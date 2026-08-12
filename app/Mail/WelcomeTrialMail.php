@@ -42,6 +42,7 @@ class WelcomeTrialMail extends Mailable
         'real_estate' => 'HexaTech',
         'education'   => 'HexaTech',
         'fitness'     => 'HexaTech',
+        'other'       => 'HexaTech',
     ];
 
     public function __construct(

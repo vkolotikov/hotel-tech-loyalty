@@ -7,7 +7,6 @@
     "retry": "Reintentar",
     "language": "Idioma"
   },
-
   "actions": {
     "save": "Guardar",
     "save_changes": "Guardar cambios",
@@ -59,7 +58,6 @@
     "draft": "Borrador",
     "published": "Publicado"
   },
-
   "status": {
     "ok": "OK",
     "error": "Error",
@@ -73,7 +71,6 @@
     "online": "En línea",
     "offline": "Sin conexión"
   },
-
   "nav": {
     "groups": {
       "overview": "Vista general",
@@ -115,7 +112,6 @@
       "settings": "Ajustes"
     }
   },
-
   "topbar": {
     "search_placeholder": "Buscar miembros, huéspedes, reservas…",
     "notifications": "Notificaciones",
@@ -126,28 +122,36 @@
     "switch_brand": "Cambiar marca",
     "all_brands": "Todas las marcas"
   },
-
   "auth": {
     "login": {
       "title": "Iniciar sesión",
-      "subtitle": "Bienvenido de vuelta",
-      "email": "Correo electrónico",
+      "subtitle": "Bienvenido de nuevo",
+      "email": "Email",
       "password": "Contraseña",
       "remember_me": "Recuérdame",
       "forgot_password": "¿Olvidaste tu contraseña?",
       "submit": "Iniciar sesión",
       "submitting": "Iniciando sesión…",
-      "no_account": "¿No tienes cuenta?",
+      "no_account": "¿Aún no tienes cuenta?",
       "create_account": "Crear una",
       "invalid_credentials": "Correo o contraseña inválidos"
     },
     "register": {
-      "title": "Crear una cuenta",
+      "title": "Empieza tu prueba gratuita",
       "name": "Tu nombre",
       "company": "Empresa / nombre del hotel",
-      "submit": "Crear cuenta",
+      "submit": "Verificar y empezar prueba",
       "have_account": "¿Ya tienes cuenta?",
-      "sign_in": "Iniciar sesión"
+      "sign_in": "Iniciar sesión",
+      "configuring_for": "Configurando para",
+      "phone": "Teléfono",
+      "subtitle": "Sin tarjeta de crédito. Cancela cuando quieras.",
+      "welcome_banner_body": "acceso completo a CRM, fidelización, motor de reservas y chatbot de IA durante su prueba.",
+      "name_placeholder": "Juan García",
+      "phone_placeholder": "+34 612 345 678",
+      "welcome_banner_title": "Bienvenido a su nuevo {{noun}}:",
+      "verification_hint": "Le enviaremos un código de verificación a su correo electrónico. No se requiere tarjeta de crédito.",
+      "eg_prefix": "p. ej."
     },
     "forgot": {
       "title": "Restablecer contraseña",
@@ -161,10 +165,109 @@
       "new_password": "Nueva contraseña",
       "confirm_password": "Confirmar contraseña",
       "submit": "Actualizar contraseña",
-      "mismatch": "Las contraseñas no coinciden"
+      "mismatch": "Las contraseñas no coinciden",
+      "repeat_placeholder": "Repita su nueva contraseña"
+    },
+    "footer": {
+      "copyright": "© {{year}} HexaTech. Todos los derechos reservados."
+    },
+    "hero": {
+      "badge": "Suite para negocios de servicios con IA nativa",
+      "default_title": "Una plataforma. Más reservas. Más fidelidad.",
+      "locked_out_title": "¿Sin acceso? Lo solucionamos."
+    },
+    "picker": {
+      "subtitle": "Preconfiguraremos tu espacio de trabajo con el pipeline, el planificador, el vocabulario y la IA adecuados para tu sector. Podrás cambiarlo más adelante en Ajustes.",
+      "title": "¿A qué se dedica tu negocio?"
+    },
+    "plans": {
+      "heading": "Elige tu plan",
+      "most_popular": "Más popular",
+      "monthly": "Mensual",
+      "yearly": "Anual",
+      "save_pct": "Ahorre ~17%",
+      "selected": "Seleccionado",
+      "per_month": "/mes",
+      "billed_yearly": "facturación anual",
+      "show_less": "Ver menos",
+      "show_all": "Ver todo lo incluido",
+      "trial_included": "Incluye {{days}} días de prueba gratis",
+      "feature": {
+        "crm": "CRM de clientes y pipeline de leads",
+        "loyalty": "Programa de fidelización",
+        "member_portal": "Portal web y alta de socios",
+        "booking": "Motor de reservas y pagos",
+        "chatbot": "Chatbot web (IA)",
+        "engagement": "Chat en vivo y seguimiento de leads",
+        "campaigns": "Campañas de email y segmentos",
+        "content_planner": "Planificador de contenido IA (redes)",
+        "reviews": "Reseñas y opiniones",
+        "wallet": "Tarjetas digitales (Apple + Google)",
+        "mobile": "App móvil de socios + push",
+        "analytics": "Paneles y analítica",
+        "properties": "Soporte multiubicación",
+        "brands": "Carteras multimarca",
+        "time_management": "Plataforma de gestión horaria",
+        "api": "Acceso API e integraciones",
+        "admin_ai": "Copiloto IA para el equipo",
+        "support": "Soporte",
+        "sla": "SLA de disponibilidad"
+      },
+      "detail": {
+        "starter": {
+          "crm": "Hasta 500 socios · importación CSV",
+          "loyalty": "Niveles, puntos y recompensas",
+          "analytics": "Paneles básicos",
+          "properties": "Una ubicación",
+          "support": "Email, online o presencial"
+        },
+        "growth": {
+          "crm": "Hasta 5.000 socios · importación CSV",
+          "loyalty": "Más descuentos, ofertas y ventajas",
+          "booking": "Con pagos online",
+          "content_planner": "Posts, calendario e imágenes IA",
+          "analytics": "Analítica completa + insights IA",
+          "properties": "Hasta 3 ubicaciones",
+          "api": "API de leads y socios",
+          "support": "Email, online o presencial"
+        },
+        "enterprise": {
+          "crm": "Socios ilimitados · importación CSV",
+          "loyalty": "Reglas, ventajas y aprobaciones a medida",
+          "booking": "Con pagos online",
+          "content_planner": "Todo lo de Growth + IA de estrategia",
+          "analytics": "Todo + retención y pasivo de puntos",
+          "properties": "Ubicaciones ilimitadas",
+          "brands": "Carteras de marcas ilimitadas",
+          "time_management": "Turnos y automatización de equipo",
+          "api": "API completa + integraciones",
+          "admin_ai": "Anthropic Claude · 35+ herramientas CRM",
+          "support": "Email, online o presencial",
+          "sla": "99,9% de disponibilidad"
+        }
+      },
+      "tagline": {
+        "starter": "Para negocios de servicios de una sola ubicación que empiezan con datos de clientes, fidelización básica y la app móvil de socios.",
+        "growth": "Para negocios en crecimiento que necesitan reservas, chat con IA y engagement de socios. Añade motor de reservas, chatbot web, bandeja de chat en vivo, campañas de email, reseñas, tarjetas Wallet, analítica y push a socios.",
+        "enterprise": "Para operadores multiubicación y multimarca. Añade ubicaciones ilimitadas, carteras de marcas, la Plataforma de gestión horaria para turnos, acceso API, el copiloto IA para el equipo y un SLA de 99,9% de disponibilidad."
+      }
+    },
+    "sso": {
+      "loading": "Accediendo…"
+    },
+    "verify": {
+      "back_to_register": "Volver al registro",
+      "no_code": "¿No has recibido el código?",
+      "resend": "Reenviar código",
+      "resend_in": "Reenviar en {{seconds}}s",
+      "title": "Verifica tu email",
+      "verified_title": "¡Verificado!"
+    },
+    "common": {
+      "email_placeholder": "nombre@empresa.com",
+      "password_placeholder": "Mínimo 8 caracteres"
     }
   },
-
   "dashboard": {
     "title": "Panel",
     "greeting": {
@@ -224,7 +327,6 @@
     "view_all": "Ver todo",
     "no_activity": "Sin actividad reciente."
   },
-
   "notifications": {
     "title": "Campañas de notificación",
     "subtitle": "Envía push y correos segmentados",
@@ -339,7 +441,6 @@
       }
     }
   },
-
   "emailCampaigns": {
     "title": "Campañas de email",
     "subtitle": "Compón, guarda y envía a un segmento. Los miembros que se dieron de baja se omiten automáticamente.",
@@ -412,7 +513,6 @@
       "delete_confirm": "¿Eliminar el borrador «{{name}}»?"
     }
   },
-
   "reports": {
     "title": "Informes de ventas",
     "subtitle": "Embudo, previsión, motivos de pérdida y marcador por comercial.",
@@ -471,7 +571,6 @@
       "open_suffix": "abiertos"
     }
   },
-
   "tasks": {
     "title": "Tareas",
     "subtitle": {
@@ -538,7 +637,6 @@
       "deleted": "Tarea eliminada"
     }
   },
-
   "taskDrawer": {
     "title_new": "Nueva tarea",
     "title_edit": "Editar tarea",
@@ -573,7 +671,6 @@
       "save_failed": "Error al guardar"
     }
   },
-
   "planner": {
     "title": "Horario de trabajo",
     "subtitle": {
@@ -673,7 +770,6 @@
       "description_placeholder": "Lo que debe saber la persona que asuma la tarea."
     }
   },
-
   "engagement": {
     "title": "Engagement",
     "subtitle": "Visitantes y conversaciones en un solo lugar — ordenados para que las filas prioritarias suban primero.",
@@ -737,27 +833,62 @@
     "pagination_one": "Página {{page}} de {{total}} · {{count}} fila",
     "pagination_other": "Página {{page}} de {{total}} · {{count}} filas",
     "empty": {
-      "priority":        { "title": "Nada requiere atención",              "sub": "Sin visitantes en línea, leads o chats activos ahora mismo." },
-      "online":          { "title": "Nadie está en línea",                 "sub": "Los visitantes aparecerán aquí en tiempo real al abrir el chat." },
-      "has_contact":     { "title": "Sin leads capturados aún",            "sub": "Cualquiera que deje email o teléfono aterriza aquí." },
-      "active_chat":     { "title": "Sin chats activos",                   "sub": "Las conversaciones abiertas aparecerán aquí." },
-      "hot_lead":        { "title": "Sin leads calientes ahora mismo",     "sub": "Visitantes con contacto capturado + señal fuerte de compra (página de reservas, 3+ mensajes, en línea) aparecen aquí." },
-      "anonymous":       { "title": "Sin visitantes anónimos",             "sub": "Visitantes sin contacto, ocultos de la vista de prioridad, aparecen aquí." },
-      "resolved":        { "title": "Sin conversaciones resueltas",        "sub": "Los chats cerrados quedan aquí como referencia." },
-      "booking_inquiry": { "title": "Sin consultas de reserva",            "sub": "Las conversaciones que la IA etiquetó como reserva aparecen aquí. Las etiquetas aparecen tras 3+ mensajes." },
-      "info_request":    { "title": "Sin solicitudes de información",      "sub": "Los visitantes con preguntas generales aparecen aquí tras etiquetado por IA." },
-      "complaint":       { "title": "Sin quejas",                          "sub": "Los problemas reportados por visitantes aparecen aquí tras etiquetado." },
-      "cancellation":    { "title": "Sin solicitudes de cancelación",      "sub": "Los visitantes que quieren cancelar una reserva aparecen aquí tras etiquetado." },
-      "support":         { "title": "Sin solicitudes de soporte",          "sub": "Las conversaciones de soporte general aparecen aquí tras etiquetado." },
+      "priority": {
+        "title": "Nada requiere atención",
+        "sub": "Sin visitantes en línea, leads o chats activos ahora mismo."
+      },
+      "online": {
+        "title": "Nadie está en línea",
+        "sub": "Los visitantes aparecerán aquí en tiempo real al abrir el chat."
+      },
+      "has_contact": {
+        "title": "Sin leads capturados aún",
+        "sub": "Cualquiera que deje email o teléfono aterriza aquí."
+      },
+      "active_chat": {
+        "title": "Sin chats activos",
+        "sub": "Las conversaciones abiertas aparecerán aquí."
+      },
+      "hot_lead": {
+        "title": "Sin leads calientes ahora mismo",
+        "sub": "Visitantes con contacto capturado + señal fuerte de compra (página de reservas, 3+ mensajes, en línea) aparecen aquí."
+      },
+      "anonymous": {
+        "title": "Sin visitantes anónimos",
+        "sub": "Visitantes sin contacto, ocultos de la vista de prioridad, aparecen aquí."
+      },
+      "resolved": {
+        "title": "Sin conversaciones resueltas",
+        "sub": "Los chats cerrados quedan aquí como referencia."
+      },
+      "booking_inquiry": {
+        "title": "Sin consultas de reserva",
+        "sub": "Las conversaciones que la IA etiquetó como reserva aparecen aquí. Las etiquetas aparecen tras 3+ mensajes."
+      },
+      "info_request": {
+        "title": "Sin solicitudes de información",
+        "sub": "Los visitantes con preguntas generales aparecen aquí tras etiquetado por IA."
+      },
+      "complaint": {
+        "title": "Sin quejas",
+        "sub": "Los problemas reportados por visitantes aparecen aquí tras etiquetado."
+      },
+      "cancellation": {
+        "title": "Sin solicitudes de cancelación",
+        "sub": "Los visitantes que quieren cancelar una reserva aparecen aquí tras etiquetado."
+      },
+      "support": {
+        "title": "Sin solicitudes de soporte",
+        "sub": "Las conversaciones de soporte general aparecen aquí tras etiquetado."
+      },
       "brand_tip": "Consejo: elige otra marca en el selector superior para ver su engagement."
     },
     "toasts": {
-      "daily_summary_on":  "Resumen diario activado",
+      "daily_summary_on": "Resumen diario activado",
       "daily_summary_off": "Resumen diario desactivado",
       "daily_summary_fail": "No se pudo actualizar la preferencia"
     }
   },
-
   "bookings": {
     "title": "Reservas",
     "subtitle": "Reservas PMS sincronizadas desde tus canales",
@@ -867,7 +998,6 @@
       "cancel_confirm_other": "¿Cancelar {{count}} reservas? Esta acción no se puede deshacer en lote."
     }
   },
-
   "bookingDetail": {
     "not_found": "Reserva no encontrada",
     "header": {
@@ -950,7 +1080,6 @@
       "mock_warning": "Esta es una reserva de prueba — no se emitirá un reembolso real. El estado de pago simplemente pasará a <code>refunded</code>."
     }
   },
-
   "inquiryDetail": {
     "back": "Atrás",
     "lost_reason_prefix": "Perdida: {{reason}}",
@@ -1048,7 +1177,6 @@
       "regenerate_tooltip": "Probar otro borrador"
     }
   },
-
   "inquiries": {
     "title": "Pipeline de ventas",
     "subtitle": "{{total}} en total · {{leads}} leads · {{deals}} acuerdos activos · {{closed}} cerrados",
@@ -1129,7 +1257,6 @@
       "drop_cards_here": "Suelta las tarjetas aquí"
     }
   },
-
   "memberDetail": {
     "ai_analysis": "Análisis IA",
     "analyzing": "Analizando…",
@@ -1179,7 +1306,6 @@
     "all_transactions": "Todas las transacciones",
     "customer_journey": "Recorrido del cliente"
   },
-
   "members": {
     "title": "Miembros",
     "total_one": "{{count}} miembro en total",
@@ -1229,7 +1355,6 @@
     "deselect_page": "Quitar selección",
     "points_short": "pts"
   },
-
   "settings": {
     "title": "Ajustes",
     "subtitle": "Gestiona configuración, integraciones y branding",
@@ -1254,7 +1379,6 @@
       "ai_system": "IA y Sistema"
     }
   },
-
   "rewards": {
     "title": "Recompensas",
     "subtitle": "Catálogo de autoservicio donde los miembros gastan sus puntos. El stock y los límites por miembro se aplican atómicamente.",
@@ -1335,7 +1459,6 @@
       "cancel_failed": "Error al cancelar"
     }
   },
-
   "referrals": {
     "title": "Referidos",
     "subtitle": "Invitaciones miembro a miembro. Los bonos se otorgan automáticamente cuando un nuevo miembro se registra con un código de referido.",
@@ -1370,7 +1493,6 @@
     "previous": "Anterior",
     "next": "Siguiente"
   },
-
   "segments": {
     "title": "Segmentos de miembros",
     "subtitle": "Guarda listas objetivo reutilizables para campañas push + email. Edita una definición y la lista se reevalúa al instante.",
@@ -1470,7 +1592,6 @@
       "send_failed": "Error al enviar"
     }
   },
-
   "offers": {
     "title": "Ofertas especiales",
     "create": "Crear oferta",
@@ -1511,7 +1632,6 @@
       "save_failed": "Error al guardar"
     }
   },
-
   "benefits": {
     "title": "Beneficios",
     "add": "Añadir beneficio",
@@ -1575,7 +1695,6 @@
       "toggle_failed": "Error al cambiar"
     }
   },
-
   "tiers": {
     "title": "Niveles",
     "add": "Añadir nivel",
@@ -1649,7 +1768,6 @@
     },
     "loading": "Cargando…"
   },
-
   "knowledge_base": {
     "brand_required": "la base de conocimiento",
     "title": "Base de conocimiento",
@@ -1760,7 +1878,6 @@
       "import_failed": "Error al importar"
     }
   },
-
   "chatbot_analytics": {
     "title": "Analítica del chat",
     "subtitle": "Mide el rendimiento de tu agente de ventas IA",
@@ -1797,7 +1914,6 @@
       "messages": "Mensajes"
     }
   },
-
   "canned_replies": {
     "title": "Respuestas predefinidas",
     "subtitle": "Respuestas pre-escritas que los agentes pueden insertar con un clic desde la bandeja. A nivel organización, máx. 50.",
@@ -1818,7 +1934,6 @@
       "empty_removed": "Las entradas vacías serán eliminadas"
     }
   },
-
   "popup_rules": {
     "title": "Reglas de automatización de pop-up",
     "subtitle": "Configura cuándo el widget de chat se abre automáticamente con un mensaje",
@@ -1883,7 +1998,6 @@
       "failed": "Error"
     }
   },
-
   "training": {
     "title": "Entrenamiento y fine-tuning IA",
     "subtitle": "Entrena modelos IA personalizados con datos de tu base de conocimiento",
@@ -1933,7 +2047,6 @@
       "job_cancelled": "Tarea cancelada"
     }
   },
-
   "chatbot_test": {
     "brand_required": "el playground de prueba IA",
     "header": "Probar la IA",
@@ -1948,7 +2061,6 @@
     "prompt_placeholder": "Envía un mensaje para ver el prompt usado.",
     "toast_failed": "Error en la llamada IA"
   },
-
   "chat_inbox": {
     "title": "Bandeja de entrada",
     "stats": {
@@ -2046,7 +2158,6 @@
       "transferred": "Transferido"
     }
   },
-
   "chatbot_setup": {
     "title": "Configuración del chatbot",
     "subtitle": "Toda la configuración del chatbot en un solo lugar",
@@ -2062,7 +2173,6 @@
       "analytics": "Analítica"
     }
   },
-
   "chatbot_config": {
     "title": "Configuración del chatbot",
     "subtitle": "Configura cómo se comporta y responde tu asistente IA a los huéspedes",
@@ -2181,7 +2291,6 @@
       "custom_placeholder": "Instrucciones adicionales para el asistente IA…"
     }
   },
-
   "reservations": {
     "title": "Reservas",
     "total_count": "{{count}} en total",
@@ -2266,7 +2375,6 @@
       "export_failed": "Error al exportar"
     }
   },
-
   "corporate": {
     "title": "Cuentas corporativas",
     "total_count": "{{count}} en total",
@@ -2364,7 +2472,6 @@
       "create_failed": "No se pudo crear la cuenta"
     }
   },
-
   "guests": {
     "title": "Huéspedes",
     "total_count": "{{count}} en total",
@@ -2472,7 +2579,6 @@
       "create_failed": "No se pudo crear el huésped"
     }
   },
-
   "guest_detail": {
     "back": "Volver a huéspedes",
     "not_found": "Huésped no encontrado o error al cargar.",
@@ -2543,7 +2649,6 @@
       "status_unknown": "desconocido"
     }
   },
-
   "analytics": {
     "title": "Analítica",
     "subtitle": "Análisis profundo del rendimiento de Fidelización y CRM",
@@ -2716,7 +2821,6 @@
     },
     "funnel_start": "inicio"
   },
-
   "common": {
     "yes": "Sí",
     "no": "No",
@@ -2749,7 +2853,6 @@
     "notes": "Notas",
     "description": "Descripción"
   },
-
   "toasts": {
     "saved": "Guardado",
     "updated": "Actualizado",
@@ -2758,7 +2861,6 @@
     "copied": "Copiado al portapapeles",
     "error": "Algo salió mal"
   },
-
   "upgrade_modal": {
     "available_on": "Disponible en el plan {{plan}}",
     "your_plan": "Tu plan",
@@ -2782,11 +2884,120 @@
       }
     }
   },
-
   "nav_locked": {
     "tooltip_collapsed": "{{label}} — mejora requerida",
     "tooltip_expanded": "Mejora tu plan para desbloquear esta función",
     "aria_label": "{{label}} — bloqueado, mejorar plan",
     "dispatch_message": "{{label}} no está incluido en tu plan actual."
+  },
+  "industries": {
+    "hotel": {
+      "hero": "Una plataforma. Más reservas. Más fidelidad.",
+      "heroSub": "Para hoteles, resorts y empresas hoteleras que quieren comunicarse mejor con sus huéspedes, aumentar la venta directa y diseñar experiencias más inteligentes.",
+      "orgLabel": "Nombre del hotel",
+      "planTagline": "Para hoteles en crecimiento",
+      "workspaceNoun": "espacio de trabajo para hoteles",
+      "heroBullets": {
+        "0": "Asistente IA: responde, cualifica y reserva — al instante",
+        "1": "Reservas sincronizadas con el PMS + pagos Stripe",
+        "2": "Programa de fidelización: niveles, puntos y pases wallet"
+      }
+    },
+    "beauty": {
+      "hero": "Una plataforma. Más citas. Clientes más felices.",
+      "heroSub": "Para salones, spas y centros de bienestar que necesitan citas, comunicación con clientes, CRM y fidelización en un solo lugar.",
+      "orgLabel": "Nombre del salón o spa",
+      "planTagline": "Para salones y spas en crecimiento",
+      "workspaceNoun": "espacio de trabajo para salones",
+      "heroBullets": {
+        "0": "Asistente IA: reserva citas + responde dudas de servicios",
+        "1": "Reservas online con depósito + pagos Stripe",
+        "2": "Fidelización: visitas, puntos, premios y pases wallet"
+      }
+    },
+    "medical": {
+      "hero": "Una plataforma. Citas más ágiles. Mejor atención al paciente.",
+      "heroSub": "Para clínicas y centros sanitarios que buscan agilizar la gestión de citas, la comunicación con el paciente y su seguimiento.",
+      "orgLabel": "Nombre de la clínica",
+      "planTagline": "Para clínicas en crecimiento",
+      "workspaceNoun": "espacio de trabajo para clínicas",
+      "heroBullets": {
+        "0": "Asistente IA: reserva citas + responde sobre servicios / horarios / seguros (nunca consejo médico)",
+        "1": "Reserva de citas online + pagos Stripe",
+        "2": "CRM de pacientes: historial, seguimientos y recordatorios"
+      }
+    },
+    "restaurant": {
+      "hero": "Una plataforma. Más comensales. Clientes que vuelven.",
+      "heroSub": "Para restaurantes, locales y negocios de hostelería que quieren mejorar sus reservas, la comunicación con el cliente y las visitas recurrentes.",
+      "orgLabel": "Nombre del restaurante o local",
+      "planTagline": "Para locales en crecimiento",
+      "workspaceNoun": "espacio de trabajo para locales",
+      "heroBullets": {
+        "0": "Asistente IA: toma reservas + responde sobre carta / horarios",
+        "1": "Reserva de mesas + espacios con depósito + pagos Stripe",
+        "2": "Fidelización de habituales: visitas, ventajas y pases wallet"
+      }
+    },
+    "fitness": {
+      "hero": "Una plataforma. Más clases. Socios más comprometidos.",
+      "heroSub": "Para estudios y gimnasios que gestionan clases, cuotas y sesiones recurrentes desde un único espacio de trabajo.",
+      "orgLabel": "Nombre del estudio o gimnasio",
+      "planTagline": "Para estudios y gimnasios en crecimiento",
+      "workspaceNoun": "espacio de trabajo para estudios",
+      "heroBullets": {
+        "0": "Asistente IA: responde sobre clases + agenda pruebas",
+        "1": "Reserva de clases + pagos Stripe",
+        "2": "CRM de socios con asistencia y fidelización"
+      }
+    },
+    "education": {
+      "hero": "Una plataforma. Más matrículas. Mejor seguimiento del alumno.",
+      "heroSub": "Para centros educativos y profesores particulares que gestionan clases, comunicación con alumnos y sesiones recurrentes desde un único espacio de trabajo.",
+      "orgLabel": "Nombre del centro o profesor",
+      "planTagline": "Para centros y profesores en crecimiento",
+      "workspaceNoun": "espacio de trabajo para centros",
+      "heroBullets": {
+        "0": "Asistente IA: responde sobre matrículas + agenda clases",
+        "1": "Reserva de clases + pagos Stripe",
+        "2": "CRM de alumnos con asistencia y notas de progreso"
+      }
+    },
+    "legal": {
+      "hero": "Una plataforma. Más expedientes. Mejor seguimiento del cliente.",
+      "heroSub": "Para despachos de abogados que gestionan la captación de asuntos, la comunicación con clientes y los encargos desde un único espacio de trabajo.",
+      "orgLabel": "Nombre del despacho",
+      "planTagline": "Para despachos en crecimiento",
+      "workspaceNoun": "espacio de trabajo para despachos",
+      "heroBullets": {
+        "0": "Asistente IA: cualifica consultas + agenda citas",
+        "1": "Reserva de consultas + pagos Stripe",
+        "2": "CRM con historial de asuntos y seguimientos"
+      }
+    },
+    "real_estate": {
+      "hero": "Una plataforma. Más visitas. Mejor seguimiento del cliente.",
+      "heroSub": "Para inmobiliarias que gestionan inmuebles, visitas y relaciones con clientes desde un único espacio de trabajo.",
+      "orgLabel": "Nombre de la inmobiliaria",
+      "planTagline": "Para inmobiliarias en crecimiento",
+      "workspaceNoun": "espacio de trabajo para agencias",
+      "heroBullets": {
+        "0": "Asistente IA: cualifica leads + agenda visitas",
+        "1": "Agenda de visitas + cobro de señales",
+        "2": "CRM con historial de inmuebles y seguimientos"
+      }
+    },
+    "other": {
+      "hero": "Una plataforma. Más clientes. Relaciones más sólidas.",
+      "heroSub": "Para cualquier negocio que quiera comunicarse mejor con sus clientes, simplificar las reservas y tener un programa de fidelización que funcione solo.",
+      "orgLabel": "Nombre del negocio",
+      "planTagline": "Para negocios en crecimiento",
+      "workspaceNoun": "espacio de trabajo para empresas",
+      "heroBullets": {
+        "0": "Asistente IA: responde dudas + capta leads",
+        "1": "Reservas y pagos en un solo lugar",
+        "2": "CRM de clientes: historial, notas y seguimientos"
+      }
+    }
   }
 }

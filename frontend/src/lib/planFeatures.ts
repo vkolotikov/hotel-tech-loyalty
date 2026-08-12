@@ -215,3 +215,29 @@ export const PLAN_TAGLINES: Record<string, string> = {
   growth:     'For growing businesses that need bookings, AI chat and member engagement. Adds the booking engine, website chatbot, live chat inbox, email campaigns, reviews, Wallet passes, analytics and member push.',
   enterprise: 'For multi-location and multi-brand operators. Adds unlimited locations, brand portfolios, the Time Management Platform for staff scheduling, API access, the staff AI copilot and a 99.9% uptime SLA.',
 }
+
+type TFn = (key: string, defaultValue: string) => string
+
+/**
+ * Localised feature label. Falls back to the English label baked into
+ * ALL_FEATURES, so an untranslated locale still renders real copy
+ * rather than a raw key.
+ */
+export function featureLabel(key: string, t: TFn): string {
+  const en = ALL_FEATURES.find(f => f.key === key)?.label ?? key
+  return t('auth.plans.feature.' + key, en)
+}
+
+/**
+ * Localised detail suffix (the "— Up to 500 members" half of a row).
+ * `value` is whatever PLAN_FEATURES holds, so an unknown SaaS plan slug
+ * with no translation still shows its own English detail.
+ */
+export function featureDetail(slug: string, key: string, value: string, t: TFn): string {
+  return t('auth.plans.detail.' + slug + '.' + key, value)
+}
+
+/** Localised plan tagline, keyed by slug; falls back to the given copy. */
+export function planTagline(slug: string, fallback: string, t: TFn): string {
+  return t('auth.plans.tagline.' + slug, fallback)
+}

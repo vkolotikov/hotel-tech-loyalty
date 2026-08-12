@@ -112,13 +112,39 @@ Route::prefix('v1')->group(function () {
     //   - 60/min/IP outer: room for normal flows + a few retries.
     //   - login / claim: 8/min — brute-force surface, kept tight.
     //   - forgot-password / reset-password: 5/min — same.
-    //   - everything else (register, trial, send-code, verify-code, activate):
+    //   - trial: 12/min in its OWN bucket — org creation, see below.
+    //   - everything else (register, send-code, verify-code, activate):
     //     uses just the outer 60/min, since they all require a fresh email
     //     code or are idempotent and don't expose credentials.
+    //
+    // NOTE on the third throttle argument. `throttle:N,1` builds its cache
+    // key from the DOMAIN + IP only — the route URI is not part of it — so
+    // two prefix-less throttles on one route resolve to the SAME key and
+    // each calls hit() on it. Stacking a bare `throttle:10,1` inside this
+    // 60/min group therefore did NOT mean "10 per minute on this route": it
+    // meant "5 per minute, counted against every other anonymous throttled
+    // endpoint on the host". Passing a third argument gives the inner limit
+    // its own bucket. Any inner throttle added here must pass one.
     Route::prefix('auth')->middleware('throttle:60,1')->group(function () {
+        // NOT rate-limited beyond the outer 60/min. Despite the name this is
+        // loyalty MEMBER self-enrolment via a venue's join link (see
+        // PortalJoin.tsx) — not org creation. Guests signing up at a venue
+        // share that venue's wifi IP, so a per-IP cap here throttles the
+        // programme's main acquisition path: 20 people joining at an event
+        // is normal traffic, not abuse.
         Route::post('register',    [AuthController::class, 'register']);
         Route::post('login',       [AuthController::class, 'login'])->middleware('throttle:8,1');
-        Route::post('trial',       [AuthController::class, 'startTrial']);
+        // Org CREATION — the expensive verb. Each call provisions a
+        // property, tier ladder, pipeline, planner, chat widget and a
+        // welcome email, so it gets a dedicated bucket rather than sharing
+        // the anonymous counter.
+        //
+        // 12/min/IP: a human completes ONE trial, and the endpoint is
+        // reached only after an emailed code, so this is far above genuine
+        // use (including the deliberate resubmit path in startTrial, where
+        // a slow first attempt can legitimately be retried) while keeping
+        // bulk org creation impractical.
+        Route::post('trial',       [AuthController::class, 'startTrial'])->middleware('throttle:12,1,trial');
         Route::post('send-code',        [AuthController::class, 'sendVerificationCode']);
         Route::post('verify-code',      [AuthController::class, 'verifyCode']);
         Route::post('forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');

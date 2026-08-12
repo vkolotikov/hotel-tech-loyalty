@@ -691,6 +691,44 @@ class IndustryPresetService
             'custom_fields_key'  => 'medical',
         ],
 
+        /**
+         * The "my business isn't listed" option.
+         *
+         * Deliberately the most generic preset in the family: a plain
+         * open→won→lost pipeline with no vertical jargon, the SERVICE_*
+         * layouts (no check-in / rooms / nights), and NO custom-field
+         * pack — a generic business has no schema we can guess, and a
+         * null key leaves CustomFieldService and its preset picker
+         * untouched so the admin can choose one later.
+         */
+        'other' => [
+            'label'       => 'Other / General business',
+            'description' => 'A neutral pipeline and workspace for any business that is not one of the listed verticals.',
+            'icon'        => 'briefcase',
+            'pipeline'    => [
+                'name'        => 'Pipeline',
+                'description' => 'Lead to won, without vertical assumptions.',
+                'stages'      => [
+                    ['name' => 'New lead',      'kind' => 'open', 'color' => '#3b82f6', 'default_win_probability' => 10],
+                    ['name' => 'Contacted',     'kind' => 'open', 'color' => '#a855f7', 'default_win_probability' => 30],
+                    ['name' => 'Proposal sent', 'kind' => 'open', 'color' => '#f59e0b', 'default_win_probability' => 60],
+                    ['name' => 'Won',           'kind' => 'won',  'color' => '#22c55e', 'default_win_probability' => 100],
+                    ['name' => 'Lost',          'kind' => 'lost', 'color' => '#ef4444', 'default_win_probability' => 0],
+                ],
+            ],
+            'lost_reasons' => [
+                'Price', 'Timing', 'Went with a competitor',
+                'No response', 'Not a fit', 'Other',
+            ],
+            'layout'             => self::SERVICE_LAYOUT,
+            'customer_layout'    => self::SERVICE_CUSTOMER_LAYOUT,
+            'corporate_layout'   => self::SERVICE_CORPORATE_LAYOUT,
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
+            'custom_fields_key'  => null,
+        ],
+
         'legal' => [
             'label'       => 'Legal / Law firm',
             'description' => 'Matter intake → engagement → close. Conflict-check, retainer, fee arrangement fields.',

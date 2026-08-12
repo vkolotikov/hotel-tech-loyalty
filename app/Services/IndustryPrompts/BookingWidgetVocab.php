@@ -47,6 +47,7 @@ final class BookingWidgetVocab
             // viewing requests rather than searches with dates.
             'legal'       => array_merge($defaults, self::genericService('consultation', 'Book a Consultation')),
             'real_estate' => array_merge($defaults, self::genericService('viewing', 'Book a Viewing')),
+            'other'       => array_merge($defaults, self::genericService('appointment', 'Book an Appointment')),
             default       => $defaults,
         };
     }

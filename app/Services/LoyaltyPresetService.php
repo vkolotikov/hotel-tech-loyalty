@@ -65,19 +65,34 @@ class LoyaltyPresetService
      * without knowing whether it maps to a hotel_classic / restaurant /
      * simple_two_tier preset id.
      *
-     * `medical` is intentionally NOT in this map — it short-circuits
-     * to no-op (decision #5: no patient loyalty program).
+     * The NO_PROGRAMME_INDUSTRIES are intentionally NOT in this map —
+     * they short-circuit to a no-op before alias resolution runs.
      *
      * The picker (POST /v1/admin/loyalty-presets/apply) keeps showing
      * the 6 canonical preset cards; aliases are an inbound resolution
      * concern for the industry-platform dispatcher only.
      */
+    /**
+     * Industries that get NO loyalty programme at all.
+     *
+     * Must stay in step with INDUSTRY_HIDDEN_GROUPS in
+     * frontend/src/lib/industryGating.ts: an industry whose Members &
+     * Loyalty nav group is hidden must not have tiers provisioned behind
+     * it, and vice versa. Today that is medical alone (decision #5 — no
+     * patient loyalty programme).
+     */
+    public const NO_PROGRAMME_INDUSTRIES = ['medical'];
+
     private const ALIASES = [
         'hotel'       => 'hotel_classic',
         'hospitality' => 'restaurant',
         'legal'       => 'simple_two_tier',
         'real_estate' => 'simple_two_tier',
         'education'   => 'simple_two_tier',
+        // A generic business can absolutely run a simple loyalty scheme —
+        // that preset's own docblock calls it "the minimum viable loyalty
+        // program for any small business".
+        'other'       => 'simple_two_tier',
     ];
 
     /**
@@ -87,15 +102,16 @@ class LoyaltyPresetService
      */
     public function apply(string $key, int $organizationId): array
     {
-        // Phase 5 — medical short-circuit. Decision #5 says no patient
-        // loyalty program. Stamp `members_preset='medical'` so the
-        // picker can render the dismissed state (LoyaltyPresetController
-        // surfaces the active key), but write NOTHING to LoyaltyTier /
-        // BenefitDefinition / HotelSetting. The existing additive-by-
-        // name guards inside the transaction would never wipe pre-
-        // existing tiers, but skipping the entire transaction avoids
-        // any chance of a transient DB write on a clean slate.
-        if ($key === 'medical') {
+        // Industries with no membership programme (decision #5 for
+        // medical; legal + real_estate joined them because
+        // industryGating hides their Members & Loyalty group).
+        //
+        // Stamp `members_preset` so the picker renders the dismissed
+        // state, but write NOTHING to LoyaltyTier / BenefitDefinition /
+        // HotelSetting. Their customers are CRM records, not loyalty
+        // members, so a ladder here is invisible dead configuration —
+        // plus an expiry policy and birthday cron with nothing to act on.
+        if (in_array($key, self::NO_PROGRAMME_INDUSTRIES, true)) {
             CrmSetting::updateOrCreate(
                 ['key' => 'members_preset'],
                 ['value' => $key],

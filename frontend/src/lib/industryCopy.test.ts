@@ -121,13 +121,14 @@ describe('INDUSTRY_COPY content invariants', () => {
 })
 
 describe('PICKER_INDUSTRIES — umbrella signup card list', () => {
-  it('ships all 8 industries', () => {
+  it('ships all 9 industries including the generic option', () => {
     // Decision #7 (four GTM-shipped industries only) was revisited:
     // fitness / education / legal / real_estate now ship on the picker
     // under umbrella branding. Every backend preset for them exists and
     // trial provisioning was verified end to end before this list grew.
     expect([...PICKER_INDUSTRIES].sort()).toEqual(
-      ['beauty', 'education', 'fitness', 'hotel', 'legal', 'medical', 'real_estate', 'restaurant'].sort(),
+      ['beauty', 'education', 'fitness', 'hotel', 'legal', 'medical',
+       'other', 'real_estate', 'restaurant'].sort(),
     )
   })
 

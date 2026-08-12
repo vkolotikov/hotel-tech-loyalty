@@ -29,6 +29,9 @@ class Organization extends Model
     public const INDUSTRIES = [
         'hotel', 'beauty', 'medical', 'restaurant',
         'legal', 'real_estate', 'education', 'fitness',
+        // "My business isn't listed" — a real, fully-provisioned generic
+        // workspace rather than a silent fallback to hotel.
+        'other',
     ];
 
     /**

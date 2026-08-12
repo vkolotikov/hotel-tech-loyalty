@@ -659,7 +659,7 @@ class AuthController extends Controller
 
         $loyaltySummary = null;
         try {
-            \DB::transaction(function () use ($org, $industry, &$loyaltySummary) {
+            \DB::transaction(function () use ($org, $industry, $beforeIndustry, &$loyaltySummary) {
                 $org->industry = $industry;
                 $org->save();
 
@@ -673,6 +673,47 @@ class AuthController extends Controller
                 // benefits + welcome bonus instead of stranding the org
                 // on the previous industry's loyalty config.
                 $loyaltySummary = app(\App\Services\LoyaltyPresetService::class)->apply($industry, $org->id);
+
+                // Re-theme to match. setupDefaults uses firstOrCreate, so
+                // it would NOT update rows that already exist — an org
+                // that switched from hotel to fitness kept the gold
+                // palette and a "Stay Feedback" review form while
+                // everything else moved. These two are cosmetic and
+                // industry-derived, so re-stamping them is safe; anything
+                // the admin has hand-edited is preserved by the guards
+                // below.
+                $setup = app(\App\Services\OrganizationSetupService::class);
+                $newColor = $setup::industryPrimaryColor($industry);
+                $oldColor = $setup::industryPrimaryColor($beforeIndustry ?? 'hotel');
+
+                $colorRow = \App\Models\HotelSetting::withoutGlobalScopes()
+                    ->where('organization_id', $org->id)
+                    ->where('key', 'primary_color')
+                    ->first();
+
+                // Only move the palette when it is still the PREVIOUS
+                // industry's default — a custom brand colour is the
+                // admin's, not ours to overwrite.
+                if ($colorRow && strcasecmp((string) $colorRow->value, $oldColor) === 0) {
+                    $colorRow->update(['value' => $newColor]);
+                }
+
+                $copy = $setup::reviewFormCopy($industry);
+                $oldCopy = $setup::reviewFormCopy($beforeIndustry ?? 'hotel');
+                $form = \App\Models\ReviewForm::withoutGlobalScopes()
+                    ->where('organization_id', $org->id)
+                    ->where('is_default', true)
+                    ->first();
+
+                // Same rule: only relabel a form still carrying the old
+                // industry's stock wording.
+                if ($form && $form->name === $oldCopy['name']) {
+                    $config = is_array($form->config) ? $form->config : [];
+                    if (($config['intro_text'] ?? null) === $oldCopy['intro']) {
+                        $config['intro_text'] = $copy['intro'];
+                    }
+                    $form->update(['name' => $copy['name'], 'config' => $config]);
+                }
             });
         } catch (\Throwable $e) {
             report($e);
@@ -767,7 +808,7 @@ class AuthController extends Controller
             ->whereNull('verified_at')
             ->delete();
 
-        EmailVerificationCode::create([
+        $record = EmailVerificationCode::create([
             'email'      => $validated['email'],
             'code'       => $code,
             'expires_at' => now()->addMinutes(15),
@@ -781,6 +822,12 @@ class AuthController extends Controller
             Mail::to($validated['email'])->queue(new VerificationCodeMail($code, $validated['name'] ?? ''));
         } catch (\Exception $e) {
             report($e);
+            // Drop the row we just wrote. startTrial gates on "a code exists
+            // for this email" — leaving an undeliverable code behind turned
+            // the client's 502 fallback into a dead end: it skipped the
+            // verify step, then startTrial rejected the signup with 422
+            // "Email not verified" for a code that was never sent.
+            $record->delete();
             return response()->json(['error' => 'Could not send verification email. Please try again.'], 502);
         }
 
@@ -902,13 +949,14 @@ class AuthController extends Controller
 
         // Require verified email (only if a code was actually sent — skip if mail isn't configured)
         $codeWasSent = EmailVerificationCode::where('email', $validated['email'])->exists();
+        $emailVerified = false;
         if ($codeWasSent) {
-            $verified = EmailVerificationCode::where('email', $validated['email'])
+            $emailVerified = EmailVerificationCode::where('email', $validated['email'])
                 ->whereNotNull('verified_at')
                 ->where('verified_at', '>', now()->subMinutes(30))
                 ->exists();
 
-            if (!$verified) {
+            if (!$emailVerified) {
                 return response()->json(['error' => 'Email not verified. Please verify your email first.'], 422);
             }
         }
@@ -1035,6 +1083,21 @@ class AuthController extends Controller
                     'organization_id' => $org->id,
                     'language'        => $signupLang,
                 ]);
+
+                // Record the ACTUAL verification outcome. When mail is down
+                // (or unconfigured) the gate above lets the signup through
+                // unverified — previously indistinguishable from a verified
+                // one because nothing ever wrote this column. Ops can now
+                // find them: users where email_verified_at is null.
+                //
+                // Set directly rather than through create(): the column is
+                // deliberately absent from User::$fillable (mass-assigning
+                // it would let a crafted signup body self-verify), so
+                // passing it above would be silently dropped.
+                if ($emailVerified) {
+                    $localUser->email_verified_at = now();
+                    $localUser->save();
+                }
             } else {
                 $updates = [
                     'password' => Hash::make($validated['password']),
@@ -1048,6 +1111,12 @@ class AuthController extends Controller
                     $updates['language'] = $signupLang;
                 }
                 $localUser->update($updates);
+
+                // Not mass-assignable — see the create() branch above.
+                if ($emailVerified && !$localUser->email_verified_at) {
+                    $localUser->email_verified_at = now();
+                    $localUser->save();
+                }
             }
 
             // Create staff record if missing (bypass scopes for check)
@@ -1066,6 +1135,27 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             report($e);
             return response()->json(['error' => 'Account creation failed: ' . $e->getMessage()], 500);
+        }
+
+        // Signup completed WITHOUT a verified email. Only reachable when no
+        // verification code exists for this address — i.e. mail is not
+        // configured, or send-code failed and cleaned up after itself. The
+        // account is still usable (blocking here would strand real customers
+        // during an SMTP outage), but it must be visible to ops rather than
+        // silently indistinguishable from a verified signup.
+        if (!$emailVerified) {
+            try {
+                \App\Models\AuditLog::record(
+                    'signup.email_unverified',
+                    $org,
+                    ['email' => $validated['email'], 'industry' => $industry],
+                    [],
+                    $localUser,
+                    'Trial signup completed without email verification (no code on file — mail likely unavailable)'
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         // Industry Platform Plan Phase 2 + Phase 5 — apply industry

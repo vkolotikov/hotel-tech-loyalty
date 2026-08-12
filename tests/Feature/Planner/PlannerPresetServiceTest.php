@@ -81,7 +81,7 @@ class PlannerPresetServiceTest extends TestCase
 
         $this->assertArrayHasKey('presets', $out);
         $this->assertArrayHasKey('current', $out);
-        $this->assertCount(8, $out['presets']);
+        $this->assertCount(9, $out['presets']);
 
         foreach ($out['presets'] as $p) {
             $this->assertArrayHasKey('key', $p);

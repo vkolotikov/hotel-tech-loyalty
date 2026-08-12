@@ -165,6 +165,21 @@ export const INDUSTRY_COPY: Partial<Record<IndustryId, IndustryCopy>> = {
     planTagline: 'For growing schools + tutors',
     workspaceNoun: 'school workspace',
   },
+  other: {
+    brand: 'Something else',
+    hero: 'One platform. More customers. Stronger relationships.',
+    heroSub: 'For any business that wants better customer communication, simpler bookings and a loyalty programme that runs itself.',
+    heroBullets: [
+      'AI assistant answers questions + captures leads',
+      'Bookings and payments in one place',
+      'Customer CRM with history, notes and follow-ups',
+    ],
+    tabTitle: 'HexaTech Workspace — Sign in',
+    orgLabel: 'Business name',
+    orgPlaceholder: 'e.g. Northside Studio',
+    planTagline: 'For growing businesses',
+    workspaceNoun: 'business workspace',
+  },
   fitness: {
     brand: 'Fitness Workspace',
     hero: 'One platform. More classes. Stronger member engagement.',
@@ -199,6 +214,45 @@ export function industryCopyFor(industry: IndustryId | null | undefined): Indust
 }
 
 /**
+ * Localised variant of {@link industryCopyFor}.
+ *
+ * The English entries above stay the source of truth (and the inline
+ * i18next defaults), so a locale missing a key simply renders English
+ * rather than a raw key path. Only the marketing prose is translated —
+ * `brand` is a product name and `tabTitle` is derived from it, so both
+ * pass through untouched.
+ *
+ * Pass the `t` from useTranslation(); this is a plain function rather
+ * than a hook so non-component callers keep working.
+ */
+export function localisedIndustryCopy(
+  industry: IndustryId | null | undefined,
+  // Loosely typed on purpose: i18next's TFunction has a large overload
+  // set that a hand-written signature can't satisfy, and this helper only
+  // ever uses the (key, defaultValue) form.
+  t: (key: string, defaultValue: string) => string,
+): IndustryCopy {
+  const base = industryCopyFor(industry)
+  const id = industry && INDUSTRY_COPY[industry] ? industry : 'hotel'
+
+  return {
+    ...base,
+    hero:           t(`industries.${id}.hero`, base.hero),
+    heroSub:        t(`industries.${id}.heroSub`, base.heroSub),
+    orgLabel:       t(`industries.${id}.orgLabel`, base.orgLabel),
+    planTagline:    t(`industries.${id}.planTagline`, base.planTagline),
+    workspaceNoun:  t(`industries.${id}.workspaceNoun`, base.workspaceNoun),
+    heroBullets:    base.heroBullets.map((b, i) => t(`industries.${id}.heroBullets.${i}`, b)),
+    // Only the "e.g." lead-in is localised — the example business names
+    // are proper nouns and stay as written.
+    orgPlaceholder: base.orgPlaceholder.replace(
+      /^e\.g\.\s*/,
+      t('auth.register.eg_prefix', 'e.g.') + ' ',
+    ),
+  }
+}
+
+/**
  * Industries that get rendered as cards on the umbrella picker.
  *
  * All eight ship now. The four late additions (fitness / education /
@@ -213,4 +267,9 @@ export function industryCopyFor(industry: IndustryId | null | undefined): Indust
 export const PICKER_INDUSTRIES: ReadonlyArray<IndustryId> = [
   'hotel', 'beauty', 'medical', 'restaurant',
   'fitness', 'education', 'legal', 'real_estate',
+  // Always last: the escape hatch for anyone whose business isn't one of
+  // the verticals. It provisions a real generic workspace (neutral
+  // pipeline, planner, simple loyalty ladder) rather than silently
+  // falling back to the hotel preset.
+  'other',
 ] as const

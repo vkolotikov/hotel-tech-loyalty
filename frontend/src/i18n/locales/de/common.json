@@ -7,7 +7,6 @@
     "retry": "Wiederholen",
     "language": "Sprache"
   },
-
   "actions": {
     "save": "Speichern",
     "save_changes": "Änderungen speichern",
@@ -59,7 +58,6 @@
     "draft": "Entwurf",
     "published": "Veröffentlicht"
   },
-
   "status": {
     "ok": "OK",
     "error": "Fehler",
@@ -73,7 +71,6 @@
     "online": "Online",
     "offline": "Offline"
   },
-
   "nav": {
     "groups": {
       "overview": "Übersicht",
@@ -115,7 +112,6 @@
       "settings": "Einstellungen"
     }
   },
-
   "topbar": {
     "search_placeholder": "Mitglieder, Gäste, Buchungen suchen…",
     "notifications": "Benachrichtigungen",
@@ -126,7 +122,6 @@
     "switch_brand": "Marke wechseln",
     "all_brands": "Alle Marken"
   },
-
   "auth": {
     "login": {
       "title": "Anmelden",
@@ -138,16 +133,25 @@
       "submit": "Anmelden",
       "submitting": "Anmeldung läuft…",
       "no_account": "Noch kein Konto?",
-      "create_account": "Konto erstellen",
+      "create_account": "Jetzt registrieren",
       "invalid_credentials": "Ungültige E-Mail oder Passwort"
     },
     "register": {
-      "title": "Konto erstellen",
+      "title": "Jetzt kostenlos testen",
       "name": "Ihr Name",
       "company": "Firma / Hotelname",
-      "submit": "Konto erstellen",
+      "submit": "E-Mail bestätigen & starten",
       "have_account": "Bereits ein Konto?",
-      "sign_in": "Anmelden"
+      "sign_in": "Anmelden",
+      "configuring_for": "Eingerichtet für",
+      "phone": "Telefon",
+      "subtitle": "Keine Kreditkarte erforderlich. Jederzeit kündbar.",
+      "welcome_banner_body": "voller Zugriff auf CRM, Treueprogramm, Buchungssystem und KI-Chatbot während Ihrer Testphase.",
+      "name_placeholder": "Max Mustermann",
+      "phone_placeholder": "+49 151 23456789",
+      "welcome_banner_title": "Willkommen in Ihrem neuen {{noun}}:",
+      "verification_hint": "Wir senden Ihnen einen Bestätigungscode per E-Mail. Keine Kreditkarte erforderlich.",
+      "eg_prefix": "z. B."
     },
     "forgot": {
       "title": "Passwort zurücksetzen",
@@ -161,10 +165,109 @@
       "new_password": "Neues Passwort",
       "confirm_password": "Passwort bestätigen",
       "submit": "Passwort aktualisieren",
-      "mismatch": "Passwörter stimmen nicht überein"
+      "mismatch": "Passwörter stimmen nicht überein",
+      "repeat_placeholder": "Neues Passwort wiederholen"
+    },
+    "footer": {
+      "copyright": "© {{year}} HexaTech. Alle Rechte vorbehalten."
+    },
+    "hero": {
+      "badge": "KI-native Suite für Dienstleister",
+      "default_title": "Eine Plattform. Mehr Buchungen. Stärkere Kundenbindung.",
+      "locked_out_title": "Ausgesperrt? Kein Problem."
+    },
+    "picker": {
+      "subtitle": "Wir richten Ihren Arbeitsbereich passend zu Ihrer Branche ein – mit der richtigen Pipeline, Planung, Terminologie und KI. Sie können das später in den Einstellungen ändern.",
+      "title": "In welcher Branche sind Sie tätig?"
+    },
+    "plans": {
+      "heading": "Wählen Sie Ihren Tarif",
+      "most_popular": "Am beliebtesten",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "save_pct": "~17% sparen",
+      "selected": "Ausgewählt",
+      "per_month": "/Mon.",
+      "billed_yearly": "jährlich abgerechnet",
+      "show_less": "Weniger anzeigen",
+      "show_all": "Alle Leistungen ansehen",
+      "trial_included": "{{days}} Tage kostenlose Testphase inklusive",
+      "feature": {
+        "crm": "Kunden-CRM & Lead-Pipeline",
+        "loyalty": "Treueprogramm",
+        "member_portal": "Mitglieder-Portal & Selbstregistrierung",
+        "booking": "Buchungssystem & Zahlungen",
+        "chatbot": "Website-Chatbot (KI)",
+        "engagement": "Live-Chat-Postfach & Lead-Tracking",
+        "campaigns": "E-Mail-Kampagnen & Segmente",
+        "content_planner": "KI-Content-Planer (Social Media)",
+        "reviews": "Bewertungen & Feedback",
+        "wallet": "Digitale Wallet-Karten (Apple + Google)",
+        "mobile": "Mitglieder-App + Push",
+        "analytics": "Dashboards & Analysen",
+        "properties": "Mehrere Standorte",
+        "brands": "Multi-Marken-Portfolios",
+        "time_management": "Zeitmanagement-Plattform",
+        "api": "API-Zugang & Integrationen",
+        "admin_ai": "KI-Copilot fürs Team",
+        "support": "Support",
+        "sla": "Verfügbarkeits-SLA"
+      },
+      "detail": {
+        "starter": {
+          "crm": "Bis zu 500 Mitglieder · CSV-Import",
+          "loyalty": "Stufen, Punkte & Prämien",
+          "analytics": "Basis-Dashboards",
+          "properties": "Ein Standort",
+          "support": "E-Mail, online oder vor Ort"
+        },
+        "growth": {
+          "crm": "Bis zu 5.000 Mitglieder · CSV-Import",
+          "loyalty": "Plus Rabatte, Angebote & Vorteile",
+          "booking": "Mit Online-Zahlungen",
+          "content_planner": "Posts, Kalender & KI-Bilder",
+          "analytics": "Volle Analysen + KI-Insights",
+          "properties": "Bis zu 3 Standorte",
+          "api": "Lead-Erfassung & Mitglieder-API",
+          "support": "E-Mail, online oder vor Ort"
+        },
+        "enterprise": {
+          "crm": "Unbegrenzt Mitglieder · CSV-Import",
+          "loyalty": "Eigene Regeln, Vorteile & Freigaben",
+          "booking": "Mit Online-Zahlungen",
+          "content_planner": "Alles aus Growth + Strategie-KI",
+          "analytics": "Alles + Retention & Punkteverbindlichkeiten",
+          "properties": "Unbegrenzt Standorte",
+          "brands": "Unbegrenzt Marken-Portfolios",
+          "time_management": "Dienstpläne & Team-Automatisierung",
+          "api": "Volle API + Integrationen",
+          "admin_ai": "Anthropic Claude · 35+ CRM-Tools",
+          "support": "E-Mail, online oder vor Ort",
+          "sla": "99,9% Verfügbarkeit"
+        }
+      },
+      "tagline": {
+        "starter": "Für Dienstleister mit einem Standort: Einstieg mit Kundendaten, einfachem Treueprogramm und Mitglieder-App.",
+        "growth": "Für wachsende Unternehmen, die Buchungen, KI-Chat und Mitgliederbindung brauchen. Ergänzt Buchungssystem, Website-Chatbot, Live-Chat-Postfach, E-Mail-Kampagnen, Bewertungen, Wallet-Pässe, Analysen und Push für Mitglieder.",
+        "enterprise": "Für Betreiber mit mehreren Standorten und Marken. Ergänzt unbegrenzte Standorte, Marken-Portfolios, die Zeitmanagement-Plattform für Dienstpläne, API-Zugang, den KI-Copilot fürs Team und ein SLA mit 99,9% Verfügbarkeit."
+      }
+    },
+    "sso": {
+      "loading": "Sie werden angemeldet…"
+    },
+    "verify": {
+      "back_to_register": "Zurück zur Registrierung",
+      "no_code": "Keinen Code erhalten?",
+      "resend": "Code erneut senden",
+      "resend_in": "Erneut senden in {{seconds}}s",
+      "title": "E-Mail bestätigen",
+      "verified_title": "Bestätigt!"
+    },
+    "common": {
+      "email_placeholder": "name@firma.de",
+      "password_placeholder": "Mindestens 8 Zeichen"
     }
   },
-
   "dashboard": {
     "title": "Übersicht",
     "greeting": {
@@ -224,7 +327,6 @@
     "view_all": "Alle anzeigen",
     "no_activity": "Noch keine aktuelle Aktivität."
   },
-
   "notifications": {
     "title": "Benachrichtigungskampagnen",
     "subtitle": "Gezielte Push-Benachrichtigungen und E-Mail-Kampagnen versenden",
@@ -339,7 +441,6 @@
       }
     }
   },
-
   "emailCampaigns": {
     "title": "E-Mail-Kampagnen",
     "subtitle": "Verfassen, speichern und an ein Segment senden. Abgemeldete Mitglieder werden automatisch übersprungen.",
@@ -412,7 +513,6 @@
       "delete_confirm": "Entwurf „{{name}}“ löschen?"
     }
   },
-
   "reports": {
     "title": "Vertriebsberichte",
     "subtitle": "Funnel, Prognose, Verlust-Aufschlüsselung und Mitarbeiter-Scoreboard.",
@@ -471,7 +571,6 @@
       "open_suffix": "offen"
     }
   },
-
   "tasks": {
     "title": "Aufgaben",
     "subtitle": {
@@ -538,7 +637,6 @@
       "deleted": "Aufgabe gelöscht"
     }
   },
-
   "taskDrawer": {
     "title_new": "Neue Aufgabe",
     "title_edit": "Aufgabe bearbeiten",
@@ -573,7 +671,6 @@
       "save_failed": "Speichern fehlgeschlagen"
     }
   },
-
   "planner": {
     "title": "Dienstplan",
     "subtitle": {
@@ -673,7 +770,6 @@
       "description_placeholder": "Was die übernehmende Person wissen sollte."
     }
   },
-
   "engagement": {
     "title": "Engagement",
     "subtitle": "Besucher und Gespräche an einem Ort — sortiert, damit wichtige Zeilen oben erscheinen.",
@@ -737,27 +833,62 @@
     "pagination_one": "Seite {{page}} von {{total}} · {{count}} Zeile",
     "pagination_other": "Seite {{page}} von {{total}} · {{count}} Zeilen",
     "empty": {
-      "priority":        { "title": "Nichts erfordert Aufmerksamkeit",      "sub": "Aktuell keine Online-Besucher, Leads oder aktive Chats." },
-      "online":          { "title": "Niemand ist online",                    "sub": "Besucher erscheinen hier in Echtzeit, sobald sie das Chat-Widget öffnen." },
-      "has_contact":     { "title": "Noch keine Leads erfasst",              "sub": "Wer eine E-Mail oder Telefonnummer hinterlässt, landet hier." },
-      "active_chat":     { "title": "Keine aktiven Chats",                   "sub": "Offene Gespräche erscheinen hier." },
-      "hot_lead":        { "title": "Aktuell keine heißen Leads",            "sub": "Besucher mit erfasstem Kontakt + starkem Kaufsignal (Buchungsseiten-Besuch, 3+ Nachrichten, jetzt online) erscheinen hier." },
-      "anonymous":       { "title": "Keine anonymen Besucher",               "sub": "Besucher ohne Kontaktdaten, die in der Prioritätsansicht ausgeblendet sind, erscheinen hier." },
-      "resolved":        { "title": "Keine abgeschlossenen Gespräche",       "sub": "Geschlossene Chats landen hier zur Referenz." },
-      "booking_inquiry": { "title": "Keine Buchungsanfragen",                "sub": "Von der KI als buchungsbezogen markierte Gespräche landen hier. Tags erscheinen nach 3+ Nachrichten." },
-      "info_request":    { "title": "Keine Informationsanfragen",            "sub": "Besucher mit allgemeinen Fragen erscheinen hier nach KI-Tagging." },
-      "complaint":       { "title": "Keine Beschwerden",                     "sub": "Von Besuchern gemeldete Probleme landen hier nach Tagging." },
-      "cancellation":    { "title": "Keine Stornierungsanfragen",            "sub": "Besucher, die eine Buchung stornieren möchten, erscheinen hier nach Tagging." },
-      "support":         { "title": "Keine Support-Anfragen",                "sub": "Allgemeine Support-Gespräche landen hier nach Tagging." },
+      "priority": {
+        "title": "Nichts erfordert Aufmerksamkeit",
+        "sub": "Aktuell keine Online-Besucher, Leads oder aktive Chats."
+      },
+      "online": {
+        "title": "Niemand ist online",
+        "sub": "Besucher erscheinen hier in Echtzeit, sobald sie das Chat-Widget öffnen."
+      },
+      "has_contact": {
+        "title": "Noch keine Leads erfasst",
+        "sub": "Wer eine E-Mail oder Telefonnummer hinterlässt, landet hier."
+      },
+      "active_chat": {
+        "title": "Keine aktiven Chats",
+        "sub": "Offene Gespräche erscheinen hier."
+      },
+      "hot_lead": {
+        "title": "Aktuell keine heißen Leads",
+        "sub": "Besucher mit erfasstem Kontakt + starkem Kaufsignal (Buchungsseiten-Besuch, 3+ Nachrichten, jetzt online) erscheinen hier."
+      },
+      "anonymous": {
+        "title": "Keine anonymen Besucher",
+        "sub": "Besucher ohne Kontaktdaten, die in der Prioritätsansicht ausgeblendet sind, erscheinen hier."
+      },
+      "resolved": {
+        "title": "Keine abgeschlossenen Gespräche",
+        "sub": "Geschlossene Chats landen hier zur Referenz."
+      },
+      "booking_inquiry": {
+        "title": "Keine Buchungsanfragen",
+        "sub": "Von der KI als buchungsbezogen markierte Gespräche landen hier. Tags erscheinen nach 3+ Nachrichten."
+      },
+      "info_request": {
+        "title": "Keine Informationsanfragen",
+        "sub": "Besucher mit allgemeinen Fragen erscheinen hier nach KI-Tagging."
+      },
+      "complaint": {
+        "title": "Keine Beschwerden",
+        "sub": "Von Besuchern gemeldete Probleme landen hier nach Tagging."
+      },
+      "cancellation": {
+        "title": "Keine Stornierungsanfragen",
+        "sub": "Besucher, die eine Buchung stornieren möchten, erscheinen hier nach Tagging."
+      },
+      "support": {
+        "title": "Keine Support-Anfragen",
+        "sub": "Allgemeine Support-Gespräche landen hier nach Tagging."
+      },
       "brand_tip": "Tipp: Wählen Sie oben eine andere Marke aus, um deren Engagement zu sehen."
     },
     "toasts": {
-      "daily_summary_on":  "Tägliche Zusammenfassung aktiviert",
+      "daily_summary_on": "Tägliche Zusammenfassung aktiviert",
       "daily_summary_off": "Tägliche Zusammenfassung deaktiviert",
       "daily_summary_fail": "Einstellung konnte nicht aktualisiert werden"
     }
   },
-
   "bookings": {
     "title": "Reservierungen",
     "subtitle": "PMS-Reservierungen aus Ihren Buchungskanälen synchronisiert",
@@ -867,7 +998,6 @@
       "cancel_confirm_other": "{{count}} Reservierungen stornieren? Dies kann nicht rückgängig gemacht werden."
     }
   },
-
   "bookingDetail": {
     "not_found": "Buchung nicht gefunden",
     "header": {
@@ -950,7 +1080,6 @@
       "mock_warning": "Dies ist eine Test-Buchung — es wird keine echte Erstattung ausgelöst. Der Zahlungsstatus wird einfach auf <code>refunded</code> umgestellt."
     }
   },
-
   "inquiryDetail": {
     "back": "Zurück",
     "lost_reason_prefix": "Verloren: {{reason}}",
@@ -1048,7 +1177,6 @@
       "regenerate_tooltip": "Anderen Entwurf versuchen"
     }
   },
-
   "inquiries": {
     "title": "Vertriebs-Pipeline",
     "subtitle": "{{total}} insgesamt · {{leads}} Leads · {{deals}} aktive Deals · {{closed}} abgeschlossen",
@@ -1129,7 +1257,6 @@
       "drop_cards_here": "Karten hierher ziehen"
     }
   },
-
   "memberDetail": {
     "ai_analysis": "KI-Analyse",
     "analyzing": "Analysiere…",
@@ -1179,7 +1306,6 @@
     "all_transactions": "Alle Transaktionen",
     "customer_journey": "Gästereise"
   },
-
   "members": {
     "title": "Mitglieder",
     "total_one": "{{count}} Mitglied insgesamt",
@@ -1229,7 +1355,6 @@
     "deselect_page": "Auswahl aufheben",
     "points_short": "Pkt"
   },
-
   "settings": {
     "title": "Einstellungen",
     "subtitle": "Plattformkonfiguration, Integrationen und Branding verwalten",
@@ -1254,7 +1379,6 @@
       "ai_system": "KI & System"
     }
   },
-
   "rewards": {
     "title": "Prämien",
     "subtitle": "Self-Service-Katalog, in dem Mitglieder ihre Punkte ausgeben. Bestand und Pro-Mitglied-Limits werden atomar durchgesetzt.",
@@ -1335,7 +1459,6 @@
       "cancel_failed": "Stornierung fehlgeschlagen"
     }
   },
-
   "referrals": {
     "title": "Empfehlungen",
     "subtitle": "Einladungen zwischen Mitgliedern. Boni werden automatisch vergeben, wenn ein neues Mitglied mit einem Empfehlungscode registriert.",
@@ -1370,7 +1493,6 @@
     "previous": "Zurück",
     "next": "Weiter"
   },
-
   "segments": {
     "title": "Mitglieder-Segmente",
     "subtitle": "Speichern Sie wiederverwendbare Zielgruppen für Push- + E-Mail-Kampagnen. Bearbeiten Sie eine Definition — die Liste wird sofort neu berechnet.",
@@ -1470,7 +1592,6 @@
       "send_failed": "Senden fehlgeschlagen"
     }
   },
-
   "offers": {
     "title": "Sonderangebote",
     "create": "Angebot erstellen",
@@ -1511,7 +1632,6 @@
       "save_failed": "Speichern fehlgeschlagen"
     }
   },
-
   "benefits": {
     "title": "Vorteile",
     "add": "Vorteil hinzufügen",
@@ -1575,7 +1695,6 @@
       "toggle_failed": "Umschalten fehlgeschlagen"
     }
   },
-
   "tiers": {
     "title": "Stufen",
     "add": "Stufe hinzufügen",
@@ -1649,7 +1768,6 @@
     },
     "loading": "Lädt…"
   },
-
   "knowledge_base": {
     "brand_required": "die Wissensdatenbank",
     "title": "Wissensdatenbank",
@@ -1760,7 +1878,6 @@
       "import_failed": "Import fehlgeschlagen"
     }
   },
-
   "chatbot_analytics": {
     "title": "Chat-Analyse",
     "subtitle": "Messen Sie die Performance Ihres KI-Vertriebsagenten",
@@ -1797,7 +1914,6 @@
       "messages": "Nachrichten"
     }
   },
-
   "canned_replies": {
     "title": "Vorgefertigte Antworten",
     "subtitle": "Vorgefertigte Antworten, die Agenten mit einem Klick aus dem Posteingang einfügen können. Organisationsweit, max. 50.",
@@ -1818,7 +1934,6 @@
       "empty_removed": "Leere Einträge werden entfernt"
     }
   },
-
   "popup_rules": {
     "title": "Popup-Automatisierungsregeln",
     "subtitle": "Konfigurieren, wann sich das Chat-Widget automatisch mit einer Nachricht öffnet",
@@ -1883,7 +1998,6 @@
       "failed": "Fehler"
     }
   },
-
   "training": {
     "title": "KI-Training & Feinabstimmung",
     "subtitle": "Trainieren Sie eigene KI-Modelle mit Daten aus Ihrer Wissensdatenbank",
@@ -1933,7 +2047,6 @@
       "job_cancelled": "Job abgebrochen"
     }
   },
-
   "chatbot_test": {
     "brand_required": "der KI-Testplattform",
     "header": "KI testen",
@@ -1948,7 +2061,6 @@
     "prompt_placeholder": "Senden Sie eine Nachricht, um den verwendeten Prompt zu sehen.",
     "toast_failed": "KI-Aufruf fehlgeschlagen"
   },
-
   "chat_inbox": {
     "title": "Posteingang",
     "stats": {
@@ -2046,7 +2158,6 @@
       "transferred": "Übergeben"
     }
   },
-
   "chatbot_setup": {
     "title": "Chatbot-Einrichtung",
     "subtitle": "Gesamte Chatbot-Konfiguration an einem Ort",
@@ -2062,7 +2173,6 @@
       "analytics": "Analytik"
     }
   },
-
   "chatbot_config": {
     "title": "Chatbot-Konfiguration",
     "subtitle": "Konfigurieren Sie, wie sich Ihr KI-Assistent verhält und auf Gäste reagiert",
@@ -2181,7 +2291,6 @@
       "custom_placeholder": "Zusätzliche Anweisungen für den KI-Assistenten…"
     }
   },
-
   "reservations": {
     "title": "Reservierungen",
     "total_count": "{{count}} insgesamt",
@@ -2266,7 +2375,6 @@
       "export_failed": "Export fehlgeschlagen"
     }
   },
-
   "corporate": {
     "title": "Firmenkunden",
     "total_count": "{{count}} insgesamt",
@@ -2364,7 +2472,6 @@
       "create_failed": "Konto konnte nicht erstellt werden"
     }
   },
-
   "guests": {
     "title": "Gäste",
     "total_count": "{{count}} insgesamt",
@@ -2472,7 +2579,6 @@
       "create_failed": "Gast konnte nicht erstellt werden"
     }
   },
-
   "guest_detail": {
     "back": "Zurück zu Gästen",
     "not_found": "Gast nicht gefunden oder Ladefehler.",
@@ -2543,7 +2649,6 @@
       "status_unknown": "unbekannt"
     }
   },
-
   "analytics": {
     "title": "Analytik",
     "subtitle": "Tiefer Einblick in Loyalty- und CRM-Performance",
@@ -2716,7 +2821,6 @@
     },
     "funnel_start": "Start"
   },
-
   "common": {
     "yes": "Ja",
     "no": "Nein",
@@ -2749,7 +2853,6 @@
     "notes": "Notizen",
     "description": "Beschreibung"
   },
-
   "toasts": {
     "saved": "Gespeichert",
     "updated": "Aktualisiert",
@@ -2758,7 +2861,6 @@
     "copied": "In Zwischenablage kopiert",
     "error": "Etwas ist schiefgelaufen"
   },
-
   "upgrade_modal": {
     "available_on": "Verfügbar im Tarif {{plan}}",
     "your_plan": "Ihr Tarif",
@@ -2782,11 +2884,120 @@
       }
     }
   },
-
   "nav_locked": {
     "tooltip_collapsed": "{{label}} — Upgrade erforderlich",
     "tooltip_expanded": "Upgrade erforderlich, um diese Funktion zu nutzen",
     "aria_label": "{{label}} — gesperrt, Tarif upgraden",
     "dispatch_message": "{{label}} ist in Ihrem aktuellen Tarif nicht enthalten."
+  },
+  "industries": {
+    "hotel": {
+      "hero": "Eine Plattform. Mehr Buchungen. Stärkere Gästebindung.",
+      "heroSub": "Für Hotels, Resorts und Gastgeber, die ihre Gästekommunikation verbessern, mehr Direktbuchungen erzielen und durchdachtere Gästeerlebnisse schaffen wollen.",
+      "orgLabel": "Hotelname",
+      "planTagline": "Für wachsende Hotels",
+      "workspaceNoun": "Hotel-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent antwortet, qualifiziert und bucht — sofort",
+        "1": "PMS-synchrone Buchungs-Engine + Stripe-Zahlungen",
+        "2": "Treueprogramm mit Stufen, Punkten und Wallet-Pässen"
+      }
+    },
+    "beauty": {
+      "hero": "Eine Plattform. Mehr Termine. Zufriedenere Kunden.",
+      "heroSub": "Für Salons, Spas und Wellnessstudios, die Terminbuchung, Kundenkommunikation, CRM und Kundenbindung an einem Ort brauchen.",
+      "orgLabel": "Salon-/Spa-Name",
+      "planTagline": "Für wachsende Salons & Spas",
+      "workspaceNoun": "Salon-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent bucht Termine + beantwortet Servicefragen",
+        "1": "Online-Buchung mit Anzahlung + Stripe-Zahlungen",
+        "2": "Kundentreue: Besuche, Punkte, Prämien und Wallet-Pässe"
+      }
+    },
+    "medical": {
+      "hero": "Eine Plattform. Reibungslose Termine. Bessere Patientenversorgung.",
+      "heroSub": "Für Praxen und Kliniken, die reibungslosere Terminabläufe, bessere Patientenkommunikation und zuverlässige Nachsorge wollen.",
+      "orgLabel": "Praxis-/Klinikname",
+      "planTagline": "Für wachsende Praxen",
+      "workspaceNoun": "Praxis-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent bucht Termine + beantwortet Fragen zu Leistungen / Zeiten / Versicherung (keine medizinische Beratung)",
+        "1": "Online-Terminbuchung + Stripe-Zahlungen",
+        "2": "Patienten-CRM mit Historie, Follow-ups und Recall-Erinnerungen"
+      }
+    },
+    "restaurant": {
+      "hero": "Eine Plattform. Mehr Gäste. Stammgäste, die wiederkommen.",
+      "heroSub": "Für Restaurants, Locations und Gastronomiebetriebe, die bessere Reservierungen, engere Gästekommunikation und mehr Wiederbesuche wollen.",
+      "orgLabel": "Restaurant-/Locationname",
+      "planTagline": "Für wachsende Locations",
+      "workspaceNoun": "Restaurant-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent nimmt Reservierungen an + beantwortet Fragen zu Karte / Zeiten",
+        "1": "Tisch- + Locationbuchung mit Anzahlung + Stripe-Zahlungen",
+        "2": "Treue für Stammgäste: Besuche, Vorteile und Wallet-Pässe"
+      }
+    },
+    "fitness": {
+      "hero": "Eine Plattform. Mehr Kurse. Aktivere Mitglieder.",
+      "heroSub": "Für Studios und Gyms, die Kurse, Mitgliedschaften und wiederkehrende Termine in einem Arbeitsbereich verwalten.",
+      "orgLabel": "Studio-/Gym-Name",
+      "planTagline": "Für wachsende Studios & Gyms",
+      "workspaceNoun": "Studio-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent beantwortet Kursfragen + bucht Probestunden",
+        "1": "Kursbuchung + Stripe-Zahlungen",
+        "2": "Mitglieder-CRM mit Anwesenheit und Treueprogramm"
+      }
+    },
+    "education": {
+      "hero": "Eine Plattform. Mehr Anmeldungen. Bessere Lernbegleitung.",
+      "heroSub": "Für Schulen und Nachhilfelehrer, die Unterricht, Kommunikation mit Schülern und wiederkehrende Termine in einem Arbeitsbereich verwalten.",
+      "orgLabel": "Schul-/Lehrername",
+      "planTagline": "Für wachsende Schulen & Nachhilfe",
+      "workspaceNoun": "Schul-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent beantwortet Anmeldefragen + plant Unterricht",
+        "1": "Kursbuchung + Stripe-Zahlungen",
+        "2": "Schüler-CRM mit Anwesenheit und Lernfortschritt"
+      }
+    },
+    "legal": {
+      "hero": "Eine Plattform. Mehr Mandate. Engere Mandantenbetreuung.",
+      "heroSub": "Für Kanzleien, die Mandatsannahme, Mandantenkommunikation und laufende Mandate in einem Arbeitsbereich verwalten.",
+      "orgLabel": "Kanzleiname",
+      "planTagline": "Für wachsende Kanzleien",
+      "workspaceNoun": "Kanzlei-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent qualifiziert Anfragen + plant Beratungstermine",
+        "1": "Beratungsbuchung + Stripe-Zahlungen",
+        "2": "Mandanten-CRM mit Aktenhistorie und Follow-ups"
+      }
+    },
+    "real_estate": {
+      "hero": "Eine Plattform. Mehr Besichtigungen. Engere Kundenbetreuung.",
+      "heroSub": "Für Maklerbüros, die Objekte, Besichtigungen und Kundenbeziehungen in einem Arbeitsbereich verwalten.",
+      "orgLabel": "Maklerbüro",
+      "planTagline": "Für wachsende Maklerbüros",
+      "workspaceNoun": "Makler-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent qualifiziert Leads + plant Besichtigungen",
+        "1": "Besichtigungsplaner + Anzahlungseinzug",
+        "2": "Kunden-CRM mit Objekthistorie und Follow-ups"
+      }
+    },
+    "other": {
+      "hero": "Eine Plattform. Mehr Kunden. Stärkere Beziehungen.",
+      "heroSub": "Für alle Unternehmen, die bessere Kundenkommunikation, einfachere Terminbuchung und ein Treueprogramm wollen, das wie von selbst läuft.",
+      "orgLabel": "Firmenname",
+      "planTagline": "Für wachsende Unternehmen",
+      "workspaceNoun": "Firmen-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent beantwortet Fragen + erfasst Leads",
+        "1": "Buchungen und Zahlungen an einem Ort",
+        "2": "Kunden-CRM mit Historie, Notizen und Follow-ups"
+      }
+    }
   }
 }

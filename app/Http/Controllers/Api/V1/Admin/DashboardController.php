@@ -63,7 +63,7 @@ class DashboardController extends Controller
                 // clients / Pipeline). Falling through to the hotel default
                 // used to greet a gym owner with Occupancy and Arrivals —
                 // numbers their business does not have.
-                'fitness', 'education', 'legal', 'real_estate'
+                'fitness', 'education', 'legal', 'real_estate', 'other'
                              => app(\App\Services\IndustryKpis\BeautyKpiService::class),
                 default      => app(\App\Services\IndustryKpis\HotelKpiService::class),
             };

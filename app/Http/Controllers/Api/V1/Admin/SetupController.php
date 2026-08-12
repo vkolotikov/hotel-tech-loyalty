@@ -72,7 +72,7 @@ class SetupController extends Controller
 
             // New wizard payload
             'company_name'     => 'nullable|string|max:255',
-            'industry'         => 'nullable|string|in:hotel,beauty,medical,legal,real_estate,education,fitness,restaurant',
+            'industry'         => 'nullable|string|in:hotel,beauty,medical,legal,real_estate,education,fitness,restaurant,other',
             'phone'            => 'nullable|string|max:50',
             'country'          => 'nullable|string|max:80',
             'features'         => 'nullable|array',

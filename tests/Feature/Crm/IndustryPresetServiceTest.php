@@ -108,8 +108,8 @@ class IndustryPresetServiceTest extends TestCase
 
         $this->assertArrayHasKey('presets', $out);
         $this->assertArrayHasKey('current', $out);
-        $this->assertCount(8, $out['presets'],
-            'listPresets must return one entry per preset (8 industries).');
+        $this->assertCount(9, $out['presets'],
+            'listPresets must return one entry per preset (9 industries).');
 
         foreach ($out['presets'] as $p) {
             // Each preset entry must carry the picker fields.

@@ -131,20 +131,44 @@ class BookingWidgetVocabTest extends TestCase
         $this->assertSame('Find Tables', $vocab['search_button']);
     }
 
-    /* ─── Fallback for settings-only industries ─── */
+    /* ─── The four late-shipped industries now have their own copy ─── */
 
-    public function test_unknown_industry_falls_through_to_hotel_defaults(): void
+    public function test_late_shipped_industries_no_longer_speak_hotel(): void
     {
-        // legal / real_estate / education / fitness today have no
-        // GTM polish but MUST render coherent strings (defensive
-        // default rather than empty).
+        // These four went live on the signup picker, so the public
+        // booking widget must stop greeting a gym member with
+        // "Find Your Perfect Stay" and a Check-in date. This test used
+        // to assert the OPPOSITE — that they fell through to hotel
+        // defaults — which was the correct contract only while they
+        // were Settings-only.
         foreach (['legal', 'real_estate', 'fitness', 'education'] as $industry) {
             $vocab = BookingWidgetVocab::for($industry);
 
-            $this->assertSame('Find Your Perfect Stay', $vocab['search_title'],
-                "Industry '{$industry}' MUST fall through to hotel defaults today.");
-            $this->assertSame('Check-in', $vocab['check_in']);
+            $this->assertNotSame('Find Your Perfect Stay', $vocab['search_title'],
+                "Industry '{$industry}' must have its own search title.");
+            $this->assertSame('Date', $vocab['check_in'],
+                "Industry '{$industry}' books a date, not a hotel check-in.");
+            // Every key the renderer reads must still be present — the
+            // overrides are merged over the hotel defaults, never
+            // replacing the set.
+            foreach (['steps_no_pay', 'steps_pay', 'search_sub', 'details_title',
+                      'search_button', 'svc_service_title'] as $key) {
+                $this->assertArrayHasKey($key, $vocab);
+            }
         }
+    }
+
+    public function test_fitness_and_education_use_their_own_nouns(): void
+    {
+        $fitness = BookingWidgetVocab::for('fitness');
+        $this->assertSame('Book Your Class', $fitness['search_title']);
+        $this->assertSame('Participants', $fitness['adults']);
+        $this->assertSame('Choose your trainer', $fitness['svc_provider_title']);
+
+        $education = BookingWidgetVocab::for('education');
+        $this->assertSame('Book a Lesson', $education['search_title']);
+        $this->assertSame('Students', $education['adults']);
+        $this->assertSame('Choose your teacher', $education['svc_provider_title']);
     }
 
     public function test_completely_unknown_industry_string_falls_through(): void

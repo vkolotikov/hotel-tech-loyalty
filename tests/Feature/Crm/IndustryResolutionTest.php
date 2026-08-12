@@ -117,7 +117,12 @@ class IndustryResolutionTest extends TestCase
         // confirm all downstream code paths.
         $this->assertSame(
             ['hotel', 'beauty', 'medical', 'restaurant',
-             'legal', 'real_estate', 'education', 'fitness'],
+             'legal', 'real_estate', 'education', 'fitness',
+             // 'other' — the generic "my business isn't listed" option.
+             // Adding it here is the deliberate confirmation this test
+             // asks for: every downstream preset, KPI, vocabulary and
+             // gating map has a matching entry.
+             'other'],
             Organization::INDUSTRIES,
         );
     }

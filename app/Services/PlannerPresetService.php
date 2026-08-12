@@ -178,6 +178,23 @@ class PlannerPresetService
             ],
         ],
 
+        /** Neutral day-plan for a business that isn't one of the verticals. */
+        'other' => [
+            'label'       => 'Other / General business',
+            'description' => 'Sales, delivery and admin cadence with no vertical assumptions.',
+            'icon'        => 'briefcase',
+            'groups'      => ['Sales', 'Operations', 'Customer Care', 'Marketing', 'Admin'],
+            'templates'   => [
+                ['name' => 'Follow up new leads',   'title' => 'Follow up on new leads',            'category' => 'Sales',         'task_group' => 'Sales',         'priority' => 'High',   'duration_minutes' => 30],
+                ['name' => 'Send proposal',         'title' => 'Prepare and send proposal',         'category' => 'Sales',         'task_group' => 'Sales',         'priority' => 'High',   'duration_minutes' => 45],
+                ['name' => 'Daily operations check','title' => 'Daily operations check',            'category' => 'Operations',    'task_group' => 'Operations',    'priority' => 'Medium', 'duration_minutes' => 20],
+                ['name' => 'Customer check-in',     'title' => 'Check in with recent customers',    'category' => 'Customer Care', 'task_group' => 'Customer Care', 'priority' => 'Medium', 'duration_minutes' => 20],
+                ['name' => 'Review feedback',       'title' => 'Review customer feedback',          'category' => 'Customer Care', 'task_group' => 'Customer Care', 'priority' => 'Low',    'duration_minutes' => 30],
+                ['name' => 'Plan social posts',     'title' => 'Plan this week of social posts',    'category' => 'Marketing',     'task_group' => 'Marketing',     'priority' => 'Low',    'duration_minutes' => 45],
+                ['name' => 'Weekly admin',          'title' => 'Weekly admin + invoicing',          'category' => 'Admin',         'task_group' => 'Admin',         'priority' => 'Medium', 'duration_minutes' => 60],
+            ],
+        ],
+
         'legal' => [
             'label'       => 'Legal / Law firm',
             'description' => 'Matter intake → research → filing → billing. Time-conscious cadence with court deadlines.',

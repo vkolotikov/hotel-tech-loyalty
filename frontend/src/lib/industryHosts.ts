@@ -33,6 +33,10 @@ export type IndustryId =
   | 'real_estate'
   | 'education'
   | 'fitness'
+  // "My business isn't listed" — a real generic workspace, not a
+  // fallback. Has no sub-brand domain, so it never appears in
+  // HOST_INDUSTRY; it is only ever chosen explicitly on the picker.
+  | 'other'
 
 /**
  * Sub-domain detection result. `null` = umbrella host (`app.hexa-tech.uk`)
@@ -213,4 +217,6 @@ export const INDUSTRY_PRIMARY_DOMAIN: Record<IndustryId, string> = {
   real_estate: 'app.hexa-tech.uk',
   education: 'app.hexa-tech.uk',
   fitness: 'app.hexa-tech.uk',
+  // No sub-brand domain — signs up on the umbrella host.
+  other: 'app.hexa-tech.uk',
 }

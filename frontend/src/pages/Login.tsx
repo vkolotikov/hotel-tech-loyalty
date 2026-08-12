@@ -8,9 +8,9 @@ import {
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { SUPPORTED_LANGUAGES, type LangCode } from '../i18n'
-import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES } from '../lib/planFeatures'
+import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES, featureLabel, featureDetail, planTagline } from '../lib/planFeatures'
 import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
-import { industryCopyFor, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
+import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -50,6 +50,7 @@ const INDUSTRY_ICONS: Record<IndustryId, string> = {
   real_estate: '🏘️',
   education: '🎓',
   fitness: '🏋️',
+  other: '🏢',
 }
 
 /**
@@ -64,18 +65,18 @@ function IndustryPicker({
   onPick: (industry: IndustryId) => void
   onCancel?: () => void
 }) {
+  const { t } = useTranslation()
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white mb-1">What kind of business do you run?</h2>
+        <h2 className="text-lg font-semibold text-white mb-1">{t('auth.picker.title', 'What kind of business do you run?')}</h2>
         <p className="text-sm text-slate-400">
-          We'll preconfigure your workspace with the right pipeline, planner, vocabulary and AI for your industry.
-          You can change this later in Settings.
+          {t('auth.picker.subtitle', "We'll preconfigure your workspace with the right pipeline, planner, vocabulary and AI for your industry. You can change this later in Settings.")}
         </p>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {PICKER_INDUSTRIES.map((id) => {
-          const copy = industryCopyFor(id)
+          const copy = localisedIndustryCopy(id, t)
           return (
             <button
               key={id}
@@ -179,6 +180,7 @@ const INDUSTRY_MONOGRAM: Record<IndustryId, string> = {
   real_estate: 'HX',
   education: 'HX',
   fitness: 'HX',
+  other: 'HX',
 }
 
 /**
@@ -364,7 +366,7 @@ export function Login() {
     // have picked previously on the umbrella.
     return readPersistedIndustry() !== null && detectIndustryFromWindow(true) === null
   })
-  const industryCopy: IndustryCopy = industryCopyFor(pickedIndustry)
+  const industryCopy: IndustryCopy = localisedIndustryCopy(pickedIndustry, t)
   // Show the umbrella picker only when the user is on the trial view AND
   // we don't have an industry from hostname or localStorage yet.
   const needsPicker = pickedIndustry === null
@@ -661,7 +663,7 @@ export function Login() {
       <div className="min-h-screen flex items-center justify-center bg-[#060b1e] text-white">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-slate-400">Signing you in…</p>
+          <p className="text-sm text-slate-400">{t('auth.sso.loading', 'Signing you in…')}</p>
         </div>
       </div>
     )
@@ -677,7 +679,7 @@ export function Login() {
               {verified ? <Check size={32} className="text-white" /> : <ShieldCheck size={32} className="text-white" />}
             </div>
             <h1 className="text-2xl font-bold text-white">
-              {verified ? 'Verified!' : 'Verify Your Email'}
+              {verified ? t('auth.verify.verified_title', 'Verified!') : t('auth.verify.title', 'Verify Your Email')}
             </h1>
             <p className="text-gray-500 mt-1">
               {verified ? 'Creating your account...' : `Enter the 6-digit code sent to ${email}`}
@@ -727,14 +729,16 @@ export function Login() {
 
               <div className="text-center">
                 <p className="text-xs text-gray-500 mb-3">
-                  Didn't receive the code?
+                  {t('auth.verify.no_code', "Didn't receive the code?")}
                 </p>
                 <button
                   onClick={handleSendCode}
                   disabled={countdown > 0 || loading}
                   className="text-sm text-primary-400 hover:text-primary-300 font-medium disabled:text-gray-600 disabled:cursor-not-allowed"
                 >
-                  {countdown > 0 ? `Resend in ${countdown}s` : 'Resend Code'}
+                  {countdown > 0
+                    ? t('auth.verify.resend_in', { seconds: countdown, defaultValue: 'Resend in {{seconds}}s' })
+                    : t('auth.verify.resend', 'Resend Code')}
                 </button>
               </div>
 
@@ -743,7 +747,7 @@ export function Login() {
                   onClick={() => { setView('trial'); setError(''); setCodeDigits(['', '', '', '', '', '']); setVerified(false); navigate('/register') }}
                   className="text-sm text-gray-500 hover:text-gray-400"
                 >
-                  Back to registration
+                  {t('auth.verify.back_to_register', 'Back to registration')}
                 </button>
               </div>
             </div>
@@ -768,8 +772,8 @@ export function Login() {
   const heroTitle = isTrial
     ? industryCopy.hero
     : isForgot || isReset
-      ? 'Locked out? No problem.'
-      : 'One platform. More bookings. Stronger loyalty.'
+      ? t('auth.hero.locked_out_title', 'Locked out? No problem.')
+      : t('auth.hero.default_title', 'One platform. More bookings. Stronger loyalty.')
   const heroSubtitle = isTrial
     ? industryCopy.heroSub
     : isForgot
@@ -779,14 +783,14 @@ export function Login() {
         : 'AI assistants, bookings, CRM, loyalty and analytics — for hotels, salons, clinics, restaurants and more.'
 
   const formTitle = isTrial
-    ? 'Start your free trial'
+    ? t('auth.register.title', 'Start your free trial')
     : isForgot
       ? 'Reset your password'
       : isReset
         ? 'Choose a new password'
-        : 'Welcome back'
+        : t('auth.login.subtitle', 'Welcome back')
   const formSubtitle = isTrial
-    ? 'No credit card required. Cancel anytime.'
+    ? t('auth.register.subtitle', 'No credit card required. Cancel anytime.')
     : isForgot
       ? 'We\'ll email you a 6-digit code.'
       : isReset
@@ -830,7 +834,7 @@ export function Login() {
 
         <div className="relative z-10 max-w-[520px]">
           <span className="inline-block text-[11px] font-medium tracking-[0.08em] uppercase px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-300 border border-blue-500/25 mb-6">
-            {pickedIndustry ? 'AI-native hospitality suite' : 'AI-native service business suite'}
+            {t('auth.hero.badge', 'AI-native service business suite')}
           </span>
           <h2 className="text-[42px] leading-[1.1] tracking-tight font-semibold mb-4 bg-gradient-to-b from-white to-slate-300 bg-clip-text text-transparent">
             {heroTitle}
@@ -859,7 +863,7 @@ export function Login() {
           </ul>
         </div>
 
-        <div className="relative z-10 text-xs text-slate-500">© {new Date().getFullYear()} HexaTech. All rights reserved.</div>
+        <div className="relative z-10 text-xs text-slate-500">{t('auth.footer.copyright', { year: new Date().getFullYear(), defaultValue: '© {{year}} HexaTech. All rights reserved.' })}</div>
       </aside>
 
       {/* ─── Form column ───────────────────────────────────────── */}
@@ -911,7 +915,7 @@ export function Login() {
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input
                       type="email" value={email} onChange={e => setEmail(e.target.value)}
-                      autoFocus required placeholder="you@company.com"
+                      autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition"
                     />
                   </div>
@@ -967,7 +971,7 @@ export function Login() {
                   the persist-on-effect cycle. */}
               {pickedViaPicker && (
                 <div className="flex items-center justify-between text-xs mb-3 px-3 py-2 rounded-lg bg-blue-500/[0.08] border border-blue-500/20 text-blue-200">
-                  <span>Configuring for <strong>{industryCopy.brand}</strong></span>
+                  <span>{t('auth.register.configuring_for', 'Configuring for')} <strong>{industryCopy.brand}</strong></span>
                   <button
                     type="button"
                     onClick={() => { setPickedIndustry(null); setPickedViaPicker(false) }}
@@ -978,15 +982,15 @@ export function Login() {
                 </div>
               )}
               <div className="bg-green-500/10 border border-green-500/25 text-green-400 text-xs rounded-lg px-3.5 py-2.5 mb-4">
-                <strong className="font-semibold">Welcome to your new {industryCopy.workspaceNoun}:</strong> full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.
+                <strong className="font-semibold">{t('auth.register.welcome_banner_title', { noun: industryCopy.workspaceNoun, defaultValue: 'Welcome to your new {{noun}}:' })}</strong>{' '}{t('auth.register.welcome_banner_body', 'full access to CRM, Loyalty, Booking engine and AI Chatbot during your trial.')}
               </div>
               <form onSubmit={e => { e.preventDefault(); handleSendCode() }} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Your Name</label>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.register.name', 'Your Name')}</label>
                     <div className="relative">
                       <User size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="John Smith"
+                      <input type="text" value={name} onChange={e => setName(e.target.value)} required placeholder={t('auth.register.name_placeholder', 'John Smith')}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
@@ -1004,25 +1008,25 @@ export function Login() {
                     <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                     <div className="relative">
                       <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder="you@company.com"
+                      <input type="email" value={email} onChange={e => setEmail(e.target.value.trim().toLowerCase())} required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Phone</label>
+                    <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.register.phone', 'Phone')}</label>
                     <div className="relative">
                       <Phone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder="+1 234 567 8900"
+                      <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} required placeholder={t('auth.register.phone_placeholder', '+1 234 567 8900')}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Password</label>
+                  <label className="block text-[13px] font-medium text-slate-300 mb-1.5">{t('auth.login.password', 'Password')}</label>
                   <div className="relative">
                     <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                     <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
-                      required minLength={8} placeholder="At least 8 characters"
+                      required minLength={8} placeholder={t('auth.common.password_placeholder', 'At least 8 characters')}
                       className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -1034,15 +1038,15 @@ export function Login() {
 
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <label className="block text-[13px] font-medium text-slate-300">Choose your plan</label>
+                    <label className="block text-[13px] font-medium text-slate-300">{t('auth.plans.heading', 'Choose your plan')}</label>
                     <div className="flex items-center gap-2">
-                      <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>Monthly</span>
+                      <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>{t('auth.plans.monthly', 'Monthly')}</span>
                       <button type="button" onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
                         className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
                         <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
                       </button>
                       <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-slate-500')}>
-                        Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>
+                        {t('auth.plans.yearly', 'Yearly')} <span className="text-green-400 text-[10px]">{t('auth.plans.save_pct', 'Save ~17%')}</span>
                       </span>
                     </div>
                   </div>
@@ -1098,22 +1102,22 @@ export function Login() {
                             >
                               {isPopular && !isSelected && (
                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                  Most Popular
+                                  {t('auth.plans.most_popular', 'Most Popular')}
                                 </div>
                               )}
                               {isSelected && (
                                 <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
-                                  <Check size={10} /> Selected
+                                  <Check size={10} /> {t('auth.plans.selected', 'Selected')}
                                 </div>
                               )}
 
                               <div className="font-semibold text-white text-sm">{p.name}</div>
                               <div className="mt-1.5 mb-0.5">
                                 <span className="text-xl font-bold text-white">{getPlanPrice(p)}</span>
-                                <span className="text-slate-400 text-[11px]">/mo{billingInterval === 'yearly' ? ' billed yearly' : ''}</span>
+                                <span className="text-slate-400 text-[11px]">{t('auth.plans.per_month', '/mo')}{billingInterval === 'yearly' ? ' ' + t('auth.plans.billed_yearly', 'billed yearly') : ''}</span>
                               </div>
                               {tagline && (
-                                <p className="text-[11px] leading-snug text-slate-400 mb-3 mt-1 line-clamp-4">{tagline}</p>
+                                <p className="text-[11px] leading-snug text-slate-400 mb-3 mt-1 line-clamp-4">{planTagline(p.slug, tagline, t)}</p>
                               )}
 
                               <div className="space-y-1 mb-3 flex-1">
@@ -1144,7 +1148,7 @@ export function Login() {
                                         ? <Check size={10} className="text-green-400 shrink-0 mt-0.5" />
                                         : <X size={10} className="text-slate-500 shrink-0 mt-0.5" />}
                                       <span className={included ? 'text-slate-300' : 'text-slate-500 line-through'}>
-                                        {f.label}{detail ? ` — ${detail}` : ''}
+                                        {featureLabel(f.key, t)}{detail ? ` — ${featureDetail(p.slug, f.key, detail, t)}` : ''}
                                       </span>
                                     </div>
                                   )
@@ -1157,13 +1161,13 @@ export function Login() {
                                     onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); setExpandedPlans(x => ({ ...x, [p.slug]: !x[p.slug] })) } }}
                                     className="inline-block text-[11px] text-blue-400 hover:text-blue-300 pt-1 cursor-pointer"
                                   >
-                                    {expandedPlans[p.slug] ? 'Show less' : 'See everything included'}
+                                    {expandedPlans[p.slug] ? t('auth.plans.show_less', 'Show less') : t('auth.plans.show_all', 'See everything included')}
                                   </span>
                                 )}
                               </div>
 
                               <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-white/[0.05]">
-                                {p.trialDays}-day free trial included
+                                {t('auth.plans.trial_included', { days: p.trialDays, defaultValue: '{{days}}-day free trial included' })}
                               </div>
                             </button>
                           )
@@ -1173,13 +1177,13 @@ export function Login() {
 
                 <button type="submit" disabled={loading}
                   className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
-                  {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> Verify Email & Start Trial</>)}
+                  {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> {t('auth.register.submit', 'Verify Email & Start Trial')}</>)}
                 </button>
-                <p className="text-[11px] text-slate-500 text-center">We'll send a verification code to your email. No credit card required.</p>
+                <p className="text-[11px] text-slate-500 text-center">{t('auth.register.verification_hint', "We'll send a verification code to your email. No credit card required.")}</p>
               </form>
               <p className="mt-6 text-center text-sm text-slate-400">
-                Already have an account?{' '}
-                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">Sign in</button>
+                {t('auth.register.have_account', 'Already have an account?')}{' '}
+                <button onClick={() => { navigate('/login'); setError('') }} className="text-blue-400 hover:text-blue-300 font-medium">{t('auth.register.sign_in', 'Sign in')}</button>
               </p>
             </>
           )}
@@ -1192,7 +1196,7 @@ export function Login() {
                   <label className="block text-[13px] font-medium text-slate-300 mb-1.5">Email</label>
                   <div className="relative">
                     <Mail size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
-                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder="you@company.com"
+                    <input type="email" value={email} onChange={e => setEmail(e.target.value)} autoFocus required placeholder={t('auth.common.email_placeholder', 'you@company.com')}
                       className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                   </div>
                 </div>
@@ -1237,7 +1241,7 @@ export function Login() {
                     <div className="relative">
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type={showPassword ? 'text' : 'password'} value={resetPassword} onChange={e => setResetPassword(e.target.value)}
-                        required minLength={8} placeholder="At least 8 characters"
+                        required minLength={8} placeholder={t('auth.common.password_placeholder', 'At least 8 characters')}
                         className="w-full pl-9 pr-10 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                       <button type="button" tabIndex={-1} onClick={() => setShowPassword(s => !s)}
                         aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -1251,7 +1255,7 @@ export function Login() {
                     <div className="relative">
                       <Lock size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                       <input type={showPassword ? 'text' : 'password'} value={resetConfirm} onChange={e => setResetConfirm(e.target.value)}
-                        required minLength={8} placeholder="Repeat your new password"
+                        required minLength={8} placeholder={t('auth.reset.repeat_placeholder', 'Repeat your new password')}
                         className="w-full pl-9 pr-4 py-2.5 bg-slate-950/60 border border-white/[0.12] rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 text-sm text-white placeholder-slate-600 transition" />
                     </div>
                   </div>

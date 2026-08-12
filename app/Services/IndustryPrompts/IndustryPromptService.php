@@ -90,6 +90,7 @@ class IndustryPromptService
             'real_estate' => $this->realEstate(),
             'education'   => $this->education(),
             'fitness'     => $this->fitness(),
+            'other'       => $this->other(),
             default       => $this->hotel(),
         };
     }
@@ -436,6 +437,43 @@ GUARD,
 - Be motivating, not pressuring. Respect a member's pace.
 GUARD,
             workspaceLabel: 'studio',
+            hasLoyalty: true,
+        );
+    }
+
+    /**
+     * The generic profile for businesses that aren't one of the
+     * verticals. Neutral nouns and no domain guardrails — the only
+     * rule is not to invent specifics we can't know.
+     *
+     * Without this, `other` fell through to the HOTEL concierge
+     * persona, which also drives `has_loyalty` on /v1/auth/me.
+     */
+    private function other(): IndustryPromptProfile
+    {
+        return new IndustryPromptProfile(
+            industry: 'other',
+            persona: 'a helpful, professional assistant at a local business',
+            nouns: [
+                'guest'       => 'customer',
+                'hotel'       => 'business',
+                'concierge'   => 'assistant',
+                'room'        => 'service',
+                'stay'        => 'visit',
+                'reservation' => 'booking',
+                'property'    => 'location',
+            ],
+            guardrails: <<<'GUARD'
+
+## General Guardrails
+
+- Never invent services, prices, opening hours or policies. If the
+  answer isn't in the business's own information, say you'll check
+  with the team and offer to take the visitor's contact details.
+- Stay within what this business actually offers — don't give
+  medical, legal or financial advice.
+GUARD,
+            workspaceLabel: 'business',
             hasLoyalty: true,
         );
     }

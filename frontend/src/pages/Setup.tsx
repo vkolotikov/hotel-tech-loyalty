@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
-  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils,
+  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
   Bot, Users, BedDouble, FileText, ClipboardList,
   ArrowRight, ArrowLeft, Check, Zap, Database, Star,
 } from 'lucide-react'
@@ -46,6 +46,7 @@ const INDUSTRIES: IndustryDef[] = [
   { key: 'education',   label: 'Education / Tutoring',   icon: GraduationCap, blurb: 'Inquiry → trial → enrolment.',                      defaultFeatures: ['ai_chat', 'crm', 'operations', 'loyalty'] },
   { key: 'fitness',     label: 'Fitness / Wellness',     icon: Dumbbell,      blurb: 'Trial → membership + class bookings.',              defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
   { key: 'restaurant',  label: 'Restaurant',             icon: Utensils,      blurb: 'Reservations + service workflow.',                  defaultFeatures: ['bookings', 'ai_chat', 'crm', 'operations'] },
+  { key: 'other',       label: 'Something else',         icon: Briefcase,     blurb: 'A neutral pipeline for any other business.',        defaultFeatures: ['ai_chat', 'crm', 'operations', 'loyalty'] },
 ]
 
 interface FeatureDef {
@@ -120,7 +121,7 @@ export function Setup({ onComplete }: Props) {
   const submit = async () => {
     setSubmitting(true)
     try {
-      await api.post('/v1/admin/setup/initialize', {
+      const res = await api.post('/v1/admin/setup/initialize', {
         company_name: companyName.trim(),
         industry,
         features,
@@ -128,7 +129,21 @@ export function Setup({ onComplete }: Props) {
         welcome_message: welcomeMessage.trim() || undefined,
         with_sample_data: withSample,
       })
-      toast.success('Welcome! Your workspace is ready.')
+      // onboardWithIndustry provisions each module independently and
+      // collects per-step failures instead of throwing, so a 200 does NOT
+      // mean everything worked. Reporting "your workspace is ready" over a
+      // partial provision sent people to a dashboard missing the modules
+      // they just picked, with no hint anything had gone wrong.
+      const errors: string[] = res?.data?.result?.errors ?? []
+      if (errors.length) {
+        toast.error(
+          `Workspace created, but ${errors.length} step${errors.length > 1 ? 's' : ''} did not complete: ` +
+          `${errors.slice(0, 2).join('; ')}. You can finish these in Settings.`,
+          { duration: 10000 },
+        )
+      } else {
+        toast.success('Welcome! Your workspace is ready.')
+      }
       setStep(5) // done state
       setTimeout(onComplete, 1400)
     } catch (e: any) {

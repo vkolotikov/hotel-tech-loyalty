@@ -171,6 +171,21 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
     'Team & Roles':      'Teachers & Roles',
     'Hotel Loyalty':     'Student Rewards',
   },
+  // Generic business. Neutral replacements only — enough to stop a
+  // plumber or agency reading "Hotel Info" and "Rooms & Services",
+  // without inventing a vocabulary we can't know. Per the rule above,
+  // NO identity mappings (they break the i18n chain), and
+  // 'Reservations' is left alone so it doesn't collide with the
+  // 'Bookings' parent group label.
+  other: {
+    'Hotel Info':        'Business Info',
+    'Hotel Loyalty':     'Loyalty',
+    'Rooms & Services':  'Services',
+    'Masters':           'Staff',
+    'Properties':        'Locations',
+    'Booking Engine':    'Booking',
+    'Member App':        'Customer App',
+  },
   fitness: {
     // No 'Members' override — "Members" IS the right word for a gym.
     // An identity mapping would break i18n for fitness orgs.

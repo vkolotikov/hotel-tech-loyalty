@@ -246,6 +246,7 @@ class OrganizationSetupService
             'education'   => '#7c6fd8', // indigo
             'legal'       => '#8a99b5', // steel
             'real_estate' => '#3fae8a', // emerald
+            'other'       => '#4c6ef5', // neutral indigo
             default       => '#c9a84c', // hotel gold
         };
     }
@@ -264,6 +265,7 @@ class OrganizationSetupService
             'education'   => ['name' => 'Course Feedback',      'intro' => 'Thank you for learning with us. Your feedback helps us improve.'],
             'legal'       => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
             'real_estate' => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
+            'other'       => ['name' => 'Customer Feedback',    'intro' => 'Thank you for choosing us. Your feedback helps us improve.'],
             default       => ['name' => 'Stay Feedback',        'intro' => 'We hope you enjoyed your stay. Your feedback helps us improve.'],
         };
     }
@@ -376,7 +378,14 @@ class OrganizationSetupService
         // expiry policy and no points-per-currency, so those crons and
         // earn calculations silently used code defaults the admin had
         // never seen. Medical stays excluded (no patient loyalty).
-        $hasLoyaltyProgramme = $resolvedIndustry !== 'medical';
+        // Single source of truth, shared with LoyaltyPresetService, so the
+        // settings and the tier ladder can never disagree about whether an
+        // industry has a programme at all.
+        $hasLoyaltyProgramme = !in_array(
+            $resolvedIndustry,
+            \App\Services\LoyaltyPresetService::NO_PROGRAMME_INDUSTRIES,
+            true
+        );
         if ($hasLoyaltyProgramme && !$seedLoyalty) {
             array_push($defaults,
                 ['key' => 'referrer_bonus_points', 'value' => '250', 'type' => 'number', 'group' => 'loyalty', 'label' => 'Referrer Bonus Points'],

@@ -61,6 +61,7 @@ const INDUSTRY_HIDDEN_GROUPS: Record<IndustryId, ReadonlyArray<string>> = {
   real_estate: [],
   education: [],
   fitness: [],
+  other: [],
 }
 
 /**
@@ -93,6 +94,9 @@ const INDUSTRY_HIDDEN_ITEMS: Record<IndustryId, ReadonlyArray<string>> = {
   real_estate: [],
   education: [],
   fitness: [],
+  // Generic business — nothing extra hidden beyond the group-level
+  // booking hide.
+  other: [],
 }
 
 /**
@@ -119,10 +123,22 @@ const INDUSTRY_HIDDEN_SETTINGS_TABS: Record<IndustryId, ReadonlyArray<string>> =
   restaurant: [
     'booking',
   ],
-  legal: ['booking', 'loyalty', 'mobile_app'],
-  real_estate: ['booking', 'loyalty', 'mobile_app'],
+  // `loyalty` deliberately NOT hidden here any more. The Members &
+  // Loyalty NAV GROUP is visible for these two (see
+  // INDUSTRY_HIDDEN_GROUPS above) and LoyaltyPresetService gives them a
+  // simple two-tier ladder — so hiding the settings tab left them with a
+  // programme they could see but never configure (no expiry policy, no
+  // points-per-currency). Either both go or neither; keeping the
+  // capability is the less destructive choice.
+  legal: ['booking', 'mobile_app'],
+  real_estate: ['booking', 'mobile_app'],
   education: ['booking', 'mobile_app'],
   fitness: ['booking'],
+  // A generic business keeps everything visible except the
+  // hotel-shaped PMS booking settings, same as the other service
+  // verticals. Loyalty stays ON — LoyaltyPresetService gives `other`
+  // the simple two-tier ladder, and the two must agree.
+  other: ['booking'],
 }
 
 /** Hook — returns the list of canonical group defaultLabels hidden by industry. */
