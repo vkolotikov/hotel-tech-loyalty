@@ -41,17 +41,29 @@ class AuthController extends Controller
             'nationality'   => 'nullable|string|max:100',
             'language'      => 'nullable|string|max:10',
             'referral_code' => 'nullable|string|max:20',
-            'organization_id' => 'nullable|integer|exists:organizations,id',
-            // Public sign-up passes the org's widget_token instead of a
-            // numeric id — same token the booking/services/chat widgets
-            // use, so a hotel can put one link on their website.
+            // NOTE: `organization_id` is deliberately NOT accepted here.
+            //
+            // This endpoint is public and anonymous, and organization ids are
+            // sequential, so accepting a caller-supplied id let anyone enrol
+            // themselves into ANY tenant's loyalty programme just by counting
+            // 1, 2, 3. Nothing legitimate sent it — the web portal has always
+            // used org_token, and the only client that referenced it was a
+            // mobile fallback gated on an env var that was set in no .env and
+            // no eas.json profile.
+            //
+            // Public sign-up passes the org's widget_token instead: an
+            // unguessable 32-char random string that is also revocable, and
+            // the same token the booking/services/chat widgets use, so a venue
+            // can put one link on their website.
             'org_token'     => 'nullable|string|max:191',
         ]);
 
         $validated['email'] = strtolower(trim($validated['email']));
 
-        // Bind org context for tenant-scoped queries (tier lookup, settings, etc.)
-        $orgId = $validated['organization_id'] ?? null;
+        // Bind org context for tenant-scoped queries (tier lookup, settings, etc.).
+        // Resolvable only from the public token or an already-bound tenant —
+        // never from a caller-supplied id, see the validation block above.
+        $orgId = null;
 
         if (!$orgId && !empty($validated['org_token'])) {
             // resolveByToken also binds brand context, so the member lands
