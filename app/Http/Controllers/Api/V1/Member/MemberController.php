@@ -131,6 +131,77 @@ class MemberController extends Controller
         ]);
     }
 
+    /**
+     * PUT /v1/member/password — change the signed-in member's password.
+     *
+     * This did not exist. The mobile Settings screen sent current_password /
+     * password / password_confirmation to PUT /v1/member/profile, whose
+     * validate() call lists none of those keys — so Laravel dropped all three,
+     * the endpoint returned 200 "Profile updated", and the app cheerfully
+     * reported "Password updated successfully" while the password was never
+     * touched. A member rotating a password they believe is compromised was
+     * left with the old one still live.
+     */
+    public function updatePassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password'         => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        // Hash::check throws on a hash it cannot parse, and CSV-imported
+        // members carry a deliberately unusable '!imported:...' placeholder
+        // rather than a bcrypt hash. Guard it, exactly as
+        // AuthController::passwordMatches does, so a 500 never leaks out of a
+        // wrong-password attempt.
+        $matches = false;
+        if ($user->password) {
+            try {
+                $matches = Hash::check($validated['current_password'], $user->password);
+            } catch (\Throwable) {
+                $matches = false;
+            }
+        }
+
+        if (!$matches) {
+            // 422 with a field-scoped error so the client can highlight the
+            // right input; deliberately does not distinguish "wrong password"
+            // from "no usable password set".
+            throw ValidationException::withMessages([
+                'current_password' => ['That password is incorrect.'],
+            ]);
+        }
+
+        // The User model casts `password` as 'hashed', so assigning the plain
+        // value hashes it once. Do NOT wrap in Hash::make here or it is hashed
+        // twice and the member can never sign in again.
+        $user->password = $validated['password'];
+        $user->save();
+
+        // Every other session for this member is now stale. Revoking them is
+        // the point of a password change when the old one was compromised —
+        // but keep the CURRENT token alive so the member is not signed out of
+        // the app they just used to fix their security.
+        try {
+            $currentId = $request->user()->currentAccessToken()?->id;
+            $query = $user->tokens();
+            if ($currentId) {
+                $query->where('id', '!=', $currentId);
+            }
+            $query->delete();
+        } catch (\Throwable $e) {
+            // Never fail the password change over session cleanup.
+            Log::warning('Could not revoke other tokens after password change', [
+                'user_id' => $user->id,
+                'error'   => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['message' => 'Password updated']);
+    }
+
     public function uploadAvatar(Request $request): JsonResponse
     {
         $request->validate([

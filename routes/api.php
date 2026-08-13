@@ -307,6 +307,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::prefix('member')->group(function () {
             Route::get('profile',           [MemberController::class, 'profile']);
             Route::put('profile',           [MemberController::class, 'updateProfile']);
+            // Throttled: this is a credential-verification surface, so it is
+            // an oracle for guessing the current password if left open.
+            Route::put('password',          [MemberController::class, 'updatePassword'])->middleware('throttle:6,1,member-password');
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
