@@ -105,8 +105,27 @@ class SettingsController extends Controller
             return $group->map(function ($setting) {
                 $value = $setting->typed_value;
 
-                // If DB value is empty, try env fallback
-                if (($value === '' || $value === null) && isset(self::ENV_FALLBACKS[$setting->key])) {
+                $isSecret = in_array($setting->key, self::SECRET_KEYS);
+
+                // If the org's own value is empty, fall back to the platform's
+                // env value so the UI can show what is actually in effect.
+                //
+                // NEVER for a secret. The env fallbacks point at the PLATFORM's
+                // own credentials, and the masked form below discloses the
+                // first four and last four characters — so for the 10-character
+                // production MAIL_PASSWORD this handed 8 of its 10 characters
+                // to every tenant super_admin who opened Settings, for an org
+                // that had configured nothing. Anyone who reassembled it could
+                // send as the platform's own domain, which is the fastest
+                // possible way to destroy the sending reputation every tenant
+                // shares.
+                //
+                // A secret an org has not set now reads as "not set", which is
+                // the truth.
+                if (!$isSecret
+                    && ($value === '' || $value === null)
+                    && isset(self::ENV_FALLBACKS[$setting->key])
+                ) {
                     $envVal = env(self::ENV_FALLBACKS[$setting->key]);
                     if ($envVal !== null && $envVal !== '') {
                         $value = $envVal;
@@ -114,7 +133,6 @@ class SettingsController extends Controller
                 }
 
                 // Mask secret keys
-                $isSecret = in_array($setting->key, self::SECRET_KEYS);
                 $masked = $isSecret && $value ? $this->maskSecret((string) $value) : null;
 
                 return [
@@ -669,8 +687,15 @@ class SettingsController extends Controller
 
     private function maskSecret(string $value): string
     {
-        if (strlen($value) <= 8) return '••••••••';
-        return substr($value, 0, 4) . str_repeat('•', min(20, strlen($value) - 8)) . substr($value, -4);
+        // Show only a short tail, and only when the secret is long enough that
+        // a tail is not most of it.
+        //
+        // The old form revealed the first FOUR and last FOUR characters, which
+        // for a 10-character password disclosed 8 of 10 — enough to reconstruct
+        // by hand. A masked secret exists so an admin can recognise which
+        // credential is set, not so they can read it.
+        if (strlen($value) < 12) return '••••••••';
+        return str_repeat('•', 8) . substr($value, -4);
     }
 
     private function getValueSource(HotelSetting $setting): string

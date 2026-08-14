@@ -39,6 +39,16 @@ class HotelSetting extends Model
         // the try/catch in getValueAttribute and re-encrypted on next save.
         'booking_smoobu_api_key',
         'booking_smoobu_webhook_secret',
+        // SMTP password for a tenant's own mail server. Previously plaintext
+        // in the settings table AND — because only ENCRYPTED_KEYS are excluded
+        // from cachedMapFor() — written a second time, in the clear, into the
+        // cache store. Encrypting it fixes both at once.
+        //
+        // NOTE: keys listed here are deliberately excluded from the cached map,
+        // so HotelSetting::getValue() will NOT return them (it falls through to
+        // the default). Read them with a direct query, as the Stripe and Smoobu
+        // consumers do.
+        'mail_password',
     ];
 
     protected static function booted(): void
