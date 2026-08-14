@@ -107,6 +107,23 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Campaign pacing
+    |--------------------------------------------------------------------------
+    |
+    | Seconds to wait between chunks of SendEmailCampaignChunk::CHUNK (100)
+    | recipients. Shared SMTP relays enforce an hourly ceiling — commonly a few
+    | hundred messages — and exceeding it gets mail deferred or the account
+    | throttled, which reads as a spam run to the receiving side.
+    |
+    | 60s => 100 recipients/minute => 6,000/hour. Raise it only to whatever the
+    | relay actually permits; a dedicated ESP can take far more.
+    |
+    */
+
+    'campaign_chunk_seconds' => env('MAIL_CAMPAIGN_CHUNK_SECONDS', 60),
+
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),
