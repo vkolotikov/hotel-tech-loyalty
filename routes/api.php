@@ -629,19 +629,27 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('nfc/issue',              [NfcController::class, 'issue']);
             Route::delete('nfc/{id}',             [NfcController::class, 'deactivate']);
 
+            // READS stay open to any staff member — the counter needs to see
+            // what is on offer. WRITES are gated on can_manage_offers, which
+            // the staff table has carried (and TeamController has let admins
+            // set) since forever while nothing ever checked it.
             Route::get('offers',                  [OffersAdminController::class, 'index']);
-            Route::post('offers',                 [OffersAdminController::class, 'store']);
-            Route::post('offers/generate-ai',     [OffersAdminController::class, 'generateAiOffer']);
             Route::get('offers/{id}',             [OffersAdminController::class, 'show']);
-            Route::put('offers/{id}',             [OffersAdminController::class, 'update']);
-            Route::delete('offers/{id}',          [OffersAdminController::class, 'destroy']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('offers',              [OffersAdminController::class, 'store']);
+                Route::post  ('offers/generate-ai',  [OffersAdminController::class, 'generateAiOffer']);
+                Route::put   ('offers/{id}',         [OffersAdminController::class, 'update']);
+                Route::delete('offers/{id}',         [OffersAdminController::class, 'destroy']);
+            });
 
-            // Benefits & fulfillment
+            // Benefits & fulfillment — same split.
             Route::get('benefits',                             [BenefitAdminController::class, 'index']);
-            Route::post('benefits',                            [BenefitAdminController::class, 'store']);
-            Route::put('benefits/{id}',                        [BenefitAdminController::class, 'update']);
-            Route::delete('benefits/{id}',                     [BenefitAdminController::class, 'destroy']);
-            Route::post('benefits/{id}/toggle',                [BenefitAdminController::class, 'toggle']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('benefits',                      [BenefitAdminController::class, 'store']);
+                Route::put   ('benefits/{id}',                 [BenefitAdminController::class, 'update']);
+                Route::delete('benefits/{id}',                 [BenefitAdminController::class, 'destroy']);
+                Route::post  ('benefits/{id}/toggle',          [BenefitAdminController::class, 'toggle']);
+            });
             // ─── Discounts: what a member actually gets off a bill ───
             // The counter-facing side of the benefit/offer engine. `quote`
             // is read-only so staff can re-quote as an order changes;
@@ -651,8 +659,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('discounts/offers/{id}/use',           [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'useOffer']);
 
             Route::get('tiers/{tierId}/benefits',              [BenefitAdminController::class, 'tierBenefits']);
-            Route::post('tier-benefits',                       [BenefitAdminController::class, 'assignTierBenefit']);
-            Route::delete('tier-benefits/{id}',                [BenefitAdminController::class, 'removeTierBenefit']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('tier-benefits',                 [BenefitAdminController::class, 'assignTierBenefit']);
+                Route::delete('tier-benefits/{id}',            [BenefitAdminController::class, 'removeTierBenefit']);
+            });
             Route::get('entitlements',                         [BenefitAdminController::class, 'entitlements']);
             Route::post('entitlements/{id}/action',            [BenefitAdminController::class, 'actionEntitlement']);
 

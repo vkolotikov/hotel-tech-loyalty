@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'brand'              => \App\Http\Middleware\BrandMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
+            'staff.can'          => \App\Http\Middleware\RequireStaffCapability::class,
         ]);
 
         // RFC 8058 one-click unsubscribe. Gmail and Yahoo POST to this URL
