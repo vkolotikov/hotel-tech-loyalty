@@ -160,10 +160,13 @@ Route::prefix('v1')->group(function () {
     Route::get('track/open/{recipient}', [CampaignTrackingController::class, 'open']);
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
-    // Apple Wallet pkpass — public route that accepts a Sanctum token
-    // via ?token= query because Safari navigations to the .pkpass URL
-    // can't carry an Authorization header. Token is resolved inside the
-    // controller using PersonalAccessToken::findToken.
+    // Apple Wallet pkpass — public route, because a Safari navigation to the
+    // .pkpass URL can't carry an Authorization header. It authenticates with a
+    // single-use ?pass= nonce minted by the authenticated
+    // member/card/apple-wallet/link endpoint (see WalletPassController).
+    // It used to accept a raw Sanctum token as ?token=; that put a
+    // never-expiring credential into access logs and browser history, and is
+    // gone.
     // NOTE: this route sits inside Route::prefix('v1') above, so the path
     // is just 'member/...' — adding 'v1/' here would produce /api/v1/v1/...
     Route::get('member/card/apple-wallet', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'apple']);

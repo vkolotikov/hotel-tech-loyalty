@@ -9,7 +9,6 @@ use App\Services\GoogleWalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
-use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -115,16 +114,15 @@ class WalletPassController extends Controller
         }
 
         if (!$user) {
-            // DEPRECATED: raw Sanctum token in the query string. Kept only
-            // because the builds already installed from the stores (member
-            // 1.1.0) send it, and removing it would break "Add to Wallet" for
-            // every existing user until they update. Remove once those builds
-            // are retired — see the ?pass= path above.
-            $tokenString = (string) $request->query('token', '');
-            if ($tokenString === '') abort(401, 'Token required.');
-            $token = PersonalAccessToken::findToken($tokenString);
-            $user = $token?->tokenable;
-            if (!$user) abort(401, 'Invalid or expired token.');
+            // The ?token= path is GONE. It accepted a raw, never-expiring
+            // Sanctum token in the query string, which meant the credential was
+            // written to web-server access logs, Safari history and every proxy
+            // in between — one leaked log line was permanent account access.
+            //
+            // It was briefly kept for the builds already on the stores, but
+            // there are no app users yet, so there is nothing to keep
+            // compatibility with and no reason to leave the weaker door open.
+            abort(401, 'A download link is required. Please try again from the app.');
         }
 
         $member = $user->loyaltyMember()->withoutGlobalScopes()->first();
