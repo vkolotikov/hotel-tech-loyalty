@@ -56,6 +56,14 @@ class MemberController extends Controller
                 'id'           => $org->id,
                 'name'         => $org->name,
                 'widget_token' => $org->widget_token,
+                // Support contacts. The mobile Help screen previously shipped
+                // a hard-coded support@hotel-loyalty.com and +1 (800) 123-4567
+                // — a mailbox that bounces and a phone number that belongs to
+                // nobody — to every tenant's members. Send the venue's own
+                // details so "Email us" reaches the venue the member is
+                // actually a member of; the client hides the row when null.
+                'email'        => $org->email,
+                'phone'        => $org->phone,
             ] : null,
         ]);
     }
