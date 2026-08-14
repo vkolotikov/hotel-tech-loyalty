@@ -8,6 +8,7 @@ use App\Services\AppleWalletService;
 use App\Services\GoogleWalletService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -45,15 +46,80 @@ class WalletPassController extends Controller
         ], 404);
     }
 
-    public function apple(Request $request, AppleWalletService $apple): Response
+    /**
+     * How long a wallet download nonce stays valid. Long enough to survive the
+     * app→Safari handoff on a slow device, short enough that a leaked log line
+     * is worthless by the time anyone reads it.
+     */
+    private const PASS_NONCE_TTL = 120;
+
+    private const PASS_NONCE_PREFIX = 'wallet_pass_nonce:';
+
+    /**
+     * GET /v1/member/card/apple-wallet/link — mint a one-time download URL.
+     *
+     * Authenticated normally (Bearer header), so nothing sensitive is ever put
+     * in a URL. Returns a URL carrying a single-use nonce that `apple()` below
+     * exchanges for the pass.
+     *
+     * WHY: the mobile app used to open
+     *   /v1/member/card/apple-wallet?token=<the member's Sanctum token>
+     * in Safari, because a Safari navigation cannot carry an Authorization
+     * header. That put a LONG-LIVED bearer token — these do not expire — into
+     * the query string, where it is written to web-server access logs, Safari
+     * history, and any proxy or CDN in between. One leaked log line is
+     * permanent access to that member's account.
+     *
+     * The nonce is single-use (Cache::pull is get-and-delete) and expires in
+     * two minutes, so the same exposure is worth nothing.
+     */
+    public function appleLink(Request $request): JsonResponse
     {
-        // Manual auth — this route is public so it can be reached via
-        // a Safari navigation (which can't carry an Authorization
-        // header). Token rides in ?token=. We also skip tenant
-        // middleware on this public route, so the org context is
-        // re-bound manually below for any scoped queries downstream.
         $user = $request->user();
         if (!$user) {
+            abort(401, 'Authentication required.');
+        }
+
+        $member = $user->loyaltyMember()->withoutGlobalScopes()->first();
+        if (!$member) {
+            abort(404, 'No loyalty membership on this account.');
+        }
+
+        $nonce = bin2hex(random_bytes(32));
+        Cache::put(self::PASS_NONCE_PREFIX . $nonce, $user->id, self::PASS_NONCE_TTL);
+
+        return response()->json([
+            'url'        => url('/api/v1/member/card/apple-wallet?pass=' . $nonce),
+            'expires_in' => self::PASS_NONCE_TTL,
+        ]);
+    }
+
+    public function apple(Request $request, AppleWalletService $apple): Response
+    {
+        // Manual auth — this route is public so it can be reached via a Safari
+        // navigation, which cannot carry an Authorization header. The org
+        // context is re-bound manually below for scoped queries downstream.
+        $user = $request->user();
+
+        if (!$user) {
+            // Preferred: a single-use nonce minted by appleLink(). Cache::pull
+            // is get-and-delete, so a replayed URL fails even inside the TTL.
+            $nonce = (string) $request->query('pass', '');
+            if ($nonce !== '') {
+                $userId = Cache::pull(self::PASS_NONCE_PREFIX . $nonce);
+                $user = $userId ? \App\Models\User::withoutGlobalScopes()->find($userId) : null;
+                if (!$user) {
+                    abort(401, 'This download link has expired. Please try again from the app.');
+                }
+            }
+        }
+
+        if (!$user) {
+            // DEPRECATED: raw Sanctum token in the query string. Kept only
+            // because the builds already installed from the stores (member
+            // 1.1.0) send it, and removing it would break "Add to Wallet" for
+            // every existing user until they update. Remove once those builds
+            // are retired — see the ?pass= path above.
             $tokenString = (string) $request->query('token', '');
             if ($tokenString === '') abort(401, 'Token required.');
             $token = PersonalAccessToken::findToken($tokenString);

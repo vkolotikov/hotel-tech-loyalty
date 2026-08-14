@@ -313,6 +313,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
+            // Mints a single-use, 2-minute URL for the Apple Wallet pass.
+            // Authenticated by header, so the member's long-lived Sanctum
+            // token never has to travel in a query string (and therefore into
+            // access logs and Safari history) the way ?token= does.
+            Route::get('card/apple-wallet/link', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'appleLink']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             // Tier benefits the member holds, and requests for the ones
