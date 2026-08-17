@@ -7,6 +7,7 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -118,5 +119,14 @@ class AppServiceProvider extends ServiceProvider
                 Log::warning('[sched] failed to log skip', ['cmd' => $cmd, 'error' => $e->getMessage()]);
             }
         });
+
+        // Suppression enforcement for EVERY outbound email.
+        //
+        // Registered on the event rather than inside the send sites because
+        // there are ~26 of them across 18 files and only one currently consults
+        // the compliance service. Returning false from a MessageSending
+        // listener cancels the send, so this cannot be bypassed by a call site
+        // added later — see App\Listeners\BlockSuppressedRecipients.
+        Event::listen(MessageSending::class, \App\Listeners\BlockSuppressedRecipients::class);
     }
 }

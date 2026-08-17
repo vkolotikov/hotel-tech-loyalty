@@ -71,7 +71,17 @@ return [
     'ses' => [
         'key' => env('AWS_ACCESS_KEY_ID'),
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
-        'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+        // Default matches the app's own region (Laravel Cloud, EU West London)
+        // rather than us-east-1 — SES identities and the sandbox are per-region,
+        // so a mismatch silently sends from an account that verified nothing.
+        'region' => env('AWS_DEFAULT_REGION', 'eu-west-2'),
+
+        // SNS topic that delivers bounce/complaint notifications to
+        // POST /api/v1/webhooks/ses. This is the credential for that endpoint:
+        // without it anyone who guessed the URL could POST a forged complaint
+        // and permanently silence any address. SesWebhookController REFUSES to
+        // accept unverified notifications in production.
+        'topic_arn' => env('SES_TOPIC_ARN'),
     ],
 
     'smoobu' => [

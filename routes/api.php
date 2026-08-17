@@ -188,6 +188,17 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 
+    // ─── Email delivery feedback (Amazon SES via SNS) ───────────────────────
+    // Bounces and complaints, which populate the suppression list. Public by
+    // necessity — SNS has no session and cannot carry a CSRF token; the
+    // credential is the TopicArn check plus the unguessable path.
+    //
+    // Rate limit is generous: a large campaign to a stale list can legitimately
+    // produce a burst of bounce notifications, and dropping them would leave
+    // dead addresses in circulation, which is the exact problem this solves.
+    Route::post('webhooks/ses', [\App\Http\Controllers\Api\V1\Webhooks\SesWebhookController::class, 'handle'])
+        ->middleware('throttle:600,1');
+
     // ─── Public Services Reservation Widget API ─────────────────────────────
     Route::prefix('services')->middleware('throttle:60,1')->group(function () {
         Route::get('config',          [ServicePublicController::class, 'config']);

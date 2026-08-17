@@ -7,6 +7,7 @@ use App\Models\CampaignRecipient;
 use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use App\Models\NotificationCampaign;
+use App\Services\EmailComplianceService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -236,6 +237,12 @@ class NotificationController extends Controller
             'scheduled_at'      => $validated['scheduled_at'] ?? null,
         ]);
 
+        // Venue identity, resolved once rather than per recipient.
+        $org = \App\Models\Organization::find(
+            app()->bound('current_organization_id') ? app('current_organization_id') : null
+        );
+        $orgName = $org?->name;
+
         // Build member query based on segment rules
         $rules = $validated['segment_rules'] ?? [];
         $query = LoyaltyMember::with(['user', 'tier'])->where('is_active', true);
@@ -285,7 +292,20 @@ class NotificationController extends Controller
             // Send email (with tracking pixel)
             if ($sendEmail && $emailTemplate) {
                 $member->loadMissing(['user', 'tier']);
-                $toEmail = $member->email_notifications ? ($member->user->email ?? null) : null;
+
+                // This campaign carries an open-tracking pixel, so it is
+                // marketing by any regulator's definition and needs real
+                // consent — not just the `email_notifications` channel switch
+                // this used to check alone. Gating on that switch sent
+                // commercial mail to members who had never agreed to receive
+                // any, which is the exact bug SegmentAdminController documents
+                // as already fixed on its own path.
+                $compliance = app(EmailComplianceService::class);
+                if (!$compliance->canReceive($member, 'marketing')) {
+                    continue;
+                }
+
+                $toEmail = $member->user->email ?? null;
                 if (!$toEmail) {
                     continue;
                 }
@@ -307,9 +327,31 @@ class NotificationController extends Controller
                         ? str_replace('</body>', $pixel . '</body>', $html)
                         : $html . $pixel;
 
-                    Mail::html($html, function ($message) use ($toEmail, $member, $rendered) {
+                    // Unsubscribe footer + RFC 8058 one-click headers. Gmail
+                    // and Yahoo require both of a bulk sender; this path had
+                    // neither, so every message it sent was a deliverability
+                    // liability for every tenant on the shared domain.
+                    $html .= $compliance->footerHtml($member, $orgName);
+
+                    Mail::html($html, function ($message) use (
+                        $toEmail, $member, $rendered, $compliance, $orgName, $org
+                    ) {
                         $message->to($toEmail, $member->user->name)
                                 ->subject($rendered['subject']);
+
+                        // Send as the venue, not as the platform. Recipients
+                        // otherwise get marketing from a brand they have never
+                        // heard of, which is a spam-report magnet. The address
+                        // stays on the platform domain because that is where
+                        // SPF and DKIM are published.
+                        if ($orgName) {
+                            $message->from(config('mail.from.address'), $orgName);
+                        }
+                        if ($org?->email) {
+                            $message->replyTo($org->email, $orgName ?: null);
+                        }
+
+                        $compliance->applyHeaders($message, $member, 'marketing');
                     });
                     $emailCount++;
                 } catch (\Throwable $e) {
