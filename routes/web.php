@@ -191,7 +191,36 @@ Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
     // Build the API base URL relative to this server
     $apiBase = rtrim(url('/'), '/') . '/api';
 
-    return view('booking-widget', compact('orgId', 'lang', 'color', 'apiBase'));
+    // Resolve the org's industry so the EMBEDDED widget speaks the same
+    // language as the standalone /book/{token} page. Without this the Blade
+    // falls back to hotel defaults, so a salon embedding the widget on their
+    // own site invited customers to "Book your stay" and pick a "room".
+    //
+    // `org` may be a numeric organisation id or a brand widget token — the
+    // loader documents the id, older embeds use the token. Try both, and fall
+    // through to the hotel defaults if neither resolves, which is exactly
+    // today's behaviour.
+    $org = ctype_digit((string) $orgId)
+        ? \App\Models\Organization::withoutGlobalScopes()->find((int) $orgId)
+        : (\App\Models\Brand::resolveByToken((string) $orgId)?->organization);
+
+    $industry = $org?->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
+    $vocab    = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
+
+    // MUST allow framing. This page exists only to be embedded in a customer's
+    // own website via widget/booking-loader.js, and the platform serves
+    // `X-Frame-Options: deny` by default at the edge — so without an explicit
+    // override the browser refused to render the iframe and the customer saw
+    // blank space with no error on the page.
+    //
+    // Every other embeddable route (services-widget, review, kiosk) already did
+    // this; the booking widget was simply missed. `frame-ancestors *` is the
+    // part modern browsers act on; the X-Frame-Options line matches the idiom
+    // used by its siblings and neutralises the inherited `deny` for older ones.
+    return response()
+        ->view('booking-widget', compact('orgId', 'lang', 'color', 'apiBase', 'industry', 'vocab'))
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
 });
 
 // ─── Public Services Reservation Widget (embeddable) ───────────────────────
@@ -321,15 +350,20 @@ Route::get('/book/{token}', function (string $token) {
     $industry = $org->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
     $vocab = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
 
-    return view('booking-widget', [
-        'orgId'  => $token,
-        'lang'   => request('lang', 'en'),
-        'color'  => $color,
-        'apiBase' => $apiBase,
-        'standalone' => true,
-        'industry' => $industry,
-        'vocab'    => $vocab,
-    ]);
+    // Allow framing for parity with /booking-widget: this is the same public
+    // page, and customers do embed the standalone URL directly.
+    return response()
+        ->view('booking-widget', [
+            'orgId'  => $token,
+            'lang'   => request('lang', 'en'),
+            'color'  => $color,
+            'apiBase' => $apiBase,
+            'standalone' => true,
+            'industry' => $industry,
+            'vocab'    => $vocab,
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
 });
 
 // ─── Public Review Page (tokenized + embed-key) ─────────────────────────────

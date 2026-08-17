@@ -36,13 +36,25 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
     ? window.location.origin
     : 'http://localhost/hotel-tech/apps/loyalty/backend/public'
 
+  // Two embed shapes, because site builders differ.
+  //
+  // `snippet` is the script loader — it auto-resizes the iframe as the widget
+  // grows, so it is the better experience wherever it works.
+  //
+  // `iframe` is the fallback for builders that strip <script> from content
+  // areas or move it elsewhere on the page. Joomla's editor and YOOtheme both
+  // do this, as do several Wix and Squarespace blocks. A plain iframe cannot be
+  // stripped and has no JavaScript to misfire; the trade-off is a fixed height
+  // instead of auto-resize.
   const rooms = {
     snippet: `<!-- Hotel Tech Booking Widget -->\n<div id="hoteltech-booking"></div>\n<script src="${widgetBaseUrl}/widget/booking-loader.js"\n        data-org="${widgetToken}"></script>`,
+    iframe:  `<iframe src="${widgetBaseUrl}/booking-widget?org=${widgetToken}"\n        width="100%" height="700" frameborder="0"\n        style="border:0;border-radius:12px;" title="Book now"></iframe>`,
     preview: `${widgetBaseUrl}/booking-widget?org=${widgetToken}`,
     direct:  `${widgetBaseUrl}/book/${widgetToken}`,
   }
   const services = {
     snippet: `<!-- Hotel Tech Services Widget -->\n<div id="hoteltech-services"></div>\n<script src="${widgetBaseUrl}/widget/services-loader.js"\n        data-org="${widgetToken}"></script>`,
+    iframe:  `<iframe src="${widgetBaseUrl}/services-widget?org=${widgetToken}"\n        width="100%" height="700" frameborder="0"\n        style="border:0;border-radius:12px;" title="Book a service"></iframe>`,
     preview: `${widgetBaseUrl}/services-widget?org=${widgetToken}`,
     direct:  `${widgetBaseUrl}/services/${widgetToken}`,
   }
@@ -161,6 +173,19 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             <div className="relative">
               <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{embed.snippet}</pre>
               <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-snippet`, embed.snippet)}</div>
+            </div>
+
+            {/* Iframe fallback — for builders that strip or move <script> */}
+            <div className="mt-3">
+              <p className="text-[11px] text-gray-500 mb-1.5">
+                Using Joomla, YOOtheme, Wix or Squarespace? Some page builders remove
+                <code className="mx-1 px-1 rounded bg-white/[0.06] text-gray-400">&lt;script&gt;</code>
+                tags from page content. Use this instead — it always works, but keeps a fixed height.
+              </p>
+              <div className="relative">
+                <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{embed.iframe}</pre>
+                <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-iframe`, embed.iframe)}</div>
+              </div>
             </div>
 
             {/* Direct URL + preview link */}
