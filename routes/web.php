@@ -268,15 +268,23 @@ Route::get('/services/{token}', function (string $token) {
     $industry = $org->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
     $vocab = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
 
-    return view('services-widget', [
-        'orgId'  => $token,
-        'lang'   => request('lang', 'en'),
-        'color'  => $color,
-        'apiBase' => $apiBase,
-        'standalone' => true,
-        'industry' => $industry,
-        'vocab'    => $vocab,
-    ]);
+    // Allow framing, for the same reason /book/{token} does: Settings hands
+    // this URL to venues as the services "direct link", and they paste it into
+    // their own site. The platform serves X-Frame-Options: deny by default, so
+    // without an explicit override the browser silently drops the iframe and
+    // the venue sees blank space with nothing in their page console.
+    return response()
+        ->view('services-widget', [
+            'orgId'  => $token,
+            'lang'   => request('lang', 'en'),
+            'color'  => $color,
+            'apiBase' => $apiBase,
+            'standalone' => true,
+            'industry' => $industry,
+            'vocab'    => $vocab,
+        ])
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
 });
 
 // ─── Standalone Chat Widget Page (mobile WebView host) ────────────────────
