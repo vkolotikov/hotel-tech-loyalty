@@ -28,6 +28,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class BookingRefundMail extends Mailable implements ShouldQueue
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public $tries = 3;
@@ -68,6 +70,10 @@ class BookingRefundMail extends Mailable implements ShouldQueue
         $this->industry         = Organization::withoutGlobalScopes()
             ->find($mirror->organization_id)?->resolved_industry
             ?? Organization::DEFAULT_INDUSTRY;
+    
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
     }
 
     public function envelope(): Envelope
@@ -77,6 +83,8 @@ class BookingRefundMail extends Mailable implements ShouldQueue
         $type = $this->isFull ? 'Refund' : 'Partial refund';
         return new Envelope(
             subject: "{$type} confirmed — {$this->hotelName} · {$this->bookingReference}",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

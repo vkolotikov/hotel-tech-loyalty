@@ -22,6 +22,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class AdminBookingNotificationMail extends Mailable
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public function __construct(
@@ -57,7 +59,11 @@ class AdminBookingNotificationMail extends Mailable
         public ?string $paymentReference = null,   // Stripe PaymentIntent id, etc.
         public ?int $mirrorId = null,              // BookingMirror.id — drives the deep-link
         public ?float $customerLtv = null,         // Lifetime value in $currency if available
-    ) {}
+    ) {
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
+    }
 
     public function envelope(): Envelope
     {
@@ -65,6 +71,8 @@ class AdminBookingNotificationMail extends Mailable
         $what = $this->kind === 'service' ? ($this->serviceName ?? 'Service') : ($this->unitName ?? 'Room');
         return new Envelope(
             subject: "🔔 New {$this->kind} booking — {$what} · {$this->guestName} ({$when})",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

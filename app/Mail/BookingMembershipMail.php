@@ -10,6 +10,8 @@ use Illuminate\Queue\SerializesModels;
 
 class BookingMembershipMail extends Mailable
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public function __construct(
@@ -24,12 +26,18 @@ class BookingMembershipMail extends Mailable
         // → hotel framing. Medical orgs (hasLoyalty=false per
         // decision #5) shouldn't reach this email at all.
         public ?string $industry = null,
-    ) {}
+    ) {
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
             subject: "Your {$this->hotelName} Membership — Activate Your Account",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 
