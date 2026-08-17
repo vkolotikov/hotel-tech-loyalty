@@ -2134,7 +2134,7 @@ export function Settings() {
     // ── Payments & Communication ──
     const serviceSections: Section[] = [
       { id: 'stripe',    title: 'Stripe',              subtitle: 'Payment processing for bookings & invoices',  icon: CreditCard,    keys: ['stripe_publishable_key', 'stripe_secret_key', 'stripe_webhook_secret', 'stripe_currency'], testType: 'stripe' },
-      { id: 'mail',      title: 'Email / SMTP',        subtitle: 'Transactional emails & notifications',        icon: Mail,          keys: ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from_address', 'mail_from_name'], testType: 'mail' },
+      { id: 'mail',      title: 'Email sender',        subtitle: 'How your emails appear to customers',         icon: Mail,          keys: ['mail_from_name', 'mail_reply_to'], testType: 'mail' },
       { id: 'twilio',    title: 'Twilio',              subtitle: 'SMS notifications & booking confirmations',   icon: Phone,         keys: ['twilio_account_sid', 'twilio_auth_token', 'twilio_phone_number'], testType: 'twilio' },
       { id: 'whatsapp',  title: 'WhatsApp Business',   subtitle: 'Guest messaging via Meta Cloud API',          icon: MessageSquare, keys: ['whatsapp_phone_id', 'whatsapp_access_token', 'whatsapp_verify_token'], testType: 'whatsapp' },
       { id: 'expo',      title: 'Push Notifications',  subtitle: 'Expo push service for mobile app',            icon: Smartphone,    keys: ['expo_access_token'], testType: 'expo' },

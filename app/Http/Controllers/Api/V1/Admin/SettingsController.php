@@ -15,7 +15,7 @@ class SettingsController extends Controller
     private const SECRET_KEYS = [
         'ai_openai_api_key', 'ai_anthropic_api_key',
         'booking_smoobu_api_key', 'booking_smoobu_webhook_secret',
-        'mail_password', 'expo_access_token',
+        'expo_access_token',
         'stripe_secret_key', 'stripe_webhook_secret',
         'twilio_auth_token',
         'whatsapp_access_token', 'whatsapp_verify_token',
@@ -54,11 +54,6 @@ class SettingsController extends Controller
         'booking_smoobu_api_key'       => 'SMOOBU_API_KEY',
         'booking_smoobu_channel_id'    => 'SMOOBU_CHANNEL_ID',
         'booking_smoobu_base_url'      => 'SMOOBU_BASE_URL',
-        'mail_host'                    => 'MAIL_HOST',
-        'mail_port'                    => 'MAIL_PORT',
-        'mail_username'                => 'MAIL_USERNAME',
-        'mail_password'                => 'MAIL_PASSWORD',
-        'mail_from_address'            => 'MAIL_FROM_ADDRESS',
         'mail_from_name'               => 'MAIL_FROM_NAME',
         'expo_access_token'            => 'EXPO_ACCESS_TOKEN',
         // stripe_* keys are deliberately NOT listed here — each customer
@@ -477,12 +472,17 @@ class SettingsController extends Controller
             ['key' => 'stripe_secret_key',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Secret Key'],
             ['key' => 'stripe_webhook_secret',        'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Webhook Secret'],
             ['key' => 'stripe_currency',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Stripe Currency'],
-            ['key' => 'mail_host',                    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Host'],
-            ['key' => 'mail_port',                    'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Port'],
-            ['key' => 'mail_username',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Username'],
-            ['key' => 'mail_password',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'SMTP Password'],
-            ['key' => 'mail_from_address',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'From Address'],
-            ['key' => 'mail_from_name',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'From Name'],
+            // Sender identity a venue can safely control. The SMTP host /
+            // port / username / password rows that used to live here were
+            // deleted (see 2026_08_14_100000): nothing ever read them, and a
+            // server-side SMTP client aimed at a tenant-supplied host is an
+            // SSRF vector. A venue sends as itself by verifying a DOMAIN in
+            // SES, not by handing us a password.
+            //
+            // From ADDRESS is deliberately absent too — it must stay on the
+            // platform's authenticated domain or DMARC alignment breaks.
+            ['key' => 'mail_from_name',               'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Sender name',      'description' => 'The name recipients see on email from your venue. Defaults to your organisation name.'],
+            ['key' => 'mail_reply_to',                'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Reply-to address', 'description' => 'Where replies go. Defaults to your organisation email.'],
             ['key' => 'twilio_account_sid',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Account SID'],
             ['key' => 'twilio_auth_token',            'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Auth Token'],
             ['key' => 'twilio_phone_number',          'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Twilio Phone Number'],
@@ -840,19 +840,63 @@ class SettingsController extends Controller
         }
     }
 
+    /**
+     * Send a real test email to the signed-in admin.
+     *
+     * This used to open a TCP socket to `mail_host` — and resolveKey() fell
+     * back to the PLATFORM's MAIL_HOST, so an org that had configured nothing
+     * got a green "SMTP reachable". The screen certified a configuration that
+     * did not exist and would not have been used if it had.
+     *
+     * A test that does not exercise the real send path is worse than no test:
+     * it converts "I do not know" into "confirmed working". So this sends an
+     * actual message through the actual mailer, with the org's actual sender
+     * identity, and reports what happened.
+     */
     private function testMail(): JsonResponse
     {
-        $host = $this->resolveKey('mail_host', 'MAIL_HOST');
-        if (!$host) return response()->json(['success' => false, 'message' => 'No SMTP host configured']);
+        $user = request()->user();
+        $to   = $user?->email;
 
-        $port = (int) ($this->resolveKey('mail_port', 'MAIL_PORT') ?? 587);
-        try {
-            $conn = @fsockopen($host, $port, $errno, $errstr, 5);
-            if ($conn) { fclose($conn); return response()->json(['success' => true, 'message' => "SMTP reachable on {$host}:{$port}"]); }
-            return response()->json(['success' => false, 'message' => "Cannot reach {$host}:{$port}: {$errstr}"]);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => $e->getMessage()]);
+        if (!$to) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No address to send to — your account has no email.',
+            ]);
         }
+
+        $orgId    = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
+        $identity = app(\App\Services\MailIdentityService::class)->forOrganization($orgId);
+
+        try {
+            \Illuminate\Support\Facades\Mail::html(
+                '<p>This is a test email from your workspace.</p>'
+                . '<p>If you received it, sending is working and this is how your '
+                . 'name appears to recipients.</p>',
+                function ($message) use ($to, $identity) {
+                    $message->to($to)->subject('Test email from your workspace');
+                    if ($identity['from_name']) {
+                        $message->from($identity['from_address'], $identity['from_name']);
+                    }
+                    if ($identity['reply_to']) {
+                        $message->replyTo($identity['reply_to']);
+                    }
+                },
+            );
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Send failed: ' . $e->getMessage(),
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Test email sent to {$to} as \"" . ($identity['from_name'] ?: config('mail.from.name')) . '\". '
+                . 'If it does not arrive within a few minutes, check your spam folder.',
+            'sender'   => $identity['from_name'],
+            'reply_to' => $identity['reply_to'],
+        ]);
     }
 
     private function testStripe(): JsonResponse
