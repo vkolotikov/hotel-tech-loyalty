@@ -7,7 +7,6 @@ use App\Models\CampaignRecipient;
 use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use App\Models\NotificationCampaign;
-use App\Services\EmailComplianceService;
 use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -237,15 +236,11 @@ class NotificationController extends Controller
             'scheduled_at'      => $validated['scheduled_at'] ?? null,
         ]);
 
-        // Venue identity, resolved once rather than per recipient.
-        $org = \App\Models\Organization::find(
-            app()->bound('current_organization_id') ? app('current_organization_id') : null
-        );
-        $orgName = $org?->name;
-
-        // Build member query based on segment rules
+        // Build member query based on segment rules.
+        // Only ids are needed — the job loads each chunk's members itself, so
+        // eager-loading the whole audience here would be wasted work.
         $rules = $validated['segment_rules'] ?? [];
-        $query = LoyaltyMember::with(['user', 'tier'])->where('is_active', true);
+        $query = LoyaltyMember::where('is_active', true);
 
         if (!empty($rules['tiers'])) {
             $query->whereHas('tier', fn($q) => $q->whereIn('name', $rules['tiers']));
@@ -262,122 +257,37 @@ class NotificationController extends Controller
             $query->whereNotNull('expo_push_token');
         }
 
-        $members = $query->get();
-        $pushCount = 0;
-        $emailCount = 0;
+        // Hand off to the queue instead of sending inline.
+        //
+        // This loop used to run in the HTTP request: one SMTP round-trip per
+        // member, no chunking, no pacing. A campaign to a few thousand members
+        // outlived any sane request timeout, so the admin got a 504 with no
+        // idea how many had been sent, and the campaign row stayed "sending"
+        // forever because the counters were only written after the loop.
+        // Meanwhile the relay received the whole list at once, which is how a
+        // shared sending reputation gets destroyed.
+        $memberIds = $query->pluck('id')->all();
 
-        foreach ($members as $member) {
-            // Send push notification
-            if ($sendPush && $member->expo_push_token) {
-                $pushRecipient = CampaignRecipient::create([
-                    'campaign_id'       => $campaign->id,
-                    'loyalty_member_id' => $member->id,
-                    'channel'           => 'push',
-                    'status'            => 'sent',
-                    'sent_at'           => now(),
-                ]);
-                try {
-                    $this->notifications->send($member, [
-                        'type'  => 'campaign',
-                        'title' => $validated['title'],
-                        'body'  => $validated['body'],
-                        'data'  => ['campaign_id' => $campaign->id],
-                    ]);
-                    $pushCount++;
-                } catch (\Throwable $e) {
-                    $pushRecipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
-                }
-            }
+        $campaign->forceFill(['target_count' => count($memberIds)])->save();
 
-            // Send email (with tracking pixel)
-            if ($sendEmail && $emailTemplate) {
-                $member->loadMissing(['user', 'tier']);
+        if ($memberIds === []) {
+            $campaign->forceFill(['status' => 'sent', 'sent_at' => now()])->save();
 
-                // This campaign carries an open-tracking pixel, so it is
-                // marketing by any regulator's definition and needs real
-                // consent — not just the `email_notifications` channel switch
-                // this used to check alone. Gating on that switch sent
-                // commercial mail to members who had never agreed to receive
-                // any, which is the exact bug SegmentAdminController documents
-                // as already fixed on its own path.
-                $compliance = app(EmailComplianceService::class);
-                if (!$compliance->canReceive($member, 'marketing')) {
-                    continue;
-                }
-
-                $toEmail = $member->user->email ?? null;
-                if (!$toEmail) {
-                    continue;
-                }
-
-                $emailRecipient = CampaignRecipient::create([
-                    'campaign_id'       => $campaign->id,
-                    'loyalty_member_id' => $member->id,
-                    'channel'           => 'email',
-                    'email'             => $toEmail,
-                    'status'            => 'sent',
-                    'sent_at'           => now(),
-                ]);
-
-                try {
-                    $rendered = $emailTemplate->render($member);
-                    $pixel = '<img src="' . url('/api/v1/track/open/' . $emailRecipient->id) . '" alt="" width="1" height="1" style="display:block;width:1px;height:1px;border:0;" />';
-                    $html = $rendered['html'];
-                    $html = str_contains($html, '</body>')
-                        ? str_replace('</body>', $pixel . '</body>', $html)
-                        : $html . $pixel;
-
-                    // Unsubscribe footer + RFC 8058 one-click headers. Gmail
-                    // and Yahoo require both of a bulk sender; this path had
-                    // neither, so every message it sent was a deliverability
-                    // liability for every tenant on the shared domain.
-                    $html .= $compliance->footerHtml($member, $orgName);
-
-                    Mail::html($html, function ($message) use (
-                        $toEmail, $member, $rendered, $compliance, $orgName, $org
-                    ) {
-                        $message->to($toEmail, $member->user->name)
-                                ->subject($rendered['subject']);
-
-                        // Send as the venue, not as the platform. Recipients
-                        // otherwise get marketing from a brand they have never
-                        // heard of, which is a spam-report magnet. The address
-                        // stays on the platform domain because that is where
-                        // SPF and DKIM are published.
-                        if ($orgName) {
-                            $message->from(config('mail.from.address'), $orgName);
-                        }
-                        if ($org?->email) {
-                            $message->replyTo($org->email, $orgName ?: null);
-                        }
-
-                        $compliance->applyHeaders($message, $member, 'marketing');
-                    });
-                    $emailCount++;
-                } catch (\Throwable $e) {
-                    $emailRecipient->update(['status' => 'failed', 'error' => $e->getMessage()]);
-                }
-            }
+            return response()->json([
+                'message'  => 'No members matched this segment — nothing was sent.',
+                'campaign' => $campaign->fresh(),
+            ]);
         }
 
-        $campaign->update([
-            'status'           => 'sent',
-            'sent_count'       => $pushCount,
-            'email_sent_count' => $emailCount,
-            'target_count'     => $members->count(),
-            'sent_at'          => now(),
-        ]);
-
-        $parts = [];
-        if ($pushCount > 0) $parts[] = "{$pushCount} push";
-        if ($emailCount > 0) $parts[] = "{$emailCount} email";
-        $summary = implode(' + ', $parts) ?: '0';
+        \App\Jobs\SendNotificationCampaignChunk::dispatch($campaign->id, $memberIds);
 
         return response()->json([
-            'message'          => "Campaign sent: {$summary}",
-            'campaign'         => $campaign->fresh(),
-            'sent_count'       => $pushCount,
-            'email_sent_count' => $emailCount,
+            // Deliberately "queued", not "sent". The send happens on the
+            // worker; claiming it is done here would be the same lie the old
+            // synchronous version told when it timed out half way through.
+            'message'      => 'Campaign queued for ' . count($memberIds) . ' members.',
+            'campaign'     => $campaign->fresh(),
+            'target_count' => count($memberIds),
         ]);
     }
 }
