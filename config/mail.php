@@ -124,6 +124,30 @@ return [
 
     'campaign_chunk_seconds' => env('MAIL_CAMPAIGN_CHUNK_SECONDS', 60),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Campaign hourly ceilings
+    |--------------------------------------------------------------------------
+    |
+    | Chunk spacing paces ONE campaign. These cap the total, which is the only
+    | number the mail provider actually sees: two campaigns running at once
+    | otherwise send twice as much, and ten tenants ten times as much.
+    |
+    | per_org  — stops one tenant's big stale list consuming the whole budget,
+    |            and their bounce rate becoming everyone's problem. All tenants
+    |            share one sending domain, so reputation damage is collective.
+    | global   — protects the provider's own ceiling. On shared hosting this is
+    |            a few hundred per hour; SES production accounts allow far more,
+    |            so raise both after the cutover.
+    |
+    | Set either to 0 to disable that ceiling. Transactional mail is never
+    | subject to these — see CampaignRateLimiter.
+    |
+    */
+
+    'campaign_hourly_limit_per_org' => env('MAIL_CAMPAIGN_HOURLY_PER_ORG', 2000),
+    'campaign_hourly_limit_global'  => env('MAIL_CAMPAIGN_HOURLY_GLOBAL', 6000),
+
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', 'Example'),

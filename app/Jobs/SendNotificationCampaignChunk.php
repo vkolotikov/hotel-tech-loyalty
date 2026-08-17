@@ -83,6 +83,26 @@ class SendNotificationCampaignChunk implements ShouldQueue
             return;
         }
 
+        // Hourly budget check. Chunk spacing paces ONE campaign; this bounds
+        // the total, which is the only number the provider sees. Over budget
+        // means LATER, never dropped — a campaign that finishes an hour late is
+        // a non-event, a campaign that silently skipped 400 people is a support
+        // incident nobody can reconstruct.
+        $limiter = app(\App\Services\CampaignRateLimiter::class);
+        if ($limiter->allowance($campaign->organization_id, count($slice)) < 1) {
+            \Illuminate\Support\Facades\Log::info('campaign chunk deferred: hourly send budget exhausted', [
+                'campaign_id'     => $campaign->id,
+                'organization_id' => $campaign->organization_id,
+                'offset'          => $this->offset,
+            ]);
+
+            // Re-queue THIS chunk (same offset) at the top of the next hour.
+            self::dispatch($this->campaignId, $this->memberIds, $this->offset)
+                ->delay(now()->addMinutes(max(1, 60 - (int) now()->format('i'))));
+
+            return;
+        }
+
         $sendEmail = in_array($campaign->channel, ['email', 'both'], true);
         $sendPush  = in_array($campaign->channel, ['push', 'both'], true);
 
@@ -110,6 +130,9 @@ class SendNotificationCampaignChunk implements ShouldQueue
                 ) ? 1 : 0;
             }
         }
+
+        // Only EMAIL consumes the mail budget; push goes to Expo, not the relay.
+        $limiter->record($campaign->organization_id, $emailSent);
 
         // Counters accumulate per chunk, so progress survives a crash and is
         // visible to the admin while the send is still running.
