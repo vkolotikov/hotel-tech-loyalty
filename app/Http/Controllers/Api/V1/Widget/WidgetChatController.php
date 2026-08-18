@@ -308,7 +308,18 @@ class WidgetChatController extends Controller
             'assistant_avatar'   => $this->resolveAvatarUrl(
                 $config->assistant_avatar_url ?: ($behavior->assistant_avatar ?? null)
             ),
-            'branding_text'      => $config->branding_text,
+            // Fall back to the venue's own name, never to the widget's
+            // hard-coded string. `branding_text` is nullable and no seeder,
+            // preset or setup path has ever written it, so every org that did
+            // not type one by hand published the JS default — 'Powered by
+            // Hotel AI', and its six translations — on their own website.
+            // A gym, a clinic and a law firm were all advertising a hotel.
+            //
+            // Resolved here rather than in the widget so it also fixes the
+            // orgs that will never run the first-run wizard, which is all of
+            // the existing ones.
+            'branding_text'      => $config->branding_text
+                ?: ($config->company_name ? "Powered by {$config->company_name}" : null),
             'input_hint_text'    => $config->input_hint_text,
             'agent_status'       => $config->agent_status ?? 'online',
             'offline_message'    => $config->offline_message,
@@ -629,7 +640,14 @@ class WidgetChatController extends Controller
         }
 
         $orgId = $config->organization_id;
-        $behaviorConfig = ChatbotBehaviorConfig::where('organization_id', $orgId)->first();
+
+        // getForOrg rather than first(): it never returns null, and it pins the
+        // widget's own brand. The bare first() could return null — which crashed
+        // the public endpoint with a 500 the moment a visitor asked for a human,
+        // because the escalation path dereferences it unconditionally — and in a
+        // multi-brand org it could just as easily return a SIBLING brand's
+        // personality and rules.
+        $behaviorConfig = ChatbotBehaviorConfig::getForOrg($orgId, $config->brand_id);
         $modelConfig = ChatbotModelConfig::where('organization_id', $orgId)->first();
 
         // If an agent has muted the AI on this conversation, just record the
