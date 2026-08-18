@@ -174,7 +174,25 @@ Route::get('/w/chat.js', function () {
 
     return response($body, 200, [
         'Content-Type'  => 'application/javascript; charset=utf-8',
-        'Cache-Control' => 'public, max-age=31536000, immutable',
+        // One hour, then revalidate — NOT a year, and never `immutable`.
+        //
+        // This URL is stable and its contents change: the embed snippet on
+        // every customer site points at a bare /w/chat.js with no version or
+        // hash. `max-age=31536000, immutable` is the contract for a
+        // content-addressed asset, and promising it here meant a browser that
+        // had loaded the widget once would not re-fetch for a year and would
+        // not even revalidate — `immutable` exists precisely to suppress the
+        // conditional request. The ETag computed above was therefore dead
+        // code for any returning visitor.
+        //
+        // The practical effect was that the widget could not be fixed in the
+        // field. Any change — a bug fix, or the XSS fix in the card renderer —
+        // would reach only first-time visitors until their cache expired.
+        //
+        // An hour of caching keeps the origin load trivial, and once stale the
+        // browser sends If-None-Match and gets a 304 with no body unless the
+        // file actually changed.
+        'Cache-Control' => 'public, max-age=3600, must-revalidate',
         'ETag'          => $etag,
         // Allow embedding from any origin (the widget runs on the
         // customer's website, not on ours).
