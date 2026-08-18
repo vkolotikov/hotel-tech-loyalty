@@ -63,15 +63,21 @@ class ChatbotAnalyticsController extends Controller
             $date    = now()->subDays($i)->format('Y-m-d');
             $prevDate = now()->subDays($i + $days)->format('Y-m-d');
             $row = $trendRows[$date] ?? null;
-            $total = (int) ($row->count ?? 0);
+            // $dayTotal, NOT $total: this loop used to assign to $total, which
+            // is the PERIOD total read from $overview above. After the loop it
+            // held whatever the final iteration wrote — the most recent day's
+            // count — and the funnel's top stage plus all three rate KPIs below
+            // divide by it. Thirty days of conversations over one quiet day's
+            // count produced resolution and conversion rates well past 100%.
+            $dayTotal = (int) ($row->count ?? 0);
             $eng   = (int) ($row->engaged_count ?? 0);
             $aiRes = (int) ($row->ai_resolved_count ?? 0);
             $trend[] = [
                 'date'          => $date,
-                'count'         => $total,
+                'count'         => $dayTotal,
                 'engagedCount'  => $eng,
                 'aiResolved'    => $aiRes,
-                'aiResolutionRate' => $total > 0 ? round(($aiRes / $total) * 100, 1) : 0,
+                'aiResolutionRate' => $dayTotal > 0 ? round(($aiRes / $dayTotal) * 100, 1) : 0,
                 'prevCount'     => (int) ($prevTrendRows[$prevDate]->count ?? 0),
             ];
         }

@@ -1375,15 +1375,27 @@ class WidgetChatController extends Controller
 
             // Also link any existing chat conversation for this session.
             if (!empty($validated['session_id'])) {
-                ChatConversation::where('session_id', $validated['session_id'])
-                    ->update([
-                        'visitor_id'   => $visitor->id,
-                        'lead_captured' => true,
-                        'inquiry_id'   => $inquiry->id,
-                        'visitor_name' => $validated['name'] ?? null,
-                        'visitor_email'=> $validated['email'] ?? null,
-                        'visitor_phone'=> $validated['phone'] ?? null,
-                    ]);
+                $convUpdate = [
+                    'visitor_id'    => $visitor->id,
+                    'lead_captured' => true,
+                    'inquiry_id'    => $inquiry->id,
+                ];
+
+                // Only overwrite a contact field the visitor actually supplied.
+                // These used to be written as `$validated['x'] ?? null`, so a
+                // form asking for an email alone NULLed the name and phone —
+                // discarding details captured earlier in the same conversation
+                // (initSession takes a visitor_name, and an earlier partial
+                // capture may have taken a phone). The visitor row three lines
+                // above already falls back correctly; the conversation row did
+                // not, and the conversation is what the staff inbox displays.
+                foreach (['name' => 'visitor_name', 'email' => 'visitor_email', 'phone' => 'visitor_phone'] as $in => $col) {
+                    if (!empty($validated[$in])) {
+                        $convUpdate[$col] = $validated[$in];
+                    }
+                }
+
+                ChatConversation::where('session_id', $validated['session_id'])->update($convUpdate);
             }
         } catch (\Throwable $e) {
             \Log::warning('Widget lead visitor link failed: ' . $e->getMessage());
