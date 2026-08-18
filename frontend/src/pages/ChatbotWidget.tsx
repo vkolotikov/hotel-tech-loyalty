@@ -813,6 +813,27 @@ export function ChatbotWidget() {
         </div>
       </div>
 
+      {/* Talk to a person.
+          One field, no enable toggle — the button appears when a number is set
+          and disappears when it is cleared. "Enabled but empty" is a state that
+          only exists to be got wrong. */}
+      <div className={card}>
+        <h3 className={cardTitle}><MessageCircle size={14} className="text-primary-500" /> Talk to a Person</h3>
+        <p className="text-xs text-[#8E8E93] mb-3">
+          Adds a WhatsApp button to the chat header so a visitor can reach a human at any point.
+          Without it, the only way out of the assistant is for it to guess from the wording that
+          someone wants help — and that detection only understands English.
+        </p>
+        <div>
+          <label className={label}>WhatsApp number</label>
+          <input type="tel" value={f.handoff_whatsapp || ''} onChange={e => update('handoff_whatsapp', e.target.value)}
+            className={input} placeholder="+44 20 7123 4567" />
+          <p className="text-xs text-[#636366] mt-1.5">
+            Include the country code. Leave empty to hide the button.
+          </p>
+        </div>
+      </div>
+
       <div className={card}>
         <h3 className={cardTitle}><Shield size={14} className="text-primary-500" /> Privacy & Notifications</h3>
         <div className="flex items-center gap-3">

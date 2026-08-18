@@ -252,6 +252,13 @@ class ChatbotOnboardingService
             $attrs['primary_color'] = OrganizationSetupService::industryPrimaryColor($industry);
         }
 
+        // "Talk to a person" destination. Stored as typed; the public config
+        // endpoint normalises it to wa.me-safe digits.
+        $whatsapp = trim((string) ($input['handoff_whatsapp'] ?? ''));
+        if ($whatsapp !== '') {
+            $attrs['handoff_whatsapp'] = $whatsapp;
+        }
+
         $tz = trim((string) ($input['timezone'] ?? ''));
         if ($tz !== '' && in_array($tz, timezone_identifiers_list(), true)) {
             $attrs['timezone'] = $tz;

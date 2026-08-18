@@ -323,6 +323,10 @@ class WidgetChatController extends Controller
             'input_hint_text'    => $config->input_hint_text,
             'agent_status'       => $config->agent_status ?? 'online',
             'offline_message'    => $config->offline_message,
+            // Digits only — the widget builds https://wa.me/<digits>, which
+            // rejects spaces and punctuation. Normalising server-side means an
+            // admin can paste "+44 20 7123 4567" from their phone and it works.
+            'handoff_whatsapp'   => ChatWidgetConfig::normaliseWhatsapp($config->handoff_whatsapp),
             'voice_enabled'      => $voiceConfig && $voiceConfig->is_active && $voiceConfig->realtime_enabled,
             'is_open'            => $this->isWithinBusinessHours($config),
             'business_hours'     => $config->business_hours,
