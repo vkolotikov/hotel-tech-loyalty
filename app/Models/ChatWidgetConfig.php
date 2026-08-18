@@ -52,6 +52,7 @@ class ChatWidgetConfig extends Model
         'lead_capture_fields',
         'lead_capture_delay',
         'offline_message',
+        'handoff_whatsapp',
         'is_active',
         'business_hours',
         'timezone',
@@ -181,5 +182,31 @@ HTML;
                 'popup_rules' => ['method' => 'GET',  'url' => $apiBase . '/popup-rules'],
             ],
         ];
+    }
+
+    /**
+     * Reduce an admin-typed WhatsApp number to what wa.me accepts: digits only,
+     * international, no plus.
+     *
+     * Deliberately conservative about leading zeros. Stripping ALL of them
+     * turns the UK national form "020 7123 4567" into "2071234567" — a
+     * different and possibly real number. The venue's own customers would be
+     * handed to a stranger while nothing looked broken, which is the worst kind
+     * of bug this feature could have. Only the "00" international dialling
+     * prefix is removed, since "0044…" and "+44…" mean the same thing. A
+     * national number is left alone and simply fails to resolve, which is
+     * visible and fixable.
+     */
+    public static function normaliseWhatsapp(?string $raw): ?string
+    {
+        $digits = preg_replace('/[^0-9]/', '', (string) $raw);
+
+        if (str_starts_with($digits, '00')) {
+            $digits = substr($digits, 2);
+        }
+
+        // Shortest plausible international number is ~8 digits. Below that it
+        // is a typo, and no button beats a button that goes nowhere.
+        return strlen($digits) >= 8 ? $digits : null;
     }
 }

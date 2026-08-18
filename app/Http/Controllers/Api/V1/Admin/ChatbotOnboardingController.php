@@ -41,6 +41,9 @@ class ChatbotOnboardingController extends Controller
             'language'       => 'nullable|string|max:10',
             'timezone'       => 'nullable|string|max:64',
             'handoff_email'  => 'nullable|email|max:190',
+            // Same rule as ChatWidgetConfigController so the wizard cannot
+            // write a number the settings screen would then reject.
+            'handoff_whatsapp' => ['nullable', 'string', 'max:32', 'regex:/^[+0-9 ()\-]{6,32}$/'],
 
             // Free-text venue facts. Bounded because they are rendered into
             // knowledge base answers that the assistant quotes verbatim.

@@ -64,6 +64,11 @@ class ChatWidgetConfigController extends Controller
             'lead_capture_fields'  => 'nullable|array',
             'lead_capture_delay'   => 'nullable|integer|min:0|max:300',
             'offline_message'      => 'nullable|string|max:500',
+            // Digits, spaces and the usual punctuation an admin pastes from a
+            // phone contact. Normalised to bare digits when the wa.me link is
+            // built — validating the shape here only keeps obvious rubbish out
+            // of a button the venue's own customers will tap.
+            'handoff_whatsapp'     => ['nullable', 'string', 'max:32', 'regex:/^[+0-9 ()\-]{6,32}$/'],
             'is_active'            => 'nullable|boolean',
             'business_hours'       => 'nullable|array',
             'timezone'             => 'nullable|string|max:64',
