@@ -224,29 +224,39 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // Outer throttle is generous (200/min) because polling alone is ~17/min per
     // open chat. Per-endpoint inner throttles cap the costly OpenAI / write
     // calls to keep abuse contained without breaking normal use.
+    //
+    // Every inner throttle carries a THIRD argument, and must. Laravel keys an
+    // unnamed throttle for a guest on sha1(domain|ip) — the route plays no part
+    // — so the nested limiters here all shared ONE counter with each other and
+    // with the outer 200/min. The effect was the opposite of what the numbers
+    // suggest: a visitor holding a normal conversation spent the /lead and
+    // /rate budgets within seconds, so those endpoints answered 429 in ordinary
+    // use, while the tight caps they were meant to impose never bound anything
+    // in particular. The third argument prefixes the cache key and gives each
+    // endpoint the independent bucket the numbers already implied.
     Route::prefix('widget')->middleware('throttle:200,1')->group(function () {
         Route::get('{widgetKey}/config',    [WidgetChatController::class, 'getConfig']);
         Route::post('{widgetKey}/init',     [WidgetChatController::class, 'initSession']);
-        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage'])->middleware('throttle:60,1');
-        Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead'])->middleware('throttle:5,1');
+        Route::post('{widgetKey}/message',  [WidgetChatController::class, 'sendMessage'])->middleware('throttle:60,1,widget-message');
+        Route::post('{widgetKey}/lead',     [WidgetChatController::class, 'captureLead'])->middleware('throttle:5,1,widget-lead');
         Route::post('{widgetKey}/heartbeat',  [WidgetChatController::class, 'heartbeat']);
         Route::get('{widgetKey}/poll',        [WidgetChatController::class, 'poll']);
         Route::post('{widgetKey}/typing',     [WidgetChatController::class, 'visitorTyping']);
-        Route::post('{widgetKey}/rate',       [WidgetChatController::class, 'rateConversation'])->middleware('throttle:5,1');
-        Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1');
-        Route::post('{widgetKey}/transcribe', [WidgetChatController::class, 'transcribe'])->middleware('throttle:30,1');
+        Route::post('{widgetKey}/rate',       [WidgetChatController::class, 'rateConversation'])->middleware('throttle:5,1,widget-rate');
+        Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1,widget-upload');
+        Route::post('{widgetKey}/transcribe', [WidgetChatController::class, 'transcribe'])->middleware('throttle:30,1,widget-transcribe');
         Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
-        Route::post('{widgetKey}/popup-impression', [WidgetChatController::class, 'popupImpression'])->middleware('throttle:30,1');
-        Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession'])->middleware('throttle:30,1');
+        Route::post('{widgetKey}/popup-impression', [WidgetChatController::class, 'popupImpression'])->middleware('throttle:30,1,widget-popup');
+        Route::post('{widgetKey}/realtime-session', [WidgetChatController::class, 'createRealtimeSession'])->middleware('throttle:30,1,widget-realtime');
 
         // Booking integration — public room catalog + availability for chat widget
         Route::get('{widgetKey}/rooms',           [WidgetChatController::class, 'getRooms']);
-        Route::get('{widgetKey}/availability',    [WidgetChatController::class, 'checkAvailability'])->middleware('throttle:30,1');
-        Route::get('{widgetKey}/calendar-prices', [WidgetChatController::class, 'widgetCalendarPrices'])->middleware('throttle:30,1');
+        Route::get('{widgetKey}/availability',    [WidgetChatController::class, 'checkAvailability'])->middleware('throttle:30,1,widget-availability');
+        Route::get('{widgetKey}/calendar-prices', [WidgetChatController::class, 'widgetCalendarPrices'])->middleware('throttle:30,1,widget-calendar');
 
         // In-chat service booking — tapped from [BOOKING_CONFIRM] card
-        Route::post('{widgetKey}/book-service',   [WidgetChatController::class, 'bookService'])->middleware('throttle:10,1');
+        Route::post('{widgetKey}/book-service',   [WidgetChatController::class, 'bookService'])->middleware('throttle:10,1,widget-book');
     });
 
     // ─── Public Lead-Capture Forms (CRM Phase 10) ──────────────────────
@@ -255,7 +265,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // gate — admins regenerate it from the editor when leaked.
     Route::prefix('public/lead-forms')->middleware('throttle:200,1')->group(function () {
         Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
-        Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1');
+        Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1,leadform-submit');
     });
 
     // ─── External integration API (Sanctum personal access tokens) ──────────
@@ -793,6 +803,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('chatbot-config/test-chat',           [ChatbotConfigController::class, 'testChat']);
                 Route::post('chatbot-config/probe-model',         [ChatbotConfigController::class, 'probeModel']);
                 Route::post('chatbot-config/suggest-keywords',    [ChatbotConfigController::class, 'suggestKeywords']);
+
+                // First-run setup. Inside this group deliberately — it writes
+                // behaviour + knowledge, which are gated, so gating the whole
+                // flow is what stops it half-succeeding on Starter.
+                Route::get('chatbot-onboarding',       [\App\Http\Controllers\Api\V1\Admin\ChatbotOnboardingController::class, 'show']);
+                Route::post('chatbot-onboarding',      [\App\Http\Controllers\Api\V1\Admin\ChatbotOnboardingController::class, 'store']);
+                Route::post('chatbot-onboarding/skip', [\App\Http\Controllers\Api\V1\Admin\ChatbotOnboardingController::class, 'skip']);
             });
 
             // ─── Chat Widget Configuration ───────────────────────────────────
