@@ -381,6 +381,46 @@
     external: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>',
   };
 
+  /**
+   * One delegated click handler for every suggestion chip.
+   *
+   * Chips are rendered by two different code paths (the welcome screen and
+   * popup quick replies) and both re-render their container, so per-button
+   * listeners would have to be re-attached on every render. Delegation from the
+   * panel survives all of it and is installed once.
+   *
+   * The value travels in a data attribute rather than an inline onclick, which
+   * is what makes chip text ordinary data instead of executable JavaScript.
+   */
+  function bindSuggestionClicks() {
+    var panel = document.getElementById('htchat-panel');
+    if (!panel || panel.dataset.htchatSuggestionsBound === '1') return;
+    panel.dataset.htchatSuggestionsBound = '1';
+
+    panel.addEventListener('click', function (e) {
+      var btn = e.target && e.target.closest
+        ? e.target.closest('[data-htchat-suggestion]')
+        : null;
+      if (!btn || !panel.contains(btn)) return;
+
+      e.preventDefault();
+
+      var text = btn.getAttribute('data-htchat-suggestion') || '';
+      if (!text.trim()) return;
+
+      var input = document.getElementById('htchat-input');
+      if (input) input.value = text;
+
+      var send = document.getElementById('htchat-send-btn');
+      if (send) send.disabled = false;
+
+      // Send directly rather than synthesising a click on the button: the
+      // button may be disabled by an in-flight request, and sendMessage()
+      // already reads the input.
+      sendMessage();
+    });
+  }
+
   // ── Init ──
   function init() {
     injectStyles();
@@ -694,6 +734,7 @@
     // Events
     document.getElementById('htchat-close-btn').onclick = togglePanel;
     document.getElementById('htchat-send-btn').onclick = function () { sendMessage(); };
+    bindSuggestionClicks();
     var inputEl = document.getElementById('htchat-input');
     inputEl.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -1047,7 +1088,13 @@
           '</p>' +
           (showSug && suggestions.length ? '<div class="htchat-suggestions">' +
             suggestions.map(function (s) {
-              return '<button class="htchat-suggestion" onclick="document.getElementById(\'htchat-input\').value=\'' + escapeHtml(s) + '\';document.getElementById(\'htchat-send-btn\').disabled=false;document.getElementById(\'htchat-send-btn\').click()">' + escapeHtml(s) + '</button>';
+              // The suggestion is carried in a data attribute and dispatched by
+              // the delegated handler installed in bindSuggestionClicks().
+              // It used to be interpolated into an inline onclick JS string
+              // delimited by single quotes, which broke on any apostrophe —
+              // "What's on the menu?" silently did nothing when clicked — and
+              // was an injection sink for anything that reached `suggestions`.
+              return '<button type="button" class="htchat-suggestion" data-htchat-suggestion="' + escapeHtml(s) + '">' + escapeHtml(s) + '</button>';
             }).join('') +
           '</div>' : '') +
         '</div>';
@@ -1955,10 +2002,35 @@
   }
 
   // ── Helpers ──
+  /**
+   * Escape for interpolation into HTML *including quoted attributes*.
+   *
+   * The previous implementation assigned to textContent and read innerHTML
+   * back. That escapes &, < and > — but NOT " or ' — because an element's
+   * innerHTML never needs to quote them in text position. Roughly a dozen call
+   * sites here interpolate the result into a quoted attribute (src="…",
+   * alt="…", data-…="…") and two built an inline onclick JS string literal
+   * delimited by single quotes. In those positions the old function escaped
+   * nothing that mattered: a value containing a quote closed the attribute and
+   * everything after it was parsed as markup.
+   *
+   * That is reachable. The card payloads are authored by the LLM (see the
+   * [ROOM_CARD] parser below), so a prompt-injected page or a poisoned
+   * knowledge base entry could put a quote into a field. The widget runs on the
+   * venue's own domain, so the blast radius is their site, not ours.
+   *
+   * Escaping the five HTML-significant characters covers text, quoted-attribute
+   * and unquoted-attribute positions alike. It does NOT make interpolation into
+   * a JS string literal safe — nothing does — which is why the suggestion chips
+   * below build DOM nodes instead.
+   */
   function escapeHtml(str) {
-    var div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
+    return String(str === null || str === undefined ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
   }
 
   function formatText(text) {
@@ -2030,7 +2102,8 @@
 
     var priceLabel = '';
     if (card.price) {
-      var curr = card.currency || 'EUR';
+      // Model-authored, rendered in text position — escape it.
+      var curr = escapeHtml(card.currency || 'EUR');
       priceLabel = curr + ' ' + Number(card.price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
     }
 
@@ -2115,7 +2188,8 @@
 
     var priceLabel = '';
     if (card.price) {
-      var curr = card.currency || 'EUR';
+      // Model-authored, rendered in text position — escape it.
+      var curr = escapeHtml(card.currency || 'EUR');
       priceLabel = curr + ' ' + Number(card.price).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
       if (card.per_night !== false) priceLabel += ' <small>/night</small>';
       else priceLabel += ' <small>total</small>';
@@ -2123,7 +2197,14 @@
 
     var infoHtml = '';
     if (card.max_guests) {
-      infoHtml = '<div class="htchat-room-card-info">Up to ' + card.max_guests + ' guests</div>';
+      // Coerced, not escaped: this is meant to be a count, and the card JSON is
+      // authored by the model, so a non-numeric value is malformed input rather
+      // than something to render. Number() turns any injection attempt into NaN,
+      // which the guard below drops.
+      var guests = Number(card.max_guests);
+      infoHtml = isFinite(guests) && guests > 0
+        ? '<div class="htchat-room-card-info">Up to ' + guests + ' guests</div>'
+        : '';
     }
 
     var safeUrl = bookUrl ? escapeHtml(bookUrl) : '';
@@ -2312,9 +2393,11 @@
         var qrHtml = '<div class="htchat-suggestions" style="padding:4px 0">';
         rule.quick_replies.forEach(function (qr) {
           if (qr && String(qr).trim()) {
-            qrHtml += '<button class="htchat-suggestion" onclick="document.getElementById(\'htchat-input\').value=\'' +
-              escapeHtml(String(qr)) + '\';document.getElementById(\'htchat-send-btn\').disabled=false;document.getElementById(\'htchat-send-btn\').click()">' +
-              escapeHtml(String(qr)) + '</button>';
+            // Same delegated dispatch as the welcome chips — see the comment
+            // there. Popup quick replies are admin-authored, so the apostrophe
+            // breakage hit venues writing ordinary English.
+            qrHtml += '<button type="button" class="htchat-suggestion" data-htchat-suggestion="' +
+              escapeHtml(String(qr)) + '">' + escapeHtml(String(qr)) + '</button>';
           }
         });
         qrHtml += '</div>';
