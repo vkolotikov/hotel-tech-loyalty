@@ -157,7 +157,10 @@ class WidgetSessionMemoryTest extends TestCase
     private function makeWidget(): array
     {
         $org = OrganizationFactory::new()->create();
-        $key = 'wk-' . $org->id;
+        // A real uuid: widget_key is a `uuid` column in Postgres, so a
+        // 'wk-1' style fixture only works against sqlite and would let a
+        // key-shape regression through unnoticed.
+        $key = (string) \Illuminate\Support\Str::uuid();
 
         ChatWidgetConfig::withoutGlobalScopes()->create([
             'organization_id' => $org->id,
@@ -193,6 +196,18 @@ class WidgetSessionMemoryTest extends TestCase
         $this->assertCount(2, $after->messages ?? [],
             'Re-init wiped the transcript the assistant reasons from, so the bot forgets a conversation the visitor can still read on screen.');
         $this->assertSame('Do you have parking?', $after->messages[0]['content']);
+    }
+
+    public function test_a_malformed_widget_key_is_a_miss_not_a_crash(): void
+    {
+        // widget_key is a Postgres `uuid` column, so comparing it against a
+        // non-uuid string is a type error rather than a miss. Every typo'd
+        // embed snippet, stale key and scanner hit produced a 500 and a
+        // database error on the busiest unauthenticated endpoint in the app.
+        foreach (['nonexistent', 'wk_123', 'null', '12345'] as $key) {
+            $this->postJson("/api/v1/widget/{$key}/init", [])
+                ->assertStatus(404);
+        }
     }
 
     public function test_a_session_id_from_another_org_is_never_resumed(): void

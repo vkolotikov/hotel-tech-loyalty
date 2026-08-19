@@ -186,6 +186,16 @@ class WidgetChatController extends Controller
      */
     private function resolveWidget(string $widgetKey): ?ChatWidgetConfig
     {
+        // widget_key is a Postgres `uuid` column, so comparing it against a
+        // non-uuid string is not a miss — it is a type error, and it surfaced
+        // as a 500 on the busiest unauthenticated endpoint we have. Any typo'd
+        // embed snippet, stale key or scanner produced an "invalid input
+        // syntax for type uuid" in the logs and an error page for the visitor,
+        // where the honest answer is simply "no such widget".
+        if (!\Illuminate\Support\Str::isUuid($widgetKey)) {
+            return null;
+        }
+
         $config = ChatWidgetConfig::withoutGlobalScopes()
             ->where('widget_key', $widgetKey)
             ->where('is_active', true)
