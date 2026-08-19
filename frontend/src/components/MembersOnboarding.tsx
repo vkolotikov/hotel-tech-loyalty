@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Utensils, Dumbbell, Star, Crown,
   ArrowRight, ArrowLeft, X, Zap, Check, Database, FileText, AlertCircle,
+  GraduationCap, Briefcase, Home, ShoppingBag, Gift,
 } from 'lucide-react'
 
 /**
@@ -32,7 +33,12 @@ interface PresetMeta {
   benefit_count: number
   tier_names: string[]
   welcome_bonus: number
+  reward_count: number
+  sample_rewards: string[]
+  points_per_currency: number | null
   is_current: boolean
+  /** Derived from the org's industry — the card we would pick for them. */
+  recommended: boolean
 }
 
 interface PresetsResponse {
@@ -47,6 +53,10 @@ const ICON_MAP: Record<string, any> = {
   'utensils':   Utensils,
   'dumbbell':   Dumbbell,
   'star':       Star,
+  'graduation-cap': GraduationCap,
+  'briefcase':      Briefcase,
+  'home':           Home,
+  'shopping-bag':   ShoppingBag,
 }
 
 interface Props {
@@ -133,7 +143,9 @@ export function MembersOnboarding({ onComplete }: Props) {
           <div className="space-y-3">
             <p className="text-sm text-gray-400 mb-2">Pick a membership shape that fits your business. Each preset creates the tier ladder + starter benefits; you can edit anything from Tiers / Benefits afterwards.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {data.presets.map(p => {
+              {/* Recommended first. Ten cards with no steer is a worse decision
+                  than one card with a reason — we already know their industry. */}
+              {[...data.presets].sort((a, b) => Number(b.recommended) - Number(a.recommended)).map(p => {
                 const TileIcon = ICON_MAP[p.icon] ?? Star
                 const active = selectedKey === p.key
                 return (
@@ -152,6 +164,9 @@ export function MembersOnboarding({ onComplete }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-white truncate">{p.label}</div>
                         {p.is_current && <div className="text-[10px] text-amber-400 font-semibold mt-0.5">Currently applied</div>}
+                        {!p.is_current && p.recommended && (
+                          <div className="text-[10px] text-emerald-400 font-semibold mt-0.5">Recommended for your business</div>
+                        )}
                       </div>
                       {active && <Check size={16} className="text-amber-400 flex-shrink-0" />}
                     </div>
@@ -163,10 +178,21 @@ export function MembersOnboarding({ onComplete }: Props) {
                         </span>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] uppercase tracking-wide font-bold text-gray-500">
+                    {/* Rewards are what a member can actually claim, so they
+                        are the part worth showing — a ladder with nothing to
+                        redeem reads as busywork. */}
+                    {p.sample_rewards?.length > 0 && (
+                      <div className="flex items-start gap-1.5 mb-2 text-[10px] text-gray-400">
+                        <Gift size={11} className="text-emerald-400 mt-[1px] flex-shrink-0" />
+                        <span className="line-clamp-1">{p.sample_rewards.join(' · ')}</span>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-wide font-bold text-gray-500">
                       <span>{p.tier_count} tiers</span>
                       <span>·</span>
                       <span>{p.benefit_count} benefits</span>
+                      <span>·</span>
+                      <span className="text-emerald-400">{p.reward_count} rewards</span>
                       <span>·</span>
                       <span className="text-amber-400">+{p.welcome_bonus} welcome pts</span>
                     </div>

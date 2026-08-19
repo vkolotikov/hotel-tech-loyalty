@@ -179,25 +179,36 @@ class LoyaltyPresetServiceTest extends TestCase
         $this->assertGreaterThan(0, $summary['tiers_added']);
     }
 
-    public function test_apply_legal_real_estate_education_all_resolve_to_simple_two_tier(): void
+    public function test_legal_real_estate_and_education_each_get_their_own_ladder(): void
     {
-        // The GTM-deferred-industry aliases. Each routes to a 2-tier
-        // setup (Member + VIP) so they get a working loyalty stub
-        // without a full preset.
-        foreach (['legal', 'real_estate', 'education'] as $alias) {
-            // Reset for each iteration by re-binding org context.
+        // These three used to resolve to simple_two_tier, so a law firm, an
+        // estate agency and a language school were handed the same two-tier
+        // Member/VIP ladder with the same perks. Each now has a preset built
+        // for how its customers actually behave.
+        $expected = [
+            'legal'       => ['Client', 'Preferred', 'Partner'],
+            'real_estate' => ['Client', 'Preferred', 'Partner'],
+            'education'   => ['Learner', 'Scholar', 'Alumni'],
+        ];
+
+        foreach ($expected as $industry => $tierNames) {
             app()->forgetInstance('current_organization_id');
             $org = OrganizationFactory::new()->create();
             app()->instance('current_organization_id', $org->id);
 
-            $summary = $this->service->apply($alias, $org->id);
+            $this->service->apply($industry, $org->id);
 
-            $tierCount = LoyaltyTier::withoutGlobalScopes()
+            $actual = LoyaltyTier::withoutGlobalScopes()
                 ->where('organization_id', $org->id)
-                ->count();
-            $this->assertSame(2, $tierCount,
-                "Alias '{$alias}' must resolve to simple_two_tier (2 tiers).");
-            $this->assertGreaterThan(0, $summary['tiers_added']);
+                ->orderBy('min_points')
+                ->pluck('name')
+                ->all();
+
+            $this->assertSame($tierNames, $actual, "'{$industry}' got the wrong ladder.");
+
+            $this->assertGreaterThan(0, \App\Models\Reward::withoutGlobalScopes()
+                ->where('organization_id', $org->id)->count(),
+                "'{$industry}' has no rewards, so its points cannot be spent.");
         }
     }
 
@@ -454,5 +465,55 @@ class LoyaltyPresetServiceTest extends TestCase
         $this->assertTrue($summary['noop'] ?? false);
         $this->assertSame(0, \App\Models\Reward::withoutGlobalScopes()
             ->where('organization_id', $this->orgId)->count());
+    }
+
+    /* ─── expanded preset range + economics ─────────────────────────────── */
+
+    public function test_every_preset_carries_its_own_point_economics(): void
+    {
+        // Signup writes a flat 10 points per unit for everyone, which cannot
+        // suit a coffee shop and a hotel at once.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $this->assertArrayHasKey('points_per_currency', $preset, "Preset '{$key}' has no earning rate.");
+            $this->assertGreaterThan(0, $preset['points_per_currency']);
+            $this->assertGreaterThan(0, $preset['points_expiry_months'] ?? 0);
+        }
+
+        // High-value, low-frequency verticals must earn more slowly than
+        // high-frequency ones or every client tops out on their first invoice.
+        $this->assertLessThan(
+            LoyaltyPresetService::PRESETS['restaurant']['points_per_currency'],
+            LoyaltyPresetService::PRESETS['real_estate']['points_per_currency'],
+        );
+    }
+
+    public function test_apply_writes_the_presets_economics_on_a_clean_replace(): void
+    {
+        $summary = $this->service->apply('restaurant', $this->orgId);
+
+        $this->assertSame(20, $summary['points_per_currency'] ?? null);
+        $this->assertSame('20', \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'points_per_currency')->value('value'));
+    }
+
+    public function test_listPresets_recommends_the_preset_matching_the_orgs_industry(): void
+    {
+        // Ten cards and no steer is a worse decision than one card and a reason.
+        \App\Models\Organization::withoutGlobalScopes()
+            ->where('id', $this->orgId)->update(['industry' => 'fitness']);
+
+        $recommended = collect($this->service->listPresets()['presets'])
+            ->firstWhere('recommended', true);
+
+        $this->assertSame('fitness', $recommended['key'] ?? null);
+    }
+
+    public function test_medical_is_recommended_nothing_because_it_gets_no_programme(): void
+    {
+        \App\Models\Organization::withoutGlobalScopes()
+            ->where('id', $this->orgId)->update(['industry' => 'medical']);
+
+        $this->assertNull(collect($this->service->listPresets()['presets'])
+            ->firstWhere('recommended', true));
     }
 }

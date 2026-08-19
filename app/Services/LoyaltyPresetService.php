@@ -40,6 +40,8 @@ class LoyaltyPresetService
         $current = optional(CrmSetting::where('key', 'members_preset')->first())->value;
         $current = is_string($current) ? trim($current, '"') : null;
 
+        $recommended = $this->recommendedKeyForCurrentOrg();
+
         $presets = [];
         foreach (self::PRESETS as $key => $p) {
             $presets[] = [
@@ -51,7 +53,17 @@ class LoyaltyPresetService
                 'benefit_count'  => count($p['benefits']),
                 'tier_names'     => array_column($p['tiers'], 'name'),
                 'welcome_bonus'  => $p['welcome_bonus'] ?? 500,
+                // Rewards are the part a venue actually judges the programme
+                // by — a ladder with nothing to redeem reads as busywork — so
+                // the picker shows the count and a couple of examples.
+                'reward_count'   => count($p['rewards'] ?? []),
+                'sample_rewards' => array_slice(array_column($p['rewards'] ?? [], 'name'), 0, 3),
+                'points_per_currency' => $p['points_per_currency'] ?? null,
                 'is_current'     => $current === $key,
+                // Ten cards and no steer is a worse decision than one card and
+                // a reason. We already know the venue's industry, so say which
+                // one we would pick — they stay free to choose another.
+                'recommended'    => $recommended === $key,
             ];
         }
 
@@ -81,14 +93,46 @@ class LoyaltyPresetService
      * it, and vice versa. Today that is medical alone (decision #5 — no
      * patient loyalty programme).
      */
+    /**
+     * Which preset we would choose for the current organisation.
+     *
+     * Resolved from the org's industry through the same alias map the
+     * automated signup path uses, so the card the picker highlights is exactly
+     * what a hands-off signup would have applied.
+     */
+    private function recommendedKeyForCurrentOrg(): ?string
+    {
+        $orgId = app()->bound('current_organization_id')
+            ? (int) app('current_organization_id')
+            : null;
+
+        if (!$orgId) {
+            return null;
+        }
+
+        $industry = \App\Models\Organization::withoutGlobalScopes()
+            ->find($orgId)?->resolved_industry;
+
+        if (!$industry || in_array($industry, self::NO_PROGRAMME_INDUSTRIES, true)) {
+            return null;
+        }
+
+        $key = self::ALIASES[$industry] ?? $industry;
+
+        return isset(self::PRESETS[$key]) ? $key : null;
+    }
+
     public const NO_PROGRAMME_INDUSTRIES = ['medical'];
 
     private const ALIASES = [
         'hotel'       => 'hotel_classic',
         'hospitality' => 'restaurant',
-        'legal'       => 'simple_two_tier',
-        'real_estate' => 'simple_two_tier',
-        'education'   => 'simple_two_tier',
+        // These three used to share simple_two_tier. They now have ladders,
+        // perks, rewards and point economics of their own — a law firm and a
+        // language school were being handed identical programmes.
+        'legal'       => 'professional_services',
+        'real_estate' => 'real_estate',
+        'education'   => 'education',
         // A generic business can absolutely run a simple loyalty scheme —
         // that preset's own docblock calls it "the minimum viable loyalty
         // program for any small business".
@@ -277,6 +321,26 @@ class LoyaltyPresetService
                     ['value' => (string) ($preset['welcome_bonus'] ?? 500), 'type' => 'number', 'group' => 'loyalty', 'label' => 'Welcome Bonus Points'],
                 );
                 $summary['welcome_bonus_set'] = (int) ($preset['welcome_bonus'] ?? 500);
+
+                // Point economics travel with the preset. Signup writes a flat
+                // 10 points per currency unit and 24-month expiry for everyone,
+                // which cannot suit a coffee shop (4 per visit) and a hotel
+                // (150 per stay) at the same time: on the flat rate a
+                // restaurant regular needs 35 visits to afford a free dessert.
+                // Same clean-replace guard as the welcome bonus, so a venue
+                // that tuned these by hand keeps them.
+                foreach ([
+                    'points_per_currency'  => ['Points per Currency Unit', $preset['points_per_currency'] ?? null],
+                    'points_expiry_months' => ['Points Expiry (Months)',   $preset['points_expiry_months'] ?? null],
+                ] as $settingKey => [$label, $value]) {
+                    if ($value === null) continue;
+
+                    HotelSetting::withoutGlobalScopes()->updateOrCreate(
+                        ['organization_id' => $organizationId, 'key' => $settingKey],
+                        ['value' => (string) $value, 'type' => 'number', 'group' => 'loyalty', 'label' => $label],
+                    );
+                    $summary[$settingKey] = $value;
+                }
             } else {
                 $summary['welcome_bonus_preserved'] = true;
             }
@@ -316,6 +380,8 @@ class LoyaltyPresetService
             'description'   => 'The canonical Bronze → Diamond ladder. Points earned per stay; earn rate scales with tier.',
             'icon'          => 'building-2',
             'welcome_bonus' => 500,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 24,
             'tiers' => [
                 ['name' => 'Bronze',   'min_points' => 0,     'earn_rate' => 1.0,  'color_hex' => '#CD7F32', 'perks' => ['Welcome drink on arrival', 'Member-only newsletter']],
                 ['name' => 'Silver',   'min_points' => 1000,  'earn_rate' => 1.25, 'color_hex' => '#C0C0C0', 'perks' => ['Late check-out until 2pm', 'Bottled water in room']],
@@ -345,6 +411,8 @@ class LoyaltyPresetService
             'description'   => 'Simplified Member / Plus / Elite ladder. Good for smaller properties or boutique hotels.',
             'icon'          => 'building-2',
             'welcome_bonus' => 250,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 24,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,     'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Member rates', 'Welcome amenity']],
                 ['name' => 'Plus',   'min_points' => 2000,  'earn_rate' => 1.5, 'color_hex' => '#3b82f6', 'perks' => ['Late check-out', 'Free Wi-Fi upgrade', 'Welcome drink']],
@@ -370,6 +438,8 @@ class LoyaltyPresetService
             'description'   => 'Welcome → Devotee → Inner Circle. Points reward repeat visits; perks lean to spa & retail.',
             'icon'          => 'sparkles',
             'welcome_bonus' => 100,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 18,
             'tiers' => [
                 ['name' => 'Welcome',      'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#f9a8d4', 'perks' => ['Birthday gift', '10% off retail']],
                 ['name' => 'Devotee',      'min_points' => 500,  'earn_rate' => 1.5, 'color_hex' => '#ec4899', 'perks' => ['15% off treatments', 'Priority booking', 'Welcome gift on every visit']],
@@ -395,6 +465,8 @@ class LoyaltyPresetService
             'description'   => 'Regular → Loyalist → Insider. Low point thresholds tuned for per-visit spend.',
             'icon'          => 'utensils',
             'welcome_bonus' => 50,
+            'points_per_currency' => 20,
+            'points_expiry_months' => 12,
             'tiers' => [
                 ['name' => 'Regular',  'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#f59e0b', 'perks' => ['Welcome bite-size dessert', 'Birthday treat']],
                 ['name' => 'Loyalist', 'min_points' => 300,  'earn_rate' => 1.5, 'color_hex' => '#d97706', 'perks' => ['Priority reservations', '10% off à la carte', 'Free aperitif']],
@@ -420,6 +492,8 @@ class LoyaltyPresetService
             'description'   => 'Member → Plus → Pro. Points scale with class attendance + personal-training sessions.',
             'icon'          => 'dumbbell',
             'welcome_bonus' => 200,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 18,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#22d3ee', 'perks' => ['Standard class access', 'Locker rental']],
                 ['name' => 'Plus',   'min_points' => 1000, 'earn_rate' => 1.5, 'color_hex' => '#0891b2', 'perks' => ['Premium classes', '1 free PT session monthly', '10% off retail']],
@@ -445,6 +519,8 @@ class LoyaltyPresetService
             'description'   => 'Member + VIP. The minimum viable loyalty program for any small business — easy to manage.',
             'icon'          => 'star',
             'welcome_bonus' => 100,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 24,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Member-only offers', 'Birthday gift']],
                 ['name' => 'VIP',    'min_points' => 2000, 'earn_rate' => 2.0, 'color_hex' => '#fbbf24', 'perks' => ['All Member perks', '15% off everything', 'Priority customer support']],
@@ -459,6 +535,123 @@ class LoyaltyPresetService
                 ['name' => 'Member Discount', 'code' => 'member_discount', 'description' => 'Tier-based percentage discount', 'category' => 'retail'],
                 ['name' => 'Birthday Gift',   'code' => 'birthday_gift',   'description' => 'Complimentary gift on birthday', 'category' => 'gift'],
                 ['name' => 'Priority Support','code' => 'priority_support','description' => 'Skip-the-queue support access',  'category' => 'service'],
+            ],
+        ],
+
+        // ─── Industries that used to fall back to the generic two-tier ────
+        // legal, real_estate and education all resolved to simple_two_tier,
+        // so three quite different businesses were handed the same ladder,
+        // the same perks and the same rewards. A law firm rewarding repeat
+        // instructions and a language school rewarding course completions
+        // have almost nothing in common except the word "loyalty".
+
+        'education' => [
+            'label'         => 'Education — Learner ladder',
+            'description'   => 'Learner to Scholar to Alumni. Rewards course completions and long-term study rather than spend.',
+            'icon'          => 'graduation-cap',
+            'welcome_bonus' => 150,
+            'points_per_currency' => 5,
+            'points_expiry_months' => 24,
+            'tiers' => [
+                ['name' => 'Learner', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#60a5fa', 'perks' => ['Course materials included', 'Member newsletter']],
+                ['name' => 'Scholar', 'min_points' => 800,  'earn_rate' => 1.5, 'color_hex' => '#2563eb', 'perks' => ['Priority enrolment', 'Free study resources']],
+                ['name' => 'Alumni',  'min_points' => 3000, 'earn_rate' => 2.0, 'color_hex' => '#1e3a8a', 'perks' => ['Alumni events', 'Discount on every future course', 'Reference on request']],
+            ],
+            'rewards' => [
+                ['name' => 'Study Pack',            'points_cost' => 200,  'category' => 'materials', 'description' => 'Printed materials for your current course.'],
+                ['name' => '10% Off Next Course',   'points_cost' => 500,  'category' => 'discount',  'description' => 'Money off your next enrolment.'],
+                ['name' => 'One-to-One Tutor Hour', 'points_cost' => 1200, 'category' => 'tuition',   'description' => 'An hour with a tutor of your choice.'],
+                ['name' => 'Free Short Course',     'points_cost' => 3000, 'category' => 'course',    'description' => 'Any short course on us.'],
+            ],
+            'benefits' => [
+                ['name' => 'Course Materials',   'code' => 'course_materials',   'description' => 'Materials included with enrolment', 'category' => 'materials'],
+                ['name' => 'Priority Enrolment', 'code' => 'priority_enrolment', 'description' => 'First access to popular courses',   'category' => 'service'],
+                ['name' => 'Alumni Events',      'code' => 'alumni_events',      'description' => 'Invitations to alumni-only events', 'category' => 'event'],
+                ['name' => 'Tutor Session',      'code' => 'tutor_session',      'description' => 'One-to-one time with a tutor',      'category' => 'tuition'],
+            ],
+        ],
+
+        'professional_services' => [
+            'label'         => 'Professional services — Client care',
+            'description'   => 'Client to Preferred to Partner. Built for high-value, low-frequency work where referrals matter more than visits.',
+            'icon'          => 'briefcase',
+            'welcome_bonus' => 100,
+            // Invoices here are large and infrequent, so a hotel-style 10
+            // points per unit would put every client in the top tier after a
+            // single matter.
+            'points_per_currency' => 2,
+            'points_expiry_months' => 36,
+            'tiers' => [
+                ['name' => 'Client',    'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Named point of contact', 'Client newsletter']],
+                ['name' => 'Preferred', 'min_points' => 1000, 'earn_rate' => 1.5, 'color_hex' => '#475569', 'perks' => ['Priority appointments', 'Annual review call']],
+                ['name' => 'Partner',   'min_points' => 4000, 'earn_rate' => 2.0, 'color_hex' => '#0f172a', 'perks' => ['Direct line to your adviser', 'Complimentary annual review', 'Referral thank-you']],
+            ],
+            'rewards' => [
+                ['name' => 'Priority Appointment',   'points_cost' => 300,  'category' => 'service',      'description' => 'Next available slot, held for you.'],
+                ['name' => 'Document Review',        'points_cost' => 800,  'category' => 'service',      'description' => 'A single document reviewed at no charge.'],
+                ['name' => '30-Minute Consultation', 'points_cost' => 1500, 'category' => 'consultation', 'description' => 'A half-hour with an adviser.'],
+                ['name' => 'Annual Review Meeting',  'points_cost' => 4000, 'category' => 'consultation', 'description' => 'A full review of your affairs.'],
+            ],
+            'benefits' => [
+                ['name' => 'Named Contact',      'code' => 'named_contact',     'description' => 'A single named point of contact', 'category' => 'service'],
+                ['name' => 'Priority Booking',   'code' => 'priority_booking',  'description' => 'Priority access to appointments', 'category' => 'service'],
+                ['name' => 'Annual Review',      'code' => 'annual_review',     'description' => 'Complimentary yearly review',     'category' => 'consultation'],
+                ['name' => 'Referral Thank-You', 'code' => 'referral_thankyou', 'description' => 'A thank-you for every referral',  'category' => 'gift'],
+            ],
+        ],
+
+        'real_estate' => [
+            'label'         => 'Property — Client & referral',
+            'description'   => 'Client to Preferred to Partner. Transactions are rare and large, so this rewards referrals and repeat instructions.',
+            'icon'          => 'home',
+            'welcome_bonus' => 100,
+            // One transaction can be six figures; 1 point per unit keeps the
+            // ladder meaningful instead of topping out on day one.
+            'points_per_currency' => 1,
+            'points_expiry_months' => 36,
+            'tiers' => [
+                ['name' => 'Client',    'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#5eead4', 'perks' => ['Priority viewing slots', 'Market updates']],
+                ['name' => 'Preferred', 'min_points' => 1200, 'earn_rate' => 1.5, 'color_hex' => '#14b8a6', 'perks' => ['Free valuation', 'Featured listing placement']],
+                ['name' => 'Partner',   'min_points' => 5000, 'earn_rate' => 2.0, 'color_hex' => '#0f766e', 'perks' => ['Professional photography', 'Priority marketing', 'Moving-day support']],
+            ],
+            'rewards' => [
+                ['name' => 'Priority Viewing Slot',    'points_cost' => 300,  'category' => 'service',   'description' => 'First pick of viewing times.'],
+                ['name' => 'Local Market Report',      'points_cost' => 600,  'category' => 'report',    'description' => 'A written report on your area.'],
+                ['name' => 'Professional Photography', 'points_cost' => 2000, 'category' => 'marketing', 'description' => 'A full photo shoot for your listing.'],
+                ['name' => 'Moving Day Support',       'points_cost' => 5000, 'category' => 'service',   'description' => 'Help coordinating your move.'],
+            ],
+            'benefits' => [
+                ['name' => 'Priority Viewings', 'code' => 'priority_viewings', 'description' => 'First access to new listings',     'category' => 'service'],
+                ['name' => 'Free Valuation',    'code' => 'free_valuation',    'description' => 'Complimentary property valuation', 'category' => 'service'],
+                ['name' => 'Featured Listing',  'code' => 'featured_listing',  'description' => 'Prominent placement when selling', 'category' => 'marketing'],
+                ['name' => 'Moving Support',    'code' => 'moving_support',    'description' => 'Assistance on moving day',         'category' => 'service'],
+            ],
+        ],
+
+        'retail' => [
+            'label'         => 'Retail / Shop — Member ladder',
+            'description'   => 'Member to Insider to VIP. Frequent small purchases, so rewards land early and often.',
+            'icon'          => 'shopping-bag',
+            'welcome_bonus' => 100,
+            'points_per_currency' => 10,
+            'points_expiry_months' => 18,
+            'tiers' => [
+                ['name' => 'Member',  'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#a5b4fc', 'perks' => ['Member pricing', 'Birthday treat']],
+                ['name' => 'Insider', 'min_points' => 750,  'earn_rate' => 1.5, 'color_hex' => '#6366f1', 'perks' => ['Early access to sales', 'Free returns']],
+                ['name' => 'VIP',     'min_points' => 3000, 'earn_rate' => 2.0, 'color_hex' => '#4338ca', 'perks' => ['First look at new stock', 'Personal shopping', 'Free delivery always']],
+            ],
+            'rewards' => [
+                ['name' => '5 Credit',             'points_cost' => 250,  'category' => 'discount', 'description' => 'Money off your next purchase.'],
+                ['name' => 'Free Delivery',        'points_cost' => 400,  'category' => 'service',  'description' => 'Delivery on us, one order.'],
+                ['name' => '10% Off',              'points_cost' => 750,  'category' => 'discount', 'description' => 'One tenth off a single order.'],
+                ['name' => '20 Credit',            'points_cost' => 2000, 'category' => 'discount', 'description' => 'A larger credit to spend in store.'],
+                ['name' => 'VIP Early Access Day', 'points_cost' => 3000, 'category' => 'vip',      'description' => 'Shop the sale a day before everyone else.'],
+            ],
+            'benefits' => [
+                ['name' => 'Member Pricing', 'code' => 'member_pricing', 'description' => 'Tier-based pricing on everything', 'category' => 'retail'],
+                ['name' => 'Early Access',   'code' => 'early_access',   'description' => 'Shop sales before the public',     'category' => 'retail'],
+                ['name' => 'Free Returns',   'code' => 'free_returns',   'description' => 'Returns at no cost',               'category' => 'service'],
+                ['name' => 'Birthday Treat', 'code' => 'birthday_treat', 'description' => 'A gift in your birthday month',    'category' => 'gift'],
             ],
         ],
     ];
