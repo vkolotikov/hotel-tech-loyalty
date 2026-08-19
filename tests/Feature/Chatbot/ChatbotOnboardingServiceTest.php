@@ -93,6 +93,8 @@ class ChatbotOnboardingServiceTest extends TestCase
                 // The production default that made the per-industry colour
                 // unreachable — reproduced here so the test exercises it.
                 $table->string('primary_color', 32)->default('#c9a84c');
+                $table->string('handoff_whatsapp', 32)->nullable();
+                $table->string('handoff_email', 190)->nullable();
                 $table->string('timezone', 64)->nullable();
                 $table->timestamps();
             });
@@ -283,6 +285,38 @@ class ChatbotOnboardingServiceTest extends TestCase
         $this->assertSame(2, $first['knowledge_created']);
         $this->assertSame(0, $second['knowledge_created']);
         $this->assertSame(2, KnowledgeItem::withoutGlobalScopes()->where('organization_id', $orgId)->count());
+    }
+
+    public function test_handover_destinations_are_saved(): void
+    {
+        // Without these the only route to a human is the AI inferring intent
+        // from English phrasing, and the only alert is a sound in an inbox
+        // somebody must already have open.
+        [$orgId] = $this->makeOrg();
+
+        $this->onboarding->apply($orgId, [
+            'facts'            => [],
+            'handoff_whatsapp' => '+44 20 7123 4567',
+            'handoff_email'    => 'team@venue.test',
+        ]);
+
+        $widget = ChatWidgetConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
+
+        $this->assertSame('+44 20 7123 4567', $widget->handoff_whatsapp,
+            'Stored as typed; the public config endpoint normalises it for wa.me.');
+        $this->assertSame('team@venue.test', $widget->handoff_email);
+    }
+
+    public function test_handover_fields_left_blank_are_not_written(): void
+    {
+        [$orgId] = $this->makeOrg();
+
+        $this->onboarding->apply($orgId, ['facts' => [], 'handoff_whatsapp' => '  ', 'handoff_email' => '']);
+
+        $widget = ChatWidgetConfig::withoutGlobalScopes()->where('organization_id', $orgId)->first();
+
+        $this->assertNull($widget->handoff_whatsapp, 'A blank number must hide the button, not store whitespace.');
+        $this->assertNull($widget->handoff_email);
     }
 
     public function test_a_venues_own_colour_survives_setup(): void

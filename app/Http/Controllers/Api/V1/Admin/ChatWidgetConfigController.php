@@ -69,6 +69,7 @@ class ChatWidgetConfigController extends Controller
             // built — validating the shape here only keeps obvious rubbish out
             // of a button the venue's own customers will tap.
             'handoff_whatsapp'     => ['nullable', 'string', 'max:32', 'regex:/^[+0-9 ()\-]{6,32}$/'],
+            'handoff_email'        => 'nullable|email|max:190',
             'is_active'            => 'nullable|boolean',
             'business_hours'       => 'nullable|array',
             'timezone'             => 'nullable|string|max:64',

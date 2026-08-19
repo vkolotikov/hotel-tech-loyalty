@@ -832,6 +832,14 @@ export function ChatbotWidget() {
             Include the country code. Leave empty to hide the button.
           </p>
         </div>
+        <div>
+          <label className={label}>Email us when a visitor asks for a person</label>
+          <input type="email" value={f.handoff_email || ''} onChange={e => update('handoff_email', e.target.value)}
+            className={input} placeholder="team@yourbusiness.com" />
+          <p className="text-xs text-[#636366] mt-1.5">
+            Sent once per conversation. The inbox sound only reaches someone who already has it open.
+          </p>
+        </div>
       </div>
 
       <div className={card}>

@@ -259,6 +259,13 @@ class ChatbotOnboardingService
             $attrs['handoff_whatsapp'] = $whatsapp;
         }
 
+        // Where to email when a visitor asks for a person. Without this the
+        // only alert is a sound in an inbox somebody has to already have open.
+        $handoffEmail = trim((string) ($input['handoff_email'] ?? ''));
+        if ($handoffEmail !== '') {
+            $attrs['handoff_email'] = $handoffEmail;
+        }
+
         $tz = trim((string) ($input['timezone'] ?? ''));
         if ($tz !== '' && in_array($tz, timezone_identifiers_list(), true)) {
             $attrs['timezone'] = $tz;
