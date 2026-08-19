@@ -516,4 +516,49 @@ class LoyaltyPresetServiceTest extends TestCase
         $this->assertNull(collect($this->service->listPresets()['presets'])
             ->firstWhere('recommended', true));
     }
+
+    /* ─── referrals + the member-facing preview ─────────────────────────── */
+
+    public function test_referral_bonuses_are_calibrated_to_the_ladder_not_flat(): void
+    {
+        // Signup wrote a flat 250 for every business. Against a restaurant's
+        // 300-point second tier that is generous; against an estate agency's
+        // 5,000-point top tier it is noise — and referrals are how that
+        // business actually grows.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $this->assertArrayHasKey('referrer_bonus', $preset, "Preset '{$key}' has no referral bonus.");
+            $this->assertGreaterThan(0, $preset['referrer_bonus']);
+        }
+
+        $this->assertGreaterThan(
+            LoyaltyPresetService::PRESETS['restaurant']['referrer_bonus'],
+            LoyaltyPresetService::PRESETS['real_estate']['referrer_bonus'],
+            'A referral is worth far more to an estate agency than to a cafe.',
+        );
+    }
+
+    public function test_apply_writes_the_referral_bonuses(): void
+    {
+        $this->service->apply('real_estate', $this->orgId);
+
+        $this->assertSame('2500', \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'referrer_bonus_points')->value('value'));
+    }
+
+    public function test_every_preset_exposes_a_first_reward_a_member_can_reach(): void
+    {
+        // The picker turns this into "about N of spend away". If the first
+        // reward were unreachable the preview would advertise a programme
+        // nobody completes.
+        app()->instance('current_organization_id', $this->orgId);
+
+        foreach ($this->service->listPresets()['presets'] as $p) {
+            $cheapest = $p['cheapest_reward'];
+            $this->assertNotNull($cheapest, "Preset '{$p['key']}' offers a member nothing to aim at.");
+
+            $spend = (int) ceil(max(0, $cheapest['points_cost'] - $p['welcome_bonus']) / max(1, (int) $p['points_per_currency']));
+            $this->assertLessThanOrEqual(500, $spend,
+                "First reward in '{$p['key']}' needs {$spend} of spend — too far to feel like a reward.");
+        }
+    }
 }

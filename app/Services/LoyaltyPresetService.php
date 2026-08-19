@@ -59,6 +59,17 @@ class LoyaltyPresetService
                 'reward_count'   => count($p['rewards'] ?? []),
                 'sample_rewards' => array_slice(array_column($p['rewards'] ?? [], 'name'), 0, 3),
                 'points_per_currency' => $p['points_per_currency'] ?? null,
+                'referrer_bonus'      => $p['referrer_bonus'] ?? null,
+                // The cheapest reward is what makes the programme concrete:
+                // it lets the picker say what a member gets and roughly what
+                // they must spend to get it, instead of quoting point totals
+                // that mean nothing on their own.
+                'cheapest_reward'     => (function () use ($p) {
+                    $rewards = $p['rewards'] ?? [];
+                    if ($rewards === []) return null;
+                    usort($rewards, fn ($a, $b) => $a['points_cost'] <=> $b['points_cost']);
+                    return ['name' => $rewards[0]['name'], 'points_cost' => $rewards[0]['points_cost']];
+                })(),
                 'is_current'     => $current === $key,
                 // Ten cards and no steer is a worse decision than one card and
                 // a reason. We already know the venue's industry, so say which
@@ -329,9 +340,17 @@ class LoyaltyPresetService
                 // restaurant regular needs 35 visits to afford a free dessert.
                 // Same clean-replace guard as the welcome bonus, so a venue
                 // that tuned these by hand keeps them.
+                // Referral bonuses belong here too. Signup wrote a flat 250
+                // for every business, which reads completely differently
+                // depending on the ladder it sits against: for a restaurant
+                // it is five visits' worth, for an estate agency whose top
+                // tier is 5,000 it is noise — and referrals are the main way
+                // that business grows. Calibrated per preset instead.
                 foreach ([
-                    'points_per_currency'  => ['Points per Currency Unit', $preset['points_per_currency'] ?? null],
-                    'points_expiry_months' => ['Points Expiry (Months)',   $preset['points_expiry_months'] ?? null],
+                    'points_per_currency'   => ['Points per Currency Unit', $preset['points_per_currency'] ?? null],
+                    'points_expiry_months'  => ['Points Expiry (Months)',   $preset['points_expiry_months'] ?? null],
+                    'referrer_bonus_points' => ['Referrer Bonus Points',    $preset['referrer_bonus'] ?? null],
+                    'referee_bonus_points'  => ['Referee Bonus Points',     $preset['referee_bonus'] ?? null],
                 ] as $settingKey => [$label, $value]) {
                     if ($value === null) continue;
 
@@ -382,6 +401,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 500,
             'points_per_currency' => 10,
             'points_expiry_months' => 24,
+            'referrer_bonus' => 1000,
+            'referee_bonus' => 500,
             'tiers' => [
                 ['name' => 'Bronze',   'min_points' => 0,     'earn_rate' => 1.0,  'color_hex' => '#CD7F32', 'perks' => ['Welcome drink on arrival', 'Member-only newsletter']],
                 ['name' => 'Silver',   'min_points' => 1000,  'earn_rate' => 1.25, 'color_hex' => '#C0C0C0', 'perks' => ['Late check-out until 2pm', 'Bottled water in room']],
@@ -413,6 +434,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 250,
             'points_per_currency' => 10,
             'points_expiry_months' => 24,
+            'referrer_bonus' => 600,
+            'referee_bonus' => 300,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,     'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Member rates', 'Welcome amenity']],
                 ['name' => 'Plus',   'min_points' => 2000,  'earn_rate' => 1.5, 'color_hex' => '#3b82f6', 'perks' => ['Late check-out', 'Free Wi-Fi upgrade', 'Welcome drink']],
@@ -440,6 +463,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 100,
             'points_per_currency' => 10,
             'points_expiry_months' => 18,
+            'referrer_bonus' => 300,
+            'referee_bonus' => 150,
             'tiers' => [
                 ['name' => 'Welcome',      'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#f9a8d4', 'perks' => ['Birthday gift', '10% off retail']],
                 ['name' => 'Devotee',      'min_points' => 500,  'earn_rate' => 1.5, 'color_hex' => '#ec4899', 'perks' => ['15% off treatments', 'Priority booking', 'Welcome gift on every visit']],
@@ -467,6 +492,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 50,
             'points_per_currency' => 20,
             'points_expiry_months' => 12,
+            'referrer_bonus' => 150,
+            'referee_bonus' => 100,
             'tiers' => [
                 ['name' => 'Regular',  'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#f59e0b', 'perks' => ['Welcome bite-size dessert', 'Birthday treat']],
                 ['name' => 'Loyalist', 'min_points' => 300,  'earn_rate' => 1.5, 'color_hex' => '#d97706', 'perks' => ['Priority reservations', '10% off à la carte', 'Free aperitif']],
@@ -494,6 +521,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 200,
             'points_per_currency' => 10,
             'points_expiry_months' => 18,
+            'referrer_bonus' => 500,
+            'referee_bonus' => 300,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#22d3ee', 'perks' => ['Standard class access', 'Locker rental']],
                 ['name' => 'Plus',   'min_points' => 1000, 'earn_rate' => 1.5, 'color_hex' => '#0891b2', 'perks' => ['Premium classes', '1 free PT session monthly', '10% off retail']],
@@ -521,6 +550,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 100,
             'points_per_currency' => 10,
             'points_expiry_months' => 24,
+            'referrer_bonus' => 250,
+            'referee_bonus' => 250,
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Member-only offers', 'Birthday gift']],
                 ['name' => 'VIP',    'min_points' => 2000, 'earn_rate' => 2.0, 'color_hex' => '#fbbf24', 'perks' => ['All Member perks', '15% off everything', 'Priority customer support']],
@@ -552,6 +583,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 150,
             'points_per_currency' => 5,
             'points_expiry_months' => 24,
+            'referrer_bonus' => 800,
+            'referee_bonus' => 400,
             'tiers' => [
                 ['name' => 'Learner', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#60a5fa', 'perks' => ['Course materials included', 'Member newsletter']],
                 ['name' => 'Scholar', 'min_points' => 800,  'earn_rate' => 1.5, 'color_hex' => '#2563eb', 'perks' => ['Priority enrolment', 'Free study resources']],
@@ -581,6 +614,8 @@ class LoyaltyPresetService
             // single matter.
             'points_per_currency' => 2,
             'points_expiry_months' => 36,
+            'referrer_bonus' => 2000,
+            'referee_bonus' => 500,
             'tiers' => [
                 ['name' => 'Client',    'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Named point of contact', 'Client newsletter']],
                 ['name' => 'Preferred', 'min_points' => 1000, 'earn_rate' => 1.5, 'color_hex' => '#475569', 'perks' => ['Priority appointments', 'Annual review call']],
@@ -609,6 +644,8 @@ class LoyaltyPresetService
             // ladder meaningful instead of topping out on day one.
             'points_per_currency' => 1,
             'points_expiry_months' => 36,
+            'referrer_bonus' => 2500,
+            'referee_bonus' => 500,
             'tiers' => [
                 ['name' => 'Client',    'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#5eead4', 'perks' => ['Priority viewing slots', 'Market updates']],
                 ['name' => 'Preferred', 'min_points' => 1200, 'earn_rate' => 1.5, 'color_hex' => '#14b8a6', 'perks' => ['Free valuation', 'Featured listing placement']],
@@ -635,6 +672,8 @@ class LoyaltyPresetService
             'welcome_bonus' => 100,
             'points_per_currency' => 10,
             'points_expiry_months' => 18,
+            'referrer_bonus' => 300,
+            'referee_bonus' => 200,
             'tiers' => [
                 ['name' => 'Member',  'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#a5b4fc', 'perks' => ['Member pricing', 'Birthday treat']],
                 ['name' => 'Insider', 'min_points' => 750,  'earn_rate' => 1.5, 'color_hex' => '#6366f1', 'perks' => ['Early access to sales', 'Free returns']],
