@@ -98,7 +98,7 @@ class LoyaltyPresetService
     /**
      * Apply a membership preset. Returns a summary.
      *
-     * @return array{tiers_set:int,tiers_added:int,benefits_added:int,members_on_tiers:int,replaced:bool,noop?:bool}
+     * @return array{tiers_set:int,tiers_added:int,benefits_added:int,rewards_added:int,members_on_tiers:int,replaced:bool,noop?:bool}
      */
     public function apply(string $key, int $organizationId): array
     {
@@ -127,6 +127,7 @@ class LoyaltyPresetService
                 'tiers_set'        => 0,
                 'tiers_added'      => 0,
                 'benefits_added'   => 0,
+                'rewards_added'    => 0,
                 'members_on_tiers' => 0,
                 'replaced'         => false,
                 'noop'             => true,
@@ -147,6 +148,7 @@ class LoyaltyPresetService
             'tiers_set'        => count($preset['tiers']),
             'tiers_added'      => 0,
             'benefits_added'   => 0,
+            'rewards_added'    => 0,
             'members_on_tiers' => 0,
             'replaced'         => false,
         ];
@@ -231,6 +233,35 @@ class LoyaltyPresetService
                 $summary['benefits_added']++;
             }
 
+            // Rewards — additive by name, same philosophy as benefits.
+            //
+            // Nothing seeded these, for any preset or any signup path: every
+            // organisation in this product has tiers and ZERO rewards. Members
+            // accumulate points against a ladder with nothing at the top of it
+            // — the programme looks configured while giving the member no
+            // reason to return. This is the loyalty equivalent of shipping a
+            // chatbot with an empty knowledge base.
+            //
+            // Priced against each preset's own tier thresholds, so the cheapest
+            // reward is reachable soon after the welcome bonus and the dearest
+            // sits around the top tier.
+            $existingRewards = \App\Models\Reward::withoutGlobalScopes()
+                ->where('organization_id', $organizationId)
+                ->pluck('name')
+                ->map(fn ($n) => mb_strtolower(trim((string) $n)))
+                ->all();
+
+            foreach (($preset['rewards'] ?? []) as $i => $r) {
+                if (in_array(mb_strtolower($r['name']), $existingRewards, true)) continue;
+
+                \App\Models\Reward::withoutGlobalScopes()->create(array_merge($r, [
+                    'organization_id' => $organizationId,
+                    'sort_order'      => $i + 1,
+                    'is_active'       => true,
+                ]));
+                $summary['rewards_added']++;
+            }
+
             // Welcome bonus — same data-safety philosophy as tiers +
             // benefits: only write when the org has no existing
             // members. An org with 500 members joined under a
@@ -292,6 +323,13 @@ class LoyaltyPresetService
                 ['name' => 'Platinum', 'min_points' => 15000, 'earn_rate' => 2.0,  'color_hex' => '#E5E4E2', 'perks' => ['Guaranteed room upgrade', 'Complimentary breakfast', 'Bonus night every 5 stays']],
                 ['name' => 'Diamond',  'min_points' => 50000, 'earn_rate' => 3.0,  'color_hex' => '#B9F2FF', 'perks' => ['Suite upgrade', 'Personal concierge', '24/7 priority line', 'Anniversary gift']],
             ],
+            'rewards' => [
+                ['name' => 'Late Checkout',             'points_cost' => 600,   'category' => 'room',          'description' => 'Stay until 2pm on departure day.'],
+                ['name' => 'Breakfast for Two',         'points_cost' => 1200,  'category' => 'food_beverage', 'description' => 'Complimentary breakfast for two guests.'],
+                ['name' => 'Room Upgrade',              'points_cost' => 3000,  'category' => 'room',          'description' => 'One category upgrade, subject to availability.'],
+                ['name' => '30-Minute Spa Treatment',   'points_cost' => 6000,  'category' => 'spa',           'description' => 'A 30-minute treatment of your choice.'],
+                ['name' => 'Free Night',                'points_cost' => 15000, 'category' => 'stay',          'description' => 'One complimentary night in a standard room.'],
+            ],
             'benefits' => [
                 ['name' => 'Welcome Drink',     'code' => 'welcome_drink',     'description' => 'Complimentary welcome drink on arrival',           'category' => 'food_beverage'],
                 ['name' => 'Late Checkout',     'code' => 'late_checkout',     'description' => 'Late checkout until 2pm',                          'category' => 'room'],
@@ -312,6 +350,13 @@ class LoyaltyPresetService
                 ['name' => 'Plus',   'min_points' => 2000,  'earn_rate' => 1.5, 'color_hex' => '#3b82f6', 'perks' => ['Late check-out', 'Free Wi-Fi upgrade', 'Welcome drink']],
                 ['name' => 'Elite',  'min_points' => 10000, 'earn_rate' => 2.0, 'color_hex' => '#fbbf24', 'perks' => ['Room upgrade', 'Complimentary breakfast', 'Priority booking']],
             ],
+            'rewards' => [
+                ['name' => 'Welcome Drink',             'points_cost' => 300,   'category' => 'food_beverage', 'description' => 'A drink on us when you arrive.'],
+                ['name' => 'Late Checkout',             'points_cost' => 600,   'category' => 'room',          'description' => 'Stay until 2pm on departure day.'],
+                ['name' => 'Breakfast for Two',         'points_cost' => 1500,  'category' => 'food_beverage', 'description' => 'Complimentary breakfast for two guests.'],
+                ['name' => 'Room Upgrade',              'points_cost' => 3000,  'category' => 'room',          'description' => 'One category upgrade, subject to availability.'],
+                ['name' => 'Free Night',                'points_cost' => 10000, 'category' => 'stay',          'description' => 'One complimentary night in a standard room.'],
+            ],
             'benefits' => [
                 ['name' => 'Welcome Drink',  'code' => 'welcome_drink',  'description' => 'Complimentary welcome drink on arrival', 'category' => 'food_beverage'],
                 ['name' => 'Late Checkout',  'code' => 'late_checkout',  'description' => 'Late checkout until 2pm',                'category' => 'room'],
@@ -329,6 +374,13 @@ class LoyaltyPresetService
                 ['name' => 'Welcome',      'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#f9a8d4', 'perks' => ['Birthday gift', '10% off retail']],
                 ['name' => 'Devotee',      'min_points' => 500,  'earn_rate' => 1.5, 'color_hex' => '#ec4899', 'perks' => ['15% off treatments', 'Priority booking', 'Welcome gift on every visit']],
                 ['name' => 'Inner Circle', 'min_points' => 2000, 'earn_rate' => 2.0, 'color_hex' => '#a21caf', 'perks' => ['20% off treatments', '1 free treatment yearly', 'Exclusive event invitations']],
+            ],
+            'rewards' => [
+                ['name' => 'Brow Tidy',                 'points_cost' => 200,   'category' => 'add_on',        'description' => 'A quick brow shape added to any appointment.'],
+                ['name' => '10 Off Any Service',        'points_cost' => 400,   'category' => 'discount',      'description' => 'Money off your next treatment.'],
+                ['name' => 'Hand Treatment',            'points_cost' => 700,   'category' => 'treatment',     'description' => 'A complimentary express hand treatment.'],
+                ['name' => '30-Minute Massage',         'points_cost' => 1200,  'category' => 'treatment',     'description' => 'A 30-minute massage of your choice.'],
+                ['name' => 'Treatment of Your Choice',  'points_cost' => 2500,  'category' => 'treatment',     'description' => 'Any single standard treatment, on us.'],
             ],
             'benefits' => [
                 ['name' => 'Birthday Gift',         'code' => 'birthday_gift',     'description' => 'Complimentary product or mini-treatment on birthday month', 'category' => 'gift'],
@@ -348,6 +400,13 @@ class LoyaltyPresetService
                 ['name' => 'Loyalist', 'min_points' => 300,  'earn_rate' => 1.5, 'color_hex' => '#d97706', 'perks' => ['Priority reservations', '10% off à la carte', 'Free aperitif']],
                 ['name' => 'Insider',  'min_points' => 1500, 'earn_rate' => 2.0, 'color_hex' => '#92400e', 'perks' => ['Chef\'s table access', 'Private tasting events', '15% off everything']],
             ],
+            'rewards' => [
+                ['name' => 'Free Coffee',               'points_cost' => 100,   'category' => 'food_beverage', 'description' => 'Any hot drink, on the house.'],
+                ['name' => 'Free Dessert',              'points_cost' => 200,   'category' => 'food_beverage', 'description' => 'Any dessert from the menu.'],
+                ['name' => 'Free Starter',              'points_cost' => 350,   'category' => 'food_beverage', 'description' => 'Any starter from the menu.'],
+                ['name' => '20% Off the Bill',          'points_cost' => 700,   'category' => 'discount',      'description' => 'One fifth off your food bill.'],
+                ['name' => 'Dinner for Two',            'points_cost' => 1800,  'category' => 'food_beverage', 'description' => 'Two courses each for two people.'],
+            ],
             'benefits' => [
                 ['name' => 'Welcome Bite',          'code' => 'welcome_bite',         'description' => 'Complimentary amuse-bouche on arrival', 'category' => 'food_beverage'],
                 ['name' => 'Birthday Treat',        'code' => 'birthday_treat',       'description' => 'Complimentary dessert on birthday',     'category' => 'food_beverage'],
@@ -366,6 +425,13 @@ class LoyaltyPresetService
                 ['name' => 'Plus',   'min_points' => 1000, 'earn_rate' => 1.5, 'color_hex' => '#0891b2', 'perks' => ['Premium classes', '1 free PT session monthly', '10% off retail']],
                 ['name' => 'Pro',    'min_points' => 5000, 'earn_rate' => 2.0, 'color_hex' => '#155e75', 'perks' => ['Unlimited PT sessions', 'Guest passes (2/month)', '20% off retail', 'Free nutrition consult']],
             ],
+            'rewards' => [
+                ['name' => 'Protein Shake',             'points_cost' => 250,   'category' => 'food_beverage', 'description' => 'Any shake from the bar.'],
+                ['name' => 'Guest Day Pass',            'points_cost' => 300,   'category' => 'guest',         'description' => 'Bring a friend for a full day.'],
+                ['name' => 'PT Taster Session',         'points_cost' => 900,   'category' => 'training',      'description' => 'A 30-minute session with a trainer.'],
+                ['name' => 'Five Class Pack',           'points_cost' => 2000,  'category' => 'classes',       'description' => 'Five classes to use whenever you like.'],
+                ['name' => 'One Month Membership',      'points_cost' => 5000,  'category' => 'membership',    'description' => 'A full month, on us.'],
+            ],
             'benefits' => [
                 ['name' => 'Class Access',     'code' => 'class_access',     'description' => 'Tier-based access to premium classes', 'category' => 'service'],
                 ['name' => 'PT Sessions',      'code' => 'pt_sessions',      'description' => 'Complimentary personal-training sessions per month', 'category' => 'service'],
@@ -382,6 +448,12 @@ class LoyaltyPresetService
             'tiers' => [
                 ['name' => 'Member', 'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#94a3b8', 'perks' => ['Member-only offers', 'Birthday gift']],
                 ['name' => 'VIP',    'min_points' => 2000, 'earn_rate' => 2.0, 'color_hex' => '#fbbf24', 'perks' => ['All Member perks', '15% off everything', 'Priority customer support']],
+            ],
+            'rewards' => [
+                ['name' => '5 Credit',                  'points_cost' => 250,   'category' => 'discount',      'description' => 'Money off your next visit.'],
+                ['name' => '10% Off',                   'points_cost' => 500,   'category' => 'discount',      'description' => 'One tenth off your next purchase.'],
+                ['name' => '15 Credit',                 'points_cost' => 1000,  'category' => 'discount',      'description' => 'A larger credit towards your next visit.'],
+                ['name' => 'VIP Perk of Your Choice',   'points_cost' => 2000,  'category' => 'vip',           'description' => 'Pick any perk from the VIP tier.'],
             ],
             'benefits' => [
                 ['name' => 'Member Discount', 'code' => 'member_discount', 'description' => 'Tier-based percentage discount', 'category' => 'retail'],
