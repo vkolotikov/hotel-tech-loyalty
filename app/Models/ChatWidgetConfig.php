@@ -53,6 +53,7 @@ class ChatWidgetConfig extends Model
         'lead_capture_delay',
         'offline_message',
         'handoff_whatsapp',
+        'handoff_email',
         'is_active',
         'business_hours',
         'timezone',

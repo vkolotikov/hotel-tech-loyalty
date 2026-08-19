@@ -735,6 +735,8 @@ class WidgetChatController extends Controller
                 'last_message_at' => now(),
                 'messages_count'  => $existingChatConv->messages_count + 2,
             ]);
+
+            $this->alertStaffOfHandoff($config, $existingChatConv, $request->message);
             return response()->json([
                 'response'      => $escalationMsg,
                 'session_id'    => $request->session_id,
@@ -1911,6 +1913,50 @@ class WidgetChatController extends Controller
             );
         } catch (\Throwable $e) {
             // Already logged inside AiUsageService.
+        }
+    }
+
+    /**
+     * Email the venue that a visitor is waiting for a person.
+     *
+     * The only alert before this was a sound in the chat inbox, which requires
+     * someone to already have the inbox open. Outside working hours a visitor
+     * who asked for help reached nobody, having just been told a colleague was
+     * coming — a promise the venue broke without knowing it had been made.
+     *
+     * Once per conversation. The visitor can ask for a human repeatedly, and a
+     * venue whose phone buzzes five times for one conversation turns the alert
+     * off, which costs them every future one.
+     *
+     * Never allowed to break the reply. This runs inside the visitor's request,
+     * and mail is the least important thing happening in it — a queue failure
+     * or a bad address must not turn a working handoff into a 500.
+     */
+    private function alertStaffOfHandoff($config, $conversation, ?string $lastMessage): void
+    {
+        try {
+            $to = trim((string) ($config->handoff_email ?? ''));
+            if ($to === '' || !filter_var($to, FILTER_VALIDATE_EMAIL)) {
+                return;
+            }
+
+            $once = 'widget:handoff-alert:' . $conversation->id;
+            if (!\Illuminate\Support\Facades\Cache::add($once, 1, now()->addHours(6))) {
+                return;
+            }
+
+            \Illuminate\Support\Facades\Mail::to($to)->queue(new \App\Mail\VisitorNeedsHumanMail(
+                venueName:    (string) ($config->company_name ?: 'Your venue'),
+                visitorName:  $conversation->visitor_name,
+                visitorEmail: $conversation->visitor_email,
+                visitorPhone: $conversation->visitor_phone,
+                lastMessage:  (string) ($lastMessage ?: '(no message)'),
+                pageUrl:      $conversation->page_url ?? null,
+                inboxUrl:     rtrim(config('app.url'), '/') . '/chat-inbox',
+                sentAt:       now()->format('D j M, H:i'),
+            ));
+        } catch (\Throwable $e) {
+            \Log::warning('Widget handoff staff alert failed: ' . $e->getMessage());
         }
     }
 
