@@ -22,6 +22,13 @@ export default {
           surface2: 'rgb(var(--color-dark-surface2, 30 30 30) / <alpha-value>)',
           surface3: 'rgb(var(--color-dark-surface3, 38 38 38) / <alpha-value>)',
           surface4: 'rgb(var(--color-dark-surface4, 46 46 46) / <alpha-value>)',
+          // `card` and `hover` were used by 28 class names across the chatbot
+          // and analytics screens but were never defined here, so Tailwind
+          // generated nothing for them and those cards rendered with NO
+          // background — which is why that part of the product looked like a
+          // second, flatter design language rather than a styling choice.
+          card:     'rgb(var(--color-dark-card, 30 30 30) / <alpha-value>)',
+          hover:    'rgb(var(--color-dark-hover, 38 38 38) / <alpha-value>)',
           border:   'rgb(var(--color-dark-border, 44 44 44) / <alpha-value>)',
           border2:  'rgb(var(--color-dark-border2, 56 56 56) / <alpha-value>)',
         },
