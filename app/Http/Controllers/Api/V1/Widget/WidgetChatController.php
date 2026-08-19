@@ -505,16 +505,31 @@ class WidgetChatController extends Controller
             $brandId = $config->brand_id
                 ?: \App\Models\Brand::currentOrDefaultIdForOrg($config->organization_id);
 
-            AiConversation::updateOrCreate(
-                ['session_id' => $sessionId],
-                [
-                    'organization_id' => $config->organization_id,
-                    'member_id' => null,
-                    'messages' => [],
-                    'model' => 'gpt-4o',
-                    'is_active' => true,
-                ]
-            );
+            // Seed the AI transcript on CREATE only.
+            //
+            // This was an updateOrCreate whose values included `messages => []`,
+            // and initSession() runs every time the panel is opened — so a
+            // visitor who closed the widget and reopened it, or simply moved to
+            // another page, had the assistant's memory wiped while their
+            // visible transcript (which comes from ChatConversation) stayed on
+            // screen. The bot appeared to forget a conversation the visitor
+            // could still read directly above the input box. sendMessage()
+            // builds its context from exactly this column.
+            //
+            // member_id is likewise create-only: nulling it on resume would
+            // unlink a conversation that had since been matched to a member.
+            $aiConv = AiConversation::withoutGlobalScopes()
+                ->firstOrNew(['session_id' => $sessionId]);
+
+            if (!$aiConv->exists) {
+                $aiConv->organization_id = $config->organization_id;
+                $aiConv->member_id       = null;
+                $aiConv->messages        = [];
+                $aiConv->model           = 'gpt-4o';
+            }
+
+            $aiConv->is_active = true;
+            $aiConv->save();
 
             // Metadata refreshes on every init, but `status` and
             // `last_message_at` only stamp on CREATE. Forcing them on
