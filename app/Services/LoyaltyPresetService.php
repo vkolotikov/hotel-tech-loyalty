@@ -78,7 +78,18 @@ class LoyaltyPresetService
             ];
         }
 
-        return ['presets' => $presets, 'current' => $current];
+        // The picker translates points into spend ("about €5 away"), which
+        // reads like a missing symbol without this.
+        $currency = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', app()->bound('current_organization_id') ? (int) app('current_organization_id') : 0)
+            ->where('key', 'currency_symbol')
+            ->value('value');
+
+        return [
+            'presets'         => $presets,
+            'current'         => $current,
+            'currency_symbol' => $currency ?: '',
+        ];
     }
 
     /**

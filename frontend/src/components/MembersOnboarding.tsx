@@ -46,6 +46,7 @@ interface PresetMeta {
 interface PresetsResponse {
   presets: PresetMeta[]
   current: string | null
+  currency_symbol: string
   onboarding_completed_at: string | null
 }
 
@@ -288,6 +289,7 @@ export function MembersOnboarding({ onComplete }: Props) {
                     {picked.points_per_currency ? (
                       <> — about{' '}
                         <span className="text-white font-semibold">
+                          {data.currency_symbol}
                           {Math.max(0, Math.ceil((picked.cheapest_reward.points_cost - picked.welcome_bonus) / picked.points_per_currency))}
                         </span>{' '}
                         of spend away.
