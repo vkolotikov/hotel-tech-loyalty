@@ -140,7 +140,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
   return (
     <div className="max-w-3xl mx-auto pb-16">
       <div className="mb-8">
-        <span className={kicker}>Set up in four steps</span>
+        <span className={kicker}>{(data.industry || '').replace(/_/g, ' ')} setup</span>
         <h1 className="text-2xl font-semibold text-white mt-2">Let’s get your assistant answering</h1>
         <p className="text-sm text-t-secondary mt-2 leading-relaxed">
           We’ve already chosen the settings that follow from your industry. You only need to tell us
@@ -150,32 +150,45 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
       </div>
 
       {/*
-        Stepper. The 1px thread is the signature element: it encodes the
-        sequence rather than decorating it, so a first-time user can see there
-        are four questions and then they are live.
+        Stepper. The connector between nodes is the signature element: it
+        encodes the sequence rather than decorating it, so a first-time user can
+        see there are four questions and then they are live, and how far along
+        they are.
+
+        Drawn as a segment per step rather than one absolutely-positioned line,
+        because the row wraps on narrow screens — an absolute line would run
+        behind the wrap and point at nothing.
       */}
-      <ol className="relative mb-8 pl-6">
-        <span aria-hidden className="absolute left-[9px] top-3 bottom-3 w-px bg-dark-border" />
-        <div className="flex flex-wrap gap-x-6 gap-y-2">
-          {STEPS.map((s, i) => (
-            <li key={s.key} className="flex items-center gap-2 text-xs">
+      <ol className="flex flex-wrap items-center gap-y-3 mb-8">
+        {STEPS.map((s, i) => (
+          <li key={s.key} className="flex items-center">
+            {i > 0 && (
               <span
-                aria-current={i === step ? 'step' : undefined}
+                aria-hidden
                 className={
-                  'relative -ml-6 w-[19px] h-[19px] rounded-full grid place-items-center border text-[10px] ' +
-                  (i < step
-                    ? 'bg-primary-500 border-primary-500 text-black'
-                    : i === step
-                      ? 'bg-dark-bg border-primary-500 text-primary-500'
-                      : 'bg-dark-bg border-dark-border text-[#636366]')
+                  'hidden sm:block h-px sm:w-10 mx-2 transition-colors duration-500 motion-reduce:transition-none ' +
+                  (i <= step ? 'bg-primary-500' : 'bg-dark-border')
                 }
-              >
-                {i < step ? <Check size={11} strokeWidth={3} /> : i + 1}
-              </span>
-              <span className={i === step ? 'text-white font-medium' : 'text-t-secondary'}>{s.title}</span>
-            </li>
-          ))}
-        </div>
+              />
+            )}
+            <span
+              aria-current={i === step ? 'step' : undefined}
+              className={
+                'w-[22px] h-[22px] rounded-full grid place-items-center border text-[10px] shrink-0 transition-colors motion-reduce:transition-none ' +
+                (i < step
+                  ? 'bg-primary-500 border-primary-500 text-black'
+                  : i === step
+                    ? 'bg-dark-bg border-primary-500 text-primary-500'
+                    : 'bg-dark-bg border-dark-border text-[#636366]')
+              }
+            >
+              {i < step ? <Check size={11} strokeWidth={3} /> : i + 1}
+            </span>
+            <span className={'ml-2 text-xs ' + (i === step ? 'text-white font-medium' : 'text-t-secondary')}>
+              {s.title}
+            </span>
+          </li>
+        ))}
       </ol>
 
       {step === 0 && (
