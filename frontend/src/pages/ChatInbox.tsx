@@ -212,7 +212,12 @@ export function ChatInbox() {
 
   const { data: cannedResponses = [] } = useQuery({
     queryKey: ['chat-canned'],
-    queryFn: () => api.get('/v1/admin/chat-inbox-canned').then(r => r.data),
+    // The endpoint wraps the list: {canned_responses: [...]}. Assigning the
+    // whole object here meant `.length` was undefined (so the empty state
+    // never showed) and `.map` threw when an agent opened the canned menu —
+    // the library they curated in Chatbot Setup was unreachable from the one
+    // screen that consumes it.
+    queryFn: () => api.get('/v1/admin/chat-inbox-canned').then(r => r.data?.canned_responses ?? []),
     staleTime: 60000,
   })
   const { data: agentList } = useQuery({

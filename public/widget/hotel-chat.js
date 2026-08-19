@@ -41,13 +41,13 @@
   // every label via widget config (input_placeholder, welcome_title, etc.) —
   // these only apply when the override is empty. Detected from browser locale.
   var I18N = {
-    en: { placeholder: 'Type a message…', hint: 'Press Enter to send', welcome: 'Hi! How can I help you today?', subtitle: 'Ask about reservations, loyalty program, hotel services, or anything else.', consentTitle: 'Privacy Consent', consentBtn: 'I agree, start chat', consentText: 'By chatting with us you agree to our privacy policy and the storage of your messages.', talkToPerson: "Talk to a person", handoffIntro: "Hi, I have a question.", branding: 'Powered by Hotel AI', offline: "We're currently offline. Leave a message and we'll get back to you.", uploadFailed: 'Upload failed', tooLarge: 'File too large (max 8MB)', somethingWrong: 'Sorry, something went wrong. Please try again.', notified: 'A team member has been notified and will reply shortly.', ratingHow: 'How was this conversation?', thanksRating: 'Thanks for your feedback!' },
-    es: { placeholder: 'Escribe un mensaje…', hint: 'Pulsa Enter para enviar', welcome: '¡Hola! ¿En qué puedo ayudarte?', subtitle: 'Pregunta sobre reservas, programa de fidelidad o servicios del hotel.', consentTitle: 'Consentimiento', consentBtn: 'Acepto, iniciar chat', consentText: 'Al chatear con nosotros aceptas nuestra política de privacidad y el almacenamiento de tus mensajes.', talkToPerson: "Hablar con una persona", handoffIntro: "Hola, tengo una pregunta.", branding: 'Con tecnología Hotel AI', offline: 'Actualmente estamos offline. Deja un mensaje y te responderemos.', uploadFailed: 'Error al subir', tooLarge: 'Archivo demasiado grande (máx 8MB)', somethingWrong: 'Lo siento, algo salió mal. Inténtalo de nuevo.', notified: 'Un miembro del equipo ha sido notificado y responderá en breve.', ratingHow: '¿Cómo fue esta conversación?', thanksRating: '¡Gracias por tus comentarios!' },
-    fr: { placeholder: 'Tapez un message…', hint: 'Appuyez sur Entrée pour envoyer', welcome: 'Bonjour ! Comment puis-je vous aider ?', subtitle: 'Posez vos questions sur les réservations, le programme de fidélité ou les services.', consentTitle: 'Consentement', consentBtn: "J'accepte, démarrer le chat", consentText: 'En discutant avec nous, vous acceptez notre politique de confidentialité et le stockage de vos messages.', talkToPerson: "Parler à quelqu’un", handoffIntro: "Bonjour, j’ai une question.", branding: 'Propulsé par Hotel AI', offline: 'Nous sommes actuellement hors ligne. Laissez un message et nous vous répondrons.', uploadFailed: 'Échec de l\'envoi', tooLarge: 'Fichier trop volumineux (max 8 Mo)', somethingWrong: 'Désolé, une erreur est survenue. Veuillez réessayer.', notified: 'Un membre de l\'équipe a été notifié et répondra bientôt.', ratingHow: 'Comment s\'est passée cette conversation ?', thanksRating: 'Merci pour vos commentaires !' },
-    de: { placeholder: 'Nachricht schreiben…', hint: 'Eingabetaste zum Senden', welcome: 'Hallo! Wie kann ich helfen?', subtitle: 'Fragen Sie zu Reservierungen, Treueprogramm oder Hotelservices.', consentTitle: 'Datenschutz', consentBtn: 'Einverstanden, Chat starten', consentText: 'Durch das Chatten mit uns stimmen Sie unserer Datenschutzerklärung und der Speicherung Ihrer Nachrichten zu.', talkToPerson: "Mit einer Person sprechen", handoffIntro: "Hallo, ich habe eine Frage.", branding: 'Bereitgestellt von Hotel AI', offline: 'Wir sind gerade offline. Hinterlassen Sie eine Nachricht und wir melden uns.', uploadFailed: 'Upload fehlgeschlagen', tooLarge: 'Datei zu groß (max. 8 MB)', somethingWrong: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.', notified: 'Ein Teammitglied wurde benachrichtigt und antwortet in Kürze.', ratingHow: 'Wie war diese Unterhaltung?', thanksRating: 'Danke für Ihr Feedback!' },
-    it: { placeholder: 'Scrivi un messaggio…', hint: 'Premi Invio per inviare', welcome: 'Ciao! Come posso aiutarti?', subtitle: 'Chiedi informazioni su prenotazioni, programma fedeltà o servizi.', consentTitle: 'Privacy', consentBtn: 'Accetto, inizia chat', consentText: 'Chattando con noi accetti la nostra privacy policy e la conservazione dei messaggi.', talkToPerson: "Parla con una persona", handoffIntro: "Ciao, ho una domanda.", branding: 'Realizzato con Hotel AI', offline: 'Al momento siamo offline. Lascia un messaggio e ti risponderemo.', uploadFailed: 'Caricamento fallito', tooLarge: 'File troppo grande (max 8 MB)', somethingWrong: 'Qualcosa è andato storto. Riprova.', notified: 'Un membro del team è stato avvisato e risponderà a breve.', ratingHow: "Com'è andata questa conversazione?", thanksRating: 'Grazie per il tuo feedback!' },
-    pt: { placeholder: 'Escreva uma mensagem…', hint: 'Pressione Enter para enviar', welcome: 'Olá! Como posso ajudar?', subtitle: 'Pergunte sobre reservas, programa de fidelidade ou serviços do hotel.', consentTitle: 'Privacidade', consentBtn: 'Concordo, iniciar chat', consentText: 'Ao conversar conosco você aceita nossa política de privacidade e o armazenamento das suas mensagens.', talkToPerson: "Falar com uma pessoa", handoffIntro: "Olá, tenho uma pergunta.", branding: 'Desenvolvido por Hotel AI', offline: 'Estamos offline no momento. Deixe uma mensagem e retornaremos.', uploadFailed: 'Falha no upload', tooLarge: 'Arquivo muito grande (máx 8MB)', somethingWrong: 'Algo deu errado. Tente novamente.', notified: 'Um membro da equipe foi notificado e responderá em breve.', ratingHow: 'Como foi esta conversa?', thanksRating: 'Obrigado pelo feedback!' },
-    ru: { placeholder: 'Введите сообщение…', hint: 'Нажмите Enter для отправки', welcome: 'Здравствуйте! Чем могу помочь?', subtitle: 'Спрашивайте о бронировании, программе лояльности или услугах отеля.', consentTitle: 'Согласие', consentBtn: 'Согласен, начать чат', consentText: 'Общаясь с нами, вы соглашаетесь с нашей политикой конфиденциальности и хранением ваших сообщений.', talkToPerson: "Связаться с человеком", handoffIntro: "Здравствуйте, у меня вопрос.", branding: 'Работает на Hotel AI', offline: 'Сейчас мы офлайн. Оставьте сообщение, и мы ответим.', uploadFailed: 'Ошибка загрузки', tooLarge: 'Файл слишком большой (макс 8 МБ)', somethingWrong: 'Что-то пошло не так. Попробуйте ещё раз.', notified: 'Сотрудник был уведомлён и скоро ответит.', ratingHow: 'Как прошёл разговор?', thanksRating: 'Спасибо за отзыв!' }
+    en: { placeholder: 'Type a message…', hint: 'Press Enter to send', welcome: 'Hi! How can I help you today?', subtitle: 'Ask about reservations, loyalty program, hotel services, or anything else.', consentTitle: 'Privacy Consent', consentBtn: 'I agree, start chat', consentText: 'By chatting with us you agree to our privacy policy and the storage of your messages.', talkToPerson: "Talk to a person", handoffIntro: "Hi, I have a question.", leadTitle: "Can we reach you?", leadName: "Your name", leadEmail: "Email", leadPhone: "Phone", leadSubmit: "Send", leadSkip: "Not now", leadSending: "Sending…", leadThanks: "Thanks — we’ll be in touch.", branding: 'Powered by Hotel AI', offline: "We're currently offline. Leave a message and we'll get back to you.", uploadFailed: 'Upload failed', tooLarge: 'File too large (max 8MB)', somethingWrong: 'Sorry, something went wrong. Please try again.', notified: 'A team member has been notified and will reply shortly.', ratingHow: 'How was this conversation?', thanksRating: 'Thanks for your feedback!' },
+    es: { placeholder: 'Escribe un mensaje…', hint: 'Pulsa Enter para enviar', welcome: '¡Hola! ¿En qué puedo ayudarte?', subtitle: 'Pregunta sobre reservas, programa de fidelidad o servicios del hotel.', consentTitle: 'Consentimiento', consentBtn: 'Acepto, iniciar chat', consentText: 'Al chatear con nosotros aceptas nuestra política de privacidad y el almacenamiento de tus mensajes.', talkToPerson: "Hablar con una persona", handoffIntro: "Hola, tengo una pregunta.", leadTitle: "¿Cómo podemos contactarte?", leadName: "Tu nombre", leadEmail: "Email", leadPhone: "Teléfono", leadSubmit: "Enviar", leadSkip: "Ahora no", leadSending: "Enviando…", leadThanks: "Gracias, te contactaremos.", branding: 'Con tecnología Hotel AI', offline: 'Actualmente estamos offline. Deja un mensaje y te responderemos.', uploadFailed: 'Error al subir', tooLarge: 'Archivo demasiado grande (máx 8MB)', somethingWrong: 'Lo siento, algo salió mal. Inténtalo de nuevo.', notified: 'Un miembro del equipo ha sido notificado y responderá en breve.', ratingHow: '¿Cómo fue esta conversación?', thanksRating: '¡Gracias por tus comentarios!' },
+    fr: { placeholder: 'Tapez un message…', hint: 'Appuyez sur Entrée pour envoyer', welcome: 'Bonjour ! Comment puis-je vous aider ?', subtitle: 'Posez vos questions sur les réservations, le programme de fidélité ou les services.', consentTitle: 'Consentement', consentBtn: "J'accepte, démarrer le chat", consentText: 'En discutant avec nous, vous acceptez notre politique de confidentialité et le stockage de vos messages.', talkToPerson: "Parler à quelqu’un", handoffIntro: "Bonjour, j’ai une question.", leadTitle: "Comment vous joindre ?", leadName: "Votre nom", leadEmail: "E-mail", leadPhone: "Téléphone", leadSubmit: "Envoyer", leadSkip: "Plus tard", leadSending: "Envoi…", leadThanks: "Merci, nous vous recontactons.", branding: 'Propulsé par Hotel AI', offline: 'Nous sommes actuellement hors ligne. Laissez un message et nous vous répondrons.', uploadFailed: 'Échec de l\'envoi', tooLarge: 'Fichier trop volumineux (max 8 Mo)', somethingWrong: 'Désolé, une erreur est survenue. Veuillez réessayer.', notified: 'Un membre de l\'équipe a été notifié et répondra bientôt.', ratingHow: 'Comment s\'est passée cette conversation ?', thanksRating: 'Merci pour vos commentaires !' },
+    de: { placeholder: 'Nachricht schreiben…', hint: 'Eingabetaste zum Senden', welcome: 'Hallo! Wie kann ich helfen?', subtitle: 'Fragen Sie zu Reservierungen, Treueprogramm oder Hotelservices.', consentTitle: 'Datenschutz', consentBtn: 'Einverstanden, Chat starten', consentText: 'Durch das Chatten mit uns stimmen Sie unserer Datenschutzerklärung und der Speicherung Ihrer Nachrichten zu.', talkToPerson: "Mit einer Person sprechen", handoffIntro: "Hallo, ich habe eine Frage.", leadTitle: "Wie erreichen wir Sie?", leadName: "Ihr Name", leadEmail: "E-Mail", leadPhone: "Telefon", leadSubmit: "Senden", leadSkip: "Später", leadSending: "Senden…", leadThanks: "Danke — wir melden uns.", branding: 'Bereitgestellt von Hotel AI', offline: 'Wir sind gerade offline. Hinterlassen Sie eine Nachricht und wir melden uns.', uploadFailed: 'Upload fehlgeschlagen', tooLarge: 'Datei zu groß (max. 8 MB)', somethingWrong: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.', notified: 'Ein Teammitglied wurde benachrichtigt und antwortet in Kürze.', ratingHow: 'Wie war diese Unterhaltung?', thanksRating: 'Danke für Ihr Feedback!' },
+    it: { placeholder: 'Scrivi un messaggio…', hint: 'Premi Invio per inviare', welcome: 'Ciao! Come posso aiutarti?', subtitle: 'Chiedi informazioni su prenotazioni, programma fedeltà o servizi.', consentTitle: 'Privacy', consentBtn: 'Accetto, inizia chat', consentText: 'Chattando con noi accetti la nostra privacy policy e la conservazione dei messaggi.', talkToPerson: "Parla con una persona", handoffIntro: "Ciao, ho una domanda.", leadTitle: "Come possiamo contattarti?", leadName: "Il tuo nome", leadEmail: "Email", leadPhone: "Telefono", leadSubmit: "Invia", leadSkip: "Non ora", leadSending: "Invio…", leadThanks: "Grazie, ti ricontatteremo.", branding: 'Realizzato con Hotel AI', offline: 'Al momento siamo offline. Lascia un messaggio e ti risponderemo.', uploadFailed: 'Caricamento fallito', tooLarge: 'File troppo grande (max 8 MB)', somethingWrong: 'Qualcosa è andato storto. Riprova.', notified: 'Un membro del team è stato avvisato e risponderà a breve.', ratingHow: "Com'è andata questa conversazione?", thanksRating: 'Grazie per il tuo feedback!' },
+    pt: { placeholder: 'Escreva uma mensagem…', hint: 'Pressione Enter para enviar', welcome: 'Olá! Como posso ajudar?', subtitle: 'Pergunte sobre reservas, programa de fidelidade ou serviços do hotel.', consentTitle: 'Privacidade', consentBtn: 'Concordo, iniciar chat', consentText: 'Ao conversar conosco você aceita nossa política de privacidade e o armazenamento das suas mensagens.', talkToPerson: "Falar com uma pessoa", handoffIntro: "Olá, tenho uma pergunta.", leadTitle: "Como podemos falar consigo?", leadName: "O seu nome", leadEmail: "Email", leadPhone: "Telefone", leadSubmit: "Enviar", leadSkip: "Agora não", leadSending: "A enviar…", leadThanks: "Obrigado — entraremos em contacto.", branding: 'Desenvolvido por Hotel AI', offline: 'Estamos offline no momento. Deixe uma mensagem e retornaremos.', uploadFailed: 'Falha no upload', tooLarge: 'Arquivo muito grande (máx 8MB)', somethingWrong: 'Algo deu errado. Tente novamente.', notified: 'Um membro da equipe foi notificado e responderá em breve.', ratingHow: 'Como foi esta conversa?', thanksRating: 'Obrigado pelo feedback!' },
+    ru: { placeholder: 'Введите сообщение…', hint: 'Нажмите Enter для отправки', welcome: 'Здравствуйте! Чем могу помочь?', subtitle: 'Спрашивайте о бронировании, программе лояльности или услугах отеля.', consentTitle: 'Согласие', consentBtn: 'Согласен, начать чат', consentText: 'Общаясь с нами, вы соглашаетесь с нашей политикой конфиденциальности и хранением ваших сообщений.', talkToPerson: "Связаться с человеком", handoffIntro: "Здравствуйте, у меня вопрос.", leadTitle: "Как с вами связаться?", leadName: "Ваше имя", leadEmail: "Email", leadPhone: "Телефон", leadSubmit: "Отправить", leadSkip: "Не сейчас", leadSending: "Отправка…", leadThanks: "Спасибо, мы свяжемся с вами.", branding: 'Работает на Hotel AI', offline: 'Сейчас мы офлайн. Оставьте сообщение, и мы ответим.', uploadFailed: 'Ошибка загрузки', tooLarge: 'Файл слишком большой (макс 8 МБ)', somethingWrong: 'Что-то пошло не так. Попробуйте ещё раз.', notified: 'Сотрудник был уведомлён и скоро ответит.', ratingHow: 'Как прошёл разговор?', thanksRating: 'Спасибо за отзыв!' }
   };
   function detectLang() {
     var l = (window.HotelChatConfig && window.HotelChatConfig.lang) || navigator.language || 'en';
@@ -76,6 +76,16 @@
 
   // ── State ──
   var isOpen = false;
+
+  // Lead capture. The admin settings for this shipped in the config payload
+  // and nothing rendered them — `lead_capture_enabled`, its field list and its
+  // delay were a settings card with no implementation behind it, on the
+  // feature that is the widget's whole commercial point.
+  var LEAD_KEY = 'htchat_lead_' + (cfg.key || 'default');
+  var leadCaptured = false;
+  var leadFormShown = false;
+  var leadTimer = null;
+  try { leadCaptured = localStorage.getItem(LEAD_KEY) === '1'; } catch (e) {}
   var isLoading = false;
   var isListening = false;
   var isSpeaking = false;
@@ -422,6 +432,121 @@
       // already reads the input.
       sendMessage();
     });
+  }
+
+  /**
+   * Ask for the visitor's details, once, after the configured delay.
+   *
+   * Built from DOM nodes rather than the message-HTML pipeline: this card
+   * holds inputs whose values are visitor-authored, and that pipeline
+   * interpolates into markup. Keeping it out of there means a typed value
+   * cannot become markup.
+   */
+  function scheduleLeadCapture() {
+    if (leadTimer || leadCaptured || leadFormShown) return;
+
+    var lc = widgetConfig && widgetConfig.lead_capture;
+    if (!lc || !lc.enabled) return;
+
+    var fields = lc.fields || {};
+    if (!fields.name && !fields.email && !fields.phone) return;
+
+    // `delay` is seconds, floored at 5. Asking the instant the panel opens,
+    // before the visitor has said anything, is the fastest way to get the
+    // widget closed.
+    var wait = Math.max(Number(lc.delay) || 0, 5) * 1000;
+    leadTimer = setTimeout(showLeadCaptureForm, wait);
+  }
+
+  function showLeadCaptureForm() {
+    if (leadCaptured || leadFormShown) return;
+    var container = document.getElementById('htchat-messages');
+    if (!container) return;
+
+    var lc = (widgetConfig && widgetConfig.lead_capture) || {};
+    var fields = lc.fields || {};
+    leadFormShown = true;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'htchat-msg assistant';
+    wrap.id = 'htchat-lead-card';
+
+    var bubble = document.createElement('div');
+    bubble.className = 'htchat-msg-bubble';
+    bubble.style.background = (widgetConfig && widgetConfig.bot_bubble_color) || '#f3f4f6';
+    bubble.style.color = (widgetConfig && widgetConfig.bot_bubble_text) || '#1f2937';
+
+    var title = document.createElement('div');
+    title.style.cssText = 'font-size:13px;font-weight:600;margin-bottom:8px';
+    title.textContent = T.leadTitle;
+    bubble.appendChild(title);
+
+    var inputs = {};
+    [['name', T.leadName], ['email', T.leadEmail], ['phone', T.leadPhone]].forEach(function (pair) {
+      if (!fields[pair[0]]) return;
+      var i = document.createElement('input');
+      i.type = pair[0] === 'email' ? 'email' : (pair[0] === 'phone' ? 'tel' : 'text');
+      i.placeholder = pair[1];
+      i.setAttribute('aria-label', pair[1]);
+      i.style.cssText = 'width:100%;box-sizing:border-box;margin-bottom:6px;padding:8px 10px;border:1px solid rgba(0,0,0,0.12);border-radius:8px;font-size:13px;font-family:inherit';
+      bubble.appendChild(i);
+      inputs[pair[0]] = i;
+    });
+
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:4px';
+
+    var send = document.createElement('button');
+    send.type = 'button';
+    send.textContent = T.leadSubmit;
+    send.style.cssText = 'background:' + getColor() + ';color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit';
+
+    var skip = document.createElement('button');
+    skip.type = 'button';
+    skip.textContent = T.leadSkip;
+    skip.style.cssText = 'background:none;border:none;color:currentColor;opacity:0.6;font-size:12px;cursor:pointer;font-family:inherit';
+
+    // Dismissal is remembered. Being asked again on the next page is worse
+    // than never being asked.
+    skip.onclick = function () {
+      leadCaptured = true;
+      try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {}
+      wrap.remove();
+    };
+
+    send.onclick = function () {
+      var payload = { session_id: sessionId };
+      var any = false;
+      Object.keys(inputs).forEach(function (k) {
+        var v = inputs[k].value.trim();
+        if (v) { payload[k] = v; any = true; }
+      });
+      if (!any) return;
+
+      send.disabled = true;
+      send.textContent = T.leadSending;
+
+      fetch(API + '/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      }).then(function (r) {
+        if (!r.ok) throw new Error('lead failed');
+        leadCaptured = true;
+        try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {}
+        bubble.textContent = T.leadThanks;
+      }).catch(function () {
+        send.disabled = false;
+        send.textContent = T.leadSubmit;
+      });
+    };
+
+    row.appendChild(send);
+    row.appendChild(skip);
+    bubble.appendChild(row);
+    wrap.appendChild(bubble);
+    container.appendChild(wrap);
+    container.scrollTop = container.scrollHeight;
   }
 
   // ── Init ──
@@ -796,6 +921,7 @@
       initSession();
       setTimeout(function () { document.getElementById('htchat-input').focus(); }, 100);
       startPolling();
+      scheduleLeadCapture();
     } else {
       panel.classList.add('hidden');
       launcher.style.display = 'flex';
@@ -1144,7 +1270,9 @@
           stars += '<button data-rating="' + i + '" style="background:none;border:none;cursor:pointer;font-size:20px;padding:0 2px;color:#f59e0b">★</button>';
         }
         return '<div class="htchat-msg assistant"><div class="htchat-msg-bubble" style="background:' + (c.bot_bubble_color || '#f3f4f6') + ';color:' + (c.bot_bubble_text || '#1f2937') + '">' +
-          '<div style="font-size:12px;margin-bottom:6px">' + escapeHtml(T.ratingHow) + '</div>' +
+          // The admin's own wording when they set one — rating_prompt_text was
+          // editable in settings but never left the database.
+          '<div style="font-size:12px;margin-bottom:6px">' + escapeHtml(c.rating_prompt_text || T.ratingHow) + '</div>' +
           '<div data-rating-stars="' + idx + '">' + stars + '</div>' +
           '</div></div>';
       }

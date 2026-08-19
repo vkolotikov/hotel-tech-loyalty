@@ -255,6 +255,14 @@ class WidgetChatController extends Controller
         }
 
         $behavior = ChatbotBehaviorConfig::where('organization_id', $config->organization_id)->first();
+
+        // Industry drives the starter chips below. Resolved once, here, rather
+        // than inline — an inline lookup that silently fell through would put
+        // hotel chips back on every other vertical, which is the bug being
+        // fixed.
+        $widgetIndustry = \App\Models\Organization::withoutGlobalScopes()
+            ->find($config->organization_id)?->resolved_industry
+            ?: \App\Models\Organization::DEFAULT_INDUSTRY;
         $voiceConfig = \App\Models\VoiceAgentConfig::where('organization_id', $config->organization_id)->first();
 
         $primaryColor = $config->primary_color ?: (\App\Models\HotelSetting::withoutGlobalScopes()
@@ -271,7 +279,16 @@ class WidgetChatController extends Controller
             'welcome_subtitle'   => $config->welcome_subtitle,
             'input_placeholder'  => $config->input_placeholder,
             'show_suggestions'   => $config->show_suggestions ?? true,
-            'suggestions'        => $config->suggestions,
+            // Fall back to the industry's starter chips, never to the widget's
+            // hard-coded English hotel phrases ("I want to check my booking",
+            // "Tell me about loyalty rewards"). `suggestions` is null for every
+            // org that predates the first-run wizard, so a gym, a clinic and a
+            // law firm were all inviting visitors to ask about their booking
+            // and loyalty rewards. Same fix shape as branding_text: resolved
+            // server-side so it reaches existing orgs, not just new ones.
+            'suggestions'        => (is_array($config->suggestions) && $config->suggestions !== [])
+                ? $config->suggestions
+                : app(\App\Services\Chatbot\ChatbotPresetService::class)->for($widgetIndustry)->suggestions,
             'primary_color'      => $primaryColor,
             'header_text_color'  => $config->header_text_color ?? '#ffffff',
             'user_bubble_color'  => $config->user_bubble_color ?? $primaryColor,
@@ -323,6 +340,7 @@ class WidgetChatController extends Controller
             'input_hint_text'    => $config->input_hint_text,
             'agent_status'       => $config->agent_status ?? 'online',
             'offline_message'    => $config->offline_message,
+            'rating_prompt_text' => $config->rating_prompt_text,
             // Digits only — the widget builds https://wa.me/<digits>, which
             // rejects spaces and punctuation. Normalising server-side means an
             // admin can paste "+44 20 7123 4567" from their phone and it works.
@@ -487,16 +505,31 @@ class WidgetChatController extends Controller
             $brandId = $config->brand_id
                 ?: \App\Models\Brand::currentOrDefaultIdForOrg($config->organization_id);
 
-            AiConversation::updateOrCreate(
-                ['session_id' => $sessionId],
-                [
-                    'organization_id' => $config->organization_id,
-                    'member_id' => null,
-                    'messages' => [],
-                    'model' => 'gpt-4o',
-                    'is_active' => true,
-                ]
-            );
+            // Seed the AI transcript on CREATE only.
+            //
+            // This was an updateOrCreate whose values included `messages => []`,
+            // and initSession() runs every time the panel is opened — so a
+            // visitor who closed the widget and reopened it, or simply moved to
+            // another page, had the assistant's memory wiped while their
+            // visible transcript (which comes from ChatConversation) stayed on
+            // screen. The bot appeared to forget a conversation the visitor
+            // could still read directly above the input box. sendMessage()
+            // builds its context from exactly this column.
+            //
+            // member_id is likewise create-only: nulling it on resume would
+            // unlink a conversation that had since been matched to a member.
+            $aiConv = AiConversation::withoutGlobalScopes()
+                ->firstOrNew(['session_id' => $sessionId]);
+
+            if (!$aiConv->exists) {
+                $aiConv->organization_id = $config->organization_id;
+                $aiConv->member_id       = null;
+                $aiConv->messages        = [];
+                $aiConv->model           = 'gpt-4o';
+            }
+
+            $aiConv->is_active = true;
+            $aiConv->save();
 
             // Metadata refreshes on every init, but `status` and
             // `last_message_at` only stamp on CREATE. Forcing them on
@@ -1535,7 +1568,12 @@ class WidgetChatController extends Controller
             ] : null,
             'ai_paused'    => $conv->ai_enabled === false,
             'status'       => $conv->status,
-            'prompt_rating' => $conv->rating_requested && !$conv->rating,
+            // rating_prompt_enabled is an admin switch that nothing read: the
+            // prompt fired purely on the agent's per-conversation request, so
+            // turning the setting off changed nothing. Column defaults to true,
+            // so honouring it here preserves behaviour for every existing org.
+            'prompt_rating' => $conv->rating_requested && !$conv->rating
+                && ($config->rating_prompt_enabled ?? true),
         ]);
     }
 

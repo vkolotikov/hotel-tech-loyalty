@@ -20,6 +20,14 @@ class Cors
             $response->headers->set($key, $value);
         }
 
+        // Appended, not set: the Allow-Origin above is chosen FROM the request's
+        // Origin, so a response cached without this can be replayed to a
+        // different origin with the previous caller's Allow-Origin still on it.
+        // /config is publicly cacheable and is exactly the sort of response a
+        // shared cache will hold. `false` preserves any Vary the app already
+        // set rather than replacing it.
+        $response->headers->set('Vary', 'Origin', false);
+
         return $response;
     }
 
