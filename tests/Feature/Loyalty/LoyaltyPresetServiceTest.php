@@ -66,6 +66,26 @@ class LoyaltyPresetServiceTest extends TestCase
         parent::setUp();
         $this->setUpLoyaltyPresetSchema();
 
+        if (!\Illuminate\Support\Facades\Schema::hasTable('rewards')) {
+            \Illuminate\Support\Facades\Schema::create('rewards', function ($t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('brand_id')->nullable();
+                $t->string('name');
+                $t->text('description')->nullable();
+                $t->text('terms')->nullable();
+                $t->string('image_url')->nullable();
+                $t->string('category', 60)->nullable();
+                $t->integer('points_cost')->default(0);
+                $t->integer('stock')->nullable();
+                $t->integer('per_member_limit')->nullable();
+                $t->timestamp('expires_at')->nullable();
+                $t->boolean('is_active')->default(true);
+                $t->integer('sort_order')->default(0);
+                $t->timestamps();
+            });
+        }
+
         $org = OrganizationFactory::new()->create();
         $this->orgId = $org->id;
         app()->instance('current_organization_id', $org->id);
@@ -159,25 +179,36 @@ class LoyaltyPresetServiceTest extends TestCase
         $this->assertGreaterThan(0, $summary['tiers_added']);
     }
 
-    public function test_apply_legal_real_estate_education_all_resolve_to_simple_two_tier(): void
+    public function test_legal_real_estate_and_education_each_get_their_own_ladder(): void
     {
-        // The GTM-deferred-industry aliases. Each routes to a 2-tier
-        // setup (Member + VIP) so they get a working loyalty stub
-        // without a full preset.
-        foreach (['legal', 'real_estate', 'education'] as $alias) {
-            // Reset for each iteration by re-binding org context.
+        // These three used to resolve to simple_two_tier, so a law firm, an
+        // estate agency and a language school were handed the same two-tier
+        // Member/VIP ladder with the same perks. Each now has a preset built
+        // for how its customers actually behave.
+        $expected = [
+            'legal'       => ['Client', 'Preferred', 'Partner'],
+            'real_estate' => ['Client', 'Preferred', 'Partner'],
+            'education'   => ['Learner', 'Scholar', 'Alumni'],
+        ];
+
+        foreach ($expected as $industry => $tierNames) {
             app()->forgetInstance('current_organization_id');
             $org = OrganizationFactory::new()->create();
             app()->instance('current_organization_id', $org->id);
 
-            $summary = $this->service->apply($alias, $org->id);
+            $this->service->apply($industry, $org->id);
 
-            $tierCount = LoyaltyTier::withoutGlobalScopes()
+            $actual = LoyaltyTier::withoutGlobalScopes()
                 ->where('organization_id', $org->id)
-                ->count();
-            $this->assertSame(2, $tierCount,
-                "Alias '{$alias}' must resolve to simple_two_tier (2 tiers).");
-            $this->assertGreaterThan(0, $summary['tiers_added']);
+                ->orderBy('min_points')
+                ->pluck('name')
+                ->all();
+
+            $this->assertSame($tierNames, $actual, "'{$industry}' got the wrong ladder.");
+
+            $this->assertGreaterThan(0, \App\Models\Reward::withoutGlobalScopes()
+                ->where('organization_id', $org->id)->count(),
+                "'{$industry}' has no rewards, so its points cannot be spent.");
         }
     }
 
@@ -346,5 +377,188 @@ class LoyaltyPresetServiceTest extends TestCase
         $this->assertArrayHasKey('benefits_added', $summary);
         $this->assertArrayHasKey('members_on_tiers', $summary);
         $this->assertArrayHasKey('replaced', $summary);
+    }
+
+    /* ─── starter rewards ───────────────────────────────────────────────── */
+
+    public function test_every_preset_ships_a_starter_rewards_catalogue(): void
+    {
+        // Before this, NO path seeded rewards — every organisation in the
+        // product had tiers and zero rewards, so members accumulated points
+        // against a ladder with nothing at the top of it. A programme that
+        // cannot be redeemed gives the member no reason to come back.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $this->assertNotEmpty($preset['rewards'] ?? [],
+                "Preset '{$key}' has no rewards, so a venue adopting it gets an unredeemable programme.");
+
+            foreach ($preset['rewards'] as $r) {
+                $this->assertNotEmpty($r['name']);
+                $this->assertGreaterThan(0, $r['points_cost'],
+                    "A zero-cost reward in '{$key}' would be free for everyone the moment they join.");
+            }
+        }
+    }
+
+    public function test_the_cheapest_reward_is_reachable_and_the_dearest_is_aspirational(): void
+    {
+        // The economics have to hang together or the catalogue is decorative:
+        // something must be affordable near the welcome bonus, and the top
+        // reward should sit around the top tier rather than beyond reach.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $costs   = array_column($preset['rewards'], 'points_cost');
+            $topTier = max(array_column($preset['tiers'], 'min_points'));
+
+            $this->assertLessThanOrEqual(max($topTier, 1), min($costs),
+                "Cheapest reward in '{$key}' costs more than the whole tier ladder.");
+            $this->assertLessThanOrEqual($topTier * 2, max($costs),
+                "Dearest reward in '{$key}' is far past the top tier — unreachable in practice.");
+        }
+    }
+
+    public function test_apply_seeds_rewards_and_reports_the_count(): void
+    {
+        $summary = $this->service->apply('fitness', $this->orgId);
+
+        $rewards = \App\Models\Reward::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->get();
+
+        $this->assertGreaterThan(0, $summary['rewards_added']);
+        $this->assertCount($summary['rewards_added'], $rewards);
+        $this->assertTrue($rewards->every(fn ($r) => $r->is_active));
+    }
+
+    public function test_reapplying_does_not_duplicate_rewards(): void
+    {
+        $this->service->apply('fitness', $this->orgId);
+        $first = \App\Models\Reward::withoutGlobalScopes()->where('organization_id', $this->orgId)->count();
+
+        $second = $this->service->apply('fitness', $this->orgId);
+
+        $this->assertSame(0, $second['rewards_added']);
+        $this->assertSame($first, \App\Models\Reward::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->count());
+    }
+
+    public function test_a_venues_own_reward_is_never_clobbered(): void
+    {
+        // Additive by name, like benefits: an admin who renamed or retuned a
+        // reward keeps it.
+        \App\Models\Reward::withoutGlobalScopes()->create([
+            'organization_id' => $this->orgId,
+            'name'            => 'Protein Shake',
+            'points_cost'     => 999,
+            'is_active'       => true,
+        ]);
+
+        $this->service->apply('fitness', $this->orgId);
+
+        $this->assertSame(999, (int) \App\Models\Reward::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)
+            ->where('name', 'Protein Shake')
+            ->value('points_cost'));
+    }
+
+    public function test_medical_gets_no_rewards_because_it_gets_no_programme(): void
+    {
+        $summary = $this->service->apply('medical', $this->orgId);
+
+        $this->assertTrue($summary['noop'] ?? false);
+        $this->assertSame(0, \App\Models\Reward::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->count());
+    }
+
+    /* ─── expanded preset range + economics ─────────────────────────────── */
+
+    public function test_every_preset_carries_its_own_point_economics(): void
+    {
+        // Signup writes a flat 10 points per unit for everyone, which cannot
+        // suit a coffee shop and a hotel at once.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $this->assertArrayHasKey('points_per_currency', $preset, "Preset '{$key}' has no earning rate.");
+            $this->assertGreaterThan(0, $preset['points_per_currency']);
+            $this->assertGreaterThan(0, $preset['points_expiry_months'] ?? 0);
+        }
+
+        // High-value, low-frequency verticals must earn more slowly than
+        // high-frequency ones or every client tops out on their first invoice.
+        $this->assertLessThan(
+            LoyaltyPresetService::PRESETS['restaurant']['points_per_currency'],
+            LoyaltyPresetService::PRESETS['real_estate']['points_per_currency'],
+        );
+    }
+
+    public function test_apply_writes_the_presets_economics_on_a_clean_replace(): void
+    {
+        $summary = $this->service->apply('restaurant', $this->orgId);
+
+        $this->assertSame(20, $summary['points_per_currency'] ?? null);
+        $this->assertSame('20', \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'points_per_currency')->value('value'));
+    }
+
+    public function test_listPresets_recommends_the_preset_matching_the_orgs_industry(): void
+    {
+        // Ten cards and no steer is a worse decision than one card and a reason.
+        \App\Models\Organization::withoutGlobalScopes()
+            ->where('id', $this->orgId)->update(['industry' => 'fitness']);
+
+        $recommended = collect($this->service->listPresets()['presets'])
+            ->firstWhere('recommended', true);
+
+        $this->assertSame('fitness', $recommended['key'] ?? null);
+    }
+
+    public function test_medical_is_recommended_nothing_because_it_gets_no_programme(): void
+    {
+        \App\Models\Organization::withoutGlobalScopes()
+            ->where('id', $this->orgId)->update(['industry' => 'medical']);
+
+        $this->assertNull(collect($this->service->listPresets()['presets'])
+            ->firstWhere('recommended', true));
+    }
+
+    /* ─── referrals + the member-facing preview ─────────────────────────── */
+
+    public function test_referral_bonuses_are_calibrated_to_the_ladder_not_flat(): void
+    {
+        // Signup wrote a flat 250 for every business. Against a restaurant's
+        // 300-point second tier that is generous; against an estate agency's
+        // 5,000-point top tier it is noise — and referrals are how that
+        // business actually grows.
+        foreach (LoyaltyPresetService::PRESETS as $key => $preset) {
+            $this->assertArrayHasKey('referrer_bonus', $preset, "Preset '{$key}' has no referral bonus.");
+            $this->assertGreaterThan(0, $preset['referrer_bonus']);
+        }
+
+        $this->assertGreaterThan(
+            LoyaltyPresetService::PRESETS['restaurant']['referrer_bonus'],
+            LoyaltyPresetService::PRESETS['real_estate']['referrer_bonus'],
+            'A referral is worth far more to an estate agency than to a cafe.',
+        );
+    }
+
+    public function test_apply_writes_the_referral_bonuses(): void
+    {
+        $this->service->apply('real_estate', $this->orgId);
+
+        $this->assertSame('2500', \App\Models\HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'referrer_bonus_points')->value('value'));
+    }
+
+    public function test_every_preset_exposes_a_first_reward_a_member_can_reach(): void
+    {
+        // The picker turns this into "about N of spend away". If the first
+        // reward were unreachable the preview would advertise a programme
+        // nobody completes.
+        app()->instance('current_organization_id', $this->orgId);
+
+        foreach ($this->service->listPresets()['presets'] as $p) {
+            $cheapest = $p['cheapest_reward'];
+            $this->assertNotNull($cheapest, "Preset '{$p['key']}' offers a member nothing to aim at.");
+
+            $spend = (int) ceil(max(0, $cheapest['points_cost'] - $p['welcome_bonus']) / max(1, (int) $p['points_per_currency']));
+            $this->assertLessThanOrEqual(500, $spend,
+                "First reward in '{$p['key']}' needs {$spend} of spend — too far to feel like a reward.");
+        }
     }
 }

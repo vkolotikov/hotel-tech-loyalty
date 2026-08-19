@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Utensils, Dumbbell, Star, Crown,
   ArrowRight, ArrowLeft, X, Zap, Check, Database, FileText, AlertCircle,
+  GraduationCap, Briefcase, Home, ShoppingBag, Gift,
 } from 'lucide-react'
 
 /**
@@ -32,12 +33,20 @@ interface PresetMeta {
   benefit_count: number
   tier_names: string[]
   welcome_bonus: number
+  reward_count: number
+  sample_rewards: string[]
+  points_per_currency: number | null
+  referrer_bonus: number | null
+  cheapest_reward: { name: string; points_cost: number } | null
   is_current: boolean
+  /** Derived from the org's industry — the card we would pick for them. */
+  recommended: boolean
 }
 
 interface PresetsResponse {
   presets: PresetMeta[]
   current: string | null
+  currency_symbol: string
   onboarding_completed_at: string | null
 }
 
@@ -47,6 +56,10 @@ const ICON_MAP: Record<string, any> = {
   'utensils':   Utensils,
   'dumbbell':   Dumbbell,
   'star':       Star,
+  'graduation-cap': GraduationCap,
+  'briefcase':      Briefcase,
+  'home':           Home,
+  'shopping-bag':   ShoppingBag,
 }
 
 interface Props {
@@ -133,7 +146,9 @@ export function MembersOnboarding({ onComplete }: Props) {
           <div className="space-y-3">
             <p className="text-sm text-gray-400 mb-2">Pick a membership shape that fits your business. Each preset creates the tier ladder + starter benefits; you can edit anything from Tiers / Benefits afterwards.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {data.presets.map(p => {
+              {/* Recommended first. Ten cards with no steer is a worse decision
+                  than one card with a reason — we already know their industry. */}
+              {[...data.presets].sort((a, b) => Number(b.recommended) - Number(a.recommended)).map(p => {
                 const TileIcon = ICON_MAP[p.icon] ?? Star
                 const active = selectedKey === p.key
                 return (
@@ -152,6 +167,9 @@ export function MembersOnboarding({ onComplete }: Props) {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-bold text-white truncate">{p.label}</div>
                         {p.is_current && <div className="text-[10px] text-amber-400 font-semibold mt-0.5">Currently applied</div>}
+                        {!p.is_current && p.recommended && (
+                          <div className="text-[10px] text-emerald-400 font-semibold mt-0.5">Recommended for your business</div>
+                        )}
                       </div>
                       {active && <Check size={16} className="text-amber-400 flex-shrink-0" />}
                     </div>
@@ -163,10 +181,21 @@ export function MembersOnboarding({ onComplete }: Props) {
                         </span>
                       ))}
                     </div>
-                    <div className="flex items-center gap-2 text-[9px] uppercase tracking-wide font-bold text-gray-500">
+                    {/* Rewards are what a member can actually claim, so they
+                        are the part worth showing — a ladder with nothing to
+                        redeem reads as busywork. */}
+                    {p.sample_rewards?.length > 0 && (
+                      <div className="flex items-start gap-1.5 mb-2 text-[10px] text-gray-400">
+                        <Gift size={11} className="text-emerald-400 mt-[1px] flex-shrink-0" />
+                        <span className="line-clamp-1">{p.sample_rewards.join(' · ')}</span>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2 text-[9px] uppercase tracking-wide font-bold text-gray-500">
                       <span>{p.tier_count} tiers</span>
                       <span>·</span>
                       <span>{p.benefit_count} benefits</span>
+                      <span>·</span>
+                      <span className="text-emerald-400">{p.reward_count} rewards</span>
                       <span>·</span>
                       <span className="text-amber-400">+{p.welcome_bonus} welcome pts</span>
                     </div>
@@ -222,9 +251,62 @@ export function MembersOnboarding({ onComplete }: Props) {
 
               <ReviewRow label="Tier ladder" value={picked.tier_names.join(' → ')} />
               <ReviewRow label="Starter benefits" value={`${picked.benefit_count} benefit definitions added to your catalog`} />
+              <ReviewRow label="Starter rewards" value={`${picked.reward_count} rewards members can actually claim`} />
               <ReviewRow label="Welcome bonus" value={`${picked.welcome_bonus} points per new member`} />
+              {picked.points_per_currency != null && (
+                <ReviewRow label="Earn rate" value={`${picked.points_per_currency} points per 1 spent`} />
+              )}
+              {picked.referrer_bonus != null && (
+                <ReviewRow label="Referral bonus" value={`${picked.referrer_bonus} points for referring someone`} />
+              )}
               <ReviewRow label="Demo data" value={withSample ? 'Yes — 5 sample members + transactions' : 'No'} />
             </div>
+
+            {/* What the MEMBER sees.
+                Owners judge a programme by their customer's experience, and
+                point totals mean nothing on their own — "600 points" is not a
+                decision, "a free coffee after about 3 spent" is. This
+                translates the preset into the first thing a real customer
+                gets. */}
+            {picked.cheapest_reward && (
+              <div className="bg-emerald-500/[0.05] border border-emerald-500/20 rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Gift size={13} className="text-emerald-300" />
+                  <div className="text-[11px] font-bold uppercase tracking-wide text-emerald-300">
+                    What your customer sees
+                  </div>
+                </div>
+                <ol className="space-y-1.5 text-[12px] text-gray-300">
+                  <li>
+                    <span className="text-gray-500">1.</span> They join and immediately have{' '}
+                    <span className="text-white font-semibold">{picked.welcome_bonus} points</span>, starting as{' '}
+                    <span className="text-white font-semibold">{picked.tier_names[0]}</span>.
+                  </li>
+                  <li>
+                    <span className="text-gray-500">2.</span> Their first reward is{' '}
+                    <span className="text-white font-semibold">{picked.cheapest_reward.name}</span> at{' '}
+                    {picked.cheapest_reward.points_cost} points
+                    {picked.points_per_currency ? (
+                      <> — about{' '}
+                        <span className="text-white font-semibold">
+                          {data.currency_symbol}
+                          {Math.max(0, Math.ceil((picked.cheapest_reward.points_cost - picked.welcome_bonus) / picked.points_per_currency))}
+                        </span>{' '}
+                        of spend away.
+                      </>
+                    ) : '.'}
+                  </li>
+                  <li>
+                    <span className="text-gray-500">3.</span> Keep going and they reach{' '}
+                    <span className="text-white font-semibold">{picked.tier_names[picked.tier_names.length - 1]}</span>
+                    {picked.referrer_bonus ? <>, earning {picked.referrer_bonus} points each time they refer someone.</> : '.'}
+                  </li>
+                </ol>
+                <p className="text-[10px] text-gray-500 mt-2.5">
+                  Every number here is editable afterwards from Tiers, Rewards and Settings.
+                </p>
+              </div>
+            )}
 
             <div className="bg-blue-500/[0.04] border border-blue-500/20 rounded-lg p-3">
               <div className="flex items-start gap-2">
