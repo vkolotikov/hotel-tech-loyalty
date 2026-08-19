@@ -184,8 +184,61 @@ class WidgetChatController extends Controller
      * Resolve the widget config and bind the org context so all
      * downstream scoped model queries work correctly.
      */
+    /**
+     * Marker prefix distinguishing a deliberate plan stop from a real failure
+     * inside the AI try/catch.
+     */
+    private const AI_STOP = 'ai-stop:';
+
+    /**
+     * Why the AI must not be called for this org, or null to proceed.
+     *
+     * The widget is unauthenticated and its key is public by design — it sits
+     * in the page source of the venue's own website. So the only thing between
+     * a scripted caller and unbounded OpenAI spend on that tenant's account is
+     * a check here. Usage was already being RECORDED after each call, which
+     * bills the venue accurately and prevents nothing.
+     *
+     * Both checks are no-ops for an org with no cap and no model allowlist,
+     * which is the default, so existing venues see no change.
+     */
+    private function aiStopReason(int $orgId, string $model): ?string
+    {
+        $org = \App\Models\Organization::withoutGlobalScopes()->find($orgId);
+
+        if (!$org) {
+            return null;
+        }
+
+        $usage = app(\App\Services\AiUsageService::class);
+
+        // The plan's model allowlist was enforced on the admin paths through
+        // DispatchesAiChat but not here, so the widget's tool-calling path —
+        // the default for any org with rooms or services — could run a model
+        // the org's plan does not include.
+        if (!$usage->isModelAllowed($org, $model)) {
+            return 'model_not_allowed';
+        }
+
+        if (($usage->budgetStatus($org)['status'] ?? null) === 'over') {
+            return 'budget_exhausted';
+        }
+
+        return null;
+    }
+
     private function resolveWidget(string $widgetKey): ?ChatWidgetConfig
     {
+        // widget_key is a Postgres `uuid` column, so comparing it against a
+        // non-uuid string is not a miss — it is a type error, and it surfaced
+        // as a 500 on the busiest unauthenticated endpoint we have. Any typo'd
+        // embed snippet, stale key or scanner produced an "invalid input
+        // syntax for type uuid" in the logs and an error page for the visitor,
+        // where the honest answer is simply "no such widget".
+        if (!\Illuminate\Support\Str::isUuid($widgetKey)) {
+            return null;
+        }
+
         $config = ChatWidgetConfig::withoutGlobalScopes()
             ->where('widget_key', $widgetKey)
             ->where('is_active', true)
@@ -869,7 +922,22 @@ class WidgetChatController extends Controller
 
         $aiFollowUps = [];
         $aiActions   = [];
+
+        // Spend guard. This endpoint is unauthenticated: anyone holding a
+        // venue's public widget key can drive OpenAI calls against that tenant,
+        // and nothing checked the org's plan before spending. Usage was
+        // recorded AFTERWARDS, which bills the venue but stops nothing. Orgs
+        // with no cap and no model allowlist are unaffected.
+        $aiStop = $this->aiStopReason((int) $orgId, (string) $model);
+
         try {
+            if ($aiStop !== null) {
+                // A deliberate stop, not a failure — see the catch below, which
+                // keeps it out of the audit log. Once a venue is over budget,
+                // every single message would otherwise write a row.
+                throw new \RuntimeException(self::AI_STOP . $aiStop);
+            }
+
             // OpenAI provider gets the agent tool-calling loop so the model can
             // check room/service availability itself and propose bookings. Other
             // providers fall back to plain text generation with pre-injected
@@ -897,26 +965,42 @@ class WidgetChatController extends Controller
                 $aiActions   = is_array($parsed['actions']    ?? null) ? array_slice($parsed['actions'],    0, 2) : [];
             }
         } catch (\Throwable $e) {
-            // Verbose log so we can diagnose chats failing in prod. The
-            // generic fallback message is what visitors see; the underlying
-            // reason is captured in laravel.log + AuditLog so an admin can
-            // find it without needing the staff console.
             $reason = $e->getMessage();
-            \Log::error("Widget chat error [{$provider}/{$model}]: {$reason}", [
-                'org_id'  => $orgId,
-                'session' => $sessionId ?? null,
-                'trace'   => substr($e->getTraceAsString(), 0, 1000),
-            ]);
-            try {
-                \App\Models\AuditLog::create([
-                    'organization_id' => $orgId,
-                    'action'          => 'widget.chat.error',
-                    'description'     => "[{$provider}/{$model}] " . substr($reason, 0, 500),
-                ]);
-            } catch (\Throwable) {}
 
-            $aiResponse = $behaviorConfig->fallback_message
-                ?? "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
+            // Plan stop: the visitor gets the venue's own fallback wording and
+            // the reason goes to the log once, without an AuditLog row per
+            // message.
+            if (str_starts_with($reason, self::AI_STOP)) {
+                \Log::info('widget chat stopped by plan limits', [
+                    'org_id' => $orgId,
+                    'reason' => substr($reason, strlen(self::AI_STOP)),
+                    'model'  => $model,
+                ]);
+
+                $aiResponse = $behaviorConfig->fallback_message
+                    ?: "I can't answer that right now — please contact us directly and we'll help.";
+
+            } else {
+                // Verbose log so we can diagnose chats failing in prod. The
+                // generic fallback message is what visitors see; the underlying
+                // reason is captured in laravel.log + AuditLog so an admin can
+                // find it without needing the staff console.
+                \Log::error("Widget chat error [{$provider}/{$model}]: {$reason}", [
+                    'org_id'  => $orgId,
+                    'session' => $sessionId ?? null,
+                    'trace'   => substr($e->getTraceAsString(), 0, 1000),
+                ]);
+                try {
+                    \App\Models\AuditLog::create([
+                        'organization_id' => $orgId,
+                        'action'          => 'widget.chat.error',
+                        'description'     => "[{$provider}/{$model}] " . substr($reason, 0, 500),
+                    ]);
+                } catch (\Throwable) {}
+
+                $aiResponse = $behaviorConfig->fallback_message
+                    ?? "I'm sorry, I'm having trouble responding right now. Please try again shortly.";
+            }
         }
 
         $messages[] = ['role' => 'assistant', 'content' => $aiResponse, 'timestamp' => now()->toIso8601String()];

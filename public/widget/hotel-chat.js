@@ -108,9 +108,13 @@
   var voiceAudioEl = null;
 
   // ── Styles ──
+  // The reset is scoped to #htchat-panel and #htchat-launcher, the roots this
+  // widget actually creates. It used to target #htchat-widget, which nothing
+  // ever creates, so the box-sizing reset and the font-family baseline applied
+  // to nothing and every widget inherited whatever the host site did to div,
+  // p, button and input. Same widget, subtly different on each customer site.
   var STYLES = '\
-    #htchat-widget * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }\
-    #htchat-launcher { position: fixed; z-index: 99998; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s, box-shadow 0.2s; }\
+    #htchat-panel *, #htchat-launcher * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }\n    #htchat-launcher { position: fixed; z-index: 99998; width: 56px; height: 56px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 20px rgba(0,0,0,0.25); transition: transform 0.2s, box-shadow 0.2s; }\
     #htchat-launcher:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.35); }\
     #htchat-launcher svg { width: 24px; height: 24px; fill: white; }\
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
@@ -839,11 +843,15 @@
 
   function applyBubbleStyles() {
     var c = widgetConfig || {};
-    document.querySelectorAll('.htchat-msg-bot .htchat-msg-bubble').forEach(function (el) {
+    // .htchat-msg-bot / .htchat-msg-user are not classes this widget ever
+    // applies — messages carry `htchat-msg assistant` and `htchat-msg user`.
+    // Both selectors matched nothing, so changing bubble colours in the admin
+    // did not repaint the messages already on screen.
+    document.querySelectorAll('.htchat-msg.assistant .htchat-msg-bubble').forEach(function (el) {
       el.style.background = c.bot_bubble_color || '#f3f4f6';
       el.style.color = c.bot_bubble_text || '#1f2937';
     });
-    document.querySelectorAll('.htchat-msg-user .htchat-msg-bubble').forEach(function (el) {
+    document.querySelectorAll('.htchat-msg.user .htchat-msg-bubble').forEach(function (el) {
       el.style.background = c.user_bubble_color || c.primary_color || '#c9a84c';
       el.style.color = c.user_bubble_text || '#ffffff';
     });

@@ -42,7 +42,12 @@ class ChatSystemMessageVisibilityTest extends TestCase
 
     private int $orgId;
 
-    private const WIDGET_KEY = 'wk_test_system_visibility';
+    // A real uuid. widget_key is a `uuid` column in Postgres, so a
+    // 'wk_...' fixture only ever worked against sqlite — and it hid the
+    // fact that a non-uuid key reaches the database as a type error
+    // rather than a miss, which is what made malformed keys 500 in
+    // production instead of 404.
+    private const WIDGET_KEY = '2f1c9e64-9d3a-4c5b-8f21-6c7d5b4a3e10';
 
     protected function setUp(): void
     {
