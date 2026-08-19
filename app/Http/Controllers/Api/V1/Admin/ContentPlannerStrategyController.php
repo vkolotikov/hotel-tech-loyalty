@@ -43,8 +43,6 @@ class ContentPlannerStrategyController extends Controller
      */
     public function generate(Request $request): JsonResponse
     {
-        set_time_limit(600); // strategy generation is a long AI call
-
         $orgId = $request->user()?->organization_id ?? app('current_organization_id');
         if (!$orgId) {
             return response()->json(['error' => 'User has no organization'], 403);
@@ -63,20 +61,31 @@ class ContentPlannerStrategyController extends Controller
             return response()->json(['error' => 'Unauthorized'], 403);
         }
 
-        try {
-            $result = $this->strategyService->generate($profile, $validated);
+        // Queued, not inline. set_time_limit(600) above raises PHP's limit but
+        // not the gateway's, so this endpoint returned 504 to the admin while
+        // the AI call carried on — often producing a strategy the UI never saw.
+        // The placeholder gives the client a stable id to poll immediately.
+        $placeholder = ContentPlannerStrategy::create([
+            'organization_id'    => $orgId,
+            'brand_id'           => $profile->brand_id,
+            'planner_profile_id' => $profile->id,
+            'title'              => 'Generating strategy…',
+            'status'             => 'generating',
+            'created_by'         => $request->user()?->id,
+        ]);
 
-            return response()->json([
-                'strategy' => $result['strategy'],
-                'pillars' => $result['pillars'],
-                'message' => 'Strategy generated successfully. Next: generate a content calendar.',
-            ], 201);
-        } catch (\Exception $e) {
-            return response()->json([
-                'error' => 'Strategy generation failed',
-                'message' => $e->getMessage(),
-            ], 500);
-        }
+        \App\Jobs\GenerateContentStrategy::dispatch(
+            $placeholder->id,
+            $profile->id,
+            (int) $orgId,
+            $validated,
+        );
+
+        return response()->json([
+            'strategy_id' => $placeholder->id,
+            'status'      => 'generating',
+            'message'     => 'Generating your strategy. This usually takes 1–3 minutes.',
+        ], 202);
     }
 
     /**

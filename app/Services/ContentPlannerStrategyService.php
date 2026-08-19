@@ -32,7 +32,17 @@ class ContentPlannerStrategyService
      *   "pillars": [ContentPlannerPillar models]
      * }
      */
-    public function generate(ContentPlannerProfile $profile, array $params = []): array
+    /**
+     * @param  ContentPlannerStrategy|null  $into  Fill this row instead of
+     *   creating one. The async path pre-creates a `generating` placeholder so
+     *   the UI has a stable id to poll while the AI call runs; without it the
+     *   caller would have nothing to ask about until the work finished.
+     */
+    public function generate(
+        ContentPlannerProfile $profile,
+        array $params = [],
+        ?ContentPlannerStrategy $into = null,
+    ): array
     {
         $prompt = $this->buildStrategyPrompt($profile, $params);
 
@@ -41,7 +51,7 @@ class ContentPlannerStrategyService
         // Persist atomically: superseding the old strategy and deactivating
         // its pillars must roll back if any later insert fails, otherwise a
         // mid-sequence error leaves the profile with no active strategy at all.
-        return DB::transaction(function () use ($profile, $data) {
+        return DB::transaction(function () use ($profile, $data, $into) {
             ContentPlannerStrategy::where('planner_profile_id', $profile->id)
                 ->where('status', 'active')
                 ->update(['status' => 'superseded']);
@@ -54,7 +64,7 @@ class ContentPlannerStrategyService
 
             $title = is_string($data['title'] ?? null) ? $data['title'] : 'Social Media Strategy';
 
-            $strategy = ContentPlannerStrategy::create([
+            $attributes = [
                 'organization_id' => $profile->organization_id,
                 'brand_id' => $profile->brand_id,
                 'planner_profile_id' => $profile->id,
@@ -66,8 +76,18 @@ class ContentPlannerStrategyService
                 'visual_direction' => is_string($data['visual_direction'] ?? null) ? $data['visual_direction'] : null,
                 'ai_output' => $data,
                 'status' => 'active',
-                'created_by' => auth()->id(),
-            ]);
+                'created_by' => $into?->created_by ?? auth()->id(),
+            ];
+
+            // Reuse the placeholder when the async path supplied one, so the id
+            // the client is polling becomes the finished strategy rather than
+            // being orphaned beside a second row.
+            if ($into) {
+                $into->update($attributes);
+                $strategy = $into->fresh();
+            } else {
+                $strategy = ContentPlannerStrategy::create($attributes);
+            }
 
             // Replace content pillars: deactivate old, create fresh from AI output.
             $profile->pillars()->where('active', true)->update(['active' => false]);

@@ -135,7 +135,34 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
   })
 
   const generate = useMutation({
-    mutationFn: (instr: string) => cp.generateStrategy(profile.id, instr.trim() || undefined),
+    // Generation is queued server-side: the POST returns 202 with an id and
+    // the work continues on a worker. It used to be one long request, which
+    // the gateway cut off at 504 while the AI call carried on — the admin saw
+    // a failure for a strategy that was often generated successfully.
+    //
+    // Polling inside mutationFn keeps `generate.isPending` true for the whole
+    // wait, so the staged progress UI below still reflects reality.
+    mutationFn: async (instr: string) => {
+      const started = await cp.generateStrategy(profile.id, instr.trim() || undefined)
+
+      const id = started?.strategy_id
+      if (!id) return started // server answered synchronously (older build)
+
+      const deadline = Date.now() + 6 * 60 * 1000
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 5000))
+
+        const strategy = await cp.getStrategy(id)
+        if (strategy?.status === 'failed') {
+          throw new Error(strategy.summary || 'Strategy generation failed')
+        }
+        if (strategy?.status && strategy.status !== 'generating') {
+          return strategy
+        }
+      }
+
+      throw new Error('This is taking longer than usual. Your strategy may still finish — reload in a few minutes.')
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['cp-strategies'] })
       toast.success('Strategy generated')

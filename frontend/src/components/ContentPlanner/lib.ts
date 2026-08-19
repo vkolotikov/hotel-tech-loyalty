@@ -276,6 +276,9 @@ export const cp = {
     api.get(`${BASE}/strategies`, { params: { planner_profile_id: profileId } }).then(r => r.data),
   generateStrategy: (profileId: number, instructions?: string) =>
     api.post(`${BASE}/strategies/generate`, { planner_profile_id: profileId, instructions }, { timeout: AI_TIMEOUT }).then(r => r.data),
+  // Generation is queued and returns 202 + a strategy_id; the caller polls
+  // this until status leaves 'generating'.
+  getStrategy: (id: number) => api.get(`${BASE}/strategies/${id}`).then(r => r.data),
   archiveStrategy: (id: number) => api.delete(`${BASE}/strategies/${id}`).then(r => r.data),
 
   listPosts: (params: Record<string, unknown>) =>
