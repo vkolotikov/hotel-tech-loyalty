@@ -1,5 +1,8 @@
 import { useState, lazy, Suspense } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
+import { api } from '../lib/api'
+import { ChatbotWizard } from '../components/chatbot/ChatbotWizard'
 import { useTranslation } from 'react-i18next'
 import {
   Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate,
@@ -68,6 +71,21 @@ export function ChatbotSetup() {
 
   const tile = TILES.find(td => td.key === active)
   const onHome = active === 'home' || !tile
+
+  // First-run gate. `completed` is a marker row stamped for every organisation
+  // that existed when this shipped, so an established venue can never land
+  // here — see ChatbotOnboardingService. Failing the request leaves the hub
+  // visible rather than blocking the whole module on an onboarding call.
+  const { data: onboarding, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['chatbot-onboarding'],
+    queryFn: () => api.get('/v1/admin/chatbot-onboarding').then(r => r.data),
+    retry: false,
+  })
+  const [wizardDone, setWizardDone] = useState(false)
+
+  if (onHome && !onboardingLoading && onboarding && !onboarding.completed && !wizardDone) {
+    return <ChatbotWizard onDone={() => setWizardDone(true)} />
+  }
 
   return (
     <div className="space-y-5">
