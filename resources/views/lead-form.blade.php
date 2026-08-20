@@ -6,7 +6,7 @@
   <title>{{ $design['title'] ?? $form->name }}</title>
   <style>
     :root {
-      --primary: {{ $design['primary_color'] ?? '#22d3ee' }};
+      --primary: {{ \App\Support\CssColor::safe($design['primary_color'] ?? null, '#22d3ee') }};
       --bg:        {{ $isDark ? '#0a0a0a' : '#ffffff' }};
       --surface:   {{ $isDark ? '#161616' : '#fafafa' }};
       --border:    {{ $isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }};
@@ -74,7 +74,7 @@
     .field textarea:focus {
       outline: none;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px {{ ($design['primary_color'] ?? '#22d3ee') }}33;
+      box-shadow: 0 0 0 3px {{ \App\Support\CssColor::safe($design['primary_color'] ?? null, '#22d3ee') }}33;
     }
     .field textarea {
       resize: vertical;

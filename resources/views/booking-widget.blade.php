@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="{{ $color ?: '#2d6a4f' }}">
+<meta name="theme-color" content="{{ \App\Support\CssColor::safe($color) }}">
 <title>Book Your Stay</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: {{ $color ?: '#2d6a4f' }};
+  --primary: {{ \App\Support\CssColor::safe($color) }};
   --primary-hover: color-mix(in srgb, var(--primary) 85%, #000);
   --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
   --bg: #faf8f5;
