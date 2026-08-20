@@ -180,10 +180,10 @@ export function KnowledgeBase() {
 
   const statusBadge = (status: string) => {
     const styles: Record<string, string> = {
-      pending: 'bg-yellow-500/20 text-yellow-400',
-      processing: 'bg-blue-500/20 text-blue-400',
-      completed: 'bg-green-500/20 text-green-400',
-      failed: 'bg-red-500/20 text-red-400',
+      pending: 'bg-warning/20 text-warning',
+      processing: 'bg-info/20 text-info',
+      completed: 'bg-accent/20 text-accent',
+      failed: 'bg-error/20 text-error',
     }
     return <span className={`px-2 py-0.5 rounded text-xs font-medium ${styles[status] || styles.pending}`}>{t(`knowledge_base.status.${status}`, { defaultValue: String(status ?? '') })}</span>
   }
@@ -246,7 +246,7 @@ export function KnowledgeBase() {
             </select>
             <button
               onClick={() => setShowAiGen(v => !v)}
-              className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm"
+              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
               <Sparkles size={16} /> {t('knowledge_base.ai_generate', 'AI Generate')}
             </button>
@@ -260,10 +260,10 @@ export function KnowledgeBase() {
 
           {/* AI FAQ Generator panel */}
           {showAiGen && (
-            <div className="bg-purple-900/10 border border-purple-500/30 rounded-xl p-6 space-y-4">
+            <div className="bg-primary-900/10 border border-primary-500/30 rounded-xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-purple-400" />
+                  <Sparkles size={18} className="text-primary-400" />
                   <h3 className="text-white font-semibold">{t('knowledge_base.ai_gen.title', 'AI FAQ Generator')}</h3>
                 </div>
                 <button onClick={() => { setShowAiGen(false); setAiPreview([]); setAiSourceText('') }} className="text-t-secondary hover:text-white"><X size={18} /></button>
@@ -300,7 +300,7 @@ export function KnowledgeBase() {
                   <button
                     onClick={() => extractFaqs.mutate()}
                     disabled={extractFaqs.isPending || aiSourceText.trim().length < 50}
-                    className="w-full flex items-center justify-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
                   >
                     <Sparkles size={14} /> {extractFaqs.isPending ? t('knowledge_base.ai_gen.generating', 'Generating...') : t('knowledge_base.ai_gen.generate', 'Generate FAQ Drafts')}
                   </button>
@@ -318,7 +318,7 @@ export function KnowledgeBase() {
                   </div>
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {aiPreview.map((it, i) => (
-                      <div key={i} className={`bg-dark-surface border rounded-lg p-3 ${it.selected ? 'border-purple-500/40' : 'border-dark-border opacity-50'}`}>
+                      <div key={i} className={`bg-dark-surface border rounded-lg p-3 ${it.selected ? 'border-primary-500/40' : 'border-dark-border opacity-50'}`}>
                         <div className="flex items-start gap-3">
                           <input type="checkbox" checked={it.selected} onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, selected: e.target.checked } : x))} className="mt-1" />
                           <div className="flex-1 min-w-0">
@@ -326,18 +326,18 @@ export function KnowledgeBase() {
                               type="text"
                               value={it.question}
                               onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, question: e.target.value } : x))}
-                              className="w-full bg-transparent text-white text-sm font-medium border-b border-transparent focus:border-purple-500 focus:outline-none mb-1"
+                              className="w-full bg-transparent text-white text-sm font-medium border-b border-transparent focus:border-primary-500 focus:outline-none mb-1"
                             />
                             <textarea
                               value={it.answer}
                               onChange={e => setAiPreview(p => p.map((x, idx) => idx === i ? { ...x, answer: e.target.value } : x))}
                               rows={2}
-                              className="w-full bg-transparent text-t-secondary text-xs border-b border-transparent focus:border-purple-500 focus:outline-none resize-none"
+                              className="w-full bg-transparent text-t-secondary text-xs border-b border-transparent focus:border-primary-500 focus:outline-none resize-none"
                             />
                             {it.keywords.length > 0 && (
                               <div className="flex flex-wrap gap-1 mt-1">
                                 {it.keywords.map((kw, ki) => (
-                                  <span key={ki} className="text-[10px] bg-purple-500/20 text-purple-300 px-1.5 py-0.5 rounded">{kw}</span>
+                                  <span key={ki} className="text-[10px] bg-primary-500/20 text-primary-300 px-1.5 py-0.5 rounded">{kw}</span>
                                 ))}
                               </div>
                             )}
@@ -351,7 +351,7 @@ export function KnowledgeBase() {
                     <button
                       onClick={() => importFaqs.mutate()}
                       disabled={importFaqs.isPending || aiPreview.filter(i => i.selected).length === 0}
-                      className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm disabled:opacity-50"
+                      className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
                     >
                       <Save size={14} /> {importFaqs.isPending ? t('knowledge_base.ai_gen.importing', 'Importing...') : t('knowledge_base.ai_gen.import_count', { count: aiPreview.filter(i => i.selected).length, defaultValue: 'Import {{count}} items' })}
                     </button>
@@ -447,7 +447,7 @@ export function KnowledgeBase() {
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-white font-medium text-sm">{item.question}</span>
                         {item.category && <span className="text-xs bg-dark-surface4 text-t-secondary px-2 py-0.5 rounded">{item.category.name}</span>}
-                        {!item.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
+                        {!item.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
                       </div>
                       <p className="text-sm text-t-secondary line-clamp-2">{item.answer}</p>
                       {item.keywords?.length > 0 && (
@@ -461,7 +461,7 @@ export function KnowledgeBase() {
                     </div>
                     <div className="flex gap-1">
                       <button onClick={() => editItem(item)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
-                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.item', 'Delete this FAQ item?'))) deleteItem.mutate(item.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.item', 'Delete this FAQ item?'))) deleteItem.mutate(item.id) }} className="p-2 text-t-secondary hover:text-error"><Trash2 size={14} /></button>
                     </div>
                   </div>
                 </div>
@@ -527,13 +527,13 @@ export function KnowledgeBase() {
                     <div className="flex items-center gap-2">
                       <span className="text-white font-medium">{cat.name}</span>
                       <span className="text-xs text-t-secondary">{t('knowledge_base.cat_row.items_count', { count: cat.items_count || 0, defaultValue: '({{count}} items)' })}</span>
-                      {!cat.is_active && <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
+                      {!cat.is_active && <span className="text-xs bg-error/20 text-error px-2 py-0.5 rounded">{t('knowledge_base.inactive', 'Inactive')}</span>}
                     </div>
                     {cat.description && <p className="text-sm text-t-secondary mt-1">{cat.description}</p>}
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => editCat(cat)} className="p-2 text-t-secondary hover:text-white"><Pencil size={14} /></button>
-                    <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.category', 'Delete this category?'))) deleteCat.mutate(cat.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                    <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.category', 'Delete this category?'))) deleteCat.mutate(cat.id) }} className="p-2 text-t-secondary hover:text-error"><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}
@@ -596,7 +596,7 @@ export function KnowledgeBase() {
                       {doc.processing_status === 'failed' && (
                         <button onClick={() => reprocessDoc.mutate(doc.id)} className="p-2 text-t-secondary hover:text-primary-400" title={t('knowledge_base.documents.reprocess_title', 'Reprocess')}><RotateCcw size={14} /></button>
                       )}
-                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.document', 'Delete this document?'))) deleteDoc.mutate(doc.id) }} className="p-2 text-t-secondary hover:text-red-400"><Trash2 size={14} /></button>
+                      <button onClick={() => { if (confirm(t('knowledge_base.delete_confirm.document', 'Delete this document?'))) deleteDoc.mutate(doc.id) }} className="p-2 text-t-secondary hover:text-error"><Trash2 size={14} /></button>
                     </div>
                   </div>
                   {doc.extracted_text && (

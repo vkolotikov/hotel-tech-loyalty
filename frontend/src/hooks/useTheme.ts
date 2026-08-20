@@ -116,6 +116,15 @@ export function applyThemeToDom(colors: Partial<ThemeColors>, mood?: string | nu
   root.style.setProperty('--color-dark-surface2', surfaceShade(merged.surface_color, 8))
   root.style.setProperty('--color-dark-surface3', surfaceShade(merged.surface_color, 16))
   root.style.setProperty('--color-dark-surface4', surfaceShade(merged.surface_color, 24))
+  // dark-card and dark-hover back 29 class names across the chatbot,
+  // analytics and canned-reply screens, but nothing ever assigned them, so
+  // they stayed on the neutral Tailwind fallback while every surface around
+  // them followed the brand. On a navy or gold tenant those cards rendered
+  // flat grey and read as a second, foreign design language. Their defaults
+  // match surface2/surface3 exactly, which is the relationship they were
+  // built to have, so derive them the same way.
+  root.style.setProperty('--color-dark-card',     surfaceShade(merged.surface_color, 8))
+  root.style.setProperty('--color-dark-hover',    surfaceShade(merged.surface_color, 16))
   root.style.setProperty('--color-dark-border',   hexToRgb(merged.border_color))
   root.style.setProperty('--color-dark-border2',  surfaceShade(merged.border_color, 12))
 

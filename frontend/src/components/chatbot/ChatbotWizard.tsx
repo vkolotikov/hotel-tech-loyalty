@@ -179,7 +179,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
                   ? 'bg-primary-500 border-primary-500 text-black'
                   : i === step
                     ? 'bg-dark-bg border-primary-500 text-primary-500'
-                    : 'bg-dark-bg border-dark-border text-[#636366]')
+                    : 'bg-dark-bg border-dark-border text-t-secondary')
               }
             >
               {i < step ? <Check size={11} strokeWidth={3} /> : i + 1}
@@ -197,7 +197,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
             <label className={label} htmlFor="cw-name">What should your assistant be called?</label>
             <input id="cw-name" className={input} value={assistantName}
               onChange={e => setForm(f => ({ ...f, assistant_name: e.target.value }))} />
-            <p className="text-xs text-[#636366] mt-1.5">Visitors see this name at the top of the chat.</p>
+            <p className="text-xs text-t-secondary mt-1.5">Visitors see this name at the top of the chat.</p>
           </div>
 
           <div>
@@ -217,7 +217,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
                   }
                 >
                   <span className="block text-sm font-medium">{t.label}</span>
-                  <span className="block text-xs text-[#636366]">{t.hint}</span>
+                  <span className="block text-xs text-t-secondary">{t.hint}</span>
                 </button>
               ))}
             </div>
@@ -270,7 +270,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
                       )}
                       className="mt-0.5 accent-primary-500 w-4 h-4 shrink-0"
                     />
-                    <span className={'text-sm leading-snug ' + (on ? 'text-white' : 'text-[#636366]')}>{rule}</span>
+                    <span className={'text-sm leading-snug ' + (on ? 'text-white' : 'text-t-secondary')}>{rule}</span>
                   </label>
                 )
               })}
@@ -289,14 +289,14 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
                 <input id="cw-wa" type="tel" className={input} placeholder="+44 20 7123 4567"
                   value={form.handoff_whatsapp ?? ''}
                   onChange={e => setForm(f => ({ ...f, handoff_whatsapp: e.target.value }))} />
-                <p className="text-xs text-[#636366] mt-1.5">Include the country code.</p>
+                <p className="text-xs text-t-secondary mt-1.5">Include the country code.</p>
               </div>
               <div>
                 <label className={label} htmlFor="cw-email">Email us when someone needs help</label>
                 <input id="cw-email" type="email" className={input} placeholder="team@yourbusiness.com"
                   value={form.handoff_email ?? ''}
                   onChange={e => setForm(f => ({ ...f, handoff_email: e.target.value }))} />
-                <p className="text-xs text-[#636366] mt-1.5">So a waiting visitor is not missed.</p>
+                <p className="text-xs text-t-secondary mt-1.5">So a waiting visitor is not missed.</p>
               </div>
             </div>
           </div>
@@ -326,7 +326,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
           </ul>
 
           {missingRequired.length > 0 && (
-            <p className="text-xs text-amber-400/90 bg-amber-400/10 border border-amber-400/20 rounded-lg px-3 py-2.5">
+            <p className="text-xs text-warning/90 bg-warning/10 border border-warning/20 rounded-lg px-3 py-2.5">
               You skipped {missingRequired.join(' and ')}. These are what visitors ask most — you can
               add them any time in the Knowledge Base.
             </p>

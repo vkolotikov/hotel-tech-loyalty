@@ -273,7 +273,7 @@ export function ChatbotWidget() {
     toast.success('Copied')
   }
 
-  if (isLoading) return <div className="text-center text-[#636366] py-12">Loading...</div>
+  if (isLoading) return <div className="text-center text-t-secondary py-12">Loading...</div>
 
   // ─── Render helpers ──────────────────────────────────────────────────────
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
@@ -425,7 +425,7 @@ export function ChatbotWidget() {
                 className="w-8 h-8 rounded cursor-pointer border-0" />
               <span className="text-xs text-t-secondary font-mono">{primary}</span>
             </div>
-            <p className="text-[10px] text-[#636366] mt-1.5">
+            <p className="text-[10px] text-t-secondary mt-1.5">
               Chosen brand color paints the launcher, header accents and active bubbles. Template colors adjust around it.
             </p>
           </div>
@@ -434,8 +434,8 @@ export function ChatbotWidget() {
             <span className="text-sm text-white">Widget is live on the website</span>
             <span className="ml-auto flex items-center gap-1.5">
               <span className={`w-2 h-2 rounded-full ${
-                (f.agent_status || 'online') === 'online' ? 'bg-emerald-500'
-                : (f.agent_status || 'online') === 'away' ? 'bg-amber-500' : 'bg-zinc-500'
+                (f.agent_status || 'online') === 'online' ? 'bg-accent'
+                : (f.agent_status || 'online') === 'away' ? 'bg-warning' : 'bg-t-secondary'
               }`} />
               <select value={f.agent_status || 'online'} onChange={e => update('agent_status', e.target.value)}
                 className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
@@ -671,7 +671,7 @@ export function ChatbotWidget() {
                 className="w-full h-full object-cover"
                 onError={e => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).parentElement!.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#636366" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>'; }} />
             ) : (
-              <MessageSquare size={22} className="text-[#636366]" />
+              <MessageSquare size={22} className="text-t-secondary" />
             )}
           </div>
           <div className="flex-1 min-w-0 space-y-2">
@@ -697,7 +697,7 @@ export function ChatbotWidget() {
             if (file) avatarUpload.mutate(file)
             e.target.value = ''
           }} />
-        <p className="text-[10px] text-[#636366]">Square PNG/JPG, ~120×120px, max 2MB.</p>
+        <p className="text-[10px] text-t-secondary">Square PNG/JPG, ~120×120px, max 2MB.</p>
       </div>
 
       <div className={card}>
@@ -801,7 +801,7 @@ export function ChatbotWidget() {
                       className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white" />
                   </>
                 )}
-                {!isOpen && <span className="text-xs text-[#636366]">Closed</span>}
+                {!isOpen && <span className="text-xs text-t-secondary">Closed</span>}
               </div>
             )
           })}
@@ -819,7 +819,7 @@ export function ChatbotWidget() {
           only exists to be got wrong. */}
       <div className={card}>
         <h3 className={cardTitle}><MessageCircle size={14} className="text-primary-500" /> Talk to a Person</h3>
-        <p className="text-xs text-[#8E8E93] mb-3">
+        <p className="text-xs text-t-secondary mb-3">
           Adds a WhatsApp button to the chat header so a visitor can reach a human at any point.
           Without it, the only way out of the assistant is for it to guess from the wording that
           someone wants help — and that detection only understands English.
@@ -828,7 +828,7 @@ export function ChatbotWidget() {
           <label className={label}>WhatsApp number</label>
           <input type="tel" value={f.handoff_whatsapp || ''} onChange={e => update('handoff_whatsapp', e.target.value)}
             className={input} placeholder="+44 20 7123 4567" />
-          <p className="text-xs text-[#636366] mt-1.5">
+          <p className="text-xs text-t-secondary mt-1.5">
             Include the country code. Leave empty to hide the button.
           </p>
         </div>
@@ -836,7 +836,7 @@ export function ChatbotWidget() {
           <label className={label}>Email us when a visitor asks for a person</label>
           <input type="email" value={f.handoff_email || ''} onChange={e => update('handoff_email', e.target.value)}
             className={input} placeholder="team@yourbusiness.com" />
-          <p className="text-xs text-[#636366] mt-1.5">
+          <p className="text-xs text-t-secondary mt-1.5">
             Sent once per conversation. The inbox sound only reaches someone who already has it open.
           </p>
         </div>
@@ -972,9 +972,9 @@ export function ChatbotWidget() {
           <div className="space-y-2">
             <p className="text-[11px] text-t-secondary">Paste this before the closing <code className="text-primary-500">&lt;/body&gt;</code> tag.</p>
             <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
-              <pre className="text-xs text-green-400 whitespace-pre-wrap break-all font-mono">{embed?.embed_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
+              <pre className="text-xs text-primary-300 whitespace-pre-wrap break-all font-mono">{embed?.embed_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
               <button onClick={() => copyCode(embed?.embed_code, 'script')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded">
-                {copied === 'script' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                {copied === 'script' ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
               </button>
             </div>
           </div>
@@ -984,9 +984,9 @@ export function ChatbotWidget() {
           <div className="space-y-2">
             <p className="text-[11px] text-t-secondary">Drop-in iframe — works with WordPress, Wix, Squarespace.</p>
             <div className="bg-dark-bg border border-dark-border rounded-lg p-3 relative group">
-              <pre className="text-xs text-blue-400 whitespace-pre-wrap break-all font-mono">{embed?.iframe_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
+              <pre className="text-xs text-primary-300 whitespace-pre-wrap break-all font-mono">{embed?.iframe_code || (config?.id ? 'Loading...' : 'Save widget config first')}</pre>
               <button onClick={() => copyCode(embed?.iframe_code, 'iframe')} className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 bg-dark-card text-t-secondary hover:text-white p-1.5 rounded">
-                {copied === 'iframe' ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                {copied === 'iframe' ? <Check size={14} className="text-accent" /> : <Copy size={14} />}
               </button>
             </div>
           </div>
@@ -997,7 +997,7 @@ export function ChatbotWidget() {
             <p className="text-[11px] text-t-secondary">REST API endpoints for custom integrations.</p>
             {embed?.api_info?.endpoints && Object.entries(embed.api_info.endpoints).map(([name, ep]: [string, any]) => (
               <div key={name} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-lg px-3 py-2">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ep.method === 'GET' ? 'bg-green-500/20 text-green-400' : 'bg-blue-500/20 text-blue-400'}`}>{ep.method}</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${ep.method === 'GET' ? 'bg-accent/20 text-accent' : 'bg-info/20 text-info'}`}>{ep.method}</span>
                 <code className="text-[11px] text-t-secondary font-mono flex-1 truncate">{ep.url}</code>
                 <button onClick={() => copyCode(ep.url, name)} className="text-t-secondary hover:text-white"><Copy size={12} /></button>
               </div>
@@ -1137,28 +1137,28 @@ function WidgetPreview({ cfg }: { cfg: any }) {
       </div>
       <p className="text-[11px] text-t-secondary -mt-2">
         Reflects unsaved changes. Not a live chat — for layout only.
-        {windowStyle === 'classic' && <span className="ml-1.5 text-[#636366]">Mobile: fullscreen.</span>}
-        {windowStyle === 'popup' && <span className="ml-1.5 text-amber-400">Mobile: floating card above launcher.</span>}
-        {windowStyle === 'bubble' && <span className="ml-1.5 text-amber-400">Mobile: 82% bottom sheet · ring launcher.</span>}
-        {windowStyle === 'minimal' && <span className="ml-1.5 text-amber-400">Mobile: 62% bottom sheet · pill launcher.</span>}
-        {(windowStyle === 'panel' || !windowStyle) && <span className="ml-1.5 text-amber-400">Mobile: 78% bottom sheet (default).</span>}
+        {windowStyle === 'classic' && <span className="ml-1.5 text-primary-400">Mobile: fullscreen.</span>}
+        {windowStyle === 'popup' && <span className="ml-1.5 text-primary-400">Mobile: floating card above launcher.</span>}
+        {windowStyle === 'bubble' && <span className="ml-1.5 text-primary-400">Mobile: 82% bottom sheet · ring launcher.</span>}
+        {windowStyle === 'minimal' && <span className="ml-1.5 text-primary-400">Mobile: 62% bottom sheet · pill launcher.</span>}
+        {(windowStyle === 'panel' || !windowStyle) && <span className="ml-1.5 text-primary-400">Mobile: 78% bottom sheet (default).</span>}
       </p>
 
       {/* Browser-window mock */}
       <div
         className="relative rounded-xl overflow-hidden border border-dark-border shadow-inner"
         style={{
-          background: 'repeating-linear-gradient(45deg, #18181b, #18181b 10px, #1f1f23 10px, #1f1f23 20px)',
+          background: 'repeating-linear-gradient(45deg, rgb(var(--color-dark-bg)), rgb(var(--color-dark-bg)) 10px, rgb(var(--color-dark-surface2)) 10px, rgb(var(--color-dark-surface2)) 20px)',
           height: 520,
           fontFamily: `'${font}', system-ui, sans-serif`,
         }}
       >
         {/* Fake browser chrome */}
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-[#0f0f10] border-b border-dark-border">
+        <div className="flex items-center gap-1.5 px-3 py-2 bg-dark-bg border-b border-dark-border">
           <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
           <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
-          <span className="ml-3 text-[10px] text-[#636366] truncate">your-hotel.com</span>
+          <span className="ml-3 text-[10px] text-t-secondary truncate">your-hotel.com</span>
         </div>
 
         {/* Launcher (when closed) */}
