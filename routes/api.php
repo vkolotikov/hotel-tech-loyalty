@@ -160,10 +160,13 @@ Route::prefix('v1')->group(function () {
     Route::get('track/open/{recipient}', [CampaignTrackingController::class, 'open']);
 
     // ─── Public Booking Widget API ──────────────────────────────────────────
-    // Apple Wallet pkpass — public route that accepts a Sanctum token
-    // via ?token= query because Safari navigations to the .pkpass URL
-    // can't carry an Authorization header. Token is resolved inside the
-    // controller using PersonalAccessToken::findToken.
+    // Apple Wallet pkpass — public route, because a Safari navigation to the
+    // .pkpass URL can't carry an Authorization header. It authenticates with a
+    // single-use ?pass= nonce minted by the authenticated
+    // member/card/apple-wallet/link endpoint (see WalletPassController).
+    // It used to accept a raw Sanctum token as ?token=; that put a
+    // never-expiring credential into access logs and browser history, and is
+    // gone.
     // NOTE: this route sits inside Route::prefix('v1') above, so the path
     // is just 'member/...' — adding 'v1/' here would produce /api/v1/v1/...
     Route::get('member/card/apple-wallet', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'apple']);
@@ -184,6 +187,17 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('webhooks/stripe',      [BookingPublicController::class, 'stripeWebhook']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
+
+    // ─── Email delivery feedback (Amazon SES via SNS) ───────────────────────
+    // Bounces and complaints, which populate the suppression list. Public by
+    // necessity — SNS has no session and cannot carry a CSRF token; the
+    // credential is the TopicArn check plus the unguessable path.
+    //
+    // Rate limit is generous: a large campaign to a stale list can legitimately
+    // produce a burst of bounce notifications, and dropping them would leave
+    // dead addresses in circulation, which is the exact problem this solves.
+    Route::post('webhooks/ses', [\App\Http\Controllers\Api\V1\Webhooks\SesWebhookController::class, 'handle'])
+        ->middleware('throttle:600,1');
 
     // ─── Public Services Reservation Widget API ─────────────────────────────
     Route::prefix('services')->middleware('throttle:60,1')->group(function () {
@@ -317,9 +331,17 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::prefix('member')->group(function () {
             Route::get('profile',           [MemberController::class, 'profile']);
             Route::put('profile',           [MemberController::class, 'updateProfile']);
+            // Throttled: this is a credential-verification surface, so it is
+            // an oracle for guessing the current password if left open.
+            Route::put('password',          [MemberController::class, 'updatePassword'])->middleware('throttle:6,1,member-password');
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
+            // Mints a single-use, 2-minute URL for the Apple Wallet pass.
+            // Authenticated by header, so the member's long-lived Sanctum
+            // token never has to travel in a query string (and therefore into
+            // access logs and Safari history) the way ?token= does.
+            Route::get('card/apple-wallet/link', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'appleLink']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             // Tier benefits the member holds, and requests for the ones
@@ -593,13 +615,23 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Rewards catalog
             Route::get('rewards',                                       [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'index']);
             Route::get('rewards/redemptions',                           [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'redemptions']);
-            Route::post('rewards/redemptions/{id}/fulfill',             [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'fulfill']);
-            Route::post('rewards/redemptions/{id}/cancel',              [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'cancel']);
-            Route::post('rewards',                                      [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'store']);
+            // Creating, editing, toggling and deleting rewards is offer management,
+            // and was open to any authenticated staff member — a receptionist could
+            // delete the catalogue. Reads stay open: helping a member at the counter
+            // means being able to see what is on offer and what they redeemed.
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post('rewards',                                      [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'store']);
+                Route::put('rewards/{id}',                                  [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'update']);
+                Route::patch('rewards/{id}/toggle',                         [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'toggleActive']);
+                Route::delete('rewards/{id}',                               [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'destroy']);
+            });
+
+            // Handing a reward over (or cancelling it) is the redemption action.
+            Route::middleware('staff.can:can_redeem_points')->group(function () {
+                Route::post('rewards/redemptions/{id}/fulfill',             [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'fulfill']);
+                Route::post('rewards/redemptions/{id}/cancel',              [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'cancel']);
+            });
             Route::get('rewards/{id}',                                  [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'show']);
-            Route::put('rewards/{id}',                                  [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'update']);
-            Route::patch('rewards/{id}/toggle',                         [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'toggleActive']);
-            Route::delete('rewards/{id}',                               [\App\Http\Controllers\Api\V1\Admin\RewardAdminController::class, 'destroy']);
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
             Route::get('members/stats',           [MemberAdminController::class, 'stats']);
@@ -636,19 +668,27 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('nfc/issue',              [NfcController::class, 'issue']);
             Route::delete('nfc/{id}',             [NfcController::class, 'deactivate']);
 
+            // READS stay open to any staff member — the counter needs to see
+            // what is on offer. WRITES are gated on can_manage_offers, which
+            // the staff table has carried (and TeamController has let admins
+            // set) since forever while nothing ever checked it.
             Route::get('offers',                  [OffersAdminController::class, 'index']);
-            Route::post('offers',                 [OffersAdminController::class, 'store']);
-            Route::post('offers/generate-ai',     [OffersAdminController::class, 'generateAiOffer']);
             Route::get('offers/{id}',             [OffersAdminController::class, 'show']);
-            Route::put('offers/{id}',             [OffersAdminController::class, 'update']);
-            Route::delete('offers/{id}',          [OffersAdminController::class, 'destroy']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('offers',              [OffersAdminController::class, 'store']);
+                Route::post  ('offers/generate-ai',  [OffersAdminController::class, 'generateAiOffer']);
+                Route::put   ('offers/{id}',         [OffersAdminController::class, 'update']);
+                Route::delete('offers/{id}',         [OffersAdminController::class, 'destroy']);
+            });
 
-            // Benefits & fulfillment
+            // Benefits & fulfillment — same split.
             Route::get('benefits',                             [BenefitAdminController::class, 'index']);
-            Route::post('benefits',                            [BenefitAdminController::class, 'store']);
-            Route::put('benefits/{id}',                        [BenefitAdminController::class, 'update']);
-            Route::delete('benefits/{id}',                     [BenefitAdminController::class, 'destroy']);
-            Route::post('benefits/{id}/toggle',                [BenefitAdminController::class, 'toggle']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('benefits',                      [BenefitAdminController::class, 'store']);
+                Route::put   ('benefits/{id}',                 [BenefitAdminController::class, 'update']);
+                Route::delete('benefits/{id}',                 [BenefitAdminController::class, 'destroy']);
+                Route::post  ('benefits/{id}/toggle',          [BenefitAdminController::class, 'toggle']);
+            });
             // ─── Discounts: what a member actually gets off a bill ───
             // The counter-facing side of the benefit/offer engine. `quote`
             // is read-only so staff can re-quote as an order changes;
@@ -658,8 +698,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('discounts/offers/{id}/use',           [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'useOffer']);
 
             Route::get('tiers/{tierId}/benefits',              [BenefitAdminController::class, 'tierBenefits']);
-            Route::post('tier-benefits',                       [BenefitAdminController::class, 'assignTierBenefit']);
-            Route::delete('tier-benefits/{id}',                [BenefitAdminController::class, 'removeTierBenefit']);
+            Route::middleware('staff.can:can_manage_offers')->group(function () {
+                Route::post  ('tier-benefits',                 [BenefitAdminController::class, 'assignTierBenefit']);
+                Route::delete('tier-benefits/{id}',            [BenefitAdminController::class, 'removeTierBenefit']);
+            });
             Route::get('entitlements',                         [BenefitAdminController::class, 'entitlements']);
             Route::post('entitlements/{id}/action',            [BenefitAdminController::class, 'actionEntitlement']);
 
@@ -688,38 +730,45 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // CampaignSegmentController; give it distinct URIs before
             // reinstating it.
 
-            Route::get('analytics/export',              [AnalyticsController::class, 'export']);
-            Route::get('analytics/overview',             [AnalyticsController::class, 'overview']);
-            Route::get('analytics/points',               [AnalyticsController::class, 'points']);
-            Route::get('analytics/member-growth',        [AnalyticsController::class, 'memberGrowth']);
-            Route::get('analytics/cohort-retention',     [AnalyticsController::class, 'cohortRetention']);
-            Route::get('analytics/at-risk-members',      [AnalyticsController::class, 'atRiskMembers']);
-            Route::get('analytics/tier-movement',        [AnalyticsController::class, 'tierMovement']);
-            Route::get('analytics/revenue',              [AnalyticsController::class, 'revenue']);
-            Route::get('analytics/revenue-trend',        [AnalyticsController::class, 'revenueTrend']);
-            Route::get('analytics/booking-trends',       [AnalyticsController::class, 'bookingTrends']);
-            Route::get('analytics/engagement',           [AnalyticsController::class, 'engagement']);
-            Route::get('analytics/points-distribution',  [AnalyticsController::class, 'pointsDistribution']);
-            Route::get('analytics/redemption-trend',     [AnalyticsController::class, 'redemptionTrend']);
-            Route::get('analytics/booking-metrics',      [AnalyticsController::class, 'bookingMetrics']);
-            Route::get('analytics/hotel-ops',            [AnalyticsController::class, 'hotelOps']);
-            Route::get('analytics/expiry-forecast',      [AnalyticsController::class, 'expiryForecast']);
-            Route::get('analytics/crm-trends',           [AnalyticsController::class, 'crmTrends']);
-            Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
-            Route::get('analytics/inquiry-funnel',       [AnalyticsController::class, 'inquiryFunnel']);
-            Route::get('analytics/booking-channels',     [AnalyticsController::class, 'bookingChannels']);
-            // Channel attribution (2026-06-12) — marketing + chat + booking source insights.
-            Route::get('analytics/marketing-channels',         [AnalyticsController::class, 'marketingChannels']);
-            Route::get('analytics/chat-channel-insights',      [AnalyticsController::class, 'chatChannelInsights']);
-            Route::get('analytics/booking-source-performance', [AnalyticsController::class, 'bookingSourcePerformance']);
-            Route::get('analytics/revenue-comparison',   [AnalyticsController::class, 'revenueComparison']);
-            Route::get('analytics/occupancy',            [AnalyticsController::class, 'occupancyTrend']);
-            Route::get('analytics/vip-distribution',     [AnalyticsController::class, 'vipDistribution']);
-            Route::get('analytics/nationality',          [AnalyticsController::class, 'nationalityBreakdown']);
-            Route::get('analytics/venue-utilization',    [AnalyticsController::class, 'venueUtilization']);
-            Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
-            Route::get('analytics/leads-deep',           [AnalyticsController::class, 'leadsDeep']);
-            Route::get('analytics/overview-trends',      [AnalyticsController::class, 'overviewTrends']);
+            // can_view_analytics was stored on staff, edited in the team UI and
+            // returned to the client, but enforced nowhere: a receptionist with the
+            // flag off could call every endpoint below directly and read revenue,
+            // cohort and member data. Same defect can_manage_offers had. Export is
+            // inside the gate too — it is the one that leaves the building.
+            Route::middleware('staff.can:can_view_analytics')->group(function () {
+                Route::get('analytics/export',              [AnalyticsController::class, 'export']);
+                Route::get('analytics/overview',             [AnalyticsController::class, 'overview']);
+                Route::get('analytics/points',               [AnalyticsController::class, 'points']);
+                Route::get('analytics/member-growth',        [AnalyticsController::class, 'memberGrowth']);
+                Route::get('analytics/cohort-retention',     [AnalyticsController::class, 'cohortRetention']);
+                Route::get('analytics/at-risk-members',      [AnalyticsController::class, 'atRiskMembers']);
+                Route::get('analytics/tier-movement',        [AnalyticsController::class, 'tierMovement']);
+                Route::get('analytics/revenue',              [AnalyticsController::class, 'revenue']);
+                Route::get('analytics/revenue-trend',        [AnalyticsController::class, 'revenueTrend']);
+                Route::get('analytics/booking-trends',       [AnalyticsController::class, 'bookingTrends']);
+                Route::get('analytics/engagement',           [AnalyticsController::class, 'engagement']);
+                Route::get('analytics/points-distribution',  [AnalyticsController::class, 'pointsDistribution']);
+                Route::get('analytics/redemption-trend',     [AnalyticsController::class, 'redemptionTrend']);
+                Route::get('analytics/booking-metrics',      [AnalyticsController::class, 'bookingMetrics']);
+                Route::get('analytics/hotel-ops',            [AnalyticsController::class, 'hotelOps']);
+                Route::get('analytics/expiry-forecast',      [AnalyticsController::class, 'expiryForecast']);
+                Route::get('analytics/crm-trends',           [AnalyticsController::class, 'crmTrends']);
+                Route::get('analytics/inquiry-pipeline',     [AnalyticsController::class, 'inquiryPipeline']);
+                Route::get('analytics/inquiry-funnel',       [AnalyticsController::class, 'inquiryFunnel']);
+                Route::get('analytics/booking-channels',     [AnalyticsController::class, 'bookingChannels']);
+                // Channel attribution (2026-06-12) — marketing + chat + booking source insights.
+                Route::get('analytics/marketing-channels',         [AnalyticsController::class, 'marketingChannels']);
+                Route::get('analytics/chat-channel-insights',      [AnalyticsController::class, 'chatChannelInsights']);
+                Route::get('analytics/booking-source-performance', [AnalyticsController::class, 'bookingSourcePerformance']);
+                Route::get('analytics/revenue-comparison',   [AnalyticsController::class, 'revenueComparison']);
+                Route::get('analytics/occupancy',            [AnalyticsController::class, 'occupancyTrend']);
+                Route::get('analytics/vip-distribution',     [AnalyticsController::class, 'vipDistribution']);
+                Route::get('analytics/nationality',          [AnalyticsController::class, 'nationalityBreakdown']);
+                Route::get('analytics/venue-utilization',    [AnalyticsController::class, 'venueUtilization']);
+                Route::get('analytics/revenue-by-property',  [AnalyticsController::class, 'revenueByProperty']);
+                Route::get('analytics/leads-deep',           [AnalyticsController::class, 'leadsDeep']);
+                Route::get('analytics/overview-trends',      [AnalyticsController::class, 'overviewTrends']);
+            });
 
             Route::get('campaigns',                       [AdminNotificationController::class, 'index']);
             Route::get('campaigns/{id}',                  [AdminNotificationController::class, 'show']);
