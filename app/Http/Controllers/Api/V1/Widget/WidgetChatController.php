@@ -1723,68 +1723,6 @@ class WidgetChatController extends Controller
     }
 
     /**
-     * POST /v1/widget/{widgetKey}/upload
-     *
-     * Visitor uploads an image/file as part of the conversation. We persist
-     * the file under storage/app/public/chat-attachments/ and create a
-     * chat_message row tagged with the attachment metadata so the agent
-     * inbox can render a thumbnail/link inline. Allowed types are limited
-     * to common image/document mime types and the size cap is 8MB to keep
-     * abuse contained.
-     */
-    public function uploadAttachment(Request $request, string $widgetKey): JsonResponse
-    {
-        $request->validate([
-            'session_id' => 'required|string|max:64',
-            'file'       => 'required|file|max:8192|mimes:jpg,jpeg,png,gif,webp,pdf,doc,docx,txt',
-        ]);
-
-        $config = $this->resolveWidget($widgetKey);
-        if (!$config) return response()->json(['error' => 'Widget not found'], 404);
-
-        $conv = ChatConversation::where('session_id', $request->session_id)
-            ->where('organization_id', $config->organization_id)
-            ->first();
-
-        if (!$conv) {
-            return response()->json(['error' => 'Conversation not found'], 404);
-        }
-
-        $file = $request->file('file');
-        // Route through MediaService so attachments land on shared
-        // storage (DO Spaces in prod). storePublicly(..., 'public')
-        // pins to a single Laravel Cloud instance's local disk and
-        // disappears when the visitor's next request hits a different
-        // instance -- same bug pattern as the chat-avatar fix.
-        $url  = \App\Services\MediaService::upload($file, 'chat-attachments');
-        $type = str_starts_with((string) $file->getMimeType(), 'image/') ? 'image' : 'file';
-
-        $msg = ChatMessage::create([
-            'conversation_id'  => $conv->id,
-            'sender_type'      => 'visitor',
-            'direction'        => ChatMessage::DIRECTION_INBOUND,
-            'content'          => $file->getClientOriginalName(),
-            'attachment_url'   => $url,
-            'attachment_type'  => $type,
-            'attachment_size'  => $file->getSize(),
-            'created_at'       => now(),
-        ]);
-
-        $conv->update([
-            'last_message_at' => now(),
-            'messages_count'  => $conv->messages_count + 1,
-            'status'          => $conv->status === 'resolved' ? 'waiting' : $conv->status,
-        ]);
-
-        return response()->json([
-            'ok'              => true,
-            'message_id'      => $msg->id,
-            'attachment_url'  => $url,
-            'attachment_type' => $type,
-        ]);
-    }
-
-    /**
      * POST /v1/widget/{widgetKey}/transcribe — convert a recorded audio blob
      * to text via OpenAI Whisper. The widget records in the browser (any
      * language), uploads here; we call OpenAI's /audio/transcriptions with

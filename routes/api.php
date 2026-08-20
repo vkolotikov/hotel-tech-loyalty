@@ -257,7 +257,6 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('{widgetKey}/poll',        [WidgetChatController::class, 'poll']);
         Route::post('{widgetKey}/typing',     [WidgetChatController::class, 'visitorTyping']);
         Route::post('{widgetKey}/rate',       [WidgetChatController::class, 'rateConversation'])->middleware('throttle:5,1,widget-rate');
-        Route::post('{widgetKey}/upload',     [WidgetChatController::class, 'uploadAttachment'])->middleware('throttle:10,1,widget-upload');
         Route::post('{widgetKey}/transcribe', [WidgetChatController::class, 'transcribe'])->middleware('throttle:30,1,widget-transcribe');
         Route::post('{widgetKey}/page-view',  [WidgetChatController::class, 'pageView']);
         Route::get('{widgetKey}/popup-rules', [WidgetChatController::class, 'getPopupRules']);
