@@ -504,6 +504,63 @@ Route::get ('/unsubscribe/{token}',             [\App\Http\Controllers\Unsubscri
 Route::post('/unsubscribe/{token}',             [\App\Http\Controllers\UnsubscribeController::class, 'oneClick']);
 Route::post('/unsubscribe/{token}/resubscribe', [\App\Http\Controllers\UnsubscribeController::class, 'resubscribe']);
 
+/*
+ * Web app manifest â makes the admin installable as a desktop application.
+ * With this and a service worker in place, Edge and Chrome on Windows offer an
+ * Install action, and the result is a real window with its own taskbar and
+ * Start Menu entry rather than a browser tab.
+ *
+ * Generated per request rather than shipped as a build artefact because the
+ * browser fetches a manifest before anyone signs in. There is no session to
+ * read at that point, so the host is the only brand signal available â and it
+ * is sufficient, since every GTM sub-brand has its own domain. A static file
+ * would install under the same name on all of them.
+ */
+Route::get('/manifest.webmanifest', function (\Illuminate\Http\Request $request) {
+    $brand = config('pwa.hosts')[strtolower($request->getHost())] ?? config('pwa.default');
+
+    $icon = fn (string $file, int $size, string $purpose) => [
+        'src'     => '/spa/pwa/' . $file,
+        'sizes'   => $size . 'x' . $size,
+        'type'    => 'image/png',
+        'purpose' => $purpose,
+    ];
+
+    return response()->json([
+        'id'               => '/',
+        'name'             => $brand['name'],
+        'short_name'       => $brand['short_name'],
+        'start_url'        => '/',
+        'scope'            => '/',
+        'display'          => 'standalone',
+        'orientation'      => 'any',
+        'theme_color'      => config('pwa.theme_color'),
+        'background_color' => config('pwa.background_color'),
+        'categories'       => ['business', 'productivity'],
+
+        // Clicking the taskbar icon while a window is already open should
+        // raise that window, not open a second copy of the same console.
+        'launch_handler'   => ['client_mode' => 'focus-existing'],
+
+        'icons' => [
+            $icon('icon-192.png', 192, 'any'),
+            $icon('icon-512.png', 512, 'any'),
+            // Windows and Android crop icons to their own shape; the maskable
+            // variant keeps the mark inside the safe area so it survives that.
+            $icon('icon-maskable-512.png', 512, 'maskable'),
+        ],
+
+        'shortcuts' => array_map(fn ($s) => [
+            'name' => $s['name'],
+            'url'  => $s['url'],
+            'icons' => [$icon('icon-192.png', 192, 'any')],
+        ], config('pwa.shortcuts')),
+    ], 200, [
+        'Content-Type'  => 'application/manifest+json',
+        'Cache-Control' => 'public, max-age=3600',
+    ], JSON_UNESCAPED_SLASHES);
+});
+
 // SPA fallback — serve the React admin panel for any non-API route
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
@@ -511,7 +568,7 @@ Route::get('/{any}', function () {
         return response()->file($spaPath, ['Content-Type' => 'text/html']);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
+})->where('any', '^(?!api/|storage/|spa/|sw.js|manifest.webmanifest|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
 
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
