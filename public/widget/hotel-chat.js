@@ -126,7 +126,7 @@
     #htchat-launcher:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(0,0,0,0.35); }\
     #htchat-launcher svg { width: 24px; height: 24px; fill: white; }\
     #htchat-launcher .htchat-pulse { position: absolute; top: -2px; right: -2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }\
-    #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
+    #htchat-panel { position: fixed; z-index: 99999; width: 380px; height: 560px; max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); transition: opacity 0.25s, transform 0.25s; background: #fff; }\
     #htchat-panel.hidden { opacity: 0; transform: translateY(20px) scale(0.95); pointer-events: none; }\
     #htchat-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; color: white; flex-shrink: 0; min-height: 64px; box-shadow: 0 1px 0 rgba(0,0,0,0.08), 0 4px 12px -6px rgba(0,0,0,0.2); position: relative; z-index: 2; }\
     #htchat-header-left { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1; }\
@@ -297,13 +297,16 @@
     @media (max-width: 600px) {\
       #htchat-panel:not(.htchat-classic) { width: 100vw !important; height: 78dvh !important; max-height: 78dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: auto !important; border-radius: 22px 22px 0 0 !important; }\
       #htchat-panel.htchat-classic { width: 100vw !important; height: 100% !important; height: 100dvh !important; max-height: 100dvh !important; right: 0 !important; left: 0 !important; bottom: 0 !important; top: 0 !important; border-radius: 0 !important; }\
-      #htchat-panel.htchat-popup { width: calc(100vw - 32px) !important; max-width: 420px !important; height: 520px !important; max-height: calc(100dvh - 110px) !important; right: 16px !important; left: auto !important; bottom: 80px !important; top: auto !important; border-radius: 20px !important; }\
+      #htchat-panel.htchat-popup { width: calc(100vw - 32px) !important; max-width: 420px !important; height: 520px !important; max-height: calc(100dvh - 32px) !important; right: 16px !important; left: auto !important; bottom: 16px !important; top: auto !important; border-radius: 20px !important; }\
       #htchat-panel.htchat-bubble { height: 82dvh !important; max-height: 82dvh !important; border-radius: 28px 28px 0 0 !important; }\
       #htchat-panel.htchat-minimal { height: 62dvh !important; max-height: 62dvh !important; border-radius: 14px 14px 0 0 !important; }\
       #htchat-launcher { bottom: 16px !important; }\
       #htchat-header { padding-top: max(14px, env(safe-area-inset-top)); padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }\
       #htchat-input-area { padding-bottom: max(12px, env(safe-area-inset-bottom)); padding-left: max(12px, env(safe-area-inset-left)); padding-right: max(12px, env(safe-area-inset-right)); }\
       #htchat-input { font-size: 16px; }\
+      #htchat-mic-btn, #htchat-send-btn, #htchat-attach-btn { width: 44px !important; height: 44px !important; }\
+      .htchat-suggestion { padding: 9px 14px !important; font-size: 12.5px !important; }\
+      #htchat-input-hint { display: none !important; }\
     }\
     /* ═══ Premium template overrides ════════════════════════════════════ */\
     /* Onyx Gold — dark glass panel + gold shimmer launcher */\
@@ -676,6 +679,19 @@
     el.style.right = pos.right;
   }
 
+  // The launcher is display:none for the whole time the panel is open, so the
+  // panel takes the launcher's own corner offset instead of reserving a strip
+  // of empty page above a button that is not there. transform-origin points at
+  // the same corner, so the panel scales out of the button rather than
+  // appearing from its own centre.
+  function applyPanelPosition(panel) {
+    var pos = getPosition();
+    panel.style.bottom = pos.bottom;
+    panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
+    panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
+    panel.style.transformOrigin = pos.left === 'auto' ? 'bottom right' : 'bottom left';
+  }
+
   function shadeHex(hex, pct) {
     var num = parseInt((hex || '#c9a84c').replace('#', ''), 16);
     var r = Math.min(255, Math.max(0, (num >> 16) + Math.round(pct * 2.55)));
@@ -883,10 +899,7 @@
     panel.className = 'hidden';
 
     // Position
-    var pos = getPosition();
-    panel.style.bottom = '86px';
-    panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
-    panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
+    applyPanelPosition(panel);
 
     panel.innerHTML = '\
       <div id="htchat-header">\
@@ -1140,11 +1153,7 @@
       if (launcher) applyPosition(launcher);
       var panel = document.getElementById('htchat-panel');
       var launcherEl = document.getElementById('htchat-launcher');
-      if (panel) {
-        var pos = getPosition();
-        panel.style.left = pos.left === 'auto' ? 'auto' : pos.left;
-        panel.style.right = pos.right === 'auto' ? 'auto' : pos.right;
-      }
+      if (panel) applyPanelPosition(panel);
       // Apply widget preset classes to panel + launcher
       var preset = data.window_style || 'panel';
       var presetClassMap = { classic: 'htchat-classic', popup: 'htchat-popup', bubble: 'htchat-bubble', minimal: 'htchat-minimal' };
