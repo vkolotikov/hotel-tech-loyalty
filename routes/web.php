@@ -565,7 +565,18 @@ Route::get('/manifest.webmanifest', function (\Illuminate\Http\Request $request)
 Route::get('/{any}', function () {
     $spaPath = public_path('spa/index.html');
     if (file_exists($spaPath)) {
-        return response()->file($spaPath, ['Content-Type' => 'text/html']);
+        // The shell must never be served from cache without checking first.
+        // It was going out as `Cache-Control: public` with no max-age, which
+        // lets the browser -- and Cloudflare in front of it -- invent their own
+        // expiry from Last-Modified. Two consequences: a deploy's new HTML can
+        // take hours to reach someone who already had the page open, and the
+        // stale HTML points at asset hashes the rebuild has already deleted,
+        // so lazily-loaded routes 404. `no-cache` still allows a 304 against
+        // Last-Modified, so this revalidates rather than re-downloads.
+        return response()->file($spaPath, [
+            'Content-Type'  => 'text/html',
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
     }
     return view('welcome');
 })->where('any', '^(?!api/|storage/|spa/|sw.js|manifest.webmanifest|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
@@ -573,7 +584,18 @@ Route::get('/{any}', function () {
 Route::get('/', function () {
     $spaPath = public_path('spa/index.html');
     if (file_exists($spaPath)) {
-        return response()->file($spaPath, ['Content-Type' => 'text/html']);
+        // The shell must never be served from cache without checking first.
+        // It was going out as `Cache-Control: public` with no max-age, which
+        // lets the browser -- and Cloudflare in front of it -- invent their own
+        // expiry from Last-Modified. Two consequences: a deploy's new HTML can
+        // take hours to reach someone who already had the page open, and the
+        // stale HTML points at asset hashes the rebuild has already deleted,
+        // so lazily-loaded routes 404. `no-cache` still allows a 304 against
+        // Last-Modified, so this revalidates rather than re-downloads.
+        return response()->file($spaPath, [
+            'Content-Type'  => 'text/html',
+            'Cache-Control' => 'no-cache, must-revalidate',
+        ]);
     }
     return view('welcome');
 });
