@@ -130,7 +130,7 @@ textarea.sv-input{min-height:22vh;resize:none}
   var API = @json($apiBase);
   var MODE = @json($mode);
   var KEY  = @json($key);
-  var PRIMARY = @json($color);
+  var PRIMARY = @json($color ? \App\Support\CssColor::safe($color) : '');
   if (PRIMARY) document.documentElement.style.setProperty('--primary', PRIMARY);
 
   var qs = new URLSearchParams(window.location.search);

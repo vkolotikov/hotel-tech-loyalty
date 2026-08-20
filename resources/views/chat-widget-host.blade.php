@@ -48,7 +48,7 @@
       width: 36px;
       height: 36px;
       border: 3px solid rgba(255,255,255,0.1);
-      border-top-color: {{ $color }};
+      border-top-color: {{ \App\Support\CssColor::safe($color) }};
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
     }
