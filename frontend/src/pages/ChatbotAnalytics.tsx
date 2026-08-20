@@ -83,7 +83,7 @@ function StatCard({
           <p className="text-xs text-t-secondary mb-1">{label}</p>
           <p className={`text-2xl font-bold ${color}`}>{value}</p>
           {delta && (
-            <p className={`text-[11px] font-semibold mt-0.5 inline-flex items-center gap-0.5 ${delta.positive ? 'text-emerald-400' : 'text-red-400'}`}>
+            <p className={`text-[11px] font-semibold mt-0.5 inline-flex items-center gap-0.5 ${delta.positive ? 'text-accent' : 'text-error'}`}>
               {delta.positive ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
               {delta.pct}%
               <span className="text-t-secondary font-normal ml-1">vs prev</span>
@@ -172,19 +172,19 @@ export function ChatbotAnalytics() {
         <>
           {/* KPI Cards — each card carries a vs-previous-period delta */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            <StatCard icon={MessageSquare} color="text-blue-400"    label={t('chatbot_analytics.kpis.total_conversations', 'Total Conversations')} value={ov!.total_conversations}
+            <StatCard icon={MessageSquare} color="text-primary-400" label={t('chatbot_analytics.kpis.total_conversations', 'Total Conversations')} value={ov!.total_conversations}
               delta={deltaOf(ov!.total_conversations, prev!.total_conversations)} />
-            <StatCard icon={UserCheck}     color="text-green-400"   label={t('chatbot_analytics.kpis.leads_captured', 'Leads Captured')} value={ov!.leads_captured}
+            <StatCard icon={UserCheck}     color="text-primary-400" label={t('chatbot_analytics.kpis.leads_captured', 'Leads Captured')} value={ov!.leads_captured}
               delta={deltaOf(ov!.leads_captured, prev!.leads_captured)} />
-            <StatCard icon={Bot}           color="text-purple-400"  label={t('chatbot_analytics.kpis.ai_resolved', 'AI Resolved')} value={ov!.ai_resolved}
+            <StatCard icon={Bot}           color="text-primary-400" label={t('chatbot_analytics.kpis.ai_resolved', 'AI Resolved')} value={ov!.ai_resolved}
               delta={deltaOf(ov!.ai_resolved, prev!.ai_resolved)} />
-            <StatCard icon={Users}         color="text-amber-400"   label={t('chatbot_analytics.kpis.escalated', 'Escalated to Human')} value={ov!.human_escalated}
+            <StatCard icon={Users}         color="text-primary-400" label={t('chatbot_analytics.kpis.escalated', 'Escalated to Human')} value={ov!.human_escalated}
               delta={deltaOf(ov!.human_escalated, prev!.human_escalated)} />
             <StatCard icon={TrendingUp}    color="text-cyan-400"    label={t('chatbot_analytics.kpis.avg_messages', 'Avg Messages / Chat')} value={ov!.avg_messages}
               delta={deltaOf(ov!.avg_messages, prev!.avg_messages)} />
-            <StatCard icon={ArrowUpRight}  color="text-emerald-400" label={t('chatbot_analytics.kpis.lead_conversion', 'Lead Conversion')} value={`${ov!.lead_conversion_rate}%`}
+            <StatCard icon={ArrowUpRight}  color="text-primary-400" label={t('chatbot_analytics.kpis.lead_conversion', 'Lead Conversion')} value={`${ov!.lead_conversion_rate}%`}
               delta={deltaOf(ov!.lead_conversion_rate, prev!.lead_conversion_rate)} />
-            <StatCard icon={Bot}           color="text-indigo-400"  label={t('chatbot_analytics.kpis.ai_resolution_rate', 'AI Resolution Rate')} value={`${ov!.ai_resolution_rate}%`}
+            <StatCard icon={Bot}           color="text-primary-400" label={t('chatbot_analytics.kpis.ai_resolution_rate', 'AI Resolution Rate')} value={`${ov!.ai_resolution_rate}%`}
               delta={deltaOf(ov!.ai_resolution_rate, prev!.ai_resolution_rate)} />
             <StatCard icon={ArrowUpRight}  color="text-rose-400"    label={t('chatbot_analytics.kpis.human_escalation_rate', 'Human Escalation Rate')} value={`${ov!.human_escalation_rate}%`}
               delta={deltaOf(ov!.human_escalation_rate, prev!.human_escalation_rate)} />
@@ -209,7 +209,7 @@ export function ChatbotAnalytics() {
                         <span className="flex items-center gap-3">
                           <span className="text-white font-bold tabular-nums">{row.count.toLocaleString()}</span>
                           <span className="text-t-secondary tabular-nums w-12 text-right">{pct}%</span>
-                          {i > 0 && <span className={`text-[10px] tabular-nums w-12 text-right ${dropFromPrev >= 80 ? 'text-emerald-400' : dropFromPrev >= 50 ? 'text-amber-400' : 'text-red-400'}`}>
+                          {i > 0 && <span className={`text-[10px] tabular-nums w-12 text-right ${dropFromPrev >= 80 ? 'text-accent' : dropFromPrev >= 50 ? 'text-warning' : 'text-error'}`}>
                             {dropFromPrev}%
                           </span>}
                         </span>
@@ -443,7 +443,7 @@ export function ChatbotAnalytics() {
                           <span className="text-xs text-white font-medium">{p.count}</span>
                         </div>
                         <div className="h-1 bg-dark-hover rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-500 rounded-full"
+                          <div className="h-full bg-primary-500 rounded-full"
                             style={{ width: `${(p.count / max) * 100}%` }} />
                         </div>
                       </div>
@@ -471,7 +471,7 @@ export function ChatbotAnalytics() {
                           <span className="text-xs text-white font-medium">{c.count}</span>
                         </div>
                         <div className="h-1 bg-dark-hover rounded-full overflow-hidden">
-                          <div className="h-full bg-emerald-500 rounded-full"
+                          <div className="h-full bg-primary-500 rounded-full"
                             style={{ width: `${(c.count / max) * 100}%` }} />
                         </div>
                       </div>

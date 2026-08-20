@@ -182,9 +182,9 @@ export function ChatbotConfig() {
               <div>
                 <label className="block text-sm text-t-secondary mb-1 flex items-center gap-2">
                   <span>{t('chatbot_config.model.model', 'Model')}</span>
-                  {probe.status === 'checking' && <span className="text-[10px] text-gray-500 flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> {t('chatbot_config.model.verifying', 'Verifying…')}</span>}
-                  {probe.status === 'ok'       && <span className="text-[10px] text-emerald-400 flex items-center gap-1"><CheckCircle size={10} /> {t('chatbot_config.model.available', 'Available on your account')}</span>}
-                  {probe.status === 'error'    && <span className="text-[10px] text-amber-400 flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> {t('chatbot_config.model.not_available', { reason: probe.message || t('chatbot_config.model.check_api_key', 'check API key'), defaultValue: 'Not available — {{reason}}' })}</span>}
+                  {probe.status === 'checking' && <span className="text-[10px] text-t-secondary flex items-center gap-1"><RefreshCw size={10} className="animate-spin" /> {t('chatbot_config.model.verifying', 'Verifying…')}</span>}
+                  {probe.status === 'ok'       && <span className="text-[10px] text-accent flex items-center gap-1"><CheckCircle size={10} /> {t('chatbot_config.model.available', 'Available on your account')}</span>}
+                  {probe.status === 'error'    && <span className="text-[10px] text-warning flex items-center gap-1" title={probe.message}><AlertTriangle size={10} /> {t('chatbot_config.model.not_available', { reason: probe.message || t('chatbot_config.model.check_api_key', 'check API key'), defaultValue: 'Not available — {{reason}}' })}</span>}
                 </label>
                 <div className="flex items-stretch gap-2">
                   <select
@@ -196,19 +196,19 @@ export function ChatbotConfig() {
                   </select>
                   <button onClick={runProbe} type="button" disabled={probe.status === 'checking'}
                     title={t('chatbot_config.model.verify_tooltip', 'Verify the chosen model is enabled on your API key')}
-                    className="px-3 rounded-lg border border-dark-border text-gray-400 hover:text-white hover:bg-dark-hover disabled:opacity-40 transition-colors">
+                    className="px-3 rounded-lg border border-dark-border text-t-secondary hover:text-white hover:bg-dark-hover disabled:opacity-40 transition-colors">
                     <Wifi size={14} />
                   </button>
                 </div>
                 {selectedModel && (
                   <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {selectedModel.capabilities.responsesApi && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-pink-500/15 text-pink-300 border border-pink-500/20" title="Routes via /v1/responses (recommended for gpt-5.x)">responses API</span>}
-                    {selectedModel.capabilities.reasoning && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/20">reasoning</span>}
-                    {selectedModel.capabilities.verbosity && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-500/15 text-indigo-300 border border-indigo-500/20">verbosity</span>}
-                    {selectedModel.capabilities.vision && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/20">vision</span>}
-                    {selectedModel.capabilities.toolUse && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">tools</span>}
-                    {selectedModel.capabilities.structuredOutputs && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/20">json schema</span>}
-                    {selectedModel.preview && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/20">preview</span>}
+                    {selectedModel.capabilities.responsesApi && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25" title="Routes via /v1/responses (recommended for gpt-5.x)">responses API</span>}
+                    {selectedModel.capabilities.reasoning && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25">reasoning</span>}
+                    {selectedModel.capabilities.verbosity && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25">verbosity</span>}
+                    {selectedModel.capabilities.vision && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25">vision</span>}
+                    {selectedModel.capabilities.toolUse && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25">tools</span>}
+                    {selectedModel.capabilities.structuredOutputs && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-primary-500/12 text-primary-300 border border-primary-500/25">json schema</span>}
+                    {selectedModel.preview && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-warning/15 text-warning border border-warning/30">preview</span>}
                   </div>
                 )}
               </div>
@@ -310,7 +310,7 @@ export function ChatbotConfig() {
                         <option value="xhigh">{t('chatbot_config.model.reasoning_xhigh', 'xHigh — maximum reasoning, slowest (for complex analysis)')}</option>
                       </select>
                       {(mForm.reasoning_effort ?? 'low') !== 'none' && (
-                        <p className="text-xs text-amber-400 mt-1">
+                        <p className="text-xs text-warning mt-1">
                           {t('chatbot_config.model.reasoning_warning', 'Temperature and top_p are ignored when reasoning effort is active (none disables it).')}
                         </p>
                       )}
@@ -440,7 +440,7 @@ export function ChatbotConfig() {
               {(bForm.core_rules || []).map((rule: string, i: number) => (
                 <div key={i} className="flex items-center gap-2 bg-dark-surface rounded-lg px-3 py-2">
                   <span className="text-sm text-white flex-1">{rule}</span>
-                  <button onClick={() => removeRule(i)} className="text-red-400 hover:text-red-300">
+                  <button onClick={() => removeRule(i)} className="text-error hover:text-error/80">
                     <X size={14} />
                   </button>
                 </div>

@@ -155,7 +155,7 @@ export function ChatbotSetup() {
             </div>
           </div>
 
-          <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('chatbot_setup.loading', 'Loading...')}</div>}>
+          <Suspense fallback={<div className="text-center text-t-secondary py-12">{t('chatbot_setup.loading', 'Loading...')}</div>}>
             {active === 'config'    && <ChatbotConfig />}
             {active === 'knowledge' && <KnowledgeBase />}
             {active === 'widget'    && <ChatbotWidget />}
