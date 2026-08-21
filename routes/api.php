@@ -188,16 +188,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 
-    // ─── Email delivery feedback (Amazon SES via SNS) ───────────────────────
-    // Bounces and complaints, which populate the suppression list. Public by
-    // necessity — SNS has no session and cannot carry a CSRF token; the
-    // credential is the TopicArn check plus the unguessable path.
-    //
-    // Rate limit is generous: a large campaign to a stale list can legitimately
-    // produce a burst of bounce notifications, and dropping them would leave
-    // dead addresses in circulation, which is the exact problem this solves.
-    Route::post('webhooks/ses', [\App\Http\Controllers\Api\V1\Webhooks\SesWebhookController::class, 'handle'])
-        ->middleware('throttle:600,1');
+    // The Amazon SES bounce/complaint webhook is deliberately absent here.
+    // Its route reached production in ee2c5c0bb ahead of the controller that
+    // serves it -- the class ships with the email/deliverability work, which
+    // is still unreleased -- so POST /api/v1/webhooks/ses answered 500 rather
+    // than accepting SNS notifications. Re-add the route in the same change
+    // that ships App\Http\Controllers\Api\V1\Webhooks\SesWebhookController,
+    // never before it.
 
     // ─── Public Services Reservation Widget API ─────────────────────────────
     Route::prefix('services')->middleware('throttle:60,1')->group(function () {
@@ -332,7 +329,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::put('profile',           [MemberController::class, 'updateProfile']);
             // Throttled: this is a credential-verification surface, so it is
             // an oracle for guessing the current password if left open.
-            Route::put('password',          [MemberController::class, 'updatePassword'])->middleware('throttle:6,1,member-password');
+            // PUT password is deliberately absent: MemberController::updatePassword
+            // ships with the unreleased member work. The route reached production
+            // in ee2c5c0bb without it, so an authenticated member changing their
+            // password got a 500. Re-add it with the method, not before.
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
@@ -340,7 +340,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Authenticated by header, so the member's long-lived Sanctum
             // token never has to travel in a query string (and therefore into
             // access logs and Safari history) the way ?token= does.
-            Route::get('card/apple-wallet/link', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'appleLink']);
+            // card/apple-wallet/link is deliberately absent: WalletPassController
+            // has apple() but not appleLink(), which ships with the unreleased
+            // member work. Same deploy, same failure. Re-add it with the method.
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             // Tier benefits the member holds, and requests for the ones
