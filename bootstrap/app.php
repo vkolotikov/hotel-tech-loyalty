@@ -6,6 +6,19 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
+    // Landing pages are registered before routes/web.php, and that ordering is
+    // load-bearing. web.php ends with a `/{any}` catch-all that serves the
+    // admin SPA shell for every path on every host; Laravel matches routes in
+    // registration order, so a landing route registered after it would never
+    // be reached. withRouting()'s `then:` hook runs *after* the web file, so
+    // the registration happens in a booting callback declared ahead of it.
+    //
+    // The landing host must never serve the admin: the SPA keeps a
+    // non-expiring, all-abilities Sanctum token in localStorage, which is
+    // per-origin. See routes/landing.php.
+    ->booting(function (): void {
+        require __DIR__.'/../routes/landing.php';
+    })
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -26,6 +39,15 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
 
         $middleware->prepend(\App\Http\Middleware\Cors::class);
+
+        // Global, and prepended so it runs before the `web` group. The landing
+        // host must serve landing pages and nothing else: /api answered there,
+        // which let the admin bundle mint a non-expiring, all-abilities token
+        // into the landing origin's localStorage, and every path the landing
+        // routes do not own fell through to the SPA catch-all inside `web`,
+        // where StartSession set a session cookie on a public marketing page.
+        // Refusing here happens before either. See the class docblock.
+        $middleware->prepend(\App\Http\Middleware\LandingHostGuard::class);
         $middleware->alias([
             'saas.auth'          => \App\Http\Middleware\SaasAuthMiddleware::class,
             'check.subscription' => \App\Http\Middleware\CheckSubscription::class,
@@ -33,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'brand'              => \App\Http\Middleware\BrandMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
+            'landing.security'   => \App\Http\Middleware\LandingPageSecurity::class,
         ]);
 
         // RFC 8058 one-click unsubscribe. Gmail and Yahoo POST to this URL

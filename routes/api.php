@@ -35,6 +35,10 @@ use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\CustomFieldController;
 use App\Http\Controllers\Api\V1\Admin\IndustryPresetController;
 use App\Http\Controllers\Api\V1\Admin\LeadFormController;
+// The admin-side builder. Not to be confused with the public renderer of the
+// same class name at App\Http\Controllers\Landing\LandingPageController, which
+// is wired in routes/landing.php and is deliberately not gated.
+use App\Http\Controllers\Api\V1\Admin\LandingPageController;
 use App\Http\Controllers\Api\V1\Public\LeadFormPublicController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
@@ -1264,6 +1268,28 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
                 Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
                 Route::post('crm-ai/capture-guest',           [CrmAiController::class, 'captureGuest']);
+            });
+
+            // ─── Landing Pages (site builder) ─────────────────────────────────
+            // Enterprise-only. Phase 1 ships no admin UI, so these endpoints
+            // ARE the product surface — which is exactly why they carry the
+            // gate: `feature:landing_pages` returns 402 with a structured
+            // `feature_locked` body when the plan doesn't include it.
+            //
+            // The public renderer (routes/landing.php) is deliberately NOT
+            // gated. Once a page is published it stays on the internet; a
+            // customer scanning a QR code on a shopfront is not party to our
+            // billing relationship with the tenant.
+            //
+            // One page per brand — hence no index and no {id} segment; the
+            // tenant + brand scopes already pick out the single row.
+            Route::middleware('feature:landing_pages')->prefix('landing-pages')->group(function () {
+                Route::get('/',            [LandingPageController::class, 'show']);
+                Route::post('/',           [LandingPageController::class, 'store']);
+                Route::put('/',            [LandingPageController::class, 'update']);
+                Route::post('publish',     [LandingPageController::class, 'publish']);
+                Route::post('unpublish',   [LandingPageController::class, 'unpublish']);
+                Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
             });
 
             // ─── Documentation ───────────────────────────────────────────────

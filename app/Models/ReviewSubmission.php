@@ -18,7 +18,7 @@ class ReviewSubmission extends Model
         'redirected_externally', 'external_platform',
         'ip', 'user_agent',
         'anonymous_name', 'anonymous_email',
-        'submitted_at',
+        'submitted_at', 'is_featured',
     ];
 
     protected $casts = [
@@ -27,6 +27,7 @@ class ReviewSubmission extends Model
         'submitted_at'          => 'datetime',
         'overall_rating'        => 'integer',
         'nps_score'             => 'integer',
+        'is_featured'           => 'boolean',
     ];
 
     public function form(): BelongsTo
@@ -47,5 +48,17 @@ class ReviewSubmission extends Model
     public function member(): BelongsTo
     {
         return $this->belongsTo(LoyaltyMember::class, 'loyalty_member_id');
+    }
+
+    /**
+     * Reviews a venue has chosen to display publicly.
+     *
+     * Deliberately not "rating >= 4": presenting a filtered subset as though
+     * it were all reviews is an unfair commercial practice under UK CMA and
+     * EU consumer rules. A person chooses, and the page says so.
+     */
+    public function scopeFeatured($query)
+    {
+        return $query->where('is_featured', true);
     }
 }
