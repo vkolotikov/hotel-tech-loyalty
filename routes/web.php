@@ -198,7 +198,20 @@ Route::get('/w/chat.js', function () {
         // customer's website, not on ours).
         'Access-Control-Allow-Origin' => '*',
     ]);
-});
+    // Out of the `web` group. It is a static script with no user in it, and
+    // it is the one `web` route reachable from the landing host (see
+    // LandingHostGuard) -- a public, unauthenticated marketing origin.
+    // StartSession allocated a fresh session per request there, and because
+    // the landing origin sets no cookies the id never came back, so nothing
+    // was ever reused: with SESSION_DRIVER=database, one INSERT per request
+    // that anyone can hammer.
+    //
+    // The whole group, not StartSession alone: ShareErrorsFromSession and
+    // VerifyCsrfToken both call $request->session() unconditionally, so
+    // dropping only StartSession leaves them throwing "Session store not set
+    // on request". Nothing here reads a session, a cookie or a route binding
+    // on any host, so it comes off everywhere rather than only on that one.
+})->withoutMiddleware('web');
 
 // ─── Public Booking Widget (embeddable) ─────────────────────────────────────
 Route::get('/booking-widget', function (\Illuminate\Http\Request $request) {
@@ -562,7 +575,15 @@ Route::get('/manifest.webmanifest', function (\Illuminate\Http\Request $request)
 });
 
 // SPA fallback — serve the React admin panel for any non-API route
-Route::get('/{any}', function () {
+Route::get('/{any}', function (\Illuminate\Http\Request $request) {
+    // The landing host serves customer content only. Serving the admin shell
+    // here would put a non-expiring, all-abilities admin token on the same
+    // origin as customer-supplied markup, where an XSS could read it.
+    // LandingHostGuard already refuses this path globally; this is the second
+    // wall, and it asks the same question the same way -- $request->getHost()
+    // alone honours the client-settable X-Forwarded-Host.
+    abort_if(\App\Http\Middleware\LandingHostGuard::addressesLandingHost($request), 404);
+
     $spaPath = public_path('spa/index.html');
     if (file_exists($spaPath)) {
         // The shell must never be served from cache without checking first.
@@ -581,7 +602,15 @@ Route::get('/{any}', function () {
     return view('welcome');
 })->where('any', '^(?!api/|storage/|spa/|sw.js|manifest.webmanifest|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
 
-Route::get('/', function () {
+Route::get('/', function (\Illuminate\Http\Request $request) {
+    // The landing host serves customer content only. Serving the admin shell
+    // here would put a non-expiring, all-abilities admin token on the same
+    // origin as customer-supplied markup, where an XSS could read it.
+    // LandingHostGuard already refuses this path globally; this is the second
+    // wall, and it asks the same question the same way -- $request->getHost()
+    // alone honours the client-settable X-Forwarded-Host.
+    abort_if(\App\Http\Middleware\LandingHostGuard::addressesLandingHost($request), 404);
+
     $spaPath = public_path('spa/index.html');
     if (file_exists($spaPath)) {
         // The shell must never be served from cache without checking first.

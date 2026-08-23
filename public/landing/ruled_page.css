@@ -1,0 +1,768 @@
+/*
+ * The Ruled Page — template stylesheet.
+ *
+ * A static file, served from the landing origin under `style-src 'self'`.
+ * There is no build step: what is written here is what ships. The only inline
+ * CSS on a landing page is the nonced block of tenant-derived custom
+ * properties in the layout's <head>.
+ *
+ * The token block below is copied verbatim from Appendix B section 4.2. The
+ * contrast ratios in its comments are measured, not estimated, and the floors
+ * they state are load-bearing: --muted is the lightest text colour permitted
+ * on paper, and --brand is 4.49:1 and therefore BANNED for any text under
+ * 24px. Accent-coloured small text uses --brand-deep, or --brand-bright on an
+ * ink band. Do not lighten anything here without re-measuring.
+ *
+ * These are also the HOUSE values, and they stand unaltered whenever the
+ * tenant has set no brand colour of their own. App\Support\Accent overrides
+ * the whole accent family at once, or none of it — see its docblock, and keep
+ * a profile's house triple here in step with that profile's accent.
+ */
+
+/* --- Appendix B section 4.2, verbatim ------------------------------------ */
+:root{
+  /* surfaces — cool paper, mauve-shifted neutrals. Not warm cream, not brown. */
+  --paper:#F4F6F8;  --paper-2:#ECE8EE;  --ink:#17131E;  --ink-2:#201A2A;
+  /* text */
+  --text:#211C29;        /* 15.35:1 on paper · 13.73:1 on paper-2 */
+  --muted:#5B5266;       /* 6.82:1 on paper · 6.10:1 on paper-2 — FLOOR, do not lighten */
+  --on-ink:#EDE9F2;      /* 15.27:1 on ink · 14.11:1 on ink-2 */
+  --muted-dark:#A79BB4;  /* 6.96:1 on ink · 6.43:1 on ink-2 */
+  /* rules */
+  --line:#DCD7E2;  --line-dark:rgba(237,233,242,.14);
+  /* house accent (profile default; tenant overrides via BrandPalette) */
+  --brand:#9B5C8F;         /* 4.49:1 on paper — BELOW the small-text floor */
+  --brand-deep:#7E4874;    /* 6.32:1 on paper · 5.66:1 on paper-2 */
+  --brand-bright:#C77FB4;  /* 6.20:1 on ink · 5.73:1 on ink-2 */
+  --brand-on:#FFFFFF;      /* 4.86:1 on --brand — passes for the CTA label */
+  --brand-halo:rgba(155,92,143,.26);
+  /* human accent — exactly two places on the page */
+  --warm:#F0805A;          /* 2.44:1 on paper: STATE DOT ONLY, never text, never a bar */
+  --warm-safe:#B4462A;     /* 5.06:1 on paper — the tick meter and histogram fill */
+  /* geometry — the commitment */
+  --r:0; --r-btn:2px;      /* no other radius exists on this page */
+  --shadow: none;          /* there is no shadow token. Zero box-shadows by design. */
+  --focus-core:var(--ink);
+  --gutter:clamp(20px,4vw,40px); --maxw:1160px;
+  --rule-x: max(var(--gutter), calc((100% - var(--maxw)) / 2 - 48px));
+  --pad:clamp(72px,10vw,140px); --pad-seam:clamp(56px,7vw,96px);
+  --header-h:96px; --header-h-condensed:64px; --bar-h:64px;
+  --ease:cubic-bezier(.22,1,.36,1);
+}
+/* --- end verbatim block -------------------------------------------------- */
+
+/* --- Appendix B section 4.1, the type scale ------------------------------ */
+/* Three faces and nothing else. Fraunces sets every heading and the phone
+   number; Inter Tight sets running text; IBM Plex Mono 500 sets EVERY number
+   on the page — price, duration, opening hour, review count — plus the
+   kickers, which is the discipline that makes a page of prices read as
+   measured rather than decorated. --t-mono carries tabular figures so a
+   column of hours lines its colons up without a table. */
+:root{
+  --t-h1:clamp(2.75rem,5.2vw,5.125rem);
+  --t-h2:clamp(2rem,3.6vw,3.25rem);
+  --t-quote:clamp(1.5rem,2.6vw,2.375rem);
+  --t-h3:clamp(1.25rem,1.6vw,1.625rem);
+  --t-lead:clamp(1.125rem,1.3vw,1.375rem);
+  --t-body:1.0625rem;
+  --t-small:.875rem;
+  --t-mono:.8125rem;
+  --t-kicker:.75rem;      /* 12px. .6875rem here is --t-legal's value, and
+                             using it set every eyebrow on the page 1px small. */
+  --t-legal:.6875rem;     /* 11px: the field labels, the "or call" line */
+  --mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+.mono,.band__kicker{font-family:var(--mono);font-weight:500;
+  font-variant-numeric:tabular-nums;letter-spacing:.06em}
+
+/* The hovered CTA fill. Section 4.2 has no token for it because 4.6 specifies
+   the hover as --brand → --brand-deep, which is only correct while both are
+   house values: a tenant page overrides --brand and would then change HUE on
+   hover rather than depth. Accent derives this from the tenant's own colour,
+   always moving away from the label so hover can only raise its contrast.
+   The house value is the house --brand-deep, so nothing moves by default. */
+:root{ --brand-hover:#7E4874 }
+
+/* --- Appendix B section 4.1, the metric-matched fallbacks ---------------- */
+/* display=swap paints in the fallback first and then swaps, and an unadjusted
+   Georgia/Arial has different metrics from Fraunces/Inter Tight -- so every
+   first paint reflowed the headline as the webfont arrived. These override the
+   local face's metrics to match, so the swap changes the shapes and nothing
+   else. src is local() only: no network request, and no font-src beyond the
+   Google host the layout already names. */
+@font-face{font-family:'Fraunces fb';src:local('Georgia');
+  size-adjust:96%;ascent-override:92%;descent-override:24%;line-gap-override:0%}
+@font-face{font-family:'Inter Tight fb';src:local('Arial');
+  size-adjust:97%;ascent-override:96%;descent-override:24%;line-gap-override:0%}
+
+*,*::before,*::after{box-sizing:border-box}
+body.rp{margin:0;background:var(--paper);color:var(--text);
+  font-family:'Inter Tight','Inter Tight fb',system-ui,sans-serif;font-size:var(--t-body);line-height:1.65;
+  font-optical-sizing:auto}
+h1,h2,h3{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
+  font-variation-settings:'opsz' 144,'SOFT' 0,'WONK' 0;letter-spacing:-.01em;margin:0}
+/* Fraunces 400 for --t-h3 is a REAL instance now that the layout requests the
+   300..500 variable range; it used to be synthesised down onto the 300 static
+   and every h3 shipped lighter than the design asks for. */
+h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
+p{margin:0}
+ul,ol{margin:0;padding:0;list-style:none}
+.rp section{padding:var(--pad) var(--gutter)}
+.rp .wrap{max-width:var(--maxw);margin:0 auto}
+/* Surface rhythm without a server pass: an ink band following an ink band
+   collapses the seam. Appendix B 3.7. Any section can be toggled off, so which
+   surface abuts which is never known at render time; both same-surface
+   collisions are answered here instead of being computed. */
+.band{position:relative}
+.band--ink{background:var(--ink);color:var(--on-ink)}
+.band--paper-2{background:var(--paper-2)}
+.band--ink + .band--ink{padding-top:var(--pad-seam);border-top:1px solid var(--line-dark)}
+.band--paper-2 + .band--paper-2{padding-top:var(--pad-seam);border-top:1px solid var(--line)}
+a{color:var(--brand-deep)}                    /* never --brand: 4.49:1 fails */
+:focus-visible{outline:2px solid var(--focus-core);outline-offset:3px;
+  box-shadow:0 0 0 6px var(--brand-halo)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* Focus is never tenant-derived — the halo carries the brand, the ring does
+   not. --focus-core flips to --on-ink inside an ink band so the ring keeps
+   13:1+ on every surface whatever hex the tenant picked. */
+.band--ink{--focus-core:var(--on-ink)}
+
+img{max-width:100%;height:auto}
+
+/* --- hero ---------------------------------------------------------------- */
+.rp-hero h1{font-size:clamp(2.75rem,5.2vw,5.125rem);line-height:1.02;
+  letter-spacing:-.025em;text-wrap:balance;max-width:14ch}
+.rp-hero__sub{font-size:clamp(1.125rem,1.3vw,1.375rem);line-height:1.55;
+  color:var(--muted);max-width:46ch;margin:24px 0 0}
+
+/* --- the primary call to action ------------------------------------------ */
+/* 52px tall, 2px radius, no shadow and no lift: hover is a colour change and
+   a hairline, because nothing on a sheet of paper floats. */
+.rp-cta{display:inline-flex;align-items:center;justify-content:center;
+  min-height:52px;margin-top:40px;padding:15px 26px;border-radius:var(--r-btn);
+  background:var(--brand);color:var(--brand-on);text-decoration:none;
+  font-size:15px;font-weight:500;line-height:1;
+  transition:background 160ms var(--ease),outline-color 160ms var(--ease)}
+.rp-cta:hover{background:var(--brand-hover);outline:1px solid var(--brand-hover);outline-offset:3px}
+
+/* --- footer -------------------------------------------------------------- */
+/* Continuous with the contact band above it, split by one hairline: the Rule
+   laid flat, closing the shape the page opened with (Appendix B 4.3.6).
+   The hairline is UNCONDITIONAL and must stay that way. The footer is a
+   sibling of <main>, not of the bands inside it, so a `.band--ink + &` rule
+   could never match however the sections are toggled — sibling combinators
+   walk the DOM tree, and neither display:contents nor any wrapper style
+   changes that. 4.3.6 wants it always anyway; over a light band the tonal
+   edge does the separating and a --line-dark hairline there is invisible. */
+.rp-footer{background:var(--ink);color:var(--on-ink);--focus-core:var(--on-ink);
+  border-top:1px solid var(--line-dark);
+  padding:56px var(--gutter) calc(40px + env(safe-area-inset-bottom))}
+.rp-footer__legal{margin:0;font-size:.75rem;line-height:1.6;color:var(--muted-dark)}
+
+/* --- the Rule (Appendix B 4.3) ------------------------------------------- */
+/* One continuous hairline down the outer margin, drawn PER BAND rather than
+   once for the document. Bands stack with no gaps, so the segments read as a
+   single unbroken line — and because each band draws its own, deleting or
+   disabling any section leaves the rule continuous with zero coordinating
+   logic. The 13px tick at every band boundary is what turns a decorative line
+   into an instrument: the whitespace reads as measured rather than empty. */
+.band::before{content:"";position:absolute;inset-block:0;inset-inline-start:var(--rule-x);
+  inline-size:1px;background:var(--line);pointer-events:none}
+.band::after{content:"";position:absolute;inset-block-start:0;inset-inline-start:var(--rule-x);
+  inline-size:13px;block-size:1px;background:var(--line);pointer-events:none}
+.band--ink::before,.band--ink::after{background:var(--line-dark)}
+
+/* The mono eyebrow. Below 1400px it sits horizontally above its heading,
+   preceded by a 12px accent tick — the ruler mark, surviving at every width.
+   Above it, the eyebrow stands vertically ON the rule so the left margin
+   becomes the page's index: TREATMENTS / THE STUDIO / THERAPISTS / IN THEIR
+   WORDS / RESERVE / FINDING US, readable in one glance down the page.
+
+   4.3 puts that flip at 1320px. At exactly 1320 the rule is still pinned to
+   the gutter (--rule-x clamps at 40px there), which leaves a vertical eyebrow
+   about 15px from the viewport edge; 1400px is the first width at which the
+   rule has actually left the gutter and the margin is wide enough to hold
+   type. Same behaviour, moved to where the arithmetic supports it. */
+.band__kicker{display:flex;align-items:center;gap:10px;margin:0 0 18px;
+  font-size:var(--t-kicker);line-height:1;text-transform:uppercase;
+  letter-spacing:.16em;color:var(--brand-deep)}
+.band__kicker::before{content:"";flex:none;inline-size:12px;block-size:1px;background:var(--brand)}
+.band--ink .band__kicker{color:var(--brand-bright)}
+.band--ink .band__kicker::before{background:var(--brand-bright)}
+@media (min-width:1400px){
+  /* Rotated with a transform rather than with writing-mode, which is not a
+     stylistic preference. Every logical property resolves against the
+     ELEMENT'S OWN writing mode, so `writing-mode:vertical-rl` silently
+     remapped the two insets that position this: inset-inline-start became
+     `top` and inset-block-start became `right`, and the page's signature
+     element -- the index down the Rule, which is the thing this template is
+     remembered by -- rendered against the right edge of the band instead.
+     (That bug predates this task; it is byte-identical to what Task 8's
+     stylesheet shipped.) Kept in horizontal writing mode, every logical
+     property means what it says.
+
+     IT DOES NOT MIRROR FOR RTL, and an earlier version of this comment
+     claimed it did. inset-inline-start does flip to the right edge, but
+     transform-origin and the rotate/translate pair below are physical, so the
+     box still grows down-and-RIGHT from that point -- into the content column,
+     at a distance that varies with the label's length. RTL needs its own
+     rule: rotate(90deg) with the origin on the other corner. Nothing on this
+     page sets dir yet, so it is a gap rather than a bug today.
+
+     The geometry: transform-origin 0 0 with rotate(-90deg) translateX(-100%)
+     leaves the rendered box exactly 1em wide and its own text-length tall,
+     growing DOWN and RIGHT from the static position -- so the static position
+     is the box's top-left, inset-block-start aligns its top with the band's
+     content, and inset-inline-start backs it off the Rule by the 14px gap
+     plus its own 1em width. line-height is 1 and there is no padding, so
+     that 1em is exact. Text reads bottom-to-top, as vertical-rl + rotate(180)
+     gave. */
+  .band__kicker{position:absolute;display:block;margin:0;white-space:nowrap;
+    inset-block-start:var(--pad);
+    inset-inline-start:calc(var(--rule-x) - 14px - 1em);
+    transform-origin:0 0;transform:rotate(-90deg) translateX(-100%)}
+  .band__kicker::before{display:none}
+}
+
+/* The Rule's reading spine: a 2px --brand overlay filling to scroll position.
+   2px at the brand colour is deliberate -- it stays visible over both --paper
+   and --ink with no blend mode and no per-band switching.
+
+   Zero JS where the browser has scroll-driven animations; ruled_page.js writes
+   --p only where it does not, and feature-detects so the listener is never
+   attached beside a CSS timeline that is already doing the work. With neither,
+   --p falls back to 0 and the spine is simply invisible. */
+.rule-progress{position:fixed;inset-block-start:0;inset-inline-start:var(--rule-x);
+  translate:-.5px 0;inline-size:2px;block-size:100vh;transform-origin:top;
+  scale:1 var(--p,0);background:var(--brand);z-index:40;pointer-events:none}
+@supports (animation-timeline: scroll()){
+  /* !important because the reduced-motion reset above is a blanket
+     animation:none, and a scroll-driven progress bar is not vestibular
+     motion: it does not move on its own, it reports where the reader has
+     already scrolled to. Removing it would take away information, which is
+     the opposite of what that preference asks for. The class outranks the
+     universal selector, so this wins wherever it appears in the file.
+
+     BOTH declarations carry it, and that is the whole trick. `animation` is a
+     shorthand and animation-timeline is one of its longhands, so the shorthand
+     RESETS the timeline to auto; marking only the shorthand important made
+     that reset important too, and it then outranked the plain
+     animation-timeline on the next line. The result was a document-timeline
+     animation that ran to completion immediately -- a permanently full brand
+     line down the viewport at every scroll position, which is worse than no
+     spine at all. */
+  .rule-progress{scale:1 1;animation:ruleGrow linear both!important;
+    animation-timeline:scroll(root block)!important}
+  @keyframes ruleGrow{from{scale:1 0}to{scale:1 1}}
+}
+/* Below 900px the vertical rule is gone (4.3's breakpoints), and the spine is
+   reincarnated as a horizontal hairline pinned across the top, driven by the
+   same --p. */
+@media (max-width:899px){
+  .rule-progress{inset-inline:0;inline-size:auto;block-size:2px;
+    transform-origin:left;scale:var(--p,0) 1}
+  @supports (animation-timeline: scroll()){
+    /* The timeline is re-declared here, not inherited: the shorthand above
+       resets it, so a copy that names only the animation would run on the
+       document timeline and paint a full-width hairline from first paint. */
+    .rule-progress{scale:1 1;animation:ruleGrowX linear both!important;
+      animation-timeline:scroll(root block)!important}
+    @keyframes ruleGrowX{from{scale:0 1}to{scale:1 1}}
+  }
+}
+
+/* --- services: the menu (4.5.3) ------------------------------------------ */
+.rp-services__title{font-size:var(--t-h2);line-height:1.06;letter-spacing:-.02em;max-width:16ch}
+.rp-services__sub{margin-top:20px;font-size:var(--t-lead);line-height:1.55;
+  color:var(--muted);max-width:46ch}
+.rp-services__grid{display:grid;align-items:start;
+  grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:clamp(40px,5vw,72px);
+  margin-top:clamp(40px,5vw,64px)}
+/* Two independent conditions, kept independent -- ORing them was how a plate
+   ended up stacked full-width under a one-column menu.
+   is-narrow: no row has a photograph, so Blade renders no plate at all and the
+   grid is one column. is-tight: fewer than three rows, so the MENU tightens
+   rather than spanning seven columns of nothing -- the plate, if there is one,
+   still sits beside it. */
+.rp-services__grid.is-narrow{grid-template-columns:minmax(0,1fr)}
+.rp-services__grid.is-tight .rp-services__list{max-width:720px}
+/* Belt and braces: a plate inside a collapsed grid would be a 3/4 block under
+   the menu, which is the bug this pair replaces. */
+.rp-services__grid.is-narrow .rp-services__plate{display:none}
+.rp-services__cta{margin-top:clamp(40px,5vw,64px)}
+
+.rp-service{padding-block:26px;border-bottom:1px solid var(--line)}
+.rp-service:first-child{border-top:1px solid var(--line)}
+.rp-service__head{display:flex;align-items:baseline;gap:12px}
+.rp-service__name{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
+  font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em;
+  transition:transform 180ms var(--ease)}
+/* The leader is a border on a flexing spacer: never typed, so a long name
+   cannot break the alignment and an RTL locale mirrors it for free. */
+.rp-service__leader{flex:1 1 auto;min-width:24px;border-bottom:1px solid var(--line);
+  transform:translateY(-5px);transition:border-color 180ms var(--ease)}
+.rp-service__price{font-family:var(--mono);font-weight:500;font-size:1.375rem;
+  letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rp-service__currency{margin-left:.4em;font-size:.68em;color:var(--muted)}
+.rp-service__price--tbc{color:var(--muted)}
+.rp-service__meta{margin-top:8px;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);letter-spacing:.06em;color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.rp-service__desc{margin-top:10px;font-size:.9375rem;line-height:1.6;
+  color:var(--muted);max-width:58ch;overflow-wrap:anywhere}
+/* Hover is a hairline changing colour and a 6px shift. Nothing lifts: there
+   is no shadow token on this page and nothing on a sheet of paper floats. */
+.rp-service:hover .rp-service__leader{border-color:var(--brand)}
+.rp-service:hover .rp-service__name{transform:translateX(6px)}
+
+/* The preview plate. Every shot is stacked in the same grid cell, the first
+   one visible, and hovering row n swaps to shot n — pure CSS via :has(), no
+   script and no state. Browsers without :has() keep showing the first shot,
+   which is a finished state rather than a broken one. */
+.rp-services__plate{position:sticky;top:88px;display:grid;aspect-ratio:3/4;
+  border:1px solid var(--line);background:var(--paper-2);overflow:hidden}
+.rp-services__shot{grid-area:1/1;inline-size:100%;block-size:100%;object-fit:cover;
+  opacity:0;transition:opacity 420ms ease}
+.rp-services__shot:first-child{opacity:1}
+.rp-services__shot--mono{display:grid}
+.rp-services__grid:has(.rp-service:hover) .rp-services__shot{opacity:0}
+.rp-services__grid:has(.rp-service:nth-child(1):hover) .rp-services__shot:nth-child(1){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(2):hover) .rp-services__shot:nth-child(2){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(3):hover) .rp-services__shot:nth-child(3){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(4):hover) .rp-services__shot:nth-child(4){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(5):hover) .rp-services__shot:nth-child(5){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(6):hover) .rp-services__shot:nth-child(6){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(7):hover) .rp-services__shot:nth-child(7){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(8):hover) .rp-services__shot:nth-child(8){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(9):hover) .rp-services__shot:nth-child(9){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(10):hover) .rp-services__shot:nth-child(10){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(11):hover) .rp-services__shot:nth-child(11){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(12):hover) .rp-services__shot:nth-child(12){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(13):hover) .rp-services__shot:nth-child(13){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(14):hover) .rp-services__shot:nth-child(14){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(15):hover) .rp-services__shot:nth-child(15){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(16):hover) .rp-services__shot:nth-child(16){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(17):hover) .rp-services__shot:nth-child(17){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(18):hover) .rp-services__shot:nth-child(18){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(19):hover) .rp-services__shot:nth-child(19){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(20):hover) .rp-services__shot:nth-child(20){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(21):hover) .rp-services__shot:nth-child(21){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(22):hover) .rp-services__shot:nth-child(22){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(23):hover) .rp-services__shot:nth-child(23){opacity:1}
+.rp-services__grid:has(.rp-service:nth-child(24):hover) .rp-services__shot:nth-child(24){opacity:1}
+
+/* Below 900px the sticky plate has no column to be sticky in, so 4.5.3 removes
+   it and PRESERVES ITS INFORMATION INLINE: the row becomes 64px 1fr, with a
+   64x80 plate at the left carrying the same photograph. Dropping the plate
+   without that is how a tenant's service photography disappears entirely on
+   the screen most of their customers use. The thumb is rendered only when some
+   row actually has a photograph -- the same test the plate itself is gated on
+   -- so a studio with no images gets a clean menu rather than a column of
+   monograms. */
+.rp-service__thumb{display:none}
+@media (max-width:899px){
+  .rp-services__plate{display:none}
+  .rp-services__grid{grid-template-columns:minmax(0,1fr)}
+  .rp-services__grid.is-tight .rp-services__list{max-width:none}
+  .rp-service:has(.rp-service__thumb){display:grid;
+    grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start;min-height:62px}
+  .rp-service__thumb{display:block;inline-size:64px;block-size:80px;
+    background:var(--paper-2);border:1px solid var(--line);overflow:hidden}
+  .rp-service__thumb img{inline-size:100%;block-size:100%;object-fit:cover;display:block}
+  .rp-service__thumb .rp-plate--mono{--plate-mark:1.5rem;border:0}
+}
+@media (max-width:559px){
+  /* No width left for a leader to do its job. */
+  .rp-service__leader{display:none}
+  .rp-service{padding-block:20px}
+  .rp-service__price{font-size:1.0625rem}
+}
+
+/* --- the no-image device: the monogram plate (4.4) ----------------------- */
+.rp-plate--mono{display:grid;place-content:center;position:relative;
+  inline-size:100%;block-size:100%;background:var(--paper-2);
+  border:1px solid var(--line)}
+.rp-plate__mark{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
+  font-size:var(--plate-mark,2rem);line-height:1;color:var(--brand);
+  letter-spacing:.02em}
+.rp-plate__label{position:absolute;inset-block-end:12px;inset-inline-start:12px;
+  font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
+.band--ink .rp-plate--mono{background:var(--ink-2);border-color:var(--line-dark)}
+.band--ink .rp-plate__mark{color:var(--brand-bright)}
+.band--ink .rp-plate__label{color:var(--muted-dark)}
+
+/* --- about: the studio (4.5.4) ------------------------------------------- */
+/* The plate that 4.5.4 hangs off the grid at -40px is not built (see the
+   partial's docblock: there is no media layer to resolve image_id against),
+   so this is 4.5.4's stated no-image path — the text column centred in the
+   twelve, at its own measure, rather than a band with a hole in it. */
+.rp-about__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:32px}
+.rp-about__text{grid-column:3 / 11}
+.rp-about__lead{margin-top:24px;font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
+  font-size:clamp(1.5rem,2.2vw,1.875rem);line-height:1.35;letter-spacing:-.015em;
+  max-width:30ch;text-wrap:balance}
+/* A letterpress opening, not a drop cap — which is refused by name. */
+.rp-about__opening{font-variant-caps:all-small-caps;letter-spacing:.08em}
+.rp-about__body{margin-top:28px;max-width:62ch;color:var(--text);
+  overflow-wrap:anywhere}
+.rp-about__body p + p{margin-top:1em}
+/* The column rule is the printed-matter tell, and it costs one declaration.
+   Both halves of 4.5.4's condition have to hold: the server has already
+   decided the body is long enough, and this decides the viewport is wide
+   enough. Under either, it stays a single 62ch column. */
+@media (min-width:1080px){
+  .rp-about__body.is-columns{max-width:none;columns:2;column-gap:48px;
+    column-rule:1px solid var(--line);column-fill:balance;orphans:3;widows:3}
+}
+@media (max-width:899px){
+  .rp-about__grid{display:block}
+  .rp-about__text{grid-column:1 / -1}
+}
+
+/* --- team: who you'll see (4.5.5) ---------------------------------------- */
+.rp-team__title{font-size:var(--t-h2);line-height:1.06;letter-spacing:-.02em;max-width:16ch}
+.rp-team__sub{margin-top:20px;font-size:var(--t-lead);line-height:1.55;
+  color:var(--muted);max-width:46ch}
+.rp-team__grid{display:grid;gap:48px 32px;margin-top:clamp(40px,5vw,64px);
+  grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+/* Count-aware variants. One or two portraits get a narrower field and a
+   squarer crop instead of being stretched across an auto-fit row. */
+.rp-team__grid[data-count="1"],.rp-team__grid[data-count="2"]{
+  grid-template-columns:repeat(2,minmax(0,1fr));max-width:720px}
+.rp-team__grid[data-count="1"] .rp-member__plate,
+.rp-team__grid[data-count="2"] .rp-member__plate{aspect-ratio:3/4}
+.rp-team__grid[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
+
+/* The plate sits on the page like a photograph laid on a ruled sheet:
+   one hairline underneath it and nothing else. */
+.rp-member__plate{position:relative;isolation:isolate;overflow:hidden;margin:0;
+  aspect-ratio:4/5;background:var(--paper-2);
+  border-bottom:1px solid var(--line);transition:border-color 200ms var(--ease)}
+.rp-member__plate img{inline-size:100%;block-size:100%;object-fit:cover;
+  object-position:center 25%;display:block;
+  filter:grayscale(1) contrast(1.06);transition:transform 400ms var(--ease)}
+/* Duotone, not a greyscale-to-colour reveal: the tenant's hue is present at
+   rest and hover lifts the hairline instead (4.6). */
+.rp-member__plate::after{content:"";position:absolute;inset:0;z-index:1;
+  background:var(--brand);mix-blend-mode:color;opacity:.30;pointer-events:none}
+.rp-member:hover .rp-member__plate{border-bottom-width:2px;border-color:var(--brand)}
+.rp-member:hover .rp-member__plate img{transform:scale(1.03)}
+@media (forced-colors:active){.rp-member__plate::after{display:none}}
+
+.rp-member__name{margin-top:16px;font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
+  font-size:1.25rem;line-height:1.25;letter-spacing:-.01em}
+.rp-member__role{margin-top:6px;font-family:var(--mono);font-weight:500;
+  font-size:.75rem;text-transform:uppercase;letter-spacing:.14em;color:var(--muted)}
+.rp-member__specialties{margin-top:8px;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);letter-spacing:.06em;color:var(--muted);
+  overflow-wrap:anywhere}
+
+/* Contact-sheet stagger: prints laid down by hand. It needs three or more
+   columns to read as intentional, so it is off below 900px and off for the
+   count-capped variants above. */
+@media (min-width:900px){
+  .rp-team__grid:not([data-count="1"]):not([data-count="2"]):not([data-count="3"])
+    .rp-member:nth-child(even){margin-block-start:40px}
+  /* mix-blend-mode forces a compositing layer per card; below the fold they
+     are not painted until they are needed. */
+  .rp-member:nth-child(n+5){content-visibility:auto;contain-intrinsic-size:0 340px}
+}
+@media (max-width:899px){
+  .rp-team__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+  .rp-member__name{font-size:1.125rem}
+}
+/* Faces read at rest on a touch screen: there is no hover to resolve them. */
+@media (hover:none){
+  .rp-member__plate img{filter:none}
+  .rp-member__plate::after{opacity:.12}
+}
+
+/* --- reviews: the ink spotlight (4.5.6) ---------------------------------- */
+/* The meter colour. 3.8 defines it as "the per-template value that clears 3:1
+   on that template's surface", and --warm-safe clears it on every surface this
+   page has: measured with App\Support\Accent::contrast, #B4462A is 5.03:1 on
+   --paper, 3.35:1 on --ink and 3.10:1 on --ink-2. So there is one meter
+   colour and it is the safe one.
+
+   It is NOT --warm. 4.2 line 40 bans that in capitals -- "STATE DOT ONLY,
+   never text, never a bar" -- and both bars on this page are bars. An earlier
+   revision of this block put --warm on the ink band on the strength of a
+   mis-measured 2.68:1 for --warm-safe there; the real figure passes, the
+   exception was never needed, and taking it left --warm painting every meter
+   on the page. If 3.35:1 ever feels too tight for the histogram, the answer is
+   a third measured token, not the banned one. */
+:root{--meter:var(--warm-safe)}
+
+.rp-reviews__grid{display:flex;flex-wrap:wrap;align-items:flex-start;
+  gap:clamp(40px,6vw,88px);margin-top:clamp(32px,4vw,56px)}
+/* Flex rather than a two-column grid: the aggregate is absent below four
+   ratings, and a flex row closes up on its own where a fixed 300px column
+   would leave a gap the size of the thing that is not there. */
+.rp-reviews__aggregate{flex:0 1 300px}
+.rp-reviews__score{font-family:var(--mono);font-weight:500;
+  font-size:clamp(2.25rem,3.4vw,3rem);line-height:1;letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;color:var(--on-ink)}
+.rp-reviews__outof{font-size:.42em;letter-spacing:.06em;color:var(--muted-dark)}
+.rp-reviews__sourced{margin-top:14px;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);line-height:1.6;letter-spacing:.06em;color:var(--muted-dark)}
+
+/* The histogram. A distribution bar, not a row of gold stars: the shape of
+   the ratings is the information, and five identical filled glyphs are not. */
+.rp-dist{display:grid;gap:10px;margin-top:26px}
+.rp-dist__row{display:grid;grid-template-columns:26px minmax(0,1fr) 44px;
+  align-items:center;gap:10px;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);letter-spacing:.06em;font-variant-numeric:tabular-nums;
+  color:var(--muted-dark)}
+.rp-dist__track{display:block;block-size:2px;background:var(--line-dark)}
+.rp-dist__fill{display:block;block-size:100%;inline-size:var(--pct,0%);background:var(--meter)}
+.rp-dist__count{text-align:end;color:var(--on-ink)}
+
+/* Native scroll-snap. It swipes, trackpad-scrolls and arrow-keys once
+   focused, with no script behind it; the next quote peeking past the edge is
+   what says so. */
+.rp-reviews__track{display:flex;flex:1 1 min(100%,520px);min-width:0;
+  gap:clamp(48px,8vw,120px);padding-bottom:24px;
+  overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;
+  scrollbar-width:thin;scrollbar-color:var(--brand-bright) rgba(237,233,242,.10)}
+.rp-review{flex:0 0 min(100%,46ch);margin:0;scroll-snap-align:start}
+.rp-review__rating{display:flex;align-items:center;gap:12px}
+/* The tick meter: five 10x2 bars. It replaces every star, square and segment
+   device on the page. */
+.rp-ticks{display:inline-flex;align-items:center;gap:3px}
+.rp-ticks__tick{inline-size:10px;block-size:2px;background:var(--line-dark)}
+.rp-ticks__tick.is-on{background:var(--meter)}
+.rp-review__score{font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--muted-dark)}
+/* No quote glyph and no italic — both refused by name in 4.1. */
+.rp-review__quote{margin:22px 0 0;font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
+  font-style:normal;font-size:var(--t-quote);line-height:1.32;letter-spacing:-.015em;
+  color:var(--on-ink);max-width:20em;overflow-wrap:anywhere}
+.rp-review__quote::before,.rp-review__quote::after{content:none}
+.rp-review__by{display:flex;flex-wrap:wrap;align-items:baseline;gap:16px;
+  margin-top:32px;padding-top:32px;border-top:1px solid var(--line-dark)}
+.rp-review__author{font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.06em;color:var(--on-ink)}
+.rp-review__date{font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.06em;color:var(--muted-dark)}
+/* The index row. It exists only once ruled_page.js has built it, because a
+   tick is a <button> and a button on a page with no script is a control that
+   does nothing when pressed. A genuine counter, so the numbering is earned
+   here in a way a decorative 01/02/03 marker elsewhere would not be. */
+.rp-index{display:flex;align-items:center;justify-content:space-between;gap:24px;
+  flex:1 1 100%;margin-top:8px}
+.rp-index__counter{font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.06em;font-variant-numeric:tabular-nums;color:var(--muted-dark)}
+.rp-index__ticks{display:flex;align-items:center;gap:8px}
+/* 28x1px visual inside a 44x24 tap target: the mark stays a hairline and the
+   thing a thumb has to hit does not. */
+.rp-index__tick{appearance:none;background:none;border:0;padding:0;cursor:pointer;
+  inline-size:28px;block-size:24px;display:grid;align-items:center}
+.rp-index__tick::before{content:"";display:block;block-size:1px;
+  background:var(--line-dark);transition:background 200ms var(--ease),block-size 200ms var(--ease)}
+.rp-index__tick.is-on::before{block-size:2px;background:var(--brand-bright)}
+@media (max-width:899px){
+  .rp-reviews__aggregate{flex:1 1 100%}
+  .rp-review{flex:0 0 100%}
+  .rp-index{justify-content:center;flex-wrap:wrap}
+  .rp-index__tick{inline-size:44px}
+}
+
+/* --- booking: reserve (4.5.7) -------------------------------------------- */
+/* Not centred. The column starts at the third of twelve so the kicker still
+   sits on the Rule and the band keeps the page's asymmetry. */
+.rp-book__col{max-width:760px;margin-inline-start:min(16.6%,180px)}
+#booking{scroll-margin-top:calc(var(--header-h-condensed) + 16px)}
+.rp-book__title{margin-top:4px;font-size:var(--t-h2);line-height:1.06;
+  letter-spacing:-.02em;max-width:18ch;text-wrap:balance}
+.rp-book__terms{margin-top:18px;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);line-height:1.7;letter-spacing:.06em;color:var(--muted)}
+
+.rp-book__frame{position:relative;margin-top:clamp(32px,4vw,48px);padding:8px;
+  border:1px solid var(--line);background:#FFF;min-height:620px;color-scheme:light;
+  transition:border-color 160ms var(--ease)}
+.rp-book__frame:focus-within{border-color:var(--brand)}
+.rp-book__iframe{display:block;inline-size:100%;border:0;min-block-size:604px;
+  block-size:604px;position:relative;z-index:1}
+/* Behind the frame, not removed by a script: covered the moment the widget
+   paints, still there if it never does. */
+.rp-book__skeleton{position:absolute;inset:8px;display:grid;place-content:center;
+  background:var(--paper-2);font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);letter-spacing:.06em;color:var(--muted)}
+
+.rp-book__or{margin-top:clamp(32px,4vw,44px);font-family:var(--mono);font-weight:500;
+  font-size:var(--t-legal);text-transform:uppercase;letter-spacing:.16em;color:var(--muted)}
+/* Booking-heading weight. The phone number is the strongest commercial line
+   on the page and it is set like one. Well over 24px, so --brand-deep is
+   comfortable here rather than merely permitted. */
+.rp-book__phone{display:inline-block;margin-top:8px;font-family:Fraunces,'Fraunces fb',Georgia,serif;
+  font-weight:400;font-size:clamp(1.75rem,2.8vw,2.75rem);line-height:1.1;
+  letter-spacing:-.015em;color:var(--brand-deep);text-decoration:none;
+  border-bottom:1px solid var(--line);padding-bottom:4px;
+  transition:border-color 160ms var(--ease)}
+.rp-book__phone:hover{border-bottom-color:var(--brand)}
+
+@media (max-width:899px){
+  .rp-book__col{margin-inline-start:0;max-width:none}
+  .rp-book__frame{padding:4px;min-height:560px}
+  .rp-book__iframe{min-block-size:552px;block-size:552px}
+  .rp-book__skeleton{inset:4px}
+}
+
+/* --- the mobile action bar (3.9) ----------------------------------------- */
+/* Hidden entirely above 600px: the page's own CTAs are in view there, and
+   600px is also where the launcher offset below starts, so the bar and the
+   rule that avoids it can never disagree about whether it exists. */
+.rp-bar{display:none}
+@media (max-width:600px){
+  .rp-bar{position:fixed;inset:auto 0 0 0;z-index:50;display:flex;
+    background:var(--paper);border-top:1px solid var(--line);
+    block-size:calc(var(--bar-h) + env(safe-area-inset-bottom));
+    padding-bottom:env(safe-area-inset-bottom);
+    transition:transform 240ms var(--ease)}
+  /* Scoped to body.bar-managed, which ruled_page.js sets INSIDE the branch
+     that actually manages the bar -- not to a page-wide "js is running"
+     class. That distinction is the whole point: the script would add such a
+     class before it knows whether IntersectionObserver exists, and where it
+     does not, the hiding rule would apply with nothing left to reveal it. The
+     page's only mobile CTA and tel: link would sit permanently translated off
+     the bottom of the screen while the body still reserved their 64px --
+     strictly worse than shipping no script at all. A rule that hides
+     something is now switched on by the same code that can switch it off. */
+  body.bar-managed .rp-bar{transform:translateY(100%)}
+  body.bar-managed .rp-bar.is-in{transform:none}
+  .rp-bar__call,.rp-bar__cta{display:flex;align-items:center;justify-content:center;
+    min-block-size:var(--bar-h);font-size:15px;font-weight:500;text-decoration:none}
+  .rp-bar__call{flex:0 0 40%;color:var(--brand-deep);
+    border-right:1px solid var(--line)}
+  .rp-bar__cta{flex:1 1 auto;background:var(--brand);color:var(--brand-on)}
+
+  /* "The bar is occupying the bottom of the screen" -- three states have to
+     resolve to it correctly:
+       - script managing the bar, bar revealed: body.has-actionbar;
+       - script managing it, bar retracted: neither rule, and correctly so;
+       - no script, or a script that cannot manage the bar: no .bar-managed,
+         so the bar is permanently visible. :has() is asking whether there is
+         a bar in the document at all, since booking can be switched off.
+
+     EACH STATE GETS ITS OWN RULE, and that is not style. A selector list is
+     invalid as a whole if any one compound in it fails to parse, so pairing
+     the class-only selector with its :has() sibling took the class-only half
+     down with it on every engine without :has() -- measured, the launcher
+     dropped back to 20px and overlapped the revealed bar by 44px, and the
+     body stopped reserving its height. Both were unconditional and working
+     before :has() was introduced here. Split, the :has() half can fail on its
+     own, which is the degradation that was intended. */
+
+  /* The bar is fixed, so it cannot push anything: the document reserves its
+     height instead, and the footer's legal links are never underneath it. */
+  body.rp.has-actionbar{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
+  body.rp:has(.rp-bar):not(.bar-managed){padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
+
+  /* Reposition, never restyle. #htchat-launcher's bottom/left/right are
+     written as INLINE styles by the widget's own applyPosition(), so only
+     !important reaches them — and only its offset is touched. Colour, size,
+     shape, side and z-index stay the tenant's.
+
+     Keyed on the bar being on screen, per Appendix B 3.6, rather than on the
+     viewport alone. The unconditional form this replaces was right while the
+     bar was always visible; once the bar learned to hide and to retract, it
+     left a 56px launcher floating 76px off the bottom with nothing underneath
+     it for most of the page -- including the whole of the booking band, which
+     is exactly where someone reaches for chat.
+
+     BOTTOM AND NOTHING ELSE. 3.6 is emphatic -- reposition, never restyle --
+     and a transition is a restyle: it would also catch any bottom the
+     widget's own applyPosition() writes later and animate that over 240ms
+     instead of applying it, which is our stylesheet changing how the tenant's
+     widget behaves. Two rules again rather than a list, for the reason given
+     above the padding. */
+  body.has-actionbar #htchat-launcher{bottom:calc(var(--bar-h) + 12px)!important}
+  body:has(.rp-bar):not(.bar-managed) #htchat-launcher{bottom:calc(var(--bar-h) + 12px)!important}
+}
+
+/* --- contact: finding us (4.5.8) ----------------------------------------- */
+.rp-contact__grid{display:grid;gap:clamp(40px,4vw,48px);
+  grid-template-columns:minmax(0,4fr) minmax(0,3fr) minmax(0,4fr);align-items:start}
+/* Absent, not empty, applied to the band's own columns. has('contact') is true
+   on an address OR a phone, so both "phone but no address" (no map) and "no
+   opening hours" are reachable, and either one left a third of an ink band
+   holding nothing. Each missing column is answered, and the two-missing case
+   with it. */
+.rp-contact__grid:not(:has(.rp-hours)),
+.rp-contact__grid:not(:has(.rp-map)){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.rp-contact__grid:not(:has(.rp-hours)):not(:has(.rp-map)){grid-template-columns:minmax(0,1fr)}
+.rp-field{margin-top:32px}
+.rp-field__label{font-family:var(--mono);font-weight:500;font-size:var(--t-legal);
+  text-transform:uppercase;letter-spacing:.16em;color:var(--muted-dark)}
+.rp-field__value{margin-top:8px;font-size:1.125rem;line-height:1.5;color:var(--on-ink);
+  overflow-wrap:anywhere}
+.rp-field__link{color:var(--on-ink);text-decoration:none;
+  border-bottom:1px solid rgba(237,233,242,.3);padding-bottom:4px;
+  transition:color 160ms var(--ease),border-color 160ms var(--ease)}
+.rp-field__link:hover{color:var(--brand-bright);border-bottom-color:var(--brand-bright)}
+
+/* The ledger. Tabular mono on both sides, so every colon lines up down the
+   column without a table being asked to do it. */
+.rp-hours{display:grid;align-content:start}
+.rp-hours__row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;
+  position:relative;padding-block:11px;border-bottom:1px solid var(--line-dark);
+  font-family:var(--mono);font-weight:500;font-size:var(--t-mono);letter-spacing:.06em;
+  font-variant-numeric:tabular-nums;color:var(--muted-dark)}
+.rp-hours__time{text-align:end;white-space:nowrap}
+/* Today reads first without moving: brightened, and ticked in the margin.
+   Reordering it visually would put the ledger's spoken order out of step with
+   its printed one for the sake of one row. */
+.rp-hours__row.is-today{color:var(--on-ink)}
+.rp-hours__row.is-today::before{content:"";position:absolute;
+  inset-inline-start:-18px;inset-block-start:calc(50% - 1px);
+  inline-size:10px;block-size:2px;background:var(--brand-bright)}
+
+/* The plan tile: an ink field, a rule grid and the point. Drawn, so there is
+   no state in which it reads as a map that failed to load. */
+.rp-map{display:block;text-decoration:none;color:var(--muted-dark);
+  transition:border-color 200ms var(--ease)}
+.rp-map__field{position:relative;display:block;aspect-ratio:4/3;
+  background:var(--ink-2);border:1px solid var(--line-dark);
+  background-image:
+    repeating-linear-gradient(90deg,rgba(237,233,242,.05) 0 1px,transparent 1px 40px),
+    repeating-linear-gradient(0deg,rgba(237,233,242,.05) 0 1px,transparent 1px 40px);
+  transition:border-color 200ms var(--ease)}
+.rp-map__dot{position:absolute;inset-block-start:46%;inset-inline-start:44%;
+  inline-size:9px;block-size:9px;border-radius:50%;background:var(--brand-bright);
+  box-shadow:0 0 0 1px var(--brand-bright);transition:transform 200ms var(--ease)}
+.rp-map:hover .rp-map__field{border-color:var(--brand-bright)}
+.rp-map:hover .rp-map__dot{transform:scale(1.15)}
+.rp-map__address,.rp-map__open{display:block;margin-top:12px;font-family:var(--mono);
+  font-weight:500;font-size:var(--t-mono);letter-spacing:.06em;overflow-wrap:anywhere}
+.rp-map__open{margin-top:6px;color:var(--brand-bright)}
+
+@media (max-width:1099px){
+  /* Three rules, not one list. Everything is one column here whatever is
+     present, but the desktop :has() rules above are MORE specific than a bare
+     .rp-contact__grid, so each needs answering by name or a phone with no
+     hours keeps the two-column desktop layout. Listing them together was
+     worse than either: without :has() the whole list is invalid, so the plain
+     selector went down with its siblings and the band stayed at three columns
+     on a phone. */
+  .rp-contact__grid{grid-template-columns:minmax(0,1fr)}
+  .rp-contact__grid:not(:has(.rp-hours)){grid-template-columns:minmax(0,1fr)}
+  .rp-contact__grid:not(:has(.rp-map)){grid-template-columns:minmax(0,1fr)}
+  .rp-hours__row.is-today::before{inset-inline-start:-16px}
+}
+
+/* --- monogram sizes per slot (4.4) --------------------------------------- */
+/* One device, one construction, only the mark's size changing with the slot.
+   The mark is --brand, which 4.2 bans under 24px; every value here is well
+   clear of that floor, and it is a graphic besides. */
+.rp-services__plate .rp-plate--mono{--plate-mark:4rem}
+.rp-member__plate .rp-plate--mono{--plate-mark:4rem}
+/* The portrait figure lays its child out rather than relying on the child to
+   fill an implicit box, so the monogram occupies the same plate a photograph
+   would and the two slots are visually identical. */
+.rp-member__plate{display:grid}
+.rp-member__plate > *{grid-area:1/1}
+@media (max-width:899px){
+  .rp-services__plate .rp-plate--mono,.rp-member__plate .rp-plate--mono{--plate-mark:2.5rem}
+}

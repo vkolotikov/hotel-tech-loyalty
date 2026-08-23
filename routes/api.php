@@ -35,6 +35,10 @@ use App\Http\Controllers\Api\V1\Admin\SavedViewController;
 use App\Http\Controllers\Api\V1\Admin\CustomFieldController;
 use App\Http\Controllers\Api\V1\Admin\IndustryPresetController;
 use App\Http\Controllers\Api\V1\Admin\LeadFormController;
+// The admin-side builder. Not to be confused with the public renderer of the
+// same class name at App\Http\Controllers\Landing\LandingPageController, which
+// is wired in routes/landing.php and is deliberately not gated.
+use App\Http\Controllers\Api\V1\Admin\LandingPageController;
 use App\Http\Controllers\Api\V1\Public\LeadFormPublicController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
@@ -188,16 +192,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 
-    // ─── Email delivery feedback (Amazon SES via SNS) ───────────────────────
-    // Bounces and complaints, which populate the suppression list. Public by
-    // necessity — SNS has no session and cannot carry a CSRF token; the
-    // credential is the TopicArn check plus the unguessable path.
-    //
-    // Rate limit is generous: a large campaign to a stale list can legitimately
-    // produce a burst of bounce notifications, and dropping them would leave
-    // dead addresses in circulation, which is the exact problem this solves.
-    Route::post('webhooks/ses', [\App\Http\Controllers\Api\V1\Webhooks\SesWebhookController::class, 'handle'])
-        ->middleware('throttle:600,1');
+    // The Amazon SES bounce/complaint webhook is deliberately absent here.
+    // Its route reached production in ee2c5c0bb ahead of the controller that
+    // serves it -- the class ships with the email/deliverability work, which
+    // is still unreleased -- so POST /api/v1/webhooks/ses answered 500 rather
+    // than accepting SNS notifications. Re-add the route in the same change
+    // that ships App\Http\Controllers\Api\V1\Webhooks\SesWebhookController,
+    // never before it.
 
     // ─── Public Services Reservation Widget API ─────────────────────────────
     Route::prefix('services')->middleware('throttle:60,1')->group(function () {
@@ -332,7 +333,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::put('profile',           [MemberController::class, 'updateProfile']);
             // Throttled: this is a credential-verification surface, so it is
             // an oracle for guessing the current password if left open.
-            Route::put('password',          [MemberController::class, 'updatePassword'])->middleware('throttle:6,1,member-password');
+            // PUT password is deliberately absent: MemberController::updatePassword
+            // ships with the unreleased member work. The route reached production
+            // in ee2c5c0bb without it, so an authenticated member changing their
+            // password got a 500. Re-add it with the method, not before.
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
@@ -340,7 +344,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Authenticated by header, so the member's long-lived Sanctum
             // token never has to travel in a query string (and therefore into
             // access logs and Safari history) the way ?token= does.
-            Route::get('card/apple-wallet/link', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'appleLink']);
+            // card/apple-wallet/link is deliberately absent: WalletPassController
+            // has apple() but not appleLink(), which ships with the unreleased
+            // member work. Same deploy, same failure. Re-add it with the method.
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             // Tier benefits the member holds, and requests for the ones
@@ -1262,6 +1268,79 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('crm-ai/capture-member',          [CrmAiController::class, 'captureMember']);
                 Route::post('crm-ai/capture-corporate',       [CrmAiController::class, 'captureCorporate']);
                 Route::post('crm-ai/capture-guest',           [CrmAiController::class, 'captureGuest']);
+            });
+
+            // ─── Landing Pages (site builder) ─────────────────────────────────
+            // Enterprise-only. Phase 1 ships no admin UI, so these endpoints
+            // ARE the product surface — which is exactly why they carry the
+            // gate: `feature:landing_pages` returns 402 with a structured
+            // `feature_locked` body when the plan doesn't include it.
+            //
+            // The public renderer (routes/landing.php) is deliberately NOT
+            // gated. Once a page is published it stays on the internet; a
+            // customer scanning a QR code on a shopfront is not party to our
+            // billing relationship with the tenant.
+            //
+            // One page per brand — hence no index and no {id} segment; the
+            // tenant + brand scopes already pick out the single row.
+            Route::prefix('landing-pages')->group(function () {
+                // TEARDOWN CARRIES NO BILLING GATE AT ALL, and that is
+                // deliberate. There are two of them and they are separate
+                // refusals, so ungating one and leaving the other still
+                // leaves a tenant stuck published:
+                //
+                //   - `feature:landing_pages` answered 402 feature_locked
+                //     after a downgrade. Hence this route sitting OUTSIDE
+                //     the entitlement group below.
+                //   - `check.subscription` answers 403 subscription_required
+                //     for any org that is not ACTIVE or TRIALING — which is
+                //     to say CANCELLED, EXPIRED, PAST_DUE, UNPAID or PAUSED,
+                //     i.e. every tenant who has actually left. It sits on
+                //     the enclosing `admin` group, so leaving the group is
+                //     not enough; it has to be excluded by name. Hence the
+                //     withoutMiddleware() below.
+                //
+                // Either one on its own kept the page serving 200 to the
+                // public with the tenant's prices, staff names, phone number
+                // and address on it, and the only way off the internet was
+                // us running an UPDATE by hand.
+                //
+                // The entitlement buys the ability to PUBLISH, and the
+                // subscription pays for it. Ceasing to pay must never compel
+                // a business to stay published: that is their data on our
+                // infrastructure, and a billing gate is not a lawful reason
+                // to keep serving it. Same reasoning as the public renderer
+                // above, pointed the other way.
+                //
+                // The exclusion is exactly one route wide, and must stay
+                // there rather than move up to the prefix group: a dead
+                // subscription still may not PUBLISH, and hoisting it would
+                // hand the build verbs' refusal to `feature:landing_pages`
+                // as a side effect.
+                //
+                // Everything that is NOT about billing still applies —
+                // `saas.auth`, `auth:sanctum`, `tenant` and `admin` all sit
+                // on enclosing groups and are untouched by the exclusion,
+                // and the controller names no page: it reads the caller's
+                // own row through the tenant scope. So this is still a
+                // staff-only endpoint that can only reach its own tenant's
+                // page. LandingPageEntitlementTest asserts the stack,
+                // LandingPageAdminApiTest asserts the cross-tenant refusal
+                // at the controller, and LandingPageTeardownTest drives the
+                // assembled stack over HTTP: a cancelled org unpublishes,
+                // the public host then 404s, and every other refusal —
+                // anonymous, non-staff, cross-tenant, and the build verbs'
+                // own two gates — still fires.
+                Route::post('unpublish', [LandingPageController::class, 'unpublish'])
+                    ->withoutMiddleware('check.subscription');
+
+                Route::middleware('feature:landing_pages')->group(function () {
+                    Route::get('/',            [LandingPageController::class, 'show']);
+                    Route::post('/',           [LandingPageController::class, 'store']);
+                    Route::put('/',            [LandingPageController::class, 'update']);
+                    Route::post('publish',     [LandingPageController::class, 'publish']);
+                    Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
+                });
             });
 
             // ─── Documentation ───────────────────────────────────────────────

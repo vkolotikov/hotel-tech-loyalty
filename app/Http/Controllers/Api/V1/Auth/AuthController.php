@@ -1926,6 +1926,12 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                // Landing page builder (2026-08-21): Enterprise-only. This is
+                // the SaaS-unreachable path, so an omission here is not a
+                // transient miss that a later sync corrects — a trial org
+                // provisioned through this fallback reads the feature as false
+                // for the life of that plan_features blob.
+                'landing_pages'        => 'false',
                 // Pricing v3 (2026-06-08): Growth+/Enterprise gates.
                 'campaigns'            => 'false',
                 'reviews'              => 'false',
@@ -1949,6 +1955,7 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                'landing_pages'        => 'false',
                 // Pricing v3 (2026-06-08): Growth+/Enterprise gates.
                 'campaigns'            => 'true',
                 'reviews'              => 'true',
@@ -1975,6 +1982,7 @@ class AuthController extends Controller
                 'time_management'      => 'true',
                 'admin_ai'             => 'true',
                 'brands'               => 'true',
+                'landing_pages'        => 'true',
                 'campaigns'            => 'true',
                 'reviews'              => 'true',
                 'engagement'           => 'true',
@@ -1993,6 +2001,7 @@ class AuthController extends Controller
                 'time_management'      => 'false',
                 'admin_ai'             => 'false',
                 'brands'               => 'false',
+                'landing_pages'        => 'false',
                 'campaigns'            => 'false',
                 'reviews'              => 'false',
                 'engagement'           => 'false',

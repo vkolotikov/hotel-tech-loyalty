@@ -487,33 +487,29 @@ class WidgetChatController extends Controller
      * Empty array for a day = closed all day. Missing config = always open
      * (back-compat — existing widgets without hours configured stay open).
      */
+    /**
+     * Whether the venue is open right now.
+     *
+     * The rule lives in App\Support\BusinessHours because the landing page
+     * needs the same answer from the same column, and two readings of it is
+     * how a venue ends up shown open on its website and closed in its widget
+     * on the same afternoon.
+     *
+     * This previously treated a day ABSENT from business_hours as "not
+     * configured, assume open". But the admin editor DELETES a day when the
+     * venue toggles it off, so absence is the only signal that a day is
+     * deliberately closed -- and a salon that switched Sunday off had its
+     * widget greeting visitors on Sunday with no offline message.
+     */
     private function isWithinBusinessHours(ChatWidgetConfig $config): bool
     {
-        $hours = $config->business_hours;
-        if (empty($hours) || !is_array($hours)) return true;
-
         try {
-            $tz = $config->timezone ?: config('app.timezone', 'UTC');
-            $now = now($tz);
+            $now = now($config->timezone ?: config('app.timezone', 'UTC'));
         } catch (\Throwable $e) {
             $now = now();
         }
 
-        $dayKey = strtolower($now->format('D')); // mon, tue, ...
-        $dayKey = substr($dayKey, 0, 3);
-        $windows = $hours[$dayKey] ?? null;
-        if ($windows === null) return true; // not configured for today = open
-        if (!is_array($windows) || count($windows) === 0) return false; // explicitly closed
-
-        $cur = $now->format('H:i');
-        foreach ($windows as $w) {
-            $open  = $w['open']  ?? null;
-            $close = $w['close'] ?? null;
-            if ($open && $close && $cur >= $open && $cur <= $close) {
-                return true;
-            }
-        }
-        return false;
+        return \App\Support\BusinessHours::isOpenAt($config->business_hours, $now);
     }
 
     /**

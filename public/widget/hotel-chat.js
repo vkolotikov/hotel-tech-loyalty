@@ -2,13 +2,40 @@
  * Hotel Tech — Embeddable AI Chat Widget
  * Drop-in chat widget with voice support for hotel websites.
  *
- * Usage: Set window.HotelChat = { key, api } before loading this script.
- * The embed code from the admin panel does this automatically.
+ * Configuration arrives one of two ways, checked in this order:
+ *
+ *   1. window.HotelChat = { key, api }, set before this script loads. This is
+ *      what the admin panel's pasted embed code does, and it is what every
+ *      customer site on someone else's domain uses. It always wins.
+ *   2. data-widget-key on this script's own tag, e.g.
+ *      <script src="/w/chat.js" data-widget-key="..." defer></script>
+ *      The API base is then derived as /api/v1/widget/{key}, relative to the
+ *      page. This exists for our own landing pages, whose CSP is
+ *      script-src 'self' with no unsafe-inline and no script nonce: there is
+ *      no inline script available on those pages to set window.HotelChat in,
+ *      and a cross-origin API base would be refused by connect-src 'self'.
+ *
+ * If you are debugging a live site and the widget never appears, check which
+ * of the two it is using before anything else — a page carrying the data
+ * attribute AND a stale window.HotelChat will silently use the latter.
  */
 (function () {
   'use strict';
 
   var cfg = window.HotelChat || {};
+  // Same-origin embeds - the landing-page templates - cannot set
+  // window.HotelChat. Their CSP is script-src 'self' with no unsafe-inline and
+  // no nonce for scripts, so there is no inline script available to assign it
+  // in, and the admin panel's pasted embed code (which is exactly such an
+  // inline script, pointing at the admin origin) is blocked there twice over.
+  // They configure the widget from a data attribute on this script tag
+  // instead, and the API base is derived as a root-relative path, which is
+  // same-origin by construction rather than by configuration. window.HotelChat
+  // still wins where it is set, so every existing customer embed is unaffected.
+  if (!cfg.key && document.currentScript) {
+    var embedKey = document.currentScript.getAttribute('data-widget-key');
+    if (embedKey) cfg = { key: embedKey, api: '/api/v1/widget/' + embedKey };
+  }
   if (!cfg.key || !cfg.api) { console.warn('HotelChat: missing key or api'); return; }
 
   var API = cfg.api;
