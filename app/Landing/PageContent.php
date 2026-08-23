@@ -1,0 +1,411 @@
+<?php
+namespace App\Landing;
+
+use App\Models\ChatWidgetConfig;
+use App\Models\LandingPage;
+use App\Models\Property;
+use App\Models\ReviewSubmission;
+use App\Models\Service;
+use App\Models\ServiceMaster;
+use App\Support\BusinessHours;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
+
+/**
+ * Everything a landing template renders, assembled once per request.
+ *
+ * Templates never query. They receive this object, which is the only place
+ * that knows where content lives — so moving a source touches one file, and a
+ * template cannot accidentally read across a tenant boundary.
+ *
+ * A public landing page request has no authenticated tenant, so the models'
+ * own global scopes (TenantScope, BrandScope) would either fail closed and
+ * match nothing, or silently no-op. Every query here therefore runs
+ * withoutGlobalScopes() and carries its own explicit organization_id filter,
+ * routed through scoped() below so there is exactly one choke point for that
+ * rule rather than six hand-spelled copies of it. Brand filtering, where it
+ * applies, is likewise routed through scopedToBrand() below.
+ */
+final class PageContent
+{
+    private function __construct(
+        public readonly LandingPage     $page,
+        public readonly IndustryProfile $profile,
+        public readonly Collection      $services,
+        public readonly Collection      $team,
+        public readonly Collection      $reviews,
+        public readonly ?array          $reviewStats,
+        public readonly ?Property       $contact,
+        public readonly ?array          $hours,
+        public readonly ?string         $widgetKey,
+    ) {}
+
+    /** Fewer than this many reviews and no aggregate is shown at all. */
+    public const MIN_REVIEWS_FOR_AGGREGATE = 4;
+
+    /**
+     * A price list is expected to be longer than a staff photo grid, so the
+     * two caps differ. Both exist for the same reason reviews are already
+     * capped at 12: an unbounded catalogue turns a marketing page into a
+     * directory dump instead of a considered page.
+     */
+    public const MAX_SERVICES = 24;
+
+    /** A "meet the team" section is a headshot grid, not a staff directory. */
+    public const MAX_TEAM = 12;
+
+    public static function for(LandingPage $page): self
+    {
+        $orgId   = $page->organization_id;
+        $brandId = $page->brand_id;
+
+        // sort_order defaults to 0 for every row nobody has manually
+        // reordered, so ordering by it alone leaves ties in whatever order
+        // the database happens to return them. The admin list the tenant
+        // actually arranged (ServiceController::index) breaks those ties by
+        // name; matching it here means the public page shows what the
+        // tenant saw, not database luck.
+        $services = self::scopedToBrand(self::scoped(Service::query(), $orgId), $brandId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(self::MAX_SERVICES)
+            ->get();
+
+        $team = self::scopedToBrand(self::scoped(ServiceMaster::query(), $orgId), $brandId)
+            ->where('is_active', true)
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->limit(self::MAX_TEAM)
+            ->get();
+
+        // Deliberately NOT brand-filtered: review_submissions has no
+        // brand_id column at all, so a multi-brand org's reviews are
+        // inherently org-wide.
+        //
+        // whereNotNull('comment') alone admits '' - an empty string is not
+        // null - which would let has('reviews') report true for a blank
+        // testimonial card. And submitted_at is nullable, so an unqualified
+        // latest('submitted_at') sorts NULLs FIRST on Postgres: a review
+        // that reached is_featured through an import or backfill, rather
+        // than the public submit path, would pin itself to the top forever.
+        // orderByRaw('submitted_at is null') sorts the non-null group (0)
+        // ahead of the null group (1) so nulls fall last instead, and the id
+        // tiebreak matches ReviewController::exportSubmissions's own
+        // ordering for the same rows.
+        $reviews = self::scoped(ReviewSubmission::query(), $orgId)
+            ->featured()
+            ->whereNotNull('comment')
+            ->where('comment', '!=', '')
+            ->orderByRaw('submitted_at is null')
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
+
+        // Preference before id-order: among the rows this page is allowed
+        // to see, the one that actually belongs to it must win over the
+        // fallback - not just "whichever has the lower id", which could
+        // hand a brand-1 page an unrelated unassigned property, or a
+        // brandless page some brand's location, instead of its own.
+        // See preferOwnBrand() for why the preference flips with $brandId.
+        $contact = self::preferOwnBrand(
+            self::scopedToBrand(self::scoped(Property::query(), $orgId), $brandId),
+            $brandId
+        )
+            ->where('is_active', true)
+            ->orderBy('id')
+            ->first();
+
+        // One row answers two questions - the opening hours below, and
+        // whether this page may embed the chat widget at all - so it is
+        // fetched once here rather than queried twice.
+        $chat = self::chatConfig($orgId, $brandId);
+
+        return new self(
+            page:        $page,
+            profile:     IndustryProfile::for($page->industry),
+            services:    $services,
+            team:        $team,
+            reviews:     $reviews,
+            reviewStats: self::aggregate($orgId),
+            contact:     $contact,
+            hours:       self::hours($chat),
+            // Only the key, and only while the widget is switched on. A
+            // template that held the whole config could reach api_key, which
+            // is an admin credential and has no business on a public page.
+            widgetKey:   $chat?->is_active ? $chat->widget_key : null,
+        );
+    }
+
+    /**
+     * The one choke point for tenant isolation. Every query in this class
+     * routes through here rather than re-spelling withoutGlobalScopes() plus
+     * an organization_id filter by hand, so the rule cannot quietly go
+     * missing from one call site while staying intact on the rest.
+     */
+    private static function scoped(Builder $query, int $orgId): Builder
+    {
+        return $query->withoutGlobalScopes()->where('organization_id', $orgId);
+    }
+
+    /**
+     * The one choke point for brand filtering. A row with brand_id NULL
+     * means "not assigned to any brand" - not "belongs to no brand's page".
+     * Excluding it with strict equality would make an entire section
+     * (services, team, contact, hours) vanish from a brand-scoped page just
+     * because nobody has gotten around to assigning it a brand yet, which
+     * degrades a page from considered to broken for no tenancy reason at
+     * all. So a brand-scoped query matches the given brand OR a null brand;
+     * it never excludes an unassigned row.
+     */
+    private static function scopedToBrand(Builder $query, ?int $brandId): Builder
+    {
+        return $query->when($brandId, fn ($q) => $q->where(
+            fn ($w) => $w->where('brand_id', $brandId)->orWhereNull('brand_id')
+        ));
+    }
+
+    /**
+     * The single-row companion to {@see scopedToBrand()}: among the rows that
+     * filter admits, publish the one that actually belongs to this page.
+     * Only meaningful where exactly one row is published - contact and hours,
+     * both of which end in first(). The list sections keep their own ordering.
+     *
+     * The preference is gated on $brandId exactly as the filter above is, and
+     * its DIRECTION flips with the same test, because the two are one rule.
+     * scopedToBrand() applies no filter at all to a brandless page, so every
+     * brand's rows stay in scope; an ungated "the brand's own row first"
+     * would then rank an unrelated brand's address, phone and opening hours
+     * ABOVE the org-level row that page should publish - the sibling-brand
+     * leak this class already fixes, pointed the other way. A page that
+     * belongs to no brand therefore prefers the unassigned, org-level row,
+     * and a brand-scoped page prefers its own. Either way the loser is one
+     * tie-break behind, never excluded - that is scopedToBrand()'s job, not
+     * this one's.
+     */
+    private static function preferOwnBrand(Builder $query, ?int $brandId): Builder
+    {
+        return $brandId
+            ? $query->orderByRaw('brand_id is null')      // the brand's own row first
+            : $query->orderByRaw('brand_id is not null'); // the org-level row first
+    }
+
+    /**
+     * Computed over EVERY review, not only the featured ones. Averaging the
+     * chosen subset would be a fabricated score. Org-wide like the reviews
+     * list above, for the same reason: review_submissions has no brand_id.
+     *
+     * Counted, averaged and bucketed BY THE DATABASE, and every query here
+     * goes through toBase() so no row is ever hydrated. Both halves of that
+     * are load-bearing on a page that is public, unauthenticated and
+     * rendered on every hit:
+     *
+     *  - This reads the organisation's ENTIRE review history, which only
+     *    grows. Pulling the ratings back to count them in PHP made the cost
+     *    of one page view a function of how long the tenant has been a
+     *    customer -- measured 17.6ms at 10 reviews, 984.9ms at 50k, 2.2s at
+     *    100k. throttle:120,1 is per-IP, and `/{slug}?cb=<random>` walks
+     *    straight past any CDN, so that was minutes of PHP CPU per minute
+     *    per IP, aimed at one tenant, entirely within the rate limit.
+     *  - Eloquent's own pluck() would not have helped: overall_rating
+     *    carries an 'integer' cast, and a cast column sends pluck() down
+     *    Builder::pluck()'s newFromBuilder() path -- one full model per ROW,
+     *    which was ~975ms of that 984.9ms. toBase() drops to the query
+     *    builder, which returns plain stdClass rows and never touches the
+     *    model at all.
+     *
+     * The distribution is a GROUP BY bounded to 1..5 rather than a fifth
+     * pass over the ratings, so it returns at most five rows however many
+     * reviews exist. Ratings outside 1..5 keep their old behaviour exactly:
+     * they still count toward `count` and `average` (the totals query does
+     * not filter them out) but have no bar to sit in, and the published
+     * shape is always all five keys -- a histogram with holes in it cannot
+     * be read, so sections/reviews.blade.php relies on that.
+     */
+    private static function aggregate(int $orgId): ?array
+    {
+        $rated = fn () => self::scoped(ReviewSubmission::query(), $orgId)
+            ->whereNotNull('overall_rating')
+            ->toBase();
+
+        $totals = $rated()
+            ->selectRaw('count(*) as total, avg(overall_rating) as average')
+            ->first();
+
+        $count = (int) ($totals->total ?? 0);
+
+        if ($count < self::MIN_REVIEWS_FOR_AGGREGATE) {
+            return null;
+        }
+
+        $counts = $rated()
+            ->whereBetween('overall_rating', [1, 5])
+            ->groupBy('overall_rating')
+            ->selectRaw('overall_rating as star, count(*) as tally')
+            ->pluck('tally', 'star');
+
+        return [
+            'count'        => $count,
+            // (float): Postgres returns avg() over an integer column as
+            // numeric, which PDO hands back as a string, while sqlite
+            // returns a float. Casting here rather than trusting the driver
+            // keeps round() -- and so the published score -- identical on
+            // both, and round()'s own return type float unchanged from when
+            // this averaged a Collection.
+            'average'      => round((float) $totals->average, 2),
+            // The (int) cast on the tally is the same driver question as the
+            // average above: Postgres returns count(*) as bigint, which PDO
+            // can hand back as a string, and this shape is documented as
+            // integers. The int LOOKUP key is safe for the mirror-image
+            // reason - a "5" key coming back from the driver lands in the
+            // pluck()ed array as int 5, because PHP coerces numeric string
+            // array keys - so this reads the same row on either engine.
+            'distribution' => collect(range(1, 5))
+                ->mapWithKeys(fn ($star) => [$star => (int) ($counts[$star] ?? 0)])
+                ->all(),
+        ];
+    }
+
+    /**
+     * The chat widget configuration this page speaks for, or null.
+     *
+     * Same precedence rule as contact above, and for the same reason this
+     * query previously had NO ordering at all: without one, the wrong config
+     * could win by nondeterministic row order.
+     */
+    private static function chatConfig(int $orgId, ?int $brandId): ?ChatWidgetConfig
+    {
+        return self::preferOwnBrand(
+            self::scopedToBrand(self::scoped(ChatWidgetConfig::query(), $orgId), $brandId),
+            $brandId
+        )
+            ->orderBy('id')
+            ->first();
+    }
+
+    /**
+     * Opening hours come from the chat widget's own business hours - the
+     * only customer-facing hours the platform holds. crm_settings.business_
+     * hours_profile is the STAFF WORKDAY and must never be published as
+     * opening hours. Property.settings['opening_hours'] does not exist
+     * anywhere in this codebase.
+     *
+     * The stored shape (see WidgetChatController::isWithinBusinessHours) is
+     * {"mon": [{"open":"09:00","close":"17:00"}], ...}. The only writer of
+     * this column - the admin editor at frontend/src/pages/ChatbotWidget.tsx
+     * (around lines 789-791) - DELETES a day's key entirely when a venue
+     * toggles that day off; it never writes an empty array. So in real data
+     * a day absent from a non-empty business_hours IS an explicit closure,
+     * not an unconfigured unknown: a venue with Mon-Sat configured and
+     * Sunday absent means closed on Sunday, and this class says so rather
+     * than silently dropping the row. An empty array for a day means the
+     * same thing and is handled identically, in case some other writer ever
+     * produces that spelling.
+     *
+     * The WIDGET's own isWithinBusinessHours (WidgetChatController.php,
+     * around lines 504-505) does NOT treat this only as a whole-column
+     * question - it has its own per-day rule, and that rule DISAGREES with
+     * the one above: `$windows = $hours[$dayKey] ?? null; if ($windows ===
+     * null) return true;` - an absent day, even inside an otherwise fully
+     * configured week, is treated as open. This class deliberately does not
+     * copy that. The widget's per-day fallback predates - or simply never
+     * accounted for - how the editor actually writes this column today:
+     * since the editor deletes a day's key on toggle-off, "absent" in real
+     * data means "the venue turned it off", and the widget's "absent means
+     * open" reading is the stale one, not this class's. The two rules do
+     * still agree one level up, at the whole column: an entirely absent or
+     * empty business_hours returns null overall below, so a venue that has
+     * configured nothing is never told it is closed - that part of the
+     * widget's back-compat reasoning is correct and this class keeps it.
+     *
+     * A third spelling of "closed" the editor can produce: clearing an
+     * <input type="time"> stores an empty string for that field rather
+     * than removing the day (ChatbotWidget.tsx, around lines 795 and 799),
+     * and the editor's own UI already treats that as closed
+     * (`isOpen = !!(slot.open && slot.close)`), as does the widget. A blank
+     * open or close is therefore closed here too, not "open with blank
+     * times".
+     *
+     * KNOWN LIMITATION, recorded rather than fixed: this reads only the
+     * FIRST window of a day ($intervals[0] below), while the widget loops
+     * every window in the day (WidgetChatController.php, around lines
+     * 509-515), so a split shift such as 09:00-13:00 plus 15:00-19:00 is
+     * published as 09:00-13:00 only. The admin editor writes exactly one
+     * slot per day, so this matches every row real data holds today; but
+     * ChatWidgetConfigController.php (around line 74) validates
+     * business_hours as no more than `nullable|array`, so a raw API caller
+     * can store several - and were that to happen, the blank-times guard
+     * below would also read a whole day as closed if a blank slot merely
+     * happened to precede a real one.
+     *
+     * This is the only place that decodes that shape. It returns either
+     * null (no config, or an empty business_hours) or exactly seven
+     * entries, Monday-first: ['day' => 0..6, 'open' => ?string,
+     * 'close' => ?string, 'closed' => bool]. A template reads this list and
+     * nothing else about the chat widget's internals.
+     */
+    private static function hours(?ChatWidgetConfig $config): ?array
+    {
+        $raw = $config?->business_hours;
+
+        if (!is_array($raw) || $raw === []) {
+            return null;
+        }
+
+        // BusinessHours owns the canonical day-key list; sourcing it from
+        // there rather than a second hand-copied array is the whole point -
+        // this method's OUTPUT contract (seven normalised rows for
+        // rendering) still has nothing to do with BusinessHours::isOpenAt's
+        // yes/no, and stays exactly as it was below.
+        return collect(BusinessHours::DAY_KEYS)
+            ->map(function (string $abbrev, int $day) use ($raw) {
+                $intervals = $raw[$abbrev] ?? [];
+
+                if (!is_array($intervals) || $intervals === []) {
+                    // Absent, or present as an empty array: both mean
+                    // closed. See the docblock above - the editor deletes
+                    // the key rather than writing [].
+                    return ['day' => $day, 'open' => null, 'close' => null, 'closed' => true];
+                }
+
+                $first = $intervals[0] ?? [];
+                $open  = $first['open']  ?? null;
+                $close = $first['close'] ?? null;
+
+                if (blank($open) || blank($close)) {
+                    // A cleared <input type="time"> stores "", not a
+                    // missing key. Same "closed" as the two cases above.
+                    return ['day' => $day, 'open' => null, 'close' => null, 'closed' => true];
+                }
+
+                return [
+                    'day'    => $day,
+                    'open'   => $open,
+                    'close'  => $close,
+                    'closed' => false,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Whether a section has anything to show. A section that would render
+     * empty is omitted from the document entirely — on a live customer site
+     * that is the difference between considered and broken.
+     */
+    public function has(string $sectionKey): bool
+    {
+        return match ($sectionKey) {
+            'services' => $this->services->isNotEmpty(),
+            'team'     => $this->team->isNotEmpty(),
+            'reviews'  => $this->reviews->isNotEmpty(),
+            'contact'  => $this->contact !== null
+                && (filled($this->contact->address) || filled($this->contact->phone)),
+            'about'    => filled($this->page->content['about']['body'] ?? null),
+            'hero', 'booking', 'footer' => true,
+            default    => false,
+        };
+    }
+}
