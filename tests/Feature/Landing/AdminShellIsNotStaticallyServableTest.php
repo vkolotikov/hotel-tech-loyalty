@@ -166,8 +166,28 @@ class AdminShellIsNotStaticallyServableTest extends TestCase
 
         $this->assertStringContainsString('EXCLUDED_FROM_DOCROOT', $source,
             'postbuild no longer excludes anything from the docroot copy.');
-        $this->assertStringContainsString("PUBLIC_SPA, 'index.html'", $source,
-            'postbuild no longer asserts that the shell stayed out of public/spa.');
+
+        // Asserted by INTENT, not by matching one line of the script verbatim.
+        // The first version of this test pinned the literal string
+        // "PUBLIC_SPA, 'index.html'", which broke the moment the closing check
+        // was generalised from that single filename to a loop over every
+        // exclusion -- a change that made the guarantee STRONGER. A test that
+        // fails when the thing it protects gets better is measuring the wrong
+        // thing.
+        foreach (['index.html', 'stats.html'] as $mustBeExcluded) {
+            $this->assertMatchesRegularExpression(
+                '/EXCLUDED_FROM_DOCROOT\s*=\s*new Set\(\[[^\]]*' . preg_quote($mustBeExcluded, '/') . '/',
+                $source,
+                "postbuild no longer excludes {$mustBeExcluded} from the docroot copy. "
+                . 'index.html is the admin shell; stats.html is the bundle analyser report, '
+                . 'which names every source module in the admin bundle and was once live at '
+                . '/spa/stats.html on the public tenant marketing host.'
+            );
+        }
+
+        $this->assertStringContainsString('fs.existsSync(path.join(PUBLIC_SPA', $source,
+            'postbuild no longer verifies, after publishing, that its exclusions really did '
+            . 'stay out of public/spa. Without that check the copy logic can regress silently.');
     }
 
     /**
