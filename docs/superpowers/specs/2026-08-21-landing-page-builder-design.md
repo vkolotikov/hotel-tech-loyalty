@@ -217,7 +217,35 @@ Conventions to follow are in Appendix A §7 — the `ChatbotWizard` step shell, 
 
 ### Placeholder imagery
 
-Customer images come later. Each profile ships curated placeholders so a page looks finished on publish day, and the editor marks them plainly as placeholders so nobody mistakes them for their own.
+Customer images come later. A page must look finished on publish day without a
+single photograph, so no image slot is ever a grey box waiting to be filled.
+
+**Resolved 2026-08-24, when this contradicted section 11.** The two sections
+disagreed: this one said images come later, section 11 listed media upload
+inside phase 2. Phase 2 ships with NO customer image upload. The reasons, in
+order of weight:
+
+- The `ruled_page` template already renders well with no imagery, which is
+  what makes the deferral cheap. `monogram.blade.php` is a deliberate
+  no-image device used in EVERY image slot; `about` renders a designed
+  text-only path rather than an empty plate; `services` only builds photo
+  plates when at least one service actually has a photograph, so a partial
+  set never collapses the grid. Service photos already flow through from
+  existing `Service` rows, so tenants who have them see them.
+- The upload pipeline needs work before a public marketing page depends on
+  it, and that work does not belong inside a UI round. Appendix A section 5.3
+  documents what is missing: no resizing, no optimisation, and NO DIMENSION
+  VALIDATION of any kind — a 6000x4000 5 MB JPEG is accepted and served
+  full-size as a hero. `MediaService::delete()` resolves against the current
+  disk rather than the one the file was written on, so cleanup silently
+  no-ops after a disk change. `gallery_files[]` is never validated in either
+  existing controller. And both `.env` and `.env.production` set
+  `MEDIA_DISK=do`, so local development uploads land in the production
+  bucket.
+- Page speed is the point. This feature exists to be found and to convert;
+  shipping an upload path that can serve an unbounded hero would undo that.
+
+Uploads get their own round, after those defects are fixed.
 
 ---
 
@@ -250,8 +278,24 @@ built against a renderer already known to work, and it fails cheaply if the
 hosting assumptions turn out wrong.
 
 **Phase 2 — Wizard and editor.** The four-step wizard, the two-pane editor,
-media upload, the `is_featured` column and its toggle in the reviews screen,
-and the entitlement gating in the SPA.
+the `is_featured` toggle in the reviews screen, a section enable/reorder
+endpoint, and the entitlement gating in the SPA. **No media upload** — see
+"Placeholder imagery" in section 9 for why it moved out and what has to be
+fixed before it comes back.
+
+Two things phase 1 left that this phase must close, both found in its final
+review rather than planned:
+
+- **Nothing can set `is_featured`.** Phase 1 shipped the column and the
+  `featured()` scope, but no writer exists anywhere in the app. The visible
+  reviews band is gated on a FEATURED review, so today it renders for nobody.
+  The toggle is not a nicety; it is what switches that section on at all.
+- **Sections have no write API.** `store()` seeds `landing_page_sections`
+  rows with `enabled = true`, and no endpoint can toggle `enabled` or reorder
+  `sort`. The wizard's fourth step and the editor's section list both need
+  it, and `RuledPageRenderTest::test_a_disabled_section_is_not_rendered` and
+  `RuledPageSectionsTest::test_switching_booking_off_takes_its_dead_anchors_with_it`
+  currently assert behaviour no API caller can produce.
 
 **Phase 3 — Templates two and three.** `hot_mauve` and `standing_appointment`,
 purely additive once the shared build kit has carried a template to production.
