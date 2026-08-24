@@ -15,11 +15,14 @@ use Tests\TestCase;
  * bundle write a non-expiring, all-abilities token into localStorage on the
  * landing origin — the exact state this feature exists to prevent.
  *
- * What these tests cannot see: public/spa/** is 213 deployed static files,
- * and the front controller serves existing files before PHP is reached
+ * What these tests cannot see: public/spa/** is a tree of deployed static
+ * files, and the front controller serves existing files before PHP is reached
  * (public/.htaccess RewriteCond !-f, nginx try_files). Those requests never
- * enter the kernel, so no PHPUnit test can observe them. Blocking them is a
- * web-server rule, escalated separately.
+ * enter the kernel, so no HTTP-level test here can observe them. The admin
+ * shell used to be one of those files and answered 200 on this host; it now
+ * lives outside the docroot. AdminShellIsNotStaticallyServableTest checks the
+ * shipped file layout instead of the kernel, which is the only place that
+ * property is observable.
  */
 class LandingHostIsolationTest extends TestCase
 {
@@ -495,8 +498,9 @@ class LandingHostIsolationTest extends TestCase
 
     /**
      * Naming the bare admin origin in frame-src let an XSS on customer content
-     * iframe the authenticated admin panel: /login and /spa/index.html send no
-     * X-Frame-Options and no frame-ancestors, so nothing else was stopping it.
+     * iframe the authenticated admin panel: /login, and every other route the
+     * SPA shell answers, sends no X-Frame-Options and no frame-ancestors, so
+     * nothing else was stopping it.
      * CSP source expressions take paths; the ruling meant a handful of widget
      * pages, not a whole origin.
      */

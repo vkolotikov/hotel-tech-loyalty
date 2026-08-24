@@ -1,4 +1,21 @@
-RewriteEngine On
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^ index.html [QSA,L]
+# Local Apache only. Laravel Cloud serves this app through nginx, which never
+# reads .htaccess — treat anything here as belt-and-braces for dev, not as the
+# control that makes production safe.
+#
+# Everything under /spa/ is public build output: content-hashed JS and CSS, the
+# PWA icons, the favicon. The admin shell HTML is deliberately NOT here. It
+# lives outside the docroot at resources/spa-shell/index.html and is served by
+# routes/web.php, because a file inside public/ is handed out by the web server
+# before PHP boots — on every host, including sites.hexa-tech.uk, which serves
+# customer landing pages and must never carry the admin origin.
+#
+# This file used to rewrite every miss under /spa/ to index.html so SPA deep
+# links worked. Nothing links into /spa/ any more (the admin mounts at /), and
+# with the shell gone that rule could only ever resurrect it. Refuse HTML in
+# this directory instead, so a build that mistakenly drops one back in still
+# does not get served here.
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.html$">
+        Require all denied
+    </FilesMatch>
+</IfModule>

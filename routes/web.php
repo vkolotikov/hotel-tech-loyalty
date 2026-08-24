@@ -584,7 +584,18 @@ Route::get('/{any}', function (\Illuminate\Http\Request $request) {
     // alone honours the client-settable X-Forwarded-Host.
     abort_if(\App\Http\Middleware\LandingHostGuard::addressesLandingHost($request), 404);
 
-    $spaPath = public_path('spa/index.html');
+    // The shell lives OUTSIDE the docroot on purpose, and reading it from
+    // here is the only way it is ever served. While it sat at
+    // public/spa/index.html the web server answered
+    // https://<landing-host>/spa/index.html with the admin login shell before
+    // PHP booted: the abort_if above never ran, and the catch-all's own
+    // pattern excludes `spa/`, so the request never reached routing either.
+    // Laravel Cloud's edge has no per-path or per-domain rule that could
+    // close that, so the file simply must not be inside the docroot.
+    // frontend/scripts/postbuild.mjs reproduces this layout on every build
+    // and fails the build if the shell is left in public/spa; see
+    // tests/Feature/Landing/AdminShellIsNotStaticallyServableTest.php.
+    $spaPath = resource_path('spa-shell/index.html');
     if (file_exists($spaPath)) {
         // The shell must never be served from cache without checking first.
         // It was going out as `Cache-Control: public` with no max-age, which
@@ -611,7 +622,18 @@ Route::get('/', function (\Illuminate\Http\Request $request) {
     // alone honours the client-settable X-Forwarded-Host.
     abort_if(\App\Http\Middleware\LandingHostGuard::addressesLandingHost($request), 404);
 
-    $spaPath = public_path('spa/index.html');
+    // The shell lives OUTSIDE the docroot on purpose, and reading it from
+    // here is the only way it is ever served. While it sat at
+    // public/spa/index.html the web server answered
+    // https://<landing-host>/spa/index.html with the admin login shell before
+    // PHP booted: the abort_if above never ran, and the catch-all's own
+    // pattern excludes `spa/`, so the request never reached routing either.
+    // Laravel Cloud's edge has no per-path or per-domain rule that could
+    // close that, so the file simply must not be inside the docroot.
+    // frontend/scripts/postbuild.mjs reproduces this layout on every build
+    // and fails the build if the shell is left in public/spa; see
+    // tests/Feature/Landing/AdminShellIsNotStaticallyServableTest.php.
+    $spaPath = resource_path('spa-shell/index.html');
     if (file_exists($spaPath)) {
         // The shell must never be served from cache without checking first.
         // It was going out as `Cache-Control: public` with no max-age, which
