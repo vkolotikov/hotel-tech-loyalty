@@ -74,10 +74,11 @@ class LandingPageSecurity
             //
             // Paths, not the bare origin. CSP source expressions take a path,
             // and naming the whole admin origin would also permit framing the
-            // admin panel itself: /login and /spa/index.html send no
-            // X-Frame-Options and no frame-ancestors, so nothing else was
-            // stopping an XSS on customer content from clickjacking a signed-in
-            // admin. script-src and style-src still refuse this origin outright.
+            // admin panel itself: /login (and every other route the SPA shell
+            // answers) sends no X-Frame-Options and no frame-ancestors, so
+            // nothing else was stopping an XSS on customer content from
+            // clickjacking a signed-in admin. script-src and style-src still
+            // refuse this origin outright.
             'frame-src ' . static::widgetFrameSources(),
         ]);
     }

@@ -62,7 +62,23 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * NOT covered, and not coverable here: public/spa/** is a tree of deployed
  * static files, and the front controller serves existing files before PHP is
  * reached (public/.htaccess RewriteCond !-f; nginx try_files). Those requests
- * never enter the kernel. Blocking them needs a web-server rule.
+ * never enter the kernel, so this class cannot refuse them and no web-server
+ * rule is available either -- Laravel Cloud's edge has no per-path or
+ * per-domain blocking.
+ *
+ * That was a live hole while the admin shell was one of those files:
+ * https://<landing host>/spa/index.html answered 200 with the admin login
+ * screen. It was closed by removing the file from the docroot rather than by
+ * trying to block it -- the shell now lives at resources/spa-shell/index.html
+ * and routes/web.php reads it from there, so the two `/` and `/{any}` routes
+ * (which run this guard's addressesLandingHost() themselves) are the only way
+ * it is ever served. What is left under public/spa/** is content-hashed JS,
+ * CSS and icons, which are public by nature.
+ *
+ * READ THIS BEFORE PUTTING A NEW FILE IN public/. Anything there is reachable
+ * on the landing host, by every client, and nothing in PHP can stop it.
+ * public/app/** and public/staff/** are Expo web builds of the member and
+ * staff apps and are in exactly that position today.
  */
 class LandingHostGuard
 {
