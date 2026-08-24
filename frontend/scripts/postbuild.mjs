@@ -37,10 +37,22 @@ const DIST = path.join(frontend, 'dist');
 const PUBLIC_SPA = path.join(root, 'public', 'spa');
 const SHELL_DEST = path.join(root, 'resources', 'spa-shell', 'index.html');
 
-// The shell is emitted by Vite as dist/index.html and must not land in the
-// docroot copy. Keep this list in step with anything else that is build
-// output but not a public asset.
-const EXCLUDED_FROM_DOCROOT = new Set(['index.html']);
+// Build output that must NOT be served as a static file.
+//
+//   index.html  - the admin shell; see the header. Republished to
+//                 resources/spa-shell/ so routes/web.php can serve it itself.
+//   stats.html  - rollup-plugin-visualizer's report (vite.config.ts enables it
+//                 on production builds). ~1.4MB naming every source module in
+//                 the admin bundle, and it was live at /spa/stats.html on
+//                 sites.hexa-tech.uk -- a public tenant marketing host --
+//                 which handed anyone a map of our source tree. Unlike the
+//                 shell it has no destination: nothing serves it, it is a
+//                 local analysis artifact. It stays in frontend/dist/ (outside
+//                 the docroot) where a developer can still open it.
+//
+// Keep this in step with anything else that is build output but not a public
+// asset. Every entry is asserted below.
+const EXCLUDED_FROM_DOCROOT = new Set(['index.html', 'stats.html']);
 
 // public/spa/.htaccess is not build output in the sense the rest of this
 // directory is — it is the local-Apache rule for this directory (nginx on
@@ -104,12 +116,16 @@ fs.mkdirSync(path.dirname(SHELL_DEST), { recursive: true });
 fs.copyFileSync(path.join(DIST, 'index.html'), SHELL_DEST);
 
 // The whole point of the split. Assert it rather than trust it: this is the
-// step a future edit to the copy logic would silently undo.
-if (fs.existsSync(path.join(PUBLIC_SPA, 'index.html'))) {
-  fail(
-    'public/spa/index.html exists after publishing. The admin shell would be served '
-    + 'as a static file on every host, including the landing host. Refusing to finish.',
-  );
+// step a future edit to the copy logic would silently undo. Checked for EVERY
+// exclusion, not just the shell -- the first version of this script asserted
+// index.html alone, and stats.html went on being published underneath it.
+for (const entry of EXCLUDED_FROM_DOCROOT) {
+  if (fs.existsSync(path.join(PUBLIC_SPA, entry))) {
+    fail(
+      'public/spa/' + entry + ' exists after publishing. It would be served as a static '
+      + 'file on every host, including the landing host. Refusing to finish.',
+    );
+  }
 }
 
 console.log('postbuild: assets -> public/spa, shell -> resources/spa-shell/index.html');
