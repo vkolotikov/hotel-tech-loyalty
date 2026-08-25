@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/funnel-BlDHjcZJ.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/funnel-BCg8v_om.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

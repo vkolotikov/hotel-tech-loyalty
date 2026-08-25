@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/trending-down-bcCnENO4.js
 import{c as n}from"./index-DXgUu8Td.js";/**
+========
+import{c as n}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/trending-down-B0eoUQ8J.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

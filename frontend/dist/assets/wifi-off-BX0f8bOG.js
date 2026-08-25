@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/wifi-off-BX0f8bOG.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/wifi-off-DJYPzPft.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/AiChat-mXDf6eIh.js
 import{a as st,j as e}from"./vendor-query-DC8MrdoG.js";import{r as a}from"./vendor-react-Bt3AHPuR.js";import{c as H,a as le,S as we,P as ke,E as Le,X as at,L as Oe,Z as $e,Y as Te,U as nt,J as it,$ as Ie,t as ot}from"./index-DXgUu8Td.js";import{V as Pe}from"./volume-2-tzelUkPr.js";import{T as lt}from"./trash-2-DvjAsTrH.js";import{W as ct}from"./wrench-Bj58DaZY.js";import{C as dt}from"./calendar-clock--KspLusp.js";import{M as ut}from"./mic-nsb41RxD.js";import{S as mt}from"./send-dlD4WJ2C.js";/**
+========
+import{a as st,j as e}from"./vendor-query-DC8MrdoG.js";import{r as a}from"./vendor-react-Bt3AHPuR.js";import{c as H,a as le,S as we,P as ke,E as Le,X as at,L as Oe,Z as $e,Y as Te,U as nt,J as it,$ as Ie,t as ot}from"./index-BG7kEQYI.js";import{V as Pe}from"./volume-2-DPMBP6QN.js";import{T as lt}from"./trash-2-BaapcqdF.js";import{W as ct}from"./wrench-Clch2BFR.js";import{C as dt}from"./calendar-clock-Sce9sWqz.js";import{M as ut}from"./mic-C6vfUAlB.js";import{S as mt}from"./send-3TvIZUDC.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/AiChat-By-GOMj9.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

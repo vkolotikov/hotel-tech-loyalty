@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/CustomerDrawer-DAV17pne.js
 import{a as Y,u as K,c as $,j as e}from"./vendor-query-DC8MrdoG.js";import{r as p,L as O}from"./vendor-react-Bt3AHPuR.js";import{c as Z,e as U,z as _,a as C,L as E,b as V,ab as S,X as J,M as G,P as R,C as I,T as ee}from"./index-DXgUu8Td.js";import{E as B}from"./external-link-BXrhkUxs.js";import{T as ae}from"./trash-2-DvjAsTrH.js";import{f as H}from"./formatDistanceToNow-DGme80z8.js";/**
+========
+import{a as Y,u as K,c as $,j as e}from"./vendor-query-DC8MrdoG.js";import{r as p,L as O}from"./vendor-react-Bt3AHPuR.js";import{c as Z,e as U,z as _,a as C,L as E,b as V,ag as S,X as J,M as G,P as R,C as I,T as ee}from"./index-BG7kEQYI.js";import{E as B}from"./external-link-D0_Q_apW.js";import{T as ae}from"./trash-2-BaapcqdF.js";import{f as H}from"./formatDistanceToNow-BTjD9K_e.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/CustomerDrawer-Ccc4C6Nk.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

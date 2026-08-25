@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/book-open-050fZ46p.js
 import{c as o}from"./index-DXgUu8Td.js";/**
+========
+import{c as o}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/book-open-DrFebIsQ.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

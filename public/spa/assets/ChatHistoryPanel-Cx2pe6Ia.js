@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/ChatHistoryPanel-Cx2pe6Ia.js
 import{c as j,i as b,g as N,Y as w,S as k,$ as S,t as _,a as v}from"./index-DXgUu8Td.js";import{u as D,j as e}from"./vendor-query-DC8MrdoG.js";import{r as L,L as u}from"./vendor-react-Bt3AHPuR.js";import{E as g}from"./external-link-BXrhkUxs.js";/**
+========
+import{c as j,i as b,g as N,Y as w,S as k,$ as S,t as _,a as v}from"./index-BG7kEQYI.js";import{u as D,j as e}from"./vendor-query-DC8MrdoG.js";import{r as L,L as u}from"./vendor-react-Bt3AHPuR.js";import{E as g}from"./external-link-D0_Q_apW.js";/**
+>>>>>>>> df03dae39:public/spa/assets/ChatHistoryPanel-Di-4Wpgo.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

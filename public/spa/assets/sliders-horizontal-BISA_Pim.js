@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/sliders-horizontal-BISA_Pim.js
 import{c as t}from"./index-DXgUu8Td.js";/**
+========
+import{c as t}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/sliders-horizontal-Bk3BI9z6.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

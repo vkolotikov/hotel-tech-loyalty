@@ -32,6 +32,9 @@ const ALL_FEATURES: SubscriptionData['features'] = {
   // Pricing v3 (2026-06-08) — Growth+/Enterprise gates.
   campaigns: 'true', reviews: 'true', engagement: 'true',
   wallet: 'true', chatbot: 'true',
+  // Landing page builder (2026-08-24) — Enterprise-only, same reason
+  // as the gates above.
+  landing_pages: 'true',
 }
 const ALL_PRODUCTS = ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking']
 
@@ -48,7 +51,23 @@ export function useSubscription() {
   const { data, isLoading } = useQuery<SubscriptionData>({
     queryKey: ['subscription-status'],
     enabled: isStaff,
-    queryFn: () => api.get('/v1/auth/subscription').then(r => r.data),
+    // Bounded, not the shared `api` instance's default (none) — this is a
+    // per-call timeout, deliberately scoped to just this request rather
+    // than a global change to `lib/api.ts` (which every call in the app
+    // shares, including long-running AI generation calls that legitimately
+    // need more than a few seconds). Round-1 review: GatedRoute's `wait`
+    // state (see lib/gateDecision.ts) has no terminal condition of its own
+    // — it holds PageLoader for as long as isLoading is true. With
+    // `retry: false` below, an unbounded stalled request left `isLoading`
+    // true forever, turning what used to be "bounce to /" into "spinner
+    // forever" for a super_admin on a gated route. 15s gives headroom over
+    // AuthController::subscription()'s own 5s upstream SaaS timeout
+    // (Http::timeout(5) in the live-SaaS-query branch) while still giving
+    // isLoading a real deadline; once it fires, react-query's error state
+    // flips isLoading false and the gate falls through to its normal
+    // "not entitled" redirect — the same terminal outcome the old code had
+    // for this case, just reachable again instead of hanging.
+    queryFn: () => api.get('/v1/auth/subscription', { timeout: 15_000 }).then(r => r.data),
     // Tight refetch policy. Billing status is the gate that decides whether
     // the user keeps using the product, so we want the wall to flip on
     // within a minute of trial expiry — not the previous 5 min worst case.

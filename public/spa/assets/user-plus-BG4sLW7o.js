@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/user-plus-BG4sLW7o.js
 import{c as e}from"./index-DXgUu8Td.js";/**
+========
+import{c as e}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/user-plus-dCBp5IZs.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

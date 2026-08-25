@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/KnowledgeBase-AsgWorSL.js
 import{a as fe,u as G,c as x,j as e}from"./vendor-query-DC8MrdoG.js";import{r as i}from"./vendor-react-Bt3AHPuR.js";import{c as _e,e as je,z as n,a as o,F as Z,a2 as ve,S as A,q as R,X as q}from"./index-DXgUu8Td.js";import{B as Ne}from"./BrandRequired-_H0dEJFg.js";import{B as ee}from"./book-open-050fZ46p.js";import{U}from"./upload-BCDXZ9m9.js";import{S as H}from"./save-eCIIPwl_.js";import{P as se}from"./pencil-Xt1_EWFO.js";import{T as M}from"./trash-2-DvjAsTrH.js";import{R as Ce}from"./rotate-ccw-B14sM-_P.js";/**
+========
+import{a as fe,u as G,c as x,j as e}from"./vendor-query-DC8MrdoG.js";import{r as i}from"./vendor-react-Bt3AHPuR.js";import{c as _e,e as je,z as n,a as o,F as Z,a2 as ve,S as A,q as R,X as q}from"./index-BG7kEQYI.js";import{B as Ne}from"./BrandRequired-DYzNnWgt.js";import{B as ee}from"./book-open-DrFebIsQ.js";import{U}from"./upload-C0tR0nyf.js";import{S as H}from"./save-CHagGeNA.js";import{P as se}from"./pencil-A3ZHCMb5.js";import{T as M}from"./trash-2-BaapcqdF.js";import{R as Ce}from"./rotate-ccw-ZoE8pvsA.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/KnowledgeBase-BNKWWBoc.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/brain-BDS91KdU.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/brain-8hmb05Vh.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

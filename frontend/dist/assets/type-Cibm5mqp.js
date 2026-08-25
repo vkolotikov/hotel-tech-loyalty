@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/type-Cibm5mqp.js
 import{c as e}from"./index-DXgUu8Td.js";/**
+========
+import{c as e}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/type-DlAwD8Aa.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

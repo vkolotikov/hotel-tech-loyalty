@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\LandingPage;
+use App\Models\Organization;
 use App\Models\ReviewDevice;
 use App\Models\ReviewForm;
 use App\Models\ReviewFormQuestion;
@@ -12,6 +14,7 @@ use App\Models\ReviewInvitation;
 use App\Models\ReviewSubmission;
 use App\Models\Guest;
 use App\Models\LoyaltyMember;
+use App\Scopes\BrandScope;
 use App\Services\ReviewInvitationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -308,6 +311,115 @@ class ReviewController extends Controller
         ])->findOrFail($id);
 
         return response()->json(['submission' => $submission]);
+    }
+
+    /**
+     * Curate a submission onto the landing page.
+     *
+     * `is_featured` shipped with the landing renderer but had no writer anywhere
+     * in the app, which meant the visible reviews band -- gated on a FEATURED
+     * review, not merely a rated one -- could never render for any tenant. The
+     * aggregate rating in the page's JSON-LD is gated on the same switch, so
+     * without this the page also published no review markup at all.
+     *
+     * Deliberately not part of a general submission-update endpoint: a review is
+     * a customer's words and nothing in the admin may edit them. Curation is the
+     * one property of a submission the tenant owns.
+     *
+     * The `landing` block in the response is not decoration. Featuring a
+     * review satisfies only HALF of what the public renderer requires — it
+     * needs the section row `enabled` AND the section to have content — and
+     * a brand-new tenant's `reviews` row is written `enabled = false` BY
+     * DEFINITION: the wizard forces `enabled:false` on any data-backed
+     * section with zero rows, and this endpoint is the first writer of
+     * `is_featured` anywhere in the app, so at wizard time there is never
+     * anything featured yet. The result was a screen reporting a green
+     * success for an action that could not possibly change the page.
+     * landingReviewsVisibility() closes that, and the block tells the
+     * caller which of the three states it is actually in so the toast can
+     * stop guessing.
+     */
+    public function setSubmissionFeatured(Request $request, int $id): JsonResponse
+    {
+        $data = $request->validate(['featured' => 'required|boolean']);
+
+        // Tenant-scoped by the model's global scope; a foreign id resolves to
+        // null and 404s rather than reporting that it exists.
+        $submission = ReviewSubmission::findOrFail($id);
+
+        $submission->update(['is_featured' => $data['featured']]);
+
+        return response()->json([
+            'submission' => ['id' => $submission->id, 'is_featured' => $submission->is_featured],
+            'landing'    => $this->landingReviewsVisibility($request->user()?->organization, (bool) $data['featured']),
+        ]);
+    }
+
+    /**
+     * Switch the tenant's `reviews` band on, and report where the review
+     * will actually show up.
+     *
+     * Three things are load-bearing here.
+     *
+     * ONE — it turns the row on only when FEATURING. Unfeaturing one review
+     * out of several must not take the whole band down; the renderer stops
+     * showing the band on its own once nothing is featured, and a tenant
+     * who deliberately switched the band off in the editor must not have
+     * that decision undone the next time they curate.
+     *
+     * TWO — it is org-wide, dropping BrandScope but never TenantScope.
+     * `review_submissions` has no `brand_id` column at all (PageContent
+     * says so and reads them org-wide), so a featured review belongs to
+     * every one of the org's pages equally; enabling the band on only the
+     * currently-bound brand's page would put the same review on one page
+     * and not another for no reason a tenant could discover.
+     *
+     * THREE — it does nothing at all for an org without the landing
+     * entitlement. This endpoint sits behind `feature:reviews`, not
+     * `feature:landing_pages`, so a Growth org that once had a page can
+     * reach it. `is_featured` has exactly one consumer (scopeFeatured, read
+     * by the public renderer), which is what makes that write inert for
+     * them today — and inert is exactly how it must stay. Enabling a
+     * section on a live page is a build action, and the plan is what buys
+     * those.
+     *
+     * @return array{has_page: bool, reviews_enabled: bool}
+     */
+    private function landingReviewsVisibility(?Organization $org, bool $featured): array
+    {
+        if (!$org) {
+            return ['has_page' => false, 'reviews_enabled' => false];
+        }
+
+        // BrandScope dropped so a multi-brand org's every page is seen;
+        // TenantScope stays on and is the only thing keeping this inside
+        // the caller's own organisation.
+        $pages = LandingPage::withoutGlobalScope(BrandScope::class)
+            ->with('sections')
+            ->get();
+
+        if ($pages->isEmpty()) {
+            return ['has_page' => false, 'reviews_enabled' => false];
+        }
+
+        $mayBuild = $org->hasFeature('landing_pages');
+        $enabled  = false;
+
+        foreach ($pages as $page) {
+            $row = $page->sections->firstWhere('key', 'reviews');
+
+            if ($row === null) {
+                continue;
+            }
+
+            if ($featured && $mayBuild && !$row->enabled) {
+                $row->update(['enabled' => true]);
+            }
+
+            $enabled = $enabled || (bool) $row->enabled;
+        }
+
+        return ['has_page' => true, 'reviews_enabled' => $enabled];
     }
 
     // ─── Stats ──────────────────────────────────────────────────────────────

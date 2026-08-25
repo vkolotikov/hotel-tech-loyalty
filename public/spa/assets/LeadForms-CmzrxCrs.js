@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/LeadForms-CmzrxCrs.js
 import{a as q,u as S,c as C,j as e}from"./vendor-query-DC8MrdoG.js";import{r as k}from"./vendor-react-Bt3AHPuR.js";import{c as P,z as y,a as f,q as z,ax as R,V as M,X as E,d as K,g as Q,F as p,n as O}from"./index-DXgUu8Td.js";import{P as B}from"./pencil-Xt1_EWFO.js";import{T}from"./trash-2-DvjAsTrH.js";import{L as A}from"./layers-COjNnVFK.js";import{P as W}from"./palette-BPMVTgs0.js";import{C as Y}from"./code-DPG3g6o_.js";import{C as F}from"./copy-CeVucgbh.js";import{E as I}from"./external-link-BXrhkUxs.js";import{R as G}from"./refresh-cw-BDOEn2If.js";import{C as L}from"./chevron-up-n8pY2HB8.js";/**
+========
+import{a as q,u as S,c as C,j as e}from"./vendor-query-DC8MrdoG.js";import{r as k}from"./vendor-react-Bt3AHPuR.js";import{c as P,z as y,a as f,q as z,aB as R,V as M,X as E,d as K,g as Q,F as p,n as O}from"./index-BG7kEQYI.js";import{P as B}from"./pencil-A3ZHCMb5.js";import{T}from"./trash-2-BaapcqdF.js";import{L as A}from"./layers-BQQeerP5.js";import{P as W}from"./palette-BldeD5b2.js";import{C as Y}from"./code-C2MACyyw.js";import{C as F}from"./copy-DfcUFeZj.js";import{E as I}from"./external-link-D0_Q_apW.js";import{R as G}from"./refresh-cw-Dn9oZIWP.js";import{C as L}from"./chevron-up-BvfirSfq.js";/**
+>>>>>>>> df03dae39:public/spa/assets/LeadForms-Dx-mrNyF.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

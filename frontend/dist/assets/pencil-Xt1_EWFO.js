@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/pencil-Xt1_EWFO.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/pencil-A3ZHCMb5.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

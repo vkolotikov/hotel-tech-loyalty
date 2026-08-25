@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/EmailCampaigns-Dv2UHTTE.js
 import{j as e,a as we,u as K,c as A}from"./vendor-query-DC8MrdoG.js";import{r as f}from"./vendor-react-Bt3AHPuR.js";import{c as S,g as _e,e as Ce,z as j,a as w,F as ae,U as se,T as Se,q as ze,X as Me,S as $e,M as ie,L as P,a9 as Te,f as re,E as Ae}from"./index-DXgUu8Td.js";import{M as Fe}from"./minus-BdWYcNhp.js";import{I as Ee}from"./image-CMcfj0rU.js";import{T as He}from"./type-Cibm5mqp.js";import{C as Le}from"./chevron-up-n8pY2HB8.js";import{T as xe}from"./trash-2-DvjAsTrH.js";import{T as Pe}from"./text-align-start-BR9dkbOf.js";import{S as R}from"./send-dlD4WJ2C.js";import{C as Be}from"./code-xml-DQCnDWg_.js";import{C as qe}from"./circle-check-big-CxONzxAh.js";import{P as Ie}from"./pencil-Xt1_EWFO.js";import{C as Ve}from"./copy-CeVucgbh.js";/**
+========
+import{j as e,a as we,u as K,c as A}from"./vendor-query-DC8MrdoG.js";import{r as f}from"./vendor-react-Bt3AHPuR.js";import{c as S,g as _e,e as Ce,z as j,a as w,F as ae,U as se,T as Se,q as ze,X as Me,S as $e,M as ie,L as P,ae as Te,f as re,E as Ae}from"./index-BG7kEQYI.js";import{M as Fe}from"./minus-Ik5RDTuO.js";import{I as Ee}from"./image-B8iZoo6A.js";import{T as He}from"./type-DlAwD8Aa.js";import{C as Le}from"./chevron-up-BvfirSfq.js";import{T as xe}from"./trash-2-BaapcqdF.js";import{T as Pe}from"./text-align-start-DerMl5ZQ.js";import{S as R}from"./send-3TvIZUDC.js";import{C as Be}from"./code-xml-DA9pH2hO.js";import{C as qe}from"./circle-check-big-Be0B6Fiq.js";import{P as Ie}from"./pencil-A3ZHCMb5.js";import{C as Ve}from"./copy-DfcUFeZj.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/EmailCampaigns-BmWthK2N.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

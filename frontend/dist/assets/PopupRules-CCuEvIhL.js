@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/PopupRules-CCuEvIhL.js
 import{a as z,u as E,c as f,j as s}from"./vendor-query-DC8MrdoG.js";import{r as n}from"./vendor-react-Bt3AHPuR.js";import{c as V,e as L,z as h,a as u,Z as j,q as N,X as k,V as M}from"./index-DXgUu8Td.js";import{B as $}from"./BrandRequired-_H0dEJFg.js";import{S as I}from"./save-eCIIPwl_.js";import{P as D}from"./pencil-Xt1_EWFO.js";import{T as F}from"./trash-2-DvjAsTrH.js";/**
+========
+import{a as z,u as E,c as f,j as s}from"./vendor-query-DC8MrdoG.js";import{r as n}from"./vendor-react-Bt3AHPuR.js";import{c as V,e as L,z as h,a as u,Z as j,q as N,X as k,V as M}from"./index-BG7kEQYI.js";import{B as $}from"./BrandRequired-DYzNnWgt.js";import{S as I}from"./save-CHagGeNA.js";import{P as D}from"./pencil-A3ZHCMb5.js";import{T as F}from"./trash-2-BaapcqdF.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/PopupRules-B7-CQgW5.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

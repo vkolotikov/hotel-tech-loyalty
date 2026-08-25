@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/calendar-clock--KspLusp.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/calendar-clock-Sce9sWqz.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

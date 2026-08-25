@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/Bookings-CzGcnNca.js
 import{u as te,j as e}from"./vendor-query-DC8MrdoG.js";import{c as et,r as b,L as O}from"./vendor-react-Bt3AHPuR.js";import{c as ae,e as tt,m as st,W as at,s as rt,F as nt,H as lt,aN as it,T as se,U as ot,J as ct,K as dt,aa as xt,j as mt,aO as S,a2 as We,a5 as K,Y as qe,a as V,z as F,M as ut,P as pt,V as re}from"./index-DXgUu8Td.js";import{D as bt}from"./DailyOpsBar-Cpw7_bor.js";import{D as ht}from"./download-B1km53_v.js";import{R as gt}from"./refresh-cw-BDOEn2If.js";import{L as ft}from"./list-j3sxV_vK.js";import{C as yt}from"./calendar-range-Cn5HLTL4.js";import{C as vt}from"./clock-4k8uxdCi.js";import{C as jt}from"./circle-x-B3yiSTyp.js";import{W as kt}from"./wifi-DW6GDyGr.js";/**
+========
+import{u as te,j as e}from"./vendor-query-DC8MrdoG.js";import{c as et,r as b,L as O}from"./vendor-react-Bt3AHPuR.js";import{c as ae,e as tt,m as st,W as at,s as rt,F as nt,H as lt,aR as it,T as se,U as ot,J as ct,K as dt,af as xt,j as mt,aS as S,a2 as We,ab as K,Y as qe,a as V,z as F,M as ut,P as pt,V as re}from"./index-BG7kEQYI.js";import{D as bt}from"./DailyOpsBar-Cpw7_bor.js";import{D as ht}from"./download-BXJ6Pxro.js";import{R as gt}from"./refresh-cw-Dn9oZIWP.js";import{L as ft}from"./list-nuXtKU-s.js";import{C as yt}from"./calendar-range-B6EVIAoi.js";import{C as vt}from"./clock-CRLOS3NM.js";import{C as jt}from"./circle-x-DXlxzcQR.js";import{W as kt}from"./wifi-CAHqttW-.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/Bookings-DDe382h7.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

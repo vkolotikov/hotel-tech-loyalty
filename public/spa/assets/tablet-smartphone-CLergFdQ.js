@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/tablet-smartphone-CLergFdQ.js
 import{c as t}from"./index-DXgUu8Td.js";/**
+========
+import{c as t}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/tablet-smartphone-Db7nACbW.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

@@ -642,4 +642,205 @@ class RuledPageRenderTest extends TestCase
         $this->assertStringContainsString('The Art of Wellness', $body);
         $this->assertStringContainsString('Quiet luxury', $body);
     }
+
+    // ─── Font pairing (RULING 5): the choice must actually change the page ──
+
+    /**
+     * The claim this task has to prove: a page with no `font_pairing` set
+     * renders EXACTLY as it did before this feature existed. Not "no visible
+     * difference" -- the opening `<html>` tag itself, byte for byte, because
+     * that is the one place the attribute could have been written.
+     */
+    public function test_a_page_with_no_font_pairing_set_gets_no_font_pairing_attribute(): void
+    {
+        $this->published();
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('/<html\b[^>]*>/i', $body, $tag),
+            'The template rendered no <html> tag at all.');
+        $this->assertDoesNotMatchRegularExpression('/data-font-pairing/', $tag[0]);
+
+        // Not merely "the attribute is absent somewhere in a longer tag" --
+        // the tag is the exact string it was before this feature existed,
+        // with no stray trailing space or other leftover from building it
+        // conditionally.
+        $this->assertMatchesRegularExpression('/^<html lang="[a-z-]+">$/', $tag[0]);
+    }
+
+    /**
+     * Fix round 1, Minor 3: the tag-level assertion above held even while
+     * the response was one byte LONGER than before this feature existed --
+     * a `{{-- --}}` comment once sat between `<!doctype html>` and
+     * `<html ...>`, and Blade strips a comment's own contents but not the
+     * real newline on each side of it, so the doctype/html boundary grew a
+     * blank line nothing above could see. This asserts the exact three-line
+     * prologue (doctype, then <html>, then <head>, one newline apart) the
+     * template has always emitted, at the very start of the response, so a
+     * stray blank line anywhere in that boundary fails it.
+     */
+    public function test_no_font_pairing_set_leaves_the_doctype_prologue_untouched(): void
+    {
+        $this->published();
+
+        $this->assertMatchesRegularExpression(
+            '/^<!doctype html>\n<html lang="[a-z-]+">\n<head>/',
+            $this->body()
+        );
+    }
+
+    /**
+     * The one behaviour RULING 5 exists for: choosing a pairing has to
+     * SHOW somewhere in the response, or the choice changes nothing and the
+     * wizard's specimen cards would be a lie. `:root[data-font-pairing="X"]`
+     * in ruled_page.css only ever matches an attribute on the root element,
+     * so this is the one place it can be written -- and this test proves
+     * exactly that, not merely that the string appears somewhere in the
+     * document (a stray copy in, say, a JSON-LD block would also pass a
+     * looser check and prove nothing about which element actually carries
+     * it).
+     */
+    public function test_a_chosen_font_pairing_appears_as_a_root_attribute(): void
+    {
+        foreach (['editorial', 'modern', 'classic'] as $pairing) {
+            $page = $this->published();
+            $page->update(['theme' => ['font_pairing' => $pairing]]);
+
+            $body = $this->body();
+
+            $this->assertSame(1, preg_match('/<html\b[^>]*>/i', $body, $tag),
+                'The template rendered no <html> tag at all.');
+            $this->assertMatchesRegularExpression(
+                '/^<html lang="[a-z-]+" data-font-pairing="' . $pairing . '">$/',
+                $tag[0],
+                'The attribute must sit on the root <html> element, in exactly this shape -- not merely appear somewhere in the document.'
+            );
+            $this->assertSame(
+                1,
+                substr_count($body, 'data-font-pairing="' . $pairing . '"'),
+                'The attribute must appear exactly once.'
+            );
+
+            $page->delete();
+        }
+    }
+
+    /**
+     * `theme` is a schemaless `array` cast (see the "Stored values the
+     * renderer must survive" tests above) -- a row written before this
+     * column existed, or hand-edited, can hold anything. An unrecognised
+     * value must be treated the same as no value at all, not echoed
+     * verbatim onto <html> as an attribute selector nothing in the
+     * stylesheet defines.
+     */
+    public function test_an_unrecognised_font_pairing_value_is_ignored(): void
+    {
+        $page = $this->published();
+        $page->update(['theme' => ['font_pairing' => 'not-a-real-pairing']]);
+
+        $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
+
+        $response->assertOk();
+        $this->assertStringNotContainsString('data-font-pairing', $response->getContent());
+    }
+
+    /**
+     * The CSS half of the wiring, asserted against the actual shipped file
+     * so a typo in a selector (which no PHP test above can see, since the
+     * class-under-test never parses CSS) cannot silently ship a pairing
+     * that changes the attribute but not a single heading.
+     *
+     * Each block must be scoped to :root (only the root element carries the
+     * attribute) and must reuse one of the two families
+     * layout.blade.php's own Google Fonts request already loads for every
+     * page -- Fraunces or IBM Plex Mono -- never a font this page does not
+     * already fetch.
+     */
+    public function test_each_font_pairing_selector_targets_the_headings_and_a_loaded_family(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        foreach (['classic', 'editorial', 'modern'] as $pairing) {
+            $this->assertSame(
+                1,
+                preg_match(
+                    '/:root\[data-font-pairing="' . $pairing . '"\][^{]*h1,[^{]*:root\[data-font-pairing="'
+                        . $pairing . '"\][^{]*h2,[^{]*:root\[data-font-pairing="' . $pairing . '"\][^{]*h3\{([^}]*)\}/',
+                    $css,
+                    $rule
+                ),
+                "No :root[data-font-pairing=\"{$pairing}\"] rule targeting h1, h2 and h3 was found."
+            );
+
+            $this->assertTrue(
+                str_contains($rule[1], 'Fraunces') || str_contains($rule[1], 'IBM Plex Mono'),
+                "The \"{$pairing}\" pairing does not set a font-family the page already loads."
+            );
+        }
+    }
+
+    /**
+     * Fix round 1, Important 2. The reviewer downloaded both the served
+     * font file and the full Fraunces variable font and read their `fvar`
+     * tables directly: the layout's href
+     * (`family=Fraunces:opsz,wght@9..144,300..500`) serves an
+     * AXIS-SLICED file carrying only `opsz` and `wght` -- Google Fonts
+     * serves exactly the axes named in the query's own axis list, nothing
+     * more. A `font-variation-settings` declaration naming any OTHER axis
+     * (Fraunces genuinely defines `SOFT` and `WONK`, among others) is
+     * silently ignored by every browser: no error, no fallback, just a
+     * declaration that does nothing. `editorial` shipped exactly this bug
+     * for `SOFT`/`WONK` in this task's first pass, and
+     * `test_each_font_pairing_selector_targets_the_headings_and_a_loaded_family`
+     * above could not catch it -- it only asserts the FAMILY is one the
+     * page loads, never that a declared AXIS is one the served file
+     * actually carries.
+     *
+     * This is the general form of that check: every axis tag any
+     * `:root[data-font-pairing="X"]` rule declares must be one the page's
+     * own Google Fonts href actually asks for, for every family and every
+     * pairing -- not a one-off assertion tied to the specific axis that
+     * went dead this time.
+     */
+    public function test_no_font_pairing_rule_declares_an_axis_the_page_never_requests(): void
+    {
+        $layout = file_get_contents(resource_path('views/landing/ruled_page/layout.blade.php'));
+        $css    = file_get_contents(public_path('landing/ruled_page.css'));
+
+        // The only family requested WITH an axis list at all -- IBM Plex
+        // Mono and Inter Tight are each requested as a static weight list
+        // (`wght@500`, `wght@400;500;600`: no comma before the `@`), so
+        // they have no variation axis a `font-variation-settings`
+        // declaration could legitimately name.
+        $this->assertSame(1, preg_match('/family=Fraunces:([a-z,]+)@/', $layout, $m),
+            'The layout requests no Fraunces axis list at all -- has the href changed shape?');
+        $servedAxes = explode(',', $m[1]);
+        $this->assertContains('opsz', $servedAxes);
+        $this->assertContains('wght', $servedAxes);
+
+        $this->assertSame(1, preg_match(
+            '/\/\* --- font pairing \(RULING 5\).*?--- end font pairing -+ \*\//s',
+            $css,
+            $block
+        ), 'The font-pairing CSS block markers were not found -- have the comment delimiters moved?');
+
+        preg_match_all('/font-variation-settings:([^;]+);/', $block[0], $declarations);
+        $this->assertNotEmpty($declarations[1], 'No font-pairing rule declares font-variation-settings at all.');
+
+        $checked = 0;
+        foreach ($declarations[1] as $declaration) {
+            preg_match_all("/'([a-zA-Z]{4})'/", $declaration, $tags);
+            foreach ($tags[1] as $tag) {
+                $checked++;
+                $this->assertContains(
+                    $tag,
+                    $servedAxes,
+                    "A font-pairing rule declares axis '{$tag}', which the page's own Google Fonts "
+                        . "request never asks for -- every browser silently ignores it. This is exactly "
+                        . "how SOFT/WONK went dead on the editorial pairing."
+                );
+            }
+        }
+        $this->assertGreaterThan(0, $checked, 'No axis tag was found inside any font-variation-settings declaration.');
+    }
 }

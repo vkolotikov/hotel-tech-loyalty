@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/list-j3sxV_vK.js
 import{c as h}from"./index-DXgUu8Td.js";/**
+========
+import{c as h}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/list-nuXtKU-s.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

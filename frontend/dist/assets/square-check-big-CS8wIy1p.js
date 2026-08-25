@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/square-check-big-CS8wIy1p.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/square-check-big-B_T33sbR.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

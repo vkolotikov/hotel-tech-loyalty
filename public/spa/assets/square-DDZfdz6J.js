@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/square-DDZfdz6J.js
 import{c as e}from"./index-DXgUu8Td.js";/**
+========
+import{c as e}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/square-CFHq3Bc1.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

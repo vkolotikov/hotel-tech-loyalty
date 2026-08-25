@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/mic-nsb41RxD.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/mic-C6vfUAlB.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

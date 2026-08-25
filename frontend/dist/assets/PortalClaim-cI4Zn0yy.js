@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/PortalClaim-cI4Zn0yy.js
 import{c as g,j as t}from"./vendor-query-DC8MrdoG.js";import{u as k,r as n,L as S}from"./vendor-react-Bt3AHPuR.js";import{c as f,u as v,T as C,L as y,a as b}from"./index-DXgUu8Td.js";import{Shell as A,Input as i}from"./PortalJoin-CXC74y0K.js";/**
+========
+import{c as g,j as t}from"./vendor-query-DC8MrdoG.js";import{u as k,r as n,L as S}from"./vendor-react-Bt3AHPuR.js";import{c as f,u as v,T as C,L as y,a as b}from"./index-BG7kEQYI.js";import{Shell as A,Input as i}from"./PortalJoin-WwAilb9b.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/PortalClaim-BKakzcLA.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

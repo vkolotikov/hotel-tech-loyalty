@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/Services-_QpJpD_Z.js
 import{j as e,a as V,u as T,c as W}from"./vendor-query-DC8MrdoG.js";import{r as i}from"./vendor-react-Bt3AHPuR.js";import{c as ce,S as E,z as h,a as j,a2 as me,q as Y,r as $,X as ee}from"./index-DXgUu8Td.js";import{P as xe,C as ue}from"./PairTabs-CePMMeyW.js";import{B as he}from"./BrandRequired-_H0dEJFg.js";import{P as se}from"./pencil-Xt1_EWFO.js";import{T as te}from"./trash-2-DvjAsTrH.js";import{C as pe}from"./clock-4k8uxdCi.js";import{U as ae}from"./upload-BCDXZ9m9.js";import{T as ge}from"./tag-Cv_X0EgW.js";import{R as ie}from"./refresh-cw-BDOEn2If.js";import{S as re}from"./save-eCIIPwl_.js";/**
+========
+import{j as e,a as V,u as T,c as W}from"./vendor-query-DC8MrdoG.js";import{r as i}from"./vendor-react-Bt3AHPuR.js";import{c as ce,S as E,z as h,a as j,a2 as me,q as Y,r as $,X as ee}from"./index-BG7kEQYI.js";import{P as xe,C as ue}from"./PairTabs-CePMMeyW.js";import{B as he}from"./BrandRequired-DYzNnWgt.js";import{P as se}from"./pencil-A3ZHCMb5.js";import{T as te}from"./trash-2-BaapcqdF.js";import{C as pe}from"./clock-CRLOS3NM.js";import{U as ae}from"./upload-C0tR0nyf.js";import{T as ge}from"./tag-D9Ll33Al.js";import{R as ie}from"./refresh-cw-Dn9oZIWP.js";import{S as re}from"./save-CHagGeNA.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/Services-DSS9Thmi.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

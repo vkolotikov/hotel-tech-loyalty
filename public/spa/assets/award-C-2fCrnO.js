@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/award-C-2fCrnO.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/award-Cu3f1IBl.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

@@ -45,7 +45,20 @@ class LandingPageSecurity
      */
     public static function harden(Response $response, string $nonce): Response
     {
-        $response->headers->set('Content-Security-Policy', static::policy($nonce));
+        // A response may ask to be framable by the admin origin -- only the
+        // preview route does, and it sets this attribute on the request.
+        // Anything else falls through to policy()'s own 'none' default --
+        // no second default is hard-coded here, so that default is the one
+        // and only place a published page's frame-ancestors is decided.
+        // Read from the REQUEST, not from a response header a controller
+        // could be tricked into echoing.
+        $frameAncestors = request()->attributes->get('landing.frame_ancestors');
+
+        $csp = $frameAncestors === null
+            ? static::policy($nonce)
+            : static::policy($nonce, $frameAncestors);
+
+        $response->headers->set('Content-Security-Policy', $csp);
         $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin');
         $response->headers->set('X-Frame-Options', 'DENY');
@@ -53,13 +66,21 @@ class LandingPageSecurity
         return $response;
     }
 
-    public static function policy(string $nonce): string
+    /**
+     * @param string $frameAncestors The frame-ancestors value. Defaults to
+     *        'none': a tenant's live page has no reason to be framable, and
+     *        leaving it open is a clickjacking surface on a page carrying their
+     *        booking and contact actions. The editor's preview pane is the one
+     *        exception and passes the admin origin explicitly -- see
+     *        LandingPageController::preview().
+     */
+    public static function policy(string $nonce, string $frameAncestors = "'none'"): string
     {
         return implode('; ', [
             "default-src 'self'",
             "base-uri 'self'",
             "form-action 'self'",
-            "frame-ancestors 'none'",
+            "frame-ancestors {$frameAncestors}",
             "object-src 'none'",
             "script-src 'self'",
             "style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com",

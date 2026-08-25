@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/Scan-xXYroOtR.js
 import{j as O}from"./vendor-query-DC8MrdoG.js";import{r as V}from"./vendor-react-Bt3AHPuR.js";import{c as hn,a as Nt,z as Ue,s as ur,L as Rt,t as dn,G as vn}from"./index-DXgUu8Td.js";import{C as dt}from"./Card-V7CHhb8I.js";import{T as pn}from"./TierBadge-DRzTywK1.js";import{Q as Pt}from"./qr-code-C9jRJFTI.js";import{A as xn}from"./award-C-2fCrnO.js";import{W as gn}from"./wifi-DW6GDyGr.js";import{W as yn}from"./wifi-off-BX0f8bOG.js";/**
+========
+import{j as O}from"./vendor-query-DC8MrdoG.js";import{r as V}from"./vendor-react-Bt3AHPuR.js";import{c as hn,a as Nt,z as Ue,s as ur,L as Rt,t as dn,G as vn}from"./index-BG7kEQYI.js";import{C as dt}from"./Card-DgdNYrXt.js";import{T as pn}from"./TierBadge-DRzTywK1.js";import{Q as Pt}from"./qr-code-CpbDM-Lw.js";import{A as xn}from"./award-Cu3f1IBl.js";import{W as gn}from"./wifi-CAHqttW-.js";import{W as yn}from"./wifi-off-DJYPzPft.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/Scan-BpeEA0zF.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

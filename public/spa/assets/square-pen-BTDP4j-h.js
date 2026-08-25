@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/square-pen-BTDP4j-h.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/square-pen-D17dwcAi.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

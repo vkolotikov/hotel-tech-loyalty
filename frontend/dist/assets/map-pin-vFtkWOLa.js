@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/map-pin-vFtkWOLa.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/map-pin-DERP0UrI.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

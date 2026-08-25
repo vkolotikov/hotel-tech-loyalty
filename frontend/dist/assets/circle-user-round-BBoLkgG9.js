@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/circle-user-round-BBoLkgG9.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/circle-user-round-C5Y8s45p.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

@@ -81,6 +81,10 @@ trait SetsUpLandingSchema
                 $table->string('name');
                 $table->string('slug')->nullable();
                 $table->string('logo_url')->nullable();
+                // The brand's own colour, which the wizard offers as the
+                // starting point for the page's accent before the tenant
+                // picks anything.
+                $table->string('primary_color', 32)->nullable();
                 $table->string('widget_token', 64)->nullable();
                 $table->boolean('is_default')->default(false);
                 $table->integer('sort_order')->default(0);

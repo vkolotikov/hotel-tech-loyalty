@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:public/spa/assets/trash-2-DvjAsTrH.js
 import{c as a}from"./index-DXgUu8Td.js";/**
+========
+import{c as a}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:public/spa/assets/trash-2-BaapcqdF.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

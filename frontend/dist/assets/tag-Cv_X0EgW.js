@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/tag-Cv_X0EgW.js
 import{c}from"./index-DXgUu8Td.js";/**
+========
+import{c}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/tag-D9Ll33Al.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

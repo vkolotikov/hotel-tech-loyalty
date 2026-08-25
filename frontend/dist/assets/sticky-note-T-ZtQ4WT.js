@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/sticky-note-T-ZtQ4WT.js
 import{c as t}from"./index-DXgUu8Td.js";/**
+========
+import{c as t}from"./index-BG7kEQYI.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/sticky-note-BuR9_-Jj.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.

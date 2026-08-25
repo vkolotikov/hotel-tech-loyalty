@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:frontend/dist/assets/WalletConfig-CXbBsV4w.js
 import{a as S,u as A,c as y,j as e}from"./vendor-query-DC8MrdoG.js";import{r as v}from"./vendor-react-Bt3AHPuR.js";import{c as k,z as m,a as h,d as C,L as F}from"./index-DXgUu8Td.js";import{C as b}from"./Card-V7CHhb8I.js";import{I as N}from"./info-kGE9UmEW.js";import{S as L}from"./smartphone-Bow9NzHy.js";import{C as W}from"./circle-x-B3yiSTyp.js";import{U as P}from"./upload-BCDXZ9m9.js";/**
+========
+import{a as S,u as A,c as y,j as e}from"./vendor-query-DC8MrdoG.js";import{r as v}from"./vendor-react-Bt3AHPuR.js";import{c as k,z as m,a as h,d as C,L as F}from"./index-BG7kEQYI.js";import{C as b}from"./Card-DgdNYrXt.js";import{I as N}from"./info-D5o6sD0q.js";import{S as L}from"./smartphone-DdeBAdZt.js";import{C as W}from"./circle-x-DXlxzcQR.js";import{U as P}from"./upload-C0tR0nyf.js";/**
+>>>>>>>> df03dae39:frontend/dist/assets/WalletConfig-CuD27IBG.js
  * @license lucide-react v0.577.0 - ISC
  *
  * This source code is licensed under the ISC license.
