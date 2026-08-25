@@ -391,21 +391,54 @@ final class PageContent
     }
 
     /**
+     * How many rows a section would actually publish.
+     *
+     * The renderer never needed this number — it only ever asked has() — but
+     * the onboarding wizard does: it tells a tenant "Treatments (12)" before
+     * offering the section as a choice. That number has to be the one the
+     * page will really show, so it is taken from the collections assembled
+     * above rather than from a second set of queries written next to the
+     * wizard. Two implementations of "does this tenant have any services"
+     * agree on the easy cases and disagree on the ones that matter — an
+     * inactive service, an unfeatured review, a featured review with a blank
+     * comment, a sibling brand's rows — and every one of those
+     * disagreements ends the same way: the wizard offers a section that then
+     * renders empty.
+     *
+     * The list counts are therefore CAPPED, because the collections are:
+     * MAX_SERVICES, MAX_TEAM and the 12 featured reviews are what the page
+     * publishes, so they are what the wizard reports. A tenant with forty
+     * treatments is told about the twenty-four that will appear.
+     *
+     * The singular sections answer 1 or 0 by the same predicate has() has
+     * always used — a section is "one section's worth of content", present
+     * or not — so that this method and has() cannot drift apart.
+     */
+    public function count(string $sectionKey): int
+    {
+        return match ($sectionKey) {
+            'services' => $this->services->count(),
+            'team'     => $this->team->count(),
+            'reviews'  => $this->reviews->count(),
+            'contact'  => $this->contact !== null
+                && (filled($this->contact->address) || filled($this->contact->phone)) ? 1 : 0,
+            'about'    => filled($this->page->content['about']['body'] ?? null) ? 1 : 0,
+            'hero', 'booking', 'footer' => 1,
+            default    => 0,
+        };
+    }
+
+    /**
      * Whether a section has anything to show. A section that would render
      * empty is omitted from the document entirely — on a live customer site
      * that is the difference between considered and broken.
+     *
+     * Expressed in terms of count() rather than repeating the predicates,
+     * so the question the renderer asks and the number the wizard prints are
+     * one decision and not two that happen to agree today.
      */
     public function has(string $sectionKey): bool
     {
-        return match ($sectionKey) {
-            'services' => $this->services->isNotEmpty(),
-            'team'     => $this->team->isNotEmpty(),
-            'reviews'  => $this->reviews->isNotEmpty(),
-            'contact'  => $this->contact !== null
-                && (filled($this->contact->address) || filled($this->contact->phone)),
-            'about'    => filled($this->page->content['about']['body'] ?? null),
-            'hero', 'booking', 'footer' => true,
-            default    => false,
-        };
+        return $this->count($sectionKey) > 0;
     }
 }

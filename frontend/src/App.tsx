@@ -11,6 +11,7 @@ import type { NavGate } from './components/Layout'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { useTheme } from './hooks/useTheme'
 import { useSubscription } from './hooks/useSubscription'
+import { gateDecision } from './lib/gateDecision'
 
 // Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
@@ -46,6 +47,7 @@ const Scan = lazy(() => import('./pages/Scan').then(m => ({ default: m.Scan })))
 const Analytics = lazy(() => import('./pages/Analytics').then(m => ({ default: m.Analytics })))
 const AiInsights = lazy(() => import('./pages/AiInsights').then(m => ({ default: m.AiInsights })))
 const ChatbotSetup = lazy(() => import('./pages/ChatbotSetup').then(m => ({ default: m.ChatbotSetup })))
+const LandingPages = lazy(() => import('./pages/LandingPages').then(m => ({ default: m.LandingPages })))
 const ChatInbox = lazy(() => import('./pages/ChatInbox').then(m => ({ default: m.ChatInbox })))
 const Visitors = lazy(() => import('./pages/Visitors').then(m => ({ default: m.Visitors })))
 const Engagement = lazy(() => import('./pages/Engagement').then(m => ({ default: m.Engagement })))
@@ -201,10 +203,25 @@ function MemberRoute({ children }: { children: React.ReactNode }) {
 
 function GatedRoute({ gate, product, feature, children }: { gate?: NavGate; product?: string; feature?: string; children: React.ReactNode }) {
   const { staff } = useAuthStore()
-  const { hasProduct, hasFeature } = useSubscription()
-  if (gate && !canAccess(gate, staff)) return <Navigate to="/" replace />
-  if (product && !hasProduct(product)) return <Navigate to="/" replace />
-  if (feature && !hasFeature(feature)) return <Navigate to="/" replace />
+  const { hasProduct, hasFeature, isLoading } = useSubscription()
+  // Decision logic lives in lib/gateDecision.ts (pure, unit-tested) —
+  // see its doc comment for the loading-race bug this guards against.
+  // Short version: hasFeature/hasProduct both default to "not entitled"
+  // while useSubscription is still loading (true on the FIRST render of
+  // a hard navigation/bookmark/refresh), so evaluating them right away
+  // used to bounce a still-unresolved gate straight to "/" before the
+  // real /v1/auth/subscription answer ever arrived. 'wait' shows the
+  // loader instead of either rendering the gated content early (would
+  // fail OPEN) or redirecting on a default we don't actually know yet.
+  const decision = gateDecision({
+    gate, product, feature,
+    canAccessGate: gate ? canAccess(gate, staff) : true,
+    isLoading,
+    hasProductResult: product ? hasProduct(product) : true,
+    hasFeatureResult: feature ? hasFeature(feature) : true,
+  })
+  if (decision === 'redirect') return <Navigate to="/" replace />
+  if (decision === 'wait') return <PageLoader />
   return <>{children}</>
 }
 
@@ -307,6 +324,27 @@ export default function App() {
           <Route path="/analytics" element={<LazyRoute gate="can_view_analytics"><Analytics /></LazyRoute>} />
           <Route path="/ai" element={<LazyRoute gate="can_view_analytics" feature="ai_insights"><AiInsights /></LazyRoute>} />
           <Route path="/chatbot-setup" element={<LazyRoute gate="admin" product="chat" feature="chatbot"><ChatbotSetup /></LazyRoute>} />
+          {/* Landing Page builder — Enterprise-only site builder for the
+              tenant's own public marketing page. The host page itself
+              decides wizard vs. editor vs. a reduced teardown-only screen;
+              see pages/LandingPages.tsx.
+
+              Task 10b: deliberately NO `product`/`feature` gate here —
+              "admin" (role) only. routes/api.php keeps `unpublish` (and its
+              read counterpart `status`) reachable with no entitlement and
+              no live subscription, so a lapsed tenant with a PUBLISHED page
+              can always take it down; a route-level product/feature gate
+              bounced that exact tenant to "/" before they ever reached the
+              component that could show them the Unpublish button at all.
+              `LandingPages.tsx` now makes that entitlement decision itself,
+              via `landingAccessDecision()` — the one place that can tell
+              "nothing to tear down, redirect" apart from "something to
+              tear down, show the reduced screen", a distinction this
+              generic route gate has no way to make. An entitled tenant's
+              render is unaffected: `landingAccessDecision` returns 'full'
+              for them exactly when the old gate would have rendered this
+              route at all. */}
+          <Route path="/landing-pages" element={<LazyRoute gate="admin"><LandingPages /></LazyRoute>} />
           {/* Legacy chatbot routes — folded into the unified Chatbot Setup tabs. */}
           <Route path="/chatbot-config" element={<Navigate to="/chatbot-setup" replace />} />
           <Route path="/knowledge-base" element={<Navigate to="/chatbot-setup" replace />} />

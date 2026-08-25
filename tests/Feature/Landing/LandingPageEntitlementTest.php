@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Laravel\Sanctum\Sanctum;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
@@ -48,6 +49,11 @@ class LandingPageEntitlementTest extends TestCase
     {
         parent::setUp();
         $this->setUpLandingSchema();
+        // Only the HTTP-driven test below needs this (BrandMiddleware joins
+        // `brands` through `brand_user` for every staff request), but it is
+        // additive and every other test in this file ignores tables it
+        // doesn't query.
+        $this->setUpLandingContentSchema();
 
         // RequireFeature reads $org->plan_slug into both 402 bodies.
         // SetsUpMinimalSchema's organizations table has no such column
@@ -56,6 +62,33 @@ class LandingPageEntitlementTest extends TestCase
         if (!Schema::hasColumn('organizations', 'plan_slug')) {
             Schema::table('organizations', function ($table) {
                 $table->string('plan_slug', 32)->nullable();
+            });
+        }
+
+        // Only test_a_non_enterprise_org_cannot_reach_the_wizard_endpoints
+        // below drives real HTTP through the whole admin stack (the rest of
+        // this file asks the route collection or the middleware directly),
+        // and that stack's CheckSubscription and BrandMiddleware both read
+        // these two tables. Same two, same shapes, as
+        // LandingPageTeardownTest's setUp — nothing else in this file needs
+        // them.
+        if (!Schema::hasTable('staff')) {
+            Schema::create('staff', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('role')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
+        if (!Schema::hasTable('brand_user')) {
+            Schema::create('brand_user', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('brand_id');
+                $table->unsignedBigInteger('user_id');
+                $table->string('role')->nullable();
+                $table->timestamps();
             });
         }
     }
@@ -70,9 +103,17 @@ class LandingPageEntitlementTest extends TestCase
         'api/v1/admin/landing-pages/preview-url',
     ];
 
-    /** Taking a page down is not something a tenant has to still be paying for. */
+    /**
+     * Taking a page down is not something a tenant has to still be paying
+     * for — and neither is seeing that there is a page to take down.
+     * `status` is the read half of the same story as `unpublish` (Task
+     * 10b): the admin SPA cannot show a lapsed tenant "your page is live at
+     * X" without a call that survives a dead subscription too, and it
+     * carries none of the edit surface `show()` does.
+     */
     private const TEARDOWN_VERBS = [
         'api/v1/admin/landing-pages/unpublish',
+        'api/v1/admin/landing-pages/status',
     ];
 
     public function test_the_admin_endpoints_require_the_enterprise_feature(): void
@@ -222,6 +263,45 @@ class LandingPageEntitlementTest extends TestCase
         $this->assertSame(200, $response->getStatusCode(),
             'An entitled org was refused; the gate refuses everybody and the 402 test above is vacuous.');
         $this->assertSame('reached the controller', $response->getContent());
+    }
+
+    /**
+     * The wizard's own two endpoints (Task 4), proven the same way
+     * LandingPageTeardownTest proves teardown: driven over the real HTTP
+     * stack, not against RequireFeature run in isolation the way the two
+     * tests above are. That distinction is the point — the SPA's own
+     * `useSubscription().hasFeature()` returns `true` on localhost before it
+     * has read anything at all, so clicking through the wizard in a
+     * browser proves nothing about this gate. Only a 402 that came out the
+     * other end of routing, the container-bound tenant, BrandMiddleware and
+     * the real `LandingOnboardingController` / `LandingPageSectionController`
+     * can prove it.
+     *
+     * Growth, not a plan with nothing: close enough that a 402 here can only
+     * have come from the missing `landing_pages` entitlement, not from
+     * `check.subscription` (this org's subscription is ACTIVE) or from a
+     * catalog with no features granted at all.
+     */
+    public function test_a_non_enterprise_org_cannot_reach_the_wizard_endpoints(): void
+    {
+        $org = $this->orgWith(['reviews' => true, 'campaigns' => true], 'growth');
+
+        Sanctum::actingAs(User::create([
+            'name'            => 'Staff',
+            'email'           => 'staff_' . uniqid() . '@example.test',
+            'organization_id' => $org->id,
+            'user_type'       => 'staff',
+        ]), ['*']);
+
+        $this->getJson('/api/v1/admin/landing-pages/onboarding')->assertStatus(402)
+            ->assertJsonPath('code', 'feature_locked')
+            ->assertJsonPath('feature', 'landing_pages');
+
+        $this->postJson('/api/v1/admin/landing-pages/onboarding', [])->assertStatus(402)
+            ->assertJsonPath('code', 'feature_locked');
+
+        $this->putJson('/api/v1/admin/landing-pages/sections', ['sections' => []])->assertStatus(402)
+            ->assertJsonPath('code', 'feature_locked');
     }
 
     /**

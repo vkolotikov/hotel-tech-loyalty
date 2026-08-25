@@ -6,7 +6,7 @@ import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
-  Crown, Building2, FileText,
+  Crown, Building2, FileText, Globe,
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
@@ -24,6 +24,9 @@ import { preloadRoute } from '../lib/routePreload'
 import { useRealtimeEvents } from '../hooks/useRealtimeEvents'
 import { useTaskReminders } from '../hooks/useTaskReminders'
 import { useSubscription } from '../hooks/useSubscription'
+// Pure predicate, no component imports — see the `_lapsed` map below for
+// why the sidebar has to ask the same question `LandingPages.tsx` asks.
+import { landingEntitled, landingNavTreatment } from '../pages/landing/landingAccess'
 import { useSettings } from '../lib/crmSettings'
 import { BrandSwitcher } from './BrandSwitcher'
 // MemberQuickSearch removed 2026-05-20 — replaced by GlobalSearch which
@@ -95,6 +98,7 @@ const navGroups: NavGroup[] = [
       { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat', feature: 'engagement',
         altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
       { path: '/chatbot-setup',  labelKey: 'nav.items.chatbot_setup',  defaultLabel: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat', feature: 'chatbot' },
+      { path: '/landing-pages',  labelKey: 'nav.items.landing_pages',  defaultLabel: 'Landing Page',  icon: Globe, gate: 'admin', product: 'chat', feature: 'landing_pages' },
     ],
   },
   {
@@ -267,6 +271,21 @@ export function Layout({ children }: { children: ReactNode }) {
     || staff?.role === 'super_admin'
     || location.pathname.startsWith('/billing')
     || location.pathname.startsWith('/login')
+  // Task 10b round 1 (review correction): NOT folded into allowRender
+  // itself, because allowRender ALSO gates the background polling stack
+  // below (useRealtimeEvents, ['brands'], ['settings-logo'],
+  // ['chat-inbox-stats-sidebar']) — a cancelled/expired tenant on
+  // /landing-pages would re-enable every one of those, each 403'ing on
+  // repeat (realtime polls every 5s), each 403 dispatching
+  // subscription:expired, each of THOSE re-invalidating
+  // subscription-status. That is the exact "restarts polling for the
+  // tenant it was meant to stop" the round-1 review caught round 0's
+  // fix doing. This variable ONLY controls whether {children} mounts
+  // (see its one use, below) — LandingPages.tsx's own
+  // landingAccessDecision needs that much to render 'wait'/'teardown'/
+  // 'redirect' at all, exactly as /billing needs it for its own
+  // subscription-aware UI — and nothing else reads it.
+  const allowRenderContent = allowRender || location.pathname.startsWith('/landing-pages')
   const roleName = staff?.role === 'super_admin' ? 'Admin' : staff?.role === 'manager' ? 'Manager' : staff?.role ? staff.role.charAt(0).toUpperCase() + staff.role.slice(1) : ''
   // useRealtimeEvents polls /v1/admin/realtime/poll every 5 s. Gate
   // it on subKnownGood so an EXPIRED-trial user doesn't flood the
@@ -446,12 +465,33 @@ export function Layout({ children }: { children: ReactNode }) {
   const qc = useQueryClient()
   useEffect(() => {
     const handler = () => {
-      qc.cancelQueries()
+      // Task 10b: /landing-pages' own queries (landing-page-status,
+      // landing-onboarding, landing-page) must survive this. The blanket
+      // cancelQueries() below exists to kill "stragglers that beat the
+      // allowRender gate" — queries that started firing in the brief
+      // LOADING window before the wall comes up, on a route where that
+      // wall is about to hide everything anyway. /landing-pages is now
+      // deliberately EXEMPTED from allowRender/SubscriptionWall (see
+      // above) for exactly the cancelled/expired tenant this event fires
+      // for, so its queries are not stragglers — they are the fetch
+      // LandingPages.tsx's own landingAccessDecision is waiting on.
+      // Un-scoped, this cancelled that fetch mid-request the moment any
+      // OTHER still-403ing dashboard widget (setup/status, brands,
+      // tasks, chat-inbox/stats, ...) dispatched this same event — a
+      // cancelled query reports isLoading:false / data:undefined, which
+      // `landingAccessDecision` correctly reads as "nothing confirmed
+      // yet" but this component was reading as "confirmed nothing to
+      // tear down", bouncing a legitimate teardown-eligible tenant
+      // straight back to "/" — the precise failure this whole task
+      // exists to fix, reintroduced by an unrelated widget's refusal.
+      if (!location.pathname.startsWith('/landing-pages')) {
+        qc.cancelQueries()
+      }
       qc.invalidateQueries({ queryKey: ['subscription-status'] })
     }
     window.addEventListener('subscription:expired', handler)
     return () => window.removeEventListener('subscription:expired', handler)
-  }, [qc])
+  }, [qc, location.pathname])
 
   // 402 feature:locked events are now handled by <UpgradeFeatureModal />
   // (mounted at the end of this component's return tree). It listens to
@@ -539,7 +579,56 @@ export function Layout({ children }: { children: ReactNode }) {
           item.feature && !hasFeature(item.feature)
             ? { ...item, _locked: true as const, _lockedFeature: item.feature }
             : item
-        )),
+        ))
+        // Task 11 — the lapsed-subscription case the two gates above
+        // cannot see. Nothing clears `plan_features`/`entitled_products`
+        // when a subscription expires or is cancelled (ExpireTrials and
+        // CheckSubscription both write only the status column), so an org
+        // that was ever Enterprise still reports `hasProduct('chat')` and
+        // `hasFeature('landing_pages')` as TRUE after it stops paying —
+        // the filter above keeps the item, and the `_locked` map above
+        // leaves it looking exactly like a fully paid feature. Clicking it
+        // then lands on a teardown-only screen, which is the opposite of
+        // what the sidebar just promised.
+        //
+        // `landingEntitled` is the SAME predicate `LandingPages.tsx` uses
+        // to make that teardown decision (it also requires a subscription
+        // status `check.subscription` would let through), so the sidebar
+        // and the screen cannot disagree about whether this tenant is
+        // entitled.
+        //
+        // `_lapsed`, NOT `_locked`: a locked item renders as a button that
+        // fires `feature:locked` and never navigates, and this tenant's
+        // route to the Unpublish button is the one thing that must always
+        // survive a cancellation (routes/api.php keeps `unpublish` outside
+        // both gates for exactly this reason). So it stays a real Link and
+        // only the STYLING becomes locked — dimmed, lock badge, and a
+        // tooltip that says what is and is not still possible.
+        //
+        // Round 2: `_lapsed` now OVERRIDES `_locked` rather than yielding
+        // to it. The old `!('_locked' in item)` guard meant a tenant whose
+        // plan genuinely dropped `landing_pages` — the downgraded-but-still-
+        // paying cohort, the exact one routes/api.php names as the reason
+        // `unpublish` sits outside the entitlement gate — got the
+        // non-navigating locked BUTTON and had no way into the teardown
+        // screen at all except by typing the URL. `landingNavTreatment`
+        // holds that precedence so it can be tested — vitest is
+        // `environment: 'node'` and cannot render this file — and the
+        // renderer below completes it by making `locked` yield to `lapsed`.
+        // The `_locked` flag is deliberately left in place rather than
+        // overwritten to `false`: narrowing it to a literal makes tsc read
+        // the whole union as `false` and reject the renderer's own
+        // `it._locked === true` test.
+        .map(item => {
+          if (item.path !== '/landing-pages') return item
+
+          const treatment = landingNavTreatment({
+            featureLocked: '_locked' in item && item._locked === true,
+            entitled: landingEntitled(subStatus, hasFeature('landing_pages'), hasProduct('chat')),
+          })
+
+          return treatment === 'lapsed' ? { ...item, _lapsed: true as const } : item
+        }),
     }))
     .filter(group => group.items.length > 0)
 
@@ -649,7 +738,21 @@ export function Layout({ children }: { children: ReactNode }) {
                 {isOpen && items.map((it) => {
                   const { path, labelKey: itemLabelKey, defaultLabel: itemDefault, icon: Icon, altPaths } = it
                   const itemLabel = vocab(itemDefault) ?? t(itemLabelKey, itemDefault)
-                  const locked = '_locked' in it && it._locked === true
+                  // Task 11: "locked-looking, still reachable" — see the
+                  // `_lapsed` map above. Deliberately does NOT suppress
+                  // `active`: this tenant can genuinely still be ON the
+                  // page, and the sidebar should say so.
+                  const lapsed = '_lapsed' in it && it._lapsed === true
+                  // Round 2 (M2): LAPSED WINS, and this is the half of that
+                  // precedence the map cannot express. A `_locked` item
+                  // renders as a <button> below whose only action dispatches
+                  // `feature:locked` — it never navigates — so leaving
+                  // `locked` true for a lapsed item is what left the
+                  // downgraded-but-still-paying tenant with no route to the
+                  // Unpublish button at all. `landingNavTreatment` only ever
+                  // sets `_lapsed` on a tenant who is genuinely unentitled,
+                  // so nothing entitled can reach this branch.
+                  const locked = !lapsed && '_locked' in it && it._locked === true
                   const lockedFeature = ('_lockedFeature' in it ? it._lockedFeature : null) as string | null
                   const active = !locked && (path === '/'
                     ? location.pathname === '/'
@@ -714,18 +817,37 @@ export function Layout({ children }: { children: ReactNode }) {
                     )
                   }
 
+                  // Task 11 — the lapsed tenant's tooltip/accessible name.
+                  // Says both halves out loud: the builder is gone, taking
+                  // the page down is not. Written for someone who has just
+                  // stopped paying and wants to know whether their page is
+                  // still on the internet.
+                  // D9: worded conditionally on purpose. The old copy
+                  // promised a takedown outright, and for a lapsed tenant
+                  // whose page is a draft — or who has already unpublished
+                  // — `landingAccessDecision` returns 'redirect' and the
+                  // click bounces to the dashboard. "If your page is still
+                  // live" is the honest version of the same reassurance.
+                  const lapsedTooltip = t('nav_lapsed.tooltip', 'Not in your plan any more — if your page is still live, you can take it offline')
+                  const lapsedAria = t('nav_lapsed.aria_label', '{{label}} — not in your plan any more; if your page is still live, you can take it offline', { label: itemLabel })
+
                   return (
                     <Link
                       key={path}
                       to={path}
-                      title={displayCollapsed ? itemLabel : undefined}
+                      title={lapsed ? lapsedTooltip : (displayCollapsed ? itemLabel : undefined)}
+                      aria-label={lapsed ? lapsedAria : undefined}
                       onMouseEnter={() => preloadRoute(path)}
                       onFocus={() => preloadRoute(path)}
                       onPointerDown={() => preloadRoute(path)}
                       className={clsx(
                         'flex items-center gap-2.5 py-2 mx-1.5 rounded-lg transition-colors text-[13px] font-medium relative',
                         displayCollapsed ? 'justify-center px-0' : 'px-3',
-                        !active && 'text-t-secondary hover:text-white hover:bg-dark-surface2',
+                        !active && !lapsed && 'text-t-secondary hover:text-white hover:bg-dark-surface2',
+                        // Matches the `_locked` button's own muted treatment
+                        // above, so "you do not have this" reads the same
+                        // whichever of the two reasons produced it.
+                        !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/[0.04]',
                       )}
                       style={active ? {
                         background: tint(0.16),
@@ -733,8 +855,15 @@ export function Layout({ children }: { children: ReactNode }) {
                         boxShadow: `inset 2px 0 0 ${accent}`,
                       } : undefined}
                     >
-                      <Icon size={17} className="flex-shrink-0" />
+                      <Icon size={17} className={clsx('flex-shrink-0', lapsed && !active && 'opacity-70')} />
                       {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
+                      {lapsed && (
+                        displayCollapsed ? (
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/80" aria-hidden="true" />
+                        ) : (
+                          <Lock size={11} className="flex-shrink-0 text-primary-gold/80" aria-hidden="true" />
+                        )
+                      )}
                       {badge > 0 && (
                         displayCollapsed ? (
                           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
@@ -910,7 +1039,7 @@ export function Layout({ children }: { children: ReactNode }) {
                 before mounting children. Brief blank-screen during initial
                 /v1/auth/subscription fetch (one round-trip, ~50ms after
                 first warm cache) but no 403 storm. */}
-            {allowRender ? children : null}
+            {allowRenderContent ? children : null}
           </div>
         </main>
       </div>
@@ -1145,6 +1274,13 @@ function SubscriptionWall() {
 
   // Always allow access to billing page
   if (location.pathname === '/billing') return null
+
+  // Task 10b: same exemption as /billing, same reason — this full-screen
+  // overlay would otherwise sit on top of LandingPages.tsx's own reduced
+  // teardown screen for exactly the tenant routes/api.php's `unpublish`/
+  // `status` carve-out exists to serve. LandingPages.tsx makes its own
+  // entitled/teardown/redirect decision once past this gate.
+  if (location.pathname.startsWith('/landing-pages')) return null
 
   // Super admin bypass
   if (staff?.role === 'super_admin') return null

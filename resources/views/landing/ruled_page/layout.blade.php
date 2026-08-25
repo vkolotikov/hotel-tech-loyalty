@@ -17,8 +17,42 @@
   first place, so script-src never gets a say over it either way — see the
   comment on that block for how this was verified in a real browser.
 --}}
+@php
+    // RULING 5: the tenant's chosen heading/body pairing, or none. `theme`
+    // is a schemaless `array` cast with no DB constraint behind it (see the
+    // "Stored values the renderer must survive" tests further down this
+    // directory), so this is whitelisted against the exact three keys
+    // LandingOnboardingController validates (`in:editorial,modern,classic`)
+    // rather than trusted verbatim -- an unrecognised or hand-edited value
+    // must not leak onto <html> as an arbitrary attribute value; it must
+    // simply render as if no pairing had been chosen at all.
+    $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic'], true)
+        ? $page->theme['font_pairing']
+        : null;
+@endphp
+{{--
+  No pairing chosen -> `@if($fontPairing)` is false -> Blade emits nothing
+  at all between @if and @endif, not even the leading space -- so this tag
+  is byte-for-byte `<html lang="…">`, exactly as it was before this
+  attribute existed. The escaping braces only, same as everywhere else on
+  this page (see the top of this file for why a raw echo is never used
+  here) -- and `$fontPairing` is already whitelisted above, so escaping it
+  here costs nothing.
+
+  Fix round 1 correction: this comment used to sit BETWEEN `<!doctype html>`
+  and `<html ...>`, which cost one real byte on every render regardless of
+  $fontPairing -- Blade strips a comment block's own contents but not the
+  newlines around it (the same reason the top-of-file comment on this
+  template never spells out its own delimiter, so a grep for it stays
+  meaningful), and this comment had one real newline on each side of it
+  there, where the doctype/html boundary previously had exactly one total.
+  Sitting here instead, immediately after @endphp, costs nothing: PHP's own
+  closing tag (what @endphp compiles to) already eats the ONE newline
+  immediately following it, so the newline this comment sits behind was
+  already going to be consumed either way.
+--}}
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($fontPairing) data-font-pairing="{{ $fontPairing }}"@endif>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">

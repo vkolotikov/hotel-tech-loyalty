@@ -50,7 +50,7 @@ class LandingPageAdminApiTest extends TestCase
         $this->org  = $this->makeOrg('Glamour', 'beauty');
         $this->user = $this->makeUser($this->org);
 
-        $this->actAs($this->user, $this->makeBrand($this->org, isDefault: true));
+        $this->actAs($this->user, $this->defaultBrandId($this->org));
     }
 
     protected function tearDown(): void
@@ -64,13 +64,37 @@ class LandingPageAdminApiTest extends TestCase
 
     // ─── Fixtures ────────────────────────────────────────────────────────
 
+    /**
+     * A new organisation, with the default brand its own `created` hook
+     * makes for it (app/Models/Organization.php:93).
+     *
+     * The tenant binding is dropped for the duration, and that is not
+     * ceremony. That hook creates a Brand, Brand carries
+     * BelongsToOrganization, and its `creating` hook FORCES organization_id
+     * from the bound tenant -- so creating a second org while the first is
+     * bound files the NEW org's default brand under the OLD one. Measured:
+     * the bound org ends up with two is_default rows (the state
+     * `brands_org_default_unique` forbids) and the new org with none, so
+     * defaultBrandId() finds nothing for it and every later lookup resolves
+     * some other org's brand. Tests then agree with each other about a world
+     * production cannot be in.
+     */
     private function makeOrg(string $name, ?string $industry = 'beauty'): Organization
     {
-        return Organization::create([
-            'name'     => $name,
-            'slug'     => str()->slug($name) . '-' . uniqid(),
-            'industry' => $industry,
-        ]);
+        $bound = app()->bound('current_organization_id') ? app('current_organization_id') : null;
+        app()->forgetInstance('current_organization_id');
+
+        try {
+            return Organization::create([
+                'name'     => $name,
+                'slug'     => str()->slug($name) . '-' . uniqid(),
+                'industry' => $industry,
+            ]);
+        } finally {
+            if ($bound !== null) {
+                app()->instance('current_organization_id', $bound);
+            }
+        }
     }
 
     private function makeUser(Organization $org): User
@@ -83,13 +107,74 @@ class LandingPageAdminApiTest extends TestCase
         ]);
     }
 
-    /** Inserted directly: Brand's own model hooks rebind the brand context. */
-    private function makeBrand(Organization $org, bool $isDefault = true): int
+    /**
+     * The organisation's default brand, which Organization's own `created`
+     * hook has already made (app/Models/Organization.php:93).
+     *
+     * Reused rather than re-inserted, and that is load-bearing rather than
+     * tidy: production allows exactly ONE default brand per org --
+     * `brands_org_default_unique`, a partial unique index on `deleted_at IS
+     * NULL` -- and the sqlite test schema has no partial indexes to enforce
+     * it. A fixture that inserted a second default would be a state the
+     * database forbids, and it changes which brand
+     * LandingPageGuard::currentBrandId() resolves in "All brands" mode --
+     * so the tests would agree with each other about a world production
+     * cannot be in.
+     */
+    private function defaultBrandId(Organization $org): int
+    {
+        $id = DB::table('brands')
+            ->where('organization_id', $org->id)
+            ->where('is_default', true)
+            ->value('id');
+
+        // Asserted rather than cast. A missing row casts to 0, which binds
+        // as `current_brand_id` without complaint and then quietly resolves
+        // to whatever LandingPageGuard::currentBrandId()'s orderBy('id')
+        // happens to reach -- a passing test standing on an accident.
+        $this->assertNotNull($id, 'The organisation has no default brand; its fixture is in a state production forbids.');
+
+        return (int) $id;
+    }
+
+    /**
+     * An organisation with no brands at all.
+     *
+     * Emptied deliberately, because Organization::created gives every new
+     * org a default brand and this state can no longer be reached simply by
+     * creating one. It is a real state all the same -- orgs predating the
+     * brands feature, and that hook's own no-op when the brands table is
+     * absent -- and it is the state in which BelongsToBrand has no default
+     * to fall back on, which is the whole subject of the two tests that use
+     * this.
+     *
+     * Until makeOrg() was fixed, those tests got this state from a FIXTURE
+     * DEFECT rather than by asking for it: creating an org while another
+     * tenant was bound filed the new org's default brand under the bound
+     * org, so the new org really did end up brandless. The premise was
+     * right, its provenance was an accident, and an accident that was also
+     * corrupting the org it filed the brand into.
+     */
+    private function makeBrandlessOrg(string $name = 'Brandless'): Organization
+    {
+        $org = $this->makeOrg($name);
+
+        DB::table('brands')->where('organization_id', $org->id)->delete();
+
+        return $org;
+    }
+
+    /**
+     * An additional, non-default brand of the same org.
+     *
+     * Inserted directly: Brand's own model hooks rebind the brand context.
+     */
+    private function makeSiblingBrand(Organization $org): int
     {
         return (int) DB::table('brands')->insertGetId([
             'organization_id' => $org->id,
-            'name'            => $org->name,
-            'is_default'      => $isDefault,
+            'name'            => $org->name . ' Two',
+            'is_default'      => false,
             'created_at'      => now(),
             'updated_at'      => now(),
         ]);
@@ -199,7 +284,7 @@ class LandingPageAdminApiTest extends TestCase
      */
     public function test_a_page_created_in_all_brands_mode_is_accepted(): void
     {
-        $brandless = $this->makeOrg('Brandless');
+        $brandless = $this->makeBrandlessOrg();
         $this->actAs($this->makeUser($brandless), null);
 
         $this->assertNull($this->create('brandless-studio')['page']['brand_id']);
@@ -239,6 +324,46 @@ class LandingPageAdminApiTest extends TestCase
     {
         $this->expectException(ValidationException::class);
         $this->create('a!');
+    }
+
+    /**
+     * Task 10b round 1 — the word "slug" must never reach the tenant
+     * (spec §9), but `$request->validate()`'s own `max:63` rule runs
+     * BEFORE `LandingPageGuard::validatedSlug()` (whose messages are
+     * clean), and the address input has no `maxLength` — so this is
+     * genuinely reachable, not a theoretical validator quirk. Both the
+     * creating (`store`) and renaming (`update`) paths carry the same
+     * rule and are asserted here.
+     */
+    public function test_a_too_long_slug_is_rejected_without_the_word_slug_reaching_the_tenant(): void
+    {
+        $tooLong = str_repeat('a', 64);
+
+        try {
+            $this->create($tooLong);
+            $this->fail('A 64-character slug should have been rejected.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['slug'][0] ?? '';
+            $this->assertStringNotContainsStringIgnoringCase('slug', $message,
+                "The creation path's validation message says the word \"slug\": \"{$message}\"");
+            $this->assertStringContainsString('63 characters', $message);
+        }
+    }
+
+    public function test_renaming_to_a_too_long_slug_is_rejected_without_the_word_slug_reaching_the_tenant(): void
+    {
+        $this->create('glamour-salon');
+        $tooLong = str_repeat('a', 64);
+
+        try {
+            $this->controller()->update($this->request(['slug' => $tooLong]));
+            $this->fail('A 64-character slug should have been rejected.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['slug'][0] ?? '';
+            $this->assertStringNotContainsStringIgnoringCase('slug', $message,
+                "The rename path's validation message says the word \"slug\": \"{$message}\"");
+            $this->assertStringContainsString('63 characters', $message);
+        }
     }
 
     // ─── Rename ──────────────────────────────────────────────────────────
@@ -392,6 +517,36 @@ class LandingPageAdminApiTest extends TestCase
         $this->assertSame(0, $page['content']['hero']['headline']);
     }
 
+    // ─── Web address (Task 10) ───────────────────────────────────────────
+
+    /**
+     * The admin editor shows the tenant's whole public address ("Web
+     * address", never "slug") with a Copy button, and cannot build it
+     * itself: nothing about the LANDING host is otherwise visible from the
+     * admin SPA's own origin. `url` has to be the SAME address the public
+     * renderer answers to, not a second, hand-built guess at it.
+     */
+    public function test_the_page_carries_its_own_full_public_address(): void
+    {
+        $page = $this->create('glamour-salon')['page'];
+
+        $this->assertStringContainsString(config('landing.host'), $page['url']);
+        $this->assertStringEndsWith('/glamour-salon', $page['url']);
+    }
+
+    /** Renaming the address must be reflected in `url` immediately, not just `slug`. */
+    public function test_the_full_address_updates_when_the_slug_changes(): void
+    {
+        $this->create('glamour-salon');
+
+        $updated = $this->body($this->controller()->update(
+            $this->request(['slug' => 'glamour-studio'])
+        ))['page'];
+
+        $this->assertSame('glamour-studio', $updated['slug']);
+        $this->assertStringEndsWith('/glamour-studio', $updated['url']);
+    }
+
     // ─── Publishing ──────────────────────────────────────────────────────
 
     /**
@@ -484,6 +639,64 @@ class LandingPageAdminApiTest extends TestCase
         }
 
         $this->assertSame(LandingPage::STATUS_PUBLISHED, $this->statusOf($rival->id));
+    }
+
+    // ─── Status (Task 10b — the read half of teardown) ────────────────────
+
+    /**
+     * `status()` is the deliberately minimal read counterpart to
+     * `unpublish()` (routes/api.php's own comment on the new route has the
+     * full story). These four tests are its whole contract: no page, a
+     * draft page, and a published page all answer correctly, and a
+     * published-but-not-mine page must not leak through — the same tenant
+     * isolation `unpublish()` itself depends on.
+     */
+    public function test_status_reports_not_published_when_there_is_no_page(): void
+    {
+        $body = $this->body($this->controller()->status());
+
+        $this->assertFalse($body['published']);
+        $this->assertNull($body['url']);
+    }
+
+    public function test_status_reports_not_published_for_a_draft_page(): void
+    {
+        $this->create();
+
+        $body = $this->body($this->controller()->status());
+
+        $this->assertFalse($body['published']);
+        $this->assertNull($body['url'],
+            'A draft page is nothing to tear down, so its address must not leak through the entitlement-free route.');
+    }
+
+    /** The one case a lapsed tenant actually needs: published, with the real address. */
+    public function test_status_reports_published_with_the_public_url_for_a_live_page(): void
+    {
+        $page = $this->create('glamour-salon')['page'];
+        $this->controller()->publish();
+
+        $body = $this->body($this->controller()->status());
+
+        $this->assertTrue($body['published']);
+        $this->assertSame($page['url'], $body['url']);
+        $this->assertStringEndsWith('/glamour-salon', $body['url']);
+    }
+
+    /**
+     * Same isolation story as unpublish: nothing about this entitlement-free
+     * route may let one tenant see whether ANOTHER tenant's page is public.
+     * The rival's page is published and sorts first (created before mine),
+     * so a `current()` that lost its tenant scope would report it instead.
+     */
+    public function test_status_does_not_reach_another_tenants_page(): void
+    {
+        $this->pageOwnedByAnotherTenant('rival-salon');
+
+        $body = $this->body($this->controller()->status());
+
+        $this->assertFalse($body['published']);
+        $this->assertNull($body['url']);
     }
 
     // ─── Preview ─────────────────────────────────────────────────────────
@@ -605,20 +818,25 @@ class LandingPageAdminApiTest extends TestCase
     // ─── One page per brand ──────────────────────────────────────────────
 
     /**
-     * "One page per brand, so there is no index" holds only while a brand is
-     * bound. BrandScope no-ops on a null brand, so in "All brands" mode every
-     * page in the org matches and an unordered ->first() picks one — publish()
-     * would publish whichever row sorted first while the other stayed
-     * unreachable, with nothing raised to say so.
+     * "All brands" mode used to be answered with a 409 here, because
+     * BrandScope no-ops on a null brand: every page in the org matched, and
+     * an unordered ->first() would have picked one — publish() putting
+     * whichever row sorted first on the internet.
      *
-     * Refusing beats guessing, and refusing beats demanding a brand:
-     * test_a_page_created_in_all_brands_mode_is_accepted covers the org that
-     * legitimately has no brand at all, and a blanket brand requirement would
-     * lock that org out of the feature entirely.
+     * The refusal covered the plural case and MISSED the singular one. With
+     * exactly one page in the org, belonging to some sibling brand, there
+     * was no ambiguity to refuse and that page was simply returned; see
+     * test_all_brands_mode_does_not_reach_a_sibling_brands_page, which is
+     * the half that mattered.
+     *
+     * The answer now is the same one the WRITE path has always given:
+     * BelongsToBrand puts a page created in this mode on the org's default
+     * brand, so this mode reads that brand's page. Deterministic, and the
+     * same row a create would target rather than whichever sorted first.
      */
-    public function test_all_brands_mode_refuses_to_guess_which_page_is_meant(): void
+    public function test_all_brands_mode_resolves_the_default_brands_page(): void
     {
-        $second = $this->makeBrand($this->org, isDefault: false);
+        $second = $this->makeSiblingBrand($this->org);
 
         $this->create('brand-one-page');
         $this->actAs($this->user, $second);
@@ -626,9 +844,180 @@ class LandingPageAdminApiTest extends TestCase
 
         $this->actAs($this->user, null);
 
+        $this->assertSame('brand-one-page', $this->body($this->controller()->show())['page']['slug']);
+    }
+
+    /**
+     * The half the old 409 could not see: one page in the org, and it
+     * belongs to a brand this request is not operating as.
+     *
+     * Nothing is ambiguous, so nothing was refused, and the sibling's page
+     * came back — which means publish() would have put that sibling's
+     * prices, staff names, phone number and address on the internet on
+     * behalf of an admin who never selected it.
+     */
+    public function test_all_brands_mode_does_not_reach_a_sibling_brands_page(): void
+    {
+        $second = $this->makeSiblingBrand($this->org);
+
+        $this->actAs($this->user, $second);
+        $this->create('sibling-page');
+
+        $this->actAs($this->user, null);
+
+        $this->assertNull(
+            $this->body($this->controller()->show())['page'],
+            'An admin in "All brands" mode was handed the page of a sibling brand.',
+        );
+
+        try {
+            $this->controller()->publish();
+            $this->fail('publish() acted on a page belonging to another brand.');
+        } catch (HttpException $e) {
+            $this->assertSame(404, $e->getStatusCode());
+        }
+
+        $this->assertNull(
+            LandingPage::withoutGlobalScopes()->where('slug', 'sibling-page')->first()->published_at,
+            'The page of a sibling brand was published by a request that never named it.',
+        );
+    }
+
+    /*
+     * A page with brand_id NULL belongs to the ORGANISATION. store() leaves
+     * it null only while the org has no default brand -- and
+     * Organization::created backfills one -- so "page created first, default
+     * brand appears afterwards" is a real if uncommon sequence, and it used
+     * to make that page unreachable from every verb and every brand
+     * selection at once. The three tests below hold all six verbs on it.
+     */
+
+    /** The org-wide page, created before the org had a default brand. */
+    private function orgWidePage(string $slug = 'org-wide-studio', string $status = 'draft'): int
+    {
+        return (int) DB::table('landing_pages')->insertGetId([
+            'organization_id' => $this->org->id,
+            'brand_id'        => null,
+            'slug'            => $slug,
+            'template_key'    => 'ruled_page',
+            'industry'        => 'beauty',
+            'status'          => $status,
+            'published_at'    => $status === 'published' ? now() : null,
+            'created_at'      => now(),
+            'updated_at'      => now(),
+        ]);
+    }
+
+    public function test_an_org_wide_page_is_reachable_once_the_org_has_a_default_brand(): void
+    {
+        $id = $this->orgWidePage();
+
+        // Both affordances an admin actually has: no brand chosen, and the
+        // default brand chosen. Neither can bind a null brand, because null
+        // is exactly what the resolver substitutes away.
+        foreach ([null, $this->defaultBrandId($this->org)] as $selection) {
+            $this->actAs($this->user, $selection);
+
+            $page = $this->body($this->controller()->show())['page'];
+
+            $this->assertNotNull($page, 'The organisation-wide page was unreachable.');
+            $this->assertSame($id, $page['id']);
+            $this->assertNotNull($this->body($this->controller()->previewUrl())['url']);
+        }
+    }
+
+    /**
+     * The verb this is really about.
+     *
+     * unpublish sits outside the billing gate on purpose, so that ceasing to
+     * pay can never compel a business to stay published. A page the resolver
+     * cannot find is a live public page whose owner has no way to take it
+     * down — the "only way off the internet was us running an UPDATE by
+     * hand" failure LandingPageTeardownTest exists to prevent, reached
+     * through the resolver instead of through the middleware.
+     */
+    public function test_an_org_wide_page_can_still_be_taken_off_the_internet(): void
+    {
+        $id = $this->orgWidePage('org-wide-live', 'published');
+
+        $this->actAs($this->user, null);
+
+        $this->controller()->unpublish();
+
+        $this->assertSame(
+            'draft',
+            DB::table('landing_pages')->where('id', $id)->value('status'),
+            'A published organisation-wide page could not be unpublished by its own owner.',
+        );
+    }
+
+    public function test_an_org_wide_page_can_still_be_edited_and_published(): void
+    {
+        $id = $this->orgWidePage();
+
+        $this->actAs($this->user, null);
+
+        $this->controller()->update($this->request(['slug' => 'org-wide-renamed']));
+        $this->controller()->publish();
+
+        $row = DB::table('landing_pages')->where('id', $id)->first();
+
+        $this->assertSame('org-wide-renamed', $row->slug);
+        $this->assertSame('published', $row->status);
+    }
+
+    /**
+     * ...and the fallback is exactly one row wide. A page on a SIBLING brand
+     * is not the organisation's page and must stay out of reach — the hole
+     * this resolver was written to close.
+     */
+    public function test_the_org_wide_fallback_does_not_reach_a_sibling_brands_page(): void
+    {
+        $second = $this->makeSiblingBrand($this->org);
+
+        $this->actAs($this->user, $second);
+        $this->create('sibling-only-page');
+
+        $this->actAs($this->user, null);
+
+        $this->assertNull(
+            $this->body($this->controller()->show())['page'],
+            'The organisation-wide fallback reached the page of a sibling brand.',
+        );
+    }
+
+    /**
+     * The ambiguity guard is kept, and this is the one state that can still
+     * reach it: two pages belonging to NO brand. The (organization_id,
+     * brand_id) unique index treats NULLs as distinct on both sqlite and
+     * Postgres, so it cannot forbid the second row — only the
+     * brandHasPage() check can, and two simultaneous writes can pass it.
+     *
+     * Reproduced by hand here because the application refuses to create it.
+     */
+    public function test_two_pages_belonging_to_no_brand_are_still_refused(): void
+    {
+        // No default brand to fall back on, so the resolved brand is null.
+        DB::table('brands')->where('organization_id', $this->org->id)->delete();
+
+        foreach (['orphan-one', 'orphan-two'] as $slug) {
+            DB::table('landing_pages')->insert([
+                'organization_id' => $this->org->id,
+                'brand_id'        => null,
+                'slug'            => $slug,
+                'template_key'    => 'ruled_page',
+                'industry'        => 'beauty',
+                'status'          => 'draft',
+                'created_at'      => now(),
+                'updated_at'      => now(),
+            ]);
+        }
+
+        $this->actAs($this->user, null);
+
         try {
             $this->controller()->show();
-            $this->fail('show() picked one of two pages instead of refusing.');
+            $this->fail('show() picked one of two brandless pages instead of refusing.');
         } catch (HttpException $e) {
             $this->assertSame(409, $e->getStatusCode());
         }
@@ -637,7 +1026,7 @@ class LandingPageAdminApiTest extends TestCase
     /** ...and with a brand bound it is unambiguous again. */
     public function test_selecting_a_brand_resolves_the_ambiguity(): void
     {
-        $second = $this->makeBrand($this->org, isDefault: false);
+        $second = $this->makeSiblingBrand($this->org);
 
         $this->create('brand-one-page');
         $this->actAs($this->user, $second);
@@ -693,7 +1082,7 @@ class LandingPageAdminApiTest extends TestCase
      */
     public function test_a_second_org_wide_page_is_a_conflict_the_index_cannot_see(): void
     {
-        $brandless = $this->makeOrg('Brandless');
+        $brandless = $this->makeBrandlessOrg();
         $this->actAs($this->makeUser($brandless), null);
 
         $this->assertNull($this->create('brandless-one')['page']['brand_id']);
@@ -810,7 +1199,7 @@ class LandingPageAdminApiTest extends TestCase
         // A brandless org, so both the pre-check and the re-check in the catch
         // truthfully answer "this brand has no page" — leaving the collision
         // nowhere to hide behind a plausible-sounding 409.
-        $brandless = $this->makeOrg('Brandless');
+        $brandless = $this->makeBrandlessOrg();
         $this->actAs($this->makeUser($brandless), null);
 
         DB::statement('CREATE UNIQUE INDEX tmp_one_template_only ON landing_pages (template_key)');

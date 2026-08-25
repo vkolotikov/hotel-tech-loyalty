@@ -131,6 +131,13 @@ class LandingPageController extends Controller
 
         abort_if($model === null, 404);
 
+        // The editor's live pane iframes this URL from the admin origin. Only the
+        // PREVIEW relaxes frame-ancestors; a published page keeps 'none'. The URL
+        // is signed and short-lived, so framability is not an exposure on its own
+        // -- and the value names our own origin rather than '*', so a draft still
+        // cannot be framed by a third party who somehow obtains the link.
+        $request->attributes->set('landing.frame_ancestors', "'self' " . config('app.url'));
+
         return $this->render($model)
             ->header('Cache-Control', 'no-store')
             ->header('X-Robots-Tag', 'noindex');

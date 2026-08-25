@@ -5,7 +5,7 @@ use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
 use App\Models\LandingPage;
 use App\Rules\ScalarLeaves;
-use App\Support\LandingSlug;
+use App\Support\LandingPageGuard;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -13,13 +13,16 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * The rules about what may exist at an address — slug format, reserved
+ * words, global uniqueness, the live-redirect hold, and one page per brand —
+ * live in {@see LandingPageGuard} rather than here, because the onboarding
+ * wizard (LandingOnboardingController) is a second way to create a page and
+ * two copies of those rules would be two different answers to the same
+ * question.
+ */
 class LandingPageController extends Controller
 {
-    /** How long a retired address keeps working after a rename. */
-    private const REDIRECT_TTL_DAYS = 90;
-
-    private const ONE_PER_BRAND = 'This brand already has a landing page. Edit that one instead of creating a second.';
-
     /** One page per brand, so there is no index. */
     public function show(): JsonResponse
     {
@@ -28,12 +31,17 @@ class LandingPageController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        // Same clean-message reasoning as update() below — see its comment.
         $data = $request->validate([
             'slug'         => 'required|string|max:63',
             'template_key' => 'required|string|in:ruled_page',
+        ], [
+            'slug.required' => 'Please choose a web address.',
+            'slug.string'   => 'That web address is not valid.',
+            'slug.max'      => 'Please use a shorter web address — up to 63 characters.',
         ]);
 
-        $slug = $this->validatedSlug($data['slug']);
+        $slug = LandingPageGuard::validatedSlug($data['slug']);
         $org  = $request->user()->organization;
 
         // "All brands" mode binds a NULL brand, and Container::instance()
@@ -51,7 +59,7 @@ class LandingPageController extends Controller
         // a unique index on both sqlite and Postgres, so it cannot see a
         // second org-wide page at all. Hence this check as well as the catch
         // below — each covers what the other misses.
-        abort_if($this->brandHasPage($org->id, $brandId), 409, self::ONE_PER_BRAND);
+        abort_if(LandingPageGuard::brandHasPage($org->id, $brandId), 409, LandingPageGuard::ONE_PER_BRAND);
 
         // Built and saved in two steps rather than ::create() so the instance
         // survives a failed insert. BelongsToOrganization and BelongsToBrand
@@ -80,7 +88,7 @@ class LandingPageController extends Controller
             // Which index, though, is a question and not an assumption. See
             // slugIsTaken() for why these lookups must not run inside an open
             // transaction.
-            if ($this->slugIsTaken($slug)) {
+            if (LandingPageGuard::slugIsTaken($slug)) {
                 throw ValidationException::withMessages(['slug' => 'That web address is already taken.']);
             }
 
@@ -92,21 +100,19 @@ class LandingPageController extends Controller
             // for a page that does not exist, so claim it only once the row is
             // demonstrably there. Anything else is a failure we cannot explain,
             // and a 500 is the honest answer to that.
-            if (!$this->brandHasPage($page->organization_id, $page->brand_id)) {
+            if (!LandingPageGuard::brandHasPage($page->organization_id, $page->brand_id)) {
                 throw $e;
             }
 
-            abort(409, self::ONE_PER_BRAND);
+            abort(409, LandingPageGuard::ONE_PER_BRAND);
         }
 
         // No redirect row may share a slug with a live page — the invariant
         // that lets Task 12's resolver stop caring which table it reads first.
-        // update() keeps it on rename; this keeps it on claim. validatedSlug()
-        // has already refused the slug if a LIVE redirect held it, so whatever
-        // is here is a lapsed row: inert against today's resolver, and a
-        // counter-example to the invariant tomorrow. Cleared only after the
-        // claim succeeded, because until then the row is still somebody else's.
-        DB::table('landing_page_redirects')->where('slug', $slug)->delete();
+        // update() keeps it on rename; this keeps it on claim. Cleared only
+        // after the claim succeeded, because until then the row is still
+        // somebody else's. See LandingPageGuard::releaseRedirects().
+        LandingPageGuard::releaseRedirects($slug);
 
         // Seed section rows now so ordering is fixed at creation, and a later
         // template revision cannot silently reorder a published page.
@@ -141,15 +147,32 @@ class LandingPageController extends Controller
         // This is one half of the fix. The renderer prunes what it reads as
         // the other half, because rows written before this rule existed are
         // already in the database; see App\Support\ScalarTree.
+        // Task 10b round 1: the "Web address" field must never let the word
+        // "slug" reach the tenant (spec §9, and the whole reason this
+        // screen is labelled "Web address" in the first place) — but
+        // `$request->validate()` runs THIS rule set before the handler
+        // reaches `LandingPageGuard::validatedSlug()` below, whose own
+        // messages ARE clean. A submission over 63 characters (the address
+        // input has no `maxLength`, and the frontend only disables "Use
+        // this address" on an EMPTY preview, not a long one) previously
+        // fell straight through to Laravel's own default message — "The
+        // slug field must not be greater than 63 characters." — reaching
+        // the tenant verbatim via LandingEditor.tsx's `errors.slug[0]`
+        // surfacing. Named explicitly here so no default validator message
+        // for this field can ever say the word, regardless of which rule
+        // fires.
         $data = $request->validate([
             'slug'    => 'sometimes|string|max:63',
             'theme'   => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'content' => ['sometimes', 'array', new ScalarLeaves(depth: 2)],
             'seo'     => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
+        ], [
+            'slug.string' => 'That web address is not valid.',
+            'slug.max'    => 'Please use a shorter web address — up to 63 characters.',
         ]);
 
         if (isset($data['slug'])) {
-            $data['slug'] = $this->validatedSlug($data['slug'], $page->id);
+            $data['slug'] = LandingPageGuard::validatedSlug($data['slug'], $page->id);
         }
 
         // One transaction: a rename is a delete, an insert and an update, and a
@@ -169,7 +192,7 @@ class LandingPageController extends Controller
                     // weight at best, a redirect loop at worst. validatedSlug()
                     // has already refused the slug if such a row belonged to
                     // anyone else, so whatever is left is ours to clear.
-                    DB::table('landing_page_redirects')->where('slug', $data['slug'])->delete();
+                    LandingPageGuard::releaseRedirects($data['slug']);
 
                     // The old address may be printed on a card or a shopfront,
                     // so keep it working rather than 404ing it the moment it
@@ -178,7 +201,7 @@ class LandingPageController extends Controller
                         ['slug' => $page->slug],
                         [
                             'landing_page_id' => $page->id,
-                            'expires_at'      => now()->addDays(self::REDIRECT_TTL_DAYS),
+                            'expires_at'      => now()->addDays(LandingPageGuard::REDIRECT_TTL_DAYS),
                             'created_at'      => now(),
                             'updated_at'      => now(),
                         ],
@@ -193,7 +216,7 @@ class LandingPageController extends Controller
             // write. store() answers that with a 422, so this must too — a
             // caller should not have to know which verb they used to understand
             // what happened to them.
-            if ($this->slugIsTaken($data['slug'] ?? $page->slug, $page->id)) {
+            if (LandingPageGuard::slugIsTaken($data['slug'] ?? $page->slug, $page->id)) {
                 throw ValidationException::withMessages(['slug' => 'That web address is already taken.']);
             }
 
@@ -217,14 +240,73 @@ class LandingPageController extends Controller
         return response()->json(['page' => $page->fresh()]);
     }
 
+    /**
+     * Take my page off the internet.
+     *
+     * Resolved with {@see LandingPageGuard::pageToTakeDown()} rather than
+     * current(), and that is the whole difference between this verb and the
+     * build verbs above. current() resolves ONE brand — the bound one, else
+     * the org's default — which is right for everything that writes to a
+     * page and wrong for the one verb whose failure mode is a live page its
+     * owner cannot reach. The SPA sends `brand_id=all` by default and after
+     * any localStorage reset, so a page published on a non-default brand
+     * answered 404 here while still serving the tenant's address, phone
+     * number, staff names and prices; the brand switcher that would have
+     * fixed it is itself behind `check.subscription`, i.e. unavailable to
+     * exactly the cancelled tenant this route exists for.
+     *
+     * Teardown is the ONLY verb widened this way. See the guard's docblock.
+     */
     public function unpublish(): JsonResponse
     {
-        $page = $this->current();
+        $page = LandingPageGuard::pageToTakeDown();
         abort_if($page === null, 404);
 
         $page->update(['status' => LandingPage::STATUS_DRAFT]);
 
         return response()->json(['page' => $page->fresh()]);
+    }
+
+    /**
+     * The read counterpart to unpublish() — carved out of `feature:landing_pages`
+     * and `check.subscription` for the identical reason (routes/api.php has the
+     * full story): a tenant whose plan no longer covers this builder must still
+     * be able to see whether their own page is public, and at what address, in
+     * order to decide to take it down. Without this, the admin SPA has no way
+     * to show that tenant anything at all — `show()` carries the full edit
+     * surface (theme/content/seo/sections) and stays behind the entitlement
+     * gate on purpose, so it cannot be reused here.
+     *
+     * Deliberately the narrowest possible answer: whether there is currently
+     * something public, and if so, where. Not the page id, not its draft
+     * content, not whether a page exists in draft form with nothing to tear
+     * down — none of that is needed to decide "show Unpublish" vs "nothing to
+     * do here", and returning it would be surface this entitlement-free route
+     * has no business carrying.
+     *
+     * Those two keys are the WHOLE response, and
+     * LandingPageTeardownTest::test_status_answers_with_exactly_two_keys
+     * pins the exact key set rather than probing one path at a time. A
+     * review found that adding `'page' => $page` here left the entire
+     * landing suite green while the draft slug and URL travelled out
+     * through the one admin route stripped of BOTH the entitlement gate and
+     * `check.subscription` — an `assertNull($body['url'])` says nothing
+     * about a sibling key carrying the same address.
+     *
+     * Resolved org-wide via {@see LandingPageGuard::pageToTakeDown()} for
+     * the same reason unpublish() is: the read half has to be able to SEE
+     * the page the write half can take down, or the admin screen tells a
+     * lapsed tenant "nothing to do here" over a page that is still live.
+     */
+    public function status(): JsonResponse
+    {
+        $page = LandingPageGuard::pageToTakeDown();
+        $published = $page !== null && $page->status === LandingPage::STATUS_PUBLISHED;
+
+        return response()->json([
+            'published' => $published,
+            'url'       => $published ? $page->url : null,
+        ]);
     }
 
     /** Short-lived signed URL, so a draft is visible to its owner and nobody else. */
@@ -238,105 +320,34 @@ class LandingPageController extends Controller
         ]);
     }
 
+    /**
+     * The caller's own page ON ONE BRAND — the resolver every BUILD verb
+     * uses, and the same one the wizard and the section endpoint use, so
+     * none of them can quietly act on a different page from the others.
+     *
+     * status() and unpublish() deliberately do NOT come through here; they
+     * ask an org-wide question via LandingPageGuard::pageToTakeDown(). That
+     * split is the fix for a real trap and must not be collapsed in either
+     * direction: widening this method would let publish() put a sibling
+     * brand's page on the internet, and narrowing teardown back to one
+     * brand leaves a lapsed tenant with a live page they cannot reach.
+     *
+     * This used to lean on BrandScope and refuse the result when more than
+     * one page came back. BrandScope NO-OPs on a null brand, so in "All
+     * brands" mode a multi-brand org matched every one of its pages: with
+     * two the request was refused, and with ONE — a page belonging to some
+     * sibling brand — it was returned, and publish() would put that
+     * sibling's page on the internet. The refusal covered the plural case
+     * and missed the singular one, which is the more dangerous half.
+     *
+     * LandingPageGuard resolves the brand first (bound brand, else the org's
+     * default — the brand a new page is already created on) and filters on
+     * it explicitly. The ambiguity guard survives inside pageOnBrand() for
+     * the one state that can still reach it.
+     */
     private function current(): ?LandingPage
     {
-        // BelongsToOrganization scopes this, and BrandScope narrows it further
-        // when a brand is bound. Do not add a where clause.
-        //
-        // BrandScope NO-OPs on a null brand, though, so in "All brands" mode a
-        // multi-brand org matches every one of its pages and a bare ->first()
-        // would silently pick one: publish() would publish whichever row sorted
-        // first, leaving the others unreachable with no error raised.
-        //
-        // Refusing the ambiguity rather than demanding a brand is deliberate. A
-        // null brand is not itself an error — an org with no brand rows
-        // legitimately owns exactly one org-wide page, PageContent already
-        // reads a null-brand page that way, and requiring a bound brand would
-        // lock that org out of the feature entirely. What is unanswerable is
-        // *which* page a request means when there is more than one, so that,
-        // and only that, is what gets refused.
-        $pages = LandingPage::with('sections')->orderBy('id')->take(2)->get();
-
-        abort_if(
-            $pages->count() > 1,
-            409,
-            'This organization has a landing page per brand. Select a brand before editing.',
-        );
-
-        return $pages->first();
+        return LandingPageGuard::pageOnBrand(LandingPageGuard::currentBrandId());
     }
 
-    /**
-     * Is this address spoken for, anywhere on the platform? Deliberately
-     * unscoped: /{slug} is one namespace shared by every tenant.
-     *
-     * Both catch blocks call this AFTER a failed write, to ask which index
-     * fired, and that is only safe outside an open transaction. On Postgres a
-     * failed statement aborts the enclosing transaction and every later query
-     * in it returns 25P02 — so wrapping store() in DB::transaction() would
-     * quietly turn these 409/422 answers back into 500s. The suite is pinned to
-     * sqlite, which does not behave that way, so nothing local would catch it.
-     */
-    private function slugIsTaken(string $slug, ?int $ignoreId = null): bool
-    {
-        return LandingPage::withoutGlobalScopes()
-            ->where('slug', $slug)
-            ->when($ignoreId, fn ($q) => $q->where('id', '!=', $ignoreId))
-            ->exists();
-    }
-
-    /** One page per brand — and for this purpose a null brand is a brand. */
-    private function brandHasPage(int $orgId, ?int $brandId): bool
-    {
-        return LandingPage::withoutGlobalScopes()
-            ->where('organization_id', $orgId)
-            ->when(
-                $brandId === null,
-                fn ($q) => $q->whereNull('brand_id'),
-                fn ($q) => $q->where('brand_id', $brandId),
-            )
-            ->exists();
-    }
-
-    private function validatedSlug(string $raw, ?int $ignoreId = null): string
-    {
-        $slug = LandingSlug::normalise($raw);
-
-        if (!LandingSlug::isValid($slug)) {
-            throw ValidationException::withMessages([
-                'slug' => 'Use 3 to 63 letters, numbers and hyphens.',
-            ]);
-        }
-
-        if (LandingSlug::isReserved($slug)) {
-            throw ValidationException::withMessages(['slug' => 'That web address is reserved.']);
-        }
-
-        // Global uniqueness: /{slug} is one namespace across every tenant, so
-        // this deliberately ignores tenancy scoping or it would miss clashes.
-        $taken = $this->slugIsTaken($slug, $ignoreId);
-
-        // A retired address is still an occupied address. It keeps resolving
-        // for REDIRECT_TTL_DAYS, so handing it to a second tenant meanwhile
-        // puts two businesses on one URL — one reachable through landing_pages,
-        // one through landing_page_redirects. Whichever table a resolver
-        // consults first, somebody's customers land on a competitor.
-        //
-        // Rows belonging to the page being edited are excluded so a tenant can
-        // move back to an address it used to hold; update() then clears the row
-        // it has just moved onto.
-        // expires_at is NOT NULL in the migration, so "never expires" is not a
-        // state a row can be in and there is no null branch to answer for.
-        $reserved = DB::table('landing_page_redirects')
-            ->where('slug', $slug)
-            ->where('expires_at', '>', now())
-            ->when($ignoreId, fn ($q) => $q->where('landing_page_id', '!=', $ignoreId))
-            ->exists();
-
-        if ($taken || $reserved) {
-            throw ValidationException::withMessages(['slug' => 'That web address is already taken.']);
-        }
-
-        return $slug;
-    }
 }

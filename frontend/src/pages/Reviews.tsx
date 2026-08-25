@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Star, Plus, Trash2, ExternalLink, Copy, Edit3, Link as LinkIcon, Download, TabletSmartphone, RefreshCw, QrCode, X } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
+// Pure decision, no component imports — vitest runs in `environment: 'node'`,
+// so anything that has to be tested cannot live inside the JSX below.
+import { featuredReviewToast } from './landing/featuredReviewFeedback'
 
 type Tab = 'submissions' | 'invitations' | 'forms' | 'devices' | 'integrations'
 
@@ -32,6 +36,17 @@ interface Submission {
   member: { user: { name: string } } | null
   guest: { full_name: string } | null
   anonymous_name: string | null
+  is_featured: boolean
+}
+
+/**
+ * What `PUT /v1/admin/reviews/submissions/{id}/featured` answers with.
+ * `landing` is what stops the toast guessing: featuring only puts CONTENT
+ * on the page, and the renderer also needs the reviews band switched on.
+ */
+interface FeaturedResult {
+  submission: { id: number; is_featured: boolean }
+  landing?: { has_page: boolean; reviews_enabled: boolean }
 }
 
 interface Integration {
@@ -126,6 +141,8 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub: st
 
 function SubmissionsTab() {
   const navigate = useNavigate()
+  const { t } = useTranslation()
+  const qc = useQueryClient()
   const [filter, setFilter] = useState<{ rating?: number; redirected?: 'yes' | 'no' }>({})
 
   const { data } = useQuery<{ data: Submission[] }>({
@@ -133,6 +150,51 @@ function SubmissionsTab() {
     queryFn: () => api.get('/v1/admin/reviews/submissions', { params: filter }).then(r => r.data),
   })
   const subs = data?.data ?? []
+
+  const featureMut = useMutation({
+    mutationFn: ({ id, featured }: { id: number; featured: boolean }) =>
+      api.put(`/v1/admin/reviews/submissions/${id}/featured`, { featured })
+        .then(r => r.data as FeaturedResult),
+    onSuccess: (data, v) => {
+      qc.invalidateQueries({ queryKey: ['review-submissions'] })
+      // This endpoint is the only writer of the column the landing
+      // renderer's reviews band is gated on, and the wizard's prefill
+      // COUNTS featured reviews to decide whether to offer the section at
+      // all. Both queries are cached against the client's 30s staleTime,
+      // so without these a tenant who clicks straight through to the
+      // landing screens still reads "Nothing to show yet." over a review
+      // they have just put on the page. Keyed loosely (no brand segment)
+      // on purpose: reviews have no brand_id, so every brand's copy of
+      // both queries is now stale.
+      qc.invalidateQueries({ queryKey: ['landing-onboarding'] })
+      qc.invalidateQueries({ queryKey: ['landing-page'] })
+
+      // Never a green success for a write that provably did not reach the
+      // page — see featuredReviewToast() for the whole story.
+      switch (featuredReviewToast({
+        featured: v.featured,
+        hasPage: data?.landing?.has_page ?? false,
+        reviewsEnabled: data?.landing?.reviews_enabled ?? false,
+      })) {
+        case 'removed':
+          toast.success(t('reviews.featured_off', 'Removed from your landing page'))
+          break
+        case 'added':
+          toast.success(t('reviews.featured_on', 'Added to your landing page'))
+          break
+        case 'section_off':
+          toast(t('reviews.featured_on_section_off',
+            'Saved. Switch the Reviews section on in your landing page editor to show it.'))
+          break
+        case 'no_page':
+          toast(t('reviews.featured_on_no_page',
+            'Saved. It will appear once you build your landing page.'))
+          break
+      }
+    },
+    onError: (e: any) => toast.error(
+      e.response?.data?.error ?? e.response?.data?.message ?? t('common.error', 'Something went wrong')),
+  })
 
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
@@ -184,11 +246,12 @@ function SubmissionsTab() {
               <th className="text-left p-3">Comment</th>
               <th className="text-left p-3">Redirect</th>
               <th className="text-left p-3">When</th>
+              <th className="text-left p-3">{t('reviews.landing_page', 'Landing page')}</th>
             </tr>
           </thead>
           <tbody>
             {subs.length === 0 && (
-              <tr><td colSpan={6} className="p-10 text-center text-[#666]">No submissions yet.</td></tr>
+              <tr><td colSpan={7} className="p-10 text-center text-[#666]">No submissions yet.</td></tr>
             )}
             {subs.map(s => (
               <tr key={s.id} onClick={() => navigate(`/reviews/submissions/${s.id}`)} className="border-t border-dark-border hover:bg-[#151515] cursor-pointer">
@@ -204,6 +267,24 @@ function SubmissionsTab() {
                   ) : <span className="text-[#666]">—</span>}
                 </td>
                 <td className="p-3 text-[#a0a0a0] text-xs">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '—'}</td>
+                <td className="p-3" onClick={e => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    aria-pressed={s.is_featured}
+                    title={t('reviews.feature_hint', 'Show this review on your landing page')}
+                    onClick={() => featureMut.mutate({ id: s.id, featured: !s.is_featured })}
+                    disabled={featureMut.isPending}
+                    className={'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors disabled:opacity-50 '
+                      + (s.is_featured
+                        ? 'bg-primary-500/[0.12] text-primary-500 border border-primary-500/30'
+                        : 'bg-dark-bg border border-dark-border text-t-secondary hover:text-white')}
+                  >
+                    <Star size={13} className={s.is_featured ? 'fill-current' : ''} />
+                    {s.is_featured
+                      ? t('reviews.featured', 'On your page')
+                      : t('reviews.feature', 'Feature')}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>

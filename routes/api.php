@@ -38,7 +38,9 @@ use App\Http\Controllers\Api\V1\Admin\LeadFormController;
 // The admin-side builder. Not to be confused with the public renderer of the
 // same class name at App\Http\Controllers\Landing\LandingPageController, which
 // is wired in routes/landing.php and is deliberately not gated.
+use App\Http\Controllers\Api\V1\Admin\LandingOnboardingController;
 use App\Http\Controllers\Api\V1\Admin\LandingPageController;
+use App\Http\Controllers\Api\V1\Admin\LandingPageSectionController;
 use App\Http\Controllers\Api\V1\Public\LeadFormPublicController;
 use App\Http\Controllers\Api\V1\Admin\ReservationController;
 use App\Http\Controllers\Api\V1\Admin\CorporateAccountController;
@@ -812,6 +814,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('reviews/submissions',                [AdminReviewController::class, 'listSubmissions']);
                 Route::get('reviews/submissions/export',         [AdminReviewController::class, 'exportSubmissions']);
                 Route::get('reviews/submissions/{id}',           [AdminReviewController::class, 'showSubmission']);
+                Route::put('reviews/submissions/{id}/featured',  [AdminReviewController::class, 'setSubmissionFeatured']);
                 Route::get('reviews/stats',                      [AdminReviewController::class, 'stats']);
 
                 Route::get('reviews/invitations',                [AdminReviewController::class, 'listInvitations']);
@@ -1334,12 +1337,35 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('unpublish', [LandingPageController::class, 'unpublish'])
                     ->withoutMiddleware('check.subscription');
 
+                // `status` carries the same two exclusions, one route below
+                // this comment, for the read half of the same story: the
+                // admin SPA cannot show a lapsed tenant so much as "your page
+                // is live at X" without a call that survives a dead
+                // subscription too, and `show()` cannot be reused for it — it
+                // carries the full edit surface (theme/content/seo/sections)
+                // and stays behind `feature:landing_pages` on purpose. Task
+                // 10 shipped `unpublish` reachable with nothing to look at;
+                // this is what makes the reduced admin screen possible at
+                // all. See LandingPageController::status()'s own docblock for
+                // exactly what it does and does not return.
+                Route::get('status', [LandingPageController::class, 'status'])
+                    ->withoutMiddleware('check.subscription');
+
                 Route::middleware('feature:landing_pages')->group(function () {
                     Route::get('/',            [LandingPageController::class, 'show']);
                     Route::post('/',           [LandingPageController::class, 'store']);
                     Route::put('/',            [LandingPageController::class, 'update']);
                     Route::post('publish',     [LandingPageController::class, 'publish']);
                     Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
+                    Route::put('sections',     [LandingPageSectionController::class, 'update']);
+
+                    // The wizard: a GET that prefills it from what the
+                    // tenant already has, and a POST that applies the result
+                    // in one transaction. Inside the entitlement group with
+                    // the rest of the build verbs — it CREATES a page, which
+                    // is exactly what the plan pays for.
+                    Route::get('onboarding',   [LandingOnboardingController::class, 'show']);
+                    Route::post('onboarding',  [LandingOnboardingController::class, 'store']);
                 });
             });
 

@@ -105,6 +105,71 @@ h1,h2,h3{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
    300..500 variable range; it used to be synthesised down onto the 300 static
    and every h3 shipped lighter than the design asks for. */
 h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
+
+/* --- font pairing (RULING 5) ---------------------------------------------
+   A tenant CHOICE, off by default. `font_pairing` absent -> layout.blade.php
+   writes no `data-font-pairing` attribute on <html> -> none of the three
+   selectors below ever match -> the h1,h2,h3 rule above is the only one in
+   play, exactly as before this block existed. Purely additive: nothing
+   above this comment changes, and every existing published page (no theme
+   choice stored) renders byte-for-byte the same headings it always has.
+
+   All three reuse the SAME three families the layout already requests from
+   Google Fonts for every page (Fraunces, Inter Tight, IBM Plex Mono) -- no
+   new font, no new host. Body copy (Inter Tight, line 100) is left alone in
+   every pairing; only the heading treatment moves, because that is where a
+   visitor's eye lands first and where the three read as genuinely
+   different at a glance:
+     - classic   -- Fraunces exactly as shipped today (the house default,
+                    offered back as an explicit, nameable choice).
+     - editorial -- the SAME Fraunces file at a much lower optical size
+                    (opsz 30 rather than the display cut's 144). opsz is a
+                    genuinely SERVED axis -- the layout's own href asks for
+                    `Fraunces:opsz,wght@9..144,300..500` -- and unlike an
+                    interpolated weight, a different opsz value is a
+                    different set of glyph outlines: Fraunces' low-opsz
+                    cut carries more stroke-width contrast and more
+                    calligraphic detail than the tall, even display cut
+                    every other pairing renders at opsz 144. Weight and
+                    tracking still move on top of that, but the opsz shift
+                    is what actually earns "genuinely distinct at a
+                    glance."
+     - modern    -- IBM Plex Mono in place of Fraunces: no serif anywhere
+                    in a heading, tracked out, upper case.
+   (Fix round 1 correction: this pairing originally also set 'SOFT'/'WONK'
+   on editorial, copying the admin's own data-mood pattern of forking a
+   font's full axis set. Fraunces DOES define SOFT and WONK, but the
+   layout's href never requests them -- Google Fonts serves only the axes
+   named in the `family=Fraunces:...` axis list, so those two tags were
+   silently ignored by every browser and did nothing. Removed rather than
+   widening the href: adding SOFT+WONK nearly doubles the font payload on
+   every published tenant page, and this feature exists to be found.)
+   Each selector's specificity (:root[attr] + tag = 0,2,1) already beats the
+   plain h1,h2,h3 / h3 rules above (0,0,1 each) regardless of source order,
+   so declaring only what changes per pairing is enough -- classic does not
+   even need to repeat weight/letter-spacing, since leaving them unset lets
+   the base rule's own values keep winning for those properties. */
+:root[data-font-pairing="classic"] h1,
+:root[data-font-pairing="classic"] h2,
+:root[data-font-pairing="classic"] h3{
+  font-family:Fraunces,'Fraunces fb',Georgia,serif;
+  font-variation-settings:'opsz' 144;
+}
+:root[data-font-pairing="editorial"] h1,
+:root[data-font-pairing="editorial"] h2,
+:root[data-font-pairing="editorial"] h3{
+  font-family:Fraunces,'Fraunces fb',Georgia,serif;
+  font-weight:450;letter-spacing:-.02em;
+  font-variation-settings:'opsz' 30;
+}
+:root[data-font-pairing="modern"] h1,
+:root[data-font-pairing="modern"] h2,
+:root[data-font-pairing="modern"] h3{
+  font-family:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  font-weight:500;letter-spacing:.02em;text-transform:uppercase;
+}
+/* --- end font pairing ----------------------------------------------------- */
+
 p{margin:0}
 ul,ol{margin:0;padding:0;list-style:none}
 .rp section{padding:var(--pad) var(--gutter)}

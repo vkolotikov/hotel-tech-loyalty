@@ -1414,6 +1414,13 @@ class AuthController extends Controller
                     // would 402 on the new Growth+ gates without these.
                     'campaigns' => 'true', 'reviews' => 'true',
                     'engagement' => 'true', 'wallet' => 'true', 'chatbot' => 'true',
+                    // Landing page builder (2026-08-24): Enterprise-only,
+                    // same reason as the blocks above — without this a
+                    // platform admin's own SPA (useSubscription().hasFeature)
+                    // reads landing_pages as false and GatedRoute bounces
+                    // them off /landing-pages, even though RequireFeature
+                    // already waves platform admins through on the backend.
+                    'landing_pages' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
@@ -1548,6 +1555,9 @@ class AuthController extends Controller
                     // would 402 on the new Growth+ gates without these.
                     'campaigns' => 'true', 'reviews' => 'true',
                     'engagement' => 'true', 'wallet' => 'true', 'chatbot' => 'true',
+                    // Landing page builder (2026-08-24): Enterprise-only,
+                    // same reason as the blocks above.
+                    'landing_pages' => 'true',
                 ],
                 'products' => ['crm', 'chat', 'loyalty', 'education', 'avatar', 'booking'],
                 'billingAvailable' => false,
