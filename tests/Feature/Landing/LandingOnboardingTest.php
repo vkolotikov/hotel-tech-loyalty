@@ -206,14 +206,22 @@ class LandingOnboardingTest extends TestCase
         ]);
     }
 
-    /** A page for this brand, created the way the wizard would create one. */
-    private function makePage(string $slug = 'glamour-salon'): LandingPage
+    /**
+     * A page for this brand, created the way the wizard would create one.
+     *
+     * `$content` defaults to none, same as a plain apply()-created page: most
+     * callers just need a page to EXIST (for `completed`/one-per-brand
+     * tests), and only the contact-override test below needs one seeded with
+     * `content.contact` already on it.
+     */
+    private function makePage(string $slug = 'glamour-salon', array $content = []): LandingPage
     {
         $page = LandingPage::create([
             'slug'         => $slug,
             'template_key' => 'ruled_page',
             'industry'     => $this->org->resolved_industry,
             'status'       => LandingPage::STATUS_DRAFT,
+            'content'      => $content,
         ]);
 
         foreach (['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'] as $i => $key) {
@@ -449,16 +457,95 @@ class LandingOnboardingTest extends TestCase
         }
     }
 
-    public function test_a_property_with_no_address_or_phone_is_not_a_contact_section(): void
+    public function test_a_property_with_no_phone_address_or_email_is_not_a_contact_section(): void
     {
         // has('contact') is not "a Property exists" -- a band with a name and
-        // nothing else is an empty band.
-        $this->makeProperty(['phone' => null, 'address' => null]);
+        // nothing else is an empty band. Email is one of the three
+        // overridable, publishable facts ContactDetails carries (see
+        // App\Landing\ContactDetails), so it has to be null here too, or
+        // this fixture would leave a real contact fact standing and prove
+        // nothing about the "no contact at all" case.
+        $this->makeProperty(['phone' => null, 'address' => null, 'email' => null]);
 
         $contact = $this->section($this->prefill(), 'contact');
 
         $this->assertFalse($contact['available']);
         $this->assertSame(0, $contact['count']);
+    }
+
+    /**
+     * The mirror image of the test above, and the widening this task
+     * intends: an email-only Property was NOT a contact section before
+     * ContactDetails existed (has('contact') only ever asked about address
+     * and phone) -- but an email address is exactly as publishable a contact
+     * fact as either of those, and there is no reason a tenant who has only
+     * filled in an email should see the wizard tell them they have no
+     * contact section to offer.
+     */
+    public function test_a_property_with_only_an_email_is_a_contact_section(): void
+    {
+        $this->makeProperty(['phone' => null, 'address' => null]);
+
+        $contact = $this->section($this->prefill(), 'contact');
+
+        $this->assertTrue($contact['available']);
+        $this->assertSame(1, $contact['count']);
+    }
+
+    /**
+     * Task 4: the booking widget asks Check-in/Check-out/Adults/Children --
+     * hotel questions -- and is framed unmodified on every industry's page,
+     * so PageContent::count('booking') gates the section to the 'hotel'
+     * industry alone. Unlike an empty Services screen, "Booking (0)" has no
+     * self-explanatory fix on the tenant's own site -- there is no screen to
+     * go fill in -- so the wizard has to say WHY, naming the CTA text the
+     * page would otherwise print (LandingOnboardingService::SECTION_COPY's
+     * 'reason' entry, sprintf'd against the profile the same way every other
+     * industry-flavoured string here is).
+     *
+     * 'beauty', not 'education', is the industry that actually exercises this:
+     * IndustryProfile::all()['education']['defaultSections'] never lists
+     * 'booking' at all (Task 3), and sections() only ever iterates
+     * $content->profile->defaultSections -- so an education organisation's
+     * prefill never mentions the key in the first place, gated or not. Only
+     * 'hotel' and 'beauty' still list 'booking' there; beauty deliberately,
+     * per IndustryProfile::all()'s own docblock ("the row goes inert, your
+     * gate decides") -- so beauty is the one non-hotel industry the wizard
+     * can actually be asked about this row for.
+     */
+    public function test_booking_is_unavailable_for_a_beauty_organisation_with_its_reason(): void
+    {
+        $this->makeProperty(['phone' => '+371 111', 'address' => 'Elizabetes iela']);
+
+        $booking = $this->section($this->prefill(), 'booking');
+
+        $this->assertFalse($booking['available']);
+        $this->assertSame(0, $booking['count']);
+        $this->assertSame(
+            "Online booking currently supports hotel stays. Your 'Book appointment' button will point "
+                . 'visitors at your contact details instead.',
+            $booking['reason'],
+        );
+    }
+
+    /**
+     * The parity half: a hotel organisation is offered the section outright,
+     * with nothing to explain away -- 'reason' is null exactly when
+     * 'available' is true, for booking as for every other section.
+     */
+    public function test_booking_is_available_for_a_hotel_organisation_with_no_reason(): void
+    {
+        $org  = $this->makeOrg('Seaside Hotel', 'hotel');
+        $user = $this->makeUser($org);
+        $this->actAs($user, $this->defaultBrandId($org));
+
+        $this->makeProperty();
+
+        $booking = $this->section($this->prefill(), 'booking');
+
+        $this->assertTrue($booking['available']);
+        $this->assertSame(1, $booking['count']);
+        $this->assertNull($booking['reason']);
     }
 
     public function test_every_sections_availability_matches_the_renderers_own_answer(): void
@@ -663,6 +750,22 @@ class LandingOnboardingTest extends TestCase
         }
     }
 
+    /**
+     * Task 2: prefill.phone/email/address are the EFFECTIVE values
+     * (ContactDetails::resolve output) once a page exists, not the raw
+     * Property — an override the tenant already saved in content.contact
+     * must win over the Property, exactly as it will on the public page
+     * itself (PageContent already resolves the two the same way; this pins
+     * the wizard's own read of that same resolution).
+     */
+    public function test_prefill_contact_reflects_page_overrides_once_a_page_exists(): void
+    {
+        $this->makeProperty(['phone' => '+371 111']);
+        $this->makePage('glamour-salon', ['contact' => ['phone' => '+371 999']]);
+
+        $this->assertSame('+371 999', $this->prefill()['prefill']['phone']);
+    }
+
     public function test_completed_is_true_once_a_page_exists(): void
     {
         $this->makeProperty();
@@ -788,6 +891,33 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('Considered care', $page->content['hero']['subtext']);
         $this->assertSame('#1f5fa8', $page->theme['brand_color']);
         $this->assertSame('editorial', $page->theme['font_pairing']);
+    }
+
+    /**
+     * Task 2's whole point: content.contact must hold ONLY the fields the
+     * tenant actually changed from what the page would otherwise publish.
+     * Freezing an untouched field in would make it survive a LATER Property
+     * edit that was supposed to flow straight through — the exact failure
+     * ContactDetails' "blank override is absence, not erasure" rule already
+     * guards for typed-then-cleared fields; this is its mirror image for a
+     * field never typed into at all.
+     *
+     * Email is submitted identical to the Property's own (the wizard's own
+     * `form.email ?? prefill.email ?? ''` fallback sends the effective value
+     * whether or not the tenant touched the input), so it must be dropped;
+     * phone differs and must be kept.
+     */
+    public function test_apply_stores_only_the_contact_fields_the_tenant_edited(): void
+    {
+        $this->makeProperty(['phone' => '+371 111', 'email' => 'hi@mimi.lv']);
+
+        $this->apply($this->validPayload([
+            'contact' => ['phone' => '+371 999', 'email' => 'hi@mimi.lv'],
+        ]));
+
+        $stored = LandingPage::first()->content['contact'] ?? [];
+        $this->assertSame(['phone' => '+371 999'], $stored,
+            'Unedited fields must not be frozen into the page - the Property stays their source of truth.');
     }
 
     public function test_apply_is_atomic(): void

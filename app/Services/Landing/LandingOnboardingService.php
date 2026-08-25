@@ -2,12 +2,12 @@
 
 namespace App\Services\Landing;
 
+use App\Landing\ContactDetails;
 use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
 use App\Models\Brand;
 use App\Models\LandingPage;
 use App\Models\Organization;
-use App\Models\Property;
 use App\Support\CssColor;
 use App\Support\LandingPageGuard;
 use App\Support\LandingSlug;
@@ -84,9 +84,18 @@ class LandingOnboardingService
         'about'    => ['label' => 'About',    'source' => 'Words you write in the editor'],
         'team'     => ['label' => 'Team',     'source' => 'Your Team screen'],
         'reviews'  => ['label' => 'Reviews',  'source' => 'Reviews you have chosen to feature on your Reviews screen'],
-        'booking'  => ['label' => 'Booking',  'source' => 'Your booking button'],
-        'contact'  => ['label' => 'Contact',  'source' => 'Your address and phone number in Settings'],
-        'footer'   => ['label' => 'Footer',   'source' => 'Your business details in Settings'],
+        // 'reason' is the one entry here that is NOT a plain string: booking's
+        // unavailability (Task 4 -- PageContent::count('booking') gates the
+        // band to the 'hotel' industry) is the one case in this table whose
+        // explanation names the tenant's own CTA text, which only the profile
+        // knows -- see sectionReason() below, the same %s-sprintf shape
+        // 'source' itself has no need for. Every other key's absence is
+        // already self-explanatory from 'source' alone ("Add some from your
+        // Services screen"), so only 'booking' carries one.
+        'booking'  => ['label' => 'Booking',  'source' => 'Your booking button', 'reason' =>
+            "Online booking currently supports hotel stays. Your '%s' button will point visitors at your contact details instead."],
+        'contact'  => ['label' => 'Contact',  'source' => 'Your address and phone number in Properties'],
+        'footer'   => ['label' => 'Footer',   'source' => 'Your business details in Properties'],
     ];
 
     /** How many addresses in one family to try before giving up on it. */
@@ -212,7 +221,7 @@ class LandingOnboardingService
             // separate act with its own button.
             'status'          => LandingPage::STATUS_DRAFT,
             'theme'           => $this->theme($data),
-            'content'         => $this->content($data),
+            'content'         => $this->content($data, $org, $brandId),
         ]);
 
         // The catch sits OUTSIDE the transaction deliberately, exactly as
@@ -282,6 +291,12 @@ class LandingOnboardingService
                 'source_label' => self::SECTION_COPY[$key]['source'] ?? '',
                 'available'    => $content->has($key),
                 'count'        => $content->count($key),
+                // null once a section IS available -- there is nothing to
+                // explain -- and null for every unavailable section that
+                // carries no authored 'reason' (an empty Services screen
+                // needs no essay, 'source_label' already says where to go).
+                // Only 'booking' has one today; see SECTION_COPY's own note.
+                'reason'       => $content->has($key) ? null : $this->sectionReason($key, $content->profile),
             ])
             ->values()
             ->all();
@@ -294,6 +309,25 @@ class LandingOnboardingService
             'team'     => $profile->peopleLabel,
             default    => self::SECTION_COPY[$key]['label'] ?? Str::headline($key),
         };
+    }
+
+    /**
+     * Why an unavailable section is unavailable, in words the tenant did not
+     * have to ask for — or null, for every section whose absence is already
+     * explained by 'source_label' alone.
+     *
+     * 'reason' names the tenant's OWN primary CTA text ("Book a lesson",
+     * "Book your stay", ...), which is industry vocabulary this class does
+     * not carry an opinion about — sprintf against the profile handed to
+     * every other line in sections() keeps this one string in step with
+     * whatever hero.blade.php is actually printing on the button, rather
+     * than a copy of one industry's CTA hard-coded here.
+     */
+    private function sectionReason(string $key, IndustryProfile $profile): ?string
+    {
+        $template = self::SECTION_COPY[$key]['reason'] ?? null;
+
+        return $template === null ? null : sprintf($template, $profile->primaryCta);
     }
 
     /**
@@ -325,7 +359,7 @@ class LandingOnboardingService
      * guard apply() will use, and hence the last resort at the bottom, which
      * cannot fail to be a legal slug.
      */
-    private function suggestSlug(Organization $org, ?Brand $brand, ?Property $contact): string
+    private function suggestSlug(Organization $org, ?Brand $brand, ?ContactDetails $contact): string
     {
         $names = [$contact?->name, $brand?->name, $org->name];
 
@@ -429,14 +463,71 @@ class LandingOnboardingService
      * $page->content[$section->key] and hands it to the partial as $copy,
      * and hero.blade.php reads headline and subtext off that.
      */
-    private function content(array $data): array
+    private function content(array $data, Organization $org, ?int $brandId): array
     {
         $hero = $this->kept([
             'headline' => $data['copy']['headline'] ?? null,
             'subtext'  => $data['copy']['subtext']  ?? null,
         ]);
 
-        return $hero === [] ? [] : ['hero' => $hero];
+        $content = $hero === [] ? [] : ['hero' => $hero];
+
+        $contact = $this->contactOverrides($data, $org, $brandId);
+        if ($contact !== []) {
+            $content['contact'] = $contact;
+        }
+
+        return $content;
+    }
+
+    /**
+     * Only the contact fields the tenant actually changed from what THIS
+     * page would otherwise publish — the Property stays the source of truth
+     * for everything left alone (Task 2's whole point). Diffed against the
+     * SAME resolution prefill() shows the wizard, not the raw Property:
+     * ContactDetails::resolve($property, []) with an empty override array,
+     * because the page being built here does not exist yet and so carries
+     * none. A field the tenant never touched arrives holding exactly that
+     * effective value (the form's own `form.x ?? prefill.x ?? ''` fallback
+     * chain), so comparing against anything OTHER than this same resolution
+     * would freeze an untouched field into the page the moment the Property
+     * and the prefill happened to differ from a raw column read.
+     *
+     * filled() first, same as kept() above and for the identical reason: a
+     * blank string is absence to ContactDetails::resolve() (its own
+     * docblock), so storing one here would be a no-op override that only
+     * pollutes content.contact for no behavioural difference at all.
+     */
+    private function contactOverrides(array $data, Organization $org, ?int $brandId): array
+    {
+        $submitted = is_array($data['contact'] ?? null) ? $data['contact'] : [];
+
+        if ($submitted === []) {
+            return [];
+        }
+
+        // The probe carries no page (it does not exist yet) and so no
+        // content.contact overrides of its own — exactly prefill()'s own
+        // "no page yet" branch, reused rather than re-derived.
+        $effective = PageContent::for($this->probePage($org, $brandId))->contact;
+
+        $changed = [];
+
+        foreach (['phone', 'email', 'address'] as $key) {
+            $value = $submitted[$key] ?? null;
+
+            if (!is_string($value) || trim($value) === '') {
+                continue;
+            }
+
+            $trimmed = trim($value);
+
+            if ($trimmed !== $effective->{$key}) {
+                $changed[$key] = $trimmed;
+            }
+        }
+
+        return $changed;
     }
 
     /**

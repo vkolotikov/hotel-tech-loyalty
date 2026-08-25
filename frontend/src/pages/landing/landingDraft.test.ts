@@ -94,6 +94,29 @@ describe('mergeFormDraft', () => {
     expect(mergeFormDraft({ sections: ['services'] })).toEqual({})
     expect('sections' in mergeFormDraft({ sections: 'services' })).toBe(false)
   })
+
+  // Task 2's own fields — plain strings, same three guards as
+  // template_key/headline/subtext/brand_color above (this is the
+  // generic-string loop, not a bespoke branch), pinned with their own
+  // cases so a later refactor that drops them from that loop's key list
+  // fails a test rather than silently stopping restoring a saved
+  // in-progress contact edit.
+  it('keeps valid phone/email/address strings', () => {
+    expect(mergeFormDraft({ phone: '+371 999', email: 'hi@mimi.lv', address: '1 Rue'}))
+      .toEqual({ phone: '+371 999', email: 'hi@mimi.lv', address: '1 Rue' })
+  })
+
+  it('leaves phone/email/address absent when the patch never mentions them', () => {
+    const merged = mergeFormDraft({ headline: 'Hi' })
+    expect('phone' in merged).toBe(false)
+    expect('email' in merged).toBe(false)
+    expect('address' in merged).toBe(false)
+  })
+
+  it('drops phone/email/address values that are not strings, rather than trusting them', () => {
+    const merged = mergeFormDraft({ phone: 42, email: null, address: ['1 Rue'] })
+    expect(merged).toEqual({})
+  })
 })
 
 describe('clampStep', () => {
@@ -215,6 +238,12 @@ describe('buildPayload', () => {
     subtext: 'Quiet luxury',
     brandColor: '#1f5fa8',
     fontPairing: 'modern' as FontPairingKey,
+    // Untouched by default: the resolved value equals the effective
+    // prefill, which is exactly the "tenant never edited this" case —
+    // `contact: {}` on every existing test above that doesn't care about
+    // Task 2's diffing logic at all.
+    contact: { phone: '+371 20000000', email: 'hello@glamour.test', address: '12 Elizabetes iela' },
+    prefillContact: { phone: '+371 20000000', email: 'hello@glamour.test', address: '12 Elizabetes iela' },
   }
 
   it('assembles the exact wire shape the endpoint expects', () => {
@@ -229,6 +258,7 @@ describe('buildPayload', () => {
       slug: 'glamour-salon',
       copy: { headline: 'The Art of Wellness', subtext: 'Quiet luxury' },
       theme: { brand_color: '#1f5fa8', font_pairing: 'modern' },
+      contact: {},
       sections: [{ key: 'hero', enabled: true }],
     })
   })
@@ -275,6 +305,80 @@ describe('buildPayload', () => {
       sectionChoices: {},
     })
     expect(payload.sections).toEqual([{ key: 'about', enabled: true }])
+  })
+
+  // Task 2: only a contact field the tenant actually changed from the
+  // effective prefill (`ContactDetails::resolve()`'s output, server-side)
+  // may reach the request at all — the Property stays the source of truth
+  // for everything left alone. `resolved` here already stands in for the
+  // component's own `form.x ?? prefill.x ?? ''` fallback chain (this
+  // module never reads `form`/`prefill` directly — see `buildPayload`'s own
+  // docblock), so these tests exercise the diff on its own.
+  describe('buildPayload — contact diffing', () => {
+    const withContact = (
+      contact: { phone: string; email: string; address: string },
+      prefillContact: { phone: string | null; email: string | null; address: string | null },
+    ) =>
+      buildPayload({ ...base, contact, prefillContact, sections: [], sectionChoices: {} }).contact
+
+    it('omits every field the tenant never touched', () => {
+      const contact = withContact(
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+      )
+      expect(contact).toEqual({})
+    })
+
+    it('includes only the field whose resolved value differs from the effective prefill', () => {
+      const contact = withContact(
+        { phone: '+371 999', email: 'hi@mimi.lv', address: '1 Rue' },
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+      )
+      expect(contact).toEqual({ phone: '+371 999' })
+    })
+
+    it('includes every field that differs, not only the first', () => {
+      const contact = withContact(
+        { phone: '+371 999', email: 'new@mimi.lv', address: '2 Rue' },
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+      )
+      expect(contact).toEqual({ phone: '+371 999', email: 'new@mimi.lv', address: '2 Rue' })
+    })
+
+    // The mirror image of "untouched": a Property with NOTHING on file
+    // (prefill is null) and a tenant who fills the field in for the first
+    // time. null must not be compared as if it were the string 'null' or
+    // left the field looking "unchanged" against some other falsy stand-in.
+    it('treats a filled-in field as a change when the Property had nothing at all', () => {
+      const contact = withContact(
+        { phone: '+371 999', email: '', address: '' },
+        { phone: null, email: null, address: null },
+      )
+      expect(contact).toEqual({ phone: '+371 999' })
+    })
+
+    // A tenant who clears a field back to blank is NOT the same as one who
+    // never touched it, but per `LandingOnboardingService::contactOverrides()`'s
+    // own "changed AND filled" rule, a blank value is never sent regardless —
+    // ContactDetails::resolve() already treats a blank override as absence,
+    // so shipping '' would be a no-op override, not a real erasure.
+    it('never sends a field the tenant cleared to blank, even though that differs from the prefill', () => {
+      const contact = withContact(
+        { phone: '', email: 'hi@mimi.lv', address: '1 Rue' },
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+      )
+      expect(contact).toEqual({})
+    })
+
+    // Leading/trailing whitespace is not a real edit — the same
+    // `trim()` ContactDetails::resolve() applies server-side.
+    it('does not treat whitespace-only padding around the same value as a change', () => {
+      const contact = withContact(
+        { phone: '  +371 111  ', email: 'hi@mimi.lv', address: '1 Rue' },
+        { phone: '+371 111', email: 'hi@mimi.lv', address: '1 Rue' },
+      )
+      expect(contact).toEqual({})
+    })
   })
 
   it('preserves section order and covers every section handed to it', () => {

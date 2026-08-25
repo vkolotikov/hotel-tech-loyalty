@@ -14,38 +14,48 @@ use Tests\TestCase;
  * stylesheet's hardcoded values.
  *
  * That is correct exactly while a profile's accent IS the stylesheet's house
- * --brand. Add a second profile whose accent is not, and the page ships that
- * profile's colour underneath beauty's label, with nothing in the render path
- * to notice: resolve() computes a correct label for it and the template simply
- * does not emit it. If the new accent fails 4.5:1 against the hardcoded white,
- * the default page for that entire industry has an unreadable call to action.
+ * --brand — true of beauty alone, which is what the first test below now
+ * checks. The industry profile round (2026-08-25) deliberately gave the other
+ * eight profiles their OWN accents (spec §4.2): a page in one of them ships
+ * that profile's colour underneath beauty's hardcoded label/hover/halo, with
+ * nothing in the render path to notice — resolve() computes a correct label
+ * for it and the template simply does not emit it while isDerived is false.
+ * If the new accent fails 4.5:1 against the hardcoded white, the default page
+ * for that entire industry has an unreadable call to action.
  *
- * So this fails at the moment the assumption stops holding, rather than at the
- * moment a customer reads about it. Both values are READ OUT of the stylesheet
- * rather than restated here, so the test and the CSS cannot drift apart - the
- * failure this guards against is precisely two files disagreeing.
+ * That specific failure mode is what the SECOND test below still guards for
+ * every profile, not just beauty — a profile accent that cannot even carry
+ * the shared hardcoded label is a page-breaking regression regardless of
+ * whether it also gets its own tuned CSS triple one day. It is what caught
+ * fitness's spec value (#C25A2B, 4.383:1 — under the floor) during this same
+ * round; see IndustryProfile::all()'s docblock for the correction.
  *
- * If it fails: either give the new profile its own house triple in the
- * stylesheet (Appendix B 3.12a) and key it off the profile, or change the
- * layout to emit the derived family for that profile too. Do NOT re-derive
- * beauty's tokens to make the test pass - they are tuned, not generated.
+ * The FIRST test narrowed to beauty only, rather than failing for the eight
+ * new profiles: that failure would be this file re-discovering a decision
+ * spec §4.2 already made on purpose, not a regression. It stays here, rather
+ * than being deleted, as the trigger for the two-part remedy this docblock
+ * described before the round that added those profiles: either give a
+ * profile its own house triple in the stylesheet (Appendix B 3.12a — this is
+ * Phase 3c's design-controls work, deliberately out of scope here) or change
+ * the layout to emit the derived family for that profile too. Do NOT
+ * re-derive beauty's tokens to make it pass again - they are tuned, not
+ * generated.
  */
 class RuledPageHouseTokensTest extends TestCase
 {
     private const STYLESHEET = 'landing/ruled_page.css';
 
-    public function test_every_profile_accent_is_the_stylesheets_house_brand(): void
+    public function test_beautys_accent_is_the_stylesheets_house_brand(): void
     {
         $house = $this->token('brand');
 
-        foreach (IndustryProfile::all() as $id => $data) {
-            $this->assertSame(
-                strtolower($house),
-                strtolower($data['accent']),
-                "Profile [{$id}] has accent {$data['accent']}, but " . self::STYLESHEET
-                . " hardcodes --brand: {$house}. See this file's docblock."
-            );
-        }
+        $this->assertSame(
+            strtolower($house),
+            strtolower(IndustryProfile::all()['beauty']['accent']),
+            self::STYLESHEET . "'s hardcoded --brand: {$house} no longer matches beauty's profile"
+            . ' accent, which is the one colour the house tokens below were hand-measured against.'
+            . " See this file's docblock."
+        );
     }
 
     public function test_every_profile_accent_can_carry_the_stylesheets_house_label(): void

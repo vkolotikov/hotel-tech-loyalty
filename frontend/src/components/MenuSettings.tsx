@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Bot, Users, BedDouble, FileText, ClipboardList, LayoutDashboard, Settings as SettingsIcon,
-  Eye, EyeOff, Save, Info, Zap, ArrowRight,
+  Eye, EyeOff, Save, Info, Zap, ArrowRight, Globe,
 } from 'lucide-react'
 import { useVocabulary } from '../lib/vocabulary'
 
@@ -30,15 +30,28 @@ interface ToggleableGroup {
   description: string
 }
 
-const TOGGLEABLE: ToggleableGroup[] = [
+// Exported for MenuSettings.navGroupParity.test.ts, which checks this list
+// (plus LOCKED below) stays exactly in sync with Layout.tsx's own navGroups
+// — the omission that made "Landing pages" unhideable after Task 5 moved it
+// out of "AI Chat" with no entry added here.
+export const TOGGLEABLE: ToggleableGroup[] = [
   { label: 'AI Chat',          accent: '#a78bfa', icon: Bot,           description: 'Engagement Hub + chatbot setup. Hide if you do not use website chat.' },
+  // Task 5 fix round 1 — added alongside Layout.tsx's own new group (same
+  // `defaultLabel`, "Landing pages", so `hidden_nav_groups` keys match).
+  // Before this fix it hid bundled with "AI Chat"; moving it into its own
+  // group left it with no entry here at all, which meant no admin could
+  // ever hide it (unlike every sibling group) and the "X of N groups"
+  // readout below silently undercounted the live sidebar by one group.
+  // `MenuSettings.navGroupParity.test.ts` guards this list staying in sync
+  // with Layout.tsx's navGroups from here on.
+  { label: 'Landing pages',    accent: '#38bdf8', icon: Globe,         description: 'The landing page builder, plus a shortcut to Featured reviews. Hide if you do not use the landing page product.' },
   { label: 'Members & Loyalty',accent: '#fbbf24', icon: Users,         description: 'Members, tiers, benefits, offers. Hide if you do not run a loyalty program.' },
   { label: 'Bookings',         accent: '#34d399', icon: BedDouble,     description: 'Reservations + Services + Rooms + Payments. Hide if you do not use the booking engine.' },
   { label: 'CRM & Marketing',  accent: '#f472b6', icon: FileText,      description: 'Leads, tasks, reports, companies, campaigns, reviews. The sales side.' },
   { label: 'Operations',       accent: '#22d3ee', icon: ClipboardList, description: 'Planner, brands, properties, scan. Day-to-day ops board.' },
 ]
 
-const LOCKED: { label: string; icon: any; reason: string }[] = [
+export const LOCKED: { label: string; icon: any; reason: string }[] = [
   { label: 'Overview', icon: LayoutDashboard, reason: 'Holds the Dashboard — the landing page after login.' },
   { label: 'System',   icon: SettingsIcon,    reason: 'Holds Settings (this page) + Billing + Audit Log. Hidden would lock you out.' },
 ]

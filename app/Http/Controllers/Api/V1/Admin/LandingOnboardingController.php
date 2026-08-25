@@ -58,13 +58,33 @@ class LandingOnboardingController extends Controller
             'theme'              => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'theme.brand_color'  => 'nullable|string|max:32',
             'theme.font_pairing' => 'nullable|string|in:editorial,modern,classic',
+            // Task 2 (contact editable): a leaf per overridable field, same
+            // three ContactDetails::resolve() honours (App\Landing\ContactDetails)
+            // — name/city/country/currency/timezone stay Property-only and are
+            // deliberately not accepted here. Every message is named, the same
+            // reason the slug messages above are: Laravel's own default for an
+            // 'email' failure is "The contact.email field must be a valid email
+            // address." — a raw dotted key handed to a tenant is exactly the
+            // "must never reach a tenant" failure spec §9 already names for
+            // "slug", just spelled with a different field.
+            'contact'            => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
+            'contact.phone'      => 'nullable|string|max:64',
+            'contact.email'      => 'nullable|string|email|max:191',
+            'contact.address'    => 'nullable|string|max:191',
             'sections'           => 'nullable|array',
             'sections.*.key'     => 'required|string|max:64',
             'sections.*.enabled' => 'required|boolean',
         ], [
-            'slug.required' => 'Please choose a web address.',
-            'slug.string'   => 'That web address is not valid.',
-            'slug.max'      => 'Please use a shorter web address — up to 63 characters.',
+            'slug.required'         => 'Please choose a web address.',
+            'slug.string'           => 'That web address is not valid.',
+            'slug.max'              => 'Please use a shorter web address — up to 63 characters.',
+            'contact.phone.string'  => 'Please enter a valid phone number.',
+            'contact.phone.max'     => 'Please use a shorter phone number — up to 64 characters.',
+            'contact.email.string'  => 'Please enter a valid email address.',
+            'contact.email.email'   => 'Please enter a valid email address.',
+            'contact.email.max'     => 'Please use a shorter email address — up to 191 characters.',
+            'contact.address.string' => 'Please enter a valid address.',
+            'contact.address.max'   => 'Please use a shorter address — up to 191 characters.',
         ]);
 
         return response()->json(['page' => $this->service->apply($data)], 201);

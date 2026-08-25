@@ -6,7 +6,7 @@ import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, Loade
 import { api } from '../../lib/api'
 import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
-import { isDataBackedSection, isOfferable, type SectionKey } from './sections'
+import { isDataBackedSection, isOfferable, unavailableReason, type SectionKey } from './sections'
 import {
   buildSectionRows, buildSectionsPayload, moveSection, toggleSection, SECTION_CONTENT_FIELDS,
   type EditorSectionRow, type PageSection, type SectionAvailability,
@@ -95,6 +95,12 @@ const FIELD_FALLBACK: Record<string, string> = {
   lead: 'Opening line',
   body: 'Body text',
   terms: 'Terms',
+  // Task 2: App\Landing\ContactDetails's three overridable fields, bound
+  // through the same content-field mechanism as every fallback above (see
+  // `SECTION_CONTENT_FIELDS.contact` in `editorSections.ts`).
+  phone: 'Phone',
+  email: 'Email',
+  address: 'Address',
 }
 
 /**
@@ -676,10 +682,14 @@ function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldCh
               </span>
             ) : (
               <span className="block text-xs text-warning/90 mt-0.5">
-                {t('landing_pages.editor.section_unavailable', {
+                {/* Fix 2 (phase 3a correctness review) — same preference as
+                    the wizard's identical step 4 branch: the backend's own
+                    authored reason, when it sent one, beats the generic
+                    instruction. */}
+                {unavailableReason(row, t('landing_pages.editor.section_unavailable', {
                   source: row.sourceLabel,
                   defaultValue: 'Nothing to show yet. Add some from {{source}}.',
-                })}
+                }))}
               </span>
             )}
           </div>
@@ -706,6 +716,22 @@ function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldCh
 
       {offerable && (
         <div className="space-y-3 pl-7">
+          {/* Task 2: the contact fields below are the ONLY per-page override
+              in this whole section list — every other field here IS the
+              page's content, but phone/email/address fall back to the
+              tenant's Properties screen the moment a field is left blank
+              (App\Landing\ContactDetails::resolve()). That is a meaningfully
+              different mental model from "type your headline here", so it
+              gets an explicit caption rather than leaving the tenant to
+              infer it from a label alone. */}
+          {row.key === 'contact' && (
+            <p className="text-xs text-t-secondary -mt-1 mb-1">
+              {t(
+                'landing_pages.editor.contact_caption',
+                'Filled from your Properties screen — edit here to override for this page.',
+              )}
+            </p>
+          )}
           {fields.map(field => (
             <div key={field.name}>
               <label className={label} htmlFor={`lp-${row.key}-${field.name}`}>
@@ -722,6 +748,16 @@ function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldCh
               ) : (
                 <input
                   id={`lp-${row.key}-${field.name}`}
+                  // Fix 1 (phase 3a correctness review): mirrors the
+                  // backend's own `content.contact.email`/`.phone`/
+                  // `.address` rules client-side, same reasoning as the web
+                  // address input's `maxLength` a few components over —
+                  // catch the obviously-wrong value here rather than
+                  // round-trip it to the server for a 422. `field.type`/
+                  // `field.maxLength` are undefined for every field but
+                  // contact's three, so every other input is unaffected.
+                  type={field.type ?? 'text'}
+                  maxLength={field.maxLength}
                   className={input}
                   value={content[field.name] ?? ''}
                   onChange={e => onFieldChange(field.name, e.target.value)}

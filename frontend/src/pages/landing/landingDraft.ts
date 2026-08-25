@@ -80,6 +80,13 @@ export type FontPairingKey = (typeof FONT_PAIRINGS)[number]
  * simply absent, so `buildPayload` can fall through to "on by default",
  * matching the same default `LandingOnboardingService::chosenSections()`
  * uses server-side (`$chosen[$key] ?? true`).
+ *
+ * Task 2: `phone`/`email`/`address` follow the identical "absent means
+ * untouched" discipline as every field above — the component's own
+ * `form.phone ?? prefill.phone ?? ''` fallback chain, and `undefined` here
+ * is what lets `buildPayload` tell "the tenant never opened this field"
+ * apart from "the tenant cleared it back to the Property's own value",
+ * which is what the diff-against-prefill logic below actually needs.
  */
 export type WizardForm = {
   template_key?: string
@@ -87,6 +94,9 @@ export type WizardForm = {
   subtext?: string
   brand_color?: string
   font_pairing?: FontPairingKey
+  phone?: string
+  email?: string
+  address?: string
   sections?: Record<string, boolean>
 }
 
@@ -118,7 +128,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 export function mergeFormDraft(patch: unknown): WizardForm {
   const out: WizardForm = {}
   if (!isPlainObject(patch)) return out
-  for (const key of ['template_key', 'headline', 'subtext', 'brand_color'] as const) {
+  for (const key of ['template_key', 'headline', 'subtext', 'brand_color', 'phone', 'email', 'address'] as const) {
     const value = patch[key]
     if (typeof value === 'string') out[key] = value
   }
@@ -214,13 +224,63 @@ export function clearDraft(brandId: number | null, storage: DraftStorage = local
 /** The exact wire shape `POST /v1/admin/landing-pages/onboarding` expects
  *  (see `LandingOnboardingController::store()`'s validation) — snake_case,
  *  same discipline as `OnboardingPrefill` in `LandingWizard.tsx`: a straight
- *  write of one request, not a layer anything else depends on. */
+ *  write of one request, not a layer anything else depends on.
+ *
+ *  Task 2: `contact` keys are OPTIONAL and, per field, present only when the
+ *  tenant's resolved value differs from the effective prefill — see
+ *  `contactOverrides()` below. This is belt-and-braces with the server's own
+ *  diff in `LandingOnboardingService::contactOverrides()`, not a
+ *  replacement for it: the server cannot trust what any caller (this
+ *  component, a stale draft, a direct API call) claims was "edited", so it
+ *  re-derives the same diff against its own effective prefill before
+ *  writing anything. Keeping the client's payload already-diffed just means
+ *  the common case (the tenant touched nothing) sends an empty `contact:
+ *  {}` rather than the three current effective values relitigated
+ *  server-side for no reason. */
 export type ApplyPayload = {
   template_key: string
   slug: string
   copy: { headline: string; subtext: string }
   theme: { brand_color: string; font_pairing: FontPairingKey }
+  contact: { phone?: string; email?: string; address?: string }
   sections: { key: string; enabled: boolean }[]
+}
+
+/** The effective prefill values `buildPayload` diffs a resolved contact
+ *  field against — `OnboardingPrefill`'s own `phone`/`email`/`address`,
+ *  copied here rather than imported so this module (already independent of
+ *  `LandingWizard.tsx` — see this file's own docblock) stays that way. */
+export type PrefillContact = {
+  phone: string | null
+  email: string | null
+  address: string | null
+}
+
+/**
+ * Only the contact fields whose RESOLVED value (the component's own
+ * `form.x ?? prefill.x ?? ''` fallback, already applied by the caller) is
+ * both filled and different from the effective prefill — the same "changed
+ * AND filled" test `LandingOnboardingService::contactOverrides()` applies
+ * server-side, so the two cannot disagree about what counts as "the tenant
+ * edited this". A field equal to its prefill (untouched, or typed back to
+ * the same value) is omitted entirely rather than sent as `''`: an omitted
+ * key and a blank one both mean "no override" to `ContactDetails::resolve()`,
+ * but only the omitted form keeps the outgoing request honest about what
+ * actually changed.
+ */
+function contactOverrides(
+  resolved: { phone: string; email: string; address: string },
+  prefill: PrefillContact,
+): ApplyPayload['contact'] {
+  const out: ApplyPayload['contact'] = {}
+
+  for (const key of ['phone', 'email', 'address'] as const) {
+    const value = resolved[key].trim()
+    if (value === '' || value === (prefill[key] ?? '')) continue
+    out[key] = value
+  }
+
+  return out
 }
 
 /**
@@ -246,6 +306,8 @@ export function buildPayload(args: {
   subtext: string
   brandColor: string
   fontPairing: FontPairingKey
+  contact: { phone: string; email: string; address: string }
+  prefillContact: PrefillContact
   sections: SectionMeta[]
   sectionChoices: Record<string, boolean>
 }): ApplyPayload {
@@ -254,6 +316,7 @@ export function buildPayload(args: {
     slug: args.slug,
     copy: { headline: args.headline, subtext: args.subtext },
     theme: { brand_color: args.brandColor, font_pairing: args.fontPairing },
+    contact: contactOverrides(args.contact, args.prefillContact),
     sections: args.sections.map(section => ({
       key: section.key,
       enabled: isOfferable(section) ? (args.sectionChoices[section.key] ?? true) : false,

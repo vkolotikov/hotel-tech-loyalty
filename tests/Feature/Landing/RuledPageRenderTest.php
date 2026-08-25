@@ -7,6 +7,7 @@ use App\Models\Property;
 use App\Models\Service;
 use App\Support\Accent;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
@@ -842,5 +843,241 @@ class RuledPageRenderTest extends TestCase
             }
         }
         $this->assertGreaterThan(0, $checked, 'No axis tag was found inside any font-variation-settings declaration.');
+    }
+
+    /**
+     * The claim this task has to prove: introducing ContactDetails must not
+     * change one byte of what a ROUTINE page renders today — a Property with
+     * a phone and an address, and no content.contact key at all, which is
+     * every existing live page's actual shape. Captured against the
+     * renderer BEFORE ContactDetails was wired into PageContent::for() at
+     * all (see this commit's own history — the capture predates the wiring
+     * commit), so a byte drifting here means the wrapping changed behaviour
+     * rather than merely changing the type. The nonce is random per
+     * request and is the only thing normalised out.
+     *
+     * Deliberately phone+address, not email-only: an email-only Property is
+     * the one case this task's widening of has('contact') is SUPPOSED to
+     * change (see test_an_email_only_property_now_renders_the_contact_band
+     * below), so it has no business in a parity fixture.
+     *
+     * Task 4 update: this fixture's industry is 'beauty', which is no longer
+     * one PageContent::count('booking') admits (the widget's Check-in/
+     * Check-out/Adults/Children questions fit hotel stays only), so the
+     * golden below no longer carries the booking band at all, and the hero
+     * CTA now reads #contact rather than a #booking anchor with nothing to
+     * scroll to. This is the one place that bug fix is expected to change
+     * this test's bytes; RuledPageSectionsTest's own hotel-industry fixtures
+     * are what still pin the booking band byte-for-byte where it belongs.
+     */
+    public function test_the_contact_band_renders_byte_identical_to_before_contactdetails(): void
+    {
+        $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'address' => '12 Elizabetes iela',
+            'city' => 'Riga', 'country' => 'Latvia', 'is_active' => true,
+        ]);
+
+        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+
+        $golden = '<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Glamour Salon</title>
+<meta name="description" content="">
+
+<meta property="og:title" content="Glamour Salon">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
+<script type="application/ld+json" nonce="TESTNONCE">
+  {"@context":"https:\\/\\/schema.org","@type":"BeautySalon","name":"Glamour Salon","url":"http:\\/\\/sites.hexa-tech.uk\\/glamour-salon","address":{"@type":"PostalAddress","streetAddress":"12 Elizabetes iela","addressLocality":"Riga","addressCountry":"Latvia"},"telephone":"+371 20000000"}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+
+<style nonce="TESTNONCE">
+  :root{
+    --brand: #9b5c8f;
+  }
+</style>
+</head>
+<body class="rp">
+
+
+<div class="rule-progress" aria-hidden="true"></div>
+
+
+
+<main>
+
+  <section data-section="hero" class="band rp-hero">
+  <div class="wrap">
+          <h1>The Art of Wellness</h1>
+            
+          <a class="rp-cta" href="#contact">Book appointment</a>
+      </div>
+</section>
+  <section id="contact" data-section="contact" class="band band--ink rp-contact">
+  <div class="wrap rp-contact__grid">
+    <div class="rp-contact__details">
+      <h2 class="band__kicker">Finding us</h2>
+
+              <div class="rp-field">
+          <p class="rp-field__label">Address</p>
+                      <p class="rp-field__value">12 Elizabetes iela</p>
+                      <p class="rp-field__value">Riga</p>
+                      <p class="rp-field__value">Latvia</p>
+                  </div>
+      
+              <div class="rp-field">
+          <p class="rp-field__label">Telephone</p>
+          <p class="rp-field__value"><a class="rp-field__link" href="tel:+37120000000">+371 20000000</a></p>
+        </div>
+      
+          </div>
+
+    
+          
+      <a class="rp-map" href="https://maps.google.com/?q=12+Elizabetes+iela%2C+Riga%2C+Latvia"
+         target="_blank" rel="noopener">
+        <span class="rp-map__field" aria-hidden="true"><span class="rp-map__dot"></span></span>
+        <span class="rp-map__address">12 Elizabetes iela, Riga, Latvia</span>
+        <span class="rp-map__open">Open in Maps &#8599;</span>
+      </a>
+      </div>
+</section>
+</main>
+
+<footer class="rp-footer" data-section="footer">
+  <div class="wrap">
+    <p class="rp-footer__legal">&copy; 2026 Glamour Salon</p>
+  </div>
+</footer>
+
+
+
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+
+</body>
+</html>
+';
+
+        $this->assertSame($golden, $body);
+    }
+
+    // ─── content.contact overrides and hostility (App\Landing\ContactDetails) ──
+
+    /**
+     * The other half of the JSON-LD claim the parity test above does not
+     * cover: a page-level phone override reaches <script type="application/
+     * ld+json"> exactly where the bare Property's phone did before, while
+     * addressLocality — never overridable, see ContactDetails — still comes
+     * from the Property untouched.
+     */
+    public function test_json_ld_telephone_reflects_a_page_level_override_while_address_locality_stays_the_propertys(): void
+    {
+        $page = $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 111', 'address' => '12 Elizabetes iela',
+            'city' => 'Riga', 'country' => 'Latvia', 'is_active' => true,
+        ]);
+        $page->update(['content' => ['hero' => ['headline' => 'The Art of Wellness'],
+            'contact' => ['phone' => '+371 999']]]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('"telephone":"+371 999"', $body);
+        $this->assertStringNotContainsString('"telephone":"+371 111"', $body);
+        $this->assertStringContainsString('"addressLocality":"Riga"', $body);
+    }
+
+    /**
+     * The widening this task makes deliberately: has('contact') used to ask
+     * only about address and phone, so an email-only Property published no
+     * contact band at all. An email address is exactly as publishable a
+     * contact fact as either of those. RuledPageSectionsTest pins the same
+     * behaviour at the section-partial level; this is the same claim at the
+     * full-page render this task's parity test above also exercises.
+     */
+    public function test_an_email_only_property_now_renders_the_contact_band(): void
+    {
+        $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'email' => 'hello@example.test', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="contact"', $body);
+        $this->assertStringContainsString('href="mailto:hello@example.test"', $body);
+    }
+
+    /**
+     * content.contact is read straight out of a schemaless `array` cast with
+     * no schema behind it (see ScalarTree's own docblock), and these rows are
+     * written exactly as a pre-existing, hand-edited, or raw-imported row
+     * would be: a direct UPDATE, bypassing both the admin API's validation
+     * and Eloquent's own re-encoding. The public page must survive every one
+     * of these shapes with a 200 -- degrading to "no override" is fine and
+     * expected, a 500 is not -- on the live page AND on preview, since
+     * preview shares this render path (see LandingPageController::render()'s
+     * own comment on exactly that).
+     */
+    private function storeRawContact(LandingPage $page, mixed $contactValue): void
+    {
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode(['hero' => ['headline' => 'The Art of Wellness'], 'contact' => $contactValue]),
+        ]);
+    }
+
+    private function assertPageAndPreviewSurvive(LandingPage $page): void
+    {
+        $this->get('http://' . config('landing.host') . '/glamour-salon')->assertOk();
+
+        $page->refresh();
+        $page->status = 'draft';
+        $page->save();
+
+        $url = URL::temporarySignedRoute('landing.preview', now()->addHours(2), ['page' => $page->id]);
+        $this->get($url)->assertOk();
+    }
+
+    public function test_a_nested_contact_phone_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawContact($page, ['phone' => ['x']]);
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    public function test_a_string_shaped_contact_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawContact($page, 'just a string');
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    public function test_an_object_shaped_contact_with_no_recognised_fields_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawContact($page, ['unexpected' => 'value', 'another' => 123]);
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    public function test_a_200k_character_contact_field_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawContact($page, ['phone' => str_repeat('x', 200_000)]);
+
+        $this->assertPageAndPreviewSurvive($page);
     }
 }

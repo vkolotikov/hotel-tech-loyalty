@@ -60,12 +60,13 @@ class IndustryProfileTest extends TestCase
     }
 
     /**
-     * The vocabulary fallback (DEFAULT_INDUSTRY = 'hotel') and the
-     * schema.org type answer "did this actually resolve?" differently, and
-     * must: publishing LodgingBusiness for a business that was never
-     * identified as a hotel is a false claim to Google, not a graceful
-     * degrade the way falling back to beauty's vocabulary is. An empty
-     * string, garbage, and null must all publish the generic type.
+     * The vocabulary fallback ('other', since the 2026-08-25 industry
+     * profile round — see IndustryProfile::for()) and the schema.org type
+     * answer "did this actually resolve?" differently, and must: publishing
+     * a named subtype for a business that was never identified as that
+     * industry is a false claim to Google, not a graceful degrade the way
+     * falling back to 'other's vocabulary is. An empty string, garbage, and
+     * null must all publish the generic type.
      */
     public function test_an_unresolved_industry_publishes_the_generic_schema_type(): void
     {
@@ -74,8 +75,10 @@ class IndustryProfileTest extends TestCase
         }
 
         // The contrast: 'hotel' passed explicitly DOES resolve, and gets
-        // its own subtype rather than the generic fallback.
-        $this->assertSame('LodgingBusiness', IndustryProfile::for('hotel')->schemaType());
+        // its own subtype rather than the generic fallback. 'Hotel' since
+        // the industry profile round (2026-08-25) — see
+        // IndustryProfile::SCHEMA_TYPES.
+        $this->assertSame('Hotel', IndustryProfile::for('hotel')->schemaType());
     }
 
     public function test_every_profile_key_is_a_real_industry_id(): void
@@ -121,5 +124,41 @@ class IndustryProfileTest extends TestCase
     public function test_an_unknown_section_gets_no_eyebrow_rather_than_its_key(): void
     {
         $this->assertSame('', IndustryProfile::for('beauty')->kicker('nonsense'));
+    }
+
+    public function test_every_platform_industry_has_an_authored_profile(): void
+    {
+        foreach (Organization::INDUSTRIES as $id) {
+            $this->assertArrayHasKey($id, IndustryProfile::all(),
+                "Industry '{$id}' silently inherits another industry's vocabulary.");
+        }
+    }
+
+    public function test_an_unknown_industry_falls_back_to_other_not_beauty(): void
+    {
+        $p = IndustryProfile::for('cryptozoology');
+        $this->assertSame('Services', $p->servicesLabel);
+        $this->assertNotSame('Treatments', $p->servicesLabel);
+    }
+
+    public function test_education_speaks_education(): void
+    {
+        $p = IndustryProfile::for('education');
+        $this->assertSame('Courses', $p->servicesLabel);
+        $this->assertSame('Instructors', $p->peopleLabel);
+    }
+
+    /**
+     * The alias layer (Organization::INDUSTRY_ALIASES) resolves inside
+     * Organization::normaliseIndustry(), which IndustryProfile::for() calls
+     * directly — there is no separate helper to drive here, this IS the
+     * real path every consumer of for() goes through.
+     */
+    public function test_aliases_resolve_before_profile_lookup(): void
+    {
+        $this->assertSame(
+            IndustryProfile::for('restaurant')->servicesLabel,
+            IndustryProfile::for('hospitality')->servicesLabel,
+        );
     }
 }

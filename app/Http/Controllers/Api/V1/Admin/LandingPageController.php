@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -170,6 +171,62 @@ class LandingPageController extends Controller
             'slug.string' => 'That web address is not valid.',
             'slug.max'    => 'Please use a shorter web address — up to 63 characters.',
         ]);
+
+        // content.contact.* used to be constrained by ScalarLeaves(depth:2)
+        // above alone -- SHAPE, not FORMAT: any scalar was a legal leaf, so
+        // email='not an email' and a 200,000-character phone both saved with
+        // a 200 and published verbatim into contact.blade.php's `mailto:`
+        // and the LocalBusiness JSON-LD. This is the SECOND door into the
+        // same column -- LandingOnboardingController::store() has enforced
+        // exactly these per-field rules on `contact.*` since Task 2 -- and a
+        // tenant editing an existing page through this screen must not be
+        // held to a looser standard than one running the wizard for the
+        // first time.
+        //
+        // A SEPARATE Validator instance, deliberately, rather than sibling
+        // rule keys ('content.contact.phone' etc.) added to the SAME
+        // validate() call above: Laravel's own anti-mass-assignment safety
+        // net (`Validator::$excludeUnvalidatedArrayKeys`, on by default
+        // since Laravel 9) silently drops an entire array-typed field from
+        // `validated()`'s result the moment ANY dotted rule names one of its
+        // children, because there is then no wildcard rule covering the
+        // OTHER children ('content.hero', 'content.about', ...) — every
+        // section but contact would have quietly vanished from every save
+        // that also touched contact, and from every save that touched
+        // NEITHER (a content.contact.* rule key existing at all is what
+        // trips it, not whether contact itself was submitted). Caught by
+        // test_updating_content_without_a_slug_leaves_the_address_alone
+        // during this fix, which is the regression test for exactly that.
+        // Only `is_array()`, never assumed: content.contact may legitimately
+        // be a plain non-array scalar on data written before this column had
+        // a shape at all (RuledPageRenderTest's own
+        // "string shaped contact does not take the page down"), and
+        // Validator::make() takes an array, not a scalar.
+        $contact = $data['content']['contact'] ?? null;
+
+        if (is_array($contact)) {
+            Validator::make($contact, [
+                'phone'   => 'nullable|string|max:64',
+                'email'   => 'nullable|string|email|max:191',
+                'address' => 'nullable|string|max:191',
+            ], [
+                // Every message named for the identical reason the slug
+                // messages above are: Laravel's own default for a failed
+                // `email` rule is "The email field must be a valid email
+                // address." -- fine here since 'email' is already the
+                // honest name of the field, but the OTHER defaults ("The
+                // phone field must not be greater than 64 characters.") are
+                // not something a tenant filling in a marketing page should
+                // ever read verbatim.
+                'phone.string'   => 'Please enter a valid phone number.',
+                'phone.max'      => 'Please use a shorter phone number — up to 64 characters.',
+                'email.string'   => 'Please enter a valid email address.',
+                'email.email'    => 'Please enter a valid email address.',
+                'email.max'      => 'Please use a shorter email address — up to 191 characters.',
+                'address.string' => 'Please enter a valid address.',
+                'address.max'    => 'Please use a shorter address — up to 191 characters.',
+            ])->validate();
+        }
 
         if (isset($data['slug'])) {
             $data['slug'] = LandingPageGuard::validatedSlug($data['slug'], $page->id);

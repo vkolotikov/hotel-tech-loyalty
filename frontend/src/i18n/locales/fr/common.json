@@ -75,6 +75,7 @@
     "groups": {
       "overview": "Vue d'ensemble",
       "ai_chat": "Chat IA",
+      "landing_pages": "Pages de destination",
       "members_loyalty": "Membres & Fidélité",
       "bookings": "Réservations",
       "crm_marketing": "CRM & Marketing",
@@ -110,7 +111,8 @@
       "billing": "Facturation",
       "audit_log": "Journal d'audit",
       "settings": "Paramètres",
-      "landing_pages": "Page de destination"
+      "landing_pages": "Page de destination",
+      "landing_featured_reviews": "Avis mis en avant"
     }
   },
   "topbar": {
@@ -3038,14 +3040,15 @@
       "services_count": "{{count}} {{label}} à afficher",
       "details_kicker": "Vos informations",
       "edit_in_settings": "Modifier dans les Paramètres",
+      "open_properties": "Ouvrir les établissements",
       "business_name": "Nom de l’établissement",
-      "business_name_hint": "Ajoutez le nom de votre établissement dans les Paramètres pour qu’il apparaisse sur votre page.",
+      "business_name_hint": "Ajoutez le nom de votre établissement dans Établissements pour qu’il apparaisse sur votre page.",
       "phone": "Téléphone",
-      "phone_hint": "Ajoutez un numéro de téléphone dans les Paramètres pour que les visiteurs puissent vous appeler.",
+      "phone_hint": "Ajoutez un numéro de téléphone pour que les visiteurs puissent vous appeler",
       "email": "E-mail",
-      "email_hint": "Ajoutez une adresse e-mail dans les Paramètres pour que les visiteurs puissent vous écrire.",
+      "email_hint": "Ajoutez une adresse e-mail pour que les visiteurs puissent vous écrire",
       "address": "Adresse",
-      "address_hint": "Ajoutez votre adresse dans les Paramètres pour que les visiteurs puissent vous trouver.",
+      "address_hint": "Ajoutez votre adresse pour que les visiteurs puissent vous trouver",
       "headline_label": "Titre",
       "headline_placeholder": "Une phrase courte qui dit ce que vous faites de mieux",
       "subtext_label": "Texte d’accompagnement",
@@ -3098,6 +3101,10 @@
       "field_lead": "Phrase d’introduction",
       "field_body": "Corps du texte",
       "field_terms": "Conditions",
+      "field_phone": "Téléphone",
+      "field_email": "E-mail",
+      "field_address": "Adresse",
+      "contact_caption": "Rempli depuis votre page Établissements — modifiez ici pour le remplacer sur cette page.",
       "preview_title": "Aperçu",
       "preview_desktop": "Ordinateur",
       "preview_mobile": "Mobile",
@@ -3114,5 +3121,15 @@
       "locked_body": "Votre offre n’inclut plus le créateur de pages : l’assistant, la modification et la publication sont donc désactivés ici. Retirer cette page du web fonctionne toujours — utilisez le bouton ci-dessus.",
       "upgrade_cta": "Voir les offres"
     }
+  },
+  "reviews": {
+    "landing_page": "Page de destination",
+    "feature": "Mettre en avant",
+    "feature_hint": "Afficher cet avis sur votre page de destination",
+    "featured": "Sur votre page",
+    "featured_on": "Ajouté à votre page de destination",
+    "featured_off": "Retiré de votre page de destination",
+    "featured_on_section_off": "Enregistré. Activez la section Avis dans l’éditeur de votre page de destination pour l’afficher.",
+    "featured_on_no_page": "Enregistré. Il apparaîtra une fois votre page de destination créée."
   }
 }

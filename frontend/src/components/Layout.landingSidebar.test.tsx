@@ -176,6 +176,28 @@ function renderSidebar(sub: SubscriptionData): string {
   )
 }
 
+/**
+ * Task 5 — `/landing-pages` moved out of "AI Chat" into its own "Landing
+ * pages" group (`nav.groups.landing_pages`), alongside a second item for
+ * `/reviews`. Slices the rendered HTML from this group's header text to
+ * the next group's header text, so a test can assert a link lives INSIDE
+ * this group specifically, rather than merely somewhere on the page —
+ * which is what actually proves the group nesting didn't disturb the
+ * `_lapsed` treatment (Task 11 M2 round 2, above) once the item moved.
+ *
+ * String-slicing rather than a DOM query, matching this file's own
+ * established style (`renderToStaticMarkup` + regex/substring assertions)
+ * — see the docblock at the top of this file for why there is no DOM here
+ * to query in the first place.
+ */
+function sliceGroup(html: string, groupLabel: string, nextGroupLabel?: string): string {
+  const start = html.indexOf(`>${groupLabel}<`)
+  if (start === -1) throw new Error(`Group "${groupLabel}" not found in rendered sidebar HTML.`)
+  const end = nextGroupLabel ? html.indexOf(`>${nextGroupLabel}<`, start) : -1
+  if (nextGroupLabel && end === -1) throw new Error(`Group "${nextGroupLabel}" not found after "${groupLabel}".`)
+  return end === -1 ? html.slice(start) : html.slice(start, end)
+}
+
 describe('Layout sidebar — landing nav renderer (Task 11 M2, round 2)', () => {
   it('gives the downgraded-but-still-paying tenant a real link to /landing-pages, while a control item locked on a DIFFERENT feature still renders the dead upgrade button', () => {
     const html = renderSidebar(subscriptionData({
@@ -203,6 +225,12 @@ describe('Layout sidebar — landing nav renderer (Task 11 M2, round 2)', () => 
     // assertion above isn't just "every locked item became a link".
     expect(html).toMatch(/<button[^>]*aria-label="[^"]*Brands[^"]*"[^>]*>/)
     expect(html).not.toContain('href="/brands"')
+
+    // Task 5: the `_lapsed` anchor still holds once `/landing-pages` moved
+    // into its own "Landing pages" group — the real link lives INSIDE that
+    // group's own rendered block, not merely somewhere else on the page.
+    const landingGroup = sliceGroup(html, 'Landing pages', 'Members &amp; Loyalty')
+    expect(landingGroup).toContain('href="/landing-pages"')
   })
 
   it('control: a fully entitled tenant gets a plain, unlocked landing-pages link with no lock styling', () => {
@@ -210,5 +238,27 @@ describe('Layout sidebar — landing nav renderer (Task 11 M2, round 2)', () => 
 
     expect(html).toContain('href="/landing-pages"')
     expect(html).not.toMatch(/<button[^>]*aria-label="[^"]*Landing Page[^"]*"[^>]*>/)
+  })
+
+  // Task 5: an entitled org's sidebar renders a "Landing pages" group
+  // (nav.groups.landing_pages) containing BOTH /landing-pages and the new
+  // /reviews door (nav.items.landing_featured_reviews) — a second entry
+  // point into the Reviews screen alongside its existing home in "CRM &
+  // Marketing" (Marketing's own altPaths), not a replacement for it.
+  it('groups /landing-pages and /reviews under a single "Landing pages" sidebar group for an entitled org', () => {
+    // `reviews` needs its own explicit `'true'` — it is not part of the
+    // `subscriptionData()` factory's default `features`, and passing
+    // `features` here REPLACES that object rather than merging with it, so
+    // every other feature this render path checks has to be repeated.
+    const html = renderSidebar(subscriptionData({
+      features: {
+        ai_insights: 'true', engagement: 'true', chatbot: 'true', campaigns: 'true',
+        time_management: 'true', brands: 'true', landing_pages: 'true', reviews: 'true',
+      },
+    }))
+
+    const landingGroup = sliceGroup(html, 'Landing pages', 'Members &amp; Loyalty')
+    expect(landingGroup).toContain('href="/landing-pages"')
+    expect(landingGroup).toContain('href="/reviews"')
   })
 })

@@ -36,11 +36,19 @@ class RuledPageSectionsTest extends TestCase
         $this->setUpLandingContentSchema();
     }
 
-    private function published(array $content = []): LandingPage
+    /**
+     * $industry defaults to 'beauty', same as every fixture in this file did
+     * before Task 4 (the booking gate) existed. Only the booking-band tests
+     * below override it to 'hotel' -- booking.blade.php is the one section
+     * whose rendering now depends on which industry the page carries (see
+     * PageContent::count('booking')), so every OTHER section's tests here
+     * are correctly unaffected by leaving the default alone.
+     */
+    private function published(array $content = [], string $industry = 'beauty'): LandingPage
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => 'glamour-salon',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'published',
+            'template_key' => 'ruled_page', 'industry' => $industry, 'status' => 'published',
             'published_at' => now(),
             'content' => $content + ['hero' => ['headline' => 'The Art of Wellness']],
         ]);
@@ -355,7 +363,11 @@ class RuledPageSectionsTest extends TestCase
 
     public function test_switching_booking_off_takes_its_dead_anchors_with_it(): void
     {
-        $page = $this->published();
+        // Hotel, deliberately: this proves the tenant's OWN switch (the
+        // section row's `enabled`) takes the anchors with it, which is only
+        // exercised where the industry gate would otherwise let the band
+        // render at all.
+        $page = $this->published(industry: 'hotel');
         Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true]);
         $page->sections()->where('key', 'booking')->update(['enabled' => false]);
 
@@ -367,7 +379,7 @@ class RuledPageSectionsTest extends TestCase
 
     public function test_booking_left_on_gives_every_cta_a_live_target(): void
     {
-        $this->published();
+        $this->published(industry: 'hotel');
         Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true]);
 
         $body = $this->body();
@@ -379,11 +391,15 @@ class RuledPageSectionsTest extends TestCase
 
     // ── booking ─────────────────────────────────────────────────────────────
 
-    public function test_booking_is_always_present_and_carries_the_heros_anchor(): void
+    /**
+     * Task 4: the booking widget asks Check-in/Check-out/Adults/Children --
+     * hotel questions -- and is framed unmodified on every industry's page,
+     * so PageContent::count('booking') gates the band to 'hotel'
+     * (the parity half of that gate: a hotel page must not regress).
+     */
+    public function test_booking_is_present_for_a_hotel_page_and_carries_the_heros_anchor(): void
     {
-        // The hero CTA points at #booking unconditionally, so the target has
-        // to exist on every published page whatever data the tenant has.
-        $this->published();
+        $this->published(industry: 'hotel');
 
         $body = $this->body();
 
@@ -391,12 +407,35 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringContainsString('id="booking"', $body);
     }
 
+    /**
+     * The other half of the same gate: an education tenant's page -- with the
+     * booking section row itself switched ON, exactly as a template rollback
+     * or a stale section row could leave it -- must never render the band or
+     * frame the widget. The widget's questions (Check-in/Check-out/Adults/
+     * Children) fit hotel stays, not a lesson booking, and there is no amount
+     * of tenant data that should bring the band back for any other industry.
+     */
+    public function test_the_booking_band_is_absent_for_an_education_page_even_with_the_row_enabled(): void
+    {
+        $this->published(industry: 'education');
+        Service::create(['organization_id' => 1, 'name' => 'Algebra', 'is_active' => true]);
+        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Learning Co',
+            'phone' => '+48 12 345 67 89', 'address' => 'ul. Sw. Tomasza 12', 'is_active' => true]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('data-section="booking"', $body);
+        $this->assertStringNotContainsString('id="booking"', $body);
+        $this->assertStringNotContainsString('booking-widget', $body);
+        $this->assertDoesNotMatchRegularExpression('/<iframe[^>]+src="[^"]*\/booking-widget/i', $body);
+    }
+
     public function test_the_booking_widget_is_framed_from_the_admin_origin_never_inlined(): void
     {
         // LandingHostGuard refuses /api/v1/booking/* and /book/{token} on this
         // host by ruling: the widget's isolation is an origin boundary. An
         // inline widget here would need that allow-list widened.
-        $this->published();
+        $this->published(industry: 'hotel');
 
         $body = $this->body();
 
@@ -410,7 +449,7 @@ class RuledPageSectionsTest extends TestCase
         // src, the response's own frame-src must already name it. A hardcoded
         // host, a widened path or a second copy of app.url all fail here
         // rather than in a browser console on a customer's site.
-        $this->published();
+        $this->published(industry: 'hotel');
 
         $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
 
@@ -435,7 +474,7 @@ class RuledPageSectionsTest extends TestCase
     {
         // Three design judges called this the sharpest commercial point in the
         // set. It is not decoration and it is not a footnote.
-        $this->published();
+        $this->published(industry: 'hotel');
         Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour',
             'phone' => '+48 12 345 67 89', 'address' => 'ul. Sw. Tomasza 12', 'is_active' => true]);
 
@@ -447,7 +486,7 @@ class RuledPageSectionsTest extends TestCase
 
     public function test_a_tenant_with_no_phone_gets_no_empty_call_block(): void
     {
-        $this->published();
+        $this->published(industry: 'hotel');
         Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour',
             'phone' => null, 'address' => 'ul. Sw. Tomasza 12', 'is_active' => true]);
 
@@ -460,7 +499,7 @@ class RuledPageSectionsTest extends TestCase
 
     public function test_the_mobile_action_bar_carries_both_a_call_and_the_cta(): void
     {
-        $this->published();
+        $this->published(industry: 'hotel');
         Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour',
             'phone' => '+48 12 345 67 89', 'address' => 'ul. Sw. Tomasza 12', 'is_active' => true]);
 
@@ -469,6 +508,42 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringContainsString('rp-bar', $body);
         $this->assertStringContainsString('rp-bar__call', $body);
         $this->assertStringContainsString('rp-bar__cta', $body);
+    }
+
+    // ── the hero cta when booking cannot honour it ──────────────────────────
+
+    /**
+     * Task 4: the hero CTA's own guard is now the same two-part test the
+     * section loop uses (row enabled AND has()), applied to booking first and
+     * then, on an @elseif, to contact -- so an industry the booking widget
+     * does not fit still gets a live button rather than a dead "#booking"
+     * anchor, as long as there is somewhere honest to send it.
+     */
+    public function test_an_education_pages_hero_cta_falls_back_to_contact_when_booking_cannot_honour_it(): void
+    {
+        $this->published(industry: 'education');
+        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Learning Co',
+            'phone' => '+48 12 345 67 89', 'address' => 'ul. Sw. Tomasza 12', 'is_active' => true]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('href="#contact"', $body);
+        $this->assertStringNotContainsString('href="#booking"', $body);
+    }
+
+    /** With neither band available, the button is dropped rather than dead. */
+    public function test_an_education_pages_hero_cta_is_absent_when_neither_booking_nor_contact_render(): void
+    {
+        $this->published(industry: 'education');
+        // No Property at all, so has('contact') is false too -- and the
+        // fixture's own sections carry no services/team/reviews content
+        // either, so nothing this test does not intend is filling the gap.
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('href="#booking"', $body);
+        $this->assertStringNotContainsString('href="#contact"', $body);
+        $this->assertStringNotContainsString('rp-cta', $body);
     }
 
     // ── contact ─────────────────────────────────────────────────────────────
@@ -496,12 +571,34 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringContainsString('href="mailto:hello@example.test"', $body);
     }
 
-    public function test_the_contact_band_is_absent_without_an_address_or_a_phone(): void
+    public function test_the_contact_band_is_absent_with_no_address_phone_or_email(): void
+    {
+        // Email is one of the three overridable, publishable facts
+        // ContactDetails carries, so it has to be nulled out here too, or
+        // this fixture leaves a real contact fact standing and the band
+        // would correctly render -- proving nothing about the "no contact at
+        // all" case this test is for.
+        $this->published();
+        $this->contactable(['address' => null, 'phone' => null, 'email' => null]);
+
+        $this->assertStringNotContainsString('data-section="contact"', $this->body());
+    }
+
+    /**
+     * The widening this task intends: an email-only Property previously did
+     * NOT render a contact band at all -- has('contact') only ever asked
+     * about address and phone. An email address is exactly as publishable a
+     * contact fact as either of those.
+     */
+    public function test_an_email_only_property_now_renders_the_contact_band(): void
     {
         $this->published();
         $this->contactable(['address' => null, 'phone' => null]);
 
-        $this->assertStringNotContainsString('data-section="contact"', $this->body());
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="contact"', $body);
+        $this->assertStringContainsString('href="mailto:hello@example.test"', $body);
     }
 
     public function test_the_map_tile_is_an_outbound_link_not_a_third_party_frame(): void

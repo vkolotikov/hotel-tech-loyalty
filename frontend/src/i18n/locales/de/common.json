@@ -75,6 +75,7 @@
     "groups": {
       "overview": "Übersicht",
       "ai_chat": "KI-Chat",
+      "landing_pages": "Landingpages",
       "members_loyalty": "Mitglieder & Treueprogramm",
       "bookings": "Buchungen",
       "crm_marketing": "CRM & Marketing",
@@ -110,7 +111,8 @@
       "billing": "Abrechnung",
       "audit_log": "Audit-Log",
       "settings": "Einstellungen",
-      "landing_pages": "Landingpage"
+      "landing_pages": "Landingpage",
+      "landing_featured_reviews": "Hervorgehobene Bewertungen"
     }
   },
   "topbar": {
@@ -3038,14 +3040,15 @@
       "services_count": "{{count}} {{label}} bereit zur Anzeige",
       "details_kicker": "Ihre Angaben",
       "edit_in_settings": "In den Einstellungen bearbeiten",
+      "open_properties": "Objekte öffnen",
       "business_name": "Firmenname",
-      "business_name_hint": "Tragen Sie Ihren Firmennamen in den Einstellungen ein, damit er auf Ihrer Seite erscheinen kann.",
+      "business_name_hint": "Tragen Sie Ihren Firmennamen unter Objekte ein, damit er auf Ihrer Seite erscheinen kann.",
       "phone": "Telefon",
-      "phone_hint": "Tragen Sie eine Telefonnummer in den Einstellungen ein, damit Besucher Sie anrufen können.",
+      "phone_hint": "Tragen Sie eine Telefonnummer ein, damit Besucher Sie anrufen können",
       "email": "E-Mail",
-      "email_hint": "Tragen Sie eine E-Mail-Adresse in den Einstellungen ein, damit Besucher Ihnen schreiben können.",
+      "email_hint": "Tragen Sie eine E-Mail-Adresse ein, damit Besucher Ihnen schreiben können",
       "address": "Adresse",
-      "address_hint": "Tragen Sie Ihre Adresse in den Einstellungen ein, damit Besucher Sie finden.",
+      "address_hint": "Tragen Sie Ihre Adresse ein, damit Besucher Sie finden",
       "headline_label": "Überschrift",
       "headline_placeholder": "Ein kurzer Satz, der sagt, was Sie am besten können",
       "subtext_label": "Untertitel",
@@ -3098,6 +3101,10 @@
       "field_lead": "Einleitungssatz",
       "field_body": "Fließtext",
       "field_terms": "Bedingungen",
+      "field_phone": "Telefon",
+      "field_email": "E-Mail",
+      "field_address": "Adresse",
+      "contact_caption": "Übernommen von Ihrer Objekte-Seite — hier bearbeiten, um es für diese Seite zu überschreiben.",
       "preview_title": "Vorschau",
       "preview_desktop": "Desktop",
       "preview_mobile": "Mobil",
@@ -3114,5 +3121,15 @@
       "locked_body": "Ihr Tarif enthält den Seitenbaukasten nicht mehr, deshalb sind Assistent, Bearbeitung und Veröffentlichen hier deaktiviert. Die Seite offline zu nehmen funktioniert weiterhin immer — nutzen Sie die Schaltfläche oben.",
       "upgrade_cta": "Tarife ansehen"
     }
+  },
+  "reviews": {
+    "landing_page": "Landingpage",
+    "feature": "Hervorheben",
+    "feature_hint": "Diese Bewertung auf Ihrer Landingpage anzeigen",
+    "featured": "Auf Ihrer Seite",
+    "featured_on": "Zu Ihrer Landingpage hinzugefügt",
+    "featured_off": "Von Ihrer Landingpage entfernt",
+    "featured_on_section_off": "Gespeichert. Aktivieren Sie den Bewertungsbereich im Landingpage-Editor, damit sie dort erscheint.",
+    "featured_on_no_page": "Gespeichert. Sie erscheint, sobald Sie Ihre Landingpage erstellt haben."
   }
 }

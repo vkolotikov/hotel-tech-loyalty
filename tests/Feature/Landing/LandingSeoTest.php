@@ -512,24 +512,42 @@ class LandingSeoTest extends TestCase
         ];
     }
 
-    /** @return array<string, array{0: string, 1: string}> */
+    /**
+     * Every id in Organization::INDUSTRIES, since the 2026-08-25 industry
+     * profile round authored a subtype for all nine (IndustryProfile::
+     * SCHEMA_TYPES) — this used to cover only the four GTM industries
+     * (Organization::GTM_INDUSTRIES) plus fitness as the one example of "no
+     * subtype yet". hotel and medical's mappings changed in that same round
+     * (LodgingBusiness -> Hotel, MedicalBusiness -> MedicalClinic); 'other'
+     * happens to land on the generic type, but as a deliberate, resolved
+     * entry rather than an unresolved fallback — see IndustryProfileTest's
+     * coverage of that distinction.
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
     public static function industryProvider(): array
     {
         return [
-            'beauty maps to BeautySalon'      => ['beauty', 'BeautySalon'],
-            'medical maps to MedicalBusiness' => ['medical', 'MedicalBusiness'],
-            'restaurant maps to Restaurant'   => ['restaurant', 'Restaurant'],
-            'hotel maps to LodgingBusiness'   => ['hotel', 'LodgingBusiness'],
-            // Not a GTM industry (Organization::GTM_INDUSTRIES) yet — the
-            // abstraction falls back to the generic type rather than a guess.
-            'fitness has no subtype yet'      => ['fitness', 'LocalBusiness'],
+            'beauty maps to BeautySalon'            => ['beauty', 'BeautySalon'],
+            'medical maps to MedicalClinic'         => ['medical', 'MedicalClinic'],
+            'restaurant maps to Restaurant'         => ['restaurant', 'Restaurant'],
+            'hotel maps to Hotel'                   => ['hotel', 'Hotel'],
+            'legal maps to LegalService'            => ['legal', 'LegalService'],
+            'real_estate maps to RealEstateAgent'   => ['real_estate', 'RealEstateAgent'],
+            'education maps to EducationalOrganization' => ['education', 'EducationalOrganization'],
+            'fitness maps to ExerciseGym'           => ['fitness', 'ExerciseGym'],
+            'other maps to the generic LocalBusiness, deliberately' => ['other', 'LocalBusiness'],
         ];
     }
 
     /** @dataProvider industryProvider */
     public function test_the_schema_type_matches_the_pages_industry(string $industry, string $expectedType): void
     {
-        $page = $this->published(10, 'schema-type-' . $industry, $industry);
+        // The slug route is constrained to [a-z0-9-]+ (routes/landing.php) —
+        // no underscores — while an industry id itself may legitimately have
+        // one ('real_estate'). Sanitised here so the SLUG stays routable
+        // without changing the INDUSTRY value under test.
+        $page = $this->published(10, 'schema-type-' . str_replace('_', '-', $industry), $industry);
         Property::create([
             'organization_id' => 1, 'brand_id' => 10, 'name' => 'Business Co', 'is_active' => true,
         ]);
@@ -593,11 +611,12 @@ class LandingSeoTest extends TestCase
 
     /**
      * schemaType() must not inherit the vocabulary fallback: an unresolved
-     * industry ('' or 'garbage') falls through to DEFAULT_INDUSTRY ('hotel')
-     * for VOCABULARY, but publishing LodgingBusiness for a business that was
-     * never identified as a hotel is a false claim to Google, not a graceful
-     * degrade. Decoded end to end for '', 'garbage', and a real industry so
-     * the contrast is explicit: only the real one gets a subtype.
+     * industry ('' or 'garbage') falls through to 'other' for VOCABULARY,
+     * but publishing a named subtype for a business that was never
+     * identified as that industry is a false claim to Google, not a
+     * graceful degrade. Decoded end to end for '', 'garbage', and a real
+     * industry so the contrast is explicit: only the real one gets a
+     * subtype.
      */
     public function test_an_unresolved_industry_publishes_the_generic_type_not_a_guess(): void
     {

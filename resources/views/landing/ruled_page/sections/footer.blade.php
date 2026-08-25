@@ -12,6 +12,6 @@
 --}}
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
-    <p class="rp-footer__legal">&copy; {{ now()->year }} {{ $content->contact?->name ?? $page->seo['title'] ?? config('app.name') }}</p>
+    <p class="rp-footer__legal">&copy; {{ now()->year }} {{ $content->contact->name ?? $page->seo['title'] ?? config('app.name') }}</p>
   </div>
 </footer>
