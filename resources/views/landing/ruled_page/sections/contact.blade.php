@@ -27,11 +27,11 @@
 
     $contact = $content->contact;
 
-    $addressLines = collect([$contact?->address, $contact?->city, $contact?->country])
+    $addressLines = collect([$contact->address, $contact->city, $contact->country])
         ->filter(fn ($line) => filled($line))
         ->values();
 
-    $phone = $contact?->phone;
+    $phone = $contact->phone;
     $dial  = filled($phone) ? preg_replace(['/[^0-9+]/', '/(?<=.)\+/'], '', (string) $phone) : null;
     $dial  = filled($dial) && preg_match('/\d/', $dial) ? $dial : null;
 
@@ -44,7 +44,7 @@
     // Today is the tenant's today, not the server's. A timezone typed into an
     // admin field can be anything at all, so a bad one costs the tick and
     // nothing else.
-    $timezone = $contact?->timezone;
+    $timezone = $contact->timezone;
 
     try {
         $today = Carbon::now(filled($timezone) ? $timezone : null)->dayOfWeekIso - 1;
@@ -57,7 +57,7 @@
 
     $mapQuery = $addressLines->implode(', ');
 @endphp
-<section data-section="contact" class="band band--ink rp-contact">
+<section id="contact" data-section="contact" class="band band--ink rp-contact">
   <div class="wrap rp-contact__grid">
     <div class="rp-contact__details">
       <h2 class="band__kicker">{{ $copy['kicker'] ?? $profile->kicker('contact') }}</h2>
@@ -78,7 +78,7 @@
         </div>
       @endif
 
-      @if (filled($contact?->email))
+      @if (filled($contact->email))
         <div class="rp-field">
           <p class="rp-field__label">{{ $copy['email_label'] ?? 'Email' }}</p>
           <p class="rp-field__value"><a class="rp-field__link" href="mailto:{{ $contact->email }}">{{ $contact->email }}</a></p>

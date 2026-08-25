@@ -53,8 +53,33 @@ describe('buildSectionRows', () => {
     expect(rows.map(r => r.key)).toEqual(SECTION_ORDER)
     expect(rows[1]).toEqual({
       key: 'services', label: 'Treatments', sourceLabel: 'Your Services screen',
-      available: true, count: 12, enabled: true, sort: 1,
+      available: true, count: 12, reason: null, enabled: true, sort: 1,
     })
+  })
+
+  /**
+   * Fix 2 (phase 3a correctness review): the backend has authored `reason`
+   * on every prefill row since Task 4 (booking's industry-gate sentence);
+   * this mapping used to drop it on the floor, which is how a beauty
+   * tenant ended up reading the generic "Nothing to show yet" instruction
+   * for a section no amount of writing would ever unlock.
+   */
+  it('carries the backend reason through to the merged row', () => {
+    const withReason: SectionAvailability[] = availability().map(a => (
+      a.key === 'booking'
+        ? { ...a, available: false, reason: "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead." }
+        : a
+    ))
+    const rows = buildSectionRows(pageSections(), withReason)
+    const booking = rows.find(r => r.key === 'booking')
+    expect(booking?.reason).toBe(
+      "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead.",
+    )
+  })
+
+  it('normalises a missing reason to null rather than undefined', () => {
+    const rows = buildSectionRows(pageSections(), availability())
+    expect(rows.find(r => r.key === 'hero')?.reason).toBeNull()
   })
 
   it('drops a page-section row with no matching availability entry', () => {
@@ -161,5 +186,18 @@ describe('SECTION_CONTENT_FIELDS', () => {
       expect(SECTION_CONTENT_FIELDS[key]).toBeDefined()
       expect(SECTION_CONTENT_FIELDS[key].length).toBeGreaterThan(0)
     }
+  })
+
+  /**
+   * Fix 1 (phase 3a correctness review): the editor's contact inputs had no
+   * `type="email"`/`maxLength` at all, so an ordinary tenant keystroke could
+   * reach the server holding an unbounded blob or an unformatted email --
+   * these mirror the backend's own `content.contact.*` rules.
+   */
+  it('mirrors the backend contact rules on phone/email/address', () => {
+    const contact = SECTION_CONTENT_FIELDS.contact
+    expect(contact.find(f => f.name === 'phone')).toMatchObject({ maxLength: 64 })
+    expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
+    expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
   })
 })

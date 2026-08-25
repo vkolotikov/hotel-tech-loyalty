@@ -22,7 +22,7 @@
      */
     $heading = collect([
         $copy['headline'] ?? null,
-        $content->contact?->name,
+        $content->contact->name,
         $page->seo['title'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
 @endphp
@@ -34,17 +34,26 @@
     @if (filled($copy['subtext'] ?? null))
       <p class="rp-hero__sub">{{ $copy['subtext'] }}</p>
     @endif
-    {{-- #booking exists: booking.blade.php renders the target with that id,
-         and PageContent::has('booking') is unconditionally true, so no amount
-         of missing tenant data can take it away.
+    {{-- Task 4: PageContent::has('booking') is no longer unconditionally
+         true — the booking widget asks Check-in/Check-out/Adults/Children,
+         which fits exactly one industry, so PageContent::count('booking')
+         gates it to 'hotel' (see that method's docblock). #booking can
+         therefore be missing from the page altogether now, on top of the
+         tenant switching the band off, which is the one case the original
+         note here accounted for. The guard is the same two-part test the
+         section loop in layout.blade.php uses — row enabled AND has() — so
+         this CTA and the band it points at can never disagree about whether
+         #booking exists.
 
-         What CAN take it away is the tenant switching the band off, which
-         @continue in the layout honours — the one case the original note here
-         did not account for. A CTA reading "Book appointment" that scrolls
-         nowhere is worse than no CTA, so the anchor's own section is checked
-         rather than assumed. --}}
-    @if ($sections->firstWhere('key', 'booking')?->enabled)
+         Outside that one industry there is still an honest place to send
+         the CTA when one exists: the contact band, on the same two-part
+         test. A CTA reading "Book your stay" that scrolls nowhere is worse
+         than no CTA, so both anchors are checked rather than assumed, and
+         with neither available the button is simply not printed. --}}
+    @if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking'))
       <a class="rp-cta" href="#booking">{{ $profile->primaryCta }}</a>
+    @elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact'))
+      <a class="rp-cta" href="#contact">{{ $profile->primaryCta }}</a>
     @endif
   </div>
 </section>

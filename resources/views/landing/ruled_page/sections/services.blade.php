@@ -22,10 +22,15 @@
 @php
     use Illuminate\Support\Str;
 
-    // A tenant can switch the booking band off. An anchor to a section the
-    // layout is not going to render is a link that silently does nothing, so
-    // the target's existence is checked rather than assumed.
-    $bookingEnabled = (bool) ($sections->firstWhere('key', 'booking')?->enabled);
+    // A tenant can switch the booking band off, AND (Task 4) an industry the
+    // booking widget does not fit never renders it at all regardless of the
+    // row's own switch (PageContent::count('booking') gates it to 'hotel' --
+    // see that method). An anchor to a section the layout is not going to
+    // render is a link that silently does nothing, so the target's existence
+    // is checked both ways rather than assumed -- the same two-part test
+    // hero.blade.php's own CTA and the section loop both use, so this menu
+    // CTA cannot point at a dead #booking anchor while those agree it is gone.
+    $bookingEnabled = (bool) ($sections->firstWhere('key', 'booking')?->enabled) && $content->has('booking');
 
     // The preview plate mirrors the menu one-for-one so :nth-child() can pair
     // a row with its shot in pure CSS (4.7). It is worth rendering only when
@@ -34,7 +39,7 @@
     // Blade omits the whole column and the menu takes the full width.
     $hasPlate = $content->services->contains(fn ($service) => filled($service->image));
 
-    $currencyFallback = $content->contact?->currency;
+    $currencyFallback = $content->contact->currency;
 @endphp
 <section data-section="services" class="band rp-services">
   <div class="wrap">

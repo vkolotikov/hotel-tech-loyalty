@@ -43,6 +43,9 @@ export type SectionAvailability = {
   source_label: string
   available: boolean
   count: number
+  /** See `SectionMeta.reason` in `./sections` -- this is that same field's
+   *  wire spelling, carried by every row of this response since Task 4. */
+  reason?: string | null
 }
 
 export type EditorSectionRow = SectionMeta & { enabled: boolean; sort: number }
@@ -83,6 +86,7 @@ export function buildSectionRows(pageSections: PageSection[], availability: Sect
       sourceLabel: meta.source_label,
       available: meta.available,
       count: meta.count,
+      reason: meta.reason ?? null,
       enabled: row.enabled,
       sort: row.sort,
     }]
@@ -157,13 +161,37 @@ export function buildSectionsPayload(rows: EditorSectionRow[]): { key: string; e
  * `services`/`team`/`reviews` are data-backed (RULING 4); their copy
  * fields are only ever shown once the section is actually offerable, same
  * as the toggle itself.
+ *
+ * Task 2: `contact`'s `phone`/`email`/`address` are NOT a fourth kind of
+ * label override like the ones the paragraph above sets aside — they are
+ * `App\Landing\ContactDetails`'s own three overridable fields, and they
+ * bind through this exact mechanism (`content.contact.phone`, etc.) for
+ * free: `SectionRow` already reads/writes `content[row.key][field.name]`,
+ * so a section-content field named `phone` on the `contact` row IS
+ * `content.contact.phone` with no new plumbing. Left in the same order
+ * `ContactDetails`'s constructor and the wizard's own step 2 use.
+ *
+ * `type`/`maxLength` mirror `LandingOnboardingController`'s own
+ * `contact.email`/`contact.phone`/`contact.address` rules (and, since the
+ * phase 3a correctness fix, `LandingPageController::update()`'s identical
+ * `content.contact.*` rules) client-side — the same reasoning as the web
+ * address input's `maxLength={63}` a few lines below this file's sibling
+ * component: stop the obviously-wrong value here rather than round-trip it
+ * to the server for a 422. The server-side rule is what actually protects
+ * the column; this is only the residual "catch it before the network
+ * round-trip" half.
  */
-export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string; multiline?: boolean }[]> = {
+export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string; multiline?: boolean; type?: string; maxLength?: number }[]> = {
   hero:     [{ name: 'headline' }, { name: 'subtext' }],
   services: [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
   about:    [{ name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
   team:     [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
   reviews:  [{ name: 'kicker' }],
   booking:  [{ name: 'kicker' }, { name: 'heading' }, { name: 'terms', multiline: true }],
-  contact:  [{ name: 'kicker' }],
+  contact:  [
+    { name: 'kicker' },
+    { name: 'phone', maxLength: 64 },
+    { name: 'email', type: 'email', maxLength: 191 },
+    { name: 'address', maxLength: 191 },
+  ],
 }

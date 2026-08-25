@@ -10,7 +10,7 @@ import {
   STEPS, FONT_PAIRINGS, type StepKey, type FontPairingKey, type WizardForm,
   emptyForm, loadDraft, saveDraft, clearDraft, buildPayload, type ApplyPayload,
 } from './landingDraft'
-import { isDataBackedSection, isOfferable, SECTION_ORDER, type SectionMeta } from './sections'
+import { isDataBackedSection, isOfferable, unavailableReason, SECTION_ORDER, type SectionMeta } from './sections'
 
 /**
  * The wizard's own onboarding contract (Appendix A §7.2 house triple):
@@ -56,6 +56,9 @@ type SectionAvailability = {
   source_label: string
   available: boolean
   count: number
+  /** See `SectionMeta.reason` in `./sections` — this is that same field's
+   *  wire spelling. */
+  reason?: string | null
 }
 
 export type OnboardingResponse = {
@@ -210,6 +213,16 @@ export function LandingWizard(props: LandingWizardProps) {
   const headline = form.headline ?? prefill.headline ?? ''
   const subtext = form.subtext ?? prefill.subtext ?? ''
   const brandColor = form.brand_color ?? prefill.brand_color
+  // Task 2: the same fallback chain as every other field above — an
+  // untouched input shows the Property's own effective value (already
+  // resolved server-side via ContactDetails::resolve, see `prefill`'s own
+  // type), and a tenant who clears it back to that exact value is, per
+  // `buildPayload`'s own diff, indistinguishable from never having touched
+  // it at all — which is the point: the Property stays the source of truth
+  // for anything not deliberately overridden.
+  const phone = form.phone ?? prefill.phone ?? ''
+  const email = form.email ?? prefill.email ?? ''
+  const address = form.address ?? prefill.address ?? ''
   // Same fallback shape as templateKey above: nothing chosen yet defaults to
   // the first specimen rather than leaving the picker in a genuinely
   // unselected state, which the theme.font_pairing column has no room for
@@ -237,7 +250,10 @@ export function LandingWizard(props: LandingWizardProps) {
     // rather than re-deriving it from the wire row's plain `string`, so
     // this needs no type assertion to satisfy `SectionMeta`.
     return row
-      ? [{ key, label: row.label, sourceLabel: row.source_label, available: row.available, count: row.count }]
+      ? [{
+        key, label: row.label, sourceLabel: row.source_label, available: row.available, count: row.count,
+        reason: row.reason ?? null,
+      }]
       : []
   })
 
@@ -282,6 +298,8 @@ export function LandingWizard(props: LandingWizardProps) {
   // back unchanged.
   const payload: ApplyPayload = buildPayload({
     templateKey, slug: suggestedSlug, headline, subtext, brandColor, fontPairing,
+    contact: { phone, email, address },
+    prefillContact: { phone: prefill.phone, email: prefill.email, address: prefill.address },
     sections: sectionMetas, sectionChoices: form.sections ?? {},
   })
 
@@ -417,33 +435,68 @@ export function LandingWizard(props: LandingWizardProps) {
             <div className="flex items-center justify-between">
               <span className={kicker}>{t('landing_pages.wizard.details_kicker', 'Your details')}</span>
               <Link
-                to="/settings"
+                to="/properties"
                 className="text-xs text-primary-400 hover:text-primary-300 font-semibold"
               >
-                {t('landing_pages.wizard.edit_in_settings', 'Edit in Settings')}
+                {t('landing_pages.wizard.open_properties', 'Open Properties')}
               </Link>
             </div>
 
             <SummaryRow
               label={t('landing_pages.wizard.business_name', 'Business name')}
               value={prefill.business_name}
-              hint={t('landing_pages.wizard.business_name_hint', 'Add your business name in Settings so it can appear on your page.')}
+              hint={t('landing_pages.wizard.business_name_hint', 'Add your business name in Properties so it can appear on your page.')}
             />
-            <SummaryRow
-              label={t('landing_pages.wizard.phone', 'Phone')}
-              value={prefill.phone}
-              hint={t('landing_pages.wizard.phone_hint', 'Add a phone number in Settings so visitors can call you.')}
-            />
-            <SummaryRow
-              label={t('landing_pages.wizard.email', 'Email')}
-              value={prefill.email}
-              hint={t('landing_pages.wizard.email_hint', 'Add an email address in Settings so visitors can write to you.')}
-            />
-            <SummaryRow
-              label={t('landing_pages.wizard.address', 'Address')}
-              value={prefill.address}
-              hint={t('landing_pages.wizard.address_hint', 'Add your address in Settings so visitors can find you.')}
-            />
+
+            {/* Task 2: phone/email/address used to be read-only SummaryRows
+                whose only recourse for a blank value was a hint sending the
+                tenant away to edit a screen this wizard never linked
+                correctly (see App\Landing\ContactDetails's own docblock on
+                that misnaming). They are real inputs now, prefilled from the
+                EFFECTIVE value (`prefill.*` is already
+                ContactDetails::resolve()'s output — the Property, or this
+                page's own saved override if one exists) and stored,
+                per-page, only when the tenant's value actually differs from
+                that effective prefill (`buildPayload`'s own diff) — an
+                untouched field leaves the Property as this page's source of
+                truth. */}
+            <div>
+              <label className={label} htmlFor="lw-phone">
+                {t('landing_pages.wizard.phone', 'Phone')}
+              </label>
+              <input
+                id="lw-phone"
+                className={input}
+                placeholder={t('landing_pages.wizard.phone_hint', 'Add a phone number so visitors can call you')}
+                value={phone}
+                onChange={e => up('phone', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor="lw-email">
+                {t('landing_pages.wizard.email', 'Email')}
+              </label>
+              <input
+                id="lw-email"
+                type="email"
+                className={input}
+                placeholder={t('landing_pages.wizard.email_hint', 'Add an email address so visitors can write to you')}
+                value={email}
+                onChange={e => up('email', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor="lw-address">
+                {t('landing_pages.wizard.address', 'Address')}
+              </label>
+              <input
+                id="lw-address"
+                className={input}
+                placeholder={t('landing_pages.wizard.address_hint', 'Add your address so visitors can find you')}
+                value={address}
+                onChange={e => up('address', e.target.value)}
+              />
+            </div>
           </div>
 
           <div className={card + ' space-y-4'}>
@@ -608,10 +661,15 @@ export function LandingWizard(props: LandingWizardProps) {
                     </span>
                   ) : (
                     <span className="block text-xs text-warning/90 mt-0.5">
-                      {t('landing_pages.wizard.section_unavailable', {
+                      {/* Fix 2 (phase 3a correctness review): the backend's
+                          own authored reason (today: booking's industry-gate
+                          sentence) beats the generic instruction below,
+                          which makes no sense for a section nothing will
+                          ever unlock by writing into it. */}
+                      {unavailableReason(section, t('landing_pages.wizard.section_unavailable', {
                         source: section.sourceLabel,
                         defaultValue: 'Nothing to show yet. Add some from {{source}}.',
-                      })}
+                      }))}
                     </span>
                   )}
                 </div>

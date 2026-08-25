@@ -24,9 +24,9 @@ final class IndustryProfile
         public readonly array  $kickers,
         public readonly array  $defaultSections,
         // Whether $industry above is a genuine match, as opposed to
-        // DEFAULT_INDUSTRY filled in because the input didn't resolve to
-        // anything. Vocabulary and schema.org type deliberately answer
-        // this question differently — see schemaType().
+        // 'other' filled in because the input didn't resolve to anything.
+        // Vocabulary and schema.org type deliberately answer this question
+        // differently — see schemaType().
         private readonly bool $resolved,
     ) {}
 
@@ -50,29 +50,43 @@ final class IndustryProfile
     /**
      * schema.org LocalBusiness has industry-specific subtypes, and Google's
      * own structured-data guidance is that the most specific applicable
-     * type should be used rather than the generic one. Only the four GTM
-     * industries (Organization::GTM_INDUSTRIES) have a subtype authored
-     * here; everything else — including a future industry this class has
-     * not been taught the vocabulary for yet, same as {@see all()} — gets
-     * the generic type rather than a guess or a thrown error.
+     * type should be used rather than the generic one. As of the industry
+     * profile round (2026-08-25) every id in Organization::INDUSTRIES has a
+     * subtype authored here, matching {@see all()} one for one — 'other' is
+     * the one entry that maps to the generic type deliberately: it is
+     * genuinely a resolved, named industry (the "my business isn't listed"
+     * catch-all), not the absence of one. A future industry this class has
+     * not been taught the vocabulary for yet still gets the generic type
+     * rather than a guess or a thrown error, same as {@see all()}.
      */
     private const SCHEMA_TYPES = [
-        'hotel'      => 'LodgingBusiness',
-        'beauty'     => 'BeautySalon',
-        'medical'    => 'MedicalBusiness',
-        'restaurant' => 'Restaurant',
+        'hotel'       => 'Hotel',
+        'beauty'      => 'BeautySalon',
+        'medical'     => 'MedicalClinic',
+        'restaurant'  => 'Restaurant',
+        'legal'       => 'LegalService',
+        'real_estate' => 'RealEstateAgent',
+        'education'   => 'EducationalOrganization',
+        'fitness'     => 'ExerciseGym',
+        'other'       => 'LocalBusiness',
     ];
 
     public function schemaType(): string
     {
-        // An unresolved industry ('', 'garbage', null) falls through to
-        // DEFAULT_INDUSTRY ('hotel') for VOCABULARY purposes — a page has to
-        // render something rather than nothing. schemaType() must not
-        // inherit that fallback: publishing LodgingBusiness for a business
-        // that was never actually identified as a hotel is a false claim to
-        // Google, not a graceful degrade. An unresolved industry therefore
-        // always publishes the generic type, regardless of what
-        // DEFAULT_INDUSTRY happens to be.
+        // An unresolved industry ('', 'garbage', null) falls through to the
+        // 'other' vocabulary for COPY purposes -- see for()'s own comment,
+        // two methods below, on why that fallback is 'other' and never
+        // Organization::DEFAULT_INDUSTRY ('hotel'): a page has to render
+        // something rather than nothing, and 'other's honestly-generic words
+        // ("Services", "Our team") are what an industry that was never
+        // actually identified gets. schemaType() must not inherit that
+        // fallback either, even though 'other' itself maps to the generic
+        // LocalBusiness type in SCHEMA_TYPES below: publishing a NAMED
+        // schema.org subtype for a business that was never identified as
+        // that industry would be a false claim to Google, not a graceful
+        // degrade, so this checks $this->resolved directly rather than
+        // trusting that an unresolved industry already reads 'other' here --
+        // true today, but not a fact this method should have to rely on.
         if (!$this->resolved) {
             return 'LocalBusiness';
         }
@@ -80,7 +94,34 @@ final class IndustryProfile
         return self::SCHEMA_TYPES[$this->industry] ?? 'LocalBusiness';
     }
 
-    /** @return array<string, array<string, mixed>> */
+    /**
+     * Industry vocabulary, authored per spec §4.2 (2026-08-25) — final copy,
+     * transcribed rather than improvised. Eight profiles were added here in
+     * that round; before it, this method authored `beauty` alone and every
+     * other industry silently inherited its vocabulary through the {@see
+     * for()} fallback — a live education tenant was offered "Treatments"
+     * and "Therapists" as a direct result. `defaultSections` lists 'booking'
+     * only for `hotel`: the widget it embeds is hotel-shaped (see 4.3), so
+     * no other profile advertises a band it cannot honestly fill, and a
+     * profile that omits 'booking' from `defaultSections` also has no
+     * `booking` key under `kickers` — {@see kicker()} returns '' for a
+     * missing key rather than fatal, which is what lets a legacy section row
+     * from a template rollback render inert instead of crashing the page.
+     *
+     * `fitness`'s accent is the one value NOT taken verbatim from the spec
+     * table: the spec lists #C25A2B, which sits in Accent's WCAG dead band
+     * (white on it measures 4.383:1, dark ink 4.172:1 — both under the 4.5:1
+     * FLOOR), and Accent::for() does not run its own discard-on-fail check
+     * against the house colour itself (only against a REJECTED tenant
+     * candidate) — so an un-overridden fitness page would ship an unreadable
+     * CTA to every tenant in that industry from day one. Darkened 4% toward
+     * black along the same hue, the same step Accent::toward() itself uses,
+     * to #BA5629 (white label 4.718:1) — the smallest correction that clears
+     * the floor with real headroom rather than scraping it. See AccentTest's
+     * per-profile house-colour coverage, which is what caught this.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public static function all(): array
     {
         return [
@@ -99,6 +140,129 @@ final class IndustryProfile
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'],
             ],
+            'hotel' => [
+                'servicesLabel' => 'Rooms & Suites',
+                'peopleLabel'   => 'At your service',
+                'primaryCta'    => 'Book your stay',
+                'accent'        => '#1B3A5C',
+                'kickers'       => [
+                    'services' => 'Stay with us',
+                    'about'    => 'The hotel',
+                    // Was 'At your service', identical to peopleLabel just
+                    // below it -- team.blade.php stacks the kicker directly
+                    // above the h2 that prints peopleLabel, so the band read
+                    // as the same three words twice. Ledger-authored
+                    // replacement (final-review.md, MUST-FIX item 4).
+                    'team'     => 'Your hosts',
+                    'reviews'  => 'Guest words',
+                    'booking'  => 'Reserve',
+                    'contact'  => 'Getting here',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'],
+            ],
+            'medical' => [
+                'servicesLabel' => 'Services',
+                'peopleLabel'   => 'Practitioners',
+                'primaryCta'    => 'Book a consultation',
+                'accent'        => '#1D6F6B',
+                'kickers'       => [
+                    'services' => 'What we treat',
+                    'about'    => 'The clinic',
+                    'team'     => 'Your care team',
+                    'reviews'  => 'Patient words',
+                    'contact'  => 'Visit us',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'restaurant' => [
+                'servicesLabel' => 'The menu',
+                'peopleLabel'   => 'The kitchen',
+                'primaryCta'    => 'Reserve a table',
+                'accent'        => '#8C3B2E',
+                'kickers'       => [
+                    'services' => 'On the table',
+                    'about'    => 'The house',
+                    // Was 'The kitchen', identical to peopleLabel just below
+                    // it -- same duplication as the hotel profile above, and
+                    // the same ledger-authored replacement.
+                    'team'     => 'Behind the pass',
+                    'reviews'  => 'Word of mouth',
+                    'contact'  => 'Find us',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'legal' => [
+                'servicesLabel' => 'Practice areas',
+                'peopleLabel'   => 'Attorneys',
+                'primaryCta'    => 'Request a consultation',
+                'accent'        => '#3B4B74',
+                'kickers'       => [
+                    'services' => 'How we help',
+                    'about'    => 'The firm',
+                    'team'     => 'Who represents you',
+                    'reviews'  => 'Client words',
+                    'contact'  => 'Reach us',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'real_estate' => [
+                'servicesLabel' => 'Services',
+                'peopleLabel'   => 'Agents',
+                'primaryCta'    => 'Arrange a viewing',
+                'accent'        => '#7A5C2E',
+                'kickers'       => [
+                    'services' => 'What we do',
+                    'about'    => 'The agency',
+                    'team'     => 'Your agents',
+                    'reviews'  => 'From our clients',
+                    'contact'  => 'Talk to us',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'education' => [
+                'servicesLabel' => 'Courses',
+                'peopleLabel'   => 'Instructors',
+                'primaryCta'    => 'Book a lesson',
+                'accent'        => '#35509E',
+                'kickers'       => [
+                    'services' => 'What you\'ll learn',
+                    'about'    => 'The academy',
+                    'team'     => 'Who teaches',
+                    'reviews'  => 'From our students',
+                    'contact'  => 'Get in touch',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'fitness' => [
+                'servicesLabel' => 'Classes',
+                'peopleLabel'   => 'Trainers',
+                'primaryCta'    => 'Book a class',
+                // See this method's docblock: darkened from the spec's
+                // #C25A2B, which fails the WCAG label floor unaided.
+                'accent'        => '#BA5629',
+                'kickers'       => [
+                    'services' => 'Train with us',
+                    'about'    => 'The studio',
+                    'team'     => 'Your coaches',
+                    'reviews'  => 'Member words',
+                    'contact'  => 'Find the gym',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'other' => [
+                'servicesLabel' => 'Services',
+                'peopleLabel'   => 'Our team',
+                'primaryCta'    => 'Get in touch',
+                'accent'        => '#2D6A4F',
+                'kickers'       => [
+                    'services' => 'What we offer',
+                    'about'    => 'About us',
+                    'team'     => 'The people',
+                    'reviews'  => 'Kind words',
+                    'contact'  => 'Contact',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
         ];
     }
 
@@ -114,11 +278,11 @@ final class IndustryProfile
         // constraint, so "Hospitality" or " hospitality " reaching it is
         // not far-fetched, and normaliseIndustry() is case- and
         // whitespace-sensitive: neither variant resolves, both silently
-        // fall through to DEFAULT_INDUSTRY ('hotel'), and a beauty salon's
-        // structured data would tell Google it is a LodgingBusiness. Trim
-        // and lowercase here, once, before resolving — this only WIDENS
-        // what resolves correctly, so nothing that already worked can
-        // start failing.
+        // fall through to the 'other' vocabulary below, and a restaurant's
+        // structured data would tell Google it is a generic LocalBusiness
+        // rather than a Restaurant. Trim and lowercase here, once, before
+        // resolving — this only WIDENS what resolves correctly, so nothing
+        // that already worked can start failing.
         $normalised = is_string($industry) ? strtolower(trim($industry)) : $industry;
         $resolvedId = Organization::normaliseIndustry($normalised);
         // Both the vocabulary fallback below and `resolved:` at the bottom
@@ -126,19 +290,42 @@ final class IndustryProfile
         // (?:) here paired with a strict !== null check there would agree
         // for every value normaliseIndustry() can return TODAY, but not for
         // a hypothetical future industry id of '0': that string is falsy,
-        // so $id would silently become DEFAULT_INDUSTRY while `resolved`
-        // stayed true, and schemaType() would then map DEFAULT_INDUSTRY's
-        // type onto an industry that was never actually '0' — the exact
-        // false claim to Google this class exists to prevent. One test,
-        // used in both places, is what keeps that impossible rather than
-        // merely unlikely.
-        $id = $resolvedId !== null ? $resolvedId : Organization::DEFAULT_INDUSTRY;
+        // so $id would silently become 'other' while `resolved` stayed
+        // true, and schemaType() would then map 'other's LocalBusiness type
+        // onto an industry that was never actually '0' — the exact false
+        // claim to Google this class exists to prevent. One test, used in
+        // both places (`??`, a strict-null operator, not `?:`), is what
+        // keeps that impossible rather than merely unlikely.
+        //
+        // This deliberately does NOT reuse Organization::DEFAULT_INDUSTRY
+        // ('hotel'): that constant answers "which industry does an org get
+        // when it has never picked ONE AT ALL", a different question from
+        // "what vocabulary does a STRING THAT NEVER RESOLVED get". Coercing
+        // the latter to DEFAULT_INDUSTRY is how this exact bug happened a
+        // second time inside this fix — once every industry (including
+        // hotel) had an authored profile, an unresolved id silently started
+        // reading as "Rooms & Suites" / "Book your stay" instead of the
+        // generic copy below, because DEFAULT_INDUSTRY is itself a NAMED
+        // industry. 'other' is the only id with no more-generic industry to
+        // misrepresent as, which is why it is Organization::INDUSTRIES' own
+        // "my business isn't listed" entry.
+        $id = $resolvedId ?? 'other';
 
         $all = self::all();
 
-        // Falling back to beauty rather than throwing: an org carrying an
-        // industry we have not authored yet must still get a page.
-        $data = $all[$id] ?? $all['beauty'];
+        // Falling back to `other` rather than throwing: this line does NOT
+        // catch an unresolved $industry — $id above is already 'other' in
+        // that case, and self::all() authors every id in
+        // Organization::INDUSTRIES (a test asserts it), so $all[$id] hits
+        // directly for every value $id can take today. What this guards is
+        // tomorrow's version of the bug this whole method exists to fix: a
+        // TENTH industry added to INDUSTRIES (so $resolvedId legitimately
+        // resolves to it) before this class is taught its vocabulary. That
+        // org must still get a page, and 'other's honestly-generic copy
+        // ("Services", "Our team") is the right thing to hand it — silently
+        // inheriting some OTHER named industry's words is exactly how an
+        // education tenant was once offered "Treatments" and "Therapists".
+        $data = $all[$id] ?? $all['other'];
 
         return new self(
             industry:        $id,

@@ -35,7 +35,7 @@ final class PageContent
         public readonly Collection      $team,
         public readonly Collection      $reviews,
         public readonly ?array          $reviewStats,
-        public readonly ?Property       $contact,
+        public readonly ContactDetails  $contact,
         public readonly ?array          $hours,
         public readonly ?string         $widgetKey,
     ) {}
@@ -109,13 +109,26 @@ final class PageContent
         // hand a brand-1 page an unrelated unassigned property, or a
         // brandless page some brand's location, instead of its own.
         // See preferOwnBrand() for why the preference flips with $brandId.
-        $contact = self::preferOwnBrand(
+        $contactProperty = self::preferOwnBrand(
             self::scopedToBrand(self::scoped(Property::query(), $orgId), $brandId),
             $brandId
         )
             ->where('is_active', true)
             ->orderBy('id')
             ->first();
+
+        // Field-level precedence between this page's own content.contact
+        // overrides and the Property above lives in ContactDetails::resolve()
+        // and nowhere else -- see its docblock. content is a schemaless
+        // `array` cast, so the is_array() guard is load-bearing: a row
+        // written or hand-edited so that 'contact' holds a string, a bool, or
+        // an over-nested shape must degrade to "no overrides" rather than
+        // reach resolve() as something it then has to defend against a
+        // second time.
+        $contact = ContactDetails::resolve(
+            $contactProperty,
+            is_array($page->content['contact'] ?? null) ? $page->content['contact'] : [],
+        );
 
         // One row answers two questions - the opening hours below, and
         // whether this page may embed the chat widget at all - so it is
@@ -420,10 +433,34 @@ final class PageContent
             'services' => $this->services->count(),
             'team'     => $this->team->count(),
             'reviews'  => $this->reviews->count(),
-            'contact'  => $this->contact !== null
-                && (filled($this->contact->address) || filled($this->contact->phone)) ? 1 : 0,
+            // Widened from address/phone to any of the three overridable
+            // fields: an email-only Property (or override) previously did
+            // NOT publish a contact band at all, which was never a
+            // deliberate ruling -- it was these two fields being the only
+            // ones ContactDetails' predecessor carried an opinion about. An
+            // email address is exactly as publishable a contact fact as a
+            // phone number or a street address.
+            'contact'  => (filled($this->contact->phone)
+                || filled($this->contact->email)
+                || filled($this->contact->address)) ? 1 : 0,
             'about'    => filled($this->page->content['about']['body'] ?? null) ? 1 : 0,
-            'hero', 'booking', 'footer' => 1,
+            // The booking widget asks Check-in / Check-out / Adults /
+            // Children -- hotel questions -- and is framed unmodified on
+            // every industry's page (booking.blade.php). Until it grows an
+            // appointment mode, it fits exactly one industry, so it is
+            // gated on $this->profile->industry -- the SAME resolved value
+            // the kickers already read (IndustryProfile::for($page->industry)
+            // in for() above), not a second, independent read of the org.
+            // 'other' industries besides hotel still LIST 'booking' in
+            // defaultSections (beauty's shipped list does, deliberately --
+            // see IndustryProfile::all()'s own docblock), so this is the one
+            // place that decides whether the row that lists it actually
+            // renders: has() -- and so the section loop, the wizard's
+            // availability count, and hero's CTA guard, all of which are
+            // expressed in terms of this method -- agree by construction
+            // rather than by each re-deriving the same industry check.
+            'booking'  => $this->profile->industry === 'hotel' ? 1 : 0,
+            'hero', 'footer' => 1,
             default    => 0,
         };
     }

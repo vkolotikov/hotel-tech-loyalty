@@ -75,6 +75,7 @@
     "groups": {
       "overview": "Overview",
       "ai_chat": "AI Chat",
+      "landing_pages": "Landing pages",
       "members_loyalty": "Members & Loyalty",
       "bookings": "Bookings",
       "crm_marketing": "CRM & Marketing",
@@ -110,7 +111,8 @@
       "billing": "Billing",
       "audit_log": "Audit Log",
       "settings": "Settings",
-      "landing_pages": "Landing Page"
+      "landing_pages": "Landing Page",
+      "landing_featured_reviews": "Featured reviews"
     }
   },
   "topbar": {
@@ -3082,14 +3084,15 @@
       "services_count": "{{count}} {{label}} ready to show",
       "details_kicker": "Your details",
       "edit_in_settings": "Edit in Settings",
+      "open_properties": "Open Properties",
       "business_name": "Business name",
-      "business_name_hint": "Add your business name in Settings so it can appear on your page.",
+      "business_name_hint": "Add your business name in Properties so it can appear on your page.",
       "phone": "Phone",
-      "phone_hint": "Add a phone number in Settings so visitors can call you.",
+      "phone_hint": "Add a phone number so visitors can call you",
       "email": "Email",
-      "email_hint": "Add an email address in Settings so visitors can write to you.",
+      "email_hint": "Add an email address so visitors can write to you",
       "address": "Address",
-      "address_hint": "Add your address in Settings so visitors can find you.",
+      "address_hint": "Add your address so visitors can find you",
       "headline_label": "Headline",
       "headline_placeholder": "A short line that says what you do best",
       "subtext_label": "Subtext",
@@ -3142,6 +3145,10 @@
       "field_lead": "Opening line",
       "field_body": "Body text",
       "field_terms": "Terms",
+      "field_phone": "Phone",
+      "field_email": "Email",
+      "field_address": "Address",
+      "contact_caption": "Filled from your Properties screen — edit here to override for this page.",
       "preview_title": "Preview",
       "preview_desktop": "Desktop",
       "preview_mobile": "Mobile",
@@ -3158,5 +3165,15 @@
       "locked_body": "Your plan no longer includes the page builder, so the wizard, editing and Publish are turned off here. Taking this page offline still always works — use the button above.",
       "upgrade_cta": "View plans"
     }
+  },
+  "reviews": {
+    "landing_page": "Landing page",
+    "feature": "Feature",
+    "feature_hint": "Show this review on your landing page",
+    "featured": "On your page",
+    "featured_on": "Added to your landing page",
+    "featured_off": "Removed from your landing page",
+    "featured_on_section_off": "Saved. Switch the Reviews section on in your landing page editor to show it.",
+    "featured_on_no_page": "Saved. It will appear once you build your landing page."
   }
 }

@@ -131,9 +131,41 @@ class AccentTest extends TestCase
      * the same sweep, for the four pairs a CTA has to satisfy at once. A
      * per-colour list can only ever cover the colours somebody thought of —
      * and every one of the four failures above came from a colour nobody had.
+     *
+     * Parameterised over every authored industry accent (Task 3, 2026-08-25)
+     * rather than fixed to beauty's #9B5C8F: each one is a HOUSE colour under
+     * Accent::for() the moment its profile ships, which the class's own
+     * docblock calls "operator data... never clamped" — every one of them has
+     * to survive the same sweep beauty alone used to be held to.
+     *
+     * The sweep alone is not enough, though: it iterates literal CANDIDATE
+     * hexes on a 17-wide grid, and none of the eight new accents happen to
+     * land exactly on that grid, so a HOUSE colour that is itself broken can
+     * pass 4096 samples without the one case that matters ever running -
+     * Accent::for(null, $house), no tenant override at all, which is also the
+     * one path Accent::for() does not run its own discard-on-fail check
+     * against (that check only rejects a REJECTED tenant candidate, never the
+     * house itself). This is exactly how fitness's spec accent (#C25A2B,
+     * 4.383:1 against white - under FLOOR) was caught: see
+     * IndustryProfile::all()'s docblock for the correction.
      */
-    public function test_no_colour_in_the_cube_produces_an_unusable_call_to_action(): void
+    #[DataProvider('authoredAccents')]
+    public function test_no_colour_in_the_cube_produces_an_unusable_call_to_action(string $industry, string $house): void
     {
+        // The bare state first — no tenant override, the real default for
+        // every fresh org in this industry, and the one case the grid sweep
+        // below cannot be relied on to hit.
+        $bare = Accent::for(null, $house);
+
+        $this->assertGreaterThanOrEqual(Accent::FLOOR, Accent::contrast($bare->on, $bare->brand),
+            "[{$industry}] house {$house}: unreadable CTA label with no tenant override at all.");
+        $this->assertGreaterThanOrEqual(Accent::FLOOR, Accent::contrast($bare->on, $bare->hover),
+            "[{$industry}] house {$house}: CTA label unreadable on hover with no tenant override.");
+        $this->assertGreaterThanOrEqual(Accent::SURFACE_FLOOR, Accent::contrast($bare->brand, self::PAPER),
+            "[{$industry}] house {$house}: invisible on the page it is painted on, unaided.");
+        $this->assertGreaterThanOrEqual(Accent::SURFACE_FLOOR, Accent::contrast($bare->hover, self::PAPER),
+            "[{$industry}] house {$house}: hover fill invisible on the page, unaided.");
+
         $failures = [];
         $flat     = [];
         $sampled  = 0;
@@ -142,7 +174,7 @@ class AccentTest extends TestCase
             for ($g = 0; $g < 256; $g += 17) {
                 for ($b = 0; $b < 256; $b += 17) {
                     $hex    = sprintf('#%02x%02x%02x', $r, $g, $b);
-                    $accent = Accent::for($hex, self::HOUSE);
+                    $accent = Accent::for($hex, $house);
                     $sampled++;
 
                     // Readable, and visible, in both the resting and the
@@ -170,9 +202,29 @@ class AccentTest extends TestCase
 
         $this->assertSame(4096, $sampled);
         $this->assertSame([], array_slice($failures, 0, 8),
-            count($failures) . ' of ' . $sampled . ' colours end in a CTA that cannot be read or cannot be seen.');
+            "[{$industry}] house {$house}: " . count($failures) . ' of ' . $sampled
+            . ' colours end in a CTA that cannot be read or cannot be seen.');
         $this->assertSame([], array_slice($flat, 0, 8),
-            count($flat) . ' of ' . $sampled . ' colours end in a CTA with no hover state at all.');
+            "[{$industry}] house {$house}: " . count($flat) . ' of ' . $sampled
+            . ' colours end in a CTA with no hover state at all.');
+    }
+
+    /**
+     * Every industry profile's accent (IndustryProfile::all()), keyed by
+     * industry — the single source of truth for which colours the machinery
+     * must handle, so this cannot drift from what actually ships.
+     *
+     * @return array<string, array{0: string, 1: string}>
+     */
+    public static function authoredAccents(): array
+    {
+        $cases = [];
+
+        foreach (IndustryProfile::all() as $industry => $profile) {
+            $cases[$industry] = [$industry, $profile['accent']];
+        }
+
+        return $cases;
     }
 
     /**

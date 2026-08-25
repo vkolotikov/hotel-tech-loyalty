@@ -376,7 +376,13 @@ class PageContentTest extends TestCase
 
         $content = PageContent::for($this->page(1));
 
-        $this->assertNull($content->contact);
+        // $content->contact is always a ContactDetails instance now (there
+        // is no Property to leak, and no page-level override either), so
+        // the no-leak assertion is on its fields rather than on the object
+        // itself being null.
+        $this->assertNull($content->contact->phone);
+        $this->assertNull($content->contact->address);
+        $this->assertNull($content->contact->name);
         $this->assertNull($content->hours);
     }
 
@@ -606,5 +612,104 @@ class PageContentTest extends TestCase
         $this->assertSame(['Unassigned Stylist'], $content->team->pluck('name')->all());
         $this->assertSame('555', $content->contact?->phone);
         $this->assertSame('09:00', $content->hours[0]['open']);
+    }
+
+    // ─── content.contact overrides (App\Landing\ContactDetails) ─────────────
+
+    /**
+     * The precedence ContactDetails::resolve() owns: an override wins for
+     * its own field, and every field the tenant did NOT override - even
+     * another overridable one - still comes from the Property. The JSON-LD
+     * "pass-through" fields (city, country, currency, timezone) are never
+     * overridable at all, and are asserted here too, because that is what
+     * layout.blade.php's addressLocality/addressCountry and services.blade
+     * .php's currency fallback both read.
+     */
+    public function test_a_content_contact_override_wins_for_its_own_field_only(): void
+    {
+        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+            'phone' => '111', 'email' => 'old@ours.test', 'address' => 'Old St',
+            'city' => 'Riga', 'country' => 'LV', 'currency' => 'EUR', 'is_active' => true]);
+
+        $page = $this->page(1);
+        $page->update(['content' => ['contact' => ['phone' => '+371 999']]]);
+
+        $content = PageContent::for($page);
+
+        $this->assertSame('+371 999', $content->contact->phone);
+        // Untouched overridable field: still the Property's.
+        $this->assertSame('old@ours.test', $content->contact->email);
+        $this->assertSame('Old St', $content->contact->address);
+        // Never overridable: always the Property's.
+        $this->assertSame('Riga', $content->contact->city);
+        $this->assertSame('LV', $content->contact->country);
+        $this->assertSame('EUR', $content->contact->currency);
+    }
+
+    /**
+     * A blank override is absence, not erasure: clearing a field in the
+     * builder must fall back to the Property rather than blanking the
+     * public page.
+     */
+    public function test_a_blank_content_contact_override_falls_back_to_the_property(): void
+    {
+        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+            'phone' => '111', 'is_active' => true]);
+
+        $page = $this->page(1);
+        $page->update(['content' => ['contact' => ['phone' => '   ']]]);
+
+        $this->assertSame('111', PageContent::for($page)->contact->phone);
+    }
+
+    /**
+     * An override reaches the rendered band on its own: with no Property row
+     * at all, a page-level phone override is still enough for has('contact')
+     * to report true, exactly as a Property's own phone would be.
+     */
+    public function test_a_content_contact_override_makes_the_band_available_with_no_property_at_all(): void
+    {
+        $page = $this->page(1);
+        $page->update(['content' => ['contact' => ['phone' => '+371 999']]]);
+
+        $content = PageContent::for($page);
+
+        $this->assertSame('+371 999', $content->contact->phone);
+        $this->assertTrue($content->has('contact'));
+        $this->assertSame(1, $content->count('contact'));
+    }
+
+    /**
+     * The widening this task makes deliberately: has('contact') used to ask
+     * only about address and phone, so an email-only Property published no
+     * contact band at all. An email address is exactly as publishable a
+     * contact fact as either of those, so it must count on its own.
+     */
+    public function test_an_email_only_property_counts_as_a_contact_section(): void
+    {
+        Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours',
+            'email' => 'hello@ours.test', 'is_active' => true]);
+
+        $content = PageContent::for($this->page(1));
+
+        $this->assertTrue($content->has('contact'));
+        $this->assertSame(1, $content->count('contact'));
+    }
+
+    /**
+     * A page with neither a Property nor any override at all still gets a
+     * ContactDetails instance - the object is never null - and every field
+     * on it is null, so has('contact') correctly reports false rather than
+     * throwing on a null contact the way the old ?Property typed field
+     * would have let a careless caller do.
+     */
+    public function test_a_page_with_no_contact_facts_at_all_reports_no_contact_section(): void
+    {
+        $content = PageContent::for($this->page(1));
+
+        $this->assertNull($content->contact->phone);
+        $this->assertNull($content->contact->email);
+        $this->assertNull($content->contact->address);
+        $this->assertFalse($content->has('contact'));
     }
 }

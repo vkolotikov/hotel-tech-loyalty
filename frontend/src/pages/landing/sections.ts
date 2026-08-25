@@ -14,6 +14,16 @@ export type SectionMeta = {
   sourceLabel: string
   available: boolean
   count: number
+  /**
+   * The backend's own explanation for a section that is unavailable for a
+   * reason no amount of writing ever fixes — today only `booking`, whose
+   * gate is the org's industry (`LandingOnboardingService::SECTION_COPY`'s
+   * `reason` template, sprintf'd against the profile's own CTA text). `null`
+   * for every offerable section and for every unavailable section whose
+   * absence is already self-explanatory from `sourceLabel` alone (an empty
+   * Services screen needs no essay).
+   */
+  reason?: string | null
 }
 
 /**
@@ -42,17 +52,69 @@ export function isDataBackedSection(key: SectionKey): boolean {
 }
 
 /**
+ * Sections whose `available` can be permanently false for a reason no
+ * amount of writing ever fixes -- today just `booking`, gated on the org's
+ * industry (Task 4 / `PageContent::count('booking')`: hotel only). There is
+ * no row to add (unlike services/team/reviews) and no copy to type (unlike
+ * hero/about/contact) that would ever flip this back to true this session
+ * -- the gate is a fact about the tenant's business, not about what they
+ * have written so far.
+ *
+ * Ruling 3a-2: since Task 4 the backend legitimately reports
+ * `available:false` for a non-hotel org's booking row, but `isOfferable`
+ * put booking in the always-offerable bucket below -- so a beauty tenant's
+ * wizard offered a Booking toggle the renderer would never honour. The
+ * wizard and the rendered page must agree by construction (the same rule
+ * `isDataBackedSection` exists to enforce for services/team/reviews), so
+ * `isOfferable` now reads `available` for this set too.
+ */
+const INDUSTRY_GATED_SECTIONS: ReadonlySet<SectionKey> = new Set(['booking'])
+
+/**
  * The spec's rule, in one place: an empty DATA-BACKED section is never
  * offered as a choice. Both the wizard's step 4 and the editor's section
  * list ask this, and they must agree -- a section the wizard hid must not
  * reappear as an editable-but-empty row.
  *
- * A section the tenant writes into directly (hero, about, contact) or that
- * has no source table at all (booking) is always offerable: `count` there
- * reflects what has been written or configured SO FAR, not permission to
- * write it.
+ * A section the tenant writes into directly (hero, about, contact) is
+ * always offerable regardless of `available`: `count` there reflects what
+ * has been written SO FAR, not permission to write it. This is why Ruling
+ * 3a-2 is scoped to `INDUSTRY_GATED_SECTIONS` rather than applied to every
+ * non-data-backed key: on a brand-new page `about`'s `available` is false
+ * by construction (nothing has been typed into it yet -- see
+ * `LandingOnboardingTest::test_every_sections_availability_matches_the_renderers_own_answer`,
+ * where a fixture with no page content at all still expects `has('about')
+ * === false` for every fresh page). Gating `about` on `available` the same
+ * way as `booking` would permanently disable its wizard toggle for every
+ * first-run tenant in every industry -- the opposite of what the wizard's
+ * own "Nothing to show yet" copy is for (offer it, invite them to write
+ * it), and the exact regression this comment exists to head off.
  */
 export function isOfferable(s: SectionMeta): boolean {
-  if (!isDataBackedSection(s.key)) return true
-  return s.available && s.count > 0
+  if (isDataBackedSection(s.key)) return s.available && s.count > 0
+  if (INDUSTRY_GATED_SECTIONS.has(s.key)) return s.available
+  return true
+}
+
+/**
+ * What a "not offerable" row explains, in one place both the wizard's step
+ * 4 and the editor's section list read (RULING 4's own discipline, applied
+ * to this string the same way it is applied to the toggle itself): the
+ * backend's own authored `reason` when the row carries one, else the
+ * generic `defaultValue`-style text neither screen can improve on for a
+ * section with no authored reason.
+ *
+ * Every prefill row has shipped `reason` (industry-gated `booking` gets the
+ * "online booking currently supports hotel stays" sentence; everything else
+ * carries `null`) since Task 4, but nothing on this side of the wire read
+ * it until this fix — a beauty tenant saw the generic "Add some from your
+ * booking button" instruction for a feature no amount of writing would ever
+ * turn on. Pulled out as its own function (rather than inlined at each of
+ * the two render call sites) because this repo's vitest is
+ * pure-function-only — no jsdom, no React Testing Library — so this is the
+ * one place the preference itself, not just the mapping that feeds it, can
+ * actually be proven by a test.
+ */
+export function unavailableReason(section: Pick<SectionMeta, 'reason'>, generic: string): string {
+  return section.reason ?? generic
 }

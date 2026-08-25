@@ -6,7 +6,7 @@ import { clsx } from 'clsx'
 import {
   LayoutDashboard, Users, Gift, BarChart2, Sparkles,
   Bell, Settings, LogOut, Hotel, Scan, Bot, Inbox, Mail,
-  Crown, Building2, FileText, Globe,
+  Crown, Building2, FileText, Globe, Star,
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
@@ -75,7 +75,11 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const navGroups: NavGroup[] = [
+// Exported so MenuSettings.tsx's own hand-authored TOGGLEABLE/LOCKED lists
+// (Settings → Sidebar Menu) can be checked against this array in a test,
+// rather than drifting silently the way "Landing pages" just did (Task 5
+// fix round 1) — see MenuSettings.navGroupParity.test.ts.
+export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groups.overview', defaultLabel: 'Overview',
     accent: '#60a5fa', // blue
@@ -98,7 +102,24 @@ const navGroups: NavGroup[] = [
       { path: '/engagement',     labelKey: 'nav.items.engagement',     defaultLabel: 'Engagement',    icon: Inbox, gate: 'all',   product: 'chat', feature: 'engagement',
         altPaths: ['/inbox', '/visitors', '/chat-inbox', '/legacy/visitors'] },
       { path: '/chatbot-setup',  labelKey: 'nav.items.chatbot_setup',  defaultLabel: 'Chatbot Setup', icon: Bot,   gate: 'admin', product: 'chat', feature: 'chatbot' },
-      { path: '/landing-pages',  labelKey: 'nav.items.landing_pages',  defaultLabel: 'Landing Page',  icon: Globe, gate: 'admin', product: 'chat', feature: 'landing_pages' },
+    ],
+  },
+  {
+    // Task 5 — its own group, one door down from AI Chat. `/landing-pages`
+    // moved in UNCHANGED (same gate/product/feature, so the `_lapsed`
+    // teardown treatment mapped onto it further down this file — keyed on
+    // `item.path === '/landing-pages'`, not on which group holds it —
+    // keeps working without any change there. `/reviews` is a SECOND door:
+    // it already lives in "CRM & Marketing" (Marketing's own `altPaths`,
+    // via the `/reviews` → `/marketing?tab=reviews` redirect in App.tsx),
+    // and nothing here removes it from there — a tenant reviewing their
+    // landing page can jump straight to the reviews they might feature on
+    // it without leaving this group.
+    labelKey: 'nav.groups.landing_pages', defaultLabel: 'Landing pages',
+    accent: '#38bdf8', // sky
+    items: [
+      { path: '/landing-pages', labelKey: 'nav.items.landing_pages',  defaultLabel: 'Landing Page',      icon: Globe, gate: 'admin', product: 'chat', feature: 'landing_pages' },
+      { path: '/reviews',       labelKey: 'nav.items.landing_featured_reviews', defaultLabel: 'Featured reviews', icon: Star,  gate: 'admin', product: 'chat', feature: 'reviews' },
     ],
   },
   {

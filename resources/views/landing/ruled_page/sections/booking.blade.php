@@ -22,7 +22,7 @@
   three templates.
 --}}
 @php
-    $phone = $content->contact?->phone;
+    $phone = $content->contact->phone;
 
     // tel: wants dialling characters and nothing else; the display string
     // keeps whatever spacing the tenant typed. A + is meaningful only in

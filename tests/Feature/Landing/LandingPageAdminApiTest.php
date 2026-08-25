@@ -517,6 +517,104 @@ class LandingPageAdminApiTest extends TestCase
         $this->assertSame(0, $page['content']['hero']['headline']);
     }
 
+    // ─── Contact write-path validation (Phase 3a correctness fix 1) ──────
+
+    /**
+     * Executed proof from the phase 3a review: `email='not an email'` was
+     * accepted with a 200 by this endpoint (ScalarLeaves(depth:2) checks
+     * SHAPE, not FORMAT) and rendered verbatim into contact.blade.php's
+     * `mailto:` and the LocalBusiness JSON-LD. The wizard has refused this
+     * exact value since Task 2 (LandingOnboardingController's own
+     * `contact.email` rule); this is the other door into the same column.
+     */
+    public function test_an_invalid_contact_email_is_refused(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'content' => ['contact' => ['email' => 'not an email']],
+            ]));
+            $this->fail('An invalid contact email was accepted.');
+        } catch (ValidationException $e) {
+            // Exact text, not merely non-empty: this also proves neither
+            // Laravel's own default wording nor a raw dotted field name
+            // leaked to the tenant -- spec §9's "slug must never leak" rule,
+            // applied to this field the same way.
+            $this->assertSame(
+                'Please enter a valid email address.',
+                $e->errors()['email'][0],
+            );
+        }
+    }
+
+    /**
+     * Executed proof from the same review: a 200,000-character phone number
+     * was accepted and stored verbatim. `max:64` mirrors the wizard's own
+     * limit for the identical field (LandingOnboardingController's
+     * `contact.phone` rule).
+     */
+    public function test_an_oversized_contact_phone_is_refused(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'content' => ['contact' => ['phone' => str_repeat('5', 200_000)]],
+            ]));
+            $this->fail('A 200,000-character phone number was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                'Please use a shorter phone number — up to 64 characters.',
+                $e->errors()['phone'][0],
+            );
+        }
+    }
+
+    /** The fix must refuse only what is actually invalid. */
+    public function test_valid_contact_fields_still_round_trip(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'content' => ['contact' => [
+                'phone'   => '+371 20 123 456',
+                'email'   => 'hello@example.test',
+                'address' => '12 Some Street, Riga',
+            ]],
+        ])))['page'];
+
+        $this->assertSame('+371 20 123 456', $page['content']['contact']['phone']);
+        $this->assertSame('hello@example.test', $page['content']['contact']['email']);
+        $this->assertSame('12 Some Street, Riga', $page['content']['contact']['address']);
+    }
+
+    /**
+     * The trap this fix itself fell into during development, pinned so it
+     * cannot come back: validating `content.contact.*` as SIBLING rule keys
+     * alongside `content`'s own `array` rule (rather than the separate
+     * Validator `update()` actually uses) trips Laravel's own
+     * anti-mass-assignment safety net
+     * (`Validator::$excludeUnvalidatedArrayKeys`) and silently erases every
+     * OTHER section from the save the moment contact is touched at all --
+     * caught here by saving hero and contact together and asserting BOTH
+     * survive.
+     */
+    public function test_a_contact_write_does_not_erase_sibling_sections(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'content' => [
+                'hero'    => ['headline' => 'Quiet luxury'],
+                'contact' => ['phone' => '+371 20 123 456'],
+            ],
+        ])))['page'];
+
+        $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
+        $this->assertSame('+371 20 123 456', $page['content']['contact']['phone']);
+    }
+
     // ─── Web address (Task 10) ───────────────────────────────────────────
 
     /**

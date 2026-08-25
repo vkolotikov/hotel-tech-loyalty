@@ -56,7 +56,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>{{ $page->seo['title'] ?? $content->contact?->name ?? $page->content['hero']['headline'] ?? config('app.name') }}</title>
+<title>{{ $page->seo['title'] ?? $content->contact->name ?? $page->content['hero']['headline'] ?? config('app.name') }}</title>
 <meta name="description" content="{{ $page->seo['description'] ?? '' }}">
 {{--
   Structured data. Being findable is the entire reason this page is
@@ -188,9 +188,9 @@
     $rendersReviews = $renderedSections->contains(fn ($section) => $section->key === 'reviews');
 
     $ldAddress = array_filter([
-        'streetAddress'   => $content->contact?->address,
-        'addressLocality' => $content->contact?->city,
-        'addressCountry'  => $content->contact?->country,
+        'streetAddress'   => $content->contact->address,
+        'addressLocality' => $content->contact->city,
+        'addressCountry'  => $content->contact->country,
     ], fn ($v) => filled($v));
     if ($ldAddress !== []) {
         $ldAddress = ['@type' => 'PostalAddress'] + $ldAddress;
@@ -259,12 +259,12 @@
     $localBusiness = array_filter([
         '@context'    => 'https://schema.org',
         '@type'       => $content->profile->schemaType(),
-        'name'        => $content->contact?->name,
+        'name'        => $content->contact->name,
         'url'         => url('/' . $page->slug),
         'description' => $page->seo['description'] ?? null,
         'address'     => $ldAddress,
-        'telephone'   => $content->contact?->phone,
-        'email'       => $content->contact?->email,
+        'telephone'   => $content->contact->phone,
+        'email'       => $content->contact->email,
         'openingHoursSpecification' => $ldHours,
         'aggregateRating' => $ldAggregate,
         'review'          => $ldReviews,
@@ -274,7 +274,7 @@
         $localBusiness = null;
     }
 @endphp
-<meta property="og:title" content="{{ $page->seo['title'] ?? $content->contact?->name ?? $page->content['hero']['headline'] ?? config('app.name') }}">
+<meta property="og:title" content="{{ $page->seo['title'] ?? $content->contact->name ?? $page->content['hero']['headline'] ?? config('app.name') }}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ url('/' . $page->slug) }}">
 @if ($localBusiness !== null)

@@ -75,6 +75,7 @@
     "groups": {
       "overview": "Vista general",
       "ai_chat": "Chat IA",
+      "landing_pages": "Páginas de destino",
       "members_loyalty": "Miembros y Fidelización",
       "bookings": "Reservas",
       "crm_marketing": "CRM y Marketing",
@@ -110,7 +111,8 @@
       "billing": "Facturación",
       "audit_log": "Registro de auditoría",
       "settings": "Ajustes",
-      "landing_pages": "Página de destino"
+      "landing_pages": "Página de destino",
+      "landing_featured_reviews": "Reseñas destacadas"
     }
   },
   "topbar": {
@@ -3038,14 +3040,15 @@
       "services_count": "{{count}} {{label}} para mostrar",
       "details_kicker": "Tus datos",
       "edit_in_settings": "Editar en Ajustes",
+      "open_properties": "Abrir propiedades",
       "business_name": "Nombre del negocio",
-      "business_name_hint": "Añade el nombre de tu negocio en Ajustes para que aparezca en tu página.",
+      "business_name_hint": "Añade el nombre de tu negocio en Propiedades para que aparezca en tu página.",
       "phone": "Teléfono",
-      "phone_hint": "Añade un teléfono en Ajustes para que los visitantes puedan llamarte.",
+      "phone_hint": "Añade un teléfono para que los visitantes puedan llamarte",
       "email": "Correo electrónico",
-      "email_hint": "Añade un correo electrónico en Ajustes para que los visitantes puedan escribirte.",
+      "email_hint": "Añade un correo electrónico para que los visitantes puedan escribirte",
       "address": "Dirección",
-      "address_hint": "Añade tu dirección en Ajustes para que los visitantes puedan encontrarte.",
+      "address_hint": "Añade tu dirección para que los visitantes puedan encontrarte",
       "headline_label": "Titular",
       "headline_placeholder": "Una frase corta que diga qué haces mejor",
       "subtext_label": "Texto de apoyo",
@@ -3098,6 +3101,10 @@
       "field_lead": "Frase de entrada",
       "field_body": "Texto",
       "field_terms": "Condiciones",
+      "field_phone": "Teléfono",
+      "field_email": "Correo electrónico",
+      "field_address": "Dirección",
+      "contact_caption": "Rellenado desde tu pantalla de Propiedades — edítalo aquí para anularlo en esta página.",
       "preview_title": "Vista previa",
       "preview_desktop": "Escritorio",
       "preview_mobile": "Móvil",
@@ -3114,5 +3121,15 @@
       "locked_body": "Tu plan ya no incluye el creador de páginas, así que el asistente, la edición y Publicar están desactivados aquí. Retirar la página de la web siempre funciona: usa el botón de arriba.",
       "upgrade_cta": "Ver planes"
     }
+  },
+  "reviews": {
+    "landing_page": "Página de destino",
+    "feature": "Destacar",
+    "feature_hint": "Mostrar esta reseña en tu página de destino",
+    "featured": "En tu página",
+    "featured_on": "Añadida a tu página de destino",
+    "featured_off": "Eliminada de tu página de destino",
+    "featured_on_section_off": "Guardado. Activa la sección de reseñas en el editor de tu página de destino para mostrarla.",
+    "featured_on_no_page": "Guardado. Aparecerá en cuanto crees tu página de destino."
   }
 }
