@@ -21,12 +21,19 @@
     // RULING 5: the tenant's chosen heading/body pairing, or none. `theme`
     // is a schemaless `array` cast with no DB constraint behind it (see the
     // "Stored values the renderer must survive" tests further down this
-    // directory), so this is whitelisted against the exact three keys
-    // LandingOnboardingController validates (`in:editorial,modern,classic`)
-    // rather than trusted verbatim -- an unrecognised or hand-edited value
-    // must not leak onto <html> as an arbitrary attribute value; it must
-    // simply render as if no pairing had been chosen at all.
-    $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic'], true)
+    // directory), so this is whitelisted against the exact four keys
+    // LandingOnboardingController validates (`in:editorial,modern,classic,grand`
+    // -- `grand` added by Task 3, landing phase 3c, D3) rather than trusted
+    // verbatim -- an unrecognised or hand-edited value must not leak onto
+    // <html> as an arbitrary attribute value; it must simply render as if
+    // no pairing had been chosen at all.
+    //
+    // This array is a deliberate, independent COPY of
+    // App\Landing\ThemeRules::FONT_PAIRINGS, not a call to it -- see that
+    // class's own docblock: the write-time allowlist (ThemeRules) and this
+    // render-time re-whitelist are kept as two separate defense-in-depth
+    // layers on purpose, so a bug in one is not a bug in both.
+    $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic', 'grand'], true)
         ? $page->theme['font_pairing']
         : null;
 @endphp
@@ -282,16 +289,20 @@
   @json($localBusiness)
 </script>
 @endif
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-{{-- Three faces, one request. The axis tuple matters: the earlier
-     `wght@9..144,300;9..144,600` served two STATIC instances, so Appendix B
-     4.1's Fraunces 400 for --t-h3 was synthesised down to 300 and every h3 on
-     the page shipped a weight lighter than the design asks for. `300..500` is
-     the variable range, so 400 is a real instance. IBM Plex Mono 500 carries
-     every price, duration, hour and kicker (--t-mono); Inter Tight replaces
-     Inter as the text face per 4.1. --}}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
+{{-- Task 3 (landing phase 3c; D3): every face this template uses -- Fraunces,
+     Inter Tight and IBM Plex Mono for editorial/modern/classic, plus
+     Cormorant Garamond and Inter for `grand` -- is self-hosted as latin-subset
+     woff2 under public/landing/fonts/ and declared by the @font-face rules at
+     the top of ruled_page.css itself. There used to be a preconnect pair and
+     a stylesheet <link> here pointed at fonts.googleapis.com/fonts.gstatic.com;
+     both hosts are gone from this page entirely -- see the CSP in
+     LandingPageSecurity::policy(), whose style-src/font-src are 'self'-only
+     now -- so there is nothing left to link here beyond the template's own
+     stylesheet below. The axis-range rationale that used to live in this
+     comment (why Fraunces has to be requested as a weight RANGE rather than a
+     semicolon list of static instances, so --t-h3's 400 is a real instance
+     and not synthesised down from 300) moved to ruled_page.css's own
+     @font-face block, next to the declarations it now governs. --}}
 <link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}">
 @php
     // The palette system (Task 1, landing phase 3c; D2). `theme` is the

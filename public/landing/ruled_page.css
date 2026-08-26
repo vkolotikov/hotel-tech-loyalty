@@ -19,6 +19,43 @@
  * a profile's house triple here in step with that profile's accent.
  */
 
+/* --- self-hosted faces (Task 3, landing phase 3c; D3) --------------------
+   Every face this stylesheet ever sets a font-family to, downloaded once as
+   a latin-subset woff2 under public/landing/fonts/ and served same-origin —
+   no Google Fonts host anywhere in the landing CSP any more (style-src and
+   font-src are 'self'-only; see LandingPageSecurity::policy()). Google's own
+   css2 API was used only to DISCOVER which gstatic file backs each family —
+   fetched by hand with a browser User-Agent, never trusted from a
+   non-browser response (Google serves a plain .ttf fallback to any UA it
+   doesn't recognise, which is exactly the QA gap the task report documents).
+   The files themselves are committed under fonts/; every source URL is
+   recorded in this task's report, not repeated here.
+
+   Fraunces, Inter Tight and IBM Plex Mono are the three faces
+   editorial/modern/classic have always shared (RULING 5 below); Cormorant
+   Garamond and Inter are the two `grand` (Task 3) adds. Each is requested
+   from Google as a genuine weight RANGE (`wght@lo..hi`), never a semicolon
+   list of static instances — a static-instance request silently synthesises
+   any weight in between rather than loading a real one, which is exactly
+   the Fraunces/--t-h3 bug this task's own predecessor test caught. Every
+   file below was confirmed to actually BE a variable font spanning the
+   declared range by reading its own `fvar` table (python fontTools) before
+   being committed, not assumed from the request URL — IBM Plex Mono is the
+   one exception, requested and served as a genuine static single weight. */
+@font-face{font-family:Fraunces;font-style:normal;font-weight:300 500;font-display:swap;
+  src:url('fonts/fraunces-var.woff2') format('woff2')}
+@font-face{font-family:'Inter Tight';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/inter-tight-var.woff2') format('woff2')}
+@font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/ibm-plex-mono-500.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/cormorant-garamond-var.woff2') format('woff2')}
+@font-face{font-family:'Cormorant Garamond';font-style:italic;font-weight:300 500;font-display:swap;
+  src:url('fonts/cormorant-garamond-italic-var.woff2') format('woff2')}
+@font-face{font-family:Inter;font-style:normal;font-weight:300 500;font-display:swap;
+  src:url('fonts/inter-var.woff2') format('woff2')}
+/* --- end self-hosted faces ------------------------------------------------ */
+
 /* --- Appendix B section 4.2, verbatim ------------------------------------ */
 :root{
   /* surfaces — cool paper, mauve-shifted neutrals. Not warm cream, not brown. */
@@ -71,6 +108,17 @@
                              using it set every eyebrow on the page 1px small. */
   --t-legal:.6875rem;     /* 11px: the field labels, the "or call" line */
   --mono:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  /* Task 3 (landing phase 3c; D3): the running-text face as a custom
+     property rather than a literal in body.rp below. editorial/modern/
+     classic never touch this token -- they only ever swap the HEADING
+     faces (see the font-pairing block further down) -- but `grand` swaps
+     the body face too (Cormorant Garamond display over Inter body, per the
+     reference), and a heading-only selector has nothing to override for
+     that. This is the minimal extension the pairing mechanism needed: one
+     more custom property, re-declared only inside
+     :root[data-font-pairing="grand"], cascading down to body.rp exactly
+     the way --brand's tenant override already cascades from :root today. */
+  --font-body:'Inter Tight','Inter Tight fb',system-ui,sans-serif;
 }
 .mono,.band__kicker{font-family:var(--mono);font-weight:500;
   font-variant-numeric:tabular-nums;letter-spacing:.06em}
@@ -88,8 +136,13 @@
    Georgia/Arial has different metrics from Fraunces/Inter Tight -- so every
    first paint reflowed the headline as the webfont arrived. These override the
    local face's metrics to match, so the swap changes the shapes and nothing
-   else. src is local() only: no network request, and no font-src beyond the
-   Google host the layout already names. */
+   else. src is local() only: no network request at all, and (Task 3, D3)
+   no font-src host of any kind needed for it -- local() never leaves the
+   device. `grand`'s two faces (Cormorant Garamond, Inter) get no such
+   fallback: Task 3 measured no metric-matched local() pair for them, so a
+   page using `grand` swaps directly from the UA's ordinary serif/sans-serif
+   default to the webfont on arrival, same as every face on the web that
+   isn't one of these two deliberately-tuned exceptions. */
 @font-face{font-family:'Fraunces fb';src:local('Georgia');
   size-adjust:96%;ascent-override:92%;descent-override:24%;line-gap-override:0%}
 @font-face{font-family:'Inter Tight fb';src:local('Arial');
@@ -97,7 +150,7 @@
 
 *,*::before,*::after{box-sizing:border-box}
 body.rp{margin:0;background:var(--paper);color:var(--text);
-  font-family:'Inter Tight','Inter Tight fb',system-ui,sans-serif;font-size:var(--t-body);line-height:1.65;
+  font-family:var(--font-body);font-size:var(--t-body);line-height:1.65;
   font-optical-sizing:auto}
 h1,h2,h3{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
   font-variation-settings:'opsz' 144,'SOFT' 0,'WONK' 0;letter-spacing:-.01em;margin:0}
@@ -114,21 +167,23 @@ h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
    above this comment changes, and every existing published page (no theme
    choice stored) renders byte-for-byte the same headings it always has.
 
-   All three reuse the SAME three families the layout already requests from
-   Google Fonts for every page (Fraunces, Inter Tight, IBM Plex Mono) -- no
-   new font, no new host. Body copy (Inter Tight, line 100) is left alone in
-   every pairing; only the heading treatment moves, because that is where a
-   visitor's eye lands first and where the three read as genuinely
-   different at a glance:
+   classic/editorial/modern all reuse the SAME three self-hosted families
+   this page already loads for every page (Fraunces, Inter Tight, IBM Plex
+   Mono; see the @font-face block near the top of this file) -- no new font,
+   no new host. Body copy (--font-body, which resolves to Inter Tight unless
+   overridden) is left alone by all three; only the heading treatment moves,
+   because that is where a visitor's eye lands first and where the three
+   read as genuinely different at a glance:
      - classic   -- Fraunces exactly as shipped today (the house default,
                     offered back as an explicit, nameable choice).
      - editorial -- the SAME Fraunces file at a much lower optical size
                     (opsz 30 rather than the display cut's 144). opsz is a
-                    genuinely SERVED axis -- the layout's own href asks for
-                    `Fraunces:opsz,wght@9..144,300..500` -- and unlike an
-                    interpolated weight, a different opsz value is a
-                    different set of glyph outlines: Fraunces' low-opsz
-                    cut carries more stroke-width contrast and more
+                    genuinely SERVED axis -- the self-hosted fraunces-var.woff2
+                    (Task 3) carries opsz 9..144 in its own `fvar` table,
+                    verified by hand when the file was acquired, not assumed
+                    -- and unlike an interpolated weight, a different opsz
+                    value is a different set of glyph outlines: Fraunces'
+                    low-opsz cut carries more stroke-width contrast and more
                     calligraphic detail than the tall, even display cut
                     every other pairing renders at opsz 144. Weight and
                     tracking still move on top of that, but the opsz shift
@@ -136,19 +191,30 @@ h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
                     glance."
      - modern    -- IBM Plex Mono in place of Fraunces: no serif anywhere
                     in a heading, tracked out, upper case.
+     - grand     -- (Task 3, D3, the reference pairing) Cormorant Garamond
+                    in place of Fraunces, and -- unlike the other three --
+                    the BODY face moves too, via --font-body (see the type-
+                    scale :root above): Inter in place of Inter Tight. This
+                    is the reference's own pairing (test.beauty-tech.uk):
+                    weight 500, the tighter line-height and letter-spacing
+                    the reference's own h1/h2/h3 rule uses, rather than this
+                    page's default 300.
    (Fix round 1 correction: this pairing originally also set 'SOFT'/'WONK'
    on editorial, copying the admin's own data-mood pattern of forking a
    font's full axis set. Fraunces DOES define SOFT and WONK, but the
-   layout's href never requests them -- Google Fonts serves only the axes
-   named in the `family=Fraunces:...` axis list, so those two tags were
-   silently ignored by every browser and did nothing. Removed rather than
-   widening the href: adding SOFT+WONK nearly doubles the font payload on
-   every published tenant page, and this feature exists to be found.)
-   Each selector's specificity (:root[attr] + tag = 0,2,1) already beats the
-   plain h1,h2,h3 / h3 rules above (0,0,1 each) regardless of source order,
-   so declaring only what changes per pairing is enough -- classic does not
-   even need to repeat weight/letter-spacing, since leaving them unset lets
-   the base rule's own values keep winning for those properties. */
+   self-hosted file never carries them -- Google's axis-sliced file serves
+   only opsz and wght (confirmed against its own `fvar` table when the file
+   was acquired), so those two tags were silently ignored by every browser
+   and did nothing. Removed rather than re-fetching a wider file: adding
+   SOFT+WONK nearly doubles the font payload on every published tenant page,
+   and this feature exists to be found.)
+   Each heading selector's specificity (:root[attr] + tag = 0,2,1) already
+   beats the plain h1,h2,h3 / h3 rules above (0,0,1 each) regardless of
+   source order, so declaring only what changes per pairing is enough --
+   classic does not even need to repeat weight/letter-spacing, since leaving
+   them unset lets the base rule's own values keep winning for those
+   properties. `grand`'s body-face override is the one pairing rule that is
+   NOT a heading selector -- see its own comment below. */
 :root[data-font-pairing="classic"] h1,
 :root[data-font-pairing="classic"] h2,
 :root[data-font-pairing="classic"] h3{
@@ -167,6 +233,23 @@ h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
 :root[data-font-pairing="modern"] h3{
   font-family:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   font-weight:500;letter-spacing:.02em;text-transform:uppercase;
+}
+:root[data-font-pairing="grand"] h1,
+:root[data-font-pairing="grand"] h2,
+:root[data-font-pairing="grand"] h3{
+  font-family:'Cormorant Garamond',Georgia,serif;
+  font-weight:500;line-height:1.05;letter-spacing:-.005em;
+}
+/* The one pairing rule in this block that is not a heading selector: `grand`
+   is the only pairing that swaps the BODY face as well (see spec D3 and the
+   --font-body token declared in the type-scale :root above), because Inter
+   over Cormorant Garamond -- not Inter Tight -- is the reference's actual
+   pairing. Scoped to :root[data-font-pairing="grand"] with no descendant
+   selector, so it re-declares the custom property at the same cascade point
+   --brand's tenant override already uses, and body.rp picks it up simply by
+   inheriting the property, the same as it always has. */
+:root[data-font-pairing="grand"]{
+  --font-body:Inter,system-ui,-apple-system,sans-serif;
 }
 /* --- end font pairing ----------------------------------------------------- */
 

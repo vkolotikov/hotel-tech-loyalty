@@ -618,61 +618,71 @@ class RuledPageRenderTest extends TestCase
     }
 
     /**
-     * The font request must ask for a weight RANGE, not a list of statics.
+     * The self-hosted equivalent (Task 3, landing phase 3c; D3) of the old
+     * "the font request must ask for a weight RANGE" check.
      *
-     * This is the check the shipped QA gate could not make. Appendix B 3.2's
-     * gate is "curl the css2 URL, assert 200 and a non-empty body" — but
-     * Google serves a .ttf fallback to any user agent it does not recognise
-     * as a browser, so that gate returns 200 for a broken axis tuple exactly
-     * as it does for a correct one. It passed for
-     * `wght@9..144,300;9..144,600`, which served two STATIC instances and left
-     * 4.1's Fraunces 400 for --t-h3 synthesised down onto the 300.
-     *
-     * Asserted here against the file rather than the network so it is
-     * deterministic and runs offline. The live half — fetch with a browser
-     * User-Agent and grep for `font-weight: 300 500` in the Fraunces blocks —
-     * belongs in a release check, and was run by hand when this landed.
+     * There is no Google href to read any more — every face is a committed
+     * woff2 under public/landing/fonts/, declared by @font-face rules at the
+     * top of ruled_page.css — so this now reads THAT declaration instead of
+     * a query string. Same intent: Fraunces must be declared with a
+     * font-weight RANGE (`300 500`, not a bare `300` or a comma-separated
+     * list), because a single fixed weight is what silently synthesises
+     * --t-h3's 400 instead of loading the real instance — the exact bug the
+     * old test caught against `wght@9..144,300;9..144,600` in the Google
+     * href. The file behind the declaration was independently confirmed to
+     * really be a variable font spanning this range (python fontTools read
+     * of its own `fvar` table, recorded in this task's report) — a check
+     * with no offline equivalent, so it is not repeated here.
      */
-    public function test_the_fraunces_request_spans_the_weights_the_stylesheet_uses(): void
+    public function test_the_fraunces_face_spans_the_weights_the_stylesheet_uses(): void
     {
-        $layout = file_get_contents(resource_path('views/landing/ruled_page/layout.blade.php'));
-
-        $this->assertSame(1, preg_match('/css2\?([^"]+)/', $layout, $url),
-            'The layout requests no Google font stylesheet.');
-
-        $this->assertSame(1, preg_match('/family=Fraunces:opsz,wght@([^&"]+)/', $url[1], $axis),
-            'Fraunces is not requested with an opsz,wght tuple.');
-
-        // A range, spelled with `..`, and one whose bounds actually bracket
-        // the 400 that --t-h3 asks for. A semicolon list is what silently
-        // synthesises instead of loading.
-        $this->assertStringNotContainsString(';', $axis[1],
-            'Fraunces is requested as static instances; 400 will be synthesised, not loaded.');
-
-        $this->assertSame(1, preg_match('/,(\d+)\.\.(\d+)$/', $axis[1], $range),
-            'The Fraunces weight axis is not a range.');
-
-        $this->assertLessThanOrEqual(400, (int) $range[1]);
-        $this->assertGreaterThanOrEqual(400, (int) $range[2]);
-
-        // The other two faces 4.1 names, and the one it replaces.
-        $this->assertStringContainsString('family=IBM+Plex+Mono', $url[1]);
-        $this->assertStringContainsString('family=Inter+Tight', $url[1]);
-        $this->assertDoesNotMatchRegularExpression('/family=Inter:/', $url[1]);
-    }
-
-    public function test_the_stylesheet_sets_the_text_face_the_font_request_loads(): void
-    {
-        // The pair that has to move together: requesting Inter Tight while
-        // body.rp still names Inter downloads a face nothing uses and renders
-        // in one nothing downloaded.
         $css = file_get_contents(public_path('landing/ruled_page.css'));
 
+        $this->assertSame(1, preg_match(
+            '/@font-face\{font-family:Fraunces;font-style:normal;font-weight:(\d+) (\d+);/',
+            $css,
+            $range
+        ), 'No self-hosted Fraunces @font-face with a weight range was found.');
+
+        // The range must bracket both the base rule's 300 and h3's own 400.
+        $this->assertLessThanOrEqual(300, (int) $range[1]);
+        $this->assertGreaterThanOrEqual(400, (int) $range[2]);
+
+        // The other two faces the shared pairings use, self-hosted the same
+        // way, and the two `grand` (Task 3) adds.
+        $this->assertStringContainsString("font-family:'IBM Plex Mono';font-style:normal;font-weight:500;", $css);
+        $this->assertStringContainsString("font-family:'Inter Tight';font-style:normal;font-weight:", $css);
+        $this->assertStringContainsString("font-family:'Cormorant Garamond';font-style:normal;font-weight:", $css);
+        $this->assertStringContainsString("font-family:'Cormorant Garamond';font-style:italic;font-weight:", $css);
+        $this->assertStringContainsString('font-family:Inter;font-style:normal;font-weight:', $css);
+    }
+
+    /**
+     * Self-hosted equivalent (Task 3, D3) of the old text-face pairing
+     * check. The pair that has to move together used to be "Inter Tight
+     * requested, body.rp names Inter Tight" — it is now "--font-body
+     * defaults to Inter Tight, and body.rp actually consumes the token"
+     * rather than a hardcoded literal, because `grand` (Task 3) has to be
+     * able to override the SAME property without touching body.rp itself.
+     * See the type-scale :root's own comment on --font-body for why a
+     * custom property replaced the literal.
+     */
+    public function test_the_stylesheet_sets_the_text_face_the_font_request_loads(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $this->assertSame(1, preg_match('/--font-body:([^;]+);/', $css, $token),
+            'No --font-body token was declared.');
+        $this->assertStringContainsString("'Inter Tight'", $token[1]);
+
         $this->assertSame(1, preg_match('/body\.rp\{[^}]*font-family:([^;]+)/', $css, $stack));
-        $this->assertStringContainsString("'Inter Tight'", $stack[1]);
+        $this->assertStringContainsString('var(--font-body)', $stack[1],
+            'body.rp does not consume the --font-body token at all.');
 
         // And the metric-matched fallbacks 4.1 specifies, without which
-        // display=swap reflows the headline on every first paint.
+        // display=swap reflows the headline on every first paint. Unaffected
+        // by self-hosting — these were always local()-only, never a network
+        // font.
         $this->assertStringContainsString("font-family:'Fraunces fb'", $css);
         $this->assertStringContainsString("font-family:'Inter Tight fb'", $css);
     }
@@ -823,7 +833,7 @@ class RuledPageRenderTest extends TestCase
      */
     public function test_a_chosen_font_pairing_appears_as_a_root_attribute(): void
     {
-        foreach (['editorial', 'modern', 'classic'] as $pairing) {
+        foreach (['editorial', 'modern', 'classic', 'grand'] as $pairing) {
             $page = $this->published();
             $page->update(['theme' => ['font_pairing' => $pairing]]);
 
@@ -872,16 +882,16 @@ class RuledPageRenderTest extends TestCase
      * that changes the attribute but not a single heading.
      *
      * Each block must be scoped to :root (only the root element carries the
-     * attribute) and must reuse one of the two families
-     * layout.blade.php's own Google Fonts request already loads for every
-     * page -- Fraunces or IBM Plex Mono -- never a font this page does not
-     * already fetch.
+     * attribute) and must reuse one of the families ruled_page.css's own
+     * @font-face block already self-hosts (Task 3, D3) -- Fraunces, IBM Plex
+     * Mono or (the `grand` pairing this task adds) Cormorant Garamond --
+     * never a font this page does not already ship.
      */
     public function test_each_font_pairing_selector_targets_the_headings_and_a_loaded_family(): void
     {
         $css = file_get_contents(public_path('landing/ruled_page.css'));
 
-        foreach (['classic', 'editorial', 'modern'] as $pairing) {
+        foreach (['classic', 'editorial', 'modern', 'grand'] as $pairing) {
             $this->assertSame(
                 1,
                 preg_match(
@@ -894,50 +904,47 @@ class RuledPageRenderTest extends TestCase
             );
 
             $this->assertTrue(
-                str_contains($rule[1], 'Fraunces') || str_contains($rule[1], 'IBM Plex Mono'),
+                str_contains($rule[1], 'Fraunces')
+                    || str_contains($rule[1], 'IBM Plex Mono')
+                    || str_contains($rule[1], 'Cormorant Garamond'),
                 "The \"{$pairing}\" pairing does not set a font-family the page already loads."
             );
         }
     }
 
     /**
-     * Fix round 1, Important 2. The reviewer downloaded both the served
-     * font file and the full Fraunces variable font and read their `fvar`
-     * tables directly: the layout's href
-     * (`family=Fraunces:opsz,wght@9..144,300..500`) serves an
-     * AXIS-SLICED file carrying only `opsz` and `wght` -- Google Fonts
-     * serves exactly the axes named in the query's own axis list, nothing
-     * more. A `font-variation-settings` declaration naming any OTHER axis
-     * (Fraunces genuinely defines `SOFT` and `WONK`, among others) is
-     * silently ignored by every browser: no error, no fallback, just a
-     * declaration that does nothing. `editorial` shipped exactly this bug
+     * Self-hosted equivalent (Task 3, landing phase 3c; D3) of Fix round 1,
+     * Important 2's original check. There is no Google href to read any
+     * more, so the axis list this test checks against comes from the
+     * self-hosted Fraunces file's own `fvar` table instead -- read once by
+     * hand with python fontTools when the file was acquired for this task
+     * (recorded in the task report) rather than re-decoded here on every
+     * run. That is no weaker a source of truth than the OLD test's: the old
+     * test also never decoded the served bytes, it only parsed the QUERY
+     * STRING that requested them and trusted Google to honour it.
+     *
+     * fraunces-var.woff2 carries exactly `opsz` and `wght` -- no `SOFT`, no
+     * `WONK` -- confirmed against its own `fvar` table. A
+     * `font-variation-settings` declaration naming any axis outside that
+     * pair is silently ignored by every browser: no error, no fallback, just
+     * a declaration that does nothing. `editorial` shipped exactly this bug
      * for `SOFT`/`WONK` in this task's first pass, and
      * `test_each_font_pairing_selector_targets_the_headings_and_a_loaded_family`
-     * above could not catch it -- it only asserts the FAMILY is one the
-     * page loads, never that a declared AXIS is one the served file
-     * actually carries.
-     *
-     * This is the general form of that check: every axis tag any
-     * `:root[data-font-pairing="X"]` rule declares must be one the page's
-     * own Google Fonts href actually asks for, for every family and every
-     * pairing -- not a one-off assertion tied to the specific axis that
-     * went dead this time.
+     * above could not catch it -- it only asserts the FAMILY is one the page
+     * loads, never that a declared AXIS is one the self-hosted file actually
+     * carries. This is the general form of that check, for every family and
+     * every pairing -- not a one-off assertion tied to the specific axis
+     * that went dead that time.
      */
-    public function test_no_font_pairing_rule_declares_an_axis_the_page_never_requests(): void
+    public function test_no_font_pairing_rule_declares_an_axis_the_self_hosted_font_lacks(): void
     {
-        $layout = file_get_contents(resource_path('views/landing/ruled_page/layout.blade.php'));
-        $css    = file_get_contents(public_path('landing/ruled_page.css'));
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
 
-        // The only family requested WITH an axis list at all -- IBM Plex
-        // Mono and Inter Tight are each requested as a static weight list
-        // (`wght@500`, `wght@400;500;600`: no comma before the `@`), so
-        // they have no variation axis a `font-variation-settings`
-        // declaration could legitimately name.
-        $this->assertSame(1, preg_match('/family=Fraunces:([a-z,]+)@/', $layout, $m),
-            'The layout requests no Fraunces axis list at all -- has the href changed shape?');
-        $servedAxes = explode(',', $m[1]);
-        $this->assertContains('opsz', $servedAxes);
-        $this->assertContains('wght', $servedAxes);
+        // Verified against public/landing/fonts/fraunces-var.woff2's own
+        // `fvar` table (python fontTools, see this task's report): opsz and
+        // wght only. No other self-hosted face in this stylesheet is ever
+        // targeted by a font-variation-settings declaration.
+        $servedAxes = ['opsz', 'wght'];
 
         $this->assertSame(1, preg_match(
             '/\/\* --- font pairing \(RULING 5\).*?--- end font pairing -+ \*\//s',
@@ -956,13 +963,77 @@ class RuledPageRenderTest extends TestCase
                 $this->assertContains(
                     $tag,
                     $servedAxes,
-                    "A font-pairing rule declares axis '{$tag}', which the page's own Google Fonts "
-                        . "request never asks for -- every browser silently ignores it. This is exactly "
-                        . "how SOFT/WONK went dead on the editorial pairing."
+                    "A font-pairing rule declares axis '{$tag}', which the self-hosted Fraunces file's "
+                        . "own fvar table does not carry -- every browser silently ignores it. This is "
+                        . "exactly how SOFT/WONK went dead on the editorial pairing."
                 );
             }
         }
         $this->assertGreaterThan(0, $checked, 'No axis tag was found inside any font-variation-settings declaration.');
+    }
+
+    /**
+     * The rendered <head> must name neither Google Fonts host any more
+     * (Task 3, landing phase 3c; D3) -- every face is self-hosted under
+     * public/landing/fonts/ and declared entirely inside ruled_page.css's
+     * own @font-face rules, so there is nothing left in the template that
+     * would ever need to link to fonts.googleapis.com or fonts.gstatic.com.
+     */
+    public function test_the_rendered_head_names_no_google_fonts_host(): void
+    {
+        $this->published();
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('fonts.googleapis.com', $body);
+        $this->assertStringNotContainsString('fonts.gstatic.com', $body);
+    }
+
+    /**
+     * Every @font-face this stylesheet declares must point at a same-origin,
+     * relative path under fonts/ -- never an absolute URL, never a
+     * protocol-relative one, and never a path that escapes public/landing/
+     * (the only directory this test can independently confirm the file
+     * actually exists in). A relative `url('fonts/…')` resolves against
+     * ruled_page.css's own location (public/landing/), so this is the whole
+     * same-origin contract D3 asks for.
+     */
+    public function test_every_font_face_source_is_same_origin_and_relative(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        preg_match_all('/@font-face\{[^}]*\bsrc:url\(\'([^\']+)\'\)/', $css, $faces);
+        $this->assertNotEmpty($faces[1], 'No @font-face src was found at all.');
+
+        foreach ($faces[1] as $src) {
+            $this->assertStringStartsWith('fonts/', $src,
+                "@font-face src '{$src}' is not a relative fonts/… path.");
+            $this->assertStringNotContainsString('://', $src,
+                "@font-face src '{$src}' names a scheme -- it is not same-origin.");
+            $this->assertStringNotContainsString('..', $src,
+                "@font-face src '{$src}' escapes the fonts/ directory.");
+        }
+    }
+
+    /**
+     * Every file every @font-face declaration names must actually exist on
+     * disk -- a typo'd or un-committed filename here is a face that
+     * silently falls through to its fallback stack on every real page,
+     * with no error anywhere a developer would see it.
+     */
+    public function test_every_declared_font_file_exists_on_disk(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        preg_match_all('/@font-face\{[^}]*\bsrc:url\(\'([^\']+)\'\)/', $css, $faces);
+        $this->assertNotEmpty($faces[1], 'No @font-face src was found at all.');
+
+        foreach ($faces[1] as $src) {
+            $this->assertFileExists(
+                public_path('landing/' . $src),
+                "Declared font file '{$src}' does not exist under public/landing/."
+            );
+        }
     }
 
     /**
@@ -989,6 +1060,15 @@ class RuledPageRenderTest extends TestCase
      * scroll to. This is the one place that bug fix is expected to change
      * this test's bytes; RuledPageSectionsTest's own hotel-industry fixtures
      * are what still pin the booking band byte-for-byte where it belongs.
+     *
+     * Task 3 update (landing phase 3c; D3): the two Google Fonts preconnect
+     * links and the Google css2 stylesheet link are gone from <head> — every
+     * face is self-hosted under public/landing/fonts/ now, declared entirely
+     * inside ruled_page.css's own @font-face rules, so there is nothing left
+     * to link. The golden below drops exactly those three lines and keeps
+     * the one blank line that used to sit between the preconnects and the
+     * Google stylesheet link — it now sits between the JSON-LD script and
+     * the (only remaining) ruled_page.css stylesheet link instead.
      */
     public function test_the_contact_band_renders_byte_identical_to_before_contactdetails(): void
     {
@@ -1014,10 +1094,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 <script type="application/ld+json" nonce="TESTNONCE">
   {"@context":"https:\\/\\/schema.org","@type":"BeautySalon","name":"Glamour Salon","url":"http:\\/\\/sites.hexa-tech.uk\\/glamour-salon","address":{"@type":"PostalAddress","streetAddress":"12 Elizabetes iela","addressLocality":"Riga","addressCountry":"Latvia"},"telephone":"+371 20000000"}</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
 
 <style nonce="TESTNONCE">
@@ -1213,6 +1290,12 @@ class RuledPageRenderTest extends TestCase
      * drifting here after that lands means the plate rendered when it had
      * no business to, not merely that the wrapping changed. The nonce is
      * random per request and is the only thing normalised out.
+     *
+     * Task 3 update (landing phase 3c; D3): see the identical note on
+     * test_the_contact_band_renders_byte_identical_to_before_contactdetails
+     * above — the two Google Fonts preconnects and the Google stylesheet
+     * link are gone from <head>, self-hosting having moved every face into
+     * ruled_page.css's own @font-face rules.
      */
     public function test_the_hero_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1234,10 +1317,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:title" content="The Art of Wellness">
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
 
 <style nonce="TESTNONCE">
@@ -1291,6 +1371,12 @@ class RuledPageRenderTest extends TestCase
      * about.blade.php claims "text at 62ch, centred in the grid" but the
      * actual markup below is grid-column 3/11 (columns 3-10), not centred —
      * the code, not the comment, is what this golden pins.
+     *
+     * Task 3 update (landing phase 3c; D3): see the identical note on
+     * test_the_contact_band_renders_byte_identical_to_before_contactdetails
+     * above — the two Google Fonts preconnects and the Google stylesheet
+     * link are gone from <head>, self-hosting having moved every face into
+     * ruled_page.css's own @font-face rules.
      */
     public function test_the_about_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1313,10 +1399,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:title" content="The Art of Wellness">
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
 
 <style nonce="TESTNONCE">
@@ -1613,6 +1696,12 @@ class RuledPageRenderTest extends TestCase
      * only thing this golden has to isolate is the ABSENCE of a second
      * <style> block in <head>, and a richer fixture would just be more
      * bytes that could drift for reasons this test isn't about.
+     *
+     * Task 3 update (landing phase 3c; D3): see the identical note on
+     * test_the_contact_band_renders_byte_identical_to_before_contactdetails
+     * above — the two Google Fonts preconnects and the Google stylesheet
+     * link are gone from <head>, self-hosting having moved every face into
+     * ruled_page.css's own @font-face rules.
      */
     public function test_a_page_with_no_palette_renders_byte_identical_to_before_the_palette_system(): void
     {
@@ -1631,10 +1720,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:title" content="The Art of Wellness">
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
 
 <style nonce="TESTNONCE">

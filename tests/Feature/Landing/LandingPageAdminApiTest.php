@@ -688,6 +688,13 @@ class LandingPageAdminApiTest extends TestCase
      * `font_pairing` gets the same ThemeRules allowlist as `palette` now —
      * this endpoint never format-checked it at all before D6 (only the
      * onboarding wizard did), so a bad value used to round-trip with a 200.
+     *
+     * `grand` used to be this test's example invalid value ("grand is Task
+     * 3, not this one") — Task 3 (landing phase 3c, D3) has now added it to
+     * `ThemeRules::FONT_PAIRINGS`, so it is a genuinely valid pairing (see
+     * `test_grand_is_accepted_as_a_font_pairing` below) and can no longer
+     * stand in for "unrecognised" here. `baroque` is not, and never will be,
+     * one of the four curated pairings.
      */
     public function test_an_invalid_font_pairing_is_refused_with_a_friendly_message(): void
     {
@@ -695,13 +702,31 @@ class LandingPageAdminApiTest extends TestCase
 
         try {
             $this->controller()->update($this->request([
-                'theme' => ['font_pairing' => 'grand'],
+                'theme' => ['font_pairing' => 'baroque'],
             ]));
-            $this->fail('An unrecognised font pairing was accepted (grand is Task 3, not this one).');
+            $this->fail('An unrecognised font pairing was accepted.');
         } catch (ValidationException $e) {
             $message = $e->errors()['font_pairing'][0] ?? '';
             $this->assertSame('Please choose one of the available type pairings.', $message);
         }
+    }
+
+    /**
+     * The other half of the rename above: `grand` (Task 3, landing phase
+     * 3c, D3 — Cormorant Garamond over Inter, the reference pairing) must
+     * now round-trip through the exact same write path `editorial`,
+     * `modern` and `classic` already do — one allowlist
+     * (`ThemeRules::FONT_PAIRINGS`), no second place that has to agree.
+     */
+    public function test_grand_is_accepted_as_a_font_pairing(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['font_pairing' => 'grand'],
+        ])))['page'];
+
+        $this->assertSame('grand', $page['theme']['font_pairing']);
     }
 
     /**

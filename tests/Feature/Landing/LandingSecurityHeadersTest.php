@@ -43,6 +43,26 @@ class LandingSecurityHeadersTest extends TestCase
         $this->assertStringNotContainsString("'unsafe-eval'", $csp);
     }
 
+    /**
+     * Task 3 (landing phase 3c; D3): every face the landing template uses
+     * is now self-hosted woff2 under public/landing/fonts/, so neither
+     * Google Fonts host has any business appearing in this policy any more
+     * — style-src no longer needs fonts.googleapis.com for a <link
+     * rel="stylesheet">, and font-src no longer needs fonts.gstatic.com for
+     * the woff2 files themselves. Removing them also removes the landing
+     * page's only external hosts of any kind and the EU consent exposure
+     * that came with them (see the spec's own framing of D3).
+     */
+    public function test_the_csp_names_no_google_fonts_host(): void
+    {
+        $csp = $this->get('http://' . $this->host() . '/any-slug')->headers->get('Content-Security-Policy');
+
+        $this->assertNotNull($csp, 'No CSP on the landing host.');
+        $this->assertStringNotContainsString('fonts.googleapis.com', $csp);
+        $this->assertStringNotContainsString('fonts.gstatic.com', $csp);
+        $this->assertStringContainsString("font-src 'self'", $csp);
+    }
+
     public function test_it_sets_the_other_headers_that_cost_nothing(): void
     {
         $res = $this->get('http://' . $this->host() . '/any-slug');

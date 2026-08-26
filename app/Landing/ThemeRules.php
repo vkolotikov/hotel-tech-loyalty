@@ -41,7 +41,7 @@ final class ThemeRules
      * `font_pairing` accept the fourth pairing everywhere `rules()` is
      * consulted, with no second allowlist to remember to update.
      */
-    public const FONT_PAIRINGS = ['editorial', 'modern', 'classic'];
+    public const FONT_PAIRINGS = ['editorial', 'modern', 'classic', 'grand'];
 
     /** Exactly D6's `{brand_color, font_pairing, palette}`, in that order. */
     public static function keys(): array
