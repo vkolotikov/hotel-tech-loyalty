@@ -180,11 +180,21 @@ export function buildSectionsPayload(rows: EditorSectionRow[]): { key: string; e
  * to the server for a 422. The server-side rule is what actually protects
  * the column; this is only the residual "catch it before the network
  * round-trip" half.
+ *
+ * Task 6: `hero` and `about` each also carry an `image_url` field with
+ * `type: 'image'` — the one signal `LandingEditor.tsx`'s field renderer
+ * needs to branch to the photo control instead of a text input/textarea.
+ * Unlike every other field here, `image_url` is NOT a `content[key]` leaf
+ * this screen ever reads or writes through the ordinary save path: Task 4's
+ * `POST/DELETE .../image` endpoints are its one and only writer (D4), and
+ * the server refuses the key outright on the plain `update()` route — this
+ * descriptor exists purely so the row list still renders a control for it,
+ * never so it flows through `updateContent`/`form`.
  */
 export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string; multiline?: boolean; type?: string; maxLength?: number }[]> = {
-  hero:     [{ name: 'headline' }, { name: 'subtext' }],
+  hero:     [{ name: 'image_url', type: 'image' }, { name: 'headline' }, { name: 'subtext' }],
   services: [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
-  about:    [{ name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
+  about:    [{ name: 'image_url', type: 'image' }, { name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
   team:     [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
   reviews:  [{ name: 'kicker' }],
   booking:  [{ name: 'kicker' }, { name: 'heading' }, { name: 'terms', multiline: true }],

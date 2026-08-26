@@ -200,4 +200,18 @@ describe('SECTION_CONTENT_FIELDS', () => {
     expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
     expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
   })
+
+  /**
+   * Task 6: `hero` and `about` are the only two sections Task 4's photo
+   * endpoints accept (`slot` in `hero,about`) — this mapping is the field
+   * renderer's one signal to branch to the photo control, so it has to
+   * expose an `image_url`/`type: 'image'` field for exactly those two
+   * sections and no others.
+   */
+  it('exposes an image_url/type:image field for exactly hero and about', () => {
+    const sectionsWithImage = SECTION_ORDER.filter(key =>
+      SECTION_CONTENT_FIELDS[key].some(f => f.name === 'image_url' && f.type === 'image'),
+    )
+    expect(sectionsWithImage.sort()).toEqual(['about', 'hero'])
+  })
 })
