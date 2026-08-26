@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
@@ -230,6 +231,60 @@ class LandingImageUploadTest extends TestCase
         $this->assertSame('Quiet luxury', $fresh->content['hero']['headline']);
     }
 
+    /**
+     * Ruling 3b-6 regression: pins the FRESH-row `$old` capture inside
+     * uploadImage()'s transaction. PHP feature tests cannot exercise true
+     * concurrency (the brief is explicit about this), so this only proves
+     * the sequential end-state stays correct across two uploads to the same
+     * slot in a row — a would-be revert to computing `$old` from a stale
+     * pre-lock snapshot rather than the lockForUpdate()-re-read row is the
+     * kind of change this test is meant to catch: the second upload must
+     * delete the FIRST upload's own file, never re-delete (or miss) the
+     * pre-test original, and the row must end up holding exactly the
+     * second URL.
+     */
+    public function test_two_sequential_uploads_to_the_same_slot_end_with_only_the_second_file(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/original.png', 'original-bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['image_url' => '/storage/landing/original.png', 'headline' => 'Quiet luxury'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $first = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot'  => 'hero',
+            'image' => $this->smallImage('first.png'),
+        ]);
+        $first->assertOk();
+        $firstUrl = $first->json('image_url');
+        $firstPath = ltrim(substr($firstUrl, strlen('/storage/')), '/');
+
+        // The pre-test file is gone the moment the FIRST upload replaces it.
+        Storage::disk('public')->assertMissing('landing/original.png');
+        Storage::disk('public')->assertExists($firstPath);
+
+        $second = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot'  => 'hero',
+            'image' => $this->smallImage('second.png'),
+        ]);
+        $second->assertOk();
+        $secondUrl = $second->json('image_url');
+        $secondPath = ltrim(substr($secondUrl, strlen('/storage/')), '/');
+
+        $this->assertNotSame($firstUrl, $secondUrl);
+
+        $fresh = $page->fresh();
+        $this->assertSame($secondUrl, $fresh->content['hero']['image_url']);
+        $this->assertSame('Quiet luxury', $fresh->content['hero']['headline']);
+
+        // The SECOND upload deleted the FIRST upload's own file — not the
+        // original again, and not left behind.
+        Storage::disk('public')->assertMissing($firstPath);
+        Storage::disk('public')->assertExists($secondPath);
+    }
+
     public function test_removing_an_image_clears_the_leaf_and_deletes_the_file(): void
     {
         $org = $this->org();
@@ -295,6 +350,50 @@ class LandingImageUploadTest extends TestCase
             'That image is very large — please use one up to 4096 pixels on its longest side.',
             $response->json('errors.image.0'),
         );
+    }
+
+    /**
+     * Ruling 3b-7, amending 3b-2: the carry-forward that protects hero/about's
+     * `image_url` must NOT extend to any other section — those are the only
+     * two slots the image endpoints (`slot` is `in:hero,about`) own. A
+     * `services.image_url` leaf is a shape no endpoint in this build ever
+     * writes; planted directly via `DB::table`, the same idiom
+     * RuledPageRenderTest's own raw-content fixtures use, standing in for a
+     * pre-existing or hand-edited row. An ordinary text-only save that
+     * touches `services` (without that key) must not re-carry it back onto
+     * the row the way it would for hero/about.
+     *
+     * Mutation: widen the carry-forward's scope back to every section and
+     * this goes red — the leaf survives the save instead of vanishing.
+     */
+    public function test_carry_forward_does_not_protect_a_leaf_outside_hero_and_about(): void
+    {
+        $org = $this->org();
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['headline' => 'Old headline'],
+        ]);
+
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero'     => ['headline' => 'Old headline'],
+                'services' => ['image_url' => '/storage/landing/services-leaked.png', 'heading' => 'Treatments'],
+            ]),
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => [
+                'hero'     => ['headline' => 'New headline'],
+                'services' => ['heading' => 'Treatments'],
+            ],
+        ]);
+
+        $response->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertArrayNotHasKey('image_url', $fresh->content['services'] ?? []);
+        $this->assertSame('Treatments', $fresh->content['services']['heading'] ?? null);
     }
 
     // ─── The single-writer rule (D4) ──────────────────────────────────────
