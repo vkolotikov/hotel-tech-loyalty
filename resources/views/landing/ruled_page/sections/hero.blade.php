@@ -84,7 +84,7 @@
 @if ($heroImage)
       </div>
       <figure class="rp-hero__plate">
-        <img class="rp-hero__plate-img" src="{{ $heroImage }}" alt="">
+        <img class="rp-hero__plate-img" src="{{ $heroImage }}" alt="" fetchpriority="high" decoding="async">
       </figure>
     </div>
 @endif

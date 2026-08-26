@@ -1396,7 +1396,10 @@ class RuledPageRenderTest extends TestCase
         $body = $this->bodyFor($page);
 
         $this->assertStringContainsString('data-section="hero"', $body);
-        $this->assertStringContainsString('<img class="rp-hero__plate-img" src="' . $url . '" alt="">', $body);
+        $this->assertStringContainsString(
+            '<img class="rp-hero__plate-img" src="' . $url . '" alt="" fetchpriority="high" decoding="async">',
+            $body,
+        );
     }
 
     /**
@@ -1444,7 +1447,7 @@ class RuledPageRenderTest extends TestCase
         $body = $this->body();
 
         $this->assertStringContainsString(
-            '<img class="rp-hero__plate-img" src="https://cdn.example.test/landing/hero.jpg" alt="">',
+            '<img class="rp-hero__plate-img" src="https://cdn.example.test/landing/hero.jpg" alt="" fetchpriority="high" decoding="async">',
             $body,
         );
     }
