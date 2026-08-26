@@ -449,12 +449,26 @@ class LandingOnboardingService
         return $chosen;
     }
 
-    /** @return array<string, string> */
+    /**
+     * D6 (landing phase 3c Task 2): `palette` joins the two keys this
+     * method already carried through — App\Http\Controllers\Api\V1\Admin\
+     * LandingOnboardingController::store() now validates it (via
+     * App\Landing\ThemeRules::validate(), against exactly
+     * ThemeRules::keys()) the same as brand_color/font_pairing, so it must
+     * be extracted here too or a validated-and-accepted `theme.palette`
+     * would silently fail to reach the stored row — accepted by the
+     * controller, dropped by the service, the same class of bug D4's
+     * comment elsewhere in this codebase warns single-writer columns
+     * about.
+     *
+     * @return array<string, string>
+     */
     private function theme(array $data): array
     {
         return $this->kept([
             'brand_color'  => $data['theme']['brand_color']  ?? null,
             'font_pairing' => $data['theme']['font_pairing'] ?? null,
+            'palette'      => $data['theme']['palette']      ?? null,
         ]);
     }
 

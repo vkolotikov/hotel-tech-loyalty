@@ -893,6 +893,66 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('editorial', $page->theme['font_pairing']);
     }
 
+    // ─── Theme allowlist (landing phase 3c, Task 2 / D6) ─────────────────
+
+    /**
+     * The twin of LandingPageAdminApiTest's own version of this test: the
+     * two write surfaces share App\Landing\ThemeRules, so an unrecognised
+     * theme key must be refused here the same way, with the same message.
+     */
+    public function test_apply_refuses_an_unknown_theme_key_with_a_friendly_message(): void
+    {
+        $this->makeProperty();
+
+        try {
+            $this->apply($this->validPayload([
+                'theme' => ['whatever' => 'anything'],
+            ]));
+            $this->fail('An unrecognised theme key was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['theme'][0] ?? '';
+            $this->assertSame('Please choose a valid design option.', $message);
+            $this->assertStringNotContainsString('whatever', $message);
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+    }
+
+    /**
+     * Task 1's `palette` reaches the stored row through the wizard too —
+     * proof that LandingOnboardingService::theme() was updated to carry it
+     * through, not only that the controller's validation accepts it.
+     */
+    public function test_apply_accepts_and_stores_a_valid_palette(): void
+    {
+        $this->makeProperty();
+
+        $this->apply($this->validPayload([
+            'theme' => ['brand_color' => '#1f5fa8', 'font_pairing' => 'editorial', 'palette' => 'midnight_brass'],
+        ]));
+
+        $page = LandingPage::first();
+
+        $this->assertSame('midnight_brass', $page->theme['palette']);
+    }
+
+    public function test_apply_refuses_an_invalid_palette_with_a_friendly_message(): void
+    {
+        $this->makeProperty();
+
+        try {
+            $this->apply($this->validPayload([
+                'theme' => ['palette' => 'nope'],
+            ]));
+            $this->fail('An unrecognised palette id was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['palette'][0] ?? '';
+            $this->assertSame('Please choose one of the available looks.', $message);
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+    }
+
     /**
      * Task 2's whole point: content.contact must hold ONLY the fields the
      * tenant actually changed from what the page would otherwise publish.

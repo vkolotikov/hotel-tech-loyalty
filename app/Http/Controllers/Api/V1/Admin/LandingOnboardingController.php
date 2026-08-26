@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Landing\ThemeRules;
 use App\Rules\ScalarLeaves;
 use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Http\JsonResponse;
@@ -55,9 +56,18 @@ class LandingOnboardingController extends Controller
             'copy'               => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'copy.headline'      => 'nullable|string|max:120',
             'copy.subtext'       => 'nullable|string|max:200',
+            // D6 (landing phase 3c): the per-key theme rules
+            // ('theme.brand_color', 'theme.font_pairing') that used to live
+            // here as sibling dotted rules moved to App\Landing\ThemeRules,
+            // validated below as its OWN Validator instance rather than
+            // dotted keys added to THIS array -- see ThemeRules::validate()'s
+            // docblock for why (the phase-3a
+            // Validator::$excludeUnvalidatedArrayKeys trap: dotted rules
+            // naming only SOME of an array field's children silently
+            // strip the rest from validated() instead of refusing them,
+            // and D6 needs an unrecognised key -- Task 1's new `palette`
+            // included -- to 422, not to vanish quietly).
             'theme'              => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
-            'theme.brand_color'  => 'nullable|string|max:32',
-            'theme.font_pairing' => 'nullable|string|in:editorial,modern,classic',
             // Task 2 (contact editable): a leaf per overridable field, same
             // three ContactDetails::resolve() honours (App\Landing\ContactDetails)
             // — name/city/country/currency/timezone stay Property-only and are
@@ -86,6 +96,19 @@ class LandingOnboardingController extends Controller
             'contact.address.string' => 'Please enter a valid address.',
             'contact.address.max'   => 'Please use a shorter address — up to 191 characters.',
         ]);
+
+        // D6: see the comment on the 'theme' rule above -- validated as its
+        // own Validator instance (App\Landing\ThemeRules::validate()), never
+        // as sibling dotted rules in the array above, so an unrecognised key
+        // (a stray `theme.whatever`, or a `theme.palette` outside the six
+        // curated ids) is refused with a 422 rather than silently dropped.
+        // Only is_array(): 'theme' is 'sometimes', so it is simply absent
+        // from $data when the request never sent it at all.
+        $theme = $data['theme'] ?? null;
+
+        if (is_array($theme)) {
+            ThemeRules::validate($theme);
+        }
 
         return response()->json(['page' => $this->service->apply($data)], 201);
     }
