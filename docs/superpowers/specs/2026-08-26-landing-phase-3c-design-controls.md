@@ -170,10 +170,11 @@ the palette file; body-text pairs must clear 4.5:1):
   on `#171310`.
 
 Industry → default palette (in IndustryProfile, next to defaultSections):
-beauty/spa → champagne_noir; hotel → midnight_brass; medical/dental →
-clinic_air; restaurant/café → terracotta; fitness/education → slate_amber;
-other → porcelain. Exact mapping over the nine authored industry ids is
-fixed at plan time from `IndustryProfile::all()`.
+beauty → champagne_noir; hotel → midnight_brass; medical → clinic_air;
+restaurant → terracotta; fitness/education/legal/real_estate (the
+professional bucket slate_amber's label names) → slate_amber;
+other → porcelain. (Mapping fixed in Task 1 from `IndustryProfile::all()`'s
+nine authored ids; recorded here per the Task 1 review.)
 
 ## 4. The rebuilt template, section by section
 
