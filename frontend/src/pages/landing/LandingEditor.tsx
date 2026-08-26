@@ -8,8 +8,8 @@ import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionKey } from './sections'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, stripImageUrlLeaves, toggleSection, SECTION_CONTENT_FIELDS,
-  type EditorSectionRow, type PageSection, type SectionAvailability,
+  buildSectionRows, buildSectionsPayload, moveSection, safeImageUrl, stripImageUrlLeaves, toggleSection,
+  SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
@@ -460,8 +460,13 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
                 content={f.content?.[row.key] ?? {}}
                 // Task 6: sourced from the QUERY's raw `page`, never from
                 // `f`/`form` — see the comment beside this row's own
-                // `type === 'image'` branch in `SectionRow` for why.
-                imageUrl={page.content?.[row.key]?.image_url ?? null}
+                // `type === 'image'` branch in `SectionRow` for why. Minor
+                // m4: that raw query leaf is also unvalidated raw-DB data —
+                // `safeImageUrl` is the allowlist gate that keeps a legal
+                // non-string leaf from reaching `resolveImage()`'s
+                // unconditional `url.match(...)` and taking this whole
+                // route down.
+                imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
                 onToggle={() => toggleRow(row.key)}
                 onMove={dir => moveRow(row.key, dir)}
                 onFieldChange={(field, value) => updateContent(row.key, field, value)}

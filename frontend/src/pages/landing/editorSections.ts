@@ -229,6 +229,31 @@ export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string;
  * lose a photo — only avoid re-sending a value the server would refuse
  * outright.
  */
+/**
+ * Minor m4: `LandingEditor.tsx`'s row list reads `imageUrl` straight off the
+ * QUERY's raw `page.content[row.key].image_url` (the thumbnail's own
+ * comment explains why it must be the raw query, never `form`) — and this
+ * feature's whole standing threat model, all through Task 4/6, has been
+ * that `content` is a schemaless JSON column a pre-existing row, a raw
+ * import, or a hand-edit can leave in a shape `ScalarLeaves`'s depth-2
+ * check permits (any SCALAR is a legal leaf) but that is not actually a
+ * usable image URL — a number, a boolean, an empty string. `ImageField`
+ * hands that value straight to `resolveImage()`, which calls
+ * `url.match(...)` unconditionally: a truthy non-string leaf throws a
+ * TypeError there and takes the whole editor route down with it.
+ *
+ * Mirrors `App\Landing\PageContent::imageUrl()`'s own allowlist exactly —
+ * same two accepted prefixes, same rejection of anything else — so the
+ * admin screen and the public renderer agree on what a "real" image_url
+ * looks like. Deliberately narrower than `resolveImage()` itself: this is
+ * the one gate that decides whether a value is safe to hand `resolveImage()`
+ * at all, not a second implementation of what it does with a safe one.
+ */
+export function safeImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value === '') return null
+  return /^(https?:\/\/|\/storage\/)/.test(value) ? value : null
+}
+
 export function stripImageUrlLeaves(content: Record<string, unknown> | null | undefined): Record<string, unknown> {
   if (content == null || typeof content !== 'object') return {}
 

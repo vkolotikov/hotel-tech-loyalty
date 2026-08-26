@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, stripImageUrlLeaves, toggleSection,
-  SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
+  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, safeImageUrl, stripImageUrlLeaves,
+  toggleSection, SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
 import { SECTION_ORDER } from './sections'
 
@@ -213,6 +213,60 @@ describe('SECTION_CONTENT_FIELDS', () => {
       SECTION_CONTENT_FIELDS[key].some(f => f.name === 'image_url' && f.type === 'image'),
     )
     expect(sectionsWithImage.sort()).toEqual(['about', 'hero'])
+  })
+})
+
+/**
+ * Minor m4: `LandingEditor.tsx` feeds this straight to `ImageField` →
+ * `resolveImage()` → an unconditional `url.match(...)`, so a truthy
+ * non-string `content[row.key].image_url` — a legal write pre-D4, and raw-DB
+ * shapes are this feature's standing threat model — throws a TypeError
+ * during render and kills the whole editor route. Mirrors
+ * `App\Landing\PageContent::imageUrl()`'s own allowlist.
+ *
+ * Mutation: make it an identity passthrough and every hostile case here
+ * goes red.
+ */
+describe('safeImageUrl', () => {
+  it('accepts a valid https URL', () => {
+    expect(safeImageUrl('https://cdn.example.test/landing/hero.jpg')).toBe('https://cdn.example.test/landing/hero.jpg')
+  })
+
+  it('accepts a valid http URL', () => {
+    expect(safeImageUrl('http://cdn.example.test/landing/hero.jpg')).toBe('http://cdn.example.test/landing/hero.jpg')
+  })
+
+  it('accepts a valid /storage/ path', () => {
+    expect(safeImageUrl('/storage/landing/hero.jpg')).toBe('/storage/landing/hero.jpg')
+  })
+
+  it('rejects a javascript: string', () => {
+    expect(safeImageUrl('javascript:alert(1)')).toBeNull()
+  })
+
+  it('rejects a number', () => {
+    expect(safeImageUrl(42)).toBeNull()
+  })
+
+  it('rejects an array', () => {
+    expect(safeImageUrl(['https://cdn.example.test/x.jpg'])).toBeNull()
+  })
+
+  it('rejects an object', () => {
+    expect(safeImageUrl({ url: 'https://cdn.example.test/x.jpg' })).toBeNull()
+  })
+
+  it('rejects an empty string', () => {
+    expect(safeImageUrl('')).toBeNull()
+  })
+
+  it('rejects null and undefined', () => {
+    expect(safeImageUrl(null)).toBeNull()
+    expect(safeImageUrl(undefined)).toBeNull()
+  })
+
+  it('rejects a boolean', () => {
+    expect(safeImageUrl(true)).toBeNull()
   })
 })
 
