@@ -205,3 +205,46 @@ export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string;
     { name: 'address', maxLength: 191 },
   ],
 }
+
+/**
+ * Fix round 1 (ruling 3b-4), the Critical this round's review reproduced:
+ * `LandingEditor.tsx`'s `form` carries a section's whole content object BY
+ * REFERENCE the moment `update()` first clones `page` into it, and
+ * `updateContent()`'s spread (`{ ...(f.content?.[sectionKey] ?? {}), … }`)
+ * copies that section's EXISTING `image_url` leaf right along with
+ * whichever field the tenant actually meant to change — so editing only
+ * `hero.headline` after a photo has ever been uploaded still puts
+ * `image_url` on the wire. `LandingPageController::update()`'s D4 refusal
+ * is unconditional (any `content.*.image_url` key 422s, regardless of
+ * value), so that save would fail outright.
+ *
+ * This is the one choke point `saveMut.mutationFn` runs every save's
+ * `content` through before the PUT — never applied to `form` at creation
+ * (the thumbnail deliberately reads `page.content`, the raw query data,
+ * never `form`; scrubbing `form` itself would be a second, redundant place
+ * this same guarantee could drift) and never applied inside `ImageField`'s
+ * own upload/remove calls (they never touch `form` at all). Always safe:
+ * the server re-hydrates each section's stored `image_url` onto a save
+ * that omits it (Task 4's own amendment), so stripping it here can never
+ * lose a photo — only avoid re-sending a value the server would refuse
+ * outright.
+ */
+export function stripImageUrlLeaves(content: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  if (content == null || typeof content !== 'object') return {}
+
+  const out: Record<string, unknown> = {}
+  for (const [key, section] of Object.entries(content)) {
+    // A non-plain-object section (a bare scalar, the pre-existing
+    // "ScalarLeaves" edge case Task 4's own fix round named) has no
+    // `image_url` key to strip — pass it through exactly as stored rather
+    // than inventing an object shape nothing asks for.
+    if (section === null || typeof section !== 'object' || Array.isArray(section)) {
+      out[key] = section
+      continue
+    }
+    const copy = { ...(section as Record<string, unknown>) }
+    delete copy.image_url
+    out[key] = copy
+  }
+  return out
+}

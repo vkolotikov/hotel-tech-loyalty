@@ -8,7 +8,7 @@ import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionKey } from './sections'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, toggleSection, SECTION_CONTENT_FIELDS,
+  buildSectionRows, buildSectionsPayload, moveSection, stripImageUrlLeaves, toggleSection, SECTION_CONTENT_FIELDS,
   type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
@@ -222,7 +222,15 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
         // second place that question could give a different answer.
         api.put('/v1/admin/landing-pages', {
           theme: body.theme ?? {},
-          content: body.content ?? {},
+          // Fix round 1 (ruling 3b-4): `body.content` can carry an
+          // `image_url` leaf dragged in by reference the instant a
+          // SIBLING field on that same section is edited (`updateContent`'s
+          // spread copies the whole stored section) — the server's D4
+          // refusal is unconditional, so an unstripped leaf 422s the very
+          // next save after any photo upload. Stripping here is always
+          // safe: the server re-hydrates each section's stored
+          // `image_url` back in when the request omits it.
+          content: stripImageUrlLeaves(body.content),
           seo: body.seo ?? {},
           slug: body.slug ?? page?.slug,
         }),

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, toggleSection,
+  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, stripImageUrlLeaves, toggleSection,
   SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
 import { SECTION_ORDER } from './sections'
@@ -213,5 +213,50 @@ describe('SECTION_CONTENT_FIELDS', () => {
       SECTION_CONTENT_FIELDS[key].some(f => f.name === 'image_url' && f.type === 'image'),
     )
     expect(sectionsWithImage.sort()).toEqual(['about', 'hero'])
+  })
+})
+
+/**
+ * Fix round 1 (ruling 3b-4): `saveMut.mutationFn`'s one choke point before
+ * a text-only save reaches the server — see `stripImageUrlLeaves`'s own
+ * docblock for why an unstripped `image_url` leaf gets dragged into `form`
+ * by reference and 422s an ordinary text save.
+ */
+describe('stripImageUrlLeaves', () => {
+  it('strips image_url from multiple sections at once, leaving siblings intact', () => {
+    const content = {
+      hero:  { image_url: '/storage/landing/hero.png', headline: 'Quiet luxury', subtext: 'Calm, considered.' },
+      about: { image_url: '/storage/landing/about.png', kicker: 'Our story', lead: 'Since 2014' },
+      services: { kicker: 'What we do', heading: 'Treatments' },
+    }
+    expect(stripImageUrlLeaves(content)).toEqual({
+      hero:  { headline: 'Quiet luxury', subtext: 'Calm, considered.' },
+      about: { kicker: 'Our story', lead: 'Since 2014' },
+      services: { kicker: 'What we do', heading: 'Treatments' },
+    })
+  })
+
+  it('tolerates a non-object section — string, number, or null — passing it through untouched', () => {
+    const content = { hero: 'a bare scalar section', about: 42, contact: null }
+    expect(stripImageUrlLeaves(content as unknown as Record<string, unknown>)).toEqual({
+      hero: 'a bare scalar section', about: 42, contact: null,
+    })
+  })
+
+  it('tolerates null or undefined content, returning {} — matching the save body\'s own `?? {}`', () => {
+    expect(stripImageUrlLeaves(null)).toEqual({})
+    expect(stripImageUrlLeaves(undefined)).toEqual({})
+  })
+
+  it('does not mutate the input object', () => {
+    const content = { hero: { image_url: '/storage/landing/hero.png', headline: 'Old' } }
+    const snapshot = JSON.parse(JSON.stringify(content))
+    stripImageUrlLeaves(content)
+    expect(content).toEqual(snapshot)
+  })
+
+  it('a section with no image_url to begin with is returned with every key intact', () => {
+    const content = { services: { kicker: 'What we do', heading: 'Treatments', subtext: 'Every service, one place.' } }
+    expect(stripImageUrlLeaves(content)).toEqual(content)
   })
 })

@@ -52,4 +52,18 @@ describe('downscaleTarget', () => {
   it('defaults maxEdge to the module constant when not passed', () => {
     expect(downscaleTarget(9999, 1)).toEqual(downscaleTarget(9999, 1, MAX_EDGE))
   })
+
+  // Fix round 1 (reviewer Minor): degenerate input pinned as-is — a
+  // `0`/negative edge is never greater than `maxEdge`, so both fall
+  // through to the same "already fits" `null` every other in-bounds size
+  // takes. Not reachable from a real file (nothing decodes to 0×0 or
+  // negative dimensions), but harmless, and now pinned rather than merely
+  // assumed.
+  it('returns null for a degenerate 0x0 size', () => {
+    expect(downscaleTarget(0, 0)).toBeNull()
+  })
+
+  it('returns null for degenerate negative dimensions', () => {
+    expect(downscaleTarget(-100, -50)).toBeNull()
+  })
 })
