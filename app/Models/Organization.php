@@ -128,6 +128,53 @@ class Organization extends Model
                 ]);
             }
         });
+
+        // Re-sync every landing page's industry snapshot when the org's own
+        // industry changes. `landing_pages.industry` is written once, at
+        // page-creation time (see LandingOnboardingService::newPageIndustry())
+        // — it is NOT re-derived from the org on every render, because the
+        // renderer treats it as the page's own committed choice (an existing
+        // page's industry is deliberately independent of the org once it
+        // exists — see that method's docblock). Nothing else re-reads the
+        // org after that, so an org that corrects its industry (unset →
+        // resolved to the platform default, or a genuine change of business)
+        // otherwise keeps every one of its pages speaking the OLD industry's
+        // language forever: wrong vocabulary (IndustryProfile), wrong
+        // schema.org subtype, and — since the booking-gate round — a hotel
+        // booking widget framed on a page that was never a hotel. There is
+        // no in-product way to fix that page short of deleting it. This
+        // hook is the one place that reconciles the two without touching
+        // any of the three call sites that write `org->industry`
+        // (AuthController's apply-industry + signup-backfill paths,
+        // SaasAuthMiddleware's JWT backfill) — they only ever need to get
+        // the ORG right; the pages following along is this hook's job.
+        static::updated(function (Organization $org): void {
+            if (! $org->wasChanged('industry')) {
+                return;
+            }
+
+            // Guard for the same reason the `created` hook above guards on
+            // `brands`: not every environment/test schema carries
+            // landing_pages, and an org update must never start failing
+            // because a feature table isn't provisioned yet.
+            if (! \Illuminate\Support\Facades\Schema::hasTable('landing_pages')) {
+                return;
+            }
+
+            // withoutGlobalScopes(): this runs in whatever request context
+            // changed the org — including SaasAuthMiddleware's JWT sync,
+            // where no tenant or brand is bound — so TenantScope/BrandScope
+            // would either miss rows or throw. The explicit organization_id
+            // where-clause below is the scope, and it deliberately covers
+            // EVERY brand under the org (a multi-brand portfolio's pages all
+            // snapshot the same org industry, so all of them resync).
+            // resolved_industry (not the raw column) so an alias like
+            // 'hospitality' lands on the page normalised, the same value
+            // every renderer already treats as canonical.
+            \App\Models\LandingPage::withoutGlobalScopes()
+                ->where('organization_id', $org->id)
+                ->update(['industry' => $org->resolved_industry]);
+        });
     }
 
     protected $casts = [
