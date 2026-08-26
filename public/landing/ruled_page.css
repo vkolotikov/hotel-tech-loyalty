@@ -831,3 +831,49 @@ img{max-width:100%;height:auto}
 @media (max-width:899px){
   .rp-services__plate .rp-plate--mono,.rp-member__plate .rp-plate--mono{--plate-mark:2.5rem}
 }
+
+/* --- media plates (Task 5, landing phase 3b) ------------------------------
+   Appendix B 4.5 items 2 (hero) and 4 (about) — the two photographic plates
+   PageContent::imageUrl() gates hero.blade.php and about.blade.php's markup
+   on. Purely additive: nothing above this comment is edited (see the diffed
+   selector list this task's report carries — the phase-1 selector-loss
+   rule), and every existing published page, which has no image_url stored,
+   never matches a class declared here at all. */
+
+/* Hero (4.5.2). Desktop: text and plate side by side; the plate is the
+   second grid item by DOM order alone, so no explicit grid-column is
+   needed. Mobile: never display:none (house mobile-parity rule) — the plate
+   drops out of the grid and becomes a full-bleed cover image below the text
+   instead, cancelling the section's own side gutter with a negative margin
+   so it reaches both viewport edges. */
+.rp-hero__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);
+  gap:clamp(40px,5vw,72px);align-items:center}
+.rp-hero__plate{margin:0;aspect-ratio:4/5;overflow:hidden;border:1px solid var(--line)}
+.rp-hero__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover}
+@media (max-width:899px){
+  .rp-hero__grid{display:block}
+  .rp-hero__plate{margin-block-start:32px;margin-inline:calc(var(--gutter) * -1);
+    border-inline:0;aspect-ratio:4/5}
+}
+
+/* About (4.5.4). The plate spans columns 1-4 and hangs off the grid by
+   -40px on both axes so it crosses the band's own top hairline — the
+   page's one deliberate "breaks the ruling" moment. The text column shifts
+   to 6-11 (from its no-image 3-11) only while the plate is actually
+   rendered; .rp-about__text alone, with no modifier, is untouched from
+   4.5.4's original no-image rule above. */
+.rp-about__plate{grid-column:1 / 5;margin:0;margin-inline-start:-40px;
+  margin-block-start:-40px;aspect-ratio:3/4;overflow:hidden;
+  border:1px solid var(--line);align-self:start}
+.rp-about__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover}
+.rp-about__plate-caption{display:block;margin-top:12px;font-size:var(--t-mono);
+  color:var(--muted);text-transform:uppercase}
+.rp-about__text.rp-about__text--shifted{grid-column:6 / 12}
+@media (max-width:899px){
+  /* The -40px hang needs margin space a phone does not have, and the plate
+     goes back to full-bleed (matching the hero's own mobile treatment)
+     rather than sitting inset inside the grid's own gutter. */
+  .rp-about__plate{margin-inline:calc(var(--gutter) * -1);margin-block-start:0;
+    border-inline:0;aspect-ratio:4/5}
+}
+/* --- end media plates ------------------------------------------------------ */
