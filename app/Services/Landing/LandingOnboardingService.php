@@ -640,7 +640,12 @@ class LandingOnboardingService
      * Where a page already EXISTS, PageContent reads the page's own
      * industry snapshot instead -- which is correct, because that page is
      * what the prefill is describing and what the renderer will draw. apply()
-     * never runs in that case; it refuses with a 409 first.
+     * never runs in that case; it refuses with a 409 first. That snapshot is
+     * no longer purely creation-time-and-frozen, though: Organization::booted()
+     * re-writes every one of the org's pages to `resolved_industry` whenever
+     * the org's own industry changes, so "the page's own snapshot" and "the
+     * org's current industry" stay the same value except mid-request, between
+     * the org's save() and that hook's write.
      */
     private function newPageIndustry(Organization $org): string
     {
