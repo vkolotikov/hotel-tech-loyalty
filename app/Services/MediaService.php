@@ -15,12 +15,20 @@ class MediaService
 {
     /**
      * Get the configured media disk name.
-     * Auto-detects DO Spaces when credentials are present, even if MEDIA_DISK is not set.
+     *
+     * Precedence: an explicit, non-empty MEDIA_DISK always wins — including
+     * an explicit 'public' — and only when it is unset/empty do we
+     * auto-detect DO Spaces from its credentials, falling back to 'public'
+     * when neither is present. Ruling 3b-5: 'public' used to be treated as
+     * indistinguishable from "unset" (config/filesystems.php's own default),
+     * which meant an explicit MEDIA_DISK=public could never win over the
+     * auto-detect and local dev silently wrote to (and deleted from) the
+     * production bucket whenever DO credentials happened to be present.
      */
     public static function disk(): string
     {
         $configured = config('filesystems.media_disk');
-        if ($configured && $configured !== 'public') {
+        if (is_string($configured) && $configured !== '') {
             return $configured;
         }
 
@@ -32,7 +40,7 @@ class MediaService
             return 'do';
         }
 
-        return $configured ?: 'public';
+        return 'public';
     }
 
     /**
