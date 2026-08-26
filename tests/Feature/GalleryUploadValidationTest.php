@@ -212,6 +212,87 @@ class GalleryUploadValidationTest extends TestCase
         (new ServiceController())->update($request, $service->id);
     }
 
+    /**
+     * Triage item 4: update()'s own share of this rule set had only ever
+     * been pinned by the non-image-file case above. This is the accept
+     * path — behaviour already verified correct by the store() coverage
+     * above, this test only pins that update() shares it.
+     */
+    public function test_service_update_accepts_a_legitimate_small_image_array(): void
+    {
+        $service = Service::create([
+            'name' => 'Manicure', 'slug' => 'manicure', 'duration_minutes' => 30,
+        ]);
+
+        $request = $this->request([], ['gallery_files' => [$this->realImage('a.jpg'), $this->realImage('b.jpg')]]);
+
+        $response = (new ServiceController())->update($request, $service->id);
+        $body = json_decode($response->getContent(), true);
+
+        $this->assertCount(2, $body['gallery']);
+    }
+
+    public function test_service_update_rejects_more_than_24_gallery_files(): void
+    {
+        $service = Service::create([
+            'name' => 'Manicure', 'slug' => 'manicure', 'duration_minutes' => 30,
+        ]);
+
+        $files = [];
+        for ($i = 0; $i < 25; $i++) {
+            $files[] = $this->realImage("photo{$i}.jpg");
+        }
+
+        $request = $this->request([], ['gallery_files' => $files]);
+
+        try {
+            (new ServiceController())->update($request, $service->id);
+            $this->fail('25 gallery files were accepted.');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                'Please upload up to 24 photos at a time.',
+                $e->errors()['gallery_files'][0],
+            );
+        }
+    }
+
+    public function test_service_update_rejects_a_genuine_text_file(): void
+    {
+        $service = Service::create([
+            'name' => 'Manicure', 'slug' => 'manicure', 'duration_minutes' => 30,
+        ]);
+
+        $request = $this->request([], ['gallery_files' => [UploadedFile::fake()->create('notes.txt', 5, 'text/plain')]]);
+
+        $this->expectException(ValidationException::class);
+        (new ServiceController())->update($request, $service->id);
+    }
+
+    /**
+     * Minor m5: `gallery_files` submitted as a scalar (a single string,
+     * rather than an array of files) used to fall through to Laravel's own
+     * default message for the `array` rule — "The gallery files field must
+     * be an array." — naming the raw field, snake_case and all, straight to
+     * the tenant. A plain field (no file upload) expresses this fine
+     * through the ordinary `request()` helper above.
+     */
+    public function test_service_store_rejects_a_scalar_gallery_files_with_a_friendly_message(): void
+    {
+        $request = $this->request(
+            ['name' => 'Manicure', 'duration_minutes' => 30, 'gallery_files' => 'not-an-array'],
+            [],
+        );
+
+        try {
+            (new ServiceController())->store($request);
+            $this->fail('A scalar gallery_files value was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['gallery_files'][0] ?? '';
+            $this->assertStringNotContainsStringIgnoringCase('gallery files', $message);
+            $this->assertSame('Please upload each gallery photo as its own file, not as a single value.', $message);
+        }
+    }
+
     // ─── BookingRoomController ──────────────────────────────────────────
 
     public function test_booking_room_store_rejects_a_non_image_file_disguised_as_a_jpg(): void
@@ -288,5 +369,86 @@ class GalleryUploadValidationTest extends TestCase
 
         $this->expectException(ValidationException::class);
         (new BookingRoomController())->update($request, $room->id);
+    }
+
+    /**
+     * Triage item 4: the other three update() variants this suite was
+     * missing for BookingRoomController — behaviour already verified
+     * correct, this pins it. Mirrors the ServiceController::update() block
+     * above one for one.
+     */
+    public function test_booking_room_update_accepts_a_legitimate_small_image_array(): void
+    {
+        $room = BookingRoom::create([
+            'name' => 'Deluxe Suite', 'slug' => 'deluxe-suite',
+            'base_price' => 100, 'inventory_count' => 1, 'currency' => 'EUR',
+        ]);
+
+        $request = $this->request([], ['gallery_files' => [$this->realImage('a.jpg'), $this->realImage('b.jpg')]]);
+
+        $response = (new BookingRoomController())->update($request, $room->id);
+        $body = json_decode($response->getContent(), true);
+
+        $this->assertCount(2, $body['gallery']);
+    }
+
+    public function test_booking_room_update_rejects_more_than_24_gallery_files(): void
+    {
+        $room = BookingRoom::create([
+            'name' => 'Deluxe Suite', 'slug' => 'deluxe-suite',
+            'base_price' => 100, 'inventory_count' => 1, 'currency' => 'EUR',
+        ]);
+
+        $files = [];
+        for ($i = 0; $i < 25; $i++) {
+            $files[] = $this->realImage("photo{$i}.jpg");
+        }
+
+        $request = $this->request([], ['gallery_files' => $files]);
+
+        try {
+            (new BookingRoomController())->update($request, $room->id);
+            $this->fail('25 gallery files were accepted.');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                'Please upload up to 24 photos at a time.',
+                $e->errors()['gallery_files'][0],
+            );
+        }
+    }
+
+    public function test_booking_room_update_rejects_a_genuine_text_file(): void
+    {
+        $room = BookingRoom::create([
+            'name' => 'Deluxe Suite', 'slug' => 'deluxe-suite',
+            'base_price' => 100, 'inventory_count' => 1, 'currency' => 'EUR',
+        ]);
+
+        $request = $this->request([], ['gallery_files' => [UploadedFile::fake()->create('notes.txt', 5, 'text/plain')]]);
+
+        $this->expectException(ValidationException::class);
+        (new BookingRoomController())->update($request, $room->id);
+    }
+
+    /**
+     * Minor m5: the BookingRoomController half of the same friendly-message
+     * requirement — see the ServiceController version above for the full
+     * reasoning.
+     */
+    public function test_booking_room_store_rejects_a_scalar_gallery_files_with_a_friendly_message(): void
+    {
+        $request = $this->request(
+            ['name' => 'Deluxe Suite', 'gallery_files' => 'not-an-array'],
+            [],
+        );
+
+        try {
+            (new BookingRoomController())->store($request);
+            $this->fail('A scalar gallery_files value was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['gallery_files'][0] ?? '';
+            $this->assertStringNotContainsStringIgnoringCase('gallery files', $message);
+            $this->assertSame('Please upload each gallery photo as its own file, not as a single value.', $message);
+        }
     }
 }

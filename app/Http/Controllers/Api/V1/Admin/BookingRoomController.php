@@ -57,6 +57,7 @@ class BookingRoomController extends Controller
             'gallery_files'     => 'nullable|array|max:24',
             'gallery_files.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ], [
+            'gallery_files.array'   => 'Please upload each gallery photo as its own file, not as a single value.',
             'gallery_files.max'     => 'Please upload up to 24 photos at a time.',
             'gallery_files.*.image' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
             'gallery_files.*.mimes' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
@@ -112,6 +113,7 @@ class BookingRoomController extends Controller
             'gallery_files'     => 'nullable|array|max:24',
             'gallery_files.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ], [
+            'gallery_files.array'   => 'Please upload each gallery photo as its own file, not as a single value.',
             'gallery_files.max'     => 'Please upload up to 24 photos at a time.',
             'gallery_files.*.image' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
             'gallery_files.*.mimes' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
