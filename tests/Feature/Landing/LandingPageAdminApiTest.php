@@ -773,6 +773,57 @@ class LandingPageAdminApiTest extends TestCase
         $this->assertSame('porcelain', $page['theme']['palette']);
     }
 
+    /**
+     * The load-bearing half of the carry-forward semantics (review fix
+     * round 1): the loop in `update()` checks `array_key_exists`, not
+     * `isset`, specifically so an EXPLICIT `null` for an allowlisted key —
+     * "clear this" — is not confused with the key being OMITTED —
+     * "leave this alone" — which `isset()` cannot tell apart (both read
+     * false for a stored `null`). This is the test that goes red the day
+     * anyone "simplifies" that check to `isset`.
+     */
+    public function test_an_explicit_null_clears_brand_color_while_omitted_keys_survive(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['brand_color' => null],
+        ])))['page'];
+
+        $this->assertNull($page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+    }
+
+    /**
+     * The reverse erase direction from the pair above: a save that omits
+     * `theme` entirely (never even sends the key) must leave every
+     * allowlisted key already on the page untouched — `theme` is absent
+     * from `update()`'s validated `$data` in that case, so the carry-forward
+     * block never runs and `$fresh->update($data)` never touches the column.
+     */
+    public function test_a_content_only_write_leaves_theme_intact(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'content' => ['hero' => ['headline' => 'Quiet luxury']],
+        ])))['page'];
+
+        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+        $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
+    }
+
     // ─── Web address (Task 10) ───────────────────────────────────────────
 
     /**
