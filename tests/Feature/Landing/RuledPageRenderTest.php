@@ -1676,4 +1676,64 @@ class RuledPageRenderTest extends TestCase
 
         $this->assertSame($golden, $body);
     }
+
+    /**
+     * The one behaviour this task exists to add: choosing a curated palette
+     * has to actually show up in the response, or the whole system is a
+     * lie. A sampled token per family (a surface, a text shade and the
+     * accent) proves the block carries the real §3 values rather than a
+     * placeholder, without pinning all fifteen keys in a render test (that
+     * job belongs to PaletteTest, which checks every palette's full set).
+     */
+    public function test_a_chosen_palette_emits_a_nonced_token_block_with_the_right_values(): void
+    {
+        $page = $this->published();
+        $page->update(['theme' => ['palette' => 'champagne_noir']]);
+
+        $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
+        $response->assertOk();
+        $body = $response->getContent();
+
+        preg_match(
+            "/'nonce-([A-Za-z0-9]+)'/",
+            (string) $response->headers->get('Content-Security-Policy'),
+            $m
+        );
+        $this->assertNotEmpty($m, 'The CSP names no style nonce.');
+
+        $this->assertStringContainsString('--bg:#15100b', $body);
+        $this->assertStringContainsString('--accent:#d8b878', $body);
+
+        preg_match_all('/<style\b[^>]*>/i', $body, $tags);
+        foreach ($tags[0] as $tag) {
+            $this->assertStringContainsString('nonce="' . $m[1] . '"', $tag);
+        }
+    }
+
+    /**
+     * `theme` is a schemaless `array` cast with no schema behind it (see
+     * the "Stored values the renderer must survive" tests above in this
+     * file) — an unknown id, a hand-edited row, or a nested/oversized value
+     * can all reach `Palette::for()`. Every one of these must be treated
+     * the same as no palette at all: the page renders 200 with no second
+     * style block, never a 500 from a ?string parameter handed an array.
+     */
+    public function test_hostile_palette_values_emit_no_block_and_render_200(): void
+    {
+        $page = $this->published();
+
+        foreach ([
+            'an unknown id'        => 'nope',
+            'an array leaf'        => ['#ffffff'],
+            'a 200k character leaf' => str_repeat('x', 200_000),
+        ] as $label => $value) {
+            $page->update(['theme' => ['palette' => $value]]);
+
+            $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
+
+            $response->assertOk("[{$label}] took the page down.");
+            $this->assertStringNotContainsString('--bg:', $response->getContent(),
+                "[{$label}] emitted a palette block that should not exist.");
+        }
+    }
 }

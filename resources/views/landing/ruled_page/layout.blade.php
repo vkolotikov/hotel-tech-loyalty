@@ -293,6 +293,79 @@
      Inter as the text face per 4.1. --}}
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}">
+@php
+    // The palette system (Task 1, landing phase 3c; D2). `theme` is the
+    // same schemaless array cast font_pairing above already guards, so this
+    // is defence in depth twice over: Palette::for() already refuses any id
+    // it doesn't author (an unknown id or absent value both resolve to
+    // null, the same "no palette" state), but its parameter is typed
+    // ?string, and PHP raises a TypeError for a non-string, non-null
+    // argument before the method body ever runs -- an array or 200k-
+    // character `theme.palette` leaf (a stored shape no validator
+    // constrains yet; see the "Stored values the renderer must survive"
+    // tests) would take the page down at the call site, not inside Palette
+    // itself. is_string() here is what stops that, exactly as the
+    // font_pairing block above narrows its own raw theme leaf before ever
+    // trusting it.
+    $paletteId = is_string($page->theme['palette'] ?? null) ? $page->theme['palette'] : null;
+    $palette   = \App\Landing\Palette::for($paletteId);
+
+    // One more nonced inline block below, emitting the fifteen tokens spec
+    // §3 names as :root custom properties. Today's stylesheet defines its
+    // own --brand family (see the Accent block further down) and does not
+    // consume --bg/--accent/etc at all, so a page with a palette set ships
+    // this block as inert, unconsumed CSS until the template rebuild
+    // (Task 4) lands -- that is deliberate, not a bug this task should
+    // "fix" by also touching the stylesheet.
+    //
+    // Placed BEFORE the Accent block below, in source order, on purpose:
+    // Accent's --brand family and this block's tokens share no property
+    // name today, so nothing actually cascades between the two blocks yet
+    // -- but this ordering is the contract Task 4 is written against
+    // ("Accent must win on the accent slot", `theme.brand_color` staying
+    // the tenant's override within whichever palette is active), and
+    // getting the order right now costs nothing while a later rebuild
+    // that folds --accent and --brand together would otherwise depend on
+    // file order nobody had deliberately chosen.
+    //
+    // Nothing is emitted at all when $palette is null (no palette set, an
+    // unrecognised id, or a hostile stored value) -- the CSS's own :root
+    // porcelain default stands exactly as it did before this block
+    // existed, and a page explicitly set to `palette: 'porcelain'`
+    // therefore renders byte-identical to one with no palette at all
+    // (spec §3's own promise). This comment sits INSIDE the @php block
+    // rather than as a separate {{-- --}} block for exactly the reason
+    // the top of this file documents for the doctype/html boundary: a
+    // Blade comment strips its own contents but not the real newline on
+    // each side of it, and that stray newline would otherwise survive
+    // even when $palette is null and nothing below it renders -- a PHP
+    // comment inside the tag that already swallows its own trailing
+    // newline costs nothing instead.
+@endphp
+@if ($palette)
+<style nonce="{{ $cspNonce }}">
+  :root{
+    --bg:{{ $palette->tokens['bg'] }};
+    --bg-2:{{ $palette->tokens['bg-2'] }};
+    --bg-elev:{{ $palette->tokens['bg-elev'] }};
+    --glass:{{ $palette->tokens['glass'] }};
+    --text:{{ $palette->tokens['text'] }};
+    --text-soft:{{ $palette->tokens['text-soft'] }};
+    --text-muted:{{ $palette->tokens['text-muted'] }};
+    --line:{{ $palette->tokens['line'] }};
+    --line-soft:{{ $palette->tokens['line-soft'] }};
+    --accent:{{ $palette->tokens['accent'] }};
+    --accent-bright:{{ $palette->tokens['accent-bright'] }};
+    --accent-deep:{{ $palette->tokens['accent-deep'] }};
+    --accent-on:{{ $palette->tokens['accent-on'] }};
+    --halo:{{ $palette->tokens['halo'] }};
+    --scrim:{{ $palette->tokens['scrim'] }};
+@if ($palette->dark)
+    color-scheme:dark;
+@endif
+  }
+</style>
+@endif
 {{-- Only tenant-derived custom properties are inline, and they carry the
      request nonce. Every value here is emitted by App\Support\Accent, which
      routes through CssColor::safe and then formats the result itself, so none
