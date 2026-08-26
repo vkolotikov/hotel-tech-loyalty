@@ -326,6 +326,112 @@ class LandingImageUploadTest extends TestCase
     }
 
     /**
+     * Coordinator ruling 3b-2 (fix round 1): D4's refusal alone left exactly
+     * one legal payload for a text-only save — omit `image_url` entirely —
+     * and update() replaces `content` verbatim, so that one legal payload
+     * erased whatever uploadImage() had just written. Proven interleaving:
+     * upload a hero photo, then edit only the headline, and the photo is
+     * gone with its file orphaned.
+     *
+     * Mutation target 1: drop the re-hydration and this goes red — the
+     * headline still updates (200, not 422 — D4 is unchanged), but
+     * `image_url` is missing afterwards.
+     */
+    public function test_a_text_only_save_does_not_erase_an_uploaded_image(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/hero.png', 'hero-bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['image_url' => '/storage/landing/hero.png', 'headline' => 'Old headline'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            // The one payload shape D4 leaves legal: no image_url key at all.
+            'content' => ['hero' => ['headline' => 'New headline']],
+        ]);
+
+        $response->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('New headline', $fresh->content['hero']['headline']);
+        $this->assertSame('/storage/landing/hero.png', $fresh->content['hero']['image_url']);
+        Storage::disk('public')->assertExists('landing/hero.png');
+    }
+
+    /**
+     * The more severe half of the same defect: the section is not merely
+     * missing its `image_url` key, the section itself is absent from the
+     * submission (a save that only touches `hero` and never mentions
+     * `about` at all). `content` is replaced wholesale, so `about` would
+     * otherwise vanish along with its photo.
+     *
+     * Mutation target 2: drop the re-hydration and this goes red the same
+     * way — `about` disappears entirely, taking `image_url` with it.
+     */
+    public function test_a_text_save_omitting_the_whole_section_still_keeps_its_image(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/hero.png', 'hero-bytes');
+        Storage::disk('public')->put('landing/about.png', 'about-bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero'  => ['image_url' => '/storage/landing/hero.png', 'headline' => 'Old headline'],
+            'about' => ['image_url' => '/storage/landing/about.png', 'body' => 'Our story'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            // `about` is not mentioned at all — not even an empty array.
+            'content' => ['hero' => ['headline' => 'New headline']],
+        ]);
+
+        $response->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('New headline', $fresh->content['hero']['headline']);
+        $this->assertSame('/storage/landing/hero.png', $fresh->content['hero']['image_url']);
+        $this->assertSame('/storage/landing/about.png', $fresh->content['about']['image_url'] ?? null,
+            'The about section vanished (and its photo with it) even though the save never touched it.');
+        Storage::disk('public')->assertExists('landing/about.png');
+    }
+
+    /**
+     * The direction that must NOT regress: a photo the tenant deliberately
+     * removed stays removed through any number of later text saves — there
+     * is nothing STORED to carry forward once removeImage() has cleared it.
+     *
+     * Mutation target 3: make the re-hydration unconditional (copy forward
+     * even when the stored leaf is absent) and this goes red — the removed
+     * image would otherwise reappear from nowhere on the very next save.
+     */
+    public function test_a_removed_image_is_not_resurrected_by_a_later_text_save(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/hero.png', 'hero-bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['image_url' => '/storage/landing/hero.png', 'headline' => 'Old headline'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'hero'])
+            ->assertOk();
+        $this->assertArrayNotHasKey('image_url', $page->fresh()->content['hero']);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['hero' => ['headline' => 'Updated after removal']],
+        ]);
+
+        $response->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('Updated after removal', $fresh->content['hero']['headline']);
+        $this->assertArrayNotHasKey('image_url', $fresh->content['hero']);
+    }
+
+    /**
      * The wizard's `store()` validates `copy`/`theme`/`contact`/`sections` —
      * never a raw `content` key — so `content.hero.image_url` cannot reach
      * `LandingOnboardingService::apply()` at all: it is dropped by

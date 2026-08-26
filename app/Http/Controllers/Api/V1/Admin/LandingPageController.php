@@ -195,6 +195,49 @@ class LandingPageController extends Controller
             }
         }
 
+        // Coordinator ruling 3b-2, amending D4: the refusal above stops this
+        // endpoint writing image_url, but update() still REPLACES the whole
+        // `content` column with whatever this request submitted -- and the
+        // one legal payload D4 leaves a tenant is exactly the one that omits
+        // image_url. Editing a headline with no image field on screen (the
+        // editor's own no-canvas contract) sent `content.hero` with no
+        // image_url key at all, and the very next save erased the photo
+        // uploadImage() had just written -- proven interleaving: upload,
+        // then any text-only PUT, and the leaf is gone with its file
+        // orphaned on disk. So every section's image_url is carried forward
+        // from what is ALREADY STORED whenever the incoming section omits
+        // it -- covering both "the section is present but the key is
+        // missing" and "the whole section is missing from this submission"
+        // with the same rule, since `$data['content'][$sectionKey] ?? []`
+        // answers both identically. Only the LEAF is carried forward, not
+        // the rest of a re-added section: everything else about `content`
+        // being replaced wholesale by whatever this request sent is
+        // untouched, existing behaviour -- this fix is scoped to the one
+        // leaf that has exactly one writer.
+        //
+        // This can only ever ADD the key back, never invent one: a section
+        // with no STORED image_url (never uploaded, or legitimately removed
+        // via removeImage()) has nothing here to copy forward, so a removed
+        // photo stays removed through any number of later text saves.
+        if (array_key_exists('content', $data)) {
+            foreach (($page->content ?? []) as $sectionKey => $storedFields) {
+                if (!is_array($storedFields)
+                    || !isset($storedFields['image_url'])
+                    || !is_string($storedFields['image_url'])
+                ) {
+                    continue;
+                }
+
+                if (!isset($data['content'][$sectionKey]) || !is_array($data['content'][$sectionKey])) {
+                    $data['content'][$sectionKey] = [];
+                }
+
+                if (!array_key_exists('image_url', $data['content'][$sectionKey])) {
+                    $data['content'][$sectionKey]['image_url'] = $storedFields['image_url'];
+                }
+            }
+        }
+
         // content.contact.* used to be constrained by ScalarLeaves(depth:2)
         // above alone -- SHAPE, not FORMAT: any scalar was a legal leaf, so
         // email='not an email' and a 200,000-character phone both saved with
