@@ -1359,6 +1359,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
                     Route::put('sections',     [LandingPageSectionController::class, 'update']);
 
+                    // The photo endpoints (Task 4, media round). Multipart
+                    // form data does not parse on a PUT in PHP, so both verbs
+                    // are POST/DELETE rather than following update()'s PUT —
+                    // the frontend posts FormData for the upload and a plain
+                    // JSON body for the removal.
+                    Route::post('image',   [LandingPageController::class, 'uploadImage']);
+                    Route::delete('image', [LandingPageController::class, 'removeImage']);
+
                     // The wizard: a GET that prefills it from what the
                     // tenant already has, and a POST that applies the result
                     // in one transaction. Inside the entitlement group with

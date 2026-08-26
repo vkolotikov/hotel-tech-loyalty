@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
 use App\Models\LandingPage;
+use App\Rules\MaxImageDimensions;
 use App\Rules\ScalarLeaves;
+use App\Services\MediaService;
 use App\Support\LandingPageGuard;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
@@ -172,6 +174,27 @@ class LandingPageController extends Controller
             'slug.max'    => 'Please use a shorter web address — up to 63 characters.',
         ]);
 
+        // D4 (landing phase 3b, media round): image_url is a leaf ScalarLeaves
+        // happily allows through — it is just a string — but it names a file
+        // written by MediaService::upload(), and this endpoint has no way to
+        // know whether a submitted string is a real upload, a dead path from
+        // a page that has moved on, or somebody else's file entirely. Letting
+        // it through here would give this column TWO writers for the same
+        // leaf: uploadImage()/removeImage() below (which pair every write
+        // with the matching delete of the file it replaces) and this free-text
+        // path (which cannot, and would leak the old file on every edit that
+        // happened to carry a stale image_url along for the ride). So this
+        // runs before anything else touches `content`, and it names no field
+        // path in its message — content.hero.image_url is exactly the kind of
+        // string spec 9 says must never reach a tenant verbatim.
+        foreach (($data['content'] ?? []) as $sectionKey => $fields) {
+            if (is_array($fields) && array_key_exists('image_url', $fields)) {
+                throw ValidationException::withMessages([
+                    'content' => 'Photos are changed with the photo controls, not by editing text.',
+                ]);
+            }
+        }
+
         // content.contact.* used to be constrained by ScalarLeaves(depth:2)
         // above alone -- SHAPE, not FORMAT: any scalar was a legal leaf, so
         // email='not an email' and a 200,000-character phone both saved with
@@ -281,6 +304,99 @@ class LandingPageController extends Controller
         }
 
         return response()->json(['page' => $page->fresh('sections')]);
+    }
+
+    /**
+     * The one writer for `content.{slot}.image_url` — see D4's comment in
+     * update() for why that leaf is refused everywhere else. Multipart form
+     * data does not parse on a PUT in PHP, which is why this is a POST
+     * (routes/api.php has the note); the frontend sends FormData.
+     *
+     * $old is read before the upload so a slow upload racing a second
+     * request still deletes whatever THIS request found on the page when it
+     * started, not whatever happens to be there by the time it finishes.
+     * MediaService::delete() only fires once the new file is safely saved —
+     * deleting the old file first and then failing the write would leave the
+     * page pointing at nothing.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'slot'  => 'required|in:hero,about',
+            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120', new MaxImageDimensions(4096)],
+        ], [
+            'slot.required'  => 'Please choose which photo you are replacing.',
+            'slot.in'        => 'Please choose which photo you are replacing.',
+            'image.required' => 'Please choose a photo to upload.',
+            'image.image'    => 'Please upload a JPEG, PNG or WebP photo.',
+            'image.mimes'    => 'Please upload a JPEG, PNG or WebP photo.',
+            'image.max'      => 'Please use a photo up to 5 MB.',
+        ]);
+
+        $page = $this->current();
+        abort_if($page === null, 404);
+
+        $slot = $data['slot'];
+        $old  = $page->content[$slot]['image_url'] ?? null;
+
+        $url = MediaService::upload($data['image'], 'landing');
+
+        // The one level of nesting update() already lives with: content is a
+        // map of section keys onto a flat map of fields, so only the leaf
+        // this endpoint owns is touched — every sibling field already
+        // written under this slot (a headline, a subtext) survives.
+        $content = $page->content ?? [];
+        $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
+        $section['image_url'] = $url;
+        $content[$slot] = $section;
+
+        $page->content = $content;
+        $page->save();
+
+        // Only after the new file is on the page and saved. A string check,
+        // not a truthiness one: an old value of '0' is a legal (if odd) past
+        // upload and must still be cleaned up.
+        if (is_string($old)) {
+            MediaService::delete($old);
+        }
+
+        return response()->json(['slot' => $slot, 'image_url' => $url]);
+    }
+
+    /** The other half of the single-writer rule: clears the leaf and deletes the file it named. */
+    public function removeImage(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'slot' => 'required|in:hero,about',
+        ], [
+            'slot.required' => 'Please choose which photo you are removing.',
+            'slot.in'       => 'Please choose which photo you are removing.',
+        ]);
+
+        $page = $this->current();
+        abort_if($page === null, 404);
+
+        $slot = $data['slot'];
+
+        $content = $page->content ?? [];
+        $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
+        $old = $section['image_url'] ?? null;
+
+        // Unset, not merely nulled — and the section stays in place even if
+        // this was its only field, matching update(): nothing in this column
+        // ever prunes a section down to nothing on its own. ScalarTree is
+        // what makes an empty section harmless to the renderer.
+        unset($section['image_url']);
+        $content[$slot] = $section;
+
+        $page->content = $content;
+        $page->save();
+
+        if (is_string($old)) {
+            MediaService::delete($old);
+        }
+
+        return response()->json(['slot' => $slot, 'image_url' => null]);
     }
 
     public function publish(): JsonResponse
