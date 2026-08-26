@@ -25,9 +25,35 @@
         $content->contact->name,
         $page->seo['title'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
+
+    // Task 5 (landing phase 3b, media round): the photographic plate
+    // Appendix B 4.5 item 2 describes, gated on PageContent::imageUrl() —
+    // the one allowlisted read of content.hero.image_url — so an absent,
+    // stale or hostile leaf (see that method's own docblock) renders
+    // NOTHING here rather than a broken <img>. Wrapping tags for the plate
+    // sit entirely inside the two @if($heroImage) blocks below so a page
+    // with no photo renders this partial's ORIGINAL markup byte-for-byte —
+    // see RuledPageRenderTest's golden capture, taken before this existed.
+    //
+    // No monogram fallback: Appendix B's own no-data path for this section
+    // wants one, but nothing in this codebase's hero ever rendered one
+    // before this task, and the golden above pins that exact absence —
+    // inventing one now would fail the byte-parity it exists to prove.
+    //
+    // The two @if($heroImage) directives below sit at column 0 deliberately
+    // (no Blade comment beside them either): Blade strips neither a
+    // directive line's own leading whitespace nor the newline outside a
+    // {{-- --}} comment, so either one would leak literal bytes into the
+    // no-image render even while the guarded block itself is skipped —
+    // exactly the byte-parity the golden capture above exists to pin.
+    $heroImage = $content->imageUrl('hero');
 @endphp
 <section data-section="hero" class="band rp-hero">
   <div class="wrap">
+@if ($heroImage)
+    <div class="rp-hero__grid">
+      <div class="rp-hero__content">
+@endif
     @if (filled($heading))
       <h1>{{ $heading }}</h1>
     @endif
@@ -55,5 +81,12 @@
     @elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact'))
       <a class="rp-cta" href="#contact">{{ $profile->primaryCta }}</a>
     @endif
+@if ($heroImage)
+      </div>
+      <figure class="rp-hero__plate">
+        <img class="rp-hero__plate-img" src="{{ $heroImage }}" alt="" fetchpriority="high" decoding="async">
+      </figure>
+    </div>
+@endif
   </div>
 </section>

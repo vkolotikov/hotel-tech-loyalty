@@ -996,6 +996,110 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Service catalog schema — opt-in extension for tests that exercise
+     * ServiceController's admin CRUD (gallery upload validation, etc).
+     *
+     * Adds `services` plus the two tables ServiceController's store()/
+     * update() eager-load on every response — `$service->load(['category',
+     * 'masters'])` — which are needed even when a test never sets a
+     * category or a master: Eloquent's eager-load still issues a query
+     * against those tables for a single model, and sqlite has no table to
+     * query against without this. `brands` comes from BelongsToBrand's
+     * default-brand resolution, same reason booking_rooms needs it in
+     * setUpAvailabilitySchema.
+     */
+    protected function setUpServiceCatalogSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('widget_token', 64)->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->softDeletes();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('service_categories')) {
+            Schema::create('service_categories', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                // ServiceCategory also uses BelongsToBrand.
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('color', 20)->nullable();
+                $table->string('icon')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('services')) {
+            Schema::create('services', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->unsignedBigInteger('category_id')->nullable();
+                $table->string('name');
+                $table->string('slug')->nullable();
+                $table->text('description')->nullable();
+                $table->text('short_description')->nullable();
+                $table->integer('duration_minutes')->default(60);
+                $table->integer('buffer_after_minutes')->default(0);
+                $table->decimal('price', 10, 2)->default(0);
+                $table->string('currency', 10)->default('EUR');
+                $table->string('image')->nullable();
+                $table->text('gallery')->nullable();
+                $table->text('tags')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->text('meta')->nullable();
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('service_masters')) {
+            Schema::create('service_masters', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                // ServiceMaster also uses BelongsToBrand — its BrandScope
+                // filters every query by brand_id, so it must exist here
+                // even though these tests never populate a master.
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('avatar')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
+        if (!Schema::hasTable('service_master_service')) {
+            Schema::create('service_master_service', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('service_master_id');
+                $table->unsignedBigInteger('service_id');
+                $table->decimal('price_override', 10, 2)->nullable();
+                $table->integer('duration_override_minutes')->nullable();
+                $table->timestamps();
+                $table->unique(['service_master_id', 'service_id']);
+            });
+        }
+    }
+
+    /**
      * Loyalty schema — opt-in extension for tests that exercise
      * LoyaltyService (award/redeem/reverse) and the tier ladder.
      * Includes a richer points_transactions schema covering every

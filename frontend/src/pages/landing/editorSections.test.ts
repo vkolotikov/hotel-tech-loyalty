@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, toggleSection,
-  SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
+  buildSectionRows, buildSectionsPayload, moveSection, orderedSections, safeImageUrl, stripImageUrlLeaves,
+  toggleSection, SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
 import { SECTION_ORDER } from './sections'
 
@@ -199,5 +199,118 @@ describe('SECTION_CONTENT_FIELDS', () => {
     expect(contact.find(f => f.name === 'phone')).toMatchObject({ maxLength: 64 })
     expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
     expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
+  })
+
+  /**
+   * Task 6: `hero` and `about` are the only two sections Task 4's photo
+   * endpoints accept (`slot` in `hero,about`) — this mapping is the field
+   * renderer's one signal to branch to the photo control, so it has to
+   * expose an `image_url`/`type: 'image'` field for exactly those two
+   * sections and no others.
+   */
+  it('exposes an image_url/type:image field for exactly hero and about', () => {
+    const sectionsWithImage = SECTION_ORDER.filter(key =>
+      SECTION_CONTENT_FIELDS[key].some(f => f.name === 'image_url' && f.type === 'image'),
+    )
+    expect(sectionsWithImage.sort()).toEqual(['about', 'hero'])
+  })
+})
+
+/**
+ * Minor m4: `LandingEditor.tsx` feeds this straight to `ImageField` →
+ * `resolveImage()` → an unconditional `url.match(...)`, so a truthy
+ * non-string `content[row.key].image_url` — a legal write pre-D4, and raw-DB
+ * shapes are this feature's standing threat model — throws a TypeError
+ * during render and kills the whole editor route. Mirrors
+ * `App\Landing\PageContent::imageUrl()`'s own allowlist.
+ *
+ * Mutation: make it an identity passthrough and every hostile case here
+ * goes red.
+ */
+describe('safeImageUrl', () => {
+  it('accepts a valid https URL', () => {
+    expect(safeImageUrl('https://cdn.example.test/landing/hero.jpg')).toBe('https://cdn.example.test/landing/hero.jpg')
+  })
+
+  it('accepts a valid http URL', () => {
+    expect(safeImageUrl('http://cdn.example.test/landing/hero.jpg')).toBe('http://cdn.example.test/landing/hero.jpg')
+  })
+
+  it('accepts a valid /storage/ path', () => {
+    expect(safeImageUrl('/storage/landing/hero.jpg')).toBe('/storage/landing/hero.jpg')
+  })
+
+  it('rejects a javascript: string', () => {
+    expect(safeImageUrl('javascript:alert(1)')).toBeNull()
+  })
+
+  it('rejects a number', () => {
+    expect(safeImageUrl(42)).toBeNull()
+  })
+
+  it('rejects an array', () => {
+    expect(safeImageUrl(['https://cdn.example.test/x.jpg'])).toBeNull()
+  })
+
+  it('rejects an object', () => {
+    expect(safeImageUrl({ url: 'https://cdn.example.test/x.jpg' })).toBeNull()
+  })
+
+  it('rejects an empty string', () => {
+    expect(safeImageUrl('')).toBeNull()
+  })
+
+  it('rejects null and undefined', () => {
+    expect(safeImageUrl(null)).toBeNull()
+    expect(safeImageUrl(undefined)).toBeNull()
+  })
+
+  it('rejects a boolean', () => {
+    expect(safeImageUrl(true)).toBeNull()
+  })
+})
+
+/**
+ * Fix round 1 (ruling 3b-4): `saveMut.mutationFn`'s one choke point before
+ * a text-only save reaches the server — see `stripImageUrlLeaves`'s own
+ * docblock for why an unstripped `image_url` leaf gets dragged into `form`
+ * by reference and 422s an ordinary text save.
+ */
+describe('stripImageUrlLeaves', () => {
+  it('strips image_url from multiple sections at once, leaving siblings intact', () => {
+    const content = {
+      hero:  { image_url: '/storage/landing/hero.png', headline: 'Quiet luxury', subtext: 'Calm, considered.' },
+      about: { image_url: '/storage/landing/about.png', kicker: 'Our story', lead: 'Since 2014' },
+      services: { kicker: 'What we do', heading: 'Treatments' },
+    }
+    expect(stripImageUrlLeaves(content)).toEqual({
+      hero:  { headline: 'Quiet luxury', subtext: 'Calm, considered.' },
+      about: { kicker: 'Our story', lead: 'Since 2014' },
+      services: { kicker: 'What we do', heading: 'Treatments' },
+    })
+  })
+
+  it('tolerates a non-object section — string, number, or null — passing it through untouched', () => {
+    const content = { hero: 'a bare scalar section', about: 42, contact: null }
+    expect(stripImageUrlLeaves(content as unknown as Record<string, unknown>)).toEqual({
+      hero: 'a bare scalar section', about: 42, contact: null,
+    })
+  })
+
+  it('tolerates null or undefined content, returning {} — matching the save body\'s own `?? {}`', () => {
+    expect(stripImageUrlLeaves(null)).toEqual({})
+    expect(stripImageUrlLeaves(undefined)).toEqual({})
+  })
+
+  it('does not mutate the input object', () => {
+    const content = { hero: { image_url: '/storage/landing/hero.png', headline: 'Old' } }
+    const snapshot = JSON.parse(JSON.stringify(content))
+    stripImageUrlLeaves(content)
+    expect(content).toEqual(snapshot)
+  })
+
+  it('a section with no image_url to begin with is returned with every key intact', () => {
+    const content = { services: { kicker: 'What we do', heading: 'Treatments', subtext: 'Every service, one place.' } }
+    expect(stripImageUrlLeaves(content)).toEqual(content)
   })
 })

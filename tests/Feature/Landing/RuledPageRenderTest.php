@@ -3,12 +3,19 @@ namespace Tests\Feature\Landing;
 
 use App\Models\ChatWidgetConfig;
 use App\Models\LandingPage;
+use App\Models\Organization;
 use App\Models\Property;
 use App\Models\Service;
+use App\Models\User;
 use App\Support\Accent;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Laravel\Sanctum\Sanctum;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
 
@@ -40,6 +47,119 @@ class RuledPageRenderTest extends TestCase
     private function body(): string
     {
         return $this->get('http://' . config('landing.host') . '/glamour-salon')->getContent();
+    }
+
+    /** Same GET, against an arbitrary page's own slug rather than the fixed 'glamour-salon' one. */
+    private function bodyFor(LandingPage $page): string
+    {
+        return $this->get('http://' . config('landing.host') . '/' . $page->slug)->getContent();
+    }
+
+    // ─── Media plates (Task 5, landing phase 3b) ───────────────────────────
+    //
+    // The brief is explicit that these tests create images through Task 4's
+    // real writer — POST /api/v1/admin/landing-pages/image — not by poking
+    // image_url into the row directly. That means driving the full admin
+    // request stack (a real Organization with the landing_pages
+    // entitlement, a real staff user, Sanctum, a faked local disk), exactly
+    // as LandingImageUploadTest's own setUp() provisions it. The published()
+    // fixture above can't be reused for this: it hardcodes organization_id
+    // 1 with no real Organization row behind it, which the public renderer
+    // never needs but the admin entitlement gate does.
+
+    /** Schema + fake-disk setup shared by every test in this section, built only when needed. */
+    private function ensureImageUploadSchema(): void
+    {
+        if (!Schema::hasColumn('organizations', 'plan_slug')) {
+            Schema::table('organizations', function ($table) {
+                $table->string('plan_slug', 32)->nullable();
+            });
+        }
+        // CheckSubscription reads $user->staff?->isSuperAdmin() before
+        // anything else; the table has to exist and stay empty.
+        if (!Schema::hasTable('staff')) {
+            Schema::create('staff', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id')->nullable();
+                $table->unsignedBigInteger('user_id')->nullable();
+                $table->string('role')->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+            });
+        }
+        // BrandMiddleware asks every staff user which brands they are pinned to.
+        if (!Schema::hasTable('brand_user')) {
+            Schema::create('brand_user', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('brand_id');
+                $table->unsignedBigInteger('user_id');
+                $table->string('role')->nullable();
+                $table->timestamps();
+            });
+        }
+
+        // MediaService::disk() auto-detects DigitalOcean Spaces whenever its
+        // credentials are configured, and this repo's own .env carries real
+        // ones — force the local disk deterministically and fake it.
+        Config::set('filesystems.media_disk', 'public');
+        Config::set('filesystems.disks.do.key', null);
+        Config::set('filesystems.disks.do.secret', null);
+        Config::set('filesystems.disks.do.bucket', null);
+        Storage::fake('public');
+    }
+
+    private function orgWithLandingPages(): Organization
+    {
+        return Organization::create([
+            'name' => 'Glamour', 'slug' => 'glamour-' . uniqid(),
+            'industry' => 'beauty', 'subscription_status' => 'ACTIVE',
+            'plan_slug' => 'enterprise', 'plan_features' => ['landing_pages' => true],
+        ]);
+    }
+
+    /** A published page tied to a REAL org id, matching what the admin upload endpoint resolves against. */
+    private function publishedForOrg(Organization $org, string $slug, array $content = []): LandingPage
+    {
+        app()->instance('current_organization_id', $org->id);
+
+        $page = LandingPage::create([
+            'organization_id' => $org->id, 'slug' => $slug,
+            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'published',
+            'published_at' => now(), 'content' => $content,
+        ]);
+        foreach (['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'] as $i => $key) {
+            $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
+        }
+
+        app()->forgetInstance('current_organization_id');
+
+        return $page;
+    }
+
+    /** Uploads a real image through Task 4's endpoint and returns the stored /storage/... URL. */
+    private function uploadImageViaEndpoint(Organization $org, string $slot): string
+    {
+        $user = User::create([
+            'name' => 'Staff', 'email' => 'staff_' . uniqid() . '@example.test',
+            'organization_id' => $org->id, 'user_type' => 'staff',
+        ]);
+        Sanctum::actingAs($user, ['*']);
+
+        $image = function_exists('imagecreatetruecolor')
+            ? UploadedFile::fake()->image('plate.png', 10, 10)
+            : UploadedFile::fake()->createWithContent(
+                'plate.png',
+                file_get_contents(base_path('tests/fixtures/images/small-10x10.png')),
+            );
+
+        $response = $this->post(
+            'http://' . parse_url(config('app.url'), PHP_URL_HOST) . '/api/v1/admin/landing-pages/image',
+            ['slot' => $slot, 'image' => $image],
+        );
+
+        $response->assertOk();
+
+        return $response->json('image_url');
     }
 
     public function test_it_renders_the_customers_own_headline(): void
@@ -1078,6 +1198,400 @@ class RuledPageRenderTest extends TestCase
         $page = $this->published();
         $this->storeRawContact($page, ['phone' => str_repeat('x', 200_000)]);
 
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    // ─── Media plates (Task 5, landing phase 3b) — golden captures ────────
+
+    /**
+     * The claim Task 5 has to prove before it touches a single Blade file:
+     * introducing the hero image plate must not move one byte of what a
+     * page with hero copy and NO `content.hero.image_url` renders today.
+     * Captured against the renderer BEFORE PageContent::imageUrl() or
+     * hero.blade.php's plate markup existed at all (see this commit's own
+     * position in git history, ahead of the wiring commit) — a byte
+     * drifting here after that lands means the plate rendered when it had
+     * no business to, not merely that the wrapping changed. The nonce is
+     * random per request and is the only thing normalised out.
+     */
+    public function test_the_hero_band_renders_byte_identical_with_no_image_url(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero' => ['headline' => 'The Art of Wellness', 'subtext' => 'Quiet luxury, considered service.'],
+        ]]);
+
+        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+
+        $golden = '<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Art of Wellness</title>
+<meta name="description" content="">
+
+<meta property="og:title" content="The Art of Wellness">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+
+<style nonce="TESTNONCE">
+  :root{
+    --brand: #9b5c8f;
+  }
+</style>
+</head>
+<body class="rp">
+
+
+<div class="rule-progress" aria-hidden="true"></div>
+
+
+
+<main>
+
+  <section data-section="hero" class="band rp-hero">
+  <div class="wrap">
+          <h1>The Art of Wellness</h1>
+              <p class="rp-hero__sub">Quiet luxury, considered service.</p>
+        
+      </div>
+</section>
+</main>
+
+<footer class="rp-footer" data-section="footer">
+  <div class="wrap">
+    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+  </div>
+</footer>
+
+
+
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+
+</body>
+</html>
+';
+
+        $this->assertSame($golden, $body);
+    }
+
+    /**
+     * The same claim, for the about band: a page with a kicker, lead and
+     * body — and no `content.about.image_url` — must render byte-identical
+     * once the plate exists. Captured before either PageContent::imageUrl()
+     * or about.blade.php's plate markup existed (see this commit's position
+     * in git history, ahead of the wiring commit that adds them). This is
+     * also the fixture that proves the docblock's promise wrong: today's
+     * about.blade.php claims "text at 62ch, centred in the grid" but the
+     * actual markup below is grid-column 3/11 (columns 3-10), not centred —
+     * the code, not the comment, is what this golden pins.
+     */
+    public function test_the_about_band_renders_byte_identical_with_no_image_url(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['kicker' => 'The Studio', 'lead' => 'Considered service, unhurried.', 'body' => 'We opened Glamour Salon to slow the whole ritual down.'],
+        ]]);
+
+        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+
+        $golden = '<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Art of Wellness</title>
+<meta name="description" content="">
+
+<meta property="og:title" content="The Art of Wellness">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+
+<style nonce="TESTNONCE">
+  :root{
+    --brand: #9b5c8f;
+  }
+</style>
+</head>
+<body class="rp">
+
+
+<div class="rule-progress" aria-hidden="true"></div>
+
+
+
+<main>
+
+  <section data-section="hero" class="band rp-hero">
+  <div class="wrap">
+          <h1>The Art of Wellness</h1>
+            
+      </div>
+</section>
+  <section data-section="about" class="band band--paper-2 rp-about">
+  <div class="wrap rp-about__grid">
+    <div class="rp-about__text">
+      
+      <h2 class="band__kicker">The Studio</h2>
+
+              <p class="rp-about__lead"><span class="rp-about__opening">Considered service,</span> unhurried.</p>
+      
+      <div class="rp-about__body">
+                              <p>We opened Glamour Salon to slow the whole ritual down.</p>
+                        </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="rp-footer" data-section="footer">
+  <div class="wrap">
+    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+  </div>
+</footer>
+
+
+
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+
+</body>
+</html>
+';
+
+        $this->assertSame($golden, $body);
+    }
+
+    /**
+     * The claim Task 5 exists to prove: an image uploaded through the REAL
+     * writer (Task 4's endpoint) reaches the public hero band as a plate.
+     * Mutation target 2 (hero plate rendered unconditionally) fails BOTH
+     * golden captures above rather than this test, since an unconditional
+     * plate would also appear on the no-image fixtures — this test only
+     * proves the positive direction: the plate appears, carries the
+     * uploaded URL, and the section still renders.
+     */
+    public function test_the_hero_plate_renders_with_an_image_uploaded_through_the_real_endpoint(): void
+    {
+        $this->ensureImageUploadSchema();
+        $org  = $this->orgWithLandingPages();
+        $page = $this->publishedForOrg($org, 'plate-hero-salon', [
+            'hero' => ['headline' => 'The Art of Wellness'],
+        ]);
+
+        $url = $this->uploadImageViaEndpoint($org, 'hero');
+        $this->assertStringStartsWith('/storage/', $url);
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('data-section="hero"', $body);
+        $this->assertStringContainsString(
+            '<img class="rp-hero__plate-img" src="' . $url . '" alt="" fetchpriority="high" decoding="async">',
+            $body,
+        );
+    }
+
+    /**
+     * The about half of the same claim, plus 4.5.4's column shift: the text
+     * moves from its no-image columns 3-11 to 6-11 exactly when the plate
+     * renders. Mutation target 3 (drop the column shift) is what this test
+     * catches — the plate would still appear, but the text div would be
+     * missing the `rp-about__text--shifted` modifier class.
+     */
+    public function test_the_about_plate_renders_with_an_image_uploaded_through_the_real_endpoint_and_shifts_the_text_column(): void
+    {
+        $this->ensureImageUploadSchema();
+        $org  = $this->orgWithLandingPages();
+        $page = $this->publishedForOrg($org, 'plate-about-salon', [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['kicker' => 'The Studio', 'body' => 'Our story starts with quiet rooms.'],
+        ]);
+
+        $url = $this->uploadImageViaEndpoint($org, 'about');
+        $this->assertStringStartsWith('/storage/', $url);
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('data-section="about"', $body);
+        $this->assertStringContainsString(
+            '<img class="rp-about__plate-img" src="' . $url . '" alt="" loading="lazy" decoding="async">',
+            $body,
+        );
+        $this->assertStringContainsString('<figcaption class="rp-about__plate-caption mono">The Studio</figcaption>', $body);
+        $this->assertStringContainsString('class="rp-about__text rp-about__text--shifted"', $body);
+    }
+
+    /**
+     * An https:// URL is the other half of the allowlist (a cloud-disk
+     * upload never starts with /storage/) and gets no less real a check
+     * than the local-disk shape above.
+     */
+    public function test_an_https_image_url_is_accepted_by_the_allowlist(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero' => ['headline' => 'The Art of Wellness', 'image_url' => 'https://cdn.example.test/landing/hero.jpg'],
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString(
+            '<img class="rp-hero__plate-img" src="https://cdn.example.test/landing/hero.jpg" alt="" fetchpriority="high" decoding="async">',
+            $body,
+        );
+    }
+
+    // ─── Hostile content.{hero,about}.image_url (App\Landing\PageContent::imageUrl) ──
+
+    /**
+     * Written exactly as the contact hostility battery above does — a raw
+     * DB::table() update, bypassing both the admin API's validation and
+     * Eloquent's re-encoding — because content.hero/about is a schemaless
+     * `array` cast with no schema behind it, and rows written before D4
+     * existed, or hand-edited, are already in the database in shapes like
+     * these. A 500 here is not acceptable, on the live page or on preview.
+     */
+    private function storeRawImageUrl(LandingPage $page, string $section, string $textField, string $textValue, mixed $imageValue): void
+    {
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero' => ['headline' => 'The Art of Wellness'],
+                $section => [$textField => $textValue, 'image_url' => $imageValue],
+            ]),
+        ]);
+    }
+
+    private function assertNoPlateImgForSection(string $section, string $body): void
+    {
+        $this->assertStringNotContainsString('rp-' . $section . '__plate-img', $body,
+            "A plate <img> rendered for {$section} despite a hostile image_url.");
+    }
+
+    /**
+     * Mutation target 1: if imageUrl() returned the raw leaf unchecked, this
+     * is the test that goes red — a `javascript:` URI would sail straight
+     * into an `<img src>` (inert there, but the guard exists precisely so
+     * "which tag happens to be forgiving" is never the thing standing
+     * between stored data and a hostile URL scheme).
+     */
+    public function test_a_javascript_scheme_image_url_renders_no_img_tag(): void
+    {
+        // Both sections hostile in the SAME row, and asserted in one pass:
+        // assertPageAndPreviewSurvive() flips its page to draft to exercise
+        // the preview path, so calling it twice against the same fixture
+        // (once per section) would find the live route already 404ing from
+        // the first call's own mutation. published()'s slug is also fixed,
+        // so a second fixture can't be created alongside this one either.
+        $page = $this->published();
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero'  => ['headline' => 'The Art of Wellness', 'image_url' => 'javascript:alert(1)'],
+                'about' => ['body' => 'Our story.', 'image_url' => 'javascript:alert(1)'],
+            ]),
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('javascript:', $body);
+        $this->assertNoPlateImgForSection('hero', $body);
+        $this->assertNoPlateImgForSection('about', $body);
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * A bare attribute-breakout string: Blade's `{{ }}` would already
+     * escape it were it ever echoed, but imageUrl()'s allowlist is the
+     * second wall — it refuses the leaf outright, so the string never
+     * reaches an attribute context (escaped or otherwise) at all.
+     */
+    public function test_an_attribute_breakout_image_url_renders_no_img_tag(): void
+    {
+        $page = $this->published();
+        $this->storeRawImageUrl($page, 'hero', 'headline', 'The Art of Wellness', '"><script>');
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('"><script>', $body);
+        $this->assertNoPlateImgForSection('hero', $body);
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * A PROTOCOL-RELATIVE URL — must be treated as absent, not as a
+     * root-relative path: a browser resolves `//` against the CURRENT
+     * page's scheme, so it is exactly as capable of pointing off-origin as
+     * a fully-qualified cross-origin URL, and `^(https?://|/storage/)`
+     * matches neither of its prefixes.
+     */
+    public function test_a_protocol_relative_image_url_renders_no_img_tag(): void
+    {
+        $page = $this->published();
+        $this->storeRawImageUrl($page, 'hero', 'headline', 'The Art of Wellness', '//evil.example/x.jpg');
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('evil.example', $body);
+        $this->assertNoPlateImgForSection('hero', $body);
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * content is pruned to depth 2 before PageContent ever sees it
+     * (ScalarTree::prune(), called from the render path) — an array-shaped
+     * leaf one level deeper than the column's own shape allows is dropped
+     * entirely rather than reaching imageUrl() at all. Proven here anyway,
+     * at the render boundary, rather than assumed from prune()'s own unit
+     * tests: this is the render path's actual behaviour on a row shaped
+     * exactly as a raw import or hand-edit would leave it.
+     */
+    public function test_an_array_shaped_image_url_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawImageUrl($page, 'hero', 'headline', 'The Art of Wellness', ['first', 'second']);
+
+        $body = $this->body();
+
+        $this->assertNoPlateImgForSection('hero', $body);
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /** A JSON object rather than a JSON array — both decode to a PHP array through the same `array` cast. */
+    public function test_an_object_shaped_image_url_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawImageUrl($page, 'hero', 'headline', 'The Art of Wellness', (object) ['nested' => 'value']);
+
+        $body = $this->body();
+
+        $this->assertNoPlateImgForSection('hero', $body);
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * No column-level length limit stands between a raw write and this
+     * leaf (content is TEXT/jsonb with no CHECK constraint), so the
+     * strlen() <= 2048 guard inside imageUrl() is what stops a pathological
+     * value from ever reaching a `src` attribute.
+     */
+    public function test_a_200k_character_image_url_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+        $this->storeRawImageUrl($page, 'hero', 'headline', 'The Art of Wellness', str_repeat('x', 200_000));
+
+        $body = $this->body();
+
+        $this->assertNoPlateImgForSection('hero', $body);
         $this->assertPageAndPreviewSurvive($page);
     }
 }

@@ -20,9 +20,11 @@ return [
     | Media Upload Disk
     |--------------------------------------------------------------------------
     | Disk used for user-uploaded media (images, documents).
-    | Set to 'do' for DigitalOcean Spaces in production.
+    | Set to 'do' for DigitalOcean Spaces in production. No default here on
+    | purpose: MediaService::disk() must be able to tell "explicitly set to
+    | public" apart from "not set at all" (see its docblock).
     */
-    'media_disk' => env('MEDIA_DISK', 'public'),
+    'media_disk' => env('MEDIA_DISK'),
 
     /*
     |--------------------------------------------------------------------------

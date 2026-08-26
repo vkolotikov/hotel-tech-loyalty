@@ -3,14 +3,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, Loader2, Save } from 'lucide-react'
-import { api } from '../../lib/api'
+import { api, resolveImage } from '../../lib/api'
 import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionKey } from './sections'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, toggleSection, SECTION_CONTENT_FIELDS,
-  type EditorSectionRow, type PageSection, type SectionAvailability,
+  buildSectionRows, buildSectionsPayload, moveSection, safeImageUrl, stripImageUrlLeaves, toggleSection,
+  SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
 } from './editorSections'
+import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
 
@@ -101,6 +102,32 @@ const FIELD_FALLBACK: Record<string, string> = {
   phone: 'Phone',
   email: 'Email',
   address: 'Address',
+  // Task 6: label above the photo control (hero/about only).
+  image_url: 'Photo',
+}
+
+/**
+ * Task 6: the one shared shape both photo mutations' `onError` reads —
+ * whichever field the server's `validate()` call actually rejected
+ * (`errors.image[0]` for a bad file, `errors.slot[0]` for either endpoint's
+ * other branch) carries the friendly, actionable message; the generic
+ * `error`/`message` envelope is the fallback for anything neither endpoint
+ * has a per-field rule for (a 404, a network failure). Same preference
+ * `saveMut`'s own `onError` above already established for `errors.slug[0]`,
+ * and for the same reason: "Validation failed" tells a tenant nothing they
+ * can act on.
+ */
+function imageErrorMessage(e: unknown, fallback: string): string {
+  const err = e as { response?: { data?: {
+    errors?: Record<string, string[]>; error?: string; message?: string
+  } } }
+  return (
+    err.response?.data?.errors?.image?.[0]
+    ?? err.response?.data?.errors?.slot?.[0]
+    ?? err.response?.data?.error
+    ?? err.response?.data?.message
+    ?? fallback
+  )
 }
 
 /**
@@ -164,6 +191,17 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
   const toggleRow = (key: SectionKey) =>
     update('sections', toggleSection(f.sections ?? [], key))
 
+  // Task 6: the photo endpoints (Task 4) save straight to the row and are
+  // this field's ONLY writer (D4) — nothing here ever routes an upload/
+  // remove through `form`/`saveMut`. `invalidateQueries` re-fetches the
+  // real saved state and `previewNonce` bumps so the right-hand preview
+  // (which renders server-side, Task 9) picks up the new photo — the exact
+  // same pairing `saveMut.onSuccess` already does for a text save.
+  const onImageChanged = () => {
+    qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
+    setPreviewNonce(n => n + 1)
+  }
+
   const saveMut = useMutation({
     mutationFn: async (body: Partial<LandingPageDTO>) => {
       const calls: Promise<unknown>[] = [
@@ -184,7 +222,15 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
         // second place that question could give a different answer.
         api.put('/v1/admin/landing-pages', {
           theme: body.theme ?? {},
-          content: body.content ?? {},
+          // Fix round 1 (ruling 3b-4): `body.content` can carry an
+          // `image_url` leaf dragged in by reference the instant a
+          // SIBLING field on that same section is edited (`updateContent`'s
+          // spread copies the whole stored section) — the server's D4
+          // refusal is unconditional, so an unstripped leaf 422s the very
+          // next save after any photo upload. Stripping here is always
+          // safe: the server re-hydrates each section's stored
+          // `image_url` back in when the request omits it.
+          content: stripImageUrlLeaves(body.content),
           seo: body.seo ?? {},
           slug: body.slug ?? page?.slug,
         }),
@@ -412,9 +458,19 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
                 isFirst={i === 0}
                 isLast={i === rows.length - 1}
                 content={f.content?.[row.key] ?? {}}
+                // Task 6: sourced from the QUERY's raw `page`, never from
+                // `f`/`form` — see the comment beside this row's own
+                // `type === 'image'` branch in `SectionRow` for why. Minor
+                // m4: that raw query leaf is also unvalidated raw-DB data —
+                // `safeImageUrl` is the allowlist gate that keeps a legal
+                // non-string leaf from reaching `resolveImage()`'s
+                // unconditional `url.match(...)` and taking this whole
+                // route down.
+                imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
                 onToggle={() => toggleRow(row.key)}
                 onMove={dir => moveRow(row.key, dir)}
                 onFieldChange={(field, value) => updateContent(row.key, field, value)}
+                onImageChanged={onImageChanged}
               />
             ))}
           </div>
@@ -622,14 +678,19 @@ function WebAddressCard({
   )
 }
 
-function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldChange }: {
+function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove, onFieldChange, onImageChanged }: {
   row: EditorSectionRow
   isFirst: boolean
   isLast: boolean
   content: Record<string, string>
+  /** Task 6: `page.content?.[row.key]?.image_url`, straight off the QUERY
+   *  — see the field-loop's own comment below for why this can never be
+   *  `content` (which is `f.content`, form-merged) instead. */
+  imageUrl: string | null
   onToggle: () => void
   onMove: (direction: 'up' | 'down') => void
   onFieldChange: (field: string, value: string) => void
+  onImageChanged: () => void
 }) {
   const { t } = useTranslation()
   // RULING 4, from ./sections — the one predicate the wizard's step 4 and
@@ -734,10 +795,27 @@ function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldCh
           )}
           {fields.map(field => (
             <div key={field.name}>
-              <label className={label} htmlFor={`lp-${row.key}-${field.name}`}>
+              <label className={label} htmlFor={field.type === 'image' ? undefined : `lp-${row.key}-${field.name}`}>
                 {t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name)}
               </label>
-              {field.multiline ? (
+              {field.type === 'image' ? (
+                /*
+                 * D4 (frontend half), Task 6: `image_url` is never part of
+                 * `form`/dirty state — Task 4's upload/remove endpoints are
+                 * its one writer and they save straight to the server, so
+                 * this control reads the `imageUrl` PROP (sourced from the
+                 * QUERY's raw `page.content` at the call site above), never
+                 * `content` (which is `f.content` — form-merged, and would
+                 * go stale here the instant a SIBLING field on this same
+                 * row were mid-edit: `form.content` is a clone frozen at
+                 * that edit's start, from before this upload ever happened,
+                 * and uploading writes nothing back into `form` to refresh
+                 * it). It also never writes through `onFieldChange` —
+                 * there is no keystroke to queue, only an immediate,
+                 * already-saved server round-trip.
+                 */
+                <ImageField sectionKey={row.key} imageUrl={imageUrl} onChanged={onImageChanged} />
+              ) : field.multiline ? (
                 <textarea
                   id={`lp-${row.key}-${field.name}`}
                   className={input + ' resize-y'}
@@ -767,6 +845,98 @@ function SectionRow({ row, isFirst, isLast, content, onToggle, onMove, onFieldCh
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Task 6: the hero/about photo control. Per the spec, **no drag-and-drop
+ * and no canvas UI** — a single native `<input type="file">`, no custom
+ * drop-zone, no in-browser cropper. Its own `useMutation`s (rather than
+ * lifting them into `LandingEditor`) because an upload/remove is a fully
+ * self-contained round-trip with nothing for the parent to own beyond the
+ * `onChanged` callback — it is never queued into `saveMut`/`form` (D4; see
+ * the field-loop's own comment at this component's one call site).
+ */
+function ImageField({ sectionKey, imageUrl, onChanged }: {
+  sectionKey: SectionKey
+  imageUrl: string | null
+  onChanged: () => void
+}) {
+  const { t } = useTranslation()
+
+  const uploadMut = useMutation({
+    mutationFn: async (file: File) => {
+      // Downscale only when the photo is actually larger than this screen
+      // ever needs — a photo that already fits is sent byte-for-byte, so a
+      // tenant who already cropped/optimised their own file never loses
+      // anything to a needless re-encode.
+      const bitmap = await createImageBitmap(file)
+      const target = downscaleTarget(bitmap.width, bitmap.height)
+      const image = target ? await drawToBlob(file, target) : file
+
+      const body = new FormData()
+      body.append('slot', sectionKey)
+      body.append('image', image, file.name)
+      // The shared `api` client strips Content-Type for a FormData body
+      // (api.ts:28-37) so this plain multipart POST needs no extra config.
+      return api.post('/v1/admin/landing-pages/image', body)
+    },
+    onSuccess: onChanged,
+    onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const removeMut = useMutation({
+    mutationFn: () => api.delete('/v1/admin/landing-pages/image', { data: { slot: sectionKey } }),
+    onSuccess: onChanged,
+    onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    // Reset immediately so picking the SAME file again (e.g. after fixing
+    // it and re-selecting) still fires a change event next time.
+    e.target.value = ''
+    if (file) uploadMut.mutate(file)
+  }
+
+  const busy = uploadMut.isPending || removeMut.isPending
+
+  return (
+    <div className="space-y-2">
+      {imageUrl ? (
+        <img
+          src={resolveImage(imageUrl) ?? undefined}
+          alt=""
+          className="max-h-24 rounded-lg border border-dark-border object-cover"
+        />
+      ) : (
+        <p className="text-xs text-t-secondary">{t('landing_pages.editor.no_photo', 'No photo yet')}</p>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          disabled={busy}
+          onChange={onPick}
+          aria-label={t('landing_pages.editor.upload_photo', 'Upload photo')}
+          className="block w-full max-w-xs text-xs text-t-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-dark-border file:bg-dark-bg file:text-t-secondary file:text-xs hover:file:text-white disabled:opacity-50"
+        />
+        {uploadMut.isPending && (
+          <span className="text-xs text-t-secondary">{t('landing_pages.editor.photo_uploading', 'Uploading…')}</span>
+        )}
+        {imageUrl && (
+          <button
+            type="button"
+            className={btnSec}
+            disabled={busy}
+            onClick={() => removeMut.mutate()}
+          >
+            {t('landing_pages.editor.remove_photo', 'Remove photo')}
+          </button>
+        )}
+      </div>
     </div>
   )
 }

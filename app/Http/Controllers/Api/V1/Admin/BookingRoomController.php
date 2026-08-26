@@ -54,6 +54,14 @@ class BookingRoomController extends Controller
             'sort_order'        => 'nullable|integer',
             'is_active'         => 'nullable|boolean',
             'pms_id'            => 'nullable|string|max:100',
+            'gallery_files'     => 'nullable|array|max:24',
+            'gallery_files.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ], [
+            'gallery_files.array'   => 'Please upload each gallery photo as its own file, not as a single value.',
+            'gallery_files.max'     => 'Please upload up to 24 photos at a time.',
+            'gallery_files.*.image' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
+            'gallery_files.*.mimes' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
+            'gallery_files.*.max'   => 'One of the photos is larger than 5 MB. Please use a smaller file.',
         ]);
 
         $data['organization_id'] = app('current_organization_id');
@@ -102,6 +110,14 @@ class BookingRoomController extends Controller
             'sort_order'        => 'nullable|integer',
             'is_active'         => 'nullable|boolean',
             'pms_id'            => 'nullable|string|max:100',
+            'gallery_files'     => 'nullable|array|max:24',
+            'gallery_files.*'   => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
+        ], [
+            'gallery_files.array'   => 'Please upload each gallery photo as its own file, not as a single value.',
+            'gallery_files.max'     => 'Please upload up to 24 photos at a time.',
+            'gallery_files.*.image' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
+            'gallery_files.*.mimes' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
+            'gallery_files.*.max'   => 'One of the photos is larger than 5 MB. Please use a smaller file.',
         ]);
 
         if (isset($data['name'])) {

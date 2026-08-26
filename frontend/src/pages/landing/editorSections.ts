@@ -180,11 +180,21 @@ export function buildSectionsPayload(rows: EditorSectionRow[]): { key: string; e
  * to the server for a 422. The server-side rule is what actually protects
  * the column; this is only the residual "catch it before the network
  * round-trip" half.
+ *
+ * Task 6: `hero` and `about` each also carry an `image_url` field with
+ * `type: 'image'` — the one signal `LandingEditor.tsx`'s field renderer
+ * needs to branch to the photo control instead of a text input/textarea.
+ * Unlike every other field here, `image_url` is NOT a `content[key]` leaf
+ * this screen ever reads or writes through the ordinary save path: Task 4's
+ * `POST/DELETE .../image` endpoints are its one and only writer (D4), and
+ * the server refuses the key outright on the plain `update()` route — this
+ * descriptor exists purely so the row list still renders a control for it,
+ * never so it flows through `updateContent`/`form`.
  */
 export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string; multiline?: boolean; type?: string; maxLength?: number }[]> = {
-  hero:     [{ name: 'headline' }, { name: 'subtext' }],
+  hero:     [{ name: 'image_url', type: 'image' }, { name: 'headline' }, { name: 'subtext' }],
   services: [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
-  about:    [{ name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
+  about:    [{ name: 'image_url', type: 'image' }, { name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
   team:     [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
   reviews:  [{ name: 'kicker' }],
   booking:  [{ name: 'kicker' }, { name: 'heading' }, { name: 'terms', multiline: true }],
@@ -194,4 +204,72 @@ export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly { name: string;
     { name: 'email', type: 'email', maxLength: 191 },
     { name: 'address', maxLength: 191 },
   ],
+}
+
+/**
+ * Fix round 1 (ruling 3b-4), the Critical this round's review reproduced:
+ * `LandingEditor.tsx`'s `form` carries a section's whole content object BY
+ * REFERENCE the moment `update()` first clones `page` into it, and
+ * `updateContent()`'s spread (`{ ...(f.content?.[sectionKey] ?? {}), … }`)
+ * copies that section's EXISTING `image_url` leaf right along with
+ * whichever field the tenant actually meant to change — so editing only
+ * `hero.headline` after a photo has ever been uploaded still puts
+ * `image_url` on the wire. `LandingPageController::update()`'s D4 refusal
+ * is unconditional (any `content.*.image_url` key 422s, regardless of
+ * value), so that save would fail outright.
+ *
+ * This is the one choke point `saveMut.mutationFn` runs every save's
+ * `content` through before the PUT — never applied to `form` at creation
+ * (the thumbnail deliberately reads `page.content`, the raw query data,
+ * never `form`; scrubbing `form` itself would be a second, redundant place
+ * this same guarantee could drift) and never applied inside `ImageField`'s
+ * own upload/remove calls (they never touch `form` at all). Always safe:
+ * the server re-hydrates each section's stored `image_url` onto a save
+ * that omits it (Task 4's own amendment), so stripping it here can never
+ * lose a photo — only avoid re-sending a value the server would refuse
+ * outright.
+ */
+/**
+ * Minor m4: `LandingEditor.tsx`'s row list reads `imageUrl` straight off the
+ * QUERY's raw `page.content[row.key].image_url` (the thumbnail's own
+ * comment explains why it must be the raw query, never `form`) — and this
+ * feature's whole standing threat model, all through Task 4/6, has been
+ * that `content` is a schemaless JSON column a pre-existing row, a raw
+ * import, or a hand-edit can leave in a shape `ScalarLeaves`'s depth-2
+ * check permits (any SCALAR is a legal leaf) but that is not actually a
+ * usable image URL — a number, a boolean, an empty string. `ImageField`
+ * hands that value straight to `resolveImage()`, which calls
+ * `url.match(...)` unconditionally: a truthy non-string leaf throws a
+ * TypeError there and takes the whole editor route down with it.
+ *
+ * Mirrors `App\Landing\PageContent::imageUrl()`'s own allowlist exactly —
+ * same two accepted prefixes, same rejection of anything else — so the
+ * admin screen and the public renderer agree on what a "real" image_url
+ * looks like. Deliberately narrower than `resolveImage()` itself: this is
+ * the one gate that decides whether a value is safe to hand `resolveImage()`
+ * at all, not a second implementation of what it does with a safe one.
+ */
+export function safeImageUrl(value: unknown): string | null {
+  if (typeof value !== 'string' || value === '') return null
+  return /^(https?:\/\/|\/storage\/)/.test(value) ? value : null
+}
+
+export function stripImageUrlLeaves(content: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  if (content == null || typeof content !== 'object') return {}
+
+  const out: Record<string, unknown> = {}
+  for (const [key, section] of Object.entries(content)) {
+    // A non-plain-object section (a bare scalar, the pre-existing
+    // "ScalarLeaves" edge case Task 4's own fix round named) has no
+    // `image_url` key to strip — pass it through exactly as stored rather
+    // than inventing an object shape nothing asks for.
+    if (section === null || typeof section !== 'object' || Array.isArray(section)) {
+      out[key] = section
+      continue
+    }
+    const copy = { ...(section as Record<string, unknown>) }
+    delete copy.image_url
+    out[key] = copy
+  }
+  return out
 }

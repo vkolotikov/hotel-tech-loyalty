@@ -478,4 +478,71 @@ final class PageContent
     {
         return $this->count($sectionKey) > 0;
     }
+
+    /**
+     * The one choke point for reading a photo plate's URL (Task 5, landing
+     * phase 3b). Blades call ONLY this — never `$copy['image_url']` or
+     * `$page->content[$section]['image_url']` directly — so the allowlist
+     * below is the single wall every render-path pixel has to clear, however
+     * the leaf got written.
+     *
+     * `content.{hero,about}.image_url` has exactly one legitimate writer —
+     * LandingPageController::uploadImage(), which only ever stores what
+     * MediaService::upload() just returned: `/storage/…` on the local disk
+     * or an `https://…` CDN URL on a cloud one (see that method's own
+     * docblock). Everything else reaching this leaf is either stale data
+     * from before D4's write-refusal existed, or a raw UPDATE bypassing the
+     * admin API entirely (this render path's standing assumption — see the
+     * "Stored values the renderer must survive" tests below). Three
+     * independent guards, because any one of them missing is a live
+     * vulnerability, not a cosmetic gap:
+     *
+     *  - is_string(): theme/content/seo are schemaless `array` casts, and
+     *    the render path already prunes anything nested deeper than the
+     *    column's own shape allows (see ScalarTree::prune(), called before
+     *    PageContent::for() ever runs) — but a scalar leaf is exactly what
+     *    prune() lets through untouched, so an array, an object (both
+     *    decode to a PHP array through the same `array` cast) or a bare
+     *    number stored in this leaf must still be refused HERE, not assumed
+     *    already gone.
+     *  - strlen() <= 2048: a stored value has no column-level length limit
+     *    (content is TEXT/jsonb with no CHECK constraint), so nothing stops
+     *    a 200,000-character string from reaching this leaf via a raw write.
+     *    Blade's `{{ }}` already escapes it, so this is not an XSS guard —
+     *    it exists so a pathological leaf cannot bloat every page load with
+     *    a `src` attribute a browser will never load into an image anyway.
+     *  - the prefix allowlist: same-origin storage or an explicit http(s)
+     *    URL, and NOTHING else — a `javascript:` URI would execute on click
+     *    were this an anchor rather than an <img> src, and hostile input
+     *    doesn't get to rely on which tag happens to be forgiving; a bare
+     *    `"><script>`-shaped string simply fails the prefix test outright.
+     *    Deliberately `^(https?://|/storage/)`, not `^(https?:)?//` or a
+     *    bare `^/`: a PROTOCOL-RELATIVE `//evil.example/x.jpg` starts with
+     *    neither allowed prefix and is refused — a browser resolves `//` by
+     *    inheriting the CURRENT page's scheme, so it is exactly as capable
+     *    of pointing off-origin as a fully-qualified cross-origin URL, and
+     *    must not be waved through as though a leading slash alone made it
+     *    root-relative.
+     *
+     * Returns null — never throws — on every shape that fails any guard, so
+     * a Blade `@if` gates the whole plate on one call and the no-image
+     * render path (today's markup, byte-for-byte) is what every failure
+     * mode falls back to.
+     */
+    public function imageUrl(string $section): ?string
+    {
+        $leaf = $this->page->content[$section] ?? null;
+
+        if (!is_array($leaf)) {
+            return null;
+        }
+
+        $url = $leaf['image_url'] ?? null;
+
+        if (!is_string($url) || $url === '' || strlen($url) > 2048) {
+            return null;
+        }
+
+        return preg_match('#^(https?://|/storage/)#', $url) === 1 ? $url : null;
+    }
 }

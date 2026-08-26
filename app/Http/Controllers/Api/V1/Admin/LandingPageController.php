@@ -4,12 +4,15 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
 use App\Models\LandingPage;
+use App\Rules\MaxImageDimensions;
 use App\Rules\ScalarLeaves;
+use App\Services\MediaService;
 use App\Support\LandingPageGuard;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
@@ -172,6 +175,46 @@ class LandingPageController extends Controller
             'slug.max'    => 'Please use a shorter web address — up to 63 characters.',
         ]);
 
+        // D4 (landing phase 3b, media round): image_url is a leaf ScalarLeaves
+        // happily allows through — it is just a string — but it names a file
+        // written by MediaService::upload(), and this endpoint has no way to
+        // know whether a submitted string is a real upload, a dead path from
+        // a page that has moved on, or somebody else's file entirely. Letting
+        // it through here would give this column TWO writers for the same
+        // leaf: uploadImage()/removeImage() below (which pair every write
+        // with the matching delete of the file it replaces) and this free-text
+        // path (which cannot, and would leak the old file on every edit that
+        // happened to carry a stale image_url along for the ride). So this
+        // runs before anything else touches `content`, and it names no field
+        // path in its message — content.hero.image_url is exactly the kind of
+        // string spec 9 says must never reach a tenant verbatim.
+        foreach (($data['content'] ?? []) as $sectionKey => $fields) {
+            if (is_array($fields) && array_key_exists('image_url', $fields)) {
+                throw ValidationException::withMessages([
+                    'content' => 'Photos are changed with the photo controls, not by editing text.',
+                ]);
+            }
+        }
+
+        // Coordinator ruling 3b-2, amending D4 -- and ruling 3b-7, amending
+        // 3b-2 in turn: update() still REPLACES the whole `content` column
+        // wholesale, and the one legal payload D4 leaves a tenant is exactly
+        // the one that omits image_url, so every text-only save must carry
+        // that leaf forward from what is already stored or the very next
+        // save erases whatever uploadImage() just wrote, orphaning its file.
+        // Ruling 3b-7 narrows WHICH sections this applies to: hero and about
+        // are the only two slots the image endpoints own (`slot` is
+        // `in:hero,about` on both), so this is scoped to exactly those two
+        // rather than every section — a section this build never gives a
+        // photo control has no image_url leaf of its own to protect, and
+        // carrying one forward for it would just be re-saving a raw-DB
+        // shape nothing here ever wrote.
+        //
+        // Ruling 3b-6 moves the actual carry-forward INSIDE the transaction
+        // below, reading the row lockForUpdate() re-reads rather than this
+        // stale $page snapshot — see that block's own comment for why the
+        // stale snapshot is the resurrect vector under a race.
+
         // content.contact.* used to be constrained by ScalarLeaves(depth:2)
         // above alone -- SHAPE, not FORMAT: any scalar was a legal leaf, so
         // email='not an email' and a 200,000-character phone both saved with
@@ -236,13 +279,65 @@ class LandingPageController extends Controller
         // page whose slug moved while its redirects did not is precisely the
         // broken address this feature exists to prevent.
         //
+        // Ruling 3b-6: everything inside now reads a FRESHLY re-read, ROW-LOCKED
+        // copy of the page — never the `$page` resolved above, which is only
+        // good for the 404/authorization decision already made and for the
+        // primary key + organization_id that identify which row to lock. Three
+        // content writers (this one, uploadImage(), removeImage()) each used to
+        // load-modify-save a stale snapshot with no lock at all, so a hero+about
+        // dual upload, a save racing an in-flight upload, or two overlapping
+        // saves could each drop the other's write, resurrect a just-deleted
+        // leaf, or leave the DB pointing at a file that no longer exists. The
+        // lock is scoped to the SAME row the guard already chose — `id` AND
+        // `organization_id`, not a wider tenant query — so this fixes the race
+        // without widening what this endpoint can ever touch.
+        //
         // The catch sits OUTSIDE it deliberately. DB::transaction() has already
         // rolled back by the time the handler runs, so the lookups in there are
         // safe; inside, on Postgres, they would hit 25P02 on an aborted
         // transaction and turn a 422 back into a 500.
         try {
             DB::transaction(function () use ($page, $data) {
-                if (isset($data['slug']) && $data['slug'] !== $page->slug) {
+                /** @var LandingPage $fresh */
+                $fresh = LandingPage::where('id', $page->id)
+                    ->where('organization_id', $page->organization_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                // Ruling 3b-2/3b-7's carry-forward, now against the FRESH
+                // row's content and scoped to hero/about only (see this
+                // method's own comment above, where this used to live, for
+                // both rulings' full reasoning). Reading `$fresh->content`
+                // rather than `$page->content` is the actual fix: under a
+                // race, `$page` is a snapshot from before this request even
+                // started validating, so carrying ITS leaf forward could
+                // resurrect a leaf an in-flight uploadImage()/removeImage()
+                // had already changed or removed by the time this
+                // transaction runs.
+                if (array_key_exists('content', $data)) {
+                    foreach (($fresh->content ?? []) as $sectionKey => $storedFields) {
+                        if (!in_array($sectionKey, ['hero', 'about'], true)) {
+                            continue;
+                        }
+
+                        if (!is_array($storedFields)
+                            || !isset($storedFields['image_url'])
+                            || !is_string($storedFields['image_url'])
+                        ) {
+                            continue;
+                        }
+
+                        if (!isset($data['content'][$sectionKey]) || !is_array($data['content'][$sectionKey])) {
+                            $data['content'][$sectionKey] = [];
+                        }
+
+                        if (!array_key_exists('image_url', $data['content'][$sectionKey])) {
+                            $data['content'][$sectionKey]['image_url'] = $storedFields['image_url'];
+                        }
+                    }
+                }
+
+                if (isset($data['slug']) && $data['slug'] !== $fresh->slug) {
                     // Moving ONTO an address means nothing may still redirect
                     // away from it. A rename of a → b → a would otherwise leave
                     // the page's own primary URL redirecting to itself: dead
@@ -253,11 +348,13 @@ class LandingPageController extends Controller
 
                     // The old address may be printed on a card or a shopfront,
                     // so keep it working rather than 404ing it the moment it
-                    // changes.
+                    // changes. $fresh->slug, not $page->slug: the locked row is
+                    // the only copy that can answer what the CURRENT address
+                    // actually is.
                     DB::table('landing_page_redirects')->updateOrInsert(
-                        ['slug' => $page->slug],
+                        ['slug' => $fresh->slug],
                         [
-                            'landing_page_id' => $page->id,
+                            'landing_page_id' => $fresh->id,
                             'expires_at'      => now()->addDays(LandingPageGuard::REDIRECT_TTL_DAYS),
                             'created_at'      => now(),
                             'updated_at'      => now(),
@@ -265,7 +362,7 @@ class LandingPageController extends Controller
                     );
                 }
 
-                $page->update($data);
+                $fresh->update($data);
             });
         } catch (UniqueConstraintViolationException $e) {
             // A lost race on the global unique on `slug`: two tenants submitted
@@ -281,6 +378,172 @@ class LandingPageController extends Controller
         }
 
         return response()->json(['page' => $page->fresh('sections')]);
+    }
+
+    /**
+     * The one writer for `content.{slot}.image_url` — see D4's comment in
+     * update() for why that leaf is refused everywhere else. Multipart form
+     * data does not parse on a PUT in PHP, which is why this is a POST
+     * (routes/api.php has the note); the frontend sends FormData.
+     *
+     * $old is read before the upload so a slow upload racing a second
+     * request still deletes whatever THIS request found on the page when it
+     * started, not whatever happens to be there by the time it finishes.
+     * MediaService::delete() only fires once the new file is safely saved —
+     * deleting the old file first and then failing the write would leave the
+     * page pointing at nothing.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'slot'  => 'required|in:hero,about',
+            'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120', new MaxImageDimensions(4096)],
+        ], [
+            'slot.required'  => 'Please choose which photo you are replacing.',
+            'slot.in'        => 'Please choose which photo you are replacing.',
+            'image.required' => 'Please choose a photo to upload.',
+            'image.image'    => 'Please upload a JPEG, PNG or WebP photo.',
+            'image.mimes'    => 'Please upload a JPEG, PNG or WebP photo.',
+            'image.max'      => 'Please use a photo up to 5 MB.',
+        ]);
+
+        $page = $this->current();
+        abort_if($page === null, 404);
+
+        $slot = $data['slot'];
+
+        // Ruling 3b-6: the upload itself stays OUTSIDE and BEFORE the
+        // transaction below — a row lock must never be held across a
+        // network transfer to MediaService's disk. $old is deliberately NOT
+        // read here (that would be the same stale-snapshot bug the
+        // transaction exists to fix): it is captured from the freshly
+        // locked row instead, once we are actually about to overwrite it.
+        $url = MediaService::upload($data['image'], 'landing');
+
+        try {
+            $old = DB::transaction(function () use ($page, $slot, $url) {
+                /** @var LandingPage $fresh */
+                $fresh = LandingPage::where('id', $page->id)
+                    ->where('organization_id', $page->organization_id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                $old = $fresh->content[$slot]['image_url'] ?? null;
+
+                // The one level of nesting update() already lives with: content is a
+                // map of section keys onto a flat map of fields, so only the leaf
+                // this endpoint owns is touched — every sibling field already
+                // written under this slot (a headline, a subtext) survives.
+                $content = $fresh->content ?? [];
+                $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
+                $section['image_url'] = $url;
+                $content[$slot] = $section;
+
+                $fresh->content = $content;
+                $fresh->save();
+
+                return $old;
+            });
+        } catch (\Throwable $e) {
+            // W3, the compensating delete: the upload above already landed
+            // on disk, so a failed save inside the transaction must not
+            // leave that new file orphaned with nothing pointing at it.
+            // Best-effort — a delete failure must not mask the ORIGINAL
+            // exception, which is what actually explains this request's 500.
+            try {
+                MediaService::delete($url);
+            } catch (\Throwable) {
+            }
+
+            throw $e;
+        }
+
+        // Only after the new file is on the page and saved, and only once —
+        // never inside the transaction, which must not hold its lock across
+        // this call. A string check, not a truthiness one: an old value of
+        // '0' is a legal (if odd) past upload and must still be cleaned up.
+        // $old !== $url guards the (practically unreachable, since upload()
+        // names are random) case of the fresh row already holding exactly
+        // the file we just wrote — never delete the file this request just
+        // saved.
+        if (is_string($old) && $old !== '' && $old !== $url) {
+            // W4: best-effort, same pattern as ChatWidgetConfigController's
+            // avatar-replace path (:181-190) — a failed delete of the OLD
+            // file must not turn this successful upload into an error
+            // response for the tenant.
+            try {
+                MediaService::delete($old);
+            } catch (\Throwable $e) {
+                Log::warning('landing.image.delete_failed', [
+                    'slot'  => $slot,
+                    'url'   => $old,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json(['slot' => $slot, 'image_url' => $url]);
+    }
+
+    /** The other half of the single-writer rule: clears the leaf and deletes the file it named. */
+    public function removeImage(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'slot' => 'required|in:hero,about',
+        ], [
+            'slot.required' => 'Please choose which photo you are removing.',
+            'slot.in'       => 'Please choose which photo you are removing.',
+        ]);
+
+        $page = $this->current();
+        abort_if($page === null, 404);
+
+        $slot = $data['slot'];
+
+        // Ruling 3b-6: same lock-and-reread shape as update()/uploadImage() —
+        // $old is read from the freshly locked row, not a stale snapshot, so
+        // this cannot delete a file a concurrent uploadImage() has already
+        // replaced.
+        $old = DB::transaction(function () use ($page, $slot) {
+            /** @var LandingPage $fresh */
+            $fresh = LandingPage::where('id', $page->id)
+                ->where('organization_id', $page->organization_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $content = $fresh->content ?? [];
+            $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
+            $old = $section['image_url'] ?? null;
+
+            // Unset, not merely nulled — and the section stays in place even if
+            // this was its only field, matching update(): nothing in this column
+            // ever prunes a section down to nothing on its own. ScalarTree is
+            // what makes an empty section harmless to the renderer.
+            unset($section['image_url']);
+            $content[$slot] = $section;
+
+            $fresh->content = $content;
+            $fresh->save();
+
+            return $old;
+        });
+
+        if (is_string($old) && $old !== '') {
+            // W4: same best-effort pattern as uploadImage() above — a failed
+            // delete must not turn this successful removal into an error
+            // response.
+            try {
+                MediaService::delete($old);
+            } catch (\Throwable $e) {
+                Log::warning('landing.image.delete_failed', [
+                    'slot'  => $slot,
+                    'url'   => $old,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return response()->json(['slot' => $slot, 'image_url' => null]);
     }
 
     public function publish(): JsonResponse

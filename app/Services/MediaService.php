@@ -15,12 +15,20 @@ class MediaService
 {
     /**
      * Get the configured media disk name.
-     * Auto-detects DO Spaces when credentials are present, even if MEDIA_DISK is not set.
+     *
+     * Precedence: an explicit, non-empty MEDIA_DISK always wins — including
+     * an explicit 'public' — and only when it is unset/empty do we
+     * auto-detect DO Spaces from its credentials, falling back to 'public'
+     * when neither is present. Ruling 3b-5: 'public' used to be treated as
+     * indistinguishable from "unset" (config/filesystems.php's own default),
+     * which meant an explicit MEDIA_DISK=public could never win over the
+     * auto-detect and local dev silently wrote to (and deleted from) the
+     * production bucket whenever DO credentials happened to be present.
      */
     public static function disk(): string
     {
         $configured = config('filesystems.media_disk');
-        if ($configured && $configured !== 'public') {
+        if (is_string($configured) && $configured !== '') {
             return $configured;
         }
 
@@ -32,7 +40,7 @@ class MediaService
             return 'do';
         }
 
-        return $configured ?: 'public';
+        return 'public';
     }
 
     /**
@@ -108,29 +116,28 @@ class MediaService
      */
     public static function delete(?string $url): void
     {
-        if (!$url) return;
-
-        $disk = static::disk();
-
-        if ($disk === 'public') {
-            $path = str_replace('/storage/', '', $url);
-            Storage::disk('public')->delete($path);
-        } else {
-            // Extract path from full URL
-            $diskUrl = rtrim(Storage::disk($disk)->url(''), '/');
-            $path = str_replace($diskUrl . '/', '', $url);
-            Storage::disk($disk)->delete($path);
+        if (!is_string($url) || trim($url) === '') {
+            return;
         }
-    }
 
-    /**
-     * Resolve a stored URL for display.
-     * Local paths get APP_URL prepended; cloud URLs pass through.
-     */
-    public static function url(?string $path): ?string
-    {
-        if (!$path) return null;
-        if (str_starts_with($path, 'http')) return $path;
-        return $path; // Local /storage/ paths resolved by frontend
+        // The value's shape is the only record of which disk wrote it: upload()
+        // returns '/storage/...' on the public disk and an absolute CDN URL on a
+        // cloud disk. Resolving against the CURRENTLY configured disk (what this
+        // method did before) silently no-ops for every file written before a
+        // disk change - which is how every replace-image flow leaked its old file.
+        if (str_starts_with($url, '/storage/')) {
+            Storage::disk('public')->delete(substr($url, strlen('/storage/')));
+            return;
+        }
+
+        $cloudBase = rtrim((string) config('filesystems.disks.do.url'), '/');
+        if ($cloudBase !== '' && str_starts_with($url, $cloudBase . '/')) {
+            Storage::disk('do')->delete(substr($url, strlen($cloudBase) + 1));
+            return;
+        }
+
+        // Not ours to delete - but say so. A silent no-op here is the old bug
+        // wearing a different hat.
+        Log::warning('media.delete.unresolvable', ['url' => $url]);
     }
 }
