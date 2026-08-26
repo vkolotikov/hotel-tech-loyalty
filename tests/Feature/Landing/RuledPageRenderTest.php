@@ -1594,4 +1594,86 @@ class RuledPageRenderTest extends TestCase
         $this->assertNoPlateImgForSection('hero', $body);
         $this->assertPageAndPreviewSurvive($page);
     }
+
+    // ─── Palette system (Task 1, landing phase 3c) — golden capture ───────
+
+    /**
+     * The claim this task has to prove before Palette.php exists at all:
+     * introducing the palette system must not move one byte of what a page
+     * with no `theme.palette` set renders today. Captured against the
+     * renderer BEFORE App\Landing\Palette, IndustryProfile::defaultPalette
+     * or the layout's second nonced style block existed (see this commit's
+     * own position in git history, ahead of the wiring commit) — a byte
+     * drifting here after that lands means the "absent means porcelain,
+     * emit nothing" contract broke, not merely that the wrapping changed.
+     * The nonce is random per request and is the only thing normalised out.
+     *
+     * Deliberately the same bare `published()` fixture the hero/about plate
+     * goldens already use (hero headline only, no Property, no theme): the
+     * only thing this golden has to isolate is the ABSENCE of a second
+     * <style> block in <head>, and a richer fixture would just be more
+     * bytes that could drift for reasons this test isn't about.
+     */
+    public function test_a_page_with_no_palette_renders_byte_identical_to_before_the_palette_system(): void
+    {
+        $this->published();
+
+        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+
+        $golden = '<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>The Art of Wellness</title>
+<meta name="description" content="">
+
+<meta property="og:title" content="The Art of Wellness">
+<meta property="og:type" content="website">
+<meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+
+<style nonce="TESTNONCE">
+  :root{
+    --brand: #9b5c8f;
+  }
+</style>
+</head>
+<body class="rp">
+
+
+<div class="rule-progress" aria-hidden="true"></div>
+
+
+
+<main>
+
+  <section data-section="hero" class="band rp-hero">
+  <div class="wrap">
+          <h1>The Art of Wellness</h1>
+            
+      </div>
+</section>
+</main>
+
+<footer class="rp-footer" data-section="footer">
+  <div class="wrap">
+    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+  </div>
+</footer>
+
+
+
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+
+</body>
+</html>
+';
+
+        $this->assertSame($golden, $body);
+    }
 }
