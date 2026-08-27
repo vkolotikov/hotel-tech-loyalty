@@ -487,19 +487,12 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   font-weight:400;font-size:clamp(1.25rem,1.7vw,1.5rem);line-height:1.55;
   color:var(--text-soft);max-width:46ch;margin:24px 0 0}
 /* The CTA pair. Gold is .rp-cta exactly as the shell built it; the ghost
-   modifier (reference .btn--ghost on tokens) is glass-hairline at rest and
-   fills with the ACCENT on hover — not the reference's bright shade,
-   because --accent-on's measured contrast is guaranteed on --accent alone.
-   The sheen sweep stays the gold pill's signature: content:none here. */
+   modifier lives in the buttons section below (it must follow the base
+   rule in source order — same specificity, and the base would win the
+   cascade from behind otherwise, refilling the ghost with the gradient). */
 .rp-hero__actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;
   margin-top:40px}
 .rp-hero__actions .rp-cta{margin-top:0}
-.rp-cta--ghost{color:var(--accent-text);background:transparent;
-  border-color:var(--line);box-shadow:none;
-  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
-.rp-cta--ghost::after{content:none}
-.rp-cta--ghost:hover{color:var(--accent-on);background:var(--accent);
-  border-color:var(--accent);box-shadow:0 16px 40px -16px var(--halo)}
 
 /* THE PHOTO COMPOSITION. The section itself becomes the viewport-height
    stage; the plate is absolute cover underneath the three layers. The img
@@ -609,6 +602,18 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   box-shadow:0 22px 55px -18px var(--halo), inset 0 1px 0 rgba(255,255,255,.35)}
 .rp-cta:hover::after{transform:translateX(110%)}
 .rp-cta--sm{min-height:0;margin-top:0;padding:.72rem 1.3rem;font-size:.74rem}
+/* The ghost half of the hero's CTA pair (Task 5; reference .btn--ghost on
+   tokens): hairline-and-blur at rest, and it fills with the ACCENT on
+   hover — not the reference's bright shade, because --accent-on's measured
+   contrast is guaranteed on --accent alone. The sheen sweep stays the gold
+   pill's signature: content:none here. AFTER the base rule on purpose —
+   same specificity, so source order is what lets the modifier win. */
+.rp-cta--ghost{color:var(--accent-text);background:transparent;
+  border-color:var(--line);box-shadow:none;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.rp-cta--ghost::after{content:none}
+.rp-cta--ghost:hover{color:var(--accent-on);background:var(--accent);
+  border-color:var(--accent);box-shadow:0 16px 40px -16px var(--halo)}
 
 /* --- footer (reference §footer, adapted; data inputs unchanged) ----------- */
 /* The deepest surface: a slow fall from bg into bg-2 under a hairline —

@@ -102,6 +102,12 @@
      * all. The same candidates back both chains, so a page with a heading
      * always has a device name too -- and a page with neither renders a
      * single quiet column, not an empty plate.
+     *
+     * The monogram partial's optional $label is deliberately NOT passed:
+     * the chip in the adjacent column already states the kicker, and the
+     * same words twice in one band is the exact duplication the kicker
+     * vocabulary work refused by name (IndustryProfile's hotel/restaurant
+     * team kickers). The device speaks once, as a mark.
      */
     $deviceName = collect([
         $content->contact->name,
@@ -153,10 +159,7 @@
     </div>
 @if ($heroDevice)
       <figure class="rp-hero__device">
-        @include('landing.ruled_page.monogram', [
-          'name'  => $deviceName,
-          'label' => $heroKicker !== '' ? $heroKicker : null,
-        ])
+        @include('landing.ruled_page.monogram', ['name' => $deviceName])
       </figure>
     </div>
 @endif
