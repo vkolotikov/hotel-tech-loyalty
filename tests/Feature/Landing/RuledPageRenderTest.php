@@ -2750,4 +2750,53 @@ class RuledPageRenderTest extends TestCase
                 "{$opener} no longer sits on the elevated surface.");
         }
     }
+
+    /**
+     * Task 7 fix round 1: the team grid's count="3" variant sets 3 columns
+     * with an attribute selector, which out-specifies the plain
+     * `.rp-team__grid` 2-column rule inside the ≤899px media block (equal
+     * specificity, later-wins would still favour whichever rule the
+     * cascade re-orders least, but the safe fix is a same-specificity
+     * answer scoped to the same query). This stylesheet has several
+     * `@media (max-width:899px){}` blocks — one per section — so the
+     * extraction below brace-matches to find the ONE that actually
+     * contains `.rp-team__grid`, rather than grabbing the first breakpoint
+     * match anywhere in the file. Mutation (drop the count="3" mobile
+     * answer) goes red here.
+     */
+    public function test_the_team_grid_answers_count_three_at_two_columns_below_900px(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $tag = '@media (max-width:899px){';
+        $offset = 0;
+        $block = null;
+        while (($start = strpos($css, $tag, $offset)) !== false) {
+            $cursor = $start + strlen($tag);
+            $depth = 1;
+            while ($depth > 0 && $cursor < strlen($css)) {
+                if ($css[$cursor] === '{') {
+                    $depth++;
+                } elseif ($css[$cursor] === '}') {
+                    $depth--;
+                }
+                $cursor++;
+            }
+            $candidate = substr($css, $start, $cursor - $start);
+            if (str_contains($candidate, '.rp-team__grid')) {
+                $block = $candidate;
+                break;
+            }
+            $offset = $cursor;
+        }
+
+        $this->assertNotNull($block,
+            'No @media (max-width:899px) block containing .rp-team__grid was found.');
+        $this->assertSame(1, preg_match(
+            '/\.rp-team__grid\[data-count="3"\]\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/',
+            $block
+        ), 'Below 900px, the count="3" team grid must be pinned back to 2 columns with matching '
+            . 'specificity — otherwise the [data-count="3"] rule out-specifies the plain .rp-team__grid '
+            . 'rule and the row stays stuck at 3-up.');
+    }
 }

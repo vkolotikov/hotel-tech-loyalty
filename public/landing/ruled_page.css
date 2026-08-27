@@ -1011,6 +1011,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 }
 @media (max-width:899px){
   .rp-team__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:24px 16px}
+  .rp-team__grid[data-count="3"]{grid-template-columns:repeat(2,minmax(0,1fr))}
   .rp-member__name{font-size:1.125rem}
 }
 /* Faces read at rest on a touch screen: there is no hover to resolve them. */
@@ -1378,7 +1379,8 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
    business name. The old -40px "crosses the ruling" hang is retired: the
    accent offset is this composition's own way of breaking the frame, and
    the two idioms fight when stacked. Text keeps its 4.5.4 column geometry —
-   the plate's grid-column and the text's shift modifier are unchanged. */
+   the text's grid-column and its shift modifier are unchanged; only the
+   frame itself widened, from the old plate's 1 / 5 to 1 / 6. */
 .rp-about__frame{position:relative;isolation:isolate;grid-column:1 / 6;margin:0;
   align-self:center}
 .rp-about__frame::before{content:"";position:absolute;
