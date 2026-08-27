@@ -186,7 +186,10 @@ class RuledPageRenderTest extends TestCase
         $page->update(['content' => []]);
         Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Maison Mimi', 'is_active' => true]);
 
-        $this->assertStringContainsString('<h1>Maison Mimi</h1>', $this->body());
+        // Task 5: the headline's last word carries the <em> emphasis (the
+        // server-side split in hero.blade.php); the CHAIN this test pins —
+        // name over an absent headline — is unchanged.
+        $this->assertStringContainsString('<h1>Maison <em>Mimi</em></h1>', $this->body());
     }
 
     /**
@@ -199,7 +202,8 @@ class RuledPageRenderTest extends TestCase
         $page->update(['content' => ['hero' => ['headline' => '']]]);
         Property::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Maison Mimi', 'is_active' => true]);
 
-        $this->assertStringContainsString('<h1>Maison Mimi</h1>', $this->body());
+        // Task 5: em-wrapped, same chain — see the test above.
+        $this->assertStringContainsString('<h1>Maison <em>Mimi</em></h1>', $this->body());
     }
 
     /** The last tenant-owned rung: the title they chose for the page. */
@@ -208,7 +212,8 @@ class RuledPageRenderTest extends TestCase
         $page = $this->published();
         $page->update(['content' => [], 'seo' => ['title' => 'Maison Mimi']]);
 
-        $this->assertStringContainsString('<h1>Maison Mimi</h1>', $this->body());
+        // Task 5: em-wrapped, same chain — see the two tests above.
+        $this->assertStringContainsString('<h1>Maison <em>Mimi</em></h1>', $this->body());
     }
 
     /**
@@ -228,6 +233,191 @@ class RuledPageRenderTest extends TestCase
             'A published page shipped an empty heading.');
         $this->assertStringNotContainsString('<h1>' . config('app.name') . '</h1>', $body,
             'The tenant page headlines itself with our own product name.');
+        // Task 5: and with no name anywhere, there is no monogram DEVICE
+        // either — an empty plate would be the <h1></h1> mistake as a
+        // graphic.
+        $this->assertStringNotContainsString('rp-hero__device', $body,
+            'A page with no name at all composed a monogram device around nothing.');
+    }
+
+    // ─── The hero composition (Task 5, landing phase 3c; D5) ───────────────
+
+    /**
+     * The em-wrap must never weaken the escaping discipline: the split
+     * happens server-side into two plain strings and BOTH halves echo
+     * through `{{ }}`, so a headline that itself contains markup — an
+     * `<em>`, a quote, an ampersand — arrives entity-escaped in whichever
+     * half it lands in, and the only <em> inside the h1 is the template's
+     * own. This is the test the "make the helper emit raw" mutation goes
+     * red against (alongside the no-raw-echo scan).
+     */
+    public function test_the_headline_emphasis_split_preserves_escaping(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero' => ['headline' => 'Pure <em>Joy</em> & "Calm" Now'],
+        ]]);
+
+        $this->assertStringContainsString(
+            '<h1>Pure &lt;em&gt;Joy&lt;/em&gt; &amp; &quot;Calm&quot; <em>Now</em></h1>',
+            $this->body(),
+            'The emphasis split must escape tenant bytes in both halves and emit exactly one template-owned <em>.'
+        );
+    }
+
+    /**
+     * A single-word headline gets NO <em>: emphasis reads as emphasis only
+     * against roman text beside it, and a wholly-italic headline is just a
+     * slanted one. (The empty-headline case is covered by the
+     * no-empty-heading test above — the h1 is dropped before the split
+     * matters.)
+     */
+    public function test_a_single_word_headline_carries_no_emphasis(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => ['hero' => ['headline' => 'Serenity']]]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h1>Serenity</h1>', $body);
+        $this->assertDoesNotMatchRegularExpression('/<h1>[^<]*<em>/', $body,
+            'A one-word headline must not be wrapped in <em> wholesale.');
+    }
+
+    /**
+     * The chip: the hero's kicker (copy override, else the industry
+     * vocabulary — no profile authors one today) set as the reference's
+     * dot-and-pill eyebrow. The same stored field the nav now rejects as
+     * an anchor source (see the #hero test below) has exactly one
+     * consumer: this.
+     */
+    public function test_a_stored_hero_kicker_renders_as_the_chip(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero' => ['headline' => 'The Art of Wellness', 'kicker' => 'Wellness atelier'],
+        ]]);
+
+        $this->assertStringContainsString(
+            '<p class="rp-hero__chip"><span class="rp-hero__chip-dot" aria-hidden="true"></span>Wellness atelier</p>',
+            $this->body()
+        );
+    }
+
+    /** No kicker stored, none authored — no chip element at all, not an empty pill. */
+    public function test_a_page_without_a_hero_kicker_gets_no_chip(): void
+    {
+        $this->published();
+
+        $this->assertStringNotContainsString('rp-hero__chip', $this->body());
+    }
+
+    /**
+     * The imageless hero's monogram DEVICE (closing the Appendix-B 4.4 gap
+     * ruling 3b-3 deferred): with no photo, the 4.4 monogram plate is
+     * composed beside the content column. The initials are the BUSINESS's
+     * — the name chain is the nav wordmark's (name → seo.title →
+     * headline), so a salon whose headline is a slogan monograms as the
+     * salon.
+     */
+    public function test_the_imageless_hero_composes_the_monogram_device_from_the_business_name(): void
+    {
+        $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figure class="rp-hero__device">', $body);
+        $this->assertStringContainsString('<span class="rp-plate__mark">GS</span>', $body,
+            'The device must monogram the BUSINESS (Glamour Salon), not the headline.');
+    }
+
+    /** Without a Property the chain falls through to the headline — a device still composes. */
+    public function test_the_imageless_hero_device_falls_back_to_the_headline(): void
+    {
+        $this->published();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figure class="rp-hero__device">', $body);
+        $this->assertStringContainsString('<span class="rp-plate__mark">TA</span>', $body);
+    }
+
+    /**
+     * The CTA pair: gold (the profile's primary verb, booking-else-contact
+     * — the gate this partial always had) plus the ghost explore half,
+     * which is honest only where a services band renders and speaks the
+     * profile's own services vocabulary rather than invented copy. Both on
+     * the same two-part enabled+has() gate the nav and footer use.
+     */
+    public function test_the_hero_carries_the_gold_and_ghost_cta_pair(): void
+    {
+        $this->published();
+        Service::create(['organization_id' => 1, 'name' => 'Signature Facial',
+            'is_active' => true, 'price' => 65]);
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '/<div class="rp-hero__actions">\s*'
+            . '<a class="rp-cta" href="#contact">Book appointment<\/a>\s*'
+            . '<a class="rp-cta rp-cta--ghost" href="#services">Treatments<\/a>\s*'
+            . '<\/div>/',
+            $body,
+            'The hero must carry the gold+ghost pair, gold first, ghost at the services band.'
+        );
+    }
+
+    /** No services band, no ghost — the pair degrades to the gold button alone. */
+    public function test_the_ghost_cta_is_absent_when_no_services_band_renders(): void
+    {
+        $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<a class="rp-cta" href="#contact">', $body);
+        $this->assertStringNotContainsString('rp-cta--ghost', $body);
+    }
+
+    /**
+     * THE MOBILE-PARITY PIN (D5: the hero image is "never display:none").
+     * PHPUnit has no layout engine, so this is enforced at the CSS level:
+     * every rule block whose selector names the hero plate — desktop,
+     * photo variant, or any media query — must be free of display:none.
+     * The services plate's own mobile display:none (a different element
+     * with an inline replacement) is out of scope by selector. This is the
+     * test the "hide the mobile hero image" mutation goes red against.
+     */
+    public function test_no_hero_media_rule_ever_hides_the_image(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        preg_match_all('/([^{}]+)\{([^{}]*)\}/', $css, $rules, PREG_SET_ORDER);
+
+        $inspected = 0;
+        foreach ($rules as $rule) {
+            if (!str_contains($rule[1], 'rp-hero__plate')) {
+                continue;
+            }
+            $inspected++;
+            $selector = trim(preg_replace('/\s+/', ' ', $rule[1]));
+            $this->assertDoesNotMatchRegularExpression('/display\s*:\s*none/', $rule[2],
+                "[{$selector}] hides the hero image — the mobile-parity rule forbids display:none on the hero media.");
+        }
+
+        $this->assertGreaterThan(0, $inspected,
+            'No hero plate rules were found at all — the selector this test guards has been renamed.');
     }
 
     public function test_a_section_with_no_data_is_absent_not_empty(): void
@@ -751,7 +941,9 @@ class RuledPageRenderTest extends TestCase
         $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
 
         $response->assertOk();
-        $this->assertStringContainsString('<h1>Maison Mimi</h1>', $response->getContent());
+        // Task 5: em-wrapped, same claim — the nested leaf is DROPPED and
+        // the name takes the heading.
+        $this->assertStringContainsString('<h1>Maison <em>Mimi</em></h1>', $response->getContent());
     }
 
     /** The preview is the only place a tenant could diagnose this, so it must not 500 either. */
@@ -1608,6 +1800,17 @@ class RuledPageRenderTest extends TestCase
             '<img class="rp-hero__plate-img" src="https://cdn.example.test/landing/hero.jpg" alt="" fetchpriority="high" decoding="async">',
             $body,
         );
+
+        // Task 5: the photo hero is the reference's LAYERED composition —
+        // the section takes the --photo variant and the three aria-hidden
+        // layers ride above the plate; the monogram device is the
+        // imageless composition's and must never render beside a photo.
+        $this->assertStringContainsString('class="band rp-hero rp-hero--photo"', $body);
+        $this->assertStringContainsString('<div class="rp-hero__glow" aria-hidden="true"></div>', $body);
+        $this->assertStringContainsString('<div class="rp-hero__veil" aria-hidden="true"></div>', $body);
+        $this->assertStringContainsString('<div class="rp-hero__vignette" aria-hidden="true"></div>', $body);
+        $this->assertStringNotContainsString('rp-hero__device', $body,
+            'The monogram device rendered beside a photo — the two compositions are exclusive.');
     }
 
     // ─── Hostile content.{hero,about}.image_url (App\Landing\PageContent::imageUrl) ──

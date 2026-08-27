@@ -438,12 +438,152 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   .nav__wordmark{font-size:1.1rem}
 }
 
-/* --- hero ---------------------------------------------------------------- */
+/* --- hero (Task 5, landing phase 3c; D5 — the reference's §hero) ---------- */
+/* Two compositions, one content column. WITH a photo the band is the
+   reference's full-bleed layered hero: the cover plate (an <img>, because a
+   tenant URL cannot reach a CSS background under style-src 'self') under
+   glow, veil and vignette, the content painted on top. WITHOUT one the same
+   column sits beside the monogram DEVICE — the 4.4 plate composed with the
+   reference's media-accent idiom (elevated surface, --r-lg corners, offset
+   accent border) rather than a blank half-band. */
 .rp section.rp-hero{padding-block-start:calc(var(--pad) + var(--header-h-condensed))}
 .rp-hero h1{font-size:clamp(2.75rem,5.2vw,5.125rem);line-height:1.02;
   letter-spacing:-.025em;text-wrap:balance;max-width:14ch}
-.rp-hero__sub{font-size:clamp(1.125rem,1.3vw,1.375rem);line-height:1.55;
+/* The emphasis: the headline's LAST word (split server-side in
+   hero.blade.php), italic in the heading's own face, painted in an accent
+   gradient whose ENDPOINTS are contrast-safe by construction — --accent-text
+   (deep on light schemes, bright on dark) and --accent (3:1 on every
+   surface, PaletteTest's floor) — so every interpolated stop sits between
+   two passing colours. Engines without background-clip:text keep the flat
+   --accent-text of the base declaration; the italic is the face's own where
+   one exists (`grand`'s Cormorant) and synthesised elsewhere, which is the
+   reference's own soft-title treatment either way. */
+.rp-hero h1 em{font-style:italic;font-weight:300;color:var(--accent-text)}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+  .rp-hero h1 em{background:linear-gradient(105deg,var(--accent-text) 0%,var(--accent) 100%);
+    -webkit-background-clip:text;background-clip:text;
+    -webkit-text-fill-color:transparent;color:transparent}
+}
+/* The chip (reference §hero__chip on tokens): the hero's kicker in the mono
+   eyebrow voice, pill-cased. Fills are the accent-tinted hairline tokens —
+   line-soft (accent-bright @ .12) is within a point of the reference's own
+   .10 chip fill — and the dot is --accent (a graphic, 3:1-floored) under a
+   --halo glow. */
+.rp-hero__chip{display:inline-flex;align-items:center;gap:.7rem;margin:0 0 26px;
+  padding:.6rem 1.2rem;
+  font-family:var(--mono);font-weight:500;font-size:var(--t-kicker);line-height:1;
+  letter-spacing:.22em;text-transform:uppercase;
+  color:var(--accent-text);
+  background:var(--line-soft);border:1px solid var(--line);border-radius:999px;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.rp-hero__chip-dot{flex:none;inline-size:7px;block-size:7px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 12px var(--halo)}
+/* The serif italic subtitle (reference §hero__subtitle VERBATIM in face and
+   scale): the reference's --font-serif IS Cormorant Garamond, whose italic
+   file is already committed for `grand` (Task 3) — same-origin, OFL, and
+   only ever fetched when a page actually has a subtext to set in it. The
+   fallback is an honest generic serif italic. */
+.rp-hero__sub{font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;
+  font-weight:400;font-size:clamp(1.25rem,1.7vw,1.5rem);line-height:1.55;
   color:var(--text-soft);max-width:46ch;margin:24px 0 0}
+/* The CTA pair. Gold is .rp-cta exactly as the shell built it; the ghost
+   modifier (reference .btn--ghost on tokens) is glass-hairline at rest and
+   fills with the ACCENT on hover — not the reference's bright shade,
+   because --accent-on's measured contrast is guaranteed on --accent alone.
+   The sheen sweep stays the gold pill's signature: content:none here. */
+.rp-hero__actions{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;
+  margin-top:40px}
+.rp-hero__actions .rp-cta{margin-top:0}
+.rp-cta--ghost{color:var(--accent-text);background:transparent;
+  border-color:var(--line);box-shadow:none;
+  -webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
+.rp-cta--ghost::after{content:none}
+.rp-cta--ghost:hover{color:var(--accent-on);background:var(--accent);
+  border-color:var(--accent);box-shadow:0 16px 40px -16px var(--halo)}
+
+/* THE PHOTO COMPOSITION. The section itself becomes the viewport-height
+   stage; the plate is absolute cover underneath the three layers. The img
+   is NEVER display:none at any width (house mobile-parity rule, test-
+   pinned): below 900px the same full-bleed image simply carries the text
+   directly, Folio-style, on a shorter stage. */
+.rp section.rp-hero--photo{display:flex;align-items:center;overflow:hidden;
+  isolation:isolate;min-height:100vh;min-height:100svh;
+  padding-block:calc(var(--header-h-condensed) + 48px) clamp(56px,8vh,96px)}
+.rp-hero--photo .wrap{position:relative;z-index:1;inline-size:100%}
+.rp-hero--photo .rp-hero__plate{position:absolute;inset:0;margin:0;overflow:hidden}
+/* Ken Burns (reference keyframes verbatim): CSS-only, on the img, switched
+   off — transform included — in the reduced-motion block at the end of
+   this file. The resting scale means the pan never shows an edge. */
+.rp-hero--photo .rp-hero__plate-img{display:block;inline-size:100%;block-size:100%;
+  object-fit:cover;transform:scale(1.08);
+  filter:brightness(0.7) saturate(1.1) contrast(1.05);
+  animation:rp-kenburns 28s ease-in-out infinite alternate}
+@keyframes rp-kenburns{
+  0%   {transform:scale(1.05) translate3d(0, 0, 0)}
+  100% {transform:scale(1.14) translate3d(-1.5%, -1%, 0)}
+}
+/* The three layers, reference §hero adapted to tokens. Glow: screen-blended
+   accent light off --halo. Veil: the reference's directional gradients
+   rebuilt on --scrim (the palette's own bg at 0.72), so the text's ground
+   is always the scheme's own surface colour — light palettes lift the
+   photo toward their paper, dark ones sink it. Vignette: photographic edge
+   fall-off, deliberately plain black at .45 — a lens property, not a
+   scheme one (reference verbatim). */
+.rp-hero__glow{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
+  background:
+    radial-gradient(ellipse at 78% 38%, var(--halo) 0%, transparent 50%),
+    radial-gradient(ellipse at 18% 80%, var(--halo) 0%, transparent 55%)}
+.rp-hero__veil{position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(180deg, var(--scrim) 0%, transparent 38%, var(--scrim) 82%),
+    linear-gradient(90deg, var(--scrim) 0%, transparent 58%)}
+.rp-hero__vignette{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 55%, transparent 50%, rgba(0,0,0,0.45) 100%)}
+.rp-hero--photo h1{text-shadow:0 4px 30px rgba(0,0,0,0.4)}
+
+/* THE IMAGELESS COMPOSITION: content beside the monogram device. */
+.rp-hero__grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);
+  gap:clamp(40px,6vw,88px);align-items:center}
+/* The device (the --r-lg token's consumer — the radius Task 4 declared for
+   exactly this kind of plate). The offset accent border is the reference's
+   media-accent idiom: hung down-left behind the plate, accent hairline,
+   sub-full opacity; z-index -1 inside the device's own isolated context so
+   it can never paint over the plate itself. */
+.rp-hero__device{position:relative;isolation:isolate;margin:0;aspect-ratio:4/5;
+  inline-size:100%;max-width:420px;justify-self:end}
+.rp-hero__device::before{content:"";position:absolute;
+  inset:-22px -22px 36px 36px;
+  border:1px solid var(--accent);border-radius:var(--r-lg);opacity:.6;
+  z-index:-1;pointer-events:none}
+.rp-hero__device .rp-plate--mono{background:var(--bg-elev);
+  border-color:var(--line-soft);border-radius:var(--r-lg);
+  box-shadow:0 50px 100px -36px rgba(0,0,0,0.35), 0 0 0 1px var(--line-soft);
+  --plate-mark:clamp(4.5rem,8vw,7rem)}
+.rp-hero__device .rp-plate__label{inset-block-end:20px;inset-inline-start:20px}
+
+@media (max-width:899px){
+  /* Text-on-photo (D5, the Folio graft): the SAME full-bleed image behind
+     the content — the plate rules above already cover it and nothing here
+     may hide it — with the veil carrying the text and the stage capped
+     near 62vh: a floor rather than a literal cap, because content must
+     grow the band before it may ever clip. */
+  .rp section.rp-hero--photo{min-height:62vh;min-height:62svh;
+    padding-block:calc(var(--header-h-condensed) + 32px) 40px}
+  /* Imageless: the device stacks ABOVE the content column. */
+  .rp-hero__grid{grid-template-columns:minmax(0,1fr);gap:44px}
+  .rp-hero__device{order:-1;max-width:min(240px,60vw);justify-self:start}
+  .rp-hero__device::before{inset:-14px -14px 22px 22px}
+  .rp-hero__device .rp-plate--mono{--plate-mark:3rem}
+  .rp-hero__device .rp-plate__label{inset-block-end:12px;inset-inline-start:12px}
+}
+@media (max-width:559px){
+  /* The reference's own 520px hero rules, on this file's existing 559
+     breakpoint. */
+  .rp-hero__chip{font-size:.7rem;letter-spacing:.2em;padding:.5rem .9rem}
+  .rp-hero__actions{flex-direction:column;align-items:stretch;gap:.85rem}
+  .rp-hero__actions .rp-cta{justify-content:center}
+}
+/* --- end hero -------------------------------------------------------------- */
 
 /* --- the primary call to action (reference §buttons, adapted) ------------- */
 /* The gradient pill with a sheen sweep: accent-on label over an accent
@@ -1104,28 +1244,12 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   .rp-services__plate .rp-plate--mono,.rp-member__plate .rp-plate--mono{--plate-mark:2.5rem}
 }
 
-/* --- media plates (Task 5, landing phase 3b) ------------------------------
-   Appendix B 4.5 items 2 (hero) and 4 (about) — the two photographic plates
-   PageContent::imageUrl() gates hero.blade.php and about.blade.php's markup
-   on. The cinematic reframing of both (Ken Burns, veil, offset accent
-   border) is Task 5 of THIS phase; these rules carry the existing geometry
-   onto the new tokens until it lands. */
-
-/* Hero (4.5.2). Desktop: text and plate side by side; the plate is the
-   second grid item by DOM order alone, so no explicit grid-column is
-   needed. Mobile: never display:none (house mobile-parity rule) — the plate
-   drops out of the grid and becomes a full-bleed cover image below the text
-   instead, cancelling the section's own side gutter with a negative margin
-   so it reaches both viewport edges. */
-.rp-hero__grid{display:grid;grid-template-columns:minmax(0,6fr) minmax(0,5fr);
-  gap:clamp(40px,5vw,72px);align-items:center}
-.rp-hero__plate{margin:0;aspect-ratio:4/5;overflow:hidden;border:1px solid var(--line)}
-.rp-hero__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover}
-@media (max-width:899px){
-  .rp-hero__grid{display:block}
-  .rp-hero__plate{margin-block-start:32px;margin-inline:calc(var(--gutter) * -1);
-    border-inline:0;aspect-ratio:4/5}
-}
+/* --- media plates (landing phase 3b; hero's moved out in 3c Task 5) -------
+   Appendix B 4.5 item 4 — the ABOUT photographic plate
+   PageContent::imageUrl() gates about.blade.php's markup on. The hero's
+   plate rules that used to open this block live in the hero section above
+   now, rebuilt as the reference's layered composition; about's cinematic
+   reframing is Task 7's. */
 
 /* About (4.5.4). The plate spans columns 1-4 and hangs off the grid by
    -40px on both axes so it crosses the band's own top hairline — the
@@ -1214,7 +1338,11 @@ iframe[src*="loyalty.hotel-tech"] {
    sheen sweep is a decorative pseudo with no information in it; smooth
    anchor scrolling is travel, which is what the preference asks to be
    spared (ruled_page.js's own programmatic scrolls already check the same
-   media query at call time). Ken Burns joins this block in Task 5. */
+   media query at call time). Ken Burns (Task 5): the blanket kill already
+   stops the ANIMATION, but the img's resting transform is a property, not
+   an animation — the reference resets both, and so does this (a frozen
+   1.08 zoom is not what "reduce motion" asked to keep). display stays
+   untouched: the image itself must remain, per the mobile-parity rule. */
 @media (prefers-reduced-motion: reduce) {
   .reveal,
   .reveal[data-delay] {
@@ -1223,5 +1351,6 @@ iframe[src*="loyalty.hotel-tech"] {
     transition: none;
   }
   .rp-cta::after { display: none; }
+  .rp-hero--photo .rp-hero__plate-img { animation: none; transform: none; }
   html { scroll-behavior: auto; }
 }

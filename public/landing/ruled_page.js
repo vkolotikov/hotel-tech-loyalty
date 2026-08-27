@@ -228,14 +228,19 @@
   // .is-visible's transform:none would both destroy — see the stylesheet's
   // note on the vertical eyebrow), and so is .rp-book__frame (animating a
   // container whose iframe loads asynchronously double-flashes; the
-  // partial's own comment rules it out).
+  // partial's own comment rules it out). Task 5 drops .rp-hero__plate from
+  // the plan for the same kind of reason: it is now the photo hero's
+  // full-bleed BACKDROP and the LCP element — fading the whole stage in
+  // over 1.1s is a worse first paint, and the reference reveals the hero's
+  // CONTENT, never its photograph. The pair of CTAs reveals as one
+  // .rp-hero__actions block; the imageless monogram device joins instead.
   //
   // Each entry is [selector, delay]: 0 means no data-delay, 1-4 a fixed
   // stagger step, and 'stagger' cycles 1-4 across the matches so lists
   // (menu rows, portraits, quotes) cascade the way the reference pages do.
   if (window.IntersectionObserver && !reduced.matches) {
     var revealPlan = [
-      ['.rp-hero h1', 0], ['.rp-hero__sub', 1], ['.rp-hero .rp-cta', 2], ['.rp-hero__plate', 2],
+      ['.rp-hero__chip', 0], ['.rp-hero h1', 0], ['.rp-hero__sub', 1], ['.rp-hero__actions', 2], ['.rp-hero__device', 3],
       ['.rp-services__title', 0], ['.rp-services__sub', 1], ['.rp-service', 'stagger'], ['.rp-services__cta', 2],
       ['.rp-about__plate', 0], ['.rp-about__lead', 1], ['.rp-about__body', 2],
       ['.rp-team__title', 0], ['.rp-team__sub', 1], ['.rp-member', 'stagger'],
