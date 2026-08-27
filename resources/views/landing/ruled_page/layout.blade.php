@@ -36,6 +36,30 @@
     $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic', 'grand'], true)
         ? $page->theme['font_pairing']
         : null;
+
+    // The palette system (Task 1, landing phase 3c; D2). `theme` is the
+    // same schemaless array cast font_pairing above already guards, so this
+    // is defence in depth twice over: Palette::for() already refuses any id
+    // it doesn't author (an unknown id or absent value both resolve to
+    // null, the same "no palette" state), but its parameter is typed
+    // ?string, and PHP raises a TypeError for a non-string, non-null
+    // argument before the method body ever runs -- an array or 200k-
+    // character `theme.palette` leaf (a stored shape no validator
+    // constrained before Task 2's allowlist; see the "Stored values the
+    // renderer must survive" tests) would take the page down at the call
+    // site, not inside Palette itself. is_string() here is what stops that,
+    // exactly as the font_pairing block above narrows its own raw theme
+    // leaf before ever trusting it.
+    //
+    // Resolved HERE, above <html>, rather than beside the token block that
+    // emits it (where Task 1 first put it), because Task 7 gave the tag a
+    // second consumer: the palette's `dark` flag now stamps
+    // data-scheme="dark" on <html> — the hook the stylesheet's
+    // scheme-conditional photo treatment forks on (the same flag that
+    // already drives --accent-text and color-scheme). The token-block
+    // comment further down still owns the emission rules.
+    $paletteId = is_string($page->theme['palette'] ?? null) ? $page->theme['palette'] : null;
+    $palette   = \App\Landing\Palette::for($paletteId);
 @endphp
 {{--
   No pairing chosen -> `@if($fontPairing)` is false -> Blade emits nothing
@@ -57,9 +81,25 @@
   closing tag (what @endphp compiles to) already eats the ONE newline
   immediately following it, so the newline this comment sits behind was
   already going to be consumed either way.
+
+  Task 7: the `{{ '' }}` between the html tag's two attribute conditionals is
+  LOAD-BEARING, not lint. Blade's directive regex opens with \B@ — an @
+  preceded by a word character is deliberately not a directive (that is what
+  keeps a literal name@example.com in tenant copy uncompiled) — so in
+  `@endif@if(...)` the second @if sits against the `f` of @endif and never
+  compiles, while its own @endif does: the compiled template ends with an
+  unbalanced endif and every page 500s. A newline or space boundary would
+  leak a real byte into the tag on every render (the goldens pin
+  `<html lang="en">` exactly); the empty echo compiles to e('') — zero bytes
+  — and, because echoes compile AFTER statements, it is still present as a
+  non-word boundary when the directive pass runs. Both conditions emit
+  nothing at all when false, so a no-palette (or light-palette) page keeps
+  its byte-identical tag. (This comment cannot sit beside the tag itself:
+  a Blade comment between doctype and <html> leaks its surrounding newline —
+  the fix-round correction above is the precedent.)
 --}}
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($fontPairing) data-font-pairing="{{ $fontPairing }}"@endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($fontPairing) data-font-pairing="{{ $fontPairing }}"@endif{{ '' }}@if($palette?->dark) data-scheme="dark"@endif>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -305,22 +345,11 @@
      @font-face block, next to the declarations it now governs. --}}
 <link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}">
 @php
-    // The palette system (Task 1, landing phase 3c; D2). `theme` is the
-    // same schemaless array cast font_pairing above already guards, so this
-    // is defence in depth twice over: Palette::for() already refuses any id
-    // it doesn't author (an unknown id or absent value both resolve to
-    // null, the same "no palette" state), but its parameter is typed
-    // ?string, and PHP raises a TypeError for a non-string, non-null
-    // argument before the method body ever runs -- an array or 200k-
-    // character `theme.palette` leaf (a stored shape no validator
-    // constrains yet; see the "Stored values the renderer must survive"
-    // tests) would take the page down at the call site, not inside Palette
-    // itself. is_string() here is what stops that, exactly as the
-    // font_pairing block above narrows its own raw theme leaf before ever
-    // trusting it.
-    $paletteId = is_string($page->theme['palette'] ?? null) ? $page->theme['palette'] : null;
-    $palette   = \App\Landing\Palette::for($paletteId);
-
+    // The palette itself is resolved in the TOP @php block now (Task 7:
+    // <html> consumes its dark flag as data-scheme before this point in the
+    // document; the resolution comment and its is_string() guard moved with
+    // it). This block keeps owning the EMISSION rules below.
+    //
     // One more nonced inline block below, emitting the fifteen tokens spec
     // §3 names as :root custom properties. Today's stylesheet defines its
     // own --brand family (see the Accent block further down) and does not

@@ -207,16 +207,23 @@ html{scroll-behavior:smooth;overflow-x:hidden}
    size against the document rather than one viewport. overflow-x CLIP, not
    hidden (Task 4 review F1): the glows deliberately bleed off both edges,
    but overflow:hidden makes body a SCROLL CONTAINER — the nearest scrollport
-   for every position:sticky descendant (the services preview plate), which
-   then sticks to a box that never scrolls, i.e. never sticks at all.
-   overflow:clip clips identically and creates no scroll container. */
+   for every position:sticky descendant, which then sticks to a box that
+   never scrolls, i.e. never sticks at all. (The sticky services plate that
+   surfaced this is gone — Task 7 rebuilt services as pillar rows — but clip
+   stays the correct primitive: it clips identically, creates no scroll
+   container, and no future sticky element can trip over it.) */
 body.rp{margin:0;position:relative;overflow-x:clip;
   background:var(--bg);color:var(--text);
   font-family:var(--font-body);font-weight:300;font-size:var(--t-body);
   line-height:1.7;font-optical-sizing:auto;
   -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+/* 'opsz' alone (Task 7): this rule used to also pin 'SOFT' 0,'WONK' 0 — axes
+   Fraunces defines but the committed axis-sliced file does not carry (fvar:
+   opsz+wght only), so both tags were silently ignored by every browser. The
+   same dead-axis bug fix round 1 removed from the editorial pairing, pruned
+   from the base rule too; the axis test now scans the whole file. */
 h1,h2,h3{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:300;
-  font-variation-settings:'opsz' 144,'SOFT' 0,'WONK' 0;letter-spacing:-.01em;margin:0}
+  font-variation-settings:'opsz' 144;letter-spacing:-.01em;margin:0}
 /* Fraunces 400 for --t-h3 is a REAL instance now that the layout requests the
    300..500 variable range; it used to be synthesised down onto the 300 static
    and every h3 shipped lighter than the design asks for. */
@@ -507,41 +514,90 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 /* Ken Burns (reference keyframes verbatim): CSS-only, on the img, switched
    off — transform included — in the reduced-motion block at the end of
    this file. The resting scale means the pan never shows an edge. */
+/* THE PHOTO GRADE FOLLOWS THE PALETTE'S DARK FLAG (Task 7; ruling 3c-4's
+   deferred judgment, decided as the structural dark-flag-conditional fix).
+   The reference's brightness(.7) is a DARK-SCHEME assumption: it sinks the
+   photograph toward a charcoal ground so light text can sit on it. On a
+   light palette the same filter turned the one photographic band into a
+   noir header stapled onto a paper page — so the base grade here is the
+   LIGHT one (a whisper of settle, no darkening: the light palettes' scrim
+   veil lifts the photo toward their own paper and the text is dark), and
+   the layout stamps data-scheme="dark" on <html> from the palette's own
+   `dark` flag (the same flag that already drives --accent-text and
+   color-scheme) to restore the reference's grade verbatim on dark palettes.
+   The vignette and the h1 text-shadow fork on the same attribute below. */
 .rp-hero--photo .rp-hero__plate-img{display:block;inline-size:100%;block-size:100%;
   object-fit:cover;transform:scale(1.08);
-  filter:brightness(0.7) saturate(1.1) contrast(1.05);
+  filter:brightness(0.96) saturate(1.06) contrast(1.02);
   animation:rp-kenburns 28s ease-in-out infinite alternate}
+:root[data-scheme="dark"] .rp-hero--photo .rp-hero__plate-img{
+  filter:brightness(0.7) saturate(1.1) contrast(1.05)}
 @keyframes rp-kenburns{
   0%   {transform:scale(1.05) translate3d(0, 0, 0)}
   100% {transform:scale(1.14) translate3d(-1.5%, -1%, 0)}
 }
 /* The three layers, reference §hero adapted to tokens. Glow: screen-blended
-   accent light off --halo. Veil: the reference's directional gradients
-   rebuilt on --scrim (the palette's own bg at 0.72), so the text's ground
-   is always the scheme's own surface colour — light palettes lift the
-   photo toward their paper, dark ones sink it. Vignette: photographic edge
-   fall-off, deliberately plain black at .45 — a lens property, not a
-   scheme one (reference verbatim). */
+   accent light off --halo. Veil: the reference's directional gradients on
+   the palette's own bg, so the text's ground is always the scheme's own
+   surface colour — light palettes lift the photo toward their paper, dark
+   ones sink it. Vignette: photographic edge fall-off — black, because a
+   vignette is a lens property, but its DEPTH forks on the scheme below
+   (the reference's .45 is another dark-scheme value; at .45 over a lifted
+   photo on paper it read as a smoked frame). */
 .rp-hero__glow{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;
   background:
     radial-gradient(ellipse at 78% 38%, var(--halo) 0%, transparent 50%),
     radial-gradient(ellipse at 18% 80%, var(--halo) 0%, transparent 55%)}
+/* THE VEIL, at the reference's own FOUR stops (Task 7; ruling 3c-4): the
+   bottom anchor — near-opaque surface at 100% — is what lands the hero into
+   the next band instead of ending on raw photograph, and the mid haze keeps
+   a breath of the surface across the photo's middle. The reference writes
+   rgba(bg, .50/.18/.55/.95); those exact alphas need color-mix over var(--bg),
+   which pre-2023 engines drop AT COMPUTED-VALUE time (a var()-carrying
+   declaration is never discarded at parse, it computes to guaranteed-invalid
+   and unsets the property) — so the un-guarded declaration below is a
+   complete 4-stop veil built from the tokens those engines CAN resolve
+   (--scrim = bg at .72 for the two scrim stops, opaque --bg for the anchor),
+   and the @supports block restates it at the reference's own alphas where
+   color-mix exists. Both carry the 90° directional gradient that grounds
+   the text column (reference: .78 -> 0 at 55%). */
 .rp-hero__veil{position:absolute;inset:0;pointer-events:none;
   background:
-    linear-gradient(180deg, var(--scrim) 0%, transparent 38%, var(--scrim) 82%),
+    linear-gradient(180deg, var(--scrim) 0%, transparent 40%, var(--scrim) 82%, var(--bg) 100%),
     linear-gradient(90deg, var(--scrim) 0%, transparent 58%)}
+@supports (color: color-mix(in srgb, red 50%, transparent)) {
+  .rp-hero__veil{
+    background:
+      linear-gradient(180deg,
+        color-mix(in srgb, var(--bg) 50%, transparent) 0%,
+        color-mix(in srgb, var(--bg) 18%, transparent) 35%,
+        color-mix(in srgb, var(--bg) 55%, transparent) 78%,
+        color-mix(in srgb, var(--bg) 95%, transparent) 100%),
+      linear-gradient(90deg,
+        color-mix(in srgb, var(--bg) 78%, transparent) 0%,
+        transparent 55%)}
+}
 .rp-hero__vignette{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 55%, transparent 50%, rgba(0,0,0,0.18) 100%)}
+:root[data-scheme="dark"] .rp-hero__vignette{
   background:radial-gradient(ellipse at 50% 55%, transparent 50%, rgba(0,0,0,0.45) 100%)}
-.rp-hero--photo h1{text-shadow:0 4px 30px rgba(0,0,0,0.4)}
+/* On a light palette the headline is DARK text on a lifted photo: the shadow
+   that lifts it off the picture is a soft halo of the palette's own paper
+   (--scrim), not the reference's black glow — that one returns with the
+   dark flag, where the text is light again. */
+.rp-hero--photo h1{text-shadow:0 2px 24px var(--scrim)}
+:root[data-scheme="dark"] .rp-hero--photo h1{text-shadow:0 4px 30px rgba(0,0,0,0.4)}
 
 /* THE IMAGELESS COMPOSITION: content beside the monogram device. */
 .rp-hero__grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);
   gap:clamp(40px,6vw,88px);align-items:center}
 /* The device (the --r-lg token's consumer — the radius Task 4 declared for
    exactly this kind of plate). The offset accent border is the reference's
-   media-accent idiom: hung down-left behind the plate, accent hairline,
-   sub-full opacity; z-index -1 inside the device's own isolated context so
-   it can never paint over the plate itself. */
+   media-accent idiom: hung UP-AND-RIGHT behind the plate (negative top/right
+   insets, positive bottom/left — Task 7 fixed this comment, which used to
+   read "down-left", the opposite of what the inset values below draw),
+   accent hairline, sub-full opacity; z-index -1 inside the device's own
+   isolated context so it can never paint over the plate itself. */
 .rp-hero__device{position:relative;isolation:isolate;margin:0;aspect-ratio:4/5;
   inline-size:100%;max-width:420px;justify-self:end}
 .rp-hero__device::before{content:"";position:absolute;
@@ -719,7 +775,18 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
    --p falls back to 0 and the spine is simply invisible. */
 .rule-progress{position:fixed;inset-block-start:0;inset-inline-start:var(--rule-x);
   translate:-.5px 0;inline-size:2px;block-size:100vh;transform-origin:top;
-  scale:1 var(--p,0);background:var(--accent);z-index:40;pointer-events:none}
+  scale:1 var(--p,0);background:var(--accent);z-index:40;pointer-events:none;
+  /* Task 7 (the "white sliver" artifact): a degenerate scaleY(0) does NOT
+     reliably suppress the box's paint — Chromium rasterises a few pixels of
+     the background at the transform-origin, which on a dark palette put a
+     pale accent blip at the top-left corner, above the nav, at every rest
+     position (diagnosed by toggling this element's display/background in a
+     live browser; the blip tracked this background exactly). The spine is
+     therefore opacity-gated as well as scaled: here, off --p (0 -> invisible,
+     any real progress -> clamped to 1 within the first ~2% of travel), and in
+     the scroll-driven keyframes below via a 0%/1% opacity step. Same
+     resting-state semantics, no zero-scale rasterisation left to smear. */
+  opacity:calc(var(--p,0) * 50)}
 @supports (animation-timeline: scroll()){
   /* !important because the reduced-motion reset above is a blanket
      animation:none, and a scroll-driven progress bar is not vestibular
@@ -738,7 +805,15 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
      spine at all. */
   .rule-progress{scale:1 1;animation:ruleGrow linear both!important;
     animation-timeline:scroll(root block)!important}
-  @keyframes ruleGrow{from{scale:1 0}to{scale:1 1}}
+  /* The 0%/1% opacity step is the sliver fix (see the base rule's comment):
+     at progress 0 the spine is opacity 0, so the degenerate scaleY(0) box
+     has nothing to smear; by 1% of scroll travel it is fully opaque and the
+     scale carries the progress exactly as before. It also means the frames
+     where a scroll timeline is momentarily INACTIVE (the animation's current
+     time resolves to null and these keyframes stop applying) fall back to
+     the base rule's --p-gated opacity — 0 with no JS writer — rather than
+     to a permanently full line. */
+  @keyframes ruleGrow{0%{scale:1 0;opacity:0}1%{opacity:1}100%{scale:1 1;opacity:1}}
 }
 /* Below 900px the vertical rule is gone (4.3's breakpoints), and the spine is
    reincarnated as a horizontal hairline pinned across the top, driven by the
@@ -752,115 +827,79 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
        document timeline and paint a full-width hairline from first paint. */
     .rule-progress{scale:1 1;animation:ruleGrowX linear both!important;
       animation-timeline:scroll(root block)!important}
-    @keyframes ruleGrowX{from{scale:0 1}to{scale:1 1}}
+    /* Same 0%/1% opacity gate as ruleGrow above — the horizontal spine's
+       scaleX(0) smears at the LEFT edge the same way. */
+    @keyframes ruleGrowX{0%{scale:0 1;opacity:0}1%{opacity:1}100%{scale:1 1;opacity:1}}
   }
 }
 
-/* --- services: the menu (4.5.3) ------------------------------------------ */
+/* --- services: the numbered pillars (Task 7, phase 3c; reference §pillars) --
+   The menu is rebuilt as the reference's numbered pillar rows: 01/02/03 in
+   the mono voice, the name in the serif italic the reference's pillar
+   headings use, price and duration in mono, and the reference's hover sweep
+   verbatim adapted — the row's bottom hairline is overdrawn by an
+   accent-to-transparent gradient scaling in from the left while the row
+   shifts 0.6rem right. This REPLACES the 3b drawn-leader menu and its
+   sticky preview-plate column entirely (the leader spacer, the 24-row
+   :has() hover battery and the position:sticky plate are all gone — that
+   sticky column is the one Task 4's overflow-x:hidden briefly broke, review
+   F1; no sticky rule survives in this file at all now, so the clip/sticky
+   interaction is moot). A row's photograph now travels ON the row, as a small square plate
+   trailing it, at every viewport width — one markup, no desktop/mobile
+   information split, so the mobile-parity thumb machinery went with it.
+
+   The numbers are set in mono, NOT the reference's serif: the type-scale
+   block's own discipline — every number on the page is IBM Plex Mono — is
+   older than this section and the index voice (see .rp-index__counter) is
+   already established as mono. --accent-text keeps them AA-comfortable. */
 .rp-services__title{font-size:var(--t-h2);line-height:1.06;letter-spacing:-.02em;max-width:16ch}
 .rp-services__sub{margin-top:20px;font-size:var(--t-lead);line-height:1.55;
   color:var(--text-soft);max-width:46ch}
-.rp-services__grid{display:grid;align-items:start;
-  grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:clamp(40px,5vw,72px);
-  margin-top:clamp(40px,5vw,64px)}
-/* Two independent conditions, kept independent -- ORing them was how a plate
-   ended up stacked full-width under a one-column menu.
-   is-narrow: no row has a photograph, so Blade renders no plate at all and the
-   grid is one column. is-tight: fewer than three rows, so the MENU tightens
-   rather than spanning seven columns of nothing -- the plate, if there is one,
-   still sits beside it. */
-.rp-services__grid.is-narrow{grid-template-columns:minmax(0,1fr)}
-.rp-services__grid.is-tight .rp-services__list{max-width:720px}
-/* Belt and braces: a plate inside a collapsed grid would be a 3/4 block under
-   the menu, which is the bug this pair replaces. */
-.rp-services__grid.is-narrow .rp-services__plate{display:none}
+.rp-pillars{margin-top:clamp(40px,5vw,64px);max-width:860px;
+  border-top:1px solid var(--line-soft)}
 .rp-services__cta{margin-top:clamp(40px,5vw,64px)}
 
-.rp-service{padding-block:26px;border-bottom:1px solid var(--line)}
-.rp-service:first-child{border-top:1px solid var(--line)}
-.rp-service__head{display:flex;align-items:baseline;gap:12px}
-.rp-service__name{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
-  font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em;
-  transition:transform 180ms var(--ease)}
-/* The leader is a border on a flexing spacer: never typed, so a long name
-   cannot break the alignment and an RTL locale mirrors it for free. */
-.rp-service__leader{flex:1 1 auto;min-width:24px;border-bottom:1px solid var(--line);
-  transform:translateY(-5px);transition:border-color 180ms var(--ease)}
-.rp-service__price{font-family:var(--mono);font-weight:500;font-size:1.375rem;
+.rp-pillar{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);
+  gap:clamp(16px,3vw,28px);align-items:start;padding:1.5rem 0;
+  border-bottom:1px solid var(--line-soft);
+  transition:padding 0.5s ease}
+.rp-pillar--shot{grid-template-columns:auto minmax(0,1fr) auto}
+/* The sweep (reference .pillar::before verbatim, on --accent): overdraws the
+   row's own hairline, left to right, on hover. */
+.rp-pillar::before{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;
+  background:linear-gradient(90deg, var(--accent), transparent 65%);
+  transform:scaleX(0);transform-origin:left center;
+  transition:transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1)}
+.rp-pillar:hover{padding-left:0.6rem}
+.rp-pillar:hover::before{transform:scaleX(1)}
+
+.rp-pillar__num{font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
+  letter-spacing:.08em;font-variant-numeric:tabular-nums;
+  color:var(--accent-text);padding-top:7px;min-width:2ch}
+.rp-pillar__head{display:flex;align-items:baseline;justify-content:space-between;
+  gap:12px 20px;flex-wrap:wrap}
+/* The reference pillar heading is the serif, italic, at h3 scale. */
+.rp-pillar__name{font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
+  font-style:italic;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
+.rp-pillar__price{font-family:var(--mono);font-weight:500;font-size:1.125rem;
   letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rp-service__currency{margin-left:.4em;font-size:.68em;color:var(--text-soft)}
-.rp-service__price--tbc{color:var(--text-soft)}
-.rp-service__meta{margin-top:8px;font-family:var(--mono);font-weight:500;
+.rp-pillar__currency{margin-left:.4em;font-size:.72em;color:var(--text-soft)}
+.rp-pillar__meta{margin-top:6px;font-family:var(--mono);font-weight:500;
   font-size:var(--t-mono);letter-spacing:.06em;color:var(--text-soft);
   font-variant-numeric:tabular-nums}
-.rp-service__desc{margin-top:10px;font-size:.9375rem;line-height:1.6;
+.rp-pillar__desc{margin-top:10px;font-size:.9375rem;line-height:1.6;
   color:var(--text-soft);max-width:58ch;overflow-wrap:anywhere}
-/* Hover is a hairline changing colour and a 6px shift — the reference's own
-   pillar-row sweep intent, carried on the existing markup. */
-.rp-service:hover .rp-service__leader{border-color:var(--accent)}
-.rp-service:hover .rp-service__name{transform:translateX(6px)}
-
-/* The preview plate. Every shot is stacked in the same grid cell, the first
-   one visible, and hovering row n swaps to shot n — pure CSS via :has(), no
-   script and no state. Browsers without :has() keep showing the first shot,
-   which is a finished state rather than a broken one. */
-.rp-services__plate{position:sticky;top:88px;display:grid;aspect-ratio:3/4;
-  border:1px solid var(--line);background:var(--bg-2);overflow:hidden}
-.rp-services__shot{grid-area:1/1;inline-size:100%;block-size:100%;object-fit:cover;
-  opacity:0;transition:opacity 420ms ease}
-.rp-services__shot:first-child{opacity:1}
-.rp-services__shot--mono{display:grid}
-.rp-services__grid:has(.rp-service:hover) .rp-services__shot{opacity:0}
-.rp-services__grid:has(.rp-service:nth-child(1):hover) .rp-services__shot:nth-child(1){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(2):hover) .rp-services__shot:nth-child(2){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(3):hover) .rp-services__shot:nth-child(3){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(4):hover) .rp-services__shot:nth-child(4){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(5):hover) .rp-services__shot:nth-child(5){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(6):hover) .rp-services__shot:nth-child(6){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(7):hover) .rp-services__shot:nth-child(7){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(8):hover) .rp-services__shot:nth-child(8){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(9):hover) .rp-services__shot:nth-child(9){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(10):hover) .rp-services__shot:nth-child(10){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(11):hover) .rp-services__shot:nth-child(11){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(12):hover) .rp-services__shot:nth-child(12){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(13):hover) .rp-services__shot:nth-child(13){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(14):hover) .rp-services__shot:nth-child(14){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(15):hover) .rp-services__shot:nth-child(15){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(16):hover) .rp-services__shot:nth-child(16){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(17):hover) .rp-services__shot:nth-child(17){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(18):hover) .rp-services__shot:nth-child(18){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(19):hover) .rp-services__shot:nth-child(19){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(20):hover) .rp-services__shot:nth-child(20){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(21):hover) .rp-services__shot:nth-child(21){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(22):hover) .rp-services__shot:nth-child(22){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(23):hover) .rp-services__shot:nth-child(23){opacity:1}
-.rp-services__grid:has(.rp-service:nth-child(24):hover) .rp-services__shot:nth-child(24){opacity:1}
-
-/* Below 900px the sticky plate has no column to be sticky in, so 4.5.3 removes
-   it and PRESERVES ITS INFORMATION INLINE: the row becomes 64px 1fr, with a
-   64x80 plate at the left carrying the same photograph. Dropping the plate
-   without that is how a tenant's service photography disappears entirely on
-   the screen most of their customers use. The thumb is rendered only when some
-   row actually has a photograph -- the same test the plate itself is gated on
-   -- so a studio with no images gets a clean menu rather than a column of
-   monograms. */
-.rp-service__thumb{display:none}
-@media (max-width:899px){
-  .rp-services__plate{display:none}
-  .rp-services__grid{grid-template-columns:minmax(0,1fr)}
-  .rp-services__grid.is-tight .rp-services__list{max-width:none}
-  .rp-service:has(.rp-service__thumb){display:grid;
-    grid-template-columns:64px minmax(0,1fr);gap:16px;align-items:start;min-height:62px}
-  .rp-service__thumb{display:block;inline-size:64px;block-size:80px;
-    background:var(--bg-2);border:1px solid var(--line);overflow:hidden}
-  .rp-service__thumb img{inline-size:100%;block-size:100%;object-fit:cover;display:block}
-  .rp-service__thumb .rp-plate--mono{--plate-mark:1.5rem;border:0}
-}
+/* The trailing photo plate: a small square, radius-md, hairline ring — never
+   display:none at any width (the house mobile-parity rule: this IS the
+   mobile presentation too, one markup for every screen). */
+.rp-pillar__shot{display:block;inline-size:clamp(64px,9vw,96px);
+  aspect-ratio:1/1;overflow:hidden;border-radius:var(--r-md);
+  border:1px solid var(--line-soft);align-self:center}
+.rp-pillar__shot img{display:block;inline-size:100%;block-size:100%;object-fit:cover}
 @media (max-width:559px){
-  /* No width left for a leader to do its job. */
-  .rp-service__leader{display:none}
-  .rp-service{padding-block:20px}
-  .rp-service__price{font-size:1.0625rem}
+  .rp-pillar{padding-block:1.15rem}
+  .rp-pillar__price{font-size:1rem}
+  .rp-pillar__shot{inline-size:56px;border-radius:12px}
 }
 
 /* --- the no-image device: the monogram plate (4.4) ----------------------- */
@@ -920,27 +959,35 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-team__grid[data-count="2"] .rp-member__plate{aspect-ratio:3/4}
 .rp-team__grid[data-count="3"]{grid-template-columns:repeat(3,minmax(0,1fr))}
 
-/* The plate sits on the page like a photograph laid on a ruled sheet:
-   one hairline underneath it and nothing else. */
+/* Task 7 (phase 3c; spec §4 "cards on bg-elev"): each practitioner is an
+   ELEVATED CARD now — bg-elev field, soft hairline ring, radius-md, a deep
+   soft shadow — with the portrait bleeding to the card's edges above the
+   text. The 3b duotone treatment inside the plate is kept verbatim (it is
+   what stops a staff grid reading as stock photography); the plate's own
+   hover hairline moved OUT to the card's ring, which warms to the accent. */
+.rp-member{background:var(--bg-elev);border:1px solid var(--line-soft);
+  border-radius:var(--r-md);overflow:hidden;padding-bottom:18px;
+  box-shadow:0 30px 60px -40px rgba(0,0,0,.45);
+  transition:border-color 200ms var(--ease)}
 .rp-member__plate{position:relative;isolation:isolate;overflow:hidden;margin:0;
   aspect-ratio:4/5;background:var(--bg-2);
-  border-bottom:1px solid var(--line);transition:border-color 200ms var(--ease)}
+  border-bottom:1px solid var(--line-soft)}
 .rp-member__plate img{inline-size:100%;block-size:100%;object-fit:cover;
   object-position:center 25%;display:block;
   filter:grayscale(1) contrast(1.06);transition:transform 400ms var(--ease)}
 /* Duotone, not a greyscale-to-colour reveal: the tenant's hue is present at
-   rest and hover lifts the hairline instead (4.6). */
+   rest and hover lifts the card's ring instead (4.6). */
 .rp-member__plate::after{content:"";position:absolute;inset:0;z-index:1;
   background:var(--accent);mix-blend-mode:color;opacity:.30;pointer-events:none}
-.rp-member:hover .rp-member__plate{border-bottom-width:2px;border-color:var(--accent)}
+.rp-member:hover{border-color:var(--accent)}
 .rp-member:hover .rp-member__plate img{transform:scale(1.03)}
 @media (forced-colors:active){.rp-member__plate::after{display:none}}
 
-.rp-member__name{margin-top:16px;font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
+.rp-member__name{margin:16px 18px 0;font-family:Fraunces,'Fraunces fb',Georgia,serif;font-weight:400;
   font-size:1.25rem;line-height:1.25;letter-spacing:-.01em}
-.rp-member__role{margin-top:6px;font-family:var(--mono);font-weight:500;
+.rp-member__role{margin:6px 18px 0;font-family:var(--mono);font-weight:500;
   font-size:.75rem;text-transform:uppercase;letter-spacing:.14em;color:var(--text-soft)}
-.rp-member__specialties{margin-top:8px;font-family:var(--mono);font-weight:500;
+.rp-member__specialties{margin:8px 18px 0;font-family:var(--mono);font-weight:500;
   font-size:var(--t-mono);letter-spacing:.06em;color:var(--text-soft);
   overflow-wrap:anywhere}
 
@@ -977,9 +1024,17 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-reviews__grid{display:flex;flex-wrap:wrap;align-items:flex-start;
   gap:clamp(40px,6vw,88px);margin-top:clamp(32px,4vw,56px)}
 /* Flex rather than a two-column grid: the aggregate is absent below four
-   ratings, and a flex row closes up on its own where a fixed 300px column
-   would leave a gap the size of the thing that is not there. */
-.rp-reviews__aggregate{flex:0 1 300px}
+   ratings, and a flex row closes up on its own where a fixed column would
+   leave a gap the size of the thing that is not there.
+   Task 7: the aggregate panel is the band's ELEVATED CARD (spec §4) — the
+   score, provenance line and histogram are the band's data-dense object and
+   earn a surface; the QUOTES stay open typographic spotlight on the band
+   itself, deliberately un-boxed (testimonial cards are the template look
+   this page exists to refuse). The meter fills inside now paint on
+   --bg-elev, which the PaletteTest/HouseTokens floors already cover. */
+.rp-reviews__aggregate{flex:0 1 320px;background:var(--bg-elev);
+  border:1px solid var(--line-soft);border-radius:var(--r-md);
+  padding:26px 24px 24px;box-shadow:0 30px 60px -40px rgba(0,0,0,.45)}
 .rp-reviews__score{font-family:var(--mono);font-weight:500;
   font-size:clamp(2.25rem,3.4vw,3rem);line-height:1;letter-spacing:-.02em;
   font-variant-numeric:tabular-nums;color:var(--text)}
@@ -1048,14 +1103,58 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   .rp-index__tick{inline-size:44px}
 }
 
-/* --- booking: reserve (4.5.7) -------------------------------------------- */
-/* Not centred. The column starts at the third of twelve so the kicker still
-   sits on the Rule and the band keeps the page's asymmetry. */
-.rp-book__col{max-width:760px;margin-inline-start:min(16.6%,180px)}
+/* --- booking: the champagne band (Task 7, phase 3c; reference §booking) --- */
+/* The reference's warm band: a halo bloom off the top over a bg->bg-2->bg
+   fall, hairlines above and below, and ONE centred card whose signature is
+   the masked-gradient border — a 1px accent gradient ring drawn by a
+   padding-box/border-box mask pair composited with exclude, fading out by
+   two-thirds of the way down. The kicker stays OUTSIDE the card (the card
+   is position:relative for its own pseudo, and the rotated >=1400px kicker
+   must keep positioning against the BAND to sit on the Rule). */
+.rp-book{border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line-soft);
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--halo) 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-2) 50%, var(--bg) 100%)}
+.rp-book__card{position:relative;max-width:920px;margin:clamp(24px,3vw,40px) auto 0;
+  padding:clamp(2.5rem,5vw,4.25rem) clamp(1.25rem,4vw,3.5rem);
+  text-align:center;
+  background:
+    radial-gradient(ellipse at 50% 0%, var(--halo) 0%, transparent 55%),
+    var(--glass);
+  border:1px solid var(--line);border-radius:var(--r-lg);
+  -webkit-backdrop-filter:blur(18px) saturate(140%);
+  backdrop-filter:blur(18px) saturate(140%);
+  box-shadow:0 60px 130px -50px rgba(0,0,0,.55), inset 0 1px 0 var(--line);
+  isolation:isolate}
+/* The masked gradient border (reference .booking__card::before adapted to
+   tokens): the pseudo paints an accent-bright -> transparent gradient across
+   its whole box, then the mask keeps ONLY the 1px padding ring — content-box
+   XOR full-box. Both the -webkit- pair (Chromium/WebKit) and the standard
+   pair (Firefox) are declared. */
+.rp-book__card::before{content:"";position:absolute;inset:0;padding:1px;
+  border-radius:inherit;
+  background:linear-gradient(180deg, var(--accent-bright), transparent 65%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite:exclude;
+  pointer-events:none;opacity:.7}
 .rp-book__title{margin-top:4px;font-size:var(--t-h2);line-height:1.06;
-  letter-spacing:-.02em;max-width:18ch;text-wrap:balance}
+  letter-spacing:-.02em;max-width:18ch;text-wrap:balance;margin-inline:auto}
+/* The terms line survives as-is wherever the perks split declines (see the
+   partial: a single sentence, or one too long to wear the uppercase perk
+   voice, stays a quiet mono line). */
 .rp-book__terms{margin-top:18px;font-family:var(--mono);font-weight:500;
   font-size:var(--t-mono);line-height:1.7;letter-spacing:.06em;color:var(--text-soft)}
+/* The perks row (reference .booking__perks on tokens): the tenant's own
+   terms sentences as dotted uppercase mono items, centred under the action. */
+.rp-book__perks{margin:clamp(28px,4vw,40px) 0 0;display:flex;flex-wrap:wrap;
+  justify-content:center;gap:.5rem 1.6rem;
+  font-family:var(--mono);font-weight:500;font-size:var(--t-kicker);line-height:1.6;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--text-soft)}
+.rp-book__perks li{display:inline-flex;align-items:center;gap:.55rem}
+.rp-book__perk-dot{flex:none;inline-size:6px;block-size:6px;border-radius:50%;
+  background:var(--accent);box-shadow:0 0 10px var(--halo)}
 
 .rp-book__frame{position:relative;margin-top:clamp(32px,4vw,48px);padding:8px;
   border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;
@@ -1084,7 +1183,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-book__phone:hover{border-bottom-color:var(--accent)}
 
 @media (max-width:899px){
-  .rp-book__col{margin-inline-start:0;max-width:none}
+  .rp-book__card{border-radius:var(--r-md)}
   .rp-book__frame{padding:4px;min-height:560px}
   .rp-book__iframe{min-block-size:552px;block-size:552px}
   .rp-book__skeleton{inset:4px}
@@ -1185,19 +1284,26 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   color:var(--accent-text)}
 
 /* The ledger. Tabular mono on both sides, so every colon lines up down the
-   column without a table being asked to do it. */
-.rp-hours{display:grid;align-content:start}
+   column without a table being asked to do it.
+   Task 7 (spec §4): the ledger sits on an elevated card — hours are the
+   contact band's operational fact and the card is what makes them read as
+   posted rather than listed. The today-tick moved inside the card's own
+   padding (it used to hang 18px into the band's margin). */
+.rp-hours{display:grid;align-content:start;background:var(--bg-elev);
+  border:1px solid var(--line-soft);border-radius:var(--r-md);
+  padding:10px 22px;box-shadow:0 30px 60px -40px rgba(0,0,0,.45)}
 .rp-hours__row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;
   position:relative;padding-block:11px;border-bottom:1px solid var(--line-soft);
   font-family:var(--mono);font-weight:500;font-size:var(--t-mono);letter-spacing:.06em;
   font-variant-numeric:tabular-nums;color:var(--text-soft)}
+.rp-hours__row:last-child{border-bottom:0}
 .rp-hours__time{text-align:end;white-space:nowrap}
-/* Today reads first without moving: brightened, and ticked in the margin.
-   Reordering it visually would put the ledger's spoken order out of step with
-   its printed one for the sake of one row. */
+/* Today reads first without moving: brightened, and ticked in the card's own
+   padding gutter. Reordering it visually would put the ledger's spoken order
+   out of step with its printed one for the sake of one row. */
 .rp-hours__row.is-today{color:var(--text)}
 .rp-hours__row.is-today::before{content:"";position:absolute;
-  inset-inline-start:-18px;inset-block-start:calc(50% - 1px);
+  inset-inline-start:-16px;inset-block-start:calc(50% - 1px);
   inline-size:10px;block-size:2px;background:var(--accent)}
 
 /* The plan tile: an elevated field, a rule grid and the point. Drawn, so
@@ -1231,14 +1337,15 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   .rp-contact__grid{grid-template-columns:minmax(0,1fr)}
   .rp-contact__grid:not(:has(.rp-hours)){grid-template-columns:minmax(0,1fr)}
   .rp-contact__grid:not(:has(.rp-map)){grid-template-columns:minmax(0,1fr)}
-  .rp-hours__row.is-today::before{inset-inline-start:-16px}
 }
 
 /* --- monogram sizes per slot (4.4) --------------------------------------- */
 /* One device, one construction, only the mark's size changing with the slot.
    The mark is --accent — a graphic well clear of the 3:1 floor every palette
-   authors for it, and set at sizes no small-text rule applies to. */
-.rp-services__plate .rp-plate--mono{--plate-mark:4rem}
+   authors for it, and set at sizes no small-text rule applies to. (The
+   services preview plate's slot died with the sticky plate in Task 7; the
+   pillar rows render a shot only for rows that actually have a photograph,
+   so no monogram slot exists in services any more.) */
 .rp-member__plate .rp-plate--mono{--plate-mark:4rem}
 /* The portrait figure lays its child out rather than relying on the child to
    fill an implicit box, so the monogram occupies the same plate a photograph
@@ -1246,37 +1353,62 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-member__plate{display:grid}
 .rp-member__plate > *{grid-area:1/1}
 @media (max-width:899px){
-  .rp-services__plate .rp-plate--mono,.rp-member__plate .rp-plate--mono{--plate-mark:2.5rem}
+  .rp-member__plate .rp-plate--mono{--plate-mark:2.5rem}
 }
 
-/* --- media plates (landing phase 3b; hero's moved out in 3c Task 5) -------
-   Appendix B 4.5 item 4 — the ABOUT photographic plate
-   PageContent::imageUrl() gates about.blade.php's markup on. The hero's
-   plate rules that used to open this block live in the hero section above
-   now, rebuilt as the reference's layered composition; about's cinematic
-   reframing is Task 7's. */
-
-/* About (4.5.4). The plate spans columns 1-4 and hangs off the grid by
-   -40px on both axes so it crosses the band's own top hairline — the
-   page's one deliberate "breaks the ruling" moment. The text column shifts
-   to 6-11 (from its no-image 3-11) only while the plate is actually
-   rendered; .rp-about__text alone, with no modifier, is untouched from
-   4.5.4's original no-image rule above. */
-.rp-about__plate{grid-column:1 / 5;margin:0;margin-inline-start:-40px;
-  margin-block-start:-40px;aspect-ratio:3/4;overflow:hidden;
-  border:1px solid var(--line);align-self:start}
-.rp-about__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover}
-.rp-about__plate-caption{display:block;margin-top:12px;font-size:var(--t-mono);
-  color:var(--text-soft);text-transform:uppercase}
+/* --- about: the cinematic frame (Task 7, phase 3c; reference §media) -------
+   The 3b hung plate is rebuilt as the reference's cinematic 4:5 media
+   composition: a radius-lg frame with the deep drop and hairline ring, the
+   photograph graded at brightness(.92) and easing to full on hover, a shine
+   overlay across the top corner, the offset accent border hung up-and-right
+   behind it (the SAME dressing as the imageless hero's monogram device —
+   the two are deliberately siblings), and a glass tag pill carrying the
+   business name. The old -40px "crosses the ruling" hang is retired: the
+   accent offset is this composition's own way of breaking the frame, and
+   the two idioms fight when stacked. Text keeps its 4.5.4 column geometry —
+   the plate's grid-column and the text's shift modifier are unchanged. */
+.rp-about__frame{position:relative;isolation:isolate;grid-column:1 / 6;margin:0;
+  align-self:center}
+.rp-about__frame::before{content:"";position:absolute;
+  inset:-22px -22px 36px 36px;
+  border:1px solid var(--accent);border-radius:var(--r-lg);opacity:.6;
+  z-index:-1;pointer-events:none}
+.rp-about__frame-media{position:relative;display:block;aspect-ratio:4/5;
+  overflow:hidden;border-radius:var(--r-lg);
+  box-shadow:0 50px 100px -36px rgba(0,0,0,.55), 0 0 0 1px var(--line)}
+.rp-about__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover;
+  filter:brightness(.92) saturate(1.08);transform:scale(1.02);
+  transition:transform 1.6s cubic-bezier(0.22, 0.61, 0.36, 1), filter .8s ease}
+.rp-about__frame:hover .rp-about__plate-img{transform:scale(1.08);
+  filter:brightness(1) saturate(1.12)}
+.rp-about__frame-shine{position:absolute;inset:0;pointer-events:none;
+  border-radius:var(--r-lg);
+  background:linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 35%)}
+/* The glass tag: the business name in the serif italic voice on a blurred
+   glass pill, laid on the photograph's lower corner — the reference floats
+   its tag off the frame's outer edge, but this frame's outer edge is the
+   Rule's margin, and a pill drifting over the page's instrument reads as a
+   mistake at the widths where the two meet. */
+.rp-about__frame-tag{position:absolute;inset-block-end:20px;inset-inline-start:20px;
+  max-width:calc(100% - 40px);margin:0;padding:.55rem 1.05rem;
+  display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-family:'Cormorant Garamond',Georgia,serif;font-style:italic;font-weight:500;
+  font-size:1.05rem;line-height:1.3;color:var(--text);
+  background:var(--glass);border:1px solid var(--line);border-radius:999px;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+  box-shadow:0 18px 40px -18px rgba(0,0,0,.5)}
 .rp-about__text.rp-about__text--shifted{grid-column:6 / 12}
 @media (max-width:899px){
-  /* The -40px hang needs margin space a phone does not have, and the plate
-     goes back to full-bleed (matching the hero's own mobile treatment)
-     rather than sitting inset inside the grid's own gutter. */
-  .rp-about__plate{margin-inline:calc(var(--gutter) * -1);margin-block-start:0;
-    border-inline:0;aspect-ratio:4/5}
+  /* The grid is display:block here (see the no-image rule above), so the
+     frame becomes a capped block above the text — inset, not full-bleed:
+     the offset accent border IS the composition and a bleed would amputate
+     it. Reference's own <=880 accent inset. */
+  .rp-about__frame{max-width:min(420px,100%);margin-bottom:40px}
+  .rp-about__frame::before{inset:-14px -14px 22px 22px}
+  .rp-about__frame-tag{inset-block-end:12px;inset-inline-start:12px;
+    font-size:.95rem;padding:.45rem .85rem}
 }
-/* --- end media plates ------------------------------------------------------ */
+/* --- end about frame ------------------------------------------------------- */
 
 /* --- reveal animations (reference §reveal, verbatim) ---------------------- */
 /* The .reveal class is added by ruled_page.js on load — the shipped markup

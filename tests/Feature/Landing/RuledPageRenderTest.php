@@ -1146,14 +1146,14 @@ class RuledPageRenderTest extends TestCase
         // targeted by a font-variation-settings declaration.
         $servedAxes = ['opsz', 'wght'];
 
-        $this->assertSame(1, preg_match(
-            '/\/\* --- font pairing \(RULING 5\).*?--- end font pairing -+ \*\//s',
-            $css,
-            $block
-        ), 'The font-pairing CSS block markers were not found -- have the comment delimiters moved?');
-
-        preg_match_all('/font-variation-settings:([^;]+);/', $block[0], $declarations);
-        $this->assertNotEmpty($declarations[1], 'No font-pairing rule declares font-variation-settings at all.');
+        // Task 7: the scan covers the WHOLE stylesheet now, not just the
+        // font-pairing block between the RULING 5 markers. The BASE
+        // h1,h2,h3 rule carried its own dead 'SOFT' 0,'WONK' 0 pair — the
+        // exact bug class this test was written for, sitting one rule
+        // outside its original scan — and the block-scoped version could
+        // never have caught it (the Task 5 review's charge list did).
+        preg_match_all('/font-variation-settings:([^;]+);/', $css, $declarations);
+        $this->assertNotEmpty($declarations[1], 'No rule declares font-variation-settings at all.');
 
         $checked = 0;
         foreach ($declarations[1] as $declaration) {
@@ -1811,6 +1811,14 @@ class RuledPageRenderTest extends TestCase
      * renders. Mutation target 3 (drop the column shift) is what this test
      * catches — the plate would still appear, but the text div would be
      * missing the `rp-about__text--shifted` modifier class.
+     *
+     * Task 7 update (surgical, not a re-capture): the plate is the CINEMATIC
+     * FRAME now (spec §4) — same img tag byte-for-byte (the hostile
+     * battery's rp-about__plate-img needle is untouched), wrapped in the
+     * frame/media/shine composition, and the old mono caption repeating the
+     * kicker is replaced by the glass tag carrying the BUSINESS NAME (here
+     * the page's seo title — the fixture org has no Property — via the
+     * footer-wordmark chain). The column-shift claim is unchanged.
      */
     public function test_the_about_plate_renders_with_an_image_uploaded_through_the_real_endpoint_and_shifts_the_text_column(): void
     {
@@ -1820,6 +1828,7 @@ class RuledPageRenderTest extends TestCase
             'hero'  => ['headline' => 'The Art of Wellness'],
             'about' => ['kicker' => 'The Studio', 'body' => 'Our story starts with quiet rooms.'],
         ]);
+        $page->update(['seo' => ['title' => 'Glamour Salon']]);
 
         $url = $this->uploadImageViaEndpoint($org, 'about');
         $this->assertStringStartsWith('/storage/', $url);
@@ -1827,12 +1836,41 @@ class RuledPageRenderTest extends TestCase
         $body = $this->bodyFor($page);
 
         $this->assertStringContainsString('data-section="about"', $body);
+        $this->assertStringContainsString('<figure class="rp-about__frame">', $body);
         $this->assertStringContainsString(
             '<img class="rp-about__plate-img" src="' . $url . '" alt="" loading="lazy" decoding="async">',
             $body,
         );
-        $this->assertStringContainsString('<figcaption class="rp-about__plate-caption mono">The Studio</figcaption>', $body);
+        $this->assertStringContainsString('<span class="rp-about__frame-shine" aria-hidden="true"></span>', $body);
+        $this->assertStringContainsString('<figcaption class="rp-about__frame-tag">Glamour Salon</figcaption>', $body);
+        $this->assertStringNotContainsString('rp-about__plate-caption', $body,
+            'The old kicker-repeating caption should be gone from the frame.');
         $this->assertStringContainsString('class="rp-about__text rp-about__text--shifted"', $body);
+    }
+
+    /**
+     * The glass tag never invents a name: with no Property and no seo title
+     * the chain is empty, and the frame renders WITHOUT a figcaption rather
+     * than with an empty pill (the same absent-not-empty rule every band
+     * follows). The frame itself still renders — it is gated on the image,
+     * not on the name.
+     */
+    public function test_the_about_frame_omits_the_tag_when_no_name_exists(): void
+    {
+        $this->ensureImageUploadSchema();
+        $org  = $this->orgWithLandingPages();
+        $page = $this->publishedForOrg($org, 'plate-about-nameless', [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['body' => 'Our story starts with quiet rooms.'],
+        ]);
+
+        $url = $this->uploadImageViaEndpoint($org, 'about');
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('<figure class="rp-about__frame">', $body);
+        $this->assertStringNotContainsString('rp-about__frame-tag', $body,
+            'A page with no business name and no seo title must not render an empty tag pill.');
     }
 
     /**
@@ -2574,5 +2612,142 @@ class RuledPageRenderTest extends TestCase
         $this->assertSame(['#d8b878'], $values,
             'With no tenant brand colour, the palette\'s accent must be the only '
             . '--accent in the document — the profile\'s house accent must not clobber it.');
+    }
+
+    // ─── The sections restyle (Task 7, landing phase 3c; spec §4) ──────────
+
+    /**
+     * The services pillars: numbered rows (a computed 01/02/…, never stored
+     * data) and the reference's hover underline sweep. The sweep is
+     * grep-level — PHPUnit has no layout engine — and pins BOTH halves of
+     * the mechanism: the resting scaleX(0) gradient pseudo and the :hover
+     * rule that scales it in. Mutation target 1 (drop the sweep rule) goes
+     * red here.
+     */
+    public function test_the_service_pillars_are_numbered_and_wear_the_hover_sweep(): void
+    {
+        $this->published();
+        Service::create(['organization_id' => 1, 'name' => 'Signature Facial',
+            'is_active' => true, 'price' => 65, 'duration_minutes' => 60]);
+        Service::create(['organization_id' => 1, 'name' => 'Deep Tissue',
+            'is_active' => true, 'price' => 80]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<span class="rp-pillar__num" aria-hidden="true">01</span>', $body);
+        $this->assertStringContainsString('<span class="rp-pillar__num" aria-hidden="true">02</span>', $body);
+        $this->assertStringContainsString('class="rp-pillar"', $body);
+
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+        $this->assertSame(1, preg_match('/\.rp-pillar::before\{[^}]*transform:scaleX\(0\)/', $css),
+            'The pillar sweep pseudo (resting scaleX(0)) is gone from the stylesheet.');
+        $this->assertSame(1, preg_match('/\.rp-pillar:hover::before\{[^}]*transform:scaleX\(1\)/', $css),
+            'Nothing ever scales the pillar sweep in on hover.');
+    }
+
+    /**
+     * The booking card's masked-gradient border — the champagne band's
+     * signature object (spec §4, reference §booking). The card class must
+     * reach a hotel page's markup, and the stylesheet's ::before must carry
+     * the full mask mechanism: the padding-box/border-box gradient pair
+     * composited with exclude (standard) and xor (-webkit-). Mutation
+     * target 2 (remove the mask-composite) goes red here — without the
+     * composite the pseudo is a solid gradient SLAB over the card, not a
+     * 1px ring.
+     */
+    public function test_the_booking_card_wears_the_masked_gradient_border(): void
+    {
+        $page = LandingPage::create([
+            'organization_id' => 1, 'brand_id' => 1, 'slug' => 'grand-hotel',
+            'template_key' => 'ruled_page', 'industry' => 'hotel', 'status' => 'published',
+            'published_at' => now(),
+            'content' => ['hero' => ['headline' => 'The Grand Stay']],
+        ]);
+        foreach (['hero', 'booking', 'contact'] as $i => $key) {
+            $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
+        }
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('<div class="rp-book__card">', $body);
+
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+        $this->assertSame(1, preg_match('/\.rp-book__card::before\{([^}]*)\}/', $css, $rule),
+            'The booking card has no ::before pseudo for the gradient border.');
+        $this->assertStringContainsString('mask-composite:exclude', $rule[1],
+            'The standard mask-composite is gone — Firefox gets a gradient slab instead of a ring.');
+        $this->assertStringContainsString('-webkit-mask-composite:xor', $rule[1],
+            'The -webkit- mask-composite is gone — Chromium/WebKit get a gradient slab instead of a ring.');
+        $this->assertStringContainsString('padding:1px', $rule[1],
+            'The 1px padding IS the ring\'s thickness — without it the mask pair excludes everything.');
+    }
+
+    /**
+     * The photo treatment follows the palette's dark flag (Task 7; ruling
+     * 3c-4's deferred judgment). The layout stamps data-scheme="dark" on
+     * <html> from Palette->dark — the same flag that already drives
+     * --accent-text and color-scheme — and the stylesheet forks the photo
+     * grade on it: the reference's brightness(.7)/black-vignette/dark
+     * text-shadow are DARK-scheme values, restored only under the
+     * attribute, while the base rules carry the light grade. Mutation
+     * target 3 (flip the emission condition) goes red here: a dark palette
+     * would lose the attribute and a light one would gain it.
+     */
+    public function test_the_photo_treatment_follows_the_palettes_dark_flag(): void
+    {
+        $page = $this->published();
+
+        $page->update(['theme' => ['palette' => 'champagne_noir']]); // dark
+        $this->assertMatchesRegularExpression('/<html[^>]* data-scheme="dark"/', $this->body(),
+            'A dark palette must stamp data-scheme="dark" on <html>.');
+
+        $page->update(['theme' => ['palette' => 'terracotta']]); // light
+        $this->assertStringNotContainsString('data-scheme', $this->body(),
+            'A light palette must not carry the dark-scheme attribute.');
+
+        $page->update(['theme' => []]); // no palette: porcelain default, light
+        $this->assertStringNotContainsString('data-scheme', $this->body(),
+            'The no-palette default is light and must not carry the attribute.');
+
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+        $this->assertSame(1, preg_match(
+            '/:root\[data-scheme="dark"\] \.rp-hero--photo \.rp-hero__plate-img\{[^}]*brightness\(0\.7\)/',
+            $css
+        ), 'The reference photo grade (brightness .7) must be scoped to the dark scheme.');
+        $this->assertSame(1, preg_match(
+            '/(?<!\] )\.rp-hero--photo \.rp-hero__plate-img\{[^}]*brightness\(0\.96\)/',
+            $css
+        ), 'The base (light) photo grade is gone.');
+        $this->assertSame(1, preg_match(
+            '/:root\[data-scheme="dark"\] \.rp-hero--photo h1\{[^}]*text-shadow/',
+            $css
+        ), 'The dark text-shadow fork is gone.');
+        // The 4-stop veil's bottom anchor (ruling 3c-4's other half): the
+        // un-guarded declaration must land the hero into the next band on an
+        // opaque surface stop, engines without color-mix included.
+        $this->assertSame(1, preg_match(
+            '/\.rp-hero__veil\{[^}]*var\(--bg\) 100%/',
+            $css
+        ), 'The veil no longer anchors its bottom stop into the surface.');
+    }
+
+    /**
+     * Spec §4's "cards on bg-elev" for the restyled sections, grep-level:
+     * the team member card, the reviews aggregate card and the contact
+     * hours ledger card each sit on the elevated surface. (The reviews
+     * QUOTES deliberately stay un-boxed — the open typographic spotlight is
+     * the band's signature; only the aggregate wears the card.)
+     */
+    public function test_the_restyled_section_cards_sit_on_the_elevated_surface(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        foreach (['.rp-member{', '.rp-reviews__aggregate{', '.rp-hours{'] as $opener) {
+            $start = strpos($css, $opener);
+            $this->assertNotFalse($start, "{$opener} rule not found.");
+            $rule = substr($css, $start, strpos($css, '}', $start) - $start);
+            $this->assertStringContainsString('var(--bg-elev)', $rule,
+                "{$opener} no longer sits on the elevated surface.");
+        }
     }
 }

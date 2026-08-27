@@ -239,13 +239,20 @@
   // stagger step, and 'stagger' cycles 1-4 across the matches so lists
   // (menu rows, portraits, quotes) cascade the way the reference pages do.
   if (window.IntersectionObserver && !reduced.matches) {
+    // Task 7 renames: the services rows are .rp-pillar now (numbered pillar
+    // rows), the about plate is .rp-about__frame (the cinematic frame — the
+    // frame reveals as one object, tag and accent border included), and the
+    // booking band adds its perks row. The booking CARD itself is
+    // deliberately NOT in the plan for the same reason .rp-book__frame never
+    // was: it contains the async iframe, and animating that container
+    // double-flashes — its title/terms/perks reveal individually instead.
     var revealPlan = [
       ['.rp-hero__chip', 0], ['.rp-hero h1', 0], ['.rp-hero__sub', 1], ['.rp-hero__actions', 2], ['.rp-hero__device', 3],
-      ['.rp-services__title', 0], ['.rp-services__sub', 1], ['.rp-service', 'stagger'], ['.rp-services__cta', 2],
-      ['.rp-about__plate', 0], ['.rp-about__lead', 1], ['.rp-about__body', 2],
+      ['.rp-services__title', 0], ['.rp-services__sub', 1], ['.rp-pillar', 'stagger'], ['.rp-services__cta', 2],
+      ['.rp-about__frame', 0], ['.rp-about__lead', 1], ['.rp-about__body', 2],
       ['.rp-team__title', 0], ['.rp-team__sub', 1], ['.rp-member', 'stagger'],
       ['.rp-reviews__aggregate', 0], ['.rp-review', 'stagger'],
-      ['.rp-book__title', 0], ['.rp-book__terms', 1],
+      ['.rp-book__title', 0], ['.rp-book__terms', 1], ['.rp-book__perks', 1],
       ['.rp-field', 'stagger'], ['.rp-hours', 2], ['.rp-map', 3],
       ['.rp-footer__top', 0]
     ];
