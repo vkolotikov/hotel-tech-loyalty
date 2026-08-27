@@ -22,7 +22,21 @@
   owns bottom-right.
 --}}
 @php
+    // The legal line's chain is the pre-rebuild one, byte-for-byte: falling
+    // through to config('app.name') is defensible THERE — it names who
+    // serves the page, in small print.
     $footerName = $content->contact->name ?? $page->seo['title'] ?? config('app.name');
+
+    // The WORDMARK is a different claim: set large in the brand column, it
+    // reads as the business's own name, so it stops before app.name for
+    // exactly the reason the hero's h1 chain does — a footer headlining US
+    // as the business on a salon's own site. filled() rather than `??`,
+    // also per the h1 chain: an empty stored string must not shadow the
+    // next real candidate.
+    $footerWordmark = collect([
+        $content->contact->name,
+        $page->seo['title'] ?? null,
+    ])->first(fn ($candidate) => filled($candidate));
 
     // The same two-part gate the hero CTA and the nav CTA use — row enabled
     // AND has() — so this anchor can never point at a band the section loop
@@ -36,12 +50,16 @@
 @endphp
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
+@if (filled($footerWordmark) || $footerCtaHref !== null)
     <div class="rp-footer__top">
-      <p class="rp-footer__wordmark">{{ $footerName }}</p>
+@if (filled($footerWordmark))
+      <p class="rp-footer__wordmark">{{ $footerWordmark }}</p>
+@endif
 @if ($footerCtaHref !== null)
       <a class="rp-cta rp-cta--sm rp-footer__cta" href="{{ $footerCtaHref }}">{{ $profile->primaryCta }}</a>
 @endif
     </div>
+@endif
     <div class="rp-footer__bar">
       <p class="rp-footer__legal">&copy; {{ now()->year }} {{ $footerName }}</p>
     </div>
