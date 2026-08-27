@@ -936,6 +936,34 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('midnight_brass', $page->theme['palette']);
     }
 
+    /**
+     * Task 6 (D2's deferred application, landing phase 3c): a tenant who
+     * never opens the palette picker still gets a page that fits its own
+     * industry — `theme.palette` stores `IndustryProfile::for($industry)
+     * ->defaultPalette`, not nothing at all. `validPayload()`'s own
+     * `theme` never sets `palette` (only `brand_color`/`font_pairing`),
+     * so this is exactly the "tenant made no choice" case; 'education' is
+     * used (rather than the fixture org's own default 'beauty') because
+     * its default, `slate_amber`, is unmistakably different from every
+     * other industry's — a wrong industry->palette mapping fails loud
+     * here rather than by accident matching beauty's `champagne_noir`.
+     */
+    public function test_apply_with_no_palette_choice_stores_the_industrys_own_default(): void
+    {
+        $org  = $this->makeOrg('Learning Loft', 'education');
+        $user = $this->makeUser($org);
+        $this->actAs($user, $this->defaultBrandId($org));
+
+        $this->makeProperty(['name' => 'Learning Loft']);
+
+        $this->apply($this->validPayload(['slug' => 'learning-loft']));
+
+        $page = LandingPage::where('slug', 'learning-loft')->first();
+
+        $this->assertSame('slate_amber', $page->theme['palette']);
+        $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
+    }
+
     public function test_apply_refuses_an_invalid_palette_with_a_friendly_message(): void
     {
         $this->makeProperty();

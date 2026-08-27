@@ -22,6 +22,7 @@
  * to live in a function vitest can actually call.
  */
 import { isOfferable, type SectionMeta } from './sections'
+import { FONT_PAIRING_IDS, PALETTE_IDS, type FontPairingId, type PaletteId } from './designChoices'
 
 const DRAFT_KEY_BASE = 'landing-wizard-draft-v1'
 
@@ -52,12 +53,15 @@ export function draftKey(brandId: number | null): string {
 export const STEPS = ['template', 'details', 'style', 'sections'] as const
 export type StepKey = (typeof STEPS)[number]
 
-/** The three curated pairings the backend accepts — `theme.font_pairing`
- *  is validated `in:editorial,modern,classic`
- *  (`LandingOnboardingController::store()`), so this list is that same
- *  enum, not an independent guess at it. */
-export const FONT_PAIRINGS = ['classic', 'editorial', 'modern'] as const
-export type FontPairingKey = (typeof FONT_PAIRINGS)[number]
+/** The four curated pairings the backend accepts — `theme.font_pairing`
+ *  is validated against `App\Landing\ThemeRules::FONT_PAIRINGS`
+ *  (`LandingOnboardingController::store()`), and `./designChoices` is this
+ *  frontend's own hand-mirror of that exact same constant (landing phase
+ *  3c Task 6 — distinct from this file's OWN "Task 6" a few lines above,
+ *  an earlier phase's numbering) — so this is that list, not a second
+ *  independent guess at it. */
+export const FONT_PAIRINGS = FONT_PAIRING_IDS
+export type FontPairingKey = FontPairingId
 
 /**
  * What the tenant has chosen so far.
@@ -94,6 +98,11 @@ export type WizardForm = {
   subtext?: string
   brand_color?: string
   font_pairing?: FontPairingKey
+  /** Landing phase 3c Task 6 (D4): absent until the tenant actually picks
+   *  one in "Make it yours" — see `buildPayload`'s own comment on why an
+   *  untouched selection is never defaulted here the way `font_pairing`
+   *  is at the component's own call site. */
+  palette?: PaletteId
   phone?: string
   email?: string
   address?: string
@@ -140,6 +149,15 @@ export function mergeFormDraft(patch: unknown): WizardForm {
   const fontPairing = patch.font_pairing
   if (typeof fontPairing === 'string' && (FONT_PAIRINGS as readonly string[]).includes(fontPairing)) {
     out.font_pairing = fontPairing as FontPairingKey
+  }
+
+  // Landing phase 3c Task 6 (D4): same guard as font_pairing above, against
+  // designChoices' own six ids — a draft holding a palette a later build
+  // renamed or removed must not reach the request any more than a removed
+  // pairing would.
+  const palette = patch.palette
+  if (typeof palette === 'string' && (PALETTE_IDS as readonly string[]).includes(palette)) {
+    out.palette = palette as PaletteId
   }
 
   // Same three guards as every other field, applied per-entry rather than
@@ -241,7 +259,15 @@ export type ApplyPayload = {
   template_key: string
   slug: string
   copy: { headline: string; subtext: string }
-  theme: { brand_color: string; font_pairing: FontPairingKey }
+  /** `palette` is OPTIONAL and present only when the tenant actually chose
+   *  one in "Make it yours" (landing phase 3c Task 6, D4) — omitted, this diffs from
+   *  `brand_color`/`font_pairing` (both always sent, defaulted at the
+   *  component's own call site) on purpose: leaving it out is what lets
+   *  `LandingOnboardingService::theme()` apply the industry's own default
+   *  palette (`IndustryProfile::for($industry)->defaultPalette`) instead of
+   *  every wizard-created page silently getting whichever palette this
+   *  frontend module happens to list first. */
+  theme: { brand_color: string; font_pairing: FontPairingKey; palette?: PaletteId }
   contact: { phone?: string; email?: string; address?: string }
   sections: { key: string; enabled: boolean }[]
 }
@@ -306,6 +332,10 @@ export function buildPayload(args: {
   subtext: string
   brandColor: string
   fontPairing: FontPairingKey
+  /** Absent when the tenant never opened the palette picker — see
+   *  `ApplyPayload['theme']`'s own comment on why this, alone among the
+   *  three theme fields, is never defaulted before reaching here. */
+  palette?: PaletteId
   contact: { phone: string; email: string; address: string }
   prefillContact: PrefillContact
   sections: SectionMeta[]
@@ -315,7 +345,11 @@ export function buildPayload(args: {
     template_key: args.templateKey,
     slug: args.slug,
     copy: { headline: args.headline, subtext: args.subtext },
-    theme: { brand_color: args.brandColor, font_pairing: args.fontPairing },
+    theme: {
+      brand_color: args.brandColor,
+      font_pairing: args.fontPairing,
+      ...(args.palette ? { palette: args.palette } : {}),
+    },
     contact: contactOverrides(args.contact, args.prefillContact),
     sections: args.sections.map(section => ({
       key: section.key,
