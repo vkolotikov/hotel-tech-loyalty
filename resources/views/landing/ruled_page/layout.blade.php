@@ -339,6 +339,23 @@
     // that folds --accent and --brand together would otherwise depend on
     // file order nobody had deliberately chosen.
     //
+    // The block's sixteenth line, --accent-text (Task 5, ride-along from
+    // the Task 4 review), is the accent-TEXT pointer: deep reads on a
+    // light scheme, bright on a dark one, and the six rules that colour
+    // text with the accent consume var(--accent-text) in ONE declaration —
+    // that line is what replaced their light-dark() double-declarations,
+    // removing the engine dependency entirely. It is DERIVED FROM THE DARK
+    // FLAG AT EMISSION, deliberately not a sixteenth authored key in
+    // Palette::TOKEN_KEYS: the fifteen keys are spec §3's own enumeration
+    // and stay the single source of truth for VALUES, `dark` is already a
+    // first-class Palette property, and a hand-authored sixteenth would be
+    // one more literal able to drift from the very accent-deep/-bright
+    // pair it names. It is a var() REFERENCE rather than the palette's
+    // literal hex for the same flow-through reason as the CSS :root
+    // default: the Accent block below may still override
+    // --accent-deep/--accent-bright with the tenant's own shades, and
+    // accent text must follow that override.
+    //
     // Nothing is emitted at all when $palette is null (no palette set, an
     // unrecognised id, or a hostile stored value) -- the CSS's own :root
     // porcelain default stands exactly as it did before this block
@@ -371,6 +388,7 @@
     --accent-on:{{ $palette->tokens['accent-on'] }};
     --halo:{{ $palette->tokens['halo'] }};
     --scrim:{{ $palette->tokens['scrim'] }};
+    --accent-text:var({{ $palette->dark ? '--accent-bright' : '--accent-deep' }});
 @if ($palette->dark)
     color-scheme:dark;
 @endif
@@ -459,12 +477,11 @@
     // ANCHORS come from $renderedSections — the one collection that decides
     // what renders — so a disabled or empty band can never be linked to. A
     // section is anchorable when it can NAME itself: its copy kicker, else
-    // the industry vocabulary's kicker for that key. hero has no kicker (by
-    // authorship, in every profile) and so is never an anchor — the wordmark
-    // already points at the top. The first FOUR anchorable sections, in
-    // section order, get links; the wrappers carry the section key as id
-    // (booking and contact always did; services/about/team/reviews gained
-    // theirs in this task).
+    // the industry vocabulary's kicker for that key. hero is excluded by
+    // key (see the comment on the pipeline below). The first FOUR
+    // anchorable sections, in section order, get links; the wrappers carry
+    // the section key as id (booking and contact always did;
+    // services/about/team/reviews gained theirs in Task 4).
     //
     // The CTA reuses hero.blade.php's exact two-part gate — row enabled AND
     // has() — for both candidate targets, so the nav can never point at an
@@ -475,7 +492,14 @@
         $page->content['hero']['headline'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
 
+    // hero is rejected BY KEY, not left to the kicker test (Task 5, ride-
+    // along from the Task 4 review): no profile authors a hero kicker, but
+    // content.hero.kicker is a real stored field (the hero chip prints it),
+    // and through the copy override it made hero "anchorable" — a dead
+    // `#hero` link, since the hero wrapper deliberately carries no id (the
+    // wordmark already points at the top), eating one of the four slots.
     $navAnchors = $renderedSections
+        ->reject(fn ($section) => $section->key === 'hero')
         ->map(fn ($section) => [
             'key'   => $section->key,
             'label' => trim((string) ($page->content[$section->key]['kicker'] ?? $profile->kicker($section->key))),

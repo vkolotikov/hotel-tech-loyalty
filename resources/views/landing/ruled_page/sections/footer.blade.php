@@ -33,6 +33,11 @@
     // as the business on a salon's own site. filled() rather than `??`,
     // also per the h1 chain: an empty stored string must not shadow the
     // next real candidate.
+    // Asymmetry with the NAV wordmark is deliberate: the nav's chain falls
+    // one rung further, to the hero headline, because an all-but-empty page
+    // still needs its pill to say SOMETHING at the top — down here the
+    // legal line already names a fallback, so a headline posing as a brand
+    // mark would add a claim, not information.
     $footerWordmark = collect([
         $content->contact->name,
         $page->seo['title'] ?? null,

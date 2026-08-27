@@ -2043,6 +2043,102 @@ class RuledPageRenderTest extends TestCase
     }
 
     /**
+     * Task 5 (ride-along from the Task 4 review): a stored
+     * content.hero.kicker must never make hero "anchorable". The hero
+     * wrapper deliberately carries no id — the wordmark already points at
+     * the top — so before hero was rejected by key, a tenant filling that
+     * field shipped a DEAD #hero link that also ate one of the four anchor
+     * slots (contact, the fifth anchorable band here, was pushed out).
+     */
+    public function test_a_stored_hero_kicker_never_becomes_a_nav_anchor(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero'  => ['headline' => 'The Art of Wellness', 'kicker' => 'Wellness atelier'],
+            'about' => ['body' => 'We opened Glamour Salon to slow the whole ritual down.'],
+        ]]);
+        Service::create(['organization_id' => 1, 'name' => 'Signature Facial',
+            'is_active' => true, 'price' => 65]);
+        ServiceMaster::create(['organization_id' => 1, 'name' => 'Marta Nowak', 'is_active' => true]);
+        ReviewSubmission::create([
+            'organization_id' => 1, 'overall_rating' => 5, 'comment' => 'Quiet, careful, unhurried.',
+            'anonymous_name' => 'Anna K.', 'is_featured' => true, 'submitted_at' => now(),
+        ]);
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('href="#hero"', $body,
+            'A stored hero kicker produced a dead #hero nav anchor.');
+        $this->assertMatchesRegularExpression(
+            '/<div class="nav__links">\s*'
+            . '<a href="#services">[^<]+<\/a>\s*'
+            . '<a href="#about">[^<]+<\/a>\s*'
+            . '<a href="#team">[^<]+<\/a>\s*'
+            . '<a href="#reviews">[^<]+<\/a>\s*'
+            . '<\/div>/',
+            $body,
+            'The four anchor slots must go to the four real anchorable bands, hero kicker or not.'
+        );
+    }
+
+    /**
+     * The accent-TEXT mechanism (Task 5, ride-along from the Task 4
+     * review): one token, --accent-text, replaces the six light-dark()
+     * double-declarations Task 4 shipped. Three parts to pin — the
+     * stylesheet's :root default points it at the deep shade (porcelain is
+     * light) and no color:light-dark() remains anywhere; a dark palette's
+     * inline block re-points it at var(--accent-bright); a light palette's
+     * at var(--accent-deep). Emitted as a var() REFERENCE, never the
+     * palette's literal hex, so a tenant brand colour whose Accent block
+     * overrides --accent-deep/--accent-bright still flows through it.
+     */
+    public function test_accent_text_is_one_token_pointed_per_scheme(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $this->assertStringContainsString('--accent-text:var(--accent-deep)', $css,
+            'The :root porcelain default no longer points --accent-text at the deep shade.');
+        $this->assertStringNotContainsString('color:light-dark', $css,
+            'A light-dark() double-declaration survives; the token was supposed to replace them all.');
+        $this->assertStringContainsString('color:var(--accent-text)', $css,
+            'Nothing in the stylesheet consumes --accent-text at all.');
+
+        $page = $this->published();
+
+        $page->update(['theme' => ['palette' => 'champagne_noir']]); // dark
+        $this->assertStringContainsString('--accent-text:var(--accent-bright)', $this->body(),
+            'A dark palette must point accent text at the bright shade.');
+
+        $page->update(['theme' => ['palette' => 'terracotta']]); // light
+        $this->assertStringContainsString('--accent-text:var(--accent-deep)', $this->body(),
+            'A light palette must point accent text at the deep shade.');
+    }
+
+    /**
+     * Task 5 (ride-along from the Task 4 review): body clips horizontal
+     * overflow with CLIP, never HIDDEN. overflow:hidden makes body a
+     * scroll container — the nearest scrollport for every position:sticky
+     * descendant (the services preview plate), which then "sticks" to a
+     * box that never scrolls, i.e. never sticks. clip clips the ambient
+     * glows' bleed identically and creates no scroll container. Grep-level
+     * because PHPUnit has no layout engine; reverting to hidden is the
+     * exact mutation this pins.
+     */
+    public function test_body_clips_horizontal_overflow_without_becoming_a_scroll_container(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $this->assertSame(1, preg_match('/body\.rp\{[^}]*overflow-x:clip/', $css),
+            'body.rp must clip horizontal overflow with overflow-x:clip.');
+        $this->assertDoesNotMatchRegularExpression('/body\.rp\{[^}]*overflow-x:hidden/', $css,
+            'body.rp is overflow-x:hidden again — a scroll container that breaks position:sticky.');
+    }
+
+    /**
      * A bare page — headline only, nothing else — still gets the nav (the
      * wordmark falls back to the headline the way <title> does), but with
      * no anchor row and no CTA: hero has no kicker so it is not anchorable,
@@ -2112,12 +2208,20 @@ class RuledPageRenderTest extends TestCase
      * ruled_page.js on load, so a no-JS visitor (or a blocked script) gets
      * a page where everything is simply visible. A .reveal in the shipped
      * HTML would be an element that never appears without JS.
+     *
+     * Task 5 (ride-along from the Task 4 review): the needle is the CLASS
+     * ATTRIBUTE shape, not the bare word — tenant copy is echoed into this
+     * body, and a salon whose about text contains the word "reveal" must
+     * not fail a test about a class the template never ships. class="reveal
+     * catches both class="reveal" and class="reveal something"; a reveal
+     * class appended mid-list (class="band reveal") cannot be shipped by
+     * the template either way, since no partial interpolates class lists.
      */
     public function test_the_shipped_markup_carries_no_reveal_class(): void
     {
         $this->published();
 
-        $this->assertStringNotContainsString('reveal', $this->body());
+        $this->assertStringNotContainsString('class="reveal', $this->body());
     }
 
     /**

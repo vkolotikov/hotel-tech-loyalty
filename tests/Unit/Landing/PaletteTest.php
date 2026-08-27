@@ -107,17 +107,27 @@ class PaletteTest extends TestCase
      * switching, precisely because every palette authors its accent to
      * clear the 3:1 graphics floor on its own bg. This is the test that
      * makes that a contract rather than a habit.
+     *
+     * Task 5 (ride-along from the Task 4 review) extended the floor to ALL
+     * THREE surfaces the template actually paints accent graphics over —
+     * the meter fills draw on band--ink/--paper-2 (both --bg-2 now) and
+     * the monogram mark sits on --bg-elev plates — and every palette
+     * already cleared it: the lowest measured pair across all eighteen is
+     * porcelain's accent on bg-2 at 4.01:1 (then clinic_air on bg-2 at
+     * 4.41:1); every other pair sits at 4.49:1 or higher.
      */
-    public function test_every_palettes_accent_clears_the_graphics_floor_on_its_own_background(): void
+    public function test_every_palettes_accent_clears_the_graphics_floor_on_its_own_surfaces(): void
     {
         foreach (Palette::ids() as $id) {
             $tokens = Palette::for($id)->tokens;
 
-            $this->assertGreaterThanOrEqual(
-                3.0,
-                $this->contrast($tokens['accent'], $tokens['bg']),
-                "[{$id}] accent-on-bg fails the 3:1 UI/graphics floor."
-            );
+            foreach (['bg', 'bg-2', 'bg-elev'] as $surface) {
+                $this->assertGreaterThanOrEqual(
+                    3.0,
+                    $this->contrast($tokens['accent'], $tokens[$surface]),
+                    "[{$id}] accent-on-{$surface} fails the 3:1 UI/graphics floor."
+                );
+            }
         }
     }
 

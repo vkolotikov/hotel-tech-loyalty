@@ -27,12 +27,18 @@
  *
  * ACCENT TEXT vs ACCENT GRAPHICS, the one discipline that survives every
  * palette: accent-coloured TEXT is --accent-deep on a light scheme and
- * --accent-bright on a dark one — written as a plain declaration followed
- * by a light-dark() one, so engines without light-dark() keep the deep
- * value (correct for porcelain, the no-JS/no-palette default) and everyone
- * else follows the palette's own color-scheme. Accent GRAPHICS (hairlines,
- * ticks, dots, meter fills) use --accent directly: every palette authors
- * its accent to clear 3:1 on its own bg, and PaletteTest holds them to it.
+ * --accent-bright on a dark one — carried by ONE token, --accent-text,
+ * which every accent-text rule consumes in a single declaration. The :root
+ * below points it at var(--accent-deep) (right for porcelain, the
+ * no-palette default); a curated palette's inline block re-points it from
+ * its own `dark` flag (see layout.blade.php's palette emission). Task 5
+ * replaced the previous light-dark() double-declarations with this: the
+ * engine dependency is gone entirely, and — because the token holds a
+ * var() REFERENCE, never a literal — a tenant brand colour whose Accent
+ * block overrides --accent-deep/--accent-bright still flows through it.
+ * Accent GRAPHICS (hairlines, ticks, dots, meter fills) use --accent
+ * directly: every palette authors its accent to clear 3:1 on its own
+ * bg/bg-2/bg-elev, and PaletteTest holds them to it.
  */
 
 /* --- self-hosted faces (Task 3, landing phase 3c; D3) --------------------
@@ -66,7 +72,7 @@
    one exception, requested and served as a genuine static single weight. */
 @font-face{font-family:Fraunces;font-style:normal;font-weight:300 500;font-display:swap;
   src:url('fonts/fraunces-var.woff2') format('woff2')}
-@font-face{font-family:'Inter Tight';font-style:normal;font-weight:400 600;font-display:swap;
+@font-face{font-family:'Inter Tight';font-style:normal;font-weight:300 600;font-display:swap;
   src:url('fonts/inter-tight-var.woff2') format('woff2')}
 @font-face{font-family:'IBM Plex Mono';font-style:normal;font-weight:500;font-display:swap;
   src:url('fonts/ibm-plex-mono-500.woff2') format('woff2')}
@@ -85,7 +91,9 @@
    byte-for-byte the same hexes Palette::all()['porcelain'] carries — keep
    the two in step or "no palette" and "palette: porcelain" stop rendering
    identically, which is the contract PaletteTest and the render goldens
-   both pin.
+   both pin. (--accent-text below is NOT a sixteenth authored key: it is a
+   var() pointer the layout derives from the palette's `dark` flag at
+   emission — see the header comment above and Palette::TOKEN_KEYS.)
 
    Contrast, measured (WCAG relative luminance, same maths as
    App\Support\Accent::contrast): --text 15.35:1 on --bg; --text-soft
@@ -107,6 +115,10 @@
      palette block supplies its own — see layout.blade.php) */
   --accent:#9B5C8F;  --accent-bright:#C77FB4;  --accent-deep:#7E4874;
   --accent-on:#FFFFFF;
+  /* the accent-TEXT shade for this scheme: deep on light, bright on dark.
+     A var() reference on purpose — an Accent (tenant brand colour) override
+     of --accent-deep resolves through it. Porcelain is light, so deep. */
+  --accent-text:var(--accent-deep);
   --halo:rgba(199, 127, 180, 0.3);
   --scrim:rgba(244, 246, 248, 0.72);
 
@@ -184,14 +196,21 @@
 html{scroll-behavior:smooth;overflow-x:hidden}
 /* The reference base: 17px/1.7 at weight 300 (Task 4 ride-along — the spec's
    own body weight, which `grand` was missing while the weight lived only in
-   the reference). Inter Tight's committed file spans 400..600, so on the
-   three shared pairings 300 currently resolves to the real 400 instance —
-   the declaration is still correct, and the day a 300..600 file is committed
-   nothing here needs touching; `grand`'s Inter file genuinely carries 300
-   and renders it today. position:relative so the ambient glows (aria-hidden
-   divs in the layout) size against the document rather than one viewport;
-   overflow-x hidden because those glows deliberately bleed off both edges. */
-body.rp{margin:0;position:relative;overflow-x:hidden;
+   the reference). Task 5: the Inter Tight descriptor above now declares
+   300 600 and the committed file genuinely carries it — the re-fetch the
+   Task 4 review asked for produced the byte-identical gstatic file (Google
+   serves the full 100..900 variable font for any requested range; fontTools
+   fvar re-read: wght 100/400/900), so the old 400-clamp was only ever the
+   DESCRIPTOR's 400 600 declaration, and widening it is the whole fix. All
+   four pairings now render body 300 as a real instance.
+   position:relative so the ambient glows (aria-hidden divs in the layout)
+   size against the document rather than one viewport. overflow-x CLIP, not
+   hidden (Task 4 review F1): the glows deliberately bleed off both edges,
+   but overflow:hidden makes body a SCROLL CONTAINER — the nearest scrollport
+   for every position:sticky descendant (the services preview plate), which
+   then sticks to a box that never scrolls, i.e. never sticks at all.
+   overflow:clip clips identically and creates no scroll container. */
+body.rp{margin:0;position:relative;overflow-x:clip;
   background:var(--bg);color:var(--text);
   font-family:var(--font-body);font-weight:300;font-size:var(--t-body);
   line-height:1.7;font-optical-sizing:auto;
@@ -341,8 +360,8 @@ ul,ol{margin:0;padding:0;list-style:none}
 .band--ink + .band--paper-2,
 .band--paper-2 + .band--ink{padding-top:var(--pad-seam);border-top:1px solid var(--line-soft)}
 /* Accent text on a surface: deep on light schemes, bright on dark ones —
-   see the header comment for the light-dark() fallback discipline. */
-a{color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright))}
+   one token, re-pointed per palette; see the header comment. */
+a{color:var(--accent-text)}
 :focus-visible{outline:2px solid var(--focus-core);outline-offset:3px;
   box-shadow:0 0 0 6px var(--halo)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
@@ -502,7 +521,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .band__kicker{display:flex;align-items:center;gap:10px;margin:0 0 18px;
   font-size:var(--t-kicker);line-height:1;text-transform:uppercase;
   letter-spacing:.16em;
-  color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright))}
+  color:var(--accent-text)}
 .band__kicker::before{content:"";flex:none;inline-size:12px;block-size:1px;background:var(--accent)}
 @media (min-width:1400px){
   /* Rotated with a transform rather than with writing-mode, which is not a
@@ -914,7 +933,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-book__phone{display:inline-block;margin-top:8px;font-family:Fraunces,'Fraunces fb',Georgia,serif;
   font-weight:400;font-size:clamp(1.75rem,2.8vw,2.75rem);line-height:1.1;
   letter-spacing:-.015em;text-decoration:none;
-  color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright));
+  color:var(--accent-text);
   border-bottom:1px solid var(--line);padding-bottom:4px;
   transition:border-color 160ms var(--ease)}
 .rp-book__phone:hover{border-bottom-color:var(--accent)}
@@ -951,7 +970,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   .rp-bar__call,.rp-bar__cta{display:flex;align-items:center;justify-content:center;
     min-block-size:var(--bar-h);font-size:15px;font-weight:500;text-decoration:none}
   .rp-bar__call{flex:0 0 40%;border-right:1px solid var(--line);
-    color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright))}
+    color:var(--accent-text)}
   .rp-bar__cta{flex:1 1 auto;background:var(--accent);color:var(--accent-on)}
 
   /* "The bar is occupying the bottom of the screen" -- three states have to
@@ -1018,7 +1037,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   border-bottom:1px solid var(--line);padding-bottom:4px;
   transition:color 160ms var(--ease),border-color 160ms var(--ease)}
 .rp-field__link:hover{border-bottom-color:var(--accent);
-  color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright))}
+  color:var(--accent-text)}
 
 /* The ledger. Tabular mono on both sides, so every colon lines up down the
    column without a table being asked to do it. */
@@ -1054,7 +1073,7 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-map__address,.rp-map__open{display:block;margin-top:12px;font-family:var(--mono);
   font-weight:500;font-size:var(--t-mono);letter-spacing:.06em;overflow-wrap:anywhere}
 .rp-map__open{margin-top:6px;
-  color:var(--accent-deep);color:light-dark(var(--accent-deep),var(--accent-bright))}
+  color:var(--accent-text)}
 
 @media (max-width:1099px){
   /* Three rules, not one list. Everything is one column here whatever is

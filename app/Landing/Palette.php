@@ -27,6 +27,13 @@ final class Palette
      * custom-property names; `dark` drives `color-scheme` instead and is
      * its own property below, not a sixteenth token, because `tokens` is
      * typed as a plain string map and `dark` is a bool.
+     *
+     * `--accent-text` (Task 5) is likewise NOT a sixteenth key here: the
+     * layout's palette emission derives it from `dark` at render time, as
+     * `var(--accent-bright)` on a dark palette and `var(--accent-deep)` on
+     * a light one — a pointer, never an authored literal, so this map
+     * stays the single source of truth for values and nothing new can
+     * drift from the pair it names. See layout.blade.php's palette block.
      */
     public const TOKEN_KEYS = [
         'bg', 'bg-2', 'bg-elev', 'glass',
