@@ -1077,6 +1077,15 @@ class RuledPageRenderTest extends TestCase
      * the one blank line that used to sit between the preconnects and the
      * Google stylesheet link — it now sits between the JSON-LD script and
      * the (only remaining) ruled_page.css stylesheet link instead.
+     *
+     * Task 4 update (landing phase 3c; D1/D5): re-captured DELIBERATELY for
+     * the template-shell rebuild — the shell adds the glass-pill nav (with
+     * this fixture's one anchorable section and its #contact CTA), the two
+     * ambient glow divs, the rebuilt footer, and renames the Accent
+     * emission's output keys to the spec §3 names (--accent instead of
+     * --brand). The contact band's own markup is untouched beyond none of
+     * that; the hostile/survival assertions elsewhere in this file pass
+     * against the new markup unchanged.
      */
     public function test_the_contact_band_renders_byte_identical_to_before_contactdetails(): void
     {
@@ -1107,7 +1116,7 @@ class RuledPageRenderTest extends TestCase
 
 <style nonce="TESTNONCE">
   :root{
-    --brand: #9b5c8f;
+    --accent: #9b5c8f;
   }
 </style>
 </head>
@@ -1116,6 +1125,19 @@ class RuledPageRenderTest extends TestCase
 
 <div class="rule-progress" aria-hidden="true"></div>
 
+
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__wordmark" href="#">Glamour Salon</a>
+    <div class="nav__links">
+      <a href="#contact">Finding us</a>
+    </div>
+    <a class="rp-cta rp-cta--sm nav__cta" href="#contact">Book appointment</a>
+  </div>
+</nav>
 
 
 <main>
@@ -1160,7 +1182,13 @@ class RuledPageRenderTest extends TestCase
 
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
-    <p class="rp-footer__legal">&copy; 2026 Glamour Salon</p>
+    <div class="rp-footer__top">
+      <p class="rp-footer__wordmark">Glamour Salon</p>
+      <a class="rp-cta rp-cta--sm rp-footer__cta" href="#contact">Book appointment</a>
+    </div>
+    <div class="rp-footer__bar">
+      <p class="rp-footer__legal">&copy; 2026 Glamour Salon</p>
+    </div>
   </div>
 </footer>
 
@@ -1304,6 +1332,13 @@ class RuledPageRenderTest extends TestCase
      * above — the two Google Fonts preconnects and the Google stylesheet
      * link are gone from <head>, self-hosting having moved every face into
      * ruled_page.css's own @font-face rules.
+     *
+     * Task 4 update (landing phase 3c; D1/D5): re-captured DELIBERATELY for
+     * the template-shell rebuild — nav (wordmark only here: no section on
+     * this fixture is anchorable and neither CTA target renders), ambient
+     * glow divs, the rebuilt footer (legal-only: no Property, so no
+     * wordmark), and --accent in place of --brand in the emission. The
+     * plate-absence this golden exists to pin is unchanged.
      */
     public function test_the_hero_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1330,7 +1365,7 @@ class RuledPageRenderTest extends TestCase
 
 <style nonce="TESTNONCE">
   :root{
-    --brand: #9b5c8f;
+    --accent: #9b5c8f;
   }
 </style>
 </head>
@@ -1339,6 +1374,15 @@ class RuledPageRenderTest extends TestCase
 
 <div class="rule-progress" aria-hidden="true"></div>
 
+
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__wordmark" href="#">The Art of Wellness</a>
+  </div>
+</nav>
 
 
 <main>
@@ -1354,7 +1398,9 @@ class RuledPageRenderTest extends TestCase
 
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
-    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    <div class="rp-footer__bar">
+      <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    </div>
   </div>
 </footer>
 
@@ -1385,6 +1431,13 @@ class RuledPageRenderTest extends TestCase
      * above — the two Google Fonts preconnects and the Google stylesheet
      * link are gone from <head>, self-hosting having moved every face into
      * ruled_page.css's own @font-face rules.
+     *
+     * Task 4 update (landing phase 3c; D1/D5): re-captured DELIBERATELY for
+     * the template-shell rebuild — nav (this fixture's about band is
+     * anchorable via its copy kicker, so one anchor renders), the about
+     * wrapper's new id="about", ambient glow divs, the rebuilt footer, and
+     * --accent in place of --brand. The plate-absence and column geometry
+     * this golden pins are unchanged.
      */
     public function test_the_about_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1412,7 +1465,7 @@ class RuledPageRenderTest extends TestCase
 
 <style nonce="TESTNONCE">
   :root{
-    --brand: #9b5c8f;
+    --accent: #9b5c8f;
   }
 </style>
 </head>
@@ -1421,6 +1474,18 @@ class RuledPageRenderTest extends TestCase
 
 <div class="rule-progress" aria-hidden="true"></div>
 
+
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__wordmark" href="#">The Art of Wellness</a>
+    <div class="nav__links">
+      <a href="#about">The Studio</a>
+    </div>
+  </div>
+</nav>
 
 
 <main>
@@ -1431,7 +1496,7 @@ class RuledPageRenderTest extends TestCase
             
       </div>
 </section>
-  <section data-section="about" class="band band--paper-2 rp-about">
+  <section id="about" data-section="about" class="band band--paper-2 rp-about">
   <div class="wrap rp-about__grid">
     <div class="rp-about__text">
       
@@ -1449,7 +1514,9 @@ class RuledPageRenderTest extends TestCase
 
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
-    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    <div class="rp-footer__bar">
+      <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    </div>
   </div>
 </footer>
 
@@ -1710,6 +1777,12 @@ class RuledPageRenderTest extends TestCase
      * above — the two Google Fonts preconnects and the Google stylesheet
      * link are gone from <head>, self-hosting having moved every face into
      * ruled_page.css's own @font-face rules.
+     *
+     * Task 4 update (landing phase 3c; D1/D5): re-captured DELIBERATELY for
+     * the template-shell rebuild, under ruling 3c-1's pre-authorisation for
+     * exactly this golden. What it pins is unchanged in kind: with no
+     * palette set there is still exactly ONE inline style block (--accent
+     * alone — the renamed Accent emission), never a palette block.
      */
     public function test_a_page_with_no_palette_renders_byte_identical_to_before_the_palette_system(): void
     {
@@ -1733,7 +1806,7 @@ class RuledPageRenderTest extends TestCase
 
 <style nonce="TESTNONCE">
   :root{
-    --brand: #9b5c8f;
+    --accent: #9b5c8f;
   }
 </style>
 </head>
@@ -1742,6 +1815,15 @@ class RuledPageRenderTest extends TestCase
 
 <div class="rule-progress" aria-hidden="true"></div>
 
+
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+<nav class="nav">
+  <div class="nav__inner">
+    <a class="nav__wordmark" href="#">The Art of Wellness</a>
+  </div>
+</nav>
 
 
 <main>
@@ -1756,7 +1838,9 @@ class RuledPageRenderTest extends TestCase
 
 <footer class="rp-footer" data-section="footer">
   <div class="wrap">
-    <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    <div class="rp-footer__bar">
+      <p class="rp-footer__legal">&copy; 2026 HotelLoyalty</p>
+    </div>
   </div>
 </footer>
 
