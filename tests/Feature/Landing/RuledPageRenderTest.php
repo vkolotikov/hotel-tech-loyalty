@@ -1278,6 +1278,15 @@ class RuledPageRenderTest extends TestCase
      * --brand). The contact band's own markup is untouched beyond none of
      * that; the hostile/survival assertions elsewhere in this file pass
      * against the new markup unchanged.
+     *
+     * Task 5 update (landing phase 3c; D5): re-captured DELIBERATELY for
+     * the hero rebuild — this fixture's hero now carries the em-wrapped
+     * headline, the monogram DEVICE (imageless page with a business name:
+     * "GS"), and the gold CTA inside the .rp-hero__actions wrapper. The
+     * contact band's own markup — the thing this golden exists to pin —
+     * is byte-untouched, and the capture is the renderer's own output
+     * (temporary in-test dump, spliced escaped, dump reverted), never
+     * hand-edited.
      */
     public function test_the_contact_band_renders_byte_identical_to_before_contactdetails(): void
     {
@@ -1336,10 +1345,20 @@ class RuledPageRenderTest extends TestCase
 
   <section data-section="hero" class="band rp-hero">
   <div class="wrap">
-          <h1>The Art of Wellness</h1>
-            
-          <a class="rp-cta" href="#contact">Book appointment</a>
-      </div>
+    <div class="rp-hero__grid">
+    <div class="rp-hero__content">
+              <h1>The Art of <em>Wellness</em></h1>
+                  <div class="rp-hero__actions">
+              <a class="rp-cta" href="#contact">Book appointment</a>
+                  </div>
+        </div>
+      <figure class="rp-hero__device">
+        <span class="rp-plate rp-plate--mono" aria-hidden="true">
+  <span class="rp-plate__mark">GS</span>
+  </span>
+      </figure>
+    </div>
+  </div>
 </section>
   <section id="contact" data-section="contact" class="band band--ink rp-contact">
   <div class="wrap rp-contact__grid">
@@ -1531,6 +1550,17 @@ class RuledPageRenderTest extends TestCase
      * glow divs, the rebuilt footer (legal-only: no Property, so no
      * wordmark), and --accent in place of --brand in the emission. The
      * plate-absence this golden exists to pin is unchanged.
+     *
+     * Task 5 update (landing phase 3c; D5): re-captured DELIBERATELY —
+     * this IS the imageless hero the rebuild redesigns, and the brief
+     * names this golden as the one that moves. What it pins now: the
+     * em-wrapped headline (last word), the serif-italic subtitle, and the
+     * monogram DEVICE composed from the name chain's headline fallback
+     * ("TA") — while STILL pinning the absences that always mattered: no
+     * .rp-hero__plate-img (mutation target: the unconditional plate goes
+     * red here), no --photo variant, no glow/veil/vignette layers, no
+     * chip, no CTAs. Capture is the renderer's own output (temporary
+     * in-test dump, spliced escaped, dump reverted), never hand-edited.
      */
     public function test_the_hero_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1581,10 +1611,18 @@ class RuledPageRenderTest extends TestCase
 
   <section data-section="hero" class="band rp-hero">
   <div class="wrap">
-          <h1>The Art of Wellness</h1>
+    <div class="rp-hero__grid">
+    <div class="rp-hero__content">
+              <h1>The Art of <em>Wellness</em></h1>
               <p class="rp-hero__sub">Quiet luxury, considered service.</p>
-        
-      </div>
+            </div>
+      <figure class="rp-hero__device">
+        <span class="rp-plate rp-plate--mono" aria-hidden="true">
+  <span class="rp-plate__mark">TA</span>
+  </span>
+      </figure>
+    </div>
+  </div>
 </section>
 </main>
 
@@ -1630,6 +1668,13 @@ class RuledPageRenderTest extends TestCase
      * wrapper's new id="about", ambient glow divs, the rebuilt footer, and
      * --accent in place of --brand. The plate-absence and column geometry
      * this golden pins are unchanged.
+     *
+     * Task 5 update (landing phase 3c; D5): re-captured DELIBERATELY for
+     * the hero rebuild — the hero band inside this fixture now carries the
+     * em-wrapped headline and the monogram device ("TA", headline
+     * fallback). The ABOUT band's markup — this golden's actual subject —
+     * is byte-untouched. Capture is the renderer's own output (temporary
+     * in-test dump, spliced escaped, dump reverted), never hand-edited.
      */
     public function test_the_about_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1684,9 +1729,17 @@ class RuledPageRenderTest extends TestCase
 
   <section data-section="hero" class="band rp-hero">
   <div class="wrap">
-          <h1>The Art of Wellness</h1>
-            
-      </div>
+    <div class="rp-hero__grid">
+    <div class="rp-hero__content">
+              <h1>The Art of <em>Wellness</em></h1>
+                </div>
+      <figure class="rp-hero__device">
+        <span class="rp-plate rp-plate--mono" aria-hidden="true">
+  <span class="rp-plate__mark">TA</span>
+  </span>
+      </figure>
+    </div>
+  </div>
 </section>
   <section id="about" data-section="about" class="band band--paper-2 rp-about">
   <div class="wrap rp-about__grid">
@@ -1986,6 +2039,17 @@ class RuledPageRenderTest extends TestCase
      * exactly this golden. What it pins is unchanged in kind: with no
      * palette set there is still exactly ONE inline style block (--accent
      * alone — the renamed Accent emission), never a palette block.
+     *
+     * Task 5 update (landing phase 3c; D5): re-captured DELIBERATELY for
+     * the hero rebuild (the brief flagged this golden as a likely mover:
+     * its fixture contains the hero band, which now carries the em-wrapped
+     * headline and the monogram device). What it pins is STILL unchanged
+     * in kind: exactly one inline style block, no palette block, and — new
+     * since wiring I — no --accent-text line either, because that pointer
+     * is emitted only inside a palette block and the CSS :root default
+     * covers the no-palette page. Capture is the renderer's own output
+     * (temporary in-test dump, spliced escaped, dump reverted), never
+     * hand-edited.
      */
     public function test_a_page_with_no_palette_renders_byte_identical_to_before_the_palette_system(): void
     {
@@ -2033,9 +2097,17 @@ class RuledPageRenderTest extends TestCase
 
   <section data-section="hero" class="band rp-hero">
   <div class="wrap">
-          <h1>The Art of Wellness</h1>
-            
-      </div>
+    <div class="rp-hero__grid">
+    <div class="rp-hero__content">
+              <h1>The Art of <em>Wellness</em></h1>
+                </div>
+      <figure class="rp-hero__device">
+        <span class="rp-plate rp-plate--mono" aria-hidden="true">
+  <span class="rp-plate__mark">TA</span>
+  </span>
+      </figure>
+    </div>
+  </div>
 </section>
 </main>
 
