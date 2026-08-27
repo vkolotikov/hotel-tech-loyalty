@@ -5,7 +5,9 @@ use App\Models\ChatWidgetConfig;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\Property;
+use App\Models\ReviewSubmission;
 use App\Models\Service;
+use App\Models\ServiceMaster;
 use App\Models\User;
 use App\Support\Accent;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -496,13 +498,19 @@ class RuledPageRenderTest extends TestCase
         $accent = Accent::for('#1F5FA8', '#9B5C8F');
         $this->assertTrue($accent->isDerived);
 
-        $this->assertStringContainsString('--brand: #1f5fa8;', $body);
-        $this->assertStringContainsString('--brand-on: ' . $accent->on . ';', $body);
+        // Task 4 (landing phase 3c): the emission writes the spec §3 accent
+        // names — --accent/--accent-on/--accent-deep/--accent-bright/--halo —
+        // which the rebuilt stylesheet consumes. Accent's PHP is untouched;
+        // only the template's output keys moved. --brand-hover has no
+        // successor: the rebuilt CTA's hover is a lift and a sheen, never a
+        // fill-colour change, so no hover token exists to write.
+        $this->assertStringContainsString('--accent: #1f5fa8;', $body);
+        $this->assertStringContainsString('--accent-on: ' . $accent->on . ';', $body);
         $this->assertGreaterThanOrEqual(4.5, Accent::contrast($accent->on, '#1f5fa8'));
 
-        // Nothing is left wearing the house mauve beside it: the hover fill,
-        // the halo and both text shades all move to the tenant's hue.
-        foreach (['--brand-hover', '--brand-halo', '--brand-deep', '--brand-bright'] as $token) {
+        // Nothing is left wearing the house mauve beside it: the halo and
+        // both text shades all move to the tenant's hue.
+        foreach (['--halo', '--accent-deep', '--accent-bright'] as $token) {
             $this->assertStringContainsString($token . ':', $body);
         }
         $this->assertStringNotContainsString('#7E4874', $body);
@@ -521,11 +529,11 @@ class RuledPageRenderTest extends TestCase
         $body = $this->body();
 
         $this->assertStringNotContainsString('#0078d7', strtolower($body));
-        $this->assertStringContainsString('--brand: #9b5c8f;', strtolower($body));
+        $this->assertStringContainsString('--accent: #9b5c8f;', strtolower($body));
 
         // Falling back means the stylesheet's measured house tokens govern,
         // so the layout must NOT also write derived overrides for them.
-        $this->assertStringNotContainsString('--brand-deep', $body);
+        $this->assertStringNotContainsString('--accent-deep', $body);
     }
 
     public function test_a_page_with_no_tenant_colour_leaves_the_house_tokens_alone(): void
@@ -534,8 +542,8 @@ class RuledPageRenderTest extends TestCase
 
         $body = $this->body();
 
-        $this->assertStringContainsString('--brand: #9b5c8f;', $body);
-        $this->assertStringNotContainsString('--brand-on', $body);
+        $this->assertStringContainsString('--accent: #9b5c8f;', $body);
+        $this->assertStringNotContainsString('--accent-on', $body);
     }
 
     public function test_every_inline_style_block_carries_the_request_nonce(): void
@@ -716,7 +724,7 @@ class RuledPageRenderTest extends TestCase
 
         // Dropped, not stringified: the page falls back to the house accent
         // rather than writing "Array" into a custom property.
-        $this->assertStringContainsString('--brand: #9b5c8f', $response->getContent());
+        $this->assertStringContainsString('--accent: #9b5c8f', $response->getContent());
     }
 
     public function test_a_nested_seo_title_does_not_take_the_page_down(): void
@@ -1821,5 +1829,287 @@ class RuledPageRenderTest extends TestCase
             $this->assertStringNotContainsString('--bg:', $response->getContent(),
                 "[{$label}] emitted a palette block that should not exist.");
         }
+    }
+
+    // ─── The shell (Task 4, landing phase 3c): nav, tokens, motion hooks ───
+
+    /**
+     * A page with a business name and a reachable contact band gets the
+     * glass-pill nav: wordmark (the same name chain the hero's h1 resolves)
+     * and the primary CTA anchored at booking-else-contact — beauty has no
+     * booking band (PageContent gates the widget to hotels), so #contact is
+     * the honest target here.
+     */
+    public function test_the_nav_renders_with_the_wordmark_and_cta(): void
+    {
+        $this->published();
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<nav class="nav">', $body);
+        $this->assertMatchesRegularExpression(
+            '/class="nav__wordmark"[^>]*>Glamour Salon<\/a>/',
+            $body,
+            'The nav carries no wordmark with the business name.'
+        );
+        $this->assertStringContainsString(
+            '<a class="rp-cta rp-cta--sm nav__cta" href="#contact">Book appointment</a>',
+            $body,
+            'The nav carries no CTA anchored at the contact band.'
+        );
+    }
+
+    /**
+     * The anchor row is the first FOUR rendered sections that can name
+     * themselves — a section is anchorable when it resolves a non-empty
+     * kicker label (copy override, else the industry vocabulary). With five
+     * anchorable bands rendered (services/about/team/reviews/contact), the
+     * nav lists exactly the first four, in section order, each pointing at
+     * an id the section wrapper actually carries.
+     */
+    public function test_the_nav_anchors_are_the_first_four_anchorable_sections(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['body' => 'We opened Glamour Salon to slow the whole ritual down.'],
+        ]]);
+        Service::create(['organization_id' => 1, 'name' => 'Signature Facial',
+            'is_active' => true, 'price' => 65]);
+        ServiceMaster::create(['organization_id' => 1, 'name' => 'Marta Nowak', 'is_active' => true]);
+        ReviewSubmission::create([
+            'organization_id' => 1, 'overall_rating' => 5, 'comment' => 'Quiet, careful, unhurried.',
+            'anonymous_name' => 'Anna K.', 'is_featured' => true, 'submitted_at' => now(),
+        ]);
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        // Exactly four links, in section order, and NOT the fifth
+        // anchorable band (contact) — that one is still the CTA's target,
+        // which is why the assertion pins the whole nav__links element
+        // rather than merely "no #contact anywhere".
+        $this->assertMatchesRegularExpression(
+            '/<div class="nav__links">\s*'
+            . '<a href="#services">[^<]+<\/a>\s*'
+            . '<a href="#about">[^<]+<\/a>\s*'
+            . '<a href="#team">[^<]+<\/a>\s*'
+            . '<a href="#reviews">[^<]+<\/a>\s*'
+            . '<\/div>/',
+            $body,
+            'The nav does not list exactly the first four anchorable sections in order.'
+        );
+
+        // And every anchor has a real target: the wrapper carries the key
+        // as its id.
+        foreach (['services', 'about', 'team', 'reviews'] as $key) {
+            $this->assertStringContainsString(
+                '<section id="' . $key . '" data-section="' . $key . '"',
+                $body,
+                "The {$key} wrapper carries no id for the nav anchor to land on."
+            );
+        }
+    }
+
+    /**
+     * Toggling a section off must pull its anchor: the nav reads
+     * $renderedSections, so a disabled band can never be linked to. With
+     * about disabled the fifth anchorable band (contact) moves up into the
+     * four.
+     */
+    public function test_a_disabled_section_drops_out_of_the_nav_anchors(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['body' => 'We opened Glamour Salon to slow the whole ritual down.'],
+        ]]);
+        Service::create(['organization_id' => 1, 'name' => 'Signature Facial',
+            'is_active' => true, 'price' => 65]);
+        ServiceMaster::create(['organization_id' => 1, 'name' => 'Marta Nowak', 'is_active' => true]);
+        ReviewSubmission::create([
+            'organization_id' => 1, 'overall_rating' => 5, 'comment' => 'Quiet, careful, unhurried.',
+            'anonymous_name' => 'Anna K.', 'is_featured' => true, 'submitted_at' => now(),
+        ]);
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
+            'phone' => '+371 20000000', 'is_active' => true,
+        ]);
+        $page->sections()->where('key', 'about')->update(['enabled' => false]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '/<div class="nav__links">\s*'
+            . '<a href="#services">[^<]+<\/a>\s*'
+            . '<a href="#team">[^<]+<\/a>\s*'
+            . '<a href="#reviews">[^<]+<\/a>\s*'
+            . '<a href="#contact">[^<]+<\/a>\s*'
+            . '<\/div>/',
+            $body
+        );
+        $this->assertStringNotContainsString('href="#about"', $body);
+    }
+
+    /**
+     * A bare page — headline only, nothing else — still gets the nav (the
+     * wordmark falls back to the headline the way <title> does), but with
+     * no anchor row and no CTA: hero has no kicker so it is not anchorable,
+     * and neither CTA target renders. An empty pill would be worse than a
+     * quiet one.
+     */
+    public function test_a_bare_page_gets_a_wordmark_but_no_anchors_and_no_cta(): void
+    {
+        $this->published();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<nav class="nav">', $body);
+        $this->assertMatchesRegularExpression(
+            '/class="nav__wordmark"[^>]*>The Art of Wellness<\/a>/',
+            $body
+        );
+        $this->assertStringNotContainsString('nav__links', $body);
+        $this->assertStringNotContainsString('nav__cta', $body);
+    }
+
+    /**
+     * Grep-level pins for the motion layer — stated plainly: the JS
+     * BEHAVIOUR (an IntersectionObserver adding classes, a scroll listener
+     * condensing the nav) cannot be exercised in PHPUnit, which has no DOM
+     * and no layout engine. What CAN be pinned is that every load-bearing
+     * hook ships: the condensed-nav class exists in the stylesheet, the
+     * reveal/is-visible pair exists, the reduced-motion block covers the
+     * reveals, ruled_page.js is referenced with defer, and the script
+     * carries the condense threshold and the reveal observer's threshold.
+     * Removing the condense listener (this task's stated no-red mutation)
+     * is caught here at the text level or not at all.
+     */
+    public function test_the_motion_hooks_are_pinned_in_the_static_files(): void
+    {
+        $this->published();
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '/<script src="[^"]*landing\/ruled_page\.js" defer><\/script>/',
+            $body,
+            'ruled_page.js is not referenced with defer.'
+        );
+
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+        $this->assertStringContainsString('.nav.is-condensed', $css,
+            'The stylesheet defines no condensed nav state.');
+        $this->assertStringContainsString('.reveal.is-visible', $css,
+            'The stylesheet defines no reveal/is-visible pair.');
+        $this->assertMatchesRegularExpression(
+            '/@media \(prefers-reduced-motion:\s*reduce\)[^}]*\{[^}]*\.reveal/s',
+            $css,
+            'No reduced-motion block covers the reveals.'
+        );
+
+        $js = file_get_contents(public_path('landing/ruled_page.js'));
+        $this->assertStringContainsString("'is-condensed', window.scrollY > 24", $js,
+            'The nav condense listener (scrollY > 24) is gone from ruled_page.js.');
+        $this->assertStringContainsString('threshold: 0.15', $js,
+            'The reveal observer no longer uses the 0.15 threshold.');
+        $this->assertStringContainsString("add('is-visible')", $js,
+            'Nothing in ruled_page.js ever reveals a .reveal element.');
+    }
+
+    /**
+     * The markup must stay reveal-free: the reveal class is added by
+     * ruled_page.js on load, so a no-JS visitor (or a blocked script) gets
+     * a page where everything is simply visible. A .reveal in the shipped
+     * HTML would be an element that never appears without JS.
+     */
+    public function test_the_shipped_markup_carries_no_reveal_class(): void
+    {
+        $this->published();
+
+        $this->assertStringNotContainsString('reveal', $this->body());
+    }
+
+    /**
+     * Mutation-3's tripwire: the rebuilt stylesheet consumes ONLY the spec
+     * §3 token names. A single surviving reference to the retired Appendix-B
+     * families (--paper/--ink/--brand/--muted/--warm/--on-ink/--line-dark)
+     * is a component that stops responding to palettes entirely — the
+     * palette block writes tokens nothing reads, and the retired name
+     * resolves to nothing at all now that :root no longer defines it.
+     */
+    public function test_the_stylesheet_consumes_no_retired_tokens(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        foreach ([
+            'var(--paper', 'var(--ink', 'var(--on-ink', 'var(--muted',
+            'var(--brand', 'var(--warm', 'var(--line-dark',
+        ] as $retired) {
+            $this->assertStringNotContainsString($retired, $css,
+                "The stylesheet still consumes the retired token family {$retired}…).");
+        }
+
+        // And the :root actually holds the porcelain values under the NEW
+        // names — the "no palette means porcelain" contract's other half.
+        $this->assertStringContainsString('--bg:#F4F6F8', $css);
+        $this->assertStringContainsString('--accent:#9B5C8F', $css);
+        $this->assertStringContainsString('--text:#211C29', $css);
+    }
+
+    /**
+     * Mutation-1's tripwire (Task 1 review pre-commitment): the palette
+     * block precedes the Accent block in source order, so on the one
+     * property both write — --accent — the tenant's derived brand colour
+     * wins by cascade. Pinned by final value rather than by byte offset:
+     * whatever the document looks like, the LAST --accent declared in it
+     * must be Accent's, and the palette's own accent must still be present
+     * ahead of it.
+     */
+    public function test_the_accent_block_wins_the_accent_slot_over_the_palette(): void
+    {
+        $page = $this->published();
+        $page->update(['theme' => ['palette' => 'champagne_noir', 'brand_color' => '#1F5FA8']]);
+
+        $body = $this->body();
+
+        preg_match_all('/--accent:\s*([^;]+);/', $body, $m);
+        $values = array_map('trim', $m[1]);
+
+        $this->assertNotEmpty($values, 'No --accent declaration reached the document at all.');
+        $this->assertSame('#1f5fa8', strtolower(end($values)),
+            'The LAST --accent in the document must be the tenant\'s derived colour — '
+            . 'the Accent block has to come after the palette block, or the palette clobbers it.');
+        $this->assertContains('#d8b878', $values,
+            'The palette\'s own accent should still be declared (first), ahead of the override.');
+    }
+
+    /**
+     * The other half of the same contract: with a palette chosen and NO
+     * usable tenant colour, the palette's accent must stand — the layout
+     * must NOT write the industry profile's house accent over it. (Today's
+     * fixture is beauty, whose profile accent is the porcelain mauve; were
+     * the emission unconditional, #9b5c8f would land after champagne
+     * noir's gold and win.)
+     */
+    public function test_a_palette_with_no_tenant_colour_keeps_its_own_accent(): void
+    {
+        $page = $this->published();
+        $page->update(['theme' => ['palette' => 'champagne_noir']]);
+
+        $body = $this->body();
+
+        preg_match_all('/--accent:\s*([^;]+);/', $body, $m);
+        $values = array_map('trim', $m[1]);
+
+        $this->assertSame(['#d8b878'], $values,
+            'With no tenant brand colour, the palette\'s accent must be the only '
+            . '--accent in the document — the profile\'s house accent must not clobber it.');
     }
 }

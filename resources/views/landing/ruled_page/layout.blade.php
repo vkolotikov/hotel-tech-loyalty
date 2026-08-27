@@ -383,25 +383,50 @@
      of it is a customer string and none of it can close the declaration it
      sits in.
 
-     Either the whole accent family is overridden or only --brand is. A tenant
-     colour that survived Accent's contrast test brings its own label, hover,
-     halo and the two text shades with it, so nothing on the page is left
-     wearing the house mauve next to it. A page with no tenant colour writes
-     --brand alone and lets the stylesheet's measured house tokens stand,
-     because those sit at 6.2-6.3:1 rather than at Accent's 5.5:1 target and
-     re-deriving them would quietly downgrade the default page. --}}
+     Task 4 (landing phase 3c): the OUTPUT KEYS moved to the spec §3 names
+     the rebuilt stylesheet consumes — --accent/--accent-on/--accent-deep/
+     --accent-bright/--halo. App\Support\Accent's PHP is untouched; only this
+     emission renames what it writes. Accent's `hover` member is computed but
+     no longer emitted: the rebuilt CTA's hover is a lift and a sheen, never
+     a fill-colour change, so no hover token exists in the new token set.
+
+     This block sits AFTER the palette block above BY CONTRACT (Task 1
+     review pre-commitment, restated in that block's own comment): the two
+     now genuinely collide on --accent, and a tenant colour that survived
+     Accent's contrast test must win by cascade — the tenant's brand colour
+     stays "an accent override within whichever palette is active" (D2).
+     Do not reorder the blocks.
+
+     Three states, three emissions:
+       - derived: the whole accent family, overriding palette and house
+         alike — a colour that brings its own readable label, halo and text
+         shades, so nothing is left wearing another palette's accent beside
+         it (the palette's OTHER twelve tokens — surfaces, text, lines —
+         stand untouched, which is exactly what "override within the
+         palette" means).
+       - not derived, no palette: --accent alone, the industry profile's
+         house colour, exactly the one token the old --brand emission wrote
+         — the stylesheet's measured porcelain family (deep/bright/on/halo)
+         stands for the rest, because those sit at 6.2-6.3:1 rather than at
+         Accent's 5.5:1 target and re-deriving them would quietly downgrade
+         the default page.
+       - not derived, palette chosen: NOTHING. The palette authored its own
+         complete accent family two blocks up; writing the profile's house
+         accent after it would clobber the very thing the tenant chose.
+         (RuledPageRenderTest pins both directions of this cascade.) --}}
+@if ($accent->isDerived || $palette === null)
 <style nonce="{{ $cspNonce }}">
   :root{
-    --brand: {{ $accent->brand }};
+    --accent: {{ $accent->brand }};
 @if ($accent->isDerived)
-    --brand-on: {{ $accent->on }};
-    --brand-hover: {{ $accent->hover }};
-    --brand-halo: {{ $accent->halo }};
-    --brand-deep: {{ $accent->deep }};
-    --brand-bright: {{ $accent->bright }};
+    --accent-on: {{ $accent->on }};
+    --halo: {{ $accent->halo }};
+    --accent-deep: {{ $accent->deep }};
+    --accent-bright: {{ $accent->bright }};
 @endif
   }
 </style>
+@endif
 </head>
 <body class="rp">
 
@@ -411,6 +436,80 @@
      and ruled_page.js never attaches a listener for it. --}}
 <div class="rule-progress" aria-hidden="true"></div>
 
+{{-- Two ambient glows (Task 4, D5; the reference's §ambient): soft accent
+     light bleeding in from the margins, drawn entirely by the stylesheet off
+     --halo. Pure decoration, so both are aria-hidden; absolutely positioned
+     against <body>, so they are siblings of <main> and never disturb the
+     band-adjacency combinators inside it. --}}
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+@php
+    // The shell nav (Task 4, D5): glass pill — wordmark, up to four section
+    // anchors, primary CTA. Every input is either already-whitelisted or
+    // escaped at the echo, same as everywhere else on this page.
+    //
+    // The wordmark resolves the same chain the hero's <h1> walks (name →
+    // seo.title → headline), with filled() rather than `??` for the same
+    // reason documented there: an empty string a tenant stored must not
+    // shadow the next real candidate. It deliberately does NOT fall through
+    // to config('app.name') — a nav naming US as the business on a salon's
+    // own site is the exact mistake the h1 chain already refuses.
+    //
+    // ANCHORS come from $renderedSections — the one collection that decides
+    // what renders — so a disabled or empty band can never be linked to. A
+    // section is anchorable when it can NAME itself: its copy kicker, else
+    // the industry vocabulary's kicker for that key. hero has no kicker (by
+    // authorship, in every profile) and so is never an anchor — the wordmark
+    // already points at the top. The first FOUR anchorable sections, in
+    // section order, get links; the wrappers carry the section key as id
+    // (booking and contact always did; services/about/team/reviews gained
+    // theirs in this task).
+    //
+    // The CTA reuses hero.blade.php's exact two-part gate — row enabled AND
+    // has() — for both candidate targets, so the nav can never point at an
+    // anchor the section loop is not going to render.
+    $navName = collect([
+        $content->contact->name,
+        $page->seo['title'] ?? null,
+        $page->content['hero']['headline'] ?? null,
+    ])->first(fn ($candidate) => filled($candidate));
+
+    $navAnchors = $renderedSections
+        ->map(fn ($section) => [
+            'key'   => $section->key,
+            'label' => trim((string) ($page->content[$section->key]['kicker'] ?? $profile->kicker($section->key))),
+        ])
+        ->filter(fn ($anchor) => $anchor['label'] !== '')
+        ->take(4)
+        ->values();
+
+    $navCtaHref = null;
+    if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking')) {
+        $navCtaHref = '#booking';
+    } elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact')) {
+        $navCtaHref = '#contact';
+    }
+@endphp
+@if (filled($navName) || $navAnchors->isNotEmpty() || $navCtaHref !== null)
+<nav class="nav">
+  <div class="nav__inner">
+@if (filled($navName))
+    <a class="nav__wordmark" href="#">{{ $navName }}</a>
+@endif
+@if ($navAnchors->isNotEmpty())
+    <div class="nav__links">
+@foreach ($navAnchors as $anchor)
+      <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
+@endforeach
+    </div>
+@endif
+@if ($navCtaHref !== null)
+    <a class="rp-cta rp-cta--sm nav__cta" href="{{ $navCtaHref }}">{{ $profile->primaryCta }}</a>
+@endif
+  </div>
+</nav>
+@endif
 
 {{-- <main> is the page's landmark, and it is NOT inert: the bands inside it
      are siblings of each other but not of anything outside it, so section 3.7's

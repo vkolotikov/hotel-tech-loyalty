@@ -67,7 +67,7 @@
     $aboutImage = $content->imageUrl('about');
     $kickerText = $copy['kicker'] ?? $profile->kicker('about');
 @endphp
-<section data-section="about" class="band band--paper-2 rp-about">
+<section id="about" data-section="about" class="band band--paper-2 rp-about">
   <div class="wrap rp-about__grid">
 @if ($aboutImage)
     <figure class="rp-about__plate">

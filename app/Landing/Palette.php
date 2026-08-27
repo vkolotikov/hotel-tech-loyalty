@@ -83,7 +83,12 @@ final class Palette
      * Every palette's rgb() triple behind these five was computed once at
      * authoring time (hexdec of the ten explicit tokens above) — there is
      * no runtime colour maths in this class, matching IndustryProfile's
-     * "pure data" shape. The contrast figure on each pair below is the
+     * "pure data" shape. NOTE (Task 4 review ride-along): that makes the
+     * five derived tokens AUTHORED LITERALS that must track their source
+     * hex by hand — edit bg-elev, accent-bright or bg in any palette and
+     * the matching glass/line/line-soft/halo/scrim rgb() triples below it
+     * must be recomputed in the same edit, or the derivations silently
+     * describe a colour the palette no longer contains. The contrast figure on each pair below is the
      * same WCAG relative-luminance ratio PaletteTest re-derives
      * independently (it does not call into this class's own numbers) and
      * Accent::contrast() already implements for tenant colours.

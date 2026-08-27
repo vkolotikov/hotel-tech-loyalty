@@ -99,6 +99,28 @@ class PaletteTest extends TestCase
         }
     }
 
+    /**
+     * D2's other promise: "UI accents >= 3:1". The rebuilt template (Task 4)
+     * leans on this directly — accent GRAPHICS (the meter fill, the ticks,
+     * the map dot, the monogram mark, the reading spine) are painted in
+     * var(--accent) straight onto the palette's surfaces, with no per-band
+     * switching, precisely because every palette authors its accent to
+     * clear the 3:1 graphics floor on its own bg. This is the test that
+     * makes that a contract rather than a habit.
+     */
+    public function test_every_palettes_accent_clears_the_graphics_floor_on_its_own_background(): void
+    {
+        foreach (Palette::ids() as $id) {
+            $tokens = Palette::for($id)->tokens;
+
+            $this->assertGreaterThanOrEqual(
+                3.0,
+                $this->contrast($tokens['accent'], $tokens['bg']),
+                "[{$id}] accent-on-bg fails the 3:1 UI/graphics floor."
+            );
+        }
+    }
+
     public function test_an_unknown_id_resolves_to_null(): void
     {
         $this->assertNull(Palette::for('not-a-real-palette'));

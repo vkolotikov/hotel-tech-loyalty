@@ -41,7 +41,7 @@
 
     $currencyFallback = $content->contact->currency;
 @endphp
-<section data-section="services" class="band rp-services">
+<section id="services" data-section="services" class="band rp-services">
   <div class="wrap">
     {{-- The profile supplies the word. A salon sells Treatments, a clinic
          sells Procedures. The template hardcodes neither. --}}
