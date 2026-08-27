@@ -311,6 +311,14 @@ h3{font-weight:400;font-size:var(--t-h3);line-height:1.2;letter-spacing:-.01em}
   font-family:'IBM Plex Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
   font-weight:500;letter-spacing:.02em;text-transform:uppercase;
 }
+/* Task 7 (ruling 3c-4's pairing eyeball): the hero h1's <em> is italic in
+   the heading's own face, and no IBM Plex Mono italic file is committed —
+   the browser SHEARS the upright, and a sheared geometric mono in uppercase
+   was the one rendering that read forced (Fraunces' synthetic oblique reads
+   fine at both opsz cuts, eyeballed the same round; grand's Cormorant is a
+   real italic). modern's em therefore stands ROMAN: the accent gradient and
+   the uppercase already carry the emphasis in that voice. */
+:root[data-font-pairing="modern"] .rp-hero h1 em{font-style:normal}
 :root[data-font-pairing="grand"] h1,
 :root[data-font-pairing="grand"] h2,
 :root[data-font-pairing="grand"] h3{
@@ -1164,10 +1172,14 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .rp-book__iframe{display:block;inline-size:100%;border:0;min-block-size:604px;
   block-size:604px;position:relative;z-index:1}
 /* Behind the frame, not removed by a script: covered the moment the widget
-   paints, still there if it never does. */
+   paints, still there if it never does. LIGHT literals on purpose (Task 7),
+   matching the frame's own committed #FFF/color-scheme:light: the widget
+   that paints over this is a light surface on every palette, and a
+   var(--bg-2) skeleton turned the pending state into a dark hole inside a
+   white ring on the dark palettes — the one moment the band broke scheme. */
 .rp-book__skeleton{position:absolute;inset:8px;display:grid;place-content:center;
-  background:var(--bg-2);font-family:var(--mono);font-weight:500;
-  font-size:var(--t-mono);letter-spacing:.06em;color:var(--text-soft)}
+  background:#F3F3F1;font-family:var(--mono);font-weight:500;
+  font-size:var(--t-mono);letter-spacing:.06em;color:#6E6E6A}
 
 .rp-book__or{margin-top:clamp(32px,4vw,44px);font-family:var(--mono);font-weight:500;
   font-size:var(--t-legal);text-transform:uppercase;letter-spacing:.16em;color:var(--text-soft)}
