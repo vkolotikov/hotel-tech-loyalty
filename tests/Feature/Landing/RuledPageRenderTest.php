@@ -1368,6 +1368,12 @@ class RuledPageRenderTest extends TestCase
      * is byte-untouched, and the capture is the renderer's own output
      * (temporary in-test dump, spliced escaped, dump reverted), never
      * hand-edited.
+     *
+     * F2 update (phase 3c final fix wave): re-captured DELIBERATELY — the
+     * stylesheet and script URLs now carry AssetVersion's cache-bust query
+     * string (?v=<10 hex chars of the file's own md5>), which changes
+     * whenever either file's content does. This golden's own bytes moved
+     * for that reason alone; the contact band's own markup is untouched.
      */
     public function test_the_contact_band_renders_byte_identical_to_before_contactdetails(): void
     {
@@ -1394,7 +1400,7 @@ class RuledPageRenderTest extends TestCase
 <script type="application/ld+json" nonce="TESTNONCE">
   {"@context":"https:\\/\\/schema.org","@type":"BeautySalon","name":"Glamour Salon","url":"http:\\/\\/sites.hexa-tech.uk\\/glamour-salon","address":{"@type":"PostalAddress","streetAddress":"12 Elizabetes iela","addressLocality":"Riga","addressCountry":"Latvia"},"telephone":"+371 20000000"}</script>
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1486,7 +1492,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
 
 </body>
 </html>
@@ -1642,6 +1648,11 @@ class RuledPageRenderTest extends TestCase
      * red here), no --photo variant, no glow/veil/vignette layers, no
      * chip, no CTAs. Capture is the renderer's own output (temporary
      * in-test dump, spliced escaped, dump reverted), never hand-edited.
+     *
+     * F2 update (phase 3c final fix wave): re-captured DELIBERATELY — see
+     * the identical note on test_the_contact_band_renders_byte_identical_
+     * to_before_contactdetails above. The imageless-hero markup this golden
+     * exists to pin is untouched.
      */
     public function test_the_hero_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1664,7 +1675,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1717,7 +1728,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
 
 </body>
 </html>
@@ -1756,6 +1767,11 @@ class RuledPageRenderTest extends TestCase
      * fallback). The ABOUT band's markup — this golden's actual subject —
      * is byte-untouched. Capture is the renderer's own output (temporary
      * in-test dump, spliced escaped, dump reverted), never hand-edited.
+     *
+     * F2 update (phase 3c final fix wave): re-captured DELIBERATELY — see
+     * the identical note on test_the_contact_band_renders_byte_identical_
+     * to_before_contactdetails above. The about band's own markup is
+     * untouched.
      */
     public function test_the_about_band_renders_byte_identical_with_no_image_url(): void
     {
@@ -1779,7 +1795,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1848,7 +1864,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
 
 </body>
 </html>
@@ -2169,6 +2185,14 @@ class RuledPageRenderTest extends TestCase
      * covers the no-palette page. Capture is the renderer's own output
      * (temporary in-test dump, spliced escaped, dump reverted), never
      * hand-edited.
+     *
+     * F2 update (phase 3c final fix wave): re-captured DELIBERATELY — see
+     * the identical note on test_the_contact_band_renders_byte_identical_
+     * to_before_contactdetails above. What this golden exists to pin (no
+     * palette block, porcelain stands) is unaffected: F1 also touches this
+     * exact no-palette path and, by design, changes nothing about it — see
+     * Accent's own docblock and layout.blade.php's palette-resolution
+     * comment for why.
      */
     public function test_a_page_with_no_palette_renders_byte_identical_to_before_the_palette_system(): void
     {
@@ -2188,7 +2212,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
 
 <style nonce="TESTNONCE">
   :root{
@@ -2240,7 +2264,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
 
 </body>
 </html>
