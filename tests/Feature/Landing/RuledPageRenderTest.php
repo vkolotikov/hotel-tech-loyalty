@@ -1384,7 +1384,7 @@ class RuledPageRenderTest extends TestCase
             'city' => 'Riga', 'country' => 'Latvia', 'is_active' => true,
         ]);
 
-        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+        $body = preg_replace(['/nonce="[^"]*"/', '/\?v=[0-9a-f]{10}/'], ['nonce="TESTNONCE"', '?v=ASSETHASH'], $this->body());
 
         $golden = '<!doctype html>
 <html lang="en">
@@ -1400,7 +1400,7 @@ class RuledPageRenderTest extends TestCase
 <script type="application/ld+json" nonce="TESTNONCE">
   {"@context":"https:\\/\\/schema.org","@type":"BeautySalon","name":"Glamour Salon","url":"http:\\/\\/sites.hexa-tech.uk\\/glamour-salon","address":{"@type":"PostalAddress","streetAddress":"12 Elizabetes iela","addressLocality":"Riga","addressCountry":"Latvia"},"telephone":"+371 20000000"}</script>
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ASSETHASH">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1492,7 +1492,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=ASSETHASH" defer></script>
 
 </body>
 </html>
@@ -1661,7 +1661,7 @@ class RuledPageRenderTest extends TestCase
             'hero' => ['headline' => 'The Art of Wellness', 'subtext' => 'Quiet luxury, considered service.'],
         ]]);
 
-        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+        $body = preg_replace(['/nonce="[^"]*"/', '/\?v=[0-9a-f]{10}/'], ['nonce="TESTNONCE"', '?v=ASSETHASH'], $this->body());
 
         $golden = '<!doctype html>
 <html lang="en">
@@ -1675,7 +1675,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ASSETHASH">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1728,7 +1728,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=ASSETHASH" defer></script>
 
 </body>
 </html>
@@ -1781,7 +1781,7 @@ class RuledPageRenderTest extends TestCase
             'about' => ['kicker' => 'The Studio', 'lead' => 'Considered service, unhurried.', 'body' => 'We opened Glamour Salon to slow the whole ritual down.'],
         ]]);
 
-        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+        $body = preg_replace(['/nonce="[^"]*"/', '/\?v=[0-9a-f]{10}/'], ['nonce="TESTNONCE"', '?v=ASSETHASH'], $this->body());
 
         $golden = '<!doctype html>
 <html lang="en">
@@ -1795,7 +1795,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ASSETHASH">
 
 <style nonce="TESTNONCE">
   :root{
@@ -1864,7 +1864,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=ASSETHASH" defer></script>
 
 </body>
 </html>
@@ -2198,7 +2198,7 @@ class RuledPageRenderTest extends TestCase
     {
         $this->published();
 
-        $body = preg_replace('/nonce="[^"]*"/', 'nonce="TESTNONCE"', $this->body());
+        $body = preg_replace(['/nonce="[^"]*"/', '/\?v=[0-9a-f]{10}/'], ['nonce="TESTNONCE"', '?v=ASSETHASH'], $this->body());
 
         $golden = '<!doctype html>
 <html lang="en">
@@ -2212,7 +2212,7 @@ class RuledPageRenderTest extends TestCase
 <meta property="og:type" content="website">
 <meta property="og:url" content="http://sites.hexa-tech.uk/glamour-salon">
 
-<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ae878c4349">
+<link rel="stylesheet" href="http://sites.hexa-tech.uk/landing/ruled_page.css?v=ASSETHASH">
 
 <style nonce="TESTNONCE">
   :root{
@@ -2264,7 +2264,7 @@ class RuledPageRenderTest extends TestCase
 
 
 
-<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=c1c7bbed10" defer></script>
+<script src="http://sites.hexa-tech.uk/landing/ruled_page.js?v=ASSETHASH" defer></script>
 
 </body>
 </html>
