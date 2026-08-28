@@ -235,6 +235,29 @@ export function pairingFor(id: string | null | undefined): FontPairingChoice {
   return FONT_PAIRINGS.find(p => p.id === id) ?? FONT_PAIRINGS.find(p => p.id === DEFAULT_FONT_PAIRING_ID)!
 }
 
+/**
+ * F4 (phase 3c final fix wave): narrows a possibly-invalid stored colour to
+ * something an `<input type="color">` can actually show. The native picker
+ * coerces ANYTHING that is not a strict 7-character `#rrggbb` string to
+ * `#000000` — a 3-digit short hex (`#FFF`), a bare hex with no `#`
+ * (`9B5C8F`), an `rgb()`/`hsl()` string, a named colour (`tomato`), or a
+ * garbled/legacy stored value all open the OS colour dialog on black, even
+ * though the swatch beside it (a plain CSS `backgroundColor`, which accepts
+ * a much wider grammar) still shows the real stored value — so a tenant's
+ * very first drag of that black-looking picker silently overwrote their
+ * real accent with black.
+ *
+ * Deliberately only 6-hex-digit values pass, matching `CssColor::safe()`'s
+ * own output shape server-side (`Accent::for()` re-validates the actual
+ * colour at render time regardless, so narrowing here is a UI courtesy, not
+ * a security boundary) — anything else falls back to `fallback` rather
+ * than to black, so the picker opens on a colour that is at least
+ * recognisably the tenant's palette/accent instead of an alarming void.
+ */
+export function pickerSafeHex(value: string | null | undefined, fallback: string): string {
+  return typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback
+}
+
 /** What a caller hands `themePayload` — the same three loose, possibly-
  *  absent-or-invalid fields both screens work with before this function
  *  narrows them. */

@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
 import {
-  PALETTES, FONT_PAIRINGS, paletteFor, pairingFor,
+  PALETTES, FONT_PAIRINGS, paletteFor, pairingFor, pickerSafeHex,
   type PaletteId, type FontPairingId,
 } from './designChoices'
 
@@ -203,7 +203,15 @@ export function DesignPanel({
           <input
             type="color"
             aria-label={t('landing_pages.design.color_label', 'Brand colour')}
-            value={resolvedBrandColor}
+            // F4 (phase 3c final fix wave): narrowed separately from the
+            // swatch/readout above and below, which keep showing
+            // resolvedBrandColor verbatim. `<input type="color">` coerces
+            // anything that is not a strict 6-hex-digit value to #000000 —
+            // see pickerSafeHex's own comment — so without this narrowing
+            // the picker opened black while the swatch beside it showed the
+            // real (non-#rrggbb) stored colour, and the tenant's first drag
+            // silently wrote black over their actual accent.
+            value={pickerSafeHex(resolvedBrandColor, activePalette.accent)}
             onChange={e => onBrandColorChange(e.target.value)}
             className="h-9 w-16 rounded-lg border border-dark-border bg-dark-bg cursor-pointer"
           />
