@@ -60,6 +60,24 @@
     // comment further down still owns the emission rules.
     $paletteId = is_string($page->theme['palette'] ?? null) ? $page->theme['palette'] : null;
     $palette   = \App\Landing\Palette::for($paletteId);
+
+    // F1 (phase 3c final fix wave): Accent must derive against the surface
+    // actually painted under it, not always the porcelain PAPER default it
+    // silently assumed before palettes existed -- on the three dark
+    // palettes that produced a --brand fill and a --brand-deep CTA stop
+    // both darkened toward black on top of an already-dark page, i.e. an
+    // invisible button. $accent was already resolved once, upstream, in
+    // LandingPageController::render() -- before this method knew whether a
+    // palette was even coming -- so with one resolved here it is
+    // RECOMPUTED, not merely read, using the exact same tenant hex and
+    // house default and nothing else new, plus the palette's own `bg`
+    // token as the surface. With no palette this block never runs at all,
+    // so $accent stays exactly the controller's own value and a
+    // palette-less page's tokens stay byte-identical (see
+    // RuledPageRenderTest's four golden captures).
+    if ($palette !== null) {
+        $accent = \App\Support\Accent::for($page->theme['brand_color'] ?? null, $content->profile->accent, $palette->tokens['bg']);
+    }
 @endphp
 {{--
   No pairing chosen -> `@if($fontPairing)` is false -> Blade emits nothing
@@ -342,8 +360,17 @@
      comment (why Fraunces has to be requested as a weight RANGE rather than a
      semicolon list of static instances, so --t-h3's 400 is a real instance
      and not synthesised down from 300) moved to ruled_page.css's own
-     @font-face block, next to the declarations it now governs. --}}
-<link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}">
+     @font-face block, next to the declarations it now governs.
+
+     F2 (phase 3c final fix wave): the href now carries AssetVersion's
+     content-hash query string. Before this, the URL below never changed
+     across a deploy no matter how much ruled_page.css's actual bytes did —
+     this branch rewrote the file wholesale (Task 4-7) and a returning
+     visitor's browser cache would keep serving the 3b stylesheet under the
+     3c markup forever, since nothing about the request ever looked new to
+     it. See App\Support\AssetVersion's own class comment for why a content
+     hash was chosen over filemtime. --}}
+<link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}{{ \App\Support\AssetVersion::query('landing/ruled_page.css') }}">
 @php
     // The palette itself is resolved in the TOP @php block now (Task 7:
     // <html> consumes its dark flag as data-scheme before this point in the
@@ -432,10 +459,22 @@
 
      Task 4 (landing phase 3c): the OUTPUT KEYS moved to the spec §3 names
      the rebuilt stylesheet consumes — --accent/--accent-on/--accent-deep/
-     --accent-bright/--halo. App\Support\Accent's PHP is untouched; only this
-     emission renames what it writes. Accent's `hover` member is computed but
-     no longer emitted: the rebuilt CTA's hover is a lift and a sheen, never
-     a fill-colour change, so no hover token exists in the new token set.
+     --accent-bright/--halo. Accent's `hover` member is computed but no
+     longer emitted: the rebuilt CTA's hover is a lift and a sheen, never a
+     fill-colour change, so no hover token exists in the new token set.
+
+     F1 (phase 3c final fix wave): $accent itself is now RE-resolved above,
+     in the palette-resolution block near the top of this file, against the
+     chosen palette's own `bg` token once one exists — see that block's own
+     comment. (Deliberately not spelled out with Blade's own directive name
+     here: this file's comments have to avoid the literal four characters
+     that name it, because Blade's raw-block extraction runs BEFORE comment
+     stripping and matches that literal text wherever it appears, comment
+     or not — the exact failure mode this note exists to warn the next
+     editor away from, found the hard way while writing it.) Every value
+     emitted here already carries the right direction for the surface it
+     will actually sit on; this block's own job (which state gets which
+     keys) is unchanged.
 
      This block sits AFTER the palette block above BY CONTRACT (Task 1
      review pre-commitment, restated in that block's own comment): the two
@@ -615,8 +654,14 @@
      reveal and its retract over the booking widget, the reviews index, and
      the fallback for the reading spine where scroll-driven CSS is missing.
      Everything it adds is an ENHANCEMENT — with the file blocked, removed or
-     still in flight, the page is complete and static rather than broken. --}}
-<script src="{{ asset('landing/ruled_page.js') }}" defer></script>
+     still in flight, the page is complete and static rather than broken.
+
+     F2 (phase 3c final fix wave): same AssetVersion content-hash query as
+     the stylesheet link above, and for the identical reason — this file's
+     behaviour changed wholesale in this branch too (the reveal/condense/
+     index logic Task 4-7 added), so a cached pre-3c copy under a 3c page is
+     exactly as wrong as a cached pre-3c stylesheet would be. --}}
+<script src="{{ asset('landing/ruled_page.js') }}{{ \App\Support\AssetVersion::query('landing/ruled_page.js') }}" defer></script>
 
 </body>
 </html>

@@ -326,6 +326,90 @@ class AccentTest extends TestCase
         }
     }
 
+    // ─── F1 (phase 3c final fix wave): the surface parameter ───────────────
+
+    /**
+     * The three dark palettes' own `bg` token (App\Landing\Palette::all()),
+     * named here as literals rather than resolved through Palette itself —
+     * Accent has no dependency on Palette and this fix wave should not give
+     * it one.
+     */
+    public static function darkSurfaces(): array
+    {
+        return [
+            'champagne_noir' => ['#15100b'],
+            'midnight_brass' => ['#0f1419'],
+            'slate_amber'    => ['#16181D'],
+        ];
+    }
+
+    /**
+     * Before F1, every derivation cleared contrast against the hardcoded
+     * light PAPER and moved a fill TOWARD BLACK regardless of the page it
+     * would actually sit on — on a dark palette that produced a fill (and a
+     * --brand-deep CTA gradient stop) darkened toward a near-black page, an
+     * invisible button. The surface parameter and its direction flip are
+     * the whole fix; this asserts the promise it makes on a real dark bg,
+     * crossed with a spread of brand colours that includes both ends of the
+     * cube (a very dark and a very light one) and the house colour itself.
+     */
+    #[DataProvider('darkSurfaces')]
+    public function test_the_fill_can_be_seen_against_a_dark_surface_it_sits_on(string $surface): void
+    {
+        foreach (['#1F5FA8', '#8B0000', '#111111', '#F5F5F5', '#9B5C8F', '#2E86DE'] as $hex) {
+            $accent = Accent::for($hex, self::HOUSE, $surface);
+
+            $this->assertGreaterThanOrEqual(
+                Accent::SURFACE_FLOOR,
+                Accent::contrast($accent->brand, $surface),
+                "{$hex} on dark surface {$surface}: {$accent->brand} is invisible on the page it is painted on."
+            );
+            $this->assertGreaterThanOrEqual(
+                Accent::SURFACE_FLOOR,
+                Accent::contrast($accent->hover, $surface),
+                "{$hex} on dark surface {$surface}: hover {$accent->hover} is invisible on the page it is painted on."
+            );
+        }
+    }
+
+    /**
+     * The other half of F1's promise: a fill derived to clear a DARK page
+     * must still carry a label that clears FLOOR on it, exactly as the
+     * light-surface case already asserts throughout this file. The label
+     * test itself never reads the surface (it is scored against the
+     * brand's own fill), but the fix must not have loosened it as a side
+     * effect of the direction flip.
+     */
+    #[DataProvider('darkSurfaces')]
+    public function test_the_label_can_always_be_read_on_the_fill_against_a_dark_surface(string $surface): void
+    {
+        foreach (['#1F5FA8', '#8B0000', '#111111', '#F5F5F5', '#9B5C8F', '#FFFF00', '#2E86DE'] as $hex) {
+            $accent = Accent::for($hex, self::HOUSE, $surface);
+
+            $this->assertGreaterThanOrEqual(
+                Accent::FLOOR,
+                Accent::contrast($accent->on, $accent->brand),
+                "{$hex} on dark surface {$surface}: {$accent->on} on {$accent->brand} is below the floor."
+            );
+        }
+    }
+
+    /**
+     * The regression net promised by the brief, made explicit rather than
+     * merely implied by every pre-existing test above still passing
+     * unchanged: an explicit PAPER surface must produce EXACTLY what the
+     * default (omitted) argument produces, for the whole adversarial set —
+     * PAPER is the default, not merely A default that happens to agree.
+     */
+    #[DataProvider('colours')]
+    public function test_an_explicit_paper_surface_matches_the_default(?string $hex): void
+    {
+        $this->assertEquals(
+            Accent::for($hex, self::HOUSE),
+            Accent::for($hex, self::HOUSE, self::PAPER),
+        );
+    }
+
     public function test_it_beats_the_rule_appendix_b_proposes(): void
     {
         // Appendix B 3.4: relativeLuminance(--brand) > 0.42 ? #17131E : #FFFFFF.

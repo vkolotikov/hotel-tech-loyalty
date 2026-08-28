@@ -885,6 +885,87 @@ class RuledPageRenderTest extends TestCase
         $this->assertStringContainsString("font-family:'Inter Tight fb'", $css);
     }
 
+    /**
+     * F3 (phase 3c final fix wave): every SELF-HOSTED @font-face rule this
+     * stylesheet declares (one with a real network src, not a local()-only
+     * metric-fallback face — see test_every_font_face_source_is_same_
+     * origin_and_relative for the same src:url(...) scoping) must carry an
+     * explicit unicode-range now that more than one subset exists per
+     * family — without it a browser cannot tell which of a family's several
+     * files serves which codepoints and, per spec, has to fetch every one
+     * of them for every page, which is exactly the extra-bytes-for-latin-
+     * only-tenants cost self-hosting (Task 3) was supposed to avoid paying.
+     * The metric-matched `local()`-only fallback faces ('Fraunces fb' etc.)
+     * are deliberately excluded: they never fetch a file at all, so a
+     * unicode-range on them would restrict which characters the LOCAL
+     * system font is allowed to substitute, not which network request
+     * fires — a real behaviour change this task is not making.
+     */
+    public function test_every_font_face_declares_a_unicode_range(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        preg_match_all('/@font-face\{([^}]*\bsrc:url\([^}]*)\}/', $css, $rules);
+        $this->assertNotEmpty($rules[1], 'No self-hosted @font-face rule was found at all.');
+
+        foreach ($rules[1] as $rule) {
+            $this->assertStringContainsString('unicode-range:', $rule,
+                "self-hosted @font-face rule '{$rule}' carries no unicode-range.");
+        }
+    }
+
+    /**
+     * The regression this task exists to fix: Inter Tight (the default
+     * body face), Inter (`grand`'s body face), IBM Plex Mono (`modern`'s
+     * heading face) and Cormorant Garamond (`grand`'s heading face, both
+     * styles) must each carry a genuine Cyrillic-covering @font-face now,
+     * not just a latin-only one — RU tenant body copy fell back to a
+     * system face before this fix. Fraunces is excluded on purpose: it has
+     * no Cyrillic upstream at all (see the @font-face block's own header
+     * comment and the font-pairing block's F3 note) — Russian headings in
+     * classic/editorial fell back before this branch and still do after
+     * it, which is a pre-existing gap this task does not claim to close.
+     */
+    public function test_a_cyrillic_range_is_declared_for_every_family_this_task_extends(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        foreach (["'Inter Tight'", 'Inter;', "'IBM Plex Mono'", "'Cormorant Garamond'"] as $family) {
+            $this->assertMatchesRegularExpression(
+                '/@font-face\{font-family:' . preg_quote($family, '/') . '[^}]*unicode-range:[^}]*U\+0400-045F/',
+                $css,
+                "No Cyrillic-covering @font-face was found for {$family}."
+            );
+        }
+    }
+
+    /**
+     * F2 (phase 3c final fix wave): both static assets this template links
+     * must carry AssetVersion's cache-bust query string, so a returning
+     * visitor's cached copy can never be paired with markup it predates —
+     * the two bare asset() calls this fixes never changed their URL across
+     * a deploy no matter how much the files' actual bytes did. The four
+     * byte goldens elsewhere in this file pin the exact query value for the
+     * fixtures they cover; this is the general assertion, independent of
+     * any one fixture.
+     */
+    public function test_the_stylesheet_and_script_urls_carry_a_cache_bust_version(): void
+    {
+        $this->published();
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '#<link rel="stylesheet" href="[^"]*landing/ruled_page\.css\?v=[0-9a-f]{10}">#',
+            $body,
+            'The stylesheet link carries no non-empty version query.'
+        );
+        $this->assertMatchesRegularExpression(
+            '#<script src="[^"]*landing/ruled_page\.js\?v=[0-9a-f]{10}" defer></script>#',
+            $body,
+            'The script tag carries no non-empty version query.'
+        );
+    }
+
     // ─── Stored values the renderer must survive ───────────────────
 
     /**
@@ -2490,8 +2571,11 @@ class RuledPageRenderTest extends TestCase
         $this->published();
         $body = $this->body();
 
+        // F2 (phase 3c final fix wave): the src now carries AssetVersion's
+        // cache-bust query string (?v=...), so the match can no longer
+        // assume ruled_page.js sits immediately before the closing quote.
         $this->assertMatchesRegularExpression(
-            '/<script src="[^"]*landing\/ruled_page\.js" defer><\/script>/',
+            '/<script src="[^"]*landing\/ruled_page\.js(?:\?[^"]*)?" defer><\/script>/',
             $body,
             'ruled_page.js is not referenced with defer.'
         );
@@ -2514,6 +2598,31 @@ class RuledPageRenderTest extends TestCase
             'The reveal observer no longer uses the 0.15 threshold.');
         $this->assertStringContainsString("add('is-visible')", $js,
             'Nothing in ruled_page.js ever reveals a .reveal element.');
+    }
+
+    /**
+     * F5 (phase 3c final fix wave): will-change must be scoped to the
+     * PRE-visible state, not sit on the bare .reveal rule — a revealed
+     * element that keeps a compositing hint for the rest of the page's life
+     * holds a real compositing layer open for nothing, on every element the
+     * scroll-reveal plan touches (which is most of the page — see the
+     * revealPlan array in ruled_page.js). Grep-level because PHPUnit has no
+     * layout engine to observe an actual layer promotion; the mutation this
+     * pins is putting will-change back on the bare .reveal rule.
+     */
+    public function test_will_change_is_scoped_to_the_pre_visible_reveal_state(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $this->assertSame(1, preg_match('/\.reveal:not\(\.is-visible\)\{([^}]*)\}/', $css, $rule),
+            'No .reveal:not(.is-visible) rule was found.');
+        $this->assertStringContainsString('will-change:opacity,transform', $rule[1],
+            'The pre-visible rule does not carry will-change.');
+
+        $this->assertSame(1, preg_match('/\.reveal\{([^}]*)\}/', $css, $base),
+            'No bare .reveal rule was found.');
+        $this->assertStringNotContainsString('will-change', $base[1],
+            'will-change sits on the bare .reveal rule again — it would then never clear.');
     }
 
     /**
@@ -2572,11 +2681,27 @@ class RuledPageRenderTest extends TestCase
      * whatever the document looks like, the LAST --accent declared in it
      * must be Accent's, and the palette's own accent must still be present
      * ahead of it.
+     *
+     * F1 (phase 3c final fix wave) fixture note: this used to hand-pick
+     * #1F5FA8 (a navy that survives Accent::for() against the light PAPER
+     * default). F1 makes Accent measure the tenant colour against the
+     * PALETTE'S OWN bg once one is chosen — champagne_noir's is #15100b,
+     * not PAPER — and #1F5FA8 turns out to sit in exactly the kind of dead
+     * band Accent::for() exists to catch on that specific dark bg (2.935:1
+     * against it, under the 3:1 fill floor; the clamp that pushes it toward
+     * white to clear the fill floor lands it at a point neither label
+     * clears 4.5:1 on either). That is Accent discarding a colour correctly,
+     * not a regression in this test — see AccentTest's own dark-surface
+     * coverage for the general claim. #2E86DE is used here instead purely
+     * because it is a brand colour this specific dark palette's bg accepts
+     * UNCHANGED (verified directly against Accent::for()), which is what
+     * this test needs to exercise the cascade-order claim above; it is not
+     * itself a claim about which colours survive derivation.
      */
     public function test_the_accent_block_wins_the_accent_slot_over_the_palette(): void
     {
         $page = $this->published();
-        $page->update(['theme' => ['palette' => 'champagne_noir', 'brand_color' => '#1F5FA8']]);
+        $page->update(['theme' => ['palette' => 'champagne_noir', 'brand_color' => '#2E86DE']]);
 
         $body = $this->body();
 
@@ -2584,7 +2709,7 @@ class RuledPageRenderTest extends TestCase
         $values = array_map('trim', $m[1]);
 
         $this->assertNotEmpty($values, 'No --accent declaration reached the document at all.');
-        $this->assertSame('#1f5fa8', strtolower(end($values)),
+        $this->assertSame('#2e86de', strtolower(end($values)),
             'The LAST --accent in the document must be the tenant\'s derived colour — '
             . 'the Accent block has to come after the palette block, or the palette clobbers it.');
         $this->assertContains('#d8b878', $values,
