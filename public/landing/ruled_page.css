@@ -540,9 +540,17 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
    reference's own soft-title treatment either way. */
 .rp-hero h1 em{font-style:italic;font-weight:300;color:var(--accent-text)}
 @supports ((-webkit-background-clip:text) or (background-clip:text)){
+  /* The padding/margin pair is load-bearing, not spacing. background-clip:text
+     paints the gradient only inside the element's own box, while an italic's
+     final glyph leans PAST that box -- so with text-fill-color:transparent the
+     overhanging ink got no paint and simply vanished. On the live page the
+     hero read "Get Rememberea": the d was there in the DOM, painted into
+     nothing. The padding widens the paint box and the equal negative margin
+     gives the space straight back, so the line breaks exactly where it did. */
   .rp-hero h1 em{background:linear-gradient(105deg,var(--accent-text) 0%,var(--accent) 100%);
     -webkit-background-clip:text;background-clip:text;
-    -webkit-text-fill-color:transparent;color:transparent}
+    -webkit-text-fill-color:transparent;color:transparent;
+    padding-inline-end:.12em;margin-inline-end:-.12em}
 }
 /* The chip (reference §hero__chip on tokens): the hero's kicker in the mono
    eyebrow voice, pill-cased. Fills are the accent-tinted hairline tokens —
