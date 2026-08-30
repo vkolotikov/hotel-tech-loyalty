@@ -503,17 +503,26 @@ class LandingPageAdminApiTest extends TestCase
         $this->assertSame('The Art of Wellness', $page['content']['hero']['headline']);
     }
 
-    /** A scalar leaf coerces to a string fine, whatever its type. */
+    /**
+     * A scalar leaf coerces to a string fine, whatever its type.
+     *
+     * `theme.radius`/`theme.dark` used to be part of this test too — proof
+     * that ANY flat scalar key survived under the old `array` +
+     * `ScalarLeaves(depth: 1)`-only rule. D6 (this task) deliberately closes
+     * that gap: `theme` now only accepts App\Landing\ThemeRules::keys(), so
+     * `radius`/`dark` are exactly the shape
+     * test_an_unknown_theme_key_is_refused_with_a_friendly_message covers
+     * now, and this test keeps only the half of its original proof — content
+     * leaves — that D6 does not touch.
+     */
     public function test_non_string_scalars_are_still_accepted(): void
     {
         $this->create();
 
         $page = $this->body($this->controller()->update($this->request([
-            'theme'   => ['radius' => 12, 'dark' => false],
             'content' => ['hero' => ['headline' => 0]],
         ])))['page'];
 
-        $this->assertSame(12, $page['theme']['radius']);
         $this->assertSame(0, $page['content']['hero']['headline']);
     }
 
@@ -613,6 +622,231 @@ class LandingPageAdminApiTest extends TestCase
 
         $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
         $this->assertSame('+371 20 123 456', $page['content']['contact']['phone']);
+    }
+
+    // ─── Theme allowlist (landing phase 3c, Task 2 / D6) ─────────────────
+
+    /**
+     * `theme` used to accept any flat scalar key at all
+     * (`test_non_string_scalars_are_still_accepted` proved it, with
+     * `theme.radius`/`theme.dark`). D6 closes that: only
+     * App\Landing\ThemeRules::keys() may appear, and anything else is
+     * refused with one message that never repeats the offending key back
+     * to the tenant (spec §9's "slug must never leak" rule applied here)
+     * and never falls back to Laravel's own default wording.
+     */
+    public function test_an_unknown_theme_key_is_refused_with_a_friendly_message(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'theme' => ['whatever' => 'anything'],
+            ]));
+            $this->fail('An unrecognised theme key was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['theme'][0] ?? '';
+            $this->assertSame('Please choose a valid design option.', $message);
+            $this->assertStringNotContainsString('whatever', $message);
+        }
+    }
+
+    /** Task 1's six curated ids, exercised through the write path Task 4 will render from. */
+    public function test_a_valid_palette_is_accepted_and_persisted(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['palette' => 'champagne_noir'],
+        ])))['page'];
+
+        $this->assertSame('champagne_noir', $page['theme']['palette']);
+    }
+
+    /**
+     * The message names neither the raw field path nor Laravel's own
+     * "The selected theme.palette is invalid." wording.
+     */
+    public function test_an_invalid_palette_is_refused_with_a_friendly_message(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'theme' => ['palette' => 'nope'],
+            ]));
+            $this->fail('An unrecognised palette id was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['palette'][0] ?? '';
+            $this->assertSame('Please choose one of the available looks.', $message);
+            $this->assertStringNotContainsString('nope', $message);
+            $this->assertStringNotContainsString('theme.palette', $message);
+        }
+    }
+
+    /**
+     * `font_pairing` gets the same ThemeRules allowlist as `palette` now —
+     * this endpoint never format-checked it at all before D6 (only the
+     * onboarding wizard did), so a bad value used to round-trip with a 200.
+     *
+     * `grand` used to be this test's example invalid value ("grand is Task
+     * 3, not this one") — Task 3 (landing phase 3c, D3) has now added it to
+     * `ThemeRules::FONT_PAIRINGS`, so it is a genuinely valid pairing (see
+     * `test_grand_is_accepted_as_a_font_pairing` below) and can no longer
+     * stand in for "unrecognised" here. `baroque` is not, and never will be,
+     * one of the four curated pairings.
+     */
+    public function test_an_invalid_font_pairing_is_refused_with_a_friendly_message(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'theme' => ['font_pairing' => 'baroque'],
+            ]));
+            $this->fail('An unrecognised font pairing was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['font_pairing'][0] ?? '';
+            $this->assertSame('Please choose one of the available type pairings.', $message);
+        }
+    }
+
+    /**
+     * The other half of the rename above: `grand` (Task 3, landing phase
+     * 3c, D3 — Cormorant Garamond over Inter, the reference pairing) must
+     * now round-trip through the exact same write path `editorial`,
+     * `modern` and `classic` already do — one allowlist
+     * (`ThemeRules::FONT_PAIRINGS`), no second place that has to agree.
+     */
+    public function test_grand_is_accepted_as_a_font_pairing(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['font_pairing' => 'grand'],
+        ])))['page'];
+
+        $this->assertSame('grand', $page['theme']['font_pairing']);
+    }
+
+    /**
+     * The phase-3a trap, re-pinned for `theme`: adding per-key rules must
+     * not add them as SIBLING dotted keys in the same validate() call that
+     * already validates `theme` as `array`, or
+     * `Validator::$excludeUnvalidatedArrayKeys` silently drops whichever
+     * theme keys those dotted rules do not enumerate. All three allowlisted
+     * keys, saved together, must all survive.
+     */
+    public function test_multiple_theme_keys_round_trip_together(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => [
+                'brand_color'  => '#1F5FA8',
+                'font_pairing' => 'modern',
+                'palette'      => 'porcelain',
+            ],
+        ])))['page'];
+
+        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+    }
+
+    /**
+     * The hazard this task's brief calls out explicitly: `update()` still
+     * REPLACES `theme` wholesale (same as `content`), and there is no
+     * per-key theme writer the way uploadImage()/removeImage() own
+     * `content.{slot}.image_url` — so a save that only touches ONE
+     * allowlisted key (as a future design-panel control might) must not
+     * erase the OTHER keys already on the page. Proven here the same way
+     * `test_updating_content_without_a_slug_leaves_the_address_alone`
+     * proves the equivalent guarantee for `content`.
+     */
+    public function test_a_theme_write_does_not_erase_sibling_theme_keys(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern'],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['palette' => 'porcelain'],
+        ])))['page'];
+
+        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+    }
+
+    /** A theme-only save must not touch `content` at all. */
+    public function test_a_theme_write_does_not_erase_the_content_column(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'content' => ['hero' => ['headline' => 'Quiet luxury']],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['palette' => 'porcelain'],
+        ])))['page'];
+
+        $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+    }
+
+    /**
+     * The load-bearing half of the carry-forward semantics (review fix
+     * round 1): the loop in `update()` checks `array_key_exists`, not
+     * `isset`, specifically so an EXPLICIT `null` for an allowlisted key —
+     * "clear this" — is not confused with the key being OMITTED —
+     * "leave this alone" — which `isset()` cannot tell apart (both read
+     * false for a stored `null`). This is the test that goes red the day
+     * anyone "simplifies" that check to `isset`.
+     */
+    public function test_an_explicit_null_clears_brand_color_while_omitted_keys_survive(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'theme' => ['brand_color' => null],
+        ])))['page'];
+
+        $this->assertNull($page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+    }
+
+    /**
+     * The reverse erase direction from the pair above: a save that omits
+     * `theme` entirely (never even sends the key) must leave every
+     * allowlisted key already on the page untouched — `theme` is absent
+     * from `update()`'s validated `$data` in that case, so the carry-forward
+     * block never runs and `$fresh->update($data)` never touches the column.
+     */
+    public function test_a_content_only_write_leaves_theme_intact(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+        ]));
+
+        $page = $this->body($this->controller()->update($this->request([
+            'content' => ['hero' => ['headline' => 'Quiet luxury']],
+        ])))['page'];
+
+        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
+        $this->assertSame('modern', $page['theme']['font_pairing']);
+        $this->assertSame('porcelain', $page['theme']['palette']);
+        $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
     }
 
     // ─── Web address (Task 10) ───────────────────────────────────────────

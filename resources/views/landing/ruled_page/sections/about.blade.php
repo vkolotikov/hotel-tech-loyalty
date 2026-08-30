@@ -1,28 +1,31 @@
 {{--
-  The studio (Appendix B 4.5.4).
+  The studio (Appendix B 4.5.4; frame rebuilt Task 7, landing phase 3c).
 
   A tinted band carrying one sentence set large and a body that takes a
   printed column rule once it is long enough to survive one. The signature
   detail is the letterpress opening: the first two words set in all-small-caps
   instead of a drop cap, which is refused by name.
 
-  THE IMAGE PLATE (Task 5, landing phase 3b media round). This docblock used
-  to say the plate could not be built at all — the brief's data table names
-  $copy['image_id'], and phase 1 shipped no media library to resolve an id
-  against. Task 4 landed the actual writer since then: uploadImage() stores a
-  real, already-hosted URL straight into content.about.image_url (never an
-  id), and PageContent::imageUrl('about') is the one allowlisted read of that
-  leaf — see its own docblock for the guards. So the plate below is gated on
-  THAT, not on the never-built image_id field this comment used to promise.
+  THE CINEMATIC FRAME (Task 7; spec §4, reference §media). The 3b hung plate
+  is rebuilt as the reference's 4:5 media composition: radius-lg frame with
+  the deep drop shadow, the photograph graded and easing on hover, a shine
+  overlay, the offset accent border hung behind it (the same dressing as the
+  imageless hero's monogram device — deliberate siblings), and a glass tag
+  pill carrying the BUSINESS NAME (spec §4 names that read explicitly; the
+  chain is the footer wordmark's own — contact name, else seo title, never
+  app.name — and with neither the tag is simply omitted). The old mono
+  caption repeating the kicker went with the rebuild: the kicker already
+  speaks once as the band's eyebrow, and the same words twice in one band is
+  the duplication the hero's device label ruling refused by name.
 
-  Per 4.5.4: the plate spans columns 1-4, hung off the grid at -40px on both
-  the inline-start and block-start sides so it crosses the band's own top
-  hairline, aspect-ratio 3:4, a 1px --line border, mono caption below (the
-  section's own kicker text, since there is no other tenant-authored label
-  for it). Text moves to columns 6-11 exactly when the plate renders. With no
-  image, this still renders 4.5.4's own stated no-image path — text at its
-  original measure, centred in the grid — byte-for-byte: see
-  RuledPageRenderTest's golden capture, taken before this plate existed.
+  The image itself is still gated on PageContent::imageUrl('about') — the one
+  allowlisted read of content.about.image_url; absent, stale or hostile
+  leaves all resolve to null. Text moves to columns 6-11 exactly when the
+  frame renders. With no image, this renders 4.5.4's own stated no-image
+  path — text at its original measure — byte-for-byte: see
+  RuledPageRenderTest's golden capture, which this rebuild deliberately does
+  not move (every markup change below lives inside the @if the golden's
+  fixture never enters).
 --}}
 @php
     $lead = trim((string) ($copy['lead'] ?? ''));
@@ -66,13 +69,28 @@
     // is skipped — exactly the byte-parity the golden capture above pins.
     $aboutImage = $content->imageUrl('about');
     $kickerText = $copy['kicker'] ?? $profile->kicker('about');
+
+    // The glass tag's name (Task 7): the footer wordmark's exact chain —
+    // the business's own name, else the page's seo title, never app.name
+    // (a tag naming US as the studio is the h1 mistake by another door) and
+    // never the headline (a slogan in a nameplate pill is a claim, not a
+    // name — the same rung the footer chain stops before). Null -> no tag.
+    $aboutTagName = collect([
+        $content->contact->name,
+        $page->seo['title'] ?? null,
+    ])->first(fn ($candidate) => filled($candidate));
 @endphp
-<section data-section="about" class="band band--paper-2 rp-about">
+<section id="about" data-section="about" class="band band--paper-2 rp-about">
   <div class="wrap rp-about__grid">
 @if ($aboutImage)
-    <figure class="rp-about__plate">
-      <img class="rp-about__plate-img" src="{{ $aboutImage }}" alt="" loading="lazy" decoding="async">
-      <figcaption class="rp-about__plate-caption mono">{{ $kickerText }}</figcaption>
+    <figure class="rp-about__frame">
+      <span class="rp-about__frame-media">
+        <img class="rp-about__plate-img" src="{{ $aboutImage }}" alt="" loading="lazy" decoding="async">
+        <span class="rp-about__frame-shine" aria-hidden="true"></span>
+      </span>
+@if (filled($aboutTagName))
+      <figcaption class="rp-about__frame-tag">{{ $aboutTagName }}</figcaption>
+@endif
     </figure>
 @endif
     <div @class(['rp-about__text', 'rp-about__text--shifted' => (bool) $aboutImage])>

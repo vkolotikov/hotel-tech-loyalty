@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from 'react'
+import { useEffect, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -7,10 +7,21 @@ import { ArrowLeft, ArrowRight, Check, ExternalLink, Loader2 } from 'lucide-reac
 import { api } from '../../lib/api'
 import { useBrandStore } from '../../stores/brandStore'
 import {
-  STEPS, FONT_PAIRINGS, type StepKey, type FontPairingKey, type WizardForm,
+  STEPS, type StepKey, type FontPairingKey, type WizardForm,
   emptyForm, loadDraft, saveDraft, clearDraft, buildPayload, type ApplyPayload,
 } from './landingDraft'
 import { isDataBackedSection, isOfferable, unavailableReason, SECTION_ORDER, type SectionMeta } from './sections'
+import { DesignPanel } from './DesignPanel'
+import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
+// Task 6, landing phase 3c (D4 — distinct from this file's OWN earlier
+// "Task 6 built steps 1-2" below, a different phase's numbering): the
+// self-hosted @font-face sheet DesignPanel's cards render against — see
+// that file's own header comment. Imported here (and by LandingEditor.tsx,
+// the only other screen that renders DesignPanel) so it is bundled into
+// the `LandingPages` route chunk both screens already live in (App.tsx's
+// `lazy(() => import('./pages/LandingPages'))`), never into the app
+// shell's own initial load.
+import '../../styles/landing-preview-fonts.css'
 
 /**
  * The wizard's own onboarding contract (Appendix A §7.2 house triple):
@@ -85,73 +96,6 @@ const label = 'block text-xs text-t-secondary mb-1.5'
 const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:border-primary-500 outline-none'
 
 /**
- * The exact Google Fonts request `resources/views/landing/ruled_page/layout.blade.php`
- * already makes for every published page (Fraunces variable + IBM Plex Mono
- * + Inter Tight, same axis tuple). RULING 5: the three specimen cards below
- * must show the tenant "the actual pairing", and the landing CSP allows no
- * font host but `fonts.googleapis.com`/`fonts.gstatic.com` — so this is
- * that same request, reused, not a new one. Rendered as a plain `<link>`
- * once step 3 is reached rather than fetched for every step, since steps
- * 1-2 and step 4 have no use for it.
- */
-const GOOGLE_FONTS_HREF = 'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap'
-
-const bodySampleStyle: CSSProperties = { fontFamily: "'Inter Tight', system-ui, sans-serif" }
-
-/**
- * The three pairings, mirrored 1:1 from `public/landing/ruled_page.css`'s
- * own `:root[data-font-pairing="X"]` rules — same property names, same
- * values, so a specimen card is not a good-faith approximation of what the
- * page will render, it is that rule. Only the HEADING moves per pairing;
- * body copy stays Inter Tight in all three, exactly as the stylesheet
- * leaves it (see that file's own comment on why body is left alone).
- *
- * Fix round 1 correction: `editorial` used to also declare Fraunces' SOFT
- * and WONK axes. Fraunces defines them, but `GOOGLE_FONTS_HREF` above never
- * requests them (Google Fonts serves only the axes named in the query's
- * axis list), so they were silently ignored by every browser — the
- * specimen showed a difference this build could not actually reproduce
- * on the live page. `editorial` now differs by `opsz` instead, which IS
- * in the requested axis list (`Fraunces:opsz,wght@…`) and is a real set of
- * different glyph outlines, not an approximation.
- */
-const FONT_PAIRING_SPECS: { key: FontPairingKey; name: string; headingStyle: CSSProperties }[] = [
-  {
-    key: 'classic',
-    // `name` is the ENGLISH fallback only; the render site passes it to
-    // `t('landing_pages.wizard.font_name_<key>', spec.name)`. Task 11: these
-    // three were the only bare strings left in a JSX text position anywhere
-    // in the feature, so a French tenant picking a type style read three
-    // English words on an otherwise translated screen.
-    name: 'Classic',
-    headingStyle: {
-      fontFamily: 'Fraunces, Georgia, serif',
-      fontVariationSettings: "'opsz' 144",
-    },
-  },
-  {
-    key: 'editorial',
-    name: 'Editorial',
-    headingStyle: {
-      fontFamily: 'Fraunces, Georgia, serif',
-      fontWeight: 450,
-      letterSpacing: '-0.02em',
-      fontVariationSettings: "'opsz' 30",
-    },
-  },
-  {
-    key: 'modern',
-    name: 'Modern',
-    headingStyle: {
-      fontFamily: "'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace",
-      fontWeight: 500,
-      letterSpacing: '0.02em',
-      textTransform: 'uppercase',
-    },
-  },
-]
-
-/**
  * The full wizard: pick a look, check your details, make it yours, choose
  * what to show, apply. Task 6 built steps 1-2; this task (7) adds steps 3-4
  * and the apply call that turns the form into a draft page.
@@ -224,11 +168,21 @@ export function LandingWizard(props: LandingWizardProps) {
   const email = form.email ?? prefill.email ?? ''
   const address = form.address ?? prefill.address ?? ''
   // Same fallback shape as templateKey above: nothing chosen yet defaults to
-  // the first specimen rather than leaving the picker in a genuinely
-  // unselected state, which the theme.font_pairing column has no room for
-  // anyway — the backend column is `nullable`, but a page this wizard
-  // creates always carries one of the three, exactly like template_key.
-  const fontPairing: FontPairingKey = form.font_pairing ?? FONT_PAIRINGS[0]
+  // the house pairing (`DEFAULT_FONT_PAIRING_ID` — the CSS's own no-choice
+  // face) rather than leaving the picker in a genuinely unselected state,
+  // which the theme.font_pairing column has no room for anyway — the
+  // backend column is `nullable`, but a page this wizard creates always
+  // carries one of the four, exactly like template_key.
+  const fontPairing: FontPairingKey = form.font_pairing ?? DEFAULT_FONT_PAIRING_ID
+  // Unlike fontPairing/brandColor, a palette is left GENUINELY unset until
+  // the tenant actually picks one — see `ApplyPayload['theme']`'s own
+  // comment: an untouched selection reaches `apply()` as an absent key, and
+  // `LandingOnboardingService::theme()` (landing phase 3c Task 6) fills it from the org's
+  // own industry default instead of this frontend module's own first
+  // palette. `DesignPanel` still needs SOMETHING to render the type-pairing
+  // cards' surfaces against before that choice exists, which is exactly
+  // what its own `paletteFor(undefined)` fallback is for.
+  const palette = form.palette
 
   // The brand's own logo, if it has one — read from the store the app
   // already populated (BrandSwitcher's own data), not a new request. There
@@ -297,7 +251,7 @@ export function LandingWizard(props: LandingWizardProps) {
   // `apply()` will be asked to accept; the wizard's job stops at handing it
   // back unchanged.
   const payload: ApplyPayload = buildPayload({
-    templateKey, slug: suggestedSlug, headline, subtext, brandColor, fontPairing,
+    templateKey, slug: suggestedSlug, headline, subtext, brandColor, fontPairing, palette,
     contact: { phone, email, address },
     prefillContact: { phone: prefill.phone, email: prefill.email, address: prefill.address },
     sections: sectionMetas, sectionChoices: form.sections ?? {},
@@ -530,75 +484,21 @@ export function LandingWizard(props: LandingWizardProps) {
 
       {step === 2 && (
         <div className="space-y-5">
-          {/* See GOOGLE_FONTS_HREF's own comment: the identical request the
-              live page already makes, only fetched once this step is
-              reached. */}
-          <link rel="stylesheet" href={GOOGLE_FONTS_HREF} />
-
-          <div className={card + ' space-y-3'}>
-            <span className={kicker}>{t('landing_pages.wizard.color_kicker', 'Brand colour')}</span>
-            <div className="flex items-center gap-3">
-              {/* Inline hex, deliberately: the swatch previews the exact
-                  colour the tenant is choosing (Appendix A §7.4's one
-                  named carve-out for admin chrome). */}
-              <span
-                aria-hidden
-                className="w-9 h-9 rounded-full border border-dark-border shrink-0"
-                style={{ backgroundColor: brandColor }}
-              />
-              <input
-                type="color"
-                aria-label={t('landing_pages.wizard.color_label', 'Brand colour')}
-                value={brandColor}
-                onChange={e => up('brand_color', e.target.value)}
-                className="h-9 w-16 rounded-lg border border-dark-border bg-dark-bg cursor-pointer"
-              />
-              <span className="text-xs text-t-secondary font-mono">{brandColor}</span>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <span className={kicker}>{t('landing_pages.wizard.font_kicker', 'Type style')}</span>
-            <p className="text-sm text-t-secondary leading-relaxed">
-              {t('landing_pages.wizard.font_intro', 'How your headings and body text look together. Pick the one that feels right.')}
-            </p>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              {FONT_PAIRING_SPECS.map(spec => {
-                const active = fontPairing === spec.key
-                return (
-                  <button
-                    key={spec.key}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => up('font_pairing', spec.key)}
-                    className={'text-left rounded-xl border p-4 transition-all '
-                      + (active
-                        ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-                        : 'border-dark-border bg-dark-surface hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-t-secondary">
-                        {t(`landing_pages.wizard.font_name_${spec.key}`, spec.name)}
-                      </span>
-                      {active && <Check size={16} className="text-primary-500" />}
-                    </div>
-
-                    {/* Inline font-family/weight/tracking, deliberately: this
-                        specimen literally IS the pairing the tenant is
-                        choosing, shown in their own business name — the
-                        second carve-out Appendix A §7.4 names. */}
-                    <span className="block text-lg text-white mt-3 truncate" style={spec.headingStyle}>
-                      {businessName}
-                    </span>
-                    <span className="block text-xs text-t-secondary mt-1" style={bodySampleStyle}>
-                      {t('landing_pages.wizard.font_sample', 'Quietly, unmistakably yours.')}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
+          {/* Task 6, landing phase 3c (D4): the wizard's own copy of the editor's Design
+              panel — same component, same six palettes and four pairings,
+              same self-hosted faces (../../styles/landing-preview-fonts.css,
+              imported at the top of this file). `palette` is left
+              genuinely absent until the tenant picks one here — see this
+              file's own `palette` const above for why. */}
+          <DesignPanel
+            businessName={businessName}
+            palette={palette}
+            fontPairing={fontPairing}
+            brandColor={brandColor}
+            onPaletteChange={id => up('palette', id)}
+            onFontPairingChange={id => up('font_pairing', id)}
+            onBrandColorChange={hex => up('brand_color', hex)}
+          />
 
           {logoUrl && (
             <div className={card + ' flex items-center justify-between gap-4'}>

@@ -220,7 +220,7 @@ class LandingOnboardingService
             // putting a business on the internet stays a deliberate,
             // separate act with its own button.
             'status'          => LandingPage::STATUS_DRAFT,
-            'theme'           => $this->theme($data),
+            'theme'           => $this->theme($data, $profile),
             'content'         => $this->content($data, $org, $brandId),
         ]);
 
@@ -449,12 +449,41 @@ class LandingOnboardingService
         return $chosen;
     }
 
-    /** @return array<string, string> */
-    private function theme(array $data): array
+    /**
+     * D6 (landing phase 3c Task 2): `palette` joins the two keys this
+     * method already carried through — App\Http\Controllers\Api\V1\Admin\
+     * LandingOnboardingController::store() now validates it (via
+     * App\Landing\ThemeRules::validate(), against exactly
+     * ThemeRules::keys()) the same as brand_color/font_pairing, so it must
+     * be extracted here too or a validated-and-accepted `theme.palette`
+     * would silently fail to reach the stored row — accepted by the
+     * controller, dropped by the service, the same class of bug D4's
+     * comment elsewhere in this codebase warns single-writer columns
+     * about.
+     *
+     * Task 6 (landing phase 3c, D2's own deferred half — see
+     * `App\Landing\Palette`'s header docblock: "nothing in THIS round
+     * applies it to a page"; this is that application): a tenant who never
+     * opened the wizard's palette picker submits `theme.palette` absent,
+     * not merely falsy — the wizard's own `WizardForm.palette` field stays
+     * genuinely unset until touched (see `landingDraft.ts`), so `?? null`
+     * here would otherwise store no palette at all and leave the page
+     * rendering the CSS's bare `porcelain` default regardless of industry.
+     * Falling back to `$profile->defaultPalette` instead means EVERY new
+     * page opens on a palette curated for its own industry — the
+     * education tenant above gets `slate_amber`, not a beauty salon's
+     * `champagne_noir` inherited by accident of stylesheet order — while a
+     * tenant who DID choose one keeps exactly that choice, since the `??`
+     * only ever fires on the absent/null case.
+     *
+     * @return array<string, string>
+     */
+    private function theme(array $data, IndustryProfile $profile): array
     {
         return $this->kept([
             'brand_color'  => $data['theme']['brand_color']  ?? null,
             'font_pairing' => $data['theme']['font_pairing'] ?? null,
+            'palette'      => $data['theme']['palette']      ?? $profile->defaultPalette,
         ]);
     }
 

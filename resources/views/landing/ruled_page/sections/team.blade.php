@@ -19,7 +19,7 @@
     // without a second class name per case.
     $count = $content->team->count();
 @endphp
-<section data-section="team" class="band rp-team">
+<section id="team" data-section="team" class="band rp-team">
   <div class="wrap">
     <p class="band__kicker">{{ $copy['kicker'] ?? $profile->kicker('team') }}</p>
     <h2 class="rp-team__title">{{ $copy['heading'] ?? $profile->peopleLabel }}</h2>

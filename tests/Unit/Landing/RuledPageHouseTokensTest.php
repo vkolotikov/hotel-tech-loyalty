@@ -6,111 +6,81 @@ use App\Support\Accent;
 use Tests\TestCase;
 
 /**
- * The house tokens in ruled_page.css were hand-measured against ONE colour:
- * beauty's #9B5C8F. App\Support\Accent leans on that. When a tenant supplies
- * no usable colour it reports isDerived = false, the layout writes --brand
- * alone, and every other accent token - the CTA label, the hover fill, the
- * halo, and the two text shades that carry every inline link - is left to the
- * stylesheet's hardcoded values.
+ * The house tokens in ruled_page.css — since Task 4 (landing phase 3c) the
+ * porcelain palette under the spec §3 names — were hand-measured against ONE
+ * colour: beauty's #9B5C8F. App\Support\Accent leans on that. When a tenant
+ * supplies no usable colour it reports isDerived = false, the layout writes
+ * --accent alone (and, with a curated palette chosen, nothing at all — the
+ * palette block carries its own family), and every other accent token — the
+ * CTA label, the halo, and the two text shades that carry every inline link
+ * — is left to the stylesheet's hardcoded values.
  *
  * That is correct exactly while a profile's accent IS the stylesheet's house
- * --brand — true of beauty alone, which is what the first test below now
- * checks. The industry profile round (2026-08-25) deliberately gave the other
- * eight profiles their OWN accents (spec §4.2): a page in one of them ships
- * that profile's colour underneath beauty's hardcoded label/hover/halo, with
- * nothing in the render path to notice — resolve() computes a correct label
- * for it and the template simply does not emit it while isDerived is false.
- * If the new accent fails 4.5:1 against the hardcoded white, the default page
- * for that entire industry has an unreadable call to action.
+ * --accent — true of beauty alone, which is what the first test below
+ * checks. The industry profile round (2026-08-25) deliberately gave the
+ * other eight profiles their OWN accents (spec §4.2): a page in one of them,
+ * with no palette chosen, ships that profile's colour underneath porcelain's
+ * hardcoded label/halo, with nothing in the render path to notice. If the
+ * profile accent fails 4.5:1 against the hardcoded white, the default page
+ * for that entire industry has an unreadable call to action — the failure
+ * mode the SECOND test guards for every profile, and what caught fitness's
+ * spec value (#C25A2B, 4.383:1 — under the floor); see
+ * IndustryProfile::all()'s docblock for the correction.
  *
- * That specific failure mode is what the SECOND test below still guards for
- * every profile, not just beauty — a profile accent that cannot even carry
- * the shared hardcoded label is a page-breaking regression regardless of
- * whether it also gets its own tuned CSS triple one day. It is what caught
- * fitness's spec value (#C25A2B, 4.383:1 — under the floor) during this same
- * round; see IndustryProfile::all()'s docblock for the correction.
- *
- * The FIRST test narrowed to beauty only, rather than failing for the eight
- * new profiles: that failure would be this file re-discovering a decision
- * spec §4.2 already made on purpose, not a regression. It stays here, rather
- * than being deleted, as the trigger for the two-part remedy this docblock
- * described before the round that added those profiles: either give a
- * profile its own house triple in the stylesheet (Appendix B 3.12a — this is
- * Phase 3c's design-controls work, deliberately out of scope here) or change
- * the layout to emit the derived family for that profile too. Do NOT
- * re-derive beauty's tokens to make it pass again - they are tuned, not
- * generated.
+ * The palette system is the two-part remedy this file's older docblock asked
+ * for: a profile whose accent diverges from the house triple now gets a
+ * complete curated palette (its default is authored in IndustryProfile).
+ * The first test stays anyway — porcelain's own accent drifting off
+ * beauty's profile accent would break the "no palette means porcelain"
+ * identity the goldens pin. Do NOT re-derive porcelain's tokens to make it
+ * pass again — they are tuned, not generated.
  */
 class RuledPageHouseTokensTest extends TestCase
 {
     private const STYLESHEET = 'landing/ruled_page.css';
 
-    public function test_beautys_accent_is_the_stylesheets_house_brand(): void
+    public function test_beautys_accent_is_the_stylesheets_house_accent(): void
     {
-        $house = $this->token('brand');
+        $house = $this->token('accent');
 
         $this->assertSame(
             strtolower($house),
             strtolower(IndustryProfile::all()['beauty']['accent']),
-            self::STYLESHEET . "'s hardcoded --brand: {$house} no longer matches beauty's profile"
-            . ' accent, which is the one colour the house tokens below were hand-measured against.'
+            self::STYLESHEET . "'s hardcoded --accent: {$house} no longer matches beauty's profile"
+            . ' accent, which is the one colour the house tokens were hand-measured against.'
             . " See this file's docblock."
         );
     }
 
     public function test_every_profile_accent_can_carry_the_stylesheets_house_label(): void
     {
-        $label = $this->token('brand-on');
+        $label = $this->token('accent-on');
 
         foreach (IndustryProfile::all() as $id => $data) {
             $this->assertGreaterThanOrEqual(
                 Accent::FLOOR,
                 Accent::contrast($label, $data['accent']),
                 "Profile [{$id}]'s accent {$data['accent']} cannot carry the hardcoded"
-                . " --brand-on: {$label}. Its default page would ship an unreadable CTA."
+                . " --accent-on: {$label}. Its default page would ship an unreadable CTA."
             );
         }
     }
 
     /**
-     * 4.2 line 40 bans --warm in capitals: "STATE DOT ONLY, never text, never
-     * a bar". It is 2.44:1 on paper, and the ban is worth a test because the
-     * ink band is exactly where reaching for it looks fine -- an earlier
-     * revision of the stylesheet did that, on the strength of a contrast
-     * figure for the token it replaced that turned out to be wrong.
-     *
-     * The check RESOLVES --meter rather than grepping for a spelling. An
-     * earlier version of this test looked for the literal string "var(--warm)"
-     * and measured --warm-safe regardless of what --meter actually pointed at,
-     * so `.band--ink{--meter:#F0805A}` -- the same colour, spelled as a hex --
-     * passed both halves of the guard it exists to be. Every assignment the
-     * stylesheet makes is followed through its var() chain to a hex, and it is
-     * that hex which is compared and measured.
-     */
-    public function test_no_meter_assignment_resolves_to_the_banned_warm_token(): void
-    {
-        $banned = strtolower($this->token('warm'));
-
-        foreach ($this->meterValues() as $selector => $hex) {
-            $this->assertNotSame(
-                $banned,
-                strtolower($hex),
-                "--meter resolves to {$hex} under [{$selector}], which is --warm. "
-                . '4.2 bans it on a bar however it is spelled. Use --warm-safe, or add '
-                . 'a third measured token -- never the banned one.'
-            );
-        }
-    }
-
-    /**
-     * And whatever it does resolve to clears the 3:1 floor a graphical object
-     * needs, on every surface the page paints it over. Measured against the
-     * resolved value, so a new token cannot be introduced without being held
-     * to the figure that made --warm-safe acceptable in the first place.
+     * Whatever --meter resolves to must clear the 3:1 floor a graphical
+     * object needs, on every surface the page paints it over. Under the
+     * palette system --meter is var(--accent) by design — PaletteTest holds
+     * every CURATED palette's accent to the same floor on its own bg; this
+     * test holds the porcelain defaults the stylesheet itself ships, and it
+     * RESOLVES the var() chain rather than grepping for a spelling, so a
+     * new hex smuggled in as `--meter:#F0805A` is measured exactly like the
+     * token it replaced. (The old --warm ban died with the old token set:
+     * no --warm exists to reach for any more, and this floor is the rule
+     * that made the ban matter.)
      */
     public function test_every_meter_assignment_clears_the_graphics_floor(): void
     {
-        $surfaces = ['paper', 'paper-2', 'ink', 'ink-2'];
+        $surfaces = ['bg', 'bg-2', 'bg-elev'];
 
         foreach ($this->meterValues() as $selector => $hex) {
             foreach ($surfaces as $surface) {
@@ -182,7 +152,7 @@ class RuledPageHouseTokensTest extends TestCase
 
         $this->assertNotFalse($css, self::STYLESHEET . ' is missing.');
 
-        // The trailing (?!-) is what keeps --brand from matching --brand-deep.
+        // The trailing (?!-) is what keeps --accent from matching --accent-deep.
         $found = preg_match('/--' . preg_quote($name, '/') . '(?!-)\s*:\s*(#[0-9a-fA-F]{3,8})/', $css, $m);
 
         $this->assertSame(1, $found, "--{$name} is not declared as a hex in " . self::STYLESHEET);

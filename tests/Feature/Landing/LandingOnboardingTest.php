@@ -893,6 +893,94 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('editorial', $page->theme['font_pairing']);
     }
 
+    // ─── Theme allowlist (landing phase 3c, Task 2 / D6) ─────────────────
+
+    /**
+     * The twin of LandingPageAdminApiTest's own version of this test: the
+     * two write surfaces share App\Landing\ThemeRules, so an unrecognised
+     * theme key must be refused here the same way, with the same message.
+     */
+    public function test_apply_refuses_an_unknown_theme_key_with_a_friendly_message(): void
+    {
+        $this->makeProperty();
+
+        try {
+            $this->apply($this->validPayload([
+                'theme' => ['whatever' => 'anything'],
+            ]));
+            $this->fail('An unrecognised theme key was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['theme'][0] ?? '';
+            $this->assertSame('Please choose a valid design option.', $message);
+            $this->assertStringNotContainsString('whatever', $message);
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+    }
+
+    /**
+     * Task 1's `palette` reaches the stored row through the wizard too —
+     * proof that LandingOnboardingService::theme() was updated to carry it
+     * through, not only that the controller's validation accepts it.
+     */
+    public function test_apply_accepts_and_stores_a_valid_palette(): void
+    {
+        $this->makeProperty();
+
+        $this->apply($this->validPayload([
+            'theme' => ['brand_color' => '#1f5fa8', 'font_pairing' => 'editorial', 'palette' => 'midnight_brass'],
+        ]));
+
+        $page = LandingPage::first();
+
+        $this->assertSame('midnight_brass', $page->theme['palette']);
+    }
+
+    /**
+     * Task 6 (D2's deferred application, landing phase 3c): a tenant who
+     * never opens the palette picker still gets a page that fits its own
+     * industry — `theme.palette` stores `IndustryProfile::for($industry)
+     * ->defaultPalette`, not nothing at all. `validPayload()`'s own
+     * `theme` never sets `palette` (only `brand_color`/`font_pairing`),
+     * so this is exactly the "tenant made no choice" case; 'education' is
+     * used (rather than the fixture org's own default 'beauty') because
+     * its default, `slate_amber`, is unmistakably different from every
+     * other industry's — a wrong industry->palette mapping fails loud
+     * here rather than by accident matching beauty's `champagne_noir`.
+     */
+    public function test_apply_with_no_palette_choice_stores_the_industrys_own_default(): void
+    {
+        $org  = $this->makeOrg('Learning Loft', 'education');
+        $user = $this->makeUser($org);
+        $this->actAs($user, $this->defaultBrandId($org));
+
+        $this->makeProperty(['name' => 'Learning Loft']);
+
+        $this->apply($this->validPayload(['slug' => 'learning-loft']));
+
+        $page = LandingPage::where('slug', 'learning-loft')->first();
+
+        $this->assertSame('slate_amber', $page->theme['palette']);
+        $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
+    }
+
+    public function test_apply_refuses_an_invalid_palette_with_a_friendly_message(): void
+    {
+        $this->makeProperty();
+
+        try {
+            $this->apply($this->validPayload([
+                'theme' => ['palette' => 'nope'],
+            ]));
+            $this->fail('An unrecognised palette id was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['palette'][0] ?? '';
+            $this->assertSame('Please choose one of the available looks.', $message);
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+    }
+
     /**
      * Task 2's whole point: content.contact must hold ONLY the fields the
      * tenant actually changed from what the page would otherwise publish.

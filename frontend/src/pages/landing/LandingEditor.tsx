@@ -14,6 +14,17 @@ import {
 import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
+import { DesignPanel } from './DesignPanel'
+import { themePayload } from './designChoices'
+// Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
+// file's photo controls below still refer to by that same number): the
+// self-hosted @font-face sheet DesignPanel's cards render against, see
+// that file's own header comment. Imported here (and by LandingWizard.tsx,
+// the only other screen that renders DesignPanel) so it is bundled into
+// the `LandingPages` route chunk both screens already live in (App.tsx's
+// `lazy(() => import('./pages/LandingPages'))`), never into the app
+// shell's own initial load.
+import '../../styles/landing-preview-fonts.css'
 
 /**
  * The row shape `GET /v1/admin/landing-pages` (`show`) returns for the
@@ -157,7 +168,7 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
   // globally, not per component instance) cannot hand this mount a
   // sibling brand's cached page for the instant before its own fetch
   // resolves.
-  const { currentBrandId } = useBrandStore()
+  const { currentBrandId, currentBrand } = useBrandStore()
 
   const { data: page, isLoading, error, refetch } = useQuery<LandingPageDTO>({
     queryKey: ['landing-page', currentBrandId],
@@ -182,6 +193,40 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
     const sectionCopy = { ...(f.content?.[sectionKey] ?? {}), [field]: value }
     update('content', { ...(f.content ?? {}), [sectionKey]: sectionCopy })
   }
+
+  // Task 6 (landing phase 3c, D4): the three theme keys the Design panel
+  // owns, narrowed from `f.theme` (an untyped `Record<string, unknown> |
+  // null` — the raw JSON column, Task 1 interfaces) the same way `imageUrl`
+  // narrows its own raw leaf a few lines below with `safeImageUrl` — a
+  // legal non-string leaf must fall through to "unset" here rather than
+  // reach `DesignPanel`'s string-typed props.
+  const themeFields = {
+    palette: typeof f.theme?.palette === 'string' ? f.theme.palette : undefined,
+    font_pairing: typeof f.theme?.font_pairing === 'string' ? f.theme.font_pairing : undefined,
+    brand_color: typeof f.theme?.brand_color === 'string' ? f.theme.brand_color : undefined,
+  }
+
+  // Merges one theme field into whatever the OTHER two currently hold —
+  // never a bare `{ [key]: value }`, which would silently drop a sibling
+  // field the tenant set in an earlier, still-unsaved edit this same
+  // session (`f.theme` already carries every prior queued change via
+  // `update`'s own `{...(p ?? page ?? {})}` merge). `themePayload` is the
+  // same allowlist-narrowing function `designChoices.test.ts` pins — used
+  // here, not only at `saveMut`'s wire boundary, so a stray key can never
+  // enter `form.theme` in the first place. Setting `form` (via `update`)
+  // is what flips `dirty` true, exactly like every other field on this
+  // screen — Save still has to be pressed; nothing here is a Task 4-style
+  // straight-to-server write.
+  const updateTheme = (patch: Partial<typeof themeFields>) =>
+    update('theme', themePayload({ ...themeFields, ...patch }))
+
+  // The best business name this screen can honestly show in a card — the
+  // page itself carries no such field (theme/content have no "name"),
+  // so the brand's own name (BrandSwitcher's own data, already loaded) is
+  // the equivalent of the wizard's `prefill.business_name`. Falls back to
+  // the same generic word the wizard uses for the same reason (an org with
+  // no BrandSummary yet, or "All brands" mode).
+  const businessName = currentBrand()?.name || t('landing_pages.wizard.your_business', 'your business')
 
   const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability)
 
@@ -450,6 +495,27 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <div className="xl:col-span-7 space-y-5 min-w-0">
+          {/*
+            Task 6 (landing phase 3c, D4): the Design panel, above the
+            section list per the spec — palette + type-pairing cards and
+            the brand-colour input, all saved through the SAME text-save
+            path every other field on this screen already uses (`update` +
+            the sticky Save button below); `image_url` handling is
+            untouched (D4's one-writer rule stays with the photo controls).
+          */}
+          <div className={card + ' space-y-5'}>
+            <h2 className="text-sm font-semibold text-white">{t('landing_pages.design.title', 'Design')}</h2>
+            <DesignPanel
+              businessName={businessName}
+              palette={themeFields.palette}
+              fontPairing={themeFields.font_pairing}
+              brandColor={themeFields.brand_color}
+              onPaletteChange={id => updateTheme({ palette: id })}
+              onFontPairingChange={id => updateTheme({ font_pairing: id })}
+              onBrandColorChange={hex => updateTheme({ brand_color: hex })}
+            />
+          </div>
+
           <div className="space-y-3">
             {rows.map((row, i) => (
               <SectionRow

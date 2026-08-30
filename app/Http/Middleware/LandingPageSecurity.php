@@ -83,8 +83,14 @@ class LandingPageSecurity
             "frame-ancestors {$frameAncestors}",
             "object-src 'none'",
             "script-src 'self'",
-            "style-src 'self' 'nonce-{$nonce}' https://fonts.googleapis.com",
-            "font-src 'self' https://fonts.gstatic.com",
+            // Task 3 (landing phase 3c; D3): both Google Fonts hosts are
+            // gone. Every face the landing template uses is self-hosted
+            // woff2 under public/landing/fonts/, declared by @font-face
+            // rules in ruled_page.css itself -- style-src needs the nonce
+            // for the tenant-derived token blocks and nothing external any
+            // more, and font-src needs no external host at all.
+            "style-src 'self' 'nonce-{$nonce}'",
+            "font-src 'self'",
             "img-src 'self' data: https:",
             "connect-src 'self'",
             // The booking, services, review and lead-form widgets are iframed

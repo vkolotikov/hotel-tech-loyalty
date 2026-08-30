@@ -113,14 +113,21 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringNotContainsString('data-section="services"', $this->body());
     }
 
-    public function test_the_preview_plate_is_omitted_when_no_service_has_an_image(): void
+    /**
+     * Task 7 (pillar rebuild): the sticky preview plate is gone; a row's
+     * photograph is a small square plate trailing the row itself, rendered
+     * ONLY for rows that actually have one. An imageless studio gets clean
+     * pillars — no shot spans, no monogram column.
+     */
+    public function test_no_shot_plate_renders_when_no_service_has_an_image(): void
     {
-        // A sticky plate with nothing in it is a hole in the page. The menu
-        // takes the full width instead.
         $this->published();
         Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true, 'image' => null]);
 
-        $this->assertStringNotContainsString('rp-services__plate', $this->body());
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('rp-pillar__shot', $body);
+        $this->assertStringNotContainsString('rp-pillar--shot', $body);
     }
 
     // ── about ───────────────────────────────────────────────────────────────
@@ -720,41 +727,34 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringContainsString('aria-label="Review 2 of 2"', $body);
     }
 
-    // ── the preview plate and its mobile stand-in ───────────────────────────
+    // ── the trailing shot plates (Task 7: the pillar rebuild) ───────────────
 
-    public function test_two_services_with_a_photograph_keep_the_plate_beside_the_menu(): void
+    public function test_a_row_with_a_photograph_carries_its_trailing_shot_plate(): void
     {
-        // is-narrow collapses the grid to one column, and it used to be ORed
-        // with the under-three-rows test — which stacked a 3:4 sticky plate
-        // full-width underneath a one-column menu at every width over 900px.
+        // The shot travels ON its own row — the row takes the --shot
+        // modifier (the third grid column exists only where a plate does)
+        // and exactly the rows with images render one.
         $this->published();
         Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true, 'image' => '/storage/a.jpg']);
         Service::create(['organization_id' => 1, 'name' => 'Massage', 'is_active' => true]);
 
         $body = $this->body();
 
-        $this->assertStringContainsString('rp-services__plate', $body);
-        $this->assertStringContainsString('is-tight', $body);
-        $this->assertStringNotContainsString('is-narrow', $body);
-    }
-
-    public function test_a_menu_with_no_photographs_collapses_and_frames_nothing(): void
-    {
-        $this->published();
-        Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true]);
-
-        $body = $this->body();
-
-        $this->assertStringContainsString('is-narrow', $body);
-        $this->assertStringNotContainsString('rp-services__plate', $body);
-        $this->assertStringNotContainsString('rp-service__thumb', $body);
+        $this->assertStringContainsString('class="rp-pillar rp-pillar--shot"', $body);
+        $this->assertSame(1, substr_count($body, 'rp-pillar__shot"'),
+            'Exactly the one row with a photograph should carry a shot plate.');
+        $this->assertStringNotContainsString('rp-services__plate', $body,
+            'The old sticky preview-plate column must not come back.');
     }
 
     public function test_service_photography_survives_on_mobile(): void
     {
-        // The sticky plate is display:none below 900px. Without an inline
-        // stand-in the tenant's photography is simply absent on the screen
-        // most of their customers use.
+        // Task 7: the old desktop sticky plate / mobile thumb split is gone —
+        // the trailing shot plate IS the presentation at every width, one
+        // markup, and no media rule may ever hide it (the same house
+        // mobile-parity rule the hero image test enforces). Each photograph
+        // therefore appears exactly ONCE, and rows without one render no
+        // monogram stand-in.
         $this->published();
         Service::create(['organization_id' => 1, 'name' => 'Facial', 'is_active' => true, 'image' => '/storage/a.jpg']);
         Service::create(['organization_id' => 1, 'name' => 'Massage', 'is_active' => true, 'image' => '/storage/b.jpg']);
@@ -762,10 +762,19 @@ class RuledPageSectionsTest extends TestCase
 
         $body = $this->body();
 
-        $this->assertSame(3, substr_count($body, 'rp-service__thumb'),
-            'Every row needs a thumb, or the plate and the rows fall out of step.');
-        // Twice each: once in the row thumb, once in the sticky plate.
-        $this->assertSame(2, substr_count($body, '/storage/a.jpg'));
+        $this->assertSame(2, substr_count($body, 'rp-pillar__shot"'),
+            'Exactly the two rows with photographs should carry shot plates.');
+        $this->assertSame(1, substr_count($body, '/storage/a.jpg'));
+        $this->assertSame(1, substr_count($body, '/storage/b.jpg'));
+
+        // The parity half, grep-level (no layout engine here): nothing in
+        // the stylesheet may hide the shot plate at any width.
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.rp-pillar__shot[^{]*\{[^}]*display:\s*none/',
+            $css,
+            'A rule hides the service photography — the shot plate must survive every viewport.'
+        );
     }
 
     // ── the contact band's columns ──────────────────────────────────────────

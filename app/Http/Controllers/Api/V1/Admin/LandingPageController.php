@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
+use App\Landing\ThemeRules;
 use App\Models\LandingPage;
 use App\Rules\MaxImageDimensions;
 use App\Rules\ScalarLeaves;
@@ -271,6 +272,31 @@ class LandingPageController extends Controller
             ])->validate();
         }
 
+        // D6 (landing phase 3c): `theme` gets an allowlist -- exactly
+        // App\Landing\ThemeRules::keys(), each with its own format/allowlist
+        // rule (ThemeRules::rules()). Before this, `theme` was constrained
+        // only by `array` + `ScalarLeaves(depth: 1)` above -- SHAPE, not
+        // membership or FORMAT -- so any flat scalar key was silently
+        // accepted (`theme.radius`, `theme.dark`, a `font_pairing` value
+        // outside the three curated ones, all round-tripped with a 200).
+        //
+        // ThemeRules::validate() runs as its own Validator instance for the
+        // identical reason the $contact block above is one: adding
+        // 'theme.palette' etc. as SIBLING rule keys to the SAME validate()
+        // call above would trip Validator::$excludeUnvalidatedArrayKeys the
+        // moment `theme` carries a key those dotted rules do not enumerate
+        // -- the phase-3a trap, applied to `theme` instead of `content` (see
+        // ThemeRules::validate()'s own docblock for the full reasoning).
+        //
+        // Only `is_array()`, never assumed: theme may legitimately be a
+        // plain non-array scalar on data written before this column had a
+        // shape at all, same reasoning as $contact above.
+        $theme = $data['theme'] ?? null;
+
+        if (is_array($theme)) {
+            ThemeRules::validate($theme);
+        }
+
         if (isset($data['slug'])) {
             $data['slug'] = LandingPageGuard::validatedSlug($data['slug'], $page->id);
         }
@@ -333,6 +359,39 @@ class LandingPageController extends Controller
 
                         if (!array_key_exists('image_url', $data['content'][$sectionKey])) {
                             $data['content'][$sectionKey]['image_url'] = $storedFields['image_url'];
+                        }
+                    }
+                }
+
+                // D6's other half: `theme` is still REPLACED WHOLESALE by
+                // `$fresh->update($data)` below, same as `content` above --
+                // there is no per-key theme writer the way uploadImage()/
+                // removeImage() own `content.{slot}.image_url`, so nothing
+                // here forces every save to omit a key the way D4 forces
+                // image_url out of `content`. But the design panel (Task 6)
+                // does not exist yet, and this task must not leave a save
+                // that touches ONE theme key (a future `theme.palette`-only
+                // PATCH, from Task 6's cards or a direct API call) able to
+                // erase whichever OTHER allowlisted keys the tenant already
+                // had saved (`brand_color`, `font_pairing`) purely because
+                // this request happened not to repeat them. So: any
+                // ThemeRules::keys() the SUBMITTED theme omits is carried
+                // forward from the FRESH, row-locked copy -- never from the
+                // stale `$page` resolved before this transaction opened,
+                // for the identical race reason the content carry-forward
+                // above reads `$fresh->content` and not `$page->content`.
+                // Today's only writer (LandingEditor.tsx's saveMut) always
+                // sends the complete stored theme object back unchanged
+                // (see this task's report), so this is currently a no-op in
+                // production; it exists so that guarantee does not have to
+                // be re-verified by hand every time a future task touches
+                // this write path.
+                if (array_key_exists('theme', $data) && is_array($data['theme'])) {
+                    $storedTheme = is_array($fresh->theme) ? $fresh->theme : [];
+
+                    foreach (ThemeRules::keys() as $key) {
+                        if (!array_key_exists($key, $data['theme']) && array_key_exists($key, $storedTheme)) {
+                            $data['theme'][$key] = $storedTheme[$key];
                         }
                     }
                 }

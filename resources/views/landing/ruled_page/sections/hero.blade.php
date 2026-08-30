@@ -26,65 +26,140 @@
         $page->seo['title'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
 
-    // Task 5 (landing phase 3b, media round): the photographic plate
-    // Appendix B 4.5 item 2 describes, gated on PageContent::imageUrl() —
-    // the one allowlisted read of content.hero.image_url — so an absent,
-    // stale or hostile leaf (see that method's own docblock) renders
-    // NOTHING here rather than a broken <img>. Wrapping tags for the plate
-    // sit entirely inside the two @if($heroImage) blocks below so a page
-    // with no photo renders this partial's ORIGINAL markup byte-for-byte —
-    // see RuledPageRenderTest's golden capture, taken before this existed.
-    //
-    // No monogram fallback: Appendix B's own no-data path for this section
-    // wants one, but nothing in this codebase's hero ever rendered one
-    // before this task, and the golden above pins that exact absence —
-    // inventing one now would fail the byte-parity it exists to prove.
-    //
-    // The two @if($heroImage) directives below sit at column 0 deliberately
-    // (no Blade comment beside them either): Blade strips neither a
-    // directive line's own leading whitespace nor the newline outside a
-    // {{-- --}} comment, so either one would leak literal bytes into the
-    // no-image render even while the guarded block itself is skipped —
-    // exactly the byte-parity the golden capture above exists to pin.
+    /*
+     * The emphasis split (Task 5, landing phase 3c; D5): the headline's LAST
+     * word is set in <em> -- italic, accent-gradient, the reference's own
+     * hero-title treatment. Split SERVER-SIDE, here, and only ever into two
+     * plain strings: the markup below echoes each half through `{{ }}`, so
+     * the helper decides WHERE the <em> boundary sits and never touches HOW
+     * a tenant byte reaches the page -- the no-raw-echo test stands over
+     * this file exactly as before, and a stored `<em>` or `"><script>` in a
+     * headline is escaped in whichever half it lands in.
+     *
+     * mb_strrpos on a plain space: multi-word headlines split before the
+     * last word (the lead keeps its trailing space); a SINGLE word gets no
+     * <em> at all, deliberately -- emphasis reads as emphasis only against
+     * roman text beside it, and a wholly-italic headline is just a slanted
+     * one; an empty heading never reaches the <h1> (the filled() gate
+     * below). The (string) cast matches what `{{ $heading }}` always did to
+     * a numeric leaf.
+     */
+    $headingText = trim((string) $heading);
+    $headingCut  = mb_strrpos($headingText, ' ');
+    [$headingLead, $headingEm] = $headingCut === false
+        ? [$headingText, '']
+        : [mb_substr($headingText, 0, $headingCut + 1), mb_substr($headingText, $headingCut + 1)];
+
+    /*
+     * The chip (industry kicker + dot, reference §hero). Resolved exactly
+     * as every band's eyebrow is -- copy override first, else the industry
+     * vocabulary -- and no profile authors a hero kicker today, so the chip
+     * appears precisely when the tenant stores content.hero.kicker. That
+     * same stored field used to mint a dead #hero NAV anchor; the nav now
+     * rejects hero by key (Task 5 ride-along), so the field has exactly one
+     * consumer: this chip.
+     */
+    $heroKicker = trim((string) ($copy['kicker'] ?? $profile->kicker('hero')));
+
+    // Task 5 (landing phase 3b, media round; rebuilt in 3c Task 5): the
+    // photographic plate, gated on PageContent::imageUrl() -- the one
+    // allowlisted read of content.hero.image_url -- so an absent, stale or
+    // hostile leaf (see that method's own docblock) renders NOTHING of the
+    // photo composition rather than a broken <img>. Every failure mode
+    // falls back to the imageless composition below, monogram device
+    // included.
     $heroImage = $content->imageUrl('hero');
+
+    /*
+     * The CTA pair (gold + ghost), each on the same two-part gate the nav
+     * and footer CTAs use -- section row enabled AND has() -- so neither
+     * button can ever point at a band the section loop will not render.
+     * Gold: the profile's primary verb at booking-else-contact, exactly the
+     * chain this partial always had. Ghost: the explore half of the
+     * reference's pair, honest only where a services band exists to scroll
+     * to, and labelled with the profile's own services vocabulary rather
+     * than invented copy.
+     */
+    $primaryHref = null;
+    if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking')) {
+        $primaryHref = '#booking';
+    } elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact')) {
+        $primaryHref = '#contact';
+    }
+    $ghostHref = ($sections->firstWhere('key', 'services')?->enabled && $content->has('services'))
+        ? '#services'
+        : null;
+
+    /*
+     * The imageless hero's monogram DEVICE (Task 5, 3c; closing the
+     * Appendix-B 4.4 gap ruling 3b-3 deferred): the 4.4 monogram plate
+     * composed as a designed object -- elevated surface, offset accent
+     * border -- beside the same content column the photo composition
+     * carries. The initials are the BUSINESS's, so the name chain is the
+     * nav wordmark's own (name -> seo.title -> headline), not the h1's
+     * headline-first order: a salon whose headline is "The Art of Wellness"
+     * monograms as the salon, not the slogan, whenever it has a name at
+     * all. The same candidates back both chains, so a page with a heading
+     * always has a device name too -- and a page with neither renders a
+     * single quiet column, not an empty plate.
+     *
+     * The monogram partial's optional $label is deliberately NOT passed:
+     * the chip in the adjacent column already states the kicker, and the
+     * same words twice in one band is the exact duplication the kicker
+     * vocabulary work refused by name (IndustryProfile's hotel/restaurant
+     * team kickers). The device speaks once, as a mark.
+     */
+    $deviceName = collect([
+        $content->contact->name,
+        $page->seo['title'] ?? null,
+        $copy['headline'] ?? null,
+    ])->first(fn ($candidate) => filled($candidate));
+
+    $heroDevice = $heroImage === null && filled($deviceName);
 @endphp
-<section data-section="hero" class="band rp-hero">
-  <div class="wrap">
+<section data-section="hero" class="band rp-hero{{ $heroImage ? ' rp-hero--photo' : '' }}">
 @if ($heroImage)
-    <div class="rp-hero__grid">
-      <div class="rp-hero__content">
+  {{-- The reference's layered composition: the cover plate under glow /
+       veil / vignette (§hero, adapted to tokens in ruled_page.css). The
+       plate stays an <img> -- a tenant URL cannot reach a CSS background
+       under this page's style-src -- and keeps 3b's fetchpriority="high":
+       it is the LCP element. alt="" + aria-hidden layers: pure scene-
+       setting, already described by the text painted over it. --}}
+  <figure class="rp-hero__plate">
+    <img class="rp-hero__plate-img" src="{{ $heroImage }}" alt="" fetchpriority="high" decoding="async">
+  </figure>
+  <div class="rp-hero__glow" aria-hidden="true"></div>
+  <div class="rp-hero__veil" aria-hidden="true"></div>
+  <div class="rp-hero__vignette" aria-hidden="true"></div>
 @endif
+  <div class="wrap">
+@if ($heroDevice)
+    <div class="rp-hero__grid">
+@endif
+    <div class="rp-hero__content">
+    @if ($heroKicker !== '')
+      <p class="rp-hero__chip"><span class="rp-hero__chip-dot" aria-hidden="true"></span>{{ $heroKicker }}</p>
+    @endif
     @if (filled($heading))
-      <h1>{{ $heading }}</h1>
+      <h1>{{ $headingLead }}@if ($headingEm !== '')<em>{{ $headingEm }}</em>@endif</h1>
     @endif
     @if (filled($copy['subtext'] ?? null))
       <p class="rp-hero__sub">{{ $copy['subtext'] }}</p>
     @endif
-    {{-- Task 4: PageContent::has('booking') is no longer unconditionally
-         true — the booking widget asks Check-in/Check-out/Adults/Children,
-         which fits exactly one industry, so PageContent::count('booking')
-         gates it to 'hotel' (see that method's docblock). #booking can
-         therefore be missing from the page altogether now, on top of the
-         tenant switching the band off, which is the one case the original
-         note here accounted for. The guard is the same two-part test the
-         section loop in layout.blade.php uses — row enabled AND has() — so
-         this CTA and the band it points at can never disagree about whether
-         #booking exists.
-
-         Outside that one industry there is still an honest place to send
-         the CTA when one exists: the contact band, on the same two-part
-         test. A CTA reading "Book your stay" that scrolls nowhere is worse
-         than no CTA, so both anchors are checked rather than assumed, and
-         with neither available the button is simply not printed. --}}
-    @if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking'))
-      <a class="rp-cta" href="#booking">{{ $profile->primaryCta }}</a>
-    @elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact'))
-      <a class="rp-cta" href="#contact">{{ $profile->primaryCta }}</a>
-    @endif
-@if ($heroImage)
+    @if ($primaryHref !== null || $ghostHref !== null)
+      <div class="rp-hero__actions">
+      @if ($primaryHref !== null)
+        <a class="rp-cta" href="{{ $primaryHref }}">{{ $profile->primaryCta }}</a>
+      @endif
+      @if ($ghostHref !== null)
+        <a class="rp-cta rp-cta--ghost" href="{{ $ghostHref }}">{{ $profile->servicesLabel }}</a>
+      @endif
       </div>
-      <figure class="rp-hero__plate">
-        <img class="rp-hero__plate-img" src="{{ $heroImage }}" alt="" fetchpriority="high" decoding="async">
+    @endif
+    </div>
+@if ($heroDevice)
+      <figure class="rp-hero__device">
+        @include('landing.ruled_page.monogram', ['name' => $deviceName])
       </figure>
     </div>
 @endif

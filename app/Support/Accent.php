@@ -30,27 +30,62 @@ namespace App\Support;
  *      profile's house accent is used - a page whose CTA label cannot be read
  *      is worse than a page in the wrong colour.
  *   3. --brand is a FILL as well as a backdrop for a label, so it is measured
- *      against the PAPER too, at 3:1 - WCAG 1.4.11, the non-text floor. A
- *      brand that fails is darkened toward ink until it clears, rather than
- *      discarded: the tenant's hue survives where the house mauve would not
- *      be their colour at all. Nothing above catches this, because every
- *      other test scores the brand against its own label rather than against
- *      the page: #FFFFFF, #F5F5F5, #FFFF00 and #FFF176 all clear 15:1 on
- *      their label and all land at 1.01-1.08 on the paper.
- *   4. --brand-deep and --brand-bright are derived by moving the brand toward
- *      black / white until they clear their own surface, so accent-coloured
- *      TEXT tracks the tenant's hue instead of staying house mauve on a navy
- *      page. Both loops terminate: black clears any light surface and white
- *      clears any dark one.
+ *      against its SURFACE too, at 3:1 - WCAG 1.4.11, the non-text floor -
+ *      the porcelain PAPER by default, or whichever surface the caller names
+ *      (see SURFACE, below). A brand that fails is pushed away from that
+ *      surface until it clears - toward ink on a light surface, toward white
+ *      on a dark one - rather than discarded: the tenant's hue survives
+ *      where the house mauve would not be their colour at all. Nothing above
+ *      catches this, because every other test scores the brand against its
+ *      own label rather than against the page: #FFFFFF, #F5F5F5, #FFFF00 and
+ *      #FFF176 all clear 15:1 on their label and all land at 1.01-1.08 on
+ *      the (default, porcelain) paper.
+ *   4. --brand-deep is derived by moving the brand toward black (on a light
+ *      surface) or white (on a dark one) until it clears ITS OWN surface -
+ *      again PAPER by default or whichever surface the caller names - so
+ *      accent-coloured TEXT tracks the tenant's hue instead of staying house
+ *      mauve on a navy page, and so the same shade still works as the CTA
+ *      fill's second gradient stop once that fill sits on a dark palette
+ *      rather than on porcelain. --brand-bright is measured against the
+ *      fixed INK band instead, on purpose, and never against $surface: it
+ *      exists for one decorative element, the ink band, whose background
+ *      never changes with the palette a page is showing. Both loops
+ *      terminate: black clears any light surface and white clears any dark
+ *      one.
  *   5. --brand-hover moves the brand AWAY from whichever label was chosen, so
  *      hovering the primary CTA raises its contrast rather than lowering it -
  *      which a fixed "darken on hover" cannot promise on a light brand. It
- *      has to clear the paper at 3:1 too, since "away from a dark label" is
+ *      has to clear its surface at 3:1 too, since "away from a dark label" is
  *      "toward the page", so the move shrinks where a full-size one would
  *      dissolve the button into the page and reverses where no size of it
  *      fits. That reversal is the one case hovering lowers the label's
  *      contrast - 1.2% of the cube, never below 4.5:1, and the alternative
  *      is a CTA with no hover state at all.
+ *
+ * SURFACE (phase 3c final fix wave, F1). Every "against the paper" above
+ * used to mean, literally, the hardcoded porcelain default - true while
+ * every landing page shared the same background, false the moment palettes
+ * (spec §3) shipped a page whose real background is a near-black brown or
+ * navy. A tenant hex could clear the PAPER-measured fill check above and
+ * still ride a --brand fill and a --brand-deep text shade BOTH moved toward
+ * black; correct on porcelain, and on each of the three dark palettes the
+ * result was a CTA gradient of two near-black stops on a near-black page,
+ * because "away from the paper" and "away from a near-black bg" are
+ * opposite directions.
+ *
+ * for() therefore takes an optional $surface (a hex string; PAPER when
+ * omitted, which is what keeps a palette-less page byte-identical to before
+ * this fix). It asks the one question that matters - does a light label or
+ * a dark one read better ON the surface itself - by reusing bestLabel()'s
+ * own contrast comparison rather than inventing a second luminance rule (see
+ * away()). Every place above that moved a colour "toward black, off the
+ * paper" now moves it toward black off a light surface and toward white off
+ * a dark one, measured against WHICHEVER surface was actually named - the
+ * SURFACE_FLOOR / SURFACE_TARGET / TEXT_TARGET numbers this class already
+ * measured are unchanged; only the direction and the surface they are taken
+ * against are parameters now. layout.blade.php passes the resolved
+ * palette's own `bg` token as $surface when a palette is chosen, and passes
+ * nothing when it is not.
  *
  * What it does NOT do, on purpose: no HSL saturation clamping, no neon
  * killing, no lightness banding. Those are 3.4's taste rules, they need their
@@ -117,7 +152,16 @@ final class Accent
      */
     private const TEXT_TARGET = 5.5;
 
-    /** The surfaces the derived tokens are measured against - Appendix B 4.2. */
+    /**
+     * The two fixed surfaces - Appendix B 4.2. PAPER is also the DEFAULT of
+     * for()'s $surface parameter (see the SURFACE section of this docblock):
+     * a page with no palette, or an unrecognised one, still renders on
+     * porcelain, so nothing about this class changes for it. INK never
+     * varies with the palette - it is the fixed ink band's own background, a
+     * decorative element whose surface does not move with the rest of the
+     * page, so --brand-bright is always measured against it rather than
+     * against $surface.
+     */
     private const PAPER = '#f4f6f8';
     private const INK   = '#17131e';
 
@@ -138,10 +182,14 @@ final class Accent
         public readonly bool   $isDerived,
     ) {}
 
-    public static function for(?string $hex, string $profileDefault): self
+    public static function for(?string $hex, string $profileDefault, ?string $surface = null): self
     {
-        $house  = CssColor::safe($profileDefault);
-        $wanted = CssColor::safe($hex, $house);
+        $house   = CssColor::safe($profileDefault);
+        $wanted  = CssColor::safe($hex, $house);
+        // PAPER when $surface is null (no palette resolved) or hostile
+        // (defence in depth only - every real caller today hands this a
+        // Palette::tokens['bg'] literal, not tenant input).
+        $surface = CssColor::safe($surface, self::PAPER);
 
         // No tenant colour, or one CssColor rejected: nothing to derive. The
         // stylesheet's measured house tokens are already correct. The house
@@ -149,7 +197,7 @@ final class Accent
         // AccentTest asserts instead that it already clears SURFACE_FLOOR on
         // its own, which is the check a new industry profile has to pass.
         if ($wanted === $house) {
-            return self::resolve($house, false);
+            return self::resolve($house, false, $surface);
         }
 
         // A fill nobody can find is as broken as a label nobody can read, and
@@ -177,8 +225,8 @@ final class Accent
         // below, which is a decision this class made deliberately and
         // measured (5.1% of the cube). A colour that already reads as a block
         // is judged exactly as it was before this line existed.
-        if (self::contrast($wanted, self::PAPER) < self::SURFACE_FLOOR) {
-            $wanted = self::toward($wanted, self::BLACK, self::PAPER, self::SURFACE_TARGET);
+        if (self::contrast($wanted, $surface) < self::SURFACE_FLOOR) {
+            $wanted = self::toward($wanted, self::away($surface), $surface, self::SURFACE_TARGET);
         }
 
         // The dead band, asked of the colour that will actually be painted.
@@ -187,25 +235,38 @@ final class Accent
         // tenant's colour; not falling back loses the words on their own call
         // to action.
         if (self::contrast(self::bestLabel($wanted), $wanted) < self::FLOOR) {
-            return self::resolve($house, false);
+            return self::resolve($house, false, $surface);
         }
 
-        return self::resolve($wanted, true);
+        return self::resolve($wanted, true, $surface);
     }
 
-    private static function resolve(string $brand, bool $isDerived): self
+    private static function resolve(string $brand, bool $isDerived, string $surface): self
     {
         $on = self::bestLabel($brand);
 
         return new self(
             brand:  $brand,
             on:     $on,
-            hover:  self::hover($brand, $on),
+            hover:  self::hover($brand, $on, $surface),
             halo:   self::rgba($brand, 0.26),
-            deep:   self::toward($brand, self::BLACK, self::PAPER, self::TEXT_TARGET),
+            deep:   self::toward($brand, self::away($surface), $surface, self::TEXT_TARGET),
             bright: self::toward($brand, self::WHITE, self::INK, self::TEXT_TARGET),
             isDerived: $isDerived,
         );
+    }
+
+    /**
+     * The direction "away from $surface" resolves to for toward(): BLACK off
+     * a light surface, WHITE off a dark one. Reuses bestLabel()'s own
+     * contrast comparison rather than a second luminance rule - a surface
+     * that reads better with a light label than a dark one IS a dark
+     * surface, by the exact same measurement bestLabel() already makes for a
+     * brand fill, asked here of the surface instead.
+     */
+    private static function away(string $surface): string
+    {
+        return self::bestLabel($surface) === self::LABEL_LIGHT ? self::WHITE : self::BLACK;
     }
 
     /**
@@ -231,15 +292,15 @@ final class Accent
      * last resort and means no hover state at all; over a 140k sweep of the
      * cube nothing reaches it, but it is what keeps this total.
      */
-    private static function hover(string $brand, string $on): string
+    private static function hover(string $brand, string $on, string $surface): string
     {
-        $away = self::nudge($brand, $on === self::LABEL_LIGHT ? self::BLACK : self::WHITE, $on);
+        $away = self::nudge($brand, $on === self::LABEL_LIGHT ? self::BLACK : self::WHITE, $on, $surface);
 
         if ($away !== $brand) {
             return $away;
         }
 
-        return self::nudge($brand, $on === self::LABEL_LIGHT ? self::WHITE : self::BLACK, $on);
+        return self::nudge($brand, $on === self::LABEL_LIGHT ? self::WHITE : self::BLACK, $on, $surface);
     }
 
     /**
@@ -251,14 +312,14 @@ final class Accent
      * every colour with room for it is unaffected by this loop existing. The
      * 2% floor is where a fill stops being a state change a person can see.
      */
-    private static function nudge(string $brand, string $target, string $on): string
+    private static function nudge(string $brand, string $target, string $on, string $surface): string
     {
         for ($percent = 18; $percent >= 2; $percent -= 2) {
             $candidate = self::mix($brand, $target, $percent / 100);
 
             if ($candidate !== $brand
                 && self::contrast($on, $candidate) >= self::FLOOR
-                && self::contrast($candidate, self::PAPER) >= self::SURFACE_FLOOR) {
+                && self::contrast($candidate, $surface) >= self::SURFACE_FLOOR) {
                 return $candidate;
             }
         }

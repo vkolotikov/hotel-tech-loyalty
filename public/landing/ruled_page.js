@@ -20,10 +20,13 @@
  * tel: link gone, their 64px still reserved. A guard that can fail closed on
  * the one control that matters is worse than no guard.
  *
- * Three jobs, and only the three with no CSS-only equivalent:
+ * Five jobs, and only the five with no CSS-only equivalent:
  *   1. the mobile action bar's reveal, and its retract over the booking widget
  *   2. the reviews index — counter, ticks, arrow keys
  *   3. the reading spine, ONLY where scroll-driven CSS is unavailable
+ *   4. the scroll reveals (Task 4, phase 3c) — this file ADDS the .reveal
+ *      class itself, so the shipped markup never starts anything hidden
+ *   5. the nav's condense-on-scroll class
  */
 (function () {
   'use strict';
@@ -210,5 +213,96 @@
 
       write();
     }
+  }
+
+  /* 4 — scroll reveals (Task 4, landing phase 3c) -------------------------- */
+  // THE MARKUP SHIPS REVEAL-FREE. This block adds .reveal itself, on a
+  // curated selector list, and only where an IntersectionObserver exists to
+  // add .is-visible back — so a blocked script, an old engine, or a reader
+  // who asked for reduced motion gets a page where nothing ever started
+  // hidden. The stylesheet's reduced-motion block covers the mid-session
+  // toggle the load-time check below cannot see.
+  //
+  // Curation, not a wildcard: .band__kicker is deliberately ABSENT (its
+  // desktop treatment is a rotate transform that .reveal's translateY and
+  // .is-visible's transform:none would both destroy — see the stylesheet's
+  // note on the vertical eyebrow), and so is .rp-book__frame (animating a
+  // container whose iframe loads asynchronously double-flashes; the
+  // partial's own comment rules it out). Task 5 drops .rp-hero__plate from
+  // the plan for the same kind of reason: it is now the photo hero's
+  // full-bleed BACKDROP and the LCP element — fading the whole stage in
+  // over 1.1s is a worse first paint, and the reference reveals the hero's
+  // CONTENT, never its photograph. The pair of CTAs reveals as one
+  // .rp-hero__actions block; the imageless monogram device joins instead.
+  //
+  // Each entry is [selector, delay]: 0 means no data-delay, 1-4 a fixed
+  // stagger step, and 'stagger' cycles 1-4 across the matches so lists
+  // (menu rows, portraits, quotes) cascade the way the reference pages do.
+  if (window.IntersectionObserver && !reduced.matches) {
+    // Task 7 renames: the services rows are .rp-pillar now (numbered pillar
+    // rows), the about plate is .rp-about__frame (the cinematic frame — the
+    // frame reveals as one object, tag and accent border included), and the
+    // booking band adds its perks row. The booking CARD itself is
+    // deliberately NOT in the plan for the same reason .rp-book__frame never
+    // was: it contains the async iframe, and animating that container
+    // double-flashes — its title/terms/perks reveal individually instead.
+    var revealPlan = [
+      ['.rp-hero__chip', 0], ['.rp-hero h1', 0], ['.rp-hero__sub', 1], ['.rp-hero__actions', 2], ['.rp-hero__device', 3],
+      ['.rp-services__title', 0], ['.rp-services__sub', 1], ['.rp-pillar', 'stagger'], ['.rp-services__cta', 2],
+      ['.rp-about__frame', 0], ['.rp-about__lead', 1], ['.rp-about__body', 2],
+      ['.rp-team__title', 0], ['.rp-team__sub', 1], ['.rp-member', 'stagger'],
+      ['.rp-reviews__aggregate', 0], ['.rp-review', 'stagger'],
+      ['.rp-book__title', 0], ['.rp-book__terms', 1], ['.rp-book__perks', 1],
+      ['.rp-field', 'stagger'], ['.rp-hours', 2], ['.rp-map', 3],
+      ['.rp-footer__top', 0]
+    ];
+
+    var revealer = new IntersectionObserver(function (entries) {
+      for (var e = 0; e < entries.length; e++) {
+        if (entries[e].isIntersecting) {
+          entries[e].target.classList.add('is-visible');
+          revealer.unobserve(entries[e].target);
+        }
+      }
+    }, { threshold: 0.15 });
+
+    for (var p = 0; p < revealPlan.length; p++) {
+      var matches = document.querySelectorAll(revealPlan[p][0]);
+      var delay = revealPlan[p][1];
+
+      for (var m = 0; m < matches.length; m++) {
+        matches[m].classList.add('reveal');
+        if (delay === 'stagger') {
+          if (m % 4 !== 0) { matches[m].setAttribute('data-delay', String(m % 4)); }
+        } else if (delay > 0) {
+          matches[m].setAttribute('data-delay', String(delay));
+        }
+        revealer.observe(matches[m]);
+      }
+    }
+  }
+
+  /* 5 — the nav condense (Task 4, landing phase 3c) ------------------------ */
+  // A passive, rAF-throttled scroll listener toggling one class at 24px of
+  // travel; the stylesheet owns what condensing looks like, and switches its
+  // transition off under prefers-reduced-motion. Attached only when the
+  // layout actually rendered a nav.
+  var nav = document.querySelector('.nav');
+
+  if (nav) {
+    var navQueued = false;
+
+    var condense = function () {
+      nav.classList.toggle('is-condensed', window.scrollY > 24);
+      navQueued = false;
+    };
+
+    window.addEventListener('scroll', function () {
+      if (navQueued) { return; }
+      navQueued = true;
+      requestAnimationFrame(condense);
+    }, { passive: true });
+
+    condense();
   }
 }());

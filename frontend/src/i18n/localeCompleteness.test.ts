@@ -97,3 +97,65 @@ describe('locale completeness — landing pages + reviews', () => {
     })
   }
 })
+
+/**
+ * Landing phase 3c Task 6, fix round 1: the ten design-panel per-id name
+ * keys are named with a template-literal `t()` call —
+ * `` t(`landing_pages.design.palette_name_${p.id}`, p.label) `` and
+ * `` t(`landing_pages.design.pairing_name_${fp.id}`, fp.label) `` in
+ * `DesignPanel.tsx` — so `T_CALL_RE` above never matches them (it requires
+ * a literal quote character immediately after `t(`) and `usedKeys()` never
+ * finds them, the exact same gap this file's own docblock already
+ * documents for `nav.groups.*`/`nav.items.*` (and that `field_${field.name}`
+ * in `LandingEditor.tsx`'s `FIELD_FALLBACK` shares silently, with no net of
+ * its own at all). Task 6's own report flagged this as a known gap rather
+ * than a thing the scan above could be made to close.
+ *
+ * Hardcoded here as a literal list — never derived from `designChoices.ts`'s
+ * own `PALETTE_IDS`/`FONT_PAIRING_IDS` — for the identical reason
+ * `designChoices.test.ts` hardcodes its own expected id lists rather than
+ * importing them from the module under test: if this list were built FROM
+ * the same module whose ids it exists to check translations for, a palette
+ * or pairing removed from `designChoices.ts` would silently disappear from
+ * the expected-keys list in the same edit, and a translation actually
+ * missing for a still-real id could never be caught. Read with `readAt`/
+ * `readLocale`, the same two helpers the scan-based test above already
+ * uses — a missing key and a present-but-blank one are both failures here,
+ * since a blank string is not a translation.
+ */
+describe('locale completeness — design panel palette/pairing names (dynamic t() keys, hand-verified)', () => {
+  const DESIGN_PANEL_ID_KEYS = [
+    // designChoices.ts's PALETTES, in Palette::all()'s own order.
+    'landing_pages.design.palette_name_champagne_noir',
+    'landing_pages.design.palette_name_porcelain',
+    'landing_pages.design.palette_name_midnight_brass',
+    'landing_pages.design.palette_name_clinic_air',
+    'landing_pages.design.palette_name_terracotta',
+    'landing_pages.design.palette_name_slate_amber',
+    // designChoices.ts's FONT_PAIRINGS, in ThemeRules::FONT_PAIRINGS's own order.
+    'landing_pages.design.pairing_name_editorial',
+    'landing_pages.design.pairing_name_modern',
+    'landing_pages.design.pairing_name_classic',
+    'landing_pages.design.pairing_name_grand',
+  ]
+
+  // A canary against the hardcoded list itself drifting silently short —
+  // mirrors the "actually found the keys" canary above, same reasoning.
+  it('names exactly ten keys, six palettes and four pairings', () => {
+    expect(DESIGN_PANEL_ID_KEYS.length).toBe(10)
+  })
+
+  for (const locale of LOCALES) {
+    it(`every design-panel palette/pairing name key resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = DESIGN_PANEL_ID_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) design key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})

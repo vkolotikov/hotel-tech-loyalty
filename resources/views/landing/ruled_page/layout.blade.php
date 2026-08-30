@@ -21,14 +21,63 @@
     // RULING 5: the tenant's chosen heading/body pairing, or none. `theme`
     // is a schemaless `array` cast with no DB constraint behind it (see the
     // "Stored values the renderer must survive" tests further down this
-    // directory), so this is whitelisted against the exact three keys
-    // LandingOnboardingController validates (`in:editorial,modern,classic`)
-    // rather than trusted verbatim -- an unrecognised or hand-edited value
-    // must not leak onto <html> as an arbitrary attribute value; it must
-    // simply render as if no pairing had been chosen at all.
-    $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic'], true)
+    // directory), so this is whitelisted against the exact four keys
+    // LandingOnboardingController validates (`in:editorial,modern,classic,grand`
+    // -- `grand` added by Task 3, landing phase 3c, D3) rather than trusted
+    // verbatim -- an unrecognised or hand-edited value must not leak onto
+    // <html> as an arbitrary attribute value; it must simply render as if
+    // no pairing had been chosen at all.
+    //
+    // This array is a deliberate, independent COPY of
+    // App\Landing\ThemeRules::FONT_PAIRINGS, not a call to it -- see that
+    // class's own docblock: the write-time allowlist (ThemeRules) and this
+    // render-time re-whitelist are kept as two separate defense-in-depth
+    // layers on purpose, so a bug in one is not a bug in both.
+    $fontPairing = in_array($page->theme['font_pairing'] ?? null, ['editorial', 'modern', 'classic', 'grand'], true)
         ? $page->theme['font_pairing']
         : null;
+
+    // The palette system (Task 1, landing phase 3c; D2). `theme` is the
+    // same schemaless array cast font_pairing above already guards, so this
+    // is defence in depth twice over: Palette::for() already refuses any id
+    // it doesn't author (an unknown id or absent value both resolve to
+    // null, the same "no palette" state), but its parameter is typed
+    // ?string, and PHP raises a TypeError for a non-string, non-null
+    // argument before the method body ever runs -- an array or 200k-
+    // character `theme.palette` leaf (a stored shape no validator
+    // constrained before Task 2's allowlist; see the "Stored values the
+    // renderer must survive" tests) would take the page down at the call
+    // site, not inside Palette itself. is_string() here is what stops that,
+    // exactly as the font_pairing block above narrows its own raw theme
+    // leaf before ever trusting it.
+    //
+    // Resolved HERE, above <html>, rather than beside the token block that
+    // emits it (where Task 1 first put it), because Task 7 gave the tag a
+    // second consumer: the palette's `dark` flag now stamps
+    // data-scheme="dark" on <html> — the hook the stylesheet's
+    // scheme-conditional photo treatment forks on (the same flag that
+    // already drives --accent-text and color-scheme). The token-block
+    // comment further down still owns the emission rules.
+    $paletteId = is_string($page->theme['palette'] ?? null) ? $page->theme['palette'] : null;
+    $palette   = \App\Landing\Palette::for($paletteId);
+
+    // F1 (phase 3c final fix wave): Accent must derive against the surface
+    // actually painted under it, not always the porcelain PAPER default it
+    // silently assumed before palettes existed -- on the three dark
+    // palettes that produced a --brand fill and a --brand-deep CTA stop
+    // both darkened toward black on top of an already-dark page, i.e. an
+    // invisible button. $accent was already resolved once, upstream, in
+    // LandingPageController::render() -- before this method knew whether a
+    // palette was even coming -- so with one resolved here it is
+    // RECOMPUTED, not merely read, using the exact same tenant hex and
+    // house default and nothing else new, plus the palette's own `bg`
+    // token as the surface. With no palette this block never runs at all,
+    // so $accent stays exactly the controller's own value and a
+    // palette-less page's tokens stay byte-identical (see
+    // RuledPageRenderTest's four golden captures).
+    if ($palette !== null) {
+        $accent = \App\Support\Accent::for($page->theme['brand_color'] ?? null, $content->profile->accent, $palette->tokens['bg']);
+    }
 @endphp
 {{--
   No pairing chosen -> `@if($fontPairing)` is false -> Blade emits nothing
@@ -50,9 +99,25 @@
   closing tag (what @endphp compiles to) already eats the ONE newline
   immediately following it, so the newline this comment sits behind was
   already going to be consumed either way.
+
+  Task 7: the `{{ '' }}` between the html tag's two attribute conditionals is
+  LOAD-BEARING, not lint. Blade's directive regex opens with \B@ — an @
+  preceded by a word character is deliberately not a directive (that is what
+  keeps a literal name@example.com in tenant copy uncompiled) — so in
+  `@endif@if(...)` the second @if sits against the `f` of @endif and never
+  compiles, while its own @endif does: the compiled template ends with an
+  unbalanced endif and every page 500s. A newline or space boundary would
+  leak a real byte into the tag on every render (the goldens pin
+  `<html lang="en">` exactly); the empty echo compiles to e('') — zero bytes
+  — and, because echoes compile AFTER statements, it is still present as a
+  non-word boundary when the directive pass runs. Both conditions emit
+  nothing at all when false, so a no-palette (or light-palette) page keeps
+  its byte-identical tag. (This comment cannot sit beside the tag itself:
+  a Blade comment between doctype and <html> leaks its surrounding newline —
+  the fix-round correction above is the precedent.)
 --}}
 <!doctype html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($fontPairing) data-font-pairing="{{ $fontPairing }}"@endif>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}"@if($fontPairing) data-font-pairing="{{ $fontPairing }}"@endif{{ '' }}@if($palette?->dark) data-scheme="dark"@endif>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -282,42 +347,172 @@
   @json($localBusiness)
 </script>
 @endif
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-{{-- Three faces, one request. The axis tuple matters: the earlier
-     `wght@9..144,300;9..144,600` served two STATIC instances, so Appendix B
-     4.1's Fraunces 400 for --t-h3 was synthesised down to 300 and every h3 on
-     the page shipped a weight lighter than the design asks for. `300..500` is
-     the variable range, so 400 is a real instance. IBM Plex Mono 500 carries
-     every price, duration, hour and kicker (--t-mono); Inter Tight replaces
-     Inter as the text face per 4.1. --}}
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..500&family=IBM+Plex+Mono:wght@500&family=Inter+Tight:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}">
+{{-- Task 3 (landing phase 3c; D3): every face this template uses -- Fraunces,
+     Inter Tight and IBM Plex Mono for editorial/modern/classic, plus
+     Cormorant Garamond and Inter for `grand` -- is self-hosted as latin-subset
+     woff2 under public/landing/fonts/ and declared by the @font-face rules at
+     the top of ruled_page.css itself. There used to be a preconnect pair and
+     a stylesheet <link> here pointed at fonts.googleapis.com/fonts.gstatic.com;
+     both hosts are gone from this page entirely -- see the CSP in
+     LandingPageSecurity::policy(), whose style-src/font-src are 'self'-only
+     now -- so there is nothing left to link here beyond the template's own
+     stylesheet below. The axis-range rationale that used to live in this
+     comment (why Fraunces has to be requested as a weight RANGE rather than a
+     semicolon list of static instances, so --t-h3's 400 is a real instance
+     and not synthesised down from 300) moved to ruled_page.css's own
+     @font-face block, next to the declarations it now governs.
+
+     F2 (phase 3c final fix wave): the href now carries AssetVersion's
+     content-hash query string. Before this, the URL below never changed
+     across a deploy no matter how much ruled_page.css's actual bytes did —
+     this branch rewrote the file wholesale (Task 4-7) and a returning
+     visitor's browser cache would keep serving the 3b stylesheet under the
+     3c markup forever, since nothing about the request ever looked new to
+     it. See App\Support\AssetVersion's own class comment for why a content
+     hash was chosen over filemtime. --}}
+<link rel="stylesheet" href="{{ asset('landing/ruled_page.css') }}{{ \App\Support\AssetVersion::query('landing/ruled_page.css') }}">
+@php
+    // The palette itself is resolved in the TOP @php block now (Task 7:
+    // <html> consumes its dark flag as data-scheme before this point in the
+    // document; the resolution comment and its is_string() guard moved with
+    // it). This block keeps owning the EMISSION rules below.
+    //
+    // One more nonced inline block below, emitting the fifteen tokens spec
+    // §3 names as :root custom properties. Today's stylesheet defines its
+    // own --brand family (see the Accent block further down) and does not
+    // consume --bg/--accent/etc at all, so a page with a palette set ships
+    // this block as inert, unconsumed CSS until the template rebuild
+    // (Task 4) lands -- that is deliberate, not a bug this task should
+    // "fix" by also touching the stylesheet.
+    //
+    // Placed BEFORE the Accent block below, in source order, on purpose:
+    // Accent's --brand family and this block's tokens share no property
+    // name today, so nothing actually cascades between the two blocks yet
+    // -- but this ordering is the contract Task 4 is written against
+    // ("Accent must win on the accent slot", `theme.brand_color` staying
+    // the tenant's override within whichever palette is active), and
+    // getting the order right now costs nothing while a later rebuild
+    // that folds --accent and --brand together would otherwise depend on
+    // file order nobody had deliberately chosen.
+    //
+    // The block's sixteenth line, --accent-text (Task 5, ride-along from
+    // the Task 4 review), is the accent-TEXT pointer: deep reads on a
+    // light scheme, bright on a dark one, and the six rules that colour
+    // text with the accent consume var(--accent-text) in ONE declaration —
+    // that line is what replaced their light-dark() double-declarations,
+    // removing the engine dependency entirely. It is DERIVED FROM THE DARK
+    // FLAG AT EMISSION, deliberately not a sixteenth authored key in
+    // Palette::TOKEN_KEYS: the fifteen keys are spec §3's own enumeration
+    // and stay the single source of truth for VALUES, `dark` is already a
+    // first-class Palette property, and a hand-authored sixteenth would be
+    // one more literal able to drift from the very accent-deep/-bright
+    // pair it names. It is a var() REFERENCE rather than the palette's
+    // literal hex for the same flow-through reason as the CSS :root
+    // default: the Accent block below may still override
+    // --accent-deep/--accent-bright with the tenant's own shades, and
+    // accent text must follow that override.
+    //
+    // Nothing is emitted at all when $palette is null (no palette set, an
+    // unrecognised id, or a hostile stored value) -- the CSS's own :root
+    // porcelain default stands exactly as it did before this block
+    // existed, and a page explicitly set to `palette: 'porcelain'`
+    // therefore renders byte-identical to one with no palette at all
+    // (spec §3's own promise). This comment sits INSIDE the @php block
+    // rather than as a separate {{-- --}} block for exactly the reason
+    // the top of this file documents for the doctype/html boundary: a
+    // Blade comment strips its own contents but not the real newline on
+    // each side of it, and that stray newline would otherwise survive
+    // even when $palette is null and nothing below it renders -- a PHP
+    // comment inside the tag that already swallows its own trailing
+    // newline costs nothing instead.
+@endphp
+@if ($palette)
+<style nonce="{{ $cspNonce }}">
+  :root{
+    --bg:{{ $palette->tokens['bg'] }};
+    --bg-2:{{ $palette->tokens['bg-2'] }};
+    --bg-elev:{{ $palette->tokens['bg-elev'] }};
+    --glass:{{ $palette->tokens['glass'] }};
+    --text:{{ $palette->tokens['text'] }};
+    --text-soft:{{ $palette->tokens['text-soft'] }};
+    --text-muted:{{ $palette->tokens['text-muted'] }};
+    --line:{{ $palette->tokens['line'] }};
+    --line-soft:{{ $palette->tokens['line-soft'] }};
+    --accent:{{ $palette->tokens['accent'] }};
+    --accent-bright:{{ $palette->tokens['accent-bright'] }};
+    --accent-deep:{{ $palette->tokens['accent-deep'] }};
+    --accent-on:{{ $palette->tokens['accent-on'] }};
+    --halo:{{ $palette->tokens['halo'] }};
+    --scrim:{{ $palette->tokens['scrim'] }};
+    --accent-text:var({{ $palette->dark ? '--accent-bright' : '--accent-deep' }});
+@if ($palette->dark)
+    color-scheme:dark;
+@endif
+  }
+</style>
+@endif
 {{-- Only tenant-derived custom properties are inline, and they carry the
      request nonce. Every value here is emitted by App\Support\Accent, which
      routes through CssColor::safe and then formats the result itself, so none
      of it is a customer string and none of it can close the declaration it
      sits in.
 
-     Either the whole accent family is overridden or only --brand is. A tenant
-     colour that survived Accent's contrast test brings its own label, hover,
-     halo and the two text shades with it, so nothing on the page is left
-     wearing the house mauve next to it. A page with no tenant colour writes
-     --brand alone and lets the stylesheet's measured house tokens stand,
-     because those sit at 6.2-6.3:1 rather than at Accent's 5.5:1 target and
-     re-deriving them would quietly downgrade the default page. --}}
+     Task 4 (landing phase 3c): the OUTPUT KEYS moved to the spec §3 names
+     the rebuilt stylesheet consumes — --accent/--accent-on/--accent-deep/
+     --accent-bright/--halo. Accent's `hover` member is computed but no
+     longer emitted: the rebuilt CTA's hover is a lift and a sheen, never a
+     fill-colour change, so no hover token exists in the new token set.
+
+     F1 (phase 3c final fix wave): $accent itself is now RE-resolved above,
+     in the palette-resolution block near the top of this file, against the
+     chosen palette's own `bg` token once one exists — see that block's own
+     comment. (Deliberately not spelled out with Blade's own directive name
+     here: this file's comments have to avoid the literal four characters
+     that name it, because Blade's raw-block extraction runs BEFORE comment
+     stripping and matches that literal text wherever it appears, comment
+     or not — the exact failure mode this note exists to warn the next
+     editor away from, found the hard way while writing it.) Every value
+     emitted here already carries the right direction for the surface it
+     will actually sit on; this block's own job (which state gets which
+     keys) is unchanged.
+
+     This block sits AFTER the palette block above BY CONTRACT (Task 1
+     review pre-commitment, restated in that block's own comment): the two
+     now genuinely collide on --accent, and a tenant colour that survived
+     Accent's contrast test must win by cascade — the tenant's brand colour
+     stays "an accent override within whichever palette is active" (D2).
+     Do not reorder the blocks.
+
+     Three states, three emissions:
+       - derived: the whole accent family, overriding palette and house
+         alike — a colour that brings its own readable label, halo and text
+         shades, so nothing is left wearing another palette's accent beside
+         it (the palette's OTHER twelve tokens — surfaces, text, lines —
+         stand untouched, which is exactly what "override within the
+         palette" means).
+       - not derived, no palette: --accent alone, the industry profile's
+         house colour, exactly the one token the old --brand emission wrote
+         — the stylesheet's measured porcelain family (deep/bright/on/halo)
+         stands for the rest, because those sit at 6.2-6.3:1 rather than at
+         Accent's 5.5:1 target and re-deriving them would quietly downgrade
+         the default page.
+       - not derived, palette chosen: NOTHING. The palette authored its own
+         complete accent family two blocks up; writing the profile's house
+         accent after it would clobber the very thing the tenant chose.
+         (RuledPageRenderTest pins both directions of this cascade.) --}}
+@if ($accent->isDerived || $palette === null)
 <style nonce="{{ $cspNonce }}">
   :root{
-    --brand: {{ $accent->brand }};
+    --accent: {{ $accent->brand }};
 @if ($accent->isDerived)
-    --brand-on: {{ $accent->on }};
-    --brand-hover: {{ $accent->hover }};
-    --brand-halo: {{ $accent->halo }};
-    --brand-deep: {{ $accent->deep }};
-    --brand-bright: {{ $accent->bright }};
+    --accent-on: {{ $accent->on }};
+    --halo: {{ $accent->halo }};
+    --accent-deep: {{ $accent->deep }};
+    --accent-bright: {{ $accent->bright }};
 @endif
   }
 </style>
+@endif
 </head>
 <body class="rp">
 
@@ -327,6 +522,86 @@
      and ruled_page.js never attaches a listener for it. --}}
 <div class="rule-progress" aria-hidden="true"></div>
 
+{{-- Two ambient glows (Task 4, D5; the reference's §ambient): soft accent
+     light bleeding in from the margins, drawn entirely by the stylesheet off
+     --halo. Pure decoration, so both are aria-hidden; absolutely positioned
+     against <body>, so they are siblings of <main> and never disturb the
+     band-adjacency combinators inside it. --}}
+<div class="ambient-glow ambient-glow--left" aria-hidden="true"></div>
+<div class="ambient-glow ambient-glow--right" aria-hidden="true"></div>
+
+@php
+    // The shell nav (Task 4, D5): glass pill — wordmark, up to four section
+    // anchors, primary CTA. Every input is either already-whitelisted or
+    // escaped at the echo, same as everywhere else on this page.
+    //
+    // The wordmark resolves the same chain the hero's <h1> walks (name →
+    // seo.title → headline), with filled() rather than `??` for the same
+    // reason documented there: an empty string a tenant stored must not
+    // shadow the next real candidate. It deliberately does NOT fall through
+    // to config('app.name') — a nav naming US as the business on a salon's
+    // own site is the exact mistake the h1 chain already refuses.
+    //
+    // ANCHORS come from $renderedSections — the one collection that decides
+    // what renders — so a disabled or empty band can never be linked to. A
+    // section is anchorable when it can NAME itself: its copy kicker, else
+    // the industry vocabulary's kicker for that key. hero is excluded by
+    // key (see the comment on the pipeline below). The first FOUR
+    // anchorable sections, in section order, get links; the wrappers carry
+    // the section key as id (booking and contact always did;
+    // services/about/team/reviews gained theirs in Task 4).
+    //
+    // The CTA reuses hero.blade.php's exact two-part gate — row enabled AND
+    // has() — for both candidate targets, so the nav can never point at an
+    // anchor the section loop is not going to render.
+    $navName = collect([
+        $content->contact->name,
+        $page->seo['title'] ?? null,
+        $page->content['hero']['headline'] ?? null,
+    ])->first(fn ($candidate) => filled($candidate));
+
+    // hero is rejected BY KEY, not left to the kicker test (Task 5, ride-
+    // along from the Task 4 review): no profile authors a hero kicker, but
+    // content.hero.kicker is a real stored field (the hero chip prints it),
+    // and through the copy override it made hero "anchorable" — a dead
+    // `#hero` link, since the hero wrapper deliberately carries no id (the
+    // wordmark already points at the top), eating one of the four slots.
+    $navAnchors = $renderedSections
+        ->reject(fn ($section) => $section->key === 'hero')
+        ->map(fn ($section) => [
+            'key'   => $section->key,
+            'label' => trim((string) ($page->content[$section->key]['kicker'] ?? $profile->kicker($section->key))),
+        ])
+        ->filter(fn ($anchor) => $anchor['label'] !== '')
+        ->take(4)
+        ->values();
+
+    $navCtaHref = null;
+    if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking')) {
+        $navCtaHref = '#booking';
+    } elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact')) {
+        $navCtaHref = '#contact';
+    }
+@endphp
+@if (filled($navName) || $navAnchors->isNotEmpty() || $navCtaHref !== null)
+<nav class="nav">
+  <div class="nav__inner">
+@if (filled($navName))
+    <a class="nav__wordmark" href="#">{{ $navName }}</a>
+@endif
+@if ($navAnchors->isNotEmpty())
+    <div class="nav__links">
+@foreach ($navAnchors as $anchor)
+      <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
+@endforeach
+    </div>
+@endif
+@if ($navCtaHref !== null)
+    <a class="rp-cta rp-cta--sm nav__cta" href="{{ $navCtaHref }}">{{ $profile->primaryCta }}</a>
+@endif
+  </div>
+</nav>
+@endif
 
 {{-- <main> is the page's landmark, and it is NOT inert: the bands inside it
      are siblings of each other but not of anything outside it, so section 3.7's
@@ -379,8 +654,14 @@
      reveal and its retract over the booking widget, the reviews index, and
      the fallback for the reading spine where scroll-driven CSS is missing.
      Everything it adds is an ENHANCEMENT — with the file blocked, removed or
-     still in flight, the page is complete and static rather than broken. --}}
-<script src="{{ asset('landing/ruled_page.js') }}" defer></script>
+     still in flight, the page is complete and static rather than broken.
+
+     F2 (phase 3c final fix wave): same AssetVersion content-hash query as
+     the stylesheet link above, and for the identical reason — this file's
+     behaviour changed wholesale in this branch too (the reveal/condense/
+     index logic Task 4-7 added), so a cached pre-3c copy under a 3c page is
+     exactly as wrong as a cached pre-3c stylesheet would be. --}}
+<script src="{{ asset('landing/ruled_page.js') }}{{ \App\Support\AssetVersion::query('landing/ruled_page.js') }}" defer></script>
 
 </body>
 </html>

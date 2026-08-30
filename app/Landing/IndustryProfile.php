@@ -23,6 +23,14 @@ final class IndustryProfile
         public readonly string $accent,
         public readonly array  $kickers,
         public readonly array  $defaultSections,
+        // The curated palette (App\Landing\Palette) this industry pre-selects
+        // for a NEW page (Task 6's editor/wizard cards; nothing in THIS round
+        // applies it to a page — see Palette's own docblock). Wired here
+        // rather than in Palette itself, symmetrically with `accent` above:
+        // industry vocabulary and industry-default styling are the same kind
+        // of fact, and Palette has no reason to know Organization::INDUSTRIES
+        // exists.
+        public readonly string $defaultPalette,
         // Whether $industry above is a genuine match, as opposed to
         // 'other' filled in because the input didn't resolve to anything.
         // Vocabulary and schema.org type deliberately answer this question
@@ -130,6 +138,9 @@ final class IndustryProfile
                 'peopleLabel'   => 'Therapists',
                 'primaryCta'    => 'Book appointment',
                 'accent'        => '#9B5C8F',
+                // Spec §3 D2: "champagne_noir (the reference language;
+                // beauty/spa default)".
+                'defaultPalette'=> 'champagne_noir',
                 'kickers'       => [
                     'services' => 'The menu',
                     'about'    => 'The studio',
@@ -145,6 +156,8 @@ final class IndustryProfile
                 'peopleLabel'   => 'At your service',
                 'primaryCta'    => 'Book your stay',
                 'accent'        => '#1B3A5C',
+                // Spec §3 D2: "midnight_brass (hotel)".
+                'defaultPalette'=> 'midnight_brass',
                 'kickers'       => [
                     'services' => 'Stay with us',
                     'about'    => 'The hotel',
@@ -165,6 +178,8 @@ final class IndustryProfile
                 'peopleLabel'   => 'Practitioners',
                 'primaryCta'    => 'Book a consultation',
                 'accent'        => '#1D6F6B',
+                // Spec §3 D2: "clinic_air (medical, dental)".
+                'defaultPalette'=> 'clinic_air',
                 'kickers'       => [
                     'services' => 'What we treat',
                     'about'    => 'The clinic',
@@ -179,6 +194,8 @@ final class IndustryProfile
                 'peopleLabel'   => 'The kitchen',
                 'primaryCta'    => 'Reserve a table',
                 'accent'        => '#8C3B2E',
+                // Spec §3 D2: "terracotta (restaurant, café)".
+                'defaultPalette'=> 'terracotta',
                 'kickers'       => [
                     'services' => 'On the table',
                     'about'    => 'The house',
@@ -196,6 +213,12 @@ final class IndustryProfile
                 'peopleLabel'   => 'Attorneys',
                 'primaryCta'    => 'Request a consultation',
                 'accent'        => '#3B4B74',
+                // Spec §3 D2 names slate_amber's third bucket "professional"
+                // alongside fitness/education, and never names legal or
+                // real_estate anywhere else — this is that bucket, not a
+                // fallback. See this task's report for the full nine-way
+                // table.
+                'defaultPalette'=> 'slate_amber',
                 'kickers'       => [
                     'services' => 'How we help',
                     'about'    => 'The firm',
@@ -210,6 +233,9 @@ final class IndustryProfile
                 'peopleLabel'   => 'Agents',
                 'primaryCta'    => 'Arrange a viewing',
                 'accent'        => '#7A5C2E',
+                // Spec §3 D2's slate_amber bucket ("professional"); see the
+                // legal profile's own comment just above for why.
+                'defaultPalette'=> 'slate_amber',
                 'kickers'       => [
                     'services' => 'What we do',
                     'about'    => 'The agency',
@@ -224,6 +250,9 @@ final class IndustryProfile
                 'peopleLabel'   => 'Instructors',
                 'primaryCta'    => 'Book a lesson',
                 'accent'        => '#35509E',
+                // Spec §3 D2: "slate_amber (fitness, education,
+                // professional)".
+                'defaultPalette'=> 'slate_amber',
                 'kickers'       => [
                     'services' => 'What you\'ll learn',
                     'about'    => 'The academy',
@@ -240,6 +269,9 @@ final class IndustryProfile
                 // See this method's docblock: darkened from the spec's
                 // #C25A2B, which fails the WCAG label floor unaided.
                 'accent'        => '#BA5629',
+                // Spec §3 D2: "slate_amber (fitness, education,
+                // professional)".
+                'defaultPalette'=> 'slate_amber',
                 'kickers'       => [
                     'services' => 'Train with us',
                     'about'    => 'The studio',
@@ -254,6 +286,10 @@ final class IndustryProfile
                 'peopleLabel'   => 'Our team',
                 'primaryCta'    => 'Get in touch',
                 'accent'        => '#2D6A4F',
+                // Spec §3 D2: "porcelain (... other, default)" — also the
+                // palette the un-palette'd CSS's own :root already ships,
+                // so 'other' picking it is a genuine no-op default.
+                'defaultPalette'=> 'porcelain',
                 'kickers'       => [
                     'services' => 'What we offer',
                     'about'    => 'About us',
@@ -335,6 +371,7 @@ final class IndustryProfile
             accent:          $data['accent'],
             kickers:         $data['kickers'],
             defaultSections: $data['defaultSections'],
+            defaultPalette:  $data['defaultPalette'],
             resolved:        $resolvedId !== null,
         );
     }
