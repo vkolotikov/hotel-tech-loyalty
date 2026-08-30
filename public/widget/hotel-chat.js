@@ -32,6 +32,18 @@
   // instead, and the API base is derived as a root-relative path, which is
   // same-origin by construction rather than by configuration. window.HotelChat
   // still wins where it is set, so every existing customer embed is unaffected.
+  var styleNonce = '';
+  if (document.currentScript) {
+    // Pages that ship a strict style-src (our landing template: 'self' plus a
+    // per-request nonce, no unsafe-inline) block this widget's entire injected
+    // stylesheet, and a widget with no CSS paints its raw DOM into the page --
+    // a full-width avatar, an unstyled SVG, loose text. That is what a real
+    // tenant page showed. Such a page hands us its nonce here; we stamp the
+    // <style> with it and skip the external font, which no nonce can rescue
+    // because its host is not in the page's style-src at all. Absent the
+    // attribute nothing changes, so every existing customer embed is untouched.
+    styleNonce = document.currentScript.getAttribute('data-style-nonce') || '';
+  }
   if (!cfg.key && document.currentScript) {
     var embedKey = document.currentScript.getAttribute('data-widget-key');
     if (embedKey) cfg = { key: embedKey, api: '/api/v1/widget/' + embedKey };
@@ -668,6 +680,13 @@
 
   function injectStyles() {
     var style = document.createElement('style');
+    if (styleNonce) {
+      // Both spellings on purpose: the IDL attribute is what the CSP check
+      // reads, and browsers strip the content attribute from the DOM after
+      // parsing, so setting only one of the two is a coin flip across engines.
+      style.setAttribute('nonce', styleNonce);
+      style.nonce = styleNonce;
+    }
     style.textContent = STYLES;
     document.head.appendChild(style);
   }
@@ -885,8 +904,11 @@
         branding.innerHTML = escapeHtml(c.branding_text || T.branding);
       }
     }
-    // Font family
-    if (c.font_family && c.font_family !== 'system-ui') {
+    // Font family. Skipped entirely in nonce mode: those pages name no font
+    // host in style-src, so this <link> is refused and only fills the console
+    // with errors. They carry their own self-hosted typography, and the widget
+    // inherits it through font-family: inherit rather than fetching a second.
+    if (!styleNonce && c.font_family && c.font_family !== 'system-ui') {
       var fontLink = document.getElementById('htchat-font');
       if (!fontLink) {
         fontLink = document.createElement('link');

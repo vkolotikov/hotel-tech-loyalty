@@ -68,17 +68,14 @@
       <h2 class="rp-book__title">{{ $copy['heading'] ?? 'Pick an hour. That’s the whole process.' }}</h2>
 
       @if (filled($bookingUrl ?? null))
-        {{-- No scroll-reveal on this frame OR on the card around it:
-             animating a container whose contents load asynchronously
-             produces a visible double-flash. The skeleton sits BEHIND the
-             iframe rather than being removed by a script, so it is covered
-             the moment the widget paints and is still there if the widget
-             never does. --}}
-        <div class="rp-book__frame">
-          <p class="rp-book__skeleton" aria-hidden="true">Loading booking…</p>
-          <iframe class="rp-book__iframe" src="{{ $bookingUrl }}"
-                  title="{{ $profile->primaryCta }}" loading="lazy"></iframe>
-        </div>
+        {{-- A button, not an embedded window. The iframe dropped a foreign
+             white panel into the middle of a dark page, needed seconds to
+             paint, and sat on "Loading booking..." forever whenever the
+             widget host was unreachable - which is what a real tenant page
+             actually showed. A link inherits the palette, paints instantly,
+             and hands the guest to the same booking flow. --}}
+        <a class="rp-cta rp-book__cta" href="{{ $bookingUrl }}"
+           target="_blank" rel="noopener">{{ $profile->primaryCta }}</a>
       @endif
 
       @if ($dial !== null)
