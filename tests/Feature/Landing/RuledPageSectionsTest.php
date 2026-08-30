@@ -437,44 +437,51 @@ class RuledPageSectionsTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/<iframe[^>]+src="[^"]*\/booking-widget/i', $body);
     }
 
-    public function test_the_booking_widget_is_framed_from_the_admin_origin_never_inlined(): void
+    public function test_the_booking_cta_links_out_and_never_inlines_the_widget(): void
     {
-        // LandingHostGuard refuses /api/v1/booking/* and /book/{token} on this
-        // host by ruling: the widget's isolation is an origin boundary. An
-        // inline widget here would need that allow-list widened.
+        // The band used to frame the widget. On a real tenant page that frame
+        // sat on "Loading booking..." indefinitely and put a white panel in the
+        // middle of a dark page, so the band now links out instead. The rule
+        // the old test defended is unchanged and simply moves to the link:
+        // LandingHostGuard refuses /api/v1/booking/* on this host by ruling,
+        // so the booking flow is reached at the admin origin, never inlined.
         $this->published(industry: 'hotel');
 
         $body = $this->body();
 
-        $this->assertMatchesRegularExpression('/<iframe[^>]+src="[^"]*\/booking-widget/i', $body);
+        $this->assertMatchesRegularExpression(
+            '/<a[^>]+class="[^"]*rp-book__cta[^"]*"[^>]+href="[^"]*\/booking-widget/i',
+            $body,
+            'The booking band no longer offers a way through to the booking flow.'
+        );
+        $this->assertStringNotContainsString('<iframe', $body, 'The band is framing again.');
         $this->assertStringNotContainsString('/api/v1/booking', $body);
     }
 
-    public function test_the_frames_source_is_one_the_pages_own_policy_permits(): void
+    public function test_the_booking_link_targets_the_configured_admin_origin(): void
     {
-        // The one assertion that matters: whatever the template put in the
-        // src, the response's own frame-src must already name it. A hardcoded
-        // host, a widened path or a second copy of app.url all fail here
-        // rather than in a browser console on a customer's site.
+        // The one assertion that matters, carried over from the frame-src era:
+        // whatever the template put in the href, it must be the origin this
+        // deployment actually configures. A hardcoded host or a second copy of
+        // app.url fails here rather than on a customer's site.
         $this->published(industry: 'hotel');
 
         $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
 
-        preg_match('/<iframe[^>]+src="([^"]+)"/i', $response->getContent(), $frame);
-        $this->assertNotEmpty($frame, 'The booking band framed nothing.');
+        preg_match(
+            '/<a[^>]+class="[^"]*rp-book__cta[^"]*"[^>]+href="([^"]+)"/i',
+            $response->getContent(),
+            $link
+        );
+        $this->assertNotEmpty($link, 'The booking band linked nowhere.');
 
-        $src = html_entity_decode($frame[1]);
-        $this->assertStringStartsWith('http', $src, 'The frame src is not absolute.');
-
-        preg_match('/frame-src ([^;]+)/', (string) $response->headers->get('Content-Security-Policy'), $policy);
-        $this->assertNotEmpty($policy, 'The response names no frame-src.');
-
-        $permitted = collect(explode(' ', trim($policy[1])))
-            ->contains(fn (string $source) => str_ends_with($source, '/')
-                ? str_starts_with($src, $source)
-                : str_starts_with($src, $source . '?') || $src === $source);
-
-        $this->assertTrue($permitted, "frame-src does not permit [{$src}].");
+        $href = html_entity_decode($link[1]);
+        $this->assertStringStartsWith('http', $href, 'The booking href is not absolute.');
+        $this->assertStringStartsWith(
+            rtrim((string) config('app.url'), '/'),
+            $href,
+            'The booking href does not point at the configured admin origin.'
+        );
     }
 
     public function test_the_phone_is_promoted_beside_the_widget_and_dials(): void

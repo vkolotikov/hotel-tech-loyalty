@@ -566,13 +566,35 @@
     // and through the copy override it made hero "anchorable" — a dead
     // `#hero` link, since the hero wrapper deliberately carries no id (the
     // wordmark already points at the top), eating one of the four slots.
+    // Nav labels are NOT the section kickers. A kicker is prose the tenant
+    // writes for the band it sits above -- FDS Cards' about kicker is
+    // "Digital is convenient. Metal makes it unforgettable." -- and putting
+    // that in a nav pill produced a link the width of the viewport. A nav
+    // label is a signpost: one or two words, industry-worded where the
+    // profile has a word for it, and dropped entirely if it cannot be short.
+    $navLabel = function ($key) use ($page, $profile) {
+        // The tenant's own kicker wins while it still reads as a signpost.
+        // "The Studio" is a better nav label than any generic word we could
+        // pick. But a kicker is prose for the band it heads, and a tenant who
+        // writes "Digital is convenient. Metal makes it unforgettable." gets a
+        // nav link the width of the viewport -- which is what shipped. Past
+        // the cap we fall back to the industry's own short word for the band.
+        $custom = trim((string) ($page->content[$key]['kicker'] ?? ''));
+
+        if ($custom !== '' && mb_strlen($custom) <= 24) {
+            return $custom;
+        }
+
+        return trim((string) $profile->kicker($key));
+    };
+
     $navAnchors = $renderedSections
         ->reject(fn ($section) => $section->key === 'hero')
         ->map(fn ($section) => [
             'key'   => $section->key,
-            'label' => trim((string) ($page->content[$section->key]['kicker'] ?? $profile->kicker($section->key))),
+            'label' => $navLabel($section->key),
         ])
-        ->filter(fn ($anchor) => $anchor['label'] !== '')
+        ->filter(fn ($anchor) => $anchor['label'] !== '' && mb_strlen($anchor['label']) <= 24)
         ->take(4)
         ->values();
 
@@ -641,7 +663,8 @@
      are therefore root-relative, which is same-origin by construction rather
      than by configuration, and the key travels on a data attribute instead of
      an inline assignment. --}}
-<script src="/w/chat.js" data-widget-key="{{ $content->widgetKey }}" defer></script>
+<script src="/w/chat.js" data-widget-key="{{ $content->widgetKey }}"
+        data-style-nonce="{{ $cspNonce }}" defer></script>
 @endif
 
 {{-- The template's interactive layer: Appendix B 4.7's budget, one file, one
