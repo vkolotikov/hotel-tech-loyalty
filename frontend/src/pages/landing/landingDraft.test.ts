@@ -64,6 +64,22 @@ describe('mergeFormDraft', () => {
     expect(mergeFormDraft({ brand_color: '#1f5fa8' })).toEqual({ brand_color: '#1f5fa8' })
   })
 
+  /**
+   * Landing phase 3c (the industry step): `industry` is a plain string
+   * field here ON PURPOSE, unlike `font_pairing`/`palette` below, which are
+   * checked against a hardcoded id list. The onboarding response SERVES the
+   * offered industries, so the narrowing happens against that live list
+   * instead (`resolveIndustry`, ./industryChoices, and its own tests) —
+   * strictly better than a mirror of `Organization::INDUSTRIES` that could
+   * drift from it. All this layer owes is the same type discipline every
+   * other string field gets.
+   */
+  it('keeps a drafted industry as a plain string and drops a non-string one', () => {
+    expect(mergeFormDraft({ industry: 'education' })).toEqual({ industry: 'education' })
+    expect(mergeFormDraft({ industry: 42 })).toEqual({})
+    expect('industry' in mergeFormDraft({ headline: 'Welcome' })).toBe(false)
+  })
+
   it('keeps a font_pairing that is one of the three the backend accepts', () => {
     expect(mergeFormDraft({ font_pairing: 'modern' })).toEqual({ font_pairing: 'modern' })
   })
@@ -261,6 +277,28 @@ describe('buildPayload', () => {
       contact: {},
       sections: [{ key: 'hero', enabled: true }],
     })
+  })
+
+  /**
+   * Landing phase 3c (the industry step). Present only when there is a real
+   * choice to send: `resolveIndustry` returns '' when the response offered
+   * no industries at all (an older backend), and an ABSENT key — not an
+   * empty string, which `Rule::in(Organization::INDUSTRIES)` would 422 — is
+   * what makes the service fall back to the org's own industry, i.e. the
+   * behaviour that shipped before this step existed. Same discipline as
+   * `theme.palette` in the very next test.
+   */
+  it('sends the chosen industry, and omits the key entirely when there is none', () => {
+    const withIndustry = buildPayload({
+      ...base, industry: 'education', sections: [], sectionChoices: {},
+    })
+    expect(withIndustry.industry).toBe('education')
+
+    const without = buildPayload({ ...base, industry: '', sections: [], sectionChoices: {} })
+    expect('industry' in without).toBe(false)
+
+    const absent = buildPayload({ ...base, sections: [], sectionChoices: {} })
+    expect('industry' in absent).toBe(false)
   })
 
   it('defaults an offerable section the tenant never toggled to enabled', () => {

@@ -108,6 +108,69 @@ class LandingOnboardingService
     }
 
     /**
+     * Every industry the wizard's first step may offer, each carrying the
+     * words a page in that industry would actually be written in.
+     *
+     * The LIST and its order are Organization::INDUSTRIES' — the same nine
+     * ids the registration picker, the Settings industry switcher and
+     * normaliseIndustry() all speak, so what the wizard offers and what
+     * apply() accepts are one list (exactly the discipline templateKeys()
+     * already gives template_key). The WORDS are IndustryProfile's, read
+     * through for() rather than all(): every id in INDUSTRIES has an
+     * authored profile today (IndustryProfileTest asserts that one-for-one
+     * match), and a TENTH industry added to INDUSTRIES before this class is
+     * taught its vocabulary degrades to 'other's honestly-generic copy
+     * rather than vanishing from a picker the rest of the platform still
+     * offers it in -- for()'s own documented fallback, inherited here on
+     * purpose instead of re-decided.
+     *
+     * Deliberately NOT translated. servicesLabel / peopleLabel / primaryCta
+     * are not admin chrome: they are the literal words that will be printed
+     * on the tenant's published page, which is rendered in English by
+     * IndustryProfile itself. Showing them verbatim is what makes the card
+     * a preview of the page rather than a description of one -- the same
+     * reason `sections[].label` and the template blurb already cross this
+     * wire untranslated.
+     *
+     * `sections` is the band list a page in that industry is created with
+     * (apply() seeds exactly $profile->defaultSections), which is what lets
+     * the wizard's step 4 stop offering a band the chosen industry's page
+     * would never have -- 'booking' is the only key that varies today.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function industries(): array
+    {
+        return collect(Organization::INDUSTRIES)
+            ->map(function (string $id): array {
+                $profile = IndustryProfile::for($id);
+
+                return [
+                    'id'             => $id,
+                    'services_label' => $profile->servicesLabel,
+                    'people_label'   => $profile->peopleLabel,
+                    'primary_cta'    => $profile->primaryCta,
+                    // Through CssColor for the same reason brandColor()
+                    // below runs the brand's own colour through it: the
+                    // swatch a card paints has to be the colour the page
+                    // would really use, not a value Accent::for() would
+                    // normalise or discard at render time.
+                    'accent'         => CssColor::safe($profile->accent),
+                    // The palette id only. What that palette LOOKS like is
+                    // already mirrored on the front end
+                    // (frontend/src/pages/landing/designChoices.ts, which
+                    // the design step's own cards render from), so sending
+                    // the tokens again here would be a second copy of the
+                    // same six palettes on the same screen.
+                    'palette'        => $profile->defaultPalette,
+                    'sections'       => $profile->defaultSections,
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
      * Everything the wizard needs to open with something already filled in.
      *
      * Completion is the existence of a page, NOT a crm_settings marker.
@@ -152,8 +215,25 @@ class LandingOnboardingService
                 'email'         => $contact?->email,
                 'address'       => $contact?->address,
                 'brand_color'   => $this->brandColor($page, $brand, $content->profile->accent),
+                // The card the wizard's first step opens pre-selected on.
+                // Read off the PROFILE that produced everything else in
+                // this response -- the section list, the labels, the house
+                // accent -- rather than from $org->resolved_industry
+                // directly, so the pre-selected card cannot describe a
+                // different industry from the rest of the prefill. The two
+                // are the same value for a tenant with no page yet (see
+                // newPageIndustry(), which is what probePage() hands
+                // PageContent); where a page DOES exist this is that page's
+                // own committed snapshot, which is the thing the prefill is
+                // describing.
+                'industry'      => $content->profile->industry,
             ],
             'templates'      => self::TEMPLATES,
+            // Landing phase 3c (wizard industry step): the nine industries
+            // step 1 offers, each with the words a page in it would carry.
+            // See industries() for why the list is Organization's and the
+            // vocabulary is IndustryProfile's.
+            'industries'     => self::industries(),
             'sections'       => $this->sections($content),
             'suggested_slug' => $page?->slug ?? $this->suggestSlug($org, $brand, $contact),
         ];
@@ -173,8 +253,9 @@ class LandingOnboardingService
         $brandId = $this->brandId();
         // Read once and used for both the row's snapshot and the section
         // list seeded from it, so the page cannot be filed under one
-        // industry and given another's bands. See newPageIndustry().
-        $industry = $this->newPageIndustry($org);
+        // industry and given another's bands. See chosenIndustry(), and
+        // newPageIndustry() behind it.
+        $industry = $this->chosenIndustry($data, $org);
         $profile  = IndustryProfile::for($industry);
 
         // Everything that can be refused is refused before the transaction
@@ -230,7 +311,17 @@ class LandingOnboardingService
         // in there are safe; inside, on Postgres, they would hit 25P02 on an
         // aborted transaction and turn a 422 into a 500.
         try {
-            return DB::transaction(function () use ($page, $slug, $profile, $chosen) {
+            return DB::transaction(function () use ($org, $industry, $page, $slug, $profile, $chosen) {
+                // BEFORE the page insert, and inside the same transaction:
+                // the org write is what makes Organization::updated resync
+                // the industry snapshot onto every landing page the org
+                // already has, and a page created before that sweep would
+                // be swept by it a moment later for no reason. Rolled back
+                // with the page if anything below fails -- "create the page
+                // the wizard describes, or nothing at all" has to include
+                // the choice the wizard was describing it with.
+                $this->syncOrganizationIndustry($org, $industry);
+
                 $page->save();
 
                 // No redirect row may share a slug with a live page. Cleared
@@ -679,5 +770,69 @@ class LandingOnboardingService
     private function newPageIndustry(Organization $org): string
     {
         return $org->resolved_industry;
+    }
+
+    /**
+     * The industry this page is being built for: the one the wizard's first
+     * step asked about, or -- when the request carries none at all -- the
+     * org's own, exactly as before this step existed.
+     *
+     * Normalised through the model rather than trusted as sent, so an alias
+     * ('hospitality') resolves the same way here as everywhere else in the
+     * platform and an unresolvable value falls through to the org's own
+     * industry instead of reaching IndustryProfile::for() to be silently
+     * read as 'other'. The controller has already refused anything outside
+     * Organization::INDUSTRIES with a 422; this is the belt to that
+     * braces, and the reason a direct API caller cannot file a page under
+     * an industry the platform does not have.
+     */
+    private function chosenIndustry(array $data, Organization $org): string
+    {
+        $submitted = $data['industry'] ?? null;
+
+        return (is_string($submitted) ? Organization::normaliseIndustry($submitted) : null)
+            ?? $this->newPageIndustry($org);
+    }
+
+    /**
+     * Move the ORGANISATION onto the industry the tenant just chose, so
+     * that choice survives as a fact about the business rather than as one
+     * page's private opinion of it.
+     *
+     * `organizations.industry` is the only writer this needs. Every landing
+     * page's own `industry` snapshot follows from Organization::updated
+     * (see that hook: "the pages following along is this hook's job"), so
+     * nothing here touches landing_pages a second time -- the row this
+     * request is about carries $industry directly because apply() built it
+     * with the same value, and any SIBLING brand's page is resynced by the
+     * hook.
+     *
+     * What this deliberately does NOT do is run the industry PRESETS.
+     * POST /v1/auth/apply-industry (AuthController::applyIndustry) is the
+     * one path that reshapes an org's CRM pipeline, lost-reason taxonomy,
+     * custom fields, planner groups and loyalty ladder to a new industry,
+     * and it refuses with a 409 until the admin has acknowledged a listed
+     * set of consequences. Reshaping any of that as a side effect of
+     * building a marketing page would be exactly the unacknowledged data
+     * change that gate exists to prevent. Writing the column alone changes
+     * only what the product CALLS things (vocabulary, KPI selection,
+     * schema.org type, this page's own bands) and destroys nothing, which
+     * is what the wizard's own copy tells the tenant it will do; the full
+     * reshape stays one deliberate click away in Settings -> Industry.
+     *
+     * A choice equal to the org's current industry -- the overwhelmingly
+     * common case, since the wizard opens pre-selected on it -- writes
+     * nothing at all, so an untouched first step cannot bump updated_at or
+     * fire the resync sweep over pages that are already correct. The same
+     * no-op test applyIndustry() makes for the same reason.
+     */
+    private function syncOrganizationIndustry(Organization $org, string $industry): void
+    {
+        if ($org->resolved_industry === $industry) {
+            return;
+        }
+
+        $org->industry = $industry;
+        $org->save();
     }
 }

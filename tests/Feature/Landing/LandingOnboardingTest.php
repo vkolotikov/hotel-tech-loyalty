@@ -1175,4 +1175,214 @@ class LandingOnboardingTest extends TestCase
 
         $this->assertDatabaseCount('landing_pages', 0);
     }
+
+    // ─── The industry step (landing phase 3c) ────────────────────────────
+
+    /**
+     * Step 1 used to ask which TEMPLATE the tenant wanted, from a list of
+     * exactly one. Industry is the question worth asking: it decides the
+     * page's whole vocabulary, its default palette and whether the booking
+     * band exists at all. So the prefill has to carry every industry the
+     * platform offers, each with words a card can actually show -- an
+     * industry the picker draws blank is a dead card, the same defect
+     * test_prefill_names_a_template_the_apply_endpoint_will_accept exists
+     * to catch on the other axis.
+     */
+    public function test_prefill_offers_every_industry_the_platform_has_with_words_to_show(): void
+    {
+        $this->makeProperty();
+
+        $industries = $this->prefill()['industries'];
+
+        $this->assertSame(
+            Organization::INDUSTRIES,
+            collect($industries)->pluck('id')->all(),
+            'The wizard offers a different set of industries from the rest of the platform.',
+        );
+
+        foreach ($industries as $industry) {
+            $profile = IndustryProfile::for($industry['id']);
+
+            // The card's own words, and the profile they must come from --
+            // asserted against IndustryProfile rather than against literals,
+            // so re-authoring an industry's vocabulary cannot leave the
+            // wizard showing the previous wording.
+            $this->assertSame($profile->servicesLabel, $industry['services_label']);
+            $this->assertSame($profile->peopleLabel, $industry['people_label']);
+            $this->assertSame($profile->primaryCta, $industry['primary_cta']);
+            $this->assertSame($profile->defaultPalette, $industry['palette']);
+            $this->assertSame($profile->defaultSections, $industry['sections']);
+
+            // A colour a card can paint with, normalised the same way the
+            // rendered page will normalise it.
+            $this->assertMatchesRegularExpression('/^#[0-9a-fA-F]{6}$/', $industry['accent']);
+
+            foreach (['services_label', 'people_label', 'primary_cta'] as $word) {
+                $this->assertNotSame('', trim($industry[$word]),
+                    "The '{$industry['id']}' card would render a blank {$word}.");
+            }
+        }
+    }
+
+    /** The card step 1 opens pre-selected on is the org's own industry. */
+    public function test_prefill_preselects_the_organisations_own_industry(): void
+    {
+        $this->makeProperty();
+
+        $this->assertSame('beauty', $this->prefill()['prefill']['industry']);
+
+        // And it is always an id the picker itself offers, so the
+        // pre-selection can never be a card that is not on screen.
+        $this->assertContains(
+            $this->prefill()['prefill']['industry'],
+            collect($this->prefill()['industries'])->pluck('id')->all(),
+        );
+    }
+
+    /**
+     * The point of asking: a chosen industry has to reach the ORGANISATION,
+     * not just this one page. `organizations.industry` is the only column
+     * written -- Organization::updated is what carries the snapshot onto
+     * every landing page, which is why nothing here writes
+     * landing_pages.industry a second time -- and the page created in the
+     * same request is filed under the chosen industry with THAT industry's
+     * bands and palette, not the one the org opened the wizard on.
+     */
+    public function test_apply_moves_the_organisation_onto_the_chosen_industry(): void
+    {
+        $this->makeProperty();
+
+        $this->assertSame('beauty', $this->org->resolved_industry);
+
+        $this->apply($this->validPayload(['industry' => 'education']));
+
+        $this->assertSame('education', $this->org->fresh()->resolved_industry);
+
+        $page = LandingPage::with('sections')->where('slug', 'maison-mimi')->first();
+
+        $this->assertSame('education', $page->industry);
+        // Education's own default palette, not beauty's -- the page was
+        // built from the profile the tenant chose, front to back.
+        $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
+        $this->assertSame(
+            IndustryProfile::for('education')->defaultSections,
+            $page->sections->pluck('key')->all(),
+        );
+    }
+
+    /**
+     * The industry the wizard SHOWED and the sections it OFFERED must not
+     * come apart when the tenant changes the first one. `beauty` lists a
+     * booking band and `education` does not, so a wizard that posted back
+     * the prefill's own section rows unchanged would be refused
+     * ("This page has no section called 'booking'.") -- the Create button
+     * 422ing on a row the wizard itself drew. The front end filters those
+     * rows against the chosen industry's list
+     * (frontend/src/pages/landing/industryChoices.ts, sectionsForIndustry);
+     * this pins the refusal that filter exists to avoid, so the two cannot
+     * quietly stop agreeing.
+     */
+    public function test_apply_refuses_a_band_the_chosen_industry_does_not_have(): void
+    {
+        $this->makeProperty();
+
+        $this->assertContains('booking', IndustryProfile::for('beauty')->defaultSections);
+        $this->assertNotContains('booking', IndustryProfile::for('education')->defaultSections);
+
+        try {
+            $this->apply($this->validPayload([
+                'industry' => 'education',
+                'sections' => [['key' => 'booking', 'enabled' => true]],
+            ]));
+            $this->fail('A band the chosen industry has no partial for was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('sections', $e->errors());
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+        // Refused before the transaction opened, so the org is untouched
+        // too -- a rejected request must not leave the business filed under
+        // an industry whose page was never created.
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+    }
+
+    /**
+     * The overwhelmingly common case: the tenant leaves step 1 on the card
+     * it opened on. Nothing is written -- no bumped updated_at, no resync
+     * sweep over pages that are already correct -- and the page is filed
+     * exactly where it would have been before this step existed.
+     */
+    public function test_apply_with_the_organisations_own_industry_writes_nothing_to_it(): void
+    {
+        $this->makeProperty();
+
+        $before = $this->org->fresh()->updated_at;
+
+        $this->apply($this->validPayload(['industry' => 'beauty']));
+
+        $after = $this->org->fresh();
+
+        $this->assertSame('beauty', $after->resolved_industry);
+        $this->assertEquals($before, $after->updated_at);
+        $this->assertSame('beauty', LandingPage::where('slug', 'maison-mimi')->first()->industry);
+    }
+
+    /**
+     * A client that never asks -- an older build, a direct API call -- keeps
+     * the exact behaviour that shipped before the industry step: the page is
+     * filed under the organisation's own industry and the org is left alone.
+     */
+    public function test_apply_without_an_industry_falls_back_to_the_organisations_own(): void
+    {
+        $this->makeProperty();
+
+        $this->apply($this->validPayload());
+
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+        $this->assertSame('beauty', LandingPage::where('slug', 'maison-mimi')->first()->industry);
+    }
+
+    public function test_apply_refuses_an_industry_the_platform_does_not_have(): void
+    {
+        $this->makeProperty();
+
+        try {
+            $this->apply($this->validPayload(['industry' => 'lunar_mining']));
+            $this->fail('An unknown industry was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['industry'][0] ?? '';
+            $this->assertSame('Please choose one of the listed industries.', $message);
+        }
+
+        $this->assertDatabaseCount('landing_pages', 0);
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+    }
+
+    /**
+     * Every industry the picker offers has to be one apply() will accept --
+     * the same "offered and accepted are one list" guarantee
+     * test_prefill_names_a_template_the_apply_endpoint_will_accept gives
+     * template_key, on the axis that now actually has nine options.
+     */
+    public function test_every_offered_industry_is_one_the_apply_endpoint_accepts(): void
+    {
+        $this->makeProperty();
+
+        foreach ($this->prefill()['industries'] as $industry) {
+            $id = $industry['id'];
+
+            $this->apply($this->validPayload([
+                'industry' => $id,
+                'slug'     => 'industry-' . str_replace('_', '-', $id),
+            ]));
+
+            $page = LandingPage::where('industry', $id)->first();
+
+            $this->assertNotNull($page, "The wizard offered '{$id}' and apply() would not create it.");
+            $this->assertSame($id, $this->org->fresh()->resolved_industry);
+
+            LandingPageSection::query()->delete();
+            LandingPage::query()->delete();
+        }
+    }
 }
