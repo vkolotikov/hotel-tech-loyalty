@@ -680,15 +680,30 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
    accent hairline, sub-full opacity; z-index -1 inside the device's own
    isolated context so it can never paint over the plate itself. */
 .rp-hero__device{position:relative;isolation:isolate;margin:0;aspect-ratio:4/5;
-  inline-size:100%;max-width:420px;justify-self:end}
+  inline-size:100%;max-width:360px;justify-self:end}
 .rp-hero__device::before{content:"";position:absolute;
   inset:-22px -22px 36px 36px;
   border:1px solid var(--accent);border-radius:var(--r-lg);opacity:.6;
   z-index:-1;pointer-events:none}
-.rp-hero__device .rp-plate--mono{background:var(--bg-elev);
+/* A tenant with no photograph yet still gets an object here, not a panel.
+   Flat --bg-elev at 420px read as an empty placeholder box on the live page:
+   one tone, no light, most of it nothing. The halo wash gives the monogram
+   something to sit in, the tonal fall to --bg-2 gives the card a lit edge and
+   a shaded one, and the inset highlight is the same top-edge light .rp-cta
+   already uses -- so the emblem belongs to the palette rather than floating
+   on it. Smaller, too: an emblem reads as chosen where a panel reads as
+   unfinished. */
+.rp-hero__device .rp-plate--mono{
+  background:
+    radial-gradient(120% 85% at 50% 4%, var(--halo) 0%, transparent 62%),
+    linear-gradient(160deg, var(--bg-elev) 0%, var(--bg-2) 100%);
   border-color:var(--line-soft);border-radius:var(--r-lg);
-  box-shadow:0 50px 100px -36px rgba(0,0,0,0.35), 0 0 0 1px var(--line-soft);
-  --plate-mark:clamp(4.5rem,8vw,7rem)}
+  box-shadow:0 50px 100px -36px rgba(0,0,0,0.35), 0 0 0 1px var(--line-soft),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  --plate-mark:clamp(4rem,7vw,6rem)}
+.rp-hero__device .rp-plate--mono::after{content:"";position:absolute;inset:0;
+  border-radius:inherit;pointer-events:none;
+  background:linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 38%)}
 .rp-hero__device .rp-plate__label{inset-block-end:20px;inset-inline-start:20px}
 
 @media (max-width:899px){
