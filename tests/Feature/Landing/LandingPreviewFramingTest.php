@@ -88,6 +88,32 @@ class LandingPreviewFramingTest extends TestCase
         $this->assertStringNotContainsString('frame-ancestors *', $csp);
     }
 
+    public function test_every_admin_host_may_frame_the_preview_not_only_the_one_in_app_url(): void
+    {
+        // The editor pane is framed by whichever admin host the tenant signed
+        // in to, and this product answers on all of config/pwa.php's hosts.
+        // Naming only config('app.url') left the pane empty on five of the six
+        // -- a tenant reported it as "preview not works", and a design nobody
+        // could see shipped because of it. The assertion above passes on a
+        // one-origin policy, which is exactly why it did not catch this.
+        $page = $this->draftPage();
+
+        $csp = $this->get($this->signedPreviewUrl($page))->headers->get('Content-Security-Policy');
+
+        preg_match('/frame-ancestors ([^;]+)/', (string) $csp, $directive);
+        $this->assertNotEmpty($directive, 'The preview names no frame-ancestors.');
+
+        $permitted = preg_split('/\s+/', trim($directive[1]));
+
+        foreach (array_keys((array) config('pwa.hosts')) as $host) {
+            $this->assertContains(
+                'https://' . $host,
+                $permitted,
+                "The admin host [{$host}] cannot frame its own preview, so the editor pane is blank there."
+            );
+        }
+    }
+
     public function test_the_preview_carries_the_rest_of_the_policy_unchanged(): void
     {
         $page = $this->draftPage();

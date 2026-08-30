@@ -131,12 +131,22 @@ class LandingPageController extends Controller
 
         abort_if($model === null, 404);
 
-        // The editor's live pane iframes this URL from the admin origin. Only the
-        // PREVIEW relaxes frame-ancestors; a published page keeps 'none'. The URL
-        // is signed and short-lived, so framability is not an exposure on its own
-        // -- and the value names our own origin rather than '*', so a draft still
-        // cannot be framed by a third party who somehow obtains the link.
-        $request->attributes->set('landing.frame_ancestors', "'self' " . config('app.url'));
+        // The editor's live pane iframes this URL from whichever admin host the
+        // tenant is signed in to, and this product answers on SIX of them
+        // (config/pwa.php's list: the umbrella app.hexa-tech.uk, loyalty.hotel-
+        // tech.ai, and the sub-brand domains). Naming only config('app.url')
+        // here meant the browser refused the frame on the other five and the
+        // editor showed an empty pane -- the exact "preview not works" a tenant
+        // reported, and the reason a broken design could ship unseen.
+        //
+        // Only the PREVIEW relaxes frame-ancestors; a published page keeps
+        // 'none'. The URL is signed and short-lived, and the value still names
+        // only our own origins rather than '*', so a draft cannot be framed by
+        // a third party who somehow obtains the link.
+        $request->attributes->set(
+            'landing.frame_ancestors',
+            "'self' " . implode(' ', LandingPageSecurity::adminOrigins())
+        );
 
         return $this->render($model)
             ->header('Cache-Control', 'no-store')

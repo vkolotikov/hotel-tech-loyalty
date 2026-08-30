@@ -224,6 +224,40 @@ class LandingPageSecurity
         return false;
     }
 
+    /**
+     * Every origin this product serves its admin SPA on.
+     *
+     * config('app.url') names ONE of them. The SPA answers on all six hosts in
+     * config/pwa.php -- the umbrella domain plus each sub-brand -- so anything
+     * deciding "may the admin do this to a landing page" has to ask about the
+     * host the tenant is actually signed in to, not the one that happens to be
+     * in APP_URL. The preview's frame-ancestors asked the narrow question and
+     * the editor's pane came back empty on five hosts out of six.
+     *
+     * Scheme is https for the configured hosts; app.url keeps its own scheme so
+     * a local http://127.0.0.1:8000 still matches itself.
+     *
+     * @return list<string>
+     */
+    public static function adminOrigins(): array
+    {
+        $origins = [];
+
+        if (($appOrigin = static::adminOrigin()) !== null) {
+            $origins[] = $appOrigin;
+        }
+
+        foreach (array_keys((array) config('pwa.hosts', [])) as $host) {
+            $host = trim((string) $host);
+
+            if ($host !== '') {
+                $origins[] = 'https://' . $host;
+            }
+        }
+
+        return array_values(array_unique($origins));
+    }
+
     private static function widgetFrameSources(): string
     {
         $origin = static::adminOrigin();
