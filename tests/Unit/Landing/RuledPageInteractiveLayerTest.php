@@ -266,41 +266,165 @@ class RuledPageInteractiveLayerTest extends TestCase
     }
 
     /**
-     * The launcher offset has to track the bar rather than the viewport width.
-     * Unconditional, it left a 56px launcher floating 76px off the bottom with
-     * nothing underneath it — over the whole booking band, which is exactly
-     * where someone reaches for chat.
+     * The chat corner's offset has to track the bar rather than the viewport
+     * width. Unconditional, it left a 56px launcher floating 76px off the
+     * bottom with nothing underneath it — over the whole booking band, which
+     * is exactly where someone reaches for chat.
+     *
+     * The SUBJECT moved with the widget and the guard moved with it. While
+     * the widget ran inside the page the launcher was the tenant's button
+     * (#htchat-launcher) and the stylesheet's only business with it was its
+     * offset, so "every rule that names it" and "every rule that offsets it"
+     * were the same set. The widget is behind an origin boundary now and the
+     * launcher is the template's own, so the sheet legitimately gives .rp-chat
+     * a size, a colour and a shape — and the question narrows to the one it
+     * was always really asking:
+     *
+     *   - exactly ONE rule sets the corner's resting offset, and
+     *   - every rule that moves it by the BAR's height tracks the bar, and
+     *     touches nothing else.
+     *
+     * The first half is new and closes a hole the old form had: a second
+     * unconditional offset written under a media query used to be invisible
+     * here, because selectorsTargeting() keys by selector and the duplicate
+     * simply overwrote the original.
      */
-    public function test_every_launcher_rule_tracks_the_bar_not_the_viewport(): void
+    public function test_every_rule_that_offsets_the_chat_dock_tracks_the_bar(): void
     {
-        $selectors = $this->selectorsTargeting('#htchat-launcher');
+        $selectors = $this->selectorsTargeting('.rp-chat');
 
-        $this->assertNotEmpty($selectors, 'Nothing offsets the chat launcher.');
+        $this->assertNotEmpty($selectors, 'Nothing styles the chat dock at all.');
 
-        foreach ($selectors as $selector => $declarations) {
+        // Half one: the resting offset is declared once, on the dock's own
+        // rule, and every OTHER rule that carries it is a duplicate.
+        $resting = [];
+
+        foreach ($this->rulesAbout('.rp-chat') as [$selector, $declarations]) {
+            if (! preg_match('/(^|;)\s*(inset-block-end|bottom)\s*:/', $declarations)) {
+                continue;
+            }
+            if (str_contains($declarations, '--bar-h')) {
+                continue;   // a raise, covered by half two
+            }
+
+            $resting[] = $selector;
+        }
+
+        $this->assertSame(
+            ['.rp-chat'],
+            $resting,
+            'The chat corner\'s resting offset must be declared exactly once, on the dock '
+            . 'itself. A second one under a media query is an offset that only applies at '
+            . 'one width, which is the shape the bar-tracking rules exist to avoid: ['
+            . implode(', ', $resting) . ']'
+        );
+
+        // Half two: every raise is conditional on the bar being on screen.
+        $raises = array_filter(
+            $selectors,
+            fn (string $declarations) => str_contains($declarations, '--bar-h')
+        );
+
+        $this->assertNotEmpty($raises, 'Nothing raises the chat dock clear of the action bar.');
+
+        foreach ($raises as $selector => $declarations) {
             $this->assertTrue(
                 $this->tracksTheBar($selector),
-                'This selector raises the launcher whether or not the bar is on screen, '
+                'This selector raises the dock whether or not the bar is on screen, '
                 . 'so it floats clear of nothing over most of the page: [' . $selector . ']'
             );
 
-            // Nothing about the launcher beyond its offset — 3.6 is emphatic:
-            // reposition, never restyle. A transition counts as a restyle: it
-            // would catch whatever bottom the widget's own applyPosition()
-            // writes later and animate that too.
+            // Nothing beyond the offset — 3.6 is emphatic: reposition, never
+            // restyle. A size or a colour reaching in from a media query is a
+            // second definition that only applies in one scroll state, and a
+            // transition would animate the raise itself, so the launcher would
+            // drift up the screen every time the bar appeared.
             foreach (explode(';', $declarations) as $declaration) {
                 if (trim($declaration) === '') {
                     continue;
                 }
 
                 $this->assertMatchesRegularExpression(
-                    '/^\s*bottom\s*:/',
+                    '/^\s*--rp-chat-gap\s*:/',
                     $declaration,
-                    "Only the launcher's offset may be touched. Colour, size, shape, side, "
-                    . "z-index and its own transitions are the tenant's: [" . trim($declaration) . "]"
+                    'Only the dock\'s offset may be touched here, and it is one custom '
+                    . 'property so the panel can measure its own height against the same '
+                    . 'number: [' . trim($declaration) . ']'
                 );
             }
         }
+    }
+
+    /**
+     * The panel's height is measured back from the dock's offset rather than
+     * from a copy of the bar's height, which is what makes the raise above a
+     * single declaration. Written independently, the panel keeps its full
+     * height when the bar pushes the dock up and runs off the top of a phone.
+     */
+    public function test_the_panel_sizes_itself_against_the_docks_own_offset(): void
+    {
+        $sized = 0;
+
+        foreach ($this->rulesAbout('.rp-chat__panel') as [$selector, $declarations]) {
+            if (! preg_match('/(^|;)\s*(max-)?block-size\s*:/', $declarations)) {
+                continue;
+            }
+
+            $sized++;
+
+            $this->assertStringContainsString(
+                'var(--rp-chat-gap)',
+                $declarations,
+                'The panel is anchored to the dock, so its height must be measured back '
+                . 'from the dock\'s own offset. A height that ignores it overruns the top '
+                . 'of the screen the moment the action bar raises the corner: [' . $selector . ']'
+            );
+        }
+
+        $this->assertGreaterThan(0, $sized, 'Nothing bounds the chat panel\'s height.');
+    }
+
+    /**
+     * Every rule whose SUBJECT is $class — the element the rule actually
+     * styles, which is the last compound of each selector in its list.
+     *
+     * selectorsTargeting() above cannot answer this: it matches a substring,
+     * so `.rp-chat` also catches `.rp-chat__panel` and `.rp-chat__launcher`,
+     * and it keys by selector, so two rules with the same selector under
+     * different media queries collapse into one. Both matter here — the dock
+     * and the panel are separately positioned elements whose class names are
+     * prefixes of each other, and "declared exactly once" is a claim about
+     * rules rather than about selectors.
+     *
+     * @return list<array{0: string, 1: string}> [selector, declarations]
+     */
+    private function rulesAbout(string $class): array
+    {
+        $found = [];
+
+        foreach ($this->rules() as $rule) {
+            foreach (explode(',', $rule[1]) as $selector) {
+                $selector = trim(preg_replace('/\s+/', ' ', $selector));
+
+                if ($selector === '') {
+                    continue;
+                }
+
+                $compounds = preg_split('/[\s>+~]+/', $selector);
+                $subject   = (string) end($compounds);
+
+                // The subject may carry pseudo-classes and attribute
+                // selectors of its own (:hover, [aria-expanded="true"]);
+                // strip them, since the ELEMENT is still the same one.
+                $subject = preg_replace('/[:\[].*$/', '', $subject);
+
+                if ($subject === $class) {
+                    $found[] = [$selector, $rule[2]];
+                }
+            }
+        }
+
+        return $found;
     }
 
     /**

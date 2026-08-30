@@ -587,11 +587,16 @@ class RuledPageRenderTest extends TestCase
         // $localBusiness a name, which is what makes the layout emit the
         // ld+json block at all (an unnamed page suppresses it — see
         // LandingSeoTest::test_the_json_ld_block_is_suppressed_when_there_is_no_property),
-        // and the chat config makes the layout ALSO emit the same-origin
-        // chat embed (carries src=). Together with ruled_page.js, the
-        // template's unconditional interactive-layer script (also carries
-        // src=), that is all three <script> tags this template can ever
-        // produce, so this test exercises every one of them at once.
+        // and the chat config makes the layout emit its chat dock. The dock
+        // is the reason the expected COUNT dropped from three to two: the
+        // chat used to be a same-origin <script src="/w/chat.js">, and it is
+        // now an iframe on the admin origin (see
+        // test_the_chat_is_framed_from_the_admin_origin_and_ships_no_script).
+        // With the chat switched on and the ld+json block emitted, this
+        // fixture still renders every <script> tag the template is capable of
+        // producing — there are exactly two left, ruled_page.js and the
+        // ld+json block, and a third appearing here is a regression whatever
+        // it turns out to be.
         $page = $this->published();
         Property::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Glamour Salon',
@@ -604,11 +609,13 @@ class RuledPageRenderTest extends TestCase
 
         $body = $this->body();
         $this->assertStringContainsString('<script', $body, 'The fixture rendered no script at all.');
+        $this->assertStringContainsString('rp-chat__launcher', $body,
+            'The chat fixture rendered no dock, so this no longer covers the chat path at all.');
 
         preg_match_all('/<script\b[^>]*>/i', $body, $m);
         $tags = $m[0];
 
-        $this->assertSame(3, count($tags), 'Expected exactly the chat embed, ruled_page.js, and the ld+json block.');
+        $this->assertSame(2, count($tags), 'Expected exactly ruled_page.js and the ld+json block.');
 
         foreach ($tags as $tag) {
             $this->assertTrue(
@@ -656,14 +663,19 @@ class RuledPageRenderTest extends TestCase
      */
     public function test_every_shape_the_template_actually_emits_is_accepted(): void
     {
+        // The /w/chat.js spellings these cases used to carry are gone with the
+        // embed itself (the chat is framed now), so every one of them is
+        // restated against the src the template does still emit. The shapes
+        // are unchanged, and they are what this guard is about: a browser
+        // treats all five as the same tag.
         $legitimate = [
-            'chat embed'                  => '<script src="/w/chat.js" data-widget-key="wk-example" defer>',
+            'external same-origin src'     => '<script src="/landing/ruled_page.js" data-x="y" defer>',
             'ruled_page.js'                => '<script src="/landing/ruled_page.js" defer>',
-            'ld+json with nonce'          => '<script type="application/ld+json" nonce="AbCdEf1234567890123456">',
-            'ld+json with no nonce'       => '<script type="application/ld+json">',
-            'attributes reordered'        => '<script defer src="/w/chat.js">',
-            'self-closing syntax'         => '<script src="/w/chat.js" defer />',
-            'mixed-case tag and attribute' => '<SCRIPT SRC="/w/chat.js" DEFER>',
+            'ld+json with nonce'           => '<script type="application/ld+json" nonce="AbCdEf1234567890123456">',
+            'ld+json with no nonce'        => '<script type="application/ld+json">',
+            'attributes reordered'         => '<script defer src="/landing/ruled_page.js">',
+            'self-closing syntax'          => '<script src="/landing/ruled_page.js" defer />',
+            'mixed-case tag and attribute' => '<SCRIPT SRC="/landing/ruled_page.js" DEFER>',
         ];
 
         foreach ($legitimate as $label => $tag) {
@@ -763,12 +775,26 @@ class RuledPageRenderTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/\sstyle="/i', $body);
     }
 
-    public function test_the_chat_embed_is_same_origin(): void
+    /**
+     * The chat is FRAMED now, and the same-origin script it replaces is gone.
+     *
+     * This test asserted the opposite until this task, on the argument that a
+     * script cannot be iframed. The argument was sound and the result was
+     * not: this page's script-src is 'self' with no nonce and its style-src
+     * is 'self' plus a per-request nonce, and the widget injects an inline
+     * <script> and writes every position it needs as an inline style
+     * ATTRIBUTE. A style nonce rescues a <style> ELEMENT and nothing else, so
+     * what a real tenant page rendered was the widget's raw DOM — unstyled
+     * avatar, SVG and text, position:static, below the footer. The chat
+     * therefore joins booking, services, reviews and lead forms behind the
+     * origin boundary.
+     *
+     * The assertion that CARRIES OVER is the last one, and it is the one that
+     * mattered: no SCRIPT on this page may name the admin origin. It now
+     * holds for a stronger reason — there is no chat script at all.
+     */
+    public function test_the_chat_is_framed_from_the_admin_origin_and_ships_no_script(): void
     {
-        // ChatWidgetConfig::generateEmbedCode() cannot be used here: it builds
-        // both the script src and the API base from the admin origin, which
-        // script-src 'self' and connect-src 'self' refuse, and it delivers
-        // them through an inline script, which has no nonce to run under.
         $this->published();
         ChatWidgetConfig::create([
             'organization_id' => 1, 'brand_id' => 1,
@@ -777,22 +803,26 @@ class RuledPageRenderTest extends TestCase
 
         $body = $this->body();
 
-        $this->assertStringContainsString('src="/w/chat.js"', $body);
-        $this->assertStringContainsString('data-widget-key="wk-same-origin"', $body);
+        $this->assertMatchesRegularExpression(
+            '/<iframe[^>]+class="rp-chat__panel"[^>]+src="[^"]*\/chat-frame\/wk-same-origin/i',
+            $body,
+            'The chat panel is not framed from the chat-frame page.'
+        );
+        $this->assertStringContainsString('rp-chat__launcher', $body,
+            'The template ships no launcher of its own.');
 
-        // Scoped to the script tags rather than the whole document, because
-        // the document legitimately names the admin origin now: the booking
-        // band FRAMES /booking-widget from it, which is the opposite ruling to
-        // this one and for the opposite reason. Booking can live behind an
-        // origin boundary and therefore must; chat is a script that has to
-        // execute inside this page, so it cannot, and it stays same-origin
-        // under script-src 'self' instead. What must never happen is a SCRIPT
-        // pointed at the admin host.
+        // The same-origin embed is GONE, not merely joined: a page carrying
+        // both would run the widget twice, once of them broken.
+        $this->assertStringNotContainsString('/w/chat.js', $body);
+        $this->assertStringNotContainsString('data-widget-key', $body);
+        $this->assertStringNotContainsString('data-style-nonce', $body);
+
         preg_match_all('/<script[\s>][^>]*>/i', $body, $tags);
         $this->assertNotEmpty($tags[0], 'The fixture rendered no script at all.');
 
         foreach ($tags[0] as $tag) {
-            $this->assertStringNotContainsString(rtrim(config('app.url'), '/'), $tag);
+            $this->assertStringNotContainsString(rtrim(config('app.url'), '/'), $tag,
+                "A script on this page names the admin origin: {$tag}");
         }
     }
 
@@ -804,7 +834,29 @@ class RuledPageRenderTest extends TestCase
             'widget_key' => 'wk-off', 'is_active' => false,
         ]);
 
-        $this->assertStringNotContainsString('/w/chat.js', $this->body());
+        $body = $this->body();
+
+        // Both spellings, so the answer does not depend on which era of the
+        // embed someone happens to be looking for.
+        $this->assertStringNotContainsString('/w/chat.js', $body);
+        $this->assertStringNotContainsString('/chat-frame/', $body);
+        $this->assertStringNotContainsString('rp-chat', $body);
+    }
+
+    /**
+     * No ChatWidgetConfig at all is the other route to the same absence, and
+     * it is the common one: most pages have no chat. A launcher shipped
+     * without a key would open an iframe pointed at /chat-frame/ with nothing
+     * after it, which 404s inside itself and shows the visitor an empty box.
+     */
+    public function test_a_page_with_no_chat_widget_ships_no_launcher(): void
+    {
+        $this->published();
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('rp-chat', $body);
+        $this->assertStringNotContainsString('/chat-frame/', $body);
     }
 
     public function test_a_disabled_section_is_not_rendered(): void

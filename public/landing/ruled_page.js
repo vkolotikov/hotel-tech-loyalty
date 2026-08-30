@@ -305,4 +305,70 @@
 
     condense();
   }
+
+  /* 6 — the chat dock (Task 8, landing phase 3c) --------------------------- */
+  // The launcher is the template's own button and the panel is an iframe on
+  // the admin origin, because the widget's inline script and inline style
+  // ATTRIBUTES are both refused by this page's CSP and no nonce reaches an
+  // attribute (see layout.blade.php's own note). So the only thing left on
+  // this side is a toggle: show the frame, say so on aria-expanded, and let
+  // the stylesheet swap the glyph off that same attribute.
+  //
+  // NOT an enhancement, unlike everything above it, and it is the one place
+  // in this file where that is true: with this script blocked the launcher is
+  // an inert button and the panel stays hidden. That is the correct resting
+  // state -- a chat panel nobody can close would be worse -- and it is why
+  // the panel ships `hidden` in the markup rather than being hidden by a
+  // class this file adds.
+  var chat = document.querySelector('.rp-chat');
+  var chatLauncher = chat && chat.querySelector('.rp-chat__launcher');
+  var chatPanel = chat && chat.querySelector('.rp-chat__panel');
+
+  if (chatLauncher && chatPanel) {
+    // The frame's own origin, read off the src the template rendered. This
+    // file is static and same-origin, so it cannot be told the admin origin
+    // any other way -- and postMessage must never be handed '*' when the
+    // page it is addressing is cross-origin.
+    var chatOrigin = null;
+    try { chatOrigin = new URL(chatPanel.getAttribute('src'), location.href).origin; } catch (e) {}
+
+    var setChat = function (open) {
+      chatPanel.hidden = !open;
+      chatLauncher.setAttribute('aria-expanded', open ? 'true' : 'false');
+
+      var label = chatLauncher.getAttribute(open ? 'data-label-close' : 'data-label-open');
+      if (label) { chatLauncher.setAttribute('aria-label', label); }
+
+      if (open && chatOrigin && chatPanel.contentWindow) {
+        // Re-opening after the visitor closed the panel from INSIDE the
+        // frame: the widget is still mounted there but its panel is hidden,
+        // and only the frame can press its launcher again. Harmlessly
+        // dropped on the first open, when the frame has not loaded yet and
+        // the widget opens itself.
+        try { chatPanel.contentWindow.postMessage({ htchat: 'open' }, chatOrigin); } catch (e) {}
+      }
+
+      if (!open) { try { chatLauncher.focus(); } catch (e) {} }
+    };
+
+    chatLauncher.addEventListener('click', function () {
+      setChat(chatPanel.hidden);
+    });
+
+    document.addEventListener('keydown', function (event) {
+      if (chatPanel.hidden) { return; }
+      if (event.key === 'Escape' || event.key === 'Esc') { setChat(false); }
+    });
+
+    // The widget's own header carries an X. Pressing it closes the panel
+    // INSIDE the frame, which would otherwise leave this page holding an
+    // open iframe with nothing painted in it; the frame reports the close
+    // and this side catches up. Identified by the window it came from rather
+    // than by its origin string: the frame is the only window this page ever
+    // listens to, and nothing else can forge event.source.
+    window.addEventListener('message', function (event) {
+      if (event.source !== chatPanel.contentWindow) { return; }
+      if (event.data && event.data.htchat === 'closed') { setChat(false); }
+    });
+  }
 }());

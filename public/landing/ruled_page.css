@@ -1317,26 +1317,33 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   body.rp.has-actionbar{padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
   body.rp:has(.rp-bar):not(.bar-managed){padding-bottom:calc(var(--bar-h) + env(safe-area-inset-bottom))}
 
-  /* Reposition, never restyle. #htchat-launcher's bottom/left/right are
-     written as INLINE styles by the widget's own applyPosition(), so only
-     !important reaches them — and only its offset is touched. Colour, size,
-     shape, side and z-index stay the tenant's.
+  /* The chat dock rides above the bar. Keyed on the bar being ON SCREEN, per
+     Appendix B 3.6, rather than on the viewport alone: the unconditional form
+     this replaces was right while the bar was always visible, and once the
+     bar learned to hide and to retract it left a 56px launcher floating 76px
+     off the bottom with nothing underneath it for most of the page --
+     including the whole of the booking band, which is exactly where someone
+     reaches for chat.
 
-     Keyed on the bar being on screen, per Appendix B 3.6, rather than on the
-     viewport alone. The unconditional form this replaces was right while the
-     bar was always visible; once the bar learned to hide and to retract, it
-     left a 56px launcher floating 76px off the bottom with nothing underneath
-     it for most of the page -- including the whole of the booking band, which
-     is exactly where someone reaches for chat.
+     THE OFFSET AND NOTHING ELSE, still. The dock is the template's own now
+     (the widget moved into .rp-chat__panel's iframe), so "reposition, never
+     restyle" is no longer about respecting a tenant's button -- it is about
+     these two rules staying a pure offset. Everything the dock IS lives in
+     one place, its own rule below; a size or a colour reaching in from here
+     is a second definition that only applies at one breakpoint in one scroll
+     state. A transition would be worse than either: it would animate the
+     raise itself, so the launcher would drift up the screen every time the
+     bar appeared.
 
-     BOTTOM AND NOTHING ELSE. 3.6 is emphatic -- reposition, never restyle --
-     and a transition is a restyle: it would also catch any bottom the
-     widget's own applyPosition() writes later and animate that over 240ms
-     instead of applying it, which is our stylesheet changing how the tenant's
-     widget behaves. Two rules again rather than a list, for the reason given
+     --rp-chat-gap, not `bottom`, and that is what makes the PANEL follow.
+     The panel is anchored to this dock and measures its own height back from
+     the same custom property, so raising the corner over the bar shortens
+     the panel by exactly as much in the same declaration. Written as a
+     `bottom` here, the panel would have had to be told the bar's height a
+     second time. Two rules rather than a comma list, for the reason given
      above the padding. */
-  body.has-actionbar #htchat-launcher{bottom:calc(var(--bar-h) + 12px)!important}
-  body:has(.rp-bar):not(.bar-managed) #htchat-launcher{bottom:calc(var(--bar-h) + 12px)!important}
+  body.has-actionbar .rp-chat{--rp-chat-gap:calc(var(--bar-h) + 12px)}
+  body:has(.rp-bar):not(.bar-managed) .rp-chat{--rp-chat-gap:calc(var(--bar-h) + 12px)}
 }
 
 /* --- contact: finding us (4.5.8) ----------------------------------------- */
@@ -1521,44 +1528,85 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 .reveal[data-delay="3"]{transition-delay:0.34s}
 .reveal[data-delay="4"]{transition-delay:0.46s}
 
-/* --- chatbot — completely static (reference, verbatim) -------------------- */
-/* The widget is the tenant's own; its attention-grab animations are calmed
-   on this page by ruling (spec §1.1) — appended from the reference sheet
-   unchanged. Its offset (and nothing else) is managed by the action-bar
-   rules above. */
-[id*="chat" i],
-[class*="chat" i],
-[id*="hotelchat" i],
-[class*="hotelchat" i],
-[id*="hotel-chat" i],
-[class*="hotel-chat" i],
-iframe[src*="hotel-chat"],
-iframe[src*="loyalty.hotel-tech"] {
-  animation: none !important;
-  -webkit-animation: none !important;
-  animation-name: none !important;
-  transform: none !important;
-  transition: opacity 0.25s ease !important;
-}
-[id*="chat" i] *,
-[class*="chat" i] *,
-[id*="hotelchat" i] *,
-[class*="hotelchat" i] *,
-[id*="hotel-chat" i] *,
-[class*="hotel-chat" i] * {
-  animation: none !important;
-  -webkit-animation: none !important;
-  animation-name: none !important;
-  animation-iteration-count: 0 !important;
-}
-/* Kill common attention-grab pseudo elements */
-[id*="chat" i]::before,
-[id*="chat" i]::after,
-[class*="chat" i]::before,
-[class*="chat" i]::after {
-  animation: none !important;
-  -webkit-animation: none !important;
-  display: none !important;
+/* --- the chat dock (Task 8; Appendix B 3.6) ------------------------------- */
+/* WHAT USED TO BE HERE: a block of [id*="chat"] / [class*="chat"] overrides
+   that calmed the tenant widget's attention-grab animations (spec §1.1) while
+   the widget ran inside this document. It cannot reach the widget any more —
+   the widget is behind an origin boundary in .rp-chat__panel's iframe — so it
+   moved to the framed page itself, resources/views/chat-frame.blade.php,
+   where the same rules still land. Leaving it here would have been worse than
+   dead: [class*="chat" i] matches .rp-chat, and its transform/transition
+   overrides and its ::before/::after display:none would have been applied
+   with full !important weight to the launcher below.
+
+   The launcher is the TEMPLATE'S now, and this is the whole of it: the
+   accent gradient and the .rp-cta shadow language (§3's --accent /
+   --accent-on / --halo), 56px, bottom-right, above the action bar. Its
+   transitions need no reduced-motion clause of their own — the blanket
+   `*{animation:none!important;transition:none!important}` near the top of
+   this file already covers them, which is why nothing else in the file
+   repeats one either. */
+
+/* The dock, and the single place the corner's offset is decided. Every state
+   that moves it moves --rp-chat-gap, never `bottom`, so there is one
+   declaration to read and the panel below can size itself against the same
+   number instead of a copy of it. */
+.rp-chat{--rp-chat-gap:20px;
+  position:fixed;inset-block-end:var(--rp-chat-gap);inset-inline-end:20px;
+  z-index:60}
+
+.rp-chat__launcher{display:flex;align-items:center;justify-content:center;
+  inline-size:56px;block-size:56px;padding:0;cursor:pointer;
+  color:var(--accent-on);
+  background:linear-gradient(180deg, var(--accent) 0%, var(--accent-deep) 160%);
+  border:1px solid transparent;border-radius:50%;
+  box-shadow:0 16px 40px -16px var(--halo), inset 0 1px 0 rgba(255,255,255,.25);
+  transition:transform .4s cubic-bezier(.22,.61,.36,1), box-shadow .5s ease}
+.rp-chat__launcher:hover{transform:translateY(-2px);
+  box-shadow:0 22px 55px -18px var(--halo), inset 0 1px 0 rgba(255,255,255,.35)}
+/* The global :focus-visible rule carries a --halo box-shadow, and the rule
+   above beats it on source order alone (both are one class). Restated here
+   with the launcher's own resting shadow kept, so a keyboard visitor gets the
+   ring AND the button still sits on the page. */
+.rp-chat__launcher:focus-visible{
+  box-shadow:0 16px 40px -16px var(--halo), 0 0 0 4px var(--halo)}
+.rp-chat__glyph{inline-size:24px;block-size:24px;display:block}
+/* One attribute decides the glyph, and it is the same attribute assistive
+   technology is told the state through — so the two can never disagree. */
+.rp-chat__glyph--close{display:none}
+.rp-chat__launcher[aria-expanded="true"] .rp-chat__glyph--open{display:none}
+.rp-chat__launcher[aria-expanded="true"] .rp-chat__glyph--close{display:block}
+
+/* The panel sits above the launcher, anchored to the dock rather than to the
+   viewport, so it rides up with it when the action bar appears and never has
+   to be told the bar's height twice. Height is measured back from the same
+   --rp-chat-gap: the dock's offset, plus the launcher and its gap (68px),
+   plus 12px of air at the top. dvh with a vh fallback, in that order, for
+   the mobile URL bar. */
+.rp-chat__panel{position:absolute;inset-block-end:calc(100% + 12px);
+  inset-inline-end:0;display:block;
+  inline-size:400px;max-inline-size:calc(100vw - 40px);
+  block-size:640px;
+  max-block-size:calc(100vh - var(--rp-chat-gap) - 80px);
+  max-block-size:calc(100dvh - var(--rp-chat-gap) - 80px);
+  border:0;border-radius:var(--r-md);
+  box-shadow:0 30px 80px -24px rgba(0,0,0,.45);
+  background:transparent;color-scheme:normal}
+/* display:block above would otherwise beat the UA's [hidden] rule, and the
+   panel is shipped hidden. */
+.rp-chat__panel[hidden]{display:none}
+
+@media (max-width:560px){
+  /* Near full width, and still anchored to the dock: the launcher stays
+     uncovered, which is what keeps the close control reachable on the one
+     viewport where there is no room for anything else. -8px pulls the panel's
+     edge past the dock's own 20px inset so the 12px margins match on both
+     sides, and max-inline-size has to be released or the desktop rule's
+     100vw - 40px would clamp this straight back to a 20px margin. */
+  .rp-chat__panel{inline-size:calc(100vw - 24px);max-inline-size:none;
+    inset-inline-end:-8px;
+    block-size:calc(100vh - var(--rp-chat-gap) - 80px);
+    block-size:calc(100dvh - var(--rp-chat-gap) - 80px)}
 }
 
 /* --- reduced motion (reference §reduced-motion, extended) ------------------ */

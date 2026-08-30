@@ -196,6 +196,25 @@ class LandingPageController extends Controller
                 'color' => $accent->brand,
                 'tpl'   => $page->template_key,
             ]),
+            // The chat panel is FRAMED too, and for a harder reason than
+            // booking's. The widget injects an inline <script> and positions
+            // itself with inline style ATTRIBUTES; this page's script-src and
+            // style-src refuse both, and a nonce -- which fixed the injected
+            // <style> element -- cannot reach an attribute. Same-origin, what
+            // a real tenant page rendered was the widget's raw DOM in the
+            // document flow below the footer. On the admin origin the widget
+            // runs under no policy at all and needs no changes; the landing
+            // page keeps only a launcher of its own. See routes/web.php.
+            //
+            // rawurlencode, then widgetUrl(): the key is a uuid column in
+            // production but this template must not depend on that to keep
+            // the path it builds inside the prefix frame-src names.
+            'chatFrameUrl' => filled($content->widgetKey)
+                ? LandingPageSecurity::widgetUrl(
+                    '/chat-frame/' . rawurlencode((string) $content->widgetKey),
+                    ['lang' => app()->getLocale()],
+                )
+                : null,
         ]);
     }
 }

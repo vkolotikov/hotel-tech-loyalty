@@ -126,6 +126,24 @@ class LandingPageSecurity
         '/review/',          // review/{id}
         '/k/',               // k/{deviceKey}
         '/form/',            // form/{embedKey}
+        // chat-frame/{widgetKey}. The chat widget is the LAST thing on this
+        // list to move behind the origin boundary, and it moved because the
+        // same-origin embed it replaces could not be made to work under this
+        // policy at all. The widget injects an inline <script> and positions
+        // its own launcher and panel with inline style attributes; script-src
+        // 'self' refuses the first and style-src refuses the second, so what
+        // reached a real tenant page was the widget's raw DOM -- an unstyled
+        // avatar, SVG and text, 3315px of it, laid out in the document flow
+        // below the footer because position:static was all the browser was
+        // left with. Nonce-ing the injected <style> fixed the launcher's size
+        // and nothing else: the positions arrive as attributes, which no
+        // nonce reaches. Framed, the widget runs under the admin origin's own
+        // (absent) policy, where its inline script and inline styles are
+        // simply allowed -- and the landing page's launcher becomes the
+        // TEMPLATE'S, in the template's tokens, which is what section 3.6
+        // always wanted and could never have while the button was somebody
+        // else's. See resources/views/chat-frame.blade.php.
+        '/chat-frame/',
     ];
 
     /**
@@ -146,7 +164,7 @@ class LandingPageSecurity
      */
     public static function widgetUrl(string $path, array $query = []): ?string
     {
-        if (! in_array($path, self::WIDGET_FRAME_PATHS, true)) {
+        if (! static::permittedByFrameSrc($path)) {
             throw new \InvalidArgumentException(
                 "[{$path}] is not named in frame-src; framing it would be blocked."
             );
@@ -161,6 +179,49 @@ class LandingPageSecurity
         $query = array_filter($query, static fn ($value) => filled($value));
 
         return $origin . $path . ($query === [] ? '' : '?' . http_build_query($query));
+    }
+
+    /**
+     * Does frame-src permit this exact path?
+     *
+     * Asked the way a BROWSER asks it, because that is the only reading under
+     * which widgetUrl()'s promise -- permitted by construction -- is true. A
+     * CSP source expression whose path ends in `/` matches by prefix; any
+     * other path matches exactly. The list was previously compared with a
+     * strict in_array(), which is the exact-match half alone: every prefix
+     * entry on it -- /book/, /review/, /k/, /form/, and now /chat-frame/ --
+     * was unreachable through this method even though frame-src permits
+     * every URL underneath it. No caller had needed one yet; the chat frame
+     * is the first, and widening the check is the honest fix rather than
+     * having its caller build a URL by hand and skip the check entirely.
+     *
+     * A traversal segment is refused outright rather than resolved, and so is
+     * anything that could make the string the browser normalises differ from
+     * the string checked here. `/chat-frame/../login` starts with a permitted
+     * prefix and addresses the admin panel; `/chat-frame/x?a=b#c` smuggles a
+     * query past the $query parameter. Neither is something a caller of this
+     * method has any reason to pass, so neither is accepted.
+     */
+    private static function permittedByFrameSrc(string $path): bool
+    {
+        if (! str_starts_with($path, '/')
+            || str_contains($path, '..')
+            || str_contains($path, '//')
+            || preg_match('/[?#\\\\\x00-\x20\x7F]/', $path)) {
+            return false;
+        }
+
+        foreach (self::WIDGET_FRAME_PATHS as $permitted) {
+            $matches = str_ends_with($permitted, '/')
+                ? str_starts_with($path, $permitted)
+                : $path === $permitted;
+
+            if ($matches) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private static function widgetFrameSources(): string

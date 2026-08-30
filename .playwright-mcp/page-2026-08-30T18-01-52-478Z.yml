@@ -1,0 +1,89 @@
+- generic [active] [ref=f7e1]:
+  - navigation [ref=f7e2]:
+    - generic [ref=f7e3]:
+      - link "FDS Cards" [ref=f7e4] [cursor=pointer]:
+        - /url: "#"
+      - generic [ref=f7e5]:
+        - link "The hotel" [ref=f7e6] [cursor=pointer]:
+          - /url: "#about"
+        - link "Reserve" [ref=f7e7] [cursor=pointer]:
+          - /url: "#booking"
+        - link "Getting here" [ref=f7e8] [cursor=pointer]:
+          - /url: "#contact"
+      - link "Book your stay" [ref=f7e9] [cursor=pointer]:
+        - /url: "#booking"
+  - main [ref=f7e10]:
+    - generic [ref=f7e13]:
+      - generic [ref=f7e14]:
+        - heading [level=1] [ref=f7e15]:
+          - text: Digital Business Cards for People Who Get
+          - emphasis [ref=f7e16]: Remembered
+        - paragraph [ref=f7e17]: Design a premium digital profile in minutes, share it through a luxury metal NFC card — and see exactly who viewed you, saved you, and passed you on.
+        - link "Book your stay" [ref=f7e19] [cursor=pointer]:
+          - /url: "#booking"
+      - figure [ref=f7e20]:
+        - generic [ref=f7e21]: FC
+    - generic [ref=f7e25]:
+      - heading "Digital is convenient. Metal makes it unforgettable." [level=2] [ref=f7e26]
+      - paragraph [ref=f7e28]: A link is easy to send and easy to forget. A luxury metal card is the thing they keep on the desk — and the moment they remember about the meeting. You get both, linked.
+    - generic [ref=f7e30]:
+      - paragraph [ref=f7e31]: Reserve
+      - generic [ref=f7e32]:
+        - heading "Pick an hour. That’s the whole process." [level=2] [ref=f7e33]
+        - link "Book your stay" [ref=f7e34] [cursor=pointer]:
+          - /url: https://loyalty.hotel-tech.ai/booking-widget?org=19&lang=en&color=%230011ff&tpl=ruled_page
+        - paragraph [ref=f7e35]: Or call
+        - link "+44 736 651 0477" [ref=f7e36] [cursor=pointer]:
+          - /url: tel:+447366510477
+        - list [ref=f7e37]:
+          - listitem [ref=f7e38]: Confirmation is instant
+          - listitem [ref=f7e40]: Cancel free up to 24 hours before
+    - generic [ref=f7e43]:
+      - generic [ref=f7e44]:
+        - heading "Getting here" [level=2] [ref=f7e45]
+        - generic [ref=f7e46]:
+          - paragraph [ref=f7e47]: Address
+          - paragraph [ref=f7e48]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=f7e49]:
+          - paragraph [ref=f7e50]: Telephone
+          - paragraph [ref=f7e51]:
+            - link "+44 736 651 0477" [ref=f7e52] [cursor=pointer]:
+              - /url: tel:+447366510477
+        - generic [ref=f7e53]:
+          - paragraph [ref=f7e54]: Email
+          - paragraph [ref=f7e55]:
+            - link "info@fds-cards.co.uk" [ref=f7e56] [cursor=pointer]:
+              - /url: mailto:info@fds-cards.co.uk
+      - link "25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ Open in Maps ↗" [ref=f7e57] [cursor=pointer]:
+        - /url: https://maps.google.com/?q=25+Cabot+Square%2C+Canary+Wharf%2C+London%2C+United+Kingdom%2C+E14+4QZ
+        - generic [ref=f7e60]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=f7e61]: Open in Maps ↗
+  - contentinfo [ref=f7e62]:
+    - generic [ref=f7e63]:
+      - generic [ref=f7e64]:
+        - paragraph [ref=f7e65]: FDS Cards
+        - link "Book your stay" [ref=f7e66] [cursor=pointer]:
+          - /url: "#booking"
+      - paragraph [ref=f7e68]: © 2026 FDS Cards
+  - button "Open chat with us" [ref=f7e69]
+  - generic [ref=f7e72]:
+    - generic [ref=f7e73]:
+      - heading "AI Assistant" [level=3] [ref=f7e80]
+      - generic [ref=f7e81]:
+        - button "Voice call" [ref=f7e82]
+        - button [ref=f7e84]
+    - generic [ref=f7e88]:
+      - heading "Hi! How can I help you today?" [level=3] [ref=f7e92]
+      - paragraph [ref=f7e93]: Ask about reservations, loyalty program, hotel services, or anything else.
+      - paragraph [ref=f7e94]: You can also use voice input.
+      - generic [ref=f7e95]:
+        - button "What services do you offer?" [ref=f7e96]
+        - button "I want to check my booking" [ref=f7e97]
+        - button "Tell me about loyalty rewards" [ref=f7e98]
+    - generic [ref=f7e99]:
+      - generic [ref=f7e100]:
+        - button "Voice input" [ref=f7e101]
+        - textbox "Type a message…" [ref=f7e104]
+        - button [disabled] [ref=f7e105]
+      - generic [ref=f7e108]: Press Enter to send
+    - generic [ref=f7e109]: Powered by Hotel AI
