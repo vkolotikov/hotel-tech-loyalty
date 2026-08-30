@@ -49,8 +49,18 @@ export function draftKey(brandId: number | null): string {
  *  appends `style` (step 3 — brand colour, font pairing) and `sections`
  *  (step 4 — what to show). The stepper, the footer's Back/Continue
  *  clamping and this module's own step-clamp all read `STEPS.length`, so
- *  none of them needed to change by hand when these two were appended. */
-export const STEPS = ['template', 'details', 'style', 'sections'] as const
+ *  none of them needed to change by hand when these two were appended.
+ *
+ *  Landing phase 3c (the industry step) renames the first one. `template`
+ *  offered exactly ONE template (`ruled_page` is still the only shipped
+ *  view) under the words "Pick the one that feels right", which a tenant
+ *  testing the shipped wizard read — correctly — as a broken screen.
+ *  `industry` asks the question that actually drives the page:
+ *  `IndustryProfile` supplies its whole vocabulary, its house accent and
+ *  its default palette, and the booking band is gated on `hotel`.
+ *  `template_key` still SHIPS as `ruled_page` (see `buildPayload`); the
+ *  wizard simply stops asking about it. */
+export const STEPS = ['industry', 'details', 'style', 'sections'] as const
 export type StepKey = (typeof STEPS)[number]
 
 /** The four curated pairings the backend accepts — `theme.font_pairing`
@@ -94,6 +104,15 @@ export type FontPairingKey = FontPairingId
  */
 export type WizardForm = {
   template_key?: string
+  /** The industry card the tenant picked in step 1 — absent until they
+   *  actually pick one, at which point the pre-selected card (the org's own
+   *  current industry) is what step 1 was already showing. Deliberately NOT
+   *  narrowed against a hardcoded id list the way `font_pairing`/`palette`
+   *  are below: the onboarding response SERVES the offered industries, so
+   *  `resolveIndustry` (./industryChoices) narrows this against that live
+   *  list instead — a strictly better guard than a mirror of the backend
+   *  constant that could drift from it. */
+  industry?: string
   headline?: string
   subtext?: string
   brand_color?: string
@@ -137,7 +156,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 export function mergeFormDraft(patch: unknown): WizardForm {
   const out: WizardForm = {}
   if (!isPlainObject(patch)) return out
-  for (const key of ['template_key', 'headline', 'subtext', 'brand_color', 'phone', 'email', 'address'] as const) {
+  for (const key of ['template_key', 'industry', 'headline', 'subtext', 'brand_color', 'phone', 'email', 'address'] as const) {
     const value = patch[key]
     if (typeof value === 'string') out[key] = value
   }
@@ -257,6 +276,14 @@ export function clearDraft(brandId: number | null, storage: DraftStorage = local
  *  server-side for no reason. */
 export type ApplyPayload = {
   template_key: string
+  /** Landing phase 3c (the industry step): which industry's words this page
+   *  is written in. OPTIONAL and, like `theme.palette`, present only when
+   *  there is a real choice to send — `resolveIndustry` returns `''` when
+   *  the response offered no industries at all (an older backend), and an
+   *  absent key is exactly what makes `LandingOnboardingService::
+   *  chosenIndustry()` fall back to the organisation's own industry, i.e.
+   *  the behaviour that shipped before this step existed. */
+  industry?: string
   slug: string
   copy: { headline: string; subtext: string }
   /** `palette` is OPTIONAL and present only when the tenant actually chose
@@ -327,6 +354,10 @@ function contactOverrides(
  */
 export function buildPayload(args: {
   templateKey: string
+  /** Already narrowed by `resolveIndustry` (./industryChoices) to an id the
+   *  server actually offered, or `''` when it offered none — see
+   *  `ApplyPayload['industry']`. */
+  industry?: string
   slug: string
   headline: string
   subtext: string
@@ -343,6 +374,7 @@ export function buildPayload(args: {
 }): ApplyPayload {
   return {
     template_key: args.templateKey,
+    ...(args.industry ? { industry: args.industry } : {}),
     slug: args.slug,
     copy: { headline: args.headline, subtext: args.subtext },
     theme: {

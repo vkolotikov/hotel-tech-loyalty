@@ -808,37 +808,52 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
                   : row.sourceLabel}
               </span>
             ) : (
-              <span className="block text-xs text-warning/90 mt-0.5">
+              <span className="block text-xs text-t-secondary/80 mt-0.5 leading-relaxed">
                 {/* Fix 2 (phase 3a correctness review) — same preference as
                     the wizard's identical step 4 branch: the backend's own
                     authored reason, when it sent one, beats the generic
-                    instruction. */}
-                {unavailableReason(row, t('landing_pages.editor.section_unavailable', {
+                    invitation.
+
+                    Landing phase 3c (the industry step's own fix round):
+                    the amber `warning` colour this line used to carry, and
+                    the greyed-out dead switch beside it, are this product's
+                    grammar for "something is wrong" — and a section the
+                    tenant simply has not filled in yet is not wrong. Same
+                    quiet treatment and same wording as the wizard's step 4,
+                    because the two screens must not describe the same
+                    section differently (RULING 4's own discipline, applied
+                    to the presentation rather than the predicate). */}
+                {unavailableReason(row, t('landing_pages.editor.section_pending', {
                   source: row.sourceLabel,
-                  defaultValue: 'Nothing to show yet. Add some from {{source}}.',
+                  defaultValue: 'Add this from {{source}} whenever you are ready — it appears on your page as soon as you do.',
                 }))}
               </span>
             )}
           </div>
         </div>
 
-        <button
-          type="button"
-          role="switch"
-          aria-checked={checked}
-          aria-label={row.label}
-          disabled={!offerable}
-          onClick={onToggle}
-          className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-none '
-            + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:cursor-not-allowed disabled:opacity-40 '
-            + (checked ? 'bg-primary-500' : 'bg-dark-border')}
-        >
-          <span
-            aria-hidden
-            className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform '
-              + (checked ? 'translate-x-4' : 'translate-x-0.5')}
-          />
-        </button>
+        {offerable ? (
+          <button
+            type="button"
+            role="switch"
+            aria-checked={checked}
+            aria-label={row.label}
+            onClick={onToggle}
+            className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-none '
+              + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
+              + (checked ? 'bg-primary-500' : 'bg-dark-border')}
+          >
+            <span
+              aria-hidden
+              className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform '
+                + (checked ? 'translate-x-4' : 'translate-x-0.5')}
+            />
+          </button>
+        ) : (
+          <span className="shrink-0 rounded-full border border-dark-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
+            {t('landing_pages.editor.section_not_yet', 'Not yet')}
+          </span>
+        )}
       </div>
 
       {offerable && (

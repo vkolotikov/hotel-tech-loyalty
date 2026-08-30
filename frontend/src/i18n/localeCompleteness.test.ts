@@ -159,3 +159,53 @@ describe('locale completeness — design panel palette/pairing names (dynamic t(
     })
   }
 })
+
+/**
+ * Landing phase 3c (the industry step): the wizard's first step names its
+ * nine cards with a template-literal `t()` call —
+ * `` t(`landing_pages.wizard.industry_name_${card.id}`, card.name) `` in
+ * `LandingWizard.tsx` — so `T_CALL_RE` above cannot see them, exactly like
+ * the design panel's ten keys just above. Same treatment, same reasoning,
+ * including WHY the list is hardcoded rather than derived from
+ * `industryChoices.ts`'s own `INDUSTRY_NAMES`: a list built from the module
+ * it exists to check would lose an id and its expectation in the same edit.
+ *
+ * These are `Organization::INDUSTRIES` (app/Models/Organization.php) — the
+ * nine ids the backend's `LandingOnboardingService::industries()` actually
+ * sends, in that constant's own order. A tenth industry added there without
+ * a translation added here renders its humanised id (`industryName()`'s
+ * fallback) rather than a raw key, so this test is the thing that says "and
+ * that is not good enough for a card a customer is asked to choose from".
+ */
+describe('locale completeness — wizard industry names (dynamic t() keys, hand-verified)', () => {
+  const INDUSTRY_NAME_KEYS = [
+    'landing_pages.wizard.industry_name_hotel',
+    'landing_pages.wizard.industry_name_beauty',
+    'landing_pages.wizard.industry_name_medical',
+    'landing_pages.wizard.industry_name_restaurant',
+    'landing_pages.wizard.industry_name_legal',
+    'landing_pages.wizard.industry_name_real_estate',
+    'landing_pages.wizard.industry_name_education',
+    'landing_pages.wizard.industry_name_fitness',
+    'landing_pages.wizard.industry_name_other',
+  ]
+
+  // The same canary as the two describes above: nine industries, no fewer.
+  it('names exactly nine industries', () => {
+    expect(INDUSTRY_NAME_KEYS.length).toBe(9)
+  })
+
+  for (const locale of LOCALES) {
+    it(`every industry name key resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = INDUSTRY_NAME_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) industry key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})

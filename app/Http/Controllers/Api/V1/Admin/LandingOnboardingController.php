@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Landing\ThemeRules;
+use App\Models\Organization;
 use App\Rules\ScalarLeaves;
 use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Http\JsonResponse;
@@ -52,6 +53,26 @@ class LandingOnboardingController extends Controller
         // not disagree about how they refuse one.
         $data = $request->validate([
             'template_key'       => ['required', 'string', Rule::in(LandingOnboardingService::templateKeys())],
+            // Landing phase 3c (wizard industry step): which industry's
+            // words the page is written in -- the wizard's own first step,
+            // and the value LandingOnboardingService::apply() moves the
+            // ORGANISATION onto (see syncOrganizationIndustry() there for
+            // what that does and, just as importantly, what it does not).
+            //
+            // Rule::in against Organization::INDUSTRIES rather than a
+            // literal, for the same reason template_key is validated
+            // against templateKeys(): the picker the wizard renders is
+            // built from that same constant, so what is OFFERED and what is
+            // ACCEPTED cannot come apart. Aliases ('hospitality') are not
+            // in it and are refused here -- the service normalises what
+            // does get through, so nothing depends on this rule being the
+            // only narrowing, but a wizard that only ever sends canonical
+            // ids should not have the endpoint quietly widen for it.
+            //
+            // 'sometimes': a client that never asks (an older build, a
+            // direct API call) keeps the pre-existing behaviour exactly --
+            // the page is filed under the org's own industry.
+            'industry'           => ['sometimes', 'string', Rule::in(Organization::INDUSTRIES)],
             'slug'               => 'required|string|max:63',
             'copy'               => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'copy.headline'      => 'nullable|string|max:120',
@@ -85,6 +106,13 @@ class LandingOnboardingController extends Controller
             'sections.*.key'     => 'required|string|max:64',
             'sections.*.enabled' => 'required|boolean',
         ], [
+            // Named for the same reason the slug and contact messages
+            // below are: Laravel's own default here is "The selected
+            // industry is invalid.", which tells a tenant nothing they can
+            // act on about a choice they made from a list this screen drew
+            // for them.
+            'industry.in'           => 'Please choose one of the listed industries.',
+            'industry.string'       => 'Please choose one of the listed industries.',
             'slug.required'         => 'Please choose a web address.',
             'slug.string'           => 'That web address is not valid.',
             'slug.max'              => 'Please use a shorter web address — up to 63 characters.',

@@ -13,6 +13,9 @@ import {
 import { isDataBackedSection, isOfferable, unavailableReason, SECTION_ORDER, type SectionMeta } from './sections'
 import { DesignPanel } from './DesignPanel'
 import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
+import {
+  industryCards, resolveIndustry, sectionsForIndustry, type IndustryOption,
+} from './industryChoices'
 // Task 6, landing phase 3c (D4 — distinct from this file's OWN earlier
 // "Task 6 built steps 1-2" below, a different phase's numbering): the
 // self-hosted @font-face sheet DesignPanel's cards render against — see
@@ -44,8 +47,21 @@ type OnboardingPrefill = {
   address: string | null
   /** Always a valid CSS colour — the backend runs it through CssColor::safe(). */
   brand_color: string
+  /** The organisation's own current industry — the card step 1 opens
+   *  pre-selected on. Always one of `industries[]`'s own ids (the backend
+   *  reads it off the same profile that produced the rest of this
+   *  response); typed loosely because an older backend sends no such key at
+   *  all, which `resolveIndustry` handles. */
+  industry?: string
 }
 
+/**
+ * The one shipped template. Still sent, still posted back verbatim as
+ * `template_key` — and no longer ASKED about: with exactly one entry there
+ * was never a choice to make, and a step that said "Pick the one that feels
+ * right" over a single card read as a broken screen to the first tenant who
+ * tested it. See `STEPS` in ./landingDraft for what step 1 asks instead.
+ */
 type TemplateOption = {
   key: string
   name: string
@@ -76,6 +92,12 @@ export type OnboardingResponse = {
   completed: boolean
   prefill: OnboardingPrefill
   templates: TemplateOption[]
+  /** `LandingOnboardingService::industries()` — the nine ids of
+   *  `Organization::INDUSTRIES`, each carrying the words a page in that
+   *  industry would be written in. Defaulted at the read site rather than
+   *  required, so a frontend deployed ahead of the backend renders step 1
+   *  empty-but-harmless instead of throwing. */
+  industries?: IndustryOption[]
   sections: SectionAvailability[]
   suggested_slug: string
 }
@@ -96,19 +118,25 @@ const label = 'block text-xs text-t-secondary mb-1.5'
 const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:border-primary-500 outline-none'
 
 /**
- * The full wizard: pick a look, check your details, make it yours, choose
- * what to show, apply. Task 6 built steps 1-2; this task (7) adds steps 3-4
+ * The full wizard: say what you do, check your details, make it yours,
+ * choose what to show, apply. Task 6 built steps 1-2; Task 7 added steps 3-4
  * and the apply call that turns the form into a draft page.
  *
- * Step 1 is deliberately not a settings form: every card shows the tenant's
- * OWN business name and brand colour, because this is the first moment they
- * see their own page rather than a product screenshot.
+ * Step 1 is deliberately not a settings form. It used to show one template
+ * card ("Pick the one that feels right", over a list of exactly one), which
+ * a tenant testing the shipped wizard read as broken — correctly, because
+ * there was nothing to pick. It now asks the question the page is actually
+ * built out of: the industry, whose profile supplies every band's name, the
+ * primary button's words, the house accent and the default palette. Each
+ * card is drawn in ITS OWN industry's words and colours, so the choice is
+ * visible before it is made rather than explained after it.
  */
 export function LandingWizard(props: LandingWizardProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
   const { prefill: onboarding, onDone } = props
   const { prefill, templates, sections, suggested_slug: suggestedSlug } = onboarding
+  const industryOptions = onboarding.industries ?? []
 
   // A landing page is strictly per-brand (Task 4's whole backend fix
   // history is this exact confusion), but BrandSwitcher changes this
@@ -154,6 +182,13 @@ export function LandingWizard(props: LandingWizardProps) {
 
   const businessName = prefill.business_name || t('landing_pages.wizard.your_business', 'your business')
   const templateKey = form.template_key ?? templates[0]?.key ?? ''
+  // Step 1's answer, narrowed against the ids the server actually offered —
+  // never the raw draft value, which could be an id a later release removed
+  // or a hand-edited localStorage entry. Falls through to the organisation's
+  // own industry (the pre-selected card) and, failing even that, to '' — at
+  // which point `buildPayload` omits the key entirely and the backend files
+  // the page under the org's industry exactly as it did before this step.
+  const selectedIndustry = resolveIndustry(industryOptions, form.industry, prefill.industry)
   const headline = form.headline ?? prefill.headline ?? ''
   const subtext = form.subtext ?? prefill.subtext ?? ''
   const brandColor = form.brand_color ?? prefill.brand_color
@@ -198,45 +233,55 @@ export function LandingWizard(props: LandingWizardProps) {
   // `SECTION_ORDER` (not `sections` as returned) fixes the render order and
   // silently drops any row this build does not know about, the same
   // defensiveness `mergeFormDraft` applies to a stale draft.
-  const sectionMetas: SectionMeta[] = SECTION_ORDER.flatMap(key => {
-    const row = sections.find(s => s.key === key)
-    // Keeps `key` from SECTION_ORDER itself (already `SectionKey`-typed)
-    // rather than re-deriving it from the wire row's plain `string`, so
-    // this needs no type assertion to satisfy `SectionMeta`.
-    return row
-      ? [{
-        key, label: row.label, sourceLabel: row.source_label, available: row.available, count: row.count,
-        reason: row.reason ?? null,
-      }]
-      : []
-  })
+  //
+  // Then filtered and relabelled to the industry STEP 1 CHOSE, not the one
+  // the org happens to be on today — see `sectionsForIndustry`. Without it,
+  // a tenant who switches away from an industry with a booking band posts a
+  // `booking` row the new page's template does not own, and the backend
+  // (correctly) 422s the Create button on a section the wizard itself
+  // offered them.
+  const sectionMetas: SectionMeta[] = sectionsForIndustry(
+    SECTION_ORDER.flatMap(key => {
+      const row = sections.find(s => s.key === key)
+      // Keeps `key` from SECTION_ORDER itself (already `SectionKey`-typed)
+      // rather than re-deriving it from the wire row's plain `string`, so
+      // this needs no type assertion to satisfy `SectionMeta`.
+      return row
+        ? [{
+          key, label: row.label, sourceLabel: row.source_label, available: row.available, count: row.count,
+          reason: row.reason ?? null,
+        }]
+        : []
+    }),
+    industryOptions,
+    selectedIndustry,
+  )
 
   // The count already sits in the payload the host fetched — no second
   // call, and no fabricated service names: the prefill response carries
-  // counts, not rows, so that is what the card can honestly show.
+  // counts, not rows, so that is what the card can honestly show. Read
+  // straight off the wire rows rather than off `sectionMetas`, because the
+  // number is a fact about the tenant's Services screen and does not change
+  // with which industry card is selected — only the WORD for it does, and
+  // each card supplies its own (see below).
   const servicesSection = sections.find(s => s.key === 'services')
   const serviceCount = servicesSection && servicesSection.available && servicesSection.count > 0
     ? servicesSection.count
     : null
-  // The industry's own word for it ("Treatments" for a beauty tenant, etc.)
-  // — LandingOnboardingService::sectionLabel() built this specifically so
-  // the platform doesn't fall back to talking about itself in the generic
-  // noun ("Services") the way this line used to (Appendix A §6, and
-  // LandingOnboardingService.php:67-72,283-290's own comment on why).
-  // Falls back to a generic label only if the payload is ever missing the
-  // row entirely, which should not happen in practice.
-  const servicesLabel = servicesSection?.label || t('landing_pages.wizard.services_fallback_label', 'services')
 
-  // Phase 2 ships exactly one template; Phase 3 adds two more (spec §9).
-  // A fixed 3-column grid with one card in it leaves two-thirds of the row
-  // visibly blank on every screen ≥640px — not an edge case, the ONLY case
-  // in Phase 2 — which reads as broken rather than modern to a first-time
-  // tenant. Sized to the count the endpoint actually returned instead.
-  const templateGridClass = 'grid gap-3 ' + (templates.length > 1 ? 'sm:grid-cols-3' : 'max-w-sm')
+  // Every card is drawn from the industry it represents, in THAT industry's
+  // vocabulary and colours — a salon card says "Treatments / Therapists /
+  // Book appointment", a school card says "Courses / Instructors / Book a
+  // lesson" — so the choice visibly changes something before it is made.
+  const cards = industryCards(industryOptions, selectedIndustry)
+  // Shown only once the tenant has moved OFF their own industry: picking
+  // the card that was already selected changes nothing at all, and a
+  // standing warning about a change nobody made is just noise.
+  const industryChanged = selectedIndustry !== '' && selectedIndustry !== prefill.industry
 
   const stepTitle = (key: StepKey) => {
     switch (key) {
-      case 'template': return t('landing_pages.wizard.step_template', 'Pick a look')
+      case 'industry': return t('landing_pages.wizard.step_industry', 'Your industry')
       case 'details': return t('landing_pages.wizard.step_details', 'Check your details')
       case 'style': return t('landing_pages.wizard.step_style', 'Make it yours')
       case 'sections': return t('landing_pages.wizard.step_sections', 'Choose what to show')
@@ -251,7 +296,8 @@ export function LandingWizard(props: LandingWizardProps) {
   // `apply()` will be asked to accept; the wizard's job stops at handing it
   // back unchanged.
   const payload: ApplyPayload = buildPayload({
-    templateKey, slug: suggestedSlug, headline, subtext, brandColor, fontPairing, palette,
+    templateKey, industry: selectedIndustry,
+    slug: suggestedSlug, headline, subtext, brandColor, fontPairing, palette,
     contact: { phone, email, address },
     prefillContact: { phone: prefill.phone, email: prefill.email, address: prefill.address },
     sections: sectionMetas, sectionChoices: form.sections ?? {},
@@ -329,57 +375,84 @@ export function LandingWizard(props: LandingWizardProps) {
       {step === 0 && (
         <div className="space-y-4">
           <p className="text-sm text-t-secondary leading-relaxed">
-            {t('landing_pages.wizard.template_intro', {
+            {t('landing_pages.wizard.industry_intro', {
               name: businessName,
-              defaultValue: 'This is {{name}}, styled a few different ways. Pick the one that feels right — you can change it later.',
+              defaultValue: 'Your page is written in your own trade’s words. Pick the closest match and {{name}} gets that language, those colours and the sections that fit.',
             })}
           </p>
 
-          <div className={templateGridClass}>
-            {templates.map(tpl => {
-              const active = templateKey === tpl.key
-              return (
-                <button
-                  key={tpl.key}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => up('template_key', tpl.key)}
-                  className={'text-left rounded-xl border p-4 transition-all '
-                    + (active
-                      ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-                      : 'border-dark-border bg-dark-surface hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
-                >
-                  <div className="flex items-center justify-between">
-                    {/* Inline hex, deliberately: this IS customer data being
-                        previewed (Appendix A §7.4), not admin chrome. */}
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {cards.map(card => (
+              <button
+                key={card.id}
+                type="button"
+                aria-pressed={card.selected}
+                onClick={() => up('industry', card.id)}
+                className={'text-left rounded-xl border p-4 transition-all outline-none '
+                  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
+                  + (card.selected
+                    ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
+                    : 'border-dark-border bg-dark-surface hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-semibold text-white truncate">
+                    {t(`landing_pages.wizard.industry_name_${card.id}`, card.name)}
+                  </span>
+                  {card.selected && <Check size={16} className="text-primary-500 shrink-0" />}
+                </div>
+
+                {/* The industry's own band names, drawn the way the page
+                    draws them: mono eyebrows in the palette this industry
+                    opens on (IndustryProfile::defaultPalette). Inline
+                    colour, deliberately — this is customer-facing page
+                    styling being previewed, not admin chrome (Appendix A
+                    §7.4), and the whole point of the card is that two
+                    industries do not look alike. */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-3">
+                  {card.vocabulary.map(word => (
                     <span
-                      aria-hidden
-                      className="w-6 h-6 rounded-full border border-dark-border shrink-0"
-                      style={{ backgroundColor: prefill.brand_color }}
-                    />
-                    {active && <Check size={16} className="text-primary-500" />}
-                  </div>
+                      key={word}
+                      className="text-[10px] font-mono uppercase tracking-[0.12em]"
+                      style={{ color: card.paletteAccent }}
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
 
-                  <div className="mt-3">
-                    <span className="block text-sm font-bold text-white">{businessName}</span>
-                    <span className="block text-[11px] text-t-secondary mt-0.5">{tpl.name}</span>
-                  </div>
+                {/* The page's own primary button, at card size. Every
+                    profile's accent clears the WCAG 4.5:1 floor against a
+                    white label — see IndustryProfile::all()'s docblock on
+                    the one accent that had to be darkened to keep that
+                    true — so the label is safe as plain white here. */}
+                <span
+                  className="inline-block mt-3 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: card.accent }}
+                >
+                  {card.primaryCta}
+                </span>
 
-                  <p className="text-[11px] text-t-secondary mt-2 leading-snug">{tpl.blurb}</p>
-
-                  {serviceCount !== null && (
-                    <p className="text-[9px] uppercase tracking-wide font-bold text-t-secondary mt-3">
-                      {t('landing_pages.wizard.services_count', {
-                        count: serviceCount,
-                        label: servicesLabel,
-                        defaultValue: '{{count}} {{label}} ready to show',
-                      })}
-                    </p>
-                  )}
-                </button>
-              )
-            })}
+                {serviceCount !== null && (
+                  <p className="text-[10px] text-t-secondary mt-3">
+                    {t('landing_pages.wizard.services_count', {
+                      count: serviceCount,
+                      label: card.vocabulary[0],
+                      defaultValue: '{{count}} {{label}} ready to show',
+                    })}
+                  </p>
+                )}
+              </button>
+            ))}
           </div>
+
+          {industryChanged && (
+            <p className="text-xs text-t-secondary leading-relaxed">
+              {t(
+                'landing_pages.wizard.industry_change_note',
+                'This also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.',
+              )}
+            </p>
+          )}
         </div>
       )}
 
@@ -526,7 +599,7 @@ export function LandingWizard(props: LandingWizardProps) {
       {step === 3 && (
         <div className="space-y-3">
           <p className="text-sm text-t-secondary leading-relaxed">
-            {t('landing_pages.wizard.sections_intro', 'Every section below can be switched on or off. You can change this any time from the editor.')}
+            {t('landing_pages.wizard.sections_intro', 'Choose what your page shows. You can change any of this later from the editor.')}
           </p>
 
           {sectionMetas.map(section => {
@@ -534,44 +607,73 @@ export function LandingWizard(props: LandingWizardProps) {
             // the editor (Task 8) both call, so the two screens cannot
             // disagree about which sections are real.
             const offerable = isOfferable(section)
-            const checked = offerable ? (form.sections?.[section.key] ?? true) : false
+
+            // A section the tenant has nothing for YET is not an error and
+            // must not be dressed as one. It used to render in `warning`
+            // amber beside a greyed-out dead switch — the visual grammar
+            // this product uses for "something is wrong here" — under the
+            // words "Nothing to show yet. Add some from Your Team screen.",
+            // and the tenant who tested the shipped wizard read the row as
+            // broken. It stays VISIBLE, because it is genuinely useful (it
+            // tells them what the page could show and where that content
+            // comes from); it just reads as a blank waiting to be filled:
+            // a dashed outline, no colour, and a quiet "Not yet" marker in
+            // place of a switch nobody can operate.
+            if (!offerable) {
+              return (
+                <div
+                  key={section.key}
+                  className="bg-dark-surface/40 border border-dashed border-dark-border rounded-xl p-5 flex items-start justify-between gap-4"
+                >
+                  <div className="min-w-0">
+                    <span className="block text-sm font-medium text-t-secondary">{section.label}</span>
+                    <span className="block text-xs text-t-secondary/80 mt-1 leading-relaxed">
+                      {/* Fix 2 (phase 3a correctness review): the backend's
+                          own authored reason (today: booking's industry-gate
+                          sentence) beats the generic invitation below,
+                          which makes no sense for a section nothing will
+                          ever unlock by writing into it. */}
+                      {unavailableReason(section, t('landing_pages.wizard.section_pending', {
+                        source: section.sourceLabel,
+                        defaultValue: 'Add this from {{source}} whenever you are ready — it appears on your page as soon as you do.',
+                      }))}
+                    </span>
+                  </div>
+
+                  <span className="shrink-0 rounded-full border border-dark-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
+                    {t('landing_pages.wizard.section_not_yet', 'Not yet')}
+                  </span>
+                </div>
+              )
+            }
+
+            // Offerable from here down, so an untouched toggle simply
+            // defaults on — the same `?? true` `buildPayload` sends and
+            // `chosenSections()` applies server-side.
+            const checked = form.sections?.[section.key] ?? true
 
             return (
               <div key={section.key} className={card + ' flex items-start justify-between gap-4'}>
                 <div className="min-w-0">
                   <span className="block text-sm font-medium text-white">{section.label}</span>
-                  {offerable ? (
-                    <span className="block text-xs text-t-secondary mt-0.5">
-                      {/* Task 11, found by walking this screen: the count
-                          only means anything for a section whose content is
-                          ROWS somewhere else (RULING 4 / isDataBackedSection).
-                          For the sections the tenant TYPES, it printed
-                          "0 from Words you write in the editor" on a brand-new
-                          page — which reads as "this is empty/broken" and
-                          invites them to switch off the About section they
-                          have simply not written yet. Those sections show the
-                          source sentence alone. */}
-                      {isDataBackedSection(section.key)
-                        ? t('landing_pages.section_source', {
-                          count: section.count,
-                          source: section.sourceLabel,
-                          defaultValue: '{{count}} from {{source}}',
-                        })
-                        : section.sourceLabel}
-                    </span>
-                  ) : (
-                    <span className="block text-xs text-warning/90 mt-0.5">
-                      {/* Fix 2 (phase 3a correctness review): the backend's
-                          own authored reason (today: booking's industry-gate
-                          sentence) beats the generic instruction below,
-                          which makes no sense for a section nothing will
-                          ever unlock by writing into it. */}
-                      {unavailableReason(section, t('landing_pages.wizard.section_unavailable', {
+                  <span className="block text-xs text-t-secondary mt-0.5">
+                    {/* Task 11, found by walking this screen: the count
+                        only means anything for a section whose content is
+                        ROWS somewhere else (RULING 4 / isDataBackedSection).
+                        For the sections the tenant TYPES, it printed
+                        "0 from Words you write in the editor" on a brand-new
+                        page — which reads as "this is empty/broken" and
+                        invites them to switch off the About section they
+                        have simply not written yet. Those sections show the
+                        source sentence alone. */}
+                    {isDataBackedSection(section.key)
+                      ? t('landing_pages.section_source', {
+                        count: section.count,
                         source: section.sourceLabel,
-                        defaultValue: 'Nothing to show yet. Add some from {{source}}.',
-                      }))}
-                    </span>
-                  )}
+                        defaultValue: '{{count}} from {{source}}',
+                      })
+                      : section.sourceLabel}
+                  </span>
                 </div>
 
                 <button
@@ -579,10 +681,9 @@ export function LandingWizard(props: LandingWizardProps) {
                   role="switch"
                   aria-checked={checked}
                   aria-label={section.label}
-                  disabled={!offerable}
                   onClick={() => up('sections', { ...form.sections, [section.key]: !checked })}
                   className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-none '
-                    + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 disabled:cursor-not-allowed disabled:opacity-40 '
+                    + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
                     + (checked ? 'bg-primary-500' : 'bg-dark-border')}
                 >
                   <span
