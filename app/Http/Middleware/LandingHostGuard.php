@@ -48,16 +48,22 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * a routing rule; inlining a booking widget and adding its API prefix here
  * would throw that away.
  *
- * CHAT, AND WHAT IS MISSING FOR IT. The same-origin allowance above is not yet
- * usable, and closing that gap is Task 8's, not this list's. Two things block
- * it. ChatWidgetConfig::generateEmbedCode() builds both the script src and the
- * API base from the base URL it is handed, and its only caller passes
- * config('app.url'), so a pasted embed points at the admin origin and dies on
- * script-src 'self' and connect-src 'self'. And PageContent never surfaces
- * widget_key -- it touches ChatWidgetConfig only for opening hours -- so a
- * template has nothing to build a same-origin embed from. The fix is a
- * landing-origin embed built from the tenant's widget_key, not a wider
- * allow-list.
+ * CHAT: THE SAME-ORIGIN ALLOWANCE IS NO LONGER USED, AND STAYS ANYWAY. The
+ * landing template did eventually ship a same-origin embed built from the
+ * tenant's widget_key, and it did not work. A landing page answers with
+ * script-src 'self' and style-src 'self' plus a per-request nonce; the widget
+ * injects an inline <script> and writes every position it needs as an inline
+ * style ATTRIBUTE, and a nonce reaches an injected <style> ELEMENT only. What
+ * a real tenant page rendered was the widget's raw DOM -- an unstyled avatar,
+ * an SVG and loose text, position:static, below the footer. So the chat moved
+ * to /chat-frame/{widgetKey} on the admin host and joined the iframed
+ * widgets, where the widget runs under no policy at all and needs no changes;
+ * what stays on the landing page is a launcher of the template's own.
+ *
+ * /w/chat.js and /api/v1/widget/ stay on the list below because they are
+ * still correct -- they are public, tenant-scoped by widget key, and carry no
+ * user -- and because removing an allowance is a separate decision from
+ * ceasing to use one. Nothing on the landing origin requests either any more.
  *
  * NOT covered, and not coverable here: public/spa/** is a tree of deployed
  * static files, and the front controller serves existing files before PHP is

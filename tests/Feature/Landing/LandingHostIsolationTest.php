@@ -362,6 +362,13 @@ class LandingHostIsolationTest extends TestCase
             'review'          => ['/review/1', 'review/{id}'],
             'kiosk'           => ['/k/some-device-key', 'k/{deviceKey}'],
             'lead form'       => ['/form/some-embed-key', 'form/{embedKey}'],
+            // The chat joined this list rather than the allow-list above it.
+            // Its loader still answers on this origin (see the test below),
+            // but the landing template no longer uses it: the widget's inline
+            // script and inline style attributes cannot survive a landing
+            // page's CSP, so the panel is framed from the admin host like
+            // every other widget and only the launcher stays here.
+            'chat frame'      => ['/chat-frame/some-widget-key', 'chat-frame/{widgetKey}'],
         ];
     }
 

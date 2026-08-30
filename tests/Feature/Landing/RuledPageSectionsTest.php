@@ -712,6 +712,187 @@ class RuledPageSectionsTest extends TestCase
         $this->assertFileExists(public_path('landing/ruled_page.js'));
     }
 
+    // ── the chat dock ───────────────────────────────────────────────────────
+
+    /** The uuid shape /chat-frame/{widgetKey} actually resolves. */
+    private const CHAT_KEY = '3f6b0c1e-9d2a-4c77-8b1e-5a0d7c4e2f91';
+
+    private function chat(array $attributes = []): ChatWidgetConfig
+    {
+        return ChatWidgetConfig::create($attributes + [
+            'organization_id' => 1, 'brand_id' => 1,
+            'widget_key' => self::CHAT_KEY, 'is_active' => true,
+        ]);
+    }
+
+    /**
+     * Absent, not empty — the same rule every band above obeys, applied to
+     * the one piece of furniture that is not a band. Most tenants have no
+     * chat, and a launcher shipped without a key would open a frame pointed
+     * at /chat-frame/ with nothing after it: a 404 inside an empty box.
+     */
+    public function test_the_launcher_and_panel_render_only_when_there_is_a_widget_key(): void
+    {
+        $this->published();
+
+        $bare = $this->body();
+        $this->assertStringNotContainsString('rp-chat__launcher', $bare);
+        $this->assertStringNotContainsString('rp-chat__panel', $bare);
+
+        $this->chat();
+
+        $withChat = $this->body();
+        $this->assertStringContainsString('class="rp-chat__launcher"', $withChat);
+        $this->assertStringContainsString('class="rp-chat__panel"', $withChat);
+    }
+
+    /**
+     * The src is not spelled in the template, and this is what that buys.
+     *
+     * LandingPageSecurity builds the frame URL and the CSP's frame-src from
+     * one config value in one class, so the frame is permitted by
+     * construction rather than by two files being kept in step. The second
+     * half asks the browser's own question the browser's way — a source
+     * expression ending in `/` matches by prefix, anything else exactly —
+     * against the policy THIS response actually carried, so a template that
+     * hand-built a URL, or a frame-src entry quietly narrowed, fails here
+     * rather than as a blank box on a customer's page.
+     */
+    public function test_the_chat_frame_src_is_permitted_by_the_pages_own_frame_src(): void
+    {
+        $this->published();
+        $this->chat();
+
+        $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
+
+        preg_match(
+            '/<iframe[^>]+class="rp-chat__panel"[^>]+src="([^"]+)"/i',
+            $response->getContent(),
+            $frame
+        );
+        $this->assertNotEmpty($frame, 'The chat dock framed nothing.');
+
+        $src = html_entity_decode($frame[1]);
+
+        $this->assertSame(
+            \App\Http\Middleware\LandingPageSecurity::widgetUrl(
+                '/chat-frame/' . self::CHAT_KEY,
+                ['lang' => app()->getLocale()],
+            ),
+            $src,
+            'The template built the frame URL itself instead of asking the middleware '
+            . 'that also writes frame-src.'
+        );
+
+        preg_match('/frame-src ([^;]+)/', (string) $response->headers->get('Content-Security-Policy'), $directive);
+        $this->assertNotEmpty($directive, 'The response names no frame-src at all.');
+
+        $path = explode('?', $src)[0];
+        $permitted = false;
+
+        foreach (preg_split('/\s+/', trim($directive[1])) as $source) {
+            if (str_ends_with($source, '/') ? str_starts_with($path, $source) : $path === $source) {
+                $permitted = true;
+                break;
+            }
+        }
+
+        $this->assertTrue($permitted,
+            "frame-src [{$directive[1]}] does not permit [{$src}], so the browser renders a blank box.");
+    }
+
+    /**
+     * The same-origin embed is gone, and gone in every spelling: a page
+     * carrying both would run the widget twice, one of them broken.
+     */
+    public function test_the_page_ships_no_chat_script_tag_any_more(): void
+    {
+        $this->published();
+        $this->chat();
+
+        $body = $this->body();
+
+        $this->assertDoesNotMatchRegularExpression('/<script[^>]*chat\.js/i', $body);
+        $this->assertStringNotContainsString('/w/chat.js', $body);
+        $this->assertStringNotContainsString('data-style-nonce', $body);
+    }
+
+    /**
+     * The dock is the template's own markup now, so it is subject to the
+     * template's own rules rather than to a tenant widget's habits: no inline
+     * script, no style attribute, every <script> carrying a src. The two
+     * general guards for this live in RuledPageRenderTest; this asks the
+     * question again with the dock specifically on the page, which is the
+     * fixture those guards would be missing if the dock ever stopped
+     * rendering under them.
+     */
+    public function test_the_chat_dock_introduces_no_inline_script_or_style(): void
+    {
+        $this->published();
+        $this->chat();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('rp-chat__launcher', $body,
+            'The fixture rendered no dock, so this asserts nothing about one.');
+        $this->assertDoesNotMatchRegularExpression('/\sstyle="/i', $body);
+
+        preg_match_all('/<script\b[^>]*>/i', $body, $tags);
+        $this->assertNotEmpty($tags[0]);
+
+        foreach ($tags[0] as $tag) {
+            // A src, or the one data block the policy tolerates because a
+            // browser never executes it. RuledPageRenderTest's own guard is
+            // the hostile version of this; here it only has to notice a bare
+            // <script> arriving with the dock.
+            $this->assertTrue(
+                str_contains($tag, ' src="') || str_contains($tag, 'application/ld+json'),
+                "An inline script reached the page with the chat dock on it: {$tag}"
+            );
+        }
+    }
+
+    /**
+     * The launcher is a real button that says what it does and what state it
+     * is in. It replaces one the tenant's widget drew, which the stylesheet
+     * could only nudge by its offset — section 3.6's "reposition, never
+     * restyle" was a constraint, not a preference, and this is the version
+     * without it.
+     */
+    public function test_the_launcher_is_a_button_that_announces_its_state(): void
+    {
+        $this->published();
+        $this->chat();
+
+        $body = $this->body();
+
+        preg_match('/<button[^>]+class="rp-chat__launcher"[^>]*>/i', $body, $button);
+        $this->assertNotEmpty($button, 'The launcher is not a button.');
+
+        // type="button" or it submits the first form on the page. There is no
+        // form on this template today, which is exactly why the omission
+        // would go unnoticed until one arrives.
+        $this->assertStringContainsString('type="button"', $button[0]);
+        $this->assertStringContainsString('aria-expanded="false"', $button[0],
+            'The launcher ships without a state, so the panel opens silently for a screen reader.');
+        $this->assertStringContainsString('aria-controls="rp-chat-panel"', $button[0]);
+        $this->assertStringContainsString('aria-label=', $button[0]);
+
+        // The panel names itself too: an unlabelled iframe is announced as
+        // "frame" and nothing else.
+        $this->assertMatchesRegularExpression(
+            '/<iframe[^>]+title="[^"]+"/i',
+            $body,
+            'The chat frame carries no title.'
+        );
+
+        // Shipped hidden and lazily loaded: [hidden] is display:none, so the
+        // frame — and the widget, and its config request — costs nothing at
+        // all until someone presses the launcher.
+        $this->assertMatchesRegularExpression('/<iframe[^>]+loading="lazy"/i', $body);
+        $this->assertMatchesRegularExpression('/<iframe[^>]+\shidden\b/i', $body);
+    }
+
     public function test_the_reading_spine_has_something_to_fill(): void
     {
         $this->published();

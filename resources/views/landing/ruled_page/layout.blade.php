@@ -649,22 +649,60 @@
 
 @include('landing.ruled_page.sections.footer')
 
-@if ($content->widgetKey)
-{{-- The chat widget is the one widget that stays same-origin: it is a script
-     that has to run inside this page, so it cannot be pushed behind an
-     iframe the way booking, services, reviews and lead forms are.
+@if (filled($chatFrameUrl ?? null))
+{{-- The chat, and the last widget to move behind the origin boundary.
 
-     ChatWidgetConfig::generateEmbedCode() is deliberately not used. It builds
-     both the script src and the API base from config('app.url') — the ADMIN
-     origin — and hands back an inline <script> to set window.HotelChat. Under
-     this page's policy that is three separate failures: script-src 'self'
-     blocks the cross-origin src, connect-src 'self' blocks the API calls, and
-     there is no script nonce for the inline block. The src and the API base
-     are therefore root-relative, which is same-origin by construction rather
-     than by configuration, and the key travels on a data attribute instead of
-     an inline assignment. --}}
-<script src="/w/chat.js" data-widget-key="{{ $content->widgetKey }}"
-        data-style-nonce="{{ $cspNonce }}" defer></script>
+     It used to be the exception: a <script src="/w/chat.js"> that ran inside
+     this page, on the argument that a script cannot be iframed. The argument
+     was sound and the result was not. This page's script-src is 'self' with
+     no nonce and its style-src is 'self' plus a per-request nonce; the widget
+     injects an inline <script> and writes every position it needs as an
+     inline style ATTRIBUTE. A nonce reaches an injected <style> ELEMENT and
+     nothing else, so what a real tenant page rendered was the widget's raw
+     DOM -- avatar, SVG and loose text, position:static, 3315px of it in the
+     document flow below this footer. There was no further patch: the
+     positions and the policy cannot both be right on one origin.
+
+     So the widget goes where its inline script and inline styles are simply
+     allowed -- the admin origin, in an iframe, exactly like booking,
+     services, reviews and lead forms -- and what stays here is a LAUNCHER
+     THAT BELONGS TO THE TEMPLATE. Section 3.6 asked for a launcher in the
+     page's own accent all along and could only ask the stylesheet to nudge
+     somebody else's button by its offset. This one is ours: --accent,
+     --accent-on and --halo, the .rp-cta shadow language, a real <button>
+     that the keyboard reaches and the focus ring shows.
+
+     No src is spelled here. LandingPageSecurity::widgetUrl() builds it from
+     app.url -- the same value its own frame-src is built from -- so the frame
+     is permitted by construction, and it is null (this whole block absent)
+     exactly when frame-src would be 'none'. --}}
+<div class="rp-chat">
+  {{-- loading="lazy" is load-bearing rather than a courtesy: [hidden] is
+       display:none, so the panel -- and the widget, and its config request --
+       costs nothing at all until someone presses the launcher. --}}
+  <iframe class="rp-chat__panel" id="rp-chat-panel" src="{{ $chatFrameUrl }}"
+          title="Chat with us" loading="lazy" allow="microphone" hidden></iframe>
+  {{-- aria-expanded is maintained by ruled_page.js and is also what swaps the
+       glyph, in CSS: one attribute, one source of truth, no second class to
+       fall out of step with the state screen readers are told about. The two
+       labels travel as data attributes so the strings stay in the template
+       and the swap stays in the script. --}}
+  <button class="rp-chat__launcher" type="button"
+          aria-controls="rp-chat-panel" aria-expanded="false"
+          aria-label="Chat with us"
+          data-label-open="Chat with us" data-label-close="Close chat">
+    <svg class="rp-chat__glyph rp-chat__glyph--open" viewBox="0 0 24 24"
+         aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/>
+    </svg>
+    <svg class="rp-chat__glyph rp-chat__glyph--close" viewBox="0 0 24 24"
+         aria-hidden="true" focusable="false" fill="none" stroke="currentColor"
+         stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M6 6 18 18M18 6 6 18"/>
+    </svg>
+  </button>
+</div>
 @endif
 
 {{-- The template's interactive layer: Appendix B 4.7's budget, one file, one

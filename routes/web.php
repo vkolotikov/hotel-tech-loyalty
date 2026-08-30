@@ -364,6 +364,78 @@ Route::get('/chat-widget/{token}', function (string $token) {
         ->header('Content-Security-Policy', "frame-ancestors *");
 });
 
+// ─── Landing-page Chat Frame (origin-isolated widget host) ────────────────
+// The chat panel a landing page shows is THIS page, in an iframe, and that is
+// a CSP ruling rather than a layout preference.
+//
+// A landing page answers with script-src 'self' and style-src 'self' plus a
+// per-request nonce. The widget injects an inline <script> and writes every
+// position it needs as an inline style ATTRIBUTE, and a nonce reaches neither
+// of those. Loaded same-origin under that policy the widget therefore paints
+// its raw DOM into the document: a full-width avatar, an unstyled SVG and
+// loose text, position:static, below the footer -- which is what a real
+// tenant page showed. Framed here it runs on the admin origin, whose only
+// header is the frame-ancestors opt-out below, so its inline script and
+// inline styles are simply allowed and nothing about the widget has to change.
+//
+// The KEY is the credential, exactly as it is on /api/v1/widget/*: this page
+// carries no session and reads no user. Resolution mirrors
+// WidgetChatController::resolveWidget() -- the same column, the same
+// is_active gate, and the same Str::isUuid() guard, which is not cosmetic:
+// widget_key is a Postgres `uuid` column, so a non-uuid comparison is a type
+// error and a 500 rather than a miss. Anything the API would refuse to talk
+// to, this page refuses to host, and there is no further gate to mirror
+// because the widget API itself has none (routes/api.php, prefix widget/) --
+// entitlement is enforced where the AI actually costs money, per request,
+// inside the controller.
+Route::get('/chat-frame/{widgetKey}', function (string $widgetKey) {
+    if (!\Illuminate\Support\Str::isUuid($widgetKey)) {
+        abort(404, 'Chat widget not found');
+    }
+
+    $config = \App\Models\ChatWidgetConfig::withoutGlobalScopes()
+        ->where('widget_key', $widgetKey)
+        ->where('is_active', true)
+        ->first();
+
+    if (!$config) {
+        abort(404, 'Chat widget not found');
+    }
+
+    // Two letters or nothing. The value reaches the widget's own language
+    // selection, and a landing page is the one caller -- there is no reason
+    // for anything longer to arrive and no reason to carry it if it does.
+    $lang = (string) request('lang', 'en');
+    $lang = preg_match('/^[a-z]{2}$/', $lang) ? $lang : 'en';
+
+    return response()
+        ->view('chat-frame', [
+            'widgetKey' => $config->widget_key,
+            // /w/chat.js, not the static public/widget/hotel-chat.js: the
+            // Laravel route minifies, sets an ETag and revalidates hourly,
+            // and the edge blocks the static path outright.
+            'scriptSrc' => '/w/chat.js?v=' . (@filemtime(public_path('widget/hotel-chat.js')) ?: time()),
+            'lang'      => $lang,
+        ])
+        // MUST allow framing, for the same reason every widget host page
+        // above does: the platform serves X-Frame-Options: deny at the edge,
+        // and without the override the landing page renders a blank box with
+        // nothing in its console. The landing side of the same boundary is
+        // narrow rather than open -- its frame-src names this path and five
+        // others, never the bare admin origin.
+        ->header('X-Frame-Options', 'ALLOWALL')
+        ->header('Content-Security-Policy', "frame-ancestors *");
+    // Out of the `web` group, following /w/chat.js above. This page is loaded
+    // once per visitor per landing page that has chat switched on, it reads no
+    // session, no cookie and no route binding, and it is framed CROSS-SITE --
+    // so the SameSite=lax session cookie StartSession queues could never be
+    // set by the browser anyway, while the session row PHP allocated to name
+    // it would still be written. With SESSION_DRIVER=database that is one
+    // INSERT per chat open that nothing can ever read back. The whole group
+    // rather than StartSession alone, because ShareErrorsFromSession and
+    // VerifyCsrfToken both call $request->session() unconditionally.
+})->withoutMiddleware('web');
+
 // ─── Standalone Booking Page ────────────────────────────────────────────────
 Route::get('/book/{token}', function (string $token) {
     $brand = \App\Models\Brand::resolveByToken($token);
@@ -611,7 +683,7 @@ Route::get('/{any}', function (\Illuminate\Http\Request $request) {
         ]);
     }
     return view('welcome');
-})->where('any', '^(?!api/|storage/|spa/|sw.js|manifest.webmanifest|widget/|booking-widget|book/|services-widget|services/|chat-widget/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
+})->where('any', '^(?!api/|storage/|spa/|sw.js|manifest.webmanifest|widget/|booking-widget|book/|services-widget|services/|chat-widget/|chat-frame/|review/|k/|form/|unsubscribe|privacy|terms|data-deletion).*$');
 
 Route::get('/', function (\Illuminate\Http\Request $request) {
     // The landing host serves customer content only. Serving the admin shell
