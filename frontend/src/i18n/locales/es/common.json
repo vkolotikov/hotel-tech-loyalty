@@ -3025,7 +3025,9 @@
     "unsaved": "Cambios sin guardar",
     "saved": "Todos los cambios guardados",
     "save": "Guardar cambios",
-    "preview_caption": "Muestra tu borrador guardado. Guarda para ver los últimos cambios.",
+    "preview_caption_live": "En vivo, con los cambios que aún no has guardado.",
+    "preview_caption_saved": "Muestra tu página guardada. Edita cualquier cosa y se actualizará aquí sobre la marcha.",
+    "preview_caption_stale": "No se pudo actualizar ahora mismo: se muestra la última versión que pudimos cargar.",
     "design": {
       "title": "Diseño",
       "industry_kicker": "Tu sector",
@@ -3165,6 +3167,7 @@
       "remove_photo": "Quitar foto",
       "photo_uploading": "Subiendo…",
       "preview_title": "Vista previa",
+      "preview_title_live": "Vista previa en vivo",
       "preview_desktop": "Escritorio",
       "preview_mobile": "Móvil",
       "preview_reload": "Recargar vista previa",

@@ -1357,6 +1357,29 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::put('/',            [LandingPageController::class, 'update']);
                     Route::post('publish',     [LandingPageController::class, 'publish']);
                     Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
+
+                    // THE LIVE PREVIEW (landing phase 3c). Takes the
+                    // editor's UNSAVED state, parks it in the cache and
+                    // hands back a signed preview URL that renders the real
+                    // Blade template from it — see App\Landing\PreviewDraft.
+                    // It writes nothing, which is why it sits beside
+                    // `preview-url` rather than anywhere near `update`.
+                    //
+                    // THE THIRD THROTTLE ARGUMENT IS MANDATORY, and this
+                    // file's own note at the auth group (line ~126) says
+                    // why: an unnamed `throttle:N,1` keys on
+                    // sha1(domain|ip) alone, so two prefix-less throttles on
+                    // one route resolve to the same bucket and each hits it.
+                    //
+                    // 60/min: the editor debounces at 600ms and cancels
+                    // in-flight requests, so a continuous typist producing a
+                    // render on every pause is nowhere near one per second
+                    // sustained — and a burst that does cross it degrades
+                    // into "showing the last version we could load" in the
+                    // pane rather than anything broken. The enclosing group
+                    // still caps the whole session at 240/min.
+                    Route::post('preview-draft', [LandingPageController::class, 'previewDraft'])
+                        ->middleware('throttle:60,1,landing-preview-draft');
                     Route::put('sections',     [LandingPageSectionController::class, 'update']);
 
                     // Adding and removing a band (the repeatable-sections

@@ -3069,7 +3069,9 @@
     "unsaved": "Unsaved changes",
     "saved": "All changes saved",
     "save": "Save changes",
-    "preview_caption": "Shows your saved draft. Save to see the latest changes.",
+    "preview_caption_live": "Live — including the changes you have not saved yet.",
+    "preview_caption_saved": "Shows your saved page. Edit anything and it updates here as you go.",
+    "preview_caption_stale": "Could not refresh just now — showing the last version we could load.",
     "design": {
       "title": "Design",
       "industry_kicker": "Your industry",
@@ -3209,6 +3211,7 @@
       "remove_photo": "Remove photo",
       "photo_uploading": "Uploading…",
       "preview_title": "Preview",
+      "preview_title_live": "Live preview",
       "preview_desktop": "Desktop",
       "preview_mobile": "Mobile",
       "preview_reload": "Reload preview",

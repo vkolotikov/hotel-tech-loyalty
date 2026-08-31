@@ -19,6 +19,7 @@ import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
+import type { DraftPayload } from './livePreview'
 import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
@@ -485,6 +486,46 @@ export function LandingEditor({
    */
   const tonePalette = paletteFor(themeFields.palette)
   const tones: ToneChoice[] = toneChoices(sectionTones, tonePalette)
+
+  /**
+   * What the preview pane renders RIGHT NOW — the live-preview round.
+   *
+   * Built from the SAME three helpers `saveMut` builds its own body from
+   * (`themePayload`, `stripImageUrlLeaves`, `buildSectionsPayload` over the
+   * re-derived `rows`), because the whole promise of a live preview is that
+   * it shows what a save would produce. A second, nearly-identical payload
+   * builder here would be a second answer to that question.
+   *
+   * Three deliberate details:
+   *
+   *   - `themePayload(themeFields)` rather than the raw `f.theme` that
+   *     `saveMut` sends. `theme` is a schemaless JSON column, so a page
+   *     written before `ThemeRules` existed can hold a key the server's
+   *     allowlist now refuses — and a 422 on every keystroke would leave
+   *     the pane stuck on "could not refresh" over something the tenant
+   *     cannot see or fix. Narrowing to the three allowlisted keys is the
+   *     same narrowing `updateTheme` already applies to everything this
+   *     screen writes, and the server carries forward whatever stored value
+   *     an omitted key had — so the pane shows what a save the server
+   *     ACCEPTS would produce.
+   *   - `stripImageUrlLeaves`, for exactly the reason `saveMut` uses it:
+   *     `updateContent`'s spread drags a stored `image_url` along the
+   *     moment a sibling field on that section is edited, and the server
+   *     refuses that leaf unconditionally (D4). The photo still appears in
+   *     the preview, because the server takes it from the STORED row.
+   *   - `rows`, not `f.sections`, so `isOfferable`'s forced-off gate
+   *     applies to what is previewed exactly as it applies to what is
+   *     saved.
+   *
+   * Not memoised: `LandingPreview` fingerprints the payload rather than
+   * comparing object identity (see `livePreview.ts`), so a fresh object
+   * per render costs a stringify and changes nothing.
+   */
+  const draftPayload: DraftPayload = {
+    theme: themePayload(themeFields),
+    content: stripImageUrlLeaves(f.content),
+    sections: buildSectionsPayload(rows),
+  }
 
   /**
    * Queued into `form` and saved by the Save button through the existing
@@ -1044,7 +1085,7 @@ export function LandingEditor({
 
         <div className="xl:col-span-5">
           <div className="xl:sticky xl:top-4">
-            <LandingPreview nonce={previewNonce} />
+            <LandingPreview nonce={previewNonce} draft={draftPayload} dirty={dirty} />
           </div>
         </div>
       </div>
