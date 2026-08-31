@@ -80,7 +80,28 @@ export type SectionTypeOption = {
   id: string
   repeatable: boolean
   fields: string[]
+  /**
+   * The OLD photo question — "draw the one-photo control" — and it is
+   * published as `images === 1`, not `images > 0`. A multi-photo type sends
+   * `false` here deliberately, because the one-photo control names its slot
+   * with the bare section key and the endpoints refuse that spelling for a
+   * gallery. See `SectionType::payload()`'s own note. Read `image_slots`
+   * instead; this field exists so a bundle that predates galleries degrades
+   * to "no photo control" rather than to a button that only ever 422s.
+   */
   image: boolean
+  /**
+   * HOW MANY photos one section of this type holds — 0, 1, or 8 for the
+   * gallery. `SectionType::payload()`'s `image_slots`, served for the same
+   * reason `limit` is: the editor's photo strip has to know the ceiling to
+   * say "6 of 8" and to stop offering an Add at the top of it, and a number
+   * this side carried itself would be a second copy of the server's.
+   *
+   * Optional: a backend that predates galleries publishes no such key, and
+   * `fieldsForType` then falls back to `image` — one photo or none, exactly
+   * what that build's catalogue means.
+   */
+  image_slots?: number | null
   limit: number | null
   /**
    * Which tone swatch a row of this type shows as chosen while its own
@@ -97,7 +118,16 @@ export type SectionTypeOption = {
 }
 
 /** One editable control on a section row — see `SECTION_CONTENT_FIELDS`. */
-export type SectionField = { name: string; multiline?: boolean; type?: string; maxLength?: number }
+export type SectionField = {
+  name: string
+  multiline?: boolean
+  type?: string
+  maxLength?: number
+  /** For `type: 'gallery'` only — how many pictures the strip may hold, off
+   *  the served `image_slots`. Never a literal eight: the cap the editor
+   *  counts against and the cap the endpoints enforce are one number. */
+  slots?: number
+}
 
 /**
  * One row of the editor's section list.
@@ -137,6 +167,13 @@ export type EditorSectionRow = Omit<SectionMeta, 'key'> & {
   siblings: number
   /** The controls this row renders, in order. See `fieldsForType`. */
   fields: readonly SectionField[]
+  /** What has to be there before a tenant-added band appears on the page —
+   *  `PageContent::count()`'s two arms, named, so the row can say "once you
+   *  add some words" for a text block and "once you add a photo" for a
+   *  gallery instead of telling a tenant to write copy that would not make
+   *  their pictures band render. Always `'words'` for a fixed row, which
+   *  never asks. See `writtenBy`. */
+  writtenBy: 'words' | 'photos'
   /** This row's stored tone, normalised: a string id or null, never
    *  undefined, so the save always says what it means (see
    *  `buildSectionsPayload`). */
@@ -220,6 +257,9 @@ export function buildSectionRows(
         ordinal: 1,
         siblings: 1,
         fields: SECTION_CONTENT_FIELDS[row.key as SectionKey],
+        // A fixed row never renders the "not written yet" line, so this is
+        // the harmless default rather than a claim about the band.
+        writtenBy: 'words',
         tone: normaliseTone(row.tone),
         // A fixed key IS its type id, so the catalogue lookup is direct.
         defaultTone: defaultToneOf(row.key, sectionTypes),
@@ -270,6 +310,7 @@ export function buildSectionRows(
       ordinal,
       siblings: perType.get(parsed.typeId) ?? 1,
       fields: fieldsForType(parsed.type),
+      writtenBy: writtenBy(parsed.type),
       tone: normaliseTone(row.tone),
       // Off the TYPE (`text`), never the key (`text_1`) — every instance of
       // a repeatable type shares one authored surface, exactly as they
@@ -324,7 +365,7 @@ export function parseSectionKey(
   const index = Number(digits)
   if (type.limit != null && index > type.limit) return null
 
-  return { typeId, index, type, written: instanceIsWritten(key, content) }
+  return { typeId, index, type, written: instanceIsWritten(key, type, content) }
 }
 
 /**
@@ -339,7 +380,19 @@ export function parseSectionKey(
  * block, uploads a photo, and sees nothing change in the preview has been
  * told nothing at all about why.
  */
-function instanceIsWritten(key: string, content?: Record<string, unknown> | null): boolean {
+function instanceIsWritten(key: string, type: SectionTypeOption, content?: Record<string, unknown> | null): boolean {
+  // A MULTI-PHOTO band is its pictures, so that is what makes it appear —
+  // `PageContent::count()`'s `'gallery' =>` arm, which counts the leaves
+  // that clear the allowlist and nothing else. A gallery with a caption and
+  // no photos does not render, and the row says so.
+  if (imageSlotsOf(type) > 1) {
+    const section = content != null && typeof content === 'object'
+      ? (content as Record<string, unknown>)[key]
+      : null
+
+    return gallerySlots(section, key, imageSlotsOf(type)).length > 0
+  }
+
   if (content == null || typeof content !== 'object') return false
   const leaf = (content as Record<string, unknown>)[key]
   if (leaf == null || typeof leaf !== 'object' || Array.isArray(leaf)) return false
@@ -347,22 +400,34 @@ function instanceIsWritten(key: string, content?: Record<string, unknown> | null
   return typeof body === 'string' && body.trim() !== ''
 }
 
+/** What has to be there before a tenant-added band appears on the page —
+ *  the two arms of `PageContent::count()`, named. Fixed rows never ask. */
+export function writtenBy(type: SectionTypeOption): 'words' | 'photos' {
+  return imageSlotsOf(type) > 1 ? 'photos' : 'words'
+}
+
 /**
  * The controls a tenant-added band renders, built from the type's OWN
  * catalogue row rather than from a hand-written map.
  *
- * `image_url` first when the type takes a photo, then the catalogue's
+ * The photo control first when the type takes photos, then the catalogue's
  * `fields` in the order the server listed them — which is the order
  * `SECTION_CONTENT_FIELDS` already puts `hero` and `about` in, so a text
  * block's card reads like the two cards above it rather than like a
  * different screen.
  *
+ * WHICH photo control is decided by the served count, not by the type id: a
+ * type holding one picture gets `type: 'image'` (the single plate, writing
+ * `content.<key>.image_url`) and a type holding more gets `type: 'gallery'`
+ * (the strip, writing `content.<key>.image_N`). Those are the only two
+ * signals `LandingEditor.tsx`'s field renderer branches on, and a third
+ * multi-photo type needs no edit here at all.
+ *
  * The photo field is SYNTHESISED here and is never in `fields` on the wire,
- * deliberately: `image_url` has exactly one writer (the image endpoints) and
- * the plain content save refuses the key outright — `SectionType::$fields`
- * documents that omission at the source, and this is the frontend half of
- * it. `type: 'image'` is the one signal `LandingEditor.tsx`'s field renderer
- * branches on.
+ * deliberately: every photo leaf has exactly one writer (the image
+ * endpoints) and the plain content save refuses the whole `image_*` family
+ * outright — `SectionType::$fields` documents that omission at the source,
+ * and this is the frontend half of it.
  *
  * Which fields get a textarea is the one thing the catalogue does not say
  * (it publishes what a partial READS, not how a form should look), so it
@@ -371,9 +436,37 @@ function instanceIsWritten(key: string, content?: Record<string, unknown> | null
  */
 const MULTILINE_FIELDS: ReadonlySet<string> = new Set(['body', 'terms'])
 
+/**
+ * How many photos a served type holds, from `image_slots` when the backend
+ * publishes it and from the legacy `image` bool when it does not.
+ *
+ * One place, because three call sites want it and each of them getting the
+ * fallback slightly differently is how a gallery ends up with a one-photo
+ * control on one screen and a strip on another.
+ */
+export function imageSlotsOf(type: SectionTypeOption): number {
+  if (typeof type.image_slots === 'number' && Number.isInteger(type.image_slots) && type.image_slots > 0) {
+    return type.image_slots
+  }
+
+  return type.image ? 1 : 0
+}
+
 export function fieldsForType(type: SectionTypeOption): SectionField[] {
+  const slots = imageSlotsOf(type)
+
+  // ONE photo control per row, and which one is decided by the count rather
+  // than by the type id: a single plate writes `content.<key>.image_url` and
+  // is named by the bare section key, a strip writes `content.<key>.image_N`
+  // and names each picture. The two are different controls over different
+  // leaves, so a type is offered exactly one of them.
+  const photo: SectionField[] =
+    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots }]
+      : slots === 1 ? [{ name: 'image_url', type: 'image' }]
+        : []
+
   return [
-    ...(type.image ? [{ name: 'image_url', type: 'image' }] : []),
+    ...photo,
     ...type.fields.map(name => (MULTILINE_FIELDS.has(name) ? { name, multiline: true } : { name })),
   ]
 }
@@ -773,22 +866,140 @@ export function safeImageUrl(value: unknown): string | null {
   return /^(https?:\/\/|\/storage\/)/.test(value) ? value : null
 }
 
-export function stripImageUrlLeaves(content: Record<string, unknown> | null | undefined): Record<string, unknown> {
+/**
+ * Whether a content-field name is a PHOTO leaf, and therefore has exactly
+ * one writer.
+ *
+ * `App\Landing\SectionType::isImageField()`, restated — the whole `image_*`
+ * family rather than the two spellings this build happens to write, because
+ * that is the family `update()` refuses. Anything in it that reached `form`
+ * has to be stripped before a save, or the save 422s.
+ */
+function isImageField(name: string): boolean {
+  return name.startsWith('image_')
+}
+
+/**
+ * The picture leaf a gallery stores its Nth photo under —
+ * `SectionType::imageLeaves()`'s multi-photo half, one entry at a time.
+ */
+export function galleryLeaf(index: number): string {
+  return 'image_' + index
+}
+
+/** The image endpoints' slot for one gallery picture — `<key>.<leaf>`. */
+export function gallerySlotName(sectionKey: string, leaf: string): string {
+  return sectionKey + '.' + leaf
+}
+
+/** One filled photo in a gallery: which leaf it lives in, how to address it, and what to show. */
+export type GalleryPhoto = { leaf: string; slot: string; url: string }
+
+/**
+ * A gallery's photos as the strip renders them: leaf order, gaps closed,
+ * hostile and non-string leaves absent.
+ *
+ * `App\Landing\PageContent::galleryImages()`'s answer, re-derived on this
+ * side for the same reason `instanceIsWritten` re-derives count()'s
+ * predicate: nothing on the wire carries it (the onboarding response
+ * structurally cannot — see `buildSectionRows`), and this is what the
+ * thumbnails, the count and the remove buttons are all built from.
+ *
+ * Every url goes through `safeImageUrl`, which mirrors the renderer's own
+ * allowlist: `content` is a schemaless column, and a legal-but-unusable leaf
+ * handed to `resolveImage()` throws on its unconditional `url.match(...)`
+ * and takes the whole editor route down (minor m4's finding, applied here
+ * eight leaves at a time).
+ *
+ * `limit` is the served `image_slots`, never a literal eight: a leaf past
+ * the cap is not a picture any endpoint can write or remove, so the strip
+ * must not offer a control for one.
+ */
+export function gallerySlots(section: unknown, sectionKey: string, limit: number): GalleryPhoto[] {
+  const fields = sectionFields(section)
+  const photos: GalleryPhoto[] = []
+
+  for (let n = 1; n <= limit; n++) {
+    const leaf = galleryLeaf(n)
+    const url = safeImageUrl(fields[leaf])
+    if (url !== null) photos.push({ leaf, slot: gallerySlotName(sectionKey, leaf), url })
+  }
+
+  return photos
+}
+
+/** One section's field map out of a raw `content` leaf, or `{}` for every
+ *  shape that is not one — a bare scalar, an array, null. `content` is a
+ *  schemaless column and all three are values it legitimately holds. */
+function sectionFields(section: unknown): Record<string, unknown> {
+  return section != null && typeof section === 'object' && !Array.isArray(section)
+    ? section as Record<string, unknown>
+    : {}
+}
+
+/**
+ * The leaves a gallery has room for, LOWEST FREE FIRST — the client-side
+ * twin of `SectionType::nextInstanceKey()`'s allocation rule, and for the
+ * same reason: a tenant who adds and removes photos must not burn the
+ * namespace, so a gap left by a removal is the next slot filled.
+ *
+ * `wanted` is how many the tenant just picked. Returning FEWER than that is
+ * the cap being reported, not an error: the caller uploads the ones that fit
+ * and says plainly why the rest did not.
+ *
+ * Counts the leaves that are OCCUPIED rather than the ones that are usable:
+ * a leaf holding a value `safeImageUrl` rejects is still a leaf an upload
+ * would overwrite, and treating it as free would silently destroy it.
+ */
+export function freeGalleryLeaves(section: unknown, limit: number, wanted: number): string[] {
+  const fields = sectionFields(section)
+  const free: string[] = []
+
+  for (let n = 1; n <= limit && free.length < wanted; n++) {
+    const leaf = galleryLeaf(n)
+    if (fields[leaf] === undefined || fields[leaf] === null) free.push(leaf)
+  }
+
+  return free
+}
+
+/**
+ * Fix round 1 (ruling 3b-4), widened for the gallery round: this used to
+ * strip the single `image_url` leaf and is now the whole `image_*` family,
+ * because that is the family `LandingPageController::update()` refuses.
+ *
+ * The bug is unchanged in kind and eight times as easy to hit: `form`
+ * carries a section's whole content object BY REFERENCE the moment
+ * `update()` first clones `page` into it, and `updateContent()`'s spread
+ * copies every existing photo leaf along with whichever field the tenant
+ * actually meant to change — so editing only a gallery's heading after any
+ * photo has been uploaded would put `image_1`…`image_8` on the wire, and
+ * D4's refusal is unconditional.
+ *
+ * This is the one choke point every save and every live-preview render runs
+ * `content` through — never applied to `form` at creation (the thumbnails
+ * deliberately read the raw query data, never `form`) and never applied
+ * inside the photo controls (they never touch `form` at all). Always safe:
+ * the server re-hydrates each section's stored photo leaves onto a save that
+ * omits them, so stripping here can never lose a picture — only avoid
+ * re-sending values the server would refuse outright.
+ */
+export function stripImageLeaves(content: Record<string, unknown> | null | undefined): Record<string, unknown> {
   if (content == null || typeof content !== 'object') return {}
 
   const out: Record<string, unknown> = {}
   for (const [key, section] of Object.entries(content)) {
     // A non-plain-object section (a bare scalar, the pre-existing
-    // "ScalarLeaves" edge case Task 4's own fix round named) has no
-    // `image_url` key to strip — pass it through exactly as stored rather
-    // than inventing an object shape nothing asks for.
+    // "ScalarLeaves" edge case Task 4's own fix round named) has no photo
+    // leaf to strip — pass it through exactly as stored rather than
+    // inventing an object shape nothing asks for.
     if (section === null || typeof section !== 'object' || Array.isArray(section)) {
       out[key] = section
       continue
     }
-    const copy = { ...(section as Record<string, unknown>) }
-    delete copy.image_url
-    out[key] = copy
+    out[key] = Object.fromEntries(
+      Object.entries(section as Record<string, unknown>).filter(([field]) => !isImageField(field)),
+    )
   }
   return out
 }

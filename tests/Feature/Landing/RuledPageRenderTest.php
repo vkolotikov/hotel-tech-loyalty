@@ -2342,6 +2342,238 @@ class RuledPageRenderTest extends TestCase
         $this->assertStringNotContainsString('rp-text__grid--plated', $body);
     }
 
+    // ─── The gallery band (the second repeatable type) ────────────────────
+    //
+    // The same three questions the plate battery above asks of a single
+    // photo, asked of eight: does the band render what the tenant uploaded,
+    // in the order they uploaded it; does it stay off the page entirely when
+    // there is nothing to show; and does every hostile shape a raw write can
+    // put in one of its leaves drop that picture without taking the page
+    // down. The guards are shared (PageContent::galleryImages() runs each
+    // leaf through the same private allowlist imageUrl() uses), so what
+    // these prove is that the SHARING is real at the render boundary rather
+    // than assumed from the unit tests.
+
+    /** published(), plus a gallery band whose content is written raw. */
+    private function publishedWithGallery(array $fields, string $key = 'gallery_1'): LandingPage
+    {
+        $page = $this->published();
+
+        // Raw, bypassing both the admin API's validation and Eloquent's
+        // re-encoding, for the reason storeRawImageUrl() gives above: this
+        // is a row shaped as a raw import or a hand-edit would leave it, and
+        // a 500 on stored data is not acceptable on a live page.
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero' => ['headline' => 'The Art of Wellness'],
+                $key   => $fields,
+            ]),
+        ]);
+
+        $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => 9]);
+
+        return $page;
+    }
+
+    /**
+     * The positive case, end to end through the REAL writer — the admin
+     * image endpoint over HTTP, three times, because the whole point of the
+     * single-writer rule is that nothing else puts a URL in these leaves.
+     *
+     * Pins ORDER, not just presence: the three <img> tags must appear in
+     * image_1, image_2, image_3 sequence in the document, which is a claim a
+     * set of assertStringContainsString calls cannot make on its own.
+     */
+    public function test_a_gallery_renders_every_uploaded_picture_in_order(): void
+    {
+        $this->ensureImageUploadSchema();
+        $org  = $this->orgWithLandingPages();
+        $page = $this->publishedForOrg($org, 'plate-gallery-salon', [
+            'hero'      => ['headline' => 'The Art of Wellness'],
+            'gallery_1' => ['kicker' => 'Our work', 'heading' => 'The rooms'],
+        ]);
+        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
+
+        $urls = [];
+
+        foreach (['image_1', 'image_2', 'image_3'] as $leaf) {
+            $urls[] = $this->uploadImageViaEndpoint($org, 'gallery_1.' . $leaf);
+        }
+
+        $this->assertCount(3, array_unique($urls), 'The three uploads did not produce three distinct files.');
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('data-section="gallery_1"', $body);
+        $this->assertStringContainsString('<h2 class="rp-gallery__title">The rooms</h2>', $body);
+        // The count-aware hook the stylesheet's column rules read.
+        $this->assertStringContainsString('<ul class="rp-gallery__grid" data-count="3">', $body);
+
+        $positions = [];
+
+        foreach ($urls as $url) {
+            $tag = '<img class="rp-gallery__img" src="' . $url . '" alt="" loading="lazy" decoding="async">';
+            $at  = strpos($body, $tag);
+
+            $this->assertNotFalse($at, "The gallery did not render {$url}.");
+
+            $positions[] = $at;
+        }
+
+        $sorted = $positions;
+        sort($sorted);
+        $this->assertSame($sorted, $positions, 'The gallery rendered its pictures out of order.');
+
+        // Every tile is deferred: a tenant-added band is below the fold by
+        // construction, and eight eager decodes on a phone is the cost this
+        // attribute exists to avoid.
+        $this->assertSame(3, substr_count($body, 'loading="lazy" decoding="async">'
+            ), 'A gallery tile rendered without loading="lazy".');
+    }
+
+    /**
+     * THE HONEST EMPTY, at the render boundary: a gallery a tenant added and
+     * captioned but never put a picture in does not appear on the page at
+     * all — no band, no heading, no empty grid, and no nav anchor pointing
+     * at it.
+     *
+     * Mutation target: give PageContent::count()'s gallery arm a floor of 1
+     * (or gate the band on its copy the way `text` is gated) and this goes
+     * red on the very first assertion.
+     */
+    public function test_a_gallery_with_no_pictures_does_not_render_at_all(): void
+    {
+        $this->publishedWithGallery(['kicker' => 'Our work', 'heading' => 'The rooms']);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('data-section="gallery_1"', $body);
+        $this->assertStringNotContainsString('rp-gallery', $body);
+        $this->assertStringNotContainsString('The rooms', $body);
+        // Not even as a signpost: the shell nav is built from the sections
+        // that actually render, so an unrendered band cannot be linked to.
+        $this->assertStringNotContainsString('#gallery_1', $body);
+    }
+
+    /**
+     * Every hostile shape the hero/about/text batteries cover, aimed at a
+     * GALLERY leaf — the same six cases, because the guard is the same guard
+     * and a gallery leaf must not be the one door it is not standing at.
+     *
+     * The band is kept alive by a second, legitimate picture, so the absence
+     * of a plate for the hostile leaf is the guard working rather than the
+     * band being missing — the same construction the added-band battery uses
+     * and for the same reason.
+     */
+    public static function hostileGalleryImageValues(): array
+    {
+        return [
+            'javascript scheme'   => ['javascript:alert(1)', 'javascript:'],
+            'attribute breakout'  => ['"><script>', '"><script>'],
+            'protocol relative'   => ['//evil.example/x.jpg', 'evil.example'],
+            'array shaped'        => [['first', 'second'], null],
+            'object shaped'       => [['nested' => 'value'], null],
+            '200k characters'     => [null, null],
+        ];
+    }
+
+    #[DataProvider('hostileGalleryImageValues')]
+    public function test_a_hostile_gallery_leaf_renders_no_img_and_leaves_the_rest(mixed $value, ?string $needle): void
+    {
+        // The 200k case is built here rather than in the provider so the data
+        // set name stays readable and PHPUnit is not asked to carry a
+        // 200,000-character argument through its own reporting.
+        $page = $this->publishedWithGallery([
+            'heading' => 'The rooms',
+            'image_1' => '/storage/landing/real.jpg',
+            'image_2' => $value ?? str_repeat('x', 200_000),
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="gallery_1"', $body,
+            'The gallery did not render at all, so this case proves nothing about its image guard.');
+
+        // Exactly ONE tile: the legitimate picture, and nothing for the
+        // hostile leaf.
+        $this->assertSame(1, substr_count($body, 'rp-gallery__img'),
+            'A tile rendered for a gallery leaf that failed the allowlist.');
+        $this->assertStringContainsString('data-count="1"', $body);
+        $this->assertStringContainsString('src="/storage/landing/real.jpg"', $body);
+
+        if ($needle !== null) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * A gallery whose every leaf is hostile has nothing to show, so it falls
+     * all the way back to the empty case — off the page entirely, page still
+     * 200. The two guards meeting: the allowlist drops the pictures and
+     * count() then drops the band.
+     */
+    public function test_a_gallery_of_only_hostile_leaves_renders_no_band_and_stays_up(): void
+    {
+        $page = $this->publishedWithGallery([
+            'heading' => 'The rooms',
+            'image_1' => 'javascript:alert(1)',
+            'image_2' => '//evil.example/x.jpg',
+            'image_3' => ['nested' => 'value'],
+            'image_4' => str_repeat('x', 200_000),
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('data-section="gallery_1"', $body);
+        $this->assertStringNotContainsString('rp-gallery__img', $body);
+        $this->assertStringNotContainsString('javascript:', $body);
+        $this->assertStringNotContainsString('evil.example', $body);
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * A leaf past the eight this type holds is not a picture: no endpoint
+     * can write it, and the renderer enumerates the CATALOGUE's leaves
+     * rather than whatever keys the stored row happens to carry, so a raw
+     * write cannot smuggle a ninth tile onto the page.
+     */
+    public function test_a_gallery_leaf_past_the_cap_never_renders(): void
+    {
+        $page = $this->publishedWithGallery([
+            'image_1'  => '/storage/landing/first.jpg',
+            'image_9'  => '/storage/landing/ninth.jpg',
+            'image_99' => '/storage/landing/ninety-ninth.jpg',
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('src="/storage/landing/first.jpg"', $body);
+        $this->assertStringNotContainsString('ninth.jpg', $body);
+        $this->assertSame(1, substr_count($body, 'rp-gallery__img'));
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /** A gallery stored as a bare string is a shape the column permits and the page must survive. */
+    public function test_a_string_shaped_gallery_does_not_take_the_page_down(): void
+    {
+        $page = $this->published();
+
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero'      => ['headline' => 'The Art of Wellness'],
+                'gallery_1' => 'just a string',
+            ]),
+        ]);
+        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
+
+        $this->assertStringNotContainsString('data-section="gallery_1"', $this->body());
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
     // ─── Palette system (Task 1, landing phase 3c) — golden capture ───────
 
     /**

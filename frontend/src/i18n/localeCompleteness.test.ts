@@ -247,9 +247,11 @@ describe('locale completeness — wizard industry names (dynamic t() keys, hand-
  */
 describe('locale completeness — addable section type names and blurbs (dynamic t() keys, hand-verified)', () => {
   const SECTION_TYPE_KEYS = [
-    // SectionType::repeatableIds() — one addable type today.
+    // SectionType::repeatableIds() — two addable types today.
     'landing_pages.editor.section_type_name_text',
     'landing_pages.editor.section_type_blurb_text',
+    'landing_pages.editor.section_type_name_gallery',
+    'landing_pages.editor.section_type_blurb_gallery',
   ]
 
   // The canary the three describes above all carry: a name AND a blurb for
@@ -322,6 +324,71 @@ describe('locale completeness — section tone names (dynamic t() keys, hand-ver
       expect(
         missing,
         `${locale}/common.json is missing (or has a blank) tone name key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})
+
+/**
+ * The gallery round closes the gap this file's own header has documented
+ * since Task 6: `LandingEditor.tsx` labels every content control with a
+ * template-literal `t()` call —
+ * `` t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name) ``
+ * — so `T_CALL_RE` at the top of this file has never been able to see the
+ * family, and unlike the four describes above it had no hand-verified net
+ * either. The fallback chain ends at `field.name`, so a missing translation
+ * renders the RAW LEAF NAME (`image_url`, `gallery`, `kicker`) as the label
+ * above an input a customer is asked to fill in.
+ *
+ * The names are the union of `SECTION_CONTENT_FIELDS`' curated fixed-row
+ * fields and the two synthesised photo controls (`fieldsForType`) — i.e.
+ * every control this build actually draws. `contact`'s five label overrides
+ * and `booking`'s two are deliberately absent: they are served on the
+ * catalogue but `SECTION_CONTENT_FIELDS` does not offer them, so no control
+ * renders them and asking for a translation of a string nothing shows would
+ * be asking for busywork.
+ *
+ * Hardcoded rather than derived, for the fifth time and the same reason as
+ * the four describes above: a list built from the module it exists to check
+ * loses a name and its expectation in the same edit.
+ */
+describe('locale completeness — content field labels (dynamic t() keys, hand-verified)', () => {
+  const FIELD_LABEL_KEYS = [
+    // The two photo controls `fieldsForType` synthesises — one plate, one
+    // strip. Neither is a `content` leaf the save path writes; both are
+    // labels above a control.
+    'landing_pages.editor.field_image_url',
+    'landing_pages.editor.field_gallery',
+    // SECTION_CONTENT_FIELDS' copy fields, in the order that map lists them.
+    'landing_pages.editor.field_headline',
+    'landing_pages.editor.field_subtext',
+    'landing_pages.editor.field_kicker',
+    'landing_pages.editor.field_heading',
+    'landing_pages.editor.field_lead',
+    'landing_pages.editor.field_body',
+    'landing_pages.editor.field_terms',
+    'landing_pages.editor.field_phone',
+    'landing_pages.editor.field_email',
+    'landing_pages.editor.field_address',
+  ]
+
+  // The same canary the describes above carry: a list that silently drifts
+  // short would pass vacuously.
+  it('names both photo controls and every copy field the editor draws', () => {
+    expect(FIELD_LABEL_KEYS.length).toBe(12)
+    expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_gallery')
+  })
+
+  for (const locale of LOCALES) {
+    it(`every content field label resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = FIELD_LABEL_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) field label: ${missing.join(', ') || '(none)'}`,
       ).toEqual([])
     })
   }

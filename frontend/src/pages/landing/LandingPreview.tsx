@@ -62,7 +62,7 @@ export function LandingPreview({ nonce, draft, dirty }: {
   nonce: number
   /**
    * The editor's CURRENT state, saved or not — built by the same helpers
-   * the save path uses (`themePayload`, `stripImageUrlLeaves`,
+   * the save path uses (`themePayload`, `stripImageLeaves`,
    * `buildSectionsPayload`), so what is previewed is what a save would
    * produce.
    */

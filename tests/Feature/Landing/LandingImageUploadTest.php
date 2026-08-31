@@ -885,4 +885,283 @@ class LandingImageUploadTest extends TestCase
         $this->assertArrayNotHasKey('image_url', $fresh->content['text_7'] ?? []);
         $this->assertSame('Words', $fresh->content['text_7']['body'] ?? null);
     }
+
+    // ─── Gallery slots (the multi-photo round) ───────────────────────────
+    //
+    // A `slot` stopped naming a SECTION and started naming a PICTURE. A
+    // single-photo band still names itself (`hero`, `text_4`) and a gallery
+    // names the picture (`gallery_1.image_3`) — see
+    // SectionType::imageSlot(), the one parser both endpoints go through.
+    // Everything the two verbs already guaranteed for one photo has to hold
+    // for eight, so these are the tests above re-aimed, plus the cap.
+
+    public function test_uploading_to_a_gallery_slot_stores_a_scalar_leaf_beside_its_siblings(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon', ['gallery_1' => ['heading' => 'The rooms']]);
+
+        $this->actAsStaff($org);
+
+        $urls = [];
+
+        foreach (['image_1', 'image_2', 'image_8'] as $leaf) {
+            $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot'  => 'gallery_1.' . $leaf,
+                'image' => $this->smallImage($leaf . '.png'),
+            ]);
+
+            $response->assertOk();
+            $this->assertSame('gallery_1.' . $leaf, $response->json('slot'));
+            $urls[$leaf] = $response->json('image_url');
+        }
+
+        $fresh = $page->fresh();
+
+        // SCALAR LEAVES under the section, one per picture — never a nested
+        // array. `content` is validated ScalarLeaves(depth: 2), so a nested
+        // shape would not be a legal value in this column at all.
+        foreach ($urls as $leaf => $url) {
+            $this->assertSame($url, $fresh->content['gallery_1'][$leaf] ?? null);
+            $this->assertIsString($fresh->content['gallery_1'][$leaf]);
+            Storage::disk('public')->assertExists(ltrim(substr($url, strlen('/storage/')), '/'));
+        }
+
+        // The band's own copy, and the siblings, survive every leaf-only write.
+        $this->assertSame('The rooms', $fresh->content['gallery_1']['heading']);
+        $this->assertCount(3, array_unique($urls), 'Three uploads did not produce three distinct files.');
+    }
+
+    /**
+     * Removing one picture drops THAT leaf and deletes THAT file, and
+     * touches nothing else — including the gap it leaves in the sequence,
+     * which is deliberate (galleryImages() closes it at render time; see
+     * removeImage()'s own comment for why renumbering here would be a write
+     * this request was not asked to make).
+     *
+     * Mutation target: drop the MediaService::delete() from removeImage()
+     * and this goes red on the assertMissing.
+     */
+    public function test_removing_one_gallery_picture_drops_its_leaf_and_deletes_only_its_file(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/one.png', 'one');
+        Storage::disk('public')->put('landing/two.png', 'two');
+        Storage::disk('public')->put('landing/three.png', 'three');
+
+        $page = $this->page($org, 'glamour-salon', [
+            'gallery_1' => [
+                'heading' => 'The rooms',
+                'image_1' => '/storage/landing/one.png',
+                'image_2' => '/storage/landing/two.png',
+                'image_3' => '/storage/landing/three.png',
+            ],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->deleteJson(
+            $this->adminUrl('/api/v1/admin/landing-pages/image'),
+            ['slot' => 'gallery_1.image_2'],
+        );
+
+        $response->assertOk();
+        $this->assertSame('gallery_1.image_2', $response->json('slot'));
+        $this->assertNull($response->json('image_url'));
+
+        $fresh = $page->fresh();
+        $this->assertArrayNotHasKey('image_2', $fresh->content['gallery_1']);
+        $this->assertSame('/storage/landing/one.png', $fresh->content['gallery_1']['image_1']);
+        $this->assertSame('/storage/landing/three.png', $fresh->content['gallery_1']['image_3']);
+        $this->assertSame('The rooms', $fresh->content['gallery_1']['heading']);
+
+        Storage::disk('public')->assertMissing('landing/two.png');
+        Storage::disk('public')->assertExists('landing/one.png');
+        Storage::disk('public')->assertExists('landing/three.png');
+    }
+
+    /**
+     * THE CAP, and it is enforced as the slot allowlist rather than as a
+     * count: a gallery holds eight pictures, so `gallery_1.image_9` is not a
+     * slot at all and never reaches a disk.
+     *
+     * MUTATION TARGET: raise `images` on the gallery type in
+     * App\Landing\SectionType and this goes red — the ninth slot becomes
+     * accepted, the upload succeeds, and the 422 never arrives.
+     *
+     * The refusal is checked for WORDS, not just for a status: spec §9 says
+     * no field path and no Laravel default may reach a tenant, and
+     * "The selected slot is invalid." is exactly what this rule would say if
+     * anybody removed the named message.
+     */
+    public function test_a_ninth_gallery_picture_is_refused_kindly(): void
+    {
+        $org = $this->org();
+        $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        foreach (['gallery_1.image_9', 'gallery_1.image_12', 'gallery_1.image_0'] as $slot) {
+            $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot'  => $slot,
+                'image' => $this->smallImage(),
+            ]);
+
+            $response->assertStatus(422);
+
+            $message = $response->json('errors.slot.0');
+
+            $this->assertSame('Please choose which photo you are replacing.', $message);
+            // No field name, no key, no Laravel phrasing.
+            foreach (['slot', 'image_', 'gallery', 'invalid', 'selected', 'field'] as $leak) {
+                $this->assertStringNotContainsStringIgnoringCase($leak, $message,
+                    "The cap refusal leaks '{$leak}' to the tenant: {$message}");
+            }
+        }
+
+        $this->assertSame([], Storage::disk('public')->allFiles(),
+            'A refused upload still put a file on the disk.');
+    }
+
+    /**
+     * The two spellings do not overlap, and neither is a way into the
+     * other's leaves. A gallery must be named picture by picture (its bare
+     * key must never quietly mean image_1), and a single-plate band must be
+     * named by itself (spelling its implied leaf is not a second form).
+     */
+    public function test_neither_slot_spelling_reaches_the_others_leaves(): void
+    {
+        $org = $this->org();
+        $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        foreach ([
+            'gallery_1',              // bare key of a multi-photo band
+            'gallery_7.image_1',      // past the instance cap
+            'gallery_1.body',         // a copy field, not a picture
+            'hero.image_url',         // the implied leaf spelled out
+            'text_1.image_1',         // a gallery leaf on a single-plate band
+            'gallery_1.image_1.image_2',
+        ] as $slot) {
+            $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot' => $slot, 'image' => $this->smallImage(),
+            ])->assertStatus(422);
+
+            $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => $slot])
+                ->assertStatus(422);
+        }
+    }
+
+    /**
+     * D4 for eight leaves: `update()` refuses a gallery picture key exactly
+     * as it refuses `image_url`, with the same words and the same silence
+     * about which field path was at fault.
+     */
+    public function test_update_refuses_to_write_a_gallery_image_key_directly(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon', ['gallery_1' => ['heading' => 'The rooms']]);
+
+        $this->actAsStaff($org);
+
+        foreach (['image_1', 'image_8', 'image_9'] as $leaf) {
+            $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+                'content' => ['gallery_1' => ['heading' => 'The rooms', $leaf => '/storage/landing/smuggled.png']],
+            ]);
+
+            $response->assertStatus(422);
+            $this->assertSame(
+                'Photos are changed with the photo controls, not by editing text.',
+                $response->json('errors.content.0'),
+            );
+        }
+
+        $this->assertArrayNotHasKey('image_1', $page->fresh()->content['gallery_1']);
+    }
+
+    /**
+     * Ruling 3b-2's carry-forward, for eight leaves: a text-only save omits
+     * every picture (it has to — D4 refuses them all), so every one of them
+     * must be carried forward from the stored row or the very next save
+     * erases eight files' worth of pointers at once.
+     *
+     * Mutation target: scope update()'s carry-forward back to `image_url`
+     * only and this goes red on the first picture.
+     */
+    public function test_a_text_only_save_does_not_erase_a_gallerys_pictures(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        $stored = [];
+
+        foreach (['image_1', 'image_2', 'image_3'] as $leaf) {
+            $stored[$leaf] = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot' => 'gallery_1.' . $leaf, 'image' => $this->smallImage($leaf . '.png'),
+            ])->json('image_url');
+        }
+
+        // A save that mentions the band but none of its pictures ...
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => [
+                'hero'      => ['headline' => 'New headline'],
+                'gallery_1' => ['heading' => 'The rooms'],
+            ],
+        ])->assertOk();
+
+        $fresh = $page->fresh();
+
+        foreach ($stored as $leaf => $url) {
+            $this->assertSame($url, $fresh->content['gallery_1'][$leaf] ?? null,
+                "The save erased {$leaf}, orphaning its file.");
+            Storage::disk('public')->assertExists(ltrim(substr($url, strlen('/storage/')), '/'));
+        }
+
+        $this->assertSame('The rooms', $fresh->content['gallery_1']['heading']);
+
+        // ... and a save that omits the band ENTIRELY keeps them too.
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['hero' => ['headline' => 'Newer headline']],
+        ])->assertOk();
+
+        foreach ($stored as $leaf => $url) {
+            $this->assertSame($url, $page->fresh()->content['gallery_1'][$leaf] ?? null);
+        }
+    }
+
+    /**
+     * The other half of the carry-forward's boundary, the same claim
+     * test_carry_forward_does_not_protect_a_leaf_past_the_instance_cap makes
+     * one type over: a `image_9` leaf that reached the column by a raw write
+     * is not a picture the catalogue holds, so nothing carries it forward
+     * and the first ordinary save drops it.
+     */
+    public function test_carry_forward_does_not_protect_a_gallery_leaf_past_the_cap(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon');
+
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'gallery_1' => [
+                    'heading' => 'The rooms',
+                    'image_1' => '/storage/landing/kept.png',
+                    'image_9' => '/storage/landing/leaked.png',
+                ],
+            ]),
+        ]);
+
+        $this->actAsStaff($org);
+
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['gallery_1' => ['heading' => 'The suites']],
+        ])->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('/storage/landing/kept.png', $fresh->content['gallery_1']['image_1'] ?? null);
+        $this->assertArrayNotHasKey('image_9', $fresh->content['gallery_1']);
+        $this->assertSame('The suites', $fresh->content['gallery_1']['heading']);
+    }
 }

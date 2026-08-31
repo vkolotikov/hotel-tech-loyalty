@@ -1610,6 +1610,74 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 }
 /* --- end text band --------------------------------------------------------- */
 
+/* --- gallery: the contact sheet (repeatable, tenant-added) ----------------- */
+/* The page's second repeatable band, and its quietest media moment on
+   purpose. about's cinematic frame and text's smaller echo of it are the
+   page's COMPOSED photographs — one plate each, dressed with the offset
+   accent border and the shine. A gallery is eight pictures at once, and
+   dressing eight of them the same way turns the signature into wallpaper
+   (the same ruling text.blade.php's own header makes about about's
+   two-column body).
+
+   So the tile borrows the TEAM grid's card language instead — the hairline
+   ring that warms to the accent on hover, --r-md corners, the slow scale —
+   because a grid of images is what that band already is, and a page
+   carrying both must read as one document rather than two.
+
+   THE CROP IS FIXED, 4:3, and that is the band's actual job: a tenant
+   uploads a phone portrait, a scanned square and a wide DSLR frame, and
+   object-fit:cover inside a fixed-ratio cell lays all three down as one
+   grid. Intrinsic ratios would give a ragged staircase of heights that no
+   amount of gap tuning rescues. 4:3 rather than the team plate's 4:5
+   because these are pictures of a place and a piece of work, not portraits,
+   and rather than 16:9 because eight cinematic letterboxes stacked two-up
+   on a phone is a very long band. */
+.rp-gallery__title{margin:0;font-size:var(--t-h2);line-height:1.06;
+  letter-spacing:-.02em;max-width:20ch;text-wrap:balance}
+/* Three across is the resting state: it fills the reading width at a tile
+   size where a face is still legible, and it is the count that looks
+   deliberate for the 3, 5 and 6-picture galleries a tenant most often ends
+   up with. */
+.rp-gallery__grid{list-style:none;padding:0;margin:clamp(32px,4vw,48px) 0 0;
+  display:grid;gap:16px;grid-template-columns:repeat(3,minmax(0,1fr))}
+/* One or two pictures are not a grid. A lone upload stretched across twelve
+   columns reads as a mistake, so the field narrows to the size the picture
+   was going to occupy anyway. */
+.rp-gallery__grid[data-count="1"]{grid-template-columns:minmax(0,1fr);max-width:560px}
+.rp-gallery__grid[data-count="2"]{grid-template-columns:repeat(2,minmax(0,1fr));max-width:860px}
+/* Four across only where there is genuinely room for it, and only for the
+   counts that FILL those rows: 4 and 8 tile exactly, and 7 leaves one gap
+   rather than three. Five and six stay at three across, where they make two
+   tidy rows instead of a row of four and an orphaned pair. */
+@media (min-width:1200px){
+  .rp-gallery__grid[data-count="4"],
+  .rp-gallery__grid[data-count="7"],
+  .rp-gallery__grid[data-count="8"]{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+.rp-gallery__cell{position:relative;margin:0;overflow:hidden;
+  aspect-ratio:4/3;background:var(--bg-2);
+  border-radius:var(--r-md);
+  /* A ring rather than a border: it does not take part in the grid's sizing,
+     so the cells cannot fall a fraction of a pixel out of alignment with
+     each other the way 1px borders on fr columns do. */
+  box-shadow:0 0 0 1px var(--line-soft);
+  transition:box-shadow 200ms var(--ease)}
+.rp-gallery__cell:hover{box-shadow:0 0 0 1px var(--accent)}
+.rp-gallery__img{display:block;inline-size:100%;block-size:100%;
+  object-fit:cover;transition:transform 600ms var(--ease)}
+.rp-gallery__cell:hover .rp-gallery__img{transform:scale(1.04)}
+@media (max-width:899px){
+  /* Two across on a phone, never one: a gallery read one picture at a time
+     is a scroll rather than a sheet, and the point of the band is that the
+     set is seen together. The narrowed one/two-picture fields are released
+     here — there is no width left to narrow. */
+  .rp-gallery__grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;
+    max-width:none}
+  .rp-gallery__grid[data-count="1"]{grid-template-columns:minmax(0,1fr);max-width:none}
+  .rp-gallery__grid[data-count="2"]{max-width:none}
+}
+/* --- end gallery ----------------------------------------------------------- */
+
 /* --- reveal animations (reference §reveal, verbatim) ---------------------- */
 /* The .reveal class is added by ruled_page.js on load — the shipped markup
    is reveal-free, so with the script blocked, absent or still in flight

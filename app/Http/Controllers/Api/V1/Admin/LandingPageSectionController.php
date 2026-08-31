@@ -226,14 +226,19 @@ class LandingPageSectionController extends Controller
     }
 
     /**
-     * Remove one added section: its row, its copy, and its photo.
+     * Remove one added section: its row, its copy, and EVERY one of its
+     * photos.
      *
      * Three things, because a section is three things. Dropping only the row
      * leaves `content.<key>` behind (harmless to the renderer, which never
      * looks at content without a row, but it is the tenant's data sitting in
      * a column nothing will ever show them again) and leaves the uploaded
-     * file on the disk with nothing pointing at it -- the exact orphan
+     * files on the disk with nothing pointing at them -- the exact orphan
      * uploadImage()'s own replace-and-delete pairing exists to prevent.
+     *
+     * "Every one" rather than "its photo" since the gallery: a band can hold
+     * eight, and the sweep is driven by SectionType::imageLeaves() so it
+     * cannot fall behind a type that grows a ninth.
      *
      * The key travels in the BODY rather than the path, matching
      * `DELETE /v1/admin/landing-pages/image`'s `slot` -- the sibling verb on
@@ -299,8 +304,27 @@ class LandingPageSectionController extends Controller
             }
 
             $content = is_array($fresh->content) ? $fresh->content : [];
-            $leaf    = $content[$key] ?? null;
-            $old     = is_array($leaf) ? ($leaf['image_url'] ?? null) : null;
+            $fields  = $content[$key] ?? null;
+
+            // EVERY picture the section holds, not just the first. A text
+            // band has one (`image_url`); a gallery has up to eight
+            // (`image_1`…`image_8`), and a delete that swept only one of
+            // them would leave seven files on the disk with nothing in the
+            // database pointing at them — the exact orphan this whole block
+            // exists to prevent, multiplied by seven.
+            //
+            // SectionType::imageLeaves() is what says which, so this is one
+            // list with the render path, the upload endpoint's slot rule and
+            // update()'s carry-forward rather than a fifth opinion.
+            $old = [];
+
+            if (is_array($fields)) {
+                foreach (SectionType::imageLeaves($key) as $leaf) {
+                    if (is_string($fields[$leaf] ?? null) && $fields[$leaf] !== '') {
+                        $old[] = $fields[$leaf];
+                    }
+                }
+            }
 
             // Unset, not nulled: the section is gone, so an empty husk under
             // its key would be a shape nothing here ever writes deliberately
@@ -324,15 +348,18 @@ class LandingPageSectionController extends Controller
         // never run inside the transaction, which would hold a row lock
         // across a network call to the media disk.
         //
-        // A string check, not a truthiness one: an image_url of '0' is a
-        // legal (if odd) past upload and must still be cleaned up.
-        if (is_string($old) && $old !== '') {
+        // Every file, each one independently best-effort: one disk refusal
+        // must not stop the seven deletes after it, which a single try
+        // around the whole loop would do. The string/'' filter happened
+        // inside the transaction, where the values were read — an image_url
+        // of '0' is a legal (if odd) past upload and is still in this list.
+        foreach ($old as $url) {
             try {
-                MediaService::delete($old);
+                MediaService::delete($url);
             } catch (\Throwable $e) {
                 Log::warning('landing.section.image_delete_failed', [
                     'slot'  => $key,
-                    'url'   => $old,
+                    'url'   => $url,
                     'error' => $e->getMessage(),
                 ]);
             }

@@ -830,4 +830,150 @@ class PageContentTest extends TestCase
         $this->assertSame(0, $content->count('booking'));
         $this->assertSame(0, $content->count('not_a_section'));
     }
+
+    // ─── The gallery band (the second repeatable type) ────────────────────
+
+    /**
+     * A gallery IS its pictures, so it counts pictures — and, being a
+     * count() arm, that is also what decides whether the band renders at
+     * all. Two claims in one test because they are one decision.
+     */
+    public function test_a_gallery_counts_the_pictures_it_will_actually_show(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'gallery_1' => [
+                'heading' => 'The rooms',
+                'image_1' => '/storage/landing/one.jpg',
+                'image_2' => '/storage/landing/two.jpg',
+                'image_3' => 'https://cdn.example.test/landing/three.jpg',
+            ],
+        ]));
+
+        $this->assertSame(3, $content->count('gallery_1'));
+        $this->assertTrue($content->has('gallery_1'));
+        $this->assertSame([
+            '/storage/landing/one.jpg',
+            '/storage/landing/two.jpg',
+            'https://cdn.example.test/landing/three.jpg',
+        ], $content->galleryImages('gallery_1'));
+    }
+
+    /**
+     * ORDER IS THE LEAF ORDER, AND GAPS CLOSE. Removing one picture unsets
+     * its leaf and deliberately does not renumber the rest (see
+     * LandingPageController::removeImage), so this is the shape a real
+     * gallery is in the moment a tenant deletes the middle of five.
+     *
+     * Stored deliberately out of order too: a `foreach` over whatever order
+     * the JSON column happens to decode in would pass the first half of this
+     * and fail the second.
+     */
+    public function test_a_gallery_publishes_its_pictures_in_leaf_order_with_gaps_closed(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'gallery_1' => [
+                'image_8' => '/storage/landing/eighth.jpg',
+                'image_1' => '/storage/landing/first.jpg',
+                'image_5' => '/storage/landing/fifth.jpg',
+            ],
+        ]));
+
+        $this->assertSame([
+            '/storage/landing/first.jpg',
+            '/storage/landing/fifth.jpg',
+            '/storage/landing/eighth.jpg',
+        ], $content->galleryImages('gallery_1'));
+        $this->assertSame(3, $content->count('gallery_1'));
+    }
+
+    /**
+     * THE HONEST EMPTY. A gallery a tenant added, captioned and never put a
+     * picture in is not a section — the same ruling `text` carries for a
+     * band with an eyebrow and no prose, pointed at the half of THIS band
+     * that is the reason it exists.
+     *
+     * The caption is filled in on purpose: it is exactly the shape that
+     * slips past a predicate written as "has any content at all", and a
+     * headed band over an empty grid on a live customer site is the
+     * difference between considered and broken.
+     */
+    public function test_a_gallery_with_a_caption_and_no_pictures_is_not_a_section(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'gallery_1' => ['kicker' => 'Our work', 'heading' => 'The rooms'],
+            'gallery_2' => [],
+        ]));
+
+        $this->assertSame(0, $content->count('gallery_1'));
+        $this->assertFalse($content->has('gallery_1'));
+        $this->assertSame(0, $content->count('gallery_2'));
+        $this->assertSame([], $content->galleryImages('gallery_1'));
+    }
+
+    /**
+     * The picture guards are imageUrl()'s guards, reached through the same
+     * private allowlist — so a gallery whose every leaf is hostile counts
+     * ZERO and does not render, rather than rendering a band of broken
+     * images.
+     *
+     * Mutation target: return the raw leaf from galleryImages() and this is
+     * the first thing that goes red.
+     */
+    public function test_a_gallery_of_hostile_leaves_counts_nothing(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'gallery_1' => [
+                'image_1' => 'javascript:alert(1)',
+                'image_2' => '//evil.example/x.jpg',
+                'image_3' => '"><script>',
+                'image_4' => '',
+                'image_5' => str_repeat('x', 200_000),
+                // A leaf outside the eight this type holds is not a picture
+                // at all: no endpoint can write it and no render may read it.
+                'image_9' => '/storage/landing/ninth.jpg',
+            ],
+        ]));
+
+        $this->assertSame(0, $content->count('gallery_1'));
+        $this->assertSame([], $content->galleryImages('gallery_1'));
+    }
+
+    /** Only the bad leaves drop; the good ones still publish, in order. */
+    public function test_one_hostile_leaf_does_not_take_the_rest_of_the_gallery_with_it(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'gallery_1' => [
+                'image_1' => '/storage/landing/first.jpg',
+                'image_2' => 'javascript:alert(1)',
+                'image_3' => '/storage/landing/third.jpg',
+            ],
+        ]));
+
+        $this->assertSame(
+            ['/storage/landing/first.jpg', '/storage/landing/third.jpg'],
+            $content->galleryImages('gallery_1'),
+        );
+    }
+
+    /**
+     * A section that holds no photos, or none of THIS shape, publishes none
+     * — asked here rather than only of SectionType because this is the
+     * method the partial actually calls, and "hero has an image_url, so a
+     * loop over image_N might find it" is precisely the confusion an
+     * enumerated leaf list exists to prevent.
+     */
+    public function test_only_a_gallery_publishes_gallery_pictures(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'hero'     => ['image_url' => '/storage/landing/hero.jpg', 'image_1' => '/storage/landing/nope.jpg'],
+            'services' => ['image_1' => '/storage/landing/nope.jpg'],
+            'gallery'  => ['image_1' => '/storage/landing/nope.jpg'],
+        ]));
+
+        $this->assertSame([], $content->galleryImages('hero'));
+        $this->assertSame([], $content->galleryImages('services'));
+        $this->assertSame([], $content->galleryImages('gallery'));
+        // ... and the hero's own single plate is untouched by any of it.
+        $this->assertSame('/storage/landing/hero.jpg', $content->imageUrl('hero'));
+    }
 }

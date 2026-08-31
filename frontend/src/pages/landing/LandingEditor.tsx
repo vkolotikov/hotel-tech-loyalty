@@ -3,17 +3,19 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
-  Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, GripVertical, Loader2, Plus, Save, Trash2,
+  Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, GripVertical, Loader2, Plus, Save, Trash2, X,
 } from 'lucide-react'
 import { api, resolveImage } from '../../lib/api'
 import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason } from './sections'
 import {
-  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, instanceRowLabel, moveSection,
+  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, freeGalleryLeaves, gallerySlotName,
+  gallerySlots, instanceRowLabel, moveSection,
   moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, setSectionTone,
-  stripImageUrlLeaves, toggleSection,
-  type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
+  stripImageLeaves, toggleSection,
+  type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability,
+  type SectionTypeOption,
 } from './editorSections'
 import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
@@ -239,6 +241,9 @@ const FIELD_FALLBACK: Record<string, string> = {
   address: 'Address',
   // Task 6: label above the photo control (hero/about only).
   image_url: 'Photo',
+  // The gallery round: label above the photo STRIP. Not a `content` field —
+  // like `image_url` above it, this names a control rather than a leaf.
+  gallery: 'Photos',
 }
 
 /**
@@ -491,7 +496,7 @@ export function LandingEditor({
    * What the preview pane renders RIGHT NOW — the live-preview round.
    *
    * Built from the SAME three helpers `saveMut` builds its own body from
-   * (`themePayload`, `stripImageUrlLeaves`, `buildSectionsPayload` over the
+   * (`themePayload`, `stripImageLeaves`, `buildSectionsPayload` over the
    * re-derived `rows`), because the whole promise of a live preview is that
    * it shows what a save would produce. A second, nearly-identical payload
    * builder here would be a second answer to that question.
@@ -508,7 +513,7 @@ export function LandingEditor({
    *     screen writes, and the server carries forward whatever stored value
    *     an omitted key had — so the pane shows what a save the server
    *     ACCEPTS would produce.
-   *   - `stripImageUrlLeaves`, for exactly the reason `saveMut` uses it:
+   *   - `stripImageLeaves`, for exactly the reason `saveMut` uses it:
    *     `updateContent`'s spread drags a stored `image_url` along the
    *     moment a sibling field on that section is edited, and the server
    *     refuses that leaf unconditionally (D4). The photo still appears in
@@ -523,7 +528,7 @@ export function LandingEditor({
    */
   const draftPayload: DraftPayload = {
     theme: themePayload(themeFields),
-    content: stripImageUrlLeaves(f.content),
+    content: stripImageLeaves(f.content),
     sections: buildSectionsPayload(rows),
   }
 
@@ -676,7 +681,7 @@ export function LandingEditor({
           // next save after any photo upload. Stripping here is always
           // safe: the server re-hydrates each section's stored
           // `image_url` back in when the request omits it.
-          content: stripImageUrlLeaves(body.content),
+          content: stripImageLeaves(body.content),
           seo: body.seo ?? {},
           slug: body.slug ?? page?.slug,
           // Landing phase 3c, Plan A: `industry` and `template_key`, and
@@ -1010,6 +1015,15 @@ export function LandingEditor({
                   // unconditional `url.match(...)` and taking this whole
                   // route down.
                   imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
+                  // Same source and the same reason as `imageUrl` above —
+                  // the raw QUERY leaf, never `f`/`form`. The photo strip
+                  // reads it whole (it needs the OCCUPIED leaves to
+                  // allocate the next upload, not only the usable ones),
+                  // and `gallerySlots` applies the identical `safeImageUrl`
+                  // allowlist to each picture it shows, so a
+                  // legal-but-unusable leaf from a raw write cannot reach
+                  // `resolveImage()`.
+                  storedSection={page.content?.[row.key] ?? null}
                   autoFocusFirstField={row.key === justAdded}
                   onFocusHandled={() => setJustAdded(null)}
                   dragging={dragKey === row.key}
@@ -1285,16 +1299,18 @@ function WebAddressCard({
  *  file's i18n already is. */
 const TYPE_NAME_FALLBACK: Record<string, string> = {
   text: 'Text block',
+  gallery: 'Photo gallery',
 }
 
 /** The one sentence the "Add a section" control gives each type — what the
  *  tenant would GET, not what the type is called. */
 const TYPE_BLURB_FALLBACK: Record<string, string> = {
   text: 'A short heading and a few lines in your own words, with a photo if you want one.',
+  gallery: 'A grid of up to eight photos, shown in the order you add them.',
 }
 
 function SectionRow({
-  row, isFirst, isLast, index, total, content, imageUrl, autoFocusFirstField, onFocusHandled,
+  row, isFirst, isLast, index, total, content, imageUrl, storedSection, autoFocusFirstField, onFocusHandled,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
   onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
 }: {
@@ -1311,6 +1327,12 @@ function SectionRow({
    *  — see the field-loop's own comment below for why this can never be
    *  `content` (which is `f.content`, form-merged) instead. */
   imageUrl: string | null
+  /** This section's whole raw stored leaf — `page.content[row.key]`, off the
+   *  QUERY, never `form`. Only the photo strip reads it, and it needs the
+   *  WHOLE map rather than the usable photos: an occupied-but-unusable leaf
+   *  is still a leaf the next upload would overwrite. `unknown` because
+   *  `content` is schemaless and this can legitimately be a scalar. */
+  storedSection: unknown
   /** Set for exactly one render, on the band the tenant has just added, so
    *  they can start typing where they are already looking. */
   autoFocusFirstField: boolean
@@ -1350,7 +1372,10 @@ function SectionRow({
   // the point — a second repeatable type renders its own fields, and its own
   // photo control, with no edit here.
   const fields = row.fields
-  const firstWritableField = fields.findIndex(field => field.type !== 'image')
+  // Neither photo control is somewhere a caret can land: a band's first
+  // control is its picture picker, and autofocusing it would either open a
+  // file dialog nobody asked for or silently focus nothing at all.
+  const firstWritableField = fields.findIndex(field => field.type !== 'image' && field.type !== 'gallery')
 
   // Which swatch is lit. A row with no stored tone is not "unset" — it is
   // sitting on the colour its section was authored with, and the served
@@ -1469,15 +1494,29 @@ function SectionRow({
                  eyebrow, a heading or a photo over blank space is a
                  fragment, not a section — so a tenant who adds a block,
                  uploads a photo and sees the preview not change has to be
-                 told why here, or they never find out at all. */
+                 told why here, or they never find out at all.
+
+                 A GALLERY's answer is the other one: it is its pictures, so
+                 words are exactly what will NOT make it appear, and telling
+                 a tenant to write some would send them the wrong way. Which
+                 sentence applies is `row.writtenBy` — count()'s two arms,
+                 named on the row rather than re-derived from the type id
+                 here. */
               <span className={'block text-xs mt-0.5 '
                 + (row.available ? 'text-t-secondary' : 'text-t-secondary/80 leading-relaxed')}>
                 {row.available
-                  ? t('landing_pages.editor.section_own_words', 'Words you write here')
-                  : t(
-                    'landing_pages.editor.section_needs_words',
-                    'Nothing written yet — this block appears on your page once you add some words.',
-                  )}
+                  ? (row.writtenBy === 'photos'
+                    ? t('landing_pages.editor.section_own_photos', 'Photos you add here')
+                    : t('landing_pages.editor.section_own_words', 'Words you write here'))
+                  : (row.writtenBy === 'photos'
+                    ? t(
+                      'landing_pages.editor.section_needs_photos',
+                      'No photos yet — this block appears on your page once you add one.',
+                    )
+                    : t(
+                      'landing_pages.editor.section_needs_words',
+                      'Nothing written yet — this block appears on your page once you add some words.',
+                    ))}
               </span>
             ) : offerable ? (
               <span className="block text-xs text-t-secondary mt-0.5">
@@ -1707,10 +1746,29 @@ function SectionRow({
           )}
           {fields.map((field, fieldIndex) => (
             <div key={field.name}>
-              <label className={label} htmlFor={field.type === 'image' ? undefined : `lp-${row.key}-${field.name}`}>
+              <label
+                className={label}
+                htmlFor={field.type === 'image' || field.type === 'gallery' ? undefined : `lp-${row.key}-${field.name}`}
+              >
                 {t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name)}
               </label>
-              {field.type === 'image' ? (
+              {field.type === 'gallery' ? (
+                /*
+                 * The same D4 reasoning as the single plate below, eight
+                 * leaves at a time: the picture leaves are never part of
+                 * `form`/dirty state, so this control reads the `gallery`
+                 * PROP (sourced from the QUERY's raw `page.content` at the
+                 * call site above) and never `content`, and it never writes
+                 * through `onFieldChange` — there is no keystroke to queue,
+                 * only immediate, already-saved server round-trips.
+                 */
+                <GalleryField
+                  sectionKey={row.key}
+                  stored={storedSection}
+                  limit={field.slots ?? 0}
+                  onChanged={onImageChanged}
+                />
+              ) : field.type === 'image' ? (
                 /*
                  * D4 (frontend half), Task 6: `image_url` is never part of
                  * `form`/dirty state — Task 4's upload/remove endpoints are
@@ -1960,6 +2018,195 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+/**
+ * The gallery photo strip — the multi-photo half of the same control
+ * `ImageField` above is the single-photo half of.
+ *
+ * ONE UPLOADER, NOT TWO. This reuses the same downscale path
+ * (`imageDownscale.ts`) and the exact same endpoint
+ * (`POST`/`DELETE /v1/admin/landing-pages/image`) the single plate has
+ * always used; the only difference is what goes in `slot`. A gallery names
+ * the PICTURE (`gallery_1.image_3`) where a single-plate band names itself
+ * (`hero`) — see `SectionType::imageSlot()`, the one parser behind both — so
+ * a second uploader here would have been a second copy of the downscale
+ * rule, the error surfacing and the invalidate-and-bump pairing, differing
+ * from the first in whichever detail somebody forgot.
+ *
+ * WHICH LEAF an added photo lands in is decided HERE, from the leaves the
+ * server has already stored: `freeGalleryLeaves` hands back the LOWEST FREE
+ * ones, so a tenant who removes the third of five photos has the next upload
+ * fill that gap rather than burning `image_6` — the same lowest-free rule
+ * `SectionType::nextInstanceKey()` uses for section keys, and for the same
+ * reason. A multi-file pick allocates ALL of its leaves up front, from one
+ * read of the stored section, so two files in one pick cannot both claim
+ * `image_1`; the uploads then run in sequence.
+ *
+ * THE CAP IS SERVED (`section_types[*].image_slots`, carried onto the row as
+ * `SectionField.slots`), never a literal eight here — the number the strip
+ * counts against and the number the endpoint's slot allowlist enforces are
+ * one number. Past it the picker is DISABLED WITH ITS REASON SHOWN rather
+ * than hidden, the same choice `AddSectionCard` makes for a type at its own
+ * cap: a tenant looking for the control they used a minute ago must find it
+ * and be told, in words, why it will not work.
+ *
+ * No drag-and-drop and no canvas UI, per the spec the single-photo control
+ * already follows: a native multi-select `<input type="file">`, a strip of
+ * thumbnails, and a remove button on each.
+ */
+function GalleryField({ sectionKey, stored, limit, onChanged }: {
+  sectionKey: string
+  /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
+  stored: unknown
+  /** The served cap. Zero means the backend published no count, and the
+   *  control shows no picker rather than guessing at a number. */
+  limit: number
+  onChanged: () => void
+}) {
+  const { t } = useTranslation()
+
+  const photos = gallerySlots(stored, sectionKey, limit)
+  const used = photos.length
+  const full = limit === 0 || used >= limit
+
+  const uploadMut = useMutation({
+    mutationFn: async (files: File[]) => {
+      // Allocated ONCE, before any upload starts, against the section this
+      // render was built from — never one at a time inside the loop, which
+      // would read the same stale snapshot each pass and send every file to
+      // the same slot.
+      const leaves = freeGalleryLeaves(stored, limit, files.length)
+
+      for (const [i, file] of files.entries()) {
+        const leaf = leaves[i]
+        if (leaf === undefined) break
+
+        // Downscale only when the photo is actually larger than this screen
+        // ever needs — identical to the single plate's own rule, through the
+        // same two helpers.
+        const bitmap = await createImageBitmap(file)
+        const target = downscaleTarget(bitmap.width, bitmap.height)
+        const image = target ? await drawToBlob(file, target) : file
+
+        const body = new FormData()
+        body.append('slot', gallerySlotName(sectionKey, leaf))
+        body.append('image', image, file.name)
+
+        // Sequential, deliberately: each upload is its own row-locking
+        // transaction on the same page row, so firing eight at once would
+        // queue them on that lock anyway while making any one failure
+        // harder to attribute.
+        await api.post('/v1/admin/landing-pages/image', body)
+      }
+
+      return files.length - leaves.length
+    },
+    onSuccess: (dropped: number) => {
+      onChanged()
+      // Said plainly rather than silently: a tenant who picked ten files
+      // with two slots left has to be told six of them are not on their
+      // page. `limit` and never `count` — i18next reads `count` as a plural
+      // selector and would go looking for `_one`/`_other` variants of a
+      // sentence written whole in each language.
+      if (dropped > 0) {
+        toast.error(t('landing_pages.editor.gallery_pick_over_cap', {
+          limit,
+          defaultValue: 'Only the first few fitted — a gallery holds up to {{limit}} photos.',
+        }))
+      }
+    },
+    onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const removeMut = useMutation({
+    mutationFn: (slot: string) => api.delete('/v1/admin/landing-pages/image', { data: { slot } }),
+    onSuccess: onChanged,
+    onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? [])
+    // Reset immediately so picking the SAME files again (e.g. after fixing
+    // one and re-selecting) still fires a change event next time.
+    e.target.value = ''
+    if (files.length > 0) uploadMut.mutate(files)
+  }
+
+  const busy = uploadMut.isPending || removeMut.isPending
+
+  return (
+    <div className="space-y-2">
+      {photos.length > 0 ? (
+        <ul className="flex flex-wrap gap-2 list-none p-0 m-0">
+          {photos.map((photo, i) => (
+            <li key={photo.leaf} className="relative">
+              <img
+                src={resolveImage(photo.url) ?? undefined}
+                alt=""
+                className="h-20 w-20 rounded-lg border border-dark-border object-cover"
+              />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => removeMut.mutate(photo.slot)}
+                // Numbered by POSITION in the strip, not by leaf: `image_5`
+                // is a storage detail, and "Remove photo 3" is what the
+                // tenant is actually looking at.
+                aria-label={t('landing_pages.editor.remove_photo_n', {
+                  position: i + 1,
+                  defaultValue: 'Remove photo {{position}}',
+                })}
+                title={t('landing_pages.editor.remove_photo_n', {
+                  position: i + 1,
+                  defaultValue: 'Remove photo {{position}}',
+                })}
+                className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-dark-bg border border-dark-border text-t-secondary hover:text-white disabled:opacity-50"
+              >
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-xs text-t-secondary">{t('landing_pages.editor.no_photos', 'No photos yet')}</p>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <input
+          type="file"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          disabled={busy || full}
+          onChange={onPick}
+          aria-label={t('landing_pages.editor.add_photos', 'Add photos')}
+          className="block w-full max-w-xs text-xs text-t-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-dark-border file:bg-dark-bg file:text-t-secondary file:text-xs hover:file:text-white disabled:opacity-50"
+        />
+        {uploadMut.isPending && (
+          <span className="text-xs text-t-secondary">{t('landing_pages.editor.photo_uploading', 'Uploading…')}</span>
+        )}
+      </div>
+
+      {/* At the cap the count is REPLACED by the reason rather than joined
+          by one: "8 of 8" alone is a fact about the gallery, not an
+          explanation of why the picker just stopped working — and the
+          picker going quietly grey with no sentence beside it is exactly
+          the refusal-without-a-reason this screen's other caps already
+          refuse to ship. */}
+      <p className="text-xs text-t-secondary/80 leading-relaxed">
+        {full && limit > 0
+          ? t('landing_pages.editor.gallery_full', {
+            limit,
+            defaultValue: 'You have {{limit}} photos — that is as many as one gallery can hold. Remove one to add another.',
+          })
+          : t('landing_pages.editor.gallery_count', {
+            used,
+            limit,
+            defaultValue: '{{used}} of {{limit}} photos',
+          })}
+      </p>
     </div>
   )
 }

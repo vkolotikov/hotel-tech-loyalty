@@ -552,6 +552,56 @@ class LandingLivePreviewTest extends TestCase
         $this->assertStringContainsString('/storage/landing/saved-hero.jpg', $response->getContent());
     }
 
+    /**
+     * The same rule for a band that holds EIGHT photos: the picture leaves
+     * are refused on the way in and carried forward from the stored row, so
+     * a gallery the tenant is mid-caption on previews with the pictures they
+     * actually uploaded — and a caller cannot name one of its own.
+     *
+     * Mutation target: narrow PreviewDraft::content()'s refusal or its
+     * carry-forward back to `image_url` and one half of this goes red.
+     */
+    public function test_a_gallerys_pictures_come_from_storage_and_never_from_the_payload(): void
+    {
+        $this->page->update([
+            'content' => [
+                'hero'      => ['headline' => self::SAVED_HEADLINE],
+                'gallery_1' => [
+                    'heading' => 'The rooms',
+                    'image_1' => '/storage/landing/saved-one.jpg',
+                    'image_2' => '/storage/landing/saved-two.jpg',
+                ],
+            ],
+        ]);
+        $this->page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
+        $this->page = $this->page->fresh('sections');
+
+        // Exactly what the editor sends: the copy, with every image leaf
+        // stripped out because the server refuses them.
+        $response = $this->get($this->draftUrl([
+            'content'  => ['gallery_1' => ['heading' => 'The suites']],
+            'sections' => $this->sectionsPayload(),
+        ]));
+
+        $response->assertOk();
+        $body = $response->getContent();
+
+        $this->assertStringContainsString('The suites', $body);
+        $this->assertStringContainsString('/storage/landing/saved-one.jpg', $body);
+        $this->assertStringContainsString('/storage/landing/saved-two.jpg', $body);
+        $this->assertStringContainsString('data-count="2"', $body);
+    }
+
+    /** A gallery picture named in the payload is refused, exactly as `image_url` is. */
+    public function test_a_gallery_image_value_in_the_payload_is_refused(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->draftUrl([
+            'content' => ['gallery_1' => ['image_3' => '/storage/landing/somebody-elses.jpg']],
+        ]);
+    }
+
     // ─── Order, toggles and tones ─────────────────────────────────────────
 
     public function test_the_section_order_in_the_payload_is_what_renders(): void
