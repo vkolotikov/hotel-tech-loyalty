@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Admin\LandingPageController;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Landing\LandingOnboardingService;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -1544,5 +1545,266 @@ class LandingPageAdminApiTest extends TestCase
         } finally {
             DB::statement('DROP INDEX IF EXISTS tmp_one_template_only');
         }
+    }
+
+    // ─── The editor's industry + template controls (landing phase 3c, Plan A) ──
+    //
+    // The wizard asks both questions exactly once, at creation. A tenant who
+    // wanted to "return to the wizard and change the template or the
+    // industry" had no way to: every OTHER wizard answer (contact fields,
+    // section toggles and order, palette, type pairing, brand colour,
+    // photos) was already re-editable in the editor, and these two alone
+    // were not. They are now two more controls in the Design panel, saved
+    // through this same endpoint — which is what these tests are about.
+
+    /**
+     * The template registry is LandingOnboardingService::TEMPLATES, and this
+     * endpoint validates against templateKeys() rather than a literal — the
+     * same discipline LandingOnboardingController::store() already had — so
+     * a second shipped template is a data change in that one array, offered
+     * and accepted by every write surface at once.
+     */
+    public function test_a_valid_template_key_is_accepted_and_persisted(): void
+    {
+        $this->create();
+
+        // Read from the registry rather than written as 'ruled_page', so
+        // this test keeps testing the mechanism (not today's only row) once
+        // a second template ships.
+        $key = LandingOnboardingService::templateKeys()[0];
+
+        $page = $this->body($this->controller()->update($this->request([
+            'template_key' => $key,
+        ])))['page'];
+
+        $this->assertSame($key, $page['template_key']);
+    }
+
+    /**
+     * And the refusal never hands the tenant a field name. Laravel's own
+     * default for a failed `in` is "The selected template key is invalid." —
+     * exactly the leak spec §9 already forbids for the word "slug", just
+     * spelled with a different field.
+     */
+    public function test_an_unknown_template_key_is_refused_with_a_friendly_message(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'template_key' => 'brochure_deluxe',
+            ]));
+            $this->fail('An unknown template key was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['template_key'][0] ?? '';
+            $this->assertSame('Please choose one of the available page styles.', $message);
+            $this->assertStringNotContainsString('brochure_deluxe', $message);
+            $this->assertStringNotContainsString('template_key', $message);
+            $this->assertStringNotContainsString('template key', $message);
+        }
+
+        $this->assertSame('ruled_page', LandingPage::first()->template_key);
+    }
+
+    /**
+     * The industry control's whole point: the choice has to reach the
+     * ORGANISATION, not just this page — the same rule the wizard's own
+     * first step follows, through the same single writer
+     * (LandingOnboardingService::syncOrganizationIndustry()).
+     *
+     * `organizations.industry` is the only column this endpoint writes.
+     * landing_pages.industry follows from Organization::updated's resync
+     * sweep, which is why the page's snapshot below is asserted as an
+     * OUTCOME rather than as something update() set: two writers for that
+     * column is precisely the drift that hook exists to prevent.
+     */
+    public function test_changing_the_industry_moves_the_organisation_and_resyncs_the_page(): void
+    {
+        $this->create();
+
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+
+        $page = $this->body($this->controller()->update($this->request([
+            'industry' => 'education',
+        ])))['page'];
+
+        $this->assertSame('education', $this->org->fresh()->resolved_industry);
+        // The response body is what the editor re-renders from and what the
+        // next preview refresh renders from, so the snapshot has to be right
+        // in THIS response — not merely eventually.
+        $this->assertSame('education', $page['industry']);
+        $this->assertSame('education', LandingPage::first()->industry);
+    }
+
+    /**
+     * Every page under the org, not just the one being edited — the sweep is
+     * Organization::updated's, and a sibling brand's page left speaking the
+     * old industry's vocabulary is the exact drift that hook exists to stop.
+     */
+    public function test_changing_the_industry_resyncs_a_sibling_brands_page_too(): void
+    {
+        $this->create('brand-one-page');
+
+        $siblingBrandId = $this->makeSiblingBrand($this->org);
+        $this->actAs($this->user, $siblingBrandId);
+        $sibling = $this->create('brand-two-page')['page'];
+
+        $this->assertSame('beauty', $sibling['industry']);
+
+        $this->controller()->update($this->request(['industry' => 'fitness']));
+
+        $this->assertSame(
+            'fitness',
+            LandingPage::withoutGlobalScopes()->findOrFail($sibling['id'])->industry,
+        );
+    }
+
+    /**
+     * A marketing-page control must never reshape the business.
+     *
+     * POST /v1/auth/apply-industry (AuthController::applyIndustry) is the one
+     * path that swaps an org's CRM pipeline and stages, reseeds its
+     * lost-reason taxonomy and custom fields, replaces its planner groups and
+     * templates and reshapes its loyalty ladder — and it refuses with a 409
+     * until an admin has acknowledged that list. Doing any of it as a side
+     * effect of picking a different word for a heading would be exactly the
+     * unacknowledged data change that gate exists to prevent.
+     *
+     * Proven by binding the four services that reshape to a resolver which
+     * fails the test on sight. A container binding, deliberately, rather than
+     * a Mockery spy: it needs no facade mocking (this suite segfaults on
+     * that), no schema for tables these tests never create, and it catches
+     * the failure at the moment of RESOLUTION — so a future refactor that
+     * reaches for a preset service by any route at all, not merely by calling
+     * apply(), still trips it.
+     */
+    public function test_changing_the_industry_never_runs_the_crm_preset_reshape(): void
+    {
+        $this->create();
+
+        foreach ([
+            \App\Services\IndustryPresetService::class,
+            \App\Services\PlannerPresetService::class,
+            \App\Services\LoyaltyPresetService::class,
+            \App\Services\OrganizationSetupService::class,
+        ] as $reshaper) {
+            app()->bind($reshaper, function () use ($reshaper) {
+                $this->fail("The landing editor's industry control reached {$reshaper}.");
+            });
+        }
+
+        $this->controller()->update($this->request(['industry' => 'restaurant']));
+
+        $this->assertSame('restaurant', $this->org->fresh()->resolved_industry);
+    }
+
+    /**
+     * The overwhelmingly common save: the tenant edits a headline and the
+     * panel sends back the industry it was already showing. Nothing is
+     * written to the organisation — no bumped updated_at, no resync sweep
+     * over pages that are already correct — the same no-op
+     * syncOrganizationIndustry() gives the wizard, inherited rather than
+     * re-decided here.
+     */
+    public function test_saving_the_industry_it_already_has_writes_nothing_to_the_organisation(): void
+    {
+        $this->create();
+
+        $before = $this->org->fresh()->updated_at;
+
+        $this->controller()->update($this->request(['industry' => 'beauty']));
+
+        $this->assertEquals($before, $this->org->fresh()->updated_at);
+    }
+
+    /** Same friendly refusal as the wizard's, word for word. */
+    public function test_an_unknown_industry_is_refused_with_a_friendly_message(): void
+    {
+        $this->create();
+
+        try {
+            $this->controller()->update($this->request([
+                'industry' => 'lunar_mining',
+            ]));
+            $this->fail('An unknown industry was accepted.');
+        } catch (ValidationException $e) {
+            $message = $e->errors()['industry'][0] ?? '';
+            $this->assertSame('Please choose one of the listed industries.', $message);
+            $this->assertStringNotContainsString('lunar_mining', $message);
+        }
+
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+        $this->assertSame('beauty', LandingPage::first()->industry);
+    }
+
+    /**
+     * Both new keys are 'sometimes', so every save that predates the panel —
+     * and every save the panel itself makes with nothing to change — behaves
+     * exactly as it did: a content-only write leaves the template and the
+     * organisation's industry alone.
+     */
+    public function test_a_save_that_carries_neither_key_changes_neither(): void
+    {
+        $this->create();
+
+        $this->controller()->update($this->request([
+            'content' => ['hero' => ['headline' => 'Still us']],
+        ]));
+
+        $this->assertSame('ruled_page', LandingPage::first()->template_key);
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+        $this->assertSame('beauty', LandingPage::first()->industry);
+    }
+
+    /**
+     * The two controls save through the SAME request the palette/type/
+     * brand-colour controls already use, so one save has to carry all of it
+     * at once without one field eating another — in particular the industry
+     * write (which fires the resync sweep across landing_pages
+     * mid-transaction) must not be undone by the page's own update a few
+     * lines later, and vice versa.
+     */
+    public function test_industry_template_and_theme_all_land_in_one_save(): void
+    {
+        $this->create();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'industry'     => 'medical',
+            'template_key' => LandingOnboardingService::templateKeys()[0],
+            'theme'        => ['palette' => 'clinic_air', 'brand_color' => '#123456'],
+            'content'      => ['hero' => ['headline' => 'Care, close by']],
+        ])))['page'];
+
+        $this->assertSame('medical', $page['industry']);
+        $this->assertSame('medical', $this->org->fresh()->resolved_industry);
+        $this->assertSame('ruled_page', $page['template_key']);
+        $this->assertSame('clinic_air', $page['theme']['palette']);
+        $this->assertSame('#123456', $page['theme']['brand_color']);
+        $this->assertSame('Care, close by', $page['content']['hero']['headline']);
+    }
+
+    /**
+     * A refused save must leave the business where it was. The industry write
+     * sits inside the same transaction as everything else, so a slug
+     * collision raised after it rolls it back — the org is not left filed
+     * under an industry whose save never landed.
+     */
+    public function test_a_refused_save_does_not_move_the_organisation(): void
+    {
+        $this->create();
+        $this->pageOwnedByAnotherTenant('taken-address');
+
+        try {
+            $this->controller()->update($this->request([
+                'industry' => 'legal',
+                'slug'     => 'taken-address',
+            ]));
+            $this->fail('A slug held by another tenant was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('slug', $e->errors());
+        }
+
+        $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
+        $this->assertSame('beauty', LandingPage::first()->industry);
     }
 }

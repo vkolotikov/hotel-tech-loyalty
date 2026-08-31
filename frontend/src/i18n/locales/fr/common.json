@@ -3028,6 +3028,11 @@
     "preview_caption": "Affiche votre brouillon enregistré. Enregistrez pour voir les dernières modifications.",
     "design": {
       "title": "Design",
+      "industry_kicker": "Votre secteur",
+      "industry_intro": "Votre page est écrite dans les mots de votre métier. Changez-le ici et les titres, le texte des boutons et les sections proposées suivent.",
+      "industry_change_note": "L’enregistrement réécrit votre page dans les mots du nouveau métier — titres, noms de sections et texte de vos boutons — et modifie les sections que vous pouvez afficher (la réservation en ligne n’est proposée qu’aux hôtels). Cela change aussi les mots employés dans le reste de votre espace de travail. Rien de ce que vous avez déjà enregistré — réservations, clients, paramètres — n’est modifié ni supprimé.",
+      "template_kicker": "Style de page",
+      "template_intro": "La mise en page de votre site. Vos textes, vos photos et vos couleurs vous suivent.",
       "palette_kicker": "Style",
       "palette_intro": "Chaque palette est pensée pour être réussie dès le départ — choisissez celle qui vous ressemble.",
       "pairing_kicker": "Style de caractères",

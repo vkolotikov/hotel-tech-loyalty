@@ -5,8 +5,10 @@ use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
 use App\Landing\ThemeRules;
 use App\Models\LandingPage;
+use App\Models\Organization;
 use App\Rules\MaxImageDimensions;
 use App\Rules\ScalarLeaves;
+use App\Services\Landing\LandingOnboardingService;
 use App\Services\MediaService;
 use App\Support\LandingPageGuard;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -38,12 +41,25 @@ class LandingPageController extends Controller
     {
         // Same clean-message reasoning as update() below — see its comment.
         $data = $request->validate([
-            'slug'         => 'required|string|max:63',
-            'template_key' => 'required|string|in:ruled_page',
+            'slug' => 'required|string|max:63',
+            // Landing phase 3c, Plan A: `in:ruled_page` was a literal — a
+            // second copy of LandingOnboardingService::TEMPLATES that a
+            // future template would have had to be remembered in. Both the
+            // onboarding controller and update() below already validate
+            // against templateKeys(); all three now do, so adding a
+            // template is a change to that one array.
+            'template_key' => ['required', 'string', Rule::in(LandingOnboardingService::templateKeys())],
         ], [
             'slug.required' => 'Please choose a web address.',
             'slug.string'   => 'That web address is not valid.',
             'slug.max'      => 'Please use a shorter web address — up to 63 characters.',
+            // Named for the same reason the slug messages are: Laravel's
+            // own default is "The selected template key is invalid.", which
+            // hands a tenant a raw field name (spec §9's rule, the one the
+            // word "slug" already has to obey here).
+            'template_key.required' => 'Please choose one of the available page styles.',
+            'template_key.string'   => 'Please choose one of the available page styles.',
+            'template_key.in'       => 'Please choose one of the available page styles.',
         ]);
 
         $slug = LandingPageGuard::validatedSlug($data['slug']);
@@ -171,9 +187,38 @@ class LandingPageController extends Controller
             'theme'   => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'content' => ['sometimes', 'array', new ScalarLeaves(depth: 2)],
             'seo'     => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
+            // ─── Landing phase 3c, Plan A: the two choose-once-at-creation
+            // fields the editor's Design panel now also owns.
+            //
+            // Both are 'sometimes', so every caller that predates this
+            // (including every save this screen made before the panel
+            // gained the two pickers) behaves EXACTLY as it did: an absent
+            // key changes neither the page's template nor the org's
+            // industry.
+            //
+            // Rule::in against the same two registries the onboarding
+            // controller uses — LandingOnboardingService::templateKeys()
+            // and Organization::INDUSTRIES — never a literal list, so what
+            // the wizard offers, what the editor offers and what either
+            // endpoint accepts cannot come apart. `industry` is handled
+            // specially below: it is NOT a column this endpoint writes.
+            'template_key' => ['sometimes', 'string', Rule::in(LandingOnboardingService::templateKeys())],
+            'industry'     => ['sometimes', 'string', Rule::in(Organization::INDUSTRIES)],
         ], [
             'slug.string' => 'That web address is not valid.',
             'slug.max'    => 'Please use a shorter web address — up to 63 characters.',
+            // Every message named, same house rule as the slug pair above
+            // and ThemeRules::messages(): Laravel's defaults here are "The
+            // selected template key is invalid." and "The selected industry
+            // is invalid.", the first of which hands a tenant a raw field
+            // name and neither of which says anything they can act on. The
+            // industry wording is character-for-character the onboarding
+            // controller's, so the same mistake reads the same in the
+            // wizard and in the editor.
+            'template_key.string' => 'Please choose one of the available page styles.',
+            'template_key.in'     => 'Please choose one of the available page styles.',
+            'industry.string'     => 'Please choose one of the listed industries.',
+            'industry.in'         => 'Please choose one of the listed industries.',
         ]);
 
         // D4 (landing phase 3b, media round): image_url is a leaf ScalarLeaves
@@ -297,6 +342,36 @@ class LandingPageController extends Controller
             ThemeRules::validate($theme);
         }
 
+        // Landing phase 3c, Plan A. `industry` is lifted OUT of $data here
+        // and never reaches $fresh->update($data) below, because
+        // landing_pages.industry has exactly one writer and it is not this
+        // endpoint: Organization::updated resyncs every one of the org's
+        // pages the moment organizations.industry changes (see that hook,
+        // and LandingOnboardingService::syncOrganizationIndustry()'s own
+        // docblock). Writing the snapshot here as well would be a second
+        // writer for the same column — the precise shape of bug D4's
+        // image_url rule exists to prevent on `content` — and the two would
+        // disagree the first time an alias or a sibling brand's page was
+        // involved.
+        //
+        // normaliseIndustry() as well as the Rule::in above, for the same
+        // "belt to that braces" reason chosenIndustry() gives: the rule is
+        // what refuses an unknown industry with a friendly 422, and this is
+        // what guarantees the value handed to the writer is canonical (so
+        // its equality no-op cannot be defeated by an alias). null here
+        // means the request never asked, which leaves the organisation
+        // exactly as it was.
+        $industry = array_key_exists('industry', $data)
+            ? Organization::normaliseIndustry($data['industry'])
+            : null;
+
+        unset($data['industry']);
+
+        // The org this page belongs to, resolved the same way store() above
+        // resolves it. Read before the transaction so the write inside it is
+        // a plain save() on an already-loaded model.
+        $org = $request->user()->organization;
+
         if (isset($data['slug'])) {
             $data['slug'] = LandingPageGuard::validatedSlug($data['slug'], $page->id);
         }
@@ -323,12 +398,32 @@ class LandingPageController extends Controller
         // safe; inside, on Postgres, they would hit 25P02 on an aborted
         // transaction and turn a 422 back into a 500.
         try {
-            DB::transaction(function () use ($page, $data) {
+            DB::transaction(function () use ($page, $data, $industry, $org) {
                 /** @var LandingPage $fresh */
                 $fresh = LandingPage::where('id', $page->id)
                     ->where('organization_id', $page->organization_id)
                     ->lockForUpdate()
                     ->firstOrFail();
+
+                // Landing phase 3c, Plan A: the industry change, through the
+                // SAME writer the wizard's own POST goes through — never a
+                // second copy of "what changing an industry means" (it is
+                // one column, it is not the CRM preset reshape behind
+                // POST /v1/auth/apply-industry, and it is a no-op when the
+                // chosen industry is the one the org is already on).
+                //
+                // First inside the transaction, exactly as apply() does it,
+                // and for the same reason: this is what fires
+                // Organization::updated's resync sweep across the org's
+                // landing pages, so $fresh's own `industry` snapshot is
+                // rewritten by the hook — never by the update() below, whose
+                // $data no longer carries the key at all. Rolled back with
+                // everything else if the write that follows fails, so a
+                // refused save cannot leave the business filed under an
+                // industry its page never moved to.
+                if ($industry !== null) {
+                    LandingOnboardingService::syncOrganizationIndustry($org, $industry);
+                }
 
                 // Ruling 3b-2/3b-7's carry-forward, now against the FRESH
                 // row's content and scoped to hero/about only (see this

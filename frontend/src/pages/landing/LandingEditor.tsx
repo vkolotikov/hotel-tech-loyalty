@@ -16,6 +16,8 @@ import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from '
 import { LandingPreview } from './LandingPreview'
 import { DesignPanel } from './DesignPanel'
 import { themePayload } from './designChoices'
+import type { IndustryOption } from './industryChoices'
+import { catalogPayload, resolveTemplateKey, type TemplateOption } from './editorCatalog'
 // Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
 // file's photo controls below still refer to by that same number): the
 // self-hosted @font-face sheet DesignPanel's cards render against, see
@@ -51,6 +53,20 @@ type LandingPageDTO = {
    */
   url: string
   status: 'draft' | 'published'
+  /**
+   * Landing phase 3c, Plan A. Both were choose-once-at-creation until the
+   * Design panel gained a picker for each.
+   *
+   * `industry` is a SNAPSHOT of `organizations.industry`, not a field this
+   * screen writes: `PUT /v1/admin/landing-pages` moves the ORGANISATION
+   * (through `LandingOnboardingService::syncOrganizationIndustry()`, the
+   * one writer the wizard's own POST also goes through) and
+   * `Organization::updated` resyncs this column across every page under
+   * that org. So the value here is always what the last save produced,
+   * read back — never something the editor set locally and hoped for.
+   */
+  industry: string
+  template_key: string
   theme: Record<string, unknown> | null
   content: Record<string, Record<string, string>> | null
   seo: Record<string, unknown> | null
@@ -71,6 +87,19 @@ type LandingEditorProps = {
    * disagree about which sections are real.
    */
   sections: SectionAvailability[]
+  /**
+   * Landing phase 3c, Plan A: the other two catalogues on that SAME
+   * onboarding response — `LandingOnboardingService::industries()` and its
+   * `TEMPLATES` — handed down whole for the identical reason `sections` is.
+   * Nothing else serves either list, and a second, editor-only copy of
+   * "which industries are there" is exactly the drift the wizard's own
+   * `industryChoices.ts` refuses to introduce.
+   *
+   * Both default to `[]` at the host's call site, so a frontend deployed
+   * ahead of its backend simply renders neither picker.
+   */
+  industries: IndustryOption[]
+  templates: TemplateOption[]
 }
 
 // bg-dark-surface, never bg-dark-card — the two are different shades, and
@@ -152,7 +181,7 @@ function imageErrorMessage(e: unknown, fallback: string): string {
  * adds the web-address/publish/unpublish block to the left column. Both
  * extend this file rather than restructure it.
  */
-export function LandingEditor({ sections: availability }: LandingEditorProps) {
+export function LandingEditor({ sections: availability, industries, templates }: LandingEditorProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
 
@@ -220,6 +249,20 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
   const updateTheme = (patch: Partial<typeof themeFields>) =>
     update('theme', themePayload({ ...themeFields, ...patch }))
 
+  // Landing phase 3c, Plan A: the two catalogue fields, queued into the
+  // SAME `form` state and flipping the SAME `dirty` flag as every other
+  // control on this screen — never a straight-to-server write. Both are
+  // top-level columns on the DTO rather than leaves of `theme`, so they use
+  // `update` directly and need no `themePayload`-style merge: there is no
+  // sibling key inside them to preserve.
+  //
+  // `templateKey` is narrowed through `resolveTemplateKey` against the
+  // SERVED list on the way in (a stored key a later backend release removed
+  // must not be drawn as a selected card), which is also what stops it
+  // being sent back out — see `catalogPayload`, which re-checks membership
+  // at the wire.
+  const templateKey = resolveTemplateKey(templates, f.template_key, page?.template_key)
+
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
   // so the brand's own name (BrandSwitcher's own data, already loaded) is
@@ -278,6 +321,26 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
           content: stripImageUrlLeaves(body.content),
           seo: body.seo ?? {},
           slug: body.slug ?? page?.slug,
+          // Landing phase 3c, Plan A: `industry` and `template_key`, and
+          // ONLY when they actually moved to a value the server offered —
+          // the opposite of the four fields above, which are sent whole on
+          // every save because the endpoint replaces them wholesale. See
+          // `catalogPayload`'s own docblock for both narrowings; the short
+          // version is that `industry` is not a column this endpoint writes
+          // at all (it moves the ORGANISATION, and a resync sweep across
+          // every landing page follows), so re-asserting it on every
+          // headline edit would be asking for that sweep on every save.
+          ...catalogPayload({
+            industries,
+            templates,
+            industry: body.industry,
+            templateKey: body.template_key,
+            // The SAVED row, never `f`/`body` — the same "diff against what
+            // is really stored" source the address block's own
+            // `pendingSlug` reads.
+            savedIndustry: page?.industry,
+            savedTemplateKey: page?.template_key,
+          }),
         }),
       ]
 
@@ -295,6 +358,18 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
+      // Landing phase 3c, Plan A: the onboarding response too, because a
+      // saved industry change moves what it says. `sections` (this
+      // component's own `availability` prop) is computed from the page's
+      // industry profile server-side — its LABELS are that industry's
+      // vocabulary ("Treatments" vs "Courses") and its ROWS are that
+      // industry's bands (only `hotel` has an available booking band) — so
+      // without this the section list below would keep describing the
+      // industry the tenant just left until something else happened to
+      // refetch it. The host (`LandingPages.tsx`) owns that query; it
+      // re-reads `completed`, which is still true for a page that exists,
+      // so nothing flashes back to the wizard.
+      qc.invalidateQueries({ queryKey: ['landing-onboarding', currentBrandId] })
       setForm(null)
       setPreviewNonce(n => n + 1)
       toast.success(t('landing_pages.editor.saved_toast', 'Your page was saved'))
@@ -505,6 +580,15 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
           */}
           <div className={card + ' space-y-5'}>
             <h2 className="text-sm font-semibold text-white">{t('landing_pages.design.title', 'Design')}</h2>
+            {/*
+              Landing phase 3c, Plan A: `industries`/`templates` and their
+              two callbacks are what turn this into the whole Design panel —
+              industry and page style above the palette, type and brand
+              colour that were already here. The wizard renders the same
+              component with neither prop set (it asks about industry in its
+              own step 1 and never asks about the template), so its "Make it
+              yours" step is unchanged.
+            */}
             <DesignPanel
               businessName={businessName}
               palette={themeFields.palette}
@@ -513,6 +597,13 @@ export function LandingEditor({ sections: availability }: LandingEditorProps) {
               onPaletteChange={id => updateTheme({ palette: id })}
               onFontPairingChange={id => updateTheme({ font_pairing: id })}
               onBrandColorChange={hex => updateTheme({ brand_color: hex })}
+              industries={industries}
+              industry={f.industry}
+              savedIndustry={page.industry}
+              onIndustryChange={id => update('industry', id)}
+              templates={templates}
+              templateKey={templateKey}
+              onTemplateChange={key => update('template_key', key)}
             />
           </div>
 

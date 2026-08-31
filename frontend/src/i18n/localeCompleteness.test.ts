@@ -165,7 +165,18 @@ describe('locale completeness — design panel palette/pairing names (dynamic t(
  * nine cards with a template-literal `t()` call —
  * `` t(`landing_pages.wizard.industry_name_${card.id}`, card.name) `` in
  * `LandingWizard.tsx` — so `T_CALL_RE` above cannot see them, exactly like
- * the design panel's ten keys just above. Same treatment, same reasoning,
+ * the design panel's ten keys just above.
+ *
+ * Plan A gave these nine keys a SECOND call site, `DesignPanel.tsx`'s own
+ * industry picker (the editor's version of the same choice), which reuses
+ * this same `landing_pages.wizard.industry_name_*` family rather than
+ * opening a `landing_pages.design.industry_name_*` one: one industry, one
+ * word for it, wherever a tenant meets it. That is also why the keys are
+ * still spelled `wizard.` in a control that is not in the wizard — renaming
+ * them would have meant nine keys × five locales moved for a prefix nobody
+ * reads. Nothing about this net changes; it covers both screens at once.
+ *
+ * Same treatment, same reasoning,
  * including WHY the list is hardcoded rather than derived from
  * `industryChoices.ts`'s own `INDUSTRY_NAMES`: a list built from the module
  * it exists to check would lose an id and its expectation in the same edit.
