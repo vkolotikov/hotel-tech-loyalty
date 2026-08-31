@@ -45,9 +45,18 @@ export type SectionMeta = {
  * keeps the wizard's step 4 and the editor's section list from disagreeing
  * about which rule applies to which section.
  */
-const DATA_BACKED_SECTIONS: ReadonlySet<SectionKey> = new Set(['services', 'team', 'reviews'])
+const DATA_BACKED_SECTIONS: ReadonlySet<string> = new Set(['services', 'team', 'reviews'])
 
-export function isDataBackedSection(key: SectionKey): boolean {
+/**
+ * Takes a plain `string`, not a `SectionKey`, since the builder round: a
+ * page can now carry TENANT-ADDED instance rows (`text_1`…`text_6`, see
+ * `App\Landing\SectionType`'s key grammar) whose keys are not in the fixed
+ * union — and the honest answer for every one of them is the same "no" this
+ * already gives `hero`. Widening the parameter rather than widening
+ * `SectionKey` itself keeps the wizard's own step 4, which only ever deals
+ * in the seven fixed keys, exactly as type-safe as it was.
+ */
+export function isDataBackedSection(key: string): boolean {
   return DATA_BACKED_SECTIONS.has(key)
 }
 
@@ -68,7 +77,7 @@ export function isDataBackedSection(key: SectionKey): boolean {
  * `isDataBackedSection` exists to enforce for services/team/reviews), so
  * `isOfferable` now reads `available` for this set too.
  */
-const INDUSTRY_GATED_SECTIONS: ReadonlySet<SectionKey> = new Set(['booking'])
+const INDUSTRY_GATED_SECTIONS: ReadonlySet<string> = new Set(['booking'])
 
 /**
  * The spec's rule, in one place: an empty DATA-BACKED section is never
@@ -90,7 +99,19 @@ const INDUSTRY_GATED_SECTIONS: ReadonlySet<SectionKey> = new Set(['booking'])
  * own "Nothing to show yet" copy is for (offer it, invite them to write
  * it), and the exact regression this comment exists to head off.
  */
-export function isOfferable(s: SectionMeta): boolean {
+/**
+ * The builder round widened the PARAMETER to anything carrying the three
+ * fields this actually reads, so an editor row keyed `text_1` can be asked
+ * the same question as a `SectionMeta` keyed `about`. The rule itself is
+ * unchanged, and it already gives the right answer for a tenant-added band
+ * without a fourth branch: an added text block is in neither set above, so
+ * it falls through to `true` exactly like `hero`/`about`/`contact` — which
+ * is correct for the same reason it is correct for them. Its content is
+ * words the tenant types, `count` reflects what has been written SO FAR,
+ * and gating it on `available` would mean a band they just added could
+ * never be written into.
+ */
+export function isOfferable(s: { key: string; available: boolean; count: number }): boolean {
   if (isDataBackedSection(s.key)) return s.available && s.count > 0
   if (INDUSTRY_GATED_SECTIONS.has(s.key)) return s.available
   return true

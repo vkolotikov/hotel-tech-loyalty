@@ -763,6 +763,32 @@ class LandingOnboardingTest extends TestCase
             'What the wizard/editor is told it can add is not what the add endpoint accepts.');
     }
 
+    /**
+     * The page cap, on the wire, next to the per-type one.
+     *
+     * `section_types[*].limit` answers "how many of THIS kind" and there is
+     * no room in it for "how many altogether" -- but store() refuses on both,
+     * and the editor greys its Add control out for both. Without this key the
+     * builder UI could only explain the first refusal from data and would
+     * have to carry its own copy of MAX_SECTIONS_PER_PAGE for the second,
+     * which is the same second-source-of-truth problem serving
+     * `section_types` at all was meant to end.
+     *
+     * Asserted against the constant, never against the literal 16: this test
+     * exists to prove the number ON THE WIRE is the number the endpoint
+     * enforces, and hardcoding it here would let both drift together the
+     * moment somebody changed one of them.
+     */
+    public function test_prefill_carries_the_page_section_cap_the_add_endpoint_enforces(): void
+    {
+        $this->makeProperty();
+
+        $prefill = $this->prefill();
+
+        $this->assertArrayHasKey('max_sections', $prefill);
+        $this->assertSame(SectionType::MAX_SECTIONS_PER_PAGE, $prefill['max_sections']);
+    }
+
     public function test_prefill_names_a_template_the_apply_endpoint_will_accept(): void
     {
         $this->makeProperty();

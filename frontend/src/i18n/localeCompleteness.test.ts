@@ -220,3 +220,59 @@ describe('locale completeness — wizard industry names (dynamic t() keys, hand-
     })
   }
 })
+
+/**
+ * The builder round: `LandingEditor.tsx` names a tenant-added band and
+ * describes it in the "Add a section" control with two template-literal
+ * `t()` calls per section TYPE —
+ * `` t(`landing_pages.editor.section_type_name_${row.typeId}`, …) `` and
+ * `` t(`landing_pages.editor.section_type_blurb_${type.id}`, …) `` — so
+ * `T_CALL_RE` at the top of this file cannot see either family, exactly like
+ * the design-panel and industry keys above.
+ *
+ * The ids are `App\Landing\SectionType::repeatableIds()` — the types the add
+ * endpoint accepts, which is to say the only ones that ever reach either
+ * call site. Fixed bands are NOT here and must not be: they are named by the
+ * wire, in the industry's own vocabulary (a clinic's "Procedures", a salon's
+ * "Treatments"), and adding `section_type_name_about` here would be asking
+ * for a translation of a string nothing renders.
+ *
+ * Hardcoded rather than derived, for the third time and the same reason: a
+ * list built from the module it exists to check loses an id and its
+ * expectation in one edit. The real cost of getting this wrong is visible —
+ * the `TYPE_NAME_FALLBACK` miss renders the raw type id `text` as a section
+ * heading, and the blurb's fallback is the empty string, so a second
+ * repeatable type shipped without translations gets an unlabelled button
+ * under a blank explanation.
+ */
+describe('locale completeness — addable section type names and blurbs (dynamic t() keys, hand-verified)', () => {
+  const SECTION_TYPE_KEYS = [
+    // SectionType::repeatableIds() — one addable type today.
+    'landing_pages.editor.section_type_name_text',
+    'landing_pages.editor.section_type_blurb_text',
+  ]
+
+  // The canary the three describes above all carry: a name AND a blurb for
+  // every addable type, never one of the pair.
+  it('names both a label and a blurb for every addable type', () => {
+    expect(SECTION_TYPE_KEYS.length % 2).toBe(0)
+    const names = SECTION_TYPE_KEYS.filter(k => k.includes('section_type_name_'))
+    const blurbs = SECTION_TYPE_KEYS.filter(k => k.includes('section_type_blurb_'))
+    expect(names.length).toBe(blurbs.length)
+    expect(names.length).toBeGreaterThan(0)
+  })
+
+  for (const locale of LOCALES) {
+    it(`every addable section type key resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = SECTION_TYPE_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) section type key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})

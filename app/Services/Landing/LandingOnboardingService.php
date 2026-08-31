@@ -259,6 +259,23 @@ class LandingOnboardingService
             // wizard's step 4 reads. THIS is the type table, independent of
             // any page.
             'section_types'  => SectionType::payload(),
+            // The OTHER cap, and the only one `section_types` structurally
+            // cannot carry: `limit` there is per-type ("up to six of these"),
+            // while this is the whole-page ceiling
+            // (SectionType::MAX_SECTIONS_PER_PAGE) that
+            // LandingPageSectionController::store() checks against the
+            // row-locked page. Both refusals exist; without this one on the
+            // wire the editor could only grey out its Add control for the
+            // first of them, and would have to discover the second by
+            // issuing an add and reading the 422 -- or, worse, by keeping a
+            // copy of the number 16 in TypeScript, which is exactly the
+            // second source of truth `section_types` was served to avoid.
+            //
+            // A scalar rather than a key inside each `section_types` row: it
+            // is a fact about the PAGE, not about any one type, and
+            // repeating it on every row would invite a reader to believe
+            // otherwise.
+            'max_sections'   => SectionType::MAX_SECTIONS_PER_PAGE,
             'suggested_slug' => $page?->slug ?? $this->suggestSlug($org, $brand, $contact),
         ];
     }
