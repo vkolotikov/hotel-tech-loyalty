@@ -5,6 +5,10 @@ import {
   PALETTES, FONT_PAIRINGS, paletteFor, pairingFor, pickerSafeHex,
   type PaletteId, type FontPairingId,
 } from './designChoices'
+import { industryCards, type IndustryOption } from './industryChoices'
+import {
+  industryHasChanged, showTemplatePicker, templateCards, type TemplateOption,
+} from './editorCatalog'
 
 /**
  * D4's own design-controls component (landing phase 3c, Task 6): six
@@ -13,6 +17,23 @@ import {
  * `LandingWizard`'s "Make it yours" step — the two places D4 says must
  * offer the same choices with the same real previews, never a
  * near-identical second copy.
+ *
+ * Landing phase 3c, Plan A adds two OPTIONAL blocks above those three: the
+ * industry picker and the template picker. Optional, and rendered only when
+ * the caller supplies their data, because only ONE of this component's two
+ * callers has either question left to ask — the wizard asks about industry
+ * in its own first step (where it can still change which SECTIONS the page
+ * is created with) and never asks about the template at all, so it passes
+ * neither prop and renders byte-identically to before. The editor passes
+ * both, because a page that already exists is exactly where the answers
+ * given once, at creation, need somewhere to be changed.
+ *
+ * The industry cards here are drawn from `industryChoices.ts` — the SAME
+ * module and the same `industryCards()` derivation the wizard's step 1
+ * renders from, over the same served catalogue — so the two screens cannot
+ * describe an industry differently, name it differently, or offer one the
+ * other does not. Only the layout differs (this panel is a column, not a
+ * full-width step).
  *
  * Every card is a REAL miniature render — the tenant's own business name,
  * set in real self-hosted faces (see `../../styles/landing-preview-
@@ -72,11 +93,39 @@ type DesignPanelProps = {
   onPaletteChange: (id: PaletteId) => void
   onFontPairingChange: (id: FontPairingId) => void
   onBrandColorChange: (hex: string) => void
+
+  // ─── Plan A's two optional blocks (see this file's docblock) ──────────
+  //
+  // Each renders only when its own data AND its own callback are supplied,
+  // so a caller with nothing to ask (LandingWizard) passes nothing and gets
+  // exactly the panel that shipped before.
+
+  /** `onboarding.industries` — the served catalogue, verbatim. Empty (or
+   *  absent) hides the picker entirely, which is what a frontend deployed
+   *  ahead of its backend gets. */
+  industries?: IndustryOption[]
+  /** The currently drafted/stored industry id. */
+  industry?: string
+  /** The industry actually SAVED on the row — what `industry` is compared
+   *  against to decide whether the tenant has moved off it, and therefore
+   *  whether the change note is shown. Never the same value as `industry`
+   *  once something is chosen; see `industryHasChanged`. */
+  savedIndustry?: string
+  onIndustryChange?: (id: string) => void
+
+  /** `onboarding.templates`. One row (today's `ruled_page` alone) hides the
+   *  picker — see `showTemplatePicker`. */
+  templates?: TemplateOption[]
+  /** Already narrowed by `resolveTemplateKey` at the call site. */
+  templateKey?: string
+  onTemplateChange?: (key: string) => void
 }
 
 export function DesignPanel({
   businessName, palette, fontPairing, brandColor,
   onPaletteChange, onFontPairingChange, onBrandColorChange,
+  industries, industry, savedIndustry, onIndustryChange,
+  templates, templateKey, onTemplateChange,
 }: DesignPanelProps) {
   const { t } = useTranslation()
 
@@ -84,8 +133,130 @@ export function DesignPanel({
   const activePairing = pairingFor(fontPairing)
   const resolvedBrandColor = brandColor || activePalette.accent
 
+  const industryOptions = industries ?? []
+  const showIndustries = industryOptions.length > 0 && onIndustryChange !== undefined
+  const industryOwnCards = industryCards(industryOptions, industry ?? '')
+  const industryMoved = industryHasChanged(industry, savedIndustry)
+
+  const templateOptions = templates ?? []
+  const showTemplates = showTemplatePicker(templateOptions) && onTemplateChange !== undefined
+  const templateOwnCards = templateCards(templateOptions, templateKey ?? '')
+
   return (
     <div className="space-y-6">
+      {showIndustries && (
+        <div className="space-y-3">
+          <span className={kicker}>{t('landing_pages.design.industry_kicker', 'Your industry')}</span>
+          <p className="text-sm text-t-secondary leading-relaxed">
+            {t(
+              'landing_pages.design.industry_intro',
+              'Your page is written in your own trade’s words. Change this and the headings, the button wording and the sections on offer follow.',
+            )}
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {industryOwnCards.map(c => (
+              <button
+                key={c.id}
+                type="button"
+                aria-pressed={c.selected}
+                onClick={() => onIndustryChange(c.id)}
+                className={'text-left rounded-xl border p-4 transition-all outline-none '
+                  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
+                  + (c.selected
+                    ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
+                    : 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  {/* The wizard's own key, deliberately reused rather than a
+                      second `landing_pages.design.industry_name_*` family:
+                      one industry, one word for it, wherever a tenant meets
+                      it. `localeCompleteness.test.ts`'s hand-verified net
+                      already pins all nine of these in all five locales. */}
+                  <span className="text-sm font-semibold text-white truncate">
+                    {t(`landing_pages.wizard.industry_name_${c.id}`, c.name)}
+                  </span>
+                  {c.selected && <Check size={16} className="text-primary-500 shrink-0" />}
+                </div>
+
+                {/* This industry's own band names, drawn the way the page
+                    draws them — mono eyebrows in the palette that industry
+                    opens on. Inline colour, deliberately: customer-facing
+                    page styling being previewed, not admin chrome
+                    (Appendix A §7.4), and the whole point is that two
+                    industries do not look alike. */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-3">
+                  {c.vocabulary.map(word => (
+                    <span
+                      key={word}
+                      className="text-[10px] font-mono uppercase tracking-[0.12em]"
+                      style={{ color: c.paletteAccent }}
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
+
+                {/* The page's own primary button, at card size. Every
+                    profile's accent clears the WCAG 4.5:1 floor against a
+                    white label — see IndustryProfile::all()'s docblock — so
+                    the label is safe as plain white here. */}
+                <span
+                  className="inline-block mt-3 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white"
+                  style={{ backgroundColor: c.accent }}
+                >
+                  {c.primaryCta}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {industryMoved && (
+            <p className="text-xs text-t-secondary leading-relaxed">
+              {t(
+                'landing_pages.design.industry_change_note',
+                'Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.',
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
+      {showTemplates && (
+        <div className="space-y-3">
+          <span className={kicker}>{t('landing_pages.design.template_kicker', 'Page style')}</span>
+          <p className="text-sm text-t-secondary leading-relaxed">
+            {t(
+              'landing_pages.design.template_intro',
+              'How your page is laid out. Your words, your photos and your colours come with you.',
+            )}
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {templateOwnCards.map(c => (
+              <button
+                key={c.key}
+                type="button"
+                aria-pressed={c.selected}
+                onClick={() => onTemplateChange(c.key)}
+                className={'text-left rounded-xl border p-4 transition-all outline-none '
+                  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
+                  + (c.selected
+                    ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
+                    : 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  {/* Untranslated, from the server — see `TemplateOption`. */}
+                  <span className="text-sm font-semibold text-white truncate">{c.name}</span>
+                  {c.selected && <Check size={16} className="text-primary-500 shrink-0" />}
+                </div>
+                <p className="text-xs text-t-secondary leading-relaxed mt-2">{c.blurb}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         <span className={kicker}>{t('landing_pages.design.palette_kicker', 'Look')}</span>
         <p className="text-sm text-t-secondary leading-relaxed">

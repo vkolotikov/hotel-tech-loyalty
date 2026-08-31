@@ -3072,6 +3072,11 @@
     "preview_caption": "Shows your saved draft. Save to see the latest changes.",
     "design": {
       "title": "Design",
+      "industry_kicker": "Your industry",
+      "industry_intro": "Your page is written in your own trade’s words. Change this and the headings, the button wording and the sections on offer follow.",
+      "industry_change_note": "Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.",
+      "template_kicker": "Page style",
+      "template_intro": "How your page is laid out. Your words, your photos and your colours come with you.",
       "palette_kicker": "Look",
       "palette_intro": "Every palette is designed to look great from the start — pick the one that feels like your business.",
       "pairing_kicker": "Type style",

@@ -48,6 +48,14 @@ class LandingOnboardingService
      * configuration. The controller validates template_key against
      * templateKeys() rather than a literal, so what the wizard OFFERS and
      * what apply() ACCEPTS are one list.
+     *
+     * Landing phase 3c, Plan A: this is now the registry for the EDITOR's
+     * template picker too (the Design panel), which renders the `name` and
+     * `blurb` below verbatim off `prefill()['templates']` -- so adding a
+     * second template is still a change to this array alone, in one file,
+     * with no second list to keep in step and no frontend release to make
+     * it appear. LandingPageController::store() AND ::update() both
+     * validate against templateKeys() for the same reason.
      */
     public const TEMPLATES = [
         [
@@ -320,7 +328,7 @@ class LandingOnboardingService
                 // with the page if anything below fails -- "create the page
                 // the wizard describes, or nothing at all" has to include
                 // the choice the wizard was describing it with.
-                $this->syncOrganizationIndustry($org, $industry);
+                self::syncOrganizationIndustry($org, $industry);
 
                 $page->save();
 
@@ -799,6 +807,18 @@ class LandingOnboardingService
      * that choice survives as a fact about the business rather than as one
      * page's private opinion of it.
      *
+     * PUBLIC AND STATIC since the editor gained its own industry control
+     * (landing phase 3c, Plan A -- the Design panel's industry picker).
+     * There are now two screens that let a tenant change this, and there
+     * must not be two ANSWERS to "what does changing it do": this method is
+     * the one writer both go through (apply() below-left,
+     * LandingPageController::update() for a page that already exists), so
+     * the no-op rule, the single column written and -- most of all -- the
+     * deliberate refusal to run the CRM presets are decided once, here,
+     * rather than re-decided per call site. Static because it reads no
+     * instance state; the controller therefore needs no constructor
+     * injection to reach it.
+     *
      * `organizations.industry` is the only writer this needs. Every landing
      * page's own `industry` snapshot follows from Organization::updated
      * (see that hook: "the pages following along is this hook's job"), so
@@ -824,9 +844,17 @@ class LandingOnboardingService
      * common case, since the wizard opens pre-selected on it -- writes
      * nothing at all, so an untouched first step cannot bump updated_at or
      * fire the resync sweep over pages that are already correct. The same
-     * no-op test applyIndustry() makes for the same reason.
+     * no-op test applyIndustry() makes for the same reason -- and the same
+     * reason the editor's save may send `industry` on every save without
+     * that costing an org write per keystroke-batch.
+     *
+     * $industry is expected CANONICAL (one of Organization::INDUSTRIES).
+     * Both callers narrow before they get here -- apply() through
+     * chosenIndustry()'s normaliseIndustry(), update() through the same
+     * plus its own Rule::in -- because an alias reaching resolved_industry's
+     * comparison below would look like a change on every single save.
      */
-    private function syncOrganizationIndustry(Organization $org, string $industry): void
+    public static function syncOrganizationIndustry(Organization $org, string $industry): void
     {
         if ($org->resolved_industry === $industry) {
             return;

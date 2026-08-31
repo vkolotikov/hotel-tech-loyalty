@@ -1,0 +1,67 @@
+- generic [active] [ref=f14e1]:
+  - navigation [ref=f14e2]:
+    - generic [ref=f14e3]:
+      - link "FDS Cards" [ref=f14e4] [cursor=pointer]:
+        - /url: "#"
+      - link "Book your stay" [ref=f14e5] [cursor=pointer]:
+        - /url: "#booking"
+  - main [ref=f14e6]:
+    - generic [ref=f14e9]:
+      - generic [ref=f14e10]:
+        - heading [level=1] [ref=f14e11]:
+          - text: Digital Business Cards for People Who Get
+          - emphasis [ref=f14e12]: Remembered
+        - paragraph [ref=f14e13]: Design a premium digital profile in minutes, share it through a luxury metal NFC card — and see exactly who viewed you, saved you, and passed you on.
+        - link "Book your stay" [ref=f14e15] [cursor=pointer]:
+          - /url: "#booking"
+      - figure [ref=f14e16]:
+        - generic [ref=f14e17]: FC
+    - generic [ref=f14e21]:
+      - heading "Digital is convenient. Metal makes it unforgettable." [level=2] [ref=f14e22]
+      - paragraph [ref=f14e24]: A link is easy to send and easy to forget. A luxury metal card is the thing they keep on the desk — and the moment they remember about the meeting. You get both, linked.
+    - generic [ref=f14e25]:
+      - generic [ref=f14e26]:
+        - paragraph [ref=f14e27]: Reserve
+        - generic [ref=f14e28]:
+          - heading "Pick an hour. That’s the whole process." [level=2] [ref=f14e29]
+          - link "Book your stay" [ref=f14e30] [cursor=pointer]:
+            - /url: https://loyalty.hotel-tech.ai/booking-widget?org=19&lang=en&color=%230011ff&tpl=ruled_page
+          - paragraph [ref=f14e31]: Or call
+          - link "+44 736 651 0477" [ref=f14e32] [cursor=pointer]:
+            - /url: tel:+447366510477
+          - list [ref=f14e33]:
+            - listitem [ref=f14e34]: Confirmation is instant
+            - listitem [ref=f14e36]: Cancel free up to 24 hours before
+      - group "Book your stay" [ref=f14e38]:
+        - link "Call" [ref=f14e39] [cursor=pointer]:
+          - /url: tel:+447366510477
+        - link "Book your stay" [ref=f14e40] [cursor=pointer]:
+          - /url: "#booking"
+    - generic [ref=f14e42]:
+      - generic [ref=f14e43]:
+        - heading "Getting here" [level=2] [ref=f14e44]
+        - generic [ref=f14e45]:
+          - paragraph [ref=f14e46]: Address
+          - paragraph [ref=f14e47]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=f14e48]:
+          - paragraph [ref=f14e49]: Telephone
+          - paragraph [ref=f14e50]:
+            - link "+44 736 651 0477" [ref=f14e51] [cursor=pointer]:
+              - /url: tel:+447366510477
+        - generic [ref=f14e52]:
+          - paragraph [ref=f14e53]: Email
+          - paragraph [ref=f14e54]:
+            - link "info@fds-cards.co.uk" [ref=f14e55] [cursor=pointer]:
+              - /url: mailto:info@fds-cards.co.uk
+      - link "25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ Open in Maps ↗" [ref=f14e56] [cursor=pointer]:
+        - /url: https://maps.google.com/?q=25+Cabot+Square%2C+Canary+Wharf%2C+London%2C+United+Kingdom%2C+E14+4QZ
+        - generic [ref=f14e59]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=f14e60]: Open in Maps ↗
+  - contentinfo [ref=f14e61]:
+    - generic [ref=f14e62]:
+      - generic [ref=f14e63]:
+        - paragraph [ref=f14e64]: FDS Cards
+        - link "Book your stay" [ref=f14e65] [cursor=pointer]:
+          - /url: "#booking"
+      - paragraph [ref=f14e67]: © 2026 FDS Cards
+  - button "Chat with us" [ref=f14e69] [cursor=pointer]

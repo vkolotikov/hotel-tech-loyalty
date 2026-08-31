@@ -3028,6 +3028,11 @@
     "preview_caption": "Muestra tu borrador guardado. Guarda para ver los últimos cambios.",
     "design": {
       "title": "Diseño",
+      "industry_kicker": "Tu sector",
+      "industry_intro": "Tu página habla con las palabras de tu sector. Si lo cambias aquí, los títulos, el texto de los botones y las secciones disponibles cambian con él.",
+      "industry_change_note": "Al guardar, tu página se reescribe con las palabras del nuevo sector —títulos, nombres de secciones y el texto de tus botones— y cambia qué secciones puedes mostrar (la reserva en línea solo se ofrece a hoteles). Esto también cambia las palabras que usa el resto de tu espacio de trabajo. Nada de lo que ya has guardado —reservas, clientes, ajustes— se modifica ni se elimina.",
+      "template_kicker": "Estilo de página",
+      "template_intro": "Cómo se organiza tu página. Tus textos, tus fotos y tus colores te acompañan.",
       "palette_kicker": "Estilo",
       "palette_intro": "Cada paleta está pensada para lucir bien desde el principio — elige la que mejor represente a tu negocio.",
       "pairing_kicker": "Estilo de letra",

@@ -3028,6 +3028,11 @@
     "preview_caption": "Zeigt Ihren gespeicherten Entwurf. Speichern Sie, um die neuesten Änderungen zu sehen.",
     "design": {
       "title": "Design",
+      "industry_kicker": "Ihre Branche",
+      "industry_intro": "Ihre Seite spricht die Sprache Ihrer Branche. Ändern Sie sie hier, und die Überschriften, die Beschriftung der Schaltflächen und die verfügbaren Abschnitte ziehen mit.",
+      "industry_change_note": "Beim Speichern wird Ihre Seite in den Begriffen der neuen Branche neu geschrieben — Überschriften, Abschnittsnamen und die Beschriftung Ihrer Schaltflächen — und es ändert sich, welche Abschnitte Sie zeigen können (Online-Buchung gibt es nur für Hotels). Damit ändern sich auch die Begriffe im übrigen Arbeitsbereich. An Ihren gespeicherten Daten — Buchungen, Kunden, Einstellungen — ändert oder löscht das nichts.",
+      "template_kicker": "Seitenstil",
+      "template_intro": "Wie Ihre Seite aufgebaut ist. Ihre Texte, Ihre Fotos und Ihre Farben kommen mit.",
       "palette_kicker": "Look",
       "palette_intro": "Jede Palette ist von Anfang an durchdacht gestaltet — wählen Sie die, die zu Ihrem Unternehmen passt.",
       "pairing_kicker": "Schriftstil",

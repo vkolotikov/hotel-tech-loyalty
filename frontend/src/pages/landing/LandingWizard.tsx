@@ -16,6 +16,7 @@ import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
 import {
   industryCards, resolveIndustry, sectionsForIndustry, type IndustryOption,
 } from './industryChoices'
+import type { TemplateOption } from './editorCatalog'
 // Task 6, landing phase 3c (D4 — distinct from this file's OWN earlier
 // "Task 6 built steps 1-2" below, a different phase's numbering): the
 // self-hosted @font-face sheet DesignPanel's cards render against — see
@@ -57,16 +58,17 @@ type OnboardingPrefill = {
 
 /**
  * The one shipped template. Still sent, still posted back verbatim as
- * `template_key` — and no longer ASKED about: with exactly one entry there
- * was never a choice to make, and a step that said "Pick the one that feels
- * right" over a single card read as a broken screen to the first tenant who
- * tested it. See `STEPS` in ./landingDraft for what step 1 asks instead.
+ * `template_key` — and no longer ASKED about here: with exactly one entry
+ * there was never a choice to make, and a step that said "Pick the one that
+ * feels right" over a single card read as a broken screen to the first
+ * tenant who tested it. See `STEPS` in ./landingDraft for what step 1 asks
+ * instead.
+ *
+ * The TYPE moved to `./editorCatalog` in landing phase 3c, Plan A, where
+ * the editor's own (conditional, more-than-one-only) template picker reads
+ * it — imported at the top of this file rather than declared twice, so one
+ * served row has one shape on this side of the wire.
  */
-type TemplateOption = {
-  key: string
-  name: string
-  blurb: string
-}
 
 /**
  * Raw section-availability row from the API. Deliberately NOT `SectionMeta`

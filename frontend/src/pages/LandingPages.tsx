@@ -190,9 +190,22 @@ export function LandingPages() {
   // step 4 gates on (RULING 4). Reusing it here, rather than a
   // second/editor-only computation, is what keeps the wizard and the
   // editor unable to disagree about which sections are real.
+  // `industries` and `templates` are handed down for exactly the same
+  // reason `sections` is (landing phase 3c, Plan A): the onboarding
+  // response is the ONLY thing that serves either catalogue —
+  // `LandingOnboardingService::industries()` and its `TEMPLATES` — and the
+  // editor's Design panel now offers both as controls. One fetch, already
+  // made above for the wizard branch, feeding both screens; a second,
+  // editor-only source for "which industries are there" is precisely the
+  // drift RULING 4 closed for sections.
   return (
     <BrandRequired feature={t('landing_pages.brand_required', 'your landing page')}>
-      <LandingEditor key={currentBrandId ?? 'org'} sections={data?.sections ?? []} />
+      <LandingEditor
+        key={currentBrandId ?? 'org'}
+        sections={data?.sections ?? []}
+        industries={data?.industries ?? []}
+        templates={data?.templates ?? []}
+      />
     </BrandRequired>
   )
 }
