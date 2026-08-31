@@ -71,6 +71,26 @@ class LandingOnboardingService
             // has never commissioned a website can act on.
             'blurb' => 'Calm and uncluttered, with plenty of white space. Your work and your prices do the talking — nothing on the page competes with them.',
         ],
+        [
+            // The first of the three BeautyTech kits
+            // (resources/landing-kits/beauty-tech/01-nocturne-ritual),
+            // converted into a real template rather than re-drawn: the
+            // author's own markup, their own :root palette and their own
+            // stylesheet ship as the design, and only the CONTENT is the
+            // tenant's. It is deliberately the opposite end of the range
+            // from The Ruled Page — dark where that is pale, photographic
+            // where that is typographic — so the picker is a choice between
+            // two directions and not two shades of one.
+            'key'   => 'nocturne_ritual',
+            'name'  => 'Nocturne Ritual',
+            // The author's own words for it, from the kit collection's
+            // README: "Dark, cinematic ritual luxury / Premium spas, massage
+            // and evening wellness brands". Written the way the Ruled Page's
+            // blurb was rewritten in Task 11 — describing what a tenant gets,
+            // in words somebody who has never commissioned a website can act
+            // on, rather than the craft behind it.
+            'blurb' => 'Dark and cinematic, built around your photographs. Made for premium spas, massage studios and evening wellness brands.',
+        ],
     ];
 
     /**
@@ -105,6 +125,16 @@ class LandingOnboardingService
             "Online booking currently supports hotel stays. Your '%s' button will point visitors at your contact details instead."],
         'contact'  => ['label' => 'Contact',  'source' => 'Your address and phone number in Properties'],
         'footer'   => ['label' => 'Footer',   'source' => 'Your business details in Properties'],
+        // The three blocks the BeautyTech kits add. Described here for the
+        // same reason every other key is: the editor prints these sentences
+        // beside the section it is offering, and a band with no entry in
+        // this table would appear as a bare key. They are page FURNITURE the
+        // designs own rather than bands the wizard seeds — see
+        // IndustryProfile::$defaultSections, which does not list them — so
+        // 'source' names the editor rather than another screen.
+        'announcement' => ['label' => 'Offer bar', 'source' => 'A short line you write here — an opening offer, late hours, a seasonal note'],
+        'trust'        => ['label' => 'Highlights', 'source' => 'A line you write here, plus your review score once you have four ratings'],
+        'faq'          => ['label' => 'Questions', 'source' => 'Questions and answers you write here'],
     ];
 
     /** How many addresses in one family to try before giving up on it. */

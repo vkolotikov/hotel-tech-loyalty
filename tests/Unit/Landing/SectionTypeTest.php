@@ -50,16 +50,65 @@ class SectionTypeTest extends TestCase
         }
     }
 
-    /** Every type names a partial that has actually shipped. */
+    /**
+     * Every type names a partial that has actually shipped — in at least ONE
+     * of the templates that ship partials.
+     *
+     * It used to be "in ruled_page", and that was the same assertion while
+     * ruled_page was the only template. It is not any more: `nocturne_ritual`
+     * renders this same catalogue through its own directory, and a type may
+     * legitimately belong to one design and not the other. `announcement`,
+     * `trust` and `faq` are the BeautyTech kits' blocks and The Ruled Page
+     * has no partial for any of them; `text` is the Ruled Page's repeatable
+     * band and the nocturne kit does not compose one.
+     *
+     * That is not a hole the renderer falls through — both layouts filter on
+     * view()->exists() before including anything, so a page carrying a row
+     * its current template cannot draw simply loses that band and keeps its
+     * stored copy for whenever it switches back. What this test still
+     * catches is the real failure: a type NO template can render, which is a
+     * row nothing will ever draw and an entry in the editor's form builder
+     * for a band that does not exist.
+     */
     public function test_every_type_resolves_to_a_view_that_exists(): void
     {
         foreach (SectionType::ids() as $id) {
             $type = SectionType::get($id);
 
             $this->assertNotNull($type);
+
+            $drawnBy = array_values(array_filter(
+                SectionType::TEMPLATES_WITH_PARTIALS,
+                fn (string $template) => View::exists('landing.' . $template . '.sections.' . $type->view),
+            ));
+
+            $this->assertNotEmpty(
+                $drawnBy,
+                "The '{$id}' type names a partial ({$type->view}) that no shipped template has."
+            );
+        }
+    }
+
+    /**
+     * Every template named as shipping partials actually ships some, and the
+     * directory it names is real.
+     *
+     * The list above is what makes "does this type render anywhere" a
+     * meaningful question, so a typo in it would quietly turn the test above
+     * into "does it render in the templates that happen to exist" — which is
+     * an assertion that passes by accident.
+     */
+    public function test_every_template_that_claims_partials_has_them(): void
+    {
+        foreach (SectionType::TEMPLATES_WITH_PARTIALS as $template) {
+            $this->assertNotEmpty(
+                glob(resource_path('views/landing/' . $template . '/sections/*.blade.php')),
+                "The '{$template}' template is listed as shipping section partials and ships none."
+            );
+
             $this->assertTrue(
-                View::exists('landing.ruled_page.sections.' . $type->view),
-                "The '{$id}' type names a partial ({$type->view}) that does not exist."
+                View::exists('landing.' . $template . '.layout'),
+                "The '{$template}' template is listed as shipping section partials but has no layout."
             );
         }
     }
@@ -85,30 +134,51 @@ class SectionTypeTest extends TestCase
      */
     public function test_the_image_flag_matches_what_each_partial_actually_reads(): void
     {
+        $checked = 0;
+
         foreach (SectionType::ids() as $id) {
             $type = SectionType::get($id);
-            $file = resource_path('views/landing/ruled_page/sections/' . $type->view . '.blade.php');
 
-            $this->assertFileExists($file);
+            // Asked of EVERY template that draws this type, not only the
+            // first one found: a claim about a type is a claim about every
+            // partial rendering it, and a second template quietly reaching
+            // for a leaf its type does not declare is exactly the drift this
+            // test exists to catch. A template with no partial for the type
+            // is skipped rather than failed — see the view-exists test above
+            // for why that is a legitimate state.
+            foreach (SectionType::TEMPLATES_WITH_PARTIALS as $template) {
+                $file = resource_path('views/landing/' . $template . '/sections/' . $type->view . '.blade.php');
 
-            $body       = file_get_contents($file);
-            $readsOne   = str_contains($body, 'imageUrl(');
-            $readsMany  = str_contains($body, 'galleryImages(');
+                if (!is_file($file)) {
+                    continue;
+                }
 
-            $this->assertSame(
-                $type->image,
-                $readsOne || $readsMany,
-                "The '{$id}' type declares images={$type->images}"
-                . ' but its partial ' . ($readsOne || $readsMany ? 'does' : 'does not') . ' read a photo.'
-            );
+                $checked++;
 
-            $this->assertSame(
-                $type->images > 1,
-                $readsMany,
-                "The '{$id}' type declares images={$type->images} but its partial "
-                . ($readsMany ? 'reads the multi-photo leaves' : 'does not read the multi-photo leaves') . '.'
-            );
+                $body       = file_get_contents($file);
+                $readsOne   = str_contains($body, 'imageUrl(');
+                $readsMany  = str_contains($body, 'galleryImages(');
+
+                $this->assertSame(
+                    $type->image,
+                    $readsOne || $readsMany,
+                    "The '{$id}' type declares images={$type->images}"
+                    . " but its {$template} partial " . ($readsOne || $readsMany ? 'does' : 'does not') . ' read a photo.'
+                );
+
+                $this->assertSame(
+                    $type->images > 1,
+                    $readsMany,
+                    "The '{$id}' type declares images={$type->images} but its {$template} partial "
+                    . ($readsMany ? 'reads the multi-photo leaves' : 'does not read the multi-photo leaves') . '.'
+                );
+            }
         }
+
+        // A guard on the guard: a broken path expression above would skip
+        // every file and pass silently.
+        $this->assertGreaterThan(count(SectionType::ids()), $checked,
+            'The scan found fewer partials than there are types; the path expression is wrong.');
     }
 
     /**
@@ -128,18 +198,27 @@ class SectionTypeTest extends TestCase
     {
         foreach (SectionType::ids() as $id) {
             $type = SectionType::get($id);
-            $body = file_get_contents(
-                resource_path('views/landing/ruled_page/sections/' . $type->view . '.blade.php')
-            );
 
-            preg_match_all("/\\\$copy\['([a-z_]+)'\]/", $body, $matches);
+            // Every template that draws the type, for the reason the image
+            // scan above gives: the field list is a claim about the type, so
+            // a second design reading a leaf nobody can edit is the same bug
+            // wherever it lives.
+            foreach (SectionType::TEMPLATES_WITH_PARTIALS as $template) {
+                $file = resource_path('views/landing/' . $template . '/sections/' . $type->view . '.blade.php');
 
-            foreach (array_unique($matches[1]) as $field) {
-                $this->assertContains(
-                    $field,
-                    $type->fields,
-                    "The '{$id}' partial reads \$copy['{$field}'], which its type does not list as an editable field."
-                );
+                if (!is_file($file)) {
+                    continue;
+                }
+
+                preg_match_all("/\\\$copy\['([a-z0-9_]+)'\]/", file_get_contents($file), $matches);
+
+                foreach (array_unique($matches[1]) as $field) {
+                    $this->assertContains(
+                        $field,
+                        $type->fields,
+                        "The '{$id}' partial in {$template} reads \$copy['{$field}'], which its type does not list as an editable field."
+                    );
+                }
             }
         }
     }

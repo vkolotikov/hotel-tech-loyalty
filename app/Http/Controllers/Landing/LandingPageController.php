@@ -261,6 +261,32 @@ class LandingPageController extends Controller
                     ['lang' => app()->getLocale()],
                 )
                 : null,
+            // The review flow, resolved here for the same reason bookingUrl
+            // and chatFrameUrl are: the widget pages live on the ADMIN
+            // origin, and LandingPageSecurity is the only thing that knows
+            // which origin that is and whether its own frame-src names the
+            // path. PageContent holds the FACT (which form, which embed key,
+            // and whether a visitor could actually submit to it — see
+            // feedbackForm()); this turns it into an address.
+            //
+            // The BeautyTech kits' `data-action="open-feedback"` hook points
+            // at this. Null is a real and common answer — an organisation
+            // with no review form, or none active — and the templates render
+            // no link at all when it is null rather than a link that opens
+            // on "Form not found or inactive". ruled_page ignores this key
+            // entirely, which is why adding it moves none of its bytes.
+            //
+            // An outbound link rather than a frame, exactly like bookingUrl
+            // above (see sections/booking.blade.php on why the booking
+            // widget stopped being iframed) — widgetUrl() is still the right
+            // builder for it, and its frame-src check is a guard that costs
+            // nothing here.
+            'feedbackUrl' => $content->feedbackForm === null
+                ? null
+                : LandingPageSecurity::widgetUrl(
+                    '/review/' . $content->feedbackForm['id'],
+                    ['key' => $content->feedbackForm['key'], 'color' => $accent->brand],
+                ),
         ]);
     }
 }
