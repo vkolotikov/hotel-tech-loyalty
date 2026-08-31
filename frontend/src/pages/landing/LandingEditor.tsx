@@ -2,14 +2,18 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
-import { Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, Loader2, Save } from 'lucide-react'
+import {
+  Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, GripVertical, Loader2, Plus, Save, Trash2,
+} from 'lucide-react'
 import { api, resolveImage } from '../../lib/api'
 import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
-import { isDataBackedSection, isOfferable, unavailableReason, type SectionKey } from './sections'
+import { isDataBackedSection, isOfferable, unavailableReason } from './sections'
 import {
-  buildSectionRows, buildSectionsPayload, moveSection, safeImageUrl, stripImageUrlLeaves, toggleSection,
-  SECTION_CONTENT_FIELDS, type EditorSectionRow, type PageSection, type SectionAvailability,
+  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, instanceRowLabel, moveSection,
+  moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, stripImageUrlLeaves,
+  toggleSection,
+  type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
@@ -100,6 +104,28 @@ type LandingEditorProps = {
    */
   industries: IndustryOption[]
   templates: TemplateOption[]
+  /**
+   * Builder round: `onboarding.section_types` — `App\Landing\SectionType`'s
+   * own catalogue — handed down for the identical reason the three lists
+   * above are. It is what says which types may be ADDED, how many of one
+   * kind a page may hold, which fields each one edits and which take a
+   * photo. Nothing on this side of the wire holds a second copy of any of
+   * that; see `editorSections.ts`'s `SectionTypeOption`.
+   */
+  sectionTypes: SectionTypeOption[]
+  /**
+   * `onboarding.max_sections` — `SectionType::MAX_SECTIONS_PER_PAGE`, the
+   * total-row cap `LandingPageSectionController::store()` enforces inside
+   * its own transaction.
+   *
+   * Served rather than mirrored for the same reason everything else here is,
+   * and `null` (an older backend that does not publish it) is handled
+   * honestly: `addableTypes()` simply drops the page-cap gate, the add goes
+   * to the server, and the server refuses it with its own already-friendly
+   * sentence. A hardcoded 16 would be a number this screen believes and the
+   * server might not.
+   */
+  maxSections: number | null
 }
 
 // bg-dark-surface, never bg-dark-card — the two are different shades, and
@@ -171,17 +197,70 @@ function imageErrorMessage(e: unknown, fallback: string): string {
 }
 
 /**
- * The landing page editor: one row per section (enable toggle, up/down
- * reorder, plain-English label with its source, inline copy fields), plus
- * an explicit Save. Per the spec, **no canvas and no drag-and-drop** —
- * both are what inexperienced users struggle with most — so reordering is
- * two buttons, not a drag handle.
- *
- * Task 9 adds the right-hand live preview (`LandingPreview.tsx`); Task 10
- * adds the web-address/publish/unpublish block to the left column. Both
- * extend this file rather than restructure it.
+ * The builder round's equivalent of `imageErrorMessage`, and the same
+ * preference for the same reason: `LandingPageSectionController`'s add and
+ * remove verbs name every one of their messages by hand — "You can add up to
+ * six sections like this one", "Sections that come with the page can be
+ * switched off, but not removed" — and every one of them lands under
+ * `errors.type[0]` or `errors.key[0]`. The generic envelope
+ * (`error`/`message`) for those two routes is the string "Validation
+ * failed", which is true and useless.
  */
-export function LandingEditor({ sections: availability, industries, templates }: LandingEditorProps) {
+function sectionErrorMessage(e: unknown, fallback: string): string {
+  const err = e as { response?: { data?: {
+    errors?: Record<string, string[]>; error?: string; message?: string
+  } } }
+  return (
+    err.response?.data?.errors?.type?.[0]
+    ?? err.response?.data?.errors?.key?.[0]
+    ?? err.response?.data?.errors?.sections?.[0]
+    ?? err.response?.data?.error
+    ?? err.response?.data?.message
+    ?? fallback
+  )
+}
+
+/**
+ * The landing page editor: one row per section (enable toggle, reorder
+ * handle, plain-English label with its source, inline copy fields), plus an
+ * explicit Save. Task 9 adds the right-hand live preview
+ * (`LandingPreview.tsx`); Task 10 the web-address/publish/unpublish block.
+ *
+ * THE BUILDER ROUND CHANGED ONE OF ITS FOUNDING RULES, deliberately. The
+ * original spec said no drag-and-drop — reasoning that it is what
+ * inexperienced users struggle with most — so reordering was two chevrons.
+ * The tenant this product is for then asked for exactly that, by name
+ * ("some drag and drop… close to a builder, simplified"). Both are right
+ * about different people, so this screen now carries both paths onto the
+ * same operation rather than choosing between them:
+ *
+ *   - a grip handle each row can be DRAGGED by (HTML5 drag events, no
+ *     library — see `SectionRow`);
+ *   - the same two chevrons, kept exactly where they were. They are the
+ *     keyboard path, they are the touch path (HTML5 drag events do not fire
+ *     for touch), and they are the discoverable path for anyone who would
+ *     never think to try dragging;
+ *   - and the handle itself takes arrow keys, so a keyboard user who lands
+ *     on the drag affordance can use it rather than having to find another
+ *     control.
+ *
+ * Every one of those routes through `moveSection`/`moveSectionTo` and ends
+ * up in the same `PUT /sections` save, and every one announces itself
+ * through the same polite live region, so there is one reorder feature with
+ * three ways in rather than three features.
+ *
+ * ADD AND REMOVE ARE NOT PART OF THAT SAVE. `POST`/`DELETE /sections` write
+ * immediately, the way the photo endpoints already do — a section row is a
+ * database row, not a field, and queueing "this page has a new band" behind
+ * a Save button would mean the key the tenant is now typing into does not
+ * exist yet server-side (the image endpoint would refuse its slot, and the
+ * next `PUT /sections` would 422 on a key the page does not own). So both
+ * follow the photo controls' established pairing exactly: write, invalidate
+ * the query, bump `previewNonce`.
+ */
+export function LandingEditor({
+  sections: availability, industries, templates, sectionTypes, maxSections,
+}: LandingEditorProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
 
@@ -271,13 +350,77 @@ export function LandingEditor({ sections: availability, industries, templates }:
   // no BrandSummary yet, or "All brands" mode).
   const businessName = currentBrand()?.name || t('landing_pages.wizard.your_business', 'your business')
 
-  const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability)
+  // `page.content` (the SAVED row), never `f.content`, for the same reason
+  // the photo thumbnails read the raw query: it answers "has this band been
+  // written into" for the tenant-added rows, and the truthful answer is
+  // about what the server would render right now, not about a keystroke
+  // queued half a second ago. A tenant typing into a brand-new text block
+  // watches the hint clear on Save, which is exactly when the band actually
+  // appears on the page.
+  const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability, sectionTypes, page?.content)
 
-  const moveRow = (key: SectionKey, direction: 'up' | 'down') =>
-    update('sections', moveSection(f.sections ?? [], key, direction))
+  // Counted over the RAW rows, never `rows` — see `addableTypes`. A row this
+  // build failed to recognise still takes up a place on the page as far as
+  // `store()`'s cap is concerned.
+  const addable: AddableType[] = addableTypes(sectionTypes, f.sections ?? [], maxSections)
 
-  const toggleRow = (key: SectionKey) =>
+  // The one polite announcement channel every reorder path writes to —
+  // drag, chevrons, and arrow keys on the handle alike. A screen reader
+  // otherwise gets nothing at all from a drop: the list silently reorders
+  // and the row the user was on is somewhere else.
+  const [announcement, setAnnouncement] = useState('')
+
+  const announceMove = (next: PageSection[], key: string, label: string) => {
+    const at = sectionIndex(next, key)
+    if (at === -1) return
+    setAnnouncement(t('landing_pages.editor.reorder_announced', {
+      label,
+      position: at + 1,
+      total: next.length,
+      defaultValue: '{{label}} moved to position {{position}} of {{total}}.',
+    }))
+  }
+
+  const moveRow = (key: string, direction: 'up' | 'down', label: string) => {
+    const next = moveSection(f.sections ?? [], key, direction)
+    update('sections', next)
+    announceMove(next, key, label)
+  }
+
+  /**
+   * The drag half, and the Home/End half: put `key` where `targetKey`
+   * currently is. Named by TARGET rather than by position because the
+   * rendered list can be shorter than the page — see `moveSectionToKey`,
+   * which owns why, and `moveSectionTo` behind it for what "where that one
+   * is" means in each direction.
+   */
+  const dropRow = (key: string, targetKey: string, label: string) => {
+    const next = moveSectionToKey(f.sections ?? [], key, targetKey)
+    update('sections', next)
+    announceMove(next, key, label)
+  }
+
+  const toggleRow = (key: string) =>
     update('sections', toggleSection(f.sections ?? [], key))
+
+  // Which row is currently being dragged, and which one the pointer is
+  // over. Held HERE rather than per row because both questions are about
+  // the list, not about any one card: a row has to know whether it is the
+  // one being carried, and every other row has to know whether it is the
+  // one about to receive it.
+  //
+  // The dragged row's LABEL rides along with its key because the drop is
+  // handled by the row underneath the pointer, which knows its own name and
+  // not the travelling one's — and the announcement has to name the section
+  // that actually moved.
+  const [drag, setDrag] = useState<{ key: string; label: string } | null>(null)
+  const [dropKey, setDropKey] = useState<string | null>(null)
+  const dragKey = drag?.key ?? null
+
+  const endDrag = () => {
+    setDrag(null)
+    setDropKey(null)
+  }
 
   // Task 6: the photo endpoints (Task 4) save straight to the row and are
   // this field's ONLY writer (D4) — nothing here ever routes an upload/
@@ -288,6 +431,85 @@ export function LandingEditor({ sections: availability, industries, templates }:
   const onImageChanged = () => {
     qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
     setPreviewNonce(n => n + 1)
+  }
+
+  // ─── Add / remove a section (the builder round) ───────────────────────
+  //
+  // Both write immediately and both follow `onImageChanged`'s pairing
+  // exactly — invalidate, then bump `previewNonce`, because the SAVED draft
+  // really did change and the preview renders from it. (Adding a band moves
+  // nothing visible yet: an unwritten text block does not render at all, by
+  // `PageContent::count()`'s own rule. Bumping anyway is the honest thing —
+  // the nonce claims "there is a newer saved draft", not "you will see a
+  // difference".)
+  //
+  // The local `form` patch beside each is what makes the row appear at once
+  // rather than after the refetch, and it is CONDITIONAL on `form` already
+  // existing. Patching a null `form` would flip `dirty` to true — showing
+  // "Unsaved changes" and disabling Publish — for a change the server has
+  // already committed, which is a plain lie about the state of the page.
+  // When `form` is null there is nothing to patch anyway: `f` falls through
+  // to `page`, and the invalidated query brings the row back with it.
+  //
+  // Known and accepted: that leaves a sub-second window where an add has
+  // succeeded, `form` is still null, the refetch has not landed, and an edit
+  // to some OTHER field clones the pre-add `page` into `form` — so the new
+  // row waits until the next Save to reappear. Nothing is lost (the row and
+  // its key exist server-side; `PUT /sections` leaves rows it is not named,
+  // and the post-save refetch brings it back), and closing it would mean
+  // writing this endpoint's response into the query cache as if it were
+  // `show()`'s — a second, differently-produced shape standing in for the
+  // canonical one, which is a worse trade than a window a tenant would have
+  // to be typing during to reach.
+  const [justAdded, setJustAdded] = useState<string | null>(null)
+
+  const addMut = useMutation({
+    mutationFn: (type: string) =>
+      api.post('/v1/admin/landing-pages/sections', { type }).then(r => r.data as { key: string }),
+    onSuccess: ({ key }) => {
+      setForm(p => (p === null ? null : { ...p, sections: appendSection(p.sections ?? [], key) }))
+      qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
+      setPreviewNonce(n => n + 1)
+      // Focuses the new band's first writable field on mount, so a tenant
+      // who pressed "Add" can start typing without hunting for where the
+      // thing landed. Cleared as soon as it is spent — it must not steal
+      // focus back on the next unrelated re-render.
+      setJustAdded(key)
+    },
+    onError: (e: unknown) => toast.error(sectionErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const removeMut = useMutation({
+    mutationFn: (key: string) => api.delete('/v1/admin/landing-pages/sections', { data: { key } }),
+    onSuccess: (_res, key) => {
+      setForm(p => (p === null ? null : {
+        ...p,
+        sections: removeSection(p.sections ?? [], key),
+        // The dead section's copy goes with it. `PUT /v1/admin/landing-pages`
+        // replaces `content` WHOLESALE, so an unsaved clone left behind here
+        // would be written straight back — and since keys are allocated
+        // lowest-free, the next text block the tenant adds would open holding
+        // the words they just deleted. See `removeSectionContent`.
+        content: removeSectionContent(p.content, key) as LandingPageDTO['content'],
+      }))
+      qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
+      setPreviewNonce(n => n + 1)
+    },
+    onError: (e: unknown) => toast.error(sectionErrorMessage(e, t('common.error', 'Something went wrong'))),
+  })
+
+  const handleRemove = (row: EditorSectionRow, label: string) => {
+    // Plain language about what is actually destroyed — `destroy()` removes
+    // the row, unsets `content.<key>` and deletes the uploaded file, and a
+    // tenant is owed all three in words rather than "Are you sure?".
+    const confirmed = window.confirm(
+      t('landing_pages.editor.section_remove_confirm', {
+        label,
+        defaultValue:
+          'Remove "{{label}}"? The words you wrote in it and any photo you added to it are deleted too, and that cannot be undone.',
+      }),
+    )
+    if (confirmed) removeMut.mutate(row.key)
   }
 
   const saveMut = useMutation({
@@ -349,7 +571,15 @@ export function LandingEditor({ sections: availability, industries, templates }:
       // than trusting `body.sections` as-is) so `isOfferable`'s
       // forced-off gate applies to what actually reaches the server, not
       // only to what the toggle displays.
-      const toSave = buildSectionRows(body.sections ?? [], availability)
+      //
+      // BUILDER ROUND, and this argument is load-bearing: `sectionTypes` is
+      // what lets a tenant-added `text_1` row survive this re-derivation.
+      // Without it `buildSectionRows` drops every key it does not recognise,
+      // so the added band's `sort` never reached the server and a reorder
+      // that moved it silently did not stick — the row kept whatever `sort`
+      // `store()` appended it with while every other row was renumbered
+      // around it.
+      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content)
       if (toSave.length > 0) {
         calls.push(api.put('/v1/admin/landing-pages/sections', { sections: buildSectionsPayload(toSave) }))
       }
@@ -607,29 +837,97 @@ export function LandingEditor({ sections: availability, industries, templates }:
             />
           </div>
 
-          <div className="space-y-3">
-            {rows.map((row, i) => (
-              <SectionRow
-                key={row.key}
-                row={row}
-                isFirst={i === 0}
-                isLast={i === rows.length - 1}
-                content={f.content?.[row.key] ?? {}}
-                // Task 6: sourced from the QUERY's raw `page`, never from
-                // `f`/`form` — see the comment beside this row's own
-                // `type === 'image'` branch in `SectionRow` for why. Minor
-                // m4: that raw query leaf is also unvalidated raw-DB data —
-                // `safeImageUrl` is the allowlist gate that keeps a legal
-                // non-string leaf from reaching `resolveImage()`'s
-                // unconditional `url.match(...)` and taking this whole
-                // route down.
-                imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
-                onToggle={() => toggleRow(row.key)}
-                onMove={dir => moveRow(row.key, dir)}
-                onFieldChange={(field, value) => updateContent(row.key, field, value)}
-                onImageChanged={onImageChanged}
-              />
-            ))}
+          <div>
+            {/*
+              Said ONCE, above the list, rather than as a hint on every one
+              of up to sixteen cards — which is also the only way a page
+              with twelve sections stays calm. It has to be said somewhere:
+              a grip icon is not self-explanatory to the tenant this screen
+              is for, and the keyboard route is not discoverable at all
+              without being named.
+            */}
+            {rows.length > 0 && (
+              <p id="lp-reorder-help" className="text-xs text-t-secondary mb-2">
+                {t(
+                  'landing_pages.editor.reorder_help',
+                  'Drag a section by its handle to move it, or use the arrows. Sections appear on your page from top to bottom.',
+                )}
+              </p>
+            )}
+
+            <div className="space-y-3">
+              {rows.map((row, i) => (
+                <SectionRow
+                  key={row.key}
+                  row={row}
+                  isFirst={i === 0}
+                  isLast={i === rows.length - 1}
+                  index={i}
+                  total={rows.length}
+                  content={f.content?.[row.key] ?? {}}
+                  // Task 6: sourced from the QUERY's raw `page`, never from
+                  // `f`/`form` — see the comment beside this row's own
+                  // `type === 'image'` branch in `SectionRow` for why. Minor
+                  // m4: that raw query leaf is also unvalidated raw-DB data —
+                  // `safeImageUrl` is the allowlist gate that keeps a legal
+                  // non-string leaf from reaching `resolveImage()`'s
+                  // unconditional `url.match(...)` and taking this whole
+                  // route down.
+                  imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
+                  autoFocusFirstField={row.key === justAdded}
+                  onFocusHandled={() => setJustAdded(null)}
+                  dragging={dragKey === row.key}
+                  dragActive={dragKey !== null}
+                  dropTarget={dropKey === row.key && dragKey !== null && dragKey !== row.key}
+                  onDragStart={label => { setDrag({ key: row.key, label }); setDropKey(null) }}
+                  onDragOverRow={() => { if (dragKey !== null && dragKey !== row.key) setDropKey(row.key) }}
+                  onDragEnd={endDrag}
+                  onDropRow={() => {
+                    // The DRAGGED row moves to THIS row's position, and it is
+                    // the DRAGGED row that gets announced — which is why its
+                    // label was captured at drag start rather than read off
+                    // `row` here, where it would name the wrong section.
+                    if (drag !== null && drag.key !== row.key) dropRow(drag.key, row.key, drag.label)
+                    endDrag()
+                  }}
+                  onToggle={() => toggleRow(row.key)}
+                  onMove={(dir, label) => moveRow(row.key, dir, label)}
+                  // Home/End. Resolved to the first/last VISIBLE row's key
+                  // here, where the rendered list is — a row this build does
+                  // not draw is not somewhere "top of the list" could mean.
+                  onMoveEdge={(edge, label) => {
+                    const target = edge === 'first' ? rows[0] : rows[rows.length - 1]
+                    if (target && target.key !== row.key) dropRow(row.key, target.key, label)
+                  }}
+                  onRemove={label => handleRemove(row, label)}
+                  removing={removeMut.isPending && removeMut.variables === row.key}
+                  onFieldChange={(field, value) => updateContent(row.key, field, value)}
+                  onImageChanged={onImageChanged}
+                />
+              ))}
+            </div>
+
+            {rows.length === 0 && (
+              <p className={card + ' text-sm text-t-secondary'}>
+                {t(
+                  'landing_pages.editor.sections_empty',
+                  'Your page has no sections yet. Add one below and it will show up here, ready to write in.',
+                )}
+              </p>
+            )}
+
+            <AddSectionCard
+              types={addable}
+              adding={addMut.isPending ? (addMut.variables ?? null) : null}
+              onAdd={type => addMut.mutate(type)}
+            />
+
+            {/*
+              The one polite channel every reorder path writes to. Visually
+              hidden, never `hidden`/`display:none` — a hidden live region
+              announces nothing at all.
+            */}
+            <p aria-live="polite" className="sr-only">{announcement}</p>
           </div>
 
           <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
@@ -835,37 +1133,166 @@ function WebAddressCard({
   )
 }
 
-function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove, onFieldChange, onImageChanged }: {
+/** `t()` fallback per section TYPE id, for the bands a tenant adds
+ *  themselves. The fixed bands take their label off the wire instead (the
+ *  industry's own vocabulary — a clinic's "Procedures", a salon's
+ *  "Treatments"), which is why there is no entry here for any of them.
+ *
+ *  A tenant-added band cannot be named that way: it is not in any industry's
+ *  `defaultSections`, so `LandingOnboardingService::sections()` — which maps
+ *  over exactly that list — has nothing to say about it, in any industry.
+ *  Naming it here rather than adding it to the wire is also the honest
+ *  split: "Text block" is not vocabulary about somebody's trade, it is the
+ *  editor describing one of its own controls, which is what the rest of this
+ *  file's i18n already is. */
+const TYPE_NAME_FALLBACK: Record<string, string> = {
+  text: 'Text block',
+}
+
+/** The one sentence the "Add a section" control gives each type — what the
+ *  tenant would GET, not what the type is called. */
+const TYPE_BLURB_FALLBACK: Record<string, string> = {
+  text: 'A short heading and a few lines in your own words, with a photo if you want one.',
+}
+
+function SectionRow({
+  row, isFirst, isLast, index, total, content, imageUrl, autoFocusFirstField, onFocusHandled,
+  dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
+  onToggle, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
+}: {
   row: EditorSectionRow
   isFirst: boolean
   isLast: boolean
+  /** Position in the VISIBLE list, 0-based, and how long that list is.
+   *  Announcements and the handle's own accessible name both need it —
+   *  `sort` is an implementation detail nobody should be read out. */
+  index: number
+  total: number
   content: Record<string, string>
   /** Task 6: `page.content?.[row.key]?.image_url`, straight off the QUERY
    *  — see the field-loop's own comment below for why this can never be
    *  `content` (which is `f.content`, form-merged) instead. */
   imageUrl: string | null
+  /** Set for exactly one render, on the band the tenant has just added, so
+   *  they can start typing where they are already looking. */
+  autoFocusFirstField: boolean
+  onFocusHandled: () => void
+  dragging: boolean
+  dragActive: boolean
+  dropTarget: boolean
+  /** Carries this row's own display label up, so the drop — handled by a
+   *  DIFFERENT row — can announce the right section by name. */
+  onDragStart: (label: string) => void
+  onDragOverRow: () => void
+  onDragEnd: () => void
+  onDropRow: () => void
   onToggle: () => void
-  onMove: (direction: 'up' | 'down') => void
+  onMove: (direction: 'up' | 'down', label: string) => void
+  onMoveEdge: (edge: 'first' | 'last', label: string) => void
+  onRemove: (label: string) => void
+  removing: boolean
   onFieldChange: (field: string, value: string) => void
   onImageChanged: () => void
 }) {
   const { t } = useTranslation()
   // RULING 4, from ./sections — the one predicate the wizard's step 4 and
   // this row both call, so the two screens cannot disagree about which
-  // sections are real.
+  // sections are real. A tenant-added band falls through it to `true`, which
+  // is correct and is argued at the predicate itself.
   const offerable = isOfferable(row)
   const checked = offerable && row.enabled
-  const fields = SECTION_CONTENT_FIELDS[row.key]
+  // Built once, in `buildSectionRows`: the curated map for a fixed band, the
+  // SERVED catalogue for a tenant-added one (`fieldsForType`). This
+  // component no longer knows which of the two it is looking at, which is
+  // the point — a second repeatable type renders its own fields, and its own
+  // photo control, with no edit here.
+  const fields = row.fields
+  const firstWritableField = fields.findIndex(field => field.type !== 'image')
+
+  // `draggable` is armed by the HANDLE, not left permanently on the card.
+  // A permanently draggable card cannot have its text selected — every
+  // input and textarea inside it would start a drag instead of a
+  // selection — which is the whole reason the handle exists. Disarmed
+  // again on drag end and on a press that never became a drag.
+  const [armed, setArmed] = useState(false)
+
+  // A tenant-added band names itself; a fixed one is named by the wire, in
+  // the industry's own vocabulary. See `TYPE_NAME_FALLBACK`.
+  const typeName = t(
+    `landing_pages.editor.section_type_name_${row.typeId}`,
+    TYPE_NAME_FALLBACK[row.typeId] ?? row.typeId,
+  )
+  const displayLabel = row.fixed ? row.label : instanceRowLabel(typeName, row.ordinal, row.siblings)
+
+  const stopDrag = () => setArmed(false)
+
+  const onHandleKeyDown = (e: React.KeyboardEvent) => {
+    // The handle IS the keyboard reorder control, so a keyboard user who
+    // lands on the drag affordance can actually use it rather than having
+    // to go and find the arrows. Same two operations, same save path.
+    if (e.key === 'ArrowUp' && !isFirst) { e.preventDefault(); onMove('up', displayLabel) }
+    else if (e.key === 'ArrowDown' && !isLast) { e.preventDefault(); onMove('down', displayLabel) }
+    else if (e.key === 'Home' && !isFirst) { e.preventDefault(); onMoveEdge('first', displayLabel) }
+    else if (e.key === 'End' && !isLast) { e.preventDefault(); onMoveEdge('last', displayLabel) }
+  }
 
   return (
-    <div className={card + ' space-y-4'}>
+    <div
+      draggable={armed}
+      onDragStart={e => {
+        e.dataTransfer.effectAllowed = 'move'
+        // Firefox starts no drag at all unless the payload is set, even
+        // when nothing ever reads it back.
+        e.dataTransfer.setData('text/plain', row.key)
+        onDragStart(displayLabel)
+      }}
+      onDragEnd={() => { stopDrag(); onDragEnd() }}
+      onDragOver={e => {
+        // Only while one of OUR rows is in flight: without this guard the
+        // card would accept a file dropped from the desktop, and preventing
+        // the default on that is what turns a stray drop into a silent
+        // nothing instead of the browser opening the file.
+        if (!dragActive) return
+        e.preventDefault()
+        e.dataTransfer.dropEffect = 'move'
+        onDragOverRow()
+      }}
+      onDrop={e => {
+        if (!dragActive) return
+        e.preventDefault()
+        onDropRow()
+      }}
+      className={card + ' space-y-4 transition-[opacity,box-shadow] motion-reduce:transition-none '
+        + (dragging ? 'opacity-40 ' : '')
+        + (dropTarget ? 'ring-2 ring-primary-500/70 ' : '')}
+    >
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0">
-          <div className="flex flex-col shrink-0 -mt-0.5">
+          <div className="flex flex-col items-center shrink-0 -mt-0.5">
+            <button
+              type="button"
+              // Not `draggable` itself — the CARD is what gets dragged, and
+              // this only arms it. Dragging the handle alone would carry a
+              // 15px icon across the screen instead of the section.
+              onPointerDown={() => setArmed(true)}
+              onPointerUp={stopDrag}
+              onKeyDown={onHandleKeyDown}
+              onBlur={stopDrag}
+              aria-describedby="lp-reorder-help"
+              aria-label={t('landing_pages.editor.reorder_handle', {
+                label: displayLabel,
+                position: index + 1,
+                total,
+                defaultValue: 'Move {{label}} — position {{position}} of {{total}}',
+              })}
+              className="text-t-secondary hover:text-white cursor-grab active:cursor-grabbing outline-none rounded focus-visible:ring-2 focus-visible:ring-primary-500/40"
+            >
+              <GripVertical size={15} />
+            </button>
             <button
               type="button"
               disabled={isFirst}
-              onClick={() => onMove('up')}
+              onClick={() => onMove('up', displayLabel)}
               aria-label={t('landing_pages.editor.move_up', 'Move up')}
               className="text-t-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
@@ -874,7 +1301,7 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
             <button
               type="button"
               disabled={isLast}
-              onClick={() => onMove('down')}
+              onClick={() => onMove('down', displayLabel)}
               aria-label={t('landing_pages.editor.move_down', 'Move down')}
               className="text-t-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
             >
@@ -883,8 +1310,25 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
           </div>
 
           <div className="min-w-0">
-            <span className="block text-sm font-medium text-white">{row.label}</span>
-            {offerable ? (
+            <span className="block text-sm font-medium text-white">{displayLabel}</span>
+            {!row.fixed ? (
+              /* A tenant-added band, whose one honest thing to say is
+                 whether it will actually appear. `PageContent::count()`
+                 publishes a text band only once its BODY is filled — an
+                 eyebrow, a heading or a photo over blank space is a
+                 fragment, not a section — so a tenant who adds a block,
+                 uploads a photo and sees the preview not change has to be
+                 told why here, or they never find out at all. */
+              <span className={'block text-xs mt-0.5 '
+                + (row.available ? 'text-t-secondary' : 'text-t-secondary/80 leading-relaxed')}>
+                {row.available
+                  ? t('landing_pages.editor.section_own_words', 'Words you write here')
+                  : t(
+                    'landing_pages.editor.section_needs_words',
+                    'Nothing written yet — this block appears on your page once you add some words.',
+                  )}
+              </span>
+            ) : offerable ? (
               <span className="block text-xs text-t-secondary mt-0.5">
                 {/* Task 11 — same rule as LandingWizard's step 4, and for
                     the same reason: a count is only meaningful for a
@@ -923,28 +1367,55 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
           </div>
         </div>
 
-        {offerable ? (
-          <button
-            type="button"
-            role="switch"
-            aria-checked={checked}
-            aria-label={row.label}
-            onClick={onToggle}
-            className={'relative shrink-0 w-9 h-5 rounded-full transition-colors outline-none '
-              + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
-              + (checked ? 'bg-primary-500' : 'bg-dark-border')}
-          >
-            <span
-              aria-hidden
-              className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform '
-                + (checked ? 'translate-x-4' : 'translate-x-0.5')}
-            />
-          </button>
-        ) : (
-          <span className="shrink-0 rounded-full border border-dark-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
-            {t('landing_pages.editor.section_not_yet', 'Not yet')}
-          </span>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {offerable ? (
+            <button
+              type="button"
+              role="switch"
+              aria-checked={checked}
+              aria-label={displayLabel}
+              onClick={onToggle}
+              className={'relative shrink-0 w-9 h-5 rounded-full transition-colors motion-reduce:transition-none outline-none '
+                + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
+                + (checked ? 'bg-primary-500' : 'bg-dark-border')}
+            >
+              <span
+                aria-hidden
+                className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform motion-reduce:transition-none '
+                  + (checked ? 'translate-x-4' : 'translate-x-0.5')}
+              />
+            </button>
+          ) : (
+            <span className="shrink-0 rounded-full border border-dark-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
+              {t('landing_pages.editor.section_not_yet', 'Not yet')}
+            </span>
+          )}
+
+          {/*
+            ONLY on a band the tenant added. The fixed bands are seeded with
+            the page and `LandingPageSectionController::destroy()` refuses
+            them outright — offering a Remove button that always fails would
+            be a worse answer than the toggle beside it, which is the real
+            way to take a fixed band off the page. `row.fixed` is derived
+            from the served catalogue's own key grammar, not from a list of
+            removable keys kept here.
+          */}
+          {!row.fixed && (
+            <button
+              type="button"
+              disabled={removing}
+              onClick={() => onRemove(displayLabel)}
+              title={t('landing_pages.editor.section_remove', 'Remove this section')}
+              aria-label={t('landing_pages.editor.section_remove_named', {
+                label: displayLabel,
+                defaultValue: 'Remove {{label}}',
+              })}
+              className={btnSec + ' !px-2 hover:!text-warning'}
+            >
+              <Trash2 size={13} />
+            </button>
+          )}
+        </div>
       </div>
 
       {offerable && (
@@ -965,7 +1436,7 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
               )}
             </p>
           )}
-          {fields.map(field => (
+          {fields.map((field, fieldIndex) => (
             <div key={field.name}>
               <label className={label} htmlFor={field.type === 'image' ? undefined : `lp-${row.key}-${field.name}`}>
                 {t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name)}
@@ -992,12 +1463,23 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
                   id={`lp-${row.key}-${field.name}`}
                   className={input + ' resize-y'}
                   rows={4}
+                  autoFocus={autoFocusFirstField && fieldIndex === firstWritableField}
+                  onFocus={onFocusHandled}
                   value={content[field.name] ?? ''}
                   onChange={e => onFieldChange(field.name, e.target.value)}
                 />
               ) : (
                 <input
                   id={`lp-${row.key}-${field.name}`}
+                  // "Expanded, ready to type into": the band the tenant just
+                  // added takes the caret, so they can start writing where
+                  // they are already looking instead of hunting for where it
+                  // landed. The FIRST WRITABLE field, never simply the first
+                  // — a text block's first control is its photo picker, and
+                  // opening a file dialog nobody asked for would be a worse
+                  // welcome than none at all.
+                  autoFocus={autoFocusFirstField && fieldIndex === firstWritableField}
+                  onFocus={onFocusHandled}
                   // Fix 1 (phase 3a correctness review): mirrors the
                   // backend's own `content.contact.email`/`.phone`/
                   // `.address` rules client-side, same reasoning as the web
@@ -1022,6 +1504,99 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
 }
 
 /**
+ * "Add a section", at the foot of the list.
+ *
+ * One button per ADDABLE type, and the list of them is the server's
+ * (`section_types` filtered to `repeatable`), never a hand list here — which
+ * is what makes a second repeatable type a backend change and nothing else.
+ * Today that is exactly one button; the layout is a column of them rather
+ * than a special case for one, because the day there are three the only
+ * thing that should have to change is the catalogue.
+ *
+ * A type at its cap is DISABLED WITH ITS REASON SHOWN, not hidden: a tenant
+ * who is looking for the control they used ten minutes ago must find it and
+ * be told why it will not work, rather than watch it vanish. Both sentences
+ * name the real number, interpolated from the served cap — see
+ * `addableTypes`, which decides which of the two applies.
+ */
+function AddSectionCard({ types, adding, onAdd }: {
+  types: AddableType[]
+  /** The type id currently in flight, or null. */
+  adding: string | null
+  onAdd: (type: string) => void
+}) {
+  const { t } = useTranslation()
+
+  // Nothing addable at all — an older backend that serves no catalogue, or
+  // one whose catalogue has no repeatable type. No card, no empty heading
+  // over nothing.
+  if (types.length === 0) return null
+
+  return (
+    <div className={card + ' mt-3 space-y-3'}>
+      <div>
+        <h2 className="text-sm font-semibold text-white">
+          {t('landing_pages.editor.add_section', 'Add a section')}
+        </h2>
+        <p className="text-xs text-t-secondary mt-0.5">
+          {t(
+            'landing_pages.editor.add_section_hint',
+            'New sections go to the bottom of the page. You can move them anywhere afterwards.',
+          )}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        {types.map(type => {
+          const name = t(
+            `landing_pages.editor.section_type_name_${type.id}`,
+            TYPE_NAME_FALLBACK[type.id] ?? type.id,
+          )
+          // `limit`, deliberately never `count`: i18next reads `count` as a
+          // plural selector and starts looking for `_one`/`_other` variants
+          // of the key. These two sentences are written whole in each
+          // language and have no plural forms to select between.
+          const reason = type.disabledReason === 'type_limit'
+            ? t('landing_pages.editor.add_section_type_full', {
+              limit: type.limit,
+              name,
+              defaultValue: 'You already have {{limit}} of these — that is as many as one page can hold. Remove one to add another.',
+            })
+            : type.disabledReason === 'page_full'
+              ? t('landing_pages.editor.add_section_page_full', {
+                limit: type.pageLimit ?? 0,
+                defaultValue: 'Your page is full — it holds up to {{limit}} sections. Remove one to add another.',
+              })
+              : null
+
+          return (
+            <div key={type.id}>
+              <button
+                type="button"
+                disabled={reason !== null || adding !== null}
+                onClick={() => onAdd(type.id)}
+                className={btnSec + ' w-full !py-2.5'}
+              >
+                <Plus size={14} />
+                {adding === type.id
+                  ? t('landing_pages.editor.add_section_working', 'Adding…')
+                  : t('landing_pages.editor.add_section_named', { name, defaultValue: 'Add a {{name}}' })}
+              </button>
+              <p className={'text-xs mt-1 ' + (reason ? 'text-t-secondary/80 leading-relaxed' : 'text-t-secondary')}>
+                {reason ?? t(
+                  `landing_pages.editor.section_type_blurb_${type.id}`,
+                  TYPE_BLURB_FALLBACK[type.id] ?? '',
+                )}
+              </p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/**
  * Task 6: the hero/about photo control. Per the spec, **no drag-and-drop
  * and no canvas UI** — a single native `<input type="file">`, no custom
  * drop-zone, no in-browser cropper. Its own `useMutation`s (rather than
@@ -1029,9 +1604,16 @@ function SectionRow({ row, isFirst, isLast, content, imageUrl, onToggle, onMove,
  * self-contained round-trip with nothing for the parent to own beyond the
  * `onChanged` callback — it is never queued into `saveMut`/`form` (D4; see
  * the field-loop's own comment at this component's one call site).
+ *
+ * Builder round: `sectionKey` widened from `SectionKey` to a plain string,
+ * because a tenant-added band takes a photo too and `text_1` is not in that
+ * union. The slot allowlist was never this type's job in the first place —
+ * `SectionType::imageKeys()` is the one that decides, and it enumerates
+ * every `text_N` alongside `hero`/`about` precisely so this endpoint could
+ * accept them. `imageErrorMessage` already surfaces its refusal in words.
  */
 function ImageField({ sectionKey, imageUrl, onChanged }: {
-  sectionKey: SectionKey
+  sectionKey: string
   imageUrl: string | null
   onChanged: () => void
 }) {

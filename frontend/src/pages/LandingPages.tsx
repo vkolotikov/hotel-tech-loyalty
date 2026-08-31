@@ -200,11 +200,24 @@ export function LandingPages() {
   // drift RULING 4 closed for sections.
   return (
     <BrandRequired feature={t('landing_pages.brand_required', 'your landing page')}>
+      {/*
+        `sectionTypes`/`maxSections` (the builder round) ride the SAME
+        response for the same reason as the three lists above it:
+        `App\Landing\SectionType`'s catalogue and its page cap are served on
+        `onboarding`, never mirrored in TypeScript, so which sections a
+        tenant may add — and how many — is one fact with one source. Both
+        fall back to "the backend did not say", which `addableTypes()`
+        handles by simply not drawing the control / not pre-judging the cap,
+        rather than by guessing a number this build would then enforce
+        against a server that disagreed.
+      */}
       <LandingEditor
         key={currentBrandId ?? 'org'}
         sections={data?.sections ?? []}
         industries={data?.industries ?? []}
         templates={data?.templates ?? []}
+        sectionTypes={data?.section_types ?? []}
+        maxSections={typeof data?.max_sections === 'number' ? data.max_sections : null}
       />
     </BrandRequired>
   )
