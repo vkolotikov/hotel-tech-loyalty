@@ -38,7 +38,7 @@ export type DraftSectionRow = {
  *
  * Deliberately the SAME three things the save path sends (`theme`,
  * `content`, the section rows) and built by the SAME helpers
- * (`themePayload`, `stripImageUrlLeaves`, `buildSectionsPayload`) — a
+ * (`themePayload`, `stripImageLeaves`, `buildSectionsPayload`) — a
  * preview assembled from a second, nearly-identical payload builder would be
  * a preview of something the save would not produce.
  *

@@ -750,8 +750,16 @@ class LandingOnboardingTest extends TestCase
 
         foreach ($types as $type) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
                 array_keys($type)
+            );
+            // The photo count rides the wire the same way `limit` does, and
+            // for the same reason: the editor's photo strip has to know how
+            // many pictures a gallery holds, and a number it carried itself
+            // would be a second copy of SectionType's own.
+            $this->assertSame(
+                count(SectionType::imageLeaves($type['repeatable'] ? $type['id'] . '_1' : $type['id'])),
+                $type['image_slots'],
             );
             // A server-side view path has no business on the wire. Neither
             // does `band` (the tone round): it is a class on a stylesheet the

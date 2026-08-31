@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   addableTypes, appendSection, buildSectionRows, buildSectionsPayload, fieldsForType, instanceRowLabel,
   moveSection, moveSectionTo, moveSectionToKey, orderedSections, parseSectionKey, removeSection, removeSectionContent,
-  safeImageUrl, sectionIndex, setSectionTone, stripImageUrlLeaves, toggleSection,
+  freeGalleryLeaves, gallerySlots,
+  safeImageUrl, sectionIndex, setSectionTone, stripImageLeaves, toggleSection,
   SECTION_CONTENT_FIELDS,
   type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
@@ -64,6 +65,9 @@ describe('buildSectionRows', () => {
       // became removable" is exactly the regression this asserts against.
       typeId: 'services', fixed: true, ordinal: 1, siblings: 1,
       fields: SECTION_CONTENT_FIELDS.services,
+      // Gallery round: what makes a tenant-added band appear. A fixed row
+      // never renders that line, so this is the harmless default.
+      writtenBy: 'words',
       // Tone round: the band's colour and the swatch to light while it has
       // none. This fixture's `sectionTypes` argument is absent, so there is
       // no served `default_tone` to find — null, not a guess.
@@ -312,18 +316,18 @@ describe('safeImageUrl', () => {
 
 /**
  * Fix round 1 (ruling 3b-4): `saveMut.mutationFn`'s one choke point before
- * a text-only save reaches the server — see `stripImageUrlLeaves`'s own
+ * a text-only save reaches the server — see `stripImageLeaves`'s own
  * docblock for why an unstripped `image_url` leaf gets dragged into `form`
  * by reference and 422s an ordinary text save.
  */
-describe('stripImageUrlLeaves', () => {
+describe('stripImageLeaves', () => {
   it('strips image_url from multiple sections at once, leaving siblings intact', () => {
     const content = {
       hero:  { image_url: '/storage/landing/hero.png', headline: 'Quiet luxury', subtext: 'Calm, considered.' },
       about: { image_url: '/storage/landing/about.png', kicker: 'Our story', lead: 'Since 2014' },
       services: { kicker: 'What we do', heading: 'Treatments' },
     }
-    expect(stripImageUrlLeaves(content)).toEqual({
+    expect(stripImageLeaves(content)).toEqual({
       hero:  { headline: 'Quiet luxury', subtext: 'Calm, considered.' },
       about: { kicker: 'Our story', lead: 'Since 2014' },
       services: { kicker: 'What we do', heading: 'Treatments' },
@@ -332,26 +336,67 @@ describe('stripImageUrlLeaves', () => {
 
   it('tolerates a non-object section — string, number, or null — passing it through untouched', () => {
     const content = { hero: 'a bare scalar section', about: 42, contact: null }
-    expect(stripImageUrlLeaves(content as unknown as Record<string, unknown>)).toEqual({
+    expect(stripImageLeaves(content as unknown as Record<string, unknown>)).toEqual({
       hero: 'a bare scalar section', about: 42, contact: null,
     })
   })
 
   it('tolerates null or undefined content, returning {} — matching the save body\'s own `?? {}`', () => {
-    expect(stripImageUrlLeaves(null)).toEqual({})
-    expect(stripImageUrlLeaves(undefined)).toEqual({})
+    expect(stripImageLeaves(null)).toEqual({})
+    expect(stripImageLeaves(undefined)).toEqual({})
   })
 
   it('does not mutate the input object', () => {
     const content = { hero: { image_url: '/storage/landing/hero.png', headline: 'Old' } }
     const snapshot = JSON.parse(JSON.stringify(content))
-    stripImageUrlLeaves(content)
+    stripImageLeaves(content)
     expect(content).toEqual(snapshot)
   })
 
   it('a section with no image_url to begin with is returned with every key intact', () => {
     const content = { services: { kicker: 'What we do', heading: 'Treatments', subtext: 'Every service, one place.' } }
-    expect(stripImageUrlLeaves(content)).toEqual(content)
+    expect(stripImageLeaves(content)).toEqual(content)
+  })
+
+  /**
+   * The gallery round widened this from the single `image_url` leaf to the
+   * whole `image_*` family, because that is the family
+   * `LandingPageController::update()` refuses (`SectionType::isImageField`).
+   * Leaving even one of a gallery's eight leaves on the wire 422s the save
+   * that a tenant only meant to change a caption in.
+   */
+  it('strips every photo leaf a gallery holds, not only image_url', () => {
+    const content = {
+      gallery_1: {
+        heading: 'The rooms',
+        image_1: '/storage/landing/one.png',
+        image_2: '/storage/landing/two.png',
+        image_8: '/storage/landing/eight.png',
+      },
+      hero: { image_url: '/storage/landing/hero.png', headline: 'Quiet luxury' },
+    }
+    expect(stripImageLeaves(content)).toEqual({
+      gallery_1: { heading: 'The rooms' },
+      hero: { headline: 'Quiet luxury' },
+    })
+  })
+
+  /**
+   * Wider than the eight legitimate leaves ON PURPOSE, for the reason
+   * `isImageField()` gives on the server: the refusal is the whole family,
+   * so a leaf a raw write left behind has to be stripped too or the save it
+   * rides along on fails with a message about photos the tenant did not
+   * touch.
+   */
+  it('strips a photo leaf outside the eight a gallery legitimately holds', () => {
+    expect(stripImageLeaves({ gallery_1: { image_9: '/storage/x.png', heading: 'Kept' } }))
+      .toEqual({ gallery_1: { heading: 'Kept' } })
+  })
+
+  /** A field that merely starts with the word is copy and stays editable. */
+  it('leaves copy fields whose names only resemble a photo leaf', () => {
+    const content = { hero: { image: 'not a leaf', imageurl: 'nor this', headline: 'Kept' } }
+    expect(stripImageLeaves(content)).toEqual(content)
   })
 })
 
@@ -375,7 +420,13 @@ const sectionTypes = (): SectionTypeOption[] => [
   { id: 'booking', repeatable: false, fields: ['kicker', 'heading', 'terms', 'call_label', 'call_short'], image: false, limit: null, default_tone: 'soft' },
   { id: 'contact', repeatable: false, fields: ['kicker', 'phone', 'email', 'address'], image: false, limit: null, default_tone: 'soft' },
   { id: 'footer', repeatable: false, fields: [], image: false, limit: null, default_tone: 'page' },
-  { id: 'text', repeatable: true, fields: ['kicker', 'heading', 'body'], image: true, limit: 6, default_tone: 'soft' },
+  { id: 'text', repeatable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6, default_tone: 'soft' },
+  // The gallery round. `image: false` with `image_slots: 8` is the wire's
+  // own shape and not a mistake — `SectionType::payload()` publishes the
+  // legacy bool as `images === 1` so a bundle that predates galleries draws
+  // no photo control for one rather than a one-photo control the endpoints
+  // would refuse. See that method's docblock.
+  { id: 'gallery', repeatable: true, fields: ['kicker', 'heading'], image: false, image_slots: 8, limit: 6, default_tone: 'page' },
 ]
 
 describe('parseSectionKey', () => {
@@ -405,7 +456,13 @@ describe('parseSectionKey', () => {
     // its id to `text_1`, which is not a type.
     expect(parseSectionKey('text_1_2', types)).toBeNull()
     // A type this build was never told about.
-    expect(parseSectionKey('gallery_1', types)).toBeNull()
+    expect(parseSectionKey('carousel_1', types)).toBeNull()
+    // A gallery IMAGE SLOT is not a section key: the image endpoints parse
+    // `gallery_1.image_3`, and nothing in the section list may treat it as a
+    // row.
+    expect(parseSectionKey('gallery_1.image_3', types)).toBeNull()
+    expect(parseSectionKey('gallery', types)).toBeNull()
+    expect(parseSectionKey('gallery_7', types)).toBeNull()
     expect(parseSectionKey('', types)).toBeNull()
   })
 
@@ -452,7 +509,8 @@ describe('fieldsForType', () => {
 
   it('omits the photo control for a type that takes no photo', () => {
     const text = sectionTypes().find(t => t.id === 'text')!
-    expect(fieldsForType({ ...text, image: false }).map(f => f.name)).toEqual(['kicker', 'heading', 'body'])
+    expect(fieldsForType({ ...text, image: false, image_slots: 0 }).map(f => f.name))
+      .toEqual(['kicker', 'heading', 'body'])
   })
 
   /** `image_url` is never on the wire's `fields` — it has one writer, the
@@ -461,6 +519,58 @@ describe('fieldsForType', () => {
     const text = sectionTypes().find(t => t.id === 'text')!
     const fields = fieldsForType({ ...text, fields: ['kicker'] })
     expect(fields.filter(f => f.type === 'image')).toHaveLength(1)
+  })
+
+  /**
+   * A MULTI-PHOTO type gets the strip, not the plate — and exactly one of
+   * the two. They write different leaves through differently-spelled slots
+   * (`gallery_1.image_3` against `hero`), so a row offering both would be
+   * offering a control the endpoints refuse.
+   */
+  it('gives a multi-photo type the strip, carrying the served cap', () => {
+    const gallery = sectionTypes().find(t => t.id === 'gallery')!
+    expect(fieldsForType(gallery)).toEqual([
+      { name: 'gallery', type: 'gallery', slots: 8 },
+      { name: 'kicker' },
+      { name: 'heading' },
+    ])
+    expect(fieldsForType(gallery).filter(f => f.type === 'image')).toHaveLength(0)
+  })
+
+  /**
+   * THE CAP IS SERVED. A backend that raises it needs no release on this
+   * side, and this side never carries a literal eight — the same discipline
+   * `parseSectionKey` already applies to `limit`.
+   */
+  it('takes the photo cap from the wire rather than a literal', () => {
+    const gallery = sectionTypes().find(t => t.id === 'gallery')!
+    expect(fieldsForType({ ...gallery, image_slots: 12 })[0]).toEqual(
+      { name: 'gallery', type: 'gallery', slots: 12 },
+    )
+  })
+
+  /**
+   * A backend that predates galleries publishes no `image_slots` at all, and
+   * the fallback is the legacy bool — one photo or none, which is exactly
+   * what that build's catalogue means. Never a guess at eight.
+   */
+  it('falls back to the legacy image bool when the wire carries no count', () => {
+    const text = sectionTypes().find(t => t.id === 'text')!
+    const legacy = { ...text }
+    delete legacy.image_slots
+
+    expect(fieldsForType(legacy)[0]).toEqual({ name: 'image_url', type: 'image' })
+    expect(fieldsForType({ ...legacy, image: false })[0]).toEqual({ name: 'kicker' })
+  })
+
+  /** A count the wire could not have meant is not a photo control. */
+  it('treats a nonsense served count as no count at all', () => {
+    const gallery = sectionTypes().find(t => t.id === 'gallery')!
+
+    for (const slots of [0, -1, 1.5, null] as const) {
+      expect(fieldsForType({ ...gallery, image_slots: slots }).map(f => f.name))
+        .toEqual(['kicker', 'heading'])
+    }
   })
 })
 
@@ -555,7 +665,7 @@ describe('buildSectionRows — tenant-added rows', () => {
   })
 
   it('still drops a key that is neither fixed nor a legal instance', () => {
-    const junk: PageSection[] = [...pageSections(), { key: 'gallery_1', enabled: true, sort: 7 }]
+    const junk: PageSection[] = [...pageSections(), { key: 'carousel_1', enabled: true, sort: 7 }]
     expect(buildSectionRows(junk, availability(), sectionTypes()).map(r => r.key)).toEqual(SECTION_ORDER)
   })
 })
@@ -706,7 +816,7 @@ describe('addableTypes', () => {
   ]
 
   it('offers only the repeatable types', () => {
-    expect(addableTypes(sectionTypes(), page(0), 16).map(t => t.id)).toEqual(['text'])
+    expect(addableTypes(sectionTypes(), page(0), 16).map(t => t.id)).toEqual(['text', 'gallery'])
   })
 
   it('offers nothing at all when the catalogue has not arrived', () => {
@@ -933,5 +1043,189 @@ describe('buildSectionRows — tone', () => {
     })
     const rows = buildSectionRows(pageSections(), availability(), bare)
     expect(rows.every(r => r.defaultTone === null)).toBe(true)
+  })
+})
+
+// ─── The gallery round: the photo strip's own maths ─────────────────────
+//
+// `App\Landing\PageContent::galleryImages()`'s answer and
+// `SectionType::nextInstanceKey()`'s lowest-free rule, both re-derived on
+// this side because nothing on the wire carries either (the onboarding
+// response structurally cannot — see `buildSectionRows`). These are the
+// functions the thumbnails, the count, the remove buttons and the multi-file
+// upload are all built from, so this is where the strip is actually proven:
+// `GalleryField` itself is a React component and this repo's vitest is
+// node-env, pure-function-only.
+
+describe('gallerySlots', () => {
+  it('lists the photos in leaf order with their slots, whatever order they are stored in', () => {
+    const section = {
+      heading: 'The rooms',
+      image_8: '/storage/landing/eighth.jpg',
+      image_1: '/storage/landing/first.jpg',
+      image_5: 'https://cdn.example.test/fifth.jpg',
+    }
+
+    expect(gallerySlots(section, 'gallery_1', 8)).toEqual([
+      { leaf: 'image_1', slot: 'gallery_1.image_1', url: '/storage/landing/first.jpg' },
+      { leaf: 'image_5', slot: 'gallery_1.image_5', url: 'https://cdn.example.test/fifth.jpg' },
+      { leaf: 'image_8', slot: 'gallery_1.image_8', url: '/storage/landing/eighth.jpg' },
+    ])
+  })
+
+  /**
+   * The same allowlist the renderer applies (`safeImageUrl`, mirroring
+   * `PageContent::imageUrl()`'s prefix rule), one leaf at a time: a
+   * legal-but-unusable value handed to `resolveImage()` throws on its
+   * unconditional `url.match(...)` and takes the whole editor route down —
+   * minor m4's finding, eight leaves at a time.
+   */
+  it('drops every leaf that fails the allowlist and keeps the rest', () => {
+    const section = {
+      image_1: '/storage/landing/first.jpg',
+      image_2: 'javascript:alert(1)',
+      image_3: '//evil.example/x.jpg',
+      image_4: '',
+      image_5: 42,
+      image_6: { nested: 'value' },
+      image_7: null,
+      image_8: '/storage/landing/eighth.jpg',
+    }
+
+    expect(gallerySlots(section, 'gallery_1', 8).map(p => p.leaf)).toEqual(['image_1', 'image_8'])
+  })
+
+  /** The cap is the SERVED one, so a leaf past it is not a photo the strip may show or offer to remove. */
+  it('never looks past the served cap', () => {
+    const section = { image_1: '/storage/a.jpg', image_9: '/storage/b.jpg' }
+
+    expect(gallerySlots(section, 'gallery_1', 8).map(p => p.leaf)).toEqual(['image_1'])
+    expect(gallerySlots(section, 'gallery_1', 0)).toEqual([])
+  })
+
+  /** `content` is schemaless: a scalar, an array, null and undefined are all shapes it holds. */
+  it('tolerates every non-map shape a raw write can leave behind', () => {
+    for (const section of ['a string', 42, null, undefined, ['image_1'], true]) {
+      expect(gallerySlots(section, 'gallery_1', 8)).toEqual([])
+    }
+  })
+})
+
+describe('freeGalleryLeaves', () => {
+  it('hands back the lowest free leaves, so a removal is the next slot filled', () => {
+    // image_3 removed from a gallery of four: the next upload fills the gap
+    // rather than burning image_5 — `nextInstanceKey`'s rule, one level down.
+    const section = { image_1: '/storage/a.jpg', image_2: '/storage/b.jpg', image_4: '/storage/d.jpg' }
+
+    expect(freeGalleryLeaves(section, 8, 1)).toEqual(['image_3'])
+    expect(freeGalleryLeaves(section, 8, 3)).toEqual(['image_3', 'image_5', 'image_6'])
+  })
+
+  it('allocates a whole multi-file pick at once, with no leaf claimed twice', () => {
+    const leaves = freeGalleryLeaves({ image_1: '/storage/a.jpg' }, 8, 4)
+
+    expect(leaves).toEqual(['image_2', 'image_3', 'image_4', 'image_5'])
+    expect(new Set(leaves).size).toBe(leaves.length)
+  })
+
+  /**
+   * THE CAP, and the way the strip reports it: fewer leaves than asked for,
+   * never an error. The caller uploads what fits and says plainly why the
+   * rest did not.
+   *
+   * Mutation target: drop the `free.length < wanted` bound or the `n <=
+   * limit` one and this goes red.
+   */
+  it('returns fewer than asked for at the cap, and nothing at all when full', () => {
+    const full = Object.fromEntries(
+      Array.from({ length: 8 }, (_, i) => ['image_' + (i + 1), '/storage/' + i + '.jpg']),
+    )
+
+    expect(freeGalleryLeaves(full, 8, 3)).toEqual([])
+    expect(freeGalleryLeaves({ ...full, image_8: undefined }, 8, 3)).toEqual(['image_8'])
+    expect(freeGalleryLeaves({}, 8, 20)).toHaveLength(8)
+  })
+
+  /**
+   * OCCUPIED, not usable. A leaf holding a value the allowlist rejects is
+   * still a leaf an upload would overwrite, and treating it as free would
+   * silently destroy whatever is there — so it is not offered as a free
+   * slot even though `gallerySlots` will not show it.
+   */
+  it('treats an unusable leaf as occupied rather than free', () => {
+    const section = { image_1: 'javascript:alert(1)', image_2: 42 }
+
+    expect(freeGalleryLeaves(section, 8, 1)).toEqual(['image_3'])
+  })
+
+  it('tolerates every non-map shape a raw write can leave behind', () => {
+    for (const section of ['a string', 42, null, undefined, ['image_1']]) {
+      expect(freeGalleryLeaves(section, 8, 2)).toEqual(['image_1', 'image_2'])
+    }
+  })
+})
+
+describe('buildSectionRows — a gallery row', () => {
+  const withGallery = (): PageSection[] => [
+    { key: 'hero', enabled: true, sort: 0 },
+    { key: 'gallery_1', enabled: true, sort: 1 },
+  ]
+
+  /**
+   * `PageContent::count()`'s `'gallery' =>` arm, restated: a gallery is its
+   * PICTURES, so a caption alone does not make it appear — and the row has
+   * to say so with the right sentence. Telling a tenant to "add some words"
+   * for a band that renders on photos would send them exactly the wrong way,
+   * which is what `writtenBy` exists to prevent.
+   */
+  it('counts a gallery by its photos and names what it needs', () => {
+    const empty = buildSectionRows(
+      withGallery(), availability(), sectionTypes(),
+      { gallery_1: { kicker: 'Our work', heading: 'The rooms' } },
+    ).find(r => r.key === 'gallery_1')!
+
+    expect(empty.available).toBe(false)
+    expect(empty.count).toBe(0)
+    expect(empty.writtenBy).toBe('photos')
+
+    const filled = buildSectionRows(
+      withGallery(), availability(), sectionTypes(),
+      { gallery_1: { image_2: '/storage/landing/two.jpg' } },
+    ).find(r => r.key === 'gallery_1')!
+
+    expect(filled.available).toBe(true)
+    expect(filled.count).toBe(1)
+    expect(filled.writtenBy).toBe('photos')
+  })
+
+  /** A gallery whose only leaf fails the allowlist has nothing to show, exactly as the renderer decides. */
+  it('does not count a photo the renderer would refuse', () => {
+    const row = buildSectionRows(
+      withGallery(), availability(), sectionTypes(),
+      { gallery_1: { image_1: 'javascript:alert(1)' } },
+    ).find(r => r.key === 'gallery_1')!
+
+    expect(row.available).toBe(false)
+  })
+
+  /** A text block still answers on its BODY, and still says "words". */
+  it('leaves the text block on its own predicate', () => {
+    const rows = buildSectionRows(
+      [{ key: 'hero', enabled: true, sort: 0 }, { key: 'text_1', enabled: true, sort: 1 }],
+      availability(), sectionTypes(),
+      { text_1: { body: 'Quiet rooms.', image_1: '/storage/landing/one.jpg' } },
+    )
+    const text = rows.find(r => r.key === 'text_1')!
+
+    expect(text.writtenBy).toBe('words')
+    expect(text.available).toBe(true)
+  })
+
+  /** The strip is the row's first control, carrying the served cap. */
+  it('gives the row the photo strip rather than the single plate', () => {
+    const row = buildSectionRows(withGallery(), availability(), sectionTypes(), {})
+      .find(r => r.key === 'gallery_1')!
+
+    expect(row.fields[0]).toEqual({ name: 'gallery', type: 'gallery', slots: 8 })
   })
 })

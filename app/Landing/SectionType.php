@@ -72,6 +72,31 @@ final class SectionType
     private const VIEW_PREFIX = 'landing.ruled_page.sections.';
 
     /**
+     * The leaf a SINGLE-photo section stores its picture under, and the one
+     * spelling every page written before galleries existed carries.
+     *
+     * Named rather than repeated because it is now one of TWO shapes (see
+     * {@see imageLeaves()}), and the whole point of naming it is that the
+     * old one did not move: hero/about/text_N still store
+     * `content.<key>.image_url`, byte for byte, and the goldens that pin
+     * their markup never had to be recaptured.
+     */
+    public const SINGLE_IMAGE_LEAF = 'image_url';
+
+    /**
+     * The separator between a section key and an image leaf inside one
+     * `slot` string — see {@see imageSlot()} for the grammar it belongs to.
+     *
+     * A DOT, because the slot then reads as the content path it names:
+     * `gallery_1.image_3` is literally `content.gallery_1.image_3` with the
+     * column's own name taken off the front. It also cannot collide with a
+     * section key: {@see typeOf()}'s grammar is `[a-z][a-z0-9_]*(_[1-9][0-9]*)?`
+     * and has no dot in it, so a single-photo slot and a multi-photo one can
+     * never be mistaken for each other however either is spelled.
+     */
+    private const SLOT_SEPARATOR = '.';
+
+    /**
      * THE TONE ALLOWLIST — every colour a tenant may put a band on, and the
      * band modifier class each one renders as.
      *
@@ -198,12 +223,30 @@ final class SectionType
          */
         public readonly string $band,
         /**
-         * Whether this type carries a photo plate — which is to say whether
-         * `content.<key>.image_url` is a leaf the image endpoints may write
-         * and {@see PageContent::imageUrl()} may be asked for.
+         * HOW MANY photos one instance of this type carries — 0 for a band
+         * with no plate, 1 for the single-plate bands (hero, about, text),
+         * and 8 for the gallery.
          *
          * This is the ONLY definition of the image slot allowlist. The
-         * endpoints' old `in:hero,about` literal was a second copy of it.
+         * endpoints' old `in:hero,about` literal was a second copy of it,
+         * and the `bool $image` that replaced that literal was a second
+         * copy of the ANSWER once "how many" stopped being "one".
+         *
+         * A COUNT rather than a bool because the count is what has to stay
+         * finite: {@see imageLeaves()} turns it into an enumerated list of
+         * leaf names, {@see imageKeys()} turns THAT into the endpoints'
+         * whole `Rule::in` allowlist, and update()'s carry-forward walks the
+         * same list. Raise this number and every one of those follows;
+         * nothing anywhere holds a second opinion about how many photos a
+         * gallery holds.
+         */
+        public readonly int $images,
+        /**
+         * Whether this type carries a photo plate AT ALL — `images > 0`,
+         * derived rather than authored so the two can never disagree.
+         *
+         * Kept because "does this band have a picture in it" is a question
+         * several callers ask and none of them want the count for.
          */
         public readonly bool $image,
     ) {}
@@ -213,22 +256,29 @@ final class SectionType
      *
      * The eight fixed types are transcribed from what the shipped partials
      * already do — `fields` is each partial's own `$copy[...]` reads and
-     * `image` is whether it calls `PageContent::imageUrl()`. Nothing about
-     * them changes by being written down here; SectionTypeTest pins the
-     * `fields`/`image` pairs against the partials so a future edit to a
+     * `images` is how many photos it reads through PageContent. Nothing
+     * about them changes by being written down here; SectionTypeTest pins
+     * the `fields`/`images` pairs against the partials so a future edit to a
      * partial cannot quietly diverge from this table.
      *
-     * `text` is the one new type: the repeatable band a tenant can add as
-     * many as six of — an eyebrow, a heading, body copy and an optional
-     * photo, which is the shape of every "and another thing" section a
-     * marketing page ever needs.
+     * `text` is the repeatable band this catalogue was first built for: an
+     * eyebrow, a heading, body copy and an optional photo, which is the
+     * shape of every "and another thing" section a marketing page ever
+     * needs.
+     *
+     * `gallery` is the second, and the first type to hold MORE THAN ONE
+     * photo — a caption and a grid of up to eight pictures. It is the reason
+     * `image` became `images`: everything downstream of this table (the
+     * endpoints' slot allowlist, update()'s carry-forward, the delete
+     * verb's file sweep, the editor's strip) is derived from the number,
+     * so a gallery of ten would be one edit here and nothing else.
      *
      * `band` is likewise transcribed rather than invented: it is the exact
      * modifier class each partial's own `<section class="band …">` already
      * carried before the tone round, and RuledPageSectionsTest asserts the
      * rendered class per key so the table and the partials cannot diverge.
      *
-     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, band: string, image: bool}>
+     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, band: string, images: int}>
      */
     public static function all(): array
     {
@@ -241,7 +291,7 @@ final class SectionType
                 'view'       => 'hero',
                 'fields'     => ['kicker', 'headline', 'subtext'],
                 'band'       => '',
-                'image'      => true,
+                'images'     => 1,
             ],
             // The price list. Its ROWS come from the Services screen, not
             // from `content` — only the band's own framing copy is editable.
@@ -250,35 +300,35 @@ final class SectionType
                 'view'       => 'services',
                 'fields'     => ['kicker', 'heading', 'subtext'],
                 'band'       => '',
-                'image'      => false,
+                'images'     => 0,
             ],
             'about' => [
                 'repeatable' => false,
                 'view'       => 'about',
                 'fields'     => ['kicker', 'lead', 'body'],
                 'band'       => 'band--paper-2',
-                'image'      => true,
+                'images'     => 1,
             ],
             'team' => [
                 'repeatable' => false,
                 'view'       => 'team',
                 'fields'     => ['kicker', 'heading', 'subtext'],
                 'band'       => '',
-                'image'      => false,
+                'images'     => 0,
             ],
             'reviews' => [
                 'repeatable' => false,
                 'view'       => 'reviews',
                 'fields'     => ['kicker'],
                 'band'       => 'band--ink',
-                'image'      => false,
+                'images'     => 0,
             ],
             'booking' => [
                 'repeatable' => false,
                 'view'       => 'booking',
                 'fields'     => ['kicker', 'heading', 'terms', 'call_label', 'call_short'],
                 'band'       => 'band--paper-2',
-                'image'      => false,
+                'images'     => 0,
             ],
             // phone/email/address are the three fields ContactDetails lets a
             // page override per-page (see its docblock); the rest of the
@@ -292,7 +342,7 @@ final class SectionType
                     'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label',
                 ],
                 'band'       => 'band--ink',
-                'image'      => false,
+                'images'     => 0,
             ],
             // Rendered outside the section loop (the layout includes it
             // unconditionally) and listed here anyway: it IS a section type,
@@ -303,7 +353,7 @@ final class SectionType
                 'view'       => 'footer',
                 'fields'     => [],
                 'band'       => '',
-                'image'      => false,
+                'images'     => 0,
             ],
             // The repeatable band this catalogue was built for.
             'text' => [
@@ -311,7 +361,25 @@ final class SectionType
                 'view'       => 'text',
                 'fields'     => ['kicker', 'heading', 'body'],
                 'band'       => 'band--paper-2',
-                'image'      => true,
+                'images'     => 1,
+            ],
+            // The picture grid. EIGHT, and the number is a judgement rather
+            // than a round one: a contact sheet reads as a considered
+            // selection at four to eight and as an unsorted camera roll
+            // past that, and eight tiles exactly into the two column counts
+            // the stylesheet uses (four across on a wide screen, two on a
+            // phone) so the last row is never a single orphan.
+            //
+            // Its `fields` are an eyebrow and a heading and nothing else:
+            // the pictures ARE the content here, and `count()` reads them
+            // rather than any copy — a gallery with words and no photos is
+            // not a section, so it does not render.
+            'gallery' => [
+                'repeatable' => true,
+                'view'       => 'gallery',
+                'fields'     => ['kicker', 'heading'],
+                'band'       => '',
+                'images'     => 8,
             ],
         ];
     }
@@ -338,26 +406,17 @@ final class SectionType
     }
 
     /**
-     * Every section key that may carry a photo — the image endpoints' whole
-     * `slot` allowlist, enumerated rather than described so it can be handed
-     * straight to Rule::in().
-     *
-     * Finite because the key grammar is: a repeatable type contributes
-     * exactly {@see MAX_INSTANCES_PER_TYPE} keys, not an open-ended family.
-     * That is what stops a caller uploading a file against an unbounded
-     * sequence of slots the renderer would never read.
+     * Every key the grammar admits, fixed ids and repeatable instances
+     * together — the enumeration {@see imageKeys()} filters and the one
+     * place the "1..MAX_INSTANCES_PER_TYPE" loop is written.
      *
      * @return list<string>
      */
-    public static function imageKeys(): array
+    private static function allKeys(): array
     {
         $keys = [];
 
         foreach (self::all() as $id => $type) {
-            if (!$type['image']) {
-                continue;
-            }
-
             if (!$type['repeatable']) {
                 $keys[] = $id;
 
@@ -372,6 +431,175 @@ final class SectionType
         return $keys;
     }
 
+    /**
+     * THE IMAGE LEAF GRAMMAR — which leaves under `content.<key>` a photo
+     * may be stored in, for one section key, in RENDER ORDER.
+     *
+     * Two shapes, and only two:
+     *
+     *   - a SINGLE-photo type stores its picture at `image_url`, exactly
+     *     where hero, about and every `text_N` have always stored it. This
+     *     did not move, and that is the point: no stored row was rewritten,
+     *     no golden was recaptured, and `content.hero.image_url` still means
+     *     what it meant.
+     *   - a MULTI-photo type stores its pictures at `image_1` … `image_<n>`,
+     *     n bounded by the type's own `images` count. SCALAR LEAVES, one per
+     *     picture — never a nested `images: [...]` array, because `content`
+     *     is validated `ScalarLeaves(depth: 2)` and a nested array is not a
+     *     legal value in that column at all. `content.gallery_1.image_3` is;
+     *     `content.gallery_1.images[2]` is not, and could not be made to be
+     *     without loosening the shape rule that keeps an array leaf out of
+     *     `e()` and `Accent::for()`.
+     *
+     * Returns [] for a key that names no type, and for a type with no
+     * photos — so a caller can loop this unconditionally and get the right
+     * answer for services, for a junk key from a raw write, and for a
+     * gallery, without asking three different questions first.
+     *
+     * @return list<string>
+     */
+    public static function imageLeaves(string $key): array
+    {
+        $type = self::forKey($key);
+
+        if ($type === null || $type->images < 1) {
+            return [];
+        }
+
+        if ($type->images === 1) {
+            return [self::SINGLE_IMAGE_LEAF];
+        }
+
+        $leaves = [];
+
+        for ($n = 1; $n <= $type->images; $n++) {
+            $leaves[] = 'image_' . $n;
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * Whether `$field` is an image leaf — the ONE test update() and the
+     * preview's own validator make before they refuse a submitted
+     * `content.<section>.<field>`.
+     *
+     * DELIBERATELY WIDER THAN {@see imageLeaves()}. That method enumerates
+     * what a type legitimately holds; this one is the refusal, and a refusal
+     * that only knew the legitimate names would wave `image_9` through on a
+     * gallery of eight and `image_1` through on the hero — writing a leaf
+     * the renderer will never read, into a column whose photo leaves are
+     * supposed to have exactly one writer. `image_` is a prefix no editable
+     * field in this catalogue uses or ever will (the fields are prose and
+     * labels), so the whole family is refused and the single-writer rule
+     * holds for shapes this build has not thought of.
+     */
+    public static function isImageField(string $field): bool
+    {
+        return str_starts_with($field, 'image_');
+    }
+
+    /**
+     * THE IMAGE SLOT ALLOWLIST — every `slot` the image endpoints accept,
+     * enumerated rather than described so it can be handed straight to
+     * Rule::in().
+     *
+     * A slot names ONE PICTURE, not one section, and it is spelled two ways
+     * because a section holds its pictures two ways:
+     *
+     *   - `hero`, `about`, `text_4` — a single-photo section names itself,
+     *     exactly as it did before galleries existed. Its leaf is implied.
+     *   - `gallery_2.image_5` — a multi-photo section names the picture,
+     *     `<section key><separator><leaf>` (see {@see SLOT_SEPARATOR}).
+     *
+     * The asymmetry is deliberate and is the reason no existing caller,
+     * stored row or test had to change: making every slot carry its leaf
+     * would have renamed `hero` to `hero.image_url` on the wire for no gain.
+     * {@see imageSlot()} is the one parser that reads either spelling.
+     *
+     * Finite because the key grammar is (a repeatable type contributes
+     * exactly {@see MAX_INSTANCES_PER_TYPE} keys) and because `images` is a
+     * count rather than an invitation. That is what stops a caller uploading
+     * a file against an unbounded sequence of slots the renderer would never
+     * read — today 2 fixed + 6 text + 6 × 8 gallery = 56 of them, and it is
+     * a closed list at every build.
+     *
+     * @return list<string>
+     */
+    public static function imageKeys(): array
+    {
+        $slots = [];
+
+        foreach (self::allKeys() as $key) {
+            $leaves = self::imageLeaves($key);
+
+            if ($leaves === []) {
+                continue;
+            }
+
+            if ($leaves === [self::SINGLE_IMAGE_LEAF]) {
+                $slots[] = $key;
+
+                continue;
+            }
+
+            foreach ($leaves as $leaf) {
+                $slots[] = $key . self::SLOT_SEPARATOR . $leaf;
+            }
+        }
+
+        return $slots;
+    }
+
+    /**
+     * Resolve an UNTRUSTED slot string into the section key and the content
+     * leaf it names, or null when it names neither.
+     *
+     * The one parser for the grammar {@see imageKeys()} enumerates, so the
+     * endpoints never split a string themselves — `$content[$key][$leaf]` is
+     * the only shape either of them writes, whichever spelling arrived.
+     *
+     * Re-derives the leaf from the CATALOGUE rather than trusting the half
+     * of the string after the separator: `gallery_1.image_9` on a gallery of
+     * eight, `hero.image_url`, `gallery_1.body` and `text_1.image_1` all
+     * return null here, which is the same answer Rule::in already gives them
+     * — checked twice on purpose, because this is the method that decides
+     * which leaf gets written and it must not be reachable with anything but
+     * a leaf the type actually holds.
+     *
+     * @return array{key: string, leaf: string}|null
+     */
+    public static function imageSlot(string $slot): ?array
+    {
+        $parts = explode(self::SLOT_SEPARATOR, $slot);
+
+        if (count($parts) > 2) {
+            return null;
+        }
+
+        $key    = $parts[0];
+        $leaves = self::imageLeaves($key);
+
+        if ($leaves === []) {
+            return null;
+        }
+
+        // The bare-key spelling: legal only for a type that holds exactly
+        // one photo, so `gallery_1` alone is not a slot and cannot be made
+        // to write image_1 by accident.
+        if (count($parts) === 1) {
+            return $leaves === [self::SINGLE_IMAGE_LEAF] ? ['key' => $key, 'leaf' => self::SINGLE_IMAGE_LEAF] : null;
+        }
+
+        // The `<key>.<leaf>` spelling: legal only for a multi-photo type,
+        // and only for a leaf it actually holds.
+        if ($leaves === [self::SINGLE_IMAGE_LEAF] || !in_array($parts[1], $leaves, true)) {
+            return null;
+        }
+
+        return ['key' => $key, 'leaf' => $parts[1]];
+    }
+
     /** A type by its ID (`text`), never by a section key (`text_1`). */
     public static function get(string $id): ?self
     {
@@ -383,7 +611,12 @@ final class SectionType
             view:       $data['view'],
             fields:     $data['fields'],
             band:       $data['band'],
-            image:      $data['image'],
+            images:     $data['images'],
+            // Derived, never authored: `image` is "does this band have a
+            // picture in it" and `images` is "how many", and one of those
+            // being a restatement of the other is exactly how the two would
+            // drift.
+            image:      $data['images'] > 0,
         );
     }
 
@@ -582,7 +815,19 @@ final class SectionType
      * than showing nothing selected and inviting the tenant to pick the
      * colour it is already painted. {@see defaultToneFor()}.
      *
-     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, limit: int|null, default_tone: string|null}>
+     * `image_slots` is the whole truth about photos — how many this type
+     * holds — and `image` is the OLD question, kept for the build of the
+     * admin SPA that is already deployed when this ships. It is published
+     * as `images === 1` rather than `images > 0` deliberately: a bundle that
+     * predates galleries reads `image` as "draw the one-photo control", and
+     * that control names its slot with the bare section key, which the
+     * endpoints refuse for a gallery (see {@see imageSlot()}). Publishing
+     * `true` there would offer a control that could only ever 422; `false`
+     * offers no photo control until the SPA is rebuilt, which is degraded
+     * but never wrong. Anything that understands `image_slots` should read
+     * that and ignore `image` entirely.
+     *
+     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
      */
     public static function payload(): array
     {
@@ -593,7 +838,8 @@ final class SectionType
                 'id'           => $id,
                 'repeatable'   => $type['repeatable'],
                 'fields'       => $type['fields'],
-                'image'        => $type['image'],
+                'image'        => $type['images'] === 1,
+                'image_slots'  => $type['images'],
                 'limit'        => $type['repeatable'] ? self::MAX_INSTANCES_PER_TYPE : null,
                 'default_tone' => self::defaultToneFor($id),
             ];

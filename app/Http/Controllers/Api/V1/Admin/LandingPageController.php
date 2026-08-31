@@ -236,11 +236,25 @@ class LandingPageController extends Controller
         // runs before anything else touches `content`, and it names no field
         // path in its message — content.hero.image_url is exactly the kind of
         // string spec 9 says must never reach a tenant verbatim.
+        //
+        // Widened from a literal `image_url` to SectionType::isImageField()
+        // when the gallery arrived: a band can now hold eight pictures, at
+        // `image_1`…`image_8`, and every one of them has the same single
+        // writer for the same reason. The test is the whole `image_*`
+        // family rather than the eight legitimate names — see that method's
+        // own note: a refusal that only knew the legitimate leaves would
+        // wave `image_9` through into a column nothing reads it from.
         foreach (($data['content'] ?? []) as $sectionKey => $fields) {
-            if (is_array($fields) && array_key_exists('image_url', $fields)) {
-                throw ValidationException::withMessages([
-                    'content' => 'Photos are changed with the photo controls, not by editing text.',
-                ]);
+            if (!is_array($fields)) {
+                continue;
+            }
+
+            foreach (array_keys($fields) as $field) {
+                if (SectionType::isImageField((string) $field)) {
+                    throw ValidationException::withMessages([
+                        'content' => 'Photos are changed with the photo controls, not by editing text.',
+                    ]);
+                }
             }
         }
 
@@ -450,32 +464,35 @@ class LandingPageController extends Controller
                         // written to prevent, reintroduced for the new
                         // sections only.
                         //
-                        // SectionType::forKey() answers null for a key that
-                        // names no type at all, and `?->image === true` is
-                        // false for every type that carries no photo, so this
-                        // still skips services/team/reviews/... and still
-                        // skips a junk key from a raw write: a section this
-                        // build never gives a photo control has no image_url
-                        // leaf of its own to protect, and carrying one
+                        // Now asked as "WHICH LEAVES", not "does this section
+                        // have a photo": SectionType::imageLeaves() answers
+                        // ['image_url'] for hero/about/text_N, the eight
+                        // image_N names for a gallery, and [] for
+                        // services/team/reviews and for a junk key from a raw
+                        // write — so the loop below is the same carry-forward
+                        // it always was, run once per picture the section
+                        // legitimately holds. Deliberately NOT the wider
+                        // isImageField() family the refusal above uses: a
+                        // section this build never gives a photo control has
+                        // no leaf of its own to protect, and carrying one
                         // forward for it would just be re-saving a raw-DB
                         // shape nothing here ever wrote.
-                        if (SectionType::forKey((string) $sectionKey)?->image !== true) {
+                        if (!is_array($storedFields)) {
                             continue;
                         }
 
-                        if (!is_array($storedFields)
-                            || !isset($storedFields['image_url'])
-                            || !is_string($storedFields['image_url'])
-                        ) {
-                            continue;
-                        }
+                        foreach (SectionType::imageLeaves((string) $sectionKey) as $leaf) {
+                            if (!isset($storedFields[$leaf]) || !is_string($storedFields[$leaf])) {
+                                continue;
+                            }
 
-                        if (!isset($data['content'][$sectionKey]) || !is_array($data['content'][$sectionKey])) {
-                            $data['content'][$sectionKey] = [];
-                        }
+                            if (!isset($data['content'][$sectionKey]) || !is_array($data['content'][$sectionKey])) {
+                                $data['content'][$sectionKey] = [];
+                            }
 
-                        if (!array_key_exists('image_url', $data['content'][$sectionKey])) {
-                            $data['content'][$sectionKey]['image_url'] = $storedFields['image_url'];
+                            if (!array_key_exists($leaf, $data['content'][$sectionKey])) {
+                                $data['content'][$sectionKey][$leaf] = $storedFields[$leaf];
+                            }
                         }
                     }
                 }
@@ -606,6 +623,26 @@ class LandingPageController extends Controller
 
         $slot = $data['slot'];
 
+        // THE ONE PARSER for a slot, and the second wall behind Rule::in
+        // above — see SectionType::imageSlot(). A single-photo band names
+        // itself (`hero`) and its leaf is implied; a gallery names the
+        // picture (`gallery_2.image_5`). Everything below writes
+        // $content[$key][$leaf] and knows nothing about which spelling
+        // arrived, which is what let the whole multi-photo grammar land
+        // without moving a stored byte or a golden.
+        //
+        // Unreachable-null by construction (Rule::in enumerates exactly what
+        // this accepts), and refused rather than assumed anyway: this is the
+        // method that decides which leaf gets written, and a 422 is the
+        // right answer if the two lists ever disagree.
+        $target = SectionType::imageSlot($slot);
+
+        if ($target === null) {
+            throw ValidationException::withMessages([
+                'slot' => 'Please choose which photo you are replacing.',
+            ]);
+        }
+
         // Ruling 3b-6: the upload itself stays OUTSIDE and BEFORE the
         // transaction below — a row lock must never be held across a
         // network transfer to MediaService's disk. $old is deliberately NOT
@@ -615,23 +652,24 @@ class LandingPageController extends Controller
         $url = MediaService::upload($data['image'], 'landing');
 
         try {
-            $old = DB::transaction(function () use ($page, $slot, $url) {
+            $old = DB::transaction(function () use ($page, $target, $url) {
                 /** @var LandingPage $fresh */
                 $fresh = LandingPage::where('id', $page->id)
                     ->where('organization_id', $page->organization_id)
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $old = $fresh->content[$slot]['image_url'] ?? null;
+                $old = $fresh->content[$target['key']][$target['leaf']] ?? null;
 
                 // The one level of nesting update() already lives with: content is a
                 // map of section keys onto a flat map of fields, so only the leaf
                 // this endpoint owns is touched — every sibling field already
-                // written under this slot (a headline, a subtext) survives.
+                // written under this slot (a headline, a subtext, the gallery's
+                // other seven pictures) survives.
                 $content = $fresh->content ?? [];
-                $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
-                $section['image_url'] = $url;
-                $content[$slot] = $section;
+                $section = is_array($content[$target['key']] ?? null) ? $content[$target['key']] : [];
+                $section[$target['leaf']] = $url;
+                $content[$target['key']] = $section;
 
                 $fresh->content = $content;
                 $fresh->save();
@@ -699,11 +737,23 @@ class LandingPageController extends Controller
 
         $slot = $data['slot'];
 
+        // The same parse uploadImage() performs, for the same reason — see
+        // its comment. The two halves of the single-writer rule must agree
+        // about which leaf a slot names, or a picture could be written and
+        // never cleared.
+        $target = SectionType::imageSlot($slot);
+
+        if ($target === null) {
+            throw ValidationException::withMessages([
+                'slot' => 'Please choose which photo you are removing.',
+            ]);
+        }
+
         // Ruling 3b-6: same lock-and-reread shape as update()/uploadImage() —
         // $old is read from the freshly locked row, not a stale snapshot, so
         // this cannot delete a file a concurrent uploadImage() has already
         // replaced.
-        $old = DB::transaction(function () use ($page, $slot) {
+        $old = DB::transaction(function () use ($page, $target) {
             /** @var LandingPage $fresh */
             $fresh = LandingPage::where('id', $page->id)
                 ->where('organization_id', $page->organization_id)
@@ -711,15 +761,19 @@ class LandingPageController extends Controller
                 ->firstOrFail();
 
             $content = $fresh->content ?? [];
-            $section = is_array($content[$slot] ?? null) ? $content[$slot] : [];
-            $old = $section['image_url'] ?? null;
+            $section = is_array($content[$target['key']] ?? null) ? $content[$target['key']] : [];
+            $old = $section[$target['leaf']] ?? null;
 
             // Unset, not merely nulled — and the section stays in place even if
             // this was its only field, matching update(): nothing in this column
             // ever prunes a section down to nothing on its own. ScalarTree is
-            // what makes an empty section harmless to the renderer.
-            unset($section['image_url']);
-            $content[$slot] = $section;
+            // what makes an empty section harmless to the renderer. On a
+            // gallery this leaves a GAP in the leaf sequence (image_2 removed
+            // from image_1..image_3), which is deliberate: renumbering would
+            // mean rewriting leaves this request was not asked to touch, and
+            // galleryImages() closes the gap at render time.
+            unset($section[$target['leaf']]);
+            $content[$target['key']] = $section;
 
             $fresh->content = $content;
             $fresh->save();

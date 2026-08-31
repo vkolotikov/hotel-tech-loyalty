@@ -466,6 +466,20 @@ final class PageContent
             // never filled in simply does not render, and neither the band
             // nor its nav anchor appears until there is something to read.
             'text'     => filled($this->page->content[$sectionKey]['body'] ?? null) ? 1 : 0,
+            // A gallery is its PICTURES, so this counts pictures — the ones
+            // that actually clear imageUrl()'s allowlist, not the leaves
+            // that happen to be present. That is what makes "an empty
+            // gallery does not render at all" structural rather than a
+            // @if inside the partial: a band whose eight leaves are all
+            // absent, blank, stale or hostile counts 0, has() is false, the
+            // section loop skips it, and its nav anchor never appears —
+            // exactly the same route the empty about band already takes.
+            //
+            // A gallery with a caption and no photos is therefore not a
+            // section either. It is the same ruling `text` carries one line
+            // up (an eyebrow over blank space is a fragment), pointed at
+            // whichever half of the band is the reason it exists.
+            'gallery'  => count($this->galleryImages($sectionKey)),
             // The booking widget asks Check-in / Check-out / Adults /
             // Children -- hotel questions -- and is framed unmodified on
             // every industry's page (booking.blade.php). Until it grows an
@@ -509,8 +523,10 @@ final class PageContent
      * the leaf got written.
      *
      * `content.<slot>.image_url` — where a slot is any section key whose
-     * type carries `image` in {@see SectionType::all()}, today hero, about
-     * and the six `text_N` instances — has exactly one legitimate writer:
+     * type carries exactly one photo in {@see SectionType::all()}, today
+     * hero, about and the six `text_N` instances; the gallery's own eight
+     * leaves are read by {@see galleryImages()} through the same guards —
+     * has exactly one legitimate writer:
      * LandingPageController::uploadImage(), which only ever stores what
      * MediaService::upload() just returned: `/storage/…` on the local disk
      * or an `https://…` CDN URL on a cloud one (see that method's own
@@ -555,14 +571,84 @@ final class PageContent
      */
     public function imageUrl(string $section): ?string
     {
-        $leaf = $this->page->content[$section] ?? null;
+        return $this->safeUrl($this->leaf($section, SectionType::SINGLE_IMAGE_LEAF));
+    }
 
-        if (!is_array($leaf)) {
-            return null;
+    /**
+     * The same choke point for a band that holds MORE THAN ONE photo — the
+     * gallery's pictures, in the order they will be laid out, with every
+     * failed leaf simply absent.
+     *
+     * The SAME three guards, reached through the same {@see safeUrl()} the
+     * single-plate reader above calls, which is the whole reason this method
+     * exists rather than a loop in the partial: the hostile-value battery
+     * that protects `content.hero.image_url` protects `content.gallery_1.
+     * image_5` identically and by construction, not because somebody
+     * remembered to re-implement it. A `javascript:` URI, a nested array, a
+     * 200,000-character string or a bare number in any one slot drops THAT
+     * picture and renders the rest.
+     *
+     * WHICH LEAVES, from {@see SectionType::imageLeaves()} and never from
+     * whatever keys the stored row happens to carry: `content` is a
+     * schemaless column and a raw write can put `image_99` in it, which is
+     * not a slot any endpoint accepts, is not a picture the editor can ever
+     * remove, and must not become one by being iterated. Enumerating the
+     * catalogue's own leaves is what keeps "what renders" and "what can be
+     * uploaded" the same finite list.
+     *
+     * ORDER IS THE LEAF ORDER — image_1 … image_8 — with gaps closed. A
+     * tenant who removes the third of five photos sees the other four, in
+     * the order they added them, not four with a hole in the middle.
+     *
+     * EMPTY FOR A SINGLE-PLATE BAND, not "the one plate as a list of one".
+     * hero, about and text answer through {@see imageUrl()} and this
+     * answers for nobody else, so the two readers can never both claim the
+     * same band — which is what makes SectionTypeTest's "which reader does
+     * this partial call" check mean something, and what stops a
+     * copy-pasted partial silently rendering the hero's plate as a
+     * one-picture grid.
+     *
+     * @return list<string>
+     */
+    public function galleryImages(string $section): array
+    {
+        $leaves = SectionType::imageLeaves($section);
+
+        if (count($leaves) < 2) {
+            return [];
         }
 
-        $url = $leaf['image_url'] ?? null;
+        $urls = [];
 
+        foreach ($leaves as $leafName) {
+            $url = $this->safeUrl($this->leaf($section, $leafName));
+
+            if ($url !== null) {
+                $urls[] = $url;
+            }
+        }
+
+        return $urls;
+    }
+
+    /** One raw leaf out of `content.<section>.<field>`, or null when the section is not a map at all. */
+    private function leaf(string $section, string $field): mixed
+    {
+        $fields = $this->page->content[$section] ?? null;
+
+        return is_array($fields) ? ($fields[$field] ?? null) : null;
+    }
+
+    /**
+     * THE THREE GUARDS, in one place — see {@see imageUrl()}'s docblock for
+     * why each of them is load-bearing rather than defensive.
+     *
+     * Extracted when a second reader appeared ({@see galleryImages()}) and
+     * for exactly that reason: two copies of an allowlist is two allowlists,
+     * and the one that gets a fix is never both.
+     */
+    private function safeUrl(mixed $url): ?string
+    {
         if (!is_string($url) || $url === '' || strlen($url) > 2048) {
             return null;
         }

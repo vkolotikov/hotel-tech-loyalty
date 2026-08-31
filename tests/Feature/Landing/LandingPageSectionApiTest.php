@@ -739,7 +739,7 @@ class LandingPageSectionApiTest extends TestCase
         $this->makePageWithSections();
 
         $message = $this->refusalMessage(
-            fn () => $this->controller()->store($this->addRequest(['type' => 'gallery'])),
+            fn () => $this->controller()->store($this->addRequest(['type' => 'carousel'])),
             'type',
         );
 
@@ -811,6 +811,91 @@ class LandingPageSectionApiTest extends TestCase
         ]);
     }
 
+    /**
+     * A gallery holds up to EIGHT files, and removing the band has to take
+     * every one of them.
+     *
+     * MUTATION TARGET: drop the delete-all step at the end of destroy() —
+     * or narrow it back to a single `image_url` — and this goes red on the
+     * first assertMissing. Seven orphaned files on a customer's disk with
+     * nothing in the database pointing at them is the worst version of this
+     * bug, not the best: the tenant cannot see them, cannot remove them, and
+     * they never expire.
+     *
+     * The full eight, deliberately, plus a gap: `image_4` is absent because
+     * that is the shape a real gallery is in after a tenant removes one
+     * picture, and a sweep written as "loop until the first missing leaf"
+     * would pass a contiguous fixture and lose four files here.
+     */
+    public function test_deleting_a_gallery_deletes_every_one_of_its_photos(): void
+    {
+        Storage::fake('public');
+
+        $files  = [];
+        $leaves = [];
+
+        foreach ([1, 2, 3, 5, 6, 7, 8] as $n) {
+            $path = "landing/gallery-{$n}.png";
+            Storage::disk('public')->put($path, "picture-{$n}");
+            $files[] = $path;
+            $leaves['image_' . $n] = '/storage/' . $path;
+        }
+
+        Storage::disk('public')->put('landing/keep-me.png', 'another band');
+
+        $page = $this->makePageWithSections();
+        $key  = $this->addSection('gallery');
+
+        $this->assertSame('gallery_1', $key);
+
+        $page->update(['content' => [
+            'hero'   => ['headline' => 'The Art of Wellness'],
+            'text_1' => ['body' => 'Quiet rooms.', 'image_url' => '/storage/landing/keep-me.png'],
+            $key     => ['heading' => 'The rooms'] + $leaves,
+        ]]);
+
+        $res = $this->controller()->destroy($this->removeRequest(['key' => $key]));
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertDatabaseMissing('landing_page_sections', ['landing_page_id' => $page->id, 'key' => $key]);
+        $this->assertArrayNotHasKey($key, $page->fresh()->content);
+
+        foreach ($files as $path) {
+            Storage::disk('public')->assertMissing($path);
+        }
+
+        // Nothing else moved: a sweep that reached past its own key would be
+        // worse than one that swept too little.
+        Storage::disk('public')->assertExists('landing/keep-me.png');
+        $this->assertSame('/storage/landing/keep-me.png', $page->fresh()->content['text_1']['image_url']);
+    }
+
+    /**
+     * A leaf past the eight the catalogue holds is not one of the section's
+     * photos — no endpoint could have written it — so the sweep leaves it
+     * exactly as it leaves a stranger's file. Same boundary the render path
+     * and update()'s carry-forward draw, drawn once more where a DELETE is
+     * the irreversible operation.
+     */
+    public function test_the_photo_sweep_only_touches_the_leaves_the_catalogue_names(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('landing/real.png', 'real');
+        Storage::disk('public')->put('landing/ninth.png', 'raw write');
+
+        $page = $this->makePageWithSections();
+        $key  = $this->addSection('gallery');
+
+        $page->update(['content' => [
+            $key => ['image_1' => '/storage/landing/real.png', 'image_9' => '/storage/landing/ninth.png'],
+        ]]);
+
+        $this->controller()->destroy($this->removeRequest(['key' => $key]));
+
+        Storage::disk('public')->assertMissing('landing/real.png');
+        Storage::disk('public')->assertExists('landing/ninth.png');
+    }
+
     /** An instance with no photo removes cleanly — the delete step is skipped, not attempted on null. */
     public function test_deleting_an_instance_with_no_photo_still_removes_it(): void
     {
@@ -859,7 +944,10 @@ class LandingPageSectionApiTest extends TestCase
     {
         $this->makePageWithSections();
 
-        foreach (['text', 'text_7', 'text_0', 'gallery_1', '../hero'] as $bogus) {
+        // `gallery` bare is a repeatable type's id and not a key; `gallery_7`
+        // is past the instance cap; `gallery_1.image_1` is an image SLOT,
+        // which the image endpoints parse and this one must not.
+        foreach (['text', 'text_7', 'text_0', 'gallery', 'gallery_7', 'gallery_1.image_1', '../hero'] as $bogus) {
             $message = $this->refusalMessage(
                 fn () => $this->controller()->destroy($this->removeRequest(['key' => $bogus])),
                 'key',

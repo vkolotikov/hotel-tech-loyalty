@@ -291,33 +291,43 @@ final class PreviewDraft
         }
 
         foreach ($submitted as $fields) {
-            if (is_array($fields) && array_key_exists('image_url', $fields)) {
-                // update()'s own words, and its own silence about which
-                // field path was at fault.
-                throw ValidationException::withMessages([
-                    'content' => 'Photos are changed with the photo controls, not by editing text.',
-                ]);
+            if (!is_array($fields)) {
+                continue;
+            }
+
+            foreach (array_keys($fields) as $field) {
+                if (SectionType::isImageField((string) $field)) {
+                    // update()'s own words, and its own silence about which
+                    // field path was at fault.
+                    throw ValidationException::withMessages([
+                        'content' => 'Photos are changed with the photo controls, not by editing text.',
+                    ]);
+                }
             }
         }
 
         foreach ($stored as $sectionKey => $storedFields) {
-            if (SectionType::forKey((string) $sectionKey)?->image !== true) {
+            if (!is_array($storedFields)) {
                 continue;
             }
 
-            if (!is_array($storedFields)
-                || !isset($storedFields['image_url'])
-                || !is_string($storedFields['image_url'])
-            ) {
-                continue;
-            }
+            // update()'s own loop, leaf for leaf — see its comment for why
+            // the carry-forward asks the catalogue WHICH leaves rather than
+            // taking the refusal's wider `image_*` family. A gallery's eight
+            // pictures reach the live preview exactly as hero's one does:
+            // from the STORED row, never from the payload the editor sent.
+            foreach (SectionType::imageLeaves((string) $sectionKey) as $leaf) {
+                if (!isset($storedFields[$leaf]) || !is_string($storedFields[$leaf])) {
+                    continue;
+                }
 
-            if (!isset($submitted[$sectionKey]) || !is_array($submitted[$sectionKey])) {
-                $submitted[$sectionKey] = [];
-            }
+                if (!isset($submitted[$sectionKey]) || !is_array($submitted[$sectionKey])) {
+                    $submitted[$sectionKey] = [];
+                }
 
-            if (!array_key_exists('image_url', $submitted[$sectionKey])) {
-                $submitted[$sectionKey]['image_url'] = $storedFields['image_url'];
+                if (!array_key_exists($leaf, $submitted[$sectionKey])) {
+                    $submitted[$sectionKey][$leaf] = $storedFields[$leaf];
+                }
             }
         }
 

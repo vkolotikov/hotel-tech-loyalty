@@ -65,16 +65,23 @@ class SectionTypeTest extends TestCase
     }
 
     /**
-     * `image` is a claim about the partial, so it is checked against the
-     * partial: a type that says it takes a photo must actually read one, and
+     * `images` is a claim about the partial, so it is checked against the
+     * partial: a type that says it takes photos must actually read them, and
      * a type that says it does not must not.
      *
-     * PageContent::imageUrl() is the ONE allowlisted read of that leaf (its
-     * own docblock says so and the render tests hold it to that), so its
-     * presence in the file is a reliable proxy for "this band has a plate" —
-     * and this test is what stops a future partial gaining or losing a plate
-     * without the catalogue, the image endpoints' slot rule and update()'s
-     * carry-forward hearing about it.
+     * PageContent::imageUrl() and ::galleryImages() are the ONLY allowlisted
+     * reads of those leaves (their own docblocks say so and the render tests
+     * hold them to it), so the presence of either call in the file is a
+     * reliable proxy for "this band has pictures in it" — and this test is
+     * what stops a future partial gaining or losing them without the
+     * catalogue, the image endpoints' slot rule and update()'s carry-forward
+     * hearing about it.
+     *
+     * Which of the two readers a partial calls is itself a claim: a
+     * single-photo type must reach for imageUrl() (the `image_url` leaf) and
+     * a multi-photo one for galleryImages() (the `image_N` family), because
+     * those are exactly the leaves imageLeaves() lets the endpoints write.
+     * A gallery partial calling imageUrl() would render nothing at all.
      */
     public function test_the_image_flag_matches_what_each_partial_actually_reads(): void
     {
@@ -84,13 +91,22 @@ class SectionTypeTest extends TestCase
 
             $this->assertFileExists($file);
 
-            $readsAnImage = str_contains(file_get_contents($file), 'imageUrl(');
+            $body       = file_get_contents($file);
+            $readsOne   = str_contains($body, 'imageUrl(');
+            $readsMany  = str_contains($body, 'galleryImages(');
 
             $this->assertSame(
                 $type->image,
-                $readsAnImage,
-                "The '{$id}' type declares image=" . var_export($type->image, true)
-                . ' but its partial ' . ($readsAnImage ? 'does' : 'does not') . ' read a photo plate.'
+                $readsOne || $readsMany,
+                "The '{$id}' type declares images={$type->images}"
+                . ' but its partial ' . ($readsOne || $readsMany ? 'does' : 'does not') . ' read a photo.'
+            );
+
+            $this->assertSame(
+                $type->images > 1,
+                $readsMany,
+                "The '{$id}' type declares images={$type->images} but its partial "
+                . ($readsMany ? 'reads the multi-photo leaves' : 'does not read the multi-photo leaves') . '.'
             );
         }
     }
@@ -128,12 +144,44 @@ class SectionTypeTest extends TestCase
         }
     }
 
-    /** image_url has one writer and it is not the copy form — it must never be offered as a field. */
-    public function test_no_type_offers_image_url_as_an_editable_field(): void
+    /**
+     * A photo leaf has one writer and it is not the copy form — none of them
+     * may ever be offered as a field.
+     *
+     * Asserted over the whole `image_*` family rather than the single
+     * `image_url` name, because update()'s refusal is that whole family
+     * (SectionType::isImageField): a type that listed `image_3` as editable
+     * copy would put a control on the editor's card that 422s the save it is
+     * part of.
+     */
+    public function test_no_type_offers_a_photo_leaf_as_an_editable_field(): void
     {
         foreach (SectionType::ids() as $id) {
-            $this->assertNotContains('image_url', SectionType::get($id)->fields,
-                "The '{$id}' type offers image_url as editable copy, which update() refuses to write.");
+            foreach (SectionType::get($id)->fields as $field) {
+                $this->assertFalse(
+                    SectionType::isImageField($field),
+                    "The '{$id}' type offers {$field} as editable copy, which update() refuses to write."
+                );
+            }
+        }
+    }
+
+    /**
+     * The refusal's own shape: the family, not the eight legitimate names.
+     *
+     * Hardcoded both ways round, because this is the one predicate standing
+     * between a free-text save and a leaf whose file has a single writer —
+     * see isImageField()'s docblock for why it is deliberately wider than
+     * imageLeaves().
+     */
+    public function test_the_image_field_refusal_covers_the_whole_family(): void
+    {
+        foreach (['image_url', 'image_1', 'image_8', 'image_9', 'image_anything'] as $field) {
+            $this->assertTrue(SectionType::isImageField($field), "'{$field}' should be refused as a copy field.");
+        }
+
+        foreach (['kicker', 'heading', 'body', 'lead', 'subtext', 'image', 'imageurl'] as $field) {
+            $this->assertFalse(SectionType::isImageField($field), "'{$field}' is copy and must stay editable.");
         }
     }
 
@@ -194,7 +242,15 @@ class SectionTypeTest extends TestCase
             'negative index'    => ['text_-1'],
             'decimal index'     => ['text_1.0'],
             'not repeatable'    => ['services_1'],
-            'unknown type'      => ['gallery_1'],
+            'unknown type'      => ['carousel_1'],
+            'bare gallery'      => ['gallery'],
+            'gallery past cap'  => ['gallery_7'],
+            // A SLOT is not a section key. `gallery_1.image_3` names one
+            // picture and the image endpoints parse it (SectionType::
+            // imageSlot); nothing else in the builder may treat it as a
+            // section — a row under that key would render nothing and count
+            // nothing.
+            'a slot, not a key' => ['gallery_1.image_3'],
             'empty'             => [''],
             'junk'              => ['../../etc/passwd'],
         ];
@@ -245,7 +301,20 @@ class SectionTypeTest extends TestCase
 
     public function test_only_repeatable_types_may_be_added(): void
     {
-        $this->assertSame(['text'], SectionType::repeatableIds());
+        $this->assertSame(['text', 'gallery'], SectionType::repeatableIds());
+    }
+
+    /** The gallery is a repeatable type in its own right, with its own instances. */
+    public function test_gallery_instances_resolve_to_their_type_and_share_one_partial(): void
+    {
+        foreach (['gallery_1', 'gallery_3', 'gallery_6'] as $key) {
+            $this->assertSame('gallery', SectionType::typeOf($key));
+            $this->assertTrue(SectionType::isInstanceKey($key));
+            $this->assertSame('landing.ruled_page.sections.gallery', SectionType::viewFor($key));
+        }
+
+        $this->assertSame('gallery_1', SectionType::nextInstanceKey('gallery', ['text_1', 'hero']));
+        $this->assertSame('gallery_2', SectionType::nextInstanceKey('gallery', ['gallery_1']));
     }
 
     // ─── The image slot allowlist ─────────────────────────────────────────
@@ -262,30 +331,117 @@ class SectionTypeTest extends TestCase
         $expected = [];
 
         foreach (SectionType::all() as $id => $type) {
-            if (!$type['image']) {
+            if ($type['images'] < 1) {
                 continue;
             }
 
-            if ($type['repeatable']) {
-                for ($n = 1; $n <= SectionType::MAX_INSTANCES_PER_TYPE; $n++) {
-                    $expected[] = $id . '_' . $n;
+            $keys = $type['repeatable']
+                ? array_map(fn ($n) => $id . '_' . $n, range(1, SectionType::MAX_INSTANCES_PER_TYPE))
+                : [$id];
+
+            foreach ($keys as $key) {
+                if ($type['images'] === 1) {
+                    // A single-photo section names ITSELF; its leaf is
+                    // implied. That spelling did not move when galleries
+                    // arrived, which is why no stored row, no frontend call
+                    // site and no golden had to.
+                    $expected[] = $key;
+
+                    continue;
                 }
 
-                continue;
+                for ($n = 1; $n <= $type['images']; $n++) {
+                    $expected[] = $key . '.image_' . $n;
+                }
             }
-
-            $expected[] = $id;
         }
 
         $this->assertSame($expected, SectionType::imageKeys());
 
-        // Every slot it publishes is a key the grammar accepts — an
-        // allowlisted upload target the renderer could never read would be
-        // an orphan file by construction.
+        // Every slot it publishes resolves to a section key the grammar
+        // accepts and a leaf that key's type actually holds — an allowlisted
+        // upload target the renderer could never read would be an orphan
+        // file by construction.
         foreach (SectionType::imageKeys() as $slot) {
-            $this->assertNotNull(SectionType::typeOf($slot), "The image slot '{$slot}' is not a section key.");
-            $this->assertTrue(SectionType::forKey($slot)->image);
+            $target = SectionType::imageSlot($slot);
+
+            $this->assertNotNull($target, "The image slot '{$slot}' does not parse.");
+            $this->assertNotNull(SectionType::typeOf($target['key']),
+                "The image slot '{$slot}' names no section key.");
+            $this->assertContains($target['leaf'], SectionType::imageLeaves($target['key']),
+                "The image slot '{$slot}' names a leaf its section does not hold.");
         }
+    }
+
+    /**
+     * THE CAP, and the thing that makes it a cap rather than a suggestion:
+     * a gallery holds eight pictures, so `gallery_1.image_9` is not a slot
+     * — the endpoints' Rule::in never sees it and imageSlot() refuses it.
+     *
+     * Mutation target: raise `images` on the gallery type and this goes red
+     * on the ninth leaf, on the slot count, and on imageSlot() accepting a
+     * ninth picture.
+     */
+    public function test_a_gallery_holds_exactly_eight_pictures(): void
+    {
+        $this->assertSame(
+            ['image_1', 'image_2', 'image_3', 'image_4', 'image_5', 'image_6', 'image_7', 'image_8'],
+            SectionType::imageLeaves('gallery_1'),
+        );
+
+        $this->assertNotNull(SectionType::imageSlot('gallery_1.image_8'));
+        $this->assertNull(SectionType::imageSlot('gallery_1.image_9'),
+            'A ninth picture is a slot the endpoints would accept and the renderer would never read.');
+        $this->assertNotContains('gallery_1.image_9', SectionType::imageKeys());
+
+        // 6 galleries × 8 pictures, plus hero, about and the six text bands.
+        $this->assertCount(6 * 8 + 2 + 6, SectionType::imageKeys());
+    }
+
+    /**
+     * The two slot spellings, and every way of getting them wrong. Each of
+     * these is a real string a client or a hand-written request can send,
+     * and every one of them decides which content leaf a file is written to.
+     */
+    public function test_the_slot_grammar_accepts_exactly_the_two_spellings(): void
+    {
+        $this->assertSame(['key' => 'hero', 'leaf' => 'image_url'], SectionType::imageSlot('hero'));
+        $this->assertSame(['key' => 'about', 'leaf' => 'image_url'], SectionType::imageSlot('about'));
+        $this->assertSame(['key' => 'text_4', 'leaf' => 'image_url'], SectionType::imageSlot('text_4'));
+        $this->assertSame(['key' => 'gallery_2', 'leaf' => 'image_5'], SectionType::imageSlot('gallery_2.image_5'));
+
+        foreach ([
+            // A gallery names the PICTURE; the bare key is not a slot, and
+            // must not quietly mean image_1.
+            'gallery_1',
+            // A single-photo band names ITSELF; spelling its implied leaf is
+            // not a second accepted form.
+            'hero.image_url',
+            'text_1.image_1',
+            // Not a photo band at all.
+            'services', 'team', 'footer', 'contact.image_1',
+            // Not a leaf this type holds.
+            'gallery_1.body', 'gallery_1.image_0', 'gallery_1.image_01',
+            // Not a section key.
+            'gallery_7.image_1', 'text_7', 'carousel_1', '',
+            // Not the grammar at all.
+            'gallery_1.image_1.image_2', '../../etc/passwd', 'gallery_1.',
+        ] as $slot) {
+            $this->assertNull(SectionType::imageSlot($slot), "'{$slot}' was accepted as an image slot.");
+            $this->assertNotContains($slot, SectionType::imageKeys());
+        }
+    }
+
+    /** The leaf list is empty — never a guess — for every key that holds no photo. */
+    public function test_a_section_with_no_photo_publishes_no_leaves(): void
+    {
+        foreach (['services', 'team', 'reviews', 'booking', 'contact', 'footer', 'text', 'gallery', 'text_7', 'nope'] as $key) {
+            $this->assertSame([], SectionType::imageLeaves($key), "'{$key}' published photo leaves.");
+        }
+
+        $this->assertSame(['image_url'], SectionType::imageLeaves('hero'));
+        $this->assertSame(['image_url'], SectionType::imageLeaves('about'));
+        $this->assertSame(['image_url'], SectionType::imageLeaves('text_6'));
     }
 
     // ─── The editor payload ───────────────────────────────────────────────
@@ -304,7 +460,7 @@ class SectionTypeTest extends TestCase
 
         foreach ($payload as $row) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
                 array_keys($row),
                 "The '{$row['id']}' row does not carry exactly the published keys."
             );
@@ -324,7 +480,44 @@ class SectionTypeTest extends TestCase
                 SectionType::toneIds(),
                 "The '{$row['id']}' row publishes a default tone the picker does not offer."
             );
+
+            $this->assertSame(
+                count(SectionType::imageLeaves(
+                    $row['repeatable'] ? $row['id'] . '_1' : $row['id'],
+                )),
+                $row['image_slots'],
+                "The '{$row['id']}' row publishes a photo count its own leaf list disagrees with."
+            );
         }
+    }
+
+    /**
+     * `image` is the OLD question, published for the admin bundle already
+     * deployed when the gallery ships — and it is FALSE for a multi-photo
+     * type on purpose.
+     *
+     * That bundle reads `image` as "draw the one-photo control", and that
+     * control names its slot with the bare section key, which is not a slot
+     * for a gallery (see the grammar test above). Publishing `true` there
+     * would offer a control that could only ever 422; `false` offers none
+     * until the SPA is rebuilt, which is degraded and never wrong.
+     * Anything that understands `image_slots` reads that instead.
+     */
+    public function test_the_payload_publishes_the_photo_count_and_a_safe_legacy_flag(): void
+    {
+        $rows = collect(SectionType::payload())->keyBy('id');
+
+        $this->assertSame(1, $rows['hero']['image_slots']);
+        $this->assertTrue($rows['hero']['image']);
+        $this->assertSame(1, $rows['text']['image_slots']);
+        $this->assertTrue($rows['text']['image']);
+
+        $this->assertSame(8, $rows['gallery']['image_slots']);
+        $this->assertFalse($rows['gallery']['image'],
+            'A build that predates galleries must not be told to draw a one-photo control for one.');
+
+        $this->assertSame(0, $rows['services']['image_slots']);
+        $this->assertFalse($rows['services']['image']);
     }
 
     // ─── Tones (the per-section colour round) ─────────────────────────────
@@ -400,6 +593,7 @@ class SectionTypeTest extends TestCase
         $this->assertSame('band band--paper-2', SectionType::bandClass('booking'));
         $this->assertSame('band band--paper-2', SectionType::bandClass('text_1'));
         $this->assertSame('band band--paper-2', SectionType::bandClass('text_4'));
+        $this->assertSame('band', SectionType::bandClass('gallery_1'));
         $this->assertSame('band band--ink', SectionType::bandClass('reviews'));
         $this->assertSame('band band--ink', SectionType::bandClass('contact'));
     }
@@ -440,9 +634,11 @@ class SectionTypeTest extends TestCase
     /** A key this catalogue does not know still gets a usable band class. */
     public function test_an_unknown_key_still_renders_a_plain_band(): void
     {
+        // `gallery` bare is a repeatable type's id, which is NOT a key — the
+        // same non-key `text` is, and the same answer.
         $this->assertSame('band', SectionType::bandClass('gallery'));
         $this->assertSame('band', SectionType::bandClass('text_9'));
-        $this->assertSame('band band--accent', SectionType::bandClass('gallery', 'accent'));
+        $this->assertSame('band band--accent', SectionType::bandClass('carousel', 'accent'));
     }
 
     /**
@@ -461,6 +657,10 @@ class SectionTypeTest extends TestCase
         $this->assertSame('soft', SectionType::defaultToneFor('contact'));
         $this->assertSame('soft', SectionType::defaultToneFor('reviews'));
         $this->assertSame('soft', SectionType::defaultToneFor('text'));
+        // The gallery is authored on the page's own surface: it sits between
+        // whatever bands the tenant put it between, and the pictures are the
+        // colour in it.
+        $this->assertSame('page', SectionType::defaultToneFor('gallery'));
         $this->assertNull(SectionType::defaultToneFor('not-a-type'));
     }
 }
