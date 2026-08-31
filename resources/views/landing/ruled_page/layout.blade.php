@@ -266,6 +266,23 @@
     $sectionViews = $sections
         ->mapWithKeys(fn ($section) => [$section->key => \App\Landing\SectionType::viewFor($section->key)]);
 
+    // WHAT COLOUR EACH BAND IS, decided once, here — for exactly the reason
+    // $sectionViews above is built here rather than resolved in the loop.
+    //
+    // The tenant may put any band on any of the palette's surfaces (the
+    // `tone` column; App\Landing\SectionType::TONES is the allowlist), and a
+    // section that has no stored tone keeps the surface its own partial was
+    // authored with. bandClass() is the ONE place those two answers meet:
+    // the eight partials below print `{{ $band }}` and none of them contains
+    // a tone test, so a fourth tone is a change to the catalogue and to
+    // nothing else. A null tone renders byte-for-byte what the page rendered
+    // before tones existed, which is what leaves every live page and this
+    // template's byte goldens alone.
+    $sectionBands = $sections
+        ->mapWithKeys(fn ($section) => [
+            $section->key => \App\Landing\SectionType::bandClass($section->key, $section->tone),
+        ]);
+
     $renderedSections = $sections->filter(fn ($section) => $section->enabled
         && $content->has($section->key)
         && $sectionViews[$section->key] !== null
@@ -675,6 +692,11 @@
   @include($sectionViews[$section->key], [
     'section' => $section,
     'copy'    => $page->content[$section->key] ?? [],
+    // The band's own class list, resolved in <head> — see $sectionBands.
+    // Passed rather than left to scope inheritance so a partial that is
+    // ever included from somewhere else fails loudly instead of rendering
+    // a section with no `.band` class and silently losing its padding.
+    'band'    => $sectionBands[$section->key],
   ])
 @endforeach
 </main>

@@ -71,6 +71,80 @@ final class SectionType
     /** Where the ruled_page template keeps its section partials. */
     private const VIEW_PREFIX = 'landing.ruled_page.sections.';
 
+    /**
+     * THE TONE ALLOWLIST — every colour a tenant may put a band on, and the
+     * band modifier class each one renders as.
+     *
+     * ONE list, here, next to the types it applies to. The endpoint
+     * validates against it, the renderer resolves through it and the editor
+     * is served it; nothing anywhere holds a second copy, for the same
+     * reason this class exists at all (see the header docblock's four
+     * answers to one question).
+     *
+     * PALETTE-DERIVED PRESETS, NEVER FREE HEX. Every value below is a
+     * surface the ACTIVE palette already authors, so the choice is legible
+     * in all six palettes and both schemes without anyone checking: a
+     * tenant cannot pick a colour that makes their own text unreadable,
+     * and a page cannot end up as eight unrelated bands. That is the same
+     * ruling `theme.palette` is built on (D2, "palettes are data") applied
+     * one level down.
+     *
+     * The ids are named for the tenant, not for the CSS — `soft`, not
+     * `paper-2` — because they are what the editor's swatch row is keyed
+     * on and what a hand-edited draft would carry.
+     *
+     * WHY THREE AND NOT FOUR. The obvious fourth ("a deep band",
+     * `band--ink`) is not a fourth colour: D1's tonal ruling collapsed
+     * ink and paper-2 onto the SAME surface (`--bg-2`; see
+     * public/landing/ruled_page.css's "Surface rhythm" block, where both
+     * classes carry the identical declaration). Offering both would put
+     * two swatches in the picker that paint the same pixels — a choice
+     * that changes nothing, which is worse than no choice at all.
+     * `band--ink` survives as an AUTHORED DEFAULT (contact/reviews still
+     * emit it, byte for byte) and answers the `soft` swatch through
+     * {@see CLASS_TONES}; it is simply not something a tenant can newly
+     * select.
+     *
+     * @var array<string, string> tone id => band modifier class ('' = the page's own surface)
+     */
+    public const TONES = [
+        // The page's own background — the plain `.band`, no modifier. What
+        // hero, services and team have always rendered as.
+        'page'   => '',
+        // The tinted band, `--bg-2`. About/booking/text's authored surface.
+        'soft'   => 'band--paper-2',
+        // Accent-tinted: `--halo` (the palette's own accent-bright at .30)
+        // composited over `--bg-2`. New in this round — see the stylesheet's
+        // `.band--accent` rule, and PaletteTest's contrast floor for it,
+        // which measures the composite against `--text`/`--text-soft` in all
+        // six palettes rather than trusting that an accent tint is bound to
+        // be readable.
+        'accent' => 'band--accent',
+    ];
+
+    /**
+     * The reverse question, and a DIFFERENT one: given the class a section
+     * is authored with, which tone swatch is it already showing?
+     *
+     * The editor needs this and the renderer never does. A section with no
+     * stored tone still sits on a colour, and a picker that shows nothing
+     * selected for it would invite the tenant to "choose" the shade the
+     * band is already painted.
+     *
+     * `band--ink` maps to `soft` because the two ARE the same surface
+     * today (see TONES' own note) — the honest answer to "what colour is
+     * the contact band" is "the tinted one", even though the bytes it
+     * emits say `band--ink`.
+     *
+     * @var array<string, string> band modifier class => tone id
+     */
+    private const CLASS_TONES = [
+        ''              => 'page',
+        'band--paper-2' => 'soft',
+        'band--ink'     => 'soft',
+        'band--accent'  => 'accent',
+    ];
+
     private function __construct(
         /** The type id — also the section KEY for every non-repeatable type. */
         public readonly string $id,
@@ -105,6 +179,25 @@ final class SectionType
          */
         public readonly array $fields,
         /**
+         * The band modifier class this type's partial was AUTHORED with —
+         * `band--paper-2` for about, `band--ink` for contact, `''` for hero.
+         *
+         * Transcribed from the partials, which used to be the only place it
+         * was written down (eight `class="band band--x rp-y"` literals). It
+         * lives here now because a section's surface became a question with
+         * TWO answers — the tenant's stored `tone` when they set one, this
+         * when they did not — and a fallback expressed in eight blades is a
+         * fallback that drifts. {@see bandClass()} is the one place the two
+         * are reconciled, and RuledPageSectionsTest pins the exact class
+         * each key renders with a null tone.
+         *
+         * Not a tone id: `band--ink` is not one (see TONES), and turning
+         * contact's authored default into `soft` would change the bytes
+         * every existing page renders — which is the one thing this whole
+         * feature must not do.
+         */
+        public readonly string $band,
+        /**
          * Whether this type carries a photo plate — which is to say whether
          * `content.<key>.image_url` is a leaf the image endpoints may write
          * and {@see PageContent::imageUrl()} may be asked for.
@@ -130,7 +223,12 @@ final class SectionType
      * photo, which is the shape of every "and another thing" section a
      * marketing page ever needs.
      *
-     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, image: bool}>
+     * `band` is likewise transcribed rather than invented: it is the exact
+     * modifier class each partial's own `<section class="band …">` already
+     * carried before the tone round, and RuledPageSectionsTest asserts the
+     * rendered class per key so the table and the partials cannot diverge.
+     *
+     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, band: string, image: bool}>
      */
     public static function all(): array
     {
@@ -142,6 +240,7 @@ final class SectionType
                 'repeatable' => false,
                 'view'       => 'hero',
                 'fields'     => ['kicker', 'headline', 'subtext'],
+                'band'       => '',
                 'image'      => true,
             ],
             // The price list. Its ROWS come from the Services screen, not
@@ -150,30 +249,35 @@ final class SectionType
                 'repeatable' => false,
                 'view'       => 'services',
                 'fields'     => ['kicker', 'heading', 'subtext'],
+                'band'       => '',
                 'image'      => false,
             ],
             'about' => [
                 'repeatable' => false,
                 'view'       => 'about',
                 'fields'     => ['kicker', 'lead', 'body'],
+                'band'       => 'band--paper-2',
                 'image'      => true,
             ],
             'team' => [
                 'repeatable' => false,
                 'view'       => 'team',
                 'fields'     => ['kicker', 'heading', 'subtext'],
+                'band'       => '',
                 'image'      => false,
             ],
             'reviews' => [
                 'repeatable' => false,
                 'view'       => 'reviews',
                 'fields'     => ['kicker'],
+                'band'       => 'band--ink',
                 'image'      => false,
             ],
             'booking' => [
                 'repeatable' => false,
                 'view'       => 'booking',
                 'fields'     => ['kicker', 'heading', 'terms', 'call_label', 'call_short'],
+                'band'       => 'band--paper-2',
                 'image'      => false,
             ],
             // phone/email/address are the three fields ContactDetails lets a
@@ -187,6 +291,7 @@ final class SectionType
                     'kicker', 'phone', 'email', 'address',
                     'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label',
                 ],
+                'band'       => 'band--ink',
                 'image'      => false,
             ],
             // Rendered outside the section loop (the layout includes it
@@ -197,6 +302,7 @@ final class SectionType
                 'repeatable' => false,
                 'view'       => 'footer',
                 'fields'     => [],
+                'band'       => '',
                 'image'      => false,
             ],
             // The repeatable band this catalogue was built for.
@@ -204,6 +310,7 @@ final class SectionType
                 'repeatable' => true,
                 'view'       => 'text',
                 'fields'     => ['kicker', 'heading', 'body'],
+                'band'       => 'band--paper-2',
                 'image'      => true,
             ],
         ];
@@ -275,8 +382,76 @@ final class SectionType
             repeatable: $data['repeatable'],
             view:       $data['view'],
             fields:     $data['fields'],
+            band:       $data['band'],
             image:      $data['image'],
         );
+    }
+
+    /** The tone ids, in the order the editor should offer them. @return list<string> */
+    public static function toneIds(): array
+    {
+        return array_keys(self::TONES);
+    }
+
+    /**
+     * THE ONE PLACE A BAND'S SURFACE IS DECIDED — the tenant's stored tone
+     * when they set one, the section's authored default when they did not.
+     *
+     * Every section partial calls this and none of them knows what a tone
+     * is; that is the point. The alternative that was NOT taken is a
+     * `$section->tone === 'accent' ? … : …` ternary in each of the eight
+     * `<section class="band …">` tags, which is eight places to add the
+     * fourth tone to and eight places for one of them to be missed.
+     *
+     * A NULL TONE RENDERS EXACTLY WHAT THE PAGE RENDERED BEFORE TONES
+     * EXISTED. That is not a nicety — it is what keeps every already-live
+     * page, and the renderer's four byte goldens, unchanged by this
+     * feature. There is deliberately no "if no tone then `soft`" anywhere:
+     * the fallback is the AUTHORED class, per type, from the catalogue
+     * above.
+     *
+     * An unrecognised tone (a hand-edited row, a value written by a build
+     * that knew a tone this one has since dropped) falls through to the
+     * authored default rather than rendering as an arbitrary class name —
+     * the same read-time re-whitelisting `theme.palette` and
+     * `theme.font_pairing` already get in the layout, and for the same
+     * reason: `tone` is a plain varchar with no database constraint behind
+     * it, and a value that reached the column by any route other than the
+     * endpoint must not be able to put attacker-chosen text into a `class`.
+     *
+     * Returns the FULL class list (`band` plus the modifier, space
+     * separated) rather than just the modifier, so a caller cannot forget
+     * the base class — `.band` is what carries the padding, the reading
+     * spine and the seam rules, and a band without it is not a band.
+     */
+    public static function bandClass(string $key, ?string $tone = null): string
+    {
+        $modifier = $tone === null ? null : (self::TONES[$tone] ?? null);
+
+        if ($modifier === null) {
+            $modifier = self::forKey($key)?->band ?? '';
+        }
+
+        return $modifier === '' ? 'band' : 'band ' . $modifier;
+    }
+
+    /**
+     * Which tone the editor should show as already selected for a section
+     * carrying no stored tone — the swatch equivalent of its authored
+     * class. Null for a type this catalogue does not know.
+     *
+     * Takes a TYPE ID, like {@see get()} and unlike {@see bandClass()}: the
+     * answer is a fact about the type, so every `text_N` on a page shares
+     * one, and {@see payload()} — the only caller — is a per-type table.
+     *
+     * The renderer never asks: it needs the CLASS, and turning the class
+     * into a tone and back would lose `band--ink`.
+     */
+    public static function defaultToneFor(string $typeId): ?string
+    {
+        $type = self::get($typeId);
+
+        return $type === null ? null : (self::CLASS_TONES[$type->band] ?? null);
     }
 
     /**
@@ -400,7 +575,14 @@ final class SectionType
      * repeatable types so the editor can grey out "Add" at the cap rather
      * than discovering it through a 422.
      *
-     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, limit: int|null}>
+     * `band` is absent for the same reason as `view` — it is a class name
+     * on a stylesheet the admin SPA does not load. What the editor needs is
+     * `default_tone`: which swatch to show lit for a row whose `tone` is
+     * null, so the picker says "this band is already the tinted one" rather
+     * than showing nothing selected and inviting the tenant to pick the
+     * colour it is already painted. {@see defaultToneFor()}.
+     *
+     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, limit: int|null, default_tone: string|null}>
      */
     public static function payload(): array
     {
@@ -408,11 +590,12 @@ final class SectionType
 
         foreach (self::all() as $id => $type) {
             $rows[] = [
-                'id'         => $id,
-                'repeatable' => $type['repeatable'],
-                'fields'     => $type['fields'],
-                'image'      => $type['image'],
-                'limit'      => $type['repeatable'] ? self::MAX_INSTANCES_PER_TYPE : null,
+                'id'           => $id,
+                'repeatable'   => $type['repeatable'],
+                'fields'       => $type['fields'],
+                'image'        => $type['image'],
+                'limit'        => $type['repeatable'] ? self::MAX_INSTANCES_PER_TYPE : null,
+                'default_tone' => self::defaultToneFor($id),
             ];
         }
 

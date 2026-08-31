@@ -276,3 +276,53 @@ describe('locale completeness — addable section type names and blurbs (dynamic
     })
   }
 })
+
+/**
+ * The tone round: `LandingEditor.tsx`'s per-section colour picker names each
+ * swatch with a template-literal `t()` call —
+ * `` t(`landing_pages.editor.tone_name_${tone.id}`, …) `` — twice over (once
+ * on the swatch's own label/title, once on the "you are on this one" caption
+ * beside the row), so `T_CALL_RE` at the top of this file cannot see the
+ * family at all. Fourth time, same reasoning as the three describes above.
+ *
+ * The ids are `App\Landing\SectionType::TONES`' keys — the allowlist the
+ * save endpoint validates against and the onboarding response publishes as
+ * `section_tones`. The list is SERVED, so a tone the backend adds appears in
+ * the picker with no release on this side: the only thing missing would be
+ * its name, and `TONE_NAME_FALLBACK`'s `?? tone.id` fallback would then
+ * render a raw id (`page`, `soft`) as the label of a colour swatch a
+ * customer is asked to choose between. That is the failure this net exists
+ * to make loud.
+ *
+ * Hardcoded rather than derived for the fourth time and the same reason: a
+ * list built from the module it checks loses an id and its expectation in
+ * one edit. `sectionTones.ts` (which owns the swatch recipes) is where the
+ * matching client-side list lives, and it is deliberately not imported here.
+ */
+describe('locale completeness — section tone names (dynamic t() keys, hand-verified)', () => {
+  const TONE_NAME_KEYS = [
+    // SectionType::TONES' three ids, in that constant's own order.
+    'landing_pages.editor.tone_name_page',
+    'landing_pages.editor.tone_name_soft',
+    'landing_pages.editor.tone_name_accent',
+  ]
+
+  // The same canary the describes above carry: three tones, no fewer.
+  it('names exactly the three tones the allowlist ships', () => {
+    expect(TONE_NAME_KEYS.length).toBe(3)
+  })
+
+  for (const locale of LOCALES) {
+    it(`every tone name key resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = TONE_NAME_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) tone name key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})

@@ -435,10 +435,34 @@ ul,ol{margin:0;padding:0;list-style:none}
 .band{position:relative}
 .band--ink{background:var(--bg-2)}
 .band--paper-2{background:var(--bg-2)}
+/* The accent tone (App\Landing\SectionType::TONES). A tenant can now choose
+   which surface each band sits on, and "the page's own colour" and "the
+   tinted one" were the only two the palette already spelled as full-bleed
+   surfaces — this is the third, and it is DERIVED from the palette rather
+   than authored per palette, so it arrives correct in all six without
+   fifteen new hex values to keep in step.
+
+   --halo is the palette's own accent-bright at .30 (see App\Landing\Palette,
+   where all six derive it identically); a solid-colour gradient layer is how
+   you composite a translucent colour over an opaque one in one declaration,
+   and it keeps --bg-2 as the actual background-color so a band that somehow
+   loses the image layer falls back to the tinted surface rather than to
+   nothing. PaletteTest measures the resulting composite against --text and
+   --text-soft in every palette, exactly as it does the authored surfaces —
+   an accent band that could not be read on would be a preset that looks
+   good in the picker and ruins the page. */
+.band--accent{background:linear-gradient(var(--halo), var(--halo)), var(--bg-2)}
+/* Same-surface seams. Any section can be toggled off (and now re-toned), so
+   which surface abuts which is never known at render time; all the
+   collisions are answered here instead of being computed. ink and paper-2
+   are ONE surface (--bg-2), hence all four of their combinations; accent is
+   its own, hence only its self-collision. An accent band against a tinted
+   one needs nothing — the colour change IS the seam. */
 .band--ink + .band--ink,
 .band--paper-2 + .band--paper-2,
 .band--ink + .band--paper-2,
-.band--paper-2 + .band--ink{padding-top:var(--pad-seam);border-top:1px solid var(--line-soft)}
+.band--paper-2 + .band--ink,
+.band--accent + .band--accent{padding-top:var(--pad-seam);border-top:1px solid var(--line-soft)}
 /* Accent text on a surface: deep on light schemes, bright on dark ones —
    one token, re-pointed per palette; see the header comment. */
 a{color:var(--accent-text)}
@@ -1009,9 +1033,13 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
   font-family:var(--mono);font-weight:500;font-size:var(--t-mono);
   letter-spacing:.06em;color:var(--text-soft);text-transform:uppercase}
 /* On the tinted band the plate steps UP onto the elevated surface instead
-   of disappearing into a same-colour field. */
+   of disappearing into a same-colour field. The accent band gets the same
+   treatment for a stronger version of the same reason: its own fill is
+   --bg-2 with an accent wash over it, so a plate left on the base --bg-2
+   would read as a rectangle of missing tint rather than as a plate. */
 .band--ink .rp-plate--mono,
-.band--paper-2 .rp-plate--mono{background:var(--bg-elev);border-color:var(--line-soft)}
+.band--paper-2 .rp-plate--mono,
+.band--accent .rp-plate--mono{background:var(--bg-elev);border-color:var(--line-soft)}
 
 /* --- about: the studio (4.5.4) ------------------------------------------- */
 /* The plate that 4.5.4 hangs off the grid at -40px is not built (see the

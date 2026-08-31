@@ -45,7 +45,7 @@
         }
     }
 @endphp
-<section id="reviews" data-section="reviews" class="band band--ink rp-reviews">
+<section id="reviews" data-section="reviews" class="{{ $band }} rp-reviews">
   <div class="wrap">
     <h2 class="band__kicker">{{ $copy['kicker'] ?? $profile->kicker('reviews') }}</h2>
 

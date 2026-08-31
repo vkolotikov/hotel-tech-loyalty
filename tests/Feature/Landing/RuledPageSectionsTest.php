@@ -689,6 +689,12 @@ class RuledPageSectionsTest extends TestCase
             'copy'     => [],
             'profile'  => \App\Landing\IndustryProfile::for('beauty'),
             'sections' => collect(),
+            // The tone round: the layout resolves each band's class list once
+            // and passes it in (see its $sectionBands map), so a partial
+            // rendered on its own has to supply it too. Asked of the same
+            // helper the layout asks, with no tone, which is what an
+            // untouched section renders as.
+            'band'     => \App\Landing\SectionType::bandClass('contact'),
         ])->render();
 
         $this->assertStringContainsString('Monday', $html);
@@ -1222,5 +1228,88 @@ class RuledPageSectionsTest extends TestCase
         $response->assertOk();
         $this->assertStringNotContainsString('data-section="text_7"', $response->getContent());
         $this->assertStringNotContainsString('Words from a row nothing should render.', $response->getContent());
+    }
+
+    // ── band tone: the per-section colour ───────────────────────────────────
+
+    /**
+     * The fixture every tone test below builds on: a page whose about,
+     * contact and hero bands all actually render, so what is being asserted
+     * is the RENDERED class attribute rather than a helper's return value
+     * (App\Landing\SectionType::bandClass() is unit-tested in
+     * SectionTypeTest; this file is about the wiring reaching the page).
+     */
+    private function publishedWithThreeBands(): LandingPage
+    {
+        $page = $this->published(['about' => ['body' => 'We opened in 2019 with a single chair.']]);
+        $this->contactable();
+
+        return $page;
+    }
+
+    /**
+     * THE CONTRACT THIS WHOLE FEATURE RESTS ON. A section with no stored
+     * tone renders the exact class its partial was authored with — three
+     * different authored surfaces asserted by literal string, because these
+     * are the same bytes the four RuledPageRenderTest goldens contain and a
+     * regression here is a regression on every already-published page.
+     */
+    public function test_sections_with_no_tone_render_their_authored_band_classes(): void
+    {
+        $this->publishedWithThreeBands();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<section data-section="hero" class="band rp-hero', $body);
+        $this->assertStringContainsString('<section id="about" data-section="about" class="band band--paper-2 rp-about">', $body);
+        $this->assertStringContainsString('<section id="contact" data-section="contact" class="band band--ink rp-contact">', $body);
+    }
+
+    public function test_a_stored_tone_paints_the_band_instead_of_its_authored_default(): void
+    {
+        $page = $this->publishedWithThreeBands();
+
+        // One band per direction: a tinted default pushed to accent, an ink
+        // default pushed to the page's own surface, and a plain default
+        // pushed to accent.
+        $page->sections()->where('key', 'about')->update(['tone' => 'accent']);
+        $page->sections()->where('key', 'contact')->update(['tone' => 'page']);
+        $page->sections()->where('key', 'hero')->update(['tone' => 'accent']);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<section id="about" data-section="about" class="band band--accent rp-about">', $body);
+        $this->assertStringContainsString('<section id="contact" data-section="contact" class="band rp-contact">', $body);
+        $this->assertStringContainsString('<section data-section="hero" class="band band--accent rp-hero', $body);
+    }
+
+    /** A tenant-added band takes a tone through the same one helper. */
+    public function test_an_added_text_band_takes_a_tone_too(): void
+    {
+        $page = $this->publishedWithTextBands(['text_1' => ['body' => 'Every appointment begins with ten minutes of nothing.']]);
+        $page->sections()->where('key', 'text_1')->update(['tone' => 'accent']);
+
+        $this->assertStringContainsString(
+            '<section id="text_1" data-section="text_1" class="band band--accent rp-text">',
+            $this->body()
+        );
+    }
+
+    /**
+     * `tone` is a plain varchar with no constraint behind it, so a value
+     * that reached the row by some route other than the endpoint must not
+     * be able to put arbitrary text into a `class` attribute. It renders as
+     * if nothing had been stored — the same read-time re-whitelisting the
+     * layout already gives `theme.palette` and `theme.font_pairing`.
+     */
+    public function test_a_hand_edited_tone_cannot_reach_the_class_attribute(): void
+    {
+        $page = $this->publishedWithThreeBands();
+        $page->sections()->where('key', 'about')->update(['tone' => 'rp-hero" onload="alert(1)']);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<section id="about" data-section="about" class="band band--paper-2 rp-about">', $body);
+        $this->assertStringNotContainsString('onload=', $body);
     }
 }

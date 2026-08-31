@@ -57,7 +57,7 @@
 
     $mapQuery = $addressLines->implode(', ');
 @endphp
-<section id="contact" data-section="contact" class="band band--ink rp-contact">
+<section id="contact" data-section="contact" class="{{ $band }} rp-contact">
   <div class="wrap rp-contact__grid">
     <div class="rp-contact__details">
       <h2 class="band__kicker">{{ $copy['kicker'] ?? $profile->kicker('contact') }}</h2>

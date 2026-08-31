@@ -3171,7 +3171,14 @@
       "preview_loading": "Vorschau wird geladen…",
       "preview_error": "Die Vorschau konnte nicht geladen werden.",
       "preview_expired": "Dieser Vorschaulink ist abgelaufen.",
-      "preview_iframe_title": "Vorschau Ihrer Seite"
+      "preview_iframe_title": "Vorschau Ihrer Seite",
+      "tone_label": "Hintergrundfarbe",
+      "tone_unknown": "Durch Ihr Design festgelegt",
+      "tone_name_page": "Seitenhintergrund",
+      "tone_name_soft": "Sanfter Streifen",
+      "tone_name_accent": "Akzentstreifen",
+      "section_showing": "Wird auf Ihrer Seite angezeigt",
+      "section_hidden": "Auf Ihrer Seite ausgeblendet"
     },
     "teardown": {
       "now_offline": "Ihre Seite ist jetzt offline",

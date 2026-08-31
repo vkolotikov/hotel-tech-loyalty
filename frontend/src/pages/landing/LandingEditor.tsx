@@ -11,15 +11,16 @@ import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason } from './sections'
 import {
   addableTypes, appendSection, buildSectionRows, buildSectionsPayload, instanceRowLabel, moveSection,
-  moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, stripImageUrlLeaves,
-  toggleSection,
+  moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, setSectionTone,
+  stripImageUrlLeaves, toggleSection,
   type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
+import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
 import { downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
 import { DesignPanel } from './DesignPanel'
-import { themePayload } from './designChoices'
+import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import { catalogPayload, resolveTemplateKey, type TemplateOption } from './editorCatalog'
 // Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
@@ -126,6 +127,20 @@ type LandingEditorProps = {
    * server might not.
    */
   maxSections: number | null
+  /**
+   * `onboarding.section_tones` — `SectionType::TONES`' ids, in the order the
+   * picker should offer them.
+   *
+   * The third served allowlist on this screen, for the third identical
+   * reason: it is what `LandingPageSectionController::update()` validates a
+   * band's colour against, so a swatch row built from a hand-kept copy here
+   * is a swatch row that can offer a colour the save would 422 on.
+   *
+   * `null` (an older backend, or a failed onboarding fetch) draws NO tone
+   * control at all rather than falling back to a guessed list — see
+   * `toneChoices` in `sectionTones.ts`, which owns that refusal.
+   */
+  sectionTones: string[] | null
 }
 
 // bg-dark-surface, never bg-dark-card — the two are different shades, and
@@ -142,6 +157,59 @@ const btnPrimary = 'flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-p
 // tenants out of using the one button that always works, even after a
 // downgrade or cancellation.
 const btnSec = 'flex items-center gap-1.5 px-3 py-2 text-xs font-medium bg-dark-bg border border-dark-border text-t-secondary rounded-lg hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors'
+
+/**
+ * The section row's icon buttons, one shape for all of them.
+ *
+ * The house icon button (EarnRateEvents.tsx:266, InquiryDetail.tsx:337) is
+ * `p-1.5 rounded hover:bg-dark-surface3 text-t-secondary hover:text-white` —
+ * quiet by default, lit on hover, no border. This is that, with two things
+ * added rather than invented: a fixed 32px square so every control on the
+ * row has the same hit target whatever glyph sits in it (the old grip and
+ * chevrons had no size at all beyond their 15px icons, which is why they
+ * read as cramped), and the focus ring the rest of this screen's controls
+ * already carry — a keyboard user must be able to see where they are on a
+ * row of four look-alike squares.
+ */
+const iconBtn = 'flex items-center justify-center w-8 h-8 shrink-0 rounded-md text-t-secondary '
+  + 'hover:text-white hover:bg-dark-surface3 transition-colors motion-reduce:transition-none '
+  + 'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-t-secondary '
+  + 'outline-none focus-visible:ring-2 focus-visible:ring-primary-500/60'
+
+/**
+ * The same button, for the one action that destroys something.
+ *
+ * SECONDARY UNTIL REACHED FOR, which is the whole point: removing a band
+ * deletes its copy and its photo and cannot be undone, so it must be
+ * findable and must not sit on the card shouting. It is the same grey as its
+ * neighbours at rest and only takes the warning colour under hover or
+ * keyboard focus. `warning` rather than `error` deliberately — this file
+ * already argues (see `btnSec`'s note) that a red treatment frightens
+ * tenants off controls they need, and the amber is the product's own
+ * "careful now".
+ */
+const iconBtnDanger = 'flex items-center justify-center w-8 h-8 shrink-0 rounded-md text-t-secondary '
+  + 'hover:text-warning hover:bg-warning/10 focus-visible:text-warning focus-visible:bg-warning/10 '
+  + 'transition-colors motion-reduce:transition-none '
+  + 'disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-t-secondary '
+  + 'outline-none focus-visible:ring-2 focus-visible:ring-warning/60'
+
+/** One 14px glyph for every control on the row header. The old mix (15px
+ *  grip and chevrons against a 13px trash) is a difference with no meaning
+ *  behind it, and it is most of what made the set look assembled rather than
+ *  designed. */
+const ROW_ICON = 14
+
+/** The tenant's word for each tone (`App\Landing\SectionType::TONES`' ids) —
+ *  `t()` fallbacks, so the swatch row is never a line of unlabelled colour.
+ *  Named for what the tenant is choosing, not for the band class behind it;
+ *  see `localeCompleteness.test.ts` for the hand-verified net over these
+ *  template-literal keys. */
+const TONE_NAME_FALLBACK: Record<string, string> = {
+  page: 'Page background',
+  soft: 'Soft band',
+  accent: 'Accent band',
+}
 
 /** `t()` fallback text per content-field name — the same words across every
  *  section that has that field, so a label means the same thing on the
@@ -259,7 +327,7 @@ function sectionErrorMessage(e: unknown, fallback: string): string {
  * the query, bump `previewNonce`.
  */
 export function LandingEditor({
-  sections: availability, industries, templates, sectionTypes, maxSections,
+  sections: availability, industries, templates, sectionTypes, maxSections, sectionTones,
 }: LandingEditorProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -402,6 +470,33 @@ export function LandingEditor({
 
   const toggleRow = (key: string) =>
     update('sections', toggleSection(f.sections ?? [], key))
+
+  /**
+   * The swatch row every section card offers, computed once for the whole
+   * list: the SERVED tone ids painted in the colours of the palette the page
+   * is currently wearing — including an unsaved palette change queued in
+   * `form` this session, which is why it reads `themeFields` rather than
+   * `page.theme`. Switch palette and every band's swatches restyle with it,
+   * because the tone a band is on genuinely is a different colour now.
+   *
+   * `paletteFor` resolves an absent or unrecognised id to the stylesheet's
+   * own no-choice default (porcelain), which is exactly what such a page
+   * actually renders as.
+   */
+  const tonePalette = paletteFor(themeFields.palette)
+  const tones: ToneChoice[] = toneChoices(sectionTones, tonePalette)
+
+  /**
+   * Queued into `form` and saved by the Save button through the existing
+   * `PUT /sections` call — never a straight-to-server write, the same as the
+   * enable toggle and the reorder controls beside it, and unlike add/remove
+   * (which must write at once because the row has to exist server-side
+   * before anything can be written into it). `saveMut.onSuccess` is what
+   * bumps `previewNonce`, so the preview refreshes when — and only when —
+   * there is genuinely a newer saved draft to show.
+   */
+  const setToneRow = (key: string, tone: string | null) =>
+    update('sections', setSectionTone(f.sections ?? [], key, tone))
 
   // Which row is currently being dragged, and which one the pointer is
   // over. Held HERE rather than per row because both questions are about
@@ -891,6 +986,8 @@ export function LandingEditor({
                     endDrag()
                   }}
                   onToggle={() => toggleRow(row.key)}
+                  tones={tones}
+                  onToneChange={tone => setToneRow(row.key, tone)}
                   onMove={(dir, label) => moveRow(row.key, dir, label)}
                   // Home/End. Resolved to the first/last VISIBLE row's key
                   // here, where the rendered list is — a row this build does
@@ -1158,7 +1255,7 @@ const TYPE_BLURB_FALLBACK: Record<string, string> = {
 function SectionRow({
   row, isFirst, isLast, index, total, content, imageUrl, autoFocusFirstField, onFocusHandled,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
-  onToggle, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
+  onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
 }: {
   row: EditorSectionRow
   isFirst: boolean
@@ -1187,6 +1284,11 @@ function SectionRow({
   onDragEnd: () => void
   onDropRow: () => void
   onToggle: () => void
+  /** The colours this band may sit on, already painted in the palette the
+   *  page is wearing. Empty (an older backend published no tone list) draws
+   *  no colour control at all. */
+  tones: ToneChoice[]
+  onToneChange: (tone: string) => void
   onMove: (direction: 'up' | 'down', label: string) => void
   onMoveEdge: (edge: 'first' | 'last', label: string) => void
   onRemove: (label: string) => void
@@ -1208,6 +1310,12 @@ function SectionRow({
   // photo control, with no edit here.
   const fields = row.fields
   const firstWritableField = fields.findIndex(field => field.type !== 'image')
+
+  // Which swatch is lit. A row with no stored tone is not "unset" — it is
+  // sitting on the colour its section was authored with, and the served
+  // `default_tone` is what names that. Null only when this build recognises
+  // neither, which it says in words rather than silently lighting nothing.
+  const currentTone = selectedTone(row.tone, row.defaultTone, tones)
 
   // `draggable` is armed by the HANDLE, not left permanently on the card.
   // A permanently draggable card cannot have its text selected — every
@@ -1266,50 +1374,52 @@ function SectionRow({
         + (dragging ? 'opacity-40 ' : '')
         + (dropTarget ? 'ring-2 ring-primary-500/70 ' : '')}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3 min-w-0">
-          <div className="flex flex-col items-center shrink-0 -mt-0.5">
-            <button
-              type="button"
-              // Not `draggable` itself — the CARD is what gets dragged, and
-              // this only arms it. Dragging the handle alone would carry a
-              // 15px icon across the screen instead of the section.
-              onPointerDown={() => setArmed(true)}
-              onPointerUp={stopDrag}
-              onKeyDown={onHandleKeyDown}
-              onBlur={stopDrag}
-              aria-describedby="lp-reorder-help"
-              aria-label={t('landing_pages.editor.reorder_handle', {
-                label: displayLabel,
-                position: index + 1,
-                total,
-                defaultValue: 'Move {{label}} — position {{position}} of {{total}}',
-              })}
-              className="text-t-secondary hover:text-white cursor-grab active:cursor-grabbing outline-none rounded focus-visible:ring-2 focus-visible:ring-primary-500/40"
-            >
-              <GripVertical size={15} />
-            </button>
-            <button
-              type="button"
-              disabled={isFirst}
-              onClick={() => onMove('up', displayLabel)}
-              aria-label={t('landing_pages.editor.move_up', 'Move up')}
-              className="text-t-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronUp size={15} />
-            </button>
-            <button
-              type="button"
-              disabled={isLast}
-              onClick={() => onMove('down', displayLabel)}
-              aria-label={t('landing_pages.editor.move_down', 'Move down')}
-              className="text-t-secondary hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ChevronDown size={15} />
-            </button>
-          </div>
+      {/*
+        THE ROW HEADER, restyled (the "activate and trash icons not looks
+        good" round). What was here: a 15px grip and two 15px chevrons
+        stacked in an unsized column against the card's left edge, and — at
+        the far right — a brand-coloured pill switch pressed up against a
+        borderless 13px trash glyph. Four controls, four different sizes,
+        two of them with no hit target beyond the glyph itself, and the only
+        splash of colour on the whole card spent on "this section is on".
 
-          <div className="min-w-0">
+        What it is now, and why:
+          - ONE handle on the left, where a drag affordance belongs, at the
+            same 32px square every other control on the row uses.
+          - The two reorder chevrons and the enable switch GROUPED in a
+            single bordered pill on the right: they are the three things a
+            tenant does to a section that already exists, and they now read
+            as one set rather than as three separate accidents.
+          - The remove button OUTSIDE that group, with air around it. It is
+            the one action here that cannot be undone, so it is deliberately
+            not adjacent to the switch a tenant presses casually.
+          - Every control 32px, every glyph 14px, every one of them with a
+            visible focus ring and an accessible name.
+      */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-start gap-3 min-w-0">
+          <button
+            type="button"
+            // Not `draggable` itself — the CARD is what gets dragged, and
+            // this only arms it. Dragging the handle alone would carry a
+            // 14px icon across the screen instead of the section.
+            onPointerDown={() => setArmed(true)}
+            onPointerUp={stopDrag}
+            onKeyDown={onHandleKeyDown}
+            onBlur={stopDrag}
+            aria-describedby="lp-reorder-help"
+            aria-label={t('landing_pages.editor.reorder_handle', {
+              label: displayLabel,
+              position: index + 1,
+              total,
+              defaultValue: 'Move {{label}} — position {{position}} of {{total}}',
+            })}
+            className={iconBtn + ' cursor-grab active:cursor-grabbing'}
+          >
+            <GripVertical size={ROW_ICON} />
+          </button>
+
+          <div className="min-w-0 pt-1.5">
             <span className="block text-sm font-medium text-white">{displayLabel}</span>
             {!row.fixed ? (
               /* A tenant-added band, whose one honest thing to say is
@@ -1367,29 +1477,75 @@ function SectionRow({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          {offerable ? (
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Reorder + enable, in one container: the three things you do to
+              a section that is already on the page. */}
+          <div className="flex items-center gap-0.5 rounded-lg border border-dark-border bg-dark-bg/60 p-0.5">
             <button
               type="button"
-              role="switch"
-              aria-checked={checked}
-              aria-label={displayLabel}
-              onClick={onToggle}
-              className={'relative shrink-0 w-9 h-5 rounded-full transition-colors motion-reduce:transition-none outline-none '
-                + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
-                + (checked ? 'bg-primary-500' : 'bg-dark-border')}
+              disabled={isFirst}
+              onClick={() => onMove('up', displayLabel)}
+              aria-label={t('landing_pages.editor.move_up', 'Move up')}
+              className={iconBtn}
             >
-              <span
-                aria-hidden
-                className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform motion-reduce:transition-none '
-                  + (checked ? 'translate-x-4' : 'translate-x-0.5')}
-              />
+              <ChevronUp size={ROW_ICON} />
             </button>
-          ) : (
-            <span className="shrink-0 rounded-full border border-dark-border px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
-              {t('landing_pages.editor.section_not_yet', 'Not yet')}
-            </span>
-          )}
+            <button
+              type="button"
+              disabled={isLast}
+              onClick={() => onMove('down', displayLabel)}
+              aria-label={t('landing_pages.editor.move_down', 'Move down')}
+              className={iconBtn}
+            >
+              <ChevronDown size={ROW_ICON} />
+            </button>
+
+            <span aria-hidden className="mx-1 h-4 w-px bg-dark-border" />
+
+            {offerable ? (
+              <button
+                type="button"
+                role="switch"
+                aria-checked={checked}
+                aria-label={displayLabel}
+                // The state in words as well as in colour, for everyone who
+                // is not reading it off a screen reader.
+                title={checked
+                  ? t('landing_pages.editor.section_showing', 'Showing on your page')
+                  : t('landing_pages.editor.section_hidden', 'Hidden from your page')}
+                onClick={onToggle}
+                // The pill lives INSIDE a 32px-tall button rather than being
+                // one: a 20px-high control is under every hit-target floor
+                // there is, and growing the pill itself would have made the
+                // loudest thing on the card louder still.
+                className={'flex items-center justify-center h-8 px-1.5 shrink-0 rounded-md outline-none '
+                  + 'hover:bg-dark-surface3 transition-colors motion-reduce:transition-none '
+                  + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
+              >
+                <span
+                  aria-hidden
+                  // `accent` (the product's green) rather than `primary` —
+                  // primary is the TENANT'S brand colour, and on a blue or
+                  // magenta brand this switch became the loudest thing on
+                  // the screen while saying nothing about state. Green reads
+                  // as "on" without being asked to, and it is the same token
+                  // this very file already uses for "live" a few components
+                  // down.
+                  className={'relative block w-9 h-5 rounded-full border transition-colors motion-reduce:transition-none '
+                    + (checked ? 'bg-accent border-accent' : 'bg-dark-surface3 border-dark-border')}
+                >
+                  <span
+                    className={'absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white transition-transform motion-reduce:transition-none '
+                      + (checked ? 'translate-x-[18px]' : 'translate-x-[2px]')}
+                  />
+                </span>
+              </button>
+            ) : (
+              <span className="flex items-center h-8 px-2 shrink-0 text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
+                {t('landing_pages.editor.section_not_yet', 'Not yet')}
+              </span>
+            )}
+          </div>
 
           {/*
             ONLY on a band the tenant added. The fixed bands are seeded with
@@ -1399,6 +1555,9 @@ function SectionRow({
             way to take a fixed band off the page. `row.fixed` is derived
             from the served catalogue's own key grammar, not from a list of
             removable keys kept here.
+
+            Outside the group above, and spaced away from it: this is the
+            only control on the row that destroys anything.
           */}
           {!row.fixed && (
             <button
@@ -1410,16 +1569,85 @@ function SectionRow({
                 label: displayLabel,
                 defaultValue: 'Remove {{label}}',
               })}
-              className={btnSec + ' !px-2 hover:!text-warning'}
+              className={iconBtnDanger + ' ml-1'}
             >
-              <Trash2 size={13} />
+              <Trash2 size={ROW_ICON} />
             </button>
           )}
         </div>
       </div>
 
+      {/* `pl-11`, not `pl-7`: the body indents to sit under the row's LABEL,
+          and the label moved right when the reorder chevrons left the left
+          edge for the group on the right (32px handle + a 12px gap). */}
       {offerable && (
-        <div className="space-y-3 pl-7">
+        <div className="space-y-3 pl-11">
+          {/*
+            THE COLOUR OF THIS BAND.
+
+            First in the card, above the words, because it is the one control
+            here that changes how the section LOOKS rather than what it says
+            — and because a tenant who came to this card to recolour it
+            should not have to scroll past four textareas to find out whether
+            they can.
+
+            Swatches, not a dropdown of colour NAMES: "Soft band" means
+            nothing until you have seen it, and the same id is a different
+            colour in each of the six palettes. Each swatch is painted in the
+            actual colour that band will be, in the palette the page is
+            currently wearing (`toneChoices`), and the chosen one is named in
+            words beside them so the control is not colour-alone.
+
+            `aria-pressed` toggle buttons rather than a `radiogroup`: the
+            same shape `DesignPanel.tsx`'s palette and pairing cards already
+            use, and it is the honest one here — a radiogroup promises
+            arrow-key navigation with a roving tabindex, and claiming that
+            without implementing it is worse for a keyboard user than three
+            plain buttons they can tab through.
+          */}
+          {tones.length > 0 && (
+            <div>
+              <span className={label} id={`lp-${row.key}-tone`}>
+                {t('landing_pages.editor.tone_label', 'Background colour')}
+              </span>
+              <div className="flex items-center gap-2 flex-wrap" role="group" aria-labelledby={`lp-${row.key}-tone`}>
+                {tones.map(tone => {
+                  const toneName = t(`landing_pages.editor.tone_name_${tone.id}`, TONE_NAME_FALLBACK[tone.id] ?? tone.id)
+                  const active = tone.id === currentTone
+
+                  return (
+                    <button
+                      key={tone.id}
+                      type="button"
+                      aria-pressed={active}
+                      aria-label={toneName}
+                      title={toneName}
+                      onClick={() => onToneChange(tone.id)}
+                      className={'flex items-center justify-center w-8 h-8 shrink-0 rounded-lg border-2 outline-none '
+                        + 'transition-colors motion-reduce:transition-none '
+                        + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 '
+                        + (active ? 'border-primary-500' : 'border-dark-border hover:border-dark-border2')}
+                    >
+                      {/* The ring is the palette colour itself, on a hairline
+                          so a white or near-black surface still has an edge
+                          against the card it sits on. */}
+                      <span
+                        aria-hidden
+                        className="block w-5 h-5 rounded-md border border-white/15"
+                        style={{ backgroundColor: tone.color }}
+                      />
+                    </button>
+                  )
+                })}
+                <span className="text-xs text-t-secondary">
+                  {currentTone === null
+                    ? t('landing_pages.editor.tone_unknown', 'Set by your design')
+                    : t(`landing_pages.editor.tone_name_${currentTone}`, TONE_NAME_FALLBACK[currentTone] ?? currentTone)}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Task 2: the contact fields below are the ONLY per-page override
               in this whole section list — every other field here IS the
               page's content, but phone/email/address fall back to the

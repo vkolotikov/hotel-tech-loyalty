@@ -304,7 +304,7 @@ class SectionTypeTest extends TestCase
 
         foreach ($payload as $row) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'limit'],
+                ['id', 'repeatable', 'fields', 'image', 'limit', 'default_tone'],
                 array_keys($row),
                 "The '{$row['id']}' row does not carry exactly the published keys."
             );
@@ -314,6 +314,153 @@ class SectionTypeTest extends TestCase
                 $row['limit'],
                 "The '{$row['id']}' row publishes the wrong limit."
             );
+
+            // `band` is a class name on a stylesheet the admin SPA never
+            // loads — the same reason `view` is kept off the wire. What the
+            // editor needs is the SWATCH the row is already showing.
+            $this->assertArrayNotHasKey('band', $row);
+            $this->assertContains(
+                $row['default_tone'],
+                SectionType::toneIds(),
+                "The '{$row['id']}' row publishes a default tone the picker does not offer."
+            );
         }
+    }
+
+    // ─── Tones (the per-section colour round) ─────────────────────────────
+
+    /**
+     * The allowlist, pinned by literal value.
+     *
+     * Hardcoded rather than derived from the constant it checks, for the
+     * reason `designChoices.test.ts` and localeCompleteness.test.ts's
+     * hand-verified nets both give: a list built FROM the thing it exists to
+     * police loses an id and its expectation in the same edit. Three ids and
+     * three classes, and the classes matter as much as the ids — every one
+     * of them has to be a selector the shipped stylesheet actually defines,
+     * or a tenant picks a colour and nothing happens.
+     *
+     * `band--ink` is deliberately NOT here: D1 collapsed it onto the same
+     * `--bg-2` surface `band--paper-2` uses, so offering both would put two
+     * swatches in the picker that paint identical pixels. It survives as an
+     * authored default only — see the constant's own note.
+     */
+    public function test_the_tone_allowlist_is_the_three_curated_surfaces(): void
+    {
+        $this->assertSame(
+            ['page' => '', 'soft' => 'band--paper-2', 'accent' => 'band--accent'],
+            SectionType::TONES
+        );
+        $this->assertSame(['page', 'soft', 'accent'], SectionType::toneIds());
+    }
+
+    /**
+     * Every band class the catalogue names — the three tones' and the four
+     * authored defaults' — is a rule public/landing/ruled_page.css actually
+     * ships. Read off the stylesheet itself rather than from a second list
+     * here, because the stylesheet is the rendering truth and a tone whose
+     * class nothing styles is a control that silently does nothing.
+     */
+    public function test_every_band_class_the_catalogue_names_is_defined_in_the_stylesheet(): void
+    {
+        $css = file_get_contents(public_path('landing/ruled_page.css'));
+
+        $classes = array_filter(array_unique(array_merge(
+            array_values(SectionType::TONES),
+            array_column(SectionType::all(), 'band'),
+        )));
+
+        $this->assertNotEmpty($classes);
+
+        foreach ($classes as $class) {
+            $this->assertMatchesRegularExpression(
+                '/^\.' . preg_quote($class, '/') . '\{/m',
+                $css,
+                "The stylesheet defines no rule for '{$class}'."
+            );
+        }
+    }
+
+    /**
+     * THE DEFAULT-PRESERVATION CONTRACT, and the reason the whole feature
+     * could ship without moving a byte of any live page: a section with no
+     * stored tone renders EXACTLY the class its partial was authored with.
+     *
+     * Asserted per key against literal strings, not against the catalogue —
+     * these are the exact class attributes the four RuledPageRenderTest byte
+     * goldens contain, so this test failing and those goldens moving are the
+     * same event, and this one says which section did it.
+     */
+    public function test_a_null_tone_renders_each_sections_authored_default(): void
+    {
+        $this->assertSame('band', SectionType::bandClass('hero'));
+        $this->assertSame('band', SectionType::bandClass('services'));
+        $this->assertSame('band', SectionType::bandClass('team'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('about'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('booking'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('text_1'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('text_4'));
+        $this->assertSame('band band--ink', SectionType::bandClass('reviews'));
+        $this->assertSame('band band--ink', SectionType::bandClass('contact'));
+    }
+
+    public function test_a_stored_tone_overrides_the_authored_default(): void
+    {
+        // Every tone on a band authored as paper-2 ...
+        $this->assertSame('band', SectionType::bandClass('about', 'page'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'soft'));
+        $this->assertSame('band band--accent', SectionType::bandClass('about', 'accent'));
+
+        // ... and on one authored as ink, and one authored plain, so the
+        // override is proved to run in both directions rather than only
+        // happening to agree with what was already there.
+        $this->assertSame('band band--accent', SectionType::bandClass('contact', 'accent'));
+        $this->assertSame('band', SectionType::bandClass('contact', 'page'));
+        $this->assertSame('band band--accent', SectionType::bandClass('hero', 'accent'));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('text_2', 'soft'));
+    }
+
+    /**
+     * A value that reached the column by some route other than the endpoint
+     * — a hand-edited row, a build that knew a tone this one has dropped —
+     * renders as if no tone had been stored. `tone` is a plain varchar with
+     * no database constraint behind it, so this is the same read-time
+     * re-whitelisting the layout already applies to `theme.palette` and
+     * `theme.font_pairing`, and it is what stops arbitrary stored text
+     * reaching a `class` attribute.
+     */
+    public function test_an_unrecognised_tone_falls_back_to_the_authored_default(): void
+    {
+        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'not-a-tone'));
+        $this->assertSame('band band--ink', SectionType::bandClass('contact', 'ink'));
+        $this->assertSame('band', SectionType::bandClass('hero', ''));
+        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'band--accent'));
+    }
+
+    /** A key this catalogue does not know still gets a usable band class. */
+    public function test_an_unknown_key_still_renders_a_plain_band(): void
+    {
+        $this->assertSame('band', SectionType::bandClass('gallery'));
+        $this->assertSame('band', SectionType::bandClass('text_9'));
+        $this->assertSame('band band--accent', SectionType::bandClass('gallery', 'accent'));
+    }
+
+    /**
+     * The editor's "you are already on this colour" answer, per type.
+     * `contact`/`reviews` answer `soft` despite emitting `band--ink`,
+     * because ink and paper-2 are one surface — see SectionType::TONES.
+     */
+    public function test_the_default_tone_per_type_is_the_swatch_its_authored_class_shows(): void
+    {
+        $this->assertSame('page', SectionType::defaultToneFor('hero'));
+        $this->assertSame('page', SectionType::defaultToneFor('services'));
+        $this->assertSame('page', SectionType::defaultToneFor('team'));
+        $this->assertSame('page', SectionType::defaultToneFor('footer'));
+        $this->assertSame('soft', SectionType::defaultToneFor('about'));
+        $this->assertSame('soft', SectionType::defaultToneFor('booking'));
+        $this->assertSame('soft', SectionType::defaultToneFor('contact'));
+        $this->assertSame('soft', SectionType::defaultToneFor('reviews'));
+        $this->assertSame('soft', SectionType::defaultToneFor('text'));
+        $this->assertNull(SectionType::defaultToneFor('not-a-type'));
     }
 }

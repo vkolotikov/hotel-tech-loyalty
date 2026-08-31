@@ -749,9 +749,21 @@ class LandingOnboardingTest extends TestCase
         $addable = [];
 
         foreach ($types as $type) {
-            $this->assertSame(['id', 'repeatable', 'fields', 'image', 'limit'], array_keys($type));
-            // A server-side view path has no business on the wire.
+            $this->assertSame(
+                ['id', 'repeatable', 'fields', 'image', 'limit', 'default_tone'],
+                array_keys($type)
+            );
+            // A server-side view path has no business on the wire. Neither
+            // does `band` (the tone round): it is a class on a stylesheet the
+            // admin SPA does not load, and what the editor's colour picker
+            // actually needs off a type is which swatch to light for a
+            // section with no stored tone -- `default_tone`.
             $this->assertArrayNotHasKey('view', $type);
+            $this->assertArrayNotHasKey('band', $type);
+            // Every published default names a tone the picker will offer and
+            // the endpoint will accept -- the same round trip this test makes
+            // for `repeatable`, applied to the other served allowlist.
+            $this->assertContains($type['default_tone'], SectionType::toneIds());
 
             if ($type['repeatable']) {
                 $addable[] = $type['id'];

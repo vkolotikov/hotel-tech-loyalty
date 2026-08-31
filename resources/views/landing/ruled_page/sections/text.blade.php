@@ -76,7 +76,7 @@
     // render rather than to a broken <img>.
     $plate = $content->imageUrl($section->key);
 @endphp
-<section id="{{ $section->key }}" data-section="{{ $section->key }}" class="band band--paper-2 rp-text">
+<section id="{{ $section->key }}" data-section="{{ $section->key }}" class="{{ $band }} rp-text">
   <div @class(['wrap', 'rp-text__grid', 'rp-text__grid--plated' => (bool) $plate])>
 @if ($plate)
     <figure class="rp-text__frame">

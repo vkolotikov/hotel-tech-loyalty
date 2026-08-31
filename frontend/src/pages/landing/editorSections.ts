@@ -30,6 +30,17 @@ export type PageSection = {
   key: string
   enabled: boolean
   sort: number
+  /**
+   * The band's colour — one of `App\Landing\SectionType::TONES`' ids, or
+   * null.
+   *
+   * NULL IS A VALUE, not an omission: it means "render this band the way its
+   * partial was authored", which is what every row on every page created
+   * before this control existed already means. Optional on this type because
+   * a response from a backend that predates the column carries no such key
+   * at all, which `buildSectionRows` normalises to null.
+   */
+  tone?: string | null
 }
 
 /** The wire shape of one row of `onboarding.sections`. Kept as a separate
@@ -71,6 +82,18 @@ export type SectionTypeOption = {
   fields: string[]
   image: boolean
   limit: number | null
+  /**
+   * Which tone swatch a row of this type shows as chosen while its own
+   * `tone` is null — `SectionType::defaultToneFor()`, served.
+   *
+   * Served rather than derived because the fact behind it is a band
+   * modifier class in a stylesheet the admin SPA does not load: `about` is
+   * authored `band--paper-2` and `contact` `band--ink`, and the second of
+   * those is not a tone at all (the two are the same surface — see the
+   * constant's own note). Optional: an older backend publishes no such key,
+   * and the picker then lights nothing rather than guessing.
+   */
+  default_tone?: string | null
 }
 
 /** One editable control on a section row — see `SECTION_CONTENT_FIELDS`. */
@@ -114,6 +137,14 @@ export type EditorSectionRow = Omit<SectionMeta, 'key'> & {
   siblings: number
   /** The controls this row renders, in order. See `fieldsForType`. */
   fields: readonly SectionField[]
+  /** This row's stored tone, normalised: a string id or null, never
+   *  undefined, so the save always says what it means (see
+   *  `buildSectionsPayload`). */
+  tone: string | null
+  /** The swatch to light when `tone` is null — the served
+   *  `section_types[*].default_tone` for this row's TYPE. Null when the
+   *  backend published none. */
+  defaultTone: string | null
 }
 
 /**
@@ -189,6 +220,9 @@ export function buildSectionRows(
         ordinal: 1,
         siblings: 1,
         fields: SECTION_CONTENT_FIELDS[row.key as SectionKey],
+        tone: normaliseTone(row.tone),
+        // A fixed key IS its type id, so the catalogue lookup is direct.
+        defaultTone: defaultToneOf(row.key, sectionTypes),
       }]
     }
 
@@ -236,8 +270,27 @@ export function buildSectionRows(
       ordinal,
       siblings: perType.get(parsed.typeId) ?? 1,
       fields: fieldsForType(parsed.type),
+      tone: normaliseTone(row.tone),
+      // Off the TYPE (`text`), never the key (`text_1`) — every instance of
+      // a repeatable type shares one authored surface, exactly as they
+      // share one partial.
+      defaultTone: normaliseTone(parsed.type.default_tone),
     }]
   })
+}
+
+/** A stored tone as the rest of this module wants it: a non-empty string, or
+ *  null. Covers the three ways a row can fail to carry one — the key absent
+ *  (a backend that predates the column), an explicit null, and a non-string
+ *  leaf out of the raw JSON. */
+function normaliseTone(value: unknown): string | null {
+  return typeof value === 'string' && value !== '' ? value : null
+}
+
+/** The served default tone for a type id, or null when the catalogue does
+ *  not name it. */
+function defaultToneOf(typeId: string, sectionTypes: SectionTypeOption[]): string | null {
+  return normaliseTone(sectionTypes.find(type => type.id === typeId)?.default_tone)
 }
 
 /**
@@ -430,7 +483,10 @@ export function moveSectionToKey(sections: PageSection[], key: string, targetKey
 export function appendSection(sections: PageSection[], key: string): PageSection[] {
   const highest = sections.reduce((max, s) => Math.max(max, s.sort), -1)
 
-  return [...sections, { key, enabled: true, sort: Math.min(999, highest + 1) }]
+  // `tone: null` explicitly, matching what `store()` just inserted: a new
+  // band arrives on its type's authored colour, and the picker lights that
+  // swatch rather than nothing until the tenant chooses.
+  return [...sections, { key, enabled: true, sort: Math.min(999, highest + 1), tone: null }]
 }
 
 /** Drop a row the server has already deleted. No renumbering: the gap it
@@ -548,6 +604,23 @@ export function toggleSection(sections: PageSection[], key: string): PageSection
 }
 
 /**
+ * Put one section on a colour. Every other row, and this row's own position
+ * and enabled flag, is untouched — same discipline as `toggleSection` above,
+ * and for the same reason: colour, order and visibility are three
+ * independent choices about one band.
+ *
+ * `null` is a legitimate argument, not a way of saying "leave it": it puts
+ * the band back on the colour its partial was authored with (the server
+ * clears the column; `SectionType::bandClass()` then falls through to the
+ * authored class). Nothing here writes an id it has not been handed — the
+ * caller passes a tone the SERVED list offered, and the endpoint refuses
+ * anything else.
+ */
+export function setSectionTone(sections: PageSection[], key: string, tone: string | null): PageSection[] {
+  return sections.map(s => (s.key === key ? { ...s, tone } : s))
+}
+
+/**
  * The exact wire body `PUT /v1/admin/landing-pages/sections` accepts.
  *
  * Takes `EditorSectionRow[]` — the ALREADY-MERGED rows `buildSectionRows`
@@ -562,11 +635,23 @@ export function toggleSection(sections: PageSection[], key: string): PageSection
  * sections are real, and a save that let a disabled row's leftover `true`
  * through would create exactly that disagreement.
  */
-export function buildSectionsPayload(rows: EditorSectionRow[]): { key: string; enabled: boolean; sort: number }[] {
+export function buildSectionsPayload(
+  rows: EditorSectionRow[],
+): { key: string; enabled: boolean; sort: number; tone: string | null }[] {
   return rows.map(row => ({
     key: row.key,
     enabled: isOfferable(row) ? row.enabled : false,
     sort: row.sort,
+    // ALWAYS SENT, and always as a string or an explicit null — never
+    // omitted and never `undefined`. `update()` server-side distinguishes an
+    // absent `tone` ("this caller does not deal in colours; leave what is
+    // stored alone") from an explicit null ("put this band back to its own
+    // colour"), and this editor is the second: it renders the tenant's whole
+    // section list from the saved rows, so what it sends IS the intended
+    // state of every row it names. Sending `undefined` would silently take
+    // the first path — JSON.stringify drops the key — and the "reset to the
+    // page's own colour" swatch would appear to do nothing.
+    tone: row.tone,
   }))
 }
 

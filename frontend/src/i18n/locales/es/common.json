@@ -3171,7 +3171,14 @@
       "preview_loading": "Cargando vista previa…",
       "preview_error": "No se pudo cargar la vista previa.",
       "preview_expired": "Este enlace de vista previa ha caducado.",
-      "preview_iframe_title": "Vista previa de tu página"
+      "preview_iframe_title": "Vista previa de tu página",
+      "tone_label": "Color de fondo",
+      "tone_unknown": "Definido por su diseño",
+      "tone_name_page": "Fondo de la página",
+      "tone_name_soft": "Franja suave",
+      "tone_name_accent": "Franja de acento",
+      "section_showing": "Visible en su página",
+      "section_hidden": "Oculta en su página"
     },
     "teardown": {
       "now_offline": "Tu página ya no está en la web",
