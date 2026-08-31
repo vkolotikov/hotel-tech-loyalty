@@ -218,6 +218,11 @@ export function LandingPages() {
         templates={data?.templates ?? []}
         sectionTypes={data?.section_types ?? []}
         maxSections={typeof data?.max_sections === 'number' ? data.max_sections : null}
+        // `section_tones` — `App\Landing\SectionType::TONES`' ids, the third
+        // served allowlist on this response. Null when the backend does not
+        // publish it, which draws no colour control rather than a guessed
+        // one; see `sectionTones.ts`'s `toneChoices`.
+        sectionTones={Array.isArray(data?.section_tones) ? data.section_tones : null}
       />
     </BrandRequired>
   )

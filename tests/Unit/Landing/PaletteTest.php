@@ -131,6 +131,116 @@ class PaletteTest extends TestCase
         }
     }
 
+    /**
+     * The accent TONE's surface (the per-section colour round).
+     *
+     * `.band--accent` is the one band background that is not an authored
+     * token: the stylesheet composites `--halo` — the palette's own
+     * accent-bright at .30 — over `--bg-2`, so the surface arrives correct
+     * in all six palettes with no new hex values to keep in step. That also
+     * means no authored contrast figure covers it, and a tenant can put ANY
+     * band on it: the reviews band, whose only text is quoted prose in
+     * --text-soft, as readily as the hero.
+     *
+     * So it is measured here, the same way and against the same floor every
+     * authored surface above is. The lowest measured pairs across all twelve
+     * are porcelain's and slate_amber's text-soft, both at 4.76:1; every
+     * other text-soft pair sits at 5.0:1 or higher and every primary-text
+     * pair clears 6.8:1.
+     *
+     * The composite is recomputed here from the palette's own `halo` STRING
+     * rather than from `accent-bright`, deliberately: `halo` is an authored
+     * literal that has to track its source hex by hand (see Palette's own
+     * note on the five derived tokens), so blending from the literal is what
+     * makes a halo that has drifted from its accent-bright show up as a
+     * contrast failure rather than passing on a number the stylesheet does
+     * not actually paint.
+     */
+    public function test_the_accent_tones_band_surface_clears_wcag_aa_in_every_palette(): void
+    {
+        foreach (Palette::ids() as $id) {
+            $tokens  = Palette::for($id)->tokens;
+            $surface = $this->composite($tokens['halo'], $tokens['bg-2'], $id);
+
+            foreach (['text', 'text-soft'] as $ink) {
+                $this->assertGreaterThanOrEqual(
+                    4.5,
+                    $this->contrastRgb($this->rgb($tokens[$ink]), $surface),
+                    "[{$id}] {$ink} on the accent tone's band fails WCAG AA (4.5:1)."
+                );
+            }
+        }
+    }
+
+    /**
+     * `rgba(r, g, b, a)` over an opaque hex, source-over in sRGB — what the
+     * browser does with `linear-gradient(var(--halo), var(--halo))` layered
+     * on a `var(--bg-2)` background-color. Kept in floats: rounding to bytes
+     * would be modelling the browser's output buffer rather than its
+     * compositing, and the answer is the same to three decimal places
+     * either way.
+     *
+     * @return array{float, float, float}
+     */
+    private function composite(string $rgba, string $overHex, string $id): array
+    {
+        $this->assertMatchesRegularExpression(
+            '/^rgba\(\s*\d+,\s*\d+,\s*\d+,\s*[0-9.]+\s*\)$/',
+            $rgba,
+            "[{$id}] halo is not an rgba() triple this test can composite."
+        );
+
+        preg_match('/^rgba\(\s*(\d+),\s*(\d+),\s*(\d+),\s*([0-9.]+)\s*\)$/', $rgba, $m);
+
+        [, $r, $g, $b, $alpha] = $m;
+        $alpha = (float) $alpha;
+        $base  = $this->rgb($overHex);
+
+        return [
+            $alpha * (float) $r + (1 - $alpha) * $base[0],
+            $alpha * (float) $g + (1 - $alpha) * $base[1],
+            $alpha * (float) $b + (1 - $alpha) * $base[2],
+        ];
+    }
+
+    /** @return array{float, float, float} */
+    private function rgb(string $hex): array
+    {
+        $hex = ltrim($hex, '#');
+
+        return [
+            (float) hexdec(substr($hex, 0, 2)),
+            (float) hexdec(substr($hex, 2, 2)),
+            (float) hexdec(substr($hex, 4, 2)),
+        ];
+    }
+
+    /**
+     * The same WCAG formula as luminance()/contrast() above, taking channels
+     * rather than a hex string — the composited surface has no hex spelling
+     * and rounding it into one to reuse those helpers would throw away the
+     * fractional channels this test just computed.
+     *
+     * @param array{float, float, float} $a
+     * @param array{float, float, float} $b
+     */
+    private function contrastRgb(array $a, array $b): float
+    {
+        $luminance = function (array $channels): float {
+            $lin = function (float $channel): float {
+                $c = $channel / 255;
+                return $c <= 0.03928 ? $c / 12.92 : (($c + 0.055) / 1.055) ** 2.4;
+            };
+
+            return 0.2126 * $lin($channels[0]) + 0.7152 * $lin($channels[1]) + 0.0722 * $lin($channels[2]);
+        };
+
+        $la = $luminance($a);
+        $lb = $luminance($b);
+
+        return (max($la, $lb) + 0.05) / (min($la, $lb) + 0.05);
+    }
+
     public function test_an_unknown_id_resolves_to_null(): void
     {
         $this->assertNull(Palette::for('not-a-real-palette'));

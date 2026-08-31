@@ -47,6 +47,28 @@ class LandingPageSectionController extends Controller
             'sections.*.key'     => 'required|string|max:64',
             'sections.*.enabled' => 'required|boolean',
             'sections.*.sort'    => 'required|integer|min:0|max:999',
+            // The band's colour. NULLABLE, and null is a value rather than an
+            // omission: it means "render this band the way its partial was
+            // authored", which is what every row on every existing page
+            // already means (see App\Landing\SectionType::bandClass()). So a
+            // tenant clearing a tone sends null and gets their section's
+            // original colour back, not a third state.
+            //
+            // Rule::in against the catalogue, never a literal list: TONES is
+            // the one allowlist, the renderer resolves through the same map,
+            // and a fourth tone is a change to that constant and to nothing
+            // else. `sometimes` is what makes the field genuinely optional —
+            // see the write loop below for why an absent `tone` must leave
+            // the stored one alone rather than clear it.
+            'sections.*.tone'    => ['sometimes', 'nullable', 'string', Rule::in(SectionType::toneIds())],
+        ], [
+            // Named for the same reason store()'s three are (spec 9): the
+            // Laravel defaults here are "The sections.0.tone field must be a
+            // string." and "The selected sections.0.tone is invalid." — a
+            // raw indexed field path is not something a tenant can act on,
+            // and it leaks the wire shape of a form they never see.
+            'sections.*.tone.string' => 'Please choose one of the colours offered for this section.',
+            'sections.*.tone.in'     => 'Please choose one of the colours offered for this section.',
         ]);
 
         // Resolved through LandingPageGuard, not through BrandScope. The
@@ -79,9 +101,25 @@ class LandingPageSectionController extends Controller
 
         DB::transaction(function () use ($page, $data) {
             foreach ($data['sections'] as $row) {
+                $update = ['enabled' => $row['enabled'], 'sort' => $row['sort']];
+
+                // PRESENT-KEY TEST, not `?? null`, and the difference is the
+                // whole contract of this optional field. `enabled` and `sort`
+                // are required, so every client sends them and overwriting
+                // them wholesale is what this endpoint has always meant.
+                // `tone` arrived later: a client that predates it (or any
+                // caller that simply does not care about colours) sends rows
+                // without the key, and `?? null` would silently wipe the
+                // tenant's chosen colours off every band on the next reorder.
+                // Sending an explicit null still clears one, which is how the
+                // editor's "the page's own colour" swatch is written.
+                if (array_key_exists('tone', $row)) {
+                    $update['tone'] = $row['tone'];
+                }
+
                 $page->sections()
                     ->where('key', $row['key'])
-                    ->update(['enabled' => $row['enabled'], 'sort' => $row['sort']]);
+                    ->update($update);
             }
         });
 

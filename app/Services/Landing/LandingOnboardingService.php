@@ -276,6 +276,22 @@ class LandingOnboardingService
             // repeating it on every row would invite a reader to believe
             // otherwise.
             'max_sections'   => SectionType::MAX_SECTIONS_PER_PAGE,
+            // The tone allowlist (SectionType::TONES' ids, in the order the
+            // editor should offer them) — served for the third time for the
+            // third identical reason: it is what
+            // LandingPageSectionController::update() validates a section's
+            // colour against, so a picker built from a hand-kept copy in
+            // TypeScript is a picker that can offer a swatch the save would
+            // then 422 on.
+            //
+            // Ids only. What each one LOOKS like is a question about the
+            // palette the page is currently wearing, and the admin SPA
+            // already holds those colours for its own design cards
+            // (frontend/src/pages/landing/designChoices.ts) — sending a hex
+            // from here would be the server describing CSS it does not
+            // render, and would go stale against the palette the tenant
+            // switches to a moment later.
+            'section_tones'  => SectionType::toneIds(),
             'suggested_slug' => $page?->slug ?? $this->suggestSlug($org, $brand, $contact),
         ];
     }

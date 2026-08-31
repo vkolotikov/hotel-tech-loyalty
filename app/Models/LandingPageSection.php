@@ -6,7 +6,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class LandingPageSection extends Model
 {
-    protected $fillable = ['landing_page_id', 'key', 'enabled', 'sort', 'content'];
+    /**
+     * `tone` is nullable and stays that way: null is not "unset", it is the
+     * value that means "render this band the way its partial was authored"
+     * — see App\Landing\SectionType::bandClass(). Never given a cast: it is
+     * a plain string id from SectionType::TONES, and the renderer
+     * re-whitelists it at read time regardless of what reached the column.
+     */
+    protected $fillable = ['landing_page_id', 'key', 'enabled', 'tone', 'sort', 'content'];
 
     protected $casts = [
         'enabled' => 'boolean',

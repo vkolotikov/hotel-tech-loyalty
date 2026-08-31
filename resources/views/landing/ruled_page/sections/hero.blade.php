@@ -117,7 +117,7 @@
 
     $heroDevice = $heroImage === null && filled($deviceName);
 @endphp
-<section data-section="hero" class="band rp-hero{{ $heroImage ? ' rp-hero--photo' : '' }}">
+<section data-section="hero" class="{{ $band }} rp-hero{{ $heroImage ? ' rp-hero--photo' : '' }}">
 @if ($heroImage)
   {{-- The reference's layered composition: the cover plate under glow /
        veil / vignette (§hero, adapted to tokens in ruled_page.css). The

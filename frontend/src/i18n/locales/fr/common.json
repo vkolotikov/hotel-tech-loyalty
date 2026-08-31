@@ -3171,7 +3171,14 @@
       "preview_loading": "Chargement de l’aperçu…",
       "preview_error": "Impossible de charger l’aperçu.",
       "preview_expired": "Ce lien d’aperçu a expiré.",
-      "preview_iframe_title": "Aperçu de votre page"
+      "preview_iframe_title": "Aperçu de votre page",
+      "tone_label": "Couleur de fond",
+      "tone_unknown": "Définie par votre design",
+      "tone_name_page": "Fond de la page",
+      "tone_name_soft": "Bande douce",
+      "tone_name_accent": "Bande accentuée",
+      "section_showing": "Affichée sur votre page",
+      "section_hidden": "Masquée sur votre page"
     },
     "teardown": {
       "now_offline": "Votre page est maintenant hors ligne",

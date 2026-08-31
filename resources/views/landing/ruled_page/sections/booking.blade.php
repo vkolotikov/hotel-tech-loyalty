@@ -61,7 +61,7 @@
 
     $perksFit = $perks->count() >= 2 && $perks->every(fn ($sentence) => mb_strlen($sentence) <= 64);
 @endphp
-<section id="booking" data-section="booking" class="band band--paper-2 rp-book">
+<section id="booking" data-section="booking" class="{{ $band }} rp-book">
   <div class="wrap">
     <p class="band__kicker">{{ $copy['kicker'] ?? $profile->kicker('booking') }}</p>
     <div class="rp-book__card">

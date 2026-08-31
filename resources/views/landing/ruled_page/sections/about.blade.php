@@ -80,7 +80,7 @@
         $page->seo['title'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
 @endphp
-<section id="about" data-section="about" class="band band--paper-2 rp-about">
+<section id="about" data-section="about" class="{{ $band }} rp-about">
   <div class="wrap rp-about__grid">
 @if ($aboutImage)
     <figure class="rp-about__frame">

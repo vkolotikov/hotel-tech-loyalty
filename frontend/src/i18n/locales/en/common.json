@@ -3215,7 +3215,14 @@
       "preview_loading": "Loading preview…",
       "preview_error": "Could not load the preview.",
       "preview_expired": "This preview link has expired.",
-      "preview_iframe_title": "Your page preview"
+      "preview_iframe_title": "Your page preview",
+      "tone_label": "Background colour",
+      "tone_unknown": "Set by your design",
+      "tone_name_page": "Page background",
+      "tone_name_soft": "Soft band",
+      "tone_name_accent": "Accent band",
+      "section_showing": "Showing on your page",
+      "section_hidden": "Hidden from your page"
     },
     "teardown": {
       "now_offline": "Your page is now offline",

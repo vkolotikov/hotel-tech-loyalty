@@ -3231,7 +3231,14 @@
       "preview_loading": "Загружаем предпросмотр…",
       "preview_error": "Не удалось загрузить предпросмотр.",
       "preview_expired": "Срок действия ссылки предпросмотра истёк.",
-      "preview_iframe_title": "Предпросмотр вашей страницы"
+      "preview_iframe_title": "Предпросмотр вашей страницы",
+      "tone_label": "Цвет фона",
+      "tone_unknown": "Задаётся вашим оформлением",
+      "tone_name_page": "Фон страницы",
+      "tone_name_soft": "Мягкая полоса",
+      "tone_name_accent": "Акцентная полоса",
+      "section_showing": "Показывается на странице",
+      "section_hidden": "Скрыт на странице"
     },
     "teardown": {
       "now_offline": "Страница снята с публикации",

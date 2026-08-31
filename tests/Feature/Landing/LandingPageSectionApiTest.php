@@ -365,6 +365,139 @@ class LandingPageSectionApiTest extends TestCase
         ]);
     }
 
+    // ─── Tone: the per-section colour ────────────────────────────────────
+
+    public function test_it_stores_a_tone_against_the_named_section_only(): void
+    {
+        $page = $this->makePageWithSections();
+
+        $res = $this->controller()->update($this->request([
+            'sections' => [
+                ['key' => 'about', 'enabled' => true, 'sort' => 2, 'tone' => 'accent'],
+                ['key' => 'hero',  'enabled' => true, 'sort' => 0, 'tone' => 'soft'],
+            ],
+        ]));
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'about', 'tone' => 'accent',
+        ]);
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'hero', 'tone' => 'soft',
+        ]);
+        // Untouched rows keep their null — the per-row `where('key', ...)`
+        // scope, same claim the toggle test above makes for enabled/sort.
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'reviews', 'tone' => null,
+        ]);
+    }
+
+    /**
+     * An explicit null clears one — this is how the editor writes "put this
+     * band back to the colour it came with", and it must be a real write
+     * rather than a no-op, or a tenant could set a tone and never undo it.
+     */
+    public function test_an_explicit_null_tone_clears_a_stored_one(): void
+    {
+        $page = $this->makePageWithSections();
+        $page->sections()->where('key', 'about')->update(['tone' => 'accent']);
+
+        $this->controller()->update($this->request([
+            'sections' => [['key' => 'about', 'enabled' => true, 'sort' => 2, 'tone' => null]],
+        ]));
+
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'about', 'tone' => null,
+        ]);
+    }
+
+    /**
+     * An ABSENT `tone` leaves the stored one alone, which is a different
+     * thing from an explicit null and the reason update() tests for the key
+     * rather than reading `?? null`.
+     *
+     * This is not a hypothetical client: `enabled` and `sort` are required
+     * and `tone` is not, so any caller that predates this round — or simply
+     * does not care about colours — sends rows without it, and a `?? null`
+     * would wipe the tenant's chosen colours off the whole page on the next
+     * reorder.
+     */
+    public function test_a_payload_with_no_tone_key_leaves_a_stored_tone_alone(): void
+    {
+        $page = $this->makePageWithSections();
+        $page->sections()->where('key', 'about')->update(['tone' => 'accent']);
+
+        $this->controller()->update($this->request([
+            'sections' => [['key' => 'about', 'enabled' => true, 'sort' => 4]],
+        ]));
+
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'about', 'tone' => 'accent', 'sort' => 4,
+        ]);
+    }
+
+    /**
+     * A tone outside the allowlist is refused, and the sentence a tenant
+     * would read names no field and carries none of Laravel's own wording
+     * ("The selected sections.0.tone is invalid.").
+     */
+    public function test_an_unknown_tone_is_refused_kindly(): void
+    {
+        $page = $this->makePageWithSections();
+
+        try {
+            $this->controller()->update($this->request([
+                'sections' => [['key' => 'about', 'enabled' => true, 'sort' => 2, 'tone' => 'neon']],
+            ]));
+            $this->fail('Expected an unknown tone to be refused.');
+        } catch (ValidationException $e) {
+            $message = $e->validator->errors()->first();
+
+            $this->assertSame('Please choose one of the colours offered for this section.', $message);
+            $this->assertStringNotContainsString('sections.', $message);
+            $this->assertStringNotContainsString('tone', $message);
+        }
+
+        // Refused means nothing was written — the validator runs before the
+        // transaction, so the row is untouched rather than half-updated.
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'about', 'tone' => null,
+        ]);
+    }
+
+    /**
+     * `band--ink` is a class the renderer still emits (contact/reviews'
+     * authored default) and is deliberately NOT a tone — see
+     * SectionType::TONES. A caller naming it, or naming a raw CSS class of
+     * any kind, is refused like any other unknown value.
+     */
+    public function test_a_raw_band_class_is_not_a_tone(): void
+    {
+        $this->makePageWithSections();
+
+        $this->expectException(ValidationException::class);
+
+        $this->controller()->update($this->request([
+            'sections' => [['key' => 'about', 'enabled' => true, 'sort' => 2, 'tone' => 'band--ink']],
+        ]));
+    }
+
+    /** Every id the allowlist publishes is one this endpoint actually takes. */
+    public function test_every_published_tone_is_accepted(): void
+    {
+        $page = $this->makePageWithSections();
+
+        foreach (SectionType::toneIds() as $tone) {
+            $this->controller()->update($this->request([
+                'sections' => [['key' => 'about', 'enabled' => true, 'sort' => 2, 'tone' => $tone]],
+            ]));
+
+            $this->assertDatabaseHas('landing_page_sections', [
+                'landing_page_id' => $page->id, 'key' => 'about', 'tone' => $tone,
+            ]);
+        }
+    }
+
     public function test_it_404s_when_this_brand_has_no_page_yet(): void
     {
         try {
