@@ -777,7 +777,15 @@ class LandingOnboardingService
      */
     private function newPageIndustry(Organization $org): string
     {
-        return $org->resolved_industry;
+        // explicit_industry, NOT resolved_industry: the difference is what an
+        // org that never picked gets, and this value is published on the
+        // tenant's own domain. resolved_industry answers 'hotel' there --
+        // DEFAULT_INDUSTRY -- so a tutoring company's page called itself
+        // "The Hotel" and asked its visitors to "Book your stay". The admin
+        // may keep guessing hotel; a customer-facing page may not, so an
+        // unpicked industry gets the neutral profile and the wizard's first
+        // step asks for the real answer.
+        return $org->explicit_industry ?? IndustryProfile::FALLBACK_INDUSTRY;
     }
 
     /**

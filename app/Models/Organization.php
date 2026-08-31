@@ -309,6 +309,23 @@ class Organization extends Model
      */
     public function getResolvedIndustryAttribute(): string
     {
+        return $this->explicit_industry ?? self::DEFAULT_INDUSTRY;
+    }
+
+    /**
+     * The industry this organisation actually chose, or null if it never did.
+     *
+     * Same two tiers as resolved_industry without the platform default, which
+     * is the whole point: `resolved_industry` cannot tell "picked hotel" from
+     * "picked nothing", and a caller that guesses wrong in PUBLIC has to be
+     * able to. A landing page built on the defaulted value invited an
+     * education tenant's visitors to "Book your stay" and called their page
+     * "The Hotel" -- fine as admin chrome, published on a customer's own
+     * domain it is just wrong. Surfaces that dress the ADMIN keep using
+     * resolved_industry and keep their opinionated default.
+     */
+    public function getExplicitIndustryAttribute(): ?string
+    {
         // Tier 1: the canonical column. Read raw to avoid recursing into
         // any future accessor someone might add on `industry`.
         $direct = self::normaliseIndustry($this->attributes['industry'] ?? null);
@@ -346,7 +363,7 @@ class Organization extends Model
             ]);
         }
 
-        return self::DEFAULT_INDUSTRY;
+        return null;
     }
 
     /**
@@ -359,6 +376,12 @@ class Organization extends Model
      */
     public function hasExplicitIndustry(): bool
     {
-        return self::normaliseIndustry($this->attributes['industry'] ?? null) !== null;
+        // Delegates so "explicitly picked" has ONE definition. This used to
+        // read the column alone, which called an org that had only ever set
+        // the legacy crm_settings preset "not picked" -- and the banner this
+        // guards then nagged a tenant who had in fact chosen. The accessor
+        // walks both tiers, so the legacy preset now counts as the real
+        // choice it always was.
+        return $this->explicit_industry !== null;
     }
 }
