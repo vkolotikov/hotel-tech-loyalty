@@ -77,7 +77,13 @@ class RuledPageSectionsTest extends TestCase
         $body = $this->body();
 
         $this->assertStringContainsString('Signature Facial', $body);
-        $this->assertStringContainsString('65.00', $body);
+        // "€65", not "65.00 EUR". A menu prints a symbol and drops the pennies
+        // on a whole amount; the old assertion pinned the accounting format
+        // that made an author's own template read "145.00 GBP" where they had
+        // drawn "£145". See App\Landing\Money.
+        $this->assertStringContainsString('€65', $body);
+        $this->assertStringNotContainsString('65.00', $body);
+        $this->assertStringNotContainsString('EUR', $body);
         $this->assertStringContainsString('60 min', $body);
         $this->assertStringContainsString('Sixty minutes of quiet', $body);
     }

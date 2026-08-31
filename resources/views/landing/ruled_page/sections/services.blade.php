@@ -65,8 +65,8 @@
           <div class="rp-pillar__body">
             <p class="rp-pillar__head">
               <span class="rp-pillar__name">{{ $service->name }}</span>
-              @if ($service->price !== null)
-                <span class="rp-pillar__price">{{ number_format((float) $service->price, 2) }}@if (filled($currency))<span class="rp-pillar__currency">{{ $currency }}</span>@endif</span>
+              @if (($servicePrice = \App\Landing\Money::format($service->price, $currency)) !== null)
+                <span class="rp-pillar__price">{{ $servicePrice }}</span>
               @endif
               {{-- Price on request is normal here: with no price, NOTHING is
                    asserted — no zero, no bare currency code, no placeholder

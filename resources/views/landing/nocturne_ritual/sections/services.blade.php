@@ -84,8 +84,8 @@
 @if ($service->duration_minutes)
               <span>{{ $service->duration_minutes }} min</span>
 @endif
-@if ($service->price !== null)
-              <strong>{{ number_format((float) $service->price, 2) }}@if (filled($currency)) {{ $currency }}@endif</strong>
+@if (($servicePrice = \App\Landing\Money::format($service->price, $currency)) !== null)
+              <strong>{{ $servicePrice }}</strong>
 @endif
             </div>
 @if ($bookingHref !== null)

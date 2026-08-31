@@ -1,0 +1,54 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - generic [ref=e3]:
+      - link "FDS Cards" [ref=e4] [cursor=pointer]:
+        - /url: "#"
+      - generic [ref=e5]:
+        - link "The agency" [ref=e6] [cursor=pointer]:
+          - /url: "#about"
+        - link "Talk to us" [ref=e7] [cursor=pointer]:
+          - /url: "#contact"
+      - link "Arrange a viewing" [ref=e8] [cursor=pointer]:
+        - /url: "#contact"
+  - main [ref=e9]:
+    - generic [ref=e12]:
+      - generic [ref=e13]:
+        - heading [level=1] [ref=e14]:
+          - text: Digital Business Cards for People Who Get
+          - emphasis [ref=e15]: Remembered
+        - paragraph [ref=e16]: Design a premium digital profile in minutes, share it through a luxury metal NFC card — and see exactly who viewed you, saved you, and passed you on.
+        - link "Arrange a viewing" [ref=e18] [cursor=pointer]:
+          - /url: "#contact"
+      - figure [ref=e19]:
+        - generic [ref=e20]: FC
+    - generic [ref=e24]:
+      - heading "Digital is convenient. Metal makes it unforgettable." [level=2] [ref=e25]
+      - paragraph [ref=e27]: A link is easy to send and easy to forget. A luxury metal card is the thing they keep on the desk — and the moment they remember about the meeting. You get both, linked.
+    - generic [ref=e29]:
+      - generic [ref=e30]:
+        - heading "Talk to us" [level=2] [ref=e31]
+        - generic [ref=e32]:
+          - paragraph [ref=e33]: Address
+          - paragraph [ref=e34]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=e35]:
+          - paragraph [ref=e36]: Telephone
+          - paragraph [ref=e37]:
+            - link "+44 736 651 0477" [ref=e38] [cursor=pointer]:
+              - /url: tel:+447366510477
+        - generic [ref=e39]:
+          - paragraph [ref=e40]: Email
+          - paragraph [ref=e41]:
+            - link "info@fds-cards.co.uk" [ref=e42] [cursor=pointer]:
+              - /url: mailto:info@fds-cards.co.uk
+      - link "25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ Open in Maps ↗" [ref=e43] [cursor=pointer]:
+        - /url: https://maps.google.com/?q=25+Cabot+Square%2C+Canary+Wharf%2C+London%2C+United+Kingdom%2C+E14+4QZ
+        - generic [ref=e46]: 25 Cabot Square, Canary Wharf, London, United Kingdom, E14 4QZ
+        - generic [ref=e47]: Open in Maps ↗
+  - contentinfo [ref=e48]:
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - paragraph [ref=e51]: FDS Cards
+        - link "Arrange a viewing" [ref=e52] [cursor=pointer]:
+          - /url: "#contact"
+      - paragraph [ref=e54]: © 2026 FDS Cards
+  - button "Chat with us" [ref=e56] [cursor=pointer]
