@@ -1519,6 +1519,69 @@ body.rp::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;
 }
 /* --- end about frame ------------------------------------------------------- */
 
+/* --- text: the tenant-added band ------------------------------------------ */
+/* The one repeatable band: up to six per page, all through
+   sections/text.blade.php, so every rule here has to hold at any position in
+   the document and beside any neighbour. It borrows about's language one
+   register quieter — same eyebrow, same tinted paper, same letterpress
+   opening, same optional plate — and deliberately does NOT borrow about's
+   two-column body (the page's one printed-column moment; six of them is
+   wallpaper) or its glass nameplate (which carries the BUSINESS name, a
+   claim that belongs to the studio band alone).
+
+   The grid is the same twelve about uses, so a text band and an about band
+   stacked on each other line up on the same columns rather than nearly
+   doing so. Without a plate the prose takes about's own no-image measure
+   (3 / 11); with one it steps to 6 / 12 and the frame takes 1 / 6 — the
+   modifier sits on the WRAPPER rather than on the two children, because
+   the server already knows which of the two arrangements this band is in
+   and one class is cheaper to reason about than two. */
+.rp-text__grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:32px}
+.rp-text__body{grid-column:3 / 11}
+.rp-text__grid--plated .rp-text__body{grid-column:6 / 12}
+.rp-text__title{margin-top:0;font-size:var(--t-h2);line-height:1.06;letter-spacing:-.02em;
+  max-width:20ch;text-wrap:balance}
+/* The prose sits at a reading measure and stays there. overflow-wrap:anywhere
+   for the same reason about's body carries it: this is customer copy and a
+   200,000-character unbroken string is a shape the column has to survive. */
+.rp-text__prose{margin-top:24px;max-width:62ch;color:var(--text);
+  font-size:var(--t-lead);line-height:1.65;overflow-wrap:anywhere}
+.rp-text__prose p + p{margin-top:1em}
+/* A letterpress opening, not a drop cap — which is refused by name. */
+.rp-text__opening{font-variant-caps:all-small-caps;letter-spacing:.08em}
+/* The plate: about's cinematic frame with the volume down. Same radius,
+   same shadow, same shine, same offset accent border hung behind it — and a
+   3:2 crop instead of 4:5, so it sits BESIDE a column of text rather than
+   towering over one at six repetitions. */
+.rp-text__frame{position:relative;isolation:isolate;grid-column:1 / 6;margin:0;
+  align-self:center}
+.rp-text__frame::before{content:"";position:absolute;
+  inset:-18px -18px 28px 28px;
+  border:1px solid var(--accent);border-radius:var(--r-lg);opacity:.5;
+  z-index:-1;pointer-events:none}
+.rp-text__frame-media{position:relative;display:block;aspect-ratio:3/2;
+  overflow:hidden;border-radius:var(--r-lg);
+  box-shadow:0 40px 80px -32px rgba(0,0,0,.5), 0 0 0 1px var(--line)}
+.rp-text__plate-img{display:block;inline-size:100%;block-size:100%;object-fit:cover;
+  filter:brightness(.94) saturate(1.06);transform:scale(1.02);
+  transition:transform 1.6s cubic-bezier(0.22, 0.61, 0.36, 1), filter .8s ease}
+.rp-text__frame:hover .rp-text__plate-img{transform:scale(1.07);
+  filter:brightness(1) saturate(1.1)}
+.rp-text__frame-shine{position:absolute;inset:0;pointer-events:none;
+  border-radius:var(--r-lg);
+  background:linear-gradient(160deg, rgba(255,255,255,0.07) 0%, transparent 35%)}
+@media (max-width:899px){
+  /* Same collapse as about: the grid becomes a block and the frame a capped
+     element above the prose — inset rather than full-bleed, because the
+     offset accent border IS the composition and a bleed would amputate it. */
+  .rp-text__grid{display:block}
+  .rp-text__body,
+  .rp-text__grid--plated .rp-text__body{grid-column:1 / -1}
+  .rp-text__frame{max-width:min(460px,100%);margin-bottom:36px}
+  .rp-text__frame::before{inset:-12px -12px 18px 18px}
+}
+/* --- end text band --------------------------------------------------------- */
+
 /* --- reveal animations (reference §reveal, verbatim) ---------------------- */
 /* The .reveal class is added by ruled_page.js on load — the shipped markup
    is reveal-free, so with the script blocked, absent or still in flight

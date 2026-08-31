@@ -250,6 +250,12 @@
       ['.rp-hero__chip', 0], ['.rp-hero h1', 0], ['.rp-hero__sub', 1], ['.rp-hero__actions', 2], ['.rp-hero__device', 3],
       ['.rp-services__title', 0], ['.rp-services__sub', 1], ['.rp-pillar', 'stagger'], ['.rp-services__cta', 2],
       ['.rp-about__frame', 0], ['.rp-about__lead', 1], ['.rp-about__body', 2],
+      // The tenant-added text band (repeatable-sections round). Selectors,
+      // not keys: a page may carry six of these and every one renders
+      // through the same partial, so one entry per element covers all of
+      // them. Its eyebrow is .band__kicker, which stays excluded for the
+      // rotation reason above.
+      ['.rp-text__frame', 0], ['.rp-text__title', 0], ['.rp-text__prose', 1],
       ['.rp-team__title', 0], ['.rp-team__sub', 1], ['.rp-member', 'stagger'],
       ['.rp-reviews__aggregate', 0], ['.rp-review', 'stagger'],
       ['.rp-book__title', 0], ['.rp-book__terms', 1], ['.rp-book__perks', 1],

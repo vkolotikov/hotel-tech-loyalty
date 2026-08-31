@@ -3,12 +3,15 @@ namespace Tests\Feature\Landing;
 
 use App\Http\Controllers\Api\V1\Admin\LandingPageController;
 use App\Http\Controllers\Api\V1\Admin\LandingPageSectionController;
+use App\Landing\SectionType;
 use App\Models\LandingPage;
+use App\Models\LandingPageSection;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Concerns\SetsUpLandingSchema;
@@ -368,6 +371,423 @@ class LandingPageSectionApiTest extends TestCase
             $this->controller()->update($this->request([
                 'sections' => [['key' => 'reviews', 'enabled' => false, 'sort' => 0]],
             ]));
+            $this->fail('Expected a 404 when this brand has no landing page yet.');
+        } catch (HttpException $e) {
+            $this->assertSame(404, $e->getStatusCode());
+        }
+    }
+
+    // ─── Adding and removing a band (the repeatable-sections round) ───────
+    //
+    // Same plumbing as the reorder tests above — the controller called
+    // directly, for the reason this file's own docblock gives. The one thing
+    // these need that the reorder tests do not is a fake disk: destroy()
+    // deletes the removed band's photo through MediaService, and
+    // MediaService::delete() routes a '/storage/...' value to the `public`
+    // disk BY THE VALUE'S SHAPE rather than by the configured media disk (see
+    // its own comment), so faking `public` is enough and no filesystems
+    // config has to be touched.
+
+    private function addRequest(array $payload): Request
+    {
+        $request = Request::create('/api/v1/admin/landing-pages/sections', 'POST', $payload);
+        $request->setUserResolver(fn () => $this->user);
+
+        return $request;
+    }
+
+    private function removeRequest(array $payload): Request
+    {
+        $request = Request::create('/api/v1/admin/landing-pages/sections', 'DELETE', $payload);
+        $request->setUserResolver(fn () => $this->user);
+
+        return $request;
+    }
+
+    /** The key store() answered with, so a test never has to guess which index it allocated. */
+    private function addSection(string $type = 'text'): string
+    {
+        $res = $this->controller()->store($this->addRequest(['type' => $type]));
+
+        $this->assertSame(201, $res->getStatusCode());
+
+        return json_decode($res->getContent(), true)['key'];
+    }
+
+    /**
+     * The message a refusal actually hands the tenant — asserted rather than
+     * merely "a ValidationException was thrown", because half of what these
+     * refusals have to get right is the wording (spec §9: no field paths, no
+     * Laravel defaults).
+     */
+    private function refusalMessage(\Closure $call, string $field): string
+    {
+        try {
+            $call();
+        } catch (ValidationException $e) {
+            $messages = $e->errors()[$field] ?? [];
+
+            $this->assertNotEmpty($messages, "The refusal named no '{$field}'.");
+
+            return $messages[0];
+        }
+
+        $this->fail('The call was accepted; a refusal was expected.');
+    }
+
+    /** No refusal a tenant reads may leak a field name, a section key, or Laravel's own phrasing. */
+    private function assertReadsLikeAPerson(string $message): void
+    {
+        foreach (['type', 'key', 'field', '_', 'null', 'invalid', 'selected'] as $leak) {
+            $this->assertStringNotContainsStringIgnoringCase($leak, $message,
+                "This refusal leaks '{$leak}' to the tenant: {$message}");
+        }
+    }
+
+    public function test_it_adds_a_text_section_at_the_end_of_the_page(): void
+    {
+        $page = $this->makePageWithSections();
+        $lastSort = (int) $page->sections->max('sort');
+
+        $key = $this->addSection();
+
+        // The first instance is text_1 — the keys are the tenant-invisible
+        // half of this feature, but the editor addresses content by them, so
+        // which one was allocated is part of the contract.
+        $this->assertSame('text_1', $key);
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'text_1', 'enabled' => true, 'sort' => $lastSort + 1,
+        ]);
+
+        // Appended, never inserted: nothing the tenant had already arranged
+        // moved to make room.
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'hero', 'sort' => 0,
+        ]);
+    }
+
+    /** The added row is an ordinary section afterwards: the reorder verb owns it like any other. */
+    public function test_an_added_section_can_then_be_toggled_and_reordered(): void
+    {
+        $page = $this->makePageWithSections();
+        $key  = $this->addSection();
+
+        $res = $this->controller()->update($this->request([
+            'sections' => [['key' => $key, 'enabled' => false, 'sort' => 2]],
+        ]));
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => $key, 'enabled' => false, 'sort' => 2,
+        ]);
+    }
+
+    public function test_each_add_takes_the_next_free_index(): void
+    {
+        $this->makePageWithSections();
+
+        $this->assertSame('text_1', $this->addSection());
+        $this->assertSame('text_2', $this->addSection());
+        $this->assertSame('text_3', $this->addSection());
+    }
+
+    /**
+     * Lowest FREE index, not highest plus one — and this is the test that
+     * says why it matters rather than merely that it happens. With
+     * highest-plus-one, a tenant who adds and removes a band six times has
+     * burned text_1..text_6 and can never add another despite the page
+     * carrying none: the NAMESPACE would be full while the page was empty.
+     */
+    public function test_a_removed_index_is_available_again(): void
+    {
+        $this->makePageWithSections();
+
+        $this->addSection();                                  // text_1
+        $second = $this->addSection();                        // text_2
+        $this->addSection();                                  // text_3
+
+        $this->controller()->destroy($this->removeRequest(['key' => $second]));
+
+        $this->assertSame('text_2', $this->addSection(),
+            'The freed index was not reused, so add/remove cycles exhaust the namespace.');
+    }
+
+    /**
+     * The instance cap. Mutation target: remove the `$key === null` refusal
+     * in store() (the cap's one expression — SectionType::nextInstanceKey()
+     * returns null at MAX_INSTANCES_PER_TYPE) and this goes red.
+     */
+    public function test_a_seventh_instance_of_a_type_is_refused_kindly(): void
+    {
+        $page = $this->makePageWithSections();
+
+        for ($i = 0; $i < SectionType::MAX_INSTANCES_PER_TYPE; $i++) {
+            $this->addSection();
+        }
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'text'])),
+            'type',
+        );
+
+        $this->assertSame('You can add up to six sections like this one. Remove one before adding another.', $message);
+        $this->assertReadsLikeAPerson($message);
+
+        // Refused, not silently capped: the page still has exactly six.
+        $this->assertSame(
+            SectionType::MAX_INSTANCES_PER_TYPE,
+            $page->fresh('sections')->sections->filter(
+                fn ($section) => SectionType::typeOf($section->key) === 'text'
+            )->count(),
+        );
+    }
+
+    /**
+     * The whole-page cap, which is a different bound from the per-type one
+     * and has to be reachable independently of it: with one repeatable type
+     * capped at six and the longest industry list at seven, the API alone
+     * cannot reach sixteen rows today. So the filler here is inserted
+     * directly — it stands in for rows a template rollback, an import or a
+     * future second repeatable type leaves on a page, which is exactly the
+     * state the cap exists to bound. The cap counts ROWS, not types, because
+     * rows are what it is protecting.
+     *
+     * Mutation target: remove the MAX_SECTIONS_PER_PAGE guard in store() and
+     * this goes red.
+     */
+    public function test_a_page_at_its_section_ceiling_refuses_kindly(): void
+    {
+        $page = $this->makePageWithSections();
+
+        $sort = (int) $page->sections->max('sort');
+
+        while ($page->sections()->count() < SectionType::MAX_SECTIONS_PER_PAGE) {
+            $page->sections()->create(['key' => 'legacy_band_' . ++$sort, 'enabled' => true, 'sort' => $sort]);
+        }
+
+        // A free instance index is still available, so nothing but the page
+        // cap can be what refuses this.
+        $this->assertNotNull(
+            SectionType::nextInstanceKey('text', $page->fresh('sections')->sections->pluck('key')->all()),
+            'The fixture has exhausted the instance cap, so it can no longer isolate the page cap.',
+        );
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'text'])),
+            'type',
+        );
+
+        $this->assertSame(
+            'This page already has as many sections as it can hold. Remove one before adding another.',
+            $message,
+        );
+        $this->assertReadsLikeAPerson($message);
+        $this->assertSame(SectionType::MAX_SECTIONS_PER_PAGE, $page->fresh('sections')->sections->count());
+    }
+
+    public function test_a_type_that_is_not_repeatable_cannot_be_added(): void
+    {
+        $this->makePageWithSections();
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'about'])),
+            'type',
+        );
+
+        $this->assertSame('That kind of section cannot be added to a page.', $message);
+        $this->assertReadsLikeAPerson($message);
+
+        // And it certainly did not create a second `about`.
+        $this->assertSame(1, LandingPageSection::where('key', 'about')->count());
+    }
+
+    public function test_an_unknown_type_is_refused_kindly(): void
+    {
+        $this->makePageWithSections();
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'gallery'])),
+            'type',
+        );
+
+        $this->assertSame('That kind of section cannot be added to a page.', $message);
+        $this->assertReadsLikeAPerson($message);
+    }
+
+    public function test_adding_without_a_type_is_refused_kindly(): void
+    {
+        $this->makePageWithSections();
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest([])),
+            'type',
+        );
+
+        $this->assertSame('Please choose which kind of section to add.', $message);
+        $this->assertReadsLikeAPerson($message);
+    }
+
+    /**
+     * Deleting an instance is three deletions, because a section is three
+     * things: the row, the copy filed under its key, and the photo the
+     * image endpoint uploaded for it.
+     *
+     * Mutation target: drop the MediaService::delete() step at the end of
+     * destroy() and this goes red on the assertMissing — the row and the
+     * copy are gone, and the file is left on the disk with nothing in the
+     * database pointing at it.
+     */
+    public function test_deleting_an_instance_drops_its_row_its_copy_and_its_photo(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('landing/text-one.png', 'plate-bytes');
+        Storage::disk('public')->put('landing/about.png', 'about-bytes');
+
+        $page = $this->makePageWithSections();
+        $key  = $this->addSection();
+
+        // Written the way the image endpoint writes it (that endpoint is
+        // exercised end to end in LandingImageUploadTest); here the subject
+        // is what REMOVAL does with what is already stored.
+        $page->update(['content' => [
+            'hero'  => ['headline' => 'The Art of Wellness'],
+            'about' => ['body' => 'Our story', 'image_url' => '/storage/landing/about.png'],
+            $key    => ['heading' => 'Our promise', 'body' => 'Quiet rooms.', 'image_url' => '/storage/landing/text-one.png'],
+        ]]);
+
+        $res = $this->controller()->destroy($this->removeRequest(['key' => $key]));
+
+        $this->assertSame(200, $res->getStatusCode());
+
+        $this->assertDatabaseMissing('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => $key,
+        ]);
+
+        $fresh = $page->fresh();
+        $this->assertArrayNotHasKey($key, $fresh->content);
+        Storage::disk('public')->assertMissing('landing/text-one.png');
+
+        // And nothing else moved: the neighbouring band keeps its copy and
+        // its file. A delete that reached past its own key would be the
+        // worst version of this bug, not the best.
+        $this->assertSame('Our story', $fresh->content['about']['body']);
+        $this->assertSame('/storage/landing/about.png', $fresh->content['about']['image_url']);
+        Storage::disk('public')->assertExists('landing/about.png');
+        $this->assertDatabaseHas('landing_page_sections', [
+            'landing_page_id' => $page->id, 'key' => 'about',
+        ]);
+    }
+
+    /** An instance with no photo removes cleanly — the delete step is skipped, not attempted on null. */
+    public function test_deleting_an_instance_with_no_photo_still_removes_it(): void
+    {
+        $page = $this->makePageWithSections();
+        $key  = $this->addSection();
+
+        $page->update(['content' => ['hero' => ['headline' => 'x'], $key => ['body' => 'Quiet rooms.']]]);
+
+        $res = $this->controller()->destroy($this->removeRequest(['key' => $key]));
+
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertDatabaseMissing('landing_page_sections', ['landing_page_id' => $page->id, 'key' => $key]);
+        $this->assertArrayNotHasKey($key, $page->fresh()->content);
+    }
+
+    /**
+     * A fixed section can be switched off and never removed. That is a fact
+     * about the CATALOGUE rather than about this page, so it is refused
+     * before the transaction opens — and it must be refused for a key the
+     * page really does carry, which is the only version of this that could
+     * ever have succeeded by accident.
+     */
+    public function test_a_fixed_section_cannot_be_deleted(): void
+    {
+        $page = $this->makePageWithSections();
+
+        foreach (['hero', 'about', 'contact'] as $fixed) {
+            $message = $this->refusalMessage(
+                fn () => $this->controller()->destroy($this->removeRequest(['key' => $fixed])),
+                'key',
+            );
+
+            $this->assertSame(
+                'Sections that come with the page can be switched off, but not removed.',
+                $message,
+            );
+
+            $this->assertDatabaseHas('landing_page_sections', [
+                'landing_page_id' => $page->id, 'key' => $fixed,
+            ]);
+        }
+    }
+
+    /** A key past the grammar is not a section at all, so it is refused the same way a fixed one is. */
+    public function test_a_key_outside_the_grammar_cannot_be_deleted(): void
+    {
+        $this->makePageWithSections();
+
+        foreach (['text', 'text_7', 'text_0', 'gallery_1', '../hero'] as $bogus) {
+            $message = $this->refusalMessage(
+                fn () => $this->controller()->destroy($this->removeRequest(['key' => $bogus])),
+                'key',
+            );
+
+            $this->assertSame(
+                'Sections that come with the page can be switched off, but not removed.',
+                $message,
+            );
+        }
+    }
+
+    public function test_deleting_an_instance_this_page_does_not_have_is_refused(): void
+    {
+        $this->makePageWithSections();
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->destroy($this->removeRequest(['key' => 'text_4'])),
+            'key',
+        );
+
+        $this->assertSame("This page has no section called 'text_4'.", $message);
+    }
+
+    /**
+     * The two new verbs resolve "my page" exactly as the reorder verb does —
+     * through LandingPageGuard, never a bare first() — so neither can reach
+     * another organisation's rows. Proven by leaving the neighbour's page
+     * untouched while mine gains and loses a band.
+     */
+    public function test_the_new_verbs_cannot_touch_another_organizations_sections(): void
+    {
+        $theirs = $this->makeOtherOrgPageWithSections();
+        $mine   = $this->makePageWithSections();
+
+        $key = $this->addSection();
+
+        $this->assertDatabaseHas('landing_page_sections', ['landing_page_id' => $mine->id, 'key' => $key]);
+        $this->assertDatabaseMissing('landing_page_sections', ['landing_page_id' => $theirs->id, 'key' => $key]);
+
+        $this->controller()->destroy($this->removeRequest(['key' => $key]));
+
+        $this->assertDatabaseMissing('landing_page_sections', ['landing_page_id' => $mine->id, 'key' => $key]);
+        // Their page still has every band it started with.
+        $this->assertSame(7, LandingPageSection::where('landing_page_id', $theirs->id)->count());
+    }
+
+    public function test_adding_404s_when_this_brand_has_no_page_yet(): void
+    {
+        try {
+            $this->controller()->store($this->addRequest(['type' => 'text']));
+            $this->fail('Expected a 404 when this brand has no landing page yet.');
+        } catch (HttpException $e) {
+            $this->assertSame(404, $e->getStatusCode());
+        }
+    }
+
+    public function test_removing_404s_when_this_brand_has_no_page_yet(): void
+    {
+        try {
+            $this->controller()->destroy($this->removeRequest(['key' => 'text_1']));
             $this->fail('Expected a 404 when this brand has no landing page yet.');
         } catch (HttpException $e) {
             $this->assertSame(404, $e->getStatusCode());

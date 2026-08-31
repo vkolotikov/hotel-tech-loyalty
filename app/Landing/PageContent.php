@@ -429,7 +429,19 @@ final class PageContent
      */
     public function count(string $sectionKey): int
     {
-        return match ($sectionKey) {
+        // Matched on the section's TYPE, not on its key. For every fixed
+        // type the two are the same string and this is exactly the `match`
+        // it always was; for a repeatable type they are not — `text_1` and
+        // `text_4` are two bands of one kind and must be answered by one
+        // arm. SectionType::typeOf() is the only parser that knows which is
+        // which, and it returns null for a key that is not a section at all,
+        // which lands on `default` below exactly as an unknown key always
+        // did.
+        //
+        // The per-key content reads below therefore still index on
+        // $sectionKey and never on the type: two text bands have separate
+        // copy.
+        return match (SectionType::typeOf($sectionKey)) {
             'services' => $this->services->count(),
             'team'     => $this->team->count(),
             'reviews'  => $this->reviews->count(),
@@ -443,7 +455,17 @@ final class PageContent
             'contact'  => (filled($this->contact->phone)
                 || filled($this->contact->email)
                 || filled($this->contact->address)) ? 1 : 0,
-            'about'    => filled($this->page->content['about']['body'] ?? null) ? 1 : 0,
+            'about'    => filled($this->page->content[$sectionKey]['body'] ?? null) ? 1 : 0,
+            // A tenant-added text band, and the same predicate `about` uses
+            // one line up — deliberately, because they are the same kind of
+            // thing: a band whose entire reason to exist is prose the tenant
+            // wrote. An eyebrow, a heading or a photo with NO body is not a
+            // section, it is a fragment, and publishing a headed band over
+            // blank space is the "empty section" this whole method exists to
+            // keep off a live page. So a text instance the tenant added but
+            // never filled in simply does not render, and neither the band
+            // nor its nav anchor appears until there is something to read.
+            'text'     => filled($this->page->content[$sectionKey]['body'] ?? null) ? 1 : 0,
             // The booking widget asks Check-in / Check-out / Adults /
             // Children -- hotel questions -- and is framed unmodified on
             // every industry's page (booking.blade.php). Until it grows an
@@ -486,7 +508,9 @@ final class PageContent
      * below is the single wall every render-path pixel has to clear, however
      * the leaf got written.
      *
-     * `content.{hero,about}.image_url` has exactly one legitimate writer —
+     * `content.<slot>.image_url` — where a slot is any section key whose
+     * type carries `image` in {@see SectionType::all()}, today hero, about
+     * and the six `text_N` instances — has exactly one legitimate writer:
      * LandingPageController::uploadImage(), which only ever stores what
      * MediaService::upload() just returned: `/storage/…` on the local disk
      * or an `https://…` CDN URL on a cloud one (see that method's own

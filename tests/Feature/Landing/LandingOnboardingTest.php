@@ -4,6 +4,7 @@ namespace Tests\Feature\Landing;
 use App\Http\Controllers\Api\V1\Admin\LandingOnboardingController;
 use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
+use App\Landing\SectionType;
 use App\Models\LandingPage;
 use App\Models\LandingPageSection;
 use App\Models\Organization;
@@ -724,6 +725,42 @@ class LandingOnboardingTest extends TestCase
         $seeded = LandingPage::with('sections')->first()->sections->pluck('key')->all();
 
         $this->assertSame($listed, $seeded);
+    }
+
+    /**
+     * The section-type catalogue rides on this response for the same reason
+     * `templates` and `industries` do: the front end mirrors neither, so a
+     * type it can offer and a type the add endpoint accepts are one list by
+     * construction rather than by two people remembering.
+     *
+     * The strong claim here is the round trip — every type the payload marks
+     * `repeatable` is one POST /sections actually accepts. A card the editor
+     * shows and the validator refuses is a dead button, which is exactly
+     * what the template test below refuses to allow for template_key.
+     */
+    public function test_prefill_carries_a_section_catalogue_the_add_endpoint_will_accept(): void
+    {
+        $this->makeProperty();
+
+        $types = $this->prefill()['section_types'];
+
+        $this->assertNotEmpty($types);
+
+        $addable = [];
+
+        foreach ($types as $type) {
+            $this->assertSame(['id', 'repeatable', 'fields', 'image', 'limit'], array_keys($type));
+            // A server-side view path has no business on the wire.
+            $this->assertArrayNotHasKey('view', $type);
+
+            if ($type['repeatable']) {
+                $addable[] = $type['id'];
+            }
+        }
+
+        $this->assertNotEmpty($addable, 'The catalogue offers no addable section type at all.');
+        $this->assertSame(SectionType::repeatableIds(), $addable,
+            'What the wizard/editor is told it can add is not what the add endpoint accepts.');
     }
 
     public function test_prefill_names_a_template_the_apply_endpoint_will_accept(): void
