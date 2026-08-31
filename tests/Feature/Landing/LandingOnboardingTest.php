@@ -923,6 +923,44 @@ class LandingOnboardingTest extends TestCase
      * proof that LandingOnboardingService::theme() was updated to carry it
      * through, not only that the controller's validation accepts it.
      */
+    public function test_an_org_that_never_picked_an_industry_gets_neutral_words_not_hotel_ones(): void
+    {
+        // Organization::resolved_industry answers 'hotel' (DEFAULT_INDUSTRY)
+        // for an org that never picked, which is fine for admin chrome and
+        // wrong on a page published on the tenant's own domain: a real
+        // education tenant's page called itself "The Hotel" and invited its
+        // visitors to "Book your stay". A page built with no industry chosen
+        // must fall back to the neutral profile instead.
+        $org  = $this->makeOrg('No Industry Co', null);
+        $user = $this->makeUser($org);
+        $this->actAs($user, $this->defaultBrandId($org));
+
+        $this->assertSame(
+            'hotel',
+            $org->resolved_industry,
+            'Precondition: the admin default is still hotel, so this test is testing something.'
+        );
+        $this->assertNull($org->explicit_industry);
+
+        // No `industry` in the payload: the tenant never answered, exactly as
+        // an API caller or a pre-3c wizard would leave it.
+        $payload = $this->validPayload(['slug' => 'no-industry-co']);
+        unset($payload['industry']);
+
+        $request = Request::create('/api/v1/admin/landing-pages/onboarding', 'POST', $payload);
+        $request->setUserResolver(fn () => $user);
+        $this->controller()->store($request);
+
+        $page = LandingPage::withoutGlobalScopes()->where('organization_id', $org->id)->first();
+
+        $this->assertNotNull($page, 'The page was never created.');
+        $this->assertSame(
+            IndustryProfile::FALLBACK_INDUSTRY,
+            $page->industry,
+            'A page for an org that never picked an industry must not be filed under hotel.'
+        );
+    }
+
     public function test_apply_accepts_and_stores_a_valid_palette(): void
     {
         $this->makeProperty();

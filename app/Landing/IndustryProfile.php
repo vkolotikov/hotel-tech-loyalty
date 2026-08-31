@@ -67,6 +67,16 @@ final class IndustryProfile
      * not been taught the vocabulary for yet still gets the generic type
      * rather than a guess or a thrown error, same as {@see all()}.
      */
+    /**
+     * The profile a page falls back to when no industry resolves.
+     *
+     * Deliberately NOT Organization::DEFAULT_INDUSTRY. That constant dresses
+     * the ADMIN and may hold an opinion; this one is published on a tenant's
+     * own domain, where guessing 'hotel' told an education tenant's visitors
+     * to "Book your stay". 'other' carries honestly generic words instead.
+     */
+    public const FALLBACK_INDUSTRY = 'other';
+
     private const SCHEMA_TYPES = [
         'hotel'       => 'Hotel',
         'beauty'      => 'BeautySalon',
@@ -345,7 +355,7 @@ final class IndustryProfile
         // industry. 'other' is the only id with no more-generic industry to
         // misrepresent as, which is why it is Organization::INDUSTRIES' own
         // "my business isn't listed" entry.
-        $id = $resolvedId ?? 'other';
+        $id = $resolvedId ?? self::FALLBACK_INDUSTRY;
 
         $all = self::all();
 
