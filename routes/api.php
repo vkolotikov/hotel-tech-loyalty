@@ -1359,6 +1359,23 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('preview-url', [LandingPageController::class, 'previewUrl']);
                     Route::put('sections',     [LandingPageSectionController::class, 'update']);
 
+                    // Adding and removing a band (the repeatable-sections
+                    // round). Both live on the same controller as the
+                    // reorder above, because all three answer one question
+                    // — which sections does this page have, in what order —
+                    // and the invariant they share is only enforceable if
+                    // one class owns all of it.
+                    //
+                    // The DELETE carries its key in the BODY rather than in
+                    // the path, matching `DELETE landing-pages/image`'s
+                    // `slot` two lines below: the page itself is resolved
+                    // from the caller's tenant and brand on every one of
+                    // these routes, so the only thing left to name is which
+                    // part of it, and naming that two different ways on one
+                    // resource is a difference with no meaning behind it.
+                    Route::post('sections',    [LandingPageSectionController::class, 'store']);
+                    Route::delete('sections',  [LandingPageSectionController::class, 'destroy']);
+
                     // The photo endpoints (Task 4, media round). Multipart
                     // form data does not parse on a PUT in PHP, so both verbs
                     // are POST/DELETE rather than following update()'s PUT —

@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
 
@@ -2194,6 +2195,151 @@ class RuledPageRenderTest extends TestCase
 
         $this->assertNoPlateImgForSection('hero', $body);
         $this->assertPageAndPreviewSurvive($page);
+    }
+
+    // ─── The same battery, aimed at a tenant-ADDED band ───────────────────
+    //
+    // Everything above this line was written when `content.image_url` had
+    // exactly two possible parents. A repeatable section adds six more per
+    // type, allocated at runtime rather than shipped in the template, and
+    // the guard that has to hold for them is the same guard — imageUrl()'s
+    // three checks, reached through a partial that never spells its own key.
+    // So the battery is re-run verbatim for `text_1`, with ONE addition
+    // that the hero/about versions do not need and could not make: the band
+    // itself is asserted to render. Without that, every case here would
+    // pass on a page that simply has no such band, and the whole battery
+    // would be measuring nothing.
+
+    /** published(), plus one added band carrying real prose so it actually renders. */
+    private function publishedWithTextBand(mixed $imageValue, string $key = 'text_1'): LandingPage
+    {
+        $page = $this->published();
+
+        // Raw, bypassing both the admin API's validation and Eloquent's
+        // re-encoding, for the reason storeRawImageUrl() above gives: this
+        // is a row shaped as a raw import or a hand-edit would leave it, and
+        // a 500 on stored data is not acceptable on a live page.
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero' => ['headline' => 'The Art of Wellness'],
+                $key   => ['body' => 'Quiet rooms and unhurried hands.', 'image_url' => $imageValue],
+            ]),
+        ]);
+
+        $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => 9]);
+
+        return $page;
+    }
+
+    /**
+     * Every hostile shape the hero/about battery covers, aimed at an added
+     * band's own image leaf.
+     *
+     *   - javascript: — mutation target: return the raw leaf unchecked from
+     *     imageUrl() and this goes red first.
+     *   - "><script>  — the attribute breakout the prefix allowlist refuses
+     *     outright, so the string never reaches an attribute context at all.
+     *   - //evil…     — protocol-relative: a browser inherits the current
+     *     page's scheme, so it points off-origin exactly as a fully
+     *     qualified URL would.
+     *   - array / object — both decode to a PHP array through the same
+     *     `array` cast; ScalarTree::prune() drops them before imageUrl() is
+     *     ever asked, and this proves that at the render boundary rather
+     *     than assuming it from prune()'s own unit tests.
+     *   - 200k characters — no column-level length limit stands between a
+     *     raw write and this leaf.
+     */
+    public static function hostileInstanceImageValues(): array
+    {
+        return [
+            'javascript scheme'   => ['javascript:alert(1)', 'javascript:'],
+            'attribute breakout'  => ['"><script>', '"><script>'],
+            'protocol relative'   => ['//evil.example/x.jpg', 'evil.example'],
+            'array shaped'        => [['first', 'second'], null],
+            'object shaped'       => [['nested' => 'value'], null],
+            '200k characters'     => [null, null],
+        ];
+    }
+
+    #[DataProvider('hostileInstanceImageValues')]
+    public function test_a_hostile_image_url_on_an_added_band_renders_no_img_tag(mixed $value, ?string $needle): void
+    {
+        // The 200k case is built here rather than in the provider so the
+        // data set name stays readable and PHPUnit is not asked to carry a
+        // 200,000-character argument through its own reporting.
+        $page = $this->publishedWithTextBand($value ?? str_repeat('x', 200_000));
+
+        $body = $this->body();
+
+        // The band renders — so the absence of a plate below is the guard
+        // working, not the band being missing.
+        $this->assertStringContainsString('data-section="text_1"', $body,
+            'The added band did not render at all, so this case proves nothing about its image guard.');
+        $this->assertStringContainsString('Quiet rooms', $body);
+
+        $this->assertStringNotContainsString('rp-text__plate-img', $body,
+            'A plate <img> rendered for an added band despite a hostile image_url.');
+        $this->assertStringNotContainsString('rp-text__frame', $body,
+            'The plate frame rendered around no image.');
+
+        if ($needle !== null) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
+
+        $this->assertPageAndPreviewSurvive($page);
+    }
+
+    /**
+     * The positive half: a real upload through Task 4's endpoint reaches an
+     * added band's plate, with the same img tag the other plates emit.
+     *
+     * Uses the SAME real writer the hero/about plate tests use — the admin
+     * image endpoint over HTTP — because the whole point of that rule is
+     * that nothing else writes this leaf, and a test that poked the URL
+     * into the row would be proving something no production path does.
+     */
+    public function test_an_added_bands_plate_renders_from_an_image_uploaded_through_the_real_endpoint(): void
+    {
+        $this->ensureImageUploadSchema();
+        $org  = $this->orgWithLandingPages();
+        $page = $this->publishedForOrg($org, 'plate-text-salon', [
+            'hero'   => ['headline' => 'The Art of Wellness'],
+            'text_1' => ['kicker' => 'The promise', 'body' => 'Quiet rooms and unhurried hands.'],
+        ]);
+        $page->sections()->create(['key' => 'text_1', 'enabled' => true, 'sort' => 9]);
+
+        $url = $this->uploadImageViaEndpoint($org, 'text_1');
+        $this->assertStringStartsWith('/storage/', $url);
+
+        $body = $this->bodyFor($page);
+
+        $this->assertStringContainsString('data-section="text_1"', $body);
+        $this->assertStringContainsString('<figure class="rp-text__frame">', $body);
+        $this->assertStringContainsString(
+            '<img class="rp-text__plate-img" src="' . $url . '" alt="" loading="lazy" decoding="async">',
+            $body,
+        );
+        $this->assertStringContainsString('<span class="rp-text__frame-shine" aria-hidden="true"></span>', $body);
+        // The plated arrangement is a modifier on the wrapper, so the text
+        // column steps aside for the frame rather than sitting under it.
+        $this->assertStringContainsString('rp-text__grid--plated', $body);
+    }
+
+    /** With no photo the same band renders its unplated arrangement — no empty frame, no modifier. */
+    public function test_an_added_band_with_no_photo_renders_no_frame(): void
+    {
+        $page = $this->published();
+        $page->update(['content' => [
+            'hero'   => ['headline' => 'The Art of Wellness'],
+            'text_1' => ['body' => 'Quiet rooms and unhurried hands.'],
+        ]]);
+        $page->sections()->create(['key' => 'text_1', 'enabled' => true, 'sort' => 9]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="text_1"', $body);
+        $this->assertStringNotContainsString('rp-text__frame', $body);
+        $this->assertStringNotContainsString('rp-text__grid--plated', $body);
     }
 
     // ─── Palette system (Task 1, landing phase 3c) — golden capture ───────

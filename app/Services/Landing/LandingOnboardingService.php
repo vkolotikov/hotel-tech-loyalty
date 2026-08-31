@@ -5,6 +5,7 @@ namespace App\Services\Landing;
 use App\Landing\ContactDetails;
 use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
+use App\Landing\SectionType;
 use App\Models\Brand;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -243,6 +244,21 @@ class LandingOnboardingService
             // vocabulary is IndustryProfile's.
             'industries'     => self::industries(),
             'sections'       => $this->sections($content),
+            // The section-type CATALOGUE (App\Landing\SectionType), served
+            // for the identical reason `templates` and `industries` above
+            // are and never mirrored on the front end: which types exist,
+            // which of them a tenant may ADD, what fields each one edits and
+            // which take a photo are all facts the server already holds, and
+            // a second copy in TypeScript is a copy that can offer a type the
+            // add endpoint would then 422 on.
+            //
+            // Distinct from `sections` one line up, which is a different
+            // question with a confusingly similar name: THAT is this page's
+            // own bands with the tenant's content counts against them ("Team
+            // (0) — add some from your Team screen"), and it is what the
+            // wizard's step 4 reads. THIS is the type table, independent of
+            // any page.
+            'section_types'  => SectionType::payload(),
             'suggested_slug' => $page?->slug ?? $this->suggestSlug($org, $brand, $contact),
         ];
     }

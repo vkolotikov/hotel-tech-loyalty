@@ -981,4 +981,246 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringNotContainsString('rp-map', $body);
         $this->assertStringNotContainsString('maps.google.com', $body);
     }
+
+    // ── text: the tenant-added band ─────────────────────────────────────────
+    //
+    // The first band on this template that is not one of a kind. Everything
+    // below is about the two consequences of that: the same partial has to
+    // render two DIFFERENT bands on one page without either borrowing the
+    // other's copy, and a band the tenant added but never filled in has to
+    // obey the same absent-not-empty rule every shipped band already does.
+
+    /**
+     * The published() fixture plus one or more added bands, exactly as the
+     * add endpoint leaves them — appended after the fixed set, enabled.
+     *
+     * The copy is written straight onto the page's `content`, which is what
+     * the editor's save does; LandingPageSectionApiTest owns the endpoint
+     * behaviour and this file owns what the renderer does with the result.
+     *
+     * @param array<string, array<string, string>> $bands key => copy
+     */
+    private function publishedWithTextBands(array $bands, array $content = []): LandingPage
+    {
+        $page = $this->published($content + $bands);
+
+        $sort = (int) $page->sections()->max('sort');
+
+        foreach (array_keys($bands) as $key) {
+            $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => ++$sort]);
+        }
+
+        return $page;
+    }
+
+    public function test_an_added_text_band_renders_once_it_has_copy(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => [
+                'kicker'  => 'The promise',
+                'heading' => 'Quiet rooms, unhurried hands',
+                'body'    => 'Every appointment begins with ten minutes of nothing at all.',
+            ],
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="text_1"', $body);
+        $this->assertStringContainsString('id="text_1"', $body);
+        $this->assertStringContainsString('The promise', $body);
+        $this->assertStringContainsString('Quiet rooms, unhurried hands', $body);
+        // The letterpress opening splits the first two words off and prints
+        // the remainder — the whole sentence has to survive the split.
+        $this->assertStringContainsString('<span class="rp-text__opening">Every appointment</span>', $body);
+        $this->assertStringContainsString('begins with ten minutes of nothing at all.', $body);
+    }
+
+    /**
+     * Absent, not empty — the rule every band on this page follows, applied
+     * to one the tenant added themselves. A section row with no body has
+     * nothing to say, and a headed band over blank space on a live customer
+     * site is the difference between considered and broken.
+     *
+     * Both halves are asserted, because they fail for different reasons:
+     * PageContent::count() decides whether the layout includes the partial
+     * at all, and the partial itself decides what to do with a row missing a
+     * field. The kicker and heading here are deliberately FILLED: a band
+     * with an eyebrow, a title and no prose is a fragment, and it is exactly
+     * the shape that would slip past a count() written as "has any copy".
+     */
+    public function test_an_added_text_band_with_no_body_does_not_render(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => ['kicker' => 'The promise', 'heading' => 'Quiet rooms'],
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('data-section="text_1"', $body);
+        $this->assertStringNotContainsString('rp-text', $body);
+        $this->assertStringNotContainsString('The promise', $body);
+        $this->assertStringNotContainsString('Quiet rooms', $body);
+    }
+
+    /** A band added and never touched at all: no row of copy, no band. */
+    public function test_an_added_text_band_with_no_copy_at_all_does_not_render(): void
+    {
+        $page = $this->published();
+        $page->sections()->create(['key' => 'text_1', 'enabled' => true, 'sort' => 9]);
+
+        $this->assertStringNotContainsString('rp-text', $this->body());
+    }
+
+    /** A band whose body is whitespace is as empty as one with none — filled(), not isset(). */
+    public function test_a_whitespace_only_body_does_not_render(): void
+    {
+        $this->publishedWithTextBands(['text_1' => ['body' => "   \n  "]]);
+
+        $this->assertStringNotContainsString('data-section="text_1"', $this->body());
+    }
+
+    /**
+     * Two bands, one partial, and no bleed between them. This is the claim
+     * a repeatable section actually has to earn: a partial that spelled its
+     * own key as a literal anywhere — for the id, for the copy read, for the
+     * plate — would render the second band as a copy of the first.
+     */
+    public function test_two_text_bands_render_their_own_copy_and_their_own_anchors(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => ['kicker' => 'The promise', 'heading' => 'First heading', 'body' => 'First body copy.'],
+            'text_2' => ['kicker' => 'The method',  'heading' => 'Second heading', 'body' => 'Second body copy.'],
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('id="text_1"', $body);
+        $this->assertStringContainsString('id="text_2"', $body);
+        $this->assertStringContainsString('First heading', $body);
+        $this->assertStringContainsString('Second heading', $body);
+        // The body is asserted in its rendered SPLIT form — the letterpress
+        // opening wraps the first two words in a span, so the sentence is
+        // never contiguous in the markup and an assertion that pretended
+        // otherwise would be testing a page this template does not ship.
+        $this->assertStringContainsString('<span class="rp-text__opening">First body</span> copy.', $body);
+        $this->assertStringContainsString('<span class="rp-text__opening">Second body</span> copy.', $body);
+
+        // Two bands, and exactly two: the partial is included once per row,
+        // not once per row per band.
+        $this->assertSame(2, substr_count($body, 'data-section="text_'));
+    }
+
+    /**
+     * The one band with no heading and no eyebrow is still a band: prose
+     * alone is a legitimate shape, and nothing is invented to head it. The
+     * industry profile has no kicker for a section it did not author, so an
+     * <h2> here would be words put in a tenant's mouth on their own domain.
+     */
+    public function test_a_text_band_with_only_prose_ships_no_invented_heading(): void
+    {
+        $this->publishedWithTextBands(['text_1' => ['body' => 'Just the words, then.']]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="text_1"', $body);
+        $this->assertStringContainsString('<span class="rp-text__opening">Just the</span> words, then.', $body);
+        $this->assertStringNotContainsString('rp-text__title', $body);
+        // No eyebrow element either — an empty one is a rotated blank at the
+        // width where the kicker becomes the page's vertical index.
+        $this->assertDoesNotMatchRegularExpression(
+            '/<section id="text_1".*?band__kicker/s',
+            $body,
+            'An added band with no kicker shipped an empty eyebrow.',
+        );
+    }
+
+    /** Blank lines the tenant typed survive as paragraphs, the same as they do in the about band. */
+    public function test_paragraph_breaks_in_an_added_band_survive_as_paragraphs(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => ['body' => "First paragraph here.\n\nSecond paragraph here.\r\n\r\nThird paragraph here."],
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<p>Second paragraph here.</p>', $body);
+        $this->assertStringContainsString('<p>Third paragraph here.</p>', $body);
+    }
+
+    /**
+     * The nav label for an added band can only come from the tenant's own
+     * kicker: IndustryProfile authors vocabulary for the bands an industry's
+     * page is created with, and has no opinion — documented as '' — about a
+     * section the tenant invented. So a band with a short kicker is
+     * anchorable, and one without a kicker simply does not appear in the
+     * nav rather than appearing as a blank pill or a printed section key.
+     */
+    public function test_an_added_bands_nav_label_is_its_own_kicker(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => ['kicker' => 'The promise', 'body' => 'Words.'],
+        ]);
+
+        $this->assertStringContainsString('<a href="#text_1">The promise</a>', $this->body());
+    }
+
+    public function test_an_added_band_with_no_kicker_takes_no_nav_anchor(): void
+    {
+        $this->publishedWithTextBands(['text_1' => ['heading' => 'Quiet rooms', 'body' => 'Words.']]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-section="text_1"', $body);
+        $this->assertStringNotContainsString('href="#text_1"', $body);
+        // And certainly not the raw key as a label.
+        $this->assertStringNotContainsString('>text_1<', $body);
+    }
+
+    /** A kicker too long to be a signpost is dropped, exactly as it is for a shipped band. */
+    public function test_an_added_bands_essay_length_kicker_takes_no_nav_anchor(): void
+    {
+        $this->publishedWithTextBands([
+            'text_1' => [
+                'kicker' => 'Digital is convenient. Metal makes it unforgettable.',
+                'body'   => 'Words.',
+            ],
+        ]);
+
+        $body = $this->body();
+
+        // It still heads its own band — it is the band's eyebrow, and that
+        // is prose the tenant wrote for it.
+        $this->assertStringContainsString('Digital is convenient. Metal makes it unforgettable.', $body);
+        // But it is not a nav pill the width of the viewport.
+        $this->assertStringNotContainsString('href="#text_1"', $body);
+    }
+
+    /** Switched off is switched off, the same as any shipped band. */
+    public function test_a_disabled_text_band_does_not_render(): void
+    {
+        $page = $this->publishedWithTextBands(['text_1' => ['body' => 'Words.']]);
+        $page->sections()->where('key', 'text_1')->update(['enabled' => false]);
+
+        $this->assertStringNotContainsString('data-section="text_1"', $this->body());
+    }
+
+    /**
+     * A key past the grammar — `text_7`, one beyond the instance cap — names
+     * no type, so it names no partial and renders nothing. Skipped rather
+     * than fatal, which is the standing rule for a section row the shipped
+     * code does not recognise: section rows are stored data, the partials
+     * are shipped code, and a live page losing one band is recoverable where
+     * a 500 is not.
+     */
+    public function test_a_row_past_the_instance_cap_renders_nothing_and_does_not_break_the_page(): void
+    {
+        $page = $this->published(['text_7' => ['body' => 'Words from a row nothing should render.']]);
+        $page->sections()->create(['key' => 'text_7', 'enabled' => true, 'sort' => 9]);
+
+        $response = $this->get('http://' . config('landing.host') . '/glamour-salon');
+
+        $response->assertOk();
+        $this->assertStringNotContainsString('data-section="text_7"', $response->getContent());
+        $this->assertStringNotContainsString('Words from a row nothing should render.', $response->getContent());
+    }
 }

@@ -246,9 +246,30 @@
     // before `reviews` existed, or a template rollback — and it is the one
     // the old two-condition JSON-LD gate could not see at all, because both
     // of its switches read tenant CONTENT and neither read the section rows.
+    //
+    // THE VIEW IS RESOLVED FROM THE SECTION'S TYPE, NOT ITS KEY (the
+    // repeatable-sections round). This used to be
+    // view()->exists('...sections.' . $section->key), which is the same
+    // thing only while every band is one of a kind: a page carrying `text_1`
+    // and `text_2` has two rows that render through ONE `text` partial, and
+    // a key→view lookup resolves neither. App\Landing\SectionType is the one
+    // catalogue that maps a key to its type and a type to its partial;
+    // viewFor() returns null for a key that names no type at all, which is
+    // the same "skip, don't fatal" outcome a missing partial has always had.
+    //
+    // Written as a map built HERE rather than a second viewFor() call down
+    // in the loop, for the reason the whole $renderedSections collection
+    // exists: what renders, and what it renders through, is decided once in
+    // this block and the loop below only iterates the answer. Fully
+    // qualified because a `use` inside a @php block lands mid-file in the
+    // compiled view.
+    $sectionViews = $sections
+        ->mapWithKeys(fn ($section) => [$section->key => \App\Landing\SectionType::viewFor($section->key)]);
+
     $renderedSections = $sections->filter(fn ($section) => $section->enabled
         && $content->has($section->key)
-        && view()->exists('landing.ruled_page.sections.' . $section->key));
+        && $sectionViews[$section->key] !== null
+        && view()->exists($sectionViews[$section->key]));
 
     $rendersReviews = $renderedSections->contains(fn ($section) => $section->key === 'reviews');
 
@@ -579,6 +600,17 @@
         // writes "Digital is convenient. Metal makes it unforgettable." gets a
         // nav link the width of the viewport -- which is what shipped. Past
         // the cap we fall back to the industry's own short word for the band.
+        //
+        // A TENANT-ADDED band (text_1, text_2, ...) has no industry kicker
+        // and never will: IndustryProfile authors vocabulary for the bands
+        // an industry's page is CREATED with, and it cannot have an opinion
+        // about a section the tenant invented. kicker() returns '' for a key
+        // it has never heard of — its documented behaviour, not an accident
+        // — so the fallback below is empty for those, the anchor is filtered
+        // out by the `!== ''` test on the pipeline below, and the band
+        // simply does not appear in the nav. The tenant's own kicker is the
+        // only source of a nav label for an added band, which is the honest
+        // answer: nobody else knows what they called it.
         $custom = trim((string) ($page->content[$key]['kicker'] ?? ''));
 
         if ($custom !== '' && mb_strlen($custom) <= 24) {
@@ -640,7 +672,7 @@
      scope — hero and services ask it whether booking is switched on, which is
      a question about the tenant's setting rather than about what renders. --}}
 @foreach ($renderedSections as $section)
-  @include('landing.ruled_page.sections.' . $section->key, [
+  @include($sectionViews[$section->key], [
     'section' => $section,
     'copy'    => $page->content[$section->key] ?? [],
   ])

@@ -712,4 +712,122 @@ class PageContentTest extends TestCase
         $this->assertNull($content->contact->address);
         $this->assertFalse($content->has('contact'));
     }
+
+    // ─── Tenant-added bands (the repeatable-sections round) ────────────────
+    //
+    // count() is matched on the section's TYPE now rather than on its key,
+    // which is what lets two bands of one kind be answered by one arm. These
+    // are the tests for that substitution: the answer has to be per-KEY (two
+    // text bands have separate copy) while the arm is per-TYPE.
+
+    private function pageWithContent(array $content): LandingPage
+    {
+        $page = $this->page(1);
+        $page->update(['content' => $content]);
+
+        return $page->fresh();
+    }
+
+    public function test_an_added_band_with_body_copy_counts_as_one_section(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'text_1' => ['kicker' => 'The promise', 'body' => 'Quiet rooms.'],
+        ]));
+
+        $this->assertSame(1, $content->count('text_1'));
+        $this->assertTrue($content->has('text_1'));
+    }
+
+    /**
+     * The empty case, and the reason it is spelled with a kicker AND a
+     * heading filled in: a band with an eyebrow, a title and no prose is a
+     * fragment, not a section, and it is exactly the shape that would slip
+     * past a predicate written as "has any copy at all". A headed band over
+     * blank space on a live customer site is the difference between
+     * considered and broken, which is the whole reason this method exists.
+     */
+    public function test_an_added_band_with_no_body_counts_as_nothing(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'text_1' => ['kicker' => 'The promise', 'heading' => 'Quiet rooms'],
+        ]));
+
+        $this->assertSame(0, $content->count('text_1'));
+        $this->assertFalse($content->has('text_1'));
+    }
+
+    /** A photo is not prose either: a plate with nothing to say is still an empty band. */
+    public function test_an_added_band_with_only_a_photo_counts_as_nothing(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'text_1' => ['image_url' => '/storage/landing/plate.png'],
+        ]));
+
+        $this->assertSame(0, $content->count('text_1'));
+    }
+
+    public function test_a_whitespace_only_body_counts_as_nothing(): void
+    {
+        $content = PageContent::for($this->pageWithContent(['text_1' => ['body' => "  \n\t "]]));
+
+        $this->assertSame(0, $content->count('text_1'));
+    }
+
+    /**
+     * Per-KEY, not per-type. One arm of the match answers both bands, so
+     * the thing that must not regress is the arm reading the type's name
+     * instead of the key's when it goes looking for the copy — which would
+     * make every text band on a page report whatever `content.text` held
+     * (nothing) or share text_1's answer.
+     */
+    public function test_two_added_bands_are_counted_independently(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'text_1' => ['body' => 'Quiet rooms.'],
+            'text_2' => ['kicker' => 'The method'],
+        ]));
+
+        $this->assertSame(1, $content->count('text_1'));
+        $this->assertSame(0, $content->count('text_2'));
+    }
+
+    /**
+     * A key the grammar does not accept is not a section, whatever is
+     * stored under it — the cap bounds the grammar, so `text_7` reports
+     * nothing even with a full band's worth of copy beneath it. Same answer
+     * an unknown key has always had, which is what keeps the renderer's
+     * "skip, don't fatal" path intact for stored data the shipped code does
+     * not recognise.
+     */
+    public function test_a_key_past_the_instance_cap_counts_as_nothing(): void
+    {
+        $content = PageContent::for($this->pageWithContent([
+            'text_7'  => ['body' => 'Words nothing should publish.'],
+            'text'    => ['body' => 'Nor these.'],
+            'gallery' => ['body' => 'Nor these either.'],
+        ]));
+
+        $this->assertSame(0, $content->count('text_7'));
+        $this->assertSame(0, $content->count('text'));
+        $this->assertSame(0, $content->count('gallery'));
+    }
+
+    /**
+     * The fixed types answer exactly as they always did — asserted here
+     * because count() stopped matching on the key directly and started
+     * matching on the type, and for every fixed type those are the same
+     * string only as long as the parser says so.
+     */
+    public function test_the_fixed_sections_still_answer_as_they_did(): void
+    {
+        $content = PageContent::for($this->pageWithContent(['about' => ['body' => 'Our story.']]));
+
+        $this->assertSame(1, $content->count('hero'));
+        $this->assertSame(1, $content->count('footer'));
+        $this->assertSame(1, $content->count('about'));
+        $this->assertSame(0, $content->count('services'));
+        // beauty, not hotel — the booking band is gated on the industry.
+        $this->assertSame(0, $content->count('booking'));
+        $this->assertSame(0, $content->count('not_a_section'));
+    }
 }

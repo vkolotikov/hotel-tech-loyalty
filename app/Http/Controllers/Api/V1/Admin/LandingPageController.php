@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
+use App\Landing\SectionType;
 use App\Landing\ThemeRules;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -437,7 +438,27 @@ class LandingPageController extends Controller
                 // transaction runs.
                 if (array_key_exists('content', $data)) {
                     foreach (($fresh->content ?? []) as $sectionKey => $storedFields) {
-                        if (!in_array($sectionKey, ['hero', 'about'], true)) {
+                        // Ruling 3b-7's "which sections" question, asked of
+                        // the catalogue instead of a literal pair. It used to
+                        // read `!in_array($sectionKey, ['hero', 'about'])`,
+                        // which was the right SET and the wrong SOURCE: the
+                        // moment a tenant-added text band could hold a photo,
+                        // that literal silently stopped carrying it forward
+                        // and the very next text-only save erased the leaf,
+                        // orphaning the file — the exact failure 3b-2 was
+                        // written to prevent, reintroduced for the new
+                        // sections only.
+                        //
+                        // SectionType::forKey() answers null for a key that
+                        // names no type at all, and `?->image === true` is
+                        // false for every type that carries no photo, so this
+                        // still skips services/team/reviews/... and still
+                        // skips a junk key from a raw write: a section this
+                        // build never gives a photo control has no image_url
+                        // leaf of its own to protect, and carrying one
+                        // forward for it would just be re-saving a raw-DB
+                        // shape nothing here ever wrote.
+                        if (SectionType::forKey((string) $sectionKey)?->image !== true) {
                             continue;
                         }
 
@@ -550,10 +571,28 @@ class LandingPageController extends Controller
     public function uploadImage(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'slot'  => 'required|in:hero,about',
+            // Rule::in over the SLOTS THE CATALOGUE SAYS CARRY A PHOTO
+            // (App\Landing\SectionType), never the `in:hero,about` literal
+            // this used to be. That literal was a second copy of "which
+            // sections have an image", and the repeatable text band made it
+            // wrong: `text_3` is a legitimate photo slot on a page that has
+            // that band, and no list spelled out by hand here could stay in
+            // step with a catalogue that also drives the renderer and the
+            // re-hydration below.
+            //
+            // Note what this rule does NOT check: whether the page actually
+            // HAS that section row. Neither did the old literal — an upload
+            // to `about` on a page with no about band has always been
+            // accepted and simply never rendered — and the two halves are
+            // genuinely independent (a tenant can add the band after
+            // choosing the photo). The grammar is bounded at
+            // SectionType::MAX_INSTANCES_PER_TYPE, so the set of slots this
+            // accepts is finite whatever a caller sends.
+            'slot'  => ['required', 'string', Rule::in(SectionType::imageKeys())],
             'image' => ['required', 'image', 'mimes:jpeg,png,jpg,webp', 'max:5120', new MaxImageDimensions(4096)],
         ], [
             'slot.required'  => 'Please choose which photo you are replacing.',
+            'slot.string'    => 'Please choose which photo you are replacing.',
             'slot.in'        => 'Please choose which photo you are replacing.',
             'image.required' => 'Please choose a photo to upload.',
             'image.image'    => 'Please upload a JPEG, PNG or WebP photo.',
@@ -643,9 +682,14 @@ class LandingPageController extends Controller
     public function removeImage(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'slot' => 'required|in:hero,about',
+            // The same catalogue-derived allowlist uploadImage() uses — see
+            // its comment. The two halves of the single-writer rule must
+            // agree about which slots exist, or a slot could be written and
+            // never cleared.
+            'slot' => ['required', 'string', Rule::in(SectionType::imageKeys())],
         ], [
             'slot.required' => 'Please choose which photo you are removing.',
+            'slot.string'   => 'Please choose which photo you are removing.',
             'slot.in'       => 'Please choose which photo you are removing.',
         ]);
 

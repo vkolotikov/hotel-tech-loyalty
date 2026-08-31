@@ -629,4 +629,260 @@ class LandingImageUploadTest extends TestCase
         $this->assertSame('landing_pages', $response->json('feature'));
         $this->assertSame('growth', $response->json('plan'));
     }
+
+    // ─── Slots for a tenant-ADDED band (the repeatable-sections round) ────
+    //
+    // `slot` used to be the literal `in:hero,about`. It is now
+    // Rule::in(SectionType::imageKeys()) — the same catalogue the renderer
+    // reads — so a `text_N` instance is a photo slot and everything else
+    // still is not. These tests are the hero/about ones above, re-aimed:
+    // the single-writer rule and its carry-forward have to hold for a band
+    // that did not exist when the template was written.
+
+    public function test_uploading_to_a_text_instance_stores_the_url_on_the_page(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon', ['text_1' => ['body' => 'Quiet rooms.']]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot'  => 'text_1',
+            'image' => $this->smallImage(),
+        ]);
+
+        $response->assertOk();
+        $this->assertSame('text_1', $response->json('slot'));
+        $this->assertStringStartsWith('/storage/', $response->json('image_url'));
+
+        $fresh = $page->fresh();
+        $this->assertSame($response->json('image_url'), $fresh->content['text_1']['image_url'] ?? null);
+        // The leaf-only write left the band's own copy alone.
+        $this->assertSame('Quiet rooms.', $fresh->content['text_1']['body']);
+
+        Storage::disk('public')->assertExists(
+            ltrim(substr($response->json('image_url'), strlen('/storage/')), '/'),
+        );
+    }
+
+    /** The other half of the single-writer rule, on an added band: the leaf clears and the file goes. */
+    public function test_removing_a_text_instance_image_clears_the_leaf_and_deletes_the_file(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/text-one.png', 'bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'text_1' => ['image_url' => '/storage/landing/text-one.png', 'body' => 'Quiet rooms.'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'text_1']);
+
+        $response->assertOk();
+        $this->assertNull($response->json('image_url'));
+
+        $fresh = $page->fresh();
+        $this->assertArrayNotHasKey('image_url', $fresh->content['text_1']);
+        $this->assertSame('Quiet rooms.', $fresh->content['text_1']['body']);
+
+        Storage::disk('public')->assertMissing('landing/text-one.png');
+    }
+
+    /**
+     * Two bands, two slots, no crossing. The endpoint takes the slot as an
+     * opaque key and writes one level down, so this is the test that would
+     * catch a write that reached the type rather than the instance.
+     */
+    public function test_two_instances_hold_their_own_photos(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        $first = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot' => 'text_1', 'image' => $this->smallImage('one.png'),
+        ]);
+        $first->assertOk();
+
+        $second = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot' => 'text_2', 'image' => $this->smallImage('two.png'),
+        ]);
+        $second->assertOk();
+
+        $fresh = $page->fresh();
+
+        $this->assertNotSame($first->json('image_url'), $second->json('image_url'));
+        $this->assertSame($first->json('image_url'), $fresh->content['text_1']['image_url']);
+        $this->assertSame($second->json('image_url'), $fresh->content['text_2']['image_url']);
+
+        // Neither upload deleted the other's file: `$old` is read per slot.
+        Storage::disk('public')->assertExists(ltrim(substr($first->json('image_url'), strlen('/storage/')), '/'));
+        Storage::disk('public')->assertExists(ltrim(substr($second->json('image_url'), strlen('/storage/')), '/'));
+    }
+
+    /**
+     * The allowlist is bounded, and these are the shapes that test it:
+     *
+     *   - text_7 is one past the instance cap. The cap bounds the key
+     *     GRAMMAR and not merely the create endpoint, precisely so this
+     *     rule cannot become an infinite family of upload targets, each one
+     *     a file the renderer would never read.
+     *   - `text` bare is not a section key at all.
+     *   - `services` is a real section that carries no photo.
+     */
+    public function test_a_slot_outside_the_catalogues_photo_keys_is_refused_kindly(): void
+    {
+        $org = $this->org();
+        $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        foreach (['text_7', 'text_0', 'text', 'services', 'text_1_2'] as $slot) {
+            $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot'  => $slot,
+                'image' => $this->smallImage(),
+            ]);
+
+            $response->assertStatus(422);
+            $this->assertSame(
+                'Please choose which photo you are replacing.',
+                $response->json('errors.slot.0'),
+                "The refusal for slot '{$slot}' was not the friendly one.",
+            );
+        }
+    }
+
+    public function test_removing_a_slot_outside_the_catalogues_photo_keys_is_refused_kindly(): void
+    {
+        $org = $this->org();
+        $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        $response = $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'text_7']);
+
+        $response->assertStatus(422);
+        $this->assertSame('Please choose which photo you are removing.', $response->json('errors.slot.0'));
+    }
+
+    /**
+     * D4 on an added band. The free-text path must refuse
+     * `content.text_1.image_url` exactly as it refuses hero's — that loop
+     * was already written over every section key, and this is what pins it
+     * there rather than leaving it a happy accident.
+     */
+    public function test_update_refuses_to_write_an_instance_image_url_directly(): void
+    {
+        $org = $this->org();
+        $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['text_1' => ['body' => 'Quiet rooms.', 'image_url' => '/storage/landing/hack.png']],
+        ]);
+
+        $response->assertStatus(422);
+
+        $message = $response->json('errors.content.0');
+        $this->assertSame('Photos are changed with the photo controls, not by editing text.', $message);
+        $this->assertStringNotContainsString('text_1', $message);
+        $this->assertStringNotContainsString('image_url', $message);
+    }
+
+    /**
+     * Ruling 3b-2's carry-forward, on an added band — and the one place
+     * ruling 3b-7's `in_array($sectionKey, ['hero', 'about'])` literal
+     * would have quietly become wrong. update() replaces `content`
+     * wholesale and D4 leaves exactly one legal text-only payload (omit
+     * image_url), so without the catalogue-driven scope the very next save
+     * after a photo upload erased the leaf and orphaned the file — the
+     * exact defect 3b-2 was written to fix, reintroduced for the new
+     * sections only.
+     *
+     * Mutation target: narrow the carry-forward back to hero/about and this
+     * goes red — the save still returns 200 and the body still updates, but
+     * `image_url` is gone.
+     */
+    public function test_a_text_only_save_does_not_erase_an_added_bands_image(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/text-one.png', 'bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero'   => ['headline' => 'Old headline'],
+            'text_1' => ['image_url' => '/storage/landing/text-one.png', 'body' => 'Old words'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => [
+                'hero'   => ['headline' => 'New headline'],
+                'text_1' => ['body' => 'New words'],
+            ],
+        ]);
+
+        $response->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('New words', $fresh->content['text_1']['body']);
+        $this->assertSame('/storage/landing/text-one.png', $fresh->content['text_1']['image_url']);
+        Storage::disk('public')->assertExists('landing/text-one.png');
+    }
+
+    /** The more severe half: the whole section is absent from the save and must survive with its photo. */
+    public function test_a_save_omitting_an_added_band_entirely_still_keeps_its_image(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/text-one.png', 'bytes');
+        $page = $this->page($org, 'glamour-salon', [
+            'hero'   => ['headline' => 'Old headline'],
+            'text_1' => ['image_url' => '/storage/landing/text-one.png', 'body' => 'Words'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['hero' => ['headline' => 'New headline']],
+        ])->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('/storage/landing/text-one.png', $fresh->content['text_1']['image_url'] ?? null);
+        Storage::disk('public')->assertExists('landing/text-one.png');
+    }
+
+    /**
+     * And the carry-forward stays scoped: a key PAST the grammar carries no
+     * photo, so a leaf sitting under it is a raw-DB shape nothing here ever
+     * wrote and must not be re-saved onto the row. This is
+     * test_carry_forward_does_not_protect_a_leaf_outside_hero_and_about's
+     * claim, restated against the boundary the new grammar creates rather
+     * than the one the old literal did.
+     */
+    public function test_carry_forward_does_not_protect_a_leaf_past_the_instance_cap(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon', ['hero' => ['headline' => 'Old headline']]);
+
+        DB::table('landing_pages')->where('id', $page->id)->update([
+            'content' => json_encode([
+                'hero'   => ['headline' => 'Old headline'],
+                'text_7' => ['image_url' => '/storage/landing/leaked.png', 'body' => 'Words'],
+            ]),
+        ]);
+
+        $this->actAsStaff($org);
+
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => [
+                'hero'   => ['headline' => 'New headline'],
+                'text_7' => ['body' => 'Words'],
+            ],
+        ])->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertArrayNotHasKey('image_url', $fresh->content['text_7'] ?? []);
+        $this->assertSame('Words', $fresh->content['text_7']['body'] ?? null);
+    }
 }
