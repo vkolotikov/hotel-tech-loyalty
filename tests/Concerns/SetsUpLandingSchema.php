@@ -150,6 +150,25 @@ trait SetsUpLandingSchema
             });
         }
 
+        // review_forms is what makes a "Leave a review" link on a landing
+        // page a real destination rather than a dead one: PageContent reads
+        // the org's active form and its embed key, and the templates render
+        // the link only when both exist. Columns follow the model's
+        // $fillable, as everything else here does.
+        if (!Schema::hasTable('review_forms')) {
+            Schema::create('review_forms', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('type', 20)->nullable();
+                $table->boolean('is_active')->default(true);
+                $table->boolean('is_default')->default(false);
+                $table->text('config')->nullable();
+                $table->string('embed_key', 64)->nullable();
+                $table->timestamps();
+            });
+        }
+
         if (!Schema::hasTable('properties')) {
             Schema::create('properties', function ($table) {
                 $table->bigIncrements('id');

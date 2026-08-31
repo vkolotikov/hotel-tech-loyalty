@@ -4,6 +4,7 @@ namespace App\Landing;
 use App\Models\ChatWidgetConfig;
 use App\Models\LandingPage;
 use App\Models\Property;
+use App\Models\ReviewForm;
 use App\Models\ReviewSubmission;
 use App\Models\Service;
 use App\Models\ServiceMaster;
@@ -38,6 +39,24 @@ final class PageContent
         public readonly ContactDetails  $contact,
         public readonly ?array          $hours,
         public readonly ?string         $widgetKey,
+        /**
+         * The organisation's own review form, as the id/key PAIR the public
+         * review page is addressed by — `['id' => 12, 'key' => 'abc…']` — or
+         * null when there is no form a visitor could actually reach.
+         *
+         * A PAIR and not a URL: building one is
+         * {@see \App\Http\Middleware\LandingPageSecurity::widgetUrl()}'s job,
+         * because only the middleware knows which origin the widget pages
+         * answer on and whether frame-src permits the path. This class's
+         * contract is "everything a landing template renders", and what it
+         * holds here is the fact, not the address.
+         *
+         * Null is the honest answer and it has to stay reachable: an
+         * organisation with no form, none active, or one whose key has never
+         * been minted cannot collect a review, and a template that rendered a
+         * "Leave a review" link anyway would be advertising a dead end.
+         */
+        public readonly ?array          $feedbackForm,
     ) {}
 
     /** Fewer than this many reviews and no aggregate is shown at all. */
@@ -148,7 +167,59 @@ final class PageContent
             // template that held the whole config could reach api_key, which
             // is an admin credential and has no business on a public page.
             widgetKey:   $chat?->is_active ? $chat->widget_key : null,
+            feedbackForm: self::feedbackForm($orgId),
         );
+    }
+
+    /**
+     * The review form a visitor may open from the page, or null.
+     *
+     * The kits' integration contract names a `data-action="open-feedback"`
+     * link, and the brief's rule for it is the one this whole class is built
+     * on: render it only where it can work, never dead. So this asks the
+     * exact question the PUBLIC endpoint asks
+     * ({@see \App\Http\Controllers\Api\V1\Public\ReviewPublicController::byFormKey()})
+     * rather than a looser one — id and embed_key together, the form active,
+     * and anonymous submissions not switched off in its own config. A link
+     * that satisfies three of those four is a link that opens on "Form not
+     * found or inactive", which is worse than no link.
+     *
+     * Org-wide, not brand-filtered: review_forms has no brand_id column, the
+     * same reason $reviews above is org-wide.
+     *
+     * DEFAULT FIRST, then lowest id — the same "preference before row order"
+     * discipline {@see preferOwnBrand()} applies to contact and hours. An
+     * organisation with three surveys has one it considers its own, and
+     * publishing whichever happened to be inserted first would be database
+     * luck deciding what a guest is asked.
+     *
+     * Only the two values the URL needs leave this method. A ReviewForm
+     * carries `config`, which is admin-authored survey structure and has no
+     * business on a public marketing page.
+     *
+     * @return array{id: int, key: string}|null
+     */
+    private static function feedbackForm(int $orgId): ?array
+    {
+        $form = self::scoped(ReviewForm::query(), $orgId)
+            ->where('is_active', true)
+            ->whereNotNull('embed_key')
+            ->where('embed_key', '!=', '')
+            ->orderByDesc('is_default')
+            ->orderBy('id')
+            ->first();
+
+        if ($form === null) {
+            return null;
+        }
+
+        // The endpoint refuses an anonymous submission when the form says so,
+        // and a landing page has no signed-in visitor to offer instead.
+        if (($form->config['allow_anonymous'] ?? true) === false) {
+            return null;
+        }
+
+        return ['id' => (int) $form->id, 'key' => (string) $form->embed_key];
     }
 
     /**
@@ -496,9 +567,107 @@ final class PageContent
             // expressed in terms of this method -- agree by construction
             // rather than by each re-deriving the same industry check.
             'booking'  => $this->profile->industry === 'hotel' ? 1 : 0,
+            // ─── The BeautyTech kits' three blocks ───────────────────────
+            //
+            // Each answered by the SAME question every arm above answers:
+            // is there one section's worth of content here. A band that
+            // would render empty is omitted from the document entirely, and
+            // for these three that matters more than for most — an offer bar
+            // announcing nothing, a trust strip of blank columns and a
+            // headed FAQ with no questions are each worse than the absence
+            // of the band.
+            //
+            // The announcement IS its message: a link label with nothing to
+            // announce is not a section (the ruling `text` and `gallery`
+            // already carry, pointed at whichever half is the reason the
+            // band exists).
+            'announcement' => filled($this->page->content[$sectionKey]['text'] ?? null) ? 1 : 0,
+            // The trust strip has THREE independent sources and needs only
+            // one of them: the tenant's own line, the aggregate the reviews
+            // already publish (null below MIN_REVIEWS_FOR_AGGREGATE, which
+            // is the same silence sections/reviews keeps), or any of the
+            // three highlights. Written as a real read of reviewStats rather
+            // than of the copy alone, because a studio with 200 reviews and
+            // no copy has something to say here and would otherwise lose the
+            // band.
+            'trust'    => (filled($this->page->content[$sectionKey]['quote'] ?? null)
+                || $this->reviewStats !== null
+                || $this->trustFeatures($sectionKey) !== []) ? 1 : 0,
+            // The FAQ is its PAIRS, counted the way the gallery counts
+            // pictures: a question with no answer (or an answer with no
+            // question) is half a row and is not one of them, so a band of
+            // nothing but stubs counts 0 and never renders.
+            'faq'      => count($this->faqPairs($sectionKey)),
             'hero', 'footer' => 1,
             default    => 0,
         };
+    }
+
+    /**
+     * The trust strip's highlights — the leaves the type lists, in order,
+     * with the blank ones closed up.
+     *
+     * Enumerated from {@see SectionType::all()}'s own `fields` rather than
+     * from whatever keys the stored row happens to carry, for the reason
+     * {@see galleryImages()} enumerates leaves rather than iterating them:
+     * `content` is a schemaless column, a raw write can put `feature_9` in
+     * it, and a leaf nothing can edit must not become one by being rendered.
+     *
+     * @return list<string>
+     */
+    public function trustFeatures(string $section): array
+    {
+        $out = [];
+
+        foreach (['feature_1', 'feature_2', 'feature_3'] as $leaf) {
+            $value = trim((string) (is_scalar($this->leaf($section, $leaf)) ? $this->leaf($section, $leaf) : ''));
+
+            if ($value !== '') {
+                $out[] = $value;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * The FAQ band's question/answer pairs, in leaf order, with the
+     * incomplete ones dropped.
+     *
+     * BOTH HALVES OR NEITHER. A <details> whose summary opens onto nothing
+     * is a control that punishes the visitor for using it, and an answer
+     * with no question cannot be found at all — so a pair only publishes
+     * once it has both, and the ones that do close up around the ones that
+     * do not (a tenant who clears the third of five sees four, in order,
+     * not four with a hole in the middle — {@see galleryImages()}'s own
+     * rule).
+     *
+     * WHICH LEAVES, from {@see SectionType::faqLeaves()} and never from the
+     * stored keys: same reason as every other enumeration in this class.
+     * is_scalar() before the string cast is the same guard imageUrl() makes
+     * for the same reason — a nested array leaf survives ScalarTree::prune()
+     * only at the depth the column allows, and (string) on an array is a
+     * fatal, on a page that is public and rendered on every hit.
+     *
+     * @return list<array{question: string, answer: string}>
+     */
+    public function faqPairs(string $section): array
+    {
+        $pairs = [];
+
+        for ($n = 1; $n <= SectionType::MAX_FAQ_PAIRS; $n++) {
+            $rawQ = $this->leaf($section, 'q' . $n);
+            $rawA = $this->leaf($section, 'a' . $n);
+
+            $question = trim((string) (is_scalar($rawQ) ? $rawQ : ''));
+            $answer   = trim((string) (is_scalar($rawA) ? $rawA : ''));
+
+            if ($question !== '' && $answer !== '') {
+                $pairs[] = ['question' => $question, 'answer' => $answer];
+            }
+        }
+
+        return $pairs;
     }
 
     /**

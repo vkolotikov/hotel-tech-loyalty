@@ -68,8 +68,57 @@ final class SectionType
      */
     public const MAX_SECTIONS_PER_PAGE = 16;
 
-    /** Where the ruled_page template keeps its section partials. */
-    private const VIEW_PREFIX = 'landing.ruled_page.sections.';
+    /**
+     * The template whose partials {@see viewFor()} resolves against unless a
+     * caller names another one.
+     *
+     * It used to be the only one, spelled into a `landing.ruled_page.
+     * sections.` prefix constant. `nocturne_ritual` (the first of the
+     * BeautyTech kits) is a SECOND template rendering the SAME catalogue
+     * through its own partials, so the prefix became a function of the
+     * template rather than a fact about this class. Defaulted here so every
+     * existing caller — the ruled_page layout, the endpoints, the tests —
+     * keeps resolving exactly what it resolved before.
+     */
+    public const DEFAULT_TEMPLATE = 'ruled_page';
+
+    /**
+     * Every template that ships partials under resources/views/landing/
+     * {key}/sections/, in the order they were built.
+     *
+     * NOT a second copy of {@see \App\Services\Landing\LandingOnboardingService::TEMPLATES}
+     * — that is the tenant-facing registry (which templates a page may be
+     * SET to, with the words the picker prints). This is the narrower fact
+     * that a type-to-partial question has more than one answer now, and it
+     * exists so SectionTypeTest can ask "does this type render ANYWHERE"
+     * rather than assuming ruled_page. A type is legitimately renderable by
+     * one template and not the other: `announcement`, `trust` and `faq` are
+     * the nocturne kit's blocks and ruled_page has no partial for any of
+     * them, which the renderer already handles by skipping the band (see
+     * the layout's $renderedSections filter — "a section key with no partial
+     * is skipped rather than fatal").
+     *
+     * @var list<string>
+     */
+    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual'];
+
+    /**
+     * How many question/answer pairs one FAQ band may carry.
+     *
+     * A cap for the same reason {@see MAX_INSTANCES_PER_TYPE} is one: the
+     * pairs are SCALAR LEAVES under `content.faq` (`q1`/`a1` … `q6`/`a6`),
+     * because the column is validated `ScalarLeaves(depth: 2)` and a nested
+     * `faqs: [...]` array is not a legal value in it at all. Bounded, the
+     * leaf names are an enumerated list ({@see faqLeaves()}) that the
+     * editor's form, the renderer and any future validator can all be built
+     * from; unbounded, `content.faq.q9999` would be a leaf nothing reads and
+     * nothing can remove.
+     *
+     * SIX because the kit's own FAQ block ships five and reads as a
+     * considered list at that length: past half a dozen "a few useful
+     * things" has become a support site, which is a different page.
+     */
+    public const MAX_FAQ_PAIRS = 6;
 
     /**
      * The leaf a SINGLE-photo section stores its picture under, and the one
@@ -381,7 +430,87 @@ final class SectionType
                 'band'       => '',
                 'images'     => 8,
             ],
+            // ─── The BeautyTech kits' three additional blocks ─────────────
+            //
+            // Added with `nocturne_ritual`, the first kit converted into a
+            // template. The kits share ONE block contract (see
+            // resources/landing-kits/beauty-tech/README.md), so these three
+            // are the shapes all three of them need and our model had no
+            // answer for; the other twelve map straight onto types that
+            // already existed.
+            //
+            // ruled_page ships no partial for any of them, deliberately.
+            // These are the kits' composition, not a change to the Ruled
+            // Page's, and the renderer already treats a type with no partial
+            // as a band to skip rather than an error (see viewFor()'s note).
+            // A tenant who switches templates therefore gains or loses them
+            // with the design that authors them, and their stored copy is
+            // waiting untouched if they switch back.
+
+            // The offer bar above the header. `text` is the whole band —
+            // count() reads it and nothing else, so an announcement with a
+            // link label and no message is not a section (the same ruling
+            // `text` and `gallery` already carry, pointed at whichever half
+            // is the reason the band exists).
+            'announcement' => [
+                'repeatable' => false,
+                'view'       => 'announcement',
+                'fields'     => ['text', 'cta_label'],
+                'band'       => '',
+                'images'     => 0,
+            ],
+            // The trust strip under the hero: a line somebody said about the
+            // business, the rating the reviews already publish, and up to
+            // three short highlights. THREE numbered fields rather than one
+            // comma-separated leaf, because splitting a tenant string on a
+            // separator makes the separator unusable inside the values —
+            // "Open late, seven days" would become two highlights.
+            'trust' => [
+                'repeatable' => false,
+                'view'       => 'trust',
+                'fields'     => ['quote', 'feature_1', 'feature_2', 'feature_3'],
+                'band'       => '',
+                'images'     => 0,
+            ],
+            // The questions band. Its pairs are flat scalar leaves —
+            // q1/a1 … q6/a6, capped by MAX_FAQ_PAIRS — because `content` is
+            // ScalarLeaves(depth: 2) and a nested list is not a legal value
+            // in that column; see faqLeaves(), which is the only enumeration
+            // of them and what `fields` below is BUILT from rather than
+            // repeating.
+            'faq' => [
+                'repeatable' => false,
+                'view'       => 'faq',
+                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::faqLeaves()),
+                'band'       => '',
+                'images'     => 0,
+            ],
         ];
+    }
+
+    /**
+     * THE FAQ LEAF GRAMMAR — every leaf under `content.faq` that holds one
+     * half of a question/answer pair, in render order.
+     *
+     * The same shape, and for the same reason, as {@see imageLeaves()}'s
+     * multi-photo case: a bounded, enumerated list of SCALAR leaf names, so
+     * that "what renders" and "what an editor may write" are one finite list
+     * rather than two that agree today. Pairs are interleaved (q1, a1, q2,
+     * a2, …) because that is the order a form should offer them in, and
+     * `fields` above is this list verbatim.
+     *
+     * @return list<string>
+     */
+    public static function faqLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::MAX_FAQ_PAIRS; $n++) {
+            $leaves[] = 'q' . $n;
+            $leaves[] = 'a' . $n;
+        }
+
+        return $leaves;
     }
 
     /** @return list<string> */
@@ -753,13 +882,22 @@ final class SectionType
      * bands share one partial. The caller still asks `view()->exists()` on
      * the result — a key this catalogue knows may still name a partial that
      * has not shipped yet, and a live page losing one band is recoverable
-     * where a 500 is not.
+     * where a 500 is not. That guard is now load-bearing rather than
+     * defensive: `announcement`, `trust` and `faq` are types only the
+     * nocturne kit renders, so a ruled_page page carrying one of those rows
+     * resolves a view that legitimately does not exist and skips the band.
+     *
+     * $template is a LITERAL at every call site — each layout names its own
+     * directory — and never `$page->template_key`, which is a plain varchar
+     * with no constraint behind it. Nothing here has to sanitise it for that
+     * reason, and the `view()->exists()` the caller still makes is what
+     * catches a name that resolves to nothing anyway.
      */
-    public static function viewFor(string $key): ?string
+    public static function viewFor(string $key, string $template = self::DEFAULT_TEMPLATE): ?string
     {
         $type = self::forKey($key);
 
-        return $type === null ? null : self::VIEW_PREFIX . $type->view;
+        return $type === null ? null : 'landing.' . $template . '.sections.' . $type->view;
     }
 
     /**
