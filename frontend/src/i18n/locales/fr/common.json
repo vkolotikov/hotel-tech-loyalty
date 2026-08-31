@@ -3025,7 +3025,9 @@
     "unsaved": "Modifications non enregistrées",
     "saved": "Toutes les modifications sont enregistrées",
     "save": "Enregistrer les modifications",
-    "preview_caption": "Affiche votre brouillon enregistré. Enregistrez pour voir les dernières modifications.",
+    "preview_caption_live": "En direct, y compris les modifications que vous n’avez pas encore enregistrées.",
+    "preview_caption_saved": "Affiche votre page enregistrée. Modifiez quoi que ce soit et l’aperçu se met à jour au fur et à mesure.",
+    "preview_caption_stale": "Impossible d’actualiser pour le moment — voici la dernière version que nous avons pu charger.",
     "design": {
       "title": "Design",
       "industry_kicker": "Votre secteur",
@@ -3165,6 +3167,7 @@
       "remove_photo": "Supprimer la photo",
       "photo_uploading": "Envoi en cours…",
       "preview_title": "Aperçu",
+      "preview_title_live": "Aperçu en direct",
       "preview_desktop": "Ordinateur",
       "preview_mobile": "Mobile",
       "preview_reload": "Recharger l’aperçu",

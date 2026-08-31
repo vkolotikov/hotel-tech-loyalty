@@ -3,6 +3,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Landing\IndustryProfile;
+use App\Landing\PreviewDraft;
 use App\Landing\SectionType;
 use App\Landing\ThemeRules;
 use App\Models\LandingPage;
@@ -827,6 +828,17 @@ class LandingPageController extends Controller
         ]);
     }
 
+    /**
+     * How long a minted preview URL's SIGNATURE stays valid.
+     *
+     * Named once because two endpoints mint one now (previewUrl() and
+     * previewDraft() below) and the frontend pins the same number
+     * (`previewFreshness.ts`'s PREVIEW_URL_TTL_MS) to refresh a long-open
+     * editor before it expires. Three copies of "two hours" is two too
+     * many.
+     */
+    private const PREVIEW_URL_TTL_HOURS = 2;
+
     /** Short-lived signed URL, so a draft is visible to its owner and nobody else. */
     public function previewUrl(): JsonResponse
     {
@@ -834,7 +846,61 @@ class LandingPageController extends Controller
         abort_if($page === null, 404);
 
         return response()->json([
-            'url' => URL::temporarySignedRoute('landing.preview', now()->addHours(2), ['page' => $page->id]),
+            'url' => URL::temporarySignedRoute(
+                'landing.preview',
+                now()->addHours(self::PREVIEW_URL_TTL_HOURS),
+                ['page' => $page->id],
+            ),
+        ]);
+    }
+
+    /**
+     * THE LIVE PREVIEW: render what the tenant is typing, without saving it.
+     *
+     * The editor posts its in-flight `theme`, `content` and section rows
+     * here; {@see PreviewDraft} validates them with the write path's own
+     * rules, parks them in the cache under an unguessable key, and this
+     * hands back a signed preview URL carrying that key. The landing host's
+     * `preview()` renders the REAL Blade template from the stash.
+     *
+     * WHY NOT RE-RENDER IN THE BROWSER: see PreviewDraft's own docblock. A
+     * JavaScript copy of the template would be a second design that drifts
+     * from the shipped one, and a preview that drifts is worse than no
+     * preview at all.
+     *
+     * WHY THIS WRITES NOTHING: the tenant has not pressed Save. A preview
+     * that persisted would publish half-typed copy to anyone holding the
+     * public URL of an already-live page, and would race the very save it
+     * is previewing. The stash is the whole persistence this feature has.
+     *
+     * The URL's signature lives the same two hours previewUrl()'s does --
+     * one lifetime for both, so `previewFreshness.ts` keeps governing both
+     * -- while the STASH behind it lives ninety seconds. Between the two
+     * the URL still renders: the key has simply expired and
+     * `PreviewDraft::hydrate()` answers null, so the route falls back to the
+     * saved draft rather than an error page inside the editor's own pane.
+     */
+    public function previewDraft(Request $request): JsonResponse
+    {
+        $page = $this->current();
+        abort_if($page === null, 404);
+
+        $data = $request->validate(PreviewDraft::rules(), PreviewDraft::messages());
+
+        $key = PreviewDraft::stash($page, $data);
+
+        return response()->json([
+            'url' => URL::temporarySignedRoute(
+                'landing.preview',
+                now()->addHours(self::PREVIEW_URL_TTL_HOURS),
+                ['page' => $page->id, 'draft' => $key],
+            ),
+            // Published rather than mirrored, for the same reason every
+            // other allowlist and cap on this screen is: the editor's
+            // caption has to stop claiming "live" once the stash behind the
+            // frame has certainly expired, and a hardcoded 90 on the
+            // frontend is a number this server might later disagree with.
+            'expires_in' => PreviewDraft::TTL_SECONDS,
         ]);
     }
 

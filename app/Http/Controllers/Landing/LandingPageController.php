@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Landing;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\LandingPageSecurity;
 use App\Landing\PageContent;
+use App\Landing\PreviewDraft;
 use App\Models\LandingPage;
 use App\Support\Accent;
 use App\Support\LandingSlug;
@@ -131,6 +132,35 @@ class LandingPageController extends Controller
 
         abort_if($model === null, 404);
 
+        // THE LIVE PREVIEW (landing phase 3c). `?draft=<key>` names an
+        // unsaved editor state parked in the cache by
+        // POST /v1/admin/landing-pages/preview-draft, and the whole point of
+        // routing it through HERE is that it renders through the SAME
+        // render() below as everything else: one template, one PageContent,
+        // one set of contrast and pruning guarantees. A browser-side
+        // re-render would have been a second copy of the design.
+        //
+        // The key rides inside the SIGNATURE (URL::temporarySignedRoute puts
+        // every query parameter into the signed payload), so it cannot be
+        // swapped onto somebody else's signed URL; the entry's own page id
+        // and organisation are what stop a caller pairing a stash key with a
+        // page they merely happen to hold a signature for. See
+        // PreviewDraft::hydrate().
+        //
+        // NULL IS NOT AN ERROR. An expired stash -- ninety seconds is short
+        // on purpose -- an unknown key, or a key minted for another page all
+        // fall through to the SAVED row, because the alternative is an error
+        // page inside the editor's own preview pane. The caption above the
+        // pane is what tells the tenant which of the two they are looking
+        // at, and the header below is what lets a test (and an operator
+        // reading a response) tell them apart.
+        $draft = $request->query('draft');
+        $fromDraft = $draft !== null ? PreviewDraft::hydrate($model, $draft) : null;
+
+        if ($fromDraft !== null) {
+            $model = $fromDraft;
+        }
+
         // The editor's live pane iframes this URL from whichever admin host the
         // tenant is signed in to, and this product answers on SIX of them
         // (config/pwa.php's list: the umbrella app.hexa-tech.uk, loyalty.hotel-
@@ -150,7 +180,13 @@ class LandingPageController extends Controller
 
         return $this->render($model)
             ->header('Cache-Control', 'no-store')
-            ->header('X-Robots-Tag', 'noindex');
+            ->header('X-Robots-Tag', 'noindex')
+            // Which of the two this response actually is. The editor cannot
+            // read it (the pane is cross-origin by design), so this is for
+            // tests and for whoever is one day looking at a preview that
+            // "isn't updating" and needs to know whether the stash was
+            // honoured or had already expired.
+            ->header('X-Landing-Preview-Source', $fromDraft !== null ? 'draft' : 'saved');
     }
 
     private function render(LandingPage $page): Response

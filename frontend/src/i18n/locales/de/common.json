@@ -3025,7 +3025,9 @@
     "unsaved": "Nicht gespeicherte Änderungen",
     "saved": "Alle Änderungen gespeichert",
     "save": "Änderungen speichern",
-    "preview_caption": "Zeigt Ihren gespeicherten Entwurf. Speichern Sie, um die neuesten Änderungen zu sehen.",
+    "preview_caption_live": "Live — einschließlich der noch nicht gespeicherten Änderungen.",
+    "preview_caption_saved": "Zeigt Ihre gespeicherte Seite. Sobald Sie etwas ändern, wird hier laufend aktualisiert.",
+    "preview_caption_stale": "Konnte gerade nicht aktualisiert werden — angezeigt wird die zuletzt geladene Fassung.",
     "design": {
       "title": "Design",
       "industry_kicker": "Ihre Branche",
@@ -3165,6 +3167,7 @@
       "remove_photo": "Foto entfernen",
       "photo_uploading": "Wird hochgeladen…",
       "preview_title": "Vorschau",
+      "preview_title_live": "Live-Vorschau",
       "preview_desktop": "Desktop",
       "preview_mobile": "Mobil",
       "preview_reload": "Vorschau neu laden",
