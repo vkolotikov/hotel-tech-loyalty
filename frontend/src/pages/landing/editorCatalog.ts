@@ -70,12 +70,32 @@ export type TemplateOption = {
    * WHICH SECTION TYPES THIS TEMPLATE SHIPS A PARTIAL FOR — derived
    * server-side from `view()->exists()`, never a hand list.
    *
-   * Not read yet: 2.6 ("Nocturne Ritual does not show this block") and
-   * 3.1's add-picker filter are what consume it. Carried now because 1.1 is
-   * where the fact is published and both of those are frontend-only reads
-   * of it afterwards.
+   * Read since template fidelity 2.6 — `templateDrawsBlock` in
+   * `builderShape.ts` is what turns it into the sentence a tenant sees on a
+   * row this design will silently drop. 3.1's add-picker filter is the
+   * other reader still to come.
    */
   renders?: string[] | null
+  /**
+   * WHICH BLOCKS THIS TEMPLATE PINS, AND WHERE — template fidelity 2.6.
+   *
+   * `LandingOnboardingService::TEMPLATES[*].fixed_blocks`, a map of section
+   * key → placement (`top` | `fixed` | `footer`), transcribed from the one
+   * statement that decides it: `$furniture` in the template's own layout,
+   * which rejects those keys out of `$mainSections` and draws them where
+   * the author put them.
+   *
+   * Until this crossed the wire, five rows on a Nocturne page carried a
+   * live drag handle and two live arrows that moved NOTHING, under a help
+   * sentence promising "sections appear on your page from top to bottom"
+   * with no exception.
+   *
+   * The PLACEMENT is a three-word vocabulary this side translates, never a
+   * sentence off the wire — see `builderShape.ts`'s `blockPlacement`.
+   * Optional for the same reason `supports` is: a backend that predates it
+   * has not declined anything, so nothing is suppressed.
+   */
+  fixed_blocks?: Record<string, string> | null
 }
 
 /**
@@ -138,6 +158,49 @@ export function templateRenders(options: TemplateOption[], selectedKey: string):
   const renders = options.find(o => o.key === selectedKey)?.renders
 
   return Array.isArray(renders) ? renders.filter(id => typeof id === 'string') : null
+}
+
+/**
+ * Which blocks the selected template draws in a place of its own, and
+ * where — an empty map when it pins nothing, which is a real answer
+ * (`ruled_page` genuinely renders every band in the tenant's own order).
+ *
+ * A backend that publishes no such key is the SAME empty map here rather
+ * than a null: "this build was not told" and "this design pins nothing"
+ * both end in the editor suppressing no controls, which is the behaviour
+ * that build already had. `templateRenders` above needs the distinction
+ * because its two answers differ (hide the row's body vs. leave it alone);
+ * this one does not.
+ */
+export function templateFixedBlocks(options: TemplateOption[], selectedKey: string): Record<string, string> {
+  const fixed = options.find(o => o.key === selectedKey)?.fixed_blocks
+
+  if (fixed == null || typeof fixed !== 'object' || Array.isArray(fixed)) return {}
+
+  const out: Record<string, string> = {}
+  for (const [key, placement] of Object.entries(fixed)) {
+    if (typeof placement === 'string' && placement !== '') out[key] = placement
+  }
+
+  return out
+}
+
+/**
+ * The OTHER templates that would draw a block this one will not — so the
+ * sentence on a dropped row can name a real way out ("switch to The Ruled
+ * Page to show it") instead of telling a tenant to go and look.
+ *
+ * Off the served `renders` for every row, so a third template appears in
+ * that sentence with no edit here. A template that publishes no `renders`
+ * is not counted: it has not claimed it draws anything, and naming it would
+ * be sending somebody to a design that may drop the block too.
+ */
+export function templatesDrawing(options: TemplateOption[], typeId: string, exceptKey: string): TemplateOption[] {
+  return options.filter(o =>
+    o.key !== exceptKey
+    && Array.isArray(o.renders)
+    && o.renders.includes(typeId),
+  )
 }
 
 /** What one template card needs, with nothing left for the component to

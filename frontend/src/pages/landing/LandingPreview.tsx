@@ -10,6 +10,7 @@ import {
   livePreviewIsActive, livePreviewReducer, previewCaptionState,
   type DraftPayload, type FrameSlot,
 } from './livePreview'
+import { focusMessage, isFromPreview, previewOrigin, selectedKey } from './previewBridge'
 
 type Device = 'desktop' | 'mobile'
 
@@ -58,7 +59,7 @@ const toggleBtn = (active: boolean) =>
  * (see `livePreview.ts`, which owns that decision and is where its tests
  * are). A failed request changes the caption and nothing else.
  */
-export function LandingPreview({ nonce, draft, dirty }: {
+export function LandingPreview({ nonce, draft, dirty, focusKey, onSelect }: {
   nonce: number
   /**
    * The editor's CURRENT state, saved or not — built by the same helpers
@@ -69,6 +70,17 @@ export function LandingPreview({ nonce, draft, dirty }: {
   draft: DraftPayload
   /** Whether anything is queued but unsaved — half of `livePreviewIsActive`. */
   dirty: boolean
+  /**
+   * TEMPLATE FIDELITY 2.5 — the section key of the card the tenant has
+   * open, or null when none is. Sent into the frame so the two halves of
+   * this screen share a subject; see `previewBridge.ts`, which owns the
+   * message grammar and the origin rule, and says plainly which half of
+   * the bridge has not shipped yet.
+   */
+  focusKey?: string | null
+  /** The return leg: a band clicked in the preview names its own key here.
+   *  Origin-checked before it is believed. */
+  onSelect?: (key: string) => void
 }) {
   const { t } = useTranslation()
   // Belt-and-braces with the host's `key={currentBrandId ?? 'org'}` on
@@ -213,6 +225,51 @@ export function LandingPreview({ nonce, draft, dirty }: {
   const caption = previewCaptionState(state)
   const live = caption === 'live'
 
+  // ─── TEMPLATE FIDELITY 2.5 — one subject between the two halves ───────
+  //
+  // Held per SLOT because there are two frames in the box for the lifetime
+  // of this component (the swap is what keeps the pane from going blank),
+  // and only the one in front is a window anything may be said to.
+  const frameRefs = useRef<Record<FrameSlot, HTMLIFrameElement | null>>({ a: null, b: null })
+  const frontUrl = state[state.front]?.url ?? null
+
+  // The callback through a ref, so the listener below depends on the URL
+  // alone: the parent hands a fresh arrow on every keystroke, and
+  // re-subscribing a window listener that often is churn for nothing.
+  const onSelectRef = useRef(onSelect)
+  useEffect(() => { onSelectRef.current = onSelect })
+
+  useEffect(() => {
+    if (focusKey == null || focusKey === '') return
+
+    // EXPLICIT TARGET ORIGIN, from the URL the SERVER minted for this
+    // frame. `'*'` would broadcast the tenant's section keys to whatever
+    // the frame had navigated to, and the landing host is a different
+    // origin from this document by design.
+    const target = previewOrigin(frontUrl)
+    const frame = frameRefs.current[state.front]
+
+    if (target === null || frame?.contentWindow == null) return
+
+    frame.contentWindow.postMessage(focusMessage(focusKey), target)
+  }, [focusKey, frontUrl, state.front])
+
+  useEffect(() => {
+    const handler = (event: MessageEvent) => {
+      // Origin FIRST, payload second: a message from any other frame in
+      // this document, from an opener or from an extension is dropped
+      // before its contents are read at all.
+      if (!isFromPreview(event.origin, frontUrl)) return
+
+      const key = selectedKey(event.data)
+      if (key !== null) onSelectRef.current?.(key)
+    }
+
+    window.addEventListener('message', handler)
+
+    return () => window.removeEventListener('message', handler)
+  }, [frontUrl])
+
   const reload = () => {
     // Both halves: a fresh signed URL (which is also what keeps
     // `previewFreshness`'s clock honest) and a fresh render of whatever is
@@ -322,6 +379,7 @@ export function LandingPreview({ nonce, draft, dirty }: {
               return (
                 <iframe
                   key={slot}
+                  ref={el => { frameRefs.current[slot] = el }}
                   src={frame.url}
                   title={t('landing_pages.editor.preview_iframe_title', 'Your page preview')}
                   // `at`/`ttlMs` ride along because a SECOND load of the

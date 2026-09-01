@@ -471,3 +471,96 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     })
   }
 })
+
+/**
+ * TEMPLATE FIDELITY 2.x — the builder's new shape names four more families
+ * with template-literal `t()` calls, so `T_CALL_RE` at the top of this file
+ * can see none of them. Sixth net, same reasoning as the five above.
+ *
+ *  - `` t(`landing_pages.editor.tab_${tab}`, …) `` — the three tabs (2.1).
+ *    A missing translation renders the raw id `publish` as the label of the
+ *    tab a tenant is looking for to put their page on the internet.
+ *  - `` t(`landing_pages.editor.filter_${id}`, …) `` — the four chips (2.3).
+ *  - `` t(`landing_pages.editor.group_${group}`, …) `` — the badge each card
+ *    wears. THE SAME THREE WORDS as the chips, deliberately: that is what
+ *    makes the filter learnable from the list rather than from a legend, and
+ *    it is why both families are pinned here together rather than in two
+ *    describes that could drift apart.
+ *  - `` t(`landing_pages.editor.placement_${placement}`, …) `` — one sentence
+ *    per placement in `LandingOnboardingService::PLACEMENTS` (2.6). This is
+ *    the ONLY explanation a tenant gets for a row whose drag handle and
+ *    arrows are absent, so a missing one is a control silently withheld.
+ *
+ * Hardcoded rather than derived, for the sixth time and the same reason: a
+ * list built from the module it exists to check loses an id and its
+ * expectation in one edit.
+ */
+describe('locale completeness — builder tabs, filter chips, badges and placements (dynamic t() keys, hand-verified)', () => {
+  // `BUILDER_TABS` in builderShape.ts, in its own order.
+  const TAB_KEYS = [
+    'landing_pages.editor.tab_content',
+    'landing_pages.editor.tab_design',
+    'landing_pages.editor.tab_publish',
+  ]
+
+  // `SECTION_FILTERS` in builderShape.ts, in its own order.
+  const FILTER_KEYS = [
+    'landing_pages.editor.filter_all',
+    'landing_pages.editor.filter_write',
+    'landing_pages.editor.filter_photos',
+    'landing_pages.editor.filter_workspace',
+  ]
+
+  // `SectionGroup` in sections.ts — one badge per answer. There is no
+  // `group_all`: "All" is a chip that clears the filter, never something a
+  // card can be.
+  const GROUP_KEYS = [
+    'landing_pages.editor.group_write',
+    'landing_pages.editor.group_photos',
+    'landing_pages.editor.group_workspace',
+  ]
+
+  // `LandingOnboardingService::PLACEMENTS`, served per fixed block.
+  const PLACEMENT_KEYS = [
+    'landing_pages.editor.placement_top',
+    'landing_pages.editor.placement_fixed',
+    'landing_pages.editor.placement_footer',
+  ]
+
+  const ALL_KEYS = [...TAB_KEYS, ...FILTER_KEYS, ...GROUP_KEYS, ...PLACEMENT_KEYS]
+
+  /**
+   * RECOMPUTED, not counted — the discipline template fidelity 1.4 put in
+   * place when it replaced `expect(FIELD_LABEL_KEYS.length).toBe(12)`.
+   *
+   * The structural claims worth making here are that every chip except
+   * "All" has a card badge to match it (the pairing is the whole reason the
+   * chips need no legend), and that nothing is written twice.
+   */
+  it('gives every chip except All a matching card badge', () => {
+    const chips = FILTER_KEYS
+      .map(key => key.replace('landing_pages.editor.filter_', ''))
+      .filter(id => id !== 'all')
+
+    for (const id of chips) {
+      expect(GROUP_KEYS).toContain(`landing_pages.editor.group_${id}`)
+    }
+
+    expect(chips.length).toBe(GROUP_KEYS.length)
+    expect(new Set(ALL_KEYS).size).toBe(ALL_KEYS.length)
+  })
+
+  for (const locale of LOCALES) {
+    it(`every tab, chip, badge and placement key resolves to a non-empty string in ${locale}/common.json`, () => {
+      const json = readLocale(locale)
+      const missing = ALL_KEYS.filter(key => {
+        const value = readAt(json, key)
+        return typeof value !== 'string' || value.trim() === ''
+      })
+      expect(
+        missing,
+        `${locale}/common.json is missing (or has a blank) builder-shape key: ${missing.join(', ') || '(none)'}`,
+      ).toEqual([])
+    })
+  }
+})
