@@ -100,7 +100,7 @@ final class SectionType
      *
      * @var list<string>
      */
-    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual', 'editorial_atelier'];
+    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual', 'editorial_atelier', 'organic_wellness'];
 
     /**
      * How many question/answer pairs one FAQ band may carry.
@@ -397,7 +397,12 @@ final class SectionType
                     // it belongs to, because the editor draws its controls
                     // in this order and "Words to highlight" means nothing
                     // three inputs below the heading it highlights.
-                    ['kicker', 'headline', 'headline_accent', 'subtext', 'cta_label'],
+                    // `proof` is the availability line kit 03 writes under its
+                    // rating ("Appointments available this week") — a claim
+                    // only the business can make, beside a rating only the
+                    // reviews can. A LINE rather than a boolean, because
+                    // nothing on the record knows whether this week has room.
+                    ['kicker', 'headline', 'headline_accent', 'subtext', 'cta_label', 'proof'],
                     // THE FACTS CARD'S THREE TERMS (template fidelity 5.2).
                     // The VALUES stay derived — the closing time the business
                     // publishes, the rating it earned, the city it is in —
@@ -453,9 +458,16 @@ final class SectionType
                 // "Prices shown are starting points". A LABEL rather than a
                 // boolean flag, because "from" is not the same word in five
                 // locales and the tenant is the one who knows whether their
+                // prices start or fix. `badge_label` is the pill kit 03
+                // draws on its featured card ("Guest favourite") — one word
+                // for the FIRST treatment in the tenant's own ordering,
+                // which is the only card that has a photograph to put it on. `badge_label` is the pill kit 03 draws
+                // on its featured card ("Guest favourite") — one word for the
+                // FIRST treatment in the tenant's own ordering, which is the
+                // only card that has a photograph to put it on.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
-                    ['price_prefix'],
+                    ['price_prefix', 'badge_label'],
                     self::photoLeaves(),
                 ),
                 'band'       => '',
@@ -475,6 +487,15 @@ final class SectionType
                 // ledger back.
                 'fields'     => array_merge(
                     ['kicker', 'lead', 'lead_accent', 'body', 'fact_1', 'fact_2', 'fact_3'],
+                    // KIT 03'S ASIDE, beside the story rather than under it:
+                    // a labelled note with up to three bulleted lines ("Our
+                    // ingredient philosophy" / "Fragrance-aware options at
+                    // every visit"). A different shape from the numbered
+                    // ledger above and a different claim — the ledger is what
+                    // to do before you arrive, this is what the studio stands
+                    // behind — so it is its own family rather than three more
+                    // `fact_N`.
+                    ['note_label', 'note_1', 'note_2', 'note_3'],
                     self::photoLeaves(),
                 ),
                 'band'       => 'band--paper-2',
@@ -716,7 +737,11 @@ final class SectionType
             'announcement' => [
                 'repeatable' => false,
                 'view'       => 'announcement',
-                'fields'     => ['text', 'cta_label'],
+                // `label` is kit 03's badge pill ("Late-summer ritual"),
+                // printed INSIDE the message as its first element. It is not
+                // the band's own gate: `count()` still reads `text` alone, so
+                // a badge with no sentence beside it is not a section.
+                'fields'     => ['label', 'text', 'cta_label'],
                 'band'       => '',
                 'images'     => 0,
             ],

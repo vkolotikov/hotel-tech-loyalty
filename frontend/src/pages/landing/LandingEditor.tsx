@@ -401,6 +401,17 @@ const FIELD_FALLBACK: Record<string, string> = {
   secondary_link_label: 'Wording on the link under your team',
   // booking — the ornamental numeral beside the closing panel.
   index: 'Number beside your booking panel',
+  // announcement — the badge pill before the message.
+  label: 'Badge on your offer bar',
+  // hero — the availability line beside the rating. The rating itself is
+  // derived and has no control; this is the half only the business knows.
+  proof: 'A line about your availability',
+  // services — the pill on the featured treatment's photograph.
+  badge_label: 'Badge on your first treatment',
+  // about — the bulleted aside beside the story. One key for all three, the
+  // same reasoning as `fact`: the inputs are in order under one heading and
+  // the sentence is the same beside each.
+  note: 'A line for your studio note',
   social_label: 'Wording above your social links',
   social_instagram: 'Instagram address',
   social_facebook: 'Facebook address',

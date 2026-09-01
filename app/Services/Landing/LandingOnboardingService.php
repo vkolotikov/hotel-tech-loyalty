@@ -213,6 +213,42 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // The third of the three BeautyTech kits
+            // (resources/landing-kits/beauty-tech/03-organic-wellness),
+            // converted the same way the other two were: the author's own
+            // markup, their own :root palette and their own stylesheet ship
+            // as the design, and only the CONTENT is the tenant's.
+            'key'   => 'organic_wellness',
+            'name'  => 'Organic Wellness',
+            // The author's own words for it, from the kit collection's
+            // README: "Bright modern organic / Skin, body and approachable
+            // wellness studios".
+            'blurb' => 'Bright and organic, with daylight photography and soft rounded cards. Made for facialists, massage practices and small wellness studios.',
+            // Transcribed from the three refusals
+            // resources/views/landing/organic_wellness/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent here on the CLAY family and on the accent
+            // TEXT this kit sets its eight two-tone headings in, never on the
+            // moss the page uses as ink (D2).
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**

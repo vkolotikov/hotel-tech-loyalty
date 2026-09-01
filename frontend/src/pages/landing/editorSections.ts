@@ -1134,6 +1134,7 @@ export function fieldLabelKey(name: string): string {
   if (/^caption_\d+$/.test(name)) return 'caption'
   if (/^fact_\d+$/.test(name)) return 'fact'
   if (/^promise_\d+$/.test(name)) return 'promise'
+  if (/^note_\d+$/.test(name)) return 'note'
 
   return name
 }

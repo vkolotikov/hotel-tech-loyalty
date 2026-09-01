@@ -167,6 +167,40 @@ final class TemplateImage
                 'alt'  => 'A row of individual styling stations in the studio',
             ],
         ],
+        // The third kit. Three scene-setting plates and a three-tile mosaic;
+        // NO `services` default, because that band's photograph is per-ROW
+        // here (`Service.image`, read through PageContent::serviceImage())
+        // rather than a page slot at all — R3's other half — and no
+        // `booking` default, because this author's closing panel is a moss
+        // card with no picture in it.
+        'organic_wellness' => [
+            'hero' => [
+                'file' => 'hero-wellness.webp',
+                'alt'  => 'A relaxed guest in a linen robe resting in a sunlit, natural-toned treatment studio',
+            ],
+            'about' => [
+                'file' => 'studio-interior.webp',
+                'alt'  => 'A calm treatment room with warm plaster arches, an olive tree and a prepared treatment bed',
+            ],
+            'team' => [
+                'file' => 'team.webp',
+                'alt'  => 'Three therapists standing together in the studio',
+            ],
+            // The mosaic, in the author's own order: the arch, the tall
+            // organic crop, the detail.
+            'gallery_1.image_1' => [
+                'file' => 'studio-interior.webp',
+                'alt'  => 'A sunlit treatment room framed by an organic arch',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'botanical-ritual.webp',
+                'alt'  => 'Fresh botanical clay in a ceramic bowl beside linen and rosemary',
+            ],
+            'gallery_1.image_3' => [
+                'file' => 'hero-wellness.webp',
+                'alt'  => 'A guest taking a quiet moment after treatment in warm morning light',
+            ],
+        ],
     ];
 
     /**

@@ -126,6 +126,61 @@ final class Copy
     }
 
     /**
+     * A BUSINESS'S NAME, SET AS A WORDMARK — the one emphasis in these kits
+     * that is INFIX rather than trailing, and the one `_accent` cannot
+     * express (template fidelity 8.x).
+     *
+     * Kit 03's lockup is `Morrow <em>&amp;</em> Moss`, in its header and
+     * again in its footer, with `.brand__name em { color: var(--color-clay) }`
+     * — the conjunction set in the accent colour and in the display face's
+     * italic. R6's own survey found it and said so: it is one of only four
+     * `<em>`s in the six kits that is not a heading, and the only one whose
+     * emphasis falls in the MIDDLE.
+     *
+     * IT IS NOT A LEAF AND MUST NOT BECOME ONE. The wordmark is derived from
+     * the business's own name (`$brandName` in every kit layout — the
+     * Property's name, else the page's SEO title), which is chrome: there is
+     * no `content.header.*`, `footer` has no row a control could hang on,
+     * and an infix needs a POSITION as well as a fragment, so a second
+     * `_accent`-shaped leaf could not express it even if there were somewhere
+     * to put one.
+     *
+     * SO IT IS DERIVED FROM THE NAME ITSELF, and the derivation is as narrow
+     * as it can be: a single `&` standing alone between two words. That is
+     * the author's own case and a very common shape for a studio's name
+     * ("Morrow & Moss", "Hart & Bloom"), it is unambiguous, and it is a
+     * TYPOGRAPHIC treatment of a conjunction rather than a guess about
+     * meaning. A name with no such ampersand renders exactly as it always
+     * did, which is what every other business gets.
+     *
+     * ONE, AND ONLY THE FIRST. "Body & Soul & Co" emphasises the first
+     * ampersand and prints the second as a plain character: two italic
+     * conjunctions in one lockup is not a design either author drew.
+     *
+     * ESCAPED THE SAME WAY EVERYTHING ELSE HERE IS. Both sides are escaped
+     * individually and the only thing this method ever puts between them is
+     * the literal `<em>` and an escaped `&` — there is no path by which a
+     * character out of `$name` reaches the page unescaped, so no partial has
+     * to contain a raw echo to draw the author's lockup.
+     */
+    public static function wordmark(?string $name): HtmlString
+    {
+        // Flattened first: a wordmark is one line by construction, and a
+        // newline a tenant left in their business name must not become a
+        // break in a header lockup.
+        $flat = self::plain($name);
+
+        // The FIRST ampersand that stands alone between two words. Not
+        // greedy, so "A & B & C" emphasises the first; \S on both sides, so
+        // an ampersand inside a word ("R&D") is left exactly as typed.
+        if (preg_match('/^(.*?\S)\s+&\s+(\S.*)$/u', $flat, $parts) !== 1) {
+            return new HtmlString(e($flat));
+        }
+
+        return new HtmlString(e($parts[1]) . ' <em>' . e('&') . '</em> ' . e($parts[2]));
+    }
+
+    /**
      * The heading, flattened to a single line with no markup at all — for
      * the places a heading is used as a VALUE rather than as display type:
      * an `aria-label`, a `<title>`, an `og:title`, a JSON-LD field.

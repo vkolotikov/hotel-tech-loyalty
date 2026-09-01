@@ -497,6 +497,10 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_price_prefix',
     'landing_pages.editor.field_secondary_link_label',
     'landing_pages.editor.field_index',
+    'landing_pages.editor.field_label',
+    'landing_pages.editor.field_proof',
+    'landing_pages.editor.field_badge_label',
+    'landing_pages.editor.field_note',
   ]
 
   /**
