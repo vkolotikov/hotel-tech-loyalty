@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isOfferable, unavailableReason, type SectionMeta } from './sections'
+import { isDataBackedSection, isOfferable, sectionGroup, unavailableReason, type SectionMeta } from './sections'
 
 const meta = (overrides: Partial<SectionMeta>): SectionMeta => ({
   key: 'reviews',
@@ -72,5 +72,46 @@ describe('unavailableReason', () => {
 
   it('falls back to the generic text when reason is absent entirely', () => {
     expect(unavailableReason(meta({ key: 'services' }), generic)).toBe(generic)
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 2.3 — the third member of the
+ * `isDataBackedSection`/`isOfferable` family.
+ *
+ * One answer per row, because it is what a card's BADGE prints, and a badge
+ * that hedges says nothing. The wider "is one of my pictures in here"
+ * question — the one the Photos chip actually asks — belongs to
+ * `rowHasPhotos` in `builderShape.ts` and is deliberately not this.
+ */
+describe('sectionGroup', () => {
+  it('files the four sections whose content lives on another screen as workspace', () => {
+    for (const key of ['services', 'team', 'reviews', 'contact']) {
+      expect(sectionGroup({ key })).toBe('workspace')
+    }
+  })
+
+  // `contact` is the one that is not a `DATA_BACKED_SECTION`: its values
+  // are not rows anywhere, but they resolve from the tenant's Properties
+  // screen, and the card already says so in as many words.
+  it('files contact as workspace even though it is not data-backed', () => {
+    expect(isDataBackedSection('contact')).toBe(false)
+    expect(sectionGroup({ key: 'contact' })).toBe('workspace')
+  })
+
+  // `writtenBy` is `PageContent::count()`'s two arms, carried on the row —
+  // so a band that renders because of its PICTURES is badged as pictures.
+  it('files a picture-led band as photos and everything else as write', () => {
+    expect(sectionGroup({ key: 'gallery_1', writtenBy: 'photos' })).toBe('photos')
+    expect(sectionGroup({ key: 'text_1', writtenBy: 'words' })).toBe('write')
+    expect(sectionGroup({ key: 'hero', writtenBy: 'words' })).toBe('write')
+    expect(sectionGroup({ key: 'announcement' })).toBe('write')
+  })
+
+  // The workspace answer wins even if such a type ever gained pictures —
+  // Phase 4 adds a photo slot to `services` and `team`, and the card still
+  // belongs to the screen its rows come from.
+  it('keeps a workspace section in workspace when it gains pictures', () => {
+    expect(sectionGroup({ key: 'team', writtenBy: 'photos' })).toBe('workspace')
   })
 })

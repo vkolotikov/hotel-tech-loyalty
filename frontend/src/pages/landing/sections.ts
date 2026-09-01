@@ -158,3 +158,48 @@ export function isOfferable(s: { key: string; available: boolean; count: number 
 export function unavailableReason(section: Pick<SectionMeta, 'reason'>, generic: string): string {
   return section.reason ?? generic
 }
+
+/**
+ * WHERE A BAND'S SUBSTANCE COMES FROM — the third member of the
+ * `isDataBackedSection`/`isOfferable` family, and template fidelity 2.3's
+ * one new fact.
+ *
+ * Three answers, because there are three tenants: one who only ever changes
+ * words, one who only ever swaps photographs, and one whose content is
+ * already in the product and only needs pointing at.
+ *
+ *  - `workspace` — services/team/reviews/contact. The rows live on another
+ *    screen; the card here is a switch and a heading over them.
+ *  - `photos`    — the band IS its pictures. `writtenBy` is the row's own
+ *    copy of `PageContent::count()`'s two arms, so this is the same
+ *    question the renderer asks about whether the band appears at all.
+ *  - `write`     — everything else: words the tenant types.
+ *
+ * ONE ANSWER PER ROW, deliberately, because this is what the card's BADGE
+ * says and a badge that hedges says nothing. The Photos FILTER is
+ * deliberately wider than `=== 'photos'` — a hero is a words-led band with
+ * a photograph in it, and "all the pictures on my page" has to include that
+ * picture. See `rowHasPhotos` in `builderShape.ts`, which owns that wider
+ * question, and keeps this one honest by not being it.
+ *
+ * Takes the fields it actually reads rather than a whole row, the same
+ * widening `isOfferable` already took, so a tenant-added `text_1` and a
+ * fixed `about` can be asked the same question.
+ */
+export type SectionGroup = 'write' | 'photos' | 'workspace'
+
+/**
+ * Sections whose card is a pointer at another screen. `contact` joins the
+ * three `DATA_BACKED_SECTIONS` here and only here: its values are not rows
+ * anywhere, but they are resolved from the tenant's Properties screen
+ * (`App\Landing\ContactDetails::resolve()`) and the editor already tells
+ * the tenant so in as many words. For the question this answers — "would I
+ * find this on another screen?" — the honest answer for contact is yes.
+ */
+const WORKSPACE_SECTIONS: ReadonlySet<string> = new Set([...DATA_BACKED_SECTIONS, 'contact'])
+
+export function sectionGroup(row: { key: string; writtenBy?: 'words' | 'photos' }): SectionGroup {
+  if (WORKSPACE_SECTIONS.has(row.key)) return 'workspace'
+
+  return row.writtenBy === 'photos' ? 'photos' : 'write'
+}

@@ -926,6 +926,68 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
+     * Template fidelity 2.6 — `fixed_blocks`, AND THE THING THAT KEEPS IT
+     * HONEST.
+     *
+     * The fact itself is authored (a template cannot be asked from outside
+     * where it chose to draw a band), but its FIRST source is executable:
+     * `$furniture` in the template's own layout is what actually rejects
+     * those keys out of `$mainSections`. So this asserts the registry
+     * against that literal, read off disk — the drift guard the plan's own
+     * "a fact living in two places" failure mode calls for. Edit the
+     * layout's list and this fails with the two lists printed side by side,
+     * rather than the editor quietly hiding the wrong rows' arrows.
+     *
+     * ruled_page is the other half of the claim: it has no `$furniture` at
+     * all — every band renders straight out of `$renderedSections` in the
+     * tenant's own order — so its map must be empty, and a future template
+     * that grows one cannot forget to say so.
+     */
+    public function test_a_templates_fixed_blocks_match_its_own_layout(): void
+    {
+        $this->makeProperty();
+
+        $fixed = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['fixed_blocks'])
+            ->all();
+
+        foreach (array_keys($fixed) as $key) {
+            $layout = resource_path("views/landing/{$key}/layout.blade.php");
+            $this->assertFileExists($layout);
+
+            $source = file_get_contents($layout);
+
+            // `$furniture = ['a', 'b', …];` — the one statement in the file
+            // that decides this. Absent means the design pins nothing.
+            $authored = [];
+
+            if (preg_match('/\$furniture\s*=\s*\[(.*?)\]\s*;/s', $source, $m) === 1) {
+                preg_match_all("/'([a-z_]+)'/", $m[1], $names);
+                $authored = $names[1];
+            }
+
+            sort($authored);
+            $served = array_keys($fixed[$key]);
+            sort($served);
+
+            $this->assertSame(
+                $authored,
+                $served,
+                "'{$key}' serves a different fixed-block list from the one its own layout enforces.",
+            );
+
+            foreach ($fixed[$key] as $block => $placement) {
+                $this->assertContains($placement, ['top', 'fixed', 'footer'], "'{$key}.{$block}' has a placement the editor cannot translate.");
+                $this->assertContains($block, SectionType::ids());
+            }
+        }
+
+        $this->assertSame([], $fixed['ruled_page']);
+        $this->assertSame('footer', $fixed['nocturne_ritual']['contact']);
+    }
+
+    /**
      * Task 2: prefill.phone/email/address are the EFFECTIVE values
      * (ContactDetails::resolve output) once a page exists, not the raw
      * Property — an override the tenant already saved in content.contact

@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
 import {
-  Check, ChevronDown, ChevronUp, Copy, ExternalLink, EyeOff, Globe, GripVertical, Loader2, Plus, Save, Trash2, X,
+  ArrowDown, ArrowUp, Check, ChevronDown, Copy, ExternalLink, EyeOff, Globe, GripVertical, LayoutList,
+  Loader2, Palette, Plus, Save, Trash2, X,
 } from 'lucide-react'
 import { api, resolveImage } from '../../lib/api'
 import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
-import { isDataBackedSection, isOfferable, unavailableReason } from './sections'
+import { isDataBackedSection, isOfferable, unavailableReason, type SectionGroup } from './sections'
 import {
   addableTypes, appendSection, buildSectionRows, buildSectionsPayload, freeGalleryLeaves, gallerySlotName,
   gallerySlots, instanceRowLabel, moveSection,
@@ -26,9 +28,16 @@ import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateSupports, type TemplateOption,
+  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
+  type TemplateOption,
 } from './editorCatalog'
 import { searchPreview, seoField, seoPayload, SEO_DESCRIPTION_MAX, SEO_TITLE_MAX } from './seoCard'
+import {
+  BUILDER_TABS, SECTION_FILTERS, blockPlacement, expandedWithin, filterCounts, nextExpanded,
+  reorderableUnderFilter, resolveBuilderTab, rowCanMove, rowGroup, rowStatus, sectionThumbUrl,
+  templateDrawsBlock, visibleRows,
+  type BlockPlacement, type BuilderTab, type RowStatus, type SectionFilter,
+} from './builderShape'
 // Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
 // file's photo controls below still refer to by that same number): the
 // self-hosted @font-face sheet DesignPanel's cards render against, see
@@ -413,6 +422,31 @@ export function LandingEditor({
   // resolves.
   const { currentBrandId, currentBrand } = useBrandStore()
 
+  /**
+   * TEMPLATE FIDELITY 2.1 — WHICH OF THE THREE TABS IS OPEN.
+   *
+   * Read straight off `?tab=` rather than mirrored into state, which is the
+   * one difference from `HubTabs.tsx`'s otherwise identical idiom: that
+   * component also accepts a `defaultTab` prop and so needs somewhere to
+   * hold it, while here the URL is the only input and a copy of it in state
+   * is a second answer that has to be re-synced by an effect. Reload, the
+   * back button and a pasted link all work for free, and an unknown value
+   * lands on Content rather than on a blank column (`resolveBuilderTab`).
+   *
+   * `navigate` rather than `setSearchParams` so a tab change is a real
+   * history entry — the back button taking a tenant from Publish to where
+   * they were writing is the behaviour the house idiom already has.
+   */
+  const [params] = useSearchParams()
+  const navigate = useNavigate()
+  const tab = resolveBuilderTab(params.get('tab'))
+  const selectTab = (next: BuilderTab) => {
+    if (next === tab) return
+    const search = new URLSearchParams(window.location.search)
+    search.set('tab', next)
+    navigate({ search: '?' + search.toString() }, { replace: false })
+  }
+
   const { data: page, isLoading, error, refetch } = useQuery<LandingPageDTO>({
     queryKey: ['landing-page', currentBrandId],
     queryFn: () => api.get('/v1/admin/landing-pages').then(r => r.data.page),
@@ -505,6 +539,18 @@ export function LandingEditor({
   // them has already changed.
   const supports = templateSupports(templates, templateKey)
 
+  /**
+   * Template fidelity 2.6: the other two served facts about the chosen
+   * design — which blocks it ships a partial for, and which of them it
+   * draws in a place of its own. Resolved against the SHOWN template key
+   * for the same reason `supports` is, so switching design updates the
+   * rows' explanations at the same moment the preview beside them changes.
+   *
+   * Neither is ever compared to a template id here; see `builderShape.ts`.
+   */
+  const renders = templateRenders(templates, templateKey)
+  const fixedBlocks = templateFixedBlocks(templates, templateKey)
+
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
   // so the brand's own name (BrandSwitcher's own data, already loaded) is
@@ -521,6 +567,40 @@ export function LandingEditor({
   // watches the hint clear on Save, which is exactly when the band actually
   // appears on the page.
   const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability, sectionTypes, page?.content)
+
+  /**
+   * TEMPLATE FIDELITY 2.2 — ONE CARD OPEN AT A TIME.
+   *
+   * Lifted here rather than held per row, because "which card is open" is a
+   * fact about the LIST: the accordion is single-expand so that the card
+   * being edited and the preview beside it have one subject between them.
+   * `null` — nothing open — is the state this screen now starts in, which
+   * is what turns roughly a hundred always-visible controls into a page a
+   * tenant can read.
+   */
+  const [expandedKey, setExpandedKey] = useState<string | null>(null)
+
+  /**
+   * TEMPLATE FIDELITY 2.3 — the chip, and only the chip.
+   *
+   * It hides rows; it never moves one and never regroups the list. The
+   * list's vertical order IS the page's vertical order — that is the whole
+   * meaning of the handle and the arrows — so while a chip is active the
+   * reorder affordances are withdrawn together and the list says so.
+   */
+  const [filter, setFilter] = useState<SectionFilter>('all')
+
+  const chipCounts = filterCounts(rows)
+  const shownRows = visibleRows(rows, filter)
+  const reorderable = reorderableUnderFilter(filter)
+
+  // The open card must be one that is actually on screen: a filter, a
+  // removal or a template change can all take it out of the list, and an
+  // `expanded` key pointing at a row nobody can see is a card that springs
+  // back open over a subject the tenant left ten minutes ago.
+  const expanded = expandedWithin(expandedKey, shownRows.map(row => row.key))
+
+  const toggleExpanded = (key: string) => setExpandedKey(current => nextExpanded(current, key))
 
   // Counted over the RAW rows, never `rows` — see `addableTypes`. A row this
   // build failed to recognise still takes up a place on the page as far as
@@ -712,6 +792,13 @@ export function LandingEditor({
       // thing landed. Cleared as soon as it is spent — it must not steal
       // focus back on the next unrelated re-render.
       setJustAdded(key)
+      // 2.2: and OPENS it. Cards are collapsed by default now, so without
+      // this the band a tenant just asked for would land closed and the
+      // caret above would have nothing to land in.
+      setExpandedKey(key)
+      // A band added while a chip is active would otherwise land outside
+      // the filter and appear not to have been added at all.
+      setFilter('all')
     },
     onError: (e: unknown) => toast.error(sectionErrorMessage(e, t('common.error', 'Something went wrong'))),
   })
@@ -1073,85 +1160,145 @@ export function LandingEditor({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/*
-        Task 10, placed above BOTH columns rather than inside the left
-        one: the brief's own stated bar for this block is higher than for
-        any control in it — "a tenant must never be unsure whether the
-        public can see their page" — so it has to be visible the instant
-        the editor mounts, not after scrolling past however many section
-        cards this page happens to have.
-      */}
-      <WebAddressCard
-        page={page}
-        dirty={dirty}
-        pendingSlug={pendingSlug}
-        editing={addressEditing}
-        draft={addressDraft}
-        copied={addressCopied}
-        onCopy={copyAddress}
-        onStartEdit={startEditingAddress}
-        onDraftChange={setAddressDraft}
-        onApply={applyAddressEdit}
-        onCancel={cancelAddressEdit}
-        onPublish={() => { void handlePublish() }}
-        onUnpublish={handleUnpublish}
-        // 1.6: the save this button now performs on the tenant's behalf is
-        // part of publishing as far as they are concerned, so it is part of
-        // "publishing…" too. Anything else would leave the button live for
-        // the half-second the save is in flight.
-        publishing={publishMut.isPending || saveMut.isPending}
-        unpublishing={unpublishMut.isPending}
-        seoTitle={seoFields.title}
-        seoDescription={seoFields.description}
-        onSeoChange={updateSeo}
-        businessName={businessName}
-        headline={typeof f.content?.hero?.headline === 'string' ? f.content.hero.headline : ''}
-      />
+        TEMPLATE FIDELITY 2.1 — THE STATUS STRIP.
 
+        `WebAddressCard`'s own invariant, kept literally at a fifth of the
+        height: "a tenant must never be unsure whether the public can see
+        their page." The card that used to say it has moved to the Publish
+        tab, so the STATE stays here, above the tabs, on every one of them —
+        the first thing on the screen whatever the tenant is doing.
+
+        Nothing in it is clickable, deliberately: it is a fact, not a
+        control, and every action it used to sit beside (Copy, Change,
+        Publish, Unpublish) is one press away on the Publish tab.
+      */}
+      <StatusStrip status={page.status} dirty={dirty} />
+
+      <BuilderTabBar active={tab} onSelect={selectTab} />
+
+      {/*
+        The grid stays BELOW the tab bar, so the right-hand column — and the
+        live preview in it — is the same element on all three tabs and is
+        never unmounted by a tab change. That is the difference between this
+        and `HubTabs.tsx`, which renders only the active tab's subtree: the
+        preview is the thing that makes this screen feel live, and a tab
+        change that reloaded it would cost a full server render every time
+        somebody went to look at a colour.
+      */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <div className="xl:col-span-7 space-y-5 min-w-0">
-          {/*
-            Task 6 (landing phase 3c, D4): the Design panel, above the
-            section list per the spec — palette + type-pairing cards and
-            the brand-colour input, all saved through the SAME text-save
-            path every other field on this screen already uses (`update` +
-            the sticky Save button below); `image_url` handling is
-            untouched (D4's one-writer rule stays with the photo controls).
-          */}
-          <div className={card + ' space-y-5'}>
-            <h2 className="text-sm font-semibold text-white">{t('landing_pages.design.title', 'Design')}</h2>
-            {/*
-              Landing phase 3c, Plan A: `industries`/`templates` and their
-              two callbacks are what turn this into the whole Design panel —
-              industry and page style above the palette, type and brand
-              colour that were already here. The wizard renders the same
-              component with neither prop set (it asks about industry in its
-              own step 1 and never asks about the template), so its "Make it
-              yours" step is unchanged.
-            */}
-            <DesignPanel
-              businessName={businessName}
-              palette={themeFields.palette}
-              fontPairing={themeFields.font_pairing}
-              brandColor={themeFields.brand_color}
-              onPaletteChange={id => updateTheme({ palette: id })}
-              onFontPairingChange={id => updateTheme({ font_pairing: id })}
-              onBrandColorChange={hex => updateTheme({ brand_color: hex })}
-              industries={industries}
-              industry={f.industry}
-              savedIndustry={page.industry}
-              onIndustryChange={handleIndustryChange}
-              templates={templates}
-              templateKey={templateKey}
-              onTemplateChange={key => update('template_key', key)}
-              // Template fidelity 1.2 — the four bools that decide which of
-              // this panel's blocks are drawn at all. See `templateSupports`.
-              supports={supports}
-            />
-          </div>
+          {tab === 'design' && (
+            /*
+              Task 6 (landing phase 3c, D4): the Design panel — palette +
+              type-pairing cards and the brand-colour input, all saved
+              through the SAME text-save path every other field on this
+              screen already uses (`update` + the sticky Save button below);
+              `image_url` handling is untouched (D4's one-writer rule stays
+              with the photo controls).
+            */
+            <div className={card + ' space-y-5'}>
+              <h2 className="text-sm font-semibold text-white">{t('landing_pages.design.title', 'Design')}</h2>
+              {/*
+                Landing phase 3c, Plan A: `industries`/`templates` and their
+                two callbacks are what turn this into the whole Design panel —
+                industry and page style above the palette, type and brand
+                colour that were already here. The wizard renders the same
+                component with neither prop set (it asks about industry in its
+                own step 1 and never asks about the template), so its "Make it
+                yours" step is unchanged.
+              */}
+              <DesignPanel
+                businessName={businessName}
+                palette={themeFields.palette}
+                fontPairing={themeFields.font_pairing}
+                brandColor={themeFields.brand_color}
+                onPaletteChange={id => updateTheme({ palette: id })}
+                onFontPairingChange={id => updateTheme({ font_pairing: id })}
+                onBrandColorChange={hex => updateTheme({ brand_color: hex })}
+                industries={industries}
+                industry={f.industry}
+                savedIndustry={page.industry}
+                onIndustryChange={handleIndustryChange}
+                templates={templates}
+                templateKey={templateKey}
+                onTemplateChange={key => update('template_key', key)}
+                // Template fidelity 1.2 — the four bools that decide which of
+                // this panel's blocks are drawn at all. See `templateSupports`.
+                supports={supports}
+              />
+            </div>
+          )}
 
+          {tab === 'publish' && (
+            <WebAddressCard
+              page={page}
+              dirty={dirty}
+              pendingSlug={pendingSlug}
+              editing={addressEditing}
+              draft={addressDraft}
+              copied={addressCopied}
+              onCopy={copyAddress}
+              onStartEdit={startEditingAddress}
+              onDraftChange={setAddressDraft}
+              onApply={applyAddressEdit}
+              onCancel={cancelAddressEdit}
+              onPublish={() => { void handlePublish() }}
+              onUnpublish={handleUnpublish}
+              // 1.6: the save this button now performs on the tenant's behalf is
+              // part of publishing as far as they are concerned, so it is part of
+              // "publishing…" too. Anything else would leave the button live for
+              // the half-second the save is in flight.
+              publishing={publishMut.isPending || saveMut.isPending}
+              unpublishing={unpublishMut.isPending}
+              seoTitle={seoFields.title}
+              seoDescription={seoFields.description}
+              onSeoChange={updateSeo}
+              businessName={businessName}
+              headline={typeof f.content?.hero?.headline === 'string' ? f.content.hero.headline : ''}
+            />
+          )}
+
+          {tab === 'content' && (
           <div>
+            {/*
+              TEMPLATE FIDELITY 2.3 — the chips, above the list they filter.
+              A chip that would show nothing is DISABLED WITH ITS ZERO
+              VISIBLE rather than hidden: "you have no photo blocks yet" is
+              guidance, and a control that vanishes is a control a tenant
+              goes looking for.
+            */}
+            {rows.length > 0 && (
+              <div className="flex items-center gap-1.5 flex-wrap mb-3" role="group" aria-label={t('landing_pages.editor.filter_label', 'Show')}>
+                {SECTION_FILTERS.map(id => {
+                  const count = chipCounts[id]
+                  const active = filter === id
+                  const empty = count === 0 && id !== 'all'
+
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={empty}
+                      onClick={() => setFilter(id)}
+                      className={'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-full border outline-none '
+                        + 'transition-colors motion-reduce:transition-none '
+                        + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 '
+                        + 'disabled:opacity-40 disabled:cursor-not-allowed '
+                        + (active
+                          ? 'bg-primary-500/15 border-primary-500 text-white'
+                          : 'bg-dark-bg border-dark-border text-t-secondary hover:text-white enabled:hover:border-dark-border2')}
+                    >
+                      {t(`landing_pages.editor.filter_${id}`, FILTER_FALLBACK[id])}
+                      <span className="text-[10px] font-mono tabular-nums opacity-70">{count}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/*
               Said ONCE, above the list, rather than as a hint on every one
               of up to sixteen cards — which is also the only way a page
@@ -1159,25 +1306,53 @@ export function LandingEditor({
               a grip icon is not self-explanatory to the tenant this screen
               is for, and the keyboard route is not discoverable at all
               without being named.
+
+              2.3: while a chip is active it is REPLACED, not merely
+              contradicted, by the sentence that says why the handles have
+              gone. Leaving the promise "sections appear from top to bottom"
+              over a list that is showing four of thirteen would be the
+              screen lying about the page again.
             */}
-            {rows.length > 0 && (
+            {rows.length > 0 && (reorderable ? (
               <p id="lp-reorder-help" className="text-xs text-t-secondary mb-2">
                 {t(
                   'landing_pages.editor.reorder_help',
                   'Drag a section by its handle to move it, or use the arrows. Sections appear on your page from top to bottom.',
                 )}
               </p>
-            )}
+            ) : (
+              <p className="text-xs text-t-secondary mb-2 leading-relaxed">
+                {t('landing_pages.editor.filter_active_note', {
+                  shown: shownRows.length,
+                  total: rows.length,
+                  defaultValue: 'Showing {{shown}} of your {{total}} sections. Choose “All” to change the order.',
+                })}
+              </p>
+            ))}
 
             <div className="space-y-3">
-              {rows.map((row, i) => (
+              {shownRows.map((row, i) => (
                 <SectionRow
                   key={row.key}
                   row={row}
                   isFirst={i === 0}
-                  isLast={i === rows.length - 1}
+                  isLast={i === shownRows.length - 1}
                   index={i}
-                  total={rows.length}
+                  total={shownRows.length}
+                  // 2.2: single-expand, decided by the list (see `expanded`).
+                  expanded={expanded === row.key}
+                  onToggleExpanded={() => toggleExpanded(row.key)}
+                  // 2.3 + 2.6: reordering is offered only over the WHOLE
+                  // list, and only for a row this design does not pin.
+                  reorderable={reorderable && rowCanMove(fixedBlocks, row)}
+                  placement={blockPlacement(fixedBlocks, row.key)}
+                  // 2.6: does this design put the band on the page at all,
+                  // and — when it does not — is there one that would?
+                  drawn={templateDrawsBlock(renders, fixedBlocks, row)}
+                  drawnBy={templatesDrawing(templates, row.typeId, templateKey).map(o => o.name)}
+                  templateName={templates.find(o => o.key === templateKey)?.name ?? ''}
+                  // 2.4: the wireframe for this block ON THIS DESIGN.
+                  thumbUrl={sectionThumbUrl(templateKey, row.typeId)}
                   content={f.content?.[row.key] ?? {}}
                   // Task 6: sourced from the QUERY's raw `page`, never from
                   // `f`/`form` — see the comment beside this row's own
@@ -1221,7 +1396,7 @@ export function LandingEditor({
                   // here, where the rendered list is — a row this build does
                   // not draw is not somewhere "top of the list" could mean.
                   onMoveEdge={(edge, label) => {
-                    const target = edge === 'first' ? rows[0] : rows[rows.length - 1]
+                    const target = edge === 'first' ? shownRows[0] : shownRows[shownRows.length - 1]
                     if (target && target.key !== row.key) dropRow(row.key, target.key, label)
                   }}
                   onRemove={label => handleRemove(row, label)}
@@ -1241,10 +1416,31 @@ export function LandingEditor({
               </p>
             )}
 
+            {/*
+              A chip whose rows all disappeared under it — a band removed,
+              a photo taken off the last picture block. The chips themselves
+              disable at zero, so this is the race rather than the ordinary
+              case, and it still gets a sentence and a way out rather than a
+              blank column.
+            */}
+            {rows.length > 0 && shownRows.length === 0 && (
+              <div className={card + ' text-sm text-t-secondary space-y-2'}>
+                <p>{t('landing_pages.editor.filter_empty', 'Nothing on your page matches this filter yet.')}</p>
+                <button
+                  type="button"
+                  className={btnSec}
+                  onClick={() => setFilter('all')}
+                >
+                  {t('landing_pages.editor.filter_clear', 'Show all sections')}
+                </button>
+              </div>
+            )}
+
             <AddSectionCard
               types={addable}
               adding={addMut.isPending ? (addMut.variables ?? null) : null}
               onAdd={type => addMut.mutate(type)}
+              templateKey={templateKey}
             />
 
             {/*
@@ -1254,6 +1450,7 @@ export function LandingEditor({
             */}
             <p aria-live="polite" className="sr-only">{announcement}</p>
           </div>
+          )}
 
           <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
             {/*
@@ -1266,6 +1463,13 @@ export function LandingEditor({
               photo and read "Unsaved changes" had every reason to think
               their photo was at risk, and one who read "All changes saved"
               after removing a band had no idea it already was.
+
+              2.1: OUTSIDE the tab switch, on all three. Every tab queues
+              into the same `form` — a headline on Content, a palette on
+              Design, a tagline or an address on Publish — and one save
+              story means one bar, not one per tab. It is also why a tenant
+              can leave the Content tab mid-edit and press Save from
+              wherever they end up.
             */}
             <span className="text-xs text-t-secondary">
               {dirty
@@ -1285,11 +1489,268 @@ export function LandingEditor({
 
         <div className="xl:col-span-5">
           <div className="xl:sticky xl:top-4">
-            <LandingPreview nonce={previewNonce} draft={draftPayload} dirty={dirty} />
+            {/*
+              TEMPLATE FIDELITY 2.5 — the card and the pane share a subject.
+
+              `focusKey` is the open card's section key, and the pane tells
+              its frame about it (explicit target origin, see
+              `previewBridge.ts`). `onSelect` is the return leg: a click on
+              a band in the preview opens that band's card here. Both are
+              deliberately keyed off the SINGLE-EXPAND accordion — with two
+              cards open there would be no single answer to send.
+            */}
+            <LandingPreview
+              nonce={previewNonce}
+              draft={draftPayload}
+              dirty={dirty}
+              focusKey={expanded}
+              onSelect={key => {
+                // Only a row that is actually on this page — a message
+                // naming anything else selects nothing at all.
+                if (!rows.some(row => row.key === key)) return
+                // A band clicked in the preview is on the page whether or
+                // not a chip happens to be hiding its card, so the chip
+                // gets out of the way rather than swallowing the request.
+                setFilter('all')
+                setExpandedKey(key)
+              }}
+            />
           </div>
         </div>
       </div>
     </div>
+  )
+}
+
+/** The four chips' `t()` fallbacks. The SAME four words the cards' own
+ *  badges use (`GROUP_FALLBACK` below), so the filter is learnable from the
+ *  list rather than needing a legend: a tenant reads "Photos you add" on a
+ *  card and finds the chip that gathers them by the same name. */
+const FILTER_FALLBACK: Record<SectionFilter, string> = {
+  all: 'All',
+  write: 'Words',
+  photos: 'Photos',
+  workspace: 'From your workspace',
+}
+
+/** The badge one card wears — `sectionGroup`'s single answer, in the chips'
+ *  own words. */
+const GROUP_FALLBACK: Record<SectionGroup, string> = {
+  write: 'Words you write',
+  photos: 'Photos you add',
+  workspace: 'From your workspace',
+}
+
+/** Where a design pins a block the tenant cannot move — one sentence per
+ *  served placement (`LandingOnboardingService::PLACEMENTS`). Translated
+ *  here rather than sent as prose, so a template says WHERE and the editor
+ *  says it in the tenant's language. */
+const PLACEMENT_FALLBACK: Record<BlockPlacement, string> = {
+  top: 'This design always shows it across the top of your page, so it cannot be moved.',
+  footer: 'This design always shows it in your footer, so it cannot be moved.',
+  fixed: 'This design gives it a fixed place on the page, so it cannot be moved.',
+}
+
+/**
+ * TEMPLATE FIDELITY 2.1 — the state of the page, in one strip, on every
+ * tab.
+ *
+ * `WebAddressCard` used to carry this at the top of the screen and it is
+ * now behind a tab, so the FACT is lifted out and the ACTIONS stay with the
+ * address. That split is the whole reason this is allowed to exist: the
+ * card's own invariant is that a tenant must never be unsure whether the
+ * public can see their page, and a fact stated on all three tabs satisfies
+ * it better than a card that is only on one.
+ *
+ * Nothing here is a control. There is no button, no link and no toggle —
+ * every action it used to sit beside is one press away, and a strip that is
+ * partly clickable is a strip a tenant has to test.
+ */
+function StatusStrip({ status, dirty }: { status: LandingPageDTO['status']; dirty: boolean }) {
+  const { t } = useTranslation()
+  const vis = pageVisibilityState(status, dirty)
+
+  return (
+    <div
+      className={'flex items-center gap-x-3 gap-y-0.5 flex-wrap rounded-xl border px-4 py-2.5 '
+        + (vis.tone === 'live'
+          ? 'border-accent/30 bg-accent/[0.07]'
+          : 'border-dark-border bg-dark-surface')}
+    >
+      <span className={'shrink-0 ' + (vis.tone === 'live' ? 'text-accent' : 'text-t-secondary')}>
+        {vis.tone === 'live' ? <Globe size={16} /> : <EyeOff size={16} />}
+      </span>
+      <p className={'text-sm font-semibold ' + (vis.tone === 'live' ? 'text-accent' : 'text-white')}>
+        {t(vis.headlineKey, vis.headlineFallback)}
+      </p>
+      {/* Wraps rather than truncating: the note is the sentence that says
+          the live page is NOT what the tenant is looking at, and a phone is
+          exactly where somebody would miss it. */}
+      {vis.noteKey && (
+        <p className="text-xs text-t-secondary">{t(vis.noteKey, vis.noteFallback ?? '')}</p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * TEMPLATE FIDELITY 2.1 — three tabs.
+ *
+ * The house idiom, taken from `HubTabs.tsx` down to the class strings, so
+ * this reads as the same product as Members and Rewards. What it does NOT
+ * take is that component's `render()` switch: the preview must survive a
+ * tab change, so the caller keeps the grid and swaps only the left column.
+ *
+ * Three, and only three, because the tenant arrives with one of three
+ * questions — what does my page say, what does it look like, can anyone
+ * see it — and a fourth tab would be a place for something to hide.
+ *
+ * `aria-pressed` buttons in a named group, NOT `role="tablist"`/`role="tab"`
+ * — the same refusal `SectionRow`'s tone swatches already make about
+ * `radiogroup`, and for the same reason. The ARIA tab pattern promises
+ * arrow-key navigation with a roving tabindex AND a single `role="tabpanel"`
+ * these controls own; neither is true here (the preview deliberately lives
+ * OUTSIDE whatever the active tab renders), and claiming a pattern without
+ * implementing it is worse for a keyboard user than three plain buttons
+ * they can tab through.
+ */
+const TAB_FALLBACK: Record<BuilderTab, string> = {
+  content: 'Content',
+  design: 'Design',
+  publish: 'Publish',
+}
+
+function BuilderTabBar({ active, onSelect }: { active: BuilderTab; onSelect: (tab: BuilderTab) => void }) {
+  const { t } = useTranslation()
+
+  const icon = (tab: BuilderTab) =>
+    tab === 'content' ? <LayoutList size={14} />
+      : tab === 'design' ? <Palette size={14} />
+        : <Globe size={14} />
+
+  return (
+    <div
+      className="flex gap-1 border-b border-dark-border overflow-x-auto"
+      role="group"
+      aria-label={t('landing_pages.editor.tabs_label', 'What you are editing')}
+    >
+      {BUILDER_TABS.map(tab => (
+        <button
+          key={tab}
+          type="button"
+          aria-pressed={active === tab}
+          onClick={() => onSelect(tab)}
+          className={'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 outline-none '
+            + 'transition-colors motion-reduce:transition-none '
+            + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 focus-visible:ring-offset-0 '
+            + (active === tab
+              ? 'text-primary-400 border-primary-400'
+              : 'text-t-secondary border-transparent hover:text-white')}
+        >
+          {icon(tab)}
+          {t(`landing_pages.editor.tab_${tab}`, TAB_FALLBACK[tab])}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * TEMPLATE FIDELITY 2.4 — a picture of the band, not another word for it.
+ *
+ * "Highlights" and "Offer bar" are honest words that tell a salon owner
+ * nothing about which stripe of the dark page they are about to edit, and
+ * the owner's whole pitch is that tenants pick THESE designs. So each card
+ * carries a wireframe of its own band ON THE CHOSEN DESIGN, served as a
+ * static same-origin file (`sectionThumbUrl`).
+ *
+ * A MISSING FILE IS NOT AN ERROR. It falls back to a generic wireframe,
+ * which doubles as the honest signal 2.6 wants for "this design does not
+ * draw this block" — the row's own sentence says the rest. That is also why
+ * there is no manifest of which files exist: a list here would be a second
+ * source of truth about the contents of a directory.
+ *
+ * `alt=""` throughout: the block's name sits immediately beside it, and a
+ * screen reader reading "wireframe of the gallery band" before the word
+ * "Photo gallery" is one thing said twice.
+ */
+function SectionThumb({ url, size }: { url: string | null; size: 'row' | 'picker' }) {
+  const [failed, setFailed] = useState(false)
+  // 64×40 on a row, 160×100 in the picker — the same 8:5 wireframe, sized
+  // for how much of the decision it is carrying.
+  const box = size === 'row' ? 'w-16 h-10' : 'w-40 h-[100px]'
+  const frame = 'shrink-0 rounded-md border border-dark-border bg-dark-bg overflow-hidden ' + box
+
+  if (url === null || failed) {
+    return (
+      <span aria-hidden className={frame + ' flex flex-col justify-center gap-1 px-2'}>
+        <span className="block h-[3px] w-3/5 rounded-full bg-white/20" />
+        <span className="block h-[3px] w-full rounded-full bg-white/10" />
+        <span className="block h-[3px] w-4/5 rounded-full bg-white/10" />
+      </span>
+    )
+  }
+
+  return (
+    <img
+      src={url}
+      alt=""
+      aria-hidden
+      loading="lazy"
+      onError={() => setFailed(true)}
+      className={frame + ' object-cover'}
+    />
+  )
+}
+
+/**
+ * TEMPLATE FIDELITY 2.2/2.3 — the three things a closed card says.
+ *
+ * The NAME, the BADGE (where its substance comes from, in the filter
+ * chips' own words — which is how the chips become learnable without a
+ * legend), and ONE status line: the single most surprising true thing about
+ * this row right now, chosen by `rowStatus` rather than by a ladder of
+ * conditions in the markup.
+ *
+ * Its own component because the same block is rendered twice — inside the
+ * disclosure button for a card that opens, and as plain markup for one that
+ * has nothing behind it — and two copies of it would be two places for the
+ * badge to drift from the chip.
+ */
+function RowHeading({ label, group, status, statusLine, placementNote }: {
+  label: string
+  group: SectionGroup
+  status: RowStatus['kind']
+  statusLine: string
+  placementNote: string | null
+}) {
+  const { t } = useTranslation()
+
+  // The one case where the line is not information but a problem: the
+  // tenant's words are stored and this design will not print them. Every
+  // other state here — not written yet, nothing on the Services screen,
+  // switched off — is a page mid-build, and this product's grammar reserves
+  // the amber for something actually wrong.
+  const alarming = status === 'not_drawn'
+
+  return (
+    <span className="min-w-0 flex-1 block">
+      <span className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm font-medium text-white">{label}</span>
+        <span className="shrink-0 rounded border border-dark-border px-1.5 py-px text-[10px] font-medium uppercase tracking-[0.08em] text-t-secondary/80">
+          {t(`landing_pages.editor.group_${group}`, GROUP_FALLBACK[group])}
+        </span>
+      </span>
+
+      <span className={'block text-xs mt-0.5 leading-relaxed '
+        + (alarming ? 'text-warning/90' : 'text-t-secondary')}>
+        {statusLine}
+      </span>
+
+      {placementNote !== null && (
+        <span className="block text-xs mt-0.5 leading-relaxed text-t-secondary/70">{placementNote}</span>
+      )}
+    </span>
   )
 }
 
@@ -1342,20 +1803,22 @@ function WebAddressCard({
 
   return (
     <div className={card + ' space-y-4'}>
+      {/*
+        TEMPLATE FIDELITY 2.1: the live/draft HEADLINE that used to open
+        this card has moved out to the status strip above the tabs, where it
+        is stated once and shown on all three of them. Saying it again here,
+        four centimetres below itself, would be the same fact in two places
+        — and this file argues elsewhere at length that a fact in two places
+        is a fact that eventually disagrees with itself.
+
+        What stays is the ACTION, which is the only thing on this screen
+        that could not follow the fact upstairs: the strip is deliberately
+        not clickable.
+      */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-start gap-3 min-w-0">
-          <span className={'mt-0.5 shrink-0 ' + (vis.tone === 'live' ? 'text-accent' : 'text-t-secondary')}>
-            {vis.tone === 'live' ? <Globe size={18} /> : <EyeOff size={18} />}
-          </span>
-          <div className="min-w-0">
-            <p className={'text-sm font-semibold ' + (vis.tone === 'live' ? 'text-accent' : 'text-white')}>
-              {t(vis.headlineKey, vis.headlineFallback)}
-            </p>
-            {vis.noteKey && (
-              <p className="text-xs text-t-secondary mt-0.5">{t(vis.noteKey, vis.noteFallback ?? '')}</p>
-            )}
-          </div>
-        </div>
+        <h2 className="text-sm font-semibold text-white pt-2">
+          {t('landing_pages.editor.publish_heading', 'Your page on the internet')}
+        </h2>
 
         <div className="shrink-0 text-right">
           {page.status === 'draft' ? (
@@ -1623,12 +2086,35 @@ const TYPE_BLURB_FALLBACK: Record<string, string> = {
 
 function SectionRow({
   row, isFirst, isLast, index, total, content, imageUrl, storedSection, autoFocusFirstField, onFocusHandled,
+  expanded, onToggleExpanded, reorderable, placement, drawn, drawnBy, templateName, thumbUrl,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
   onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
 }: {
   row: EditorSectionRow
   isFirst: boolean
   isLast: boolean
+  /** TEMPLATE FIDELITY 2.2 — is this the one open card? Decided by the
+   *  LIST (single-expand), never held here: two cards open and the preview
+   *  beside them can only be about one of them. */
+  expanded: boolean
+  onToggleExpanded: () => void
+  /** 2.3 + 2.6: whether the move affordances exist at all — false while a
+   *  filter is active (the list is not the whole page, so a move past rows
+   *  the tenant cannot see has no honest meaning) and false for a block
+   *  this design pins. `placement` is what says which of the two, and
+   *  supplies the sentence. */
+  reorderable: boolean
+  placement: BlockPlacement | null
+  /** 2.6: whether the chosen design puts this band on the page at all, the
+   *  names of the designs that WOULD, and this design's own name — so a
+   *  dropped row can be explained by name rather than by "this template".
+   *  All three come off the served `renders`/`fixed_blocks`; nothing here
+   *  compares a template id. */
+  drawn: boolean
+  drawnBy: string[]
+  templateName: string
+  /** 2.4: the wireframe of this band on this design, or null. */
+  thumbUrl: string | null
   /** Position in the VISIBLE list, 0-based, and how long that list is.
    *  Announcements and the handle's own accessible name both need it —
    *  `sort` is an implementation detail nobody should be read out. */
@@ -1710,6 +2196,73 @@ function SectionRow({
   )
   const displayLabel = row.fixed ? row.label : instanceRowLabel(typeName, row.ordinal, row.siblings)
 
+  // ─── TEMPLATE FIDELITY 2.2/2.3/2.6 — what the CLOSED card says ────────
+  //
+  // The card is shut by default now, so these three lines are all a tenant
+  // has to decide whether to open it: what the band is called, where its
+  // substance comes from (the badge, in the filter chips' own words), and
+  // the single most surprising true thing about it right now.
+  const group = rowGroup(row)
+  const status = rowStatus(row, { drawn, offerable, dataBacked: isDataBackedSection(row.key) })
+
+  // Nothing to open: a band that cannot be switched on has no controls
+  // behind the header, and a `footer` row's catalogue entry declares no
+  // fields at all. A chevron over an empty box is a promise the card
+  // cannot keep, so the header renders as plain text instead of a button.
+  const expandable = offerable && fields.length > 0
+  const isOpen = expandable && expanded
+  const bodyId = `lp-${row.key}-body`
+
+  // 2.6's own sentence, assembled from served facts: this design's name,
+  // and the names of the designs that WOULD draw the band. Never "switch
+  // templates" as an abstraction — a way out a tenant can act on names the
+  // design they would be switching to.
+  const notDrawnNote = drawnBy.length === 1
+    ? t('landing_pages.editor.block_not_drawn_switch', {
+      template: templateName,
+      other: drawnBy[0],
+      defaultValue: '{{template}} does not show this block. Your words are kept — switch to {{other}} to show it, or leave it here.',
+    })
+    : drawnBy.length > 1
+      ? t('landing_pages.editor.block_not_drawn_other', {
+        template: templateName,
+        defaultValue: '{{template}} does not show this block. Your words are kept — switch to another design to show it, or leave it here.',
+      })
+      : t('landing_pages.editor.block_not_drawn_none', {
+        template: templateName,
+        defaultValue: '{{template}} does not show this block, and no other design here shows it either. Your words are kept.',
+      })
+
+  const statusLine =
+    status.kind === 'not_drawn' ? notDrawnNote
+      : status.kind === 'unavailable'
+        ? unavailableReason(row, t('landing_pages.editor.section_pending', {
+          source: row.sourceLabel,
+          defaultValue: 'Add this from {{source}} whenever you are ready — it appears on your page as soon as you do.',
+        }))
+        : status.kind === 'hidden'
+          ? t('landing_pages.editor.section_hidden', 'Hidden from your page')
+          : status.kind === 'needs_photos'
+            ? t('landing_pages.editor.section_needs_photos', 'No photos yet — this block appears on your page once you add one.')
+            : status.kind === 'needs_words'
+              ? t('landing_pages.editor.section_needs_words', 'Nothing written yet — this block appears on your page once you add some words.')
+              : status.kind === 'counted'
+                ? t('landing_pages.section_source', {
+                  count: status.count,
+                  source: status.source,
+                  defaultValue: '{{count}} from {{source}}',
+                })
+                : status.kind === 'source' ? status.source
+                  : status.kind === 'own_photos'
+                    ? t('landing_pages.editor.section_own_photos', 'Photos you add here')
+                    : t('landing_pages.editor.section_own_words', 'Words you write here')
+
+  // A quiet line, not a warning: a fixed place is the design working as
+  // drawn, and this is the answer to "where did my arrows go".
+  const placementNote = placement === null
+    ? null
+    : t(`landing_pages.editor.placement_${placement}`, PLACEMENT_FALLBACK[placement])
+
   const stopDrag = () => setArmed(false)
 
   const onHandleKeyDown = (e: React.KeyboardEvent) => {
@@ -1738,161 +2291,171 @@ function SectionRow({
         // card would accept a file dropped from the desktop, and preventing
         // the default on that is what turns a stray drop into a silent
         // nothing instead of the browser opening the file.
-        if (!dragActive) return
+        //
+        // 2.6: and only onto a row whose POSITION means something. A block
+        // this design pins is drawn where the author put it whatever its
+        // `sort` says, so "drop it here" would name a place that does not
+        // exist — the same reason the row has no handle and no arrows.
+        if (!dragActive || !reorderable) return
         e.preventDefault()
         e.dataTransfer.dropEffect = 'move'
         onDragOverRow()
       }}
       onDrop={e => {
-        if (!dragActive) return
+        if (!dragActive || !reorderable) return
         e.preventDefault()
         onDropRow()
       }}
-      className={card + ' space-y-4 transition-[opacity,box-shadow] motion-reduce:transition-none '
+      className={card + ' space-y-3 transition-[opacity,box-shadow] motion-reduce:transition-none '
         + (dragging ? 'opacity-40 ' : '')
         + (dropTarget ? 'ring-2 ring-primary-500/70 ' : '')}
     >
       {/*
-        THE ROW HEADER, restyled (the "activate and trash icons not looks
-        good" round). What was here: a 15px grip and two 15px chevrons
-        stacked in an unsized column against the card's left edge, and — at
-        the far right — a brand-coloured pill switch pressed up against a
-        borderless 13px trash glyph. Four controls, four different sizes,
-        two of them with no hit target beyond the glyph itself, and the only
-        splash of colour on the whole card spent on "this section is on".
+        THE ROW HEADER. Since template fidelity 2.2 it is also the whole
+        card most of the time — the body is closed by default — so it has to
+        answer, at a glance, four questions a tenant would otherwise open the
+        card to find out: what band is this, what does it look like on THIS
+        design (the thumbnail), where does its content come from (the badge),
+        and is anything the matter with it (the one status line).
 
-        What it is now, and why:
-          - ONE handle on the left, where a drag affordance belongs, at the
-            same 32px square every other control on the row uses.
-          - The two reorder chevrons and the enable switch GROUPED in a
-            single bordered pill on the right: they are the three things a
-            tenant does to a section that already exists, and they now read
-            as one set rather than as three separate accidents.
-          - The remove button OUTSIDE that group, with air around it. It is
+        Left to right, and each position is an argument:
+          - the DRAG HANDLE, where a drag affordance belongs, and only on a
+            row a move would actually move (2.6);
+          - the DISCLOSURE — chevron, thumbnail, name, badge, status — as ONE
+            control, because the thing a tenant reaches for is the name of
+            the section, not a 14px glyph beside it;
+          - the two reorder ARROWS and the enable switch grouped in a single
+            bordered pill: the three things you do to a section that already
+            exists. Arrows rather than the chevrons this used to draw, now
+            that the card's own disclosure is a chevron;
+          - the REMOVE button outside that group, with air around it. It is
             the one action here that cannot be undone, so it is deliberately
             not adjacent to the switch a tenant presses casually.
-          - Every control 32px, every glyph 14px, every one of them with a
-            visible focus ring and an accessible name.
+
+        Every control 32px, every glyph 14px, every one of them with a
+        visible focus ring and an accessible name.
       */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 min-w-0">
-          <button
-            type="button"
-            // Not `draggable` itself — the CARD is what gets dragged, and
-            // this only arms it. Dragging the handle alone would carry a
-            // 14px icon across the screen instead of the section.
-            onPointerDown={() => setArmed(true)}
-            onPointerUp={stopDrag}
-            onKeyDown={onHandleKeyDown}
-            onBlur={stopDrag}
-            aria-describedby="lp-reorder-help"
-            aria-label={t('landing_pages.editor.reorder_handle', {
-              label: displayLabel,
-              position: index + 1,
-              total,
-              defaultValue: 'Move {{label}} — position {{position}} of {{total}}',
-            })}
-            className={iconBtn + ' cursor-grab active:cursor-grabbing'}
-          >
-            <GripVertical size={ROW_ICON} />
-          </button>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0 flex-1">
+          {/*
+            TEMPLATE FIDELITY 2.6 — the handle exists only where a move
+            would do something. It is withdrawn for a block this design
+            pins (the layout draws it where the author put it, whatever
+            `sort` says) and for every row while a filter is active (the
+            list on screen is not the whole page). `placementNote` and the
+            filter's own sentence are the two explanations; a control that
+            cannot act is not rendered.
+          */}
+          {reorderable && (
+            <button
+              type="button"
+              // Not `draggable` itself — the CARD is what gets dragged, and
+              // this only arms it. Dragging the handle alone would carry a
+              // 14px icon across the screen instead of the section.
+              onPointerDown={() => setArmed(true)}
+              onPointerUp={stopDrag}
+              onKeyDown={onHandleKeyDown}
+              onBlur={stopDrag}
+              aria-describedby="lp-reorder-help"
+              aria-label={t('landing_pages.editor.reorder_handle', {
+                label: displayLabel,
+                position: index + 1,
+                total,
+                defaultValue: 'Move {{label}} — position {{position}} of {{total}}',
+              })}
+              className={iconBtn + ' cursor-grab active:cursor-grabbing'}
+            >
+              <GripVertical size={ROW_ICON} />
+            </button>
+          )}
 
-          <div className="min-w-0 pt-1.5">
-            <span className="block text-sm font-medium text-white">{displayLabel}</span>
-            {!row.fixed ? (
-              /* A tenant-added band, whose one honest thing to say is
-                 whether it will actually appear. `PageContent::count()`
-                 publishes a text band only once its BODY is filled — an
-                 eyebrow, a heading or a photo over blank space is a
-                 fragment, not a section — so a tenant who adds a block,
-                 uploads a photo and sees the preview not change has to be
-                 told why here, or they never find out at all.
+          {/*
+            TEMPLATE FIDELITY 2.2 — THE CARD IS A DISCLOSURE.
 
-                 A GALLERY's answer is the other one: it is its pictures, so
-                 words are exactly what will NOT make it appear, and telling
-                 a tenant to write some would send them the wrong way. Which
-                 sentence applies is `row.writtenBy` — count()'s two arms,
-                 named on the row rather than re-derived from the type id
-                 here. */
-              <span className={'block text-xs mt-0.5 '
-                + (row.available ? 'text-t-secondary' : 'text-t-secondary/80 leading-relaxed')}>
-                {row.available
-                  ? (row.writtenBy === 'photos'
-                    ? t('landing_pages.editor.section_own_photos', 'Photos you add here')
-                    : t('landing_pages.editor.section_own_words', 'Words you write here'))
-                  : (row.writtenBy === 'photos'
-                    ? t(
-                      'landing_pages.editor.section_needs_photos',
-                      'No photos yet — this block appears on your page once you add one.',
-                    )
-                    : t(
-                      'landing_pages.editor.section_needs_words',
-                      'Nothing written yet — this block appears on your page once you add some words.',
-                    ))}
-              </span>
-            ) : offerable ? (
-              <span className="block text-xs text-t-secondary mt-0.5">
-                {/* Task 11 — same rule as LandingWizard's step 4, and for
-                    the same reason: a count is only meaningful for a
-                    section backed by rows elsewhere in the product. See
-                    that file's comment at the identical call site. */}
-                {isDataBackedSection(row.key)
-                  ? t('landing_pages.section_source', {
-                    count: row.count,
-                    source: row.sourceLabel,
-                    defaultValue: '{{count}} from {{source}}',
-                  })
-                  : row.sourceLabel}
-              </span>
-            ) : (
-              <span className="block text-xs text-t-secondary/80 mt-0.5 leading-relaxed">
-                {/* Fix 2 (phase 3a correctness review) — same preference as
-                    the wizard's identical step 4 branch: the backend's own
-                    authored reason, when it sent one, beats the generic
-                    invitation.
+            One control over the whole name/thumbnail/status block rather
+            than a lone chevron: the thing a tenant reaches for is the name
+            of the section they want to edit, and asking them to hit a 14px
+            glyph beside it instead would be the opposite of the point. The
+            chevron rides inside it, at the left, where a disclosure
+            triangle belongs and where it cannot be confused with the two
+            reorder arrows at the far end of the row.
 
-                    Landing phase 3c (the industry step's own fix round):
-                    the amber `warning` colour this line used to carry, and
-                    the greyed-out dead switch beside it, are this product's
-                    grammar for "something is wrong" — and a section the
-                    tenant simply has not filled in yet is not wrong. Same
-                    quiet treatment and same wording as the wizard's step 4,
-                    because the two screens must not describe the same
-                    section differently (RULING 4's own discipline, applied
-                    to the presentation rather than the predicate). */}
-                {unavailableReason(row, t('landing_pages.editor.section_pending', {
-                  source: row.sourceLabel,
-                  defaultValue: 'Add this from {{source}} whenever you are ready — it appears on your page as soon as you do.',
-                }))}
-              </span>
-            )}
-          </div>
+            A row with nothing behind it (a band that cannot be switched on,
+            or a type whose catalogue entry declares no fields) renders the
+            same markup as plain text — no button, no chevron, no promise.
+          */}
+          {expandable ? (
+            <button
+              type="button"
+              onClick={onToggleExpanded}
+              aria-expanded={isOpen}
+              aria-controls={bodyId}
+              className={'flex items-start gap-3 min-w-0 flex-1 text-left rounded-lg -my-1 py-1 px-1.5 -mx-1.5 outline-none '
+                + 'transition-colors motion-reduce:transition-none hover:bg-dark-surface3/50 '
+                + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
+            >
+              <ChevronDown
+                size={ROW_ICON}
+                aria-hidden
+                className={'shrink-0 mt-1.5 text-t-secondary transition-transform motion-reduce:transition-none '
+                  + (isOpen ? '' : '-rotate-90')}
+              />
+              <SectionThumb url={thumbUrl} size="row" />
+              <RowHeading
+                label={displayLabel}
+                group={group}
+                status={status.kind}
+                statusLine={statusLine}
+                placementNote={placementNote}
+              />
+            </button>
+          ) : (
+            <div className="flex items-start gap-3 min-w-0 flex-1 pl-[26px]">
+              <SectionThumb url={thumbUrl} size="row" />
+              <RowHeading
+                label={displayLabel}
+                group={group}
+                status={status.kind}
+                statusLine={statusLine}
+                placementNote={placementNote}
+              />
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
           {/* Reorder + enable, in one container: the three things you do to
-              a section that is already on the page. */}
+              a section that is already on the page. ARROWS rather than the
+              chevrons this used to draw — the card's own disclosure is a
+              chevron now, and two glyphs that differ only in position is
+              how a tenant collapses a card while trying to move it. It also
+              matches the help sentence above the list, which has always
+              said "or use the arrows". */}
           <div className="flex items-center gap-0.5 rounded-lg border border-dark-border bg-dark-bg/60 p-0.5">
-            <button
-              type="button"
-              disabled={isFirst}
-              onClick={() => onMove('up', displayLabel)}
-              aria-label={t('landing_pages.editor.move_up', 'Move up')}
-              className={iconBtn}
-            >
-              <ChevronUp size={ROW_ICON} />
-            </button>
-            <button
-              type="button"
-              disabled={isLast}
-              onClick={() => onMove('down', displayLabel)}
-              aria-label={t('landing_pages.editor.move_down', 'Move down')}
-              className={iconBtn}
-            >
-              <ChevronDown size={ROW_ICON} />
-            </button>
+            {reorderable && (
+              <>
+                <button
+                  type="button"
+                  disabled={isFirst}
+                  onClick={() => onMove('up', displayLabel)}
+                  aria-label={t('landing_pages.editor.move_up', 'Move up')}
+                  className={iconBtn}
+                >
+                  <ArrowUp size={ROW_ICON} />
+                </button>
+                <button
+                  type="button"
+                  disabled={isLast}
+                  onClick={() => onMove('down', displayLabel)}
+                  aria-label={t('landing_pages.editor.move_down', 'Move down')}
+                  className={iconBtn}
+                >
+                  <ArrowDown size={ROW_ICON} />
+                </button>
 
-            <span aria-hidden className="mx-1 h-4 w-px bg-dark-border" />
+                <span aria-hidden className="mx-1 h-4 w-px bg-dark-border" />
+              </>
+            )}
 
             {offerable ? (
               <button
@@ -1969,11 +2532,23 @@ function SectionRow({
         </div>
       </div>
 
-      {/* `pl-11`, not `pl-7`: the body indents to sit under the row's LABEL,
-          and the label moved right when the reorder chevrons left the left
-          edge for the group on the right (32px handle + a 12px gap). */}
-      {offerable && (
-        <div className="space-y-3 pl-11">
+      {/*
+        THE BODY, BEHIND THE HEADER SINCE 2.2.
+
+        This is the change the whole phase turns on. Every one of these
+        cards used to be open at once — roughly a hundred controls down one
+        four-thousand-pixel column, before Phases 3–5 add another forty-five
+        fields and three photo slots. Closed by default, one open at a time,
+        the same page is a list a tenant can read and the growth is absorbed
+        instead of compounding.
+
+        `id`/`aria-controls`/`aria-expanded` are the accessible half: the
+        header says what it controls and what state it is in, and the body
+        is genuinely unmounted rather than hidden, so nothing inside a
+        closed card is in the tab order.
+      */}
+      {isOpen && (
+        <div id={bodyId} className="space-y-3 border-t border-dark-border/60 pt-3">
           {/*
             THE COLOUR OF THIS BAND.
 
@@ -2158,11 +2733,16 @@ function SectionRow({
  * name the real number, interpolated from the served cap — see
  * `addableTypes`, which decides which of the two applies.
  */
-function AddSectionCard({ types, adding, onAdd }: {
+function AddSectionCard({ types, adding, onAdd, templateKey }: {
   types: AddableType[]
   /** The type id currently in flight, or null. */
   adding: string | null
   onAdd: (type: string) => void
+  /** 2.4: which design's wireframes to show beside each choice. The block a
+   *  tenant is picking looks different on each template, and the name alone
+   *  ("Photo gallery") does not say which stripe of the page they are about
+   *  to add. Interpolated into a URL, never compared. */
+  templateKey: string
 }) {
   const { t } = useTranslation()
 
@@ -2209,24 +2789,31 @@ function AddSectionCard({ types, adding, onAdd }: {
               : null
 
           return (
-            <div key={type.id}>
-              <button
-                type="button"
-                disabled={reason !== null || adding !== null}
-                onClick={() => onAdd(type.id)}
-                className={btnSec + ' w-full !py-2.5'}
-              >
-                <Plus size={14} />
-                {adding === type.id
-                  ? t('landing_pages.editor.add_section_working', 'Adding…')
-                  : t('landing_pages.editor.add_section_named', { name, defaultValue: 'Add a {{name}}' })}
-              </button>
-              <p className={'text-xs mt-1 ' + (reason ? 'text-t-secondary/80 leading-relaxed' : 'text-t-secondary')}>
-                {reason ?? t(
-                  `landing_pages.editor.section_type_blurb_${type.id}`,
-                  TYPE_BLURB_FALLBACK[type.id] ?? '',
-                )}
-              </p>
+            /* 2.4: the wireframe beside the words, at the larger of the two
+               sizes — this is the moment a tenant is CHOOSING a band, so
+               the picture is doing more work here than in the row header
+               where the choice has already been made. */
+            <div key={type.id} className="flex items-start gap-3">
+              <SectionThumb url={sectionThumbUrl(templateKey, type.id)} size="picker" />
+              <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  disabled={reason !== null || adding !== null}
+                  onClick={() => onAdd(type.id)}
+                  className={btnSec + ' w-full !py-2.5'}
+                >
+                  <Plus size={14} />
+                  {adding === type.id
+                    ? t('landing_pages.editor.add_section_working', 'Adding…')
+                    : t('landing_pages.editor.add_section_named', { name, defaultValue: 'Add a {{name}}' })}
+                </button>
+                <p className={'text-xs mt-1 ' + (reason ? 'text-t-secondary/80 leading-relaxed' : 'text-t-secondary')}>
+                  {reason ?? t(
+                    `landing_pages.editor.section_type_blurb_${type.id}`,
+                    TYPE_BLURB_FALLBACK[type.id] ?? '',
+                  )}
+                </p>
+              </div>
             </div>
           )
         })}

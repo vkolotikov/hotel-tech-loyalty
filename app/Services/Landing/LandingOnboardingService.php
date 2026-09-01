@@ -99,6 +99,12 @@ class LandingOnboardingService
                 'tones'        => true,
                 'brand_color'  => true,
             ],
+            // NOTHING IS FURNITURE HERE. ruled_page's layout renders every
+            // band straight out of $renderedSections, in the tenant's own
+            // `sort` order and nowhere else — grep it for `$furniture` and
+            // there is none. So every row on this design really can be
+            // moved, and the reorder controls tell the truth as they stand.
+            'fixed_blocks' => [],
         ],
         [
             // The first of the three BeautyTech kits
@@ -134,6 +140,40 @@ class LandingOnboardingService
                 'tones'        => false,
                 'brand_color'  => true,
             ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php, and the sentence above it — "announcement
+            // sits above the header, contact and the review link live inside
+            // the footer hub, and trust and faq have fixed places in the
+            // sequence (under the hero, over the booking panel)".
+            //
+            // Serving it matters because five of this page's rows carry live
+            // drag handles and up/down arrows that move NOTHING: the layout
+            // rejects these keys out of $mainSections and draws them where
+            // the author put them. That is a control that cannot act, which
+            // this project's own rule says must not be rendered — and the
+            // editor cannot apply that rule against a fact it has no way to
+            // read. (Nor may it be spelled as `if (templateKey === …)` on
+            // the far side of the wire: that is the second-source-of-truth
+            // failure the whole template-fidelity plan exists to remove.)
+            //
+            // The VALUE is where the block ends up, from a three-word
+            // vocabulary the editor translates — never authored English on
+            // the wire. `contact` is here although this kit ships no
+            // contact.blade.php: its details are printed inside the footer
+            // hub (footer.blade.php's `data-block="contact"` address), so
+            // "this design does not show this block" would be a lie about
+            // it, and "shown in your footer" is the truth.
+            //
+            // Pinned against the layout's own literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
         ],
     ];
 
@@ -151,6 +191,28 @@ class LandingOnboardingService
      * @var list<string>
      */
     private const SUPPORT_KEYS = ['palette', 'font_pairing', 'tones', 'brand_color'];
+
+    /**
+     * WHERE a block a template pins ends up, as a three-word vocabulary
+     * rather than a sentence.
+     *
+     * The editor prints one translated line per value ("Shown in your
+     * footer on this design."), so the wire carries the placement and not
+     * the prose — the same split every other tenant-facing string on this
+     * response follows except the two template blurbs, which are authored
+     * marketing copy and say so.
+     *
+     *  - `top`    — above everything, before the header.
+     *  - `footer` — inside the footer, whatever else the page does.
+     *  - `fixed`  — somewhere the design chose, in the middle of the page.
+     *
+     * A value outside this list is dropped by {@see fixedBlocksFor()}: an
+     * unknown placement would reach the editor as a blank line where an
+     * explanation should be.
+     *
+     * @var list<string>
+     */
+    private const PLACEMENTS = ['top', 'fixed', 'footer'];
 
     /**
      * What each section is called, and where its content comes from, in
@@ -207,27 +269,67 @@ class LandingOnboardingService
 
     /**
      * The template registry as the wizard and the editor consume it: every
-     * authored row, plus the two CAPABILITY facts a screen needs in order
+     * authored row, plus the three CAPABILITY facts a screen needs in order
      * to stop offering a control the chosen design cannot honour.
      *
      * `supports` is the authored half, normalised so every row answers all
      * four questions (see {@see SUPPORT_KEYS}). `renders` is the derived
      * half — which of the catalogue's section types this template ships a
-     * partial for.
+     * partial for. `fixed_blocks` (template fidelity 2.6) is the third:
+     * which of the blocks it DOES draw it draws in a place of its own,
+     * where the tenant's reorder controls have no say.
      *
-     * Both ride the SAME response `templates` already rode, rather than a
-     * new endpoint, because they are facts ABOUT the rows already on it and
-     * a screen that has the row must not have to make a second request to
-     * find out whether the row's design can draw what it is about to offer.
+     * All three ride the SAME response `templates` already rode, rather
+     * than a new endpoint, because they are facts ABOUT the rows already on
+     * it and a screen that has the row must not have to make a second
+     * request to find out whether the row's design can draw what it is
+     * about to offer.
      *
      * @return list<array<string, mixed>>
      */
     public static function templates(): array
     {
         return array_map(fn (array $row): array => array_merge($row, [
-            'supports' => self::supportsFor($row),
-            'renders'  => self::rendersFor($row['key']),
+            'supports'     => self::supportsFor($row),
+            'renders'      => self::rendersFor($row['key']),
+            'fixed_blocks' => self::fixedBlocksFor($row),
         ]), self::TEMPLATES);
+    }
+
+    /**
+     * Which of a template's blocks it draws in a place of its own choosing,
+     * and where — the third capability fact, beside `supports` and
+     * `renders`.
+     *
+     * Normalised rather than passed through: a key the catalogue does not
+     * know, or a placement outside {@see PLACEMENTS}, is dropped. Both would
+     * otherwise reach the editor as a control silently withheld from a row
+     * with no sentence to explain it, which is worse than the dead arrows
+     * this fact exists to remove.
+     *
+     * @param  array<string, mixed> $row
+     * @return array<string, string>
+     */
+    private static function fixedBlocksFor(array $row): array
+    {
+        $authored = is_array($row['fixed_blocks'] ?? null) ? $row['fixed_blocks'] : [];
+        $ids      = SectionType::ids();
+
+        $out = [];
+
+        foreach ($authored as $key => $placement) {
+            if (! is_string($key) || ! in_array($key, $ids, true)) {
+                continue;
+            }
+
+            if (! is_string($placement) || ! in_array($placement, self::PLACEMENTS, true)) {
+                continue;
+            }
+
+            $out[$key] = $placement;
+        }
+
+        return $out;
     }
 
     /**

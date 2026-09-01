@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   catalogPayload, industryHasChanged, resolveTemplateKey, showTemplatePicker, templateCards,
-  templateRenders, templateSupports,
+  templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
 import type { IndustryOption } from './industryChoices'
@@ -277,5 +277,76 @@ describe('templateRenders', () => {
       { key: 'k', name: 'K', blurb: '', renders: ['hero', 7 as unknown as string, 'about'] },
     ]
     expect(templateRenders(hostile, 'k')).toEqual(['hero', 'about'])
+  })
+})
+
+describe('templateFixedBlocks', () => {
+  const WITH_FIXED: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', fixed_blocks: {} },
+    {
+      key: 'nocturne_ritual',
+      name: 'Nocturne Ritual',
+      blurb: '',
+      fixed_blocks: { announcement: 'top', trust: 'fixed', faq: 'fixed', contact: 'footer', footer: 'footer' },
+    },
+  ]
+
+  it('carries the served map through', () => {
+    expect(templateFixedBlocks(WITH_FIXED, 'nocturne_ritual').contact).toBe('footer')
+    expect(templateFixedBlocks(WITH_FIXED, 'nocturne_ritual').announcement).toBe('top')
+  })
+
+  /**
+   * UNLIKE `templateRenders`, THE TWO EMPTY CASES ARE ONE ANSWER HERE, and
+   * that difference is deliberate. "This design pins nothing" (ruled_page,
+   * whose layout has no `$furniture` at all) and "this build was not told"
+   * (an older backend) both end in the editor suppressing no controls —
+   * which is the behaviour that build already had. `renders` needs the
+   * distinction because its two answers differ; this one does not.
+   */
+  it('reads an absent map and an empty one the same way — nothing is pinned', () => {
+    expect(templateFixedBlocks(WITH_FIXED, 'ruled_page')).toEqual({})
+    expect(templateFixedBlocks(TWO_TEMPLATES, 'ruled_page')).toEqual({})
+    expect(templateFixedBlocks(WITH_FIXED, 'nobody')).toEqual({})
+  })
+
+  it('drops a non-string placement rather than handing one on', () => {
+    const hostile: TemplateOption[] = [
+      { key: 'k', name: 'K', blurb: '', fixed_blocks: { a: 'top', b: 7 as unknown as string, c: '' } },
+    ]
+    expect(templateFixedBlocks(hostile, 'k')).toEqual({ a: 'top' })
+  })
+})
+
+describe('templatesDrawing', () => {
+  const THREE: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text', 'contact'] },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', renders: ['hero', 'trust'] },
+    { key: 'wide_gallery', name: 'The Wide Gallery', blurb: '', renders: ['hero', 'text'] },
+  ]
+
+  /**
+   * The way out named on a row this design will not draw. Off the served
+   * `renders` for every row, so a third template appears in that sentence
+   * with no edit on this side of the wire.
+   */
+  it('names the other designs that would draw the block', () => {
+    expect(templatesDrawing(THREE, 'text', 'nocturne_ritual').map(o => o.name))
+      .toEqual(['The Ruled Page', 'The Wide Gallery'])
+  })
+
+  it('never names the design the tenant is already on', () => {
+    expect(templatesDrawing(THREE, 'hero', 'ruled_page').map(o => o.key))
+      .toEqual(['nocturne_ritual', 'wide_gallery'])
+  })
+
+  it('is empty when nothing else draws it, so the sentence can say so', () => {
+    expect(templatesDrawing(THREE, 'faq', 'nocturne_ritual')).toEqual([])
+  })
+
+  // A template that has not claimed it draws anything is not a way out:
+  // sending somebody there could drop the block too.
+  it('does not name a template that published no renders list', () => {
+    expect(templatesDrawing(TWO_TEMPLATES, 'hero', 'ruled_page')).toEqual([])
   })
 })
