@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import fs from 'node:fs'
 import path from 'node:path'
+// Template fidelity 5.x: the field-label net below asks these two the same
+// question the editor's label site asks — which key does this leaf read —
+// rather than re-deriving the collapse rules a second time here.
+import { fieldHintKey, fieldLabelKey } from '../pages/landing/editorSections'
 
 /**
  * Task 5's locale-sweep net.
@@ -444,6 +448,42 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_a5',
     'landing_pages.editor.field_q6',
     'landing_pages.editor.field_a6',
+
+    // ─── Template fidelity 5.x ─────────────────────────────────────────
+    //
+    // The keys below are FAMILY keys, not leaf names — see `fieldLabelKey`,
+    // which is what the label site reads. `headline_accent`,
+    // `heading_accent` and `lead_accent` are one control on nine types;
+    // `fact_1..3`, `promise_1..3` and `feature_1..4_caption` are numbered
+    // inputs under one heading. One sentence each, translated once, exactly
+    // as `caption` already covers a gallery's eight `caption_N` leaves.
+
+    // 5.1 / R6 — the companion leaf beside every two-tone heading, plus the
+    // note that tells a tenant where the words land BEFORE they type them
+    // (the ruling's own named mitigation for a one-way split).
+    'landing_pages.editor.field_accent',
+    'landing_pages.editor.field_hint_accent',
+    // 5.2 — hero's three fact terms, the row chips, the story ledger and
+    // the closing panel's promises.
+    'landing_pages.editor.field_hours_label',
+    'landing_pages.editor.field_rating_label',
+    'landing_pages.editor.field_city_label',
+    'landing_pages.editor.field_item_cta_label',
+    'landing_pages.editor.field_fact',
+    'landing_pages.editor.field_promise',
+    // 5.4 — the second line of a trust highlight.
+    'landing_pages.editor.field_feature_caption',
+    // 5.5 — the footer hub: the lockup's descriptor, the Follow column and
+    // the legal line. The three platform keys are NOT collapsed into one,
+    // because "Instagram address" and "TikTok address" are different
+    // sentences naming different services.
+    'landing_pages.editor.field_descriptor',
+    'landing_pages.editor.field_social_label',
+    'landing_pages.editor.field_social_instagram',
+    'landing_pages.editor.field_social_facebook',
+    'landing_pages.editor.field_social_tiktok',
+    'landing_pages.editor.field_hint_social',
+    'landing_pages.editor.field_legal_note',
   ]
 
   /**
@@ -468,7 +508,57 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
       expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_a${n}`)
     }
 
+    // SectionType::MAX_TRUST_FEATURES columns, and the caption family that
+    // covers the second line of every one of them (template fidelity 5.4).
+    for (let n = 1; n <= 4; n++) {
+      expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_feature_${n}`)
+    }
+    expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_feature_caption')
+
+    // SectionType::SOCIAL_PLATFORMS, one key each — these are the one 5.x
+    // family deliberately NOT collapsed, so the list has to name all of
+    // them (template fidelity 5.5).
+    for (const platform of ['instagram', 'facebook', 'tiktok']) {
+      expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_social_${platform}`)
+    }
+
     expect(new Set(FIELD_LABEL_KEYS).size).toBe(FIELD_LABEL_KEYS.length)
+  })
+
+  /**
+   * Template fidelity 5.x: the collapsed families are only honest if the
+   * function that collapses them agrees with the list above. A leaf whose
+   * family key is missing here renders its RAW LEAF NAME — `heading_accent`
+   * over an input a salon owner is asked to fill in — which is the exact
+   * failure 1.4 was written to stop, arriving by a new door.
+   *
+   * Every leaf spelled here is one the catalogue publishes today.
+   */
+  it('labels every collapsed field family, not only the leaves that name themselves', () => {
+    const leaves = [
+      'headline_accent', 'heading_accent', 'lead_accent',
+      'fact_1', 'fact_2', 'fact_3',
+      'promise_1', 'promise_2', 'promise_3',
+      'feature_1_caption', 'feature_2_caption', 'feature_3_caption', 'feature_4_caption',
+      'caption_1', 'caption_8',
+      'hours_label', 'rating_label', 'city_label', 'item_cta_label',
+      'descriptor', 'social_label', 'legal_note',
+      'social_instagram', 'social_facebook', 'social_tiktok',
+    ]
+
+    const missing = leaves.filter(
+      leaf => !FIELD_LABEL_KEYS.includes(`landing_pages.editor.field_${fieldLabelKey(leaf)}`),
+    )
+
+    expect(missing, `no label key for: ${missing.join(', ') || '(none)'}`).toEqual([])
+
+    // And every hinted family has its sentence.
+    for (const leaf of leaves) {
+      const hint = fieldHintKey(leaf)
+      if (hint !== null) {
+        expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_hint_${hint}`)
+      }
+    }
   })
 
   for (const locale of LOCALES) {

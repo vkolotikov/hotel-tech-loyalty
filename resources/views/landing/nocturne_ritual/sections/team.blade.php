@@ -37,6 +37,8 @@
   author declared — see this task's report.
 --}}
 @php
+    use App\Landing\Copy;
+
     // The band's own photograph — the tenant's upload, else the design's
     // group shot. One allowlisted read, the same three guards every other
     // picture on this page goes through.
@@ -55,6 +57,12 @@
     $photo    = $groupPhoto ?? $portrait?->avatar;
     $photoAlt = $portrait !== null ? $portrait->name : $content->imageAlt('team');
     $caption  = $content->imageCaption('team');
+
+    // Same ruling as the services menu's row chip: `__('Book')` stays the
+    // default and is what kit 01 writes, but the words belong to the tenant
+    // (template fidelity 5.2).
+    $rowCtaLabel = trim((string) ($copy['item_cta_label'] ?? ''));
+    $rowCtaLabel = $rowCtaLabel !== '' ? $rowCtaLabel : __('Book');
 @endphp
     <section class="section section--paper team" id="team" data-block="team" data-variant="feature-and-list">
       <div @class(['shell', 'team__grid', 'team__grid--solo' => $photo === null])>
@@ -76,7 +84,7 @@
 @endif
         <div class="team__content">
           <p class="eyebrow eyebrow--ink">{{ $copy['kicker'] ?? $profile->kicker('team') }}</p>
-          <h2>{{ $copy['heading'] ?? $profile->peopleLabel }}</h2>
+          <h2>{{ Copy::heading($copy['heading'] ?? $profile->peopleLabel, $copy['heading_accent'] ?? null) }}</h2>
 @if (filled($copy['subtext'] ?? null))
           <p class="team__lead">{{ $copy['subtext'] }}</p>
 @endif
@@ -98,7 +106,7 @@
             <article data-item-id="{{ $member->id }}">
               <div><h3>{{ $member->name }}</h3>@if ($role !== '')<p>{{ $role }}</p>@endif</div>
 @if ($bookingHref !== null)
-              <a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ __('Book') }}</a>
+              <a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ $rowCtaLabel }}</a>
 @endif
             </article>
 @endforeach

@@ -22,12 +22,18 @@
     - the contact column on the same two-part gate the rest of the page uses,
       the section row enabled AND has('contact'), so a tenant who switched
       their contact details off does not find them republished down here.
-    - the SOCIAL column is not rendered at all, and that is not an omission
-      this file can fix: this platform holds no social destinations for a
-      business anywhere in its data model. The author's own note says to
-      "replace all fictional social destinations before publishing", and
-      three icons linking to `#` would be exactly the fictional destinations
-      that note is about. Recorded in this task's report.
+    - the SOCIAL column only where the business has actually named a
+      destination (template fidelity 5.5). The platform held none anywhere in
+      its data model — not on Property, not on Organization, not on
+      LandingPage — so this column was missing entirely; it is page content
+      now, on the CONTACT row, which is the block the author nests in this
+      hub. PageContent::socialLinks() is the one reader and its guard is the
+      strictest on that class (an explicit http(s) URL and nothing else),
+      because these are the only anchors on the page whose visible label is
+      a picture and whose destination a visitor cannot read. A blank leaf
+      renders NO icon: the author's own note says to "replace all fictional
+      social destinations before publishing", and this page never links to
+      `#`.
 
   THE HUB IS TOLD HOW MANY COLUMNS IT REALLY HAS. The author's five-column
   grid assumes all of them; `.footer-hub--1/2/3` (the stylesheet's appended
@@ -93,13 +99,30 @@
         }
     }
 
+    // THE FOLLOW COLUMN (template fidelity 5.5). Gated on the same two-part
+    // rule the contact channels are — the row enabled AND has('contact') —
+    // because these leaves live on the contact row and a tenant who switched
+    // their contact details off did not ask for their Instagram to stay.
+    $social = $showsContact ? $content->socialLinks('contact') : [];
+
+    $socialLabel = trim((string) ($contactCopy['social_label'] ?? ''));
+    $socialLabel = $socialLabel !== '' ? $socialLabel : __('Follow');
+
     $showsReview  = filled($feedbackUrl ?? null);
     $showsChannel = $dial !== null || $email !== null || $mapQuery !== '' || $todayHours !== null;
 
     // Content columns beside the always-present brand column: the review
-    // link and the contact details. The slot is not one of them — it is the
-    // reserved corner, and the grid template names it separately.
-    $hubColumns = 1 + ($showsReview ? 1 : 0) + ($showsChannel ? 1 : 0);
+    // link, the contact details and the social icons. The slot is not one of
+    // them — it is the reserved corner, and the grid template names it
+    // separately. FOUR is the author's own rule, unmodified: his
+    // `.footer-hub` is `brand + repeat(3, …) + widget`, which until this
+    // round nothing could ever reach.
+    $hubColumns = 1 + ($showsReview ? 1 : 0) + ($showsChannel ? 1 : 0) + ($social !== [] ? 1 : 0);
+
+    // The sentence after the copyright. The author writes one ("Fictional
+    // demonstration content."); the conversion printed the © line alone,
+    // because there was no leaf for it.
+    $legalNote = trim((string) ($contactCopy['legal_note'] ?? ''));
 
     // The legal line's chain falls one rung further than the wordmark's,
     // through to config('app.name'): in small print it names who serves the
@@ -171,6 +194,21 @@
       </address>
 @endif
 
+@if ($social !== [])
+      {{-- The author's own nav, icon for icon. Each anchor's accessible name
+           is the platform — the icon is aria-hidden and there is no visible
+           text — and rel="noopener" with target="_blank" because these are
+           the page's only outbound links to somewhere a tenant typed. --}}
+      <nav class="footer-hub__social" aria-label="{{ $socialLabel }}">
+        <p class="footer-hub__label">{{ $socialLabel }}</p>
+        <div>
+@foreach ($social as $link)
+          <a href="{{ $link['url'] }}" target="_blank" rel="noopener nofollow" data-social-platform="{{ $link['platform'] }}" aria-label="{{ $link['name'] }}">@include('landing.nocturne_ritual.icon', ['name' => $link['platform']])</a>
+@endforeach
+        </div>
+      </nav>
+@endif
+
       {{-- The mount point the author reserved. See the header note above:
            it keeps its footprint either way, and the launcher and its panel
            are the stylesheet's `.ai-launcher` / `.ai-panel`, fixed to the
@@ -210,6 +248,18 @@
       </div>
     </div>
     <div class="shell site-footer__bottom">
-      <p>&copy; {{ now()->year }} {{ $legalName }}</p>
+      {{-- THE LEGAL LINE. The author's is "© 2026 Nocturne Bathhouse.
+           Fictional demonstration content." — a registration or disclaimer
+           sentence after the copyright, which had no leaf and so was
+           dropped. The tenant writes it whole, punctuation and all, so this
+           joins with a full stop and prints nothing at all when there is
+           none.
+
+           WHAT IS STILL NOT HERE, deliberately: the author's "Privacy ·
+           Accessibility · Terms" links. This product has no such pages to
+           point at, and three labels pointing at `#top` are exactly the dead
+           controls the rest of this template refuses — see the phase 5
+           report. --}}
+      <p>&copy; {{ now()->year }} {{ $legalName }}@if ($legalNote !== ''). {{ $legalNote }}@endif</p>
     </div>
   </footer>

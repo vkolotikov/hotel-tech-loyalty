@@ -17,13 +17,29 @@
      featured subset, which would be a fabricated number. PageContent
      computes it over every rating the organisation holds.
 
+  THE BAND CAN NAME ITSELF NOW (template fidelity 5.2). `reviews.fields` was
+  `['kicker']` alone, so kit 03's "Kind words, left after the exhale." and
+  kit 02's "Recent studio feedback" had nowhere to live and this file had to
+  promote the EYEBROW into the <h2> — otherwise the band was a nav
+  destination with no heading in the document outline.
+
+  That promotion survives EXACTLY as the fallback, so a page with no heading
+  renders byte-for-byte what it rendered before. Where a heading IS written,
+  the header takes the author's own two-part shape: the eyebrow as the <p>
+  the author drew, the heading as the <h2>, both inside a wrapper so the
+  score keeps its place at the far end of his flex row.
+
   count() gates the band on the featured reviews, so a studio with none does
   not render this at all.
 --}}
 @php
+    use App\Landing\Copy;
     use Illuminate\Support\Str;
 
-    $stats = $content->reviewStats;
+    $stats   = $content->reviewStats;
+    $kicker  = trim((string) ($copy['kicker'] ?? $profile->kicker('reviews')));
+    $heading = trim((string) ($copy['heading'] ?? ''));
+    $subtext = trim((string) ($copy['subtext'] ?? ''));
 
     // The author's row is three cards wide — a featured one and two beside
     // it. Beyond that the band stops being a considered selection, and the
@@ -33,7 +49,27 @@
     <section class="section section--sand reviews" id="reviews" data-block="testimonials" data-variant="featured-and-cards">
       <div class="shell">
         <header @class(['reviews__header', 'reviews__header--solo' => $stats === null])>
-          <h2 class="eyebrow eyebrow--ink">{{ $copy['kicker'] ?? $profile->kicker('reviews') }}</h2>
+@if ($heading !== '' || $subtext !== '')
+          {{-- One wrapper, so the score stays at the far end of the author's
+               flex row however many lines the copy column has. --}}
+          <div>
+@if ($heading !== '')
+@if ($kicker !== '')
+            <p class="eyebrow eyebrow--ink">{{ $kicker }}</p>
+@endif
+            <h2>{{ Copy::heading($heading, $copy['heading_accent'] ?? null) }}</h2>
+@else
+            {{-- Still no heading: the eyebrow is this band's real heading,
+                 the same ruling the story band makes one file over. --}}
+            <h2 class="eyebrow eyebrow--ink">{{ $kicker }}</h2>
+@endif
+@if ($subtext !== '')
+            <p>{{ $subtext }}</p>
+@endif
+          </div>
+@else
+          <h2 class="eyebrow eyebrow--ink">{{ $kicker }}</h2>
+@endif
 @if ($stats !== null)
           <div class="reviews__score" role="img" aria-label="{{ trans_choice(
               '{1} Rated :score out of 5 from :count review|[2,*] Rated :score out of 5 from :count reviews',

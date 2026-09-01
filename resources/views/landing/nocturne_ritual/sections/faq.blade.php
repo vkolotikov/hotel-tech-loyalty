@@ -17,6 +17,8 @@
   which is every tenant on day one — gets no headed band over an empty list.
 --}}
 @php
+    use App\Landing\Copy;
+
     $pairs   = $content->faqPairs('faq');
     $kicker  = trim((string) ($copy['kicker'] ?? ''));
     $heading = trim((string) ($copy['heading'] ?? ''));
@@ -34,7 +36,13 @@
 @if ($kicker !== '' && $heading !== '')
           <p class="eyebrow eyebrow--ink">{{ $kicker }}</p>
 @endif
-          <h2 id="faq-title">{{ $title }}</h2>
+          {{-- The accent companion belongs to the tenant's HEADING and only
+               to it. `$title` falls back to the eyebrow, and then to this
+               band's default name, when no heading is written — appending
+               "…in your accent colour at the end of the heading" to a
+               fallback the tenant did not write would put the emphasis on
+               somebody else's words. --}}
+          <h2 id="faq-title">{{ $heading !== '' ? Copy::heading($heading, $copy['heading_accent'] ?? null) : Copy::heading($title) }}</h2>
 @if ($subtext !== '')
           <p>{{ $subtext }}</p>
 @endif

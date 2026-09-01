@@ -1096,4 +1096,162 @@ class PageContentTest extends TestCase
         $this->assertNotSame('', $photos[0]['alt']);
         $this->assertSame('', $photos[0]['caption']);
     }
+
+    // ─── Template fidelity 5.3 — data already on the record ───────────────
+    //
+    // Two readers with NO consumer on either shipped template, and that is
+    // deliberate rather than an oversight: kit 01's practitioner list is a
+    // name and a role, and its review card is a quote and an attribution.
+    // Rendering either on `nocturne_ritual` would be adding an element the
+    // author did not draw, which is the one thing this whole round is not
+    // allowed to do. They are here so the kits that DO draw them (kit 02's
+    // artist blurb, kit 03's per-card star row) are a partial edit rather
+    // than a partial reaching into a model — the same discipline every
+    // picture on the page already goes through.
+
+    public function test_a_practitioners_own_blurb_is_readable_and_bounded(): void
+    {
+        $member = ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Amara Cole', 'is_active' => true,
+            'bio' => '  Fifteen years of warm-oil bodywork, and a quiet room to do it in.  ',
+        ]);
+
+        $content = PageContent::for($this->page(1));
+
+        $this->assertSame(
+            'Fifteen years of warm-oil bodywork, and a quiet room to do it in.',
+            $content->memberBio($member),
+        );
+    }
+
+    public function test_a_blurb_long_enough_to_break_the_card_is_cut_on_a_word(): void
+    {
+        $member = ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Long', 'is_active' => true,
+            'bio' => str_repeat('warmth ', 60),
+        ]);
+
+        $bio = PageContent::for($this->page(1))->memberBio($member);
+
+        $this->assertLessThanOrEqual(181, mb_strlen($bio));
+        $this->assertStringEndsWith('…', $bio);
+        // Cut on a word boundary, never mid-word.
+        $this->assertStringNotContainsString('warmt…', $bio);
+    }
+
+    public function test_a_practitioner_with_no_blurb_reads_as_empty_never_null(): void
+    {
+        $member = ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Quiet', 'is_active' => true,
+        ]);
+
+        $this->assertSame('', PageContent::for($this->page(1))->memberBio($member));
+    }
+
+    public function test_a_reviews_own_star_count_is_an_integer_one_to_five_or_nothing(): void
+    {
+        $content = PageContent::for($this->page(1));
+
+        $five = ReviewSubmission::create([
+            'organization_id' => 1, 'overall_rating' => 5, 'comment' => 'Five', 'is_featured' => true,
+        ]);
+        $unrated = ReviewSubmission::create([
+            'organization_id' => 1, 'overall_rating' => null, 'comment' => 'None', 'is_featured' => true,
+        ]);
+
+        $this->assertSame(5, $content->reviewRating($five));
+        // Null means the row is omitted rather than drawn empty — the same
+        // silence reviewStats keeps below four ratings.
+        $this->assertNull($content->reviewRating($unrated));
+    }
+
+    public function test_a_rating_outside_the_scale_draws_no_stars_at_all(): void
+    {
+        $content = PageContent::for($this->page(1));
+
+        foreach ([0, 6, -1] as $bad) {
+            $review = new ReviewSubmission(['overall_rating' => $bad]);
+
+            $this->assertNull($content->reviewRating($review), "A rating of {$bad} must draw nothing.");
+        }
+    }
+
+    // ─── Template fidelity 5.4 / 5.5 ──────────────────────────────────────
+
+    public function test_a_flat_highlight_still_reads_as_a_pair_with_no_caption(): void
+    {
+        // The migration: `feature_N` is the leaf live pages already carry
+        // and it did not move.
+        $features = PageContent::for($this->pageWithContent([
+            'trust' => ['feature_1' => 'Private treatment rooms'],
+        ]))->trustFeatures('trust');
+
+        $this->assertSame([['value' => 'Private treatment rooms', 'caption' => '']], $features);
+    }
+
+    public function test_the_trust_strip_holds_four_columns_now_not_three(): void
+    {
+        $features = PageContent::for($this->pageWithContent([
+            'trust' => [
+                'feature_1' => 'One', 'feature_2' => 'Two', 'feature_3' => 'Three',
+                'feature_4' => '15 years', 'feature_4_caption' => 'Combined studio experience',
+                // Past the cap, and the cap is enumerated from the type's
+                // own leaves: a raw write cannot add a fifth column.
+                'feature_5' => 'Never rendered',
+            ],
+        ]))->trustFeatures('trust');
+
+        $this->assertCount(4, $features);
+        $this->assertSame(['value' => '15 years', 'caption' => 'Combined studio experience'], $features[3]);
+    }
+
+    public function test_social_links_are_read_in_the_designs_own_order_with_the_blanks_closed_up(): void
+    {
+        $links = PageContent::for($this->pageWithContent([
+            'contact' => [
+                'social_tiktok'    => 'https://tiktok.com/@n',
+                'social_instagram' => '  https://instagram.com/n  ',
+            ],
+        ]))->socialLinks('contact');
+
+        // Instagram first, because SectionType::SOCIAL_PLATFORMS is the
+        // author's order and not whatever order the row was written in.
+        $this->assertSame(
+            [
+                ['platform' => 'instagram', 'name' => 'Instagram', 'url' => 'https://instagram.com/n'],
+                ['platform' => 'tiktok', 'name' => 'TikTok', 'url' => 'https://tiktok.com/@n'],
+            ],
+            $links,
+        );
+    }
+
+    public function test_a_social_destination_that_is_not_an_explicit_http_url_is_refused(): void
+    {
+        $page = $this->page(1);
+
+        foreach ([
+            'javascript:alert(1)', '#social-gallery', '//instagram.com/n', 'instagram.com/n',
+            '/storage/x.webp', 'https://in stagram.com/n', '', '   ',
+            'https://' . str_repeat('a', 2100),
+        ] as $bad) {
+            $page->update(['content' => ['contact' => ['social_instagram' => $bad]]]);
+
+            $links = PageContent::for($page->fresh())->socialLinks('contact');
+
+            $this->assertSame([], $links, "A social destination of `{$bad}` must render no icon.");
+        }
+    }
+
+    public function test_a_nested_or_numeric_social_leaf_is_refused_rather_than_cast(): void
+    {
+        // `content` is a schemaless column and a raw write can put anything
+        // in it. (string) on an array is fatal, on a page that is public.
+        $page = $this->page(1);
+
+        foreach ([['https://x.test'], 42, true, null] as $bad) {
+            $page->update(['content' => ['contact' => ['social_facebook' => $bad]]]);
+
+            $this->assertSame([], PageContent::for($page->fresh())->socialLinks('contact'));
+        }
+    }
 }

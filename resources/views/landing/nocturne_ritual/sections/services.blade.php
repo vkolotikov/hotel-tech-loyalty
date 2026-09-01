@@ -39,16 +39,25 @@
   PageContent::serviceImage().
 --}}
 @php
+    use App\Landing\Copy;
     use Illuminate\Support\Str;
 
     $currencyFallback = $content->contact->currency;
+
+    // The wording on each row's booking chip. `__('Book')` was hardcoded
+    // here and is still the default — kit 01 writes exactly that — but kit
+    // 03 writes "Reserve this ritual" on the same control, and a chip whose
+    // words a tenant cannot change is a chip that reads as ours rather than
+    // as theirs (template fidelity 5.2).
+    $rowCtaLabel = trim((string) ($copy['item_cta_label'] ?? ''));
+    $rowCtaLabel = $rowCtaLabel !== '' ? $rowCtaLabel : __('Book');
 @endphp
     <section class="section section--dark service-menu" id="services" data-block="services" data-variant="editorial-list">
       <div class="shell">
         <header class="section-heading section-heading--split">
           <div>
             <p class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('services') }}</p>
-            <h2>{{ $copy['heading'] ?? $profile->servicesLabel }}</h2>
+            <h2>{{ Copy::heading($copy['heading'] ?? $profile->servicesLabel, $copy['heading_accent'] ?? null) }}</h2>
           </div>
 @if (filled($copy['subtext'] ?? null))
           <p>{{ $copy['subtext'] }}</p>
@@ -102,7 +111,7 @@
 @endif
             </div>
 @if ($bookingHref !== null)
-            <a class="service-row__action" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ __('Book') }} <span aria-hidden="true">↗</span></a>
+            <a class="service-row__action" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ $rowCtaLabel }} <span aria-hidden="true">↗</span></a>
 @endif
           </article>
 @endforeach

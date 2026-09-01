@@ -1058,6 +1058,75 @@ export const FIELD_PRESENTATION: Record<string, { multiline?: boolean; type?: st
   address: { maxLength: 191 },
 
   image_url: { type: 'image' },
+
+  // ─── Template fidelity 5.5 ────────────────────────────────────────────
+  //
+  // The footer hub's Follow column. `type: 'url'` because
+  // `PageContent::socialLinks()` accepts an explicit http(s) URL and NOTHING
+  // else — no bare domain promoted on the tenant's behalf, no
+  // protocol-relative form — and a tenant who types `instagram.com/us` would
+  // otherwise save happily and then find no icon on their page with nothing
+  // to tell them why. The browser's own hint is the cheapest possible
+  // version of that message; the server's guard is still the one that
+  // decides. `maxLength` mirrors the same reader's own bound.
+  social_instagram: { type: 'url', maxLength: 2048 },
+  social_facebook:  { type: 'url', maxLength: 2048 },
+  social_tiktok:    { type: 'url', maxLength: 2048 },
+}
+
+/**
+ * WHICH LOCALE KEY LABELS A FIELD — the field's own name, or its FAMILY's
+ * where a family is numbered and every member reads the same sentence.
+ *
+ * The precedent is already in the tree: a gallery's eight `caption_N` leaves
+ * are all labelled "Caption under the photo", because the control draws one
+ * input per tile and the sentence means the same thing beside every one of
+ * them; eight numbered keys would be eight translations of one string, in
+ * five locales, that can drift apart.
+ *
+ * Template fidelity 5.x adds four more such families. Collapsing them here
+ * rather than at the render site keeps ONE answer — `localeCompleteness`
+ * pins the collapsed keys, `FIELD_FALLBACK` is keyed by them, and the
+ * component reads this function — so a family cannot be labelled one way in
+ * the net and another on the screen.
+ *
+ * `*_accent` is the widest of them: `headline_accent`, `heading_accent` and
+ * `lead_accent` are the same control on nine different types, and "Words to
+ * highlight" is the same instruction beside all of them.
+ */
+export function fieldLabelKey(name: string): string {
+  if (name.endsWith('_accent')) return 'accent'
+  if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
+  if (/^caption_\d+$/.test(name)) return 'caption'
+  if (/^fact_\d+$/.test(name)) return 'fact'
+  if (/^promise_\d+$/.test(name)) return 'promise'
+
+  return name
+}
+
+/**
+ * The one-line note printed UNDER a field, or null for the great majority
+ * that need none.
+ *
+ * Two families have it, and both for the same reason: the control does
+ * something a tenant cannot infer from its label.
+ *
+ *  - an ACCENT leaf is not a second heading. R6's own risk register says
+ *    the split is one-way — a tenant who writes an accent that is not the
+ *    tail of their heading gets a heading that reads wrong — so the screen
+ *    says where the words land before they are typed, which is the
+ *    mitigation the ruling asks for by name.
+ *  - a SOCIAL leaf silently renders nothing unless it is a full web
+ *    address, and its consequence (an icon appears, or does not) is at the
+ *    bottom of a different page.
+ *
+ * Keyed by family exactly as `fieldLabelKey` is, and for the same reason.
+ */
+export function fieldHintKey(name: string): string | null {
+  if (name.endsWith('_accent')) return 'accent'
+  if (name.startsWith('social_') && name !== 'social_label') return 'social'
+
+  return null
 }
 
 /** The leaf every SINGLE-photo band stores its picture under —

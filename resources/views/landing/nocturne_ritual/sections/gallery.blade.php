@@ -37,25 +37,37 @@
   business never approved.
 --}}
 @php
+    use App\Landing\Copy;
+
     $fields  = is_array($copy) ? $copy : [];
 
     $kicker  = trim((string) ($fields['kicker'] ?? ''));
     $heading = trim((string) ($fields['heading'] ?? ''));
 
+    // The gallery intro both kit 02 and kit 03 write (template fidelity
+    // 5.2). It lands in the SECOND column of the author's own
+    // `.section-heading--split` — the same header his services band already
+    // fills exactly this way — so a tenant who writes one gets a composition
+    // he drew rather than one we added.
+    $subtext = trim((string) ($fields['subtext'] ?? ''));
+
     $photos  = $content->galleryPhotos($section->key);
 @endphp
     <section class="section section--dark gallery" id="{{ $section->key }}" data-block="gallery" data-variant="mosaic"@if ($heading !== '') aria-labelledby="{{ $section->key }}-title"@endif>
       <div class="shell">
-@if ($kicker !== '' || $heading !== '')
+@if ($kicker !== '' || $heading !== '' || $subtext !== '')
         <header class="section-heading section-heading--split">
           <div>
 @if ($kicker !== '')
             <p class="eyebrow">{{ $kicker }}</p>
 @endif
 @if ($heading !== '')
-            <h2 id="{{ $section->key }}-title">{{ $heading }}</h2>
+            <h2 id="{{ $section->key }}-title">{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
 @endif
           </div>
+@if ($subtext !== '')
+          <p>{{ $subtext }}</p>
+@endif
         </header>
 @endif
         <div class="gallery__grid" data-count="{{ count($photos) }}">
