@@ -112,6 +112,23 @@ export type TemplateOption = {
    */
   photo_blocks?: string[] | null
   /**
+   * WHICH OF EACH TYPE'S LEAVES THIS DESIGN ACTUALLY PRINTS — type id → the
+   * leaves it draws, `LandingOnboardingService::contentFieldsFor()`, template
+   * fidelity 5.x / the plan's open question §7.
+   *
+   * `photo_blocks` one level finer. A leaf belongs to a TYPE, which every
+   * template shares; a drawn leaf belongs to a PARTIAL, which they do not.
+   * Nocturne Ritual draws a two-tone heading companion, a story ledger and a
+   * footer social column that The Ruled Page draws nowhere; The Ruled Page
+   * draws four contact wording overrides the kits' icon-led footer has no
+   * room for. Offering either set on the other is a control that cannot act.
+   *
+   * Optional and null-tolerant for the same reason `renders` is: an older
+   * backend has declined nothing, and hiding fields on the strength of a key
+   * it never sent would be worse than the state that build shipped.
+   */
+  content_fields?: Record<string, string[]> | null
+  /**
    * THE DESIGN'S OWN PHOTOGRAPHS — slot → URL, template fidelity 4.1.
    *
    * The kit's photographs ship as the template's defaults and stay until a
@@ -227,6 +244,38 @@ export function templatePhotoBlocks(options: TemplateOption[], selectedKey: stri
   const blocks = options.find(o => o.key === selectedKey)?.photo_blocks
 
   return Array.isArray(blocks) ? blocks.filter(id => typeof id === 'string') : null
+}
+
+/**
+ * Which leaves the selected design draws, per type — template fidelity 5.x.
+ *
+ * Null when the backend published no such fact, which every reader treats as
+ * "no opinion, offer everything": see `content_fields` on `TemplateOption`.
+ * A type ABSENT from a map that was published is likewise no opinion — it is
+ * a type this design does not render at all, and `renders` has already taken
+ * its row off the list.
+ *
+ * Normalised the way every other served list here is, because this one can
+ * REMOVE a control: a malformed entry must collapse to "no opinion" rather
+ * than to an empty list, which would blank a card.
+ */
+export function templateContentFields(
+  options: TemplateOption[],
+  selectedKey: string,
+): Record<string, string[]> | null {
+  const map = options.find(o => o.key === selectedKey)?.content_fields
+
+  if (map == null || typeof map !== 'object' || Array.isArray(map)) return null
+
+  const out: Record<string, string[]> = {}
+
+  for (const [typeId, leaves] of Object.entries(map)) {
+    if (!Array.isArray(leaves)) continue
+
+    out[typeId] = leaves.filter(leaf => typeof leaf === 'string')
+  }
+
+  return out
 }
 
 /**

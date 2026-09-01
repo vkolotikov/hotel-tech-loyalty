@@ -46,6 +46,8 @@
   else beneath this directory; the no-raw-echo tests scan this file too.
 --}}
 @php
+    use App\Landing\Copy;
+
     // $copy is $page->content[$section->key], a schemaless `array` cast: a
     // row hand-edited (or written before this column had a shape at all) can
     // legitimately hold a string here. (string) casts on each leaf, never on
@@ -99,7 +101,7 @@
 @if ($kicker !== '')
           <p class="eyebrow eyebrow--ink">{{ $kicker }}</p>
 @endif
-          <h2>{{ $heading }}</h2>
+          <h2>{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
 @elseif ($kicker !== '')
           <h2 class="eyebrow eyebrow--ink">{{ $kicker }}</h2>
 @endif

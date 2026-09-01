@@ -657,6 +657,35 @@ describe('fieldsForType', () => {
     ])
   })
 
+  /**
+   * TEMPLATE FIDELITY 5.x — a leaf this design's partial never prints is a
+   * control that cannot act: the tenant types, the save succeeds, and their
+   * page does not change. The list is the served `content_fields[type]`.
+   */
+  it('draws only the leaves the design prints, in the catalogue order', () => {
+    const text = sectionTypes().find(t => t.id === 'text')!
+
+    expect(fieldsForType(text, true, ['body', 'kicker']).map(f => f.name))
+      .toEqual(['image_url', 'kicker', 'body'])
+  })
+
+  it('leaves every field alone when the design has no opinion', () => {
+    const text = sectionTypes().find(t => t.id === 'text')!
+
+    expect(fieldsForType(text, true, null).map(f => f.name))
+      .toEqual(fieldsForType(text).map(f => f.name))
+  })
+
+  it('lets a design decline every leaf of a band it draws nothing of', () => {
+    const text = sectionTypes().find(t => t.id === 'text')!
+
+    // The photo control is `drawsPhotos`' business, not this list's — a
+    // design that draws the picture and none of the words still draws the
+    // picture.
+    expect(fieldsForType(text, true, []).map(f => f.name)).toEqual(['image_url'])
+    expect(fieldsForType(text, false, []).map(f => f.name)).toEqual([])
+  })
+
   it('omits the photo control for a type that takes no photo', () => {
     const text = sectionTypes().find(t => t.id === 'text')!
     expect(fieldsForType({ ...text, image: false, image_slots: 0 }).map(f => f.name))

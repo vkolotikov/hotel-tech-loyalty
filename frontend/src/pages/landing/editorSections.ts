@@ -255,10 +255,22 @@ export function buildSectionRows(
    * band whose picture this design will never draw.
    */
   photoBlocks: string[] | null = null,
+  /**
+   * Which of each type's LEAVES the page's own design prints —
+   * `templateContentFields()`, template fidelity 5.x. Null (an older backend,
+   * or a caller that does not care) leaves every field exactly where it was,
+   * and so does a type the map does not mention.
+   *
+   * Applied HERE for the same reason `photoBlocks` is: everything that reads
+   * `row.fields` — the Photos chip, the auto-focus, the row's own status —
+   * sees one answer about what this card offers.
+   */
+  contentFields: Record<string, string[]> | null = null,
 ): EditorSectionRow[] {
   const ordered = orderedSections(pageSections)
 
   const drawsPhotos = (typeId: string) => photoBlocks === null || photoBlocks.includes(typeId)
+  const drawnLeaves = (typeId: string) => contentFields?.[typeId] ?? null
 
   // Counted over the WHOLE ordered list first, so `siblings` is a fact
   // about the page rather than about how far down the list this row sits.
@@ -321,7 +333,7 @@ export function buildSectionRows(
         // the shipped partials read and no tenant could fill in — and it
         // was the reason every field a later phase adds would otherwise
         // have needed a frontend release to become visible.
-        fields: fieldsForType(fixedType, drawsPhotos(fixedType.id)),
+        fields: fieldsForType(fixedType, drawsPhotos(fixedType.id), drawnLeaves(fixedType.id)),
         // A fixed row never renders the "not written yet" line, so this is
         // the harmless default rather than a claim about the band.
         writtenBy: 'words',
@@ -374,7 +386,7 @@ export function buildSectionRows(
       fixed: false,
       ordinal,
       siblings: perType.get(parsed.typeId) ?? 1,
-      fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId)),
+      fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId), drawnLeaves(parsed.typeId)),
       writtenBy: writtenBy(parsed.type),
       tone: normaliseTone(row.tone),
       // Off the TYPE (`text`), never the key (`text_1`) — every instance of
@@ -592,8 +604,22 @@ export function fieldsForType(
    * no such fact) behaves exactly as it did.
    */
   drawsPhotos = true,
+  /**
+   * Which of this type's leaves the page's own DESIGN prints —
+   * `templateContentFields()`, template fidelity 5.x / the plan's open
+   * question §7. Null is "no opinion", which is what an older backend and a
+   * type this design does not render both mean, and it leaves every field
+   * exactly where it was.
+   *
+   * Applied to the SERVED names only. The three synthesised controls (the
+   * photo plate, the gallery strip, the questions form) are decided by
+   * `drawsPhotos` and by the leaves the catalogue published, and a design
+   * that draws a gallery draws its whole grid or none of it.
+   */
+  drawnLeaves: string[] | null = null,
 ): SectionField[] {
   const slots = drawsPhotos ? imageSlotsOf(type) : 0
+  const draws = drawnLeaves === null ? null : new Set(drawnLeaves)
 
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
@@ -643,6 +669,14 @@ export function fieldsForType(
   const rest: SectionField[] = []
 
   for (const name of type.fields) {
+    // THE DESIGN'S OWN ANSWER, applied before anything else looks at the
+    // name (template fidelity 5.x). A leaf this template's partial never
+    // prints is a control that cannot act: the tenant types, the save
+    // succeeds, and their page does not change. `q1` is exempt because it
+    // stands in for the whole questions form, which the pair count above
+    // has already decided.
+    if (draws !== null && !draws.has(name) && name !== 'q1') continue
+
     if (!paired.has(name)) {
       // The catalogue's own field, wearing whatever presentation this screen
       // has an opinion about. The overlay is applied ONLY here, and only to
@@ -1058,6 +1092,75 @@ export const FIELD_PRESENTATION: Record<string, { multiline?: boolean; type?: st
   address: { maxLength: 191 },
 
   image_url: { type: 'image' },
+
+  // ─── Template fidelity 5.5 ────────────────────────────────────────────
+  //
+  // The footer hub's Follow column. `type: 'url'` because
+  // `PageContent::socialLinks()` accepts an explicit http(s) URL and NOTHING
+  // else — no bare domain promoted on the tenant's behalf, no
+  // protocol-relative form — and a tenant who types `instagram.com/us` would
+  // otherwise save happily and then find no icon on their page with nothing
+  // to tell them why. The browser's own hint is the cheapest possible
+  // version of that message; the server's guard is still the one that
+  // decides. `maxLength` mirrors the same reader's own bound.
+  social_instagram: { type: 'url', maxLength: 2048 },
+  social_facebook:  { type: 'url', maxLength: 2048 },
+  social_tiktok:    { type: 'url', maxLength: 2048 },
+}
+
+/**
+ * WHICH LOCALE KEY LABELS A FIELD — the field's own name, or its FAMILY's
+ * where a family is numbered and every member reads the same sentence.
+ *
+ * The precedent is already in the tree: a gallery's eight `caption_N` leaves
+ * are all labelled "Caption under the photo", because the control draws one
+ * input per tile and the sentence means the same thing beside every one of
+ * them; eight numbered keys would be eight translations of one string, in
+ * five locales, that can drift apart.
+ *
+ * Template fidelity 5.x adds four more such families. Collapsing them here
+ * rather than at the render site keeps ONE answer — `localeCompleteness`
+ * pins the collapsed keys, `FIELD_FALLBACK` is keyed by them, and the
+ * component reads this function — so a family cannot be labelled one way in
+ * the net and another on the screen.
+ *
+ * `*_accent` is the widest of them: `headline_accent`, `heading_accent` and
+ * `lead_accent` are the same control on nine different types, and "Words to
+ * highlight" is the same instruction beside all of them.
+ */
+export function fieldLabelKey(name: string): string {
+  if (name.endsWith('_accent')) return 'accent'
+  if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
+  if (/^caption_\d+$/.test(name)) return 'caption'
+  if (/^fact_\d+$/.test(name)) return 'fact'
+  if (/^promise_\d+$/.test(name)) return 'promise'
+
+  return name
+}
+
+/**
+ * The one-line note printed UNDER a field, or null for the great majority
+ * that need none.
+ *
+ * Two families have it, and both for the same reason: the control does
+ * something a tenant cannot infer from its label.
+ *
+ *  - an ACCENT leaf is not a second heading. R6's own risk register says
+ *    the split is one-way — a tenant who writes an accent that is not the
+ *    tail of their heading gets a heading that reads wrong — so the screen
+ *    says where the words land before they are typed, which is the
+ *    mitigation the ruling asks for by name.
+ *  - a SOCIAL leaf silently renders nothing unless it is a full web
+ *    address, and its consequence (an icon appears, or does not) is at the
+ *    bottom of a different page.
+ *
+ * Keyed by family exactly as `fieldLabelKey` is, and for the same reason.
+ */
+export function fieldHintKey(name: string): string | null {
+  if (name.endsWith('_accent')) return 'accent'
+  if (name.startsWith('social_') && name !== 'social_label') return 'social'
+
+  return null
 }
 
 /** The leaf every SINGLE-photo band stores its picture under —

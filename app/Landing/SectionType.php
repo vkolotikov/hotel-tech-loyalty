@@ -136,6 +136,41 @@ final class SectionType
     public const GALLERY_IMAGES = 8;
 
     /**
+     * How many columns the trust strip holds (template fidelity 5.4 / D7).
+     *
+     * FOUR, which is the superset: kit 01 draws three flat highlights, kits
+     * 02 and 03 each draw four value+caption pairs. Raised from three, which
+     * was kit 01's shape read as if it were the model's.
+     *
+     * One number, read by {@see trustLeaves()} (which builds the type's
+     * `fields`) and by {@see \App\Landing\PageContent::trustFeatures()}
+     * through that list. It used to be a literal in both files.
+     */
+    public const MAX_TRUST_FEATURES = 4;
+
+    /**
+     * The social platforms the kits' footer hubs draw, in the author's own
+     * order: leaf suffix => the platform's own spelling of its name.
+     *
+     * The NAME is here rather than derived from the key because these are
+     * proper nouns and nothing mechanical spells them right — `Str::title`
+     * makes "Tiktok". It is the anchor's accessible name (the icons are
+     * aria-hidden and there is no visible text), and it is deliberately NOT
+     * run through `__()`: a brand name is the same word in every locale.
+     *
+     * One entry per branch in `nocturne_ritual/icon.blade.php`, and
+     * {@see socialLeaves()} builds the content leaves from the same keys, so
+     * a platform cannot arrive with a URL and no icon or the reverse.
+     *
+     * @var array<string, string>
+     */
+    public const SOCIAL_PLATFORMS = [
+        'instagram' => 'Instagram',
+        'facebook'  => 'Facebook',
+        'tiktok'    => 'TikTok',
+    ];
+
+    /**
      * The leaf a SINGLE-photo section stores its picture under, and the one
      * spelling every page written before galleries existed carries.
      *
@@ -353,7 +388,29 @@ final class SectionType
             'hero' => [
                 'repeatable' => false,
                 'view'       => 'hero',
-                'fields'     => array_merge(['kicker', 'headline', 'subtext'], self::photoLeaves()),
+                'fields'     => array_merge(
+                    // `headline_accent` is the companion leaf R6 settles on
+                    // (template fidelity 5.1): the trailing fragment the
+                    // author sets in the accent colour, echoed as
+                    // `{{ $heading }} <em>{{ $accent }}</em>` by
+                    // App\Landing\Copy. It sits IMMEDIATELY after the leaf
+                    // it belongs to, because the editor draws its controls
+                    // in this order and "Words to highlight" means nothing
+                    // three inputs below the heading it highlights.
+                    ['kicker', 'headline', 'headline_accent', 'subtext', 'cta_label'],
+                    // THE FACTS CARD'S THREE TERMS (template fidelity 5.2).
+                    // The VALUES stay derived — the closing time the business
+                    // publishes, the rating it earned, the city it is in —
+                    // because a card that lets a tenant type its own numbers
+                    // is a card that can lie. Only the WORDING is theirs, and
+                    // each leaf is bound to its own fact rather than to a
+                    // position: with no rating the city's label must not slide
+                    // up into the rating's row. Kit 01 writes "Open late"
+                    // where the derivation says "Open until"; that one string
+                    // is what these exist for.
+                    ['hours_label', 'rating_label', 'city_label'],
+                    self::photoLeaves(),
+                ),
                 'band'       => '',
                 'images'     => 1,
             ],
@@ -370,14 +427,32 @@ final class SectionType
             'services' => [
                 'repeatable' => false,
                 'view'       => 'services',
-                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::photoLeaves()),
+                // `item_cta_label` is the wording on each ROW's booking chip,
+                // hardcoded `__('Book')` until template fidelity 5.2. Kit 01
+                // writes exactly "Book"; kit 03 writes "Reserve this ritual".
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
+                    self::photoLeaves(),
+                ),
                 'band'       => '',
                 'images'     => 1,
             ],
             'about' => [
                 'repeatable' => false,
                 'view'       => 'about',
-                'fields'     => array_merge(['kicker', 'lead', 'body'], self::photoLeaves()),
+                // THE NUMBERED LEDGER IS THE AUTHOR'S, AND IT IS GUIDANCE
+                // (template fidelity 5.2). Kit 01's three lines are "Arrive
+                // 20 minutes early for tea and thermal time." — advice, not
+                // opening hours — and the conversion had nowhere to put
+                // them, so it published a grouped week under the author's
+                // ornamental 01/02/03 instead. The derived week survives as
+                // the fallback for every page that has no lines of its own,
+                // so nothing regresses; a tenant who writes one takes the
+                // ledger back.
+                'fields'     => array_merge(
+                    ['kicker', 'lead', 'lead_accent', 'body', 'fact_1', 'fact_2', 'fact_3'],
+                    self::photoLeaves(),
+                ),
                 'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
@@ -391,14 +466,25 @@ final class SectionType
             'team' => [
                 'repeatable' => false,
                 'view'       => 'team',
-                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::photoLeaves()),
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
+                    self::photoLeaves(),
+                ),
                 'band'       => '',
                 'images'     => 1,
             ],
+            // THE ONE BAND THAT COULD NOT NAME ITSELF (template fidelity
+            // 5.2). `fields` was `['kicker']` alone, so kit 03's "Kind
+            // words, left after the exhale." and kit 02's "Recent studio
+            // feedback" had nowhere to live and the nocturne partial had to
+            // promote the EYEBROW into the <h2> to give the band a heading
+            // at all. That promotion survives as the fallback — a page with
+            // no heading renders exactly what it rendered before — and a
+            // tenant who writes one gets the author's real two-part header.
             'reviews' => [
                 'repeatable' => false,
                 'view'       => 'reviews',
-                'fields'     => ['kicker'],
+                'fields'     => ['kicker', 'heading', 'heading_accent', 'subtext'],
                 'band'       => 'band--ink',
                 'images'     => 0,
             ],
@@ -410,8 +496,20 @@ final class SectionType
             'booking' => [
                 'repeatable' => false,
                 'view'       => 'booking',
+                // THE PROMISES ARE THREE LEAVES NOW, NOT A SENTENCE SPLIT
+                // (template fidelity 5.2). The partial was cutting `terms`
+                // on sentence boundaries and printing the fragments as the
+                // author's uppercase chips — which meant a tenant with one
+                // long sentence lost all three, a fourth chip was
+                // impossible, and the author's own page (which carries BOTH
+                // a paragraph AND three chips) could not be reproduced at
+                // all: the split rendered one or the other, never both. The
+                // split stays as the migration fallback for pages that have
+                // no promise leaves.
                 'fields'     => array_merge(
-                    ['kicker', 'heading', 'terms', 'call_label', 'call_short'],
+                    ['kicker', 'heading', 'heading_accent', 'terms'],
+                    ['promise_1', 'promise_2', 'promise_3'],
+                    ['cta_label', 'call_label', 'call_short'],
                     self::photoLeaves(),
                 ),
                 'band'       => 'band--paper-2',
@@ -421,13 +519,51 @@ final class SectionType
             // page override per-page (see its docblock); the rest of the
             // contact facts pass through the Property untouched and are not
             // page content at all.
+            //
+            // THE FOOTER HUB'S OWN THREE FAMILIES LIVE HERE, and that is a
+            // deliberate resolution of template fidelity 5.5 rather than
+            // where the plan first put them. 5.5 proposes `content.footer.*`;
+            // `footer` is CHROME — it has no row on any page, no industry
+            // seeds one, and giving it `fields` would immediately make it
+            // ADDABLE ({@see addableIds()}, whose second family is "a fixed
+            // type nobody seeds, with something to edit"), i.e. a picker
+            // entry offering to add a band every layout already draws
+            // unconditionally. The `footer` entry's own docblock below names
+            // that trap in as many words.
+            //
+            // `contact` is where they belong instead, and not merely because
+            // it is convenient: on every one of these kits the footer hub IS
+            // the contact block — the author nests `data-block="contact"`
+            // inside `.footer-hub`, the layout already hands this row's copy
+            // to the footer partial as `$contactCopy`, `fixed_blocks`
+            // already publishes its placement as `footer`, and the editor
+            // already tells the tenant "Shown in your footer on this
+            // design." Every page carries a contact row, so all five are
+            // reachable with no seeding change and no new mechanism.
+            //
+            //   - `descriptor` is the small caps word under the wordmark
+            //     ("Bathhouse", "Atelier London"). The conversion substituted
+            //     Property.city for it, which is wrong on all six kits and
+            //     wrong TWICE (header and footer). The city survives as the
+            //     fallback.
+            //   - `social_*` are the Follow column. There is no social
+            //     destination anywhere else in this platform's data model —
+            //     not on Property, not on Organization, not on LandingPage —
+            //     which is why the conversion rendered no column at all. A
+            //     blank leaf renders no icon: this page never links to `#`.
+            //   - `legal_note` is the sentence after the copyright line.
             'contact' => [
                 'repeatable' => false,
                 'view'       => 'contact',
-                'fields'     => [
-                    'kicker', 'phone', 'email', 'address',
-                    'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label',
-                ],
+                'fields'     => array_merge(
+                    [
+                        'kicker', 'phone', 'email', 'address',
+                        'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label',
+                        'descriptor',
+                    ],
+                    self::socialLeaves(),
+                    ['legal_note'],
+                ),
                 'band'       => 'band--ink',
                 'images'     => 0,
             ],
@@ -458,6 +594,15 @@ final class SectionType
             // A later phase that gives the footer real leaves of its own —
             // a legal note, social destinations — undoes both by adding them
             // here, and should read this note first.
+            //
+            // TEMPLATE FIDELITY 5.5 READ IT. The footer's tagline, social
+            // column and legal line are all real and all now rendered — the
+            // tagline off `seo.description` (1.5) and the other two off the
+            // CONTACT row's own leaves, which the layout already hands this
+            // partial as `$contactCopy`. They are not here, and this stays
+            // `[]`, for exactly the reason above: no page carries a footer
+            // row, so a leaf here would be a control no tenant could reach,
+            // and adding one would put "Footer" in the add-a-block picker.
             'footer' => [
                 'repeatable' => false,
                 'view'       => 'footer',
@@ -469,7 +614,10 @@ final class SectionType
             'text' => [
                 'repeatable' => true,
                 'view'       => 'text',
-                'fields'     => array_merge(['kicker', 'heading', 'body'], self::photoLeaves()),
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'heading_accent', 'body'],
+                    self::photoLeaves(),
+                ),
                 'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
@@ -494,7 +642,17 @@ final class SectionType
             'gallery' => [
                 'repeatable' => true,
                 'view'       => 'gallery',
-                'fields'     => array_merge(['kicker', 'heading'], self::galleryCaptionLeaves()),
+                // `subtext` is the gallery intro both kit 02 and kit 03
+                // write (template fidelity 5.2). Kit 01 draws no paragraph
+                // here — but the header it draws IS `.section-heading--split`,
+                // the same two-column header the services band fills with
+                // exactly such a paragraph, so a tenant who writes one gets
+                // it in the composition the author already drew rather than
+                // in a new one.
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'heading_accent', 'subtext'],
+                    self::galleryCaptionLeaves(),
+                ),
                 'band'       => '',
                 'images'     => self::GALLERY_IMAGES,
             ],
@@ -529,14 +687,24 @@ final class SectionType
             ],
             // The trust strip under the hero: a line somebody said about the
             // business, the rating the reviews already publish, and up to
-            // three short highlights. THREE numbered fields rather than one
-            // comma-separated leaf, because splitting a tenant string on a
-            // separator makes the separator unusable inside the values —
-            // "Open late, seven days" would become two highlights.
+            // {@see MAX_TRUST_FEATURES} short highlights. NUMBERED fields
+            // rather than one comma-separated leaf, because splitting a
+            // tenant string on a separator makes the separator unusable
+            // inside the values — "Open late, seven days" would become two
+            // highlights.
+            //
+            // FOUR, AND EACH MAY BE A PAIR (template fidelity 5.4 / D7).
+            // Kit 01 shows three flat strings; kits 02 and 03 each show FOUR
+            // items as a value + caption pair ("15 years" / "Combined studio
+            // experience"). One superset serves all three, and it is
+            // ADDITIVE rather than a rename: `feature_N` is the leaf live
+            // pages already carry and it goes on meaning what it meant — the
+            // highlight, or the pair's VALUE when a caption joins it. See
+            // {@see trustLeaves()}, which is the only enumeration of them.
             'trust' => [
                 'repeatable' => false,
                 'view'       => 'trust',
-                'fields'     => ['quote', 'feature_1', 'feature_2', 'feature_3'],
+                'fields'     => array_merge(['quote'], self::trustLeaves()),
                 'band'       => '',
                 'images'     => 0,
             ],
@@ -549,7 +717,10 @@ final class SectionType
             'faq' => [
                 'repeatable' => false,
                 'view'       => 'faq',
-                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::faqLeaves()),
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'heading_accent', 'subtext'],
+                    self::faqLeaves(),
+                ),
                 'band'       => '',
                 'images'     => 0,
             ],
@@ -610,7 +781,27 @@ final class SectionType
      */
     public static function photoLeaves(): array
     {
-        return ['alt', 'caption'];
+        return array_merge(self::altLeaves(), self::captionLeaves());
+    }
+
+    /**
+     * The two halves of {@see photoLeaves()}, named separately because they
+     * have separate READERS — `PageContent::imageAlt()` and
+     * `imageCaption()` — and `LandingOnboardingService::contentFieldsFor()`
+     * asks per reader which leaves it publishes. A partial can honestly draw
+     * one and not the other.
+     *
+     * @return list<string>
+     */
+    public static function altLeaves(): array
+    {
+        return ['alt'];
+    }
+
+    /** @return list<string> */
+    public static function captionLeaves(): array
+    {
+        return ['caption'];
     }
 
     /**
@@ -643,6 +834,77 @@ final class SectionType
         }
 
         return $leaves;
+    }
+
+    /**
+     * THE TRUST STRIP'S HIGHLIGHTS, in render order — every leaf under
+     * `content.trust` that holds one column of it (template fidelity 5.4).
+     *
+     * `feature_N` is the highlight (kit 01's shape) or the pair's VALUE
+     * (kits 02 and 03: "15 years"); `feature_N_caption` is the line under
+     * it ("Combined studio experience"). Interleaved, because that is the
+     * order a form should offer them in and it is what `fields` above is
+     * built from.
+     *
+     * THE CAP USED TO BE SPELLED TWICE — a literal three here and a literal
+     * `['feature_1', 'feature_2', 'feature_3']` inside
+     * {@see \App\Landing\PageContent::trustFeatures()} — which is the "one
+     * fact in two places" failure this plan's risk register names by name.
+     * PageContent reads THIS list now, so the number moves in one edit.
+     *
+     * @return list<string>
+     */
+    public static function trustLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::MAX_TRUST_FEATURES; $n++) {
+            $leaves[] = 'feature_' . $n;
+            $leaves[] = 'feature_' . $n . '_caption';
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE FOOTER HUB'S FOLLOW COLUMN — a label and one destination per
+     * platform the kits actually draw (template fidelity 5.5).
+     *
+     * All six kits render an Instagram / Facebook / TikTok trio and this
+     * platform holds a social destination for a business NOWHERE: not on
+     * `Property`, not on `Organization`, not on `LandingPage`. So they are
+     * page content, which is both the cheap answer and the honest one — a
+     * landing page is the only thing in this product that would render them.
+     *
+     * THREE, NOT AN OPEN LIST, and that is the same ruling every enumerated
+     * family in this class carries: the icons are the author's own SVG paths
+     * and there is exactly one per platform, so a fourth platform is a new
+     * icon and a new leaf together rather than a URL with nothing to draw it.
+     *
+     * @return list<string>
+     */
+    public static function socialLeaves(): array
+    {
+        return array_merge(['social_label'], self::socialDestinationLeaves());
+    }
+
+    /**
+     * The DESTINATIONS alone, without the column's own label.
+     *
+     * Split out for the same reason {@see altLeaves()} is: they have a
+     * different reader. `PageContent::socialLinks()` publishes the three
+     * URLs and knows nothing about the heading over them, which a partial
+     * reads by index like any other line of copy — so a design could draw
+     * the icons under a heading of its own, or none.
+     *
+     * @return list<string>
+     */
+    public static function socialDestinationLeaves(): array
+    {
+        return array_map(
+            static fn (string $platform) => 'social_' . $platform,
+            array_keys(self::SOCIAL_PLATFORMS),
+        );
     }
 
     /** @return list<string> */

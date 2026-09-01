@@ -12,6 +12,7 @@ use App\Models\ServiceMaster;
 use App\Support\BusinessHours;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 /**
  * Everything a landing template renders, assembled once per request.
@@ -646,21 +647,156 @@ final class PageContent
      * `content` is a schemaless column, a raw write can put `feature_9` in
      * it, and a leaf nothing can edit must not become one by being rendered.
      *
-     * @return list<string>
+     * A PAIR, NOT A STRING, SINCE TEMPLATE FIDELITY 5.4. Kit 01 draws three
+     * flat highlights; kits 02 and 03 each draw four as a value with a
+     * caption under it ("15 years" / "Combined studio experience"). One
+     * superset serves both, and the migration is that `feature_N` did not
+     * move: a page that carries only the flat leaf comes back as a pair with
+     * an empty caption, which is byte-for-byte what it rendered before.
+     *
+     * THE CAP LIVES IN ONE PLACE NOW. It used to be a literal three here and
+     * a literal three-element `fields` array in SectionType — the "one fact
+     * in two places" this project has been bitten by before. Both read
+     * {@see SectionType::MAX_TRUST_FEATURES} through
+     * {@see SectionType::trustLeaves()}.
+     *
+     * @return list<array{value: string, caption: string}>
      */
     public function trustFeatures(string $section): array
     {
         $out = [];
 
-        foreach (['feature_1', 'feature_2', 'feature_3'] as $leaf) {
-            $value = trim((string) (is_scalar($this->leaf($section, $leaf)) ? $this->leaf($section, $leaf) : ''));
+        for ($n = 1; $n <= SectionType::MAX_TRUST_FEATURES; $n++) {
+            $raw   = $this->leaf($section, 'feature_' . $n);
+            $value = is_scalar($raw) ? trim((string) $raw) : '';
 
-            if ($value !== '') {
-                $out[] = $value;
+            if ($value === '') {
+                // NO VALUE, NO COLUMN — even with a caption written. The
+                // caption is the line UNDER the highlight ("Combined studio
+                // experience" under "15 years"); on its own it is the half
+                // of a pair that cannot be read, and it closes up exactly
+                // the way an FAQ answer with no question does.
+                continue;
             }
+
+            $rawCaption = $this->leaf($section, 'feature_' . $n . '_caption');
+
+            $out[] = [
+                'value'   => $value,
+                'caption' => is_scalar($rawCaption) ? trim((string) $rawCaption) : '',
+            ];
         }
 
         return $out;
+    }
+
+    /**
+     * THE FOOTER HUB'S FOLLOW COLUMN — the business's own social
+     * destinations, and the first thing on any of these pages that links off
+     * this origin to somewhere a tenant typed (template fidelity 5.5).
+     *
+     * ONE GUARD PER LINK, and it is the strictest on this class. Every kit
+     * renders these as bare icons: the visible label is a picture, the
+     * accessible name is the platform's name, and NOTHING about the anchor
+     * tells a visitor where it goes. A `javascript:` URI behind an icon
+     * nobody can read the destination of is the worst-shaped link on the
+     * page, so this refuses everything that is not an explicit http(s) URL —
+     * no `/storage/` arm (this is not a picture), no protocol-relative form,
+     * no bare domain promoted to a URL on the tenant's behalf.
+     *
+     * AND NEVER A LINK TO `#`. The author's own kit points all three at
+     * `#social-gallery` and his notes say to "replace all fictional social
+     * destinations before publishing"; a blank leaf therefore renders NO
+     * icon rather than a placeholder, and a column with no surviving link
+     * renders no column. That is the same rule the review link and the
+     * contact channels in the same hub already follow.
+     *
+     * The platforms come from {@see SectionType::SOCIAL_PLATFORMS}, which is
+     * also what the leaves and the icon set are built from, so a fourth one
+     * is a single edit and cannot half-arrive.
+     *
+     * @return list<array{platform: string, name: string, url: string}>
+     */
+    public function socialLinks(string $section): array
+    {
+        $out = [];
+
+        foreach (SectionType::SOCIAL_PLATFORMS as $platform => $name) {
+            $raw = $this->leaf($section, 'social_' . $platform);
+
+            if (!is_string($raw)) {
+                continue;
+            }
+
+            $url = trim($raw);
+
+            if ($url === '' || strlen($url) > 2048) {
+                continue;
+            }
+
+            if (preg_match('#^https?://[^\s<>"\']+$#i', $url) !== 1) {
+                continue;
+            }
+
+            $out[] = ['platform' => $platform, 'name' => $name, 'url' => $url];
+        }
+
+        return $out;
+    }
+
+    /**
+     * ONE PRACTITIONER'S OWN BLURB — `ServiceMaster.bio`, already on the
+     * record and already written on the Team screen (template fidelity 5.3).
+     *
+     * Kit 02 draws three fields per person: name, role and a sentence about
+     * them. This is that sentence, and it is zero schema — the column has
+     * existed since the Team screen did and no landing partial had ever
+     * read it.
+     *
+     * Read through this class rather than in a partial for the reason every
+     * other tenant string on this page is: it is customer data reachable by
+     * a raw write, `bio` is `TEXT` with no length bound behind it, and a
+     * paragraph pasted into a card the author drew for one line is a broken
+     * band. Bounded on a word boundary here, once, so every kit that draws
+     * it agrees about the limit.
+     *
+     * NOT RENDERED BY `nocturne_ritual`: kit 01's practitioner list is a
+     * name and a role, and adding a third line to it would be re-drawing the
+     * author's band rather than converting it. See the phase 5 report.
+     */
+    public function memberBio(ServiceMaster $member): string
+    {
+        $bio = trim((string) ($member->bio ?? ''));
+
+        return $bio === '' ? '' : Str::limit($bio, 180, '…', preserveWords: true);
+    }
+
+    /**
+     * ONE REVIEW'S OWN STAR COUNT — `ReviewSubmission.overall_rating`,
+     * already on the record and already aggregated into
+     * {@see $reviewStats} (template fidelity 5.3).
+     *
+     * Kit 03 draws a star row on every testimonial card. Returned as an
+     * integer 1–5 or null, so a partial can never print half a star or a
+     * negative one, and null (an unrated submission — the column is
+     * nullable) means the row is omitted rather than drawn empty: the same
+     * silence {@see $reviewStats} keeps below four ratings.
+     *
+     * NOT RENDERED BY `nocturne_ritual`, for the same reason as
+     * {@see memberBio()}: kit 01's review card is a quote and an
+     * attribution, and it draws no stars.
+     */
+    public function reviewRating(ReviewSubmission $review): ?int
+    {
+        $raw = $review->overall_rating;
+
+        if (!is_numeric($raw)) {
+            return null;
+        }
+
+        $rating = (int) round((float) $raw);
+
+        return $rating >= 1 && $rating <= 5 ? $rating : null;
     }
 
     /**

@@ -86,8 +86,15 @@ class NocturneRitualRenderTest extends TestCase
         return $this->get('http://' . config('landing.host') . '/nocturne-spa')->getStatusCode();
     }
 
-    /** The kit's own sample content, as close as a real tenant can get to it. */
-    private function seedLikeTheKit(): LandingPage
+    /**
+     * The kit's own sample content, as close as a real tenant can get to it.
+     *
+     * `$industry` because the closing booking panel is gated to hotel until
+     * phase 6 (`PageContent::count('booking')`), and template fidelity 5.2
+     * gave that band four of the author's strings — so the tests that check
+     * them have to seed a tenant whose band actually renders.
+     */
+    private function seedLikeTheKit(string $industry = 'beauty'): LandingPage
     {
         Property::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne Bathhouse',
@@ -174,7 +181,7 @@ class NocturneRitualRenderTest extends TestCase
                 'q2' => 'How early should I arrive?',
                 'a2' => 'We recommend 20 minutes, so you can settle and speak with your practitioner.',
             ],
-        ]);
+        ], [], $industry);
     }
 
     // ─── Escaping and policy ──────────────────────────────────────────────
@@ -1384,4 +1391,436 @@ class NocturneRitualRenderTest extends TestCase
                 "The author's token `{$line}` is not in the shipped stylesheet verbatim.");
         }
     }
+
+    // ─── Template fidelity 5.x — the forty authored strings ───────────────
+    //
+    // Everything below is one authored string the conversion USED to lose.
+    // The acceptance test for the phase is the screenshot pair in the
+    // report; these are what stops a later edit taking any of them away
+    // again without anybody noticing.
+
+    /**
+     * 5.1b / R7. Four of the author's headings break, and the conversion
+     * printed one long line — Blade escapes the newline a tenant types.
+     * `App\Landing\Copy` is the one permitted route to that `<br>`, and the
+     * three raw-echo scans above are still green in the same run.
+     */
+    public function test_the_authors_hand_placed_line_breaks_survive_in_every_heading(): void
+    {
+        $page = $this->seedLikeTheKit('hotel');
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'hero'     => ['headline' => "Let the day\nfall away."],
+            'services' => ['heading'  => "Care that meets you\nwhere you are."],
+            'team'     => ['heading'  => "Good hands.\nThoughtful people."],
+            'booking'  => ['heading'  => "Choose a ritual.\nWe will take it from there."],
+        ])]);
+
+        $body = $this->body();
+
+        // All four of the author's, in the four bands he wrote them in.
+        $this->assertStringContainsString('Let the day<br>fall away.', $body);
+        $this->assertStringContainsString('Care that meets you<br>where you are.', $body);
+        $this->assertStringContainsString('Good hands.<br>Thoughtful people.', $body);
+        $this->assertStringContainsString('Choose a ritual.<br>We will take it from there.', $body);
+    }
+
+    /**
+     * The same helper, doing the job it was actually built for: kits 02 and
+     * 03 set the trailing fragment of a heading in the accent colour, and
+     * kit 03 does it on the h1 and every h2. `<em>` is markup, tenant copy
+     * may not contain markup, and this is what R6 settles instead.
+     */
+    public function test_a_heading_accent_renders_as_the_authors_em_and_nothing_else_does(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'hero'     => ['headline' => 'Care that follows your', 'headline_accent' => 'natural rhythm.'],
+            'services' => ['heading' => 'Rituals for skin, body', 'heading_accent' => 'and breathing room.'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('Care that follows your <em>natural rhythm.</em>', $body);
+        $this->assertStringContainsString('Rituals for skin, body <em>and breathing room.</em>', $body);
+    }
+
+    public function test_an_accent_a_tenant_never_wrote_puts_no_empty_em_on_the_page(): void
+    {
+        $this->seedLikeTheKit();
+
+        // The kit itself uses no <em> anywhere. A page seeded like it must
+        // ship none either — an empty <em> would be a styling hook with
+        // nothing in it on every band.
+        $this->assertStringNotContainsString('<em>', $this->body());
+    }
+
+    /**
+     * The accent is customer copy like everything else, so it goes through
+     * the escaping braces — which is the whole point of building the markup
+     * in a helper rather than letting a tenant type it.
+     */
+    public function test_a_hostile_accent_never_reaches_the_dom(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'hero' => ['headline_accent' => '</em><script>alert(1)</script>'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $body);
+        $this->assertStringContainsString('&lt;script&gt;', $body);
+    }
+
+    /**
+     * 5.2 — the hero facts card. The author writes "Open late" over a
+     * closing time; this printed "Open until", because the WORDING had no
+     * home. The values are still derived and there is still no control for
+     * them.
+     */
+    public function test_the_facts_card_takes_the_tenants_wording_and_keeps_the_derived_values(): void
+    {
+        $page = $this->seedLikeTheKit();
+        Property::query()->update(['city' => 'Bath']);
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'hero' => ['rating_label' => 'Guest rating', 'city_label' => 'Find us'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<dt>Find us</dt>', $body);
+        $this->assertStringContainsString('<dd>Bath</dd>', $body);
+    }
+
+    /**
+     * 5.2 — the story band's numbered ledger. The author's three lines are
+     * GUIDANCE ("Arrive 20 minutes early for tea"); the conversion published
+     * a grouped week of opening hours under his ornamental 01/02/03, because
+     * there was no leaf for what he wrote.
+     */
+    public function test_the_story_ledger_prints_the_tenants_own_lines(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'about' => [
+                'fact_1' => 'Arrive 20 minutes early for tea and thermal time.',
+                'fact_2' => 'Your practitioner adapts pressure, scent and pace.',
+                'fact_3' => 'Leave space after your ritual—there is no hurried exit.',
+            ],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<dd>Arrive 20 minutes early for tea and thermal time.</dd>', $body);
+        $this->assertStringContainsString('<dd>Your practitioner adapts pressure, scent and pace.</dd>', $body);
+        $this->assertStringContainsString('<dt>03</dt>', $body);
+    }
+
+    /**
+     * The migration half of the same change: a page written before the
+     * leaves existed still publishes the week, so nothing regresses.
+     */
+    public function test_a_page_with_no_ledger_lines_still_publishes_the_week(): void
+    {
+        ChatWidgetConfig::create([
+            'organization_id' => 1, 'brand_id' => 1, 'widget_key' => 'wk-hours', 'is_active' => true,
+            'business_hours' => [
+                'mon' => [['open' => '10:00', 'close' => '21:00']],
+                'tue' => [['open' => '10:00', 'close' => '21:00']],
+                'wed' => [['open' => '10:00', 'close' => '21:00']],
+            ],
+        ]);
+
+        $this->seedLikeTheKit();
+
+        $this->assertStringContainsString('10:00–21:00', $this->body());
+    }
+
+    /**
+     * 5.2 — the closing panel. The author's own band carries a PARAGRAPH and
+     * three uppercase chips; the conversion split one field into the other
+     * and so could render one or the other, never both.
+     */
+    public function test_the_closing_panel_prints_the_paragraph_and_the_promises_together(): void
+    {
+        $page = $this->seedLikeTheKit('hotel');
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'booking' => [
+                'terms'     => 'Online booking shows live appointment times. Choose the closest ritual and we will confirm the details with you.',
+                'promise_1' => 'Live availability',
+                'promise_2' => 'Simple rescheduling',
+                'promise_3' => 'Secure confirmation',
+            ],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('Online booking shows live appointment times.', $body);
+        $this->assertStringContainsString('<li>Live availability</li>', $body);
+        $this->assertStringContainsString('<li>Simple rescheduling</li>', $body);
+        $this->assertStringContainsString('<li>Secure confirmation</li>', $body);
+    }
+
+    /** The sentence split survives for a page that has no promise leaves. */
+    public function test_a_page_with_no_promises_still_gets_the_old_sentence_split(): void
+    {
+        $page = $this->seedLikeTheKit('hotel');
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'booking' => ['terms' => 'Live availability. Simple rescheduling. Secure confirmation.'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<li>Live availability</li>', $body);
+        $this->assertStringContainsString('<li>Secure confirmation</li>', $body);
+    }
+
+    /**
+     * 5.2 — five Book controls, worded by placement. The industry's verb was
+     * printed on all of them.
+     */
+    public function test_the_book_controls_take_the_wording_the_author_gives_each_placement(): void
+    {
+        $page = $this->seedLikeTheKit('hotel');
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'hero'     => ['cta_label' => 'Reserve your ritual'],
+            'booking'  => ['cta_label' => 'Book now'],
+            'services' => ['item_cta_label' => 'Reserve this ritual'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('Reserve your ritual', $body);
+        $this->assertStringContainsString('Book now', $body);
+        $this->assertStringContainsString('Reserve this ritual', $body);
+        // The industry's verb is gone from the page: every control that
+        // carried it now carries one of the three above.
+        $this->assertStringNotContainsString('Book appointment', $body);
+    }
+
+    /**
+     * 5.2 — the brand lockup's descriptor. The author writes "Bathhouse";
+     * the conversion printed Property.city ("Bath"), in TWO places.
+     */
+    public function test_the_lockup_descriptor_is_the_tenants_word_not_their_city(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => ['descriptor' => 'Bathhouse'],
+        ])]);
+
+        $body = $this->body();
+
+        // Twice: the header lockup and the footer's.
+        $this->assertSame(2, substr_count($body, '<span class="brand__descriptor">Bathhouse</span>'));
+        $this->assertStringNotContainsString('<span class="brand__descriptor">Bath</span>', $body);
+    }
+
+    /** And the city stays the fallback, so no live page loses its lockup. */
+    public function test_a_page_with_no_descriptor_still_falls_back_to_the_city(): void
+    {
+        $this->seedLikeTheKit();
+
+        $this->assertStringContainsString('<span class="brand__descriptor">Bath</span>', $this->body());
+    }
+
+    /**
+     * 5.5 — the Follow column. It was rendered NOWHERE, because this
+     * platform held no social destination for a business anywhere in its
+     * data model.
+     */
+    public function test_the_footer_hub_renders_the_social_column_the_tenant_filled_in(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => [
+                'social_label'     => 'Follow',
+                'social_instagram' => 'https://instagram.com/nocturne',
+                'social_tiktok'    => 'https://tiktok.com/@nocturne',
+            ],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('class="footer-hub__social"', $body);
+        $this->assertStringContainsString('href="https://instagram.com/nocturne"', $body);
+        $this->assertStringContainsString('data-social-platform="tiktok"', $body);
+        $this->assertStringContainsString('aria-label="TikTok"', $body);
+        // Only what was filled in. Facebook was left blank and there is no
+        // icon for it, not an icon pointing nowhere.
+        $this->assertStringNotContainsString('data-social-platform="facebook"', $body);
+    }
+
+    public function test_a_page_with_no_social_links_renders_no_column_and_never_links_to_a_hash(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('footer-hub__social', $body);
+        $this->assertStringNotContainsString('data-social-platform', $body);
+    }
+
+    /**
+     * The strictest guard on PageContent, and the reason for it: these are
+     * the only anchors on the page whose visible label is a picture and
+     * whose destination a visitor cannot read.
+     */
+    #[DataProvider('hostileSocialValues')]
+    public function test_a_social_destination_that_is_not_an_explicit_http_url_renders_no_icon(mixed $value): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => ['social_instagram' => $value],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('footer-hub__social', $body);
+        $this->assertStringNotContainsString('javascript:', $body);
+    }
+
+    public static function hostileSocialValues(): array
+    {
+        return [
+            'a javascript uri'    => ['javascript:alert(1)'],
+            'a data uri'          => ['data:text/html,<script>alert(1)</script>'],
+            'the authors own #'   => ['#social-gallery'],
+            'a bare domain'       => ['instagram.com/nocturne'],
+            'protocol relative'   => ['//instagram.com/nocturne'],
+            'a storage path'      => ['/storage/x.webp'],
+            'a url with a space'  => ['https://instagram.com/n octurne'],
+            'not a string at all' => [42],
+        ];
+    }
+
+    /** 5.5 — the sentence after the copyright, which had no leaf. */
+    public function test_the_legal_line_carries_the_tenants_small_print(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => ['legal_note' => 'Registered in England 09182736.'],
+        ])]);
+
+        $this->assertStringContainsString(
+            'Nocturne Bathhouse. Registered in England 09182736.',
+            $this->body(),
+        );
+    }
+
+    /**
+     * 5.4 / D7 — four columns, each optionally a value with a caption under
+     * it. ADDITIVE: `feature_N` is the leaf live pages already carry and it
+     * still means what it meant.
+     */
+    public function test_the_trust_strip_takes_four_highlights_and_keeps_the_flat_ones_working(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'trust' => [
+                'feature_1' => '15 years', 'feature_1_caption' => 'Combined studio experience',
+                'feature_4' => 'Gift rituals available',
+            ],
+        ])]);
+
+        $body = $this->body();
+
+        // The pair, in the author's own middot voice.
+        $this->assertStringContainsString('<li>15 years · Combined studio experience</li>', $body);
+        // The flat leaves the page already had, untouched.
+        $this->assertStringContainsString('<li>Small daily guest list</li>', $body);
+        // And the fourth column, which the model could not hold before.
+        $this->assertStringContainsString('<li>Gift rituals available</li>', $body);
+    }
+
+    /** A caption with no value beside it is half a pair and is not a column. */
+    public function test_a_highlight_caption_with_no_highlight_renders_nothing(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'trust' => ['feature_4_caption' => 'An orphan caption'],
+        ])]);
+
+        $this->assertStringNotContainsString('An orphan caption', $this->body());
+    }
+
+    /**
+     * 5.2 — the reviews band could not name itself: `fields` was `['kicker']`
+     * alone, so the partial had to promote the eyebrow into the <h2>.
+     */
+    public function test_the_reviews_band_takes_a_real_heading_when_one_is_written(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'reviews' => ['heading' => 'Kind words, left', 'heading_accent' => 'after the exhale.'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h2>Kind words, left <em>after the exhale.</em></h2>', $body);
+        $this->assertStringContainsString('<p class="eyebrow eyebrow--ink">Guest notes</p>', $body);
+    }
+
+    /** And with none, the eyebrow is still the band's heading. */
+    public function test_the_reviews_band_still_promotes_its_eyebrow_when_no_heading_is_written(): void
+    {
+        $this->seedLikeTheKit();
+
+        $this->assertStringContainsString(
+            '<h2 class="eyebrow eyebrow--ink">Guest notes</h2>',
+            $this->body(),
+        );
+    }
+
+    /** 5.2 — the gallery intro kits 02 and 03 both write. */
+    public function test_the_gallery_header_carries_an_intro_paragraph(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 20]);
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'gallery_1' => [
+                'kicker'    => 'Inside Nocturne',
+                'heading'   => 'A house made for the evening.',
+                'subtext'   => 'Rooms, water and light, in the order you meet them.',
+                'image_1'   => '/storage/one.webp',
+            ],
+        ])]);
+
+        $this->assertStringContainsString('Rooms, water and light, in the order you meet them.', $this->body());
+    }
+
+    /**
+     * 5.2 — the one contact channel the author LABELS rather than prints.
+     * His footer reads "Email the house"; `email_label` has been in the
+     * catalogue since 1.3 surfaced it and this band never read it.
+     */
+    public function test_the_footers_email_line_takes_the_tenants_own_wording(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => ['email_label' => 'Email the house'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<span>Email the house</span>', $body);
+        // The mailto: is still the address, whatever the wording says.
+        $this->assertStringContainsString('href="mailto:hello@nocturnebathhouse.example"', $body);
+    }
+
+    public function test_the_footers_email_line_still_prints_the_address_by_default(): void
+    {
+        $this->seedLikeTheKit();
+
+        $this->assertStringContainsString('<span>hello@nocturnebathhouse.example</span>', $this->body());
+    }
+
+    /** 5.6 — the one string on the page that was a bare English literal. */
+    public function test_the_skip_link_is_translatable(): void
+    {
+        $file = file_get_contents(resource_path('views/landing/nocturne_ritual/layout.blade.php'));
+
+        $this->assertStringContainsString("{{ __('Skip to content') }}", $file);
+        $this->assertStringNotContainsString('href="#main-content">Skip to content<', $file);
+    }
+
 }

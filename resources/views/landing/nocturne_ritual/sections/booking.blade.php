@@ -45,14 +45,27 @@
   at all the media half is dropped and the invitation centres in one column —
   never an empty frame.
 
-  THE PROMISES are the tenant's `terms` line, split on sentence boundaries.
-  Presentation only: the split decides where list-item boundaries sit and
-  every fragment still reaches the page through the escaping braces. The
-  uppercase promise voice only fits short items, so the split is declined —
-  and the whole line printed as one — when it yields fewer than two sentences
-  or any sentence over 40 characters.
+  THE PROMISES ARE THREE LEAVES OF THEIR OWN (template fidelity 5.2), and
+  the reason that matters is visible in the author's own page: he writes a
+  PARAGRAPH ("Online booking shows live appointment times…") AND three
+  uppercase chips ("Live availability", "Simple rescheduling", "Secure
+  confirmation"). The conversion had one field for both, so it cut `terms`
+  on sentence boundaries and printed the fragments as chips — which could
+  render the paragraph or the chips but never the two together, lost all
+  three for a tenant who wrote one long sentence, and could not reach a
+  fourth chip at all.
+
+  With any promise leaf written, the paragraph is the paragraph and the chips
+  are the chips. THE SPLIT SURVIVES AS THE MIGRATION and nothing else: a page
+  written before the leaves existed renders exactly what it rendered
+  yesterday, chips and all, and the moment a tenant writes a promise it stops
+  guessing. The split's own rule is unchanged — declined, and the whole line
+  printed as one, when it yields fewer than two sentences or any sentence
+  over 40 characters, because the uppercase chip voice only fits short items.
 --}}
 @php
+    use App\Landing\Copy;
+
     // THREE RUNGS, IN THIS ORDER, and the middle one is the migration:
     //
     //   1. the tenant's own closing plate, if they have chosen one;
@@ -79,12 +92,30 @@
 
     $terms = trim((string) ($copy['terms'] ?? __('Live availability. Simple rescheduling. Secure confirmation.')));
 
-    $promises = collect(preg_split('/(?<=[.!?])\s+/u', $terms) ?: [])
-        ->map(fn ($sentence) => trim((string) preg_replace('/[.!?]+$/u', '', trim((string) $sentence))))
-        ->filter(fn ($sentence) => $sentence !== '')
+    // The tenant's own chips, in leaf order, blanks closed up.
+    // Spelled, for the reason the story band's ledger spells its three.
+    $written = collect([$copy['promise_1'] ?? null, $copy['promise_2'] ?? null, $copy['promise_3'] ?? null])
+        ->map(fn ($promise) => trim((string) (is_scalar($promise) ? $promise : '')))
+        ->filter(fn ($promise) => $promise !== '')
         ->values();
 
-    $promisesFit = $promises->count() >= 2 && $promises->every(fn ($sentence) => mb_strlen($sentence) <= 40);
+    if ($written->isNotEmpty()) {
+        $promises    = $written;
+        $promisesFit = true;
+        // Written chips mean the paragraph is a paragraph. The author's own
+        // band carries both.
+        $showsTerms  = $terms !== '';
+    } else {
+        // The migration, unchanged.
+        $promises = collect(preg_split('/(?<=[.!?])\s+/u', $terms) ?: [])
+            ->map(fn ($sentence) => trim((string) preg_replace('/[.!?]+$/u', '', trim((string) $sentence))))
+            ->filter(fn ($sentence) => $sentence !== '')
+            ->values();
+
+        $promisesFit = $promises->count() >= 2 && $promises->every(fn ($sentence) => mb_strlen($sentence) <= 40);
+        $showsTerms  = ! $promisesFit;
+    }
+
 @endphp
     <section @class(['booking-panel', 'booking-panel--solo' => $panelImage === null]) id="booking" data-block="booking" data-variant="image-split">
 @if ($panelImage !== null)
@@ -94,8 +125,8 @@
 @endif
       <div class="booking-panel__content">
         <p class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('booking') }}</p>
-        <h2>{{ $copy['heading'] ?? __('Choose a time. We will take it from there.') }}</h2>
-@if (! $promisesFit)
+        <h2>{{ Copy::heading($copy['heading'] ?? __('Choose a time. We will take it from there.'), $copy['heading_accent'] ?? null) }}</h2>
+@if ($showsTerms)
         <p>{{ $terms }}</p>
 @endif
 @if ($bookingHref !== null)

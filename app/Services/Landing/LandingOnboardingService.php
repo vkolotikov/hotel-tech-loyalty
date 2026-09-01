@@ -295,8 +295,183 @@ class LandingOnboardingService
             'renders'        => self::rendersFor($row['key']),
             'fixed_blocks'   => self::fixedBlocksFor($row),
             'photo_blocks'   => self::photoBlocksFor($row['key']),
+            'content_fields' => self::contentFieldsFor($row['key']),
             'image_defaults' => TemplateImage::map($row['key']),
         ]), self::TEMPLATES);
+    }
+
+    /**
+     * WHICH OF A TYPE'S LEAVES THIS DESIGN ACTUALLY PRINTS — the narrowest
+     * of the four capability facts, and the one the plan's own open question
+     * §7 asks for: *"the `renders` fact must gate FIELDS as well as blocks,
+     * or Phase 1's win is undone by Phase 5."*
+     *
+     * A LEAF BELONGS TO A TYPE; A DRAWN LEAF BELONGS TO A PARTIAL. Every
+     * type is shared by every template and the catalogue is deliberately one
+     * list, so the moment two designs stopped drawing the same things the
+     * editor started offering controls that could not act:
+     *
+     *   - template fidelity 5.x gives `nocturne_ritual` some thirty leaves
+     *     `ruled_page` draws nowhere — the two-tone heading companions, the
+     *     hero's fact terms, the story ledger, the closing promises, the
+     *     footer hub's social column;
+     *   - and `ruled_page` has always drawn four `contact` wording overrides
+     *     (`phone_label`, `address_label`, `map_label`, `closed_label`) that
+     *     the kits' icon-led footer has no room for. That direction was
+     *     already true before this round.
+     *
+     * DERIVED FROM THE PARTIAL, exactly as `photo_blocks` and `renders` are,
+     * because a hand list here would be the second source of truth this whole
+     * plan exists to remove. Three readings, in order:
+     *
+     *   1. THE TYPE'S OWN PARTIAL, scanned for the leaves it indexes by name
+     *      (`$copy['x']`, or `$fields['x']` where the partial normalises the
+     *      array first). This is the same scan SectionTypeTest has always run
+     *      in the other direction to keep `fields` honest, so a partial that
+     *      reads a leaf and a catalogue that lists it are one fact.
+     *   2. THE SHARED FILES (layout, header, footer), scanned for one band's
+     *      leaf read by NAME from another file — `['booking']['cta_label']`
+     *      is the chrome's Book wording, resolved in the layout because the
+     *      header bar and the fixed pill carry it too.
+     *   3. {@see LEAF_READERS}, for the leaves a partial reaches through an
+     *      allowlisted PageContent method rather than by index. A gallery's
+     *      captions arrive inside `galleryPhotos()`, the FAQ's pairs inside
+     *      `faqPairs()`, the trust columns inside `trustFeatures()` — the
+     *      indirection is the guard, and it must not cost the tenant the
+     *      control.
+     *
+     * A TYPE WITH NO PARTIAL OF ITS OWN may still be drawn, and that is not
+     * an edge case: every one of these kits nests `contact` inside the footer
+     * hub rather than giving it a band, which is why `fixed_blocks` publishes
+     * its placement as `footer`. So where the type ships no partial, the
+     * template's FOOTER is read for the copy the layout hands it under
+     * another name (`$contactCopy['x']`).
+     *
+     * A type absent from this map has no opinion published about it and every
+     * field is offered — an older frontend, or a type this template does not
+     * render at all (which `renders` has already removed from the list).
+     *
+     * Asked once per builder load on the admin onboarding endpoint, never on
+     * the public render path.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function contentFieldsFor(string $templateKey): array
+    {
+        $shared = '';
+
+        foreach (['layout', 'header', 'sections.footer'] as $name) {
+            $shared .= "\n" . self::viewBody('landing.' . $templateKey . '.' . $name);
+        }
+
+        $out = [];
+
+        foreach (SectionType::ids() as $id) {
+            $type = SectionType::get($id);
+
+            if ($type === null || $type->fields === []) {
+                continue;
+            }
+
+            $view = SectionType::viewForType($id, $templateKey);
+            $own  = $view === null ? '' : self::viewBody($view);
+
+            // The furniture case: no partial of its own, drawn inside the
+            // footer hub under a name the layout chose.
+            $body = $own !== '' ? $own : $shared;
+
+            $seen = [];
+
+            // 1 + the furniture reading of the same pattern. `$copy`,
+            // `$fields` and `$contactCopy` are the three names a partial
+            // beneath a template gives ONE thing: this section's own copy.
+            preg_match_all("/\\\$(?:copy|fields|[a-z]+Copy)\['([a-z0-9_]+)'\]/", $body, $direct);
+
+            foreach ($direct[1] as $leaf) {
+                $seen[$leaf] = true;
+            }
+
+            // 2. One band's leaf, read by name from a shared file.
+            preg_match_all("/\['" . preg_quote($id, '/') . "'\]\['([a-z0-9_]+)'\]/", $shared, $byName);
+
+            foreach ($byName[1] as $leaf) {
+                $seen[$leaf] = true;
+            }
+
+            // 3. The leaves that arrive through an allowlisted reader.
+            $scan = $own . $shared;
+
+            foreach (self::LEAF_READERS as $reader => $leaves) {
+                if (str_contains($scan, $reader)) {
+                    foreach ($leaves() as $leaf) {
+                        $seen[$leaf] = true;
+                    }
+                }
+            }
+
+            // The one family no scan can find, because it is resolved before
+            // any partial is reached: ContactDetails answers "what is this
+            // business's phone number" out of the page's overrides on EVERY
+            // template, so these three are offered wherever a contact row is.
+            if ($id === 'contact') {
+                foreach (ContactDetails::overridableFields() as $leaf) {
+                    $seen[$leaf] = true;
+                }
+            }
+
+            // The type's OWN order, filtered — never the order the scan
+            // happened to find them in, which is the order of a file.
+            $out[$id] = array_values(array_filter(
+                $type->fields,
+                static fn (string $leaf) => isset($seen[$leaf]),
+            ));
+        }
+
+        return $out;
+    }
+
+    /**
+     * The leaves a partial reaches through an allowlisted PageContent method
+     * instead of by index, and the substring that proves it does.
+     *
+     * The one hand-written half of {@see contentFieldsFor()}, kept as small
+     * as it can be and guarded from the other end: LandingOnboardingTest
+     * asserts this map is TOTAL — every leaf of every type is either indexed
+     * by name in some shipped partial or covered by an entry here — so a new
+     * leaf that no design can reach cannot be added without the net going
+     * red.
+     *
+     * The values are closures because {@see SectionType}'s leaf generators
+     * are what enumerate each family, and reading them at class-constant time
+     * is not possible.
+     *
+     * `contact`'s three VALUES (`phone`, `email`, `address`) are NOT here —
+     * they have no reader substring to look for, because
+     * {@see \App\Landing\ContactDetails::resolve()} consumes them before any
+     * partial is reached. They are named in {@see contentFieldsFor()}
+     * directly, beside the reason.
+     *
+     * @var array<string, callable(): list<string>>
+     */
+    private const LEAF_READERS = [
+        'imageAlt('      => [SectionType::class, 'altLeaves'],
+        'imageCaption('  => [SectionType::class, 'captionLeaves'],
+        'galleryPhotos(' => [SectionType::class, 'galleryCaptionLeaves'],
+        'faqPairs('      => [SectionType::class, 'faqLeaves'],
+        'trustFeatures(' => [SectionType::class, 'trustLeaves'],
+        'socialLinks('   => [SectionType::class, 'socialDestinationLeaves'],
+    ];
+
+    /** A view's source, or '' where the template ships none. */
+    private static function viewBody(string $view): string
+    {
+        if (! view()->exists($view)) {
+            return '';
+        }
+
+        $file = resource_path('views/' . str_replace('.', '/', $view) . '.blade.php');
+
+        return is_file($file) ? (string) file_get_contents($file) : '';
     }
 
     /**

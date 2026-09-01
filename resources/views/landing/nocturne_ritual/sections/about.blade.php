@@ -19,17 +19,26 @@
   of the page. A frame with no photograph in it is the one thing this band
   must never render.
 
-  THE FACTS LEDGER is the author's numbered dl. There is no tenant field for
-  it and it is not invented: it publishes the opening hours the business
-  actually keeps, numbered in the author's own voice, and it is absent
-  entirely when the business publishes none. Three empty rows under an
-  ornamental 01/02/03 would be exactly the fabrication this template refuses.
+  THE FACTS LEDGER IS THE TENANT'S THREE LINES (template fidelity 5.2), and
+  that is what the author wrote there: "Arrive 20 minutes early for tea and
+  thermal time." — GUIDANCE, in his own voice, not a timetable. The
+  conversion had no field for it, so it published a grouped week under his
+  ornamental 01/02/03 instead, which is a different band saying a different
+  thing.
+
+  The grouped week survives as the FALLBACK, unchanged and still derived, so
+  every page written before the leaves existed renders exactly what it
+  rendered yesterday; a tenant who writes one line takes the ledger back and
+  keeps only what they wrote. Neither, and the ledger is absent entirely —
+  three empty rows under an ornamental 01/02/03 would be exactly the
+  fabrication this template refuses.
 
   count() gates the band on the BODY: an eyebrow, a heading or a photograph
   with no prose is a fragment, not a section (PageContent::count()'s 'about'
   arm — the same ruling the Ruled Page's about band carries).
 --}}
 @php
+    use App\Landing\Copy;
     use Illuminate\Support\Carbon;
 
     $storyImage = $content->imageUrl('about');
@@ -54,6 +63,19 @@
         preg_split('/\R{2,}/u', $body) ?: [$body],
         static fn ($p) => filled(trim((string) $p))
     ));
+
+    // THE TENANT'S OWN LINES FIRST. Any one of the three is enough to take
+    // the ledger over: the author writes three, but a studio with one thing
+    // worth saying gets one numbered line rather than one line and two days
+    // of opening hours, which would read as a page half-edited.
+    // Each leaf SPELLED, never named through a variable: `content_fields`
+    // is derived by reading this file for the leaves it consumes (see
+    // LandingOnboardingService::contentFieldsFor), and a leaf read through
+    // a variable is a leaf the editor would stop offering.
+    $written = collect([$copy['fact_1'] ?? null, $copy['fact_2'] ?? null, $copy['fact_3'] ?? null])
+        ->map(fn ($line) => trim((string) (is_scalar($line) ? $line : '')))
+        ->filter(fn ($line) => $line !== '')
+        ->values();
 
     // The ledger: the week this business actually keeps, GROUPED into runs of
     // consecutive days that share a window, at most three lines.
@@ -99,7 +121,22 @@
         $ledger[] = ['from' => (int) $row['day'], 'to' => (int) $row['day'], 'window' => $window];
     }
 
-    $ledger = collect($ledger)->filter()->take(3)->values();
+    // Both shapes reach the same numbered dl as a plain list of lines, so
+    // the markup below has one loop rather than two branches.
+    $ledger = $written->isNotEmpty()
+        ? $written
+        : collect($ledger)
+            ->filter()
+            ->take(3)
+            ->map(function ($run) use ($week) {
+                $from = $week->copy()->addDays($run['from'])->isoFormat('dddd');
+                $days = $run['from'] === $run['to']
+                    ? $from
+                    : $from . '–' . $week->copy()->addDays($run['to'])->isoFormat('dddd');
+
+                return $days . ' · ' . ($run['window'] === '' ? __('Closed') : $run['window']);
+            })
+            ->values();
 @endphp
     <section class="section section--paper story" id="about" data-block="story" data-variant="offset-image">
       <div @class(['shell', 'story__grid', 'story__grid--solo' => $storyImage === null])>
@@ -137,7 +174,7 @@
                whenever nothing else is. --}}
 @if ($lead !== '')
           <p class="eyebrow eyebrow--ink">{{ $copy['kicker'] ?? $profile->kicker('about') }}</p>
-          <h2>{{ $lead }}</h2>
+          <h2>{{ Copy::heading($lead, $copy['lead_accent'] ?? null) }}</h2>
 @else
           <h2 class="eyebrow eyebrow--ink">{{ $copy['kicker'] ?? $profile->kicker('about') }}</h2>
 @endif
@@ -150,16 +187,10 @@
 @endforeach
 @if ($ledger->isNotEmpty())
           <dl class="story__facts">
-@foreach ($ledger as $run)
-@php
-    $from = $week->copy()->addDays($run['from'])->isoFormat('dddd');
-    $days = $run['from'] === $run['to']
-        ? $from
-        : $from . '–' . $week->copy()->addDays($run['to'])->isoFormat('dddd');
-@endphp
+@foreach ($ledger as $line)
             <div>
               <dt>{{ sprintf('%02d', $loop->iteration) }}</dt>
-              <dd>{{ $days }} · {{ $run['window'] === '' ? __('Closed') : $run['window'] }}</dd>
+              <dd>{{ $line }}</dd>
             </div>
 @endforeach
           </dl>

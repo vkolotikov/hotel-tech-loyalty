@@ -12,7 +12,8 @@ import { QueryError } from '../../components/QueryError'
 import { useBrandStore } from '../../stores/brandStore'
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionGroup } from './sections'
 import {
-  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, freeGalleryLeaves, gallerySlotName,
+  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, fieldHintKey, fieldLabelKey,
+  freeGalleryLeaves, gallerySlotName,
   gallerySlots, instanceRowLabel, moveSection,
   moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, setSectionTone,
   stripImageLeaves, toggleSection, visibleFaqPairs,
@@ -28,7 +29,8 @@ import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateImageDefaults, templatePhotoBlocks,
+  catalogPayload, resolveTemplateKey, templateContentFields, templateFixedBlocks, templateImageDefaults,
+  templatePhotoBlocks,
   templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -346,6 +348,58 @@ const FIELD_FALLBACK: Record<string, string> = {
   address_label: 'Wording above your address',
   map_label: 'Map link wording',
   closed_label: 'Closed-today wording',
+
+  // ─── Template fidelity 5.1 / R6 ───────────────────────────────────────
+  //
+  // The companion leaf beside every heading a kit sets in two tones. Keyed
+  // by FAMILY (`fieldLabelKey`), because `headline_accent`, `heading_accent`
+  // and `lead_accent` are one control on nine types and one sentence
+  // describes all of them.
+  accent: 'Words to highlight',
+
+  // ─── Template fidelity 5.2 ────────────────────────────────────────────
+  //
+  // hero — the three terms over the facts card. Named for the fact each one
+  // sits above, because that is what a tenant is rewording; the VALUES stay
+  // derived and there is no control for them.
+  hours_label: 'Wording above your closing time',
+  rating_label: 'Wording above your rating',
+  city_label: 'Wording above your town',
+  // services / team — the wording on each row's own Book link.
+  item_cta_label: 'Wording on each Book link',
+  // about — the numbered list beside the story. One key for all three: the
+  // inputs are in order under one heading and the sentence is the same
+  // beside each (the `caption_N` precedent).
+  fact: 'A line for your numbered list',
+  // booking — the short promises under the button.
+  promise: 'A short promise under your button',
+
+  // ─── Template fidelity 5.4 ────────────────────────────────────────────
+  //
+  // The second line of a highlight ("Combined studio experience" under
+  // "15 years"). One key for all four, same reasoning as `fact`.
+  feature_caption: 'Line under the highlight',
+
+  // ─── Template fidelity 5.5 ────────────────────────────────────────────
+  //
+  // The footer hub. `descriptor` is the small word under the business name
+  // in the header and the footer lockups; the rest are the Follow column.
+  descriptor: 'Word under your business name',
+  social_label: 'Wording above your social links',
+  social_instagram: 'Instagram address',
+  social_facebook: 'Facebook address',
+  social_tiktok: 'TikTok address',
+  legal_note: 'Small print under your footer',
+}
+
+/**
+ * Template fidelity 5.1 / 5.5 — the one-line note under a field, for the two
+ * families whose behaviour a label alone cannot carry. See `fieldHintKey`,
+ * which decides which fields have one.
+ */
+const FIELD_HINT_FALLBACK: Record<string, string> = {
+  accent: 'Shown in your accent colour at the end of the heading.',
+  social: 'A full web address, starting with https://. Leave blank to hide the icon.',
 }
 
 /**
@@ -598,6 +652,10 @@ export function LandingEditor({
    * beside them has already changed.
    */
   const photoBlocks = templatePhotoBlocks(templates, templateKey)
+  // Template fidelity 5.x: one level finer than `photoBlocks` — which of
+  // each type's LEAVES this design prints. Resolved against the same shown
+  // template key, for the same reason.
+  const contentFields = templateContentFields(templates, templateKey)
   const imageDefaults = templateImageDefaults(templates, templateKey)
 
   // The best business name this screen can honestly show in a card — the
@@ -616,7 +674,7 @@ export function LandingEditor({
   // watches the hint clear on Save, which is exactly when the band actually
   // appears on the page.
   const rows: EditorSectionRow[] = buildSectionRows(
-    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks,
+    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks, contentFields,
   )
 
   /**
@@ -1015,7 +1073,7 @@ export function LandingEditor({
       // that moved it silently did not stick — the row kept whatever `sort`
       // `store()` appended it with while every other row was renumbered
       // around it.
-      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks)
+      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks, contentFields)
       if (toSave.length > 0) {
         calls.push(api.put('/v1/admin/landing-pages/sections', { sections: buildSectionsPayload(toSave) }))
       }
@@ -2746,7 +2804,13 @@ function SectionRow({
               )}
             </p>
           )}
-          {fields.map((field, fieldIndex) => (
+          {fields.map((field, fieldIndex) => {
+            // Template fidelity 5.x: numbered families share one label (and,
+            // for two of them, one hint) — see `fieldLabelKey`.
+            const labelKey = fieldLabelKey(field.name)
+            const hintKey = fieldHintKey(field.name)
+
+            return (
             <div key={field.name}>
               <label
                 className={label}
@@ -2755,8 +2819,13 @@ function SectionRow({
                 // form has a pair of inputs per row, each already labelled.
                 htmlFor={COMPOSITE_FIELD_TYPES.includes(field.type ?? '') ? undefined : `lp-${row.key}-${field.name}`}
               >
-                {t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name)}
+                {t(`landing_pages.editor.field_${labelKey}`, FIELD_FALLBACK[labelKey] ?? field.name)}
               </label>
+              {hintKey !== null && (
+                <p className="text-xs text-t-secondary -mt-1 mb-1">
+                  {t(`landing_pages.editor.field_hint_${hintKey}`, FIELD_HINT_FALLBACK[hintKey])}
+                </p>
+              )}
               {field.type === 'gallery' ? (
                 /*
                  * The same D4 reasoning as the single plate below, eight
@@ -2856,7 +2925,8 @@ function SectionRow({
                 />
               )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

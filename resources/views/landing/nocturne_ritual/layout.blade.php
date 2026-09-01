@@ -170,12 +170,20 @@
     ])->first(fn ($candidate) => filled($candidate));
 
     // The kit's brand lockup carries a small uppercase descriptor under the
-    // wordmark ("Bathhouse"). There is no honest source for a business's own
-    // description of itself, so this uses the one real fact that reads
-    // correctly in that slot — the city the business is in — and prints
-    // nothing at all when there is none. Inventing a descriptor would be
-    // putting words in the tenant's mouth on their own front door.
-    $brandDescriptor = trim((string) ($content->contact->city ?? ''));
+    // wordmark. "Bathhouse", "Atelier London", "skin · body · stillness" —
+    // the business's own word for what it is, in TWO places (the header and
+    // the footer), and until template fidelity 5.2 there was no leaf for it,
+    // so this printed Property.city instead. That substitution is wrong on
+    // all six kits ("Bath" where the author wrote "Bathhouse") and it was
+    // wrong twice.
+    //
+    // It is a CONTACT leaf, and not for convenience: the contact row exists
+    // on every page, and this word belongs beside the business's name in the
+    // same way its address does. The city survives as the fallback, so a
+    // page written before the leaf existed does not lose its lockup, and
+    // nothing is invented for a business that has neither.
+    $ownDescriptor   = trim((string) ($page->content['contact']['descriptor'] ?? ''));
+    $brandDescriptor = $ownDescriptor !== '' ? $ownDescriptor : trim((string) ($content->contact->city ?? ''));
 
     // THE PRIMARY ACTION, resolved once for every control that carries it.
     //
@@ -204,9 +212,26 @@
         $bookingHref = '#site-footer';
     }
 
-    // The industry's own verb — "Book appointment" for a salon, "Book your
-    // stay" for a hotel. The template hardcodes no CTA text.
-    $bookingLabel = $content->profile->primaryCta;
+    // THE WORDS ON THE BOOK CONTROLS. The industry's own verb — "Book
+    // appointment" for a salon, "Book your stay" for a hotel — is the
+    // default, and the template hardcodes no CTA text.
+    //
+    // The author words his five differently BY PLACEMENT (template fidelity
+    // 5.2): "Book a ritual" in the header bar, "Reserve your ritual" in the
+    // hero, "Book now" in the closing panel, the footer lockup and the fixed
+    // pill. One string could not say all three, so the page said the
+    // industry's verb five times.
+    //
+    // Two leaves answer it: `hero.cta_label`, read by the hero band itself,
+    // and `booking.cta_label` — resolved HERE, because it is the label the
+    // three CHROME controls carry as well as the closing panel's own, and no
+    // partial decides for itself what a Book control says any more than it
+    // decides where one points. The author's own page words those four
+    // identically in four of the six kits; the header's variant is the one
+    // string this shape cannot reach, and it is recorded in the phase 5
+    // report rather than answered with a leaf on a block that has no row.
+    $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
+    $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
 
     // NAV ANCHORS come from $renderedSections, the one collection that
     // decides what renders, so a disabled or empty band can never be linked
@@ -317,7 +342,12 @@
 @endif
 </head>
 <body>
-  <a class="skip-link" href="#main-content">Skip to content</a>
+  {{-- Template fidelity 5.6: the one string on this page that was a bare
+       English literal, on a document whose <html lang> follows the app
+       locale two dozen lines above. The first thing a keyboard or screen
+       reader user meets was in a language the page had already said it was
+       not written in. --}}
+  <a class="skip-link" href="#main-content">{{ __('Skip to content') }}</a>
 
 @if ($showsBlock('announcement'))
   @include('landing.nocturne_ritual.sections.announcement', [

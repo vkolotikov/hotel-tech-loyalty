@@ -2,10 +2,19 @@
   The trust strip (data-block="trust", data-variant="press-and-rating").
 
   The sand band under the hero: one line somebody said about the business,
-  the rating, and up to three short highlights. Three columns in the author's
-  markup, and the reason this file computes how many it actually has is that
-  a real page rarely has all three — a studio with no featured line still has
-  a rating, and a brand-new one has neither.
+  the rating, and up to SectionType::MAX_TRUST_FEATURES short highlights.
+  Three columns in the author's markup, and the reason this file computes how
+  many it actually has is that a real page rarely has all three — a studio
+  with no featured line still has a rating, and a brand-new one has neither.
+
+  A HIGHLIGHT MAY BE A PAIR (template fidelity 5.4 / D7). Kits 02 and 03
+  each draw four items as a value with a caption under it — "15 years" over
+  "Combined studio experience" — where the author of THIS kit drew four words
+  on one line. The model is one superset for all three designs and each kit
+  renders it as its own design wants; this one keeps the author's single
+  line and joins the pair with the middot he uses everywhere else on the page
+  (the service taglines, the story caption, the practitioner roles). Adding a
+  second tier of type to his `<li>` would be re-drawing his band.
 
   THE RATING IS NOT WRITTEN HERE AND CANNOT BE. It is
   $content->reviewStats, computed over every rating the organisation holds,
@@ -60,7 +69,7 @@
 @if ($features !== [])
         <ul class="trust-strip__features">
 @foreach ($features as $feature)
-          <li>{{ $feature }}</li>
+          <li>{{ $feature['caption'] === '' ? $feature['value'] : $feature['value'] . ' · ' . $feature['caption'] }}</li>
 @endforeach
         </ul>
 @endif

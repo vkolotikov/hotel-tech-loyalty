@@ -31,4 +31,15 @@
 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5.5" width="17" height="13" rx="1.8" fill="none" stroke="currentColor" stroke-width="1.7"></rect><path d="m5 7 7 5.5L19 7" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 @elseif ($name === 'clock')
 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.7"></circle><path d="M12 7.5V12l3 2" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+{{-- The footer hub's Follow column (template fidelity 5.5). Transcribed from
+     the author's own markup, geometry for geometry, exactly as the six above
+     were; one branch per SectionType::SOCIAL_PLATFORMS entry, which is also
+     what the leaves and PageContent::socialLinks() are built from, so a
+     platform cannot half-arrive. --}}
+@elseif ($name === 'instagram')
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.7"></rect><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.7"></circle><circle cx="17.6" cy="6.6" r="1" fill="currentColor"></circle></svg>
+@elseif ($name === 'facebook')
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.7 20v-7h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a22 22 0 0 0-2.4-.1c-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v7h3.2Z" fill="currentColor"></path></svg>
+@elseif ($name === 'tiktok')
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14.5 4v10.2a4.2 4.2 0 1 1-3.2-4.1v3a1.5 1.5 0 1 0 .4 1.1V4h2.8Zm0 0c.6 2.2 2.1 3.6 4.4 3.9v3.2a8.3 8.3 0 0 1-4.4-1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 @endif
