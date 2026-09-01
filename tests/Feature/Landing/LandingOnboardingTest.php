@@ -13,6 +13,7 @@ use App\Models\ReviewSubmission;
 use App\Models\Service;
 use App\Models\ServiceMaster;
 use App\Models\User;
+use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -750,7 +751,7 @@ class LandingOnboardingTest extends TestCase
 
         foreach ($types as $type) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
                 array_keys($type)
             );
             // The photo count rides the wire the same way `limit` does, and
@@ -773,14 +774,26 @@ class LandingOnboardingTest extends TestCase
             // for `repeatable`, applied to the other served allowlist.
             $this->assertContains($type['default_tone'], SectionType::toneIds());
 
-            if ($type['repeatable']) {
+            if ($type['addable']) {
                 $addable[] = $type['id'];
             }
         }
 
         $this->assertNotEmpty($addable, 'The catalogue offers no addable section type at all.');
-        $this->assertSame(SectionType::repeatableIds(), $addable,
+        // Template fidelity 3.1: `addable`, never `repeatable`. The picker
+        // filtered on the latter, which is why three of the kits' fifteen
+        // blocks were reachable from no screen at all.
+        $this->assertSame(SectionType::addableIds(), $addable,
             'What the wizard/editor is told it can add is not what the add endpoint accepts.');
+        $this->assertContains('announcement', $addable);
+        $this->assertContains('trust', $addable);
+        $this->assertContains('faq', $addable);
+        // Chrome. The layout includes it unconditionally and it has no
+        // editable copy, so "add a footer" would add a row nothing renders
+        // differently — see SectionType's own note on the type.
+        $this->assertNotContains('footer', $addable);
+        // Seeded with every page, so it arrives rather than being added.
+        $this->assertNotContains('hero', $addable);
     }
 
     /**
@@ -889,9 +902,18 @@ class LandingOnboardingTest extends TestCase
      *
      * The two named expectations below are the ones that make the fact
      * worth serving at all. nocturne_ritual ships announcement/trust/faq
-     * and no `text` or `contact` partial — so "Add a Text block" is today a
-     * control a tenant can press, write into, save, and never see. ruled_
-     * page is the exact inverse.
+     * and ruled_page ships none of them; ruled_page ships a `contact`
+     * partial and nocturne prints those details inside its footer hub
+     * instead, so the editor must not claim either design is missing a band
+     * it draws elsewhere.
+     *
+     * `text` used to be the third case here — nocturne shipped no partial
+     * for it, so "Add a Text block" was a control a tenant could press,
+     * write into, save, and never see. Template fidelity 3.2 closed that
+     * from both ends: the picker filters on this fact, AND the partial
+     * shipped, because the owner asked for all sections. Both templates
+     * now draw it, which is why the round trip above is the assertion that
+     * matters and the named cases are only the ones with an asymmetry left.
      */
     public function test_every_template_says_which_blocks_it_can_actually_draw(): void
     {
@@ -919,10 +941,187 @@ class LandingOnboardingTest extends TestCase
             $this->assertNotContains($id, $renders['ruled_page']);
         }
 
-        foreach (['text', 'contact'] as $id) {
-            $this->assertContains($id, $renders['ruled_page']);
-            $this->assertNotContains($id, $renders['nocturne_ritual']);
+        $this->assertContains('contact', $renders['ruled_page']);
+        $this->assertNotContains('contact', $renders['nocturne_ritual']);
+
+        // 3.2: both draw the repeatable words band now.
+        $this->assertContains('text', $renders['ruled_page']);
+        $this->assertContains('text', $renders['nocturne_ritual']);
+    }
+
+    /**
+     * Template fidelity 4.5 — `photo_blocks`, the narrower fact behind
+     * `renders`: which blocks this DESIGN actually draws a photograph in.
+     *
+     * A photo SLOT belongs to a type and is shared by every template; a
+     * DRAWN photograph belongs to a partial and is not. Without this on the
+     * wire the editor would offer a photo control on a design with nowhere
+     * to put the picture — a control that cannot act, which this project's
+     * own rule forbids — and the only alternative (`if (templateKey === …)`
+     * in TypeScript) is the second-source-of-truth failure the whole plan
+     * exists to remove.
+     *
+     * The claim is a round trip against the shipped partials, not a list.
+     */
+    public function test_every_template_says_which_blocks_it_draws_a_photograph_in(): void
+    {
+        $this->makeProperty();
+
+        $photos = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['photo_blocks'])
+            ->all();
+
+        foreach ($photos as $key => $list) {
+            // Every claim is a subset of what the design draws at all…
+            $renders = LandingOnboardingService::rendersFor($key);
+
+            foreach ($list as $id) {
+                $this->assertContains($id, $renders,
+                    "'{$key}' claims a photograph in '{$id}', a block it does not draw at all.");
+                $this->assertTrue(SectionType::get($id)?->image,
+                    "'{$key}' claims a photograph in '{$id}', a type that declares none.");
+            }
+
+            // …and it is derived from the partial, so it matches the file.
+            $this->assertSame(LandingOnboardingService::photoBlocksFor($key), $list);
         }
+
+        // The named cases. `services` got a page slot in 4.1 for kit 02's
+        // sticky editorial plate (R3) and NEITHER shipped design draws one,
+        // so no editor offers a control for it — which is the whole reason
+        // this fact is served rather than assumed from the catalogue.
+        foreach (array_keys($photos) as $key) {
+            $this->assertNotContains('services', $photos[$key]);
+        }
+
+        foreach (['hero', 'about', 'team', 'booking', 'text', 'gallery'] as $id) {
+            $this->assertContains($id, $photos['nocturne_ritual'],
+                "Nocturne draws a photograph in '{$id}' and does not say so.");
+        }
+
+        // The Ruled Page draws no team or booking photograph of its own.
+        $this->assertNotContains('team', $photos['ruled_page']);
+        $this->assertNotContains('booking', $photos['ruled_page']);
+    }
+
+    /**
+     * Template fidelity 4.1 — the design's own photographs, on the wire.
+     *
+     * The editor has to know which of a row's photo controls is showing the
+     * DESIGN's picture and which is showing the TENANT's, because that is
+     * the difference between "Remove photo" and "Restore original". A copy
+     * of this map in TypeScript would be a copy that offers to restore an
+     * original that does not exist.
+     */
+    public function test_each_template_publishes_its_own_photographs(): void
+    {
+        $this->makeProperty();
+
+        $defaults = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['image_defaults'])
+            ->all();
+
+        // Every slot named is one the image endpoints accept, so the
+        // control that shows it can also replace it.
+        foreach ($defaults as $key => $map) {
+            foreach (array_keys($map) as $slot) {
+                $this->assertContains($slot, SectionType::imageKeys(),
+                    "'{$key}' publishes a default for '{$slot}', which no endpoint can replace.");
+            }
+        }
+
+        $this->assertArrayHasKey('hero', $defaults['nocturne_ritual']);
+        $this->assertArrayHasKey('team', $defaults['nocturne_ritual']);
+        $this->assertArrayHasKey('gallery_1.image_4', $defaults['nocturne_ritual']);
+
+        // A design that ships no photographs of its own publishes none, so
+        // its controls keep saying "Remove photo" and meaning it.
+        $this->assertSame([], $defaults['ruled_page']);
+    }
+
+    /**
+     * Template fidelity 3.1 / R4 — a new page is seeded with the industry's
+     * bands UNION the blocks its chosen design draws that no industry seeds.
+     *
+     * The whole point of the union is that the answer DIFFERS BY TEMPLATE,
+     * so this asserts both sides of that: a Nocturne page arrives with the
+     * author's offer bar, highlights and questions already on it, and a
+     * Ruled Page tenant still gets exactly the seven rows they always got —
+     * which is the concern that ruled out simply adding the three to
+     * beauty's `defaultSections`.
+     *
+     * Asserted through the service rather than against a literal list, and
+     * the extra keys are derived from the catalogue on both sides, so a
+     * fourth kit block is a catalogue change and nothing else.
+     */
+    public function test_a_new_page_is_seeded_with_the_blocks_its_design_draws(): void
+    {
+        $profile = IndustryProfile::for('beauty');
+
+        $nocturne = LandingOnboardingService::seedSectionsFor('nocturne_ritual', $profile);
+        $ruled    = LandingOnboardingService::seedSectionsFor('ruled_page', $profile);
+
+        $this->assertSame($profile->defaultSections, $ruled,
+            'The Ruled Page draws none of the kit blocks, so it must seed none of them.');
+
+        $this->assertSame(
+            array_merge($profile->defaultSections, ['announcement', 'trust', 'faq']),
+            $nocturne,
+        );
+
+        // The union stays inside the page cap with headroom for the
+        // tenant's own added bands — the risk the plan names by number.
+        $this->assertLessThanOrEqual(SectionType::MAX_SECTIONS_PER_PAGE, count($nocturne));
+        $this->assertGreaterThanOrEqual(6, SectionType::MAX_SECTIONS_PER_PAGE - count($nocturne));
+
+        // A repeatable type is addable and drawn by both designs and is
+        // still never seeded: `text` is a type, `text_1` is a section, and a
+        // band that arrives empty is the "headed band over blank space"
+        // every count() arm refuses.
+        foreach (SectionType::repeatableIds() as $id) {
+            $this->assertNotContains($id, $nocturne);
+        }
+    }
+
+    /**
+     * The other half of 3.1's "never offered" door: a fixed row the page
+     * carries but no industry seeds must arrive on the wire with a label,
+     * a source sentence and an availability count.
+     *
+     * Without this the editor DROPS the row — `buildSectionRows` refuses to
+     * draw a fixed row with no matching availability entry rather than show
+     * one with blank copy — so a seeded or added `announcement` would be a
+     * band on the page with no card anywhere to edit it. The words it gets
+     * are the ones LandingOnboardingService::SECTION_COPY has carried, unread
+     * by anything, since the kit landed.
+     */
+    public function test_a_kit_block_row_on_the_page_is_described_on_the_wire(): void
+    {
+        $this->makeProperty();
+
+        $page = $this->makePage();
+        $page->update([
+            'template_key' => 'nocturne_ritual',
+            'content'      => ['announcement' => ['text' => 'Late-summer ritual']],
+        ]);
+        $page->sections()->create(['key' => 'announcement', 'enabled' => true, 'sort' => 20]);
+
+        $rows = collect($this->prefill()['sections'])->keyBy('key');
+
+        $this->assertArrayHasKey('announcement', $rows->all(),
+            'A row the page carries is missing from the response the editor builds its cards from.');
+        $this->assertSame('Offer bar', $rows['announcement']['label']);
+        $this->assertNotSame('', $rows['announcement']['source_label']);
+        $this->assertTrue($rows['announcement']['available']);
+        $this->assertSame(1, $rows['announcement']['count']);
+
+        // A repeatable instance is deliberately NOT here: the editor derives
+        // its label and its availability itself, because "which bands is a
+        // page in this industry created with" has no answer for a band the
+        // tenant added.
+        $this->assertArrayNotHasKey('text_1', $rows->all());
     }
 
     /**

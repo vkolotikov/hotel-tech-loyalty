@@ -6,6 +6,7 @@ use App\Landing\ContactDetails;
 use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
 use App\Landing\SectionType;
+use App\Landing\TemplateImage;
 use App\Models\Brand;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -290,10 +291,141 @@ class LandingOnboardingService
     public static function templates(): array
     {
         return array_map(fn (array $row): array => array_merge($row, [
-            'supports'     => self::supportsFor($row),
-            'renders'      => self::rendersFor($row['key']),
-            'fixed_blocks' => self::fixedBlocksFor($row),
+            'supports'       => self::supportsFor($row),
+            'renders'        => self::rendersFor($row['key']),
+            'fixed_blocks'   => self::fixedBlocksFor($row),
+            'photo_blocks'   => self::photoBlocksFor($row['key']),
+            'image_defaults' => TemplateImage::map($row['key']),
         ]), self::TEMPLATES);
+    }
+
+    /**
+     * WHICH BLOCKS THIS DESIGN ACTUALLY DRAWS A PHOTOGRAPH IN — the narrower
+     * fact behind `renders`, and template fidelity 4.5's general rule.
+     *
+     * A photo SLOT belongs to a type, which is shared by every template; a
+     * DRAWN photograph belongs to a partial, which is not. The two came apart
+     * the moment R3 gave `services` a band-level plate for kit 02 while kit
+     * 01's own services band has never had one: the slot is legitimate, the
+     * endpoint accepts it, and on Nocturne Ritual there is nowhere for the
+     * picture to appear. A photo control offered there is a control that
+     * cannot act — this project's own rule says such a control is not
+     * rendered and its absence is explained in one sentence.
+     *
+     * The same rule, stated once, also closes the bug 4.5 is named for:
+     * `text_1..text_6` contributed six slots to the upload allowlist while
+     * `nocturne_ritual` shipped no `text` partial at all, so a tenant could
+     * upload six photographs nothing would ever show. 3.2 shipped that
+     * partial, but the general rule is what stops the same bug arriving with
+     * every future template.
+     *
+     * DERIVED FROM THE PARTIAL, never authored. The question is "does this
+     * file read a photograph", and the file is the only honest answer to it —
+     * a hand-written list here would be a second source of truth about the
+     * contents of a directory, which is exactly what `renders` refuses to be.
+     * The predicate is the same one SectionTypeTest has always used to keep
+     * the catalogue's `images` count honest against the partials.
+     *
+     * Only ever asked on the ADMIN onboarding endpoint (once per builder
+     * load), never on the public render path, and only of the types that
+     * declare a photograph at all — six reads per template rather than
+     * thirteen.
+     *
+     * @return list<string>
+     */
+    public static function photoBlocksFor(string $templateKey): array
+    {
+        $out = [];
+
+        foreach (SectionType::ids() as $id) {
+            if (SectionType::get($id)?->image !== true) {
+                continue;
+            }
+
+            $view = SectionType::viewForType($id, $templateKey);
+
+            if ($view === null || !view()->exists($view)) {
+                continue;
+            }
+
+            $file = resource_path('views/' . str_replace('.', '/', $view) . '.blade.php');
+
+            if (!is_file($file)) {
+                continue;
+            }
+
+            $body = (string) file_get_contents($file);
+
+            // The two allowlisted readers on PageContent, and nothing else:
+            // a partial that draws a picture goes through one of them, by
+            // the same discipline that makes the hostile-value battery
+            // universal. `$panelImage`-style hand-downs are deliberately not
+            // matched — a band whose photograph is resolved somewhere else
+            // is a band whose partial does not own the slot, and that is the
+            // shape this fact exists to stop.
+            if (str_contains($body, 'imageUrl(') || str_contains($body, 'galleryPhotos(') || str_contains($body, 'galleryImages(')) {
+                $out[] = $id;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * THE SECTION ROWS A NEW PAGE IS CREATED WITH — the industry's own list,
+     * plus the blocks the CHOSEN TEMPLATE draws that no industry seeds
+     * (template fidelity 3.1 / R4).
+     *
+     * The union, and it takes both halves for a reason each of them alone
+     * gets wrong:
+     *
+     *   - `defaultSections` alone is what shipped, and it leaves a brand-new
+     *     Nocturne page missing three of the author's fifteen blocks
+     *     (`announcement`, `trust`, `faq`) until the tenant discovers a
+     *     picker. Those blocks are the design; a tenant chose it partly for
+     *     them.
+     *   - adding them to beauty's `defaultSections` instead — the other
+     *     obvious fix — would seed three permanently-dead rows into every
+     *     RULED PAGE, which ships no partial for any of them. That is the
+     *     concern this template's own layout already records in prose.
+     *
+     * So the extra rows are a function of the TEMPLATE, resolved through the
+     * same two derivations everything else here uses:
+     * {@see SectionType::addableIds()} (a fixed type no industry seeds, with
+     * something to edit) intersected with {@see rendersFor()} (this template
+     * ships a partial for it). A Ruled Page tenant therefore still gets
+     * exactly the seven rows they got before, and neither list is copied.
+     *
+     * REPEATABLE TYPES ARE NOT SEEDED. `text` and `gallery` are addable and
+     * drawn by both templates, and `addableIds()` names them — but they have
+     * no bare key (`text` is a type, `text_1` is a section) and a page that
+     * arrives with an empty band is the "headed band over blank space" every
+     * count() arm exists to prevent. They are added, which is what repeatable
+     * means.
+     *
+     * Order: the industry's list first, in its own order, then the template's
+     * blocks in catalogue order. Sort position barely matters for these three
+     * — every kit layout draws them as furniture, in the author's own places
+     * — but a stable order means two pages created a second apart carry the
+     * same rows in the same sequence.
+     *
+     * SectionType::MAX_SECTIONS_PER_PAGE is 16 and the longest union is
+     * 7 + 3 = 10, leaving six for the tenant's own text and gallery bands.
+     *
+     * @return list<string>
+     */
+    public static function seedSectionsFor(string $templateKey, IndustryProfile $profile): array
+    {
+        $renders = array_flip(self::rendersFor($templateKey));
+
+        $extra = array_values(array_filter(
+            SectionType::addableIds(),
+            static fn (string $id) => isset($renders[$id])
+                && SectionType::get($id)?->repeatable === false
+                && !in_array($id, $profile->defaultSections, true),
+        ));
+
+        return array_values(array_merge($profile->defaultSections, $extra));
     }
 
     /**
@@ -665,11 +797,14 @@ class LandingOnboardingService
                 // row is still somebody else's.
                 LandingPageGuard::releaseRedirects($slug);
 
-                // Seeded from the industry's own section list so the wizard
-                // and LandingPageController::store() produce the same page,
-                // and so ordering is fixed at creation rather than by
-                // whatever a later template revision happens to list first.
-                foreach ($profile->defaultSections as $i => $key) {
+                // Seeded from the industry's own section list UNION the
+                // blocks the chosen template draws that no industry seeds
+                // (template fidelity 3.1 / R4) — so the wizard and
+                // LandingPageController::store() produce the same page, and
+                // so ordering is fixed at creation rather than by whatever a
+                // later template revision happens to list first. See
+                // seedSectionsFor().
+                foreach (self::seedSectionsFor($page->template_key, $profile) as $i => $key) {
                     $page->sections()->create([
                         'key'     => $key,
                         'enabled' => $chosen[$key] ?? true,
@@ -708,10 +843,38 @@ class LandingOnboardingService
      * `available && count > 0`, which is deliberately belt and braces on one
      * strap: it can only ever be wrong in the direction of NOT offering a
      * section, which is the safe direction.
+     *
+     * WHICH ROWS: the industry's `defaultSections` — the bands a page in this
+     * industry is CREATED with, which is the only question the wizard can ask
+     * (it describes a page that does not exist yet) — UNION the fixed rows
+     * THIS page actually carries (template fidelity 3.1).
+     *
+     * The union is what makes an added or template-seeded block editable at
+     * all. `buildSectionRows` drops a fixed row with no entry in this list
+     * rather than drawing it with blank copy, so before the union an
+     * `announcement` row on a page was a row the editor silently threw away —
+     * and the tenant-facing words for it ("Offer bar", "A short line you
+     * write here…") have sat in SECTION_COPY, unread by anything, since the
+     * kit landed. Repeatable instances are deliberately NOT unioned in: the
+     * editor derives their label and their availability itself (see
+     * `buildSectionRows`' instance arm), because "which bands is a page in
+     * this industry created with" has no answer for a band the tenant added.
      */
     private function sections(PageContent $content): array
     {
+        $page = $content->page;
+
+        // Only a SAVED page has rows; the wizard's stand-in
+        // (probePage()) is an unsaved model describing a page that does not
+        // exist yet, and asking it for its sections would query on a null
+        // foreign key.
+        $own = $page->exists
+            ? $page->sections->pluck('key')->filter(fn ($key) => SectionType::get((string) $key)?->repeatable === false)
+            : collect();
+
         return collect($content->profile->defaultSections)
+            ->concat($own)
+            ->unique()
             ->map(fn (string $key) => [
                 'key'          => $key,
                 'label'        => $this->sectionLabel($key, $content->profile),

@@ -9,19 +9,23 @@
   THE PHOTOGRAPH is gated on PageContent::imageUrl('hero') — the one
   allowlisted read of content.hero.image_url, with its three guards (a
   string, under 2048 characters, and same-origin storage or an explicit
-  http(s) URL). An absent, stale or hostile leaf resolves to null and renders
-  NOTHING of the plate rather than a broken <img>, and the band falls back to
-  `.hero--plain`: the kit's own panel gradient and radial glow, which is a
-  designed dark room rather than a hole where a picture should be. That is
-  the state a brand-new studio actually sees, so it is the one that had to
-  look deliberate.
+  http(s) URL). An absent, stale or hostile leaf resolves to the DESIGN's
+  own plate (template fidelity 4.1: the kit's photographs ship as this
+  template's defaults and stay until a tenant replaces them), so the picture
+  a hostile value falls back to is the author's rather than none. Removing
+  the photograph restores that default; `.hero--plain` — the kit's own panel
+  gradient and radial glow — is what a design shipping NO photograph of its
+  own falls back to, and it is still the state a Ruled Page tenant sees.
 
   fetchpriority="high" and no loading="lazy": with a picture, this <img> IS
   the LCP element, and it is the only image on the page that is not lazy —
   exactly as the author has it. The intrinsic width/height are the author's
-  too. alt is empty because the plate is scene-setting already described by
-  the text painted over it; a tenant writes no per-photo caption and an
-  invented description would be worse than none.
+  too.
+
+  THE ALT is PageContent::imageAlt('hero'): the tenant's own words, else the
+  design's description of ITS OWN picture, else empty. The kit's description
+  is offered only while the kit's photograph is the one showing — once a
+  tenant uploads their own, a confidently wrong alt is worse than none.
 
   THE FACTS CARD is real data or it is absent. The kit shows "Open late /
   Guest rating / Find us"; here that is the closing time this business
@@ -88,7 +92,7 @@
     <section @class(['hero', 'hero--cinematic', 'hero--plain' => $heroImage === null]) id="top" data-block="hero" data-variant="cinematic-image">
 @if ($heroImage !== null)
       <figure class="hero__media">
-        <img src="{{ $heroImage }}" width="1536" height="1024" alt="" fetchpriority="high" decoding="async">
+        <img src="{{ $heroImage }}" width="1536" height="1024" alt="{{ $content->imageAlt('hero') }}" fetchpriority="high" decoding="async">
       </figure>
       <div class="hero__shade" aria-hidden="true"></div>
 @endif

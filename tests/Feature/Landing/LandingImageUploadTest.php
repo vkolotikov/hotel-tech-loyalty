@@ -1,6 +1,7 @@
 <?php
 namespace Tests\Feature\Landing;
 
+use App\Landing\PageContent;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\User;
@@ -309,6 +310,161 @@ class LandingImageUploadTest extends TestCase
         Storage::disk('public')->assertMissing('landing/existing.png');
     }
 
+    /**
+     * TEMPLATE FIDELITY 4.1 — "REMOVE" MEANS RESTORE THE ORIGINAL.
+     *
+     * The endpoint is unchanged and deliberately so: it unsets the leaf and
+     * deletes the file, exactly as it always has. What changed is what the
+     * page reads afterwards — the DESIGN's own photograph, not nothing — so
+     * the control can never leave a hole in a design that ships one.
+     *
+     * MUTATION TARGET: make `PageContent::imageUrl()` return the tenant's
+     * leaf alone (drop its `?? TemplateImage::url(...)`) and this goes red on
+     * the last two assertions, which is the whole feature.
+     */
+    public function test_removing_a_photo_restores_the_designs_own(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/mine.png', 'bytes');
+
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['image_url' => '/storage/landing/mine.png', 'headline' => 'Quiet luxury'],
+        ]);
+        $page->update(['template_key' => 'nocturne_ritual']);
+
+        $this->actAsStaff($org);
+
+        $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'hero'])
+            ->assertOk();
+
+        $fresh = $page->fresh();
+
+        // The leaf and the file are gone, exactly as before.
+        $this->assertArrayNotHasKey('image_url', $fresh->content['hero']);
+        Storage::disk('public')->assertMissing('landing/mine.png');
+
+        // And the band is not empty: the author's plate is back, with the
+        // author's own description of it.
+        $content = PageContent::for($fresh);
+        $this->assertStringContainsString(
+            'landing/nocturne_ritual/assets/hero-nocturne.webp',
+            (string) $content->imageUrl('hero'),
+        );
+        $this->assertSame('A warmly lit, charcoal-toned treatment room', $content->imageAlt('hero'));
+    }
+
+    /**
+     * The same verb on a design that ships no photographs still clears the
+     * slot outright — the model is default+override, not default-always, and
+     * a design with no default has nothing to restore.
+     */
+    public function test_removing_a_photo_clears_it_where_the_design_has_no_default(): void
+    {
+        $org = $this->org();
+        Storage::disk('public')->put('landing/mine.png', 'bytes');
+
+        $page = $this->page($org, 'glamour-salon', [
+            'hero' => ['image_url' => '/storage/landing/mine.png', 'headline' => 'Quiet luxury'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'hero'])
+            ->assertOk();
+
+        $this->assertNull(PageContent::for($page->fresh())->imageUrl('hero'));
+    }
+
+    /**
+     * The tenant's own photograph outranks the design's, which is the other
+     * half of the same rule and the one a tenant actually notices.
+     */
+    public function test_an_upload_replaces_the_designs_own_photograph(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon');
+        $page->update(['template_key' => 'nocturne_ritual']);
+
+        $this->actAsStaff($org);
+
+        $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+            'slot'  => 'hero',
+            'image' => $this->smallImage(),
+        ]);
+
+        $response->assertOk();
+
+        $content = PageContent::for($page->fresh());
+
+        $this->assertSame($response->json('image_url'), $content->imageUrl('hero'));
+        $this->assertStringNotContainsString('nocturne_ritual/assets', (string) $content->imageUrl('hero'));
+        // And the design's description goes with the design's picture: an
+        // alt that describes a photograph no longer on the page is worse
+        // than none at all.
+        $this->assertSame('', $content->imageAlt('hero'));
+    }
+
+    /**
+     * TEMPLATE FIDELITY 4.1 / R1, R2, R3 — the three new slots are accepted
+     * by both halves of the single-writer rule.
+     *
+     * The allowlist is derived from the catalogue's `images` count, so this
+     * is really an assertion that the count reached the endpoints; it is
+     * here because "the editor offers a control the endpoint 422s" is the
+     * failure that would otherwise reach a tenant.
+     */
+    public function test_the_three_new_slots_upload_and_remove(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon');
+
+        $this->actAsStaff($org);
+
+        foreach (['team', 'booking', 'services'] as $slot) {
+            $upload = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
+                'slot'  => $slot,
+                'image' => $this->smallImage($slot . '.png'),
+            ]);
+
+            $upload->assertOk();
+            $this->assertSame($slot, $upload->json('slot'));
+            $this->assertSame($upload->json('image_url'), $page->fresh()->content[$slot]['image_url'] ?? null);
+
+            $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => $slot])
+                ->assertOk();
+
+            $this->assertArrayNotHasKey('image_url', $page->fresh()->content[$slot] ?? []);
+        }
+    }
+
+    /**
+     * The single-writer rule reaches the new slots too: the text-save path
+     * refuses their image leaf and carries an omitted one forward.
+     */
+    public function test_the_text_save_path_refuses_and_carries_forward_a_new_slots_photo(): void
+    {
+        $org  = $this->org();
+        $page = $this->page($org, 'glamour-salon', [
+            'team' => ['image_url' => '/storage/landing/team.png', 'heading' => 'Our people'],
+        ]);
+
+        $this->actAsStaff($org);
+
+        // Refused outright, whatever the value.
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['team' => ['image_url' => '/storage/landing/other.png']],
+        ])->assertStatus(422);
+
+        // And carried forward when omitted.
+        $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
+            'content' => ['team' => ['heading' => 'The studio']],
+        ])->assertOk();
+
+        $fresh = $page->fresh();
+        $this->assertSame('/storage/landing/team.png', $fresh->content['team']['image_url']);
+        $this->assertSame('The studio', $fresh->content['team']['heading']);
+    }
+
     public function test_a_slot_outside_the_enum_is_refused_kindly(): void
     {
         $org = $this->org();
@@ -353,20 +509,26 @@ class LandingImageUploadTest extends TestCase
     }
 
     /**
-     * Ruling 3b-7, amending 3b-2: the carry-forward that protects hero/about's
-     * `image_url` must NOT extend to any other section — those are the only
-     * two slots the image endpoints (`slot` is `in:hero,about`) own. A
-     * `services.image_url` leaf is a shape no endpoint in this build ever
+     * Ruling 3b-7, amending 3b-2: the carry-forward that protects a photo
+     * band's `image_url` must NOT extend to a section that holds no
+     * photograph. It is DERIVED from the catalogue's own `images` count, not
+     * from a list of keys, which is why template fidelity 4.1 could take the
+     * single-plate set from two to five (hero, services, about, team,
+     * booking) without touching this rule at all.
+     *
+     * `reviews` is the band this now tests with — a real fixed section that
+     * has never had and will never have a plate of its own. A
+     * `reviews.image_url` leaf is a shape no endpoint in this build ever
      * writes; planted directly via `DB::table`, the same idiom
      * RuledPageRenderTest's own raw-content fixtures use, standing in for a
      * pre-existing or hand-edited row. An ordinary text-only save that
-     * touches `services` (without that key) must not re-carry it back onto
-     * the row the way it would for hero/about.
+     * touches `reviews` (without that key) must not re-carry it back onto
+     * the row the way it would for a photo band.
      *
      * Mutation: widen the carry-forward's scope back to every section and
      * this goes red — the leaf survives the save instead of vanishing.
      */
-    public function test_carry_forward_does_not_protect_a_leaf_outside_hero_and_about(): void
+    public function test_carry_forward_does_not_protect_a_leaf_on_a_photoless_band(): void
     {
         $org = $this->org();
         $page = $this->page($org, 'glamour-salon', [
@@ -375,8 +537,8 @@ class LandingImageUploadTest extends TestCase
 
         DB::table('landing_pages')->where('id', $page->id)->update([
             'content' => json_encode([
-                'hero'     => ['headline' => 'Old headline'],
-                'services' => ['image_url' => '/storage/landing/services-leaked.png', 'heading' => 'Treatments'],
+                'hero'    => ['headline' => 'Old headline'],
+                'reviews' => ['image_url' => '/storage/landing/reviews-leaked.png', 'kicker' => 'Guest notes'],
             ]),
         ]);
 
@@ -384,16 +546,16 @@ class LandingImageUploadTest extends TestCase
 
         $response = $this->putJson($this->adminUrl('/api/v1/admin/landing-pages'), [
             'content' => [
-                'hero'     => ['headline' => 'New headline'],
-                'services' => ['heading' => 'Treatments'],
+                'hero'    => ['headline' => 'New headline'],
+                'reviews' => ['kicker' => 'Guest notes'],
             ],
         ]);
 
         $response->assertOk();
 
         $fresh = $page->fresh();
-        $this->assertArrayNotHasKey('image_url', $fresh->content['services'] ?? []);
-        $this->assertSame('Treatments', $fresh->content['services']['heading'] ?? null);
+        $this->assertArrayNotHasKey('image_url', $fresh->content['reviews'] ?? []);
+        $this->assertSame('Guest notes', $fresh->content['reviews']['kicker'] ?? null);
     }
 
     // ─── The single-writer rule (D4) ──────────────────────────────────────
@@ -729,7 +891,10 @@ class LandingImageUploadTest extends TestCase
      *     rule cannot become an infinite family of upload targets, each one
      *     a file the renderer would never read.
      *   - `text` bare is not a section key at all.
-     *   - `services` is a real section that carries no photo.
+     *   - `reviews` is a real section that carries no photo. (It replaced
+     *     `services` here when template fidelity 4.1 gave that band its own
+     *     editorial plate — R3 — which is exactly the kind of change this
+     *     allowlist is derived rather than authored in order to absorb.)
      */
     public function test_a_slot_outside_the_catalogues_photo_keys_is_refused_kindly(): void
     {
@@ -738,7 +903,7 @@ class LandingImageUploadTest extends TestCase
 
         $this->actAsStaff($org);
 
-        foreach (['text_7', 'text_0', 'text', 'services', 'text_1_2'] as $slot) {
+        foreach (['text_7', 'text_0', 'text', 'reviews', 'text_1_2'] as $slot) {
             $response = $this->post($this->adminUrl('/api/v1/admin/landing-pages/image'), [
                 'slot'  => $slot,
                 'image' => $this->smallImage(),

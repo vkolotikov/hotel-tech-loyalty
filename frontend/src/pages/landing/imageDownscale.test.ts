@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { downscaleTarget, MAX_EDGE } from './imageDownscale'
+import { downscaledName, downscaleTarget, MAX_EDGE, OUTPUT_QUALITY, OUTPUT_TYPE } from './imageDownscale'
 
 describe('downscaleTarget', () => {
   it('returns null when the image already fits exactly at maxEdge (boundary is inclusive)', () => {
@@ -65,5 +65,50 @@ describe('downscaleTarget', () => {
 
   it('returns null for degenerate negative dimensions', () => {
     expect(downscaleTarget(-100, -50)).toBeNull()
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 4.8 — uploads stop being re-encoded to JPEG.
+ *
+ * On a design whose entire pitch is photography, a tenant's phone photo was
+ * arriving heavier than the 21-151 KB WebP reference assets it replaced. The
+ * server already accepted WebP (`mimes:jpeg,png,jpg,webp` on both image
+ * endpoints), so this needed no backend change at all.
+ */
+describe('the upload format', () => {
+  it('emits WebP, at a quality equivalent to the JPEG it replaces', () => {
+    expect(OUTPUT_TYPE).toBe('image/webp')
+    expect(OUTPUT_QUALITY).toBeGreaterThan(0.85)
+    expect(OUTPUT_QUALITY).toBeLessThanOrEqual(1)
+  })
+})
+
+/**
+ * The bytes on the wire are WebP whatever the picked file was called, and
+ * two different pieces of code downstream — Laravel's `mimes` rule, which
+ * sniffs, and `storePublicly`, which names the stored file — would resolve
+ * that disagreement differently.
+ */
+describe('downscaledName', () => {
+  it('swaps the extension for the one the re-encode actually produced', () => {
+    expect(downscaledName('holiday.JPG')).toBe('holiday.webp')
+    expect(downscaledName('a.very.long.name.png')).toBe('a.very.long.name.webp')
+    expect(downscaledName('photo.heic')).toBe('photo.webp')
+  })
+
+  it('appends one to a name that has none rather than inventing a stem', () => {
+    expect(downscaledName('holiday')).toBe('holiday.webp')
+  })
+
+  /** A leading dot is a whole filename on every POSIX system, not an
+   *  extension on an empty stem — losing the name would be worse than
+   *  keeping a second dot. */
+  it('leaves a dotfile-shaped name with its own name intact', () => {
+    expect(downscaledName('.hidden')).toBe('.hidden.webp')
+  })
+
+  it('takes the extension it is given, so a fallback encode can name itself', () => {
+    expect(downscaledName('holiday.jpg', 'png')).toBe('holiday.png')
   })
 })

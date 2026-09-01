@@ -119,7 +119,11 @@
       <div class="footer-hub__booking">
 @if (filled($brandName))
         <a class="brand brand--footer" href="#main-content" aria-label="{{ $brandName }}">
-@if ($footerInitial !== '')
+{{-- The same lockup rule as the header's — see its comment. One logo, two
+     places, read from the one resolved value. --}}
+@if ($contact->logoUrl !== null)
+          <span class="brand__mark" aria-hidden="true"><img src="{{ $contact->logoUrl }}" alt="" loading="lazy" decoding="async"></span>
+@elseif ($footerInitial !== '')
           <span class="brand__mark" aria-hidden="true">{{ $footerInitial }}</span>
 @endif
           <span class="brand__wordmark">{{ $brandName }}</span>

@@ -118,34 +118,51 @@ class SectionTypeTest extends TestCase
      * partial: a type that says it takes photos must actually read them, and
      * a type that says it does not must not.
      *
-     * PageContent::imageUrl() and ::galleryImages() are the ONLY allowlisted
-     * reads of those leaves (their own docblocks say so and the render tests
-     * hold them to it), so the presence of either call in the file is a
-     * reliable proxy for "this band has pictures in it" — and this test is
-     * what stops a future partial gaining or losing them without the
-     * catalogue, the image endpoints' slot rule and update()'s carry-forward
-     * hearing about it.
+     * PageContent::imageUrl() and ::galleryPhotos()/::galleryImages() are the
+     * ONLY allowlisted reads of those leaves (their own docblocks say so and
+     * the render tests hold them to it), so the presence of one of those
+     * calls in the file is a reliable proxy for "this band has pictures in
+     * it" — and this test is what stops a future partial gaining or losing
+     * them without the catalogue, the image endpoints' slot rule and
+     * update()'s carry-forward hearing about it.
      *
-     * Which of the two readers a partial calls is itself a claim: a
-     * single-photo type must reach for imageUrl() (the `image_url` leaf) and
-     * a multi-photo one for galleryImages() (the `image_N` family), because
-     * those are exactly the leaves imageLeaves() lets the endpoints write.
-     * A gallery partial calling imageUrl() would render nothing at all.
+     * ASKED PER TEMPLATE, IN ONE DIRECTION ONLY, since template fidelity
+     * 4.1. It used to be a two-way equality per template: every partial for
+     * a photo type had to read a photo, and no partial for a photoless one
+     * could. R3 broke the first half honestly — kit 02's services band
+     * carries an editorial plate and kit 01's has never had one, so the SLOT
+     * is legitimate and one of the two designs draws nothing with it, which
+     * is the same asymmetry `renders` already describes for whole bands.
+     *
+     * So the claims are now:
+     *
+     *  - no partial may read a photograph its type does not declare (the
+     *    drift that would put a leaf outside the allowlist on a page);
+     *  - the multi-photo readers appear only where `images > 1`, because a
+     *    gallery partial calling imageUrl() would render nothing at all.
+     *
+     * WHAT IS DELIBERATELY NOT ASSERTED, and where it went instead: "a type
+     * that declares a photograph is drawn by at least one shipped partial".
+     * `services` is legitimately ahead of the design that draws it — kit 02's
+     * services band carries a sticky editorial plate and neither shipped
+     * template has one — so today that slot is accepted by the endpoints and
+     * rendered nowhere. That is the same already-documented state an upload
+     * to `about` on a page with no about band has always been in
+     * (uploadImage()'s own note), and it is bounded by the same finite
+     * allowlist. What must NOT happen is a control being offered for it, and
+     * that is `templates[*].photo_blocks`
+     * (LandingOnboardingService::photoBlocksFor) — derived from this same
+     * scan, per template, and round-tripped by LandingOnboardingTest, which
+     * also pins that `services` is in neither template's list today.
      */
     public function test_the_image_flag_matches_what_each_partial_actually_reads(): void
     {
         $checked = 0;
 
         foreach (SectionType::ids() as $id) {
-            $type = SectionType::get($id);
+            $type    = SectionType::get($id);
+            $drawnBy = 0;
 
-            // Asked of EVERY template that draws this type, not only the
-            // first one found: a claim about a type is a claim about every
-            // partial rendering it, and a second template quietly reaching
-            // for a leaf its type does not declare is exactly the drift this
-            // test exists to catch. A template with no partial for the type
-            // is skipped rather than failed — see the view-exists test above
-            // for why that is a legitimate state.
             foreach (SectionType::TEMPLATES_WITH_PARTIALS as $template) {
                 $file = resource_path('views/landing/' . $template . '/sections/' . $type->view . '.blade.php');
 
@@ -155,15 +172,17 @@ class SectionTypeTest extends TestCase
 
                 $checked++;
 
-                $body       = file_get_contents($file);
-                $readsOne   = str_contains($body, 'imageUrl(');
-                $readsMany  = str_contains($body, 'galleryImages(');
+                $body      = file_get_contents($file);
+                $readsMany = str_contains($body, 'galleryPhotos(') || str_contains($body, 'galleryImages(');
+                $readsOne  = str_contains($body, 'imageUrl(');
 
-                $this->assertSame(
-                    $type->image,
-                    $readsOne || $readsMany,
-                    "The '{$id}' type declares images={$type->images}"
-                    . " but its {$template} partial " . ($readsOne || $readsMany ? 'does' : 'does not') . ' read a photo.'
+                if ($readsOne || $readsMany) {
+                    $drawnBy++;
+                }
+
+                $this->assertFalse(
+                    ($readsOne || $readsMany) && !$type->image,
+                    "The '{$id}' type declares no photograph but its {$template} partial reads one."
                 );
 
                 $this->assertSame(
@@ -173,6 +192,11 @@ class SectionTypeTest extends TestCase
                     . ($readsMany ? 'reads the multi-photo leaves' : 'does not read the multi-photo leaves') . '.'
                 );
             }
+
+            $this->assertFalse(
+                $drawnBy > 0 && !$type->image,
+                "The '{$id}' type declares no photograph and a shipped partial draws one anyway."
+            );
         }
 
         // A guard on the guard: a broken path expression above would skip
@@ -383,6 +407,80 @@ class SectionTypeTest extends TestCase
         $this->assertSame(['text', 'gallery'], SectionType::repeatableIds());
     }
 
+    /**
+     * Template fidelity 3.1 / R4 — THE ADD ALLOWLIST, which is wider than
+     * "which types repeat".
+     *
+     * Asserted by DERIVATION on both sides rather than against a literal
+     * `['announcement','trust','faq']`, because a literal here would agree
+     * with a literal there and neither would notice the day a fourth kit
+     * block landed. The rule is: every repeatable type, plus every fixed
+     * type that no industry seeds and that has something to edit.
+     */
+    public function test_a_fixed_block_no_industry_seeds_may_be_added(): void
+    {
+        $addable = SectionType::addableIds();
+
+        $seeded = [];
+
+        foreach (IndustryProfile::all() as $profile) {
+            foreach ($profile['defaultSections'] as $key) {
+                $seeded[$key] = true;
+            }
+        }
+
+        foreach (SectionType::all() as $id => $type) {
+            $expected = $type['repeatable']
+                || (!isset($seeded[$id]) && ($type['fields'] !== [] || $type['images'] > 0));
+
+            $this->assertSame($expected, in_array($id, $addable, true),
+                "'{$id}' is on the wrong side of the add allowlist.");
+        }
+
+        // The three the rule exists for: the kits draw them, no industry
+        // seeds them, and before this they were reachable from no screen.
+        foreach (['announcement', 'trust', 'faq'] as $id) {
+            $this->assertContains($id, $addable);
+        }
+
+        // Chrome — no fields, no photograph, included by every layout
+        // unconditionally. Adding one would add a row nothing draws
+        // differently.
+        $this->assertNotContains('footer', $addable);
+
+        // Everything an industry's page is created with arrives with the
+        // page and is switched off, never added.
+        $this->assertNotContains('hero', $addable);
+        $this->assertNotContains('contact', $addable);
+    }
+
+    /**
+     * keyFor() — the one method the create endpoint calls, answering both
+     * spellings of the key grammar so the endpoint never branches on
+     * `repeatable` itself.
+     */
+    public function test_key_for_allocates_an_instance_or_the_bare_fixed_id(): void
+    {
+        // Repeatable: lowest free index, cap and all — nextInstanceKey's
+        // behaviour, unchanged and delegated to rather than re-implemented.
+        $this->assertSame('text_1', SectionType::keyFor('text', ['hero']));
+        $this->assertSame('text_2', SectionType::keyFor('text', ['text_1']));
+        $this->assertNull(SectionType::keyFor(
+            'text',
+            array_map(fn ($n) => 'text_' . $n, range(1, SectionType::MAX_INSTANCES_PER_TYPE)),
+        ));
+
+        // Fixed and addable: its own bare id, once.
+        $this->assertSame('faq', SectionType::keyFor('faq', ['hero', 'contact']));
+        $this->assertNull(SectionType::keyFor('faq', ['hero', 'faq']));
+
+        // Fixed and NOT addable: refused even by a caller that got past a
+        // Rule::in, which is why this is a second wall rather than a helper.
+        $this->assertNull(SectionType::keyFor('footer', []));
+        $this->assertNull(SectionType::keyFor('hero', []));
+        $this->assertNull(SectionType::keyFor('not_a_type', []));
+    }
+
     /** The gallery is a repeatable type in its own right, with its own instances. */
     public function test_gallery_instances_resolve_to_their_type_and_share_one_partial(): void
     {
@@ -473,8 +571,12 @@ class SectionTypeTest extends TestCase
             'A ninth picture is a slot the endpoints would accept and the renderer would never read.');
         $this->assertNotContains('gallery_1.image_9', SectionType::imageKeys());
 
-        // 6 galleries × 8 pictures, plus hero, about and the six text bands.
-        $this->assertCount(6 * 8 + 2 + 6, SectionType::imageKeys());
+        // 6 galleries × 8 pictures, plus the six text bands and the five
+        // single-plate fixed types: hero, services, about, team, booking.
+        // Template fidelity 4.1 took that last group from two to five — the
+        // allowlist stays FINITE AND ENUMERABLE and grew by three scalar
+        // edits, with no change to the grammar.
+        $this->assertCount(6 * 8 + 6 + 5, SectionType::imageKeys());
     }
 
     /**
@@ -489,6 +591,12 @@ class SectionTypeTest extends TestCase
         $this->assertSame(['key' => 'text_4', 'leaf' => 'image_url'], SectionType::imageSlot('text_4'));
         $this->assertSame(['key' => 'gallery_2', 'leaf' => 'image_5'], SectionType::imageSlot('gallery_2.image_5'));
 
+        // Template fidelity 4.1 / R1, R2, R3 — the three slots that turn
+        // "every picture in the design" from ten into thirteen.
+        $this->assertSame(['key' => 'team', 'leaf' => 'image_url'], SectionType::imageSlot('team'));
+        $this->assertSame(['key' => 'booking', 'leaf' => 'image_url'], SectionType::imageSlot('booking'));
+        $this->assertSame(['key' => 'services', 'leaf' => 'image_url'], SectionType::imageSlot('services'));
+
         foreach ([
             // A gallery names the PICTURE; the bare key is not a slot, and
             // must not quietly mean image_1.
@@ -498,7 +606,11 @@ class SectionTypeTest extends TestCase
             'hero.image_url',
             'text_1.image_1',
             // Not a photo band at all.
-            'services', 'team', 'footer', 'contact.image_1',
+            'reviews', 'contact', 'footer', 'contact.image_1',
+            // A single-plate band names ITSELF, so its implied leaf is not a
+            // second accepted form — true of the three slots 4.1 added as
+            // much as of the two that were always here.
+            'services.image_url', 'team.image_url', 'booking.image_1',
             // Not a leaf this type holds.
             'gallery_1.body', 'gallery_1.image_0', 'gallery_1.image_01',
             // Not a section key.
@@ -514,13 +626,14 @@ class SectionTypeTest extends TestCase
     /** The leaf list is empty — never a guess — for every key that holds no photo. */
     public function test_a_section_with_no_photo_publishes_no_leaves(): void
     {
-        foreach (['services', 'team', 'reviews', 'booking', 'contact', 'footer', 'text', 'gallery', 'text_7', 'nope'] as $key) {
+        foreach (['reviews', 'contact', 'footer', 'text', 'gallery', 'text_7', 'nope'] as $key) {
             $this->assertSame([], SectionType::imageLeaves($key), "'{$key}' published photo leaves.");
         }
 
-        $this->assertSame(['image_url'], SectionType::imageLeaves('hero'));
-        $this->assertSame(['image_url'], SectionType::imageLeaves('about'));
-        $this->assertSame(['image_url'], SectionType::imageLeaves('text_6'));
+        foreach (['hero', 'about', 'text_6', 'services', 'team', 'booking'] as $key) {
+            $this->assertSame(['image_url'], SectionType::imageLeaves($key),
+                "'{$key}' does not hold its single plate under the leaf every page already stores one in.");
+        }
     }
 
     // ─── The editor payload ───────────────────────────────────────────────
@@ -539,7 +652,7 @@ class SectionTypeTest extends TestCase
 
         foreach ($payload as $row) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
                 array_keys($row),
                 "The '{$row['id']}' row does not carry exactly the published keys."
             );
@@ -548,6 +661,16 @@ class SectionTypeTest extends TestCase
                 $row['repeatable'] ? SectionType::MAX_INSTANCES_PER_TYPE : null,
                 $row['limit'],
                 "The '{$row['id']}' row publishes the wrong limit."
+            );
+
+            // Template fidelity 3.1: `addable` is a SEPARATE question from
+            // `repeatable` and the picker reads this one. Round-tripped
+            // against the allowlist the create endpoint validates with, so
+            // the editor can never offer a type that endpoint would 422.
+            $this->assertSame(
+                in_array($row['id'], SectionType::addableIds(), true),
+                $row['addable'],
+                "The '{$row['id']}' row publishes an `addable` its own allowlist disagrees with."
             );
 
             // `band` is a class name on a stylesheet the admin SPA never
@@ -595,8 +718,15 @@ class SectionTypeTest extends TestCase
         $this->assertFalse($rows['gallery']['image'],
             'A build that predates galleries must not be told to draw a one-photo control for one.');
 
-        $this->assertSame(0, $rows['services']['image_slots']);
-        $this->assertFalse($rows['services']['image']);
+        // Template fidelity 4.1: services, team and booking each hold ONE
+        // now. The bands with no picture in any design are the ones left.
+        foreach (['services', 'team', 'booking'] as $id) {
+            $this->assertSame(1, $rows[$id]['image_slots']);
+            $this->assertTrue($rows[$id]['image']);
+        }
+
+        $this->assertSame(0, $rows['reviews']['image_slots']);
+        $this->assertFalse($rows['reviews']['image']);
     }
 
     // ─── Tones (the per-section colour round) ─────────────────────────────

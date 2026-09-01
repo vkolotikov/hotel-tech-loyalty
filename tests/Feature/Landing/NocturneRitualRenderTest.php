@@ -2,6 +2,7 @@
 namespace Tests\Feature\Landing;
 
 use App\Landing\SectionType;
+use App\Models\Brand;
 use App\Models\ChatWidgetConfig;
 use App\Models\LandingPage;
 use App\Models\Property;
@@ -60,6 +61,19 @@ class NocturneRitualRenderTest extends TestCase
         }
 
         return $page;
+    }
+
+    /**
+     * The brand this page belongs to, with a logo on it (template fidelity
+     * 4.6). The landing schema creates the `brands` table but no rows —
+     * every other fixture here only needs the page's `brand_id` to be a
+     * number — so the row a logo actually lives on has to be made.
+     */
+    private function makeBrand(?string $logoUrl): void
+    {
+        Brand::withoutGlobalScopes()->create([
+            'id' => 1, 'organization_id' => 1, 'name' => 'Nocturne', 'logo_url' => $logoUrl,
+        ]);
     }
 
     private function body(): string
@@ -345,9 +359,17 @@ class NocturneRitualRenderTest extends TestCase
 
     /**
      * A brand-new tenant: a page, a name and nothing else. Not one empty
-     * band, not one stray heading, not one photo frame with no photo.
+     * band, not one stray heading — and, since template fidelity 4.1, the
+     * DESIGN'S OWN PHOTOGRAPHS rather than a page with none.
+     *
+     * The second half of that is the author's recorded decision and it is
+     * what this test now pins: a tenant who chose this design because of its
+     * photography gets its photography on day one. A band with nothing to
+     * SAY is still absent — the photographs are the design's, the words are
+     * the tenant's, and no band renders on the strength of a picture alone
+     * except the ones whose whole content is pictures.
      */
-    public function test_a_bare_page_renders_no_empty_bands(): void
+    public function test_a_bare_page_renders_the_designs_photographs_and_no_empty_bands(): void
     {
         Property::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
@@ -359,7 +381,11 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertSame(200, $this->statusCode());
 
         // Every band whose content comes from a screen the tenant has not
-        // filled in yet is simply not in the document.
+        // filled in yet is simply not in the document. `story` and `team`
+        // are in this list although the design has a photograph for each:
+        // count() gates them on the tenant's prose and their practitioners,
+        // and a photograph is not a reason to publish a band about a studio
+        // nobody has described yet.
         foreach (['services', 'story', 'team', 'testimonials', 'gallery', 'faq', 'trust', 'announcement'] as $block) {
             $this->assertStringNotContainsString('data-block="' . $block . '"', $body,
                 "The '{$block}' block rendered with nothing in it.");
@@ -369,14 +395,39 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringContainsString('data-block="hero"', $body);
         $this->assertStringContainsString('data-block="footer"', $body);
 
-        // And no photo frames: no plate, no story media, no team portrait.
-        $this->assertStringNotContainsString('hero__media', $body);
-        $this->assertStringNotContainsString('story__media', $body);
-        $this->assertStringNotContainsString('team__portrait', $body);
+        // The hero wears the author's own plate, with the author's own
+        // description of it — not `.hero--plain`, which is what a design
+        // shipping NO photograph falls back to and is still what The Ruled
+        // Page renders.
+        $this->assertStringContainsString('hero__media', $body);
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/hero-nocturne.webp', $body);
+        $this->assertStringContainsString('alt="A warmly lit, charcoal-toned treatment room"', $body);
+        $this->assertStringNotContainsString('hero--plain', $body);
 
-        // The imageless hero wears the kit's own designed fallback rather
-        // than a hole where a photograph should be.
-        $this->assertStringContainsString('hero--plain', $body);
+        // And nothing about the author's own fictional business travels with
+        // the picture: the alt describes the photograph, never the studio.
+        $this->assertStringNotContainsString('Nocturne Bathhouse', $body);
+        $this->assertStringNotContainsString('Amara', $body);
+    }
+
+    /**
+     * The other side of the default model, and the reason it is not simply
+     * "ship some photographs": The Ruled Page has none of its own, so its
+     * empty states are exactly what they were.
+     */
+    public function test_a_design_with_no_photographs_of_its_own_still_renders_its_empty_state(): void
+    {
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
+        ]);
+
+        $page = $this->published();
+        $page->update(['template_key' => 'ruled_page']);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
     }
 
     public function test_an_empty_page_ships_no_empty_heading(): void
@@ -406,6 +457,49 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringNotContainsString('data-block="services"', $body);
         // ...and the nav cannot point at it either.
         $this->assertStringNotContainsString('href="#services"', $body);
+    }
+
+    /**
+     * Template fidelity 3.2 — "Add a Text block" stops being a dead control.
+     *
+     * A tenant could add this band on this template, watch the editor
+     * auto-focus its first input, write copy, save it, and never see it: the
+     * layout filtered the band out because no `text.blade.php` shipped here.
+     * The partial ships now, drawn as the author's own story band — his
+     * composition, his classes, not one byte added to his stylesheet.
+     *
+     * Gated on the BODY, like every other prose band: an added band the
+     * tenant has not written into is not in the document at all.
+     */
+    public function test_a_tenant_added_words_band_renders_on_this_template(): void
+    {
+        $page = $this->published([
+            'hero'   => ['headline' => 'Nocturne'],
+            'text_1' => [
+                'kicker'  => 'A note',
+                'heading' => 'Membership is open.',
+                'body'    => "First paragraph.\n\nSecond paragraph.",
+            ],
+            'text_2' => ['kicker' => 'Written into never'],
+        ]);
+        $page->sections()->create(['key' => 'text_1', 'enabled' => true, 'sort' => 8]);
+        $page->sections()->create(['key' => 'text_2', 'enabled' => true, 'sort' => 9]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringContainsString('data-block="text"', $body);
+        $this->assertStringContainsString('Membership is open.', $body);
+        // Paragraph breaks the tenant typed survive as paragraphs.
+        $this->assertStringContainsString('First paragraph.', $body);
+        $this->assertStringContainsString('Second paragraph.', $body);
+        // The band with no body is a fragment, not a section.
+        $this->assertStringNotContainsString('Written into never', $body);
+        // Two instances, one partial: the second one's id is its own key.
+        $this->assertStringContainsString('id="text_1"', $body);
+        $this->assertStringNotContainsString('id="text_2"', $body);
+        // No photograph, so no empty frame — the author's own --solo collapse.
+        $this->assertStringContainsString('story__grid--solo', $body);
     }
 
     public function test_the_faq_renders_only_complete_pairs(): void
@@ -774,15 +868,48 @@ class NocturneRitualRenderTest extends TestCase
         ];
     }
 
+    /**
+     * THE BATTERY IS STRONGER AFTER TEMPLATE FIDELITY 4.1, NOT WEAKER, and
+     * this is where that is pinned.
+     *
+     * A hostile leaf still fails every one of imageUrl()'s three guards and
+     * still never reaches the DOM — that half is unchanged and is what the
+     * `$needle` assertion holds. What it FALLS BACK TO changed: the design's
+     * own photograph rather than an empty band. So a page whose stored hero
+     * leaf is `javascript:alert(1)` now renders the author's plate, which is
+     * also exactly what "Remove restores the original" means one door over.
+     */
     #[DataProvider('hostileImages')]
-    public function test_a_hostile_hero_image_renders_no_img_and_stays_up(mixed $value, ?string $needle): void
+    public function test_a_hostile_hero_image_never_reaches_the_page_and_restores_the_default(mixed $value, ?string $needle): void
     {
         $this->published(['hero' => ['headline' => 'Nocturne', 'image_url' => $value]]);
         $body = $this->body();
 
         $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('hero__media', $body);
-        $this->assertStringContainsString('hero--plain', $body);
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/hero-nocturne.webp', $body);
+        $this->assertStringNotContainsString('hero--plain', $body);
+
+        if ($needle !== null) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
+    }
+
+    /**
+     * The same battery against a design that ships no photograph of its own,
+     * where the fallback is still the empty state. Both halves of the model
+     * have to be proven, or "it fell back to something" says nothing about
+     * which something.
+     */
+    #[DataProvider('hostileImages')]
+    public function test_a_hostile_hero_image_renders_no_img_where_the_design_has_no_default(mixed $value, ?string $needle): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Nocturne', 'image_url' => $value]]);
+        $page->update(['template_key' => 'ruled_page']);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
 
         if ($needle !== null) {
             $this->assertStringNotContainsString($needle, $body);
@@ -790,7 +917,7 @@ class NocturneRitualRenderTest extends TestCase
     }
 
     #[DataProvider('hostileImages')]
-    public function test_a_hostile_story_image_renders_no_frame_and_stays_up(mixed $value, ?string $needle): void
+    public function test_a_hostile_story_image_never_reaches_the_page_and_restores_the_default(mixed $value, ?string $needle): void
     {
         $this->published([
             'hero'  => ['headline' => 'Nocturne'],
@@ -800,11 +927,23 @@ class NocturneRitualRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
         $this->assertStringContainsString('data-block="story"', $body);
-        $this->assertStringNotContainsString('story__media', $body);
-        $this->assertStringContainsString('story__grid--solo', $body);
+        // The design's own plate, and not the tenant's hostile leaf.
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/thermal-pool.webp', $body);
+        $this->assertStringNotContainsString('story__grid--solo', $body);
+
+        if ($needle !== null) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
     }
 
-    public function test_a_gallery_of_only_hostile_leaves_renders_no_band(): void
+    /**
+     * A gallery of nothing but hostile leaves renders the DESIGN'S OWN
+     * mosaic — none of the hostile values, all four of the author's
+     * photographs — because every one of those leaves has a default behind
+     * it (template fidelity 4.1). The half that matters is unchanged: not
+     * one of the three hostile strings reaches the document.
+     */
+    public function test_a_gallery_of_only_hostile_leaves_renders_the_designs_own_mosaic(): void
     {
         $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
             'heading' => 'Inside the house',
@@ -817,27 +956,56 @@ class NocturneRitualRenderTest extends TestCase
         $body = $this->body();
 
         $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('data-block="gallery"', $body);
+        $this->assertStringContainsString('data-block="gallery"', $body);
+        $this->assertStringContainsString('data-count="4"', $body);
+
+        foreach (['javascript:', 'evil.example', 'nope'] as $needle) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
+    }
+
+    /**
+     * A design with no photographs of its own is where "an empty gallery is
+     * not a section" still lives — and it has to, because it is the ruling
+     * that keeps a headed band off a page with nothing under it.
+     */
+    public function test_a_gallery_with_no_usable_picture_renders_no_band_where_the_design_has_no_defaults(): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
+            'heading' => 'Inside the house',
+            'image_1' => 'javascript:alert(1)',
+            'image_2' => ['nope'],
+        ]]);
+        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
+        $page->update(['template_key' => 'ruled_page']);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
         $this->assertStringNotContainsString('Inside the house', $body);
     }
 
     public function test_a_gallery_renders_its_photographs_in_leaf_order(): void
     {
         $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
-            'kicker'  => 'Inside Nocturne',
-            'heading' => 'A house made for the evening.',
-            'image_1' => '/storage/one.webp',
-            'image_3' => '/storage/three.webp',
-            'image_4' => '/storage/four.webp',
+            'kicker'    => 'Inside Nocturne',
+            'heading'   => 'A house made for the evening.',
+            'image_1'   => '/storage/one.webp',
+            'image_3'   => '/storage/three.webp',
+            'image_4'   => '/storage/four.webp',
+            'caption_1' => 'Dry heat room',
         ]]);
         $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
 
         $body = $this->body();
 
         $this->assertStringContainsString('data-block="gallery"', $body);
-        // Gaps close up: three pictures, in order, and the count reaches the
-        // stylesheet so the mosaic composes for three rather than for four.
-        $this->assertStringContainsString('data-count="3"', $body);
+        // Leaf order, and gaps in the TENANT's uploads closed by this
+        // design's own photograph for that exact slot rather than by
+        // shuffling the pictures up: `image_2` is the author's, and the
+        // tenant's three sit where they were put.
+        $this->assertStringContainsString('data-count="4"', $body);
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/ritual-detail.webp', $body);
         $this->assertLessThan(
             strpos($body, '/storage/three.webp'),
             strpos($body, '/storage/one.webp')
@@ -845,6 +1013,274 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertLessThan(
             strpos($body, '/storage/four.webp'),
             strpos($body, '/storage/three.webp')
+        );
+
+        // The tenant's own caption pill, which the conversion had to drop
+        // for want of a field until template fidelity 4.3.
+        $this->assertStringContainsString('<figcaption>Dry heat room</figcaption>', $body);
+    }
+
+    /**
+     * A caption is the tenant's, never the author's. The kit writes one per
+     * photograph ("Dry heat room", "Amber Hour" — its own fictional rooms
+     * and treatments) and none of them ships as a default, because a caption
+     * is a claim about the business where an alt is a description of the
+     * picture.
+     */
+    public function test_the_designs_photographs_ship_with_a_description_and_no_caption(): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
+            'heading' => 'A house made for the evening.',
+        ]]);
+        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-block="gallery"', $body);
+        $this->assertStringContainsString('alt="Warm timber sauna with towels and soft architectural lighting"', $body);
+        $this->assertStringNotContainsString('<figcaption>', $body);
+        $this->assertStringNotContainsString('Amber Hour', $body);
+        $this->assertStringNotContainsString('Dry heat room', $body);
+    }
+
+    /**
+     * TEMPLATE FIDELITY 4.1 / R1, R2, R3 — THE THREE NEW SLOTS, AND THEIR
+     * HOSTILE BATTERY.
+     *
+     * `team`, `booking` and `services` became addressable photographs in the
+     * same round the default model landed, and every battery that protects
+     * `hero` has to protect them or they are three new ways for a stored
+     * value to reach a `src`. Same provider, same guards, same reader — which
+     * is the whole reason there is one reader.
+     *
+     * `services` is included although neither shipped design draws its plate
+     * (kit 02's is the first): the slot is real, the endpoints accept it, and
+     * a guard that is only tested where a picture happens to be visible is a
+     * guard nobody notices losing.
+     *
+     * Mutation target: drop the `safeUrl()` call from `PageContent::
+     * imageUrl()` — or read `$copy['image_url']` in `team.blade.php` instead
+     * of going through it — and this goes red.
+     *
+     * @param mixed $value
+     */
+    #[DataProvider('hostileImages')]
+    public function test_a_hostile_value_in_a_new_slot_never_reaches_the_page(mixed $value, ?string $needle): void
+    {
+        ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Amara Cole', 'is_active' => true,
+        ]);
+
+        $this->published([
+            'hero'     => ['headline' => 'Nocturne'],
+            'team'     => ['image_url' => $value],
+            'booking'  => ['image_url' => $value],
+            'services' => ['image_url' => $value],
+        ], industry: 'hotel');
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+
+        if ($needle !== null) {
+            $this->assertStringNotContainsString($needle, $body);
+        }
+
+        // Each failed leaf restored the design's own photograph rather than
+        // leaving a hole — the same outcome "Remove" produces.
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/team-nocturne.webp', $body);
+        $this->assertStringContainsString('booking-panel__media', $body);
+    }
+
+    /**
+     * R1 — the team band's photograph is the BAND's, not one practitioner's
+     * headshot, and the avatar substitution survives only as the fallback for
+     * a design that ships none.
+     */
+    public function test_the_team_band_leads_with_its_own_photograph(): void
+    {
+        ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Amara Cole',
+            'avatar' => '/storage/avatars/amara.webp', 'is_active' => true,
+        ]);
+
+        $page = $this->published(['hero' => ['headline' => 'Nocturne']]);
+        $body = $this->body();
+
+        // The design's group shot, in a frame the author drew for three.
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/team-nocturne.webp', $body);
+        $this->assertStringNotContainsString('/storage/avatars/amara.webp', $body);
+        $this->assertStringContainsString('alt="Three practitioners together in the treatment space"', $body);
+
+        // On a design with no photograph of its own, the first
+        // practitioner's avatar is still what the band leads with.
+        $page->update(['template_key' => 'ruled_page']);
+        $this->assertStringContainsString('/storage/avatars/amara.webp', $this->body());
+    }
+
+    /**
+     * R2 — the closing panel has its own slot, and the author's reuse of the
+     * hero plate is that slot's DEFAULT rather than an alias. Replacing it
+     * must not touch the hero.
+     */
+    public function test_the_closing_panel_can_take_a_photograph_of_its_own(): void
+    {
+        $this->published([
+            'hero'    => ['headline' => 'Nocturne', 'image_url' => '/storage/my-hero.webp'],
+            'booking' => ['image_url' => '/storage/my-closing-plate.webp'],
+        ], industry: 'hotel');
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('/storage/my-closing-plate.webp', $body);
+        $this->assertStringContainsString('/storage/my-hero.webp', $body);
+    }
+
+    /**
+     * The migration behind R2, stated as a test because it is what keeps
+     * every already-live page unchanged: a page with a hero upload and
+     * nothing for `booking` renders the hero plate in the closing panel,
+     * exactly as it did before the slot existed.
+     */
+    public function test_a_page_with_no_closing_plate_still_reuses_its_hero(): void
+    {
+        $this->published([
+            'hero' => ['headline' => 'Nocturne', 'image_url' => '/storage/my-hero.webp'],
+        ], industry: 'hotel');
+
+        $body = $this->body();
+
+        // Counted over the BODY only: the same URL also appears twice in
+        // <head> as this page's share image (4.7), which is a different
+        // claim and would make this assertion about the wrong thing.
+        $rendered = substr($body, strpos($body, '<body>'));
+
+        $this->assertSame(2, substr_count($rendered, '/storage/my-hero.webp'),
+            'The closing panel no longer reuses the hero plate for a page that has not chosen its own.');
+    }
+
+    /**
+     * Template fidelity 4.7 — the page publishes a picture when it is
+     * shared, and the same one in its structured data.
+     *
+     * Every one of these designs is photography-led and, until this, a
+     * pasted link produced a dark rectangle with a title on it.
+     */
+    public function test_the_page_publishes_a_share_image_and_names_it_in_its_structured_data(): void
+    {
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
+        ]);
+
+        $this->published(['hero' => ['headline' => 'Nocturne', 'image_url' => '/storage/my-hero.webp']]);
+        $body = $this->body();
+
+        // ABSOLUTE, always: a crawler does not resolve a storage-relative
+        // path against this page's origin.
+        $this->assertMatchesRegularExpression(
+            '#<meta property="og:image" content="https?://[^"]+/storage/my-hero\.webp">#',
+            $body,
+        );
+        $this->assertStringContainsString('<meta name="twitter:card" content="summary_large_image">', $body);
+        $this->assertMatchesRegularExpression('#"image":"https?:\\\\?/\\\\?/[^"]+my-hero#', $body);
+    }
+
+    /**
+     * A tenant who has uploaded nothing still shares as a photograph — the
+     * design's own — which is the day-one case and the reason 4.1 and 4.7
+     * land together.
+     */
+    public function test_a_page_with_no_upload_shares_as_the_designs_own_photograph(): void
+    {
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
+        ]);
+
+        $this->published();
+
+        $this->assertMatchesRegularExpression(
+            '#<meta property="og:image" content="https?://[^"]+/landing/nocturne_ritual/assets/hero-nocturne\.webp">#',
+            $this->body(),
+        );
+    }
+
+    /**
+     * No picture anywhere means no tag, rather than one pointing at nothing.
+     *
+     * Asserted through The Ruled Page because it is the only design that can
+     * reach that state — it ships no photographs of its own. Its layout also
+     * carries its OWN <head> and its own inline JSON-LD copy (the four byte
+     * goldens pin them), so it publishes no share image at all yet: that is
+     * the same known duplication `landing/shared/local-business-json-ld.blade.php`
+     * already records, and closing it is a deliberate golden re-capture this
+     * task was told not to make.
+     */
+    public function test_a_design_with_no_photographs_publishes_no_share_image(): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Nocturne']]);
+        $page->update(['template_key' => 'ruled_page']);
+
+        $this->assertStringNotContainsString('og:image', $this->body());
+    }
+
+    /**
+     * Template fidelity 4.6 — a tenant with a real logo finally has
+     * somewhere to put it, and it is somewhere they have already put it.
+     *
+     * No new upload slot: `Brand.logo_url` exists, is tenant-uploadable, and
+     * was read by no landing file at all. The monogram stays as the fallback.
+     */
+    public function test_the_brands_own_logo_replaces_the_monogram(): void
+    {
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
+        ]);
+        $this->makeBrand('/storage/brands/mark.svg');
+
+        $this->published();
+        $body = $this->body();
+
+        // Header and footer both, from one resolved value.
+        $this->assertSame(2, substr_count($body, '/storage/brands/mark.svg'));
+        $this->assertStringNotContainsString('<span class="brand__mark" aria-hidden="true">N</span>', $body);
+    }
+
+    /** A hostile logo_url is refused by the same allowlist every photograph clears. */
+    public function test_a_hostile_brand_logo_never_reaches_the_page(): void
+    {
+        Property::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
+        ]);
+        $this->makeBrand('javascript:alert(1)');
+
+        $this->published();
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('javascript:', $body);
+        // And the monogram is back, rather than a frame with nothing in it.
+        $this->assertStringContainsString('<span class="brand__mark" aria-hidden="true">N</span>', $body);
+    }
+
+    /**
+     * Template fidelity 4.4 — the shipped defect. The catalogue admits eight
+     * photographs and the mosaic was authored for four, with nothing sizing
+     * the implicit rows five to eight land in; because `.gallery__item img`
+     * is `height: 100%`, those tiles collapsed to zero height on desktop.
+     *
+     * Asserted against the STYLESHEET rather than the markup, because that
+     * is where the defect is and there is nothing in the HTML to look at.
+     * Mutation target: delete `grid-auto-rows` from the appended block and
+     * this goes red.
+     */
+    public function test_the_mosaic_sizes_the_rows_a_fifth_photograph_lands_in(): void
+    {
+        $css = file_get_contents(public_path('landing/nocturne_ritual.css'));
+
+        $this->assertMatchesRegularExpression(
+            '/\.gallery__grid\s*\{[^}]*grid-auto-rows:\s*\d/s',
+            $css,
+            'Photographs five to eight land in implicit rows with no height.',
         );
     }
 

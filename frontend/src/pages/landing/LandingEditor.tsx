@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
@@ -15,12 +15,12 @@ import {
   addableTypes, appendSection, buildSectionRows, buildSectionsPayload, freeGalleryLeaves, gallerySlotName,
   gallerySlots, instanceRowLabel, moveSection,
   moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, setSectionTone,
-  stripImageLeaves, toggleSection,
+  stripImageLeaves, toggleSection, visibleFaqPairs,
   type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability,
   type SectionTypeOption,
 } from './editorSections'
 import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
-import { downscaleTarget, drawToBlob } from './imageDownscale'
+import { downscaledName, downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
 import type { DraftPayload } from './livePreview'
@@ -28,7 +28,8 @@ import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
+  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateImageDefaults, templatePhotoBlocks,
+  templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
 import { searchPreview, seoField, seoPayload, SEO_DESCRIPTION_MAX, SEO_TITLE_MAX } from './seoCard'
@@ -215,6 +216,22 @@ const iconBtnDanger = 'flex items-center justify-center w-8 h-8 shrink-0 rounded
  *  designed. */
 const ROW_ICON = 14
 
+/**
+ * The "+ Add a block" rail AFTER the last card, as an insertion point
+ * (template fidelity 3.4).
+ *
+ * A sentinel rather than a nullable second piece of state, so "which rail is
+ * open" is one value. Safe against collision by construction:
+ * `SectionType::typeOf()`'s key grammar is `[a-z][a-z0-9_]*(_[1-9][0-9]*)?`
+ * and this is upper case, so no section key can ever equal it.
+ */
+const ADD_AT_END = 'END'
+
+/** Field types whose control is a COMPOSITE — several inputs, or none at
+ *  all — so the card's own `<label>` names the group rather than pointing
+ *  `htmlFor` at an id no single element carries. */
+const COMPOSITE_FIELD_TYPES = ['image', 'gallery', 'faq_pairs']
+
 /** The tenant's word for each tone (`App\Landing\SectionType::TONES`' ids) —
  *  `t()` fallbacks, so the swatch row is never a line of unlabelled colour.
  *  Named for what the tenant is choosing, not for the band class behind it;
@@ -253,6 +270,21 @@ const FIELD_FALLBACK: Record<string, string> = {
   address: 'Address',
   // Task 6: label above the photo control (hero/about only).
   image_url: 'Photo',
+
+  // ─── Template fidelity 4.3 ────────────────────────────────────────────
+  //
+  // The two text leaves that belong to a PICTURE rather than to the band —
+  // drawn inside the photo control that owns them (see `fieldsForType`,
+  // which consumes them out of the flat field list). One label each, however
+  // many photographs a band holds: a gallery's eight `caption_N` leaves all
+  // take `caption`, because "Caption under the photo" means the same thing
+  // beside every one of them and eight numbered labels would be eight ways
+  // of saying it.
+  //
+  // Named for what the tenant is WRITING, not for the attribute: "alt text"
+  // is the trade's word and means nothing to a salon owner.
+  alt: 'What the photo shows',
+  caption: 'Caption under the photo',
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
@@ -551,6 +583,23 @@ export function LandingEditor({
   const renders = templateRenders(templates, templateKey)
   const fixedBlocks = templateFixedBlocks(templates, templateKey)
 
+  /**
+   * Template fidelity 4.1/4.5 — the two facts the photo controls need.
+   *
+   * `photoBlocks` is which blocks this design actually DRAWS a photograph
+   * in, which is narrower than `renders`: a slot belongs to a type and is
+   * shared by every design, a drawn photograph belongs to a partial and is
+   * not. `imageDefaults` is the design's OWN photographs, slot → URL, which
+   * is what makes "Remove" mean "restore the original" and what lets a
+   * control say which of the two subjects it is showing.
+   *
+   * Resolved against the SHOWN template key, like the two above: switching
+   * design changes which photographs a tenant is looking at, and the preview
+   * beside them has already changed.
+   */
+  const photoBlocks = templatePhotoBlocks(templates, templateKey)
+  const imageDefaults = templateImageDefaults(templates, templateKey)
+
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
   // so the brand's own name (BrandSwitcher's own data, already loaded) is
@@ -566,7 +615,9 @@ export function LandingEditor({
   // queued half a second ago. A tenant typing into a brand-new text block
   // watches the hint clear on Save, which is exactly when the band actually
   // appears on the page.
-  const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability, sectionTypes, page?.content)
+  const rows: EditorSectionRow[] = buildSectionRows(
+    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks,
+  )
 
   /**
    * TEMPLATE FIDELITY 2.2 — ONE CARD OPEN AT A TIME.
@@ -590,6 +641,17 @@ export function LandingEditor({
    */
   const [filter, setFilter] = useState<SectionFilter>('all')
 
+  /**
+   * TEMPLATE FIDELITY 3.4 — which "+ Add a block" rail has its picker open.
+   *
+   * The KEY of the row the picker sits above, `END` for the rail after the
+   * last card, or null for none. Lifted to the list for the same reason
+   * `expandedKey` is: there is one picker at a time, and two rails both
+   * believing they are open would be two claims about where the next block
+   * lands.
+   */
+  const [addOpenAt, setAddOpenAt] = useState<string | null>(null)
+
   const chipCounts = filterCounts(rows)
   const shownRows = visibleRows(rows, filter)
   const reorderable = reorderableUnderFilter(filter)
@@ -604,8 +666,9 @@ export function LandingEditor({
 
   // Counted over the RAW rows, never `rows` — see `addableTypes`. A row this
   // build failed to recognise still takes up a place on the page as far as
-  // `store()`'s cap is concerned.
-  const addable: AddableType[] = addableTypes(sectionTypes, f.sections ?? [], maxSections)
+  // `store()`'s cap is concerned. `renders` (3.1) keeps a block this design
+  // has no partial for out of the picker entirely.
+  const addable: AddableType[] = addableTypes(sectionTypes, f.sections ?? [], maxSections, renders)
 
   // The one polite announcement channel every reorder path writes to —
   // drag, chevrons, and arrow keys on the handle alike. A screen reader
@@ -781,10 +844,23 @@ export function LandingEditor({
   const [justAdded, setJustAdded] = useState<string | null>(null)
 
   const addMut = useMutation({
-    mutationFn: (type: string) =>
+    // 3.4: `before` is the key of the row the picker was opened ABOVE, or
+    // null for the rail after the last card. The ENDPOINT still appends —
+    // that is the one placement that can never silently reorder something a
+    // tenant had already arranged, and it is the same rule two simultaneous
+    // adds have to agree on — so the requested position is applied here, to
+    // the form, and travels with the next save alongside every other
+    // reorder. The row itself exists the moment this returns.
+    mutationFn: ({ type }: { type: string; before: string | null }) =>
       api.post('/v1/admin/landing-pages/sections', { type }).then(r => r.data as { key: string }),
-    onSuccess: ({ key }) => {
-      setForm(p => (p === null ? null : { ...p, sections: appendSection(p.sections ?? [], key) }))
+    onSuccess: ({ key }, { before }) => {
+      setForm(p => {
+        if (p === null) return null
+
+        const appended = appendSection(p.sections ?? [], key)
+
+        return { ...p, sections: before === null ? appended : moveSectionToKey(appended, key, before) }
+      })
       qc.invalidateQueries({ queryKey: ['landing-page', currentBrandId] })
       setPreviewNonce(n => n + 1)
       // Focuses the new band's first writable field on mount, so a tenant
@@ -799,6 +875,9 @@ export function LandingEditor({
       // A band added while a chip is active would otherwise land outside
       // the filter and appear not to have been added at all.
       setFilter('all')
+      // 3.4: the picker has done its job. Left open it would sit between
+      // the card the tenant just asked for and the one above it.
+      setAddOpenAt(null)
     },
     onError: (e: unknown) => toast.error(sectionErrorMessage(e, t('common.error', 'Something went wrong'))),
   })
@@ -936,7 +1015,7 @@ export function LandingEditor({
       // that moved it silently did not stick — the row kept whatever `sort`
       // `store()` appended it with while every other row was renumbered
       // around it.
-      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content)
+      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks)
       if (toSave.length > 0) {
         calls.push(api.put('/v1/admin/landing-pages/sections', { sections: buildSectionsPayload(toSave) }))
       }
@@ -1332,6 +1411,25 @@ export function LandingEditor({
 
             <div className="space-y-3">
               {shownRows.map((row, i) => (
+                <React.Fragment key={row.key}>
+                  {/*
+                    3.4: the insertion point ABOVE this card. Offered only
+                    over the whole list — while a chip is active the list is
+                    a subset in page order, so "above this card" names no
+                    position the page has, exactly as the reorder arrows are
+                    withdrawn for the same reason. The trailing rail below
+                    still works under a filter and adds at the end.
+                  */}
+                  {reorderable && (
+                    <AddBlockRail
+                      types={addable}
+                      adding={addMut.isPending ? (addMut.variables?.type ?? null) : null}
+                      onAdd={type => addMut.mutate({ type, before: row.key })}
+                      templateKey={templateKey}
+                      open={addOpenAt === row.key}
+                      onOpenChange={next => setAddOpenAt(next ? row.key : null)}
+                    />
+                  )}
                 <SectionRow
                   key={row.key}
                   row={row}
@@ -1363,6 +1461,10 @@ export function LandingEditor({
                   // unconditional `url.match(...)` and taking this whole
                   // route down.
                   imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
+                  // 4.1: the design's own photographs, for the controls that
+                  // have to say whether the picture on screen is the
+                  // tenant's or the designer's.
+                  imageDefaults={imageDefaults}
                   // Same source and the same reason as `imageUrl` above —
                   // the raw QUERY leaf, never `f`/`form`. The photo strip
                   // reads it whole (it needs the OCCUPIED leaves to
@@ -1404,6 +1506,7 @@ export function LandingEditor({
                   onFieldChange={(field, value) => updateContent(row.key, field, value)}
                   onImageChanged={onImageChanged}
                 />
+                </React.Fragment>
               ))}
             </div>
 
@@ -1436,11 +1539,17 @@ export function LandingEditor({
               </div>
             )}
 
-            <AddSectionCard
+            {/* 3.4: the last insertion point — after the final card, and
+                the only one offered while a chip is active. `END` is not a
+                section key (the grammar is `[a-z][a-z0-9_]*`), so it can
+                never collide with a row. */}
+            <AddBlockRail
               types={addable}
-              adding={addMut.isPending ? (addMut.variables ?? null) : null}
-              onAdd={type => addMut.mutate(type)}
+              adding={addMut.isPending ? (addMut.variables?.type ?? null) : null}
+              onAdd={type => addMut.mutate({ type, before: null })}
               templateKey={templateKey}
+              open={addOpenAt === ADD_AT_END}
+              onOpenChange={next => setAddOpenAt(next ? ADD_AT_END : null)}
             />
 
             {/*
@@ -2085,7 +2194,8 @@ const TYPE_BLURB_FALLBACK: Record<string, string> = {
 }
 
 function SectionRow({
-  row, isFirst, isLast, index, total, content, imageUrl, storedSection, autoFocusFirstField, onFocusHandled,
+  row, isFirst, isLast, index, total, content, imageUrl, imageDefaults, storedSection, autoFocusFirstField,
+  onFocusHandled,
   expanded, onToggleExpanded, reorderable, placement, drawn, drawnBy, templateName, thumbUrl,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
   onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
@@ -2093,6 +2203,11 @@ function SectionRow({
   row: EditorSectionRow
   isFirst: boolean
   isLast: boolean
+  /** TEMPLATE FIDELITY 4.1 — the DESIGN's own photographs, slot => URL.
+   *  Handed down whole rather than resolved per control, because a gallery
+   *  needs eight of them and a single plate one, and both are looked up by
+   *  the endpoints' own slot spelling. */
+  imageDefaults: Record<string, string>
   /** TEMPLATE FIDELITY 2.2 — is this the one open card? Decided by the
    *  LIST (single-expand), never held here: two cards open and the preview
    *  beside them can only be about one of them. */
@@ -2635,7 +2750,10 @@ function SectionRow({
             <div key={field.name}>
               <label
                 className={label}
-                htmlFor={field.type === 'image' || field.type === 'gallery' ? undefined : `lp-${row.key}-${field.name}`}
+                // A composite control has no ONE input to label — the photo
+                // strip has eight thumbnails and a picker, the questions
+                // form has a pair of inputs per row, each already labelled.
+                htmlFor={COMPOSITE_FIELD_TYPES.includes(field.type ?? '') ? undefined : `lp-${row.key}-${field.name}`}
               >
                 {t(`landing_pages.editor.field_${field.name}`, FIELD_FALLBACK[field.name] ?? field.name)}
               </label>
@@ -2653,7 +2771,25 @@ function SectionRow({
                   sectionKey={row.key}
                   stored={storedSection}
                   limit={field.slots ?? 0}
+                  defaults={imageDefaults}
+                  content={content}
+                  onFieldChange={onFieldChange}
                   onChanged={onImageChanged}
+                />
+              ) : field.type === 'faq_pairs' ? (
+                /*
+                 * 3.3: the questions band is ONE control, not fifteen boxes.
+                 * Synthesised in `fieldsForType` exactly the way the gallery
+                 * strip is, and writing the same `q1`/`a1`… leaves through
+                 * the same `onFieldChange` every other text field uses —
+                 * these ARE ordinary content leaves and they save with the
+                 * words, not through an endpoint of their own.
+                 */
+                <FaqPairsField
+                  sectionKey={row.key}
+                  content={content}
+                  pairs={field.pairs ?? 0}
+                  onFieldChange={onFieldChange}
                 />
               ) : field.type === 'image' ? (
                 /*
@@ -2671,7 +2807,17 @@ function SectionRow({
                  * there is no keystroke to queue, only an immediate,
                  * already-saved server round-trip.
                  */
-                <ImageField sectionKey={row.key} imageUrl={imageUrl} onChanged={onImageChanged} />
+                <ImageField
+                  sectionKey={row.key}
+                  imageUrl={imageUrl}
+                  // 4.1: this row's slot is the bare section key for a
+                  // single plate — the endpoints' own spelling, which is
+                  // also how the served map is keyed.
+                  defaultUrl={imageDefaults[row.key] ?? null}
+                  content={content}
+                  onFieldChange={onFieldChange}
+                  onChanged={onImageChanged}
+                />
               ) : field.multiline ? (
                 <textarea
                   id={`lp-${row.key}-${field.name}`}
@@ -2718,24 +2864,88 @@ function SectionRow({
 }
 
 /**
- * "Add a section", at the foot of the list.
+ * TEMPLATE FIDELITY 3.4 — "+ Add a block", between the cards and after the
+ * last one.
  *
- * One button per ADDABLE type, and the list of them is the server's
- * (`section_types` filtered to `repeatable`), never a hand list here — which
- * is what makes a second repeatable type a backend change and nothing else.
- * Today that is exactly one button; the layout is a column of them rather
- * than a special case for one, because the day there are three the only
- * thing that should have to change is the catalogue.
+ * The affordance this replaces was a card at the FOOT of the list carrying
+ * an apology: "New sections go to the bottom of the page. You can move them
+ * anywhere afterwards." A tenant who wanted a words band between their
+ * services and their story had to add it, scroll to the bottom, and drag it
+ * six rows up. Offering the add WHERE the block goes removes the apology and
+ * the drag together.
  *
- * A type at its cap is DISABLED WITH ITS REASON SHOWN, not hidden: a tenant
- * who is looking for the control they used ten minutes ago must find it and
- * be told why it will not work, rather than watch it vanish. Both sentences
- * name the real number, interpolated from the served cap — see
- * `addableTypes`, which decides which of the two applies.
+ * A hairline with a quiet button in it, at rest; the picker opens INLINE
+ * beneath it rather than in a portal, so the tenant keeps the list they were
+ * reading in view and there is no focus trap to get wrong. One picker open
+ * at a time, decided by the list (the same single-expand rule the cards
+ * follow), which is also what stops two rails claiming the same insertion
+ * point.
  */
-function AddSectionCard({ types, adding, onAdd, templateKey }: {
+function AddBlockRail({ types, adding, onAdd, templateKey, open, onOpenChange }: {
   types: AddableType[]
   /** The type id currently in flight, or null. */
+  adding: string | null
+  onAdd: (type: string) => void
+  templateKey: string
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
+  const { t } = useTranslation()
+
+  // Nothing addable at all — an older backend that serves no catalogue, or
+  // a design that draws none of the addable types. No rail, no empty
+  // heading over nothing.
+  if (types.length === 0) return null
+
+  return (
+    <div className="relative">
+      {/* The rail reads as a seam between two cards rather than as a
+          control until it is hovered or focused — thirteen of these down a
+          list must not be louder than the sections they sit between. */}
+      <div className="group flex items-center gap-2 py-1">
+        <span aria-hidden className="h-px flex-1 bg-dark-border/60" />
+        <button
+          type="button"
+          onClick={() => onOpenChange(!open)}
+          aria-expanded={open}
+          className={'flex items-center gap-1 px-2 py-1 rounded-full border border-dark-border bg-dark-bg '
+            + 'text-[11px] text-t-secondary opacity-60 group-hover:opacity-100 focus-visible:opacity-100 '
+            + 'hover:text-white transition-opacity motion-reduce:transition-none outline-none '
+            + 'focus-visible:ring-2 focus-visible:ring-primary-500/60'}
+        >
+          <Plus size={12} />
+          {t('landing_pages.editor.add_block', 'Add a block')}
+        </button>
+        <span aria-hidden className="h-px flex-1 bg-dark-border/60" />
+      </div>
+
+      {open && (
+        <AddBlockPicker
+          types={types}
+          adding={adding}
+          onAdd={onAdd}
+          templateKey={templateKey}
+          onClose={() => onOpenChange(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+/**
+ * The picker sheet itself: one entry per ADDABLE type, and the list of them
+ * is the server's (`section_types` filtered by `addable` and by what this
+ * design actually draws), never a hand list here — which is what makes a new
+ * block a backend change and nothing else.
+ *
+ * A type that cannot be added right now is DISABLED WITH ITS REASON SHOWN,
+ * not hidden: a tenant who is looking for the control they used ten minutes
+ * ago must find it and be told why it will not work, rather than watch it
+ * vanish. Every sentence names the real number, interpolated from the served
+ * cap — see `addableTypes`, which decides which of the three applies.
+ */
+function AddBlockPicker({ types, adding, onAdd, templateKey, onClose }: {
+  types: AddableType[]
   adding: string | null
   onAdd: (type: string) => void
   /** 2.4: which design's wireframes to show beside each choice. The block a
@@ -2743,26 +2953,32 @@ function AddSectionCard({ types, adding, onAdd, templateKey }: {
    *  ("Photo gallery") does not say which stripe of the page they are about
    *  to add. Interpolated into a URL, never compared. */
   templateKey: string
+  onClose: () => void
 }) {
   const { t } = useTranslation()
 
-  // Nothing addable at all — an older backend that serves no catalogue, or
-  // one whose catalogue has no repeatable type. No card, no empty heading
-  // over nothing.
-  if (types.length === 0) return null
-
   return (
-    <div className={card + ' mt-3 space-y-3'}>
-      <div>
-        <h2 className="text-sm font-semibold text-white">
-          {t('landing_pages.editor.add_section', 'Add a section')}
-        </h2>
-        <p className="text-xs text-t-secondary mt-0.5">
-          {t(
-            'landing_pages.editor.add_section_hint',
-            'New sections go to the bottom of the page. You can move them anywhere afterwards.',
-          )}
-        </p>
+    <div className={card + ' mb-1 space-y-3'}>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-sm font-semibold text-white">
+            {t('landing_pages.editor.add_section', 'Add a section')}
+          </h2>
+          <p className="text-xs text-t-secondary mt-0.5">
+            {t(
+              'landing_pages.editor.add_block_hint',
+              'It goes in right here. You can still move it afterwards.',
+            )}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t('landing_pages.editor.add_block_close', 'Close')}
+          className={iconBtn}
+        >
+          <X size={ROW_ICON} />
+        </button>
       </div>
 
       <div className="space-y-2">
@@ -2781,12 +2997,21 @@ function AddSectionCard({ types, adding, onAdd, templateKey }: {
               name,
               defaultValue: 'You already have {{limit}} of these — that is as many as one page can hold. Remove one to add another.',
             })
-            : type.disabledReason === 'page_full'
-              ? t('landing_pages.editor.add_section_page_full', {
-                limit: type.pageLimit ?? 0,
-                defaultValue: 'Your page is full — it holds up to {{limit}} sections. Remove one to add another.',
+            // 3.1: a FIXED block a page can only hold one of. There is
+            // nothing to remove and no cap to explain — the band is already
+            // in the list above, possibly switched off, and switching it
+            // back on is the actual next step.
+            : type.disabledReason === 'already_on_page'
+              ? t('landing_pages.editor.add_section_already_on_page', {
+                name,
+                defaultValue: 'Your page already has one of these — find it in the list above.',
               })
-              : null
+              : type.disabledReason === 'page_full'
+                ? t('landing_pages.editor.add_section_page_full', {
+                  limit: type.pageLimit ?? 0,
+                  defaultValue: 'Your page is full — it holds up to {{limit}} sections. Remove one to add another.',
+                })
+                : null
 
           return (
             /* 2.4: the wireframe beside the words, at the larger of the two
@@ -2823,6 +3048,124 @@ function AddSectionCard({ types, adding, onAdd, templateKey }: {
 }
 
 /**
+ * TEMPLATE FIDELITY 3.3 — the FAQ needs a form, not fifteen boxes.
+ *
+ * `faq.fields` is `kicker, heading, subtext, q1, a1, … q6, a6`. Through the
+ * flat field loop that was fifteen stacked inputs on one card, twelve of
+ * them labelled `q1`…`a6` — a control a salon owner cannot read, on the one
+ * band whose entire content is a list of couplets.
+ *
+ * BOTH HALVES OR NEITHER, said on the card rather than discovered from a
+ * preview. `PageContent::faqPairs()` drops any pair missing a half, so a
+ * tenant who types a question and no answer has written something the page
+ * will never show — this mirrors that rule where the typing happens instead
+ * of letting a lone answer be saved silently.
+ *
+ * HOW MANY ROWS ARE SHOWN is `visibleFaqPairs`, a pure function so the rule
+ * is testable: every pair that has anything in it, plus the ones the tenant
+ * has revealed, never fewer than one and never more than the served cap. The
+ * cap comes off the wire (`SectionField.pairs`, derived from the leaves the
+ * server published) and is never the literal six.
+ */
+function FaqPairsField({ sectionKey, content, pairs, onFieldChange }: {
+  sectionKey: string
+  /** `f.content[sectionKey]` — the same form-merged object every other text
+   *  control on this card reads and writes. These are ordinary content
+   *  leaves; nothing here talks to an endpoint. */
+  content: Record<string, string>
+  /** The served cap — how many couplets this band may hold. */
+  pairs: number
+  onFieldChange: (field: string, value: string) => void
+}) {
+  const { t } = useTranslation()
+
+  // How many EMPTY rows the tenant has asked to see beyond the written ones.
+  // Local, because it is a fact about this card being open rather than about
+  // the page: a revealed-but-never-filled row leaves nothing behind.
+  const [revealed, setRevealed] = useState(0)
+
+  const shown = visibleFaqPairs(content, pairs, revealed)
+  const full = shown >= pairs
+
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: shown }, (_, i) => {
+        const n = i + 1
+        const question = content[`q${n}`] ?? ''
+        const answer = content[`a${n}`] ?? ''
+        // Exactly `PageContent::faqPairs()`'s own test, said where the
+        // typing is: trimmed, both halves, or the pair does not publish.
+        const halfWritten = (question.trim() === '') !== (answer.trim() === '')
+
+        return (
+          <div key={n} className="rounded-lg border border-dark-border bg-dark-bg/40 p-3 space-y-2">
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-q${n}`}>
+                {t(`landing_pages.editor.field_q${n}`, FIELD_FALLBACK[`q${n}`] ?? `Question ${n}`)}
+              </label>
+              <input
+                id={`lp-${sectionKey}-q${n}`}
+                className={input}
+                value={question}
+                onChange={e => onFieldChange(`q${n}`, e.target.value)}
+              />
+            </div>
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-a${n}`}>
+                {t(`landing_pages.editor.field_a${n}`, FIELD_FALLBACK[`a${n}`] ?? `Answer ${n}`)}
+              </label>
+              <textarea
+                id={`lp-${sectionKey}-a${n}`}
+                className={input + ' resize-y'}
+                rows={2}
+                value={answer}
+                onChange={e => onFieldChange(`a${n}`, e.target.value)}
+              />
+            </div>
+            {halfWritten && (
+              <p className="text-xs text-warning leading-relaxed">
+                {t(
+                  'landing_pages.editor.faq_pair_incomplete',
+                  'A question needs its answer. This one stays off your page until both are filled in.',
+                )}
+              </p>
+            )}
+          </div>
+        )
+      })}
+
+      <div className="flex items-center gap-3 flex-wrap">
+        <button
+          type="button"
+          className={btnSec}
+          disabled={full}
+          onClick={() => setRevealed(r => r + 1)}
+        >
+          <Plus size={14} />
+          {t('landing_pages.editor.faq_add_pair', 'Add another question')}
+        </button>
+        {/* At the cap the count is REPLACED by the reason rather than joined
+            by one — the same choice the photo strip makes, and for the same
+            reason: a button going quietly grey with no sentence beside it is
+            a refusal with no explanation. */}
+        <p className="text-xs text-t-secondary/80 leading-relaxed">
+          {full
+            ? t('landing_pages.editor.faq_full', {
+              limit: pairs,
+              defaultValue: 'You have {{limit}} questions — that is as many as one band can hold.',
+            })
+            : t('landing_pages.editor.faq_count', {
+              used: shown,
+              limit: pairs,
+              defaultValue: '{{used}} of {{limit}} questions',
+            })}
+        </p>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Task 6: the hero/about photo control. Per the spec, **no drag-and-drop
  * and no canvas UI** — a single native `<input type="file">`, no custom
  * drop-zone, no in-browser cropper. Its own `useMutation`s (rather than
@@ -2838,9 +3181,20 @@ function AddSectionCard({ types, adding, onAdd, templateKey }: {
  * every `text_N` alongside `hero`/`about` precisely so this endpoint could
  * accept them. `imageErrorMessage` already surfaces its refusal in words.
  */
-function ImageField({ sectionKey, imageUrl, onChanged }: {
+function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, onChanged }: {
   sectionKey: string
+  /** The TENANT's own upload for this slot, off the raw query — null when
+   *  they have not made one. Never the effective picture: the difference
+   *  between the two is the whole control. */
   imageUrl: string | null
+  /** The DESIGN's own photograph for this slot, off the served
+   *  `image_defaults` — null when it ships none (template fidelity 4.1). */
+  defaultUrl: string | null
+  /** `f.content[sectionKey]`, for the two WORD leaves that belong to this
+   *  picture. They are ordinary content and save with the words; only the
+   *  picture itself has an endpoint of its own. */
+  content: Record<string, string>
+  onFieldChange: (field: string, value: string) => void
   onChanged: () => void
 }) {
   const { t } = useTranslation()
@@ -2864,7 +3218,9 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
 
       const body = new FormData()
       body.append('slot', sectionKey)
-      body.append('image', image, file.name)
+      // 4.8: a re-encoded upload is WebP whatever the picked file was
+      // called, and the name has to say so — see `downscaledName`.
+      body.append('image', image, target ? downscaledName(file.name) : file.name)
       // The shared `api` client strips Content-Type for a FormData body
       // (api.ts:28-37) so this plain multipart POST needs no extra config.
       return api.post('/v1/admin/landing-pages/image', body)
@@ -2889,14 +3245,32 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
 
   const busy = uploadMut.isPending || removeMut.isPending
 
+  // WHAT THE TENANT IS ACTUALLY LOOKING AT — their own picture when they
+  // have chosen one, the design's when they have not. The same resolution
+  // `PageContent::imageUrl()` makes server-side, from the same two facts,
+  // because a control that showed a different picture from the page would
+  // be worse than one that showed none.
+  const shown = imageUrl ?? defaultUrl
+  const isDefault = imageUrl === null && defaultUrl !== null
+
   return (
     <div className="space-y-2">
-      {imageUrl ? (
-        <img
-          src={resolveImage(imageUrl) ?? undefined}
-          alt=""
-          className="max-h-24 rounded-lg border border-dark-border object-cover"
-        />
+      {shown ? (
+        <div className="space-y-1">
+          <img
+            src={resolveImage(shown) ?? undefined}
+            alt=""
+            className="max-h-24 rounded-lg border border-dark-border object-cover"
+          />
+          {/* Said plainly, because it is the one thing about this control a
+              tenant cannot see: the picture on their page right now is the
+              designer's, and it will stay there until they replace it. */}
+          {isDefault && (
+            <p className="text-xs text-t-secondary/80">
+              {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}
+            </p>
+          )}
+        </div>
       ) : (
         <p className="text-xs text-t-secondary">{t('landing_pages.editor.no_photo', 'No photo yet')}</p>
       )}
@@ -2907,7 +3281,9 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
           accept="image/jpeg,image/png,image/webp"
           disabled={busy}
           onChange={onPick}
-          aria-label={t('landing_pages.editor.upload_photo', 'Upload photo')}
+          aria-label={isDefault || imageUrl
+            ? t('landing_pages.editor.replace_photo', 'Replace photo')
+            : t('landing_pages.editor.upload_photo', 'Upload photo')}
           className="block w-full max-w-xs text-xs text-t-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-dark-border file:bg-dark-bg file:text-t-secondary file:text-xs hover:file:text-white disabled:opacity-50"
         />
         {uploadMut.isPending && (
@@ -2918,6 +3294,14 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
             <Check size={12} /> {t('landing_pages.editor.photo_saved', 'Saved')}
           </span>
         )}
+        {/* TEMPLATE FIDELITY 4.1 — the verb follows what actually happens.
+            The endpoint is the same one either way (it clears the leaf and
+            deletes the file); what differs is what the page shows next, and
+            on a design that ships its own photograph that is the designer's
+            picture rather than a hole. A button saying "Remove photo" that
+            leaves a photograph behind would be the control lying about
+            itself; one saying "Restore original" where there is no original
+            would be worse. */}
         {imageUrl && (
           <button
             type="button"
@@ -2925,10 +3309,49 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
             disabled={busy}
             onClick={() => removeMut.mutate()}
           >
-            {t('landing_pages.editor.remove_photo', 'Remove photo')}
+            {defaultUrl
+              ? t('landing_pages.editor.restore_photo', 'Restore original')
+              : t('landing_pages.editor.remove_photo', 'Remove photo')}
           </button>
         )}
       </div>
+
+      {/* THE WORDS THAT BELONG TO THIS PICTURE (4.3), under it rather than
+          beside the rest of the card's fields: they describe the thing
+          immediately above them, and every kit writes both.
+
+          Ordinary content leaves — they queue into the same save as the
+          headline, and the one-writer rule that protects the picture does
+          not apply to them. Offered only once there is a picture to
+          describe. */}
+      {shown && (
+        <div className="grid gap-2 sm:grid-cols-2 pt-1">
+          <div>
+            <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
+              {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
+            </label>
+            <input
+              id={`lp-${sectionKey}-alt`}
+              className={input}
+              maxLength={191}
+              value={content.alt ?? ''}
+              onChange={e => onFieldChange('alt', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
+              {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+            </label>
+            <input
+              id={`lp-${sectionKey}-caption`}
+              className={input}
+              maxLength={191}
+              value={content.caption ?? ''}
+              onChange={e => onFieldChange('caption', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -2996,19 +3419,28 @@ function useSavedFlash(): [boolean, () => void] {
  * already follows: a native multi-select `<input type="file">`, a strip of
  * thumbnails, and a remove button on each.
  */
-function GalleryField({ sectionKey, stored, limit, onChanged }: {
+function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
   stored: unknown
   /** The served cap. Zero means the backend published no count, and the
    *  control shows no picker rather than guessing at a number. */
   limit: number
+  /** The design's own photographs, slot => URL (template fidelity 4.1). */
+  defaults: Record<string, string>
+  /** `f.content[sectionKey]`, for the per-tile caption leaves. Ordinary
+   *  content: they queue into the same save as the words. */
+  content: Record<string, string>
+  onFieldChange: (field: string, value: string) => void
   onChanged: () => void
 }) {
   const { t } = useTranslation()
 
-  const photos = gallerySlots(stored, sectionKey, limit)
-  const used = photos.length
+  const photos = gallerySlots(stored, sectionKey, limit, defaults)
+  // Counted over the TENANT's own uploads, never the design's: "6 of 8" is
+  // about how many more they can add, and the endpoint's cap is on leaves
+  // they have written. A design's photograph occupies a leaf they have not.
+  const used = photos.filter(photo => !photo.isDefault).length
   const full = limit === 0 || used >= limit
   // 1.6, same reason as the single plate's: these uploads and removals are
   // already saved the moment they return, and the save bar below is about
@@ -3036,7 +3468,9 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
 
         const body = new FormData()
         body.append('slot', gallerySlotName(sectionKey, leaf))
-        body.append('image', image, file.name)
+        // 4.8, same rule as the single plate's: a re-encoded upload is WebP
+        // whatever the picked file was called.
+        body.append('image', image, target ? downscaledName(file.name) : file.name)
 
         // Sequential, deliberately: each upload is its own row-locking
         // transaction on the same page row, so firing eight at once would
@@ -3084,33 +3518,78 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
   return (
     <div className="space-y-2">
       {photos.length > 0 ? (
-        <ul className="flex flex-wrap gap-2 list-none p-0 m-0">
+        /* A COLUMN OF TILES, not a wrapped row of thumbnails, since 4.3:
+           each picture now carries a caption input of its own, and a caption
+           belongs beside the photograph it names. */
+        <ul className="space-y-2 list-none p-0 m-0">
           {photos.map((photo, i) => (
-            <li key={photo.leaf} className="relative">
-              <img
-                src={resolveImage(photo.url) ?? undefined}
-                alt=""
-                className="h-20 w-20 rounded-lg border border-dark-border object-cover"
-              />
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => removeMut.mutate(photo.slot)}
-                // Numbered by POSITION in the strip, not by leaf: `image_5`
-                // is a storage detail, and "Remove photo 3" is what the
-                // tenant is actually looking at.
-                aria-label={t('landing_pages.editor.remove_photo_n', {
-                  position: i + 1,
-                  defaultValue: 'Remove photo {{position}}',
-                })}
-                title={t('landing_pages.editor.remove_photo_n', {
-                  position: i + 1,
-                  defaultValue: 'Remove photo {{position}}',
-                })}
-                className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-dark-bg border border-dark-border text-t-secondary hover:text-white disabled:opacity-50"
-              >
-                <X size={12} />
-              </button>
+            <li key={photo.leaf} className="flex items-start gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src={resolveImage(photo.url) ?? undefined}
+                  alt=""
+                  className="h-20 w-20 rounded-lg border border-dark-border object-cover"
+                />
+                {/* Nothing to remove from a tile the tenant has not filled:
+                    the design's photograph is not theirs to delete, and the
+                    way to change it is to upload one over it. */}
+                {!photo.isDefault && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => removeMut.mutate(photo.slot)}
+                    // Numbered by POSITION in the strip, not by leaf:
+                    // `image_5` is a storage detail, and "photo 3" is what
+                    // the tenant is actually looking at. The VERB follows
+                    // what happens next — on a design that ships its own
+                    // picture for this slot, clearing the leaf puts that
+                    // picture back rather than leaving a hole.
+                    aria-label={t(
+                      defaults[photo.slot]
+                        ? 'landing_pages.editor.restore_photo_n'
+                        : 'landing_pages.editor.remove_photo_n',
+                      {
+                        position: i + 1,
+                        defaultValue: defaults[photo.slot]
+                          ? 'Restore the original photo {{position}}'
+                          : 'Remove photo {{position}}',
+                      },
+                    )}
+                    title={t(
+                      defaults[photo.slot]
+                        ? 'landing_pages.editor.restore_photo_n'
+                        : 'landing_pages.editor.remove_photo_n',
+                      {
+                        position: i + 1,
+                        defaultValue: defaults[photo.slot]
+                          ? 'Restore the original photo {{position}}'
+                          : 'Remove photo {{position}}',
+                      },
+                    )}
+                    className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-dark-bg border border-dark-border text-t-secondary hover:text-white disabled:opacity-50"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <label className={label} htmlFor={`lp-${sectionKey}-${photo.captionLeaf}`}>
+                  {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+                </label>
+                <input
+                  id={`lp-${sectionKey}-${photo.captionLeaf}`}
+                  className={input}
+                  maxLength={191}
+                  value={content[photo.captionLeaf] ?? ''}
+                  onChange={e => onFieldChange(photo.captionLeaf, e.target.value)}
+                />
+                {photo.isDefault && (
+                  <p className="text-xs text-t-secondary/80 mt-1">
+                    {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}
+                  </p>
+                )}
+              </div>
             </li>
           ))}
         </ul>

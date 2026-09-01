@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   catalogPayload, industryHasChanged, resolveTemplateKey, showTemplatePicker, templateCards,
+  templateImageDefaults, templatePhotoBlocks,
   templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -315,6 +316,84 @@ describe('templateFixedBlocks', () => {
       { key: 'k', name: 'K', blurb: '', fixed_blocks: { a: 'top', b: 7 as unknown as string, c: '' } },
     ]
     expect(templateFixedBlocks(hostile, 'k')).toEqual({ a: 'top' })
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 4.5 — which blocks a design draws a PHOTOGRAPH in, which
+ * is narrower than which blocks it draws at all.
+ *
+ * A photo slot belongs to a TYPE and is shared by every design; a drawn
+ * photograph belongs to a PARTIAL and is not. `services` carries a
+ * band-level plate for the second kit and neither shipped design has one, so
+ * its control must be offered nowhere yet.
+ */
+describe('templatePhotoBlocks', () => {
+  const WITH_PHOTOS: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', photo_blocks: ['hero', 'about', 'text', 'gallery'] },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', photo_blocks: ['hero', 'about', 'team', 'booking'] },
+  ]
+
+  it('carries the served list through', () => {
+    expect(templatePhotoBlocks(WITH_PHOTOS, 'nocturne_ritual')).toEqual(['hero', 'about', 'team', 'booking'])
+    expect(templatePhotoBlocks(WITH_PHOTOS, 'ruled_page')).not.toContain('team')
+  })
+
+  /**
+   * Null is NOT "none", exactly as for `renders`: an older backend has not
+   * declined anything, and hiding every photo control on the strength of a
+   * key it never sent would be worse than the state that build shipped.
+   */
+  it('answers null when the response does not say, and for an unknown key', () => {
+    expect(templatePhotoBlocks(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templatePhotoBlocks(WITH_PHOTOS, 'nobody')).toBeNull()
+  })
+
+  it('drops a non-string entry rather than handing one on', () => {
+    const hostile: TemplateOption[] = [
+      { key: 'k', name: 'K', blurb: '', photo_blocks: ['hero', 7 as unknown as string] },
+    ]
+    expect(templatePhotoBlocks(hostile, 'k')).toEqual(['hero'])
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 4.1 — the design's own photographs, slot => URL. This is
+ * what turns "Remove photo" into "Restore original" and what lets a control
+ * say whose picture it is showing.
+ */
+describe('templateImageDefaults', () => {
+  const WITH_DEFAULTS: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', image_defaults: {} },
+    {
+      key: 'nocturne_ritual',
+      name: 'Nocturne Ritual',
+      blurb: '',
+      image_defaults: { hero: '/landing/n/assets/hero.webp', 'gallery_1.image_2': '/landing/n/assets/two.webp' },
+    },
+  ]
+
+  it('carries the served map through, keyed by the endpoints own slot spelling', () => {
+    const map = templateImageDefaults(WITH_DEFAULTS, 'nocturne_ritual')
+
+    expect(map.hero).toBe('/landing/n/assets/hero.webp')
+    expect(map['gallery_1.image_2']).toBe('/landing/n/assets/two.webp')
+  })
+
+  /** Both empty cases are one answer, the same collapse `templateFixedBlocks`
+   *  makes: "this design has none" and "this build was not told" both end in
+   *  every control saying "Remove photo" and meaning it. */
+  it('reads an absent map and an empty one the same way', () => {
+    expect(templateImageDefaults(WITH_DEFAULTS, 'ruled_page')).toEqual({})
+    expect(templateImageDefaults(TWO_TEMPLATES, 'ruled_page')).toEqual({})
+    expect(templateImageDefaults(WITH_DEFAULTS, 'nobody')).toEqual({})
+  })
+
+  it('drops a non-string or empty url rather than handing one on', () => {
+    const hostile: TemplateOption[] = [
+      { key: 'k', name: 'K', blurb: '', image_defaults: { a: '/ok.webp', b: 7 as unknown as string, c: '' } },
+    ]
+    expect(templateImageDefaults(hostile, 'k')).toEqual({ a: '/ok.webp' })
   })
 })
 

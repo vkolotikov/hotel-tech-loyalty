@@ -96,6 +96,35 @@ export type TemplateOption = {
    * has not declined anything, so nothing is suppressed.
    */
   fixed_blocks?: Record<string, string> | null
+  /**
+   * WHICH BLOCKS THIS TEMPLATE ACTUALLY DRAWS A PHOTOGRAPH IN — template
+   * fidelity 4.5, derived server-side from the shipped partial's own
+   * allowlisted reads.
+   *
+   * The narrower fact behind `renders`, and the two came apart the moment a
+   * photo SLOT (which belongs to a type, shared by every design) stopped
+   * implying a drawn photograph (which belongs to a partial, and does not).
+   * `services` carries a band-level plate for the second kit and neither
+   * shipped design has one, so its control must not be offered anywhere
+   * yet — a control that cannot act is not rendered.
+   *
+   * Optional for the same reason `renders` is; see `templatePhotoBlocks`.
+   */
+  photo_blocks?: string[] | null
+  /**
+   * THE DESIGN'S OWN PHOTOGRAPHS — slot → URL, template fidelity 4.1.
+   *
+   * The kit's photographs ship as the template's defaults and stay until a
+   * tenant replaces them, so every photo control has two possible subjects
+   * and has to say which one it is showing. That is the difference between
+   * "Remove photo" and "Restore original", and a copy of this map on this
+   * side would be a copy that offers to restore an original that does not
+   * exist.
+   *
+   * Keyed by the ENDPOINTS' own slot spelling (`hero`, `gallery_1.image_3`)
+   * so a default and the upload that replaces it name the same thing.
+   */
+  image_defaults?: Record<string, string> | null
 }
 
 /**
@@ -180,6 +209,45 @@ export function templateFixedBlocks(options: TemplateOption[], selectedKey: stri
   const out: Record<string, string> = {}
   for (const [key, placement] of Object.entries(fixed)) {
     if (typeof placement === 'string' && placement !== '') out[key] = placement
+  }
+
+  return out
+}
+
+/**
+ * Which blocks the selected template draws a PHOTOGRAPH in, or `null` when
+ * this response does not say (template fidelity 4.5).
+ *
+ * Null is not "none", for exactly the reason `templateRenders` gives: an
+ * older backend has not declined anything, and hiding every photo control on
+ * the strength of a key it never sent would be worse than the state that
+ * build already shipped.
+ */
+export function templatePhotoBlocks(options: TemplateOption[], selectedKey: string): string[] | null {
+  const blocks = options.find(o => o.key === selectedKey)?.photo_blocks
+
+  return Array.isArray(blocks) ? blocks.filter(id => typeof id === 'string') : null
+}
+
+/**
+ * The design's own photographs for the selected template, slot → URL — an
+ * empty map when it ships none, which is a real answer (The Ruled Page is a
+ * typographic design and genuinely has none).
+ *
+ * A backend that publishes no such key is the SAME empty map, and for the
+ * same reason `templateFixedBlocks` collapses its two nulls: "this build was
+ * not told" and "this design has none" both end in every photo control
+ * saying "Remove photo" and meaning it, which is the behaviour that build
+ * already had.
+ */
+export function templateImageDefaults(options: TemplateOption[], selectedKey: string): Record<string, string> {
+  const defaults = options.find(o => o.key === selectedKey)?.image_defaults
+
+  if (defaults == null || typeof defaults !== 'object' || Array.isArray(defaults)) return {}
+
+  const out: Record<string, string> = {}
+  for (const [slot, url] of Object.entries(defaults)) {
+    if (typeof url === 'string' && url !== '') out[slot] = url
   }
 
   return out

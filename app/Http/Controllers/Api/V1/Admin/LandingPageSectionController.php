@@ -127,29 +127,39 @@ class LandingPageSectionController extends Controller
     }
 
     /**
-     * Add one section of a repeatable type.
+     * Add one section.
      *
-     * TAKES A TYPE, NEVER A KEY. The instance key (`text_1`, `text_2`, ...)
-     * is allocated here from the rows the page actually has — see
-     * SectionType::nextInstanceKey(), which hands back the LOWEST free index
-     * rather than the highest plus one, so a tenant who adds and removes a
-     * band six times has not permanently exhausted the namespace. Letting a
+     * TAKES A TYPE, NEVER A KEY. The key is allocated here from the rows the
+     * page actually has — see SectionType::keyFor(), which hands a repeatable
+     * type its LOWEST free instance index (rather than the highest plus one,
+     * so a tenant who adds and removes a band six times has not permanently
+     * exhausted the namespace) and a fixed type its own bare id. Letting a
      * caller name its own key would mean validating an arbitrary string
      * against the grammar, the cap, and the rows already present, i.e. three
      * ways for a client to be wrong about something the server already
      * knows.
      *
-     * Only REPEATABLE types may be added: the fixed set is seeded when the
-     * page is created (LandingPageController::store(), from the industry's
-     * defaultSections) and can be switched off, never added and never
-     * removed. Rule::in against SectionType::repeatableIds() rather than a
-     * literal, so a second repeatable type is a change to the catalogue and
-     * to nothing else.
+     * WHICH TYPES, since template fidelity 3.1: SectionType::addableIds(),
+     * which is wider than `repeatableIds()` was. It also admits a FIXED type
+     * that no industry's page is created with — `announcement`, `trust` and
+     * `faq`, three of the fifteen blocks the BeautyTech kits draw. Those
+     * three were previously reachable from no screen at all: no
+     * `defaultSections` list names them, so no page was ever seeded with one,
+     * and this endpoint refused them because they do not repeat. The kits'
+     * layouts have rendered them from content alone ever since, which is a
+     * band a tenant could only ever get by writing copy into a card that did
+     * not exist.
+     *
+     * The rest of the fixed set still arrives with the page
+     * (LandingPageController::store(), from the industry's defaultSections)
+     * and is switched off rather than added — and `footer`, which is chrome,
+     * is not addable at all. Both facts are derived in the catalogue, not
+     * spelled again here.
      */
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'type' => ['required', 'string', Rule::in(SectionType::repeatableIds())],
+            'type' => ['required', 'string', Rule::in(SectionType::addableIds())],
         ], [
             // Every message named, the house rule this file's siblings
             // already follow (LandingPageController::update()'s slug and
@@ -195,16 +205,34 @@ class LandingPageSectionController extends Controller
                 ]);
             }
 
-            $key = SectionType::nextInstanceKey($data['type'], $existing);
+            $key = SectionType::keyFor($data['type'], $existing);
 
-            // The instance cap, and its ONE expression: nextInstanceKey()
-            // scans 1..SectionType::MAX_INSTANCES_PER_TYPE and returns null
-            // when every index is taken. The message names no type and no
-            // field -- "sections like this one" is what a tenant looking at
-            // the band already knows it is.
+            // Two refusals behind one null, told apart by asking the
+            // catalogue which shape of key it would have allocated —
+            // NEVER by re-deriving either rule here.
+            //
+            // A FIXED type has exactly one key, so the only way it can fail
+            // is that the page already carries it. Named in the style of the
+            // sibling refusals above: what happened, and the one thing that
+            // fixes it.
+            //
+            // A REPEATABLE type fails at the instance cap, which
+            // nextInstanceKey() expresses by scanning
+            // 1..SectionType::MAX_INSTANCES_PER_TYPE and returning null when
+            // every index is taken. The message names no type and no field --
+            // "sections like this one" is what a tenant looking at the band
+            // already knows it is.
+            //
+            // Both are thrown from inside the row-locked transaction, so two
+            // simultaneous adds of the same fixed type cannot both see an
+            // absent row -- which matters more here than for the instance
+            // cap, since (landing_page_id, key) is unique and the loser would
+            // otherwise get a 500 instead of this sentence.
             if ($key === null) {
                 throw ValidationException::withMessages([
-                    'type' => 'You can add up to six sections like this one. Remove one before adding another.',
+                    'type' => SectionType::get($data['type'])?->repeatable === false
+                        ? 'Your page already has one of these. Switch the one you have back on instead.'
+                        : 'You can add up to six sections like this one. Remove one before adding another.',
                 ]);
             }
 

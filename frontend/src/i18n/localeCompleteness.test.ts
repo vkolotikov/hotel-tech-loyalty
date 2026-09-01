@@ -388,6 +388,19 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     // labels above a control.
     'landing_pages.editor.field_image_url',
     'landing_pages.editor.field_gallery',
+    // Template fidelity 3.3: the third synthesised control — the questions
+    // FORM, which stands in for `q1`…`a6` where `q1` sat. Its twelve leaves
+    // keep their own labels below (the form prints one over each input);
+    // this names the group.
+    'landing_pages.editor.field_faq_pairs',
+    // Template fidelity 4.3: the two text leaves that belong to a PICTURE.
+    // `caption` covers a gallery's eight `caption_N` leaves as well as a
+    // single plate's one — the photo control draws one input per tile and
+    // labels every one of them with this key, because "Caption under the
+    // photo" means the same thing beside each. Eight numbered keys would be
+    // eight translations of one sentence.
+    'landing_pages.editor.field_alt',
+    'landing_pages.editor.field_caption',
     // hero / services / about / team / reviews / text / gallery.
     'landing_pages.editor.field_headline',
     'landing_pages.editor.field_subtext',
@@ -447,6 +460,7 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
   it('names both photo controls and every copy field the catalogue publishes', () => {
     expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_image_url')
     expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_gallery')
+    expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_faq_pairs')
 
     // SectionType::MAX_FAQ_PAIRS pairs, both halves of each.
     for (let n = 1; n <= 6; n++) {

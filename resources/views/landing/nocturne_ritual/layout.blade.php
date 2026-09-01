@@ -88,6 +88,27 @@
 
     $rendersReviews = $renderedSections->contains(fn ($section) => $section->key === 'reviews');
 
+    // THE PICTURE THIS PAGE SHARES AS, resolved once for the three tags that
+    // need it (og:image, twitter:image, the JSON-LD `image`) — template
+    // fidelity 4.7.
+    //
+    // The hero plate, which is the one photograph every one of these designs
+    // leads with, falling back to the brand's own logo for a tenant whose
+    // design ships no photograph and who has uploaded none. Read through
+    // PageContent, so the same three guards that keep a hostile leaf out of
+    // an <img> keep it out of a meta tag a crawler will fetch.
+    //
+    // ABSOLUTE, always. A crawler is not the visitor's browser: it does not
+    // resolve `/storage/x.webp` against this page's origin, and og:image is
+    // specified as an absolute URL. url() prefixes the app root only for a
+    // value that is not already one — TemplateImage's own asset() URLs and a
+    // cloud disk's https:// CDN URLs both arrive absolute.
+    $shareImage = $content->imageUrl('hero') ?? $content->contact->logoUrl;
+
+    if ($shareImage !== null && !preg_match('#^https?://#', $shareImage)) {
+        $shareImage = url($shareImage);
+    }
+
     // THE KIT'S COMPOSITION. announcement sits above the header, contact and
     // the review link live inside the footer hub, and trust and faq have
     // fixed places in the sequence (under the hero, over the booking panel).
@@ -225,7 +246,26 @@
 <meta property="og:title" content="{{ $page->seo['title'] ?? $content->contact->name ?? $page->content['hero']['headline'] ?? config('app.name') }}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{{ url('/' . $page->slug) }}">
-@include('landing.shared.local-business-json-ld', ['rendersReviews' => $rendersReviews])
+{{-- THE PICTURE THIS PAGE SHARES AS (template fidelity 4.7).
+     Every one of these kits is a photography-led design and, until this
+     line, the page published NO image at all when somebody pasted its link
+     into a message: a dark rectangle with a title on it, for a page whose
+     whole pitch is how it looks.
+     $shareImage is resolved once at the top of this file, through the same
+     allowlisted read every plate on the page goes through, and made ABSOLUTE
+     there — a crawler is not the visitor's browser and cannot resolve a
+     storage-relative path against this origin. Omitted entirely when there
+     is nothing to name, because an og:image pointing at nothing is worse
+     than none. --}}
+@if ($shareImage !== null)
+<meta property="og:image" content="{{ $shareImage }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{{ $shareImage }}">
+@endif
+@include('landing.shared.local-business-json-ld', [
+  'rendersReviews' => $rendersReviews,
+  'image'          => $shareImage,
+])
 {{-- The kit's <head> carried a fonts.googleapis.com preconnect pair and a
      css2 stylesheet <link> for Cormorant Garamond and Manrope. Both hosts
      are refused by this page's CSP (style-src and font-src are 'self'-only;
@@ -308,11 +348,6 @@
     @include($sectionViews[$section->key], [
       'section' => $section,
       'copy'    => $page->content[$section->key] ?? [],
-      // The booking panel reuses the hero's photograph, which is the
-      // author's own composition. Resolved here, through the hero's single
-      // allowlisted read, so that the `booking` type can stay honestly at
-      // images=0 and its partial never reaches for a leaf it does not own.
-      'panelImage' => $content->imageUrl('hero'),
     ])
 @if ($trustAfter === $section->key)
     @include('landing.nocturne_ritual.sections.trust', ['copy' => $page->content['trust'] ?? []])

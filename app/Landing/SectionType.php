@@ -121,6 +121,21 @@ final class SectionType
     public const MAX_FAQ_PAIRS = 6;
 
     /**
+     * How many photographs one gallery band holds.
+     *
+     * Named because it is now spelled in two places that must agree — the
+     * `gallery` type's own `images` count, and {@see galleryCaptionLeaves()},
+     * which numbers one caption per tile. `images` cannot read this list and
+     * the list cannot read `images` (it is built while {@see all()} is being
+     * built), so the number lives here and SectionTypeTest asserts the type
+     * carries exactly it.
+     *
+     * EIGHT, and the number is a judgement rather than a round one — see the
+     * `gallery` row's own note in {@see all()}.
+     */
+    public const GALLERY_IMAGES = 8;
+
+    /**
      * The leaf a SINGLE-photo section stores its picture under, and the one
      * spelling every page written before galleries existed carries.
      *
@@ -338,32 +353,47 @@ final class SectionType
             'hero' => [
                 'repeatable' => false,
                 'view'       => 'hero',
-                'fields'     => ['kicker', 'headline', 'subtext'],
+                'fields'     => array_merge(['kicker', 'headline', 'subtext'], self::photoLeaves()),
                 'band'       => '',
                 'images'     => 1,
             ],
             // The price list. Its ROWS come from the Services screen, not
-            // from `content` — only the band's own framing copy is editable.
+            // from `content` — only the band's own framing copy and the
+            // band-level editorial plate are editable.
+            //
+            // R3: ONE photograph here, for the whole band, which is kit 02's
+            // sticky `.services__media`. The per-ROW picture kit 03 draws on
+            // its featured card is a different thing entirely and is NOT a
+            // page slot: there can be up to PageContent::MAX_SERVICES rows,
+            // and each one already has an uploadable `Service.image` on the
+            // Services screen — read through PageContent::serviceImage().
             'services' => [
                 'repeatable' => false,
                 'view'       => 'services',
-                'fields'     => ['kicker', 'heading', 'subtext'],
+                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::photoLeaves()),
                 'band'       => '',
-                'images'     => 0,
+                'images'     => 1,
             ],
             'about' => [
                 'repeatable' => false,
                 'view'       => 'about',
-                'fields'     => ['kicker', 'lead', 'body'],
+                'fields'     => array_merge(['kicker', 'lead', 'body'], self::photoLeaves()),
                 'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
+            // R1: the team band's photograph is its OWN slot, not the first
+            // practitioner's avatar. All three kits' alt text names three
+            // people at once — it is a photograph OF THE STUDIO, and putting
+            // one face in a frame the author drew for three is what the
+            // avatar substitution was doing. That substitution survives as
+            // the FALLBACK so nothing regresses for a tenant who has neither
+            // uploaded a band photograph nor is on a design that ships one.
             'team' => [
                 'repeatable' => false,
                 'view'       => 'team',
-                'fields'     => ['kicker', 'heading', 'subtext'],
+                'fields'     => array_merge(['kicker', 'heading', 'subtext'], self::photoLeaves()),
                 'band'       => '',
-                'images'     => 0,
+                'images'     => 1,
             ],
             'reviews' => [
                 'repeatable' => false,
@@ -372,12 +402,20 @@ final class SectionType
                 'band'       => 'band--ink',
                 'images'     => 0,
             ],
+            // R2: the closing panel's photograph is its OWN slot. Kit 01
+            // reuses the hero plate here and that reuse is the author's
+            // composition — so it is the DEFAULT (see TemplateImage), not a
+            // hard-coded alias. "All images which I can change later" does
+            // not admit an image that is silently a copy of another one.
             'booking' => [
                 'repeatable' => false,
                 'view'       => 'booking',
-                'fields'     => ['kicker', 'heading', 'terms', 'call_label', 'call_short'],
+                'fields'     => array_merge(
+                    ['kicker', 'heading', 'terms', 'call_label', 'call_short'],
+                    self::photoLeaves(),
+                ),
                 'band'       => 'band--paper-2',
-                'images'     => 0,
+                'images'     => 1,
             ],
             // phone/email/address are the three fields ContactDetails lets a
             // page override per-page (see its docblock); the rest of the
@@ -393,10 +431,33 @@ final class SectionType
                 'band'       => 'band--ink',
                 'images'     => 0,
             ],
-            // Rendered outside the section loop (the layout includes it
-            // unconditionally) and listed here anyway: it IS a section type,
-            // and the wizard already names it. It has no editable copy — the
-            // footer reads the business's own details.
+            // CHROME, and this is where that is written down (template
+            // fidelity 3.5). It is listed here because it IS a section type
+            // and the wizard already names it, but it is the one type in this
+            // catalogue with no editable copy and no photograph, and that is
+            // a decision rather than an omission:
+            //
+            //   - every layout includes it UNCONDITIONALLY, outside the
+            //     section loop, so there is no row to switch off and no order
+            //     to move it in. `fixed_blocks` publishes it as `footer`
+            //     placement for exactly that reason.
+            //   - what it prints is the business's own details — the name,
+            //     the address, the phone, the hours, the review link — which
+            //     are Properties data, not page copy. The one leaf it reads
+            //     out of `content` is the CONTACT band's kicker (see
+            //     footer.blade.php), which the contact type already owns and
+            //     already offers a control for.
+            //   - the page's tagline, which is the only text a tenant might
+            //     expect to write here, is `seo.description` and has had its
+            //     own control on the Publish tab since template fidelity 1.5.
+            //
+            // Being fieldless is therefore load-bearing in two places rather
+            // than merely true: {@see addableIds()} refuses to offer it (a
+            // control that would add a row nothing renders differently), and
+            // the editor draws its row as a plain header with no disclosure.
+            // A later phase that gives the footer real leaves of its own —
+            // a legal note, social destinations — undoes both by adding them
+            // here, and should read this note first.
             'footer' => [
                 'repeatable' => false,
                 'view'       => 'footer',
@@ -408,7 +469,7 @@ final class SectionType
             'text' => [
                 'repeatable' => true,
                 'view'       => 'text',
-                'fields'     => ['kicker', 'heading', 'body'],
+                'fields'     => array_merge(['kicker', 'heading', 'body'], self::photoLeaves()),
                 'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
@@ -419,16 +480,23 @@ final class SectionType
             // the stylesheet uses (four across on a wide screen, two on a
             // phone) so the last row is never a single orphan.
             //
-            // Its `fields` are an eyebrow and a heading and nothing else:
-            // the pictures ARE the content here, and `count()` reads them
-            // rather than any copy — a gallery with words and no photos is
-            // not a section, so it does not render.
+            // Its `fields` are an eyebrow, a heading and one caption per
+            // tile: the pictures ARE the content here, and `count()` reads
+            // them rather than any copy — a gallery with words and no photos
+            // is not a section, so it does not render.
+            //
+            // The captions are the author's own glass pills, which the
+            // conversion had to drop for want of a field (gallery.blade.php
+            // said so in as many words). They are ORDINARY CONTENT LEAVES,
+            // not image leaves — `isImageField()` refuses the `image_`
+            // prefix and nothing else — so they travel the plain content
+            // save while the pictures beside them keep their single writer.
             'gallery' => [
                 'repeatable' => true,
                 'view'       => 'gallery',
-                'fields'     => ['kicker', 'heading'],
+                'fields'     => array_merge(['kicker', 'heading'], self::galleryCaptionLeaves()),
                 'band'       => '',
-                'images'     => 8,
+                'images'     => self::GALLERY_IMAGES,
             ],
             // ─── The BeautyTech kits' three additional blocks ─────────────
             //
@@ -513,6 +581,70 @@ final class SectionType
         return $leaves;
     }
 
+    /**
+     * THE WORDS THAT BELONG TO A SINGLE PHOTOGRAPH — the two text leaves
+     * every one-picture band carries beside its plate (template fidelity
+     * 4.3).
+     *
+     *   - `alt` is what a screen reader (and a search engine, and anybody on
+     *     a connection that lost the file) is told the picture shows. Every
+     *     kit writes a real descriptive alt on every photograph and every
+     *     converted partial hardcoded `alt=""`, which is a WCAG 1.1.1 gap on
+     *     a page whose entire pitch is its photography.
+     *   - `caption` is the line printed under the frame in the design's own
+     *     voice. The partials have been substituting the street address for
+     *     it, which matches the author's kit by luck and nothing else.
+     *
+     * NEITHER IS AN IMAGE LEAF, and that is the property this list exists to
+     * make structural. {@see isImageField()} refuses the whole `image_`
+     * prefix, so these travel the ordinary content save — one writer for the
+     * picture, the normal writer for the words about it — and no endpoint,
+     * carry-forward rule or delete sweep has to learn about them.
+     *
+     * Spelled ONCE and merged into each single-photo type's `fields` rather
+     * than typed out six times, so the day a third leaf joins them (a focal
+     * point, if D4 is ever answered — and NOT named `image_focus`, which the
+     * refusal above would eat) it is one edit.
+     *
+     * @return list<string>
+     */
+    public static function photoLeaves(): array
+    {
+        return ['alt', 'caption'];
+    }
+
+    /**
+     * The same words for a band that holds MORE THAN ONE photograph, one
+     * caption per tile, numbered to match the picture leaf beside it:
+     * `image_3`'s caption is `caption_3`.
+     *
+     * Derived from the gallery's own `images` count rather than a literal
+     * eight — the two numbers have to be the same number, and the whole
+     * reason `images` is a count is that everything downstream follows from
+     * it. Read out of {@see all()} would be circular (this is called while
+     * building that array), so the count is named here as its own constant
+     * and pinned against the type by SectionTypeTest.
+     *
+     * ALT IS DELIBERATELY ABSENT. Eight more inputs on the busiest card in
+     * the editor is the "fifteen loose boxes" failure 3.3 just removed from
+     * the FAQ, and a gallery tile is a decorative mosaic in every one of the
+     * three kits — the caption pill is the information, and it is beside the
+     * picture on the page. A tile with a caption and no alt is a picture
+     * whose meaning is already in the document.
+     *
+     * @return list<string>
+     */
+    public static function galleryCaptionLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
+            $leaves[] = 'caption_' . $n;
+        }
+
+        return $leaves;
+    }
+
     /** @return list<string> */
     public static function ids(): array
     {
@@ -532,6 +664,120 @@ final class SectionType
             self::all(),
             static fn (array $type) => $type['repeatable'],
         )));
+    }
+
+    /**
+     * THE ADD ALLOWLIST — every type a tenant may put on a page that does
+     * not already have one, which is a wider question than "which types
+     * repeat" (template fidelity 3.1 / R4).
+     *
+     * Two families, and the second is the reason this exists:
+     *
+     *   - every REPEATABLE type, which is what this allowlist has always
+     *     been. A page may hold up to {@see MAX_INSTANCES_PER_TYPE} of each.
+     *   - every FIXED type that no industry's page is created with, and that
+     *     has something to edit. `announcement`, `trust` and `faq` are the
+     *     BeautyTech kits' own blocks: three of the author's fifteen, drawn
+     *     by the shipped partials, described in tenant words by
+     *     {@see \App\Services\Landing\LandingOnboardingService::SECTION_COPY}
+     *     — and, until this list existed, reachable from no screen in the
+     *     product at all, because the create endpoint accepted repeatable
+     *     types only and no `defaultSections` list names them.
+     *
+     * DERIVED, never a second literal `['announcement', 'trust', 'faq']`.
+     * Both halves of the second family's test are facts already written down
+     * somewhere else:
+     *
+     *   - "no industry seeds it" is {@see IndustryProfile::all()}'s own
+     *     `defaultSections` lists, unioned. A type that IS seeded arrives
+     *     with the page and is switched off rather than added, which is the
+     *     rule `LandingPageSectionController::destroy()` already states from
+     *     the other end.
+     *   - "has something to edit" is this catalogue's own `fields`/`images`.
+     *     `footer` is the type that fails it: it declares no editable copy
+     *     and no photograph because it is CHROME — the layout includes it
+     *     unconditionally and it reads the business's own details — so
+     *     "add a footer" would be a control that adds a row nothing renders
+     *     differently. See its entry in {@see all()}.
+     *
+     * Order is {@see all()}'s authored order, so a picker built from this
+     * list reads in catalogue order rather than in two clumps.
+     *
+     * @return list<string>
+     */
+    public static function addableIds(): array
+    {
+        $seeded = self::seededIds();
+
+        return array_values(array_keys(array_filter(
+            self::all(),
+            static fn (array $type, string $id) => $type['repeatable']
+                || (!isset($seeded[$id]) && ($type['fields'] !== [] || $type['images'] > 0)),
+            ARRAY_FILTER_USE_BOTH,
+        )));
+    }
+
+    /**
+     * Every section key some industry's new page is created with, as a SET
+     * (id => true) so {@see addableIds()} can test membership without a
+     * linear scan per type.
+     *
+     * The one place this class reads {@see IndustryProfile}, and it reads
+     * the same `defaultSections` lists `LandingPageController::store()` and
+     * `LandingOnboardingService::apply()` seed from — so "this type arrives
+     * with the page" and "this type may be added to a page" are one decision
+     * with one input, rather than two lists that agree until somebody edits
+     * one of them.
+     *
+     * @return array<string, true>
+     */
+    private static function seededIds(): array
+    {
+        $seeded = [];
+
+        foreach (IndustryProfile::all() as $profile) {
+            foreach ($profile['defaultSections'] as $key) {
+                $seeded[$key] = true;
+            }
+        }
+
+        return $seeded;
+    }
+
+    /**
+     * The section KEY one add of `$typeId` should create, or null when the
+     * page cannot take another.
+     *
+     * The two spellings the key grammar admits, answered by the one method
+     * the create endpoint calls, so that endpoint never branches on
+     * `repeatable` itself:
+     *
+     *   - a REPEATABLE type allocates the lowest free instance index —
+     *     {@see nextInstanceKey()}, unchanged, cap and all.
+     *   - a FIXED type IS its own key. There can only ever be one, so the
+     *     answer is the bare id when the page does not already carry it and
+     *     null when it does — the caller turns that null into its own named
+     *     refusal, exactly as it already does for the instance cap.
+     *
+     * Refuses a type this catalogue does not know, and a fixed type that is
+     * not addable at all, so a caller that reached here past its own
+     * `Rule::in` still cannot create a row for `footer`.
+     *
+     * @param list<string> $existingKeys every section key the page already carries
+     */
+    public static function keyFor(string $typeId, array $existingKeys): ?string
+    {
+        $type = self::get($typeId);
+
+        if ($type === null || !in_array($typeId, self::addableIds(), true)) {
+            return null;
+        }
+
+        if ($type->repeatable) {
+            return self::nextInstanceKey($typeId, $existingKeys);
+        }
+
+        return in_array($typeId, $existingKeys, true) ? null : $typeId;
     }
 
     /**
@@ -673,11 +919,26 @@ final class SectionType
             }
 
             foreach ($leaves as $leaf) {
-                $slots[] = $key . self::SLOT_SEPARATOR . $leaf;
+                $slots[] = self::slotFor($key, $leaf);
             }
         }
 
         return $slots;
+    }
+
+    /**
+     * One MULTI-photo slot's name, in the spelling {@see imageKeys()}
+     * enumerates and {@see imageSlot()} parses — `gallery_1.image_3`.
+     *
+     * Public because a second caller appeared: {@see TemplateImage} keys the
+     * design's own photographs by slot, and {@see PageContent::galleryPhotos()}
+     * has to build the same string to ask for one. Two places spelling a
+     * separator is how a separator changes in one of them, so the composer
+     * is here beside the parser rather than the constant being exported.
+     */
+    public static function slotFor(string $key, string $leaf): string
+    {
+        return $key . self::SLOT_SEPARATOR . $leaf;
     }
 
     /**
@@ -987,16 +1248,26 @@ final class SectionType
      * but never wrong. Anything that understands `image_slots` should read
      * that and ignore `image` entirely.
      *
-     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
+     * `addable` is the question the "+ Add a block" picker actually asks, and
+     * it is NOT `repeatable` (template fidelity 3.1). Three of the kits'
+     * fifteen blocks are fixed types a tenant may nonetheless add, because no
+     * industry's page is created with them — see {@see addableIds()}. The
+     * editor filtered its picker on `repeatable` until this key existed,
+     * which is why `announcement`, `trust` and `faq` were reachable from no
+     * screen in the product.
+     *
+     * @return list<array{id: string, repeatable: bool, addable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
      */
     public static function payload(): array
     {
-        $rows = [];
+        $addable = array_flip(self::addableIds());
+        $rows    = [];
 
         foreach (self::all() as $id => $type) {
             $rows[] = [
                 'id'           => $id,
                 'repeatable'   => $type['repeatable'],
+                'addable'      => isset($addable[$id]),
                 'fields'       => $type['fields'],
                 'image'        => $type['images'] === 1,
                 'image_slots'  => $type['images'],

@@ -131,6 +131,15 @@
         'name'        => $content->contact->name,
         'url'         => url('/' . $page->slug),
         'description' => $page->seo['description'] ?? null,
+        // Template fidelity 4.7. Google's LocalBusiness guidance asks for an
+        // image and a rich result without one is a plain blue link; these
+        // designs are photography-led and published none. The caller resolves
+        // it (the same allowlisted read the page's own plates go through,
+        // made absolute), and filled() below drops the key entirely rather
+        // than claiming "image": null — the same rule every other field here
+        // follows. Defaulted at the read site so a caller that predates this
+        // simply publishes what it published before.
+        'image'       => $image ?? null,
         'address'     => $ldAddress,
         'telephone'   => $content->contact->phone,
         'email'       => $content->contact->email,

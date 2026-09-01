@@ -59,8 +59,16 @@
                 ? Str::limit($description, 180, '…', preserveWords: true)
                 : null;
             $currency = $service->currency ?: $currencyFallback;
+            // Template fidelity 4.2 / R3: the row's own photograph, through
+            // the ONE allowlisted reader rather than off the model. `image`
+            // is a plain string column written by the Services screen's
+            // uploader and reachable by a raw write, and this partial put it
+            // straight into a `src` — the same three guards every other
+            // picture on this page clears now cover it too, and a value that
+            // fails them drops the plate instead of reaching the DOM.
+            $serviceShot = $content->serviceImage($service);
         @endphp
-        <li @class(['rp-pillar', 'rp-pillar--shot' => filled($service->image)])>
+        <li @class(['rp-pillar', 'rp-pillar--shot' => $serviceShot !== null])>
           <span class="rp-pillar__num" aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
           <div class="rp-pillar__body">
             <p class="rp-pillar__head">
@@ -82,12 +90,12 @@
               <p class="rp-pillar__desc">{{ $description }}</p>
             @endif
           </div>
-          @if (filled($service->image))
+          @if ($serviceShot !== null)
             {{-- The trailing photo plate: aria-hidden decoration — the row
                  has already stated everything in text — rendered only for
                  rows that actually have a photograph, so an imageless studio
                  gets clean pillars rather than a column of monograms. --}}
-            <span class="rp-pillar__shot" aria-hidden="true"><img src="{{ $service->image }}" alt="" loading="lazy" decoding="async"></span>
+            <span class="rp-pillar__shot" aria-hidden="true"><img src="{{ $serviceShot }}" alt="" loading="lazy" decoding="async"></span>
           @endif
         </li>
       @endforeach

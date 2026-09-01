@@ -24,6 +24,19 @@
 
   A row with no price asserts nothing — no zero, no bare currency code, no
   placeholder dash. A studio that quotes on consultation is a normal studio.
+
+  THERE IS NO PHOTOGRAPH IN THIS BAND, and the `services` type declares one
+  anyway (template fidelity 4.1 / R3). That is not drift: the slot is for the
+  SECOND kit, whose services band carries a sticky editorial plate beside the
+  list, and the author of THIS one drew a purely typographic menu. Adding a
+  picture here would be re-drawing his design.
+  Nothing is offered to a tenant meanwhile: `templates[*].photo_blocks` is
+  derived from what each partial actually reads, so no editor draws a photo
+  control for a band with nowhere to put the picture — see
+  LandingOnboardingService::photoBlocksFor(). The per-ROW photograph kit 03
+  draws on its featured card is a different thing again and is not a page
+  slot at all: it is `Service.image`, read through
+  PageContent::serviceImage().
 --}}
 @php
     use Illuminate\Support\Str;

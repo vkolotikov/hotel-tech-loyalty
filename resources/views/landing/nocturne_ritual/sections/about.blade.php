@@ -34,6 +34,16 @@
 
     $storyImage = $content->imageUrl('about');
 
+    // The tenant's own caption, else the address this band has always
+    // printed under the frame. filled() rather than ??, because an empty
+    // stored caption must not shadow the fallback that was there before the
+    // leaf existed.
+    $storyCaption = $content->imageCaption('about');
+
+    if ($storyCaption === '') {
+        $storyCaption = trim((string) ($content->contact->address ?? ''));
+    }
+
     $lead = trim((string) ($copy['lead'] ?? ''));
     $body = trim((string) ($copy['body'] ?? ''));
 
@@ -96,14 +106,16 @@
 @if ($storyImage !== null)
         <div class="story__media-wrap">
           <figure class="story__media">
-            <img src="{{ $storyImage }}" width="1024" height="1536" loading="lazy" decoding="async" alt="">
+            <img src="{{ $storyImage }}" width="1024" height="1536" loading="lazy" decoding="async" alt="{{ $content->imageAlt('about') }}">
           </figure>
-@if (filled($content->contact->address))
-          {{-- The author's caption names the room. There is no tenant field
-               for that, and the honest equivalent is the address this page
-               already publishes in its own footer — a real place, in the
-               author's small-caps voice. No address, no caption. --}}
-          <p class="story__caption">{{ $content->contact->address }}</p>
+@if ($storyCaption !== '')
+          {{-- THE AUTHOR'S CAPTION NAMES THE ROOM, and since template
+               fidelity 4.3 there is a field for exactly that. It falls back
+               to the address this page already publishes in its own footer —
+               a real place, in the author's small-caps voice — which is what
+               this line printed before the leaf existed, so no live page
+               loses its caption. Neither, and there is no pill. --}}
+          <p class="story__caption">{{ $storyCaption }}</p>
 @endif
         </div>
 @endif

@@ -1,6 +1,7 @@
 <?php
 namespace App\Landing;
 
+use App\Models\Brand;
 use App\Models\ChatWidgetConfig;
 use App\Models\LandingPage;
 use App\Models\Property;
@@ -148,6 +149,17 @@ final class PageContent
         $contact = ContactDetails::resolve(
             $contactProperty,
             is_array($page->content['contact'] ?? null) ? $page->content['contact'] : [],
+            // Template fidelity 4.6: the brand's own logo, which the tenant
+            // has already uploaded on the Brands screen and which no landing
+            // file has ever read. withoutGlobalScopes() and value() for the
+            // same reason every other query in this class uses them — a
+            // public page request has no authenticated tenant, and one
+            // column is all that is wanted. A brandless (org-wide) page has
+            // no brand to take a logo from and keeps its monogram.
+            $brandId === null ? null : Brand::withoutGlobalScopes()
+                ->where('id', $brandId)
+                ->where('organization_id', $orgId)
+                ->value('logo_url'),
         );
 
         // One row answers two questions - the opening hours below, and
@@ -756,12 +768,127 @@ final class PageContent
      *
      * Returns null — never throws — on every shape that fails any guard, so
      * a Blade `@if` gates the whole plate on one call and the no-image
-     * render path (today's markup, byte-for-byte) is what every failure
-     * mode falls back to.
+     * render path is what every failure mode falls back to.
+     *
+     * DEFAULT + OVERRIDE, since template fidelity 4.1. A read that comes
+     * back empty — no leaf, a blank one, or one that failed any guard above
+     * — falls through to the DESIGN's own photograph for this slot
+     * ({@see TemplateImage}), and null now means "neither the tenant nor the
+     * design has a picture here" rather than "the tenant has none".
+     *
+     * Three consequences worth stating, because each is the point:
+     *
+     *  - a tenant who picks a photographic design gets its photographs on
+     *    day one instead of a page with none;
+     *  - "Remove" means RESTORE THE ORIGINAL. The remove endpoint unsets the
+     *    leaf, exactly as it always did, and this read then answers with the
+     *    design's picture — so the control cannot leave a hole;
+     *  - the hostile-value battery gets STRONGER, not weaker. A
+     *    `javascript:` URI, a nested array or a 200,000-character leaf still
+     *    fails every guard and still never reaches the DOM; what it falls
+     *    back to is now the author's plate rather than an empty band.
+     *
+     * `ruled_page` has no defaults at all and must not gain any: its empty
+     * states are drawn for the absence of a picture and its four byte
+     * goldens pin the markup of a page with none.
      */
     public function imageUrl(string $section): ?string
     {
+        return $this->ownImageUrl($section)
+            ?? TemplateImage::url($this->page->template_key, $section);
+    }
+
+    /**
+     * THE TENANT'S OWN UPLOAD FOR THIS SLOT, and only that — the same three
+     * guards, without the design's photograph behind them.
+     *
+     * The distinction exists because "has this tenant chosen a picture here"
+     * and "what picture does this band show" are genuinely different
+     * questions, and exactly one band needs the first: the closing panel,
+     * whose slot was an alias of the hero's until template fidelity 4.1 gave
+     * it one of its own. A page that already carried a hero upload and
+     * nothing for `booking` must go on showing THEIR photograph there, not
+     * the design's — the tenant's own picture outranks the author's in a
+     * slot they had already, implicitly, filled.
+     *
+     * Every other caller wants {@see imageUrl()}. Reaching for this one to
+     * "check whether there is a real picture" is how the default model gets
+     * bypassed one band at a time.
+     */
+    public function ownImageUrl(string $section): ?string
+    {
         return $this->safeUrl($this->leaf($section, SectionType::SINGLE_IMAGE_LEAF));
+    }
+
+    /**
+     * What that photograph SHOWS, for a reader who cannot see it — the
+     * tenant's own `alt` leaf, else the design's description of its own
+     * picture, else empty (template fidelity 4.3).
+     *
+     * THE DESIGN'S DESCRIPTION IS OFFERED ONLY WHILE THE DESIGN'S PICTURE IS
+     * THE ONE SHOWING. Once a tenant has uploaded their own, the kit's alt
+     * describes a photograph that is no longer on the page, and a confidently
+     * wrong alt is worse than an empty one — a screen reader announces the
+     * wrong room instead of skipping a decorative plate.
+     *
+     * Empty string rather than null so the caller writes `alt="{{ … }}"`
+     * unconditionally: `alt=""` is a valid, meaningful declaration (this
+     * picture is decorative, skip it) and a MISSING alt attribute is not.
+     */
+    public function imageAlt(string $section): string
+    {
+        $own = $this->leaf($section, 'alt');
+        $own = is_scalar($own) ? trim((string) $own) : '';
+
+        if ($own !== '') {
+            return $own;
+        }
+
+        return $this->ownImageUrl($section) !== null
+            ? ''
+            : (TemplateImage::alt($this->page->template_key, $section) ?? '');
+    }
+
+    /**
+     * The line printed under the frame, in the business's own voice — the
+     * tenant's `caption` leaf and nothing else.
+     *
+     * NO DESIGN DEFAULT, deliberately, where {@see imageAlt()} has one. Alt
+     * text describes the picture and is true of it wherever it appears; a
+     * caption is a CLAIM ABOUT THE BUSINESS ("Dry heat room", "The lower
+     * thermal room · Quiet sessions throughout the day") and publishing the
+     * kit author's fictional one on a real salon's front door is putting
+     * words in their mouth. Blank means no caption, which is what every
+     * partial under the kit already does.
+     */
+    public function imageCaption(string $section): string
+    {
+        $value = $this->leaf($section, 'caption');
+
+        return is_scalar($value) ? trim((string) $value) : '';
+    }
+
+    /**
+     * ONE SERVICE ROW'S OWN PHOTOGRAPH, through the same three guards
+     * (template fidelity 4.2 / R3).
+     *
+     * `Service.image` is already a tenant-uploaded column on the Services
+     * screen and `ruled_page/sections/services.blade.php` already reads it.
+     * Kit 03's featured service card wants the same picture, and the reason
+     * it is NOT a page slot is a number: a page may carry up to
+     * {@see MAX_SERVICES} rows, and modelling that as page content would put
+     * twenty-four more slots in an allowlist whose whole value is being
+     * finite and enumerable.
+     *
+     * Allowlisted here rather than read in the partial for the same reason
+     * every other picture on this page is: `$service->image` is a plain
+     * string column with no constraint behind it, written by an uploader but
+     * reachable by a raw write, and one choke point is what makes the
+     * hostile-value battery cover it by construction.
+     */
+    public function serviceImage(Service $service): ?string
+    {
+        return $this->safeUrl($service->image);
     }
 
     /**
@@ -802,23 +929,63 @@ final class PageContent
      */
     public function galleryImages(string $section): array
     {
+        return array_column($this->galleryPhotos($section), 'url');
+    }
+
+    /**
+     * The same pictures, each with the words that belong to it — the reader
+     * the mosaic actually renders through (template fidelity 4.3).
+     *
+     * A tuple per tile: `url`, `alt`, `caption`. Every one of the three
+     * follows the same default+override rule the single plate's does, and
+     * for the same reasons —
+     *
+     *  - `url` is the tenant's leaf if it clears the guards, else THIS
+     *    DESIGN's photograph for that exact slot (`gallery_1.image_3`, the
+     *    endpoints' own spelling), else the tile is not there at all. Gaps
+     *    still close up: a tenant who removes the sixth of seven sees six,
+     *    in order, not six with a hole in the middle.
+     *  - `alt` is the tenant's `alt_N`… no. There is deliberately no per-tile
+     *    alt leaf ({@see SectionType::galleryCaptionLeaves()} says why), so
+     *    this is the design's description while the design's picture is
+     *    showing and empty once the tenant has replaced it — a decorative
+     *    tile whose meaning is the caption printed beside it.
+     *  - `caption` is the tenant's `caption_N` and nothing else. The author's
+     *    own glass pills are claims about their fictional rooms; the leaf is
+     *    the tenant's to fill and blank means no pill, which is exactly what
+     *    this partial did before the field existed.
+     *
+     * @return list<array{url: string, alt: string, caption: string}>
+     */
+    public function galleryPhotos(string $section): array
+    {
         $leaves = SectionType::imageLeaves($section);
 
         if (count($leaves) < 2) {
             return [];
         }
 
-        $urls = [];
+        $photos = [];
 
-        foreach ($leaves as $leafName) {
-            $url = $this->safeUrl($this->leaf($section, $leafName));
+        foreach ($leaves as $n => $leafName) {
+            $slot   = SectionType::slotFor($section, $leafName);
+            $own    = $this->safeUrl($this->leaf($section, $leafName));
+            $url    = $own ?? TemplateImage::url($this->page->template_key, $slot);
 
-            if ($url !== null) {
-                $urls[] = $url;
+            if ($url === null) {
+                continue;
             }
+
+            $caption = $this->leaf($section, 'caption_' . ($n + 1));
+
+            $photos[] = [
+                'url'     => $url,
+                'alt'     => $own !== null ? '' : (TemplateImage::alt($this->page->template_key, $slot) ?? ''),
+                'caption' => is_scalar($caption) ? trim((string) $caption) : '',
+            ];
         }
 
-        return $urls;
+        return $photos;
     }
 
     /** One raw leaf out of `content.<section>.<field>`, or null when the section is not a map at all. */

@@ -139,7 +139,16 @@ class LandingPageController extends Controller
 
         // Seed section rows now so ordering is fixed at creation, and a later
         // template revision cannot silently reorder a published page.
-        foreach (IndustryProfile::for($page->industry)->defaultSections as $i => $key) {
+        //
+        // The industry's list UNION the blocks the chosen template draws that
+        // no industry seeds (template fidelity 3.1 / R4) — one derivation,
+        // shared with LandingOnboardingService::apply(), so a page created
+        // through this endpoint and a page created through the wizard carry
+        // the same rows. See LandingOnboardingService::seedSectionsFor().
+        foreach (LandingOnboardingService::seedSectionsFor(
+            $page->template_key,
+            IndustryProfile::for($page->industry),
+        ) as $i => $key) {
             $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
         }
 

@@ -2593,6 +2593,62 @@ h3 {
   }
 }
 
+/* --- gallery: five to eight photographs ----------------------------------
+   THE SHIPPED DEFECT (template fidelity 4.4). The catalogue admits eight
+   pictures and the editor has always let a tenant upload eight, but the
+   mosaic is authored for exactly four: `grid-template-rows: 24rem 24rem`
+   with the wide and tall tiles spanning `1 / 3`, so photographs five to
+   eight land in IMPLICIT rows — and because `.gallery__item img` is
+   `height: 100%`, an implicit row with no size collapses those tiles to zero
+   height on desktop. The tenant uploaded a photograph, the editor said
+   "Saved", and the page showed nothing.
+
+   One declaration, appended rather than edited into the author's rule above,
+   which is why it changes nothing for one to four pictures: with four or
+   fewer there are no implicit rows for it to size. Repeated inside the wide
+   breakpoint so the flow rows match the two the author sizes there. The
+   narrow breakpoint turns the grid into a flex scroller and is unaffected. */
+.gallery__grid {
+  grid-auto-rows: 24rem;
+}
+
+@media (max-width: 70rem) {
+  .gallery__grid {
+    grid-auto-rows: 20rem;
+  }
+}
+
+/* --- the team band's own caption ------------------------------------------
+   The author draws no caption under the practitioners' group shot — his
+   fictional studio needed none. Template fidelity 4.3 gives every photograph
+   on the page a caption leaf, and a tenant who writes one here gets it in
+   the story band's own `.story__caption` voice (already styled, already the
+   right one for a paper band): a caption is a caption wherever it appears,
+   and a second visual language for one would read as a mistake.
+
+   The only thing needed here is the WRAPPER, because `.team__portrait` is
+   the grid item today and it is `overflow: hidden` — a caption inside it
+   would be clipped along with the author's inset accent rule. The wrapper
+   takes its place in the grid and the frame keeps its own box, so nothing
+   about the composition moves for a page with no caption. */
+.team__media-wrap {
+  min-width: 0;
+}
+
+/* --- the brand logo -------------------------------------------------------
+   Template fidelity 4.6. The kit derives a MONOGRAM from the first letter of
+   the business name and a tenant with a real logo had nowhere to put it on
+   any of the three designs. The logo takes the monogram's own box — the same
+   ~2.5rem square, the same border, the same position in the lockup — so the
+   header and footer compositions do not move; `contain` because a logo has
+   its own aspect ratio and `cover` would crop somebody's mark. */
+.brand__mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 /* --- reviews: one or two ------------------------------------------------- */
 .review-grid[data-count="1"] {
   grid-template-columns: 1fr;

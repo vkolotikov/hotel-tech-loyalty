@@ -36,9 +36,40 @@ final class ContactDetails
         public readonly ?string $country,
         public readonly ?string $currency,
         public readonly ?string $timezone,
+        /**
+         * THE BUSINESS'S OWN LOGO (template fidelity 4.6), or null.
+         *
+         * No landing file read a logo anywhere before this: the header and
+         * the footer both derived a MONOGRAM from the first letter of the
+         * business name, and a tenant with a real logo had nowhere to put it
+         * on any of the three kits.
+         *
+         * NO NEW UPLOAD SLOT, deliberately. `Brand.logo_url` already exists,
+         * is already tenant-uploadable (BrandController accepts SVG), and is
+         * already what the admin shell paints its own chrome with — so this
+         * is a READ of something the tenant has already given us rather than
+         * a fourth place to ask for it. It is resolved beside the Property's
+         * facts because it answers the same question they do ("what does the
+         * page say this business is"), and because the two are wanted
+         * together at every call site.
+         *
+         * Not overridable per page: a logo is the business's identity, not a
+         * per-page detail like the phone number a branch might correct.
+         *
+         * Guarded like every other URL this page renders — same-origin
+         * storage or an explicit http(s) URL, nothing else — because
+         * `logo_url` is a plain string column and a `javascript:` value in it
+         * would otherwise reach an <img src> on a public page.
+         */
+        public readonly ?string $logoUrl = null,
     ) {}
 
-    public static function resolve(?Property $property, array $overrides): self
+    /**
+     * @param string|null $logoUrl the brand's own `logo_url`, raw — validated
+     *                             here rather than at the call site, so every
+     *                             caller gets the same allowlist
+     */
+    public static function resolve(?Property $property, array $overrides, ?string $logoUrl = null): self
     {
         $pick = static function (string $key) use ($property, $overrides): ?string {
             $o = $overrides[$key] ?? null;
@@ -58,6 +89,29 @@ final class ContactDetails
             country:  is_string($property?->country) ? $property->country : null,
             currency: is_string($property?->currency) ? $property->currency : null,
             timezone: is_string($property?->timezone) ? $property->timezone : null,
+            logoUrl:  self::safeLogo($logoUrl),
         );
+    }
+
+    /**
+     * The same three guards {@see PageContent::imageUrl()} applies to every
+     * photograph on the page, applied to the logo — a string, bounded, and
+     * either same-origin storage or an explicit http(s) URL.
+     *
+     * Repeated here rather than reached for across classes because this is
+     * the only value in this class that becomes a `src`, and a guard that
+     * only ONE of the two readers makes is a guard the other one does not
+     * have. Deliberately `^(https?://|/storage/)` and not `^//` or a bare
+     * `^/`: a protocol-relative `//evil.example/logo.svg` inherits the page's
+     * scheme and is exactly as capable of pointing off-origin as a fully
+     * qualified cross-origin URL.
+     */
+    private static function safeLogo(?string $url): ?string
+    {
+        if (!is_string($url) || $url === '' || strlen($url) > 2048) {
+            return null;
+        }
+
+        return preg_match('#^(https?://|/storage/)#', $url) === 1 ? $url : null;
     }
 }

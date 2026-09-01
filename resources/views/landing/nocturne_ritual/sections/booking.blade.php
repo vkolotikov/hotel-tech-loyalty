@@ -27,14 +27,23 @@
   every "Book" control points in that case. This partial does not
   second-guess that: it is only included when the band is going to render.
 
-  THE PHOTOGRAPH is the hero's, which is the author's own choice (the kit
-  reuses hero-nocturne.webp here). It is handed down as $panelImage rather
-  than read here, and that is a catalogue rule rather than a style: the
-  allowlisted read of content.hero.image_url belongs to the band that OWNS
-  that leaf, and a `booking` type declaring images=0 while its partial
-  reached for a photograph is exactly the drift SectionTypeTest exists to
-  catch. With no hero picture the media half is dropped and the invitation
-  centres in one column — never an empty frame.
+  THE PHOTOGRAPH IS THIS BAND'S OWN (template fidelity 4.1 / R2). The kit
+  reuses hero-nocturne.webp here, and that reuse is the author's
+  composition — so it is the DEFAULT for this band's own slot rather than a
+  hard-coded alias of the hero's leaf. A tenant who wants a different closing
+  plate can have one; a tenant who does not gets exactly the page the author
+  drew. "All images which I can change later" does not admit an image that is
+  silently a copy of another.
+
+  IT IS READ HERE NOW, not handed down as $panelImage from the layout. That
+  hand-down existed for one reason — this type declared images=0, so its
+  partial had no business reaching for a photo leaf, and the allowlisted read
+  belonged to the band that OWNED the leaf. The band owns one now, so the
+  read comes home; the `?? imageUrl('hero')` behind it is the MIGRATION and
+  not the design, so a page that already carries a hero upload and nothing
+  for `booking` renders exactly what it rendered yesterday. With no picture
+  at all the media half is dropped and the invitation centres in one column —
+  never an empty frame.
 
   THE PROMISES are the tenant's `terms` line, split on sentence boundaries.
   Presentation only: the split decides where list-item boundaries sit and
@@ -44,6 +53,30 @@
   or any sentence over 40 characters.
 --}}
 @php
+    // THREE RUNGS, IN THIS ORDER, and the middle one is the migration:
+    //
+    //   1. the tenant's own closing plate, if they have chosen one;
+    //   2. the tenant's own HERO plate, because until this band had a slot
+    //      of its own that is what it showed — a page that already carries a
+    //      hero upload must go on showing THEIR photograph here rather than
+    //      being handed the design's;
+    //   3. the design's own closing plate, which for this kit is the
+    //      author's reuse of his hero photograph.
+    //
+    // ownImageUrl() for the first two because they are the question "has
+    // this tenant chosen a picture", which is not the same question as
+    // "what does this band show" — see its docblock.
+    $panelImage = $content->ownImageUrl('booking')
+        ?? $content->ownImageUrl('hero')
+        ?? $content->imageUrl('booking');
+
+    // The words follow the picture. A tenant's own upload takes the tenant's
+    // own alt (blank unless they wrote one — a confidently wrong description
+    // is worse than none); the design's plate takes the design's.
+    $panelImageAlt = $content->ownImageUrl('booking') !== null
+        ? $content->imageAlt('booking')
+        : ($content->ownImageUrl('hero') !== null ? $content->imageAlt('hero') : $content->imageAlt('booking'));
+
     $terms = trim((string) ($copy['terms'] ?? __('Live availability. Simple rescheduling. Secure confirmation.')));
 
     $promises = collect(preg_split('/(?<=[.!?])\s+/u', $terms) ?: [])
@@ -56,7 +89,7 @@
     <section @class(['booking-panel', 'booking-panel--solo' => $panelImage === null]) id="booking" data-block="booking" data-variant="image-split">
 @if ($panelImage !== null)
       <figure class="booking-panel__media">
-        <img src="{{ $panelImage }}" width="1536" height="1024" loading="lazy" decoding="async" alt="">
+        <img src="{{ $panelImage }}" width="1536" height="1024" loading="lazy" decoding="async" alt="{{ $panelImageAlt }}">
       </figure>
 @endif
       <div class="booking-panel__content">

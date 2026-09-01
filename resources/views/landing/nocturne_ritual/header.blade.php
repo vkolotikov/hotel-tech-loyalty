@@ -36,7 +36,15 @@
     <div class="shell site-header__inner">
 @if (filled($brandName))
       <a class="brand" href="{{ $topHref }}" aria-label="{{ $brandName }}">
-@if ($brandInitial !== '')
+{{-- THE LOGO, IF THE BUSINESS HAS ONE (template fidelity 4.6). It takes the
+     monogram's own box, so the lockup does not move; the monogram is the
+     fallback it always was for a tenant who has uploaded none.
+     aria-hidden and alt="" on both: the wordmark beside them already names
+     the business, and the anchor carries its own aria-label — a logo read
+     out as well would announce the name twice. --}}
+@if ($content->contact->logoUrl !== null)
+        <span class="brand__mark" aria-hidden="true"><img src="{{ $content->contact->logoUrl }}" alt="" decoding="async"></span>
+@elseif ($brandInitial !== '')
         <span class="brand__mark" aria-hidden="true">{{ $brandInitial }}</span>
 @endif
         <span class="brand__wordmark">{{ $brandName }}</span>
