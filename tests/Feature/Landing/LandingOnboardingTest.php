@@ -1859,4 +1859,136 @@ class LandingOnboardingTest extends TestCase
             LandingPage::query()->delete();
         }
     }
+    /**
+     * Template fidelity 5.x — `content_fields`, one level finer than
+     * `photo_blocks` and the answer to the plan's own open question §7:
+     * *"the `renders` fact must gate FIELDS as well as blocks, or Phase 1's
+     * win is undone by Phase 5."*
+     *
+     * A leaf belongs to a TYPE, which every template shares; a DRAWN leaf
+     * belongs to a PARTIAL, which they do not. Phase 5 gave the kit template
+     * some thirty leaves the Ruled Page draws nowhere; the Ruled Page has
+     * always drawn four contact wording overrides the kits' icon-led footer
+     * has no room for. Both directions are a control that cannot act.
+     */
+    public function test_every_template_says_which_of_each_types_leaves_it_prints(): void
+    {
+        $this->makeProperty();
+
+        $served = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['content_fields'])
+            ->all();
+
+        foreach ($served as $key => $map) {
+            $this->assertSame(LandingOnboardingService::contentFieldsFor($key), $map,
+                "'{$key}' publishes a content_fields map that is not the one derived from its partials.");
+
+            foreach ($map as $id => $leaves) {
+                $type = SectionType::get($id);
+
+                $this->assertNotNull($type, "'{$key}' names an unknown type '{$id}'.");
+
+                // A subset of the catalogue, IN THE CATALOGUE'S OWN ORDER —
+                // this fact narrows the field list, it never reorders or
+                // invents one.
+                $this->assertSame(
+                    array_values(array_intersect($type->fields, $leaves)),
+                    array_values($leaves),
+                    "'{$key}' publishes '{$id}' leaves out of the catalogue's order, or leaves it does not declare.",
+                );
+            }
+        }
+
+        // The named cases, both directions.
+        $kit   = $served['nocturne_ritual'];
+        $ruled = $served['ruled_page'];
+
+        // The two-tone heading companion is drawn by the kit and by nothing
+        // else — R6's whole primitive.
+        $this->assertContains('headline_accent', $kit['hero']);
+        $this->assertNotContains('headline_accent', $ruled['hero']);
+
+        // The story ledger, the closing promises and the footer hub's social
+        // column, all 5.x, all kit-only.
+        $this->assertContains('fact_1', $kit['about']);
+        $this->assertNotContains('fact_1', $ruled['about']);
+        $this->assertContains('promise_1', $kit['booking']);
+        $this->assertNotContains('promise_1', $ruled['booking']);
+        $this->assertContains('social_instagram', $kit['contact']);
+        $this->assertNotContains('social_instagram', $ruled['contact']);
+
+        // And the direction that was already true before this round: the
+        // Ruled Page's contact band prints wording labels above each
+        // channel; the kits' hub is icons and has nowhere for them.
+        $this->assertContains('map_label', $ruled['contact']);
+        $this->assertNotContains('map_label', $kit['contact']);
+
+        // ContactDetails' three overridable VALUES are offered on BOTH,
+        // because it resolves them before any partial is reached — the one
+        // family no scan of a partial could ever find.
+        foreach (\App\Landing\ContactDetails::overridableFields() as $leaf) {
+            $this->assertContains($leaf, $kit['contact']);
+            $this->assertContains($leaf, $ruled['contact']);
+        }
+
+        // The leaves that arrive through an allowlisted reader rather than by
+        // index survive the derivation — the indirection is the guard and it
+        // must not cost the tenant the control.
+        $this->assertContains('q6', $kit['faq']);
+        $this->assertContains('feature_4_caption', $kit['trust']);
+        $this->assertContains('caption_8', $kit['gallery']);
+        $this->assertContains('alt', $kit['hero']);
+    }
+
+    /**
+     * THE HAND-WRITTEN HALF, GUARDED FROM THE OTHER END.
+     *
+     * `contentFieldsFor()` reads three things: the leaves a partial indexes
+     * by name, the leaves a shared file reads by band name, and
+     * `LEAF_READERS` — a small map naming the families that arrive through an
+     * allowlisted PageContent method instead. That map is the one place this
+     * mechanism could silently drift, so this asserts it is TOTAL: every leaf
+     * of every type is reachable by SOME design. A leaf reachable by none is
+     * a leaf no tenant can ever act on, and it fails here rather than
+     * appearing as a control that does nothing.
+     */
+    public function test_no_catalogue_leaf_is_unreachable_on_every_design(): void
+    {
+        $this->makeProperty();
+
+        $reachable = [];
+
+        foreach (LandingOnboardingService::templateKeys() as $key) {
+            foreach (LandingOnboardingService::contentFieldsFor($key) as $id => $leaves) {
+                foreach ($leaves as $leaf) {
+                    $reachable[$id][$leaf] = true;
+                }
+            }
+        }
+
+        $orphans = [];
+
+        foreach (SectionType::all() as $id => $type) {
+            foreach ($type['fields'] as $leaf) {
+                if (! isset($reachable[$id][$leaf])) {
+                    $orphans[] = $id . '.' . $leaf;
+                }
+            }
+        }
+
+        // `hero.caption`, `services.alt`, `services.caption` and
+        // `booking.caption` are the four the catalogue declares that neither
+        // shipped design prints today: `photoLeaves()` is merged into every
+        // single-plate type, and the kit draws a caption under the story and
+        // team frames only, while `services` has a slot ahead of the design
+        // that will use it (R3, kit 02). They are LISTED rather than allowed
+        // by rule, so a fifth cannot join them unnoticed.
+        $this->assertSame(
+            ['hero.caption', 'services.alt', 'services.caption', 'booking.caption'],
+            $orphans,
+            'A catalogue leaf is reachable on no design at all — either a partial must read it, '
+            . 'or LEAF_READERS must name the reader that does.',
+        );
+    }
 }

@@ -1788,6 +1788,32 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringContainsString('Rooms, water and light, in the order you meet them.', $this->body());
     }
 
+    /**
+     * 5.2 — the one contact channel the author LABELS rather than prints.
+     * His footer reads "Email the house"; `email_label` has been in the
+     * catalogue since 1.3 surfaced it and this band never read it.
+     */
+    public function test_the_footers_email_line_takes_the_tenants_own_wording(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, [
+            'contact' => ['email_label' => 'Email the house'],
+        ])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<span>Email the house</span>', $body);
+        // The mailto: is still the address, whatever the wording says.
+        $this->assertStringContainsString('href="mailto:hello@nocturnebathhouse.example"', $body);
+    }
+
+    public function test_the_footers_email_line_still_prints_the_address_by_default(): void
+    {
+        $this->seedLikeTheKit();
+
+        $this->assertStringContainsString('<span>hello@nocturnebathhouse.example</span>', $this->body());
+    }
+
     /** 5.6 — the one string on the page that was a bare English literal. */
     public function test_the_skip_link_is_translatable(): void
     {

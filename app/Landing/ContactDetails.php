@@ -65,6 +65,24 @@ final class ContactDetails
     ) {}
 
     /**
+     * THE THREE FACTS A PAGE MAY OVERRIDE — the `$overrides` keys
+     * {@see resolve()} consults, named so the one other place that needs to
+     * know reads them rather than repeating them.
+     *
+     * That place is `LandingOnboardingService::contentFieldsFor()`, which
+     * derives per-template field lists by reading what each partial indexes.
+     * These three are the exception it has to be told about: they are
+     * resolved HERE, before any partial is reached, so no partial indexes
+     * them and a scan alone would conclude no design offers them.
+     *
+     * @return list<string>
+     */
+    public static function overridableFields(): array
+    {
+        return ['phone', 'email', 'address'];
+    }
+
+    /**
      * @param string|null $logoUrl the brand's own `logo_url`, raw — validated
      *                             here rather than at the call site, so every
      *                             caller gets the same allowlist

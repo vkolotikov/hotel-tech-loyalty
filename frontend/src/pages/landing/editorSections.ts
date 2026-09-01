@@ -255,10 +255,22 @@ export function buildSectionRows(
    * band whose picture this design will never draw.
    */
   photoBlocks: string[] | null = null,
+  /**
+   * Which of each type's LEAVES the page's own design prints —
+   * `templateContentFields()`, template fidelity 5.x. Null (an older backend,
+   * or a caller that does not care) leaves every field exactly where it was,
+   * and so does a type the map does not mention.
+   *
+   * Applied HERE for the same reason `photoBlocks` is: everything that reads
+   * `row.fields` — the Photos chip, the auto-focus, the row's own status —
+   * sees one answer about what this card offers.
+   */
+  contentFields: Record<string, string[]> | null = null,
 ): EditorSectionRow[] {
   const ordered = orderedSections(pageSections)
 
   const drawsPhotos = (typeId: string) => photoBlocks === null || photoBlocks.includes(typeId)
+  const drawnLeaves = (typeId: string) => contentFields?.[typeId] ?? null
 
   // Counted over the WHOLE ordered list first, so `siblings` is a fact
   // about the page rather than about how far down the list this row sits.
@@ -321,7 +333,7 @@ export function buildSectionRows(
         // the shipped partials read and no tenant could fill in — and it
         // was the reason every field a later phase adds would otherwise
         // have needed a frontend release to become visible.
-        fields: fieldsForType(fixedType, drawsPhotos(fixedType.id)),
+        fields: fieldsForType(fixedType, drawsPhotos(fixedType.id), drawnLeaves(fixedType.id)),
         // A fixed row never renders the "not written yet" line, so this is
         // the harmless default rather than a claim about the band.
         writtenBy: 'words',
@@ -374,7 +386,7 @@ export function buildSectionRows(
       fixed: false,
       ordinal,
       siblings: perType.get(parsed.typeId) ?? 1,
-      fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId)),
+      fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId), drawnLeaves(parsed.typeId)),
       writtenBy: writtenBy(parsed.type),
       tone: normaliseTone(row.tone),
       // Off the TYPE (`text`), never the key (`text_1`) — every instance of
@@ -592,8 +604,22 @@ export function fieldsForType(
    * no such fact) behaves exactly as it did.
    */
   drawsPhotos = true,
+  /**
+   * Which of this type's leaves the page's own DESIGN prints —
+   * `templateContentFields()`, template fidelity 5.x / the plan's open
+   * question §7. Null is "no opinion", which is what an older backend and a
+   * type this design does not render both mean, and it leaves every field
+   * exactly where it was.
+   *
+   * Applied to the SERVED names only. The three synthesised controls (the
+   * photo plate, the gallery strip, the questions form) are decided by
+   * `drawsPhotos` and by the leaves the catalogue published, and a design
+   * that draws a gallery draws its whole grid or none of it.
+   */
+  drawnLeaves: string[] | null = null,
 ): SectionField[] {
   const slots = drawsPhotos ? imageSlotsOf(type) : 0
+  const draws = drawnLeaves === null ? null : new Set(drawnLeaves)
 
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
@@ -643,6 +669,14 @@ export function fieldsForType(
   const rest: SectionField[] = []
 
   for (const name of type.fields) {
+    // THE DESIGN'S OWN ANSWER, applied before anything else looks at the
+    // name (template fidelity 5.x). A leaf this template's partial never
+    // prints is a control that cannot act: the tenant types, the save
+    // succeeds, and their page does not change. `q1` is exempt because it
+    // stands in for the whole questions form, which the pair count above
+    // has already decided.
+    if (draws !== null && !draws.has(name) && name !== 'q1') continue
+
     if (!paired.has(name)) {
       // The catalogue's own field, wearing whatever presentation this screen
       // has an opinion about. The overlay is applied ONLY here, and only to

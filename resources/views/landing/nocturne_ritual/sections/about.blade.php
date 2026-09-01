@@ -68,8 +68,12 @@
     // the ledger over: the author writes three, but a studio with one thing
     // worth saying gets one numbered line rather than one line and two days
     // of opening hours, which would read as a page half-edited.
-    $written = collect(['fact_1', 'fact_2', 'fact_3'])
-        ->map(fn ($leaf) => trim((string) ($copy[$leaf] ?? '')))
+    // Each leaf SPELLED, never named through a variable: `content_fields`
+    // is derived by reading this file for the leaves it consumes (see
+    // LandingOnboardingService::contentFieldsFor), and a leaf read through
+    // a variable is a leaf the editor would stop offering.
+    $written = collect([$copy['fact_1'] ?? null, $copy['fact_2'] ?? null, $copy['fact_3'] ?? null])
+        ->map(fn ($line) => trim((string) (is_scalar($line) ? $line : '')))
         ->filter(fn ($line) => $line !== '')
         ->values();
 

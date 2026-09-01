@@ -29,7 +29,8 @@ import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateImageDefaults, templatePhotoBlocks,
+  catalogPayload, resolveTemplateKey, templateContentFields, templateFixedBlocks, templateImageDefaults,
+  templatePhotoBlocks,
   templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -651,6 +652,10 @@ export function LandingEditor({
    * beside them has already changed.
    */
   const photoBlocks = templatePhotoBlocks(templates, templateKey)
+  // Template fidelity 5.x: one level finer than `photoBlocks` — which of
+  // each type's LEAVES this design prints. Resolved against the same shown
+  // template key, for the same reason.
+  const contentFields = templateContentFields(templates, templateKey)
   const imageDefaults = templateImageDefaults(templates, templateKey)
 
   // The best business name this screen can honestly show in a card — the
@@ -669,7 +674,7 @@ export function LandingEditor({
   // watches the hint clear on Save, which is exactly when the band actually
   // appears on the page.
   const rows: EditorSectionRow[] = buildSectionRows(
-    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks,
+    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks, contentFields,
   )
 
   /**
@@ -1068,7 +1073,7 @@ export function LandingEditor({
       // that moved it silently did not stick — the row kept whatever `sort`
       // `store()` appended it with while every other row was renumbered
       // around it.
-      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks)
+      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks, contentFields)
       if (toSave.length > 0) {
         calls.push(api.put('/v1/admin/landing-pages/sections', { sections: buildSectionsPayload(toSave) }))
       }

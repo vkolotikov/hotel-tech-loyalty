@@ -186,7 +186,18 @@
         <a href="tel:{{ $dial }}">@include('landing.nocturne_ritual.icon', ['name' => 'phone'])<span>{{ $phone }}</span></a>
 @endif
 @if ($email !== null)
-        <a href="mailto:{{ $email }}">@include('landing.nocturne_ritual.icon', ['name' => 'mail'])<span>{{ $email }}</span></a>
+        {{-- THE ONE CHANNEL THE AUTHOR LABELS RATHER THAN PRINTS. His line
+             reads "Email the house", not the address, and `email_label` has
+             been in the catalogue since template fidelity 1.3 surfaced it —
+             this band simply never read it. The address stays the fallback,
+             and the mailto: is the address either way, so nothing about
+             where the link GOES depends on the wording.
+
+             Its two siblings deliberately do NOT do this: the map line's
+             text is the address and the phone line's is the number, and
+             replacing either with a label would take a fact off the page
+             rather than name it. --}}
+        <a href="mailto:{{ $email }}">@include('landing.nocturne_ritual.icon', ['name' => 'mail'])<span>{{ trim((string) ($contactCopy['email_label'] ?? '')) !== '' ? $contactCopy['email_label'] : $email }}</span></a>
 @endif
 @if ($todayHours !== null)
         <span class="footer-hub__contact-line">@include('landing.nocturne_ritual.icon', ['name' => 'clock'])<span>{{ $todayHours }}</span></span>

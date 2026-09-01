@@ -89,17 +89,23 @@
         ->last();
 
     // Each term: the tenant's own wording for THIS fact, else the derived
-    // one. trim()+filled() rather than ??, because an empty stored string
-    // must not shadow the default — the same rule every other chain on this
-    // page makes.
-    $termFor = function (string $leaf, string $default) use ($copy) {
-        $own = trim((string) ($copy[$leaf] ?? ''));
+    // one. trim() rather than ??, because an empty stored string must not
+    // shadow the default — the same rule every other chain on this page
+    // makes.
+    //
+    // Each leaf is SPELLED at its call site rather than passed as a name,
+    // and that is load-bearing rather than verbose: `content_fields` is
+    // derived by reading this file for the leaves it consumes (see
+    // LandingOnboardingService::contentFieldsFor), so a leaf read through a
+    // variable is a leaf the editor would stop offering.
+    $termFor = function (mixed $own, string $default): string {
+        $own = trim((string) (is_scalar($own) ? $own : ''));
 
         return $own !== '' ? $own : $default;
     };
 
     if (filled($latestClose)) {
-        $facts[] = ['term' => $termFor('hours_label', __('Open until')), 'value' => $latestClose];
+        $facts[] = ['term' => $termFor($copy['hours_label'] ?? null, __('Open until')), 'value' => $latestClose];
     }
 
     if ($content->reviewStats !== null) {
@@ -108,13 +114,13 @@
         // changes its own precision reads as a number nobody is looking
         // after.
         $facts[] = [
-            'term'  => $termFor('rating_label', __('Guest rating')),
+            'term'  => $termFor($copy['rating_label'] ?? null, __('Guest rating')),
             'value' => number_format((float) $content->reviewStats['average'], 1) . ' / 5',
         ];
     }
 
     if (filled($content->contact->city)) {
-        $facts[] = ['term' => $termFor('city_label', __('Find us')), 'value' => $content->contact->city];
+        $facts[] = ['term' => $termFor($copy['city_label'] ?? null, __('Find us')), 'value' => $content->contact->city];
     }
 
     // The button's own wording. The industry's verb ("Book appointment") is

@@ -781,7 +781,27 @@ final class SectionType
      */
     public static function photoLeaves(): array
     {
-        return ['alt', 'caption'];
+        return array_merge(self::altLeaves(), self::captionLeaves());
+    }
+
+    /**
+     * The two halves of {@see photoLeaves()}, named separately because they
+     * have separate READERS — `PageContent::imageAlt()` and
+     * `imageCaption()` — and `LandingOnboardingService::contentFieldsFor()`
+     * asks per reader which leaves it publishes. A partial can honestly draw
+     * one and not the other.
+     *
+     * @return list<string>
+     */
+    public static function altLeaves(): array
+    {
+        return ['alt'];
+    }
+
+    /** @return list<string> */
+    public static function captionLeaves(): array
+    {
+        return ['caption'];
     }
 
     /**
@@ -865,12 +885,25 @@ final class SectionType
      */
     public static function socialLeaves(): array
     {
-        return array_merge(
-            ['social_label'],
-            array_map(
-                static fn (string $platform) => 'social_' . $platform,
-                array_keys(self::SOCIAL_PLATFORMS),
-            ),
+        return array_merge(['social_label'], self::socialDestinationLeaves());
+    }
+
+    /**
+     * The DESTINATIONS alone, without the column's own label.
+     *
+     * Split out for the same reason {@see altLeaves()} is: they have a
+     * different reader. `PageContent::socialLinks()` publishes the three
+     * URLs and knows nothing about the heading over them, which a partial
+     * reads by index like any other line of copy — so a design could draw
+     * the icons under a heading of its own, or none.
+     *
+     * @return list<string>
+     */
+    public static function socialDestinationLeaves(): array
+    {
+        return array_map(
+            static fn (string $platform) => 'social_' . $platform,
+            array_keys(self::SOCIAL_PLATFORMS),
         );
     }
 

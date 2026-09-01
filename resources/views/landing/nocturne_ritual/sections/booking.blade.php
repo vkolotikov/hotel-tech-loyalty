@@ -93,8 +93,9 @@
     $terms = trim((string) ($copy['terms'] ?? __('Live availability. Simple rescheduling. Secure confirmation.')));
 
     // The tenant's own chips, in leaf order, blanks closed up.
-    $written = collect(['promise_1', 'promise_2', 'promise_3'])
-        ->map(fn ($leaf) => trim((string) ($copy[$leaf] ?? '')))
+    // Spelled, for the reason the story band's ledger spells its three.
+    $written = collect([$copy['promise_1'] ?? null, $copy['promise_2'] ?? null, $copy['promise_3'] ?? null])
+        ->map(fn ($promise) => trim((string) (is_scalar($promise) ? $promise : '')))
         ->filter(fn ($promise) => $promise !== '')
         ->values();
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   catalogPayload, industryHasChanged, resolveTemplateKey, showTemplatePicker, templateCards,
-  templateImageDefaults, templatePhotoBlocks,
+  templateContentFields, templateImageDefaults, templatePhotoBlocks,
   templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -354,6 +354,75 @@ describe('templatePhotoBlocks', () => {
       { key: 'k', name: 'K', blurb: '', photo_blocks: ['hero', 7 as unknown as string] },
     ]
     expect(templatePhotoBlocks(hostile, 'k')).toEqual(['hero'])
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 5.x — `content_fields`, one level finer than
+ * `photo_blocks`: which of each type's LEAVES this design actually prints.
+ *
+ * The plan's own open question §7 — a leaf belongs to a type, which every
+ * template shares, and a DRAWN leaf belongs to a partial, which they do not.
+ * Without it, Phase 5's thirty new kit-only leaves would appear as thirty
+ * controls a Ruled Page tenant can type into and never see.
+ */
+describe('templateContentFields', () => {
+  const WITH_FIELDS: TemplateOption[] = [
+    {
+      key: 'ruled_page', name: 'The Ruled Page', blurb: '',
+      content_fields: { hero: ['kicker', 'headline', 'subtext'], contact: ['kicker', 'map_label'] },
+    },
+    {
+      key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '',
+      content_fields: { hero: ['kicker', 'headline', 'headline_accent', 'cta_label'] },
+    },
+  ]
+
+  it('carries the served map through, per type', () => {
+    expect(templateContentFields(WITH_FIELDS, 'nocturne_ritual')?.hero)
+      .toEqual(['kicker', 'headline', 'headline_accent', 'cta_label'])
+    expect(templateContentFields(WITH_FIELDS, 'ruled_page')?.hero).not.toContain('headline_accent')
+    expect(templateContentFields(WITH_FIELDS, 'ruled_page')?.contact).toContain('map_label')
+  })
+
+  /**
+   * Null is NOT "draws nothing", and here that distinction has teeth the
+   * other served facts' does not: this one REMOVES controls, so a malformed
+   * or absent answer has to collapse to "no opinion" rather than to an empty
+   * list, which would blank a card.
+   */
+  it('answers null when the response does not say, and for an unknown key', () => {
+    expect(templateContentFields(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templateContentFields(WITH_FIELDS, 'nobody')).toBeNull()
+  })
+
+  it('collapses a malformed map to no opinion rather than to an empty one', () => {
+    const hostile: TemplateOption[] = [
+      { key: 'a', name: 'A', blurb: '', content_fields: ['hero'] as unknown as Record<string, string[]> },
+      { key: 'b', name: 'B', blurb: '', content_fields: 'hero' as unknown as Record<string, string[]> },
+    ]
+
+    expect(templateContentFields(hostile, 'a')).toBeNull()
+    expect(templateContentFields(hostile, 'b')).toBeNull()
+  })
+
+  it('drops a non-list entry and a non-string leaf rather than handing either on', () => {
+    const hostile: TemplateOption[] = [
+      {
+        key: 'k', name: 'K', blurb: '',
+        content_fields: {
+          hero: ['kicker', 7 as unknown as string],
+          about: 'body' as unknown as string[],
+        },
+      },
+    ]
+
+    const map = templateContentFields(hostile, 'k')
+
+    expect(map?.hero).toEqual(['kicker'])
+    // A type whose entry was not a list has NO entry, which every reader
+    // treats as "no opinion about this type" — never as "draws nothing".
+    expect(map).not.toHaveProperty('about')
   })
 })
 
