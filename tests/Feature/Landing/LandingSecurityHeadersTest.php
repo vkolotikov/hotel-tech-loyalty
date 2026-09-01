@@ -93,10 +93,21 @@ class LandingSecurityHeadersTest extends TestCase
      */
     public function test_a_widget_url_is_built_from_the_same_origin_frame_src_names(): void
     {
-        $url = LandingPageSecurity::widgetUrl('/booking-widget', ['org' => 7, 'lang' => 'pl']);
+        // A 32-char token, not the numeric org id this used to pass. Nothing
+        // in widgetUrl() cares which — it builds a query string — but the
+        // literal was the shape of a bug: `bindOrg()` resolves the widget's
+        // tenant with `Organization::where('widget_token', $token)` and
+        // nothing else, so the landing page handing it an ID meant
+        // `current_organization_id` was never bound and every guest saw an
+        // empty widget. That is fixed at the call site
+        // (LandingPageController hands over `$content->widgetToken`); this
+        // stops the fixture modelling the contract that was wrong.
+        $token = str_repeat('a1b2c3d4', 4);
+
+        $url = LandingPageSecurity::widgetUrl('/booking-widget', ['org' => $token, 'lang' => 'pl']);
 
         $this->assertNotNull($url);
-        $this->assertStringContainsString('org=7', $url);
+        $this->assertStringContainsString('org=' . $token, $url);
         $this->assertStringContainsString('lang=pl', $url);
         $this->assertStringStartsWith(rtrim(config('app.url'), '/') . '/booking-widget?', $url);
         $this->assertStringContainsString($url === null ? '' : parse_url($url, PHP_URL_HOST),

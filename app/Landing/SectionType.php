@@ -897,6 +897,28 @@ final class SectionType
     {
         $type = self::forKey($key);
 
+        return $type === null ? null : self::viewForType($type->id, $template);
+    }
+
+    /**
+     * The same view name, asked of a TYPE ID rather than of a section key.
+     *
+     * The two questions are genuinely different and only one of them can be
+     * asked of `text`: {@see typeOf()} deliberately refuses a repeatable
+     * type's bare id as a key (`text` is a type, `text_1` is a section), so
+     * `viewFor('text')` is null even though `landing.ruled_page.sections.
+     * text` exists and is exactly the partial a `text` band renders through.
+     *
+     * Anything enumerating the CATALOGUE — "which of these thirteen types
+     * does this template ship a partial for" — is asking about types, not
+     * about any page's keys, and has to come in this door or it silently
+     * drops every repeatable type. {@see \App\Services\Landing\LandingOnboardingService::rendersFor()}
+     * is that caller, and it is why this exists.
+     */
+    public static function viewForType(string $typeId, string $template = self::DEFAULT_TEMPLATE): ?string
+    {
+        $type = self::get($typeId);
+
         return $type === null ? null : 'landing.' . $template . '.sections.' . $type->view;
     }
 

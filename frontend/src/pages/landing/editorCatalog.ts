@@ -43,6 +43,101 @@ export type TemplateOption = {
   key: string
   name: string
   blurb: string
+  /**
+   * Landing phase 3c / template fidelity 1.1 — WHICH DESIGN CONTROLS THIS
+   * TEMPLATE ACTUALLY HONOURS, off the wire.
+   *
+   * `LandingOnboardingService::TEMPLATES[*].supports`, which transcribes
+   * one bool per control from what each template's own layout says it
+   * reads. Nocturne Ritual's layout states in words that `theme.palette`,
+   * `theme.font_pairing` and section tones are "simply not read here" — and
+   * because that fact was prose and nothing else, the editor drew ten
+   * palette/type cards and twenty-one tone swatches over a page that
+   * ignores every one of them.
+   *
+   * SERVED, NEVER MIRRORED, and never keyed off a template id in
+   * TypeScript: `if (templateKey === 'nocturne_ritual')` would be a second
+   * statement of the same fact, in the one place that cannot see the
+   * layout it is describing, and the third template would silently inherit
+   * the Ruled Page's answers.
+   *
+   * Optional because a backend that predates 1.1 publishes no such key —
+   * see `templateSupports`, which resolves that to "assume it honours
+   * everything", the behaviour that build already had.
+   */
+  supports?: Record<string, boolean> | null
+  /**
+   * WHICH SECTION TYPES THIS TEMPLATE SHIPS A PARTIAL FOR — derived
+   * server-side from `view()->exists()`, never a hand list.
+   *
+   * Not read yet: 2.6 ("Nocturne Ritual does not show this block") and
+   * 3.1's add-picker filter are what consume it. Carried now because 1.1 is
+   * where the fact is published and both of those are frontend-only reads
+   * of it afterwards.
+   */
+  renders?: string[] | null
+}
+
+/**
+ * The four design controls a template can answer for, and the order this
+ * module reasons about them in — `LandingOnboardingService::SUPPORT_KEYS`,
+ * restated only as the TYPE of the map, never as a copy of its values.
+ */
+export type TemplateSupport = {
+  palette: boolean
+  font_pairing: boolean
+  tones: boolean
+  brand_color: boolean
+}
+
+/** Everything on, which is what every template did before 1.1 existed. */
+const SUPPORTS_EVERYTHING: TemplateSupport = {
+  palette: true, font_pairing: true, tones: true, brand_color: true,
+}
+
+/**
+ * What the SELECTED template honours, as four bools that are always
+ * present.
+ *
+ * THE ABSENT-KEY DIRECTION IS DELIBERATE AND IT IS THE OPPOSITE OF THE
+ * SERVER'S. Server-side, a template row that forgets to declare a control
+ * reads as `false`: an author who did not say "yes" has not said yes.
+ * Here, a RESPONSE that carries no `supports` at all is an older backend,
+ * and the honest answer to "does this build know?" is no — so it falls back
+ * to the behaviour that build already had (draw everything) rather than
+ * hiding four controls a tenant has been using. The two are different
+ * questions: "this template declined" versus "nobody was asked".
+ *
+ * A key missing from a `supports` map that IS present is a different case
+ * again, and takes the server's direction: the row answered, and it did not
+ * answer yes.
+ */
+export function templateSupports(options: TemplateOption[], selectedKey: string): TemplateSupport {
+  const supports = options.find(o => o.key === selectedKey)?.supports
+
+  if (supports == null || typeof supports !== 'object') return SUPPORTS_EVERYTHING
+
+  return {
+    palette: supports.palette === true,
+    font_pairing: supports.font_pairing === true,
+    tones: supports.tones === true,
+    brand_color: supports.brand_color === true,
+  }
+}
+
+/**
+ * Which section types the selected template can draw, or `null` when this
+ * response does not say.
+ *
+ * Null is not "none": a caller that gates a control on this must leave the
+ * control alone rather than hide every block, for the same reason
+ * `templateSupports` falls back to "everything" — an older backend has not
+ * declined anything, it has simply not been asked.
+ */
+export function templateRenders(options: TemplateOption[], selectedKey: string): string[] | null {
+  const renders = options.find(o => o.key === selectedKey)?.renders
+
+  return Array.isArray(renders) ? renders.filter(id => typeof id === 'string') : null
 }
 
 /** What one template card needs, with nothing left for the component to

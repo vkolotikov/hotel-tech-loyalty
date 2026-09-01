@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   catalogPayload, industryHasChanged, resolveTemplateKey, showTemplatePicker, templateCards,
+  templateRenders, templateSupports,
   type TemplateOption,
 } from './editorCatalog'
 import type { IndustryOption } from './industryChoices'
@@ -190,5 +191,91 @@ describe('catalogPayload', () => {
     // a change the tenant can still see selected on screen.
     expect(catalogPayload({ ...base, industry: 'education', savedIndustry: 'beauty' }))
       .toEqual({ industry: 'education' })
+  })
+})
+
+/**
+ * Template fidelity 1.1/1.2 — the two capability facts, and the DIRECTIONS
+ * their absences resolve in.
+ *
+ * The failure these prevent is the one Phase 1 exists to end: a control that
+ * cannot act, rendered anyway. `nocturne_ritual` reads neither
+ * `theme.palette` nor `theme.font_pairing` nor any section tone, and the
+ * editor — having no way to know — drew six palette cards, four type cards
+ * and three swatches per section card over a page that ignores all of them.
+ */
+describe('templateSupports', () => {
+  const GATED: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', supports: { palette: true, font_pairing: true, tones: true, brand_color: true } },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', supports: { palette: false, font_pairing: false, tones: false, brand_color: true } },
+  ]
+
+  it('reads the served map for the selected template', () => {
+    expect(templateSupports(GATED, 'ruled_page'))
+      .toEqual({ palette: true, font_pairing: true, tones: true, brand_color: true })
+    expect(templateSupports(GATED, 'nocturne_ritual'))
+      .toEqual({ palette: false, font_pairing: false, tones: false, brand_color: true })
+  })
+
+  /**
+   * A RESPONSE THAT NEVER ANSWERED IS NOT A REFUSAL. An older backend
+   * publishes no `supports` at all, and hiding four controls a tenant has
+   * been using on the strength of a key that was never sent would be a
+   * regression dressed as a gate.
+   */
+  it('assumes everything when the response carries no supports at all', () => {
+    expect(templateSupports(TWO_TEMPLATES, 'ruled_page'))
+      .toEqual({ palette: true, font_pairing: true, tones: true, brand_color: true })
+  })
+
+  it('assumes everything for a key the response does not list', () => {
+    expect(templateSupports(GATED, 'wide_gallery').palette).toBe(true)
+    expect(templateSupports([], 'ruled_page').tones).toBe(true)
+  })
+
+  /**
+   * A MAP THAT IS PRESENT BUT INCOMPLETE takes the opposite direction, and
+   * the same one the server takes: the row answered, and it did not answer
+   * yes. Anything other than a literal `true` is a no.
+   */
+  it('reads a key missing from a present map as false', () => {
+    const partial: TemplateOption[] = [
+      { key: 'k', name: 'K', blurb: '', supports: { palette: true } as Record<string, boolean> },
+    ]
+    expect(templateSupports(partial, 'k'))
+      .toEqual({ palette: true, font_pairing: false, tones: false, brand_color: false })
+  })
+
+  it('reads an explicit null map as an unanswered response, not as four noes', () => {
+    const nulled: TemplateOption[] = [{ key: 'k', name: 'K', blurb: '', supports: null }]
+    expect(templateSupports(nulled, 'k').palette).toBe(true)
+  })
+})
+
+describe('templateRenders', () => {
+  const WITH_RENDERS: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text', 'contact'] },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', renders: ['hero', 'announcement', 'trust', 'faq'] },
+  ]
+
+  it('carries the served list through', () => {
+    expect(templateRenders(WITH_RENDERS, 'nocturne_ritual')).toEqual(['hero', 'announcement', 'trust', 'faq'])
+  })
+
+  /**
+   * NULL IS NOT "NONE". A caller gating a block on this must leave the block
+   * alone when the response did not say — hiding every section because an
+   * older backend published no list would empty the whole builder.
+   */
+  it('answers null, never an empty list, when the response does not say', () => {
+    expect(templateRenders(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templateRenders(WITH_RENDERS, 'wide_gallery')).toBeNull()
+  })
+
+  it('drops a non-string entry rather than handing one on', () => {
+    const hostile: TemplateOption[] = [
+      { key: 'k', name: 'K', blurb: '', renders: ['hero', 7 as unknown as string, 'about'] },
+    ]
+    expect(templateRenders(hostile, 'k')).toEqual(['hero', 'about'])
   })
 })

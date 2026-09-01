@@ -57,6 +57,25 @@ class LandingOnboardingService
      * with no second list to keep in step and no frontend release to make
      * it appear. LandingPageController::store() AND ::update() both
      * validate against templateKeys() for the same reason.
+     *
+     * `supports` is the OTHER half of that registry, and it is the only
+     * hand-written part of this array a reader has to check against
+     * something outside it: it transcribes, one bool per design control,
+     * the four statements a template's own layout makes about what it
+     * reads. Until it existed those statements were PROSE — nocturne's
+     * layout.blade.php says in words that `theme.palette`, `theme.
+     * font_pairing` and section tones are "simply not read here" — and the
+     * editor, having no way to know, drew ten palette/type cards and
+     * twenty-one tone swatches on a page that ignores every one of them.
+     * A control that cannot act is not rendered; that rule needs this fact
+     * on the wire to be applied at all.
+     *
+     * `renders` is NOT here on purpose. Which section types a template can
+     * draw is a question about which .blade.php files shipped, and the
+     * filesystem already answers it — see {@see rendersFor()}, which derives
+     * it. Writing that list by hand would be a second source of truth about
+     * a fact the renderer reads off disk on every request, and it would go
+     * stale the first time somebody added a partial.
      */
     public const TEMPLATES = [
         [
@@ -70,6 +89,16 @@ class LandingOnboardingService
             // the visual restraint is still the pitch, in words somebody who
             // has never commissioned a website can act on.
             'blurb' => 'Calm and uncluttered, with plenty of white space. Your work and your prices do the talking — nothing on the page competes with them.',
+            // Every one, and this is the template App\Landing\Palette,
+            // the font pairings and SectionType::bandClass() were all
+            // built for: ruled_page's layout renders the palette block,
+            // the pairing block and each band's tone class.
+            'supports' => [
+                'palette'      => true,
+                'font_pairing' => true,
+                'tones'        => true,
+                'brand_color'  => true,
+            ],
         ],
         [
             // The first of the three BeautyTech kits
@@ -90,8 +119,38 @@ class LandingOnboardingService
             // in words somebody who has never commissioned a website can act
             // on, rather than the craft behind it.
             'blurb' => 'Dark and cinematic, built around your photographs. Made for premium spas, massage studios and evening wellness brands.',
+            // Transcribed from the four statements
+            // resources/views/landing/nocturne_ritual/layout.blade.php
+            // makes about itself, in its own "WHAT THIS TEMPLATE
+            // DELIBERATELY DOES NOT DO" note: no palette block (the kit's
+            // :root IS the design), no font pairing (Cormorant Garamond
+            // and Manrope are named in the kit's own tokens), no section
+            // tones (the dark/paper/sand rhythm is composed, and a band on
+            // the wrong surface breaks the sequence rather than just that
+            // band) — and the accent, which is "the ONE tenant override".
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
         ],
     ];
+
+    /**
+     * The keys every TEMPLATES row's `supports` map answers, which is to
+     * say every design control that can be gated on one.
+     *
+     * Named once so {@see templates()} can normalise a row that forgot one
+     * (a new template added without its bool) to FALSE rather than to
+     * whatever `??` happened to be written at the reading end. False is the
+     * safe direction for exactly the reason this whole fact exists: a
+     * control wrongly hidden is a control a tenant asks about, and a
+     * control wrongly shown is a control that does nothing.
+     *
+     * @var list<string>
+     */
+    private const SUPPORT_KEYS = ['palette', 'font_pairing', 'tones', 'brand_color'];
 
     /**
      * What each section is called, and where its content comes from, in
@@ -144,6 +203,90 @@ class LandingOnboardingService
     public static function templateKeys(): array
     {
         return array_column(self::TEMPLATES, 'key');
+    }
+
+    /**
+     * The template registry as the wizard and the editor consume it: every
+     * authored row, plus the two CAPABILITY facts a screen needs in order
+     * to stop offering a control the chosen design cannot honour.
+     *
+     * `supports` is the authored half, normalised so every row answers all
+     * four questions (see {@see SUPPORT_KEYS}). `renders` is the derived
+     * half — which of the catalogue's section types this template ships a
+     * partial for.
+     *
+     * Both ride the SAME response `templates` already rode, rather than a
+     * new endpoint, because they are facts ABOUT the rows already on it and
+     * a screen that has the row must not have to make a second request to
+     * find out whether the row's design can draw what it is about to offer.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function templates(): array
+    {
+        return array_map(fn (array $row): array => array_merge($row, [
+            'supports' => self::supportsFor($row),
+            'renders'  => self::rendersFor($row['key']),
+        ]), self::TEMPLATES);
+    }
+
+    /**
+     * WHICH SECTION TYPES A TEMPLATE CAN ACTUALLY DRAW — derived from the
+     * shipped partials, never written down.
+     *
+     * This is the same question both layouts already ask, one section at a
+     * time, in their `$renderedSections` filter: `view()->exists()` on
+     * SectionType's answer for the key. Asking it of the whole catalogue up
+     * front is what lets the editor stop offering a band this design will
+     * silently drop — "Add a Text block" on nocturne_ritual, which ships no
+     * text.blade.php, is today a control a tenant can press, write into,
+     * save, and never see.
+     *
+     * DERIVED IS THE WHOLE POINT. A hand-written list here would be a
+     * second answer to a question the renderer resolves off disk on every
+     * request, and it would be wrong the first time somebody added a
+     * partial — which is precisely how ten dead design cards and a dead Add
+     * button got shipped in the first place.
+     *
+     * Asked through {@see SectionType::viewForType()} rather than viewFor():
+     * this enumerates TYPES, and `text`/`gallery` are types whose bare ids
+     * are deliberately not section keys.
+     *
+     * @return list<string>
+     */
+    public static function rendersFor(string $templateKey): array
+    {
+        return array_values(array_filter(
+            SectionType::ids(),
+            static function (string $id) use ($templateKey): bool {
+                $view = SectionType::viewForType($id, $templateKey);
+
+                return $view !== null && view()->exists($view);
+            },
+        ));
+    }
+
+    /**
+     * One template row's `supports` map, with every key present.
+     *
+     * A row that omits the whole map, or one key of it, reads as FALSE —
+     * see {@see SUPPORT_KEYS}. A template added without saying whether it
+     * honours the palette has not said yes.
+     *
+     * @param  array<string, mixed> $row
+     * @return array<string, bool>
+     */
+    private static function supportsFor(array $row): array
+    {
+        $authored = is_array($row['supports'] ?? null) ? $row['supports'] : [];
+
+        $out = [];
+
+        foreach (self::SUPPORT_KEYS as $key) {
+            $out[$key] = ($authored[$key] ?? false) === true;
+        }
+
+        return $out;
     }
 
     /**
@@ -267,7 +410,11 @@ class LandingOnboardingService
                 // describing.
                 'industry'      => $content->profile->industry,
             ],
-            'templates'      => self::TEMPLATES,
+            // templates(), not the raw TEMPLATES constant: the rows carry
+            // their capability facts (`supports`, `renders`) so the editor's
+            // Design panel can stop drawing a control the chosen template
+            // ignores. See templates().
+            'templates'      => self::templates(),
             // Landing phase 3c (wizard industry step): the nine industries
             // step 1 offers, each with the words a page in it would carry.
             // See industries() for why the list is Organization's and the

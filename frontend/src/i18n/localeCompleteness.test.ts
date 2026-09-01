@@ -230,12 +230,21 @@ describe('locale completeness — wizard industry names (dynamic t() keys, hand-
  * `T_CALL_RE` at the top of this file cannot see either family, exactly like
  * the design-panel and industry keys above.
  *
- * The ids are `App\Landing\SectionType::repeatableIds()` — the types the add
- * endpoint accepts, which is to say the only ones that ever reach either
- * call site. Fixed bands are NOT here and must not be: they are named by the
- * wire, in the industry's own vocabulary (a clinic's "Procedures", a salon's
- * "Treatments"), and adding `section_type_name_about` here would be asking
- * for a translation of a string nothing renders.
+ * The ids used to be `App\Landing\SectionType::repeatableIds()` alone — the
+ * two types the add endpoint accepts. Template fidelity 1.4 adds the FOUR
+ * FIXED TYPES NO INDUSTRY SEEDS: `announcement`, `trust`, `faq` (the three
+ * blocks the BeautyTech kits draw) and `footer`. They are unreachable from
+ * any screen today, which is precisely the point — 3.1 makes them addable
+ * and seeds them per template, and their being named in all five locales
+ * now is what makes that change a backend-only one.
+ *
+ * The seven bands an industry DOES seed are still absent and must stay
+ * absent: they are named by the wire, in the industry's own vocabulary (a
+ * clinic's "Procedures", a salon's "Treatments"), so
+ * `section_type_name_about` would be a translation of a string nothing
+ * renders. The four below are the opposite case — no industry profile names
+ * them, so `LandingOnboardingService::sections()` has nothing to say about
+ * them and the editor's own i18n is the only namer they can have.
  *
  * Hardcoded rather than derived, for the third time and the same reason: a
  * list built from the module it exists to check loses an id and its
@@ -252,6 +261,17 @@ describe('locale completeness — addable section type names and blurbs (dynamic
     'landing_pages.editor.section_type_blurb_text',
     'landing_pages.editor.section_type_name_gallery',
     'landing_pages.editor.section_type_blurb_gallery',
+    // Template fidelity 1.4 — the four fixed types no industry's
+    // `defaultSections` names, and which therefore reach the editor with no
+    // label off the wire at all.
+    'landing_pages.editor.section_type_name_announcement',
+    'landing_pages.editor.section_type_blurb_announcement',
+    'landing_pages.editor.section_type_name_trust',
+    'landing_pages.editor.section_type_blurb_trust',
+    'landing_pages.editor.section_type_name_faq',
+    'landing_pages.editor.section_type_blurb_faq',
+    'landing_pages.editor.section_type_name_footer',
+    'landing_pages.editor.section_type_blurb_footer',
   ]
 
   // The canary the three describes above all carry: a name AND a blurb for
@@ -340,13 +360,22 @@ describe('locale completeness — section tone names (dynamic t() keys, hand-ver
  * renders the RAW LEAF NAME (`image_url`, `gallery`, `kicker`) as the label
  * above an input a customer is asked to fill in.
  *
- * The names are the union of `SECTION_CONTENT_FIELDS`' curated fixed-row
- * fields and the two synthesised photo controls (`fieldsForType`) — i.e.
- * every control this build actually draws. `contact`'s five label overrides
- * and `booking`'s two are deliberately absent: they are served on the
- * catalogue but `SECTION_CONTENT_FIELDS` does not offer them, so no control
- * renders them and asking for a translation of a string nothing shows would
- * be asking for busywork.
+ * The names are every field the SERVED CATALOGUE publishes
+ * (`App\Landing\SectionType::all()`'s `fields` arrays, union) plus the two
+ * photo controls `fieldsForType` synthesises. Template fidelity 1.3 made
+ * the fixed rows read that catalogue instead of a hand-written mirror, so
+ * this list grew by exactly the controls that mirror had been withholding:
+ * `booking`'s two phone-line labels, `contact`'s five wording overrides,
+ * and — once 3.1 makes the three kit blocks reachable — `announcement`'s
+ * pair, `trust`'s four and the twelve FAQ leaves.
+ *
+ * The FAQ, trust and announcement names are here AHEAD of a control that
+ * renders them, deliberately and unlike everything else in this file: their
+ * types exist in the catalogue today and only their ROWS are unreachable,
+ * so the label is what 3.1 needs in place for that task to be backend-only.
+ * `feature_4` is one step further ahead again — 5.4 raises the trust cap
+ * from three to four to match kits 02 and 03 — and it is a one-line
+ * translation against a control labelled `feature_4` reaching a customer.
  *
  * Hardcoded rather than derived, for the fifth time and the same reason as
  * the four describes above: a list built from the module it exists to check
@@ -359,24 +388,73 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     // labels above a control.
     'landing_pages.editor.field_image_url',
     'landing_pages.editor.field_gallery',
-    // SECTION_CONTENT_FIELDS' copy fields, in the order that map lists them.
+    // hero / services / about / team / reviews / text / gallery.
     'landing_pages.editor.field_headline',
     'landing_pages.editor.field_subtext',
     'landing_pages.editor.field_kicker',
     'landing_pages.editor.field_heading',
     'landing_pages.editor.field_lead',
     'landing_pages.editor.field_body',
+    // booking — `terms` plus the two phone-line labels 1.3 surfaced.
     'landing_pages.editor.field_terms',
+    'landing_pages.editor.field_call_label',
+    'landing_pages.editor.field_call_short',
+    // contact — ContactDetails' three overridable VALUES...
     'landing_pages.editor.field_phone',
     'landing_pages.editor.field_email',
     'landing_pages.editor.field_address',
+    // ...and the five WORDING overrides above them, also surfaced by 1.3.
+    'landing_pages.editor.field_phone_label',
+    'landing_pages.editor.field_email_label',
+    'landing_pages.editor.field_address_label',
+    'landing_pages.editor.field_map_label',
+    'landing_pages.editor.field_closed_label',
+    // announcement.
+    'landing_pages.editor.field_text',
+    'landing_pages.editor.field_cta_label',
+    // trust — three today, four after 5.4 (see this describe's docblock).
+    'landing_pages.editor.field_quote',
+    'landing_pages.editor.field_feature_1',
+    'landing_pages.editor.field_feature_2',
+    'landing_pages.editor.field_feature_3',
+    'landing_pages.editor.field_feature_4',
+    // faq — SectionType::faqLeaves(), interleaved as the form offers them.
+    'landing_pages.editor.field_q1',
+    'landing_pages.editor.field_a1',
+    'landing_pages.editor.field_q2',
+    'landing_pages.editor.field_a2',
+    'landing_pages.editor.field_q3',
+    'landing_pages.editor.field_a3',
+    'landing_pages.editor.field_q4',
+    'landing_pages.editor.field_a4',
+    'landing_pages.editor.field_q5',
+    'landing_pages.editor.field_a5',
+    'landing_pages.editor.field_q6',
+    'landing_pages.editor.field_a6',
   ]
 
-  // The same canary the describes above carry: a list that silently drifts
-  // short would pass vacuously.
-  it('names both photo controls and every copy field the editor draws', () => {
-    expect(FIELD_LABEL_KEYS.length).toBe(12)
+  /**
+   * The canary the describes above all carry — a list that silently drifted
+   * short would pass vacuously — RECOMPUTED rather than counted.
+   *
+   * It used to be `expect(FIELD_LABEL_KEYS.length).toBe(12)`, which is a
+   * number two edits keep in step only by hand: adding a key and forgetting
+   * the count fails for the wrong reason, and adding a key and BUMPING the
+   * count passes without anyone having looked at the key. This asks the
+   * structural questions instead — the two photo controls are named, the
+   * FAQ grammar is complete and interleaved, and no key was written twice.
+   */
+  it('names both photo controls and every copy field the catalogue publishes', () => {
+    expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_image_url')
     expect(FIELD_LABEL_KEYS).toContain('landing_pages.editor.field_gallery')
+
+    // SectionType::MAX_FAQ_PAIRS pairs, both halves of each.
+    for (let n = 1; n <= 6; n++) {
+      expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_q${n}`)
+      expect(FIELD_LABEL_KEYS).toContain(`landing_pages.editor.field_a${n}`)
+    }
+
+    expect(new Set(FIELD_LABEL_KEYS).size).toBe(FIELD_LABEL_KEYS.length)
   })
 
   for (const locale of LOCALES) {
