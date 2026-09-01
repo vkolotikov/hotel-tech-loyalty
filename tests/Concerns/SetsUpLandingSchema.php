@@ -72,6 +72,32 @@ trait SetsUpLandingSchema
         }
     }
 
+    /**
+     * An organizations row for the page's tenant, carrying a widget token.
+     *
+     * Opt-in, not automatic: most landing tests render with a bare
+     * `organization_id => 1` and never needed the row to exist. The booking
+     * frame does -- the widget binds its tenant by `widget_token` and by
+     * nothing else, so a page whose org has no token can offer no booking URL
+     * at all. Tests that assert the booking flow have to seed the fact the
+     * real world always has; tests that do not care keep their empty table.
+     */
+    protected function seedWidgetOrganization(int $id = 1, string $token = 'wt-landing-test-token'): void
+    {
+        if (\Illuminate\Support\Facades\DB::table('organizations')->where('id', $id)->exists()) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::table('organizations')->insert([
+            'id'           => $id,
+            'name'         => 'Test Organization',
+            'slug'         => 'test-organization-' . $id,
+            'widget_token' => $token,
+            'created_at'   => now(),
+            'updated_at'   => now(),
+        ]);
+    }
+
     /** The tables a landing page reads live. Columns follow each model's $fillable. */
     protected function setUpLandingContentSchema(): void
     {

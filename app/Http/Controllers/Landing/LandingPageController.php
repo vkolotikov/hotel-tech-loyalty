@@ -236,11 +236,18 @@ class LandingPageController extends Controller
             // frame-src, from the same config value, so the template can never
             // name a host the policy does not permit -- and gets null, rather
             // than a broken frame, when there is no origin to name.
-            'bookingUrl' => LandingPageSecurity::widgetUrl('/booking-widget', [
-                'org'   => $page->organization_id,
+            // `org` is the widget TOKEN, not the id. BookingPublicController::
+            // bindOrg() resolves the tenant with a single
+            // `where('widget_token', $token)`, so the id this used to send
+            // matched nothing and every landing page framed a booking widget
+            // with no rooms in it -- silently, since an unbound widget renders
+            // empty rather than erroring. Null token, no URL: a frame that
+            // cannot bind is worse than no frame at all.
+            // `tpl` dropped with the same edit; nothing reads it.
+            'bookingUrl' => $content->widgetToken === null ? null : LandingPageSecurity::widgetUrl('/booking-widget', [
+                'org'   => $content->widgetToken,
                 'lang'  => app()->getLocale(),
                 'color' => $accent->brand,
-                'tpl'   => $page->template_key,
             ]),
             // The chat panel is FRAMED too, and for a harder reason than
             // booking's. The widget injects an inline <script> and positions

@@ -39,6 +39,7 @@ final class PageContent
         public readonly ContactDetails  $contact,
         public readonly ?array          $hours,
         public readonly ?string         $widgetKey,
+        public readonly ?string         $widgetToken,
         /**
          * The organisation's own review form, as the id/key PAIR the public
          * review page is addressed by — `['id' => 12, 'key' => 'abc…']` — or
@@ -167,6 +168,14 @@ final class PageContent
             // template that held the whole config could reach api_key, which
             // is an admin credential and has no business on a public page.
             widgetKey:   $chat?->is_active ? $chat->widget_key : null,
+            // The booking widget binds its tenant by widget_token and by
+            // nothing else -- BookingPublicController::bindOrg() is a single
+            // `where('widget_token', $token)`. The landing page was handing it
+            // organization_id, a number that can never equal a 32-character
+            // random token, so every landing page's booking frame came up with
+            // no rooms and no error. The admin's own embed builder has always
+            // used the token (BookingTab.tsx); this is the page catching up.
+            widgetToken: self::widgetToken($orgId),
             feedbackForm: self::feedbackForm($orgId),
         );
     }
@@ -199,6 +208,18 @@ final class PageContent
      *
      * @return array{id: int, key: string}|null
      */
+    private static function widgetToken(int $orgId): ?string
+    {
+        // withoutGlobalScopes because the public render has no bound tenant --
+        // the same reason every other read in this class takes the org id as
+        // an argument rather than trusting ambient context.
+        $token = \App\Models\Organization::withoutGlobalScopes()
+            ->whereKey($orgId)
+            ->value('widget_token');
+
+        return is_string($token) && $token !== '' ? $token : null;
+    }
+
     private static function feedbackForm(int $orgId): ?array
     {
         $form = self::scoped(ReviewForm::query(), $orgId)

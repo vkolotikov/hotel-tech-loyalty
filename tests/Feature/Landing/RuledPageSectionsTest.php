@@ -445,6 +445,10 @@ class RuledPageSectionsTest extends TestCase
 
     public function test_the_booking_cta_links_out_and_never_inlines_the_widget(): void
     {
+        // The widget binds by widget_token; with no org row there is no token
+        // and therefore, correctly, no booking URL to offer.
+        $this->seedWidgetOrganization();
+
         // The band used to frame the widget. On a real tenant page that frame
         // sat on "Loading booking..." indefinitely and put a white panel in the
         // middle of a dark page, so the band now links out instead. The rule
@@ -464,8 +468,39 @@ class RuledPageSectionsTest extends TestCase
         $this->assertStringNotContainsString('/api/v1/booking', $body);
     }
 
+    public function test_the_booking_link_carries_the_widget_token_not_the_organization_id(): void
+    {
+        // The bug this pins: the page sent `org={organization_id}`, but
+        // BookingPublicController::bindOrg() resolves the tenant with a single
+        // `where('widget_token', $token)`. A numeric id never equals a
+        // 32-character random token, so the tenant was never bound and every
+        // landing page framed a booking widget containing no rooms -- with no
+        // error anywhere, because an unbound widget renders empty rather than
+        // failing. The admin's own embed builder has always sent the token.
+        $this->seedWidgetOrganization(token: 'wt-known-token-value');
+        $this->published(industry: 'hotel');
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('org=wt-known-token-value', $body);
+        $this->assertStringNotContainsString('booking-widget?org=1', $body);
+        $this->assertDoesNotMatchRegularExpression('/booking-widget\?org=\d+(&|")/', $body);
+    }
+
+    public function test_a_tenant_with_no_widget_token_is_offered_no_booking_link(): void
+    {
+        // No token means the widget cannot bind, so a link would open an empty
+        // frame. Offering nothing is the honest answer; the band's other
+        // routes through (the phone number) still stand.
+        $this->published(industry: 'hotel');
+
+        $this->assertStringNotContainsString('booking-widget', $this->body());
+    }
+
     public function test_the_booking_link_targets_the_configured_admin_origin(): void
     {
+        $this->seedWidgetOrganization();
+
         // The one assertion that matters, carried over from the frame-src era:
         // whatever the template put in the href, it must be the origin this
         // deployment actually configures. A hardcoded host or a second copy of
