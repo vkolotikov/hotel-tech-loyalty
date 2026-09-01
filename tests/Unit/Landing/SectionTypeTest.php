@@ -383,6 +383,80 @@ class SectionTypeTest extends TestCase
         $this->assertSame(['text', 'gallery'], SectionType::repeatableIds());
     }
 
+    /**
+     * Template fidelity 3.1 / R4 — THE ADD ALLOWLIST, which is wider than
+     * "which types repeat".
+     *
+     * Asserted by DERIVATION on both sides rather than against a literal
+     * `['announcement','trust','faq']`, because a literal here would agree
+     * with a literal there and neither would notice the day a fourth kit
+     * block landed. The rule is: every repeatable type, plus every fixed
+     * type that no industry seeds and that has something to edit.
+     */
+    public function test_a_fixed_block_no_industry_seeds_may_be_added(): void
+    {
+        $addable = SectionType::addableIds();
+
+        $seeded = [];
+
+        foreach (IndustryProfile::all() as $profile) {
+            foreach ($profile['defaultSections'] as $key) {
+                $seeded[$key] = true;
+            }
+        }
+
+        foreach (SectionType::all() as $id => $type) {
+            $expected = $type['repeatable']
+                || (!isset($seeded[$id]) && ($type['fields'] !== [] || $type['images'] > 0));
+
+            $this->assertSame($expected, in_array($id, $addable, true),
+                "'{$id}' is on the wrong side of the add allowlist.");
+        }
+
+        // The three the rule exists for: the kits draw them, no industry
+        // seeds them, and before this they were reachable from no screen.
+        foreach (['announcement', 'trust', 'faq'] as $id) {
+            $this->assertContains($id, $addable);
+        }
+
+        // Chrome — no fields, no photograph, included by every layout
+        // unconditionally. Adding one would add a row nothing draws
+        // differently.
+        $this->assertNotContains('footer', $addable);
+
+        // Everything an industry's page is created with arrives with the
+        // page and is switched off, never added.
+        $this->assertNotContains('hero', $addable);
+        $this->assertNotContains('contact', $addable);
+    }
+
+    /**
+     * keyFor() — the one method the create endpoint calls, answering both
+     * spellings of the key grammar so the endpoint never branches on
+     * `repeatable` itself.
+     */
+    public function test_key_for_allocates_an_instance_or_the_bare_fixed_id(): void
+    {
+        // Repeatable: lowest free index, cap and all — nextInstanceKey's
+        // behaviour, unchanged and delegated to rather than re-implemented.
+        $this->assertSame('text_1', SectionType::keyFor('text', ['hero']));
+        $this->assertSame('text_2', SectionType::keyFor('text', ['text_1']));
+        $this->assertNull(SectionType::keyFor(
+            'text',
+            array_map(fn ($n) => 'text_' . $n, range(1, SectionType::MAX_INSTANCES_PER_TYPE)),
+        ));
+
+        // Fixed and addable: its own bare id, once.
+        $this->assertSame('faq', SectionType::keyFor('faq', ['hero', 'contact']));
+        $this->assertNull(SectionType::keyFor('faq', ['hero', 'faq']));
+
+        // Fixed and NOT addable: refused even by a caller that got past a
+        // Rule::in, which is why this is a second wall rather than a helper.
+        $this->assertNull(SectionType::keyFor('footer', []));
+        $this->assertNull(SectionType::keyFor('hero', []));
+        $this->assertNull(SectionType::keyFor('not_a_type', []));
+    }
+
     /** The gallery is a repeatable type in its own right, with its own instances. */
     public function test_gallery_instances_resolve_to_their_type_and_share_one_partial(): void
     {
@@ -539,7 +613,7 @@ class SectionTypeTest extends TestCase
 
         foreach ($payload as $row) {
             $this->assertSame(
-                ['id', 'repeatable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
                 array_keys($row),
                 "The '{$row['id']}' row does not carry exactly the published keys."
             );
@@ -548,6 +622,16 @@ class SectionTypeTest extends TestCase
                 $row['repeatable'] ? SectionType::MAX_INSTANCES_PER_TYPE : null,
                 $row['limit'],
                 "The '{$row['id']}' row publishes the wrong limit."
+            );
+
+            // Template fidelity 3.1: `addable` is a SEPARATE question from
+            // `repeatable` and the picker reads this one. Round-tripped
+            // against the allowlist the create endpoint validates with, so
+            // the editor can never offer a type that endpoint would 422.
+            $this->assertSame(
+                in_array($row['id'], SectionType::addableIds(), true),
+                $row['addable'],
+                "The '{$row['id']}' row publishes an `addable` its own allowlist disagrees with."
             );
 
             // `band` is a class name on a stylesheet the admin SPA never

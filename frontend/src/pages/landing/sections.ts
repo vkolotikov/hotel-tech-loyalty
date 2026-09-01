@@ -3,32 +3,28 @@
  * editor's section list (show it as on/off), so the two screens cannot
  * describe the same page differently.
  */
-export type SectionKey = 'hero' | 'services' | 'about' | 'team' | 'reviews' | 'booking' | 'contact'
-
 /**
- * THE WIZARD'S CREATE-TIME ORDERING, and nothing else since template
- * fidelity 1.3.
+ * THERE IS NO `SECTION_ORDER` AND NO `SectionKey` HERE ANY MORE, and both
+ * absences are load-bearing (template fidelity 1.3, then 3.1).
  *
- * It used to be "the template order every list of sections renders in", and
- * the editor's own row list read it to decide which keys were real. That is
- * no longer true and must not become true again: a page's bands are the
- * SERVED catalogue's types (`onboarding.section_types`) in the page's own
- * stored `sort` order, and a tenant-added `text_1` — or a fixed
- * `announcement` — is a legitimate band this seven-key literal has never
- * heard of. `buildSectionRows` derives "is this a fixed band" from the
- * catalogue for exactly that reason.
+ * They were a seven-key literal — `hero`, `services`, `about`, `team`,
+ * `reviews`, `booking`, `contact` — and a union type over it. 1.3 took the
+ * editor's row list off them (a page's bands are the SERVED catalogue's
+ * types in the page's own stored `sort` order, and a tenant-added `text_1`
+ * or a design-seeded `announcement` is a legitimate band no literal here has
+ * ever heard of). 3.1 took the wizard's step 4 off them too: it iterates the
+ * served `onboarding.sections` rows in wire order, which is the industry
+ * profile's own `defaultSections` — the thing the literal was a copy of.
  *
- * What is left is the wizard's step 4, which offers the seven bands a NEW
- * page is created with, in the order it should offer them. That question
- * has a served answer too (`onboarding.sections`, which maps the industry
- * profile's own `defaultSections`), and 3.1 replaces this last use with it;
- * until then this is a create-time display order and nothing may read it as
- * a claim about which sections exist.
+ * `key` below is therefore a plain `string`. Anything that needs to know
+ * whether a key names a real section asks the served catalogue
+ * (`parseSectionKey`), and anything that needs to know which bands a NEW
+ * page in an industry gets asks the served `industries[].sections`
+ * (`sectionsForIndustry`). Re-introducing either of these would be a second
+ * answer to a question the server already answers.
  */
-export const SECTION_ORDER: SectionKey[] = ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact']
-
 export type SectionMeta = {
-  key: SectionKey
+  key: string
   label: string
   sourceLabel: string
   available: boolean

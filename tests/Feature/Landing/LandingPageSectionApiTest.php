@@ -676,6 +676,77 @@ class LandingPageSectionApiTest extends TestCase
     }
 
     /**
+     * Template fidelity 3.1 — the door that was shut: a fixed block no
+     * industry seeds can now be ADDED, once, and it comes in under its own
+     * bare key.
+     *
+     * `announcement`, `trust` and `faq` are three of the fifteen blocks the
+     * BeautyTech kits draw. Before this they were reachable from no screen in
+     * the product: no `defaultSections` list names them, so no page was ever
+     * seeded with one, and this endpoint accepted repeatable types only.
+     */
+    public function test_a_kit_block_can_be_added_once_under_its_own_key(): void
+    {
+        $page = $this->makePageWithSections();
+        $lastSort = (int) $page->sections->max('sort');
+
+        foreach (['announcement', 'trust', 'faq'] as $i => $type) {
+            $this->assertSame($type, $this->addSection($type),
+                'A fixed block must arrive under its own bare key, never an instance index.');
+
+            $this->assertDatabaseHas('landing_page_sections', [
+                'landing_page_id' => $page->id, 'key' => $type, 'enabled' => true, 'sort' => $lastSort + 1 + $i,
+            ]);
+        }
+    }
+
+    /**
+     * There is only one of each, so a second add is refused in words rather
+     * than by the (landing_page_id, key) unique index — which would be a
+     * 500, and which is also why the refusal is thrown from inside the
+     * row-locked transaction.
+     *
+     * Mutation target: return the bare id unconditionally from
+     * SectionType::keyFor() (drop its `in_array($typeId, $existingKeys)`
+     * test) and this goes red.
+     */
+    public function test_a_second_copy_of_a_kit_block_is_refused_kindly(): void
+    {
+        $page = $this->makePageWithSections();
+
+        $this->addSection('trust');
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'trust'])),
+            'type',
+        );
+
+        $this->assertSame('Your page already has one of these. Switch the one you have back on instead.', $message);
+        $this->assertReadsLikeAPerson($message);
+
+        $this->assertSame(1, $page->fresh('sections')->sections->where('key', 'trust')->count());
+    }
+
+    /**
+     * Chrome stays chrome. `footer` is a fixed type no industry seeds — the
+     * first half of the addable rule — but it declares no editable copy and
+     * no photograph, every layout includes it unconditionally, and adding
+     * one would put a row on the page that changes nothing about what
+     * renders.
+     */
+    public function test_the_footer_cannot_be_added(): void
+    {
+        $this->makePageWithSections();
+
+        $message = $this->refusalMessage(
+            fn () => $this->controller()->store($this->addRequest(['type' => 'footer'])),
+            'type',
+        );
+
+        $this->assertSame('That kind of section cannot be added to a page.', $message);
+    }
+
+    /**
      * The whole-page cap, which is a different bound from the per-type one
      * and has to be reachable independently of it: with one repeatable type
      * capped at six and the longest industry list at seven, the API alone

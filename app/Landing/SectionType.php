@@ -393,10 +393,33 @@ final class SectionType
                 'band'       => 'band--ink',
                 'images'     => 0,
             ],
-            // Rendered outside the section loop (the layout includes it
-            // unconditionally) and listed here anyway: it IS a section type,
-            // and the wizard already names it. It has no editable copy — the
-            // footer reads the business's own details.
+            // CHROME, and this is where that is written down (template
+            // fidelity 3.5). It is listed here because it IS a section type
+            // and the wizard already names it, but it is the one type in this
+            // catalogue with no editable copy and no photograph, and that is
+            // a decision rather than an omission:
+            //
+            //   - every layout includes it UNCONDITIONALLY, outside the
+            //     section loop, so there is no row to switch off and no order
+            //     to move it in. `fixed_blocks` publishes it as `footer`
+            //     placement for exactly that reason.
+            //   - what it prints is the business's own details — the name,
+            //     the address, the phone, the hours, the review link — which
+            //     are Properties data, not page copy. The one leaf it reads
+            //     out of `content` is the CONTACT band's kicker (see
+            //     footer.blade.php), which the contact type already owns and
+            //     already offers a control for.
+            //   - the page's tagline, which is the only text a tenant might
+            //     expect to write here, is `seo.description` and has had its
+            //     own control on the Publish tab since template fidelity 1.5.
+            //
+            // Being fieldless is therefore load-bearing in two places rather
+            // than merely true: {@see addableIds()} refuses to offer it (a
+            // control that would add a row nothing renders differently), and
+            // the editor draws its row as a plain header with no disclosure.
+            // A later phase that gives the footer real leaves of its own —
+            // a legal note, social destinations — undoes both by adding them
+            // here, and should read this note first.
             'footer' => [
                 'repeatable' => false,
                 'view'       => 'footer',
@@ -532,6 +555,120 @@ final class SectionType
             self::all(),
             static fn (array $type) => $type['repeatable'],
         )));
+    }
+
+    /**
+     * THE ADD ALLOWLIST — every type a tenant may put on a page that does
+     * not already have one, which is a wider question than "which types
+     * repeat" (template fidelity 3.1 / R4).
+     *
+     * Two families, and the second is the reason this exists:
+     *
+     *   - every REPEATABLE type, which is what this allowlist has always
+     *     been. A page may hold up to {@see MAX_INSTANCES_PER_TYPE} of each.
+     *   - every FIXED type that no industry's page is created with, and that
+     *     has something to edit. `announcement`, `trust` and `faq` are the
+     *     BeautyTech kits' own blocks: three of the author's fifteen, drawn
+     *     by the shipped partials, described in tenant words by
+     *     {@see \App\Services\Landing\LandingOnboardingService::SECTION_COPY}
+     *     — and, until this list existed, reachable from no screen in the
+     *     product at all, because the create endpoint accepted repeatable
+     *     types only and no `defaultSections` list names them.
+     *
+     * DERIVED, never a second literal `['announcement', 'trust', 'faq']`.
+     * Both halves of the second family's test are facts already written down
+     * somewhere else:
+     *
+     *   - "no industry seeds it" is {@see IndustryProfile::all()}'s own
+     *     `defaultSections` lists, unioned. A type that IS seeded arrives
+     *     with the page and is switched off rather than added, which is the
+     *     rule `LandingPageSectionController::destroy()` already states from
+     *     the other end.
+     *   - "has something to edit" is this catalogue's own `fields`/`images`.
+     *     `footer` is the type that fails it: it declares no editable copy
+     *     and no photograph because it is CHROME — the layout includes it
+     *     unconditionally and it reads the business's own details — so
+     *     "add a footer" would be a control that adds a row nothing renders
+     *     differently. See its entry in {@see all()}.
+     *
+     * Order is {@see all()}'s authored order, so a picker built from this
+     * list reads in catalogue order rather than in two clumps.
+     *
+     * @return list<string>
+     */
+    public static function addableIds(): array
+    {
+        $seeded = self::seededIds();
+
+        return array_values(array_keys(array_filter(
+            self::all(),
+            static fn (array $type, string $id) => $type['repeatable']
+                || (!isset($seeded[$id]) && ($type['fields'] !== [] || $type['images'] > 0)),
+            ARRAY_FILTER_USE_BOTH,
+        )));
+    }
+
+    /**
+     * Every section key some industry's new page is created with, as a SET
+     * (id => true) so {@see addableIds()} can test membership without a
+     * linear scan per type.
+     *
+     * The one place this class reads {@see IndustryProfile}, and it reads
+     * the same `defaultSections` lists `LandingPageController::store()` and
+     * `LandingOnboardingService::apply()` seed from — so "this type arrives
+     * with the page" and "this type may be added to a page" are one decision
+     * with one input, rather than two lists that agree until somebody edits
+     * one of them.
+     *
+     * @return array<string, true>
+     */
+    private static function seededIds(): array
+    {
+        $seeded = [];
+
+        foreach (IndustryProfile::all() as $profile) {
+            foreach ($profile['defaultSections'] as $key) {
+                $seeded[$key] = true;
+            }
+        }
+
+        return $seeded;
+    }
+
+    /**
+     * The section KEY one add of `$typeId` should create, or null when the
+     * page cannot take another.
+     *
+     * The two spellings the key grammar admits, answered by the one method
+     * the create endpoint calls, so that endpoint never branches on
+     * `repeatable` itself:
+     *
+     *   - a REPEATABLE type allocates the lowest free instance index —
+     *     {@see nextInstanceKey()}, unchanged, cap and all.
+     *   - a FIXED type IS its own key. There can only ever be one, so the
+     *     answer is the bare id when the page does not already carry it and
+     *     null when it does — the caller turns that null into its own named
+     *     refusal, exactly as it already does for the instance cap.
+     *
+     * Refuses a type this catalogue does not know, and a fixed type that is
+     * not addable at all, so a caller that reached here past its own
+     * `Rule::in` still cannot create a row for `footer`.
+     *
+     * @param list<string> $existingKeys every section key the page already carries
+     */
+    public static function keyFor(string $typeId, array $existingKeys): ?string
+    {
+        $type = self::get($typeId);
+
+        if ($type === null || !in_array($typeId, self::addableIds(), true)) {
+            return null;
+        }
+
+        if ($type->repeatable) {
+            return self::nextInstanceKey($typeId, $existingKeys);
+        }
+
+        return in_array($typeId, $existingKeys, true) ? null : $typeId;
     }
 
     /**
@@ -987,16 +1124,26 @@ final class SectionType
      * but never wrong. Anything that understands `image_slots` should read
      * that and ignore `image` entirely.
      *
-     * @return list<array{id: string, repeatable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
+     * `addable` is the question the "+ Add a block" picker actually asks, and
+     * it is NOT `repeatable` (template fidelity 3.1). Three of the kits'
+     * fifteen blocks are fixed types a tenant may nonetheless add, because no
+     * industry's page is created with them — see {@see addableIds()}. The
+     * editor filtered its picker on `repeatable` until this key existed,
+     * which is why `announcement`, `trust` and `faq` were reachable from no
+     * screen in the product.
+     *
+     * @return list<array{id: string, repeatable: bool, addable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
      */
     public static function payload(): array
     {
-        $rows = [];
+        $addable = array_flip(self::addableIds());
+        $rows    = [];
 
         foreach (self::all() as $id => $type) {
             $rows[] = [
                 'id'           => $id,
                 'repeatable'   => $type['repeatable'],
+                'addable'      => isset($addable[$id]),
                 'fields'       => $type['fields'],
                 'image'        => $type['images'] === 1,
                 'image_slots'  => $type['images'],

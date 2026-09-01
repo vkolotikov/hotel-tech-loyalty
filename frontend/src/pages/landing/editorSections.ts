@@ -79,6 +79,23 @@ export type SectionAvailability = {
 export type SectionTypeOption = {
   id: string
   repeatable: boolean
+  /**
+   * Whether the "+ Add a block" picker may offer this type — `SectionType::
+   * addableIds()`, served (template fidelity 3.1).
+   *
+   * NOT the same question as `repeatable`, and reading the wrong one is why
+   * three of the BeautyTech kits' fifteen blocks were reachable from no
+   * screen in the product. `announcement`, `trust` and `faq` are FIXED types
+   * (a page holds at most one of each) that no industry's page is created
+   * with, so nothing seeded them and this picker refused them. `footer` is
+   * the other direction: fixed, unseeded, and deliberately NOT addable,
+   * because it is chrome with no editable copy.
+   *
+   * Optional: a backend that predates the key publishes none, and
+   * `isAddable` then falls back to `repeatable` — exactly what that build's
+   * add endpoint accepts.
+   */
+  addable?: boolean
   fields: string[]
   /**
    * The OLD photo question — "draw the one-photo control" — and it is
@@ -128,6 +145,10 @@ export type SectionField = {
    *  the served `image_slots`. Never a literal eight: the cap the editor
    *  counts against and the cap the endpoints enforce are one number. */
   slots?: number
+  /** For `type: 'faq_pairs'` only — how many question/answer couplets the
+   *  band may hold, DERIVED from the `qN`/`aN` leaves the server actually
+   *  published (see `faqPairsOf`). Never a literal six. */
+  pairs?: number
 }
 
 /**
@@ -486,6 +507,65 @@ export function imageSlotsOf(type: SectionTypeOption): number {
   return type.image ? 1 : 0
 }
 
+/**
+ * How many question/answer couplets a served type publishes — the largest
+ * `N` for which BOTH `qN` and `aN` are in its `fields`, or 0 for a type that
+ * is not a questions band.
+ *
+ * DERIVED from the wire, never `SectionType::MAX_FAQ_PAIRS` written out
+ * again here: the cap moving from six to eight must be a backend edit, which
+ * is the whole property template fidelity 1.3 bought. Both halves are
+ * required because a half-pair is not a row the form can render — the same
+ * rule `PageContent::faqPairs()` applies at the other end, where a question
+ * with no answer is dropped rather than published.
+ *
+ * Counted from 1 upward and stopping at the first gap, so a catalogue that
+ * published `q1..q3` and `q9` yields three rather than nine holes.
+ */
+export function faqPairsOf(type: SectionTypeOption): number {
+  const has = new Set(type.fields)
+
+  let n = 0
+  while (has.has(`q${n + 1}`) && has.has(`a${n + 1}`)) n++
+
+  return n
+}
+
+/**
+ * How many question/answer rows the FAQ form should draw (template fidelity
+ * 3.3).
+ *
+ * Every pair that has ANYTHING in it — including a half-written one, which
+ * must stay visible or the tenant cannot finish it — plus however many empty
+ * rows they have revealed, floored at one so the control is never a lone
+ * button, and capped at what the server published.
+ *
+ * The floor and the cap are why this is a function rather than an
+ * expression inside JSX: the interesting cases (a band whose only written
+ * pair is the fourth; a cap of zero from a backend that publishes no pairs)
+ * are exactly the ones a condition written inline gets wrong.
+ */
+export function visibleFaqPairs(
+  content: Record<string, unknown>,
+  cap: number,
+  revealed: number,
+): number {
+  if (cap < 1) return 0
+
+  let highestWritten = 0
+
+  for (let n = 1; n <= cap; n++) {
+    const q = content[`q${n}`]
+    const a = content[`a${n}`]
+
+    if ((typeof q === 'string' && q.trim() !== '') || (typeof a === 'string' && a.trim() !== '')) {
+      highestWritten = n
+    }
+  }
+
+  return Math.min(cap, Math.max(1, highestWritten + Math.max(0, revealed)))
+}
+
 export function fieldsForType(type: SectionTypeOption): SectionField[] {
   const slots = imageSlotsOf(type)
 
@@ -499,16 +579,48 @@ export function fieldsForType(type: SectionTypeOption): SectionField[] {
       : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image' }]
         : []
 
-  return [
-    ...photo,
-    // The catalogue's own field list, in the order the server sent it, each
-    // wearing whatever presentation this screen has an opinion about. The
-    // overlay is applied ONLY here, and only to the served names — the two
-    // synthesised photo controls above already carry the exact `type` (and,
-    // for a strip, the `slots`) their renderer branches on, and letting a
-    // by-name overlay speak over those would put two answers on one field.
-    ...type.fields.map(name => ({ name, ...(FIELD_PRESENTATION[name] ?? {}) })),
-  ]
+  // THE QUESTIONS BAND IS ONE CONTROL, NOT FIFTEEN (template fidelity 3.3).
+  //
+  // `faq.fields` is `kicker, heading, subtext, q1, a1, … q6, a6`, and run
+  // through the flat loop below that is fifteen stacked inputs on one card,
+  // twelve of them labelled `q1`…`a6`. The pairs are SYNTHESISED into one
+  // `faq_pairs` control the same way the gallery strip is synthesised into
+  // one `gallery` control — the renderer draws Question/Answer couplets and
+  // an "add another" affordance, and the twelve leaves it writes are exactly
+  // the twelve the server published.
+  //
+  // Positioned WHERE `q1` SAT, so the band still reads top-to-bottom in the
+  // order its own partial renders: eyebrow, heading, intro, then the
+  // questions. Splicing rather than appending matters the day a type carries
+  // a field after its pairs.
+  const pairs = faqPairsOf(type)
+  const paired = new Set<string>()
+
+  if (pairs > 0) {
+    for (let n = 1; n <= pairs; n++) { paired.add(`q${n}`); paired.add(`a${n}`) }
+  }
+
+  const rest: SectionField[] = []
+
+  for (const name of type.fields) {
+    if (!paired.has(name)) {
+      // The catalogue's own field, wearing whatever presentation this screen
+      // has an opinion about. The overlay is applied ONLY here, and only to
+      // the served names — the synthesised controls already carry the exact
+      // `type` (and `slots`/`pairs`) their renderer branches on, and letting
+      // a by-name overlay speak over those would put two answers on one
+      // field.
+      rest.push({ name, ...(FIELD_PRESENTATION[name] ?? {}) })
+
+      continue
+    }
+
+    // The first leaf of the first pair stands in for all of them; the rest
+    // are consumed.
+    if (name === 'q1') rest.push({ name: 'faq_pairs', type: 'faq_pairs', pairs })
+  }
+
+  return [...photo, ...rest]
 }
 
 /**
@@ -658,16 +770,32 @@ export function removeSectionContent(
  *  `editorCatalog.ts`'s `templateCards()` follows. */
 export type AddableType = {
   id: string
-  /** How many of this type the page already carries, and the ceiling. */
+  /** How many of this type the page already carries, and the ceiling. A
+   *  FIXED addable type's ceiling is 1 — there is only ever one
+   *  `announcement` — which is not on the wire as a `limit` (that key is
+   *  null for a fixed type) but is a fact about the key grammar: a fixed
+   *  type IS its own key. See `SectionType::keyFor()`, the server's half. */
   used: number
   limit: number
   /** null when the button is live. Otherwise WHICH refusal applies, so the
    *  component can render the matching sentence rather than this module
    *  carrying English (or five translations of it). */
-  disabledReason: 'type_limit' | 'page_full' | null
+  disabledReason: 'type_limit' | 'page_full' | 'already_on_page' | null
   /** The page cap, carried so the 'page_full' sentence can name the real
    *  number rather than a copy of a server constant. */
   pageLimit: number | null
+}
+
+/**
+ * Whether the picker may offer this type — the served `addable`, falling
+ * back to `repeatable` for a backend that predates the key.
+ *
+ * One place, because the fallback is the whole point: an older backend's add
+ * endpoint accepts exactly the repeatable types, so degrading to that is the
+ * honest answer rather than a guess.
+ */
+export function isAddable(type: SectionTypeOption): boolean {
+  return type.addable ?? type.repeatable
 }
 
 /**
@@ -688,30 +816,56 @@ export type AddableType = {
  * `pageLimit` unknown (a backend that does not publish it) drops the
  * page-cap gate rather than guessing a number: the add still goes to the
  * server, which refuses it with its own already-friendly sentence.
+ *
+ * TWO FILTERS SINCE TEMPLATE FIDELITY 3.1, and each closes a control that
+ * lied:
+ *
+ *  - `isAddable`, not `repeatable`. The kits' `announcement`, `trust` and
+ *    `faq` are fixed types no industry seeds, so nothing put them on a page
+ *    and this picker refused them: three of the author's fifteen blocks,
+ *    drawn by shipped partials, reachable from nowhere.
+ *  - `renders`, the served per-template fact (1.1). A type this design has
+ *    no partial for is not offered at all, because adding it produces a
+ *    band the layout then filters out — a tenant could add a Text block on
+ *    Nocturne, write into it, save, and never see it.
+ *
+ * `renders` null (an older backend that publishes no such fact) drops that
+ * filter rather than hiding everything: degrading to "offer them all" is
+ * exactly the behaviour that build already had.
  */
 export function addableTypes(
   sectionTypes: SectionTypeOption[],
   pageSections: PageSection[],
   pageLimit: number | null,
+  /** `templateRenders(templates, key)` — which types the page's own design
+   *  ships a partial for, or null when the backend publishes none. */
+  renders: string[] | null = null,
 ): AddableType[] {
   const full = pageLimit != null && pageSections.length >= pageLimit
 
   return sectionTypes
-    .filter(type => type.repeatable)
+    .filter(type => isAddable(type) && (renders === null || renders.includes(type.id)))
     .map(type => {
-      const limit = type.limit ?? 0
-      const used = pageSections.filter(s => parseSectionKey(s.key, sectionTypes)?.typeId === type.id).length
+      // A FIXED addable type has exactly one key, so its ceiling is one and
+      // "used" is simply whether the page carries that key. A repeatable one
+      // counts its instances against the served per-type cap.
+      const fixed = !type.repeatable
+      const limit = fixed ? 1 : (type.limit ?? 0)
+      const used = fixed
+        ? pageSections.filter(s => s.key === type.id).length
+        : pageSections.filter(s => parseSectionKey(s.key, sectionTypes)?.typeId === type.id).length
 
-      return {
-        id: type.id,
-        used,
-        limit,
-        // The per-type cap is named FIRST when both apply: it is the more
-        // specific of the two answers, and it is the one whose fix ("remove
-        // one of these") is the thing the tenant is already looking at.
-        disabledReason: used >= limit ? 'type_limit' : full ? 'page_full' : null,
-        pageLimit,
-      } satisfies AddableType
+      // The per-type answer is named FIRST when both apply: it is the more
+      // specific of the two, and it is the one whose fix is the thing the
+      // tenant is already looking at. A fixed type at its ceiling gets its
+      // OWN reason rather than the instance cap's "remove one of these" —
+      // there is nothing to remove, the band is already on the page, and
+      // switching it back on is the actual next step.
+      const disabledReason: AddableType['disabledReason'] = used >= limit
+        ? (fixed ? 'already_on_page' : 'type_limit')
+        : full ? 'page_full' : null
+
+      return { id: type.id, used, limit, disabledReason, pageLimit } satisfies AddableType
     })
 }
 

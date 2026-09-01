@@ -1,13 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, fieldsForType, instanceRowLabel,
+  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, faqPairsOf, fieldsForType, instanceRowLabel,
+  visibleFaqPairs,
   moveSection, moveSectionTo, moveSectionToKey, orderedSections, parseSectionKey, removeSection, removeSectionContent,
   freeGalleryLeaves, gallerySlots,
   safeImageUrl, sectionIndex, setSectionTone, stripImageLeaves, toggleSection,
   FIELD_PRESENTATION,
   type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
-import { SECTION_ORDER } from './sections'
+
+/**
+ * The seven bands a beauty page is created with, as a FIXTURE.
+ *
+ * It used to be `SECTION_ORDER`, imported from `./sections` — a literal the
+ * production code also read. Template fidelity 3.1 deleted that literal (the
+ * wizard's last reader now iterates the served rows), so the seven keys are
+ * spelled here, where they are what they have always actually been in this
+ * file: the shape of `pageSections()` below, restated so an assertion can
+ * name it.
+ */
+const SEEDED_KEYS = ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact']
 
 const pageSections = (): PageSection[] => [
   { key: 'hero', enabled: true, sort: 0 },
@@ -54,7 +66,7 @@ describe('orderedSections', () => {
 describe('buildSectionRows', () => {
   it('merges page state with availability, in sort order, every seeded key present', () => {
     const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
-    expect(rows.map(r => r.key)).toEqual(SECTION_ORDER)
+    expect(rows.map(r => r.key)).toEqual(SEEDED_KEYS)
     expect(rows[1]).toEqual({
       key: 'services', label: 'Treatments', sourceLabel: 'Your Services screen',
       available: true, count: 12, reason: null, enabled: true, sort: 1,
@@ -129,7 +141,7 @@ describe('buildSectionRows', () => {
       { key: 'footer', label: 'Footer', source_label: 'Settings', available: true, count: 1 },
     ]
     const rows = buildSectionRows(withFooter, withFooterAvailability, sectionTypes())
-    expect(rows.map(r => r.key)).toEqual([...SECTION_ORDER, 'footer'])
+    expect(rows.map(r => r.key)).toEqual([...SEEDED_KEYS, 'footer'])
     expect(rows.find(r => r.key === 'footer')).toMatchObject({ fixed: true, label: 'Footer' })
   })
 
@@ -280,7 +292,11 @@ describe('field authority — the served catalogue, not a mirror', () => {
       .find(r => r.key === key)!.fields.map(f => f.name)
 
   it('gives a fixed row every field its catalogue type publishes, in order', () => {
-    for (const type of sectionTypes().filter(o => !o.repeatable && o.id !== 'footer')) {
+    // Over the types the fixture page actually carries. `footer` has no
+    // fields at all, and `announcement`/`trust`/`faq` are the blocks 3.1
+    // made addable — they have their own cases below, and the FAQ's fields
+    // are deliberately not one-for-one (its pairs are one control).
+    for (const type of sectionTypes().filter(o => SEEDED_KEYS.includes(o.id))) {
       const rendered = fieldsFor(type.id)
       // The photo control is synthesised and is never on the wire, so the
       // catalogue's own list is what must appear after it.
@@ -533,14 +549,35 @@ const sectionTypes = (): SectionTypeOption[] => [
     fields: ['kicker', 'phone', 'email', 'address', 'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label'],
   },
   { id: 'footer', repeatable: false, fields: [], image: false, limit: null, default_tone: 'page' },
-  { id: 'text', repeatable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6, default_tone: 'soft' },
+  { id: 'text', repeatable: true, addable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6, default_tone: 'soft' },
   // The gallery round. `image: false` with `image_slots: 8` is the wire's
   // own shape and not a mistake — `SectionType::payload()` publishes the
   // legacy bool as `images === 1` so a bundle that predates galleries draws
   // no photo control for one rather than a one-photo control the endpoints
   // would refuse. See that method's docblock.
-  { id: 'gallery', repeatable: true, fields: ['kicker', 'heading'], image: false, image_slots: 8, limit: 6, default_tone: 'page' },
+  { id: 'gallery', repeatable: true, addable: true, fields: ['kicker', 'heading'], image: false, image_slots: 8, limit: 6, default_tone: 'page' },
+  // Template fidelity 3.1: three FIXED types no industry seeds, which the
+  // BeautyTech kits draw and which the add picker may therefore offer. The
+  // `addable` key is the wire's own, and it is what separates these from
+  // `footer` above — also fixed, also unseeded, and deliberately not
+  // addable because it is chrome.
+  {
+    id: 'announcement', repeatable: false, addable: true, fields: ['text', 'cta_label'],
+    image: false, image_slots: 0, limit: null, default_tone: 'page',
+  },
+  {
+    id: 'trust', repeatable: false, addable: true, fields: ['quote', 'feature_1', 'feature_2', 'feature_3'],
+    image: false, image_slots: 0, limit: null, default_tone: 'page',
+  },
+  {
+    id: 'faq', repeatable: false, addable: true, image: false, image_slots: 0, limit: null, default_tone: 'page',
+    fields: ['kicker', 'heading', 'subtext', 'q1', 'a1', 'q2', 'a2', 'q3', 'a3', 'q4', 'a4', 'q5', 'a5', 'q6', 'a6'],
+  },
 ]
+
+/** Every type this design draws — the served `templates[*].renders` fact
+ *  (template fidelity 1.1), which `addableTypes` filters the picker on. */
+const rendersEverything = (): string[] => sectionTypes().map(type => type.id)
 
 describe('parseSectionKey', () => {
   it('resolves an instance key to its repeatable type', () => {
@@ -714,7 +751,7 @@ describe('buildSectionRows — tenant-added rows', () => {
 
   it('carries added rows once the catalogue is supplied', () => {
     const rows = buildSectionRows(withText(), availability(), sectionTypes())
-    expect(rows.map(r => r.key)).toEqual([...SECTION_ORDER, 'text_1', 'text_4'])
+    expect(rows.map(r => r.key)).toEqual([...SEEDED_KEYS, 'text_1', 'text_4'])
   })
 
   it('reaches the wire, which is the whole point — the added rows carry their sort', () => {
@@ -727,7 +764,7 @@ describe('buildSectionRows — tenant-added rows', () => {
   it('marks added rows removable and fixed rows not', () => {
     const rows = buildSectionRows(withText(), availability(), sectionTypes())
     expect(rows.filter(r => !r.fixed).map(r => r.key)).toEqual(['text_1', 'text_4'])
-    expect(rows.filter(r => r.fixed).map(r => r.key)).toEqual(SECTION_ORDER)
+    expect(rows.filter(r => r.fixed).map(r => r.key)).toEqual(SEEDED_KEYS)
   })
 
   /** Numbered by POSITION, never by key index — keys are allocated
@@ -786,7 +823,7 @@ describe('buildSectionRows — tenant-added rows', () => {
 
   it('still drops a key that is neither fixed nor a legal instance', () => {
     const junk: PageSection[] = [...pageSections(), { key: 'carousel_1', enabled: true, sort: 7 }]
-    expect(buildSectionRows(junk, availability(), sectionTypes()).map(r => r.key)).toEqual(SECTION_ORDER)
+    expect(buildSectionRows(junk, availability(), sectionTypes()).map(r => r.key)).toEqual(SEEDED_KEYS)
   })
 })
 
@@ -935,12 +972,74 @@ describe('addableTypes', () => {
     ...Array.from({ length: textCount }, (_, i) => ({ key: `text_${i + 1}`, enabled: true, sort: 7 + i })),
   ]
 
-  it('offers only the repeatable types', () => {
-    expect(addableTypes(sectionTypes(), page(0), 16).map(t => t.id)).toEqual(['text', 'gallery'])
+  /**
+   * TEMPLATE FIDELITY 3.1 — the picker reads `addable`, not `repeatable`.
+   *
+   * The kits' `announcement`, `trust` and `faq` are FIXED types (one per
+   * page) that no industry seeds, so nothing ever put them on a page and
+   * this list refused them: three of the author's fifteen blocks, drawn by
+   * shipped partials, reachable from no screen at all. `footer` is the
+   * other direction and is the reason the rule is not simply "any fixed
+   * type nothing seeded": it is chrome with no editable copy, the wire says
+   * `addable: false`, and it stays out.
+   */
+  it('offers every addable type, fixed ones included, and never the footer', () => {
+    expect(addableTypes(sectionTypes(), page(0), 16).map(t => t.id))
+      .toEqual(['text', 'gallery', 'announcement', 'trust', 'faq'])
+  })
+
+  /** An older backend publishes no `addable` at all; its add endpoint
+   *  accepts exactly the repeatable types, so degrading to those is the
+   *  honest answer rather than a guess in either direction. */
+  it('falls back to repeatable when the wire carries no addable flag', () => {
+    const legacy = sectionTypes().map(type => {
+      const copy = { ...type }
+      delete copy.addable
+      return copy
+    })
+    expect(addableTypes(legacy, page(0), 16).map(t => t.id)).toEqual(['text', 'gallery'])
   })
 
   it('offers nothing at all when the catalogue has not arrived', () => {
     expect(addableTypes([], page(0), 16)).toEqual([])
+  })
+
+  /**
+   * The second filter: a block this DESIGN has no partial for is not
+   * offered. A tenant could add a Text block on Nocturne, watch the editor
+   * focus its first input, write copy, save — and never see it, because the
+   * layout filtered a band with no partial straight back out.
+   */
+  it('drops a type the chosen design does not draw', () => {
+    const drawsNoGallery = rendersEverything().filter(id => id !== 'gallery')
+
+    expect(addableTypes(sectionTypes(), page(0), 16, drawsNoGallery).map(t => t.id))
+      .toEqual(['text', 'announcement', 'trust', 'faq'])
+  })
+
+  /** A backend that publishes no `renders` must not be guessed at: offering
+   *  them all is exactly what that build already did. */
+  it('drops the design filter when the fact was never served', () => {
+    expect(addableTypes(sectionTypes(), page(0), 16, null).map(t => t.id))
+      .toEqual(addableTypes(sectionTypes(), page(0), 16).map(t => t.id))
+  })
+
+  /**
+   * A fixed block's ceiling is ONE — a fact about the key grammar (a fixed
+   * type IS its own key), not about the `limit` on the wire, which is null
+   * for every fixed type. And its refusal is its own: there is nothing to
+   * remove, the band is already in the list, and switching it back on is
+   * the actual next step.
+   */
+  it('refuses a fixed block the page already carries, in its own words', () => {
+    const withTrust: PageSection[] = [...pageSections(), { key: 'trust', enabled: false, sort: 9 }]
+    const rows = addableTypes(sectionTypes(), withTrust, 16)
+
+    expect(rows.find(t => t.id === 'trust')).toEqual({
+      id: 'trust', used: 1, limit: 1, disabledReason: 'already_on_page', pageLimit: 16,
+    })
+    // The one it does not have is still live.
+    expect(rows.find(t => t.id === 'faq')?.disabledReason).toBeNull()
   })
 
   it('is live below both caps', () => {
@@ -1000,6 +1099,93 @@ describe('addableTypes', () => {
     const raised = sectionTypes().map(t => (t.id === 'text' ? { ...t, limit: 8 } : t))
     expect(addableTypes(raised, page(6), 16)[0].disabledReason).toBeNull()
     expect(addableTypes(raised, page(8), 20)[0].disabledReason).toBe('type_limit')
+  })
+})
+
+/**
+ * TEMPLATE FIDELITY 3.3 — the FAQ is a form, not fifteen boxes.
+ *
+ * `faq.fields` is `kicker, heading, subtext, q1, a1, … q6, a6`. Rendered
+ * through the flat field loop that is fifteen stacked inputs on one card,
+ * twelve of them labelled `q1`…`a6`. The couplets are synthesised into ONE
+ * control the same way the gallery strip already is, and the cap comes off
+ * the wire rather than being `MAX_FAQ_PAIRS` written out again here.
+ */
+describe('the FAQ pair form', () => {
+  const faqType = () => sectionTypes().find(o => o.id === 'faq')!
+
+  it('counts the pairs the server actually published', () => {
+    expect(faqPairsOf(faqType())).toBe(6)
+    expect(faqPairsOf(sectionTypes().find(o => o.id === 'hero')!)).toBe(0)
+  })
+
+  /** BOTH halves, because a half-pair is not a row the form can draw — the
+   *  same rule `PageContent::faqPairs()` applies at the other end. */
+  it('needs both halves of a pair, and stops at the first gap', () => {
+    const half = { ...faqType(), fields: ['kicker', 'q1', 'a1', 'q2'] }
+    expect(faqPairsOf(half)).toBe(1)
+
+    const gapped = { ...faqType(), fields: ['q1', 'a1', 'q3', 'a3'] }
+    expect(faqPairsOf(gapped)).toBe(1)
+  })
+
+  it('follows a raised cap off the wire rather than a hardcoded six', () => {
+    const raised = {
+      ...faqType(),
+      fields: [...faqType().fields, 'q7', 'a7', 'q8', 'a8'],
+    }
+    expect(faqPairsOf(raised)).toBe(8)
+    expect(fieldsForType(raised).find(f => f.type === 'faq_pairs')?.pairs).toBe(8)
+  })
+
+  /** One control, WHERE `q1` SAT, so the card still reads in the order the
+   *  band's own partial renders: eyebrow, heading, intro, then questions. */
+  it('collapses twelve leaves into one control in q1s place', () => {
+    const fields = fieldsForType(faqType())
+
+    expect(fields.map(f => f.name)).toEqual(['kicker', 'heading', 'subtext', 'faq_pairs'])
+    expect(fields[3]).toEqual({ name: 'faq_pairs', type: 'faq_pairs', pairs: 6 })
+  })
+
+  it('leaves a type with no pairs exactly as it was', () => {
+    const trust = sectionTypes().find(o => o.id === 'trust')!
+    expect(fieldsForType(trust).map(f => f.name)).toEqual(trust.fields)
+  })
+})
+
+/**
+ * How many couplets the form draws. The floor and the cap are why this is a
+ * function rather than a condition inside JSX: a band whose only written
+ * pair is the fourth, and a cap of zero from a backend that publishes none,
+ * are exactly the cases an inline expression gets wrong.
+ */
+describe('visibleFaqPairs', () => {
+  it('never draws fewer than one row', () => {
+    expect(visibleFaqPairs({}, 6, 0)).toBe(1)
+  })
+
+  it('draws every written pair, including a half-written one', () => {
+    expect(visibleFaqPairs({ q1: 'a', a1: 'b', q2: 'c', a2: 'd' }, 6, 0)).toBe(2)
+    // A lone question must stay visible or the tenant cannot finish it.
+    expect(visibleFaqPairs({ q3: 'only a question' }, 6, 0)).toBe(3)
+    expect(visibleFaqPairs({ a4: 'only an answer' }, 6, 0)).toBe(4)
+  })
+
+  it('ignores whitespace, the way the renderer does', () => {
+    expect(visibleFaqPairs({ q1: '   ', a1: '\n\t' }, 6, 0)).toBe(1)
+  })
+
+  it('adds the rows the tenant revealed, and stops at the served cap', () => {
+    expect(visibleFaqPairs({ q1: 'a', a1: 'b' }, 6, 2)).toBe(3)
+    expect(visibleFaqPairs({ q1: 'a', a1: 'b' }, 6, 99)).toBe(6)
+  })
+
+  it('draws nothing at all when the backend published no pairs', () => {
+    expect(visibleFaqPairs({ q1: 'a' }, 0, 3)).toBe(0)
+  })
+
+  it('ignores a non-string leaf out of the raw column', () => {
+    expect(visibleFaqPairs({ q1: 7, a1: ['nope'] }, 6, 0)).toBe(1)
   })
 })
 

@@ -408,6 +408,49 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringNotContainsString('href="#services"', $body);
     }
 
+    /**
+     * Template fidelity 3.2 — "Add a Text block" stops being a dead control.
+     *
+     * A tenant could add this band on this template, watch the editor
+     * auto-focus its first input, write copy, save it, and never see it: the
+     * layout filtered the band out because no `text.blade.php` shipped here.
+     * The partial ships now, drawn as the author's own story band — his
+     * composition, his classes, not one byte added to his stylesheet.
+     *
+     * Gated on the BODY, like every other prose band: an added band the
+     * tenant has not written into is not in the document at all.
+     */
+    public function test_a_tenant_added_words_band_renders_on_this_template(): void
+    {
+        $page = $this->published([
+            'hero'   => ['headline' => 'Nocturne'],
+            'text_1' => [
+                'kicker'  => 'A note',
+                'heading' => 'Membership is open.',
+                'body'    => "First paragraph.\n\nSecond paragraph.",
+            ],
+            'text_2' => ['kicker' => 'Written into never'],
+        ]);
+        $page->sections()->create(['key' => 'text_1', 'enabled' => true, 'sort' => 8]);
+        $page->sections()->create(['key' => 'text_2', 'enabled' => true, 'sort' => 9]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringContainsString('data-block="text"', $body);
+        $this->assertStringContainsString('Membership is open.', $body);
+        // Paragraph breaks the tenant typed survive as paragraphs.
+        $this->assertStringContainsString('First paragraph.', $body);
+        $this->assertStringContainsString('Second paragraph.', $body);
+        // The band with no body is a fragment, not a section.
+        $this->assertStringNotContainsString('Written into never', $body);
+        // Two instances, one partial: the second one's id is its own key.
+        $this->assertStringContainsString('id="text_1"', $body);
+        $this->assertStringNotContainsString('id="text_2"', $body);
+        // No photograph, so no empty frame — the author's own --solo collapse.
+        $this->assertStringContainsString('story__grid--solo', $body);
+    }
+
     public function test_the_faq_renders_only_complete_pairs(): void
     {
         $this->published([

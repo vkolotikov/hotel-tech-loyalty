@@ -10,7 +10,7 @@ import {
   STEPS, type StepKey, type FontPairingKey, type WizardForm,
   emptyForm, loadDraft, saveDraft, clearDraft, buildPayload, type ApplyPayload,
 } from './landingDraft'
-import { isDataBackedSection, isOfferable, unavailableReason, SECTION_ORDER, type SectionMeta } from './sections'
+import { isDataBackedSection, isOfferable, unavailableReason, type SectionMeta } from './sections'
 import { DesignPanel } from './DesignPanel'
 import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
 import {
@@ -232,29 +232,35 @@ export function LandingWizard(props: LandingWizardProps) {
   // The one translation from the wire's snake_case rows to the camelCase
   // `SectionMeta` shape `isOfferable()` and the editor (Task 8) both read —
   // done once, here, rather than at each of step 4's per-row call sites.
-  // `SECTION_ORDER` (not `sections` as returned) fixes the render order and
-  // silently drops any row this build does not know about, the same
-  // defensiveness `mergeFormDraft` applies to a stale draft.
+  //
+  // TEMPLATE FIDELITY 3.1: the SERVED rows, in wire order, rather than
+  // `SECTION_ORDER.flatMap(...)`. That literal was seven keys, so it
+  // silently dropped every row outside them — and `onboarding.sections` now
+  // carries more than seven (a page's own fixed rows are unioned in, so an
+  // `announcement` the design seeded has a label and an availability count).
+  // Dropping a row the server described is the defensiveness that turns
+  // into a bug the moment the server has something new to say. The wire's
+  // own order is the industry profile's own `defaultSections` order, which
+  // is what `SECTION_ORDER` was a copy of.
   //
   // Then filtered and relabelled to the industry STEP 1 CHOSE, not the one
-  // the org happens to be on today — see `sectionsForIndustry`. Without it,
-  // a tenant who switches away from an industry with a booking band posts a
+  // the org happens to be on today — see `sectionsForIndustry`, which is
+  // also what keeps a block the wizard has no business offering (page
+  // furniture the design seeds for itself) out of step 4: it admits only
+  // the keys that industry's own section list names. Without it, a tenant
+  // who switches away from an industry with a booking band posts a
   // `booking` row the new page's template does not own, and the backend
   // (correctly) 422s the Create button on a section the wizard itself
   // offered them.
   const sectionMetas: SectionMeta[] = sectionsForIndustry(
-    SECTION_ORDER.flatMap(key => {
-      const row = sections.find(s => s.key === key)
-      // Keeps `key` from SECTION_ORDER itself (already `SectionKey`-typed)
-      // rather than re-deriving it from the wire row's plain `string`, so
-      // this needs no type assertion to satisfy `SectionMeta`.
-      return row
-        ? [{
-          key, label: row.label, sourceLabel: row.source_label, available: row.available, count: row.count,
-          reason: row.reason ?? null,
-        }]
-        : []
-    }),
+    sections.map(row => ({
+      key: row.key,
+      label: row.label,
+      sourceLabel: row.source_label,
+      available: row.available,
+      count: row.count,
+      reason: row.reason ?? null,
+    })),
     industryOptions,
     selectedIndustry,
   )
