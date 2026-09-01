@@ -225,9 +225,11 @@ class CopyTest extends TestCase
      * `Luma <em>Garden</em>` are BRAND WORDMARKS, in the header and footer
      * lockups. They are derived from the business's own name (see
      * layout.blade.php's `$brandName` chain) and are not heading leaves at
-     * all, so R6's mechanism neither covers them nor needs to. Phase 7 and
-     * phase 8 will have to answer them separately, and this test is here so
-     * that whoever reads R6 next knows the exception exists.
+     * all, so R6's mechanism neither covers them nor needs to. Phase 8
+     * answered kit 03's with {@see Copy::wordmark()} — see the group of tests
+     * under this one — and this test is here so that whoever reads R6 next
+     * knows the exception exists and that a SEVENTH kit with an infix
+     * emphasis somewhere else fails here rather than quietly losing it.
      */
     public function test_the_only_non_trailing_emphasis_in_any_kit_is_inside_a_brand_wordmark(): void
     {
@@ -259,6 +261,80 @@ class CopyTest extends TestCase
             $offenders,
             'A non-trailing <em> appeared outside a brand wordmark — R6 needs re-deciding.',
         );
+    }
+
+    // ─── The infix wordmark (template fidelity 8.x) ──────────────────────
+    //
+    // The answer to the exception above. `_accent` is a TRAILING fragment and
+    // cannot express an emphasis in the middle; the wordmark is derived from
+    // the business's own name, which is chrome with no row and no control, so
+    // there is nowhere to put a leaf either. The emphasis is therefore
+    // derived from the NAME: a single `&` standing alone between two words,
+    // which is the author's own case and a very common shape for a studio's
+    // name. Everything else is escaped and printed exactly as it always was.
+
+    /** The author's own lockup, reproduced from the business's own name. */
+    public function test_a_conjunction_in_the_business_name_takes_the_authors_em(): void
+    {
+        $this->assertSame(
+            'Morrow <em>&amp;</em> Moss',
+            Copy::wordmark('Morrow & Moss')->toHtml(),
+        );
+    }
+
+    /** Every other business gets exactly the lockup it always had. */
+    public function test_a_name_with_no_conjunction_is_unchanged(): void
+    {
+        $this->assertSame('Nocturne Bathhouse', Copy::wordmark('Nocturne Bathhouse')->toHtml());
+        $this->assertSame('', Copy::wordmark(null)->toHtml());
+    }
+
+    /**
+     * An ampersand INSIDE a word is not a conjunction. "R&D" is one word and
+     * the author's treatment would set its middle letter in italics.
+     */
+    public function test_an_ampersand_inside_a_word_is_left_alone(): void
+    {
+        $this->assertSame('R&amp;D Skin Lab', Copy::wordmark('R&D Skin Lab')->toHtml());
+        $this->assertSame('One&amp;Two', Copy::wordmark('One&Two')->toHtml());
+    }
+
+    /** One, and only the first: two italic conjunctions is not a design. */
+    public function test_only_the_first_conjunction_is_emphasised(): void
+    {
+        $this->assertSame(
+            'Body <em>&amp;</em> Soul &amp; Co',
+            Copy::wordmark('Body & Soul & Co')->toHtml(),
+        );
+    }
+
+    /**
+     * And both sides are escaped, so a hostile business name — which is
+     * customer data reachable by a raw write, like every other string on
+     * these pages — cannot put markup in a lockup.
+     */
+    public function test_both_sides_of_the_conjunction_are_escaped(): void
+    {
+        $this->assertSame(
+            '&lt;script&gt;x&lt;/script&gt; <em>&amp;</em> &lt;b&gt;y&lt;/b&gt;',
+            Copy::wordmark('<script>x</script> & <b>y</b>')->toHtml(),
+        );
+
+        $this->assertStringNotContainsString('<script>', Copy::wordmark('<script>x</script>')->toHtml());
+    }
+
+    /**
+     * A wordmark is ONE LINE by construction, so a newline a tenant left in
+     * their business name is flattened rather than turned into a break in a
+     * header lockup — the one place `Copy` deliberately does not honour the
+     * gesture it honours everywhere else.
+     */
+    public function test_a_wordmark_is_flattened_to_one_line(): void
+    {
+        $this->assertSame('Morrow <em>&amp;</em> Moss', Copy::wordmark("Morrow
+& Moss")->toHtml());
+        $this->assertStringNotContainsString('<br>', Copy::wordmark("A
+B")->toHtml());
     }
 
     /** Every h1/h2 in a kit that contains an <em>, inner HTML only. */

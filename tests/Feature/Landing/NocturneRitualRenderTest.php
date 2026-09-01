@@ -1299,7 +1299,7 @@ class NocturneRitualRenderTest extends TestCase
         $body = $this->body();
 
         $this->assertMatchesRegularExpression('#landing/nocturne_ritual\.css\?v=[0-9a-f]{10}#', $body);
-        $this->assertMatchesRegularExpression('#landing/nocturne_ritual\.js\?v=[0-9a-f]{10}#', $body);
+        $this->assertMatchesRegularExpression('#landing/kit\.js\?v=[0-9a-f]{10}#', $body);
     }
 
     public function test_the_rendered_head_names_no_google_fonts_host(): void

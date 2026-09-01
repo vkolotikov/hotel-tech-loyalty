@@ -988,12 +988,14 @@ class LandingOnboardingTest extends TestCase
         }
 
         // The named cases. `services` got a page slot in 4.1 for kit 02's
-        // sticky editorial plate (R3) and NEITHER shipped design draws one,
-        // so no editor offers a control for it — which is the whole reason
-        // this fact is served rather than assumed from the catalogue.
-        foreach (array_keys($photos) as $key) {
-            $this->assertNotContains('services', $photos[$key]);
-        }
+        // sticky editorial plate (R3), and kit 02 is the ONLY design that
+        // draws one: the Ruled Page's services band is a table and Nocturne's
+        // is a purely typographic menu, so an editor on either of those must
+        // not offer a photo control for it. This asymmetry is the whole
+        // reason the fact is served rather than assumed from the catalogue.
+        $this->assertContains('services', $photos['editorial_atelier']);
+        $this->assertNotContains('services', $photos['nocturne_ritual']);
+        $this->assertNotContains('services', $photos['ruled_page']);
 
         foreach (['hero', 'about', 'team', 'booking', 'text', 'gallery'] as $id) {
             $this->assertContains($id, $photos['nocturne_ritual'],
@@ -1977,15 +1979,19 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        // `hero.caption`, `services.alt`, `services.caption` and
-        // `booking.caption` are the four the catalogue declares that neither
-        // shipped design prints today: `photoLeaves()` is merged into every
-        // single-plate type, and the kit draws a caption under the story and
-        // team frames only, while `services` has a slot ahead of the design
-        // that will use it (R3, kit 02). They are LISTED rather than allowed
-        // by rule, so a fifth cannot join them unnoticed.
+        // `booking.caption` is the ONE leaf the catalogue declares that no
+        // shipped design prints: `photoLeaves()` is merged into every
+        // single-plate type, and neither kit 02 nor kit 03 puts a photograph
+        // in its closing panel at all (kit 01 does, and draws no caption
+        // under it). It is LISTED rather than allowed by rule, so a second
+        // cannot join it unnoticed.
+        //
+        // The other three closed with kit 02, which is the design each was
+        // added for: `hero.caption` is the sentence in his note on the hero
+        // plate, and `services.alt` / `services.caption` belong to the
+        // band-level editorial photograph R3 gave that band a slot for.
         $this->assertSame(
-            ['hero.caption', 'services.alt', 'services.caption', 'booking.caption'],
+            ['booking.caption'],
             $orphans,
             'A catalogue leaf is reachable on no design at all — either a partial must read it, '
             . 'or LEAF_READERS must name the reader that does.',

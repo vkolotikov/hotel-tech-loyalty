@@ -385,6 +385,33 @@ const FIELD_FALLBACK: Record<string, string> = {
   // The footer hub. `descriptor` is the small word under the business name
   // in the header and the footer lockups; the rest are the Follow column.
   descriptor: 'Word under your business name',
+
+  // ─── Template fidelity 7.x — the leaves one design draws and the others
+  // do not. Every one of them is gated by `content_fields`, so a control
+  // labelled here appears only on the design whose partial prints it.
+  //
+  // hero — the label on the note pinned to the opening photograph, and the
+  // small ornamental mark up its margin. The note's SENTENCE is the photo's
+  // own caption, labelled above.
+  note_label: 'Label on your main photo',
+  edition: 'Small mark beside your opening',
+  // services — the word before every price ("from £88").
+  price_prefix: 'Word before every price',
+  // team — the one link under the list, on a design with no per-person one.
+  secondary_link_label: 'Wording on the link under your team',
+  // booking — the ornamental numeral beside the closing panel.
+  index: 'Number beside your booking panel',
+  // announcement — the badge pill before the message.
+  label: 'Badge on your offer bar',
+  // hero — the availability line beside the rating. The rating itself is
+  // derived and has no control; this is the half only the business knows.
+  proof: 'A line about your availability',
+  // services — the pill on the featured treatment's photograph.
+  badge_label: 'Badge on your first treatment',
+  // about — the bulleted aside beside the story. One key for all three, the
+  // same reasoning as `fact`: the inputs are in order under one heading and
+  // the sentence is the same beside each.
+  note: 'A line for your studio note',
   social_label: 'Wording above your social links',
   social_instagram: 'Instagram address',
   social_facebook: 'Facebook address',

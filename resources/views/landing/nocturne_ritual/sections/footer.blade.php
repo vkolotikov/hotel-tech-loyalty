@@ -159,7 +159,7 @@
         <p class="site-footer__tagline">{{ $tagline }}</p>
 @endif
 @if ($bookingHref !== null)
-        <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.nocturne_ritual.icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+        <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
 @endif
       </div>
 
@@ -167,7 +167,7 @@
       <div class="footer-hub__review" data-block="feedback" data-variant="footer-link">
         <p class="footer-hub__label">{{ __('Guest review') }}</p>
 @if ($content->reviewStats !== null)
-        <p class="footer-hub__rating">@include('landing.nocturne_ritual.icon', ['name' => 'star'])<strong>{{ number_format((float) $content->reviewStats['average'], 1) }}</strong><span>/ 5</span></p>
+        <p class="footer-hub__rating">@include('landing.shared.kit-icon', ['name' => 'star'])<strong>{{ number_format((float) $content->reviewStats['average'], 1) }}</strong><span>/ 5</span></p>
 @endif
         <a href="{{ $feedbackUrl }}" data-action="open-feedback" target="_blank" rel="noopener">{{ __('Leave a review') }}</a>
       </div>
@@ -180,10 +180,10 @@
         {{-- An outbound navigation, not a subresource: frame-src names six
              admin widget paths and nothing else, so there is no third-party
              map frame on this page and there is not going to be one. --}}
-        <a class="footer-hub__contact-line" href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($mapQuery) }}" target="_blank" rel="noopener">@include('landing.nocturne_ritual.icon', ['name' => 'pin'])<span>{{ $mapQuery }}</span></a>
+        <a class="footer-hub__contact-line" href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($mapQuery) }}" target="_blank" rel="noopener">@include('landing.shared.kit-icon', ['name' => 'pin'])<span>{{ $mapQuery }}</span></a>
 @endif
 @if ($dial !== null)
-        <a href="tel:{{ $dial }}">@include('landing.nocturne_ritual.icon', ['name' => 'phone'])<span>{{ $phone }}</span></a>
+        <a href="tel:{{ $dial }}">@include('landing.shared.kit-icon', ['name' => 'phone'])<span>{{ $phone }}</span></a>
 @endif
 @if ($email !== null)
         {{-- THE ONE CHANNEL THE AUTHOR LABELS RATHER THAN PRINTS. His line
@@ -197,10 +197,10 @@
              text is the address and the phone line's is the number, and
              replacing either with a label would take a fact off the page
              rather than name it. --}}
-        <a href="mailto:{{ $email }}">@include('landing.nocturne_ritual.icon', ['name' => 'mail'])<span>{{ trim((string) ($contactCopy['email_label'] ?? '')) !== '' ? $contactCopy['email_label'] : $email }}</span></a>
+        <a href="mailto:{{ $email }}">@include('landing.shared.kit-icon', ['name' => 'mail'])<span>{{ trim((string) ($contactCopy['email_label'] ?? '')) !== '' ? $contactCopy['email_label'] : $email }}</span></a>
 @endif
 @if ($todayHours !== null)
-        <span class="footer-hub__contact-line">@include('landing.nocturne_ritual.icon', ['name' => 'clock'])<span>{{ $todayHours }}</span></span>
+        <span class="footer-hub__contact-line">@include('landing.shared.kit-icon', ['name' => 'clock'])<span>{{ $todayHours }}</span></span>
 @endif
       </address>
 @endif
@@ -214,7 +214,7 @@
         <p class="footer-hub__label">{{ $socialLabel }}</p>
         <div>
 @foreach ($social as $link)
-          <a href="{{ $link['url'] }}" target="_blank" rel="noopener nofollow" data-social-platform="{{ $link['platform'] }}" aria-label="{{ $link['name'] }}">@include('landing.nocturne_ritual.icon', ['name' => $link['platform']])</a>
+          <a href="{{ $link['url'] }}" target="_blank" rel="noopener nofollow" data-social-platform="{{ $link['platform'] }}" aria-label="{{ $link['name'] }}">@include('landing.shared.kit-icon', ['name' => $link['platform']])</a>
 @endforeach
         </div>
       </nav>
@@ -242,7 +242,7 @@
              launcher. loading="lazy" says the same thing to the browser. --}}
         <iframe class="ai-panel" id="nocturne-chat-panel" src="{{ $chatFrameUrl }}"
                 title="{{ __('Chat with us') }}" loading="lazy" allow="microphone" hidden></iframe>
-        {{-- aria-expanded is maintained by nocturne_ritual.js and is also
+        {{-- aria-expanded is maintained by landing/kit.js and is also
              what swaps the glyph, in CSS: one attribute, one source of
              truth, no second class to fall out of step with the state
              screen readers are told about. The two labels travel as data

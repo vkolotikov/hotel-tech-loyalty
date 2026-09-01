@@ -484,6 +484,23 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_social_tiktok',
     'landing_pages.editor.field_hint_social',
     'landing_pages.editor.field_legal_note',
+
+    // ─── Template fidelity 7.x ─────────────────────────────────────────
+    //
+    // The leaves one kit template draws and the others do not. They reach a
+    // tenant's screen only where that design's own partial prints them
+    // (`content_fields`), which is exactly why they need a label: a control
+    // that appears on one design and not another is still a control, and the
+    // fallback chain ends at the raw leaf name.
+    'landing_pages.editor.field_note_label',
+    'landing_pages.editor.field_edition',
+    'landing_pages.editor.field_price_prefix',
+    'landing_pages.editor.field_secondary_link_label',
+    'landing_pages.editor.field_index',
+    'landing_pages.editor.field_label',
+    'landing_pages.editor.field_proof',
+    'landing_pages.editor.field_badge_label',
+    'landing_pages.editor.field_note',
   ]
 
   /**

@@ -18,7 +18,9 @@
   with no 'unsafe-inline' and no nonce for scripts, so an inline script would
   simply not execute; the kit's own notes forbid inline scripts, styles and
   DOM event handlers for the same practical reason. The template's behaviour
-  is public/landing/nocturne_ritual.js, external and same-origin. The one
+  is public/landing/kit.js, external and same-origin — one file shared by
+  all three BeautyTech kit templates, for the reason its own header gives.
+  The one
   <script> with no src is the application/ld+json block, which carries a type
   the HTML parser never treats as script in the first place.
 
@@ -402,7 +404,7 @@
      in-page controls above are not conditional on it. Rendered only when it
      has somewhere real to go. --}}
 @if ($bookingHref !== null)
-  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.nocturne_ritual.icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
 @endif
 
 {{-- The template's interactive layer: one file, one entry point, no
@@ -410,6 +412,6 @@
      'self', and it is a static file under public/ so it never reaches
      Laravel. Same content-hash query as the stylesheet, for the same
      reason. --}}
-<script src="{{ asset('landing/nocturne_ritual.js') }}{{ AssetVersion::query('landing/nocturne_ritual.js') }}" defer></script>
+<script src="{{ asset('landing/kit.js') }}{{ AssetVersion::query('landing/kit.js') }}" defer></script>
 </body>
 </html>

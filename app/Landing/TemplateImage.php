@@ -124,6 +124,83 @@ final class TemplateImage
                 'alt'  => 'Light moving across thermal pool steps',
             ],
         ],
+        // The second kit. It leads with the same three scene-setting plates
+        // and adds one kit 01 has nowhere to put: `services`, the sticky
+        // editorial photograph beside the numbered menu (R3, and the reason
+        // that slot exists at all). It ships NO `booking` default, because
+        // this author's closing panel is typographic — an ornamental numeral
+        // and a heading — and defaulting a photograph into a band that draws
+        // none would be a picture no tenant could ever see.
+        'editorial_atelier' => [
+            'hero' => [
+                'file' => 'hero-elan.webp',
+                'alt'  => 'Client with long, softly layered brunette hair in a salon',
+            ],
+            'services' => [
+                'file' => 'service-precision-cut.webp',
+                'alt'  => 'Stylist refining a precision bob at the mirror',
+            ],
+            'about' => [
+                'file' => 'atelier-interior.webp',
+                'alt'  => 'A studio interior with warm plaster walls, dark wood floors and individual styling stations',
+            ],
+            'team' => [
+                'file' => 'team-collective.webp',
+                'alt'  => 'Three stylists standing together in the studio',
+            ],
+            // The lookbook, in the author's own order: the portrait, the
+            // precision cut, the tools, the room.
+            'gallery_1.image_1' => [
+                'file' => 'hero-elan.webp',
+                'alt'  => 'Softly layered brunette style with a polished finish',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'service-precision-cut.webp',
+                'alt'  => 'Precision bob being detailed by a stylist',
+            ],
+            'gallery_1.image_3' => [
+                'file' => 'atelier-tools.webp',
+                'alt'  => 'Professional brushes, comb and scissors arranged in warm window light',
+            ],
+            'gallery_1.image_4' => [
+                'file' => 'atelier-interior.webp',
+                'alt'  => 'A row of individual styling stations in the studio',
+            ],
+        ],
+        // The third kit. Three scene-setting plates and a three-tile mosaic;
+        // NO `services` default, because that band's photograph is per-ROW
+        // here (`Service.image`, read through PageContent::serviceImage())
+        // rather than a page slot at all — R3's other half — and no
+        // `booking` default, because this author's closing panel is a moss
+        // card with no picture in it.
+        'organic_wellness' => [
+            'hero' => [
+                'file' => 'hero-wellness.webp',
+                'alt'  => 'A relaxed guest in a linen robe resting in a sunlit, natural-toned treatment studio',
+            ],
+            'about' => [
+                'file' => 'studio-interior.webp',
+                'alt'  => 'A calm treatment room with warm plaster arches, an olive tree and a prepared treatment bed',
+            ],
+            'team' => [
+                'file' => 'team.webp',
+                'alt'  => 'Three therapists standing together in the studio',
+            ],
+            // The mosaic, in the author's own order: the arch, the tall
+            // organic crop, the detail.
+            'gallery_1.image_1' => [
+                'file' => 'studio-interior.webp',
+                'alt'  => 'A sunlit treatment room framed by an organic arch',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'botanical-ritual.webp',
+                'alt'  => 'Fresh botanical clay in a ceramic bowl beside linen and rosemary',
+            ],
+            'gallery_1.image_3' => [
+                'file' => 'hero-wellness.webp',
+                'alt'  => 'A guest taking a quiet moment after treatment in warm morning light',
+            ],
+        ],
     ];
 
     /**
