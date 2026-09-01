@@ -7,11 +7,13 @@
   key — the id, the data hook and every read come off `$section->key`, or
   `gallery_2` would render as `gallery_1`'s twin.
 
-  THE PICTURES are PageContent::galleryImages(), the one allowlisted read of
+  THE PICTURES are PageContent::galleryPhotos(), the one allowlisted read of
   this band's eight photo leaves: the same three guards the hero's single
   plate goes through, applied per leaf, with the failures simply absent from
   the list. There is no per-image @if here and no way for an unchecked value
-  to reach a src.
+  to reach a src. Each tile arrives with its own words as well as its URL —
+  the design's description of its own photograph while that photograph is
+  what is showing, and the tenant's caption whenever they have written one.
 
   EMPTY IS NOT A STATE THIS FILE HANDLES, deliberately. A gallery with no
   readable pictures counts 0, has() is false, and the layout never includes
@@ -26,12 +28,13 @@
   modifiers still land on the first two tiles exactly as the author placed
   them.
 
-  Captions: the author writes one per photograph and a tenant writes none —
-  there is no per-photo caption field and an invented one ("Ritual details")
-  would be words the business never approved. So the pill is not rendered,
-  the alt is empty (a decorative-by-declaration image is skipped by a screen
-  reader rather than read out as a filename), and what is left is the
-  author's mosaic of the tenant's own photographs.
+  CAPTIONS are the author's glass pills, and since template fidelity 4.3
+  there is a leaf per tile to fill them (`caption_1`…`caption_8`, ordinary
+  content leaves beside the picture leaves the image endpoints own). A tile
+  with no caption renders no pill — never an invented one, because "Ritual
+  details" and "Amber Hour" are the kit author's fictional rooms and
+  treatments, and publishing them on a real studio's page would be words the
+  business never approved.
 --}}
 @php
     $fields  = is_array($copy) ? $copy : [];
@@ -39,7 +42,7 @@
     $kicker  = trim((string) ($fields['kicker'] ?? ''));
     $heading = trim((string) ($fields['heading'] ?? ''));
 
-    $images  = $content->galleryImages($section->key);
+    $photos  = $content->galleryPhotos($section->key);
 @endphp
     <section class="section section--dark gallery" id="{{ $section->key }}" data-block="gallery" data-variant="mosaic"@if ($heading !== '') aria-labelledby="{{ $section->key }}-title"@endif>
       <div class="shell">
@@ -55,14 +58,17 @@
           </div>
         </header>
 @endif
-        <div class="gallery__grid" data-count="{{ count($images) }}">
-@foreach ($images as $image)
+        <div class="gallery__grid" data-count="{{ count($photos) }}">
+@foreach ($photos as $photo)
           <figure @class([
             'gallery__item',
             'gallery__item--wide' => $loop->iteration === 1 && $loop->count > 1,
             'gallery__item--tall' => $loop->iteration === 2 && $loop->count > 2,
           ])>
-            <img src="{{ $image }}" width="1024" height="1536" loading="lazy" decoding="async" alt="">
+            <img src="{{ $photo['url'] }}" width="1024" height="1536" loading="lazy" decoding="async" alt="{{ $photo['alt'] }}">
+@if ($photo['caption'] !== '')
+            <figcaption>{{ $photo['caption'] }}</figcaption>
+@endif
           </figure>
 @endforeach
         </div>

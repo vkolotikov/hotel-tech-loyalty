@@ -6,6 +6,7 @@ use App\Landing\ContactDetails;
 use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
 use App\Landing\SectionType;
+use App\Landing\TemplateImage;
 use App\Models\Brand;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -290,10 +291,84 @@ class LandingOnboardingService
     public static function templates(): array
     {
         return array_map(fn (array $row): array => array_merge($row, [
-            'supports'     => self::supportsFor($row),
-            'renders'      => self::rendersFor($row['key']),
-            'fixed_blocks' => self::fixedBlocksFor($row),
+            'supports'       => self::supportsFor($row),
+            'renders'        => self::rendersFor($row['key']),
+            'fixed_blocks'   => self::fixedBlocksFor($row),
+            'photo_blocks'   => self::photoBlocksFor($row['key']),
+            'image_defaults' => TemplateImage::map($row['key']),
         ]), self::TEMPLATES);
+    }
+
+    /**
+     * WHICH BLOCKS THIS DESIGN ACTUALLY DRAWS A PHOTOGRAPH IN — the narrower
+     * fact behind `renders`, and template fidelity 4.5's general rule.
+     *
+     * A photo SLOT belongs to a type, which is shared by every template; a
+     * DRAWN photograph belongs to a partial, which is not. The two came apart
+     * the moment R3 gave `services` a band-level plate for kit 02 while kit
+     * 01's own services band has never had one: the slot is legitimate, the
+     * endpoint accepts it, and on Nocturne Ritual there is nowhere for the
+     * picture to appear. A photo control offered there is a control that
+     * cannot act — this project's own rule says such a control is not
+     * rendered and its absence is explained in one sentence.
+     *
+     * The same rule, stated once, also closes the bug 4.5 is named for:
+     * `text_1..text_6` contributed six slots to the upload allowlist while
+     * `nocturne_ritual` shipped no `text` partial at all, so a tenant could
+     * upload six photographs nothing would ever show. 3.2 shipped that
+     * partial, but the general rule is what stops the same bug arriving with
+     * every future template.
+     *
+     * DERIVED FROM THE PARTIAL, never authored. The question is "does this
+     * file read a photograph", and the file is the only honest answer to it —
+     * a hand-written list here would be a second source of truth about the
+     * contents of a directory, which is exactly what `renders` refuses to be.
+     * The predicate is the same one SectionTypeTest has always used to keep
+     * the catalogue's `images` count honest against the partials.
+     *
+     * Only ever asked on the ADMIN onboarding endpoint (once per builder
+     * load), never on the public render path, and only of the types that
+     * declare a photograph at all — six reads per template rather than
+     * thirteen.
+     *
+     * @return list<string>
+     */
+    public static function photoBlocksFor(string $templateKey): array
+    {
+        $out = [];
+
+        foreach (SectionType::ids() as $id) {
+            if (SectionType::get($id)?->image !== true) {
+                continue;
+            }
+
+            $view = SectionType::viewForType($id, $templateKey);
+
+            if ($view === null || !view()->exists($view)) {
+                continue;
+            }
+
+            $file = resource_path('views/' . str_replace('.', '/', $view) . '.blade.php');
+
+            if (!is_file($file)) {
+                continue;
+            }
+
+            $body = (string) file_get_contents($file);
+
+            // The two allowlisted readers on PageContent, and nothing else:
+            // a partial that draws a picture goes through one of them, by
+            // the same discipline that makes the hostile-value battery
+            // universal. `$panelImage`-style hand-downs are deliberately not
+            // matched — a band whose photograph is resolved somewhere else
+            // is a band whose partial does not own the slot, and that is the
+            // shape this fact exists to stop.
+            if (str_contains($body, 'imageUrl(') || str_contains($body, 'galleryPhotos(') || str_contains($body, 'galleryImages(')) {
+                $out[] = $id;
+            }
+        }
+
+        return $out;
     }
 
     /**

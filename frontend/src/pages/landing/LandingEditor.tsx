@@ -20,7 +20,7 @@ import {
   type SectionTypeOption,
 } from './editorSections'
 import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
-import { downscaleTarget, drawToBlob } from './imageDownscale'
+import { downscaledName, downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
 import type { DraftPayload } from './livePreview'
@@ -28,7 +28,8 @@ import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
+  catalogPayload, resolveTemplateKey, templateFixedBlocks, templateImageDefaults, templatePhotoBlocks,
+  templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
 import { searchPreview, seoField, seoPayload, SEO_DESCRIPTION_MAX, SEO_TITLE_MAX } from './seoCard'
@@ -269,6 +270,21 @@ const FIELD_FALLBACK: Record<string, string> = {
   address: 'Address',
   // Task 6: label above the photo control (hero/about only).
   image_url: 'Photo',
+
+  // ─── Template fidelity 4.3 ────────────────────────────────────────────
+  //
+  // The two text leaves that belong to a PICTURE rather than to the band —
+  // drawn inside the photo control that owns them (see `fieldsForType`,
+  // which consumes them out of the flat field list). One label each, however
+  // many photographs a band holds: a gallery's eight `caption_N` leaves all
+  // take `caption`, because "Caption under the photo" means the same thing
+  // beside every one of them and eight numbered labels would be eight ways
+  // of saying it.
+  //
+  // Named for what the tenant is WRITING, not for the attribute: "alt text"
+  // is the trade's word and means nothing to a salon owner.
+  alt: 'What the photo shows',
+  caption: 'Caption under the photo',
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
@@ -567,6 +583,23 @@ export function LandingEditor({
   const renders = templateRenders(templates, templateKey)
   const fixedBlocks = templateFixedBlocks(templates, templateKey)
 
+  /**
+   * Template fidelity 4.1/4.5 — the two facts the photo controls need.
+   *
+   * `photoBlocks` is which blocks this design actually DRAWS a photograph
+   * in, which is narrower than `renders`: a slot belongs to a type and is
+   * shared by every design, a drawn photograph belongs to a partial and is
+   * not. `imageDefaults` is the design's OWN photographs, slot → URL, which
+   * is what makes "Remove" mean "restore the original" and what lets a
+   * control say which of the two subjects it is showing.
+   *
+   * Resolved against the SHOWN template key, like the two above: switching
+   * design changes which photographs a tenant is looking at, and the preview
+   * beside them has already changed.
+   */
+  const photoBlocks = templatePhotoBlocks(templates, templateKey)
+  const imageDefaults = templateImageDefaults(templates, templateKey)
+
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
   // so the brand's own name (BrandSwitcher's own data, already loaded) is
@@ -582,7 +615,9 @@ export function LandingEditor({
   // queued half a second ago. A tenant typing into a brand-new text block
   // watches the hint clear on Save, which is exactly when the band actually
   // appears on the page.
-  const rows: EditorSectionRow[] = buildSectionRows(f.sections ?? [], availability, sectionTypes, page?.content)
+  const rows: EditorSectionRow[] = buildSectionRows(
+    f.sections ?? [], availability, sectionTypes, page?.content, photoBlocks,
+  )
 
   /**
    * TEMPLATE FIDELITY 2.2 — ONE CARD OPEN AT A TIME.
@@ -980,7 +1015,7 @@ export function LandingEditor({
       // that moved it silently did not stick — the row kept whatever `sort`
       // `store()` appended it with while every other row was renumbered
       // around it.
-      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content)
+      const toSave = buildSectionRows(body.sections ?? [], availability, sectionTypes, page?.content, photoBlocks)
       if (toSave.length > 0) {
         calls.push(api.put('/v1/admin/landing-pages/sections', { sections: buildSectionsPayload(toSave) }))
       }
@@ -1426,6 +1461,10 @@ export function LandingEditor({
                   // unconditional `url.match(...)` and taking this whole
                   // route down.
                   imageUrl={safeImageUrl(page.content?.[row.key]?.image_url)}
+                  // 4.1: the design's own photographs, for the controls that
+                  // have to say whether the picture on screen is the
+                  // tenant's or the designer's.
+                  imageDefaults={imageDefaults}
                   // Same source and the same reason as `imageUrl` above —
                   // the raw QUERY leaf, never `f`/`form`. The photo strip
                   // reads it whole (it needs the OCCUPIED leaves to
@@ -2155,7 +2194,8 @@ const TYPE_BLURB_FALLBACK: Record<string, string> = {
 }
 
 function SectionRow({
-  row, isFirst, isLast, index, total, content, imageUrl, storedSection, autoFocusFirstField, onFocusHandled,
+  row, isFirst, isLast, index, total, content, imageUrl, imageDefaults, storedSection, autoFocusFirstField,
+  onFocusHandled,
   expanded, onToggleExpanded, reorderable, placement, drawn, drawnBy, templateName, thumbUrl,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
   onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
@@ -2163,6 +2203,11 @@ function SectionRow({
   row: EditorSectionRow
   isFirst: boolean
   isLast: boolean
+  /** TEMPLATE FIDELITY 4.1 — the DESIGN's own photographs, slot => URL.
+   *  Handed down whole rather than resolved per control, because a gallery
+   *  needs eight of them and a single plate one, and both are looked up by
+   *  the endpoints' own slot spelling. */
+  imageDefaults: Record<string, string>
   /** TEMPLATE FIDELITY 2.2 — is this the one open card? Decided by the
    *  LIST (single-expand), never held here: two cards open and the preview
    *  beside them can only be about one of them. */
@@ -2726,6 +2771,9 @@ function SectionRow({
                   sectionKey={row.key}
                   stored={storedSection}
                   limit={field.slots ?? 0}
+                  defaults={imageDefaults}
+                  content={content}
+                  onFieldChange={onFieldChange}
                   onChanged={onImageChanged}
                 />
               ) : field.type === 'faq_pairs' ? (
@@ -2759,7 +2807,17 @@ function SectionRow({
                  * there is no keystroke to queue, only an immediate,
                  * already-saved server round-trip.
                  */
-                <ImageField sectionKey={row.key} imageUrl={imageUrl} onChanged={onImageChanged} />
+                <ImageField
+                  sectionKey={row.key}
+                  imageUrl={imageUrl}
+                  // 4.1: this row's slot is the bare section key for a
+                  // single plate — the endpoints' own spelling, which is
+                  // also how the served map is keyed.
+                  defaultUrl={imageDefaults[row.key] ?? null}
+                  content={content}
+                  onFieldChange={onFieldChange}
+                  onChanged={onImageChanged}
+                />
               ) : field.multiline ? (
                 <textarea
                   id={`lp-${row.key}-${field.name}`}
@@ -3123,9 +3181,20 @@ function FaqPairsField({ sectionKey, content, pairs, onFieldChange }: {
  * every `text_N` alongside `hero`/`about` precisely so this endpoint could
  * accept them. `imageErrorMessage` already surfaces its refusal in words.
  */
-function ImageField({ sectionKey, imageUrl, onChanged }: {
+function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, onChanged }: {
   sectionKey: string
+  /** The TENANT's own upload for this slot, off the raw query — null when
+   *  they have not made one. Never the effective picture: the difference
+   *  between the two is the whole control. */
   imageUrl: string | null
+  /** The DESIGN's own photograph for this slot, off the served
+   *  `image_defaults` — null when it ships none (template fidelity 4.1). */
+  defaultUrl: string | null
+  /** `f.content[sectionKey]`, for the two WORD leaves that belong to this
+   *  picture. They are ordinary content and save with the words; only the
+   *  picture itself has an endpoint of its own. */
+  content: Record<string, string>
+  onFieldChange: (field: string, value: string) => void
   onChanged: () => void
 }) {
   const { t } = useTranslation()
@@ -3149,7 +3218,9 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
 
       const body = new FormData()
       body.append('slot', sectionKey)
-      body.append('image', image, file.name)
+      // 4.8: a re-encoded upload is WebP whatever the picked file was
+      // called, and the name has to say so — see `downscaledName`.
+      body.append('image', image, target ? downscaledName(file.name) : file.name)
       // The shared `api` client strips Content-Type for a FormData body
       // (api.ts:28-37) so this plain multipart POST needs no extra config.
       return api.post('/v1/admin/landing-pages/image', body)
@@ -3174,14 +3245,32 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
 
   const busy = uploadMut.isPending || removeMut.isPending
 
+  // WHAT THE TENANT IS ACTUALLY LOOKING AT — their own picture when they
+  // have chosen one, the design's when they have not. The same resolution
+  // `PageContent::imageUrl()` makes server-side, from the same two facts,
+  // because a control that showed a different picture from the page would
+  // be worse than one that showed none.
+  const shown = imageUrl ?? defaultUrl
+  const isDefault = imageUrl === null && defaultUrl !== null
+
   return (
     <div className="space-y-2">
-      {imageUrl ? (
-        <img
-          src={resolveImage(imageUrl) ?? undefined}
-          alt=""
-          className="max-h-24 rounded-lg border border-dark-border object-cover"
-        />
+      {shown ? (
+        <div className="space-y-1">
+          <img
+            src={resolveImage(shown) ?? undefined}
+            alt=""
+            className="max-h-24 rounded-lg border border-dark-border object-cover"
+          />
+          {/* Said plainly, because it is the one thing about this control a
+              tenant cannot see: the picture on their page right now is the
+              designer's, and it will stay there until they replace it. */}
+          {isDefault && (
+            <p className="text-xs text-t-secondary/80">
+              {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}
+            </p>
+          )}
+        </div>
       ) : (
         <p className="text-xs text-t-secondary">{t('landing_pages.editor.no_photo', 'No photo yet')}</p>
       )}
@@ -3192,7 +3281,9 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
           accept="image/jpeg,image/png,image/webp"
           disabled={busy}
           onChange={onPick}
-          aria-label={t('landing_pages.editor.upload_photo', 'Upload photo')}
+          aria-label={isDefault || imageUrl
+            ? t('landing_pages.editor.replace_photo', 'Replace photo')
+            : t('landing_pages.editor.upload_photo', 'Upload photo')}
           className="block w-full max-w-xs text-xs text-t-secondary file:mr-3 file:px-3 file:py-1.5 file:rounded-lg file:border file:border-dark-border file:bg-dark-bg file:text-t-secondary file:text-xs hover:file:text-white disabled:opacity-50"
         />
         {uploadMut.isPending && (
@@ -3203,6 +3294,14 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
             <Check size={12} /> {t('landing_pages.editor.photo_saved', 'Saved')}
           </span>
         )}
+        {/* TEMPLATE FIDELITY 4.1 — the verb follows what actually happens.
+            The endpoint is the same one either way (it clears the leaf and
+            deletes the file); what differs is what the page shows next, and
+            on a design that ships its own photograph that is the designer's
+            picture rather than a hole. A button saying "Remove photo" that
+            leaves a photograph behind would be the control lying about
+            itself; one saying "Restore original" where there is no original
+            would be worse. */}
         {imageUrl && (
           <button
             type="button"
@@ -3210,10 +3309,49 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
             disabled={busy}
             onClick={() => removeMut.mutate()}
           >
-            {t('landing_pages.editor.remove_photo', 'Remove photo')}
+            {defaultUrl
+              ? t('landing_pages.editor.restore_photo', 'Restore original')
+              : t('landing_pages.editor.remove_photo', 'Remove photo')}
           </button>
         )}
       </div>
+
+      {/* THE WORDS THAT BELONG TO THIS PICTURE (4.3), under it rather than
+          beside the rest of the card's fields: they describe the thing
+          immediately above them, and every kit writes both.
+
+          Ordinary content leaves — they queue into the same save as the
+          headline, and the one-writer rule that protects the picture does
+          not apply to them. Offered only once there is a picture to
+          describe. */}
+      {shown && (
+        <div className="grid gap-2 sm:grid-cols-2 pt-1">
+          <div>
+            <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
+              {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
+            </label>
+            <input
+              id={`lp-${sectionKey}-alt`}
+              className={input}
+              maxLength={191}
+              value={content.alt ?? ''}
+              onChange={e => onFieldChange('alt', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
+              {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+            </label>
+            <input
+              id={`lp-${sectionKey}-caption`}
+              className={input}
+              maxLength={191}
+              value={content.caption ?? ''}
+              onChange={e => onFieldChange('caption', e.target.value)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -3281,19 +3419,28 @@ function useSavedFlash(): [boolean, () => void] {
  * already follows: a native multi-select `<input type="file">`, a strip of
  * thumbnails, and a remove button on each.
  */
-function GalleryField({ sectionKey, stored, limit, onChanged }: {
+function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
   stored: unknown
   /** The served cap. Zero means the backend published no count, and the
    *  control shows no picker rather than guessing at a number. */
   limit: number
+  /** The design's own photographs, slot => URL (template fidelity 4.1). */
+  defaults: Record<string, string>
+  /** `f.content[sectionKey]`, for the per-tile caption leaves. Ordinary
+   *  content: they queue into the same save as the words. */
+  content: Record<string, string>
+  onFieldChange: (field: string, value: string) => void
   onChanged: () => void
 }) {
   const { t } = useTranslation()
 
-  const photos = gallerySlots(stored, sectionKey, limit)
-  const used = photos.length
+  const photos = gallerySlots(stored, sectionKey, limit, defaults)
+  // Counted over the TENANT's own uploads, never the design's: "6 of 8" is
+  // about how many more they can add, and the endpoint's cap is on leaves
+  // they have written. A design's photograph occupies a leaf they have not.
+  const used = photos.filter(photo => !photo.isDefault).length
   const full = limit === 0 || used >= limit
   // 1.6, same reason as the single plate's: these uploads and removals are
   // already saved the moment they return, and the save bar below is about
@@ -3321,7 +3468,9 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
 
         const body = new FormData()
         body.append('slot', gallerySlotName(sectionKey, leaf))
-        body.append('image', image, file.name)
+        // 4.8, same rule as the single plate's: a re-encoded upload is WebP
+        // whatever the picked file was called.
+        body.append('image', image, target ? downscaledName(file.name) : file.name)
 
         // Sequential, deliberately: each upload is its own row-locking
         // transaction on the same page row, so firing eight at once would
@@ -3369,33 +3518,78 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
   return (
     <div className="space-y-2">
       {photos.length > 0 ? (
-        <ul className="flex flex-wrap gap-2 list-none p-0 m-0">
+        /* A COLUMN OF TILES, not a wrapped row of thumbnails, since 4.3:
+           each picture now carries a caption input of its own, and a caption
+           belongs beside the photograph it names. */
+        <ul className="space-y-2 list-none p-0 m-0">
           {photos.map((photo, i) => (
-            <li key={photo.leaf} className="relative">
-              <img
-                src={resolveImage(photo.url) ?? undefined}
-                alt=""
-                className="h-20 w-20 rounded-lg border border-dark-border object-cover"
-              />
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => removeMut.mutate(photo.slot)}
-                // Numbered by POSITION in the strip, not by leaf: `image_5`
-                // is a storage detail, and "Remove photo 3" is what the
-                // tenant is actually looking at.
-                aria-label={t('landing_pages.editor.remove_photo_n', {
-                  position: i + 1,
-                  defaultValue: 'Remove photo {{position}}',
-                })}
-                title={t('landing_pages.editor.remove_photo_n', {
-                  position: i + 1,
-                  defaultValue: 'Remove photo {{position}}',
-                })}
-                className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-dark-bg border border-dark-border text-t-secondary hover:text-white disabled:opacity-50"
-              >
-                <X size={12} />
-              </button>
+            <li key={photo.leaf} className="flex items-start gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src={resolveImage(photo.url) ?? undefined}
+                  alt=""
+                  className="h-20 w-20 rounded-lg border border-dark-border object-cover"
+                />
+                {/* Nothing to remove from a tile the tenant has not filled:
+                    the design's photograph is not theirs to delete, and the
+                    way to change it is to upload one over it. */}
+                {!photo.isDefault && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => removeMut.mutate(photo.slot)}
+                    // Numbered by POSITION in the strip, not by leaf:
+                    // `image_5` is a storage detail, and "photo 3" is what
+                    // the tenant is actually looking at. The VERB follows
+                    // what happens next — on a design that ships its own
+                    // picture for this slot, clearing the leaf puts that
+                    // picture back rather than leaving a hole.
+                    aria-label={t(
+                      defaults[photo.slot]
+                        ? 'landing_pages.editor.restore_photo_n'
+                        : 'landing_pages.editor.remove_photo_n',
+                      {
+                        position: i + 1,
+                        defaultValue: defaults[photo.slot]
+                          ? 'Restore the original photo {{position}}'
+                          : 'Remove photo {{position}}',
+                      },
+                    )}
+                    title={t(
+                      defaults[photo.slot]
+                        ? 'landing_pages.editor.restore_photo_n'
+                        : 'landing_pages.editor.remove_photo_n',
+                      {
+                        position: i + 1,
+                        defaultValue: defaults[photo.slot]
+                          ? 'Restore the original photo {{position}}'
+                          : 'Remove photo {{position}}',
+                      },
+                    )}
+                    className="absolute -top-1.5 -right-1.5 flex items-center justify-center w-5 h-5 rounded-full bg-dark-bg border border-dark-border text-t-secondary hover:text-white disabled:opacity-50"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <label className={label} htmlFor={`lp-${sectionKey}-${photo.captionLeaf}`}>
+                  {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+                </label>
+                <input
+                  id={`lp-${sectionKey}-${photo.captionLeaf}`}
+                  className={input}
+                  maxLength={191}
+                  value={content[photo.captionLeaf] ?? ''}
+                  onChange={e => onFieldChange(photo.captionLeaf, e.target.value)}
+                />
+                {photo.isDefault && (
+                  <p className="text-xs text-t-secondary/80 mt-1">
+                    {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}
+                  </p>
+                )}
+              </div>
             </li>
           ))}
         </ul>

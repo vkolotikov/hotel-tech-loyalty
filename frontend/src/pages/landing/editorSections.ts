@@ -243,8 +243,22 @@ export function buildSectionRows(
    *  band has been written into yet — see `instanceIsWritten`. Fixed rows
    *  take that answer off the wire (`availability`) and ignore this. */
   content?: Record<string, unknown> | null,
+  /**
+   * Which blocks the page's own DESIGN draws a photograph in —
+   * `templatePhotoBlocks()`, template fidelity 4.5. Null (an older backend,
+   * or a caller that does not care) leaves every photo control exactly where
+   * it was.
+   *
+   * Applied HERE rather than in the row's renderer so it reaches everything
+   * that reads `row.fields` — including the Photos filter chip, which asks
+   * whether a row has any photo control at all and would otherwise count a
+   * band whose picture this design will never draw.
+   */
+  photoBlocks: string[] | null = null,
 ): EditorSectionRow[] {
   const ordered = orderedSections(pageSections)
+
+  const drawsPhotos = (typeId: string) => photoBlocks === null || photoBlocks.includes(typeId)
 
   // Counted over the WHOLE ordered list first, so `siblings` is a fact
   // about the page rather than about how far down the list this row sits.
@@ -307,7 +321,7 @@ export function buildSectionRows(
         // the shipped partials read and no tenant could fill in — and it
         // was the reason every field a later phase adds would otherwise
         // have needed a frontend release to become visible.
-        fields: fieldsForType(fixedType),
+        fields: fieldsForType(fixedType, drawsPhotos(fixedType.id)),
         // A fixed row never renders the "not written yet" line, so this is
         // the harmless default rather than a claim about the band.
         writtenBy: 'words',
@@ -360,7 +374,7 @@ export function buildSectionRows(
       fixed: false,
       ordinal,
       siblings: perType.get(parsed.typeId) ?? 1,
-      fields: fieldsForType(parsed.type),
+      fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId)),
       writtenBy: writtenBy(parsed.type),
       tone: normaliseTone(row.tone),
       // Off the TYPE (`text`), never the key (`text_1`) — every instance of
@@ -566,8 +580,20 @@ export function visibleFaqPairs(
   return Math.min(cap, Math.max(1, highestWritten + Math.max(0, revealed)))
 }
 
-export function fieldsForType(type: SectionTypeOption): SectionField[] {
-  const slots = imageSlotsOf(type)
+export function fieldsForType(
+  type: SectionTypeOption,
+  /**
+   * Whether the page's own DESIGN draws a photograph in this block —
+   * `templatePhotoBlocks()`, template fidelity 4.5. False suppresses the
+   * photo control entirely, because a picture that can never appear is the
+   * clearest case of a control that cannot act.
+   *
+   * Defaulted to true so every existing caller (and a backend that publishes
+   * no such fact) behaves exactly as it did.
+   */
+  drawsPhotos = true,
+): SectionField[] {
+  const slots = drawsPhotos ? imageSlotsOf(type) : 0
 
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
@@ -600,6 +626,20 @@ export function fieldsForType(type: SectionTypeOption): SectionField[] {
     for (let n = 1; n <= pairs; n++) { paired.add(`q${n}`); paired.add(`a${n}`) }
   }
 
+  // THE WORDS THAT BELONG TO A PICTURE GO WITH THE PICTURE (template
+  // fidelity 4.3). `alt` and `caption` on a single-plate band, and one
+  // `caption_N` per tile on a strip, are ordinary content leaves the server
+  // publishes like any other — but they are not free-standing fields: a
+  // caption listed on its own is eight loose boxes on a gallery card, which
+  // is the failure 3.3 has just finished removing from the FAQ. They are
+  // consumed here and drawn inside the photo control that owns them.
+  //
+  // With the photo control suppressed (a design that draws no photograph in
+  // this block), they go with it: describing a picture that will never
+  // appear is a control that cannot act just as surely as the picker is.
+  for (const name of PHOTO_WORD_LEAVES) paired.add(name)
+  for (let n = 1; n <= imageSlotsOf(type); n++) paired.add(`caption_${n}`)
+
   const rest: SectionField[] = []
 
   for (const name of type.fields) {
@@ -622,6 +662,18 @@ export function fieldsForType(type: SectionTypeOption): SectionField[] {
 
   return [...photo, ...rest]
 }
+
+/**
+ * The text leaves that describe a SINGLE photograph — `SectionType::
+ * photoLeaves()`, whose reasoning this mirrors: `alt` is what a reader who
+ * cannot see the picture is told it shows, `caption` is the line printed
+ * under the frame in the business's own voice.
+ *
+ * Named here so `fieldsForType` consumes them into the photo control rather
+ * than listing them as free-standing inputs, and so the day a third joins
+ * them it is one edit on each side.
+ */
+const PHOTO_WORD_LEAVES = ['alt', 'caption']
 
 /**
  * Swap a section with its neighbour in the CURRENT order and renumber
@@ -1089,7 +1141,20 @@ export function gallerySlotName(sectionKey: string, leaf: string): string {
 }
 
 /** One filled photo in a gallery: which leaf it lives in, how to address it, and what to show. */
-export type GalleryPhoto = { leaf: string; slot: string; url: string }
+export type GalleryPhoto = {
+  leaf: string
+  slot: string
+  url: string
+  /** True when `url` is the DESIGN's own photograph rather than the
+   *  tenant's — template fidelity 4.1. It decides whether this tile offers
+   *  "Restore original", "Remove photo", or nothing at all: there is nothing
+   *  to remove from a tile the tenant has not filled. */
+  isDefault: boolean
+  /** Which caption leaf carries this tile's words (`caption_3` beside
+   *  `image_3`). Numbered to match the picture, never to match its position
+   *  in the strip — a caption must not move when a gap above it closes. */
+  captionLeaf: string
+}
 
 /**
  * A gallery's photos as the strip renders them: leaf order, gaps closed,
@@ -1111,14 +1176,29 @@ export type GalleryPhoto = { leaf: string; slot: string; url: string }
  * the cap is not a picture any endpoint can write or remove, so the strip
  * must not offer a control for one.
  */
-export function gallerySlots(section: unknown, sectionKey: string, limit: number): GalleryPhoto[] {
+export function gallerySlots(
+  section: unknown,
+  sectionKey: string,
+  limit: number,
+  /** The DESIGN's own photographs, slot => URL — `templateImageDefaults()`,
+   *  template fidelity 4.1. A leaf the tenant has not filled shows the
+   *  design's picture for that exact slot, which is what the page renders
+   *  and therefore what this strip has to show. Empty (a design with none)
+   *  leaves the strip exactly as it was. */
+  defaults: Record<string, string> = {},
+): GalleryPhoto[] {
   const fields = sectionFields(section)
   const photos: GalleryPhoto[] = []
 
   for (let n = 1; n <= limit; n++) {
     const leaf = galleryLeaf(n)
-    const url = safeImageUrl(fields[leaf])
-    if (url !== null) photos.push({ leaf, slot: gallerySlotName(sectionKey, leaf), url })
+    const slot = gallerySlotName(sectionKey, leaf)
+    const own = safeImageUrl(fields[leaf])
+    const url = own ?? defaults[slot] ?? null
+
+    if (url !== null) {
+      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}` })
+    }
   }
 
   return photos

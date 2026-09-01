@@ -976,4 +976,124 @@ class PageContentTest extends TestCase
         // ... and the hero's own single plate is untouched by any of it.
         $this->assertSame('/storage/landing/hero.jpg', $content->imageUrl('hero'));
     }
+
+    // ─── Template fidelity 4.2 / R3 — one service row's own photograph ────
+
+    /**
+     * `Service.image` is already a tenant-uploaded column on the Services
+     * screen, and it is read through the SAME three guards every page slot
+     * clears — which is the whole reason this reader exists rather than the
+     * partial reaching for `$service->image` (as one of them did).
+     *
+     * It is NOT a page slot, and the reason is a number: a page may carry up
+     * to PageContent::MAX_SERVICES rows, and modelling that as page content
+     * would put twenty-four more entries in an allowlist whose entire value
+     * is being finite and enumerable.
+     */
+    public function test_a_service_photograph_goes_through_the_same_guards(): void
+    {
+        $content = PageContent::for($this->page(1));
+
+        $ok = new Service(['image' => '/storage/services/one.webp']);
+        $this->assertSame('/storage/services/one.webp', $content->serviceImage($ok));
+
+        $cdn = new Service(['image' => 'https://cdn.example/two.webp']);
+        $this->assertSame('https://cdn.example/two.webp', $content->serviceImage($cdn));
+
+        foreach ([
+            'javascript:alert(1)',
+            '"><script>',
+            '//evil.example/x.jpg',
+            '/uploads/not-storage.jpg',
+            '',
+            null,
+            '/storage/' . str_repeat('a', 3000) . '.jpg',
+        ] as $hostile) {
+            $this->assertNull(
+                $content->serviceImage(new Service(['image' => $hostile])),
+                'A service photograph cleared the allowlist it should not have.',
+            );
+        }
+    }
+
+    // ─── Template fidelity 4.1 — default + override ───────────────────────
+
+    /**
+     * The whole model in one test: the tenant's picture when they have one,
+     * the design's when they do not, and NOTHING when neither exists.
+     *
+     * `ownImageUrl()` is the question "has this tenant chosen a picture
+     * here", which is deliberately a different method from "what does this
+     * band show" — see its docblock, and the closing panel, which is the one
+     * band that needs the first.
+     */
+    public function test_a_slot_reads_the_tenants_picture_then_the_designs(): void
+    {
+        $page = $this->pageWithContent(['hero' => ['image_url' => '/storage/landing/mine.jpg']]);
+        $page->update(['template_key' => 'nocturne_ritual']);
+
+        $content = PageContent::for($page->fresh());
+
+        $this->assertSame('/storage/landing/mine.jpg', $content->imageUrl('hero'));
+        $this->assertSame('/storage/landing/mine.jpg', $content->ownImageUrl('hero'));
+        // A tenant's own picture takes a tenant's own description, and blank
+        // rather than the design's: an alt describing a photograph that is
+        // no longer on the page is worse than none.
+        $this->assertSame('', $content->imageAlt('hero'));
+
+        // A slot they have not filled shows the design's, with its words.
+        $this->assertNull($content->ownImageUrl('about'));
+        $this->assertStringContainsString('nocturne_ritual/assets/thermal-pool.webp', (string) $content->imageUrl('about'));
+        $this->assertSame(
+            'Dark stone steps descending into a softly lit thermal pool',
+            $content->imageAlt('about'),
+        );
+
+        // And a design with no photographs of its own answers null, which is
+        // what every page rendered before this model existed did.
+        $page->update(['template_key' => 'ruled_page']);
+        $this->assertNull(PageContent::for($page->fresh())->imageUrl('about'));
+    }
+
+    /**
+     * A caption is never the design's. Alt text describes the picture and is
+     * true of it wherever it appears; a caption is a claim about the
+     * business, and the kit's own ("Dry heat room", "Amber Hour") are its
+     * fictional rooms and treatments.
+     */
+    public function test_a_caption_is_only_ever_the_tenants(): void
+    {
+        $page = $this->pageWithContent(['about' => ['caption' => 'The lower thermal room']]);
+        $page->update(['template_key' => 'nocturne_ritual']);
+
+        $content = PageContent::for($page->fresh());
+
+        $this->assertSame('The lower thermal room', $content->imageCaption('about'));
+        $this->assertSame('', $content->imageCaption('hero'));
+    }
+
+    /**
+     * The gallery reads its pictures per LEAF, so a tenant who replaces the
+     * third of the design's four keeps the author's other three — and the
+     * captions beside them are theirs alone.
+     */
+    public function test_a_gallery_merges_the_tenants_pictures_with_the_designs(): void
+    {
+        $page = $this->pageWithContent(['gallery_1' => [
+            'image_3'   => '/storage/landing/mine.jpg',
+            'caption_3' => 'Our treatment room',
+        ]]);
+        $page->update(['template_key' => 'nocturne_ritual']);
+
+        $photos = PageContent::for($page->fresh())->galleryPhotos('gallery_1');
+
+        $this->assertCount(4, $photos);
+        $this->assertSame('/storage/landing/mine.jpg', $photos[2]['url']);
+        $this->assertSame('Our treatment room', $photos[2]['caption']);
+        // A replaced tile loses the design's description with the design's
+        // picture; the untouched ones keep theirs.
+        $this->assertSame('', $photos[2]['alt']);
+        $this->assertNotSame('', $photos[0]['alt']);
+        $this->assertSame('', $photos[0]['caption']);
+    }
 }

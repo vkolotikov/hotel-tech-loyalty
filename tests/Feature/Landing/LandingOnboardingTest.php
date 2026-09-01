@@ -950,6 +950,98 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
+     * Template fidelity 4.5 — `photo_blocks`, the narrower fact behind
+     * `renders`: which blocks this DESIGN actually draws a photograph in.
+     *
+     * A photo SLOT belongs to a type and is shared by every template; a
+     * DRAWN photograph belongs to a partial and is not. Without this on the
+     * wire the editor would offer a photo control on a design with nowhere
+     * to put the picture — a control that cannot act, which this project's
+     * own rule forbids — and the only alternative (`if (templateKey === …)`
+     * in TypeScript) is the second-source-of-truth failure the whole plan
+     * exists to remove.
+     *
+     * The claim is a round trip against the shipped partials, not a list.
+     */
+    public function test_every_template_says_which_blocks_it_draws_a_photograph_in(): void
+    {
+        $this->makeProperty();
+
+        $photos = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['photo_blocks'])
+            ->all();
+
+        foreach ($photos as $key => $list) {
+            // Every claim is a subset of what the design draws at all…
+            $renders = LandingOnboardingService::rendersFor($key);
+
+            foreach ($list as $id) {
+                $this->assertContains($id, $renders,
+                    "'{$key}' claims a photograph in '{$id}', a block it does not draw at all.");
+                $this->assertTrue(SectionType::get($id)?->image,
+                    "'{$key}' claims a photograph in '{$id}', a type that declares none.");
+            }
+
+            // …and it is derived from the partial, so it matches the file.
+            $this->assertSame(LandingOnboardingService::photoBlocksFor($key), $list);
+        }
+
+        // The named cases. `services` got a page slot in 4.1 for kit 02's
+        // sticky editorial plate (R3) and NEITHER shipped design draws one,
+        // so no editor offers a control for it — which is the whole reason
+        // this fact is served rather than assumed from the catalogue.
+        foreach (array_keys($photos) as $key) {
+            $this->assertNotContains('services', $photos[$key]);
+        }
+
+        foreach (['hero', 'about', 'team', 'booking', 'text', 'gallery'] as $id) {
+            $this->assertContains($id, $photos['nocturne_ritual'],
+                "Nocturne draws a photograph in '{$id}' and does not say so.");
+        }
+
+        // The Ruled Page draws no team or booking photograph of its own.
+        $this->assertNotContains('team', $photos['ruled_page']);
+        $this->assertNotContains('booking', $photos['ruled_page']);
+    }
+
+    /**
+     * Template fidelity 4.1 — the design's own photographs, on the wire.
+     *
+     * The editor has to know which of a row's photo controls is showing the
+     * DESIGN's picture and which is showing the TENANT's, because that is
+     * the difference between "Remove photo" and "Restore original". A copy
+     * of this map in TypeScript would be a copy that offers to restore an
+     * original that does not exist.
+     */
+    public function test_each_template_publishes_its_own_photographs(): void
+    {
+        $this->makeProperty();
+
+        $defaults = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['image_defaults'])
+            ->all();
+
+        // Every slot named is one the image endpoints accept, so the
+        // control that shows it can also replace it.
+        foreach ($defaults as $key => $map) {
+            foreach (array_keys($map) as $slot) {
+                $this->assertContains($slot, SectionType::imageKeys(),
+                    "'{$key}' publishes a default for '{$slot}', which no endpoint can replace.");
+            }
+        }
+
+        $this->assertArrayHasKey('hero', $defaults['nocturne_ritual']);
+        $this->assertArrayHasKey('team', $defaults['nocturne_ritual']);
+        $this->assertArrayHasKey('gallery_1.image_4', $defaults['nocturne_ritual']);
+
+        // A design that ships no photographs of its own publishes none, so
+        // its controls keep saying "Remove photo" and meaning it.
+        $this->assertSame([], $defaults['ruled_page']);
+    }
+
+    /**
      * Template fidelity 3.1 / R4 — a new page is seeded with the industry's
      * bands UNION the blocks its chosen design draws that no industry seeds.
      *

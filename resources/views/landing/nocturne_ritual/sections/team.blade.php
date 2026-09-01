@@ -5,17 +5,26 @@
   beside it an eyebrow, a heading, a lead and a ruled list of people — each
   with a name, a line about what they do, and a Book link.
 
-  THE PORTRAIT is the team's own first photograph. The kit uses one group
-  shot; this platform holds a per-person avatar, and the person at the top of
-  the tenant's own ordering is the one the band leads with — never a stock
-  photograph, and never a picture of somebody else's studio. With nobody
-  photographed at all the media column goes and the grid collapses to one
-  (`.team__grid--solo`, in the stylesheet's appended tenant-state block):
+  THE PORTRAIT IS THIS BAND'S OWN PHOTOGRAPH (template fidelity 4.1 / R1).
+  Every kit's alt text here names three people at once — it is a picture OF
+  THE STUDIO, not any one person's headshot — so putting the first
+  practitioner's avatar in a frame the author drew for three was the wrong
+  substitution, however sensible it looked. The band now has its own slot,
+  with the design's group shot as its default.
+
+  THE AVATAR SUBSTITUTION SURVIVES AS THE FALLBACK, so nothing regresses: a
+  tenant on a design that ships no photograph of its own, who has not
+  uploaded a band picture, still leads with the person at the top of their
+  own ordering. With neither the media column goes and the grid collapses to
+  one (`.team__grid--solo`, in the stylesheet's appended tenant-state block):
   the practitioners still get their ruled list, which is the part that
   matters, and there is no empty frame.
 
-  The alt text names the person, because unlike the scene-setting plates
-  elsewhere on this page this photograph IS information.
+  The alt names the person when the picture IS a person (the avatar path),
+  and otherwise comes through PageContent::imageAlt('team') — the tenant's
+  own words, else the design's description of its own group shot. Unlike the
+  scene-setting plates elsewhere on this page, this photograph is
+  information.
 
   count() gates the band on the team collection, so a studio with no
   practitioners on file does not render this at all — the layout never
@@ -28,18 +37,42 @@
   author declared — see this task's report.
 --}}
 @php
-    // The first practitioner who actually has a photograph, in the tenant's
-    // own order. `avatar` is a plain string column written by the admin
-    // uploader; filled() is the same test the Ruled Page's team grid makes
-    // of it.
-    $portrait = $content->team->first(fn ($member) => filled($member->avatar));
+    // The band's own photograph — the tenant's upload, else the design's
+    // group shot. One allowlisted read, the same three guards every other
+    // picture on this page goes through.
+    $groupPhoto = $content->imageUrl('team');
+
+    // The fallback, unchanged: the first practitioner who actually has a
+    // photograph, in the tenant's own order. `avatar` is a plain string
+    // column written by the admin uploader; filled() is the same test the
+    // Ruled Page's team grid makes of it. Consulted ONLY when the band has
+    // no photograph of its own, so a design that ships one never shows a
+    // single face in a frame drawn for the studio.
+    $portrait = $groupPhoto === null
+        ? $content->team->first(fn ($member) => filled($member->avatar))
+        : null;
+
+    $photo    = $groupPhoto ?? $portrait?->avatar;
+    $photoAlt = $portrait !== null ? $portrait->name : $content->imageAlt('team');
+    $caption  = $content->imageCaption('team');
 @endphp
     <section class="section section--paper team" id="team" data-block="team" data-variant="feature-and-list">
-      <div @class(['shell', 'team__grid', 'team__grid--solo' => $portrait === null])>
-@if ($portrait !== null)
-        <figure class="team__portrait">
-          <img src="{{ $portrait->avatar }}" width="1536" height="1024" loading="lazy" decoding="async" alt="{{ $portrait->name }}">
-        </figure>
+      <div @class(['shell', 'team__grid', 'team__grid--solo' => $photo === null])>
+@if ($photo !== null)
+        <div class="team__media-wrap">
+          <figure class="team__portrait">
+            <img src="{{ $photo }}" width="1536" height="1024" loading="lazy" decoding="async" alt="{{ $photoAlt }}">
+          </figure>
+@if ($caption !== '')
+          {{-- The caption sits OUTSIDE the frame, in the story band's own
+               `.story__caption` voice, because `.team__portrait` is
+               `overflow: hidden` (it clips the author's inset accent rule)
+               and a caption inside it would be clipped with everything else.
+               Same small-caps ink-soft treatment as the story band's, which
+               is what a caption on a paper band already looks like here. --}}
+          <p class="story__caption">{{ $caption }}</p>
+@endif
+        </div>
 @endif
         <div class="team__content">
           <p class="eyebrow eyebrow--ink">{{ $copy['kicker'] ?? $profile->kicker('team') }}</p>

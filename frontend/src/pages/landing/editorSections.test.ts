@@ -1189,6 +1189,118 @@ describe('visibleFaqPairs', () => {
   })
 })
 
+/**
+ * TEMPLATE FIDELITY 4.1/4.3/4.5 — the default+override image model on this
+ * side of the wire.
+ *
+ * Three separate rules, and each of them is a control saying something
+ * different: which picture is on the page, whose it is, and whether this
+ * design draws one here at all.
+ */
+describe('the design own photographs', () => {
+  const defaults = () => ({
+    'gallery_1.image_1': '/landing/n/assets/one.webp',
+    'gallery_1.image_2': '/landing/n/assets/two.webp',
+  })
+
+  it('shows the design photograph for a leaf the tenant has not filled', () => {
+    const photos = gallerySlots({}, 'gallery_1', 8, defaults())
+
+    expect(photos.map(p => p.url)).toEqual(['/landing/n/assets/one.webp', '/landing/n/assets/two.webp'])
+    expect(photos.every(p => p.isDefault)).toBe(true)
+  })
+
+  /** Per LEAF, not per position: a tenant who replaces the second keeps the
+   *  design's first, in the author's own order. */
+  it('merges the tenants own uploads with the designs, leaf by leaf', () => {
+    const section = { image_2: '/storage/mine.jpg' }
+    const photos = gallerySlots(section, 'gallery_1', 8, defaults())
+
+    expect(photos.map(p => p.url)).toEqual(['/landing/n/assets/one.webp', '/storage/mine.jpg'])
+    expect(photos.map(p => p.isDefault)).toEqual([true, false])
+  })
+
+  /** A caption is numbered to match its PICTURE, never its position in the
+   *  strip — a caption must not move when a gap above it closes. */
+  it('names the caption leaf beside each picture', () => {
+    const section = { image_3: '/storage/mine.jpg' }
+    const photos = gallerySlots(section, 'gallery_1', 8)
+
+    expect(photos).toHaveLength(1)
+    expect(photos[0].captionLeaf).toBe('caption_3')
+  })
+
+  /** A design with none leaves the strip exactly as it was. */
+  it('changes nothing for a design that ships no photographs', () => {
+    const section = { image_1: '/storage/mine.jpg' }
+
+    expect(gallerySlots(section, 'gallery_1', 8, {})).toEqual(gallerySlots(section, 'gallery_1', 8))
+  })
+
+  /** A hostile stored leaf still fails the allowlist, and what it falls back
+   *  to is the design's picture rather than a hole — the battery is stronger,
+   *  not weaker. */
+  it('falls back to the designs photograph when the stored leaf is hostile', () => {
+    const photos = gallerySlots({ image_1: 'javascript:alert(1)' }, 'gallery_1', 8, defaults())
+
+    expect(photos[0].url).toBe('/landing/n/assets/one.webp')
+    expect(photos[0].isDefault).toBe(true)
+  })
+})
+
+/**
+ * 4.5 — a photo control is not offered on a design with nowhere to put the
+ * picture, and the words that describe a photograph go with it.
+ */
+describe('photo controls follow what the design actually draws', () => {
+  const heroType = () => sectionTypes().find(o => o.id === 'hero')!
+
+  it('draws the photo control by default, as every caller before this did', () => {
+    expect(fieldsForType(heroType()).map(f => f.name)).toContain('image_url')
+  })
+
+  it('suppresses the photo control for a block this design draws no photograph in', () => {
+    expect(fieldsForType(heroType(), false).map(f => f.name)).not.toContain('image_url')
+  })
+
+  /**
+   * The words go with the picture — both directions. `alt` and `caption` are
+   * ordinary served fields, but a caption listed on its own is a loose box
+   * (and on a gallery, eight of them), so the photo control draws them; with
+   * no photo control there is no photograph to describe.
+   */
+  it('never lists a picture words as a field of its own', () => {
+    const withWords = { ...heroType(), fields: [...heroType().fields, 'alt', 'caption'] }
+
+    expect(fieldsForType(withWords).map(f => f.name)).not.toContain('alt')
+    expect(fieldsForType(withWords).map(f => f.name)).not.toContain('caption')
+    expect(fieldsForType(withWords, false).map(f => f.name)).not.toContain('caption')
+  })
+
+  it('consumes one caption leaf per gallery tile rather than listing eight', () => {
+    const galleryType = sectionTypes().find(o => o.id === 'gallery')!
+    const captioned = {
+      ...galleryType,
+      fields: [...galleryType.fields, ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}`)],
+    }
+
+    expect(fieldsForType(captioned).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+  })
+
+  /** The row carries the decision, so everything reading `row.fields` — the
+   *  Photos filter chip included — sees the same answer. */
+  it('carries the decision onto the row', () => {
+    const drawn = buildSectionRows(pageSections(), availability(), sectionTypes(), null, ['hero'])
+    const notDrawn = buildSectionRows(pageSections(), availability(), sectionTypes(), null, [])
+
+    expect(drawn.find(r => r.key === 'hero')!.fields.map(f => f.name)).toContain('image_url')
+    expect(notDrawn.find(r => r.key === 'hero')!.fields.map(f => f.name)).not.toContain('image_url')
+    // Null is "this build was not told", which must change nothing.
+    expect(buildSectionRows(pageSections(), availability(), sectionTypes(), null, null))
+      .toEqual(buildSectionRows(pageSections(), availability(), sectionTypes(), null))
+  })
+})
+
 describe('instanceRowLabel', () => {
   it('does not number a lone block', () => {
     expect(instanceRowLabel('Text block', 1, 1)).toBe('Text block')
@@ -1372,7 +1484,7 @@ describe('gallerySlots', () => {
       image_5: 'https://cdn.example.test/fifth.jpg',
     }
 
-    expect(gallerySlots(section, 'gallery_1', 8)).toEqual([
+    expect(gallerySlots(section, 'gallery_1', 8).map(({ leaf, slot, url }) => ({ leaf, slot, url }))).toEqual([
       { leaf: 'image_1', slot: 'gallery_1.image_1', url: '/storage/landing/first.jpg' },
       { leaf: 'image_5', slot: 'gallery_1.image_5', url: 'https://cdn.example.test/fifth.jpg' },
       { leaf: 'image_8', slot: 'gallery_1.image_8', url: '/storage/landing/eighth.jpg' },
@@ -1412,7 +1524,7 @@ describe('gallerySlots', () => {
   /** `content` is schemaless: a scalar, an array, null and undefined are all shapes it holds. */
   it('tolerates every non-map shape a raw write can leave behind', () => {
     for (const section of ['a string', 42, null, undefined, ['image_1'], true]) {
-      expect(gallerySlots(section, 'gallery_1', 8)).toEqual([])
+      expect(gallerySlots(section, 'gallery_1', 8).map(({ leaf, slot, url }) => ({ leaf, slot, url }))).toEqual([])
     }
   })
 })
