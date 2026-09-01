@@ -528,6 +528,10 @@ class NocturneRitualRenderTest extends TestCase
 
     public function test_a_hotel_page_wires_every_booking_hook_to_the_real_flow(): void
     {
+        // The widget binds by widget_token, so a page whose org has none can
+        // honestly offer no booking URL at all.
+        $this->seedWidgetOrganization();
+
         Property::create([
             'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
         ]);
