@@ -1,7 +1,18 @@
 /*
- * Nocturne Ritual — the interactive layer.
+ * The BeautyTech kits' interactive layer — one file, all three templates.
  *
- * One file, one entry point, no dependencies, no build step. Served straight
+ * SHARED FOR THE REASON landing/shared/kit-icon.blade.php IS (template
+ * fidelity 7.1): the three kits declare the SAME integration contract in
+ * their own notes — data-action="open-booking", data-action="open-feedback",
+ * [data-ai-widget-slot] — and each ships its navigation and its FAQ as a
+ * native <details>. There is therefore exactly one behaviour to write, and
+ * three copies of it would be three chances for one of them to drift.
+ *
+ * The only thing the kits spell differently is the class on their mobile
+ * menu (`.mobile-menu` in kits 01 and 02, `.mobile-nav` in kit 03), which is
+ * one selector list rather than one file each.
+ *
+ * One entry point, no dependencies, no build step. Served straight
  * out of public/ under script-src 'self', which is why it exists at all: this
  * page's CSP has no nonce for scripts and no 'unsafe-inline', so an inline
  * handler or an inline <script> would simply never run. The kit's own notes
@@ -106,7 +117,7 @@
      itself once you have used it, so a visitor who taps "Rituals" arrives at
      the price list with the panel still covering it. Three lines, all of
      them removing state rather than creating any. */
-  var menu = document.querySelector('.mobile-menu');
+  var menu = document.querySelector('.mobile-menu, .mobile-nav');
 
   if (menu) {
     var closeMenu = function () {

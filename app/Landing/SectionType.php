@@ -100,7 +100,7 @@ final class SectionType
      *
      * @var list<string>
      */
-    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual'];
+    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual', 'editorial_atelier'];
 
     /**
      * How many question/answer pairs one FAQ band may carry.
@@ -158,7 +158,7 @@ final class SectionType
      * aria-hidden and there is no visible text), and it is deliberately NOT
      * run through `__()`: a brand name is the same word in every locale.
      *
-     * One entry per branch in `nocturne_ritual/icon.blade.php`, and
+     * One entry per branch in `landing/shared/kit-icon.blade.php`, and
      * {@see socialLeaves()} builds the content leaves from the same keys, so
      * a platform cannot arrive with a URL and no icon or the reverse.
      *
@@ -409,7 +409,24 @@ final class SectionType
                     // where the derivation says "Open until"; that one string
                     // is what these exist for.
                     ['hours_label', 'rating_label', 'city_label'],
+                    // THE NOTE ON THE HERO PHOTOGRAPH, which kits 02 and 03
+                    // both draw and kit 01 does not (template fidelity 7.5 /
+                    // 8.x). Both authors write it in two parts — a short
+                    // label set apart ("Élan Edit 01", "Begin with a pause")
+                    // and a sentence after it — and the SENTENCE is already
+                    // in this catalogue: it is the photograph's `caption`,
+                    // which is exactly what a line printed under a picture
+                    // is. Only the label had no home, so only the label is
+                    // new, and `hero.caption` stops being a leaf no design
+                    // could reach.
+                    ['note_label'],
                     self::photoLeaves(),
+                    // The oversized ornamental mark beside kit 02's hero
+                    // ("E / 01"), aria-hidden in the author's own markup. A
+                    // leaf rather than a derivation because it is the
+                    // business's own editorial mark and nothing on the
+                    // record could invent one; blank renders nothing at all.
+                    ['edition'],
                 ),
                 'band'       => '',
                 'images'     => 1,
@@ -430,8 +447,15 @@ final class SectionType
                 // `item_cta_label` is the wording on each ROW's booking chip,
                 // hardcoded `__('Book')` until template fidelity 5.2. Kit 01
                 // writes exactly "Book"; kit 03 writes "Reserve this ritual".
+                //
+                // `price_prefix` is the word kit 02 puts before every price
+                // ("from £88"), and its own intro paragraph promises it —
+                // "Prices shown are starting points". A LABEL rather than a
+                // boolean flag, because "from" is not the same word in five
+                // locales and the tenant is the one who knows whether their
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
+                    ['price_prefix'],
                     self::photoLeaves(),
                 ),
                 'band'       => '',
@@ -466,8 +490,15 @@ final class SectionType
             'team' => [
                 'repeatable' => false,
                 'view'       => 'team',
+                //
+                // `secondary_link_label` is kit 02's one section-level text
+                // link ("Book with an artist"). That kit draws NO per-person
+                // Book control — the whole band closes on a single link — so
+                // it is a different control from `item_cta_label` beside it
+                // and not a rewording of it.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
+                    ['secondary_link_label'],
                     self::photoLeaves(),
                 ),
                 'band'       => '',
@@ -510,6 +541,10 @@ final class SectionType
                     ['kicker', 'heading', 'heading_accent', 'terms'],
                     ['promise_1', 'promise_2', 'promise_3'],
                     ['cta_label', 'call_label', 'call_short'],
+                    // The ornamental numeral beside kit 02's closing panel
+                    // ("06"), aria-hidden in the author's markup — the same
+                    // ruling as `hero.edition`, and blank draws nothing.
+                    ['index'],
                     self::photoLeaves(),
                 ),
                 'band'       => 'band--paper-2',
@@ -704,7 +739,14 @@ final class SectionType
             'trust' => [
                 'repeatable' => false,
                 'view'       => 'trust',
-                'fields'     => array_merge(['quote'], self::trustLeaves()),
+                // `heading` was deferred out of 5.4 with the reason stated
+                // ("kit 02's visually-hidden <h2>, and nocturne's strip has
+                // no heading at all"). Kit 02 is here now: its strip is a
+                // <section aria-labelledby> whose heading is real, named and
+                // visually hidden, which is how a band with no visible title
+                // stays in the document outline. Designs that draw no
+                // heading here simply do not publish the leaf.
+                'fields'     => array_merge(['heading', 'quote'], self::trustLeaves()),
                 'band'       => '',
                 'images'     => 0,
             ],

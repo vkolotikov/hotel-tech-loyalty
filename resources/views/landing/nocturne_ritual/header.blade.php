@@ -15,7 +15,7 @@
   four plus FAQ in the panel).
 
   The mobile menu is a native <details>, the author's choice, and it works
-  with no JavaScript at all. nocturne_ritual.js only adds the two courtesies
+  with no JavaScript at all. landing/kit.js only adds the two courtesies
   a native <details> cannot do for itself — close on Escape, close when you
   tap outside — so a blocked script costs nothing here.
 --}}
@@ -64,7 +64,7 @@
 
 @if ($bookingHref !== null)
       <div class="header-actions">
-        <a class="button button--light button--compact" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.nocturne_ritual.icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+        <a class="button button--light button--compact" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
       </div>
 @endif
 
@@ -79,7 +79,7 @@
           <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
 @endforeach
 @if ($bookingHref !== null)
-          <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.nocturne_ritual.icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+          <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
 @endif
         </nav>
       </details>

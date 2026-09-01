@@ -6,47 +6,36 @@
   `assistant` widget slot INSIDE the footer so that address, channels, review
   collection and integrations do not each demand a page section. The layout
   therefore keeps `contact` out of the main loop and includes this file once,
-  unconditionally, after </main> — the same shape the Ruled Page's own footer
-  has.
+  unconditionally, after </main>.
 
   WHAT IS RENDERED IS WHAT EXISTS. Every column here is gated:
 
     - the review link only where a review form is actually reachable — see
       PageContent::feedbackForm(), which asks the exact question the public
-      endpoint asks (an active form, with an embed key, that accepts
-      anonymous submissions). "Leave a review" pointing at "Form not found or
-      inactive" is worse than no link, so where there is no form there is no
-      column.
+      endpoint asks. "Leave a review" pointing at "Form not found or
+      inactive" is worse than no link.
     - the rating beside it only where $content->reviewStats exists, which is
       never below four ratings.
     - the contact column on the same two-part gate the rest of the page uses,
-      the section row enabled AND has('contact'), so a tenant who switched
-      their contact details off does not find them republished down here.
+      the section row enabled AND has('contact').
     - the SOCIAL column only where the business has actually named a
-      destination (template fidelity 5.5). The platform held none anywhere in
-      its data model — not on Property, not on Organization, not on
-      LandingPage — so this column was missing entirely; it is page content
-      now, on the CONTACT row, which is the block the author nests in this
-      hub. PageContent::socialLinks() is the one reader and its guard is the
-      strictest on that class (an explicit http(s) URL and nothing else),
-      because these are the only anchors on the page whose visible label is
-      a picture and whose destination a visitor cannot read. A blank leaf
-      renders NO icon: the author's own note says to "replace all fictional
-      social destinations before publishing", and this page never links to
-      `#`.
+      destination. PageContent::socialLinks() is the one reader and its guard
+      is the strictest on that class (an explicit http(s) URL and nothing
+      else), because these are the only anchors on the page whose visible
+      label is a picture and whose destination a visitor cannot read. The
+      author's own note says to "replace all fictional social destinations
+      before publishing", and this page never links to `#`.
 
   THE HUB IS TOLD HOW MANY COLUMNS IT REALLY HAS. The author's five-column
   grid assumes all of them; `.footer-hub--1/2/3` (the stylesheet's appended
-  tenant-state block) close the row up instead of leaving a gap where a
-  tenant's missing details would be.
+  tenant-state block) close the row up instead of leaving a gap.
 
   THE AI SLOT keeps its footprint whether or not a chat widget exists — it is
   what stops the fixed launcher covering the last line of the footer, which
-  is the author's reason for reserving it. When there is a widget it holds
-  the launcher and the panel; when there is not it is the empty, aria-hidden
-  spacer the author drew.
+  is the author's reason for reserving it.
 --}}
 @php
+    use App\Landing\Copy;
     use Illuminate\Support\Carbon;
 
     $contact = $content->contact;
@@ -71,8 +60,8 @@
     // TODAY's hours, which is the one hours line worth a single row of a
     // footer — a week's ledger belongs on a contact page and this kit does
     // not have one. Today is the TENANT's today, not the server's: a
-    // timezone typed into an admin field can be anything at all, so a bad
-    // one costs this line and nothing else.
+    // timezone typed into an admin field can be anything at all, so a bad one
+    // costs this line and nothing else.
     $todayHours = null;
 
     if ($showsContact && $content->hours !== null) {
@@ -84,12 +73,12 @@
 
         $row = $todayIndex === null ? null : collect($content->hours)->firstWhere('day', $todayIndex);
 
-        // Only a row that states something definite. A row that is neither
+        // Only a row that states something DEFINITE. A row that is neither
         // open with both ends of its window nor closed is UNKNOWN, and an
-        // unknown row is omitted rather than resolved in either direction —
-        // a page that guesses "Closed" is the reason someone does not turn
-        // up, and one that guesses an open window is the reason someone
-        // turns up to a locked door.
+        // unknown row is omitted rather than resolved in either direction — a
+        // page that guesses "Closed" is the reason someone does not turn up,
+        // and one that guesses an open window is the reason someone turns up
+        // to a locked door.
         if ($row !== null) {
             if ($row['closed']) {
                 $todayHours = __('Closed today');
@@ -99,10 +88,10 @@
         }
     }
 
-    // THE FOLLOW COLUMN (template fidelity 5.5). Gated on the same two-part
-    // rule the contact channels are — the row enabled AND has('contact') —
-    // because these leaves live on the contact row and a tenant who switched
-    // their contact details off did not ask for their Instagram to stay.
+    // THE FOLLOW COLUMN. Gated on the same two-part rule the contact channels
+    // are — the row enabled AND has('contact') — because these leaves live on
+    // the contact row and a tenant who switched their contact details off did
+    // not ask for their Instagram to stay.
     $social = $showsContact ? $content->socialLinks('contact') : [];
 
     $socialLabel = trim((string) ($contactCopy['social_label'] ?? ''));
@@ -114,52 +103,46 @@
     // Content columns beside the always-present brand column: the review
     // link, the contact details and the social icons. The slot is not one of
     // them — it is the reserved corner, and the grid template names it
-    // separately. FOUR is the author's own rule, unmodified: his
-    // `.footer-hub` is `brand + repeat(3, …) + widget`, which until this
-    // round nothing could ever reach.
+    // separately. FOUR is the author's own rule, unmodified.
     $hubColumns = 1 + ($showsReview ? 1 : 0) + ($showsChannel ? 1 : 0) + ($social !== [] ? 1 : 0);
 
     // The sentence after the copyright. The author writes one ("Fictional
-    // demonstration content."); the conversion printed the © line alone,
-    // because there was no leaf for it.
+    // demonstration content."); with no leaf for it the conversion printed
+    // the © line alone.
     $legalNote = trim((string) ($contactCopy['legal_note'] ?? ''));
 
     // The legal line's chain falls one rung further than the wordmark's,
     // through to config('app.name'): in small print it names who serves the
-    // page, which is honest. The WORDMARK stops before that — see
-    // $brandName in layout.blade.php.
+    // page, which is honest. The WORDMARK stops before that.
     $legalName = $contact->name ?? $page->seo['title'] ?? config('app.name');
 
     // The author's tagline slot. The page's own meta description is the one
     // sentence the business has already written about itself; nothing is
     // invented for it.
     $tagline = trim((string) ($page->seo['description'] ?? ''));
-
-    $footerInitial = filled($brandName) ? mb_strtoupper(mb_substr(trim((string) $brandName), 0, 1)) : '';
 @endphp
   <footer class="site-footer" id="site-footer" data-block="footer" data-variant="service-hub">
-    <div class="shell footer-hub footer-hub--{{ $hubColumns }}">
+    <div class="container footer-hub footer-hub--{{ $hubColumns }}">
       <div class="footer-hub__booking">
 @if (filled($brandName))
-        <a class="brand brand--footer" href="#main-content" aria-label="{{ $brandName }}">
-{{-- The same lockup rule as the header's — see its comment. One logo, two
-     places, read from the one resolved value. --}}
+        <a class="brand brand--inverse" href="#main-content" aria-label="{{ $brandName }}">
+{{-- The same lockup rule as the header's — this kit has no monogram, so a
+     tenant's logo replaces the WORDMARK and takes a wide box of its own. --}}
 @if ($contact->logoUrl !== null)
-          <span class="brand__mark" aria-hidden="true"><img src="{{ $contact->logoUrl }}" alt="" loading="lazy" decoding="async"></span>
-@elseif ($footerInitial !== '')
-          <span class="brand__mark" aria-hidden="true">{{ $footerInitial }}</span>
+          <img class="brand__logo" src="{{ $contact->logoUrl }}" alt="" loading="lazy" decoding="async">
+@else
+          <span class="brand__name">{{ $brandName }}</span>
 @endif
-          <span class="brand__wordmark">{{ $brandName }}</span>
 @if ($brandDescriptor !== '')
-          <span class="brand__descriptor">{{ $brandDescriptor }}</span>
+          <span class="brand__descriptor">{{ Copy::lines($brandDescriptor) }}</span>
 @endif
         </a>
 @endif
 @if ($tagline !== '')
-        <p class="site-footer__tagline">{{ $tagline }}</p>
+        <p>{{ $tagline }}</p>
 @endif
 @if ($bookingHref !== null)
-        <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+        <a class="button button--paper" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
 @endif
       </div>
 
@@ -187,16 +170,13 @@
 @endif
 @if ($email !== null)
         {{-- THE ONE CHANNEL THE AUTHOR LABELS RATHER THAN PRINTS. His line
-             reads "Email the house", not the address, and `email_label` has
-             been in the catalogue since template fidelity 1.3 surfaced it —
-             this band simply never read it. The address stays the fallback,
-             and the mailto: is the address either way, so nothing about
-             where the link GOES depends on the wording.
-
-             Its two siblings deliberately do NOT do this: the map line's
-             text is the address and the phone line's is the number, and
-             replacing either with a label would take a fact off the page
-             rather than name it. --}}
+             reads "Email the studio", not the address. The address stays the
+             fallback, and the mailto: is the address either way, so nothing
+             about where the link GOES depends on the wording. Its two
+             siblings deliberately do NOT do this: the map line's text is the
+             address and the phone line's is the number, and replacing either
+             with a label would take a fact off the page rather than name
+             it. --}}
         <a href="mailto:{{ $email }}">@include('landing.shared.kit-icon', ['name' => 'mail'])<span>{{ trim((string) ($contactCopy['email_label'] ?? '')) !== '' ? $contactCopy['email_label'] : $email }}</span></a>
 @endif
 @if ($todayHours !== null)
@@ -220,10 +200,10 @@
       </nav>
 @endif
 
-      {{-- The mount point the author reserved. See the header note above:
-           it keeps its footprint either way, and the launcher and its panel
-           are the stylesheet's `.ai-launcher` / `.ai-panel`, fixed to the
-           bottom-right corner the kit's notes keep clear for exactly this. --}}
+      {{-- The mount point the author reserved. It keeps its footprint either
+           way, and the launcher and its panel are the stylesheet's
+           `.ai-launcher` / `.ai-panel`, fixed to the bottom-right corner the
+           kit's notes keep clear for exactly this. --}}
       {{-- The `{{ '' }}` before the conditional is LOAD-BEARING, not lint.
            Blade's directive regex opens with \B@ — an @ preceded by a word
            character is deliberately not a directive, which is what keeps a
@@ -232,24 +212,21 @@
            and the compiled view ends with an unbalanced endif that 500s every
            page. A space would leak a real byte into the attribute list; the
            empty echo compiles to e(''), zero bytes, and is still a non-word
-           boundary when the directive pass runs. Found the hard way; the same
-           trap the Ruled Page's <html> tag documents. --}}
+           boundary when the directive pass runs. --}}
       <div class="footer-hub__ai-slot" data-block="assistant" data-variant="widget-slot" data-ai-widget-slot{{ '' }}@if (! filled($chatFrameUrl ?? null)) aria-hidden="true"@endif>
 @if (filled($chatFrameUrl ?? null))
         {{-- hidden is load-bearing rather than a courtesy: [hidden] is
              display:none, so the panel — and the widget, and its config
              request — costs nothing at all until someone presses the
              launcher. loading="lazy" says the same thing to the browser. --}}
-        <iframe class="ai-panel" id="nocturne-chat-panel" src="{{ $chatFrameUrl }}"
+        <iframe class="ai-panel" id="atelier-chat-panel" src="{{ $chatFrameUrl }}"
                 title="{{ __('Chat with us') }}" loading="lazy" allow="microphone" hidden></iframe>
-        {{-- aria-expanded is maintained by landing/kit.js and is also
-             what swaps the glyph, in CSS: one attribute, one source of
-             truth, no second class to fall out of step with the state
-             screen readers are told about. The two labels travel as data
-             attributes so the strings stay in the template and the swap
-             stays in the script. --}}
+        {{-- aria-expanded is maintained by landing/kit.js and is also what
+             swaps the glyph, in CSS: one attribute, one source of truth, no
+             second class to fall out of step with the state screen readers
+             are told about. --}}
         <button class="ai-launcher" type="button"
-                aria-controls="nocturne-chat-panel" aria-expanded="false"
+                aria-controls="atelier-chat-panel" aria-expanded="false"
                 aria-label="{{ __('Chat with us') }}"
                 data-label-open="{{ __('Chat with us') }}" data-label-close="{{ __('Close chat') }}">
           <svg class="icon ai-launcher__glyph--open" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-5 4v-4H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg>
@@ -258,19 +235,15 @@
 @endif
       </div>
     </div>
-    <div class="shell site-footer__bottom">
-      {{-- THE LEGAL LINE. The author's is "© 2026 Nocturne Bathhouse.
-           Fictional demonstration content." — a registration or disclaimer
-           sentence after the copyright, which had no leaf and so was
-           dropped. The tenant writes it whole, punctuation and all, so this
-           joins with a full stop and prints nothing at all when there is
-           none.
+    <div class="container site-footer__bottom">
+      {{-- THE LEGAL LINE. The author's is "© 2026 Élan Atelier. Fictional
+           demonstration content." — a registration or disclaimer sentence
+           after the copyright, which had no leaf and so was dropped.
 
            WHAT IS STILL NOT HERE, deliberately: the author's "Privacy ·
-           Accessibility · Terms" links. This product has no such pages to
-           point at, and three labels pointing at `#top` are exactly the dead
-           controls the rest of this template refuses — see the phase 5
-           report. --}}
+           Accessibility" links. This product has no such pages to point at,
+           and two labels pointing at `#top` are exactly the dead controls the
+           rest of this template refuses. --}}
       <p>&copy; {{ now()->year }} {{ $legalName }}@if ($legalNote !== ''). {{ $legalNote }}@endif</p>
     </div>
   </footer>

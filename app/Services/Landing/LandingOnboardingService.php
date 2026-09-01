@@ -176,6 +176,43 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // The second of the three BeautyTech kits
+            // (resources/landing-kits/beauty-tech/02-editorial-atelier),
+            // converted the same way the first was: the author's own markup,
+            // their own :root palette and their own stylesheet ship as the
+            // design, and only the CONTENT is the tenant's.
+            'key'   => 'editorial_atelier',
+            'name'  => 'Editorial Atelier',
+            // The author's own words for it, from the kit collection's
+            // README: "Sharp editorial fashion / Hair studios and image-led
+            // beauty ateliers". Written the way the other two blurbs are —
+            // what a tenant gets, in words somebody who has never
+            // commissioned a website can act on.
+            'blurb' => 'Sharp and editorial, with big type and a magazine lookbook. Made for hair studios and image-led beauty ateliers.',
+            // Transcribed from the three refusals
+            // resources/views/landing/editorial_atelier/layout.blade.php
+            // makes about itself in its own "WHAT THIS TEMPLATE DELIBERATELY
+            // DOES NOT DO" note — and the accent, which is "the ONE tenant
+            // override".
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
