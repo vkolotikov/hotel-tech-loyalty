@@ -1,11 +1,30 @@
 /**
  * The shape shared between the wizard's step 4 (offer a section) and the
  * editor's section list (show it as on/off), so the two screens cannot
- * describe the same page differently. `SECTION_ORDER` is the template
- * order every list of sections renders in.
+ * describe the same page differently.
  */
 export type SectionKey = 'hero' | 'services' | 'about' | 'team' | 'reviews' | 'booking' | 'contact'
 
+/**
+ * THE WIZARD'S CREATE-TIME ORDERING, and nothing else since template
+ * fidelity 1.3.
+ *
+ * It used to be "the template order every list of sections renders in", and
+ * the editor's own row list read it to decide which keys were real. That is
+ * no longer true and must not become true again: a page's bands are the
+ * SERVED catalogue's types (`onboarding.section_types`) in the page's own
+ * stored `sort` order, and a tenant-added `text_1` — or a fixed
+ * `announcement` — is a legitimate band this seven-key literal has never
+ * heard of. `buildSectionRows` derives "is this a fixed band" from the
+ * catalogue for exactly that reason.
+ *
+ * What is left is the wizard's step 4, which offers the seven bands a NEW
+ * page is created with, in the order it should offer them. That question
+ * has a served answer too (`onboarding.sections`, which maps the industry
+ * profile's own `defaultSections`), and 3.1 replaces this last use with it;
+ * until then this is a create-time display order and nothing may read it as
+ * a claim about which sections exist.
+ */
 export const SECTION_ORDER: SectionKey[] = ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact']
 
 export type SectionMeta = {

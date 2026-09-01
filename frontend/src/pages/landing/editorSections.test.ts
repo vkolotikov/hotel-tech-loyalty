@@ -4,7 +4,7 @@ import {
   moveSection, moveSectionTo, moveSectionToKey, orderedSections, parseSectionKey, removeSection, removeSectionContent,
   freeGalleryLeaves, gallerySlots,
   safeImageUrl, sectionIndex, setSectionTone, stripImageLeaves, toggleSection,
-  SECTION_CONTENT_FIELDS,
+  FIELD_PRESENTATION,
   type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
 import { SECTION_ORDER } from './sections'
@@ -52,26 +52,28 @@ describe('orderedSections', () => {
 })
 
 describe('buildSectionRows', () => {
-  it('merges page state with availability, in sort order, every SECTION_ORDER key present', () => {
-    const rows = buildSectionRows(pageSections(), availability())
+  it('merges page state with availability, in sort order, every seeded key present', () => {
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     expect(rows.map(r => r.key)).toEqual(SECTION_ORDER)
     expect(rows[1]).toEqual({
       key: 'services', label: 'Treatments', sourceLabel: 'Your Services screen',
       available: true, count: 12, reason: null, enabled: true, sort: 1,
       // Builder round: every row now also carries what it is, whether it can
       // be removed, and which controls it renders. A fixed band is one of
-      // one, is never removable, and takes the curated field list — pinned
-      // whole here rather than spot-checked, because "a fixed row quietly
-      // became removable" is exactly the regression this asserts against.
+      // one and is never removable — pinned whole here rather than
+      // spot-checked, because "a fixed row quietly became removable" is
+      // exactly the regression this asserts against.
       typeId: 'services', fixed: true, ordinal: 1, siblings: 1,
-      fields: SECTION_CONTENT_FIELDS.services,
+      // Template fidelity 1.3: the SERVED catalogue's fields, through the
+      // same `fieldsForType` the added rows have always used — no longer a
+      // hand-written per-section map.
+      fields: fieldsForType(sectionTypes().find(o => o.id === 'services')!),
       // Gallery round: what makes a tenant-added band appear. A fixed row
       // never renders that line, so this is the harmless default.
       writtenBy: 'words',
       // Tone round: the band's colour and the swatch to light while it has
-      // none. This fixture's `sectionTypes` argument is absent, so there is
-      // no served `default_tone` to find — null, not a guess.
-      tone: null, defaultTone: null,
+      // none.
+      tone: null, defaultTone: 'page',
     })
   })
 
@@ -88,7 +90,7 @@ describe('buildSectionRows', () => {
         ? { ...a, available: false, reason: "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead." }
         : a
     ))
-    const rows = buildSectionRows(pageSections(), withReason)
+    const rows = buildSectionRows(pageSections(), withReason, sectionTypes())
     const booking = rows.find(r => r.key === 'booking')
     expect(booking?.reason).toBe(
       "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead.",
@@ -96,25 +98,56 @@ describe('buildSectionRows', () => {
   })
 
   it('normalises a missing reason to null rather than undefined', () => {
-    const rows = buildSectionRows(pageSections(), availability())
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     expect(rows.find(r => r.key === 'hero')?.reason).toBeNull()
   })
 
   it('drops a page-section row with no matching availability entry', () => {
-    const rows = buildSectionRows(pageSections(), availability().filter(a => a.key !== 'booking'))
+    const rows = buildSectionRows(pageSections(), availability().filter(a => a.key !== 'booking'), sectionTypes())
     expect(rows.map(r => r.key)).not.toContain('booking')
     expect(rows).toHaveLength(6)
   })
 
-  it('drops a page-section row whose key is not in SECTION_ORDER', () => {
-    const withJunk: PageSection[] = [...pageSections(), { key: 'footer', enabled: true, sort: 7 }]
-    const withJunkAvailability: SectionAvailability[] = [
+  /**
+   * Template fidelity 1.3 changed this row's ANSWER and it is the change
+   * worth pinning.
+   *
+   * `footer` is a real fixed type in the served catalogue, and until 1.3
+   * this function decided "is this a fixed band" against a seven-key
+   * literal that had never heard of it — so a footer row was dropped as
+   * junk even when the wire described it. It is now recognised, carried,
+   * and named by the wire like every other fixed band.
+   *
+   * The drop is still there, in the place it belongs: a row the CATALOGUE
+   * does not know is not a section, and neither is a fixed row the
+   * onboarding response says nothing about.
+   */
+  it('carries a fixed row the served catalogue knows, whatever the wizard seeds', () => {
+    const withFooter: PageSection[] = [...pageSections(), { key: 'footer', enabled: true, sort: 7 }]
+    const withFooterAvailability: SectionAvailability[] = [
       ...availability(),
       { key: 'footer', label: 'Footer', source_label: 'Settings', available: true, count: 1 },
     ]
-    const rows = buildSectionRows(withJunk, withJunkAvailability)
+    const rows = buildSectionRows(withFooter, withFooterAvailability, sectionTypes())
+    expect(rows.map(r => r.key)).toEqual([...SECTION_ORDER, 'footer'])
+    expect(rows.find(r => r.key === 'footer')).toMatchObject({ fixed: true, label: 'Footer' })
+  })
+
+  it('drops a fixed row the onboarding response says nothing about', () => {
+    const withFooter: PageSection[] = [...pageSections(), { key: 'footer', enabled: true, sort: 7 }]
+    const rows = buildSectionRows(withFooter, availability(), sectionTypes())
     expect(rows.map(r => r.key)).not.toContain('footer')
-    expect(rows).toHaveLength(7)
+  })
+
+  it('drops every row when no catalogue is served, rather than inventing seven', () => {
+    // The honest degradation, and the one this function's own docblock
+    // argues for: with no catalogue this build knows neither which keys are
+    // sections nor what fields any of them edit, so seven cards with no
+    // controls in them would be a worse answer than none. Unreachable in
+    // practice — `LandingPages.tsx` only mounts the editor on a resolved
+    // onboarding response, which has carried `section_types` since the
+    // builder round.
+    expect(buildSectionRows(pageSections(), availability())).toEqual([])
   })
 })
 
@@ -175,7 +208,7 @@ describe('toggleSection', () => {
 
 describe('buildSectionsPayload', () => {
   it('forces an unofferable data-backed row to enabled:false regardless of its stored value', () => {
-    const rows = buildSectionRows(pageSections(), availability()) // reviews: available:false, count:0, but enabled:true would come from... see next line
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes()) // reviews: available:false, count:0, but enabled:true would come from... see next line
     // Force the exact stale-state scenario: reviews stored as enabled:true, but no longer offerable.
     const stale: EditorSectionRow[] = rows.map(r => (r.key === 'reviews' ? { ...r, enabled: true } : r))
     const payload = buildSectionsPayload(stale)
@@ -183,14 +216,14 @@ describe('buildSectionsPayload', () => {
   })
 
   it('leaves a copy-backed row enabled even when unavailable with zero count (about)', () => {
-    const rows = buildSectionRows(pageSections(), availability())
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     const payload = buildSectionsPayload(rows)
     // `about` is available:false/count:0 in the fixture, but copy-backed sections are always offerable.
     expect(payload.find(p => p.key === 'about')).toEqual({ key: 'about', enabled: true, sort: 2, tone: null })
   })
 
   it('produces exactly {key, enabled, sort, tone} per row, dropping label/sourceLabel/available/count', () => {
-    const rows = buildSectionRows(pageSections(), availability())
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     const payload = buildSectionsPayload(rows)
     for (const row of payload) {
       expect(Object.keys(row).sort()).toEqual(['enabled', 'key', 'sort', 'tone'])
@@ -209,7 +242,7 @@ describe('buildSectionsPayload', () => {
    * nothing at all.
    */
   it('always sends tone, as an explicit null when the row has none', () => {
-    const rows = buildSectionRows(pageSections(), availability())
+    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     for (const row of buildSectionsPayload(rows)) {
       expect(row).toHaveProperty('tone')
       expect(row.tone).toBeNull()
@@ -218,45 +251,118 @@ describe('buildSectionsPayload', () => {
 
   it('carries a stored tone through to the wire', () => {
     const toned = pageSections().map(s => (s.key === 'about' ? { ...s, tone: 'accent' } : s))
-    const payload = buildSectionsPayload(buildSectionRows(toned, availability()))
+    const payload = buildSectionsPayload(buildSectionRows(toned, availability(), sectionTypes()))
     expect(payload.find(p => p.key === 'about')?.tone).toBe('accent')
     expect(payload.find(p => p.key === 'hero')?.tone).toBeNull()
   })
 })
 
-describe('SECTION_CONTENT_FIELDS', () => {
-  it('has an entry for every section in SECTION_ORDER', () => {
-    for (const key of SECTION_ORDER) {
-      expect(SECTION_CONTENT_FIELDS[key]).toBeDefined()
-      expect(SECTION_CONTENT_FIELDS[key].length).toBeGreaterThan(0)
+/**
+ * TEMPLATE FIDELITY 1.3 — THE KEYSTONE, pinned as a DERIVATION rather than
+ * as a list.
+ *
+ * What this replaces: a `SECTION_CONTENT_FIELDS` describe that asserted a
+ * hand-written per-section map had an entry for each of seven keys. That
+ * test could only ever prove the map agreed with itself — and the map had
+ * meanwhile drifted from the server's catalogue on four of those seven
+ * types, so `hero.kicker`, `booking.call_label`/`call_short` and `contact`'s
+ * five wording overrides were read by shipped partials and fillable by
+ * nobody.
+ *
+ * The claim now is the one that matters: EVERY field the server publishes
+ * for a type gets a control, in the server's own order, for a fixed row and
+ * a tenant-added one alike. Mutation check: drop a name from
+ * `fieldsForType`'s spread and every case below goes red.
+ */
+describe('field authority — the served catalogue, not a mirror', () => {
+  const fieldsFor = (key: string, types = sectionTypes()) =>
+    buildSectionRows(pageSections(), availability(), types)
+      .find(r => r.key === key)!.fields.map(f => f.name)
+
+  it('gives a fixed row every field its catalogue type publishes, in order', () => {
+    for (const type of sectionTypes().filter(o => !o.repeatable && o.id !== 'footer')) {
+      const rendered = fieldsFor(type.id)
+      // The photo control is synthesised and is never on the wire, so the
+      // catalogue's own list is what must appear after it.
+      expect(rendered.filter(name => name !== 'image_url' && name !== 'gallery'))
+        .toEqual(type.fields)
     }
   })
 
-  /**
-   * Fix 1 (phase 3a correctness review): the editor's contact inputs had no
-   * `type="email"`/`maxLength` at all, so an ordinary tenant keystroke could
-   * reach the server holding an unbounded blob or an unformatted email --
-   * these mirror the backend's own `content.contact.*` rules.
-   */
-  it('mirrors the backend contact rules on phone/email/address', () => {
-    const contact = SECTION_CONTENT_FIELDS.contact
-    expect(contact.find(f => f.name === 'phone')).toMatchObject({ maxLength: 64 })
-    expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
-    expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
+  it('surfaces the four controls the hand-written mirror had lost', () => {
+    // Every one of these is read by a shipped partial and none of them had
+    // a control before 1.3.
+    expect(fieldsFor('hero')).toContain('kicker')
+    expect(fieldsFor('booking')).toEqual(expect.arrayContaining(['call_label', 'call_short']))
+    expect(fieldsFor('contact')).toEqual(
+      expect.arrayContaining(['phone_label', 'email_label', 'address_label', 'map_label', 'closed_label']),
+    )
+  })
+
+  it('puts the photo control first on a type that takes one, and none on a type that does not', () => {
+    expect(fieldsFor('hero')[0]).toBe('image_url')
+    expect(fieldsFor('about')[0]).toBe('image_url')
+    expect(fieldsFor('services')).not.toContain('image_url')
+    expect(fieldsFor('team')).not.toContain('image_url')
   })
 
   /**
-   * Task 6: `hero` and `about` are the only two sections Task 4's photo
-   * endpoints accept (`slot` in `hero,about`) — this mapping is the field
-   * renderer's one signal to branch to the photo control, so it has to
-   * expose an `image_url`/`type: 'image'` field for exactly those two
-   * sections and no others.
+   * The presentation overlay is keyed by FIELD NAME, which is the half of
+   * 1.3 that makes every later phase's field additions backend-only: a name
+   * means the same thing wherever it appears, so `body` is a textarea on
+   * `about` and on a tenant-added text block without either being named.
    */
-  it('exposes an image_url/type:image field for exactly hero and about', () => {
-    const sectionsWithImage = SECTION_ORDER.filter(key =>
-      SECTION_CONTENT_FIELDS[key].some(f => f.name === 'image_url' && f.type === 'image'),
-    )
-    expect(sectionsWithImage.sort()).toEqual(['about', 'hero'])
+  it('applies the same presentation to a name wherever it appears', () => {
+    const fieldOf = (key: string, name: string) =>
+      buildSectionRows([...pageSections(), { key: 'text_1', enabled: true, sort: 9 }], availability(), sectionTypes())
+        .find(r => r.key === key)!.fields.find(f => f.name === name)
+
+    expect(fieldOf('about', 'body')).toMatchObject({ multiline: true })
+    expect(fieldOf('text_1', 'body')).toMatchObject({ multiline: true })
+    expect(fieldOf('booking', 'terms')).toMatchObject({ multiline: true })
+    expect(fieldOf('services', 'subtext')).toMatchObject({ multiline: true })
+    expect(fieldOf('hero', 'headline')?.multiline).toBeUndefined()
+  })
+
+  /**
+   * Fix 1 (phase 3a correctness review), carried forward: the editor's
+   * contact inputs had no `type="email"`/`maxLength` at all, so an ordinary
+   * tenant keystroke could reach the server holding an unbounded blob or an
+   * unformatted email. These mirror the backend's own `content.contact.*`
+   * rules, and they now arrive by NAME rather than by section.
+   */
+  it('mirrors the backend contact rules on phone/email/address', () => {
+    const contact = buildSectionRows(pageSections(), availability(), sectionTypes())
+      .find(r => r.key === 'contact')!.fields
+
+    expect(contact.find(f => f.name === 'phone')).toMatchObject({ maxLength: 64 })
+    expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
+    expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
+    // The five WORDING overrides beside them are plain text — they are the
+    // words above the value, not the value.
+    expect(contact.find(f => f.name === 'phone_label')).toEqual({ name: 'phone_label' })
+  })
+
+  /**
+   * The whole point, stated as the thing a later phase gets for free: a
+   * field the SERVER adds appears with no edit on this side.
+   */
+  it('renders a field this build has never heard of, because the server named it', () => {
+    const withNewField = sectionTypes().map(o => (
+      o.id === 'hero' ? { ...o, fields: [...o.fields, 'headline_accent'] } : o
+    ))
+
+    expect(fieldsFor('hero', withNewField)).toContain('headline_accent')
+  })
+})
+
+describe('FIELD_PRESENTATION', () => {
+  it('is keyed by field name and never by section key', () => {
+    // A section key here would be the section-shaped second list 1.3
+    // removed, creeping back in by the other door.
+    for (const key of Object.keys(FIELD_PRESENTATION)) {
+      expect(sectionTypes().some(type => type.id === key)).toBe(false)
+    }
   })
 })
 
@@ -418,7 +524,14 @@ const sectionTypes = (): SectionTypeOption[] => [
   { id: 'team', repeatable: false, fields: ['kicker', 'heading', 'subtext'], image: false, limit: null, default_tone: 'page' },
   { id: 'reviews', repeatable: false, fields: ['kicker'], image: false, limit: null, default_tone: 'soft' },
   { id: 'booking', repeatable: false, fields: ['kicker', 'heading', 'terms', 'call_label', 'call_short'], image: false, limit: null, default_tone: 'soft' },
-  { id: 'contact', repeatable: false, fields: ['kicker', 'phone', 'email', 'address'], image: false, limit: null, default_tone: 'soft' },
+  // The REAL nine, as `SectionType::all()` publishes them. The five
+  // `*_label` overrides are what template fidelity 1.3 is about: every one
+  // is read by `contact.blade.php` and none of them had a control, because
+  // the editor's own hand-written mirror stopped at the first four.
+  {
+    id: 'contact', repeatable: false, image: false, limit: null, default_tone: 'soft',
+    fields: ['kicker', 'phone', 'email', 'address', 'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label'],
+  },
   { id: 'footer', repeatable: false, fields: [], image: false, limit: null, default_tone: 'page' },
   { id: 'text', repeatable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6, default_tone: 'soft' },
   // The gallery round. `image: false` with `image_slots: 8` is the wire's
@@ -590,8 +703,13 @@ describe('buildSectionRows — tenant-added rows', () => {
     { key: 'text_4', enabled: false, sort: 8 },
   ]
 
-  it('drops added rows when no catalogue is supplied — the pre-fix behaviour, pinned', () => {
-    expect(buildSectionRows(withText(), availability()).map(r => r.key)).toEqual(SECTION_ORDER)
+  it('drops every row when no catalogue is supplied — added and fixed alike', () => {
+    // Template fidelity 1.3 widened this from "added rows" to "every row":
+    // which keys are FIXED is the catalogue's answer now too, so a build
+    // with no catalogue recognises nothing rather than recognising seven
+    // keys it happens to have written down. See the `buildSectionRows`
+    // describe above for why that is the honest degradation.
+    expect(buildSectionRows(withText(), availability())).toEqual([])
   })
 
   it('carries added rows once the catalogue is supplied', () => {
@@ -634,13 +752,15 @@ describe('buildSectionRows — tenant-added rows', () => {
     ])
   })
 
-  it('gives an added row the catalogue fields, a fixed row the curated ones', () => {
+  it('gives an added row and a fixed row the SAME catalogue derivation', () => {
     const rows = buildSectionRows(withText(), availability(), sectionTypes())
     expect(rows.find(r => r.key === 'text_1')!.fields.map(f => f.name))
       .toEqual(['image_url', 'kicker', 'heading', 'body'])
-    // The curated map, NOT the catalogue: `booking`'s call_label/call_short
-    // and `contact`'s five label overrides stay off this screen.
-    expect(rows.find(r => r.key === 'booking')!.fields).toBe(SECTION_CONTENT_FIELDS.booking)
+    // Template fidelity 1.3: the fixed rows take the catalogue too now.
+    // `booking`'s two phone-line labels used to be deliberately withheld
+    // here by a hand-written map; `booking.blade.php` reads both.
+    expect(rows.find(r => r.key === 'booking')!.fields.map(f => f.name))
+      .toEqual(['kicker', 'heading', 'terms', 'call_label', 'call_short'])
   })
 
   it('reports an added row as written only once its body is filled', () => {

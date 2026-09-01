@@ -834,6 +834,98 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
+     * Landing phase 3c / template fidelity 1.1 — the two capability facts
+     * every template row now carries.
+     *
+     * `supports` is the authored half: four bools transcribed from what a
+     * template's own layout says it reads. Until it existed the fact that
+     * `nocturne_ritual` ignores `theme.palette`, `theme.font_pairing` and
+     * every section tone lived only as PROSE in that layout's header, and
+     * the editor — having no way to know — drew ten palette/type cards and
+     * twenty-one tone swatches over a design that reads none of them.
+     *
+     * Asserted per key rather than by comparing whole maps: the failure
+     * this catches is one bool flipping, and "arrays differ" would not say
+     * which.
+     */
+    public function test_every_template_says_which_design_controls_it_honours(): void
+    {
+        $this->makeProperty();
+
+        $supports = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['supports'])
+            ->all();
+
+        $this->assertSame(
+            ['palette', 'font_pairing', 'tones', 'brand_color'],
+            array_keys($supports['ruled_page']),
+            'A template answered a different set of capability questions from the others.',
+        );
+
+        // The Ruled Page is the template Palette, the font pairings and
+        // bandClass() were all built for.
+        foreach (['palette', 'font_pairing', 'tones', 'brand_color'] as $control) {
+            $this->assertTrue($supports['ruled_page'][$control], "ruled_page should honour {$control}.");
+        }
+
+        // Nocturne's own four statements, in its layout's "WHAT THIS
+        // TEMPLATE DELIBERATELY DOES NOT DO" note.
+        $this->assertFalse($supports['nocturne_ritual']['palette']);
+        $this->assertFalse($supports['nocturne_ritual']['font_pairing']);
+        $this->assertFalse($supports['nocturne_ritual']['tones']);
+        $this->assertTrue($supports['nocturne_ritual']['brand_color'], 'The accent is the one tenant override this kit keeps.');
+    }
+
+    /**
+     * `renders` — which section types a template ships a partial for —
+     * DERIVED from the filesystem, which is the only reason it can be
+     * trusted.
+     *
+     * The claim is a round trip, not a list: for every template and every
+     * type, "the payload says this template draws it" must equal "the view
+     * the renderer would resolve actually exists". A hand-written list
+     * would satisfy an equality against itself; this cannot.
+     *
+     * The two named expectations below are the ones that make the fact
+     * worth serving at all. nocturne_ritual ships announcement/trust/faq
+     * and no `text` or `contact` partial — so "Add a Text block" is today a
+     * control a tenant can press, write into, save, and never see. ruled_
+     * page is the exact inverse.
+     */
+    public function test_every_template_says_which_blocks_it_can_actually_draw(): void
+    {
+        $this->makeProperty();
+
+        $renders = collect($this->prefill()['templates'])
+            ->keyBy('key')
+            ->map(fn (array $row) => $row['renders'])
+            ->all();
+
+        foreach ($renders as $key => $list) {
+            foreach (SectionType::ids() as $id) {
+                $view = SectionType::viewForType($id, $key);
+
+                $this->assertSame(
+                    $view !== null && view()->exists($view),
+                    in_array($id, $list, true),
+                    "'{$key}' disagrees with its own shipped partials about '{$id}'.",
+                );
+            }
+        }
+
+        foreach (['announcement', 'trust', 'faq'] as $id) {
+            $this->assertContains($id, $renders['nocturne_ritual']);
+            $this->assertNotContains($id, $renders['ruled_page']);
+        }
+
+        foreach (['text', 'contact'] as $id) {
+            $this->assertContains($id, $renders['ruled_page']);
+            $this->assertNotContains($id, $renders['nocturne_ritual']);
+        }
+    }
+
+    /**
      * Task 2: prefill.phone/email/address are the EFFECTIVE values
      * (ContactDetails::resolve output) once a page exists, not the raw
      * Property — an override the tenant already saved in content.contact

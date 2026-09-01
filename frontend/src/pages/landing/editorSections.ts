@@ -23,7 +23,7 @@
  *    branch) and hands it down here too, rather than this component
  *    issuing a second, duplicate request for the same data.
  */
-import { isOfferable, SECTION_ORDER, type SectionKey, type SectionMeta } from './sections'
+import { isOfferable, type SectionMeta } from './sections'
 
 /** The subset of `LandingPageSection` this editor reads and writes. */
 export type PageSection = {
@@ -117,7 +117,8 @@ export type SectionTypeOption = {
   default_tone?: string | null
 }
 
-/** One editable control on a section row — see `SECTION_CONTENT_FIELDS`. */
+/** One editable control on a section row — the served catalogue's field
+ *  list, wearing `FIELD_PRESENTATION`'s opinion about how it should look. */
 export type SectionField = {
   name: string
   multiline?: boolean
@@ -202,12 +203,12 @@ export function orderedSections(sections: PageSection[]): PageSection[] {
  * the last save) shows disabled here exactly as it would in the wizard,
  * rather than staying stuck on from whenever it was last enabled.
  *
- * A row present in `pageSections` but absent from `SECTION_ORDER`, or with
- * no matching `availability` entry (a key this build's onboarding response
- * doesn't recognise — should not happen, since both are seeded from the
- * same industry profile, but the wizard applies this same defensiveness to
- * a mismatch it cannot rule out either), is dropped rather than shown with
- * blank copy.
+ * A row present in `pageSections` but naming no type the SERVED catalogue
+ * knows, or a fixed row with no matching `availability` entry (a key this
+ * build's onboarding response doesn't recognise — should not happen, since
+ * both are seeded from the same industry profile, but the wizard applies
+ * this same defensiveness to a mismatch it cannot rule out either), is
+ * dropped rather than shown with blank copy.
  */
 export function buildSectionRows(
   pageSections: PageSection[],
@@ -240,7 +241,28 @@ export function buildSectionRows(
     // `label`, `source_label`, `available`, `count` and `reason` all come
     // from `LandingOnboardingService::sections()`, which is the same
     // `PageContent` resolution the wizard's step 4 reads (RULING 4).
-    if ((SECTION_ORDER as readonly string[]).includes(row.key)) {
+    //
+    // WHICH ROWS ARE FIXED IS THE SERVED CATALOGUE'S ANSWER (template
+    // fidelity 1.3), not a seven-key literal in TypeScript. `SectionType`
+    // already publishes `repeatable` per type, and "a fixed band" is
+    // exactly "a non-repeatable type named by its own bare id" — the same
+    // rule `SectionType::typeOf()` applies server-side. The literal it
+    // replaces could only ever recognise the seven keys some industry's
+    // `defaultSections` happened to name, so `announcement`, `trust`, `faq`
+    // and `footer` — real fixed types the kits draw — were unrecognisable
+    // rows this list silently dropped.
+    //
+    // An EMPTY catalogue therefore yields no rows at all, where the literal
+    // used to yield seven. That is the honest degradation rather than a
+    // regression: without the catalogue this build knows neither which keys
+    // are sections nor what fields any of them edit, so the seven cards it
+    // used to draw would now be seven cards with no controls in them. The
+    // host (`LandingPages.tsx`) only mounts this screen on a RESOLVED
+    // onboarding response, and that response has carried `section_types`
+    // since the builder round.
+    const fixedType = sectionTypes.find(type => type.id === row.key && !type.repeatable)
+
+    if (fixedType) {
       const meta = availability.find(a => a.key === row.key)
       if (!meta) return []
       return [{
@@ -256,7 +278,15 @@ export function buildSectionRows(
         fixed: true,
         ordinal: 1,
         siblings: 1,
-        fields: SECTION_CONTENT_FIELDS[row.key as SectionKey],
+        // THE SAME DERIVATION THE INSTANCE ROWS BELOW HAVE ALWAYS USED
+        // (template fidelity 1.3, the keystone). The hand-written mirror
+        // this replaces had drifted from the catalogue on four types —
+        // `hero` was missing its eyebrow, `booking` its two phone-line
+        // labels and `contact` its five wording overrides, all of which
+        // the shipped partials read and no tenant could fill in — and it
+        // was the reason every field a later phase adds would otherwise
+        // have needed a frontend release to become visible.
+        fields: fieldsForType(fixedType),
         // A fixed row never renders the "not written yet" line, so this is
         // the harmless default rather than a claim about the band.
         writtenBy: 'words',
@@ -407,14 +437,19 @@ export function writtenBy(type: SectionTypeOption): 'words' | 'photos' {
 }
 
 /**
- * The controls a tenant-added band renders, built from the type's OWN
- * catalogue row rather than from a hand-written map.
+ * The controls a band renders, built from the type's OWN catalogue row
+ * rather than from a hand-written map.
  *
  * The photo control first when the type takes photos, then the catalogue's
- * `fields` in the order the server listed them — which is the order
- * `SECTION_CONTENT_FIELDS` already puts `hero` and `about` in, so a text
- * block's card reads like the two cards above it rather than like a
- * different screen.
+ * `fields` in the order the server listed them — the order the partials
+ * themselves read those fields in, so every card reads top-to-bottom the
+ * way the band it edits does.
+ *
+ * Since template fidelity 1.3 this is the ONLY builder of a row's controls,
+ * fixed and tenant-added alike. It used to serve the added rows only, with
+ * the fixed ones taking a hand-written per-section map — which is how four
+ * of the seven fixed cards ended up missing controls their own partials
+ * were already reading.
  *
  * WHICH photo control is decided by the served count, not by the type id: a
  * type holding one picture gets `type: 'image'` (the single plate, writing
@@ -429,12 +464,11 @@ export function writtenBy(type: SectionTypeOption): 'words' | 'photos' {
  * outright — `SectionType::$fields` documents that omission at the source,
  * and this is the frontend half of it.
  *
- * Which fields get a textarea is the one thing the catalogue does not say
- * (it publishes what a partial READS, not how a form should look), so it
- * stays a local editorial choice — the same one `SECTION_CONTENT_FIELDS`
- * already makes for `about.body` and `booking.terms`.
+ * Which fields get a textarea, an email keyboard or a length cap is the one
+ * thing the catalogue does not say (it publishes what a partial READS, not
+ * how a form should look), so it stays a local editorial choice — see
+ * `FIELD_PRESENTATION`, which is now that choice's only home.
  */
-const MULTILINE_FIELDS: ReadonlySet<string> = new Set(['body', 'terms'])
 
 /**
  * How many photos a served type holds, from `image_slots` when the backend
@@ -462,12 +496,18 @@ export function fieldsForType(type: SectionTypeOption): SectionField[] {
   // leaves, so a type is offered exactly one of them.
   const photo: SectionField[] =
     slots > 1 ? [{ name: 'gallery', type: 'gallery', slots }]
-      : slots === 1 ? [{ name: 'image_url', type: 'image' }]
+      : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image' }]
         : []
 
   return [
     ...photo,
-    ...type.fields.map(name => (MULTILINE_FIELDS.has(name) ? { name, multiline: true } : { name })),
+    // The catalogue's own field list, in the order the server sent it, each
+    // wearing whatever presentation this screen has an opinion about. The
+    // overlay is applied ONLY here, and only to the served names — the two
+    // synthesised photo controls above already carry the exact `type` (and,
+    // for a strip, the `slots`) their renderer branches on, and letting a
+    // by-name overlay speak over those would put two answers on one field.
+    ...type.fields.map(name => ({ name, ...(FIELD_PRESENTATION[name] ?? {}) })),
   ]
 }
 
@@ -749,74 +789,76 @@ export function buildSectionsPayload(
 }
 
 /**
- * The inline copy fields each section's Blade partial actually reads off
- * `$page->content[key]` — see
- * `resources/views/landing/ruled_page/sections/*.blade.php`. Not every
- * field every partial *could* read: `contact.blade.php` also honours
- * `address_label`/`phone_label`/`email_label`/`closed_label`/`map_label`
- * overrides, and `booking.blade.php` a `call_label`/`call_short` — those
- * are secondary label overrides with a sensible built-in default already,
- * and are left for a later pass rather than widening this one screen's
- * surface for a polish case no worked example in the spec asks for.
- * `services`/`team`/`reviews` are data-backed (RULING 4); their copy
- * fields are only ever shown once the section is actually offerable, same
- * as the toggle itself.
+ * HOW A FIELD SHOULD LOOK — never WHICH fields exist.
  *
- * Task 2: `contact`'s `phone`/`email`/`address` are NOT a fourth kind of
- * label override like the ones the paragraph above sets aside — they are
- * `App\Landing\ContactDetails`'s own three overridable fields, and they
- * bind through this exact mechanism (`content.contact.phone`, etc.) for
- * free: `SectionRow` already reads/writes `content[row.key][field.name]`,
- * so a section-content field named `phone` on the `contact` row IS
- * `content.contact.phone` with no new plumbing. Left in the same order
- * `ContactDetails`'s constructor and the wizard's own step 2 use.
+ * This is what is left of `SECTION_CONTENT_FIELDS` after template fidelity
+ * 1.3, and the difference is the whole point of that task. That map was
+ * keyed by SECTION and listed, by hand, the fields each section's partial
+ * reads: a second copy of `App\Landing\SectionType`'s `fields` arrays,
+ * written on the far side of the wire, which had already drifted from them
+ * on four of the seven sections. `hero.kicker` (the kit's own
+ * "Bathing · Bodywork · Rest" eyebrow), `booking.call_label`/`call_short`
+ * and `contact`'s five wording overrides are all read by shipped partials
+ * and were all unfillable, because this map did not name them.
  *
- * `type`/`maxLength` mirror `LandingOnboardingController`'s own
- * `contact.email`/`contact.phone`/`contact.address` rules (and, since the
- * phase 3a correctness fix, `LandingPageController::update()`'s identical
- * `content.contact.*` rules) client-side — the same reasoning as the web
- * address input's `maxLength={63}` a few lines below this file's sibling
- * component: stop the obviously-wrong value here rather than round-trip it
- * to the server for a 422. The server-side rule is what actually protects
- * the column; this is only the residual "catch it before the network
- * round-trip" half.
+ * Its own docblock argued that omitting them was deliberate — "a polish
+ * surface no worked example in the spec asks for". That reasoning was
+ * sound at the time and the owner's instruction ("as close as possible to
+ * my templates… all sections") is the worked example it was waiting for.
  *
- * Task 6: `hero` and `about` each also carry an `image_url` field with
- * `type: 'image'` — the one signal `LandingEditor.tsx`'s field renderer
- * needs to branch to the photo control instead of a text input/textarea.
- * Unlike every other field here, `image_url` is NOT a `content[key]` leaf
- * this screen ever reads or writes through the ordinary save path: Task 4's
- * `POST/DELETE .../image` endpoints are its one and only writer (D4), and
- * the server refuses the key outright on the plain `update()` route — this
- * descriptor exists purely so the row list still renders a control for it,
- * never so it flows through `updateContent`/`form`.
+ * So the LIST is now the served catalogue's, through `fieldsForType()`,
+ * exactly as the tenant-added rows have always taken it — and this is the
+ * residue: the presentation opinions the catalogue structurally cannot
+ * hold, because it publishes what a PARTIAL READS and not how a FORM
+ * SHOULD LOOK.
  *
- * Builder round: the FIXED rows still read this map rather than the served
- * `section_types` catalogue, and that is deliberate rather than an oversight
- * about mirroring. The catalogue publishes every field a partial reads —
- * including `contact`'s five label overrides and `booking`'s two, which the
- * paragraph above sets aside ON PURPOSE as a polish surface no worked
- * example asks for. Deriving the fixed rows from it would silently widen
- * seven cards by nine controls. The TENANT-ADDED rows have no such curated
- * history to preserve and are derived straight from the catalogue
- * (`fieldsForType`), which is where "do not mirror the server's list"
- * actually bites: a second repeatable type appears with its own fields, and
- * its own photo control, with no release on this side.
+ * KEYED BY FIELD NAME, never by section, and that is load-bearing rather
+ * than tidy: `body` means the same thing on `about` as it does on a
+ * tenant-added text block, and a per-section key would be the very
+ * section-shaped second list this replaced. It also means a field a later
+ * phase adds to the catalogue appears in the editor with NO EDIT HERE —
+ * which is what makes Phases 3–5's ~45 new fields a backend-only change.
+ *
+ * `type`/`maxLength` on the contact three mirror
+ * `LandingOnboardingController`'s own `contact.email`/`phone`/`address`
+ * rules (and, since the phase 3a correctness fix,
+ * `LandingPageController::update()`'s identical `content.contact.*` rules)
+ * client-side — the same reasoning as the web address input's
+ * `maxLength={63}`: stop the obviously-wrong value here rather than
+ * round-trip it for a 422. The server-side rule is what actually protects
+ * the column; this is only the residual half.
+ *
+ * `image_url` is here for completeness and is normally unreachable: photo
+ * leaves are not in `fields` on the wire at all (they have exactly one
+ * writer, the image endpoints, and `update()` refuses the whole `image_*`
+ * family), so the plate control is SYNTHESISED by `fieldsForType` and this
+ * entry only bites if a future catalogue ever published the leaf as copy.
  */
-export const SECTION_CONTENT_FIELDS: Record<SectionKey, readonly SectionField[]> = {
-  hero:     [{ name: 'image_url', type: 'image' }, { name: 'headline' }, { name: 'subtext' }],
-  services: [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
-  about:    [{ name: 'image_url', type: 'image' }, { name: 'kicker' }, { name: 'lead' }, { name: 'body', multiline: true }],
-  team:     [{ name: 'kicker' }, { name: 'heading' }, { name: 'subtext' }],
-  reviews:  [{ name: 'kicker' }],
-  booking:  [{ name: 'kicker' }, { name: 'heading' }, { name: 'terms', multiline: true }],
-  contact:  [
-    { name: 'kicker' },
-    { name: 'phone', maxLength: 64 },
-    { name: 'email', type: 'email', maxLength: 191 },
-    { name: 'address', maxLength: 191 },
-  ],
+export const FIELD_PRESENTATION: Record<string, { multiline?: boolean; type?: string; maxLength?: number }> = {
+  // Paragraph fields — the ones a partial prints as a block of prose
+  // rather than a line. `subtext` joins `body`/`terms` here because every
+  // partial that reads it renders a paragraph, and a one-line input for a
+  // paragraph is how a tenant learns to write one-line paragraphs.
+  body:    { multiline: true },
+  terms:   { multiline: true },
+  subtext: { multiline: true },
+
+  // App\Landing\ContactDetails' three overridable fields. They bind through
+  // the ordinary content mechanism for free — `SectionRow` reads and writes
+  // `content[row.key][field.name]`, so a field named `phone` on the
+  // `contact` row IS `content.contact.phone` with no new plumbing.
+  phone:   { maxLength: 64 },
+  email:   { type: 'email', maxLength: 191 },
+  address: { maxLength: 191 },
+
+  image_url: { type: 'image' },
 }
+
+/** The leaf every SINGLE-photo band stores its picture under —
+ *  `SectionType::SINGLE_IMAGE_LEAF`, and the name `fieldsForType`
+ *  synthesises its plate control under. Spelled once so the control's name
+ *  and `FIELD_PRESENTATION`'s entry for it cannot drift apart. */
+const SINGLE_IMAGE_FIELD = 'image_url'
 
 /**
  * Fix round 1 (ruling 3b-4), the Critical this round's review reproduced:

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import toast from 'react-hot-toast'
@@ -25,7 +25,10 @@ import type { DraftPayload } from './livePreview'
 import { DesignPanel } from './DesignPanel'
 import { paletteFor, themePayload } from './designChoices'
 import type { IndustryOption } from './industryChoices'
-import { catalogPayload, resolveTemplateKey, type TemplateOption } from './editorCatalog'
+import {
+  catalogPayload, resolveTemplateKey, templateSupports, type TemplateOption,
+} from './editorCatalog'
+import { searchPreview, seoField, seoPayload, SEO_DESCRIPTION_MAX, SEO_TITLE_MAX } from './seoCard'
 // Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
 // file's photo controls below still refer to by that same number): the
 // self-hosted @font-face sheet DesignPanel's cards render against, see
@@ -41,10 +44,10 @@ import '../../styles/landing-preview-fonts.css'
  * page itself. `theme`/`content`/`seo` are the raw JSON columns
  * (`App\Models\LandingPage`'s `array` casts) — `content` keyed by SECTION,
  * each value a flat map of the fields that section's Blade partial reads
- * (see `SECTION_CONTENT_FIELDS`). Any of the three can genuinely be `null`
- * on a page nothing has ever written to (a plain `store()`-created page
- * never sets them), which is why every read below falls through `?? {}`
- * rather than assuming an object.
+ * (the served catalogue’s `fields` for that section’s type). Any of the
+ * three can genuinely be `null` on a page nothing has ever written to (a
+ * plain `store()`-created page never sets them), which is why every read
+ * below falls through `?? {}` rather than assuming an object.
  */
 type LandingPageDTO = {
   id: number
@@ -235,7 +238,7 @@ const FIELD_FALLBACK: Record<string, string> = {
   terms: 'Terms',
   // Task 2: App\Landing\ContactDetails's three overridable fields, bound
   // through the same content-field mechanism as every fallback above (see
-  // `SECTION_CONTENT_FIELDS.contact` in `editorSections.ts`).
+  // `FIELD_PRESENTATION` in `editorSections.ts`).
   phone: 'Phone',
   email: 'Email',
   address: 'Address',
@@ -244,6 +247,64 @@ const FIELD_FALLBACK: Record<string, string> = {
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
+
+  // ─── Template fidelity 1.4 ────────────────────────────────────────────
+  //
+  // 1.3 made the fixed rows read the SERVED catalogue instead of a
+  // hand-written mirror, so every field the shipped partials already read
+  // now has a control. This is the other half of that change and it ships
+  // in the same commit for a reason: without it those controls appear
+  // labelled `call_short`, `map_label`, `q1` — the fallback chain at the
+  // render site ends in `field.name`, so an unlabelled field is rendered
+  // as its raw leaf name above an input a salon owner is asked to fill in.
+  //
+  // Named for what a tenant is WRITING, never for what the leaf is called.
+  // "Phone line wording" is a thing somebody can answer; `call_label` is
+  // not, and neither is "CTA".
+
+  // announcement — the offer bar above the header.
+  text: 'Your message',
+  cta_label: 'Link wording',
+
+  // trust — the highlights strip. `feature_4` is here ahead of the
+  // catalogue (which ships three today) because 5.4 raises the cap to four
+  // to match kits 02 and 03, and a label waiting for it is what keeps that
+  // change backend-only. An unrendered label costs nothing; a control
+  // labelled `feature_4` costs a tenant their confidence in the screen.
+  quote: 'What someone said about you',
+  feature_1: 'Highlight 1',
+  feature_2: 'Highlight 2',
+  feature_3: 'Highlight 3',
+  feature_4: 'Highlight 4',
+
+  // faq — six question/answer pairs, flat leaves (see
+  // `SectionType::faqLeaves()`; 3.3 turns them into a pair control).
+  q1: 'Question 1',
+  a1: 'Answer 1',
+  q2: 'Question 2',
+  a2: 'Answer 2',
+  q3: 'Question 3',
+  a3: 'Answer 3',
+  q4: 'Question 4',
+  a4: 'Answer 4',
+  q5: 'Question 5',
+  a5: 'Answer 5',
+  q6: 'Question 6',
+  a6: 'Answer 6',
+
+  // booking — the two phone-line overrides `booking.blade.php` already
+  // reads and nothing could fill in.
+  call_label: 'Phone line wording',
+  call_short: 'Short phone label',
+
+  // contact — the five wording overrides `contact.blade.php` already reads.
+  // Distinct from `phone`/`email`/`address` above, which are the VALUES:
+  // these are the words printed above them.
+  phone_label: 'Wording above your phone number',
+  email_label: 'Wording above your email',
+  address_label: 'Wording above your address',
+  map_label: 'Map link wording',
+  closed_label: 'Closed-today wording',
 }
 
 /**
@@ -402,6 +463,26 @@ export function LandingEditor({
   const updateTheme = (patch: Partial<typeof themeFields>) =>
     update('theme', themePayload({ ...themeFields, ...patch }))
 
+  /**
+   * Template fidelity 1.5: the two `seo` leaves, narrowed out of the raw
+   * JSON column exactly the way `themeFields` narrows `theme` — a legal
+   * non-string leaf falls through to '' here rather than reaching a
+   * string-typed input.
+   *
+   * Queued into `form` and saved by the same Save button as everything else
+   * on this screen: `saveMut` has always put `seo` on the wire and the
+   * endpoint has always accepted it. Until now nothing ever set a key in
+   * it, so every published page shipped an empty meta description and — on
+   * all three kit templates — a footer with no tagline.
+   */
+  const seoFields = {
+    title: seoField(f.seo, 'title'),
+    description: seoField(f.seo, 'description'),
+  }
+
+  const updateSeo = (field: 'title' | 'description', value: string) =>
+    update('seo', seoPayload(f.seo, { [field]: value }))
+
   // Landing phase 3c, Plan A: the two catalogue fields, queued into the
   // SAME `form` state and flipping the SAME `dirty` flag as every other
   // control on this screen — never a straight-to-server write. Both are
@@ -415,6 +496,14 @@ export function LandingEditor({
   // being sent back out — see `catalogPayload`, which re-checks membership
   // at the wire.
   const templateKey = resolveTemplateKey(templates, f.template_key, page?.template_key)
+
+  // Template fidelity 1.2: WHAT THE CHOSEN DESIGN ACTUALLY HONOURS, off the
+  // served `templates[*].supports`. Resolved against the key the panel is
+  // SHOWING (which includes an unsaved template change queued this session)
+  // rather than against `page.template_key`, so switching template makes the
+  // controls that design ignores disappear immediately — the preview beside
+  // them has already changed.
+  const supports = templateSupports(templates, templateKey)
 
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
@@ -490,7 +579,14 @@ export function LandingEditor({
    * actually renders as.
    */
   const tonePalette = paletteFor(themeFields.palette)
-  const tones: ToneChoice[] = toneChoices(sectionTones, tonePalette)
+  // Template fidelity 1.2: EMPTY WHEN THIS DESIGN DOES NOT READ TONES.
+  // `SectionRow` already renders no colour control for an empty list (that
+  // is how an older backend serving no tone allowlist is handled), so
+  // gating here rather than in the row is one decision in one place — and
+  // it takes twenty-one dead swatches off a Nocturne page, three per card,
+  // on a design whose layout says in words that a band on the wrong surface
+  // breaks the composed dark/paper/sand sequence rather than just that band.
+  const tones: ToneChoice[] = supports.tones ? toneChoices(sectionTones, tonePalette) : []
 
   /**
    * What the preview pane renders RIGHT NOW — the live-preview round.
@@ -653,6 +749,39 @@ export function LandingEditor({
     if (confirmed) removeMut.mutate(row.key)
   }
 
+  /**
+   * Template fidelity 1.2: the industry picker asks first.
+   *
+   * It is the most destructive control in the builder — saving it rewrites
+   * every heading, the wording on every button, the words the rest of the
+   * workspace uses, and which sections are on offer — and it is the one
+   * control here whose effect a tenant cannot see until after they save.
+   * `handleRemove` already puts a plain-language `window.confirm` in front
+   * of the only other irreversible control on this screen; this is the same
+   * pattern, in the same words, for the same reason.
+   *
+   * Only when they are actually MOVING off the saved industry: re-selecting
+   * the card the panel opened on is not a change and must not interrogate
+   * anybody. The confirm text is the change note `DesignPanel` already
+   * shows, so what a tenant is warned about and what they are asked to
+   * confirm are one sentence.
+   */
+  const handleIndustryChange = (id: string) => {
+    if (id === f.industry) return
+
+    if (id !== page?.industry) {
+      const confirmed = window.confirm(
+        t(
+          'landing_pages.design.industry_change_note',
+          'Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.',
+        ),
+      )
+      if (!confirmed) return
+    }
+
+    update('industry', id)
+  }
+
   const saveMut = useMutation({
     mutationFn: async (body: Partial<LandingPageDTO>) => {
       const calls: Promise<unknown>[] = [
@@ -806,7 +935,25 @@ export function LandingEditor({
     },
   })
 
-  const handlePublish = () => {
+  /**
+   * Template fidelity 1.6 — ONE SAVE STORY.
+   *
+   * Publish used to be `disabled={dirty}` with "Save your changes first."
+   * underneath it, which meant the button a first-time tenant reaches for
+   * was greyed out for most of their session: every keystroke on this
+   * screen sets `dirty`, and the one thing they came here to do was the one
+   * thing they could not press. Worse, the instruction was for a step the
+   * screen could plainly have taken itself.
+   *
+   * So it takes it: a dirty page SAVES and then publishes, in that order,
+   * as one action. `mutateAsync` rather than `mutate` because the ordering
+   * is the whole point — publishing a page whose save has not landed would
+   * put the previous version on the internet, which is the exact confusion
+   * the old gate existed to prevent. A failed save throws, `saveMut`'s own
+   * `onError` has already said why in words the tenant can act on, and the
+   * publish never happens.
+   */
+  const handlePublish = async () => {
     if (!page) return
     const confirmed = window.confirm(
       t('landing_pages.editor.publish_confirm', {
@@ -814,7 +961,21 @@ export function LandingEditor({
         defaultValue: 'Publish your page? Anyone with the link will be able to see it at {{url}}.',
       }),
     )
-    if (confirmed) publishMut.mutate()
+    if (!confirmed) return
+
+    if (dirty) {
+      try {
+        await saveMut.mutateAsync(f)
+      } catch {
+        // Already surfaced by saveMut.onError — and deliberately NOT
+        // followed by a publish. Swallowed rather than rethrown because
+        // nothing above this is an error boundary and an unhandled
+        // rejection here would be noise, not information.
+        return
+      }
+    }
+
+    publishMut.mutate()
   }
 
   const handleUnpublish = () => {
@@ -933,10 +1094,19 @@ export function LandingEditor({
         onDraftChange={setAddressDraft}
         onApply={applyAddressEdit}
         onCancel={cancelAddressEdit}
-        onPublish={handlePublish}
+        onPublish={() => { void handlePublish() }}
         onUnpublish={handleUnpublish}
-        publishing={publishMut.isPending}
+        // 1.6: the save this button now performs on the tenant's behalf is
+        // part of publishing as far as they are concerned, so it is part of
+        // "publishing…" too. Anything else would leave the button live for
+        // the half-second the save is in flight.
+        publishing={publishMut.isPending || saveMut.isPending}
         unpublishing={unpublishMut.isPending}
+        seoTitle={seoFields.title}
+        seoDescription={seoFields.description}
+        onSeoChange={updateSeo}
+        businessName={businessName}
+        headline={typeof f.content?.hero?.headline === 'string' ? f.content.hero.headline : ''}
       />
 
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
@@ -971,10 +1141,13 @@ export function LandingEditor({
               industries={industries}
               industry={f.industry}
               savedIndustry={page.industry}
-              onIndustryChange={id => update('industry', id)}
+              onIndustryChange={handleIndustryChange}
               templates={templates}
               templateKey={templateKey}
               onTemplateChange={key => update('template_key', key)}
+              // Template fidelity 1.2 — the four bools that decide which of
+              // this panel's blocks are drawn at all. See `templateSupports`.
+              supports={supports}
             />
           </div>
 
@@ -1083,8 +1256,21 @@ export function LandingEditor({
           </div>
 
           <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
+            {/*
+              Template fidelity 1.6 — SAY WHAT THIS BAR IS ACTUALLY ABOUT.
+              It used to read "Unsaved changes" / "All changes saved", which
+              is true of only half the card: photo upload and remove, and
+              section add and remove, write IMMEDIATELY (they are database
+              rows and files, not fields — see `onImageChanged` and the
+              add/remove mutations above). A tenant who had just uploaded a
+              photo and read "Unsaved changes" had every reason to think
+              their photo was at risk, and one who read "All changes saved"
+              after removing a band had no idea it already was.
+            */}
             <span className="text-xs text-t-secondary">
-              {dirty ? t('landing_pages.unsaved', 'Unsaved changes') : t('landing_pages.saved', 'All changes saved')}
+              {dirty
+                ? t('landing_pages.editor.words_unsaved', 'Your words aren’t saved yet')
+                : t('landing_pages.editor.words_saved', 'Everything saved')}
             </span>
             <button
               type="button"
@@ -1120,6 +1306,7 @@ function WebAddressCard({
   page, dirty, pendingSlug, editing, draft, copied,
   onCopy, onStartEdit, onDraftChange, onApply, onCancel,
   onPublish, onUnpublish, publishing, unpublishing,
+  seoTitle, seoDescription, onSeoChange, businessName, headline,
 }: {
   page: LandingPageDTO
   dirty: boolean
@@ -1136,9 +1323,22 @@ function WebAddressCard({
   onUnpublish: () => void
   publishing: boolean
   unpublishing: boolean
+  /** Template fidelity 1.5 — the two `seo` leaves, already narrowed to
+   *  strings by the parent (see `seoFields`). */
+  seoTitle: string
+  seoDescription: string
+  onSeoChange: (field: 'title' | 'description', value: string) => void
+  /** The two things the layouts fall back to when `seo.title` is blank, so
+   *  the preview can show a tenant what an EMPTY field actually publishes —
+   *  which is the state every page is in today. */
+  businessName: string
+  headline: string
 }) {
   const { t } = useTranslation()
   const vis = pageVisibilityState(page.status, dirty)
+  const preview = searchPreview({
+    title: seoTitle, description: seoDescription, businessName, headline, url: page.url,
+  })
 
   return (
     <div className={card + ' space-y-4'}>
@@ -1162,7 +1362,12 @@ function WebAddressCard({
             <button
               type="button"
               className={btnPrimary}
-              disabled={dirty || publishing}
+              // Template fidelity 1.6: NOT gated on `dirty` any more. The
+              // handler saves first when there is anything to save — see
+              // `handlePublish` — so the instruction this button used to
+              // print underneath itself ("Save your changes first.") is a
+              // step the screen now takes on the tenant's behalf.
+              disabled={publishing}
               onClick={onPublish}
             >
               <Globe size={14} />
@@ -1178,9 +1383,13 @@ function WebAddressCard({
               {unpublishing ? t('landing_pages.editor.unpublishing', 'Working…') : t('landing_pages.editor.unpublish', 'Unpublish')}
             </button>
           )}
+          {/* 1.6: the "Save your changes first." line that sat here is gone
+              with the gate that made it necessary. What replaces it is
+              honest about what pressing the button will do, and only while
+              there is actually something to save. */}
           {page.status === 'draft' && dirty && (
             <p className="text-[11px] text-t-secondary mt-1">
-              {t('landing_pages.editor.publish_needs_save', 'Save your changes first.')}
+              {t('landing_pages.editor.publish_saves_first', 'This saves your changes too.')}
             </p>
           )}
         </div>
@@ -1281,6 +1490,93 @@ function WebAddressCard({
           </>
         )}
       </div>
+
+      {/*
+        TEMPLATE FIDELITY 1.5 — the two lines a search result and a shared
+        link are made of, which until now no tenant could write.
+
+        `page.seo.description` is BOTH the `<meta name="description">` and
+        the footer tagline on every template; `page.seo.title` backs the
+        `<title>`, the `og:title`, the h1 fallback and the legal name. The
+        endpoint has accepted the column since it existed and this editor
+        has always put it on the wire — nothing ever set a key in it. So
+        every published page shipped an empty meta description and a footer
+        with no tagline, on designs whose own kits all write a real one.
+
+        Here, beside the address, because this is the "how the world sees
+        this page" block — the same card that answers "is it public" and
+        "what is the link". Phase 2 moves the whole card to a Publish tab
+        and this travels with it.
+      */}
+      <div className="border-t border-dark-border pt-4 space-y-3">
+        <div>
+          <h3 className="text-sm font-semibold text-white">
+            {t('landing_pages.editor.seo_title_heading', 'How your page appears in search and when shared')}
+          </h3>
+          <p className="text-xs text-t-secondary mt-0.5 leading-relaxed">
+            {t(
+              'landing_pages.editor.seo_intro',
+              'These two lines are what Google shows, what appears when someone shares your link, and — on most designs — the tagline in your footer.',
+            )}
+          </p>
+        </div>
+
+        <div>
+          <label className={label} htmlFor="lp-seo-title">
+            {t('landing_pages.editor.seo_title_label', 'Page title')}
+          </label>
+          <input
+            id="lp-seo-title"
+            className={input}
+            maxLength={SEO_TITLE_MAX}
+            value={seoTitle}
+            onChange={e => onSeoChange('title', e.target.value)}
+            placeholder={businessName}
+          />
+        </div>
+
+        <div>
+          <label className={label} htmlFor="lp-seo-description">
+            {t('landing_pages.editor.seo_description_label', 'One line about your business')}
+          </label>
+          <textarea
+            id="lp-seo-description"
+            className={input + ' resize-y'}
+            rows={2}
+            maxLength={SEO_DESCRIPTION_MAX}
+            value={seoDescription}
+            onChange={e => onSeoChange('description', e.target.value)}
+          />
+        </div>
+
+        {/*
+          A REAL PREVIEW, not a caption about one — the same discipline the
+          Design panel's palette cards follow. The tenant sees the exact
+          words that will be published, INCLUDING what an empty description
+          publishes, which is the state their page is in right now.
+
+          Deliberately plain admin chrome rather than a Google pastiche: it
+          is a preview of their own words, not an impression of somebody
+          else's product.
+        */}
+        <div className="rounded-lg border border-dark-border bg-dark-bg p-3 space-y-1">
+          <span className="block text-[10px] font-mono uppercase tracking-[0.12em] text-t-secondary/70">
+            {t('landing_pages.editor.seo_preview_kicker', 'Preview')}
+          </span>
+          <p className="text-sm text-primary-400 truncate">{preview.title}</p>
+          <p className="text-[11px] text-accent truncate">{preview.url}</p>
+          {preview.descriptionIsEmpty ? (
+            <p className="text-xs text-warning/90 leading-relaxed">
+              {t(
+                'landing_pages.editor.seo_preview_empty',
+                'With this blank, search results show whatever Google picks off your page — and your footer tagline is empty.',
+              )}
+            </p>
+          ) : (
+            <p className="text-xs text-t-secondary leading-relaxed">{preview.description}</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1300,6 +1596,18 @@ function WebAddressCard({
 const TYPE_NAME_FALLBACK: Record<string, string> = {
   text: 'Text block',
   gallery: 'Photo gallery',
+  // Template fidelity 1.4: the four fixed types no industry's
+  // `defaultSections` names — the three blocks the BeautyTech kits add, and
+  // the footer. They are unreachable from any screen today (3.1 is what
+  // makes them addable and seeds them per template), and their names are
+  // here now so that change is a backend-only one. `LandingOnboardingService
+  // ::SECTION_COPY` already carries the same three words for a row that
+  // exists; these name the TYPE, for the picker and for a row the wire has
+  // nothing to say about.
+  announcement: 'Offer bar',
+  trust: 'Highlights',
+  faq: 'Questions',
+  footer: 'Footer',
 }
 
 /** The one sentence the "Add a section" control gives each type — what the
@@ -1307,6 +1615,10 @@ const TYPE_NAME_FALLBACK: Record<string, string> = {
 const TYPE_BLURB_FALLBACK: Record<string, string> = {
   text: 'A short heading and a few lines in your own words, with a photo if you want one.',
   gallery: 'A grid of up to eight photos, shown in the order you add them.',
+  announcement: 'A single line across the top of your page — an opening offer, late hours, a seasonal note.',
+  trust: 'Three or four short things worth knowing about you, with your review score beside them.',
+  faq: 'The questions people ask before they book, answered once so you stop answering them.',
+  footer: 'The band at the very bottom, with your contact details and opening hours.',
 }
 
 function SectionRow({
@@ -1945,6 +2257,13 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
   onChanged: () => void
 }) {
   const { t } = useTranslation()
+  // Template fidelity 1.6: photos write IMMEDIATELY (D4 — the image
+  // endpoints are their one writer and they save straight to the row), and
+  // the save bar at the foot of this screen is about the tenant's WORDS.
+  // Without a word here, the only feedback an upload gives is a thumbnail
+  // appearing, and the bar below it may well be saying "not saved yet"
+  // about something else entirely.
+  const [justSaved, setJustSaved] = useSavedFlash()
 
   const uploadMut = useMutation({
     mutationFn: async (file: File) => {
@@ -1963,13 +2282,13 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
       // (api.ts:28-37) so this plain multipart POST needs no extra config.
       return api.post('/v1/admin/landing-pages/image', body)
     },
-    onSuccess: onChanged,
+    onSuccess: () => { onChanged(); setJustSaved() },
     onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
   })
 
   const removeMut = useMutation({
     mutationFn: () => api.delete('/v1/admin/landing-pages/image', { data: { slot: sectionKey } }),
-    onSuccess: onChanged,
+    onSuccess: () => { onChanged(); setJustSaved() },
     onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
   })
 
@@ -2007,6 +2326,11 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
         {uploadMut.isPending && (
           <span className="text-xs text-t-secondary">{t('landing_pages.editor.photo_uploading', 'Uploading…')}</span>
         )}
+        {!busy && justSaved && (
+          <span className="flex items-center gap-1 text-xs text-accent">
+            <Check size={12} /> {t('landing_pages.editor.photo_saved', 'Saved')}
+          </span>
+        )}
         {imageUrl && (
           <button
             type="button"
@@ -2020,6 +2344,34 @@ function ImageField({ sectionKey, imageUrl, onChanged }: {
       </div>
     </div>
   )
+}
+
+/**
+ * "Saved", for two seconds, on a control that writes straight to the server
+ * (template fidelity 1.6).
+ *
+ * A hook rather than the same three lines in both photo controls, and a
+ * hook rather than a toast: an upload is a change to ONE card and the
+ * confirmation belongs on that card, where the tenant is already looking —
+ * `saveMut`'s toast is for a save that spans the whole page.
+ *
+ * The timer is cleared on unmount, so removing a section (or switching
+ * brand, which remounts everything) cannot leave a `setState` pointed at a
+ * component that no longer exists.
+ */
+function useSavedFlash(): [boolean, () => void] {
+  const [saved, setSaved] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => () => { if (timer.current !== null) clearTimeout(timer.current) }, [])
+
+  const flash = () => {
+    setSaved(true)
+    if (timer.current !== null) clearTimeout(timer.current)
+    timer.current = setTimeout(() => setSaved(false), 2000)
+  }
+
+  return [saved, flash]
 }
 
 /**
@@ -2071,6 +2423,10 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
   const photos = gallerySlots(stored, sectionKey, limit)
   const used = photos.length
   const full = limit === 0 || used >= limit
+  // 1.6, same reason as the single plate's: these uploads and removals are
+  // already saved the moment they return, and the save bar below is about
+  // words. See `useSavedFlash`.
+  const [justSaved, setJustSaved] = useSavedFlash()
 
   const uploadMut = useMutation({
     mutationFn: async (files: File[]) => {
@@ -2106,6 +2462,7 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
     },
     onSuccess: (dropped: number) => {
       onChanged()
+      setJustSaved()
       // Said plainly rather than silently: a tenant who picked ten files
       // with two slots left has to be told six of them are not on their
       // page. `limit` and never `count` — i18next reads `count` as a plural
@@ -2123,7 +2480,7 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
 
   const removeMut = useMutation({
     mutationFn: (slot: string) => api.delete('/v1/admin/landing-pages/image', { data: { slot } }),
-    onSuccess: onChanged,
+    onSuccess: () => { onChanged(); setJustSaved() },
     onError: (e: unknown) => toast.error(imageErrorMessage(e, t('common.error', 'Something went wrong'))),
   })
 
@@ -2186,6 +2543,11 @@ function GalleryField({ sectionKey, stored, limit, onChanged }: {
         />
         {uploadMut.isPending && (
           <span className="text-xs text-t-secondary">{t('landing_pages.editor.photo_uploading', 'Uploading…')}</span>
+        )}
+        {!busy && justSaved && (
+          <span className="flex items-center gap-1 text-xs text-accent">
+            <Check size={12} /> {t('landing_pages.editor.photo_saved', 'Saved')}
+          </span>
         )}
       </div>
 
