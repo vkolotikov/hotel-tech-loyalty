@@ -332,6 +332,43 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // The third of the three HOSPITALITY kits
+            // (resources/landing-kits/hospitality/03-ember-table), converted
+            // the same way: the author's own markup, his own :root palette and
+            // his own stylesheet ship as the design, and only the CONTENT is
+            // the tenant's. Like its two siblings it ships NO team partial, so
+            // `renders` does not name that band and the picker cannot offer it.
+            'key'   => 'ember_table',
+            'name'  => 'Ember Table',
+            // The author's own words for it, from the kit collection's README:
+            // "Cinematic chef-led tasting room / Intimate restaurants, wine
+            // bars and open-fire kitchens".
+            'blurb' => 'Dark and cinematic, lit like an evening service, with a typographic menu and mono labels. Made for chef-led dining rooms, wine bars and open-fire kitchens.',
+            // Transcribed from the three refusals
+            // resources/views/landing/ember_table/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent here on the GOLD label family and on the accent an em takes
+            // on a light ground, never on the ember, which is a surface this
+            // page sets its type in night on.
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**

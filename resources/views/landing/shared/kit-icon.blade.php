@@ -1,14 +1,28 @@
 {{--
   The kits' shared icon language, transcribed geometry for geometry.
 
-  ONE FILE FOR ALL THREE BEAUTYTECH KITS (template fidelity 7.1). Every SVG
-  path string below is BYTE-IDENTICAL across 01-nocturne-ritual,
-  02-editorial-atelier and 03-organic-wellness — the authors drew one icon
-  set and used it three times — so this lives under landing/shared/ rather
-  than under any one template's directory. Copying it per template would
-  create exactly the second (and third) source of truth the whole
-  template-fidelity plan exists to remove: nine chances for one calendar to
-  drift from the others.
+  ONE FILE FOR ALL SIX KITS (template fidelity 7.1, extended in phase 9-11).
+  Every SVG path string below is BYTE-IDENTICAL across 01-nocturne-ritual,
+  02-editorial-atelier and 03-organic-wellness — the authors drew one icon set
+  and used it three times — so this lives under landing/shared/ rather than
+  under any one template's directory. Copying it per template would create
+  exactly the second (and third) source of truth the whole template-fidelity
+  plan exists to remove: nine chances for one calendar to drift from the
+  others.
+
+  THE THREE HOSPITALITY KITS DREW THE SAME NINE SHAPES A SECOND TIME, and
+  their coordinates differ from these by tenths of a unit — `6-5.1` where this
+  says `6-5.2`, `M12 7v5l3 2` where this says `M12 7.5V12l3 2`, and this
+  calendar carries one extra element they do not draw (`M8 13h3v3H8z`, the day
+  marker). At the 1.05rem these icons are set in that is one to three pixels on
+  a seventeen-pixel glyph, and the acceptance screenshots measure it: the hero
+  band, which carries one of them on its primary button, differs from the
+  author's page by 0.002% with a maximum of three differing pixels on any row.
+
+  THEY ARE NOT FORKED FOR THAT. A second icon file would be the exact
+  duplication this one exists to prevent, traded for a sub-visible difference —
+  and the two sets are the same drawings, not two icon languages. Named in the
+  hospitality report rather than quietly absorbed.
 
   The author's own note explains why these are self-contained inline SVG and
   not a sprite, a font or an external file: "avoiding third-party

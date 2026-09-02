@@ -1,16 +1,17 @@
 /*
- * The BeautyTech kits' interactive layer — one file, all three templates.
+ * The kits' interactive layer — one file, all six templates.
  *
  * SHARED FOR THE REASON landing/shared/kit-icon.blade.php IS (template
- * fidelity 7.1): the three kits declare the SAME integration contract in
- * their own notes — data-action="open-booking", data-action="open-feedback",
+ * fidelity 7.1): the six kits declare the SAME integration contract in their
+ * own notes — data-action="open-booking", data-action="open-feedback",
  * [data-ai-widget-slot] — and each ships its navigation and its FAQ as a
- * native <details>. There is therefore exactly one behaviour to write, and
- * three copies of it would be three chances for one of them to drift.
+ * native <details>. There is therefore exactly one behaviour to write, and six
+ * copies of it would be six chances for one of them to drift.
  *
- * The only thing the kits spell differently is the class on their mobile
- * menu (`.mobile-menu` in kits 01 and 02, `.mobile-nav` in kit 03), which is
- * one selector list rather than one file each.
+ * The only thing the kits spell differently is the class on their mobile menu
+ * (`.mobile-menu` in beauty kits 01 and 02, `.mobile-nav` in beauty kit 03 and
+ * in all three hospitality kits), which is one selector list rather than one
+ * file each — and phase 9-11 added nothing to it at all.
  *
  * One entry point, no dependencies, no build step. Served straight
  * out of public/ under script-src 'self', which is why it exists at all: this

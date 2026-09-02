@@ -257,6 +257,28 @@ final class TemplateImage
                 'alt'  => 'A plate from the coastal menu',
             ],
         ],
+        // THE THIRD HOSPITALITY KIT. Two photographs again, and the same three
+        // absences for the same three reasons: no `team` (no hospitality
+        // template draws one), no `services` (his ledger is typographic) and no
+        // `booking` (his closing panel is an ember field with no picture in it).
+        'ember_table' => [
+            'hero' => [
+                'file' => 'hero-dining.webp',
+                'alt'  => 'A candlelit dining room and an open hearth before evening service',
+            ],
+            'about' => [
+                'file' => 'seasonal-dish.webp',
+                'alt'  => 'Seasonal roasted vegetables plated on handmade ceramic',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-dining.webp',
+                'alt'  => 'The dining room in low evening light',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'seasonal-dish.webp',
+                'alt'  => 'A plate from the seasonal menu',
+            ],
+        ],
     ];
 
     /**
