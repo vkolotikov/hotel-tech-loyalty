@@ -3252,6 +3252,7 @@
       "field_city_label": "Texto sobre tu localidad",
       "field_item_cta_label": "Texto de cada enlace de reserva",
       "field_fact": "Una línea para tu lista numerada",
+      "field_fact_caption": "Línea debajo del número",
       "field_promise": "Una promesa breve bajo tu botón",
       "field_feature_caption": "Línea bajo el punto destacado",
       "field_descriptor": "Palabra bajo el nombre de tu negocio",

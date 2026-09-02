@@ -470,6 +470,7 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_city_label',
     'landing_pages.editor.field_item_cta_label',
     'landing_pages.editor.field_fact',
+    'landing_pages.editor.field_fact_caption',
     'landing_pages.editor.field_promise',
     // 5.4 — the second line of a trust highlight.
     'landing_pages.editor.field_feature_caption',
@@ -555,6 +556,7 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     const leaves = [
       'headline_accent', 'heading_accent', 'lead_accent',
       'fact_1', 'fact_2', 'fact_3',
+      'fact_1_caption', 'fact_2_caption', 'fact_3_caption',
       'promise_1', 'promise_2', 'promise_3',
       'feature_1_caption', 'feature_2_caption', 'feature_3_caption', 'feature_4_caption',
       'caption_1', 'caption_8',

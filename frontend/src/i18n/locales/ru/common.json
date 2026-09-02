@@ -3312,6 +3312,7 @@
       "field_city_label": "Подпись над городом",
       "field_item_cta_label": "Текст на каждой кнопке записи",
       "field_fact": "Строка нумерованного списка",
+      "field_fact_caption": "Строка под числом",
       "field_promise": "Короткое обещание под кнопкой",
       "field_feature_caption": "Строка под преимуществом",
       "field_descriptor": "Слово под названием компании",

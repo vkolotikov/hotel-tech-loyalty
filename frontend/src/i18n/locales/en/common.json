@@ -3296,6 +3296,7 @@
       "field_city_label": "Wording above your town",
       "field_item_cta_label": "Wording on each Book link",
       "field_fact": "A line for your numbered list",
+      "field_fact_caption": "Line under the number",
       "field_promise": "A short promise under your button",
       "field_feature_caption": "Line under the highlight",
       "field_descriptor": "Word under your business name",

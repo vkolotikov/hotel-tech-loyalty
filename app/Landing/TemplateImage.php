@@ -201,6 +201,39 @@ final class TemplateImage
                 'alt'  => 'A guest taking a quiet moment after treatment in warm morning light',
             ],
         ],
+        // THE FIRST HOSPITALITY KIT. Two photographs, which is all this author
+        // drew, and therefore all that is offered: his hero is a full-bleed
+        // dining room and his story band is a plate of oysters.
+        //
+        // NO `team` ENTRY, because there is no team band on any hospitality
+        // template — no partial ships for it. NO `services` and NO `booking`
+        // either: his menu ledger is typographic and his closing panel is a
+        // heading on an oxblood field, so a default in either would be a
+        // picture no tenant could ever see.
+        //
+        // THE GALLERY GETS TWO TILES, not three. His own salon band draws no
+        // photograph at all (see that partial's note), so there is no authored
+        // order to follow, and a third default would be one of these two files
+        // printed twice in one band — the exact duplication this class refuses
+        // for a second gallery instance.
+        'maison_vela' => [
+            'hero' => [
+                'file' => 'hero-brasserie.webp',
+                'alt'  => 'An elegant dining room with deep red banquettes and warm brass lighting',
+            ],
+            'about' => [
+                'file' => 'oysters.webp',
+                'alt'  => 'Oysters over crushed ice beside a coupe of chilled sparkling wine',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-brasserie.webp',
+                'alt'  => 'The main dining room laid for service',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'oysters.webp',
+                'alt'  => 'A shellfish plate dressed over ice',
+            ],
+        ],
     ];
 
     /**

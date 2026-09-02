@@ -1,0 +1,646 @@
+/*
+ * Maison Vela — template stylesheet.
+ *
+ * THE AUTHOR'S OWN style.css, from
+ * resources/landing-kits/hospitality/01-maison-vela/style.css, copied byte
+ * for byte except for the TWO deliberate changes listed below — the same
+ * two the Organic Wellness conversion made, and for the same reasons.
+ *
+ * WHAT CHANGED, and nothing else did:
+ *
+ *  1. The self-hosted @font-face block below. The kit asked for Playfair
+ *     Display and DM Sans through a fonts.googleapis.com <link>; the landing
+ *     CSP's style-src/font-src are 'self'-only
+ *     (LandingPageSecurity::policy()), so that link cannot work here. Both
+ *     families are new to this repository and all eight files were fetched
+ *     with the discipline the three kit templates before this one set: the
+ *     css2 endpoint fetched with a Chrome User-Agent (it serves a plain .ttf
+ *     to any UA it does not recognise), every file confirmed to be a genuine
+ *     variable font over the declared wght range by reading its own fvar
+ *     table with fontTools, and every face declared with the unicode-range
+ *     Google publishes for that subset. Source URLs are in the task report.
+ *
+ *     PLAYFAIR IS DECLARED AT ONE WEIGHT, 500, AND THAT IS THE AUTHOR'S OWN
+ *     REQUEST rather than a subsetting choice: his <link> asks for
+ *     `ital,wght@0,500;1,500`, so Google hands his page a face whose declared
+ *     range is exactly [500,500] and every use of the family — his h1..h3 at
+ *     500, but also `.faq summary`, `.story dt`, `.trust strong` and
+ *     `.footer-rating strong`, none of which set a weight at all — resolves
+ *     to that one instance. Declaring the full 400..900 axis here instead
+ *     rendered four of those five elements a whole weight lighter than his
+ *     page does. The FILE is the full variable font (so the Cyrillic subset
+ *     is a real one); only the declared range is pinned, exactly as his is.
+ *     DM Sans needs no such pin: Google answers his `wght@400;500;600` with
+ *     three declarations over one variable file, which is what a single
+ *     `100 1000` declaration already is.
+ *
+ *     THE ITALIC AXIS IS LOAD-BEARING and is shipped. `.hero h1 em` is this
+ *     kit's one two-tone heading treatment and <em> is italic by default, so
+ *     the author's own <link> asks for `ital,wght@0,500;1,500`. A synthesised
+ *     oblique on a 8.5rem Playfair headline is a different typeface from the
+ *     one he chose.
+ *
+ *     PLAYFAIR DISPLAY CARRIES CYRILLIC and it is shipped, roman and italic —
+ *     the first kit template whose DISPLAY face does. DM SANS DOES NOT:
+ *     Google publishes it as latin and latin-ext only, so there is no
+ *     Cyrillic body face to declare and none was invented. A Russian tenant's
+ *     running copy falls through to the author's own declared stack (Arial),
+ *     which is exactly what happens on the author's page; the HEADINGS,
+ *     which are this design's whole character, are covered.
+ *
+ *  2. The "tenant states" section APPENDED at the very end of this file.
+ *     The kit is a mock with exactly three menus, three salon cards, one
+ *     diner note and two photographs; a real page has anywhere from none to
+ *     twenty-four of each. Those rules answer counts the mock never had to,
+ *     plus the two things this author drew nowhere: a words band and a chat
+ *     launcher. Every rule below is written in the kit's own tokens and every
+ *     one is additive: no rule above the "tenant states" banner was edited to
+ *     make any of it work.
+ *
+ * TOKEN TRAPS when copying a rule out of one of the other five kit
+ * stylesheets into this file, all of which produce silence rather than an
+ * error:
+ *
+ *   1. `--border-thin` here is `--border` in every other hospitality kit and
+ *      `--hairline` in the beauty kits. A rule lifted by name compiles to an
+ *      invalid border-width and is dropped.
+ *   2. `--line-height-body` / `--line-height-heading` here are `--line-body`
+ *      / `--line-heading` in kits 02 and 03.
+ *   3. `--container-narrow` and `--container-reading` DO NOT EXIST here.
+ *      There is one `--container` (90rem) and nothing else.
+ *   4. THE `--space-N` RAMP MATCHES kits 02 and 03 but NOT organic_wellness,
+ *      whose eleven-step ramp puts `--space-6` at 1.7rem where this file has
+ *      3rem.
+ */
+
+/* --- self-hosted faces (see note 1 above) -------------------------------- */
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-var-cyrillic.woff2') format('woff2');
+  unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Playfair Display';font-style:normal;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Playfair Display';font-style:italic;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-italic-var-cyrillic.woff2') format('woff2');
+  unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:'Playfair Display';font-style:italic;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-italic-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Playfair Display';font-style:italic;font-weight:500;font-display:swap;
+  src:url('fonts/playfair-display-italic-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;font-display:swap;
+  src:url('fonts/dm-sans-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:100 1000;font-display:swap;
+  src:url('fonts/dm-sans-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+/* --- end self-hosted faces ----------------------------------------------- */
+
+:root {
+  --color-ink: #171310;
+  --color-ink-soft: #241d18;
+  --color-paper: #eee8de;
+  --color-paper-deep: #d9cebd;
+  --color-wine: #5a1823;
+  --color-brass: #b39258;
+  --color-olive: #59604b;
+  --color-white: #fffdf8;
+  --color-muted: #756c62;
+  --color-line: rgba(23, 19, 16, 0.2);
+  --color-line-light: rgba(255, 253, 248, 0.22);
+  --color-overlay: rgba(14, 10, 7, 0.55);
+  --color-overlay-soft: rgba(14, 10, 7, 0.22);
+  --color-focus: #f2c874;
+  --color-shadow: rgba(20, 12, 8, 0.22);
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "DM Sans", Arial, sans-serif;
+  --font-size-2xs: 0.7rem;
+  --font-size-xs: 0.78rem;
+  --font-size-sm: 0.9rem;
+  --font-size-body: 1rem;
+  --font-size-lead: clamp(1.08rem, 1.5vw, 1.35rem);
+  --font-size-h3: clamp(1.45rem, 2vw, 2rem);
+  --font-size-h2: clamp(2.8rem, 5.5vw, 6rem);
+  --font-size-hero: clamp(4rem, 8vw, 8.5rem);
+  --font-size-quote: clamp(2rem, 4.2vw, 4.5rem);
+  --line-height-body: 1.65;
+  --line-height-heading: 0.98;
+  --letter-label: 0.18em;
+  --container: 90rem;
+  --gutter: clamp(1.25rem, 4vw, 4.5rem);
+  --space-1: 0.4rem;
+  --space-2: 0.7rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --space-7: 4.5rem;
+  --space-8: 7rem;
+  --space-9: 10rem;
+  --radius-sm: 0.2rem;
+  --radius-pill: 999px;
+  --border-thin: 1px;
+  --touch-target: 3rem;
+  --header-height: 5.5rem;
+  --widget-space: 7.5rem;
+  --fab-offset: 1.25rem;
+  --fab-clearance: 12rem;
+  --shadow: 0 2rem 5rem var(--color-shadow);
+  --transition: 220ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; overflow-x: hidden; background: var(--color-paper); color: var(--color-ink); font-family: var(--font-body); font-size: var(--font-size-body); line-height: var(--line-height-body); -webkit-font-smoothing: antialiased; }
+body, button, input { font-family: var(--font-body); }
+img { display: block; width: 100%; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p, blockquote, dl, dd { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.035em; }
+[id] { scroll-margin-top: calc(var(--header-height) + var(--space-4)); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: var(--space-1); }
+.container { width: min(calc(100% - var(--gutter) * 2), var(--container)); margin-inline: auto; }
+.section { padding-block: var(--space-9); }
+.eyebrow, .footer-label { font-size: var(--font-size-2xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.icon { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; }
+.icon--social { width: 1.2rem; height: 1.2rem; }
+
+.skip-link { position: fixed; z-index: 100; top: var(--space-3); left: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--color-white); color: var(--color-ink); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.announcement { display: grid; min-height: 2.5rem; place-items: center; padding: var(--space-1) var(--gutter); background: var(--color-wine); color: var(--color-white); font-size: var(--font-size-xs); text-align: center; }
+.announcement a { border-bottom: var(--border-thin) solid var(--color-line-light); }
+.site-header { position: absolute; z-index: 30; top: 2.5rem; left: 0; width: 100%; color: var(--color-white); }
+.header__inner { display: grid; min-height: var(--header-height); grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-6); border-bottom: var(--border-thin) solid var(--color-line-light); }
+.brand { display: grid; grid-template-columns: auto auto; column-gap: var(--space-3); align-items: center; line-height: var(--line-height-heading); }
+.brand > span { display: grid; width: 2.7rem; height: 2.7rem; grid-row: span 2; place-items: center; border: var(--border-thin) solid currentColor; border-radius: var(--radius-pill); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.brand strong { font-family: var(--font-display); font-weight: 500; }
+.brand small { font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav { display: flex; justify-content: center; gap: var(--space-5); font-size: var(--font-size-xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav a, .header__book { transition: opacity var(--transition); }
+.desktop-nav a:hover, .header__book:hover { opacity: 0.66; }
+.header__book { display: inline-flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); font-size: var(--font-size-xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.mobile-nav { display: none; position: relative; }
+.mobile-nav summary { min-width: var(--touch-target); min-height: var(--touch-target); align-content: center; cursor: pointer; list-style: none; font-size: var(--font-size-xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.mobile-nav summary::-webkit-details-marker { display: none; }
+.mobile-nav summary span { margin-left: var(--space-2); }
+.mobile-nav nav { position: absolute; top: calc(100% + var(--space-3)); right: 0; display: grid; min-width: 15rem; padding: var(--space-3); border: var(--border-thin) solid var(--color-line); background: var(--color-paper); box-shadow: var(--shadow); color: var(--color-ink); }
+.mobile-nav nav a { min-height: var(--touch-target); align-content: center; border-bottom: var(--border-thin) solid var(--color-line); }
+
+.hero { position: relative; min-height: 50rem; color: var(--color-white); }
+.hero > img, .hero__veil { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero > img { object-fit: cover; }
+.hero__veil { background: linear-gradient(90deg, var(--color-overlay), var(--color-overlay-soft)); }
+.hero__content { position: relative; z-index: 1; display: flex; min-height: 50rem; flex-direction: column; align-items: flex-start; justify-content: center; padding-top: var(--header-height); }
+.hero__content .eyebrow { margin-bottom: var(--space-5); }
+.hero h1 { max-width: 11ch; font-size: var(--font-size-hero); line-height: 0.88; }
+.hero h1 em { color: var(--color-paper-deep); font-weight: 500; }
+.hero__content > p:not(.eyebrow) { max-width: 34rem; margin-top: var(--space-5); font-size: var(--font-size-lead); }
+.hero .button { margin-top: var(--space-6); }
+.hero__note { position: absolute; z-index: 1; right: var(--gutter); bottom: var(--space-5); font-size: var(--font-size-xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.button, .booking-fab { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2) var(--space-5); border: var(--border-thin) solid var(--color-ink); background: var(--color-ink); color: var(--color-white); font-size: var(--font-size-xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; transition: transform var(--transition), background var(--transition); }
+.button--light { border-color: var(--color-white); background: var(--color-white); color: var(--color-ink); }
+.button:hover, .booking-fab:hover { transform: translateY(-0.15rem); }
+
+.trust { display: grid; min-height: 5.5rem; grid-template-columns: repeat(4, 1fr); border-bottom: var(--border-thin) solid var(--color-line); background: var(--color-paper-deep); }
+.trust p { display: grid; place-items: center; padding: var(--space-3); border-right: var(--border-thin) solid var(--color-line); font-size: var(--font-size-xs); letter-spacing: var(--letter-label); text-align: center; text-transform: uppercase; }
+.trust p:last-child { border-right: 0; }
+.trust p:first-child { padding-left: var(--fab-clearance); }
+.trust strong { margin-right: var(--space-1); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.section-heading { display: grid; grid-template-columns: 0.6fr 1.25fr 0.75fr; gap: var(--space-6); align-items: start; }
+.section-heading h2, .story h2, .salon h2, .faq h2, .booking h2 { font-size: var(--font-size-h2); line-height: var(--line-height-heading); }
+.section-heading > p:last-child { max-width: 30rem; padding-top: var(--space-2); color: var(--color-muted); }
+.menu-list { margin-top: var(--space-8); border-top: var(--border-thin) solid var(--color-line); }
+.menu-list article { display: grid; min-height: 8rem; grid-template-columns: 4rem 1fr auto; align-items: center; gap: var(--space-5); border-bottom: var(--border-thin) solid var(--color-line); transition: padding var(--transition), background var(--transition); }
+.menu-list article:hover { padding-inline: var(--space-3); background: var(--color-paper-deep); }
+.menu-list span { color: var(--color-muted); font-size: var(--font-size-xs); }
+.menu-list h3 { font-size: var(--font-size-h3); }
+.menu-list p { color: var(--color-muted); }
+.menu-list strong { font-size: var(--font-size-sm); font-weight: 500; }
+.story { display: grid; grid-template-columns: 1fr 1fr; background: var(--color-ink); color: var(--color-white); }
+.story__image img { height: 100%; object-fit: cover; }
+.story__copy { display: flex; flex-direction: column; justify-content: center; padding: var(--space-9) var(--gutter); }
+.story__copy .eyebrow { margin-bottom: var(--space-5); color: var(--color-brass); }
+.story__copy > p:not(.eyebrow) { max-width: 35rem; margin-top: var(--space-5); color: var(--color-paper-deep); font-size: var(--font-size-lead); }
+.story dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-3); margin-top: var(--space-7); padding-top: var(--space-5); border-top: var(--border-thin) solid var(--color-line-light); }
+.story dt { font-family: var(--font-display); font-size: var(--font-size-h3); }
+.story dd { color: var(--color-paper-deep); font-size: var(--font-size-xs); }
+.salon { background: var(--color-olive); color: var(--color-white); }
+.salon__grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-7); }
+.salon__grid > p { max-width: 33rem; align-self: end; color: var(--color-paper); font-size: var(--font-size-lead); }
+.salon__cards { display: grid; grid-column: 1 / -1; grid-template-columns: repeat(3, 1fr); margin-top: var(--space-4); border-top: var(--border-thin) solid var(--color-line-light); }
+.salon__cards article { min-height: 13rem; padding: var(--space-5); border-right: var(--border-thin) solid var(--color-line-light); }
+.salon__cards article:last-child { border-right: 0; }
+.salon__cards span { color: var(--color-paper-deep); font-size: var(--font-size-xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.salon__cards h3 { margin-block: var(--space-5) var(--space-2); font-size: var(--font-size-h3); }
+.salon__cards p { color: var(--color-paper-deep); }
+.reviews .eyebrow { margin-bottom: var(--space-6); }
+.reviews__layout { display: grid; grid-template-columns: 1fr 14rem; gap: var(--space-8); align-items: end; }
+.reviews blockquote { max-width: 24ch; font-family: var(--font-display); font-size: var(--font-size-quote); line-height: 1.08; }
+.reviews__layout > div { padding-top: var(--space-5); border-top: var(--border-thin) solid var(--color-line); color: var(--color-muted); }
+.rating { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); color: var(--color-wine); font-weight: 600; }
+.faq { background: var(--color-paper-deep); }
+.faq__grid { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: var(--space-8); }
+.faq details { border-top: var(--border-thin) solid var(--color-line); }
+.faq details:last-child { border-bottom: var(--border-thin) solid var(--color-line); }
+.faq summary { min-height: 5rem; align-content: center; cursor: pointer; font-family: var(--font-display); font-size: var(--font-size-h3); }
+.faq details p { max-width: 44rem; padding-bottom: var(--space-5); color: var(--color-muted); }
+.booking { padding-block: var(--space-8); background: var(--color-wine); color: var(--color-white); }
+.booking__inner { display: grid; grid-template-columns: 1fr 0.6fr; gap: var(--space-8); align-items: end; }
+.booking__inner > div:last-child { display: grid; gap: var(--space-4); justify-items: start; }
+.booking__inner > div:last-child > p { color: var(--color-paper-deep); font-size: var(--font-size-lead); }
+.phone-link { font-size: var(--font-size-sm); }
+.phone-link a { border-bottom: var(--border-thin) solid var(--color-line-light); }
+
+.site-footer { background: var(--color-ink); color: var(--color-paper-deep); }
+.footer-hub { display: grid; grid-template-columns: minmax(14rem, 1.35fr) repeat(3, minmax(9rem, 0.7fr)) var(--widget-space); gap: var(--space-6); padding-block: var(--space-7); }
+.footer-hub__booking, .footer-hub__review, .footer-hub__contact, .footer-hub__social { display: grid; align-content: start; gap: var(--space-3); }
+.brand--footer { color: var(--color-white); }
+.footer-hub__booking > p { max-width: 21rem; }
+.footer-hub__booking .button { justify-self: start; margin-top: var(--space-2); }
+.footer-label { color: var(--color-brass); }
+.footer-rating { display: flex; align-items: center; gap: var(--space-2); }
+.footer-rating strong { color: var(--color-white); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.footer-hub__review > a, .footer-hub__contact a { text-decoration: underline; text-decoration-color: var(--color-line-light); text-underline-offset: var(--space-1); }
+.footer-hub__contact { font-style: normal; }
+.footer-hub__contact a, .footer-hub__contact span { display: flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); }
+.footer-hub__social > div { display: flex; gap: var(--space-2); }
+.footer-hub__social a { display: grid; width: var(--touch-target); min-height: var(--touch-target); place-items: center; border: var(--border-thin) solid var(--color-line-light); border-radius: var(--radius-pill); transition: background var(--transition); }
+.footer-hub__social a:hover { background: var(--color-wine); }
+.footer-hub__ai-slot { min-width: var(--widget-space); min-height: var(--widget-space); justify-self: end; }
+.footer-bottom { display: flex; min-height: 5rem; align-items: center; justify-content: space-between; gap: var(--space-4); border-top: var(--border-thin) solid var(--color-line-light); font-size: var(--font-size-xs); }
+.footer-bottom > div { display: flex; gap: var(--space-4); margin-right: calc(var(--widget-space) + var(--space-5)); }
+.footer-bottom > p { margin-left: var(--fab-clearance); }
+.booking-fab { position: fixed; z-index: 50; bottom: var(--fab-offset); left: var(--fab-offset); border-color: var(--color-brass); background: var(--color-white); box-shadow: var(--shadow); color: var(--color-ink); }
+
+@media (max-width: 70rem) {
+  .desktop-nav, .header__book { display: none; }
+  .header__inner { grid-template-columns: 1fr auto; }
+  .mobile-nav { display: block; }
+  .footer-hub { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .footer-hub__ai-slot { grid-column: 2; }
+}
+
+@media (max-width: 52rem) {
+  .section-heading { grid-template-columns: 1fr; }
+  .story { grid-template-columns: 1fr; }
+  .story__image { max-height: 38rem; }
+  .story__copy { padding-block: var(--space-8); }
+  .salon__grid, .booking__inner, .faq__grid { grid-template-columns: 1fr; gap: var(--space-6); }
+  .reviews__layout { grid-template-columns: 1fr; gap: var(--space-5); }
+}
+
+@media (max-width: 42rem) {
+  :root { --font-size-hero: clamp(3.5rem, 17vw, 5.2rem); --font-size-h2: clamp(2.5rem, 12vw, 4rem); --space-9: 6rem; }
+  .announcement { min-height: 3rem; }
+  .site-header { top: 3rem; background: var(--color-ink); }
+  .header__inner { border-bottom: 0; }
+  .brand small { display: none; }
+  .hero, .hero__content { min-height: 44rem; }
+  .hero__content { justify-content: flex-end; padding-bottom: var(--space-7); }
+  .hero__note { display: none; }
+  .trust { grid-template-columns: repeat(2, 1fr); }
+  .trust p:nth-child(2) { border-right: 0; }
+  .trust p:nth-child(-n+2) { border-bottom: var(--border-thin) solid var(--color-line); }
+  .trust p:first-child { padding-left: var(--space-3); }
+  .menu-list article { min-height: 10rem; grid-template-columns: 2rem 1fr; gap: var(--space-3); }
+  .menu-list strong { grid-column: 2; }
+  .story dl, .salon__cards { grid-template-columns: 1fr; }
+  .salon__cards article { min-height: auto; border-right: 0; border-bottom: var(--border-thin) solid var(--color-line-light); }
+  .footer-hub { grid-template-columns: 1fr; }
+  .footer-hub__ai-slot { grid-column: 1; }
+  .footer-bottom { align-items: flex-start; flex-direction: column; padding-block: var(--space-4) calc(var(--widget-space) + var(--space-5)); }
+  .footer-bottom > p, .footer-bottom > div { margin: 0; }
+  .booking-fab { display: none; }
+}
+
+@media (hover: hover) {
+  .footer-hub__contact a:hover { color: var(--color-white); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
+}
+
+/* =========================================================================
+   TENANT STATES — appended, never edited into the kit above.
+
+   The kit is a mock: exactly three menus, three salon cards, one diner note,
+   two photographs and a week of fictional opening hours. A real page has
+   anywhere from none to twenty-four of each, and a brand-new restaurant has
+   none of anything. Everything below answers a count the mock never had to
+   answer, in the kit's own tokens, so that a page which is missing a
+   photograph reads as a designed composition rather than a hole. Nothing
+   above this banner was changed to make any of it work.
+
+   TWO THINGS THIS AUTHOR DREW NOWHERE are also here: a repeatable words band
+   (`text`), assembled out of his own section header and his own muted prose
+   voice, and a chat launcher for the corner his notes reserve
+   ([data-ai-widget-slot] "for the future assistant"). Neither invents a new
+   visual language; both are written in his tokens.
+
+   TOKEN TRAP, restated because every rule below had to avoid it: this kit
+   spells its hairline `--border-thin` (the other two hospitality kits spell
+   it `--border`) and its line heights `--line-height-body` /
+   `--line-height-heading` (they spell those `--line-body` / `--line-heading`).
+   There is one container width here and no reading measure. See the file
+   header.
+   ========================================================================= */
+
+/* --- the two tenant-coloured tokens --------------------------------------
+   THE ONE TENANT OVERRIDE, given somewhere to land.
+
+   This design has two accent families and only one of them may carry a
+   tenant's colour. `--color-wine` is a SURFACE: the announcement bar and the
+   closing panel are painted in it and set their type in `--color-white` and
+   `--color-paper-deep`, neither of which a single token can carry with it, so
+   a mid-tone tenant hue would leave a bar of unreadable text. `--color-brass`
+   is the accent TEXT — the eyebrow over the kitchen story, every footer
+   label, the fixed pill's hairline — and it appears only on `--color-ink`,
+   which is exactly the fixed dark Accent::bright is measured against.
+
+   `--color-accent-ink` is its counterpart for a PAPER ground, and it is new:
+   the author sets an em in only one heading (his h1, in a tint of the hero
+   veil), so the two-tone companion leaf R6 ships for every other display
+   heading had no colour on this design at all. It defaults to the author's
+   own oxblood, so a page with no tenant colour renders the bytes it always
+   did, and Accent::deep is measured to 5.5:1 against this kit's own paper. */
+:root {
+  --color-accent-ink: var(--color-wine);
+}
+
+.section-heading h2 em,
+.faq h2 em,
+.text-band h2 em {
+  color: var(--color-accent-ink);
+  font-weight: 500;
+}
+
+.story h2 em,
+.salon h2 em,
+.booking h2 em {
+  color: var(--color-brass);
+  font-weight: 500;
+}
+
+/* --- the lockup's logo and its conjunction --------------------------------
+   The author's brand mark is a bordered disc holding one display-face letter.
+   A business that has uploaded a logo puts it in that same disc, so the
+   lockup does not move; the global `img { width: 100% }` rule would otherwise
+   let it out of the circle.
+
+   `.brand strong em` is Copy::wordmark()'s derived infix emphasis — a single
+   `&` standing alone between two words, which this author's own fictional
+   name has no occasion for but a real one ("Ember & Vine") very often does.
+   It takes the accent his lockup would use if he had drawn one. */
+.brand > span img {
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+.brand strong em {
+  color: var(--color-brass);
+}
+
+/* --- the kitchen band with no photograph ---------------------------------
+   His story band is an even two-column split, one half of which is the
+   picture. TemplateImage makes his own plate the default for this slot, so
+   this state is only reachable by a page whose stored leaf resolves to
+   nothing at all — and half an ink band with nothing in it is a hole. */
+.story--solo {
+  grid-template-columns: 1fr;
+}
+
+/* --- an eyebrow used as a heading -----------------------------------------
+   Three bands promote their eyebrow from <p> to <h2> when the tenant has
+   written no display heading, because a nav destination with no heading is a
+   nameless section in the document outline. `h1, h2, h3` above sets the
+   DISPLAY family, which a two-word eyebrow in small caps must not inherit —
+   `.eyebrow`'s own weight and tracking already win on specificity, and only
+   the family is unopposed. */
+h2.eyebrow {
+  font-family: var(--font-body);
+}
+
+/* --- hero with no photograph ---------------------------------------------
+   The author's hero is a full-bleed photograph under a gradient veil with
+   white type over it. TemplateImage makes his own plate the default for this
+   slot, so this state is only reachable by a page whose stored leaf resolves
+   to nothing at all — and white type on the paper ground would be invisible
+   rather than merely plain. */
+.hero--solo {
+  background: var(--color-ink);
+}
+
+/* --- the trust strip: fewer than four cells ------------------------------
+   Four cells in the author's markup: the rating he leads with (null below
+   PageContent::MIN_REVIEWS_FOR_AGGREGATE org-wide, by design) and three
+   highlights a tenant may or may not have written. */
+.trust[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.trust[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.trust[data-count="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* --- the kitchen ledger: one or two facts --------------------------------
+   His dl is three value/caption pairs in a fixed `repeat(3, 1fr)`; a
+   restaurant with one thing worth counting would otherwise get a third of a
+   row with two empty columns beside it. */
+.story dl[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.story dl[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* --- the salon cards, for one to eight photographs -----------------------
+   THE ONE BAND THAT IS NOT THE AUTHOR'S COMPOSITION, and the reason is
+   written down rather than glossed. His three cards carry a small label, a
+   name and a line of prose and NO photograph — the only text-only `gallery`
+   block in the six kits. On this platform a gallery band IS its pictures:
+   PageContent::count() counts photographs for this type, the image endpoints
+   are the only writer of its eight slots, and a design that drew none would
+   offer eight photo controls that could never appear.
+
+   So the picture fills the card he drew, inside his own border, under a veil
+   in the two overlay tokens his hero already uses, and his h3 becomes the
+   photograph's caption. His card's `min-height: 13rem` is untouched and the
+   picture is absolutely positioned, so THE BAND IS EXACTLY THE HEIGHT HE
+   DREW IT at every count. */
+.salon__cards article {
+  position: relative;
+  overflow: hidden;
+}
+
+.salon__cards img {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  height: 100%;
+  object-fit: cover;
+}
+
+.salon__cards article::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  inset: 0;
+  background: linear-gradient(to top, var(--color-overlay), var(--color-overlay-soft));
+}
+
+.salon__cards span,
+.salon__cards h3 {
+  position: relative;
+  z-index: 1;
+}
+
+/* One and two photographs: his fixed three-column track would leave the row
+   part-empty. Bounded at SectionType::GALLERY_IMAGES, so the counts are
+   enumerable and are enumerated rather than approximated. */
+.salon__cards[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.salon__cards[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Four and up wrap onto a second row, which his single `:last-child` rule
+   never had to think about: the third card of every row needs its dividing
+   rule removed, and every card after the first row needs the hairline his
+   container's own `border-top` gives the first. */
+.salon__cards article:nth-child(3n) {
+  border-right: 0;
+}
+
+.salon__cards article:nth-child(n + 4) {
+  border-top: var(--border-thin) solid var(--color-line-light);
+}
+
+/* --- the diner note: no attribution --------------------------------------
+   His quote sits beside a 14rem column holding the rating and the guest's
+   name. ReviewSubmission's rating is nullable and the aggregate is null below
+   four ratings, so that column can legitimately be empty — and an empty
+   column with a rule over it is a line to nowhere. */
+.reviews__layout--solo {
+  grid-template-columns: 1fr;
+}
+
+/* --- the footer hub, for the columns a tenant actually has ----------------
+   His five-track grid assumes all of them: the lockup, the review link, the
+   contact details, the Follow icons and the reserved widget space. Each of
+   the middle three is gated on something real (a reachable review form, a
+   published channel, a social destination the business named), so the row
+   closes up rather than leaving gaps. The widget space is never dropped —
+   it is what keeps the fixed launcher off the last line of the footer. */
+.footer-hub--1 {
+  grid-template-columns: minmax(14rem, 1fr) var(--widget-space);
+}
+
+.footer-hub--2 {
+  grid-template-columns: minmax(14rem, 1.35fr) minmax(9rem, 0.7fr) var(--widget-space);
+}
+
+.footer-hub--3 {
+  grid-template-columns: minmax(14rem, 1.35fr) repeat(2, minmax(9rem, 0.7fr)) var(--widget-space);
+}
+
+/* --- the words band the author did not draw ------------------------------
+   `text` is repeatable and every template has to ship one, because the picker
+   filters on what a design actually renders and a control that saves words
+   the page then drops is the failure this project refuses. Assembled from his
+   own parts: the three-column section header his menus band already uses, his
+   muted prose colour and a plate cropped the way his story photograph is. The
+   only rules it needs are a reading measure — his own body copy is bounded by
+   grid tracks this band has none of — and the frame. */
+.text-band__body {
+  display: grid;
+  max-width: 44rem;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  color: var(--color-muted);
+}
+
+.text-band__media {
+  margin: var(--space-7) 0 0;
+}
+
+.text-band__media img {
+  max-height: 34rem;
+  object-fit: cover;
+}
+
+.text-band__media figcaption {
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* --- the chat launcher ---------------------------------------------------
+   The author reserves the footer's right side for "the future assistant" and
+   keeps the bottom-RIGHT corner clear (his own `.booking-fab` is fixed
+   bottom-left). This is that launcher, in his tokens: his ink, his brass
+   hairline, his pill radius and his lifted shadow.
+
+   The glyph swaps off `aria-expanded`, which landing/kit.js maintains — one
+   attribute, one source of truth, and no second class to fall out of step
+   with the state a screen reader is told about. */
+.ai-launcher {
+  position: fixed;
+  z-index: 60;
+  right: var(--fab-offset);
+  bottom: var(--fab-offset);
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  place-items: center;
+  border: var(--border-thin) solid var(--color-brass);
+  border-radius: var(--radius-pill);
+  background: var(--color-ink);
+  box-shadow: var(--shadow);
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.ai-launcher .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.ai-launcher__glyph--close {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--open {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--close {
+  display: block;
+}
+
+.ai-panel {
+  position: fixed;
+  z-index: 60;
+  right: var(--fab-offset);
+  bottom: calc(var(--fab-offset) + 4.25rem);
+  width: min(24rem, calc(100vw - var(--fab-offset) * 2));
+  height: min(32rem, 70vh);
+  border: 0;
+  background: var(--color-white);
+  box-shadow: var(--shadow);
+}

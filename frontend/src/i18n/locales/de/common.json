@@ -3252,6 +3252,7 @@
       "field_city_label": "Text über Ihrem Ort",
       "field_item_cta_label": "Text auf jedem Buchen-Link",
       "field_fact": "Eine Zeile für Ihre nummerierte Liste",
+      "field_fact_caption": "Zeile unter der Zahl",
       "field_promise": "Ein kurzes Versprechen unter Ihrem Button",
       "field_feature_caption": "Zeile unter dem Highlight",
       "field_descriptor": "Wort unter Ihrem Firmennamen",
