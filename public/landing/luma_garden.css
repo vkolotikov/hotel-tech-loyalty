@@ -1,0 +1,614 @@
+/*
+ * Luma Garden — template stylesheet.
+ *
+ * THE AUTHOR'S OWN style.css, from
+ * resources/landing-kits/hospitality/02-luma-garden/style.css, copied byte for
+ * byte except for the TWO deliberate changes listed below.
+ *
+ * WHAT CHANGED, and nothing else did:
+ *
+ *  1. The self-hosted @font-face block below. The kit asked for Newsreader and
+ *     Manrope through a fonts.googleapis.com <link>; the landing CSP's
+ *     style-src/font-src are 'self'-only (LandingPageSecurity::policy()), so
+ *     that link cannot work here. BOTH FAMILIES ARE ALREADY ON DISK —
+ *     organic_wellness.css declares the same seven files — so this template
+ *     adds no font to the repository at all. It re-declares them because a
+ *     @font-face rule belongs to the stylesheet that uses it, and because THE
+ *     DECLARED RANGES ARE NOT THE SAME.
+ *
+ *     THE RANGES ARE THIS AUTHOR'S OWN REQUEST. His <link> asks for
+ *     `Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400` and
+ *     `Manrope:wght@400;500;600`, so Google hands his page a Newsreader
+ *     pinned at 400 and a Manrope that stops at 600. Both matter: `.faq
+ *     summary`, `.review blockquote` and `.footer-rating strong` set no
+ *     Newsreader weight at all (and <strong> asks for 700), and
+ *     `.menu-grid article div strong` asks Manrope for 700. Declaring a wider
+ *     range than he has would render four elements a weight heavier than his
+ *     page does. The FILES are unchanged and still carry their full axes;
+ *     only the declared ranges are pinned, exactly as his are.
+ *
+ *     THE ITALIC AXIS IS SHIPPED because his own <link> asks for it and his
+ *     lockup sets an <em> in the display face.
+ *
+ *     NEWSREADER PUBLISHES NO CYRILLIC SUBSET. Google serves it as latin,
+ *     latin-ext and vietnamese and nothing else, so there is no Cyrillic
+ *     display face to declare and none is invented; a Russian tenant's
+ *     headings fall through to the author's own declared stack (Georgia,
+ *     serif), which is what happens on his page. The BODY face, Manrope, does
+ *     carry Cyrillic and latin-ext, so every word of running copy is covered.
+ *
+ *  2. The "tenant states" section APPENDED at the very end of this file. The
+ *     kit is a mock with exactly three menus, four occasion cards, one diner
+ *     postcard and two photographs; a real page has anywhere from none to
+ *     twenty-four of each. Those rules answer counts the mock never had to,
+ *     plus the two things this author drew nowhere: a words band and a chat
+ *     launcher. Every rule below is written in the kit's own tokens and every
+ *     one is additive: no rule above the "tenant states" banner was edited to
+ *     make any of it work.
+ *
+ * TOKEN TRAPS when copying a rule out of one of the other five kit
+ * stylesheets into this file, all of which produce silence rather than an
+ * error:
+ *
+ *   1. `--border` here is `--border-thin` in kit 01-hospitality and
+ *      `--hairline` in the beauty kits.
+ *   2. `--line-body` / `--line-heading` here are `--line-height-body` /
+ *      `--line-height-heading` in kit 01-hospitality.
+ *   3. There is no reading measure. One `--container` (92rem) and nothing
+ *      else; `--container-reading` and `--container-narrow` do not exist.
+ *   4. THIS IS THE ONLY HOSPITALITY KIT WITH RADII. `--radius-md` and
+ *      `--radius-lg` exist here and in neither of the other two.
+ */
+
+/* --- self-hosted faces (see note 1 above) -------------------------------- */
+@font-face{font-family:Newsreader;font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/newsreader-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:Newsreader;font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/newsreader-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:Newsreader;font-style:italic;font-weight:400;font-display:swap;
+  src:url('fonts/newsreader-italic-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:Newsreader;font-style:italic;font-weight:400;font-display:swap;
+  src:url('fonts/newsreader-italic-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/manrope-var-cyrillic.woff2') format('woff2');
+  unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/manrope-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/manrope-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+/* --- end self-hosted faces ----------------------------------------------- */
+
+:root {
+  --color-sand: #f0ede3;
+  --color-shell: #faf8f1;
+  --color-foam: #e1e6dc;
+  --color-sage: #68735c;
+  --color-pine: #233126;
+  --color-sea: #d3d9c9;
+  --color-clay: #b97051;
+  --color-ink: #202b22;
+  --color-muted: #68716b;
+  --color-white: #ffffff;
+  --color-line: rgba(36, 49, 41, 0.17);
+  --color-line-light: rgba(255, 255, 255, 0.23);
+  --color-focus: #e49b7d;
+  --color-shadow: rgba(38, 56, 45, 0.15);
+  --font-display: "Newsreader", Georgia, serif;
+  --font-body: "Manrope", Arial, sans-serif;
+  --font-size-2xs: 0.7rem;
+  --font-size-xs: 0.78rem;
+  --font-size-sm: 0.9rem;
+  --font-size-body: 1rem;
+  --font-size-lead: clamp(1.1rem, 1.5vw, 1.4rem);
+  --font-size-h3: clamp(1.6rem, 2vw, 2.25rem);
+  --font-size-h2: clamp(3rem, 5.5vw, 6rem);
+  --font-size-hero: clamp(4.3rem, 8vw, 8.4rem);
+  --font-size-quote: clamp(1.9rem, 3.4vw, 3.8rem);
+  --line-body: 1.7;
+  --line-heading: 0.94;
+  --letter-label: 0.17em;
+  --container: 92rem;
+  --gutter: clamp(1rem, 3.5vw, 4rem);
+  --space-1: 0.4rem;
+  --space-2: 0.7rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --space-7: 4.5rem;
+  --space-8: 7rem;
+  --space-9: 10rem;
+  --radius-sm: 0.45rem;
+  --radius-md: 0.9rem;
+  --radius-lg: 1.35rem;
+  --radius-pill: 999px;
+  --border: 1px;
+  --touch-target: 3rem;
+  --header-height: 5.5rem;
+  --widget-space: 7.5rem;
+  --fab-offset: 1.25rem;
+  --fab-clearance: 13rem;
+  --shadow: 0 1.8rem 5rem var(--color-shadow);
+  --transition: 240ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; overflow-x: hidden; background: var(--color-sand); color: var(--color-ink); font-family: var(--font-body); font-size: var(--font-size-body); line-height: var(--line-body); -webkit-font-smoothing: antialiased; }
+img { display: block; width: 100%; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p, blockquote { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.035em; }
+[id] { scroll-margin-top: calc(var(--header-height) + var(--space-4)); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: var(--space-1); }
+.container { width: min(calc(100% - var(--gutter) * 2), var(--container)); margin-inline: auto; }
+.section { padding-block: var(--space-9); }
+.eyebrow, .footer-label { font-size: var(--font-size-2xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.icon { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; }
+.icon--social { width: 1.2rem; height: 1.2rem; }
+.skip-link { position: fixed; z-index: 100; top: var(--space-3); left: var(--space-3); padding: var(--space-2) var(--space-3); border-radius: var(--radius-pill); background: var(--color-pine); color: var(--color-white); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.announcement { display: grid; min-height: 2.5rem; place-items: center; padding: var(--space-1) var(--gutter); background: var(--color-sea); color: var(--color-ink); font-size: var(--font-size-xs); text-align: center; }
+.announcement a { border-bottom: var(--border) solid currentColor; }
+.site-header { position: sticky; z-index: 40; top: 0; background: var(--color-shell); border-bottom: var(--border) solid var(--color-line); }
+.header__inner { display: grid; min-height: var(--header-height); grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-6); }
+.brand { display: grid; grid-template-columns: auto auto; column-gap: var(--space-3); align-items: center; line-height: 1; }
+.brand > span { display: grid; width: 2.8rem; height: 2.8rem; grid-row: span 2; place-items: center; border: var(--border) solid var(--color-line); border-radius: var(--radius-pill); background: var(--color-foam); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.brand strong { font-family: var(--font-display); font-weight: 400; }
+.brand strong em { color: var(--color-clay); font-weight: 400; }
+.brand small { color: var(--color-muted); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav { display: flex; justify-content: center; gap: var(--space-5); font-size: var(--font-size-xs); font-weight: 600; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav a { transition: color var(--transition); }
+.desktop-nav a:hover { color: var(--color-clay); }
+.header__book { display: inline-flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); padding-inline: var(--space-4); border-radius: var(--radius-pill); background: var(--color-pine); color: var(--color-white); font-size: var(--font-size-xs); font-weight: 600; }
+.mobile-nav { display: none; position: relative; }
+.mobile-nav summary { min-height: var(--touch-target); align-content: center; cursor: pointer; list-style: none; font-size: var(--font-size-xs); font-weight: 600; text-transform: uppercase; }
+.mobile-nav summary::-webkit-details-marker { display: none; }
+.mobile-nav summary span { margin-left: var(--space-2); }
+.mobile-nav nav { position: absolute; top: calc(100% + var(--space-3)); right: 0; display: grid; min-width: 15rem; padding: var(--space-3); border: var(--border) solid var(--color-line); border-radius: var(--radius-md); background: var(--color-shell); box-shadow: var(--shadow); }
+.mobile-nav nav a { min-height: var(--touch-target); align-content: center; border-bottom: var(--border) solid var(--color-line); }
+
+.hero { display: grid; min-height: 47rem; grid-template-columns: 1.18fr 0.82fr; gap: 0; padding: var(--gutter); background: var(--color-shell); }
+.hero__image { overflow: hidden; border-radius: var(--radius-lg); }
+.hero__image img { height: 100%; object-fit: cover; }
+.hero__copy { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: var(--space-7); }
+.hero__copy .eyebrow { margin-bottom: var(--space-5); color: var(--color-sage); }
+.hero h1 { font-size: var(--font-size-hero); line-height: var(--line-heading); }
+.hero h1 em { color: var(--color-clay); font-weight: 400; }
+.hero__copy > p:not(.eyebrow) { max-width: 34rem; margin-top: var(--space-5); color: var(--color-muted); font-size: var(--font-size-lead); }
+.hero .button { margin-top: var(--space-6); }
+.button, .booking-fab { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2) var(--space-5); border: var(--border) solid var(--color-pine); border-radius: var(--radius-pill); background: var(--color-pine); color: var(--color-white); font-size: var(--font-size-xs); font-weight: 600; transition: transform var(--transition), background var(--transition); }
+.button:hover, .booking-fab:hover { transform: translateY(-0.15rem); }
+.button--cream { border-color: var(--color-shell); background: var(--color-shell); color: var(--color-pine); }
+.trust { display: grid; grid-template-columns: repeat(4, 1fr); padding-inline: var(--gutter); background: var(--color-foam); }
+.trust div { display: flex; min-height: 7rem; flex-direction: column; justify-content: center; padding: var(--space-4); border-right: var(--border) solid var(--color-line); text-align: center; }
+.trust div:last-child { border-right: 0; }
+.trust strong { font-family: var(--font-display); font-size: var(--font-size-h3); font-weight: 400; }
+.trust span { color: var(--color-muted); font-size: var(--font-size-xs); }
+.section-heading { display: flex; align-items: end; justify-content: space-between; gap: var(--space-7); }
+.section-heading h2, .story h2, .faq h2, .booking h2 { margin-top: var(--space-3); font-size: var(--font-size-h2); line-height: var(--line-heading); }
+.section-heading > p { max-width: 31rem; color: var(--color-muted); font-size: var(--font-size-lead); }
+.menu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); margin-top: var(--space-7); }
+.menu-grid article { display: flex; min-height: 25rem; flex-direction: column; padding: var(--space-5); border: var(--border) solid var(--color-line); border-radius: var(--radius-lg); background: var(--color-shell); transition: transform var(--transition), box-shadow var(--transition); }
+.menu-grid article:hover { box-shadow: var(--shadow); transform: translateY(-0.3rem); }
+.menu-grid__featured { background: var(--color-foam) !important; }
+.menu-grid__number { color: var(--color-clay); font-size: var(--font-size-xs); }
+.menu-grid h3 { margin-top: auto; font-size: var(--font-size-h2); line-height: var(--line-heading); }
+.menu-grid > article > p:not(.menu-grid__number) { margin-top: var(--space-4); color: var(--color-muted); }
+.menu-grid article div { display: flex; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-5); padding-top: var(--space-3); border-top: var(--border) solid var(--color-line); font-size: var(--font-size-xs); }
+.menu-grid article div span { color: var(--color-muted); }
+.story { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-7); padding: var(--space-7); background: var(--color-sage); color: var(--color-white); }
+.story__copy { display: flex; flex-direction: column; justify-content: center; max-width: 39rem; margin-inline: auto; }
+.story__copy .eyebrow { color: var(--color-foam); }
+.story__copy > p:not(.eyebrow) { margin-top: var(--space-5); color: var(--color-foam); font-size: var(--font-size-lead); }
+.story ul { display: grid; gap: var(--space-2); padding: var(--space-5) 0 0; margin: var(--space-6) 0 0; border-top: var(--border) solid var(--color-line-light); list-style: none; }
+.story__image { overflow: hidden; border-radius: var(--radius-lg); }
+.story__image img { height: 100%; max-height: 46rem; object-fit: cover; }
+.occasion-list { display: grid; grid-template-columns: repeat(4, 1fr); margin-top: var(--space-7); border-top: var(--border) solid var(--color-line); }
+.occasion-list article { min-height: 15rem; padding: var(--space-4); border-right: var(--border) solid var(--color-line); }
+.occasion-list article:last-child { border-right: 0; }
+.occasion-list span { color: var(--color-clay); font-size: var(--font-size-xs); }
+.occasion-list h3 { margin-block: var(--space-6) var(--space-2); font-size: var(--font-size-h3); }
+.occasion-list p { color: var(--color-muted); }
+.review { padding-block: var(--space-9); background: var(--color-sea); }
+.review__inner { display: grid; grid-template-columns: 10rem 1fr 12rem; gap: var(--space-7); align-items: end; }
+.review blockquote { font-family: var(--font-display); font-size: var(--font-size-quote); line-height: 1.03; }
+.review__inner > div { padding-top: var(--space-3); border-top: var(--border) solid var(--color-line); font-size: var(--font-size-sm); }
+.rating { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); font-weight: 600; }
+.faq { display: grid; grid-template-columns: 0.75fr 1.25fr; gap: var(--space-8); }
+.faq details { border-top: var(--border) solid var(--color-line); }
+.faq details:last-child { border-bottom: var(--border) solid var(--color-line); }
+.faq summary { min-height: 5rem; align-content: center; cursor: pointer; font-family: var(--font-display); font-size: var(--font-size-h3); }
+.faq details p { max-width: 42rem; padding-bottom: var(--space-5); color: var(--color-muted); }
+.booking { padding: var(--space-4) var(--gutter) var(--space-9); }
+.booking__card { display: grid; max-width: var(--container); min-height: 33rem; grid-template-columns: 1fr 0.6fr; gap: var(--space-7); align-items: end; margin-inline: auto; padding: var(--space-8); border-radius: var(--radius-lg); background: var(--color-pine); color: var(--color-white); }
+.booking__card > div:first-child > p:last-child { margin-top: var(--space-5); color: var(--color-foam); font-size: var(--font-size-lead); }
+.booking__card > div:last-child { display: grid; gap: var(--space-4); justify-items: start; }
+.booking-phone { font-size: var(--font-size-sm); }
+.booking-phone a { border-bottom: var(--border) solid var(--color-line-light); }
+
+.site-footer { background: var(--color-pine); color: var(--color-foam); }
+.footer-hub { display: grid; grid-template-columns: minmax(14rem, 1.35fr) repeat(3, minmax(9rem, 0.7fr)) var(--widget-space); gap: var(--space-6); padding-block: var(--space-7); }
+.footer-hub__booking, .footer-hub__review, .footer-hub__contact, .footer-hub__social { display: grid; align-content: start; gap: var(--space-3); }
+.brand--footer { color: var(--color-white); }
+.brand--footer > span { border-color: var(--color-line-light); background: var(--color-sage); }
+.brand--footer small, .footer-label { color: var(--color-sea); }
+.footer-hub__booking > p { max-width: 22rem; }
+.footer-hub__booking .button { justify-self: start; margin-top: var(--space-2); }
+.footer-rating { display: flex; align-items: center; gap: var(--space-2); }
+.footer-rating strong { color: var(--color-white); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.footer-hub__review > a, .footer-hub__contact a { text-decoration: underline; text-decoration-color: var(--color-line-light); text-underline-offset: var(--space-1); }
+.footer-hub__contact { font-style: normal; }
+.footer-hub__contact a, .footer-hub__contact span { display: flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); }
+.footer-hub__social > div { display: flex; gap: var(--space-2); }
+.footer-hub__social a { display: grid; width: var(--touch-target); min-height: var(--touch-target); place-items: center; border: var(--border) solid var(--color-line-light); border-radius: var(--radius-pill); transition: background var(--transition); }
+.footer-hub__social a:hover { background: var(--color-sage); }
+.footer-hub__ai-slot { min-width: var(--widget-space); min-height: var(--widget-space); justify-self: end; }
+.footer-bottom { display: flex; min-height: 5rem; align-items: center; justify-content: space-between; gap: var(--space-4); border-top: var(--border) solid var(--color-line-light); font-size: var(--font-size-xs); }
+.footer-bottom > p { margin-left: var(--fab-clearance); }
+.footer-bottom > div { display: flex; gap: var(--space-4); margin-right: calc(var(--widget-space) + var(--space-5)); }
+.booking-fab { position: fixed; z-index: 50; bottom: var(--fab-offset); left: var(--fab-offset); box-shadow: var(--shadow); }
+
+@media (max-width: 70rem) {
+  .desktop-nav, .header__book { display: none; }
+  .header__inner { grid-template-columns: 1fr auto; }
+  .mobile-nav { display: block; }
+  .footer-hub { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .footer-hub__ai-slot { grid-column: 2; }
+}
+
+@media (max-width: 54rem) {
+  .hero { grid-template-columns: 1fr; }
+  .hero__image { min-height: 34rem; }
+  .hero__copy { padding: var(--space-7) var(--space-4); }
+  .section-heading { align-items: flex-start; flex-direction: column; gap: var(--space-4); }
+  .menu-grid { grid-template-columns: 1fr; }
+  .menu-grid article { min-height: 20rem; }
+  .story { grid-template-columns: 1fr; padding: var(--space-5); }
+  .story__copy { padding-block: var(--space-5); }
+  .occasion-list { grid-template-columns: repeat(2, 1fr); }
+  .occasion-list article:nth-child(2) { border-right: 0; }
+  .occasion-list article:nth-child(-n+2) { border-bottom: var(--border) solid var(--color-line); }
+  .review__inner, .faq, .booking__card { grid-template-columns: 1fr; }
+  .review__inner { gap: var(--space-5); }
+}
+
+@media (max-width: 48rem) {
+  :root { --font-size-hero: clamp(3.7rem, 18vw, 5.4rem); --font-size-h2: clamp(2.7rem, 13vw, 4.2rem); --space-9: 6rem; }
+  .brand small { display: none; }
+  .hero { padding: var(--space-3); }
+  .hero__image { min-height: 18rem; }
+  .hero__copy { padding: var(--space-5) var(--space-2); }
+  .hero__copy > p:not(.eyebrow) { margin-top: var(--space-4); }
+  .hero .button { margin-top: var(--space-4); }
+  .hero .button, .booking__card .button { width: 100%; }
+  .trust { grid-template-columns: repeat(2, 1fr); }
+  .trust div:nth-child(2) { border-right: 0; }
+  .trust div:nth-child(-n+2) { border-bottom: var(--border) solid var(--color-line); }
+  .occasion-list { grid-template-columns: 1fr; }
+  .occasion-list article { min-height: auto; border-right: 0; border-bottom: var(--border) solid var(--color-line); }
+  .booking { padding-inline: var(--space-3); }
+  .booking__card { min-height: 32rem; padding: var(--space-6) var(--space-4); }
+  .footer-hub { grid-template-columns: 1fr; }
+  .footer-hub__ai-slot { grid-column: 1; }
+  .footer-bottom { align-items: flex-start; flex-direction: column; padding-block: var(--space-4) calc(var(--widget-space) + var(--space-5)); }
+  .footer-bottom > p, .footer-bottom > div { margin: 0; }
+  .booking-fab { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
+}
+
+/* =========================================================================
+   TENANT STATES — appended, never edited into the kit above.
+
+   The kit is a mock: exactly three menus, four occasion cards, one diner
+   postcard, two photographs and a week of fictional service times. A real page
+   has anywhere from none to twenty-four of each, and a brand-new restaurant
+   has none of anything. Everything below answers a count the mock never had to
+   answer, in the kit's own tokens, so that a page which is missing a
+   photograph reads as a designed composition rather than a hole. Nothing above
+   this banner was changed to make any of it work.
+
+   TWO THINGS THIS AUTHOR DREW NOWHERE are also here: a repeatable words band
+   (`text`), assembled out of his own split section header and his own card
+   radius, and a chat launcher for the corner his notes reserve
+   ([data-ai-widget-slot] "for the future assistant"). Neither invents a new
+   visual language; both are written in his tokens.
+
+   TOKEN TRAP, restated because every rule below had to avoid it: this kit
+   spells its hairline `--border` (kit 01-hospitality spells it
+   `--border-thin`) and its line heights `--line-body` / `--line-heading` (kit
+   01 spells those `--line-height-body` / `--line-height-heading`). There is
+   one container width here and no reading measure. See the file header.
+   ========================================================================= */
+
+/* --- the tenant-coloured token -------------------------------------------
+   THE ONE TENANT OVERRIDE, and this design already had somewhere for it to
+   land: `--color-clay` is the author's terracotta accent and it is used as
+   TEXT and as a hairline in every place he uses it — the wordmark's last word,
+   the menu-card ordinals, the occasion ordinals, the desktop nav's hover. It
+   never carries type on top of it, which is what makes it safe to repaint.
+
+   `--color-pine` and `--color-sage` are NOT touched. Pine is this page's ink
+   (the header book pill, the closing card, the footer) and sage is the story
+   band's field; both set their type in `--color-white` and `--color-foam`,
+   which no single token can carry with them. Repainting a page's ink with a
+   brand colour is exactly the destruction D2 names.
+
+   Accent::deep is measured to 5.5:1 against this kit's own sand page, which is
+   the surface every clay element sits on. */
+
+/* --- an eyebrow used as a heading -----------------------------------------
+   Three bands promote their eyebrow from <p> to <h2> when the tenant has
+   written no display heading, because a nav destination with no heading is a
+   nameless section in the document outline. `h1, h2, h3` above sets the
+   DISPLAY family, which a two-word eyebrow in small caps must not inherit —
+   `.eyebrow`'s own weight and tracking already win on specificity, and only
+   the family is unopposed. */
+h2.eyebrow {
+  font-family: var(--font-body);
+}
+
+/* --- the lockup's logo ----------------------------------------------------
+   The author's brand mark is a tinted disc holding one display-face letter. A
+   business that has uploaded a logo puts it in that same disc, so the lockup
+   does not move; the global `img { width: 100% }` rule would otherwise let it
+   out of the circle. */
+.brand > span img {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: var(--radius-pill);
+  object-fit: cover;
+}
+
+/* --- hero with no photograph ---------------------------------------------
+   His hero is an image-led split: a tall rounded plate on the left and the
+   copy on the right. TemplateImage makes his own plate the default for this
+   slot, so this state is only reachable by a page whose stored leaf resolves
+   to nothing at all — and half a hero with a hole in it is worse than a
+   typographic one. */
+.hero--solo {
+  grid-template-columns: 1fr;
+}
+
+.hero--solo .hero__copy {
+  max-width: 46rem;
+  margin-inline: auto;
+}
+
+/* --- the trust strip: fewer than four cells ------------------------------
+   Four cells in the author's markup: the rating he leads with (null below
+   PageContent::MIN_REVIEWS_FOR_AGGREGATE org-wide, by design) and three
+   highlights a tenant may or may not have written. */
+.trust[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.trust[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.trust[data-count="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* --- the menu cards, for any number of menus -----------------------------
+   His grid is a fixed `repeat(3, 1fr)` for exactly three cards. One and two
+   would leave the row part-empty; four and up wrap onto rows of three, which
+   his own gap already spaces correctly, so only the short counts need a rule.
+   Bounded at PageContent::MAX_SERVICES, so this is not an open-ended list —
+   every count above three tiles in threes. */
+.menu-grid[data-count="1"] {
+  grid-template-columns: minmax(0, 28rem);
+}
+
+.menu-grid[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* --- the kitchen band with no photograph ---------------------------------
+   His story band is an even two-column split, one half of which is the
+   picture. */
+.story--solo {
+  grid-template-columns: 1fr;
+}
+
+/* --- the occasion cards, for one to eight photographs ---------------------
+   THE ONE BAND THAT IS NOT THE AUTHOR'S COMPOSITION, and the reason is written
+   down rather than glossed. His four cards carry an ordinal, a name and a line
+   of prose and NO photograph — the hospitality kits' `gallery` block is the
+   only text-only one in the six. On this platform a gallery band IS its
+   pictures: PageContent::count() counts photographs for this type, the image
+   endpoints are the only writer of its eight slots, and a design that drew
+   none would offer eight photo controls that could never appear.
+
+   So the picture fills the card he drew, inside his own hairline, under a veil
+   in his own pine, and his `<h3>` becomes the photograph's caption. His card's
+   `min-height: 15rem` is untouched and the picture is absolutely positioned,
+   so THE BAND IS EXACTLY THE HEIGHT HE DREW IT at every count. */
+.occasion-list article {
+  position: relative;
+  overflow: hidden;
+}
+
+.occasion-list img {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  height: 100%;
+  object-fit: cover;
+}
+
+.occasion-list article::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  inset: 0;
+  background: linear-gradient(to top, rgba(35, 49, 38, 0.72), rgba(35, 49, 38, 0.24));
+}
+
+.occasion-list span,
+.occasion-list h3 {
+  position: relative;
+  z-index: 1;
+  color: var(--color-white);
+}
+
+.occasion-list span {
+  color: var(--color-sea);
+}
+
+/* One to three photographs: his fixed four-column track would leave the row
+   part-empty. Bounded at SectionType::GALLERY_IMAGES, so the counts are
+   enumerable and are enumerated rather than approximated. */
+.occasion-list[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.occasion-list[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.occasion-list[data-count="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* Five and up wrap onto a second row, which his single `:last-child` rule
+   never had to think about: the fourth card of every row needs its dividing
+   rule removed, and every card after the first row needs the hairline his
+   container's own `border-top` gives the first. */
+.occasion-list article:nth-child(4n) {
+  border-right: 0;
+}
+
+.occasion-list article:nth-child(n + 5) {
+  border-top: var(--border) solid var(--color-line);
+}
+
+/* --- the diner postcard: no attribution -----------------------------------
+   His quote sits in the middle of a three-track row, with the eyebrow on one
+   side and the rating and guest name on the other. ReviewSubmission's rating
+   is nullable and the aggregate is null below four ratings, so that last
+   column can legitimately be empty — and an empty column with a rule over it
+   is a line to nowhere. */
+.review__inner--solo {
+  grid-template-columns: 10rem 1fr;
+}
+
+/* --- the footer hub, for the columns a tenant actually has ----------------
+   His five-track grid assumes all of them: the lockup, the review link, the
+   contact details, the Follow icons and the reserved widget space. Each of the
+   middle three is gated on something real (a reachable review form, a
+   published channel, a social destination the business named), so the row
+   closes up rather than leaving gaps. The widget space is never dropped — it
+   is what keeps the fixed launcher off the last line of the footer. */
+.footer-hub--1 {
+  grid-template-columns: minmax(14rem, 1fr) var(--widget-space);
+}
+
+.footer-hub--2 {
+  grid-template-columns: minmax(14rem, 1.35fr) minmax(9rem, 0.7fr) var(--widget-space);
+}
+
+.footer-hub--3 {
+  grid-template-columns: minmax(14rem, 1.35fr) repeat(2, minmax(9rem, 0.7fr)) var(--widget-space);
+}
+
+/* --- the words band the author did not draw ------------------------------
+   `text` is repeatable and every template has to ship one, because the picker
+   filters on what a design actually renders and a control that saves words the
+   page then drops is the failure this project refuses. Assembled from his own
+   parts: the split section header his menus and occasions bands already use,
+   his muted prose colour and a plate in his own large radius. The only rules
+   it needs are a reading measure — his own body copy is bounded by grid tracks
+   this band has none of — and the frame. */
+.text-band__body {
+  display: grid;
+  max-width: 44rem;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  color: var(--color-muted);
+}
+
+.text-band__media {
+  overflow: hidden;
+  margin: var(--space-7) 0 0;
+  border-radius: var(--radius-lg);
+}
+
+.text-band__media img {
+  max-height: 34rem;
+  object-fit: cover;
+}
+
+.text-band__media figcaption {
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font-size: var(--font-size-sm);
+}
+
+/* --- the chat launcher ---------------------------------------------------
+   The author reserves the footer's right side for "the future assistant" and
+   keeps the bottom-RIGHT corner clear (his own `.booking-fab` is fixed
+   bottom-left). This is that launcher, in his tokens: his pine, his pill
+   radius and his lifted shadow.
+
+   The glyph swaps off `aria-expanded`, which landing/kit.js maintains — one
+   attribute, one source of truth, and no second class to fall out of step with
+   the state a screen reader is told about. */
+.ai-launcher {
+  position: fixed;
+  z-index: 60;
+  right: var(--fab-offset);
+  bottom: var(--fab-offset);
+  display: grid;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  place-items: center;
+  border: var(--border) solid var(--color-pine);
+  border-radius: var(--radius-pill);
+  background: var(--color-pine);
+  box-shadow: var(--shadow);
+  color: var(--color-white);
+  cursor: pointer;
+}
+
+.ai-launcher .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.ai-launcher__glyph--close {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--open {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--close {
+  display: block;
+}
+
+.ai-panel {
+  position: fixed;
+  z-index: 60;
+  right: var(--fab-offset);
+  bottom: calc(var(--fab-offset) + 4.25rem);
+  width: min(24rem, calc(100vw - var(--fab-offset) * 2));
+  height: min(32rem, 70vh);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-shell);
+  box-shadow: var(--shadow);
+}

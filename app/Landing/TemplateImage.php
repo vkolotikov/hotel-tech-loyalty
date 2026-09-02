@@ -234,6 +234,29 @@ final class TemplateImage
                 'alt'  => 'A shellfish plate dressed over ice',
             ],
         ],
+        // THE SECOND HOSPITALITY KIT. Two photographs again, and the same three
+        // absences for the same three reasons: no `team` (no hospitality
+        // template draws one), no `services` (his menu cards are typographic)
+        // and no `booking` (his closing panel is a pine card with no picture
+        // in it).
+        'luma_garden' => [
+            'hero' => [
+                'file' => 'hero-garden.webp',
+                'alt'  => 'A garden terrace with limestone arches, olive trees and linen-laid tables',
+            ],
+            'about' => [
+                'file' => 'langoustine.webp',
+                'alt'  => 'Grilled langoustine plated with citrus and fennel',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-garden.webp',
+                'alt'  => 'Tables set under the garden canopy',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'langoustine.webp',
+                'alt'  => 'A plate from the coastal menu',
+            ],
+        ],
     ];
 
     /**

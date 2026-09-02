@@ -296,6 +296,42 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // The second of the three HOSPITALITY kits
+            // (resources/landing-kits/hospitality/02-luma-garden), converted
+            // the same way: the author's own markup, his own :root palette and
+            // his own stylesheet ship as the design, and only the CONTENT is
+            // the tenant's. Like its two siblings it ships NO team partial, so
+            // `renders` does not name that band and the picker cannot offer it.
+            'key'   => 'luma_garden',
+            'name'  => 'Luma Garden',
+            // The author's own words for it, from the kit collection's README:
+            // "Luminous Mediterranean garden / All-day restaurants and
+            // produce-led destinations".
+            'blurb' => 'Light and Mediterranean, with a photographic hero and soft rounded menu cards. Made for garden restaurants, all-day dining rooms and produce-led kitchens.',
+            // Transcribed from the three refusals
+            // resources/views/landing/luma_garden/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent here on the CLAY family, which this author uses as text and
+            // as hairlines and never as a ground with type on it.
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
