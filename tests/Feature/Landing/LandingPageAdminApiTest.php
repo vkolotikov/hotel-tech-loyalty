@@ -2,6 +2,7 @@
 namespace Tests\Feature\Landing;
 
 use App\Http\Controllers\Api\V1\Admin\LandingPageController;
+use App\Landing\IndustryProfile;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\User;
@@ -209,11 +210,22 @@ class LandingPageAdminApiTest extends TestCase
         return json_decode($response->getContent(), true);
     }
 
+    /**
+     * A page created the way a tenant creates one — on a design this endpoint
+     * will actually accept.
+     *
+     * Read from the registry rather than written out. It used to be
+     * 'ruled_page', which the final scenario retired from the offer: store()
+     * validates against offerableTemplateKeys(), so a literal here would make
+     * every test in this file fail on the design it happened to name rather
+     * than on what it is testing.
+     */
     private function create(string $slug = 'glamour-salon'): array
     {
-        return $this->body($this->controller()->store(
-            $this->request(['slug' => $slug, 'template_key' => 'ruled_page'])
-        ));
+        return $this->body($this->controller()->store($this->request([
+            'slug'         => $slug,
+            'template_key' => LandingOnboardingService::offerableTemplateKeys()[0],
+        ])));
     }
 
     /** A rival tenant already holding an address in the shared namespace. */
@@ -261,11 +273,22 @@ class LandingPageAdminApiTest extends TestCase
     {
         $page = $this->create()['page'];
 
+        // The industry's own seven, in its own order, FIRST. The rows after
+        // them are the chosen design's own blocks (the final scenario: the
+        // wizard now asks which design, and every one of the owner's kits
+        // draws furniture no industry seeds) — seedSectionsFor()'s union,
+        // already pinned in LandingOnboardingTest. What this test is about is
+        // that creation seeds the INDUSTRY's list and seeds it in order.
+        $keys = array_column($page['sections'], 'key');
+
         $this->assertSame(
             ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'],
-            array_column($page['sections'], 'key')
+            array_slice($keys, 0, 7),
         );
-        $this->assertSame([0, 1, 2, 3, 4, 5, 6], array_column($page['sections'], 'sort'));
+        // Contiguous from zero, however many rows the design contributed —
+        // "in order" is the claim, and a literal seven would only ever be
+        // restating how many blocks today's first design happens to draw.
+        $this->assertSame(range(0, count($keys) - 1), array_column($page['sections'], 'sort'));
     }
 
     /** The slug the tenant types is not the slug we store. */
@@ -1568,16 +1591,159 @@ class LandingPageAdminApiTest extends TestCase
     {
         $this->create();
 
-        // Read from the registry rather than written as 'ruled_page', so
-        // this test keeps testing the mechanism (not today's only row) once
-        // a second template ships.
-        $key = LandingOnboardingService::templateKeys()[0];
+        // Read from the registry rather than written out, so this test keeps
+        // testing the mechanism rather than a name — and the SECOND offerable
+        // design, so that this is a genuine move off the one `create()` made
+        // the page on rather than a no-op that would pass either way.
+        $key = LandingOnboardingService::offerableTemplateKeys()[1];
 
         $page = $this->body($this->controller()->update($this->request([
             'template_key' => $key,
         ])))['page'];
 
         $this->assertSame($key, $page['template_key']);
+    }
+
+    /**
+     * THE FINAL SCENARIO, STEP 2 — a design retired from the offer cannot be
+     * moved TO, and the message says so in the same words an unknown key
+     * gets. Retiring a design is one bool in the registry, and this is the
+     * write surface that has to honour it.
+     */
+    public function test_a_retired_design_cannot_be_chosen(): void
+    {
+        $this->create();
+
+        $this->assertNotContains('ruled_page', LandingOnboardingService::offerableTemplateKeys());
+
+        try {
+            $this->controller()->update($this->request(['template_key' => 'ruled_page']));
+            $this->fail('A retired design was accepted.');
+        } catch (ValidationException $e) {
+            $this->assertSame(
+                'Please choose one of the available page styles.',
+                $e->errors()['template_key'][0] ?? '',
+            );
+        }
+
+        $this->assertSame(
+            LandingOnboardingService::offerableTemplateKeys()[0],
+            LandingPage::first()->template_key,
+        );
+    }
+
+    /**
+     * THE OTHER HALF OF RETIRING ONE: a page ALREADY on it keeps working.
+     *
+     * Two demo pages sit on `ruled_page`. Re-sending the design a page is
+     * already on must not be a refusal, or every save those pages make — a
+     * headline, an address, a photo caption — would 422 on a design nobody
+     * was trying to change. "You may choose any design on offer, or keep the
+     * one you have" is one rule; this is its second arm.
+     */
+    public function test_a_page_already_on_a_retired_design_can_still_be_saved(): void
+    {
+        $this->pageOnRetiredDesign();
+
+        $page = $this->body($this->controller()->update($this->request([
+            'template_key' => 'ruled_page',
+            'content'      => ['hero' => ['headline' => 'Still here']],
+        ])))['page'];
+
+        $this->assertSame('ruled_page', $page['template_key']);
+        $this->assertSame('Still here', $page['content']['hero']['headline']);
+    }
+
+    /**
+     * THE FINAL SCENARIO, STEP 5 — changing design brings the blocks the new
+     * design draws, and takes nothing away.
+     *
+     * A design is a composition, not a skin: the owner's kits all draw an
+     * offer bar, a highlights band and a questions block that The Ruled Page
+     * ships no partial for. Before this, a page moved onto one of them
+     * arrived with three of the author's blocks simply absent, with no row to
+     * write them into and no control anywhere that said why.
+     *
+     * Additive, and that is the load-bearing half: every row the page already
+     * had is still there, in its own order, with its own `enabled` — and the
+     * tenant's words are untouched.
+     */
+    public function test_changing_design_adds_the_new_designs_blocks_and_removes_nothing(): void
+    {
+        $page = $this->pageOnRetiredDesign();
+
+        $page->update(['content' => ['about' => ['body' => 'Twenty years on this street']]]);
+        $page->sections()->where('key', 'team')->update(['enabled' => false]);
+
+        $before = $page->sections()->orderBy('sort')->pluck('key')->all();
+        $target = LandingOnboardingService::offerableTemplateKeys()[0];
+
+        $this->controller()->update($this->request(['template_key' => $target]));
+
+        $fresh = LandingPage::with('sections')->first();
+        $after = $fresh->sections->sortBy('sort')->pluck('key')->values()->all();
+
+        $this->assertSame($target, $fresh->template_key);
+
+        // Nothing lost: every row that was there is still there, in order.
+        $this->assertSame($before, array_slice($after, 0, count($before)));
+
+        // And the blocks the new design draws that no industry seeds are now
+        // rows the tenant can actually write into.
+        foreach (['announcement', 'trust', 'faq'] as $block) {
+            $this->assertContains($block, $after, "Moving to {$target} left its own {$block} block with no row.");
+            $this->assertNotContains($block, $before);
+        }
+
+        // Their words, and their own answers about what to show, survive the
+        // move — a design change is not a reset.
+        $this->assertSame('Twenty years on this street', $fresh->content['about']['body']);
+        $this->assertFalse((bool) $fresh->sections->firstWhere('key', 'team')->enabled);
+    }
+
+    /**
+     * And a save that does NOT move the design seeds nothing — the top-up is
+     * a consequence of changing design, not something every save does.
+     */
+    public function test_a_save_that_does_not_change_the_design_seeds_no_rows(): void
+    {
+        $this->create();
+
+        $before = LandingPage::with('sections')->first()->sections->pluck('key')->all();
+
+        $this->controller()->update($this->request([
+            'content' => ['hero' => ['headline' => 'Unchanged design']],
+        ]));
+
+        $this->assertSame($before, LandingPage::with('sections')->first()->sections->pluck('key')->all());
+    }
+
+    /**
+     * A page on the retired design, with the industry's own bands on it —
+     * the state the two demo pages are in, and the only starting point from
+     * which a design change actually gains blocks (every one of the six kits
+     * draws the same three that The Ruled Page draws none of).
+     *
+     * Written through the model rather than through store(), which no longer
+     * accepts this design at all. That is the point of it.
+     */
+    private function pageOnRetiredDesign(string $slug = 'glamour-salon'): LandingPage
+    {
+        $page = LandingPage::create([
+            'slug'         => $slug,
+            'template_key' => 'ruled_page',
+            'industry'     => $this->org->resolved_industry,
+            'status'       => LandingPage::STATUS_DRAFT,
+        ]);
+
+        foreach (LandingOnboardingService::seedSectionsFor(
+            'ruled_page',
+            IndustryProfile::for($page->industry),
+        ) as $i => $key) {
+            $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
+        }
+
+        return $page->fresh('sections');
     }
 
     /**
@@ -1603,7 +1769,10 @@ class LandingPageAdminApiTest extends TestCase
             $this->assertStringNotContainsString('template key', $message);
         }
 
-        $this->assertSame('ruled_page', LandingPage::first()->template_key);
+        $this->assertSame(
+            LandingOnboardingService::offerableTemplateKeys()[0],
+            LandingPage::first()->template_key,
+        );
     }
 
     /**
@@ -1751,7 +1920,10 @@ class LandingPageAdminApiTest extends TestCase
             'content' => ['hero' => ['headline' => 'Still us']],
         ]));
 
-        $this->assertSame('ruled_page', LandingPage::first()->template_key);
+        $this->assertSame(
+            LandingOnboardingService::offerableTemplateKeys()[0],
+            LandingPage::first()->template_key,
+        );
         $this->assertSame('beauty', $this->org->fresh()->resolved_industry);
         $this->assertSame('beauty', LandingPage::first()->industry);
     }
@@ -1770,14 +1942,14 @@ class LandingPageAdminApiTest extends TestCase
 
         $page = $this->body($this->controller()->update($this->request([
             'industry'     => 'medical',
-            'template_key' => LandingOnboardingService::templateKeys()[0],
+            'template_key' => LandingOnboardingService::offerableTemplateKeys()[1],
             'theme'        => ['palette' => 'clinic_air', 'brand_color' => '#123456'],
             'content'      => ['hero' => ['headline' => 'Care, close by']],
         ])))['page'];
 
         $this->assertSame('medical', $page['industry']);
         $this->assertSame('medical', $this->org->fresh()->resolved_industry);
-        $this->assertSame('ruled_page', $page['template_key']);
+        $this->assertSame(LandingOnboardingService::offerableTemplateKeys()[1], $page['template_key']);
         $this->assertSame('clinic_air', $page['theme']['palette']);
         $this->assertSame('#123456', $page['theme']['brand_color']);
         $this->assertSame('Care, close by', $page['content']['hero']['headline']);

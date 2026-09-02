@@ -45,22 +45,32 @@ export function draftKey(brandId: number | null): string {
   return `${DRAFT_KEY_BASE}:${brandId === null ? 'org' : brandId}`
 }
 
-/** The four steps of the wizard. Task 6 built `template`/`details`; Task 7
- *  appends `style` (step 3 — brand colour, font pairing) and `sections`
- *  (step 4 — what to show). The stepper, the footer's Back/Continue
- *  clamping and this module's own step-clamp all read `STEPS.length`, so
- *  none of them needed to change by hand when these two were appended.
+/**
+ * The four steps of the wizard. The stepper, the footer's Back/Continue
+ * clamping and this module's own step-clamp all read `STEPS.length`, so
+ * none of them has to be told when the list changes.
  *
- *  Landing phase 3c (the industry step) renames the first one. `template`
- *  offered exactly ONE template (`ruled_page` is still the only shipped
- *  view) under the words "Pick the one that feels right", which a tenant
- *  testing the shipped wizard read — correctly — as a broken screen.
- *  `industry` asks the question that actually drives the page:
- *  `IndustryProfile` supplies its whole vocabulary, its house accent and
- *  its default palette, and the booking band is gated on `hotel`.
- *  `template_key` still SHIPS as `ruled_page` (see `buildPayload`); the
- *  wizard simply stops asking about it. */
-export const STEPS = ['industry', 'details', 'style', 'sections'] as const
+ * THE FINAL SCENARIO REPLACES `style` WITH `design`, AND MOVES IT SECOND.
+ *
+ * `template` was the original first step and offered exactly ONE design
+ * under the words "Pick the one that feels right", which a tenant testing
+ * the shipped wizard read — correctly — as a broken screen. It was replaced
+ * by `industry`, and the wizard silently created every page on whichever
+ * design the registry happened to list first.
+ *
+ * Six of the owner's own kits later that silence is the bug: the first row
+ * is a beauty design, and a restaurant that never got asked would have been
+ * handed one. So the wizard asks again — and now there is genuinely
+ * something to ask, because the answer is three designs drawn for the trade
+ * step 1 just established (`vertical`, see `LandingOnboardingService`).
+ *
+ * `style` is gone rather than renamed. It offered six palettes and four type
+ * pairings, both of which only ever acted on the retired generic design; the
+ * one control on it that every design honours — the accent colour — moved
+ * onto `design`, where it belongs, beside the design it tints. See
+ * `DesignPanel.tsx`'s own note.
+ */
+export const STEPS = ['industry', 'design', 'details', 'sections'] as const
 export type StepKey = (typeof STEPS)[number]
 
 /** The four curated pairings the backend accepts — `theme.font_pairing`

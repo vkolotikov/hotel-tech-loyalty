@@ -55,6 +55,23 @@ export type IndustryOption = {
   palette: string
   /** The bands a page in this industry is created with. */
   sections: string[]
+  /**
+   * WHICH TRADE'S DESIGNS THIS INDUSTRY IS OFFERED FIRST — the final
+   * scenario, step 1.
+   *
+   * `LandingOnboardingService::industries()`, resolved there through
+   * `INDUSTRY_VERTICALS`, which is the ONE place in the product where
+   * industries and designs are mapped to each other. Matched against the
+   * `vertical` on each `templates[*]` row (see `editorCatalog.ts`'s
+   * `templateGroups`) — two served values compared, never an industry id or
+   * a template id spelled out on this side.
+   *
+   * `null` for the seven industries no kit has been drawn for yet, which the
+   * picker reads as "no trade of its own": every offerable design under one
+   * neutral heading, never an empty picker. Optional because a backend that
+   * predates the key has said nothing, which lands in the same place.
+   */
+  vertical?: string | null
 }
 
 /** What one card needs, with nothing left for the component to derive. */
@@ -95,6 +112,27 @@ export const INDUSTRY_NAMES: Record<string, string> = {
   education: 'Education / Tutoring',
   fitness: 'Fitness / Wellness',
   other: 'Something else',
+}
+
+/**
+ * THE TRADE ONE INDUSTRY'S DESIGNS ARE DRAWN FOR, off the served rows.
+ *
+ * The read half of the design join (the final scenario, step 1) — the value
+ * `templateGroups` compares each design's own `vertical` against. Resolved
+ * against the row the SERVER sent for the currently-selected industry rather
+ * than from any table here, for the reason this whole module exists: the
+ * industries are served, so a tenth one, or a trade that gains its first kit,
+ * arrives with no release on this side.
+ *
+ * `null` where the industry is not offered, has no trade of its own, or the
+ * response predates the key — three different reasons that all mean the same
+ * thing to a picker: show every design under one heading, and claim nothing
+ * about whose trade it was drawn for.
+ */
+export function verticalFor(options: IndustryOption[], industryId: string): string | null {
+  const vertical = options.find(o => o.id === industryId)?.vertical
+
+  return typeof vertical === 'string' && vertical !== '' ? vertical : null
 }
 
 /**

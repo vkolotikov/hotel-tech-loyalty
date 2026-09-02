@@ -50,7 +50,14 @@ class LandingPageController extends Controller
             // onboarding controller and update() below already validate
             // against templateKeys(); all three now do, so adding a
             // template is a change to that one array.
-            'template_key' => ['required', 'string', Rule::in(LandingOnboardingService::templateKeys())],
+            //
+            // The final scenario, step 2: offerableTemplateKeys(), not
+            // templateKeys() — a design retired from the offer must not be
+            // creatable by anyone, and the one thing worse than a retired
+            // design in a picker is a retired design reachable by a caller
+            // who guessed its key. Pages ALREADY on one keep working; see
+            // that method's own docblock and update()'s rule below.
+            'template_key' => ['required', 'string', Rule::in(LandingOnboardingService::offerableTemplateKeys())],
         ], [
             'slug.required' => 'Please choose a web address.',
             'slug.string'   => 'That web address is not valid.',
@@ -213,7 +220,22 @@ class LandingPageController extends Controller
             // the wizard offers, what the editor offers and what either
             // endpoint accepts cannot come apart. `industry` is handled
             // specially below: it is NOT a column this endpoint writes.
-            'template_key' => ['sometimes', 'string', Rule::in(LandingOnboardingService::templateKeys())],
+            //
+            // The final scenario, step 2: the OFFER, plus whatever this page
+            // is already on. The offer is what a tenant may move TO — a
+            // retired design must not be reachable by a caller who guessed
+            // its key — and the page's own current key is here so that
+            // re-sending an unchanged value is never a refusal. Two demo
+            // pages sit on the retired design; a save that touched only
+            // their headline must not 422 because of the design they were
+            // created with, and "you may keep the design you have" is a
+            // rule, not a special case. (The admin SPA never sends this key
+            // unchanged — see `catalogPayload` — so this arm exists for
+            // every other caller.)
+            'template_key' => ['sometimes', 'string', Rule::in(array_values(array_unique(array_merge(
+                LandingOnboardingService::offerableTemplateKeys(),
+                [$page->template_key],
+            ))))],
             'industry'     => ['sometimes', 'string', Rule::in(Organization::INDUSTRIES)],
         ], [
             'slug.string' => 'That web address is not valid.',
@@ -564,7 +586,41 @@ class LandingPageController extends Controller
                     );
                 }
 
+                // Read BEFORE the write, off the row-locked copy, so "did the
+                // design change" is asked of what is really stored and not of
+                // the snapshot this request was validated against.
+                $wasTemplate = $fresh->template_key;
+
                 $fresh->update($data);
+
+                // THE FINAL SCENARIO, STEP 5 — a design change brings the
+                // blocks the new design draws and no industry seeds.
+                //
+                // A design is a composition, not a skin: move a page onto
+                // Nocturne Ritual and its offer bar, highlights band and
+                // questions block have to exist as ROWS before the tenant can
+                // write a word into any of them. Through the one writer
+                // (LandingOnboardingService::addMissingSections, which is
+                // seedSectionsFor asked a second time), so a page that
+                // CHANGED design and a page CREATED on it carry the same
+                // rows. Purely additive — nothing is deleted, no `content` is
+                // touched, and a block the new design will not draw keeps its
+                // row and its words. See that method's docblock.
+                //
+                // Inside the same transaction as everything else here: a save
+                // that rolled back must not leave the page carrying rows for
+                // a design it did not end up on.
+                if ($fresh->template_key !== $wasTemplate) {
+                    LandingOnboardingService::addMissingSections(
+                        $fresh,
+                        // The industry the page is on AFTER this request:
+                        // $industry when the same save moved it (the org
+                        // write above has already fired the resync hook, so
+                        // $fresh's own snapshot may be a version behind),
+                        // otherwise the page's own.
+                        IndustryProfile::for($industry ?? $fresh->industry),
+                    );
+                }
             });
         } catch (UniqueConstraintViolationException $e) {
             // A lost race on the global unique on `slug`: two tenants submitted

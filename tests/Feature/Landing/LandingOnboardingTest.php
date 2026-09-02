@@ -308,7 +308,12 @@ class LandingOnboardingTest extends TestCase
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
-            'template_key' => 'ruled_page',
+            // The final scenario, step 2: the first design a tenant may
+            // actually be OFFERED, read from the registry rather than
+            // written out. It used to be 'ruled_page' — retired from the
+            // offer, and refused by this endpoint ever since, which is
+            // exactly what test_apply_refuses_a_retired_design pins.
+            'template_key' => LandingOnboardingService::offerableTemplateKeys()[0],
             'slug'         => 'maison-mimi',
             'copy'         => ['headline' => 'Quiet luxury', 'subtext' => 'Considered care'],
             'theme'        => ['brand_color' => '#1f5fa8', 'font_pairing' => 'editorial'],
@@ -717,15 +722,37 @@ class LandingOnboardingTest extends TestCase
         // places -- the probe the prefill describes, and the row apply()
         // writes. Listing one set of bands and seeding another would leave
         // nothing downstream able to tell which was meant.
+        //
+        // "The same" is a PREFIX rather than an equality since the wizard
+        // started asking which design (the final scenario, step 2): a page
+        // created on one of the owner's kits also carries that design's OWN
+        // blocks -- the offer bar, the highlights band, the questions block
+        // -- which no industry seeds and which the wizard deliberately does
+        // not list, because they are the design's furniture rather than a
+        // choice the tenant is making. So every band the wizard LISTED is
+        // still seeded, in its own order, first; and every extra row is
+        // checked to be one this design genuinely draws.
         $this->makeProperty();
 
+        $key    = LandingOnboardingService::offerableTemplateKeys()[0];
         $listed = collect($this->prefill()['sections'])->pluck('key')->all();
 
-        $this->apply($this->validPayload());
+        $this->apply($this->validPayload(['template_key' => $key]));
 
         $seeded = LandingPage::with('sections')->first()->sections->pluck('key')->all();
 
-        $this->assertSame($listed, $seeded);
+        $this->assertSame($listed, array_slice($seeded, 0, count($listed)));
+
+        $renders = LandingOnboardingService::rendersFor($key);
+
+        foreach (array_slice($seeded, count($listed)) as $extra) {
+            $this->assertNotContains($extra, $listed);
+            $this->assertContains(
+                $extra,
+                $renders,
+                "apply() seeded '{$extra}', which {$key} ships no partial for.",
+            );
+        }
     }
 
     /**
@@ -834,15 +861,129 @@ class LandingOnboardingTest extends TestCase
             $this->assertArrayHasKey('key', $template);
             $this->assertArrayHasKey('name', $template);
             $this->assertArrayHasKey('blurb', $template);
+            // The final scenario, step 2: every row says whether a tenant
+            // may choose it, so a screen never has to decide that itself.
+            $this->assertArrayHasKey('offerable', $template);
+            $this->assertIsBool($template['offerable']);
 
-            // Offered and accepted must be one list. A template the wizard
-            // shows and the validator refuses is a dead card in the UI.
-            $this->apply($this->validPayload([
+            $payload = $this->validPayload([
                 'template_key' => $template['key'],
                 'slug'         => 'template-' . $template['key'],
-            ]));
+            ]);
 
-            LandingPage::query()->delete();
+            // OFFERED AND ACCEPTED ARE ONE LIST, IN BOTH DIRECTIONS. A design
+            // the wizard shows and the validator refuses is a dead card in
+            // the UI; a design the wizard has RETIRED and the validator still
+            // accepts is a retired design one guessed key away from being
+            // created, which is the half a picker alone cannot enforce.
+            if ($template['offerable']) {
+                $this->apply($payload);
+                LandingPage::query()->delete();
+
+                continue;
+            }
+
+            try {
+                $this->apply($payload);
+                $this->fail("A retired design ({$template['key']}) was accepted by apply().");
+            } catch (ValidationException $e) {
+                $this->assertSame(
+                    'Please choose one of the available page styles.',
+                    $e->errors()['template_key'][0] ?? '',
+                );
+            }
+
+            $this->assertSame(0, LandingPage::query()->count());
+        }
+    }
+
+    /**
+     * THE RETIRED DESIGN IS STILL A PAGE THAT RENDERS (the final scenario,
+     * step 2) — withdrawing it from the offer must not orphan the pages that
+     * already took it.
+     *
+     * Two demo pages are on `ruled_page`. Its row therefore stays on the
+     * wire, carrying every capability fact the editor reads about a page's
+     * design (`renders`, `fixed_blocks`, `content_fields`, `image_defaults`),
+     * and only `offerable` says it is no longer on the menu. A response that
+     * simply dropped the row would leave those two editors unable to answer a
+     * single question about the page they are editing.
+     */
+    public function test_the_retired_design_is_still_described_but_not_offered(): void
+    {
+        $this->makeProperty();
+
+        $byKey = collect($this->prefill()['templates'])->keyBy('key');
+
+        $this->assertTrue($byKey->has('ruled_page'), 'The retired design must still be described.');
+        $this->assertFalse($byKey['ruled_page']['offerable']);
+        $this->assertNotEmpty($byKey['ruled_page']['renders']);
+        $this->assertNotContains('ruled_page', LandingOnboardingService::offerableTemplateKeys());
+
+        // And every OTHER shipped design is on the menu, so retiring one is
+        // not quietly retiring more.
+        $this->assertSame(
+            array_values(array_diff(LandingOnboardingService::templateKeys(), ['ruled_page'])),
+            LandingOnboardingService::offerableTemplateKeys(),
+        );
+    }
+
+    /**
+     * THE DESIGNS A TENANT IS OFFERED FIRST ARE THEIR OWN TRADE'S (the final
+     * scenario, step 1) — and the join that decides it is served on BOTH
+     * sides, so no screen ever compares a template id.
+     *
+     * `industries[*].vertical` and `templates[*].vertical` are the two ends.
+     * The editor matches one against the other; it does not know, and must
+     * never learn, that `nocturne_ritual` is a beauty design.
+     */
+    public function test_every_industry_is_told_which_trade_its_designs_are_drawn_for(): void
+    {
+        $this->makeProperty();
+
+        $prefill    = $this->prefill();
+        $industries = collect($prefill['industries'])->keyBy('id');
+        $templates  = collect($prefill['templates'])->keyBy('key');
+
+        // Every industry answers the question, even the seven that answer
+        // "none of them yet" — an absent key would be a screen guessing.
+        foreach (Organization::INDUSTRIES as $id) {
+            $this->assertArrayHasKey('vertical', $industries[$id]);
+            $this->assertTrue(
+                $industries[$id]['vertical'] === null
+                    || in_array($industries[$id]['vertical'], LandingOnboardingService::VERTICALS, true),
+                "Industry {$id} publishes a vertical outside the allowlist.",
+            );
+        }
+
+        $this->assertSame('beauty', $industries['beauty']['vertical']);
+        $this->assertSame('dining', $industries['restaurant']['vertical']);
+        // The seven with no kits of their own, named so that shipping one
+        // for them has to come past this list.
+        foreach (['hotel', 'medical', 'fitness', 'education', 'legal', 'real_estate', 'other'] as $id) {
+            $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
+        }
+
+        // The template end of the same join: three beauty kits, three
+        // dining kits, and the retired generic belonging to no trade.
+        $this->assertSame('beauty', $templates['nocturne_ritual']['vertical']);
+        $this->assertSame('beauty', $templates['editorial_atelier']['vertical']);
+        $this->assertSame('beauty', $templates['organic_wellness']['vertical']);
+        $this->assertSame('dining', $templates['maison_vela']['vertical']);
+        $this->assertSame('dining', $templates['luma_garden']['vertical']);
+        $this->assertSame('dining', $templates['ember_table']['vertical']);
+        $this->assertNull($templates['ruled_page']['vertical']);
+
+        // NOBODY IS EVER LEFT WITH NOTHING TO CHOOSE. Seven of the nine
+        // industries have no kit of their own; the offer is the whole
+        // offerable list for every one of them, and the vertical only
+        // decides what comes FIRST.
+        foreach (Organization::INDUSTRIES as $id) {
+            $this->assertGreaterThan(
+                0,
+                count(LandingOnboardingService::offerableTemplateKeys()),
+                "Industry {$id} would be offered no design at all.",
+            );
         }
     }
 
@@ -1740,9 +1881,19 @@ class LandingOnboardingTest extends TestCase
         // Education's own default palette, not beauty's -- the page was
         // built from the profile the tenant chose, front to back.
         $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
+        // The CHOSEN industry's bands, in its own order, first -- the rows
+        // after them are the design's own furniture (the final scenario:
+        // the wizard now asks which design, and every one of the owner's
+        // kits draws blocks no industry seeds). Which industry decided the
+        // list is the claim here, and a prefix is what states it without
+        // restating seedSectionsFor()'s union.
         $this->assertSame(
             IndustryProfile::for('education')->defaultSections,
-            $page->sections->pluck('key')->all(),
+            array_slice(
+                $page->sections->pluck('key')->all(),
+                0,
+                count(IndustryProfile::for('education')->defaultSections),
+            ),
         );
     }
 

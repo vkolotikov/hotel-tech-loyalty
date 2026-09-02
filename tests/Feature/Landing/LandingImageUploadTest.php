@@ -5,6 +5,7 @@ use App\Landing\PageContent;
 use App\Models\LandingPage;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Config;
@@ -716,7 +717,12 @@ class LandingImageUploadTest extends TestCase
         $this->actAsStaff($org);
 
         $response = $this->postJson($this->adminUrl('/api/v1/admin/landing-pages/onboarding'), [
-            'template_key' => 'ruled_page',
+            // Read from the registry, not written out: the final scenario
+            // retired `ruled_page` from the offer and this endpoint validates
+            // against `offerableTemplateKeys()`, so a literal here would fail
+            // this test on the design it named rather than on the leaf it is
+            // actually about.
+            'template_key' => LandingOnboardingService::offerableTemplateKeys()[0],
             'slug'         => 'wizard-salon',
             'copy'         => ['headline' => 'Wizard headline', 'image_url' => '/storage/landing/hack.png'],
             // A raw `content` key, the same shape update() accepts — never

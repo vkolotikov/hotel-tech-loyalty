@@ -67,6 +67,47 @@ export type TemplateOption = {
    */
   supports?: Record<string, boolean> | null
   /**
+   * WHETHER A TENANT MAY CHOOSE THIS DESIGN AT ALL - the final scenario,
+   * step 2.
+   *
+   * `LandingOnboardingService::TEMPLATES[*].offerable`, and the SAME fact
+   * both create endpoints validate against (`offerableTemplateKeys()`), so a
+   * design in the picker and a design the server accepts are one list in
+   * both directions.
+   *
+   * The row for a retired design STAYS on the wire, and that is the point of
+   * a flag rather than an omission: pages already on it keep rendering, and
+   * everything the editor knows about a page's design - `renders`,
+   * `fixed_blocks`, `content_fields`, `image_defaults` - is read off this
+   * list by key. A response that simply dropped the row would leave those
+   * pages' editors with no facts at all.
+   *
+   * Optional, and ABSENT MEANS OFFERABLE: a backend that predates the flag
+   * has retired nothing, and hiding every design on the strength of a key it
+   * never sent would leave a tenant with an empty picker. See
+   * `offerableTemplates`.
+   */
+  offerable?: boolean | null
+  /**
+   * THE TRADE THIS DESIGN WAS DRAWN FOR - the final scenario, step 1.
+   *
+   * `LandingOnboardingService::TEMPLATES[*].vertical`, joined against the
+   * matching `vertical` on `onboarding.industries[*]` (`INDUSTRY_VERTICALS`
+   * there is the one place the two are mapped). A beauty brand is offered
+   * the three beauty kits first, a restaurant the three dining ones;
+   * everybody may still choose any of them.
+   *
+   * BOTH SIDES OF THAT COMPARISON ARE SERVED, which is the whole reason this
+   * key exists: `if (industry === 'beauty') show nocturne...` on this side
+   * would be a second statement of a fact only the registry can hold, and a
+   * seventh kit would need a frontend release to be offered to anyone.
+   *
+   * Null for a design drawn for no trade in particular. Optional for the
+   * same reason `offerable` is; see `templateGroups`, which treats a missing
+   * vertical as "no trade of its own" and shows one ungrouped list.
+   */
+  vertical?: string | null
+  /**
    * WHICH SECTION TYPES THIS TEMPLATE SHIPS A PARTIAL FOR — derived
    * server-side from `view()->exists()`, never a hand list.
    *
@@ -304,20 +345,165 @@ export function templateImageDefaults(options: TemplateOption[], selectedKey: st
 
 /**
  * The OTHER templates that would draw a block this one will not — so the
- * sentence on a dropped row can name a real way out ("switch to The Ruled
- * Page to show it") instead of telling a tenant to go and look.
+ * sentence on a dropped row can name a real way out ("switch to Luma Garden
+ * to show it") instead of telling a tenant to go and look.
  *
  * Off the served `renders` for every row, so a third template appears in
  * that sentence with no edit here. A template that publishes no `renders`
  * is not counted: it has not claimed it draws anything, and naming it would
  * be sending somebody to a design that may drop the block too.
+ *
+ * OFFERABLE ONLY (the final scenario, step 2). A way out has to be a way a
+ * tenant can actually take: naming a design the picker no longer lists — and
+ * both create endpoints now refuse — would be an instruction that dead-ends
+ * in a picker with no such card in it.
  */
 export function templatesDrawing(options: TemplateOption[], typeId: string, exceptKey: string): TemplateOption[] {
-  return options.filter(o =>
+  return offerableTemplates(options).filter(o =>
     o.key !== exceptKey
     && Array.isArray(o.renders)
     && o.renders.includes(typeId),
   )
+}
+
+/**
+ * The designs a tenant may actually choose from — every served row that has
+ * not been retired from the offer.
+ *
+ * ABSENT MEANS OFFERABLE, the opposite direction from the server's own
+ * default for `supports`, and for the reason `templateSupports` gives about
+ * the same asymmetry: server-side a row that did not say yes has not said
+ * yes; here a RESPONSE that says nothing at all is an older backend, and the
+ * honest fallback is the behaviour that build already had. Withholding every
+ * design because a key was missing would leave a tenant with nothing to pick.
+ */
+export function offerableTemplates(options: TemplateOption[]): TemplateOption[] {
+  return options.filter(o => o.offerable !== false)
+}
+
+/**
+ * WHY A GROUP OF DESIGNS IS BEING SHOWN — a three-word vocabulary the panel
+ * turns into a heading, never a sentence computed here.
+ *
+ *  - `own`   — drawn for this tenant's own trade. Shown first.
+ *  - `other` — drawn for another trade, and still theirs to choose.
+ *  - `all`   — no trade of their own, so no split would be honest: one list.
+ */
+export type TemplateGroupKind = 'own' | 'other' | 'all'
+
+export type TemplateGroup = {
+  kind: TemplateGroupKind
+  cards: TemplateCard[]
+}
+
+/**
+ * THE DESIGNS ON OFFER, THEIR OWN TRADE'S FIRST — the final scenario's
+ * step 1, as data.
+ *
+ * `vertical` is the SELECTED industry's own, read off
+ * `onboarding.industries[*].vertical` at the call site; each design's is read
+ * off its own served row. Both ends are served, so no template id and no
+ * industry id is ever compared in this file — grep it and there is none. A
+ * seventh kit, or a whole new trade, is a change to `LandingOnboardingService`
+ * alone.
+ *
+ * NOBODY IS EVER OFFERED NOTHING. That is the rule this function exists to
+ * keep, and it is why the split is "first" rather than "only":
+ *
+ *  - a tenant whose trade HAS kits sees those three under "made for your
+ *    trade", and the rest under "other designs" — because a restaurant owner
+ *    who prefers a beauty kit's layout is not wrong, and hiding it would be
+ *    the product overruling them;
+ *  - a tenant whose trade has NO kits yet (seven industries of the nine —
+ *    hotels, clinics, gyms, schools, law firms, agencies and everyone under
+ *    "something else") sees every design under ONE neutral heading. A "made
+ *    for your trade" heading over an empty group, followed by everything
+ *    under "other designs", would tell them the product has nothing for them
+ *    — which is both discouraging and untrue: any of the six will render
+ *    their words, their photographs and their accent.
+ *
+ * An empty offer returns no groups at all rather than an empty heading, so
+ * the panel can decline to draw a picker rather than draw an empty one.
+ */
+export function templateGroups(
+  options: TemplateOption[],
+  selectedKey: string,
+  vertical: string | null | undefined,
+): TemplateGroup[] {
+  const offered = offerableTemplates(options)
+
+  if (offered.length === 0) return []
+
+  if (typeof vertical === 'string' && vertical !== '') {
+    const own = offered.filter(o => o.vertical === vertical)
+
+    if (own.length > 0) {
+      const other = offered.filter(o => o.vertical !== vertical)
+
+      return [
+        { kind: 'own', cards: templateCards(own, selectedKey) },
+        ...(other.length > 0 ? [{ kind: 'other' as const, cards: templateCards(other, selectedKey) }] : []),
+      ]
+    }
+  }
+
+  return [{ kind: 'all', cards: templateCards(offered, selectedKey) }]
+}
+
+/**
+ * WHAT CHANGING DESIGN WOULD DO TO THIS PAGE'S BLOCKS — the final scenario,
+ * step 5, as two lists of type ids.
+ *
+ * A design is a composition, not a skin. Moving a page between two of them
+ * changes which of its bands appear at all, and a tenant who is not told that
+ * is a tenant who presses Save and finds a band gone with no explanation
+ * anywhere on the screen.
+ *
+ *  - `dropped` — blocks this page HAS, which the design it is on draws and
+ *    the new one does not. Their rows and every word in them are kept (the
+ *    server's design change is purely additive), which is what the warning
+ *    says; they simply stop appearing until the tenant moves back.
+ *  - `added` — blocks the new design draws that the current one does not and
+ *    this page has no row for. The server seeds exactly these on the save
+ *    (`LandingOnboardingService::addMissingSections`), so naming them is a
+ *    promise the write actually keeps.
+ *
+ * "Draws" is `renders` UNION the keys of `fixed_blocks`, the same union the
+ * server takes and for the same reason: every kit prints its contact details
+ * inside the footer hub and ships no contact partial, so `renders` alone
+ * would report `contact` as dropped on every single design change.
+ *
+ * NO OPINION IS NO WARNING. Where either design publishes no `renders` (an
+ * older backend), both lists come back empty rather than guessed — a warning
+ * naming the wrong blocks is worse than the plain "this changes your layout"
+ * the panel says anyway.
+ */
+export function designChangeImpact(args: {
+  options: TemplateOption[]
+  fromKey: string
+  toKey: string
+  /** The page's own rows as TYPE ids — a `text_1` row is a `text`. */
+  rowTypeIds: string[]
+}): { dropped: string[]; added: string[] } {
+  const drawn = (key: string): Set<string> | null => {
+    const renders = templateRenders(args.options, key)
+
+    if (renders === null) return null
+
+    return new Set([...renders, ...Object.keys(templateFixedBlocks(args.options, key))])
+  }
+
+  const from = drawn(args.fromKey)
+  const to = drawn(args.toKey)
+
+  if (from === null || to === null || args.fromKey === args.toKey) return { dropped: [], added: [] }
+
+  const has = new Set(args.rowTypeIds)
+
+  return {
+    dropped: [...has].filter(id => from.has(id) && !to.has(id)),
+    added: [...to].filter(id => !from.has(id) && !has.has(id)),
+  }
 }
 
 /** What one template card needs, with nothing left for the component to
@@ -332,15 +518,18 @@ export type TemplateCard = {
 /**
  * Whether the template picker is worth rendering at all.
  *
- * Today `TEMPLATES` has exactly one row (`ruled_page`), and a choice with
- * one option is not a choice — it is the screen the wizard's own first step
- * used to be, which the first tenant to test it read as broken, correctly.
- * So the picker appears only once there is something to pick BETWEEN, and
- * the day a second template ships it appears on its own: a data change in
- * `LandingOnboardingService::TEMPLATES`, not a UI change here.
+ * A choice with one option is not a choice — it is the screen the wizard's
+ * own first step used to be, which the first tenant to test it read as
+ * broken, correctly. So the picker appears only once there is something to
+ * pick BETWEEN.
+ *
+ * Counted over the OFFER (the final scenario, step 2), not over every served
+ * row: a response carrying six designs plus one retired one offers six, and a
+ * build where retiring designs left only one on the menu should stop drawing
+ * a picker for exactly the reason it always did.
  */
 export function showTemplatePicker(options: TemplateOption[]): boolean {
-  return options.length > 1
+  return offerableTemplates(options).length > 1
 }
 
 /**

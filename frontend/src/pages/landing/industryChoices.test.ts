@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  INDUSTRY_NAMES, industryCards, industryName, resolveIndustry, sectionsForIndustry,
+  INDUSTRY_NAMES, industryCards, industryName, resolveIndustry, sectionsForIndustry, verticalFor,
   type IndustryOption,
 } from './industryChoices'
 import { PALETTES } from './designChoices'
@@ -42,6 +42,50 @@ const EDUCATION: IndustryOption = {
 }
 
 const OPTIONS = [HOTEL, EDUCATION]
+
+/**
+ * THE TRADE WHOSE DESIGNS AN INDUSTRY IS OFFERED FIRST — the final
+ * scenario, step 1, read half.
+ *
+ * `LandingOnboardingService::INDUSTRY_VERTICALS` is the ONE place the join
+ * lives; this is the client end of it, and every one of these cases is about
+ * the same property: the answer comes off the SERVED row and nothing here
+ * decides it.
+ */
+describe('verticalFor', () => {
+  const BEAUTY: IndustryOption = { ...EDUCATION, id: 'beauty', vertical: 'beauty' }
+  const SERVED = [HOTEL, EDUCATION, BEAUTY]
+
+  it('reads the trade the server published for that industry', () => {
+    expect(verticalFor(SERVED, 'beauty')).toBe('beauty')
+  })
+
+  /*
+   * Seven of the nine industries have no kit drawn for them yet, and the
+   * honest answer for all of them is null — which the picker reads as "show
+   * every design under one heading", never as "show none".
+   */
+  it('answers null for an industry no kit has been drawn for', () => {
+    expect(verticalFor(SERVED, 'hotel')).toBeNull()
+    expect(verticalFor(SERVED, 'education')).toBeNull()
+  })
+
+  it('answers null for an industry the response never carried', () => {
+    expect(verticalFor(SERVED, 'medical')).toBeNull()
+    expect(verticalFor([], 'beauty')).toBeNull()
+  })
+
+  /*
+   * An older backend publishes no such key, and a blank is not an answer
+   * either — both land on the same "no trade of its own" as an industry
+   * without kits, which is the only state a picker can act on honestly.
+   */
+  it('answers null when the key is absent or blank', () => {
+    expect(verticalFor([{ ...BEAUTY, vertical: undefined }], 'beauty')).toBeNull()
+    expect(verticalFor([{ ...BEAUTY, vertical: '' }], 'beauty')).toBeNull()
+    expect(verticalFor([{ ...BEAUTY, vertical: null }], 'beauty')).toBeNull()
+  })
+})
 
 describe('industryName', () => {
   it('names every id the platform ships', () => {
