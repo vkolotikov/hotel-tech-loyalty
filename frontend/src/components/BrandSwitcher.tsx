@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
 import { Briefcase, Check, ChevronDown, LayoutGrid, Plus, Settings2 } from 'lucide-react'
 import { useBrandStore } from '../stores/brandStore'
+import { useBrandSwitch } from '../hooks/useBrandSwitch'
 import { resolveImage } from '../lib/api'
 
 /**
@@ -18,8 +18,11 @@ import { resolveImage } from '../lib/api'
  * audit every page for which queries depend on brand context.
  */
 export function BrandSwitcher() {
-  const { brands, currentBrandId, setCurrentBrand, currentBrand } = useBrandStore()
-  const qc = useQueryClient()
+  const { brands, currentBrandId, currentBrand } = useBrandStore()
+  // The recipe below used to live inline here. It has a second caller now
+  // (the landing builder's own brand step), so it lives in one hook rather
+  // than in two hand-written copies — see `useBrandSwitch`.
+  const switchBrand = useBrandSwitch()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -42,12 +45,7 @@ export function BrandSwitcher() {
   const selected = currentBrand()
 
   const switchTo = (id: number | null) => {
-    if (id !== currentBrandId) {
-      setCurrentBrand(id)
-      // Heavy hammer: invalidate everything so all pages refetch with the
-      // new brand context. Cheaper than maintaining a per-page allowlist.
-      qc.invalidateQueries()
-    }
+    switchBrand(id)
     setOpen(false)
   }
 

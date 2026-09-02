@@ -1,105 +1,124 @@
-import type { CSSProperties } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
-import {
-  PALETTES, FONT_PAIRINGS, paletteFor, pairingFor, pickerSafeHex,
-  type PaletteId, type FontPairingId,
-} from './designChoices'
+import { pickerSafeHex } from './designChoices'
 import { industryCards, type IndustryOption } from './industryChoices'
 import {
-  industryHasChanged, showTemplatePicker, templateCards,
-  type TemplateOption, type TemplateSupport,
+  industryHasChanged, showTemplatePicker, templateGroups,
+  type TemplateGroupKind, type TemplateOption, type TemplateSupport,
 } from './editorCatalog'
 
 /**
- * D4's own design-controls component (landing phase 3c, Task 6): six
- * palette cards, four type-pairing cards, and the brand-colour input,
- * shared verbatim between `LandingEditor`'s new Design panel and
- * `LandingWizard`'s "Make it yours" step — the two places D4 says must
- * offer the same choices with the same real previews, never a
- * near-identical second copy.
+ * THE DESIGN CONTROLS: the design this page is on, the one colour every
+ * design honours, and the way to change design.
  *
- * Landing phase 3c, Plan A adds two OPTIONAL blocks above those three: the
- * industry picker and the template picker. Optional, and rendered only when
- * the caller supplies their data, because only ONE of this component's two
- * callers has either question left to ask — the wizard asks about industry
- * in its own first step (where it can still change which SECTIONS the page
- * is created with) and never asks about the template at all, so it passes
- * neither prop and renders byte-identically to before. The editor passes
- * both, because a page that already exists is exactly where the answers
- * given once, at creation, need somewhere to be changed.
+ * Shared verbatim between `LandingEditor`'s Design tab and `LandingWizard`'s
+ * own design step, so the two screens cannot offer different choices or
+ * describe the same design differently. Only the layout differs (this is a
+ * column in the editor, a full-width step in the wizard) and one behaviour:
+ * the wizard is CHOOSING, so its picker is open; the editor is EDITING a
+ * page that already has a design, so its picker sits behind "Change design".
  *
- * The industry cards here are drawn from `industryChoices.ts` — the SAME
- * module and the same `industryCards()` derivation the wizard's step 1
- * renders from, over the same served catalogue — so the two screens cannot
- * describe an industry differently, name it differently, or offer one the
- * other does not. Only the layout differs (this panel is a column, not a
- * full-width step).
+ * ─── WHAT USED TO BE HERE, AND WHY IT IS NOT ────────────────────────────
  *
- * Every card is a REAL miniature render — the tenant's own business name,
- * set in real self-hosted faces (see `../../styles/landing-preview-
- * fonts.css`, imported by both call sites), over the real palette colours
- * — never a swatch or a label. Per the brief: a palette card shows the
- * business name in the currently SELECTED pairing's face (so it re-renders
- * the instant the tenant changes the type style), and a pairing card shows
- * it in ITS OWN face over the currently selected PALETTE's surfaces (so the
- * two axes stay comparable against one fixed backdrop each time).
+ * Six palette cards, four type-pairing cards, and — on the section rows next
+ * door — twenty-one tone swatches. All three existed to make ONE generic
+ * template (`ruled_page`) look varied, and they worked: that design reads
+ * `theme.palette`, `theme.font_pairing` and each band's tone class, and
+ * still does, for the pages already on it.
  *
- * Deliberately not wired to `theme` objects or form state directly — see
- * this file's own three callback props. Two very different callers own two
- * very different write paths (`LandingEditor`'s single `theme` object via
- * the existing save button; `LandingWizard`'s per-field `WizardForm`
- * setters via its autosaved draft), and a shared component that tried to
- * own either shape would have to know about both.
+ * Six faithful conversions of the owner's own HTML/CSS kits later, none of
+ * that is a choice anybody is making. Each kit ships its author's complete
+ * `:root` — their colours, their faces, their composed dark/paper/sand
+ * rhythm — and its layout reads none of those three keys; that is exactly
+ * what each row's `supports` has been publishing. With the generic design
+ * retired from the offer (see `offerable` in `editorCatalog.ts`), every
+ * design a tenant can now choose ignores all three, so the controls could
+ * only ever be drawn to do nothing. A control that cannot act is not
+ * rendered — this project's own rule — and the honest end state of that rule
+ * for a control no offerable design honours is deletion, not a gate.
  *
- * No unit tests target this file directly — `vitest.config.ts` is
- * node-env, pure-function-only (no DOM, no React Testing Library); what
- * IS tested is this component's data (`designChoices.test.ts`) and, at
- * each call site, the payload/patch functions that turn a click here into
+ * THE ACCENT STAYS. It is the one override every kit was converted to
+ * honour, spent on the family each author uses as accent TEXT rather than as
+ * a ground with type on it, and it is the control a tenant most often comes
+ * here for.
+ *
+ * Every card below is a REAL claim about a real design — its own name and
+ * the author's own words for it, off the wire, never a swatch or an invented
+ * label.
+ *
+ * No unit tests target this file directly — `vitest.config.ts` is node-env,
+ * pure-function-only (no DOM, no React Testing Library); what IS tested is
+ * this component's data (`editorCatalog.test.ts`, `industryChoices.test.ts`)
+ * and, at each call site, the payload functions that turn a click here into
  * a saved value.
  */
 
 const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-500'
 
-// The house "selected card" idiom (LandingWizard.tsx's own template/font
-// cards, predating this component): border + a soft ring in primary-500,
-// versus a plain border that brightens on hover. Reused verbatim rather
-// than invented fresh — except the active variant here carries no
-// `bg-primary-500/[...]` wash, because these cards paint their OWN
-// background (the palette's real `bg`) and a translucent overlay on top of
-// it would tint the very colour the card exists to show honestly.
-const cardBase = 'relative text-left rounded-xl border p-4 transition-all overflow-hidden '
-  + 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/50'
-const cardActive = 'border-primary-500 ring-1 ring-primary-500/30'
-const cardInactive = 'border-dark-border hover:border-primary-500/40'
+// The house "selected card" idiom (LandingWizard.tsx's own cards, predating
+// this component): border + a soft ring in primary-500, versus a plain
+// border that brightens on hover.
+const cardBase = 'text-left rounded-xl border p-4 transition-all outline-none '
+  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40'
+const cardActive = 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
+const cardInactive = 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]'
 
 type DesignPanelProps = {
-  /** The tenant's own business name — every card sets this, never a
-   *  placeholder. Callers already resolve this fallback chain themselves
-   *  (`LandingWizard`'s `businessName`, `LandingEditor`'s equivalent). */
-  businessName: string
-  /** The currently stored/drafted `theme.palette`, or `undefined` when
-   *  nothing has been chosen yet — `designChoices.paletteFor()` resolves
-   *  that (and any unrecognised id) to the CSS's own no-choice default for
-   *  preview purposes only; see that function's own comment for why this
-   *  component never writes that fallback back into `theme` itself. */
-  palette: string | undefined
-  /** Same shape as `palette`, for `theme.font_pairing`. */
-  fontPairing: string | undefined
   /** The current `theme.brand_color`, or `undefined` on a page/draft that
-   *  has never set one — the swatch/input then falls back to the selected
-   *  palette's own accent, exactly what `Accent::for()` does server-side
-   *  for an unset brand colour. */
+   *  has never set one — the swatch then falls back to `accentFallback`. */
   brandColor: string | undefined
-  onPaletteChange: (id: PaletteId) => void
-  onFontPairingChange: (id: FontPairingId) => void
+  /**
+   * THE COLOUR THIS PAGE WOULD USE WITH NO OVERRIDE — the industry's own
+   * house accent, off `onboarding.industries[*].accent` (already through
+   * `CssColor::safe()` server-side).
+   *
+   * Resolved by the caller rather than here, and served rather than mirrored,
+   * because it is the same value `Accent::for()` falls back to at render
+   * time: an unset brand colour publishes the INDUSTRY's accent, so that is
+   * what the swatch has to show. It used to fall back to the selected
+   * palette's accent, which was a different colour from the one the page
+   * would actually paint on any kit design.
+   */
+  accentFallback: string
   onBrandColorChange: (hex: string) => void
 
-  // ─── Plan A's two optional blocks (see this file's docblock) ──────────
+  // ─── The design itself ───────────────────────────────────────────────
   //
-  // Each renders only when its own data AND its own callback are supplied,
-  // so a caller with nothing to ask (LandingWizard) passes nothing and gets
-  // exactly the panel that shipped before.
+  // Rendered only when the caller supplies both the rows and the callback,
+  // so a caller with nothing to ask draws nothing.
+
+  /** `onboarding.templates`, verbatim — every served row, retired ones
+   *  included, because the CHOSEN design may be one of those (two demo pages
+   *  are) and its name still has to be printable. The picker itself is built
+   *  from the offer; see `templateGroups`. */
+  templates?: TemplateOption[]
+  /** Already narrowed by `resolveTemplateKey` at the call site. */
+  templateKey?: string
+  onTemplateChange?: (key: string) => void
+  /**
+   * THE TENANT'S OWN TRADE, off `onboarding.industries[*].vertical` — what
+   * decides which three designs are offered first.
+   *
+   * A served value compared against each design's own served `vertical`;
+   * this component never learns that `nocturne_ritual` is a beauty design.
+   * Null (no kit drawn for this trade yet, or an older backend) shows every
+   * offered design under one neutral heading — never an empty picker. See
+   * `templateGroups`, which owns that rule.
+   */
+  vertical?: string | null
+  /**
+   * Whether the picker starts open.
+   *
+   * The wizard's design step IS the choice, so it opens open and draws no
+   * toggle. The editor is editing a page that already has a design, so the
+   * picker sits behind "Change design" — which keeps the Design tab to the
+   * three things it is now for: the design, the accent, and the way to
+   * change design.
+   */
+  pickerOpen?: boolean
+
+  // ─── Industry, under its own warning ─────────────────────────────────
 
   /** `onboarding.industries` — the served catalogue, verbatim. Empty (or
    *  absent) hides the picker entirely, which is what a frontend deployed
@@ -109,122 +128,157 @@ type DesignPanelProps = {
   industry?: string
   /** The industry actually SAVED on the row — what `industry` is compared
    *  against to decide whether the tenant has moved off it, and therefore
-   *  whether the change note is shown. Never the same value as `industry`
-   *  once something is chosen; see `industryHasChanged`. */
+   *  whether the change note is shown. See `industryHasChanged`. */
   savedIndustry?: string
   onIndustryChange?: (id: string) => void
 
-  /** `onboarding.templates`. One row (today's `ruled_page` alone) hides the
-   *  picker — see `showTemplatePicker`. */
-  templates?: TemplateOption[]
-  /** Already narrowed by `resolveTemplateKey` at the call site. */
-  templateKey?: string
-  onTemplateChange?: (key: string) => void
-
   /**
-   * Template fidelity 1.2 — WHAT THE SELECTED TEMPLATE ACTUALLY HONOURS,
-   * resolved by `templateSupports()` at the call site off the SERVED
-   * `templates[*].supports`.
+   * WHAT THE SELECTED DESIGN HONOURS, off the served `templates[*].supports`.
    *
-   * Every block below whose value this panel writes is gated on the
-   * matching bool, and where one is false the control is NOT RENDERED and
-   * its absence is explained in one sentence. That is this project's own
-   * rule, arrived at the hard way: on Nocturne Ritual this panel drew six
-   * palette cards and four type-pairing cards over a design whose layout
-   * reads neither key, so ten of the fifteen controls a tenant met here
-   * did nothing at all, silently, forever.
+   * One reader left: `brand_color`. The other three bools described controls
+   * this panel no longer has — see this file's own note above — and they stay
+   * on the wire because they still describe something true about each design
+   * and because `ruled_page`, which really does read all four, still renders.
    *
-   * NEVER a template id compared in this file. The fact belongs to the
-   * template's own layout and reaches here off the wire; a
-   * `key === 'nocturne_ritual'` here would be a second statement of it
-   * that the third template would silently inherit wrongly.
-   *
-   * Optional, and absent means "everything" — the wizard passes no
-   * templates at all and must keep rendering exactly the panel it always
-   * did. See `templateSupports`, which owns that direction.
+   * NEVER a template id compared in this file. Optional, and absent means
+   * "everything", which is what a response with no `supports` at all gets.
    */
   supports?: TemplateSupport
 }
 
-/** Everything on — what the wizard (which asks about no template) gets, and
- *  what a response with no `supports` resolves to. Kept beside the prop it
- *  defaults so the two cannot drift. */
+/** Everything on — what a response with no `supports` resolves to. Kept
+ *  beside the prop it defaults so the two cannot drift. */
 const ALL_SUPPORTED: TemplateSupport = {
   palette: true, font_pairing: true, tones: true, brand_color: true,
 }
 
+/** The heading over each group of designs. A three-word vocabulary off
+ *  `templateGroups`, translated here — never a sentence computed in a pure
+ *  module, and never a heading assembled from an industry name. */
+const GROUP_HEADING: Record<TemplateGroupKind, { key: string; fallback: string }> = {
+  own: { key: 'landing_pages.design.designs_own_trade', fallback: 'Made for your trade' },
+  other: { key: 'landing_pages.design.designs_other_trades', fallback: 'Other designs' },
+  all: { key: 'landing_pages.design.designs_all', fallback: 'All designs' },
+}
+
 export function DesignPanel({
-  businessName, palette, fontPairing, brandColor,
-  onPaletteChange, onFontPairingChange, onBrandColorChange,
+  brandColor, accentFallback, onBrandColorChange,
+  templates, templateKey, onTemplateChange, vertical, pickerOpen,
   industries, industry, savedIndustry, onIndustryChange,
-  templates, templateKey, onTemplateChange,
   supports = ALL_SUPPORTED,
 }: DesignPanelProps) {
   const { t } = useTranslation()
 
-  const activePalette = paletteFor(palette)
-  const activePairing = pairingFor(fontPairing)
-  const resolvedBrandColor = brandColor || activePalette.accent
+  const resolvedBrandColor = brandColor || accentFallback
+
+  const templateOptions = templates ?? []
+  const chosen = templateOptions.find(o => o.key === templateKey)
+  const groups = templateGroups(templateOptions, templateKey ?? '', vertical)
+  const canChangeDesign = showTemplatePicker(templateOptions) && onTemplateChange !== undefined
+
+  // The picker is either permanently open (the wizard is choosing) or behind
+  // a toggle (the editor is editing). One boolean, not two code paths.
+  const [changing, setChanging] = useState(false)
+  const showPicker = canChangeDesign && (pickerOpen === true || changing)
 
   const industryOptions = industries ?? []
   const showIndustries = industryOptions.length > 0 && onIndustryChange !== undefined
   const industryOwnCards = industryCards(industryOptions, industry ?? '')
   const industryMoved = industryHasChanged(industry, savedIndustry)
 
-  const templateOptions = templates ?? []
-  const showTemplates = showTemplatePicker(templateOptions) && onTemplateChange !== undefined
-  const templateOwnCards = templateCards(templateOptions, templateKey ?? '')
-
-  // WHICH OF THE TWO SHAPE-OF-THE-PAGE CONTROLS THIS DESIGN IGNORES, said
-  // once so the sentence below can name them honestly. Both false is the
-  // common case (a kit template owns its whole visual identity); one of the
-  // two is possible in principle and is what the three keys exist for.
-  const lockedPalette = !supports.palette
-  const lockedType = !supports.font_pairing
-  const templateName = templateOptions.find(o => o.key === templateKey)?.name ?? ''
-
   return (
     <div className="space-y-6">
-      {showTemplates && (
-        <div className="space-y-3">
-          <span className={kicker}>{t('landing_pages.design.template_kicker', 'Page style')}</span>
+      {/*
+        THE DESIGN THIS PAGE IS ON, said plainly and first. It used to be
+        implicit — a lit card somewhere in a grid of cards — which is fine
+        while you are choosing and useless afterwards, when the question is
+        "what am I looking at".
+      */}
+      {(chosen || canChangeDesign) && (
+        <div className="space-y-2">
+          <span className={kicker}>{t('landing_pages.design.chosen_kicker', 'Your design')}</span>
+
+          {/*
+            The summary is gated on `chosen` rather than on the block, and
+            the toggle is not: a page whose stored design the response no
+            longer describes has nothing to summarise, and withholding the
+            way OUT of that state — because there is nothing to print above
+            it — would be the one case where a tenant most needs the picker.
+          */}
+          {chosen && (
+            <div className="rounded-xl border border-dark-border bg-dark-bg p-4">
+              {/* Untranslated, from the server — see `TemplateOption`. */}
+              <p className="text-sm font-semibold text-white">{chosen.name}</p>
+              <p className="text-xs text-t-secondary leading-relaxed mt-1.5">{chosen.blurb}</p>
+            </div>
+          )}
+
+          {canChangeDesign && pickerOpen !== true && (
+            <button
+              type="button"
+              aria-expanded={changing}
+              onClick={() => setChanging(v => !v)}
+              className="text-xs text-primary-400 hover:text-primary-300 font-semibold outline-none
+                focus-visible:ring-2 focus-visible:ring-primary-500/40 rounded"
+            >
+              {changing
+                ? t('landing_pages.design.change_cancel', 'Keep this design')
+                : t('landing_pages.design.change_open', 'Change design')}
+            </button>
+          )}
+        </div>
+      )}
+
+      {showPicker && onTemplateChange && (
+        <div className="space-y-4">
           <p className="text-sm text-t-secondary leading-relaxed">
             {t(
               'landing_pages.design.template_intro',
-              'How your page is laid out. Your words, your photos and your colours come with you.',
+              'Each design is a complete look, drawn by hand — its own colours, its own type, its own layout. Your words, your photographs and your accent colour come with you.',
             )}
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            {templateOwnCards.map(c => (
-              <button
-                key={c.key}
-                type="button"
-                aria-pressed={c.selected}
-                onClick={() => onTemplateChange(c.key)}
-                className={'text-left rounded-xl border p-4 transition-all outline-none '
-                  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
-                  + (c.selected
-                    ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-                    : 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  {/* Untranslated, from the server — see `TemplateOption`. */}
-                  <span className="text-sm font-semibold text-white truncate">{c.name}</span>
-                  {c.selected && <Check size={16} className="text-primary-500 shrink-0" />}
-                </div>
-                <p className="text-xs text-t-secondary leading-relaxed mt-2">{c.blurb}</p>
-              </button>
-            ))}
-          </div>
+          {groups.map(group => (
+            <div key={group.kind} className="space-y-3">
+              <span className={kicker}>
+                {t(GROUP_HEADING[group.kind].key, GROUP_HEADING[group.kind].fallback)}
+              </span>
+
+              {group.kind === 'other' && (
+                <p className="text-xs text-t-secondary leading-relaxed">
+                  {t(
+                    'landing_pages.design.designs_other_trades_note',
+                    'Drawn for another trade. Nothing stops you using one — your own words and sections stay exactly as they are.',
+                  )}
+                </p>
+              )}
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                {group.cards.map(c => (
+                  <button
+                    key={c.key}
+                    type="button"
+                    aria-pressed={c.selected}
+                    onClick={() => onTemplateChange(c.key)}
+                    className={cardBase + ' ' + (c.selected ? cardActive : cardInactive)}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      {/* Untranslated, from the server — see `TemplateOption`. */}
+                      <span className="text-sm font-semibold text-white truncate">{c.name}</span>
+                      {c.selected && <Check size={16} className="text-primary-500 shrink-0" />}
+                    </div>
+                    <p className="text-xs text-t-secondary leading-relaxed mt-2">{c.blurb}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {/*
-        BRAND COLOUR, SECOND — right under the page style, because it is the
-        one design control every template honours and the one a tenant most
-        often arrives here to change. It used to be last, under six palette
-        cards and four type cards, on a template that draws none of them.
+        BRAND COLOUR — the one design control every design honours, and the
+        one a tenant most often arrives here to change.
       */}
       {supports.brand_color && (
         <div className="space-y-3">
@@ -249,147 +303,19 @@ export function DesignPanel({
               // the picker opened black while the swatch beside it showed the
               // real (non-#rrggbb) stored colour, and the tenant's first drag
               // silently wrote black over their actual accent.
-              value={pickerSafeHex(resolvedBrandColor, activePalette.accent)}
+              value={pickerSafeHex(resolvedBrandColor, accentFallback)}
               onChange={e => onBrandColorChange(e.target.value)}
               className="h-9 w-16 rounded-lg border border-dark-border bg-dark-bg cursor-pointer"
             />
             <span className="text-xs text-t-secondary font-mono">{resolvedBrandColor}</span>
           </div>
-        </div>
-      )}
-
-      {supports.palette && (
-        <div className="space-y-3">
-          <span className={kicker}>{t('landing_pages.design.palette_kicker', 'Look')}</span>
-          <p className="text-sm text-t-secondary leading-relaxed">
+          <p className="text-xs text-t-secondary leading-relaxed">
             {t(
-              'landing_pages.design.palette_intro',
-              'Every palette is designed to look great from the start — pick the one that feels like your business.',
+              'landing_pages.design.color_note',
+              'The one colour that is yours on every design — your buttons, your links and the small type your designer set in accent.',
             )}
           </p>
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            {PALETTES.map(p => {
-              const active = p.id === activePalette.id
-              const headingStyle: CSSProperties = {
-                color: p.text,
-                fontFamily: activePairing.displayFontFamily,
-                fontWeight: activePairing.displayFontWeight,
-                letterSpacing: activePairing.displayLetterSpacing,
-                textTransform: activePairing.displayTextTransform,
-                fontVariationSettings: activePairing.displayFontVariationSettings,
-              }
-              const bodyStyle: CSSProperties = { color: p.textSoft, fontFamily: activePairing.bodyFontFamily }
-
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onPaletteChange(p.id)}
-                  className={cardBase + ' ' + (active ? cardActive : cardInactive)}
-                  style={{ backgroundColor: p.bg }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span aria-hidden className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.accent }} />
-                    {active && <Check size={14} className="text-primary-500" />}
-                  </div>
-
-                  <span className="block mt-3 text-lg truncate" style={headingStyle}>{businessName}</span>
-                  <span className="block mt-1.5 text-[11px] leading-relaxed" style={bodyStyle}>
-                    {t('landing_pages.design.specimen_line1', 'Quietly, unmistakably yours.')}
-                  </span>
-                  <span className="block text-[11px] leading-relaxed" style={bodyStyle}>
-                    {t('landing_pages.design.specimen_line2', 'Designed to feel considered, not templated.')}
-                  </span>
-
-                  <span
-                    aria-hidden
-                    className="block mt-2.5 h-[3px] w-10 rounded-full"
-                    style={{ backgroundImage: `linear-gradient(90deg, ${p.accent}, ${p.accentBright})` }}
-                  />
-                  <span className="block mt-1.5 text-[10px] font-mono uppercase tracking-wide" style={{ color: p.textSoft }}>
-                    {t(`landing_pages.design.palette_name_${p.id}`, p.label)}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
         </div>
-      )}
-
-      {supports.font_pairing && (
-        <div className="space-y-3">
-          <span className={kicker}>{t('landing_pages.design.pairing_kicker', 'Type style')}</span>
-          <p className="text-sm text-t-secondary leading-relaxed">
-            {t('landing_pages.design.pairing_intro', 'How your headings and body text look together.')}
-          </p>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            {FONT_PAIRINGS.map(fp => {
-              const active = fp.id === activePairing.id
-              const headingStyle: CSSProperties = {
-                color: activePalette.text,
-                fontFamily: fp.displayFontFamily,
-                fontWeight: fp.displayFontWeight,
-                letterSpacing: fp.displayLetterSpacing,
-                textTransform: fp.displayTextTransform,
-                fontVariationSettings: fp.displayFontVariationSettings,
-              }
-              const bodyStyle: CSSProperties = { color: activePalette.textSoft, fontFamily: fp.bodyFontFamily }
-
-              return (
-                <button
-                  key={fp.id}
-                  type="button"
-                  aria-pressed={active}
-                  onClick={() => onFontPairingChange(fp.id)}
-                  className={cardBase + ' ' + (active ? cardActive : cardInactive)}
-                  style={{ backgroundColor: activePalette.bg }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono uppercase tracking-wide" style={{ color: activePalette.textSoft }}>
-                      {t(`landing_pages.design.pairing_name_${fp.id}`, fp.label)}
-                    </span>
-                    {active && <Check size={14} className="text-primary-500" />}
-                  </div>
-
-                  <span className="block mt-3 text-lg truncate" style={headingStyle}>{businessName}</span>
-                  <span className="block mt-1.5 text-xs" style={bodyStyle}>
-                    {t('landing_pages.design.specimen_line1', 'Quietly, unmistakably yours.')}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
-
-      {/*
-        THE ABSENCE, EXPLAINED — the other half of "a control that cannot act
-        is not rendered". A tenant who used these cards on The Ruled Page and
-        then switched to a kit template must be told where they went, and
-        that the one colour control they have left still works. Named after
-        the template so the sentence reads as a fact about the design they
-        chose rather than as a missing feature.
-      */}
-      {(lockedPalette || lockedType) && (
-        <p className="text-sm text-t-secondary leading-relaxed">
-          {lockedPalette && lockedType
-            ? t('landing_pages.design.locked_look_and_type', {
-              template: templateName,
-              defaultValue: '{{template}} comes with its own colours and type — the designer chose them, and they are part of why the page looks like this. Your brand colour still applies above.',
-            })
-            : lockedPalette
-              ? t('landing_pages.design.locked_look', {
-                template: templateName,
-                defaultValue: '{{template}} comes with its own colours — the designer chose them, and they are part of why the page looks like this. Your brand colour still applies above.',
-              })
-              : t('landing_pages.design.locked_type', {
-                template: templateName,
-                defaultValue: '{{template}} comes with its own type — the designer chose it, and it is part of why the page looks like this.',
-              })}
-        </p>
       )}
 
       {/*
@@ -397,12 +323,13 @@ export function DesignPanel({
 
         It is the most destructive control on this screen — its own change
         note below says that saving it rewrites every heading, the wording on
-        every button and which sections are on offer — and until this round
-        it was the FIRST thing, and the largest grid, a tenant met when they
-        came here looking for a colour. The confirm is the caller's (see
+        every button and which sections are on offer. It is also what decides
+        WHICH DESIGNS ARE OFFERED FIRST above, which is the reason it stays on
+        this panel at all rather than moving out with the palette: a tenant
+        filed under the wrong trade is being shown the wrong three designs,
+        and this is where they find that out. The confirm is the caller's (see
         `LandingEditor`'s `onIndustryChange`), mirroring the one `handleRemove`
-        already puts in front of the only other irreversible control in the
-        editor.
+        already puts in front of the only other irreversible control here.
       */}
       {showIndustries && (
         <div className="space-y-4 border-t border-dark-border pt-6">
@@ -417,7 +344,7 @@ export function DesignPanel({
             <p className="text-sm text-t-secondary leading-relaxed">
               {t(
                 'landing_pages.design.industry_intro',
-                'Your page is written in your own trade’s words. Change this and the headings, the button wording and the sections on offer follow.',
+                'Your page is written in your own trade’s words, and your trade is what decides which designs you are offered first. Change this and the headings, the button wording, the sections on offer and the designs above all follow.',
               )}
             </p>
 
@@ -428,11 +355,7 @@ export function DesignPanel({
                   type="button"
                   aria-pressed={c.selected}
                   onClick={() => onIndustryChange(c.id)}
-                  className={'text-left rounded-xl border p-4 transition-all outline-none '
-                    + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
-                    + (c.selected
-                      ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-                      : 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
+                  className={cardBase + ' ' + (c.selected ? cardActive : cardInactive)}
                 >
                   <div className="flex items-center justify-between gap-2">
                     {/* The wizard's own key, deliberately reused rather than a
@@ -447,7 +370,7 @@ export function DesignPanel({
                   </div>
 
                   {/* This industry's own band names, drawn the way the page
-                      draws them — mono eyebrows in the palette that industry
+                      draws them — mono eyebrows in the accent that industry
                       opens on. Inline colour, deliberately: customer-facing
                       page styling being previewed, not admin chrome
                       (Appendix A §7.4), and the whole point is that two

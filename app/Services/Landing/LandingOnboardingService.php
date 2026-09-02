@@ -71,6 +71,16 @@ class LandingOnboardingService
      * A control that cannot act is not rendered; that rule needs this fact
      * on the wire to be applied at all.
      *
+     * `offerable` and `vertical` (the final scenario) are the two OFFER
+     * facts, and they are here for the same reason `supports` is: the
+     * question "which designs may THIS tenant choose" has to be answerable
+     * from data, in one place, or it becomes a condition in a screen that
+     * the next kit silently inherits wrongly. `offerable` retires a design
+     * from the picker without orphaning the pages already on it (see
+     * {@see offerableTemplateKeys()}); `vertical` says which trade it was
+     * drawn for, and is joined against the matching key on
+     * {@see industries()} (see {@see INDUSTRY_VERTICALS}).
+     *
      * `renders` is NOT here on purpose. Which section types a template can
      * draw is a question about which .blade.php files shipped, and the
      * filesystem already answers it — see {@see rendersFor()}, which derives
@@ -82,6 +92,32 @@ class LandingOnboardingService
         [
             'key'   => 'ruled_page',
             'name'  => 'The Ruled Page',
+            // RETIRED FROM THE OFFER (the final scenario, step 2). This is
+            // the one template on this list that is NOT one of the owner's
+            // kits: it is the generic house design the palette, the type
+            // pairings and the section tones were all built to make look
+            // varied. Six faithful kit conversions later there is nothing it
+            // is the best answer to, and a tenant who picks it gets a page
+            // none of the design controls left in the builder can style.
+            //
+            // `false` here — a fact in the registry, not a condition in a
+            // screen — is the whole mechanism: {@see offerableTemplateKeys()}
+            // is what the wizard's picker, the editor's picker and BOTH
+            // create endpoints read, so there is one answer to "may a tenant
+            // choose this" and no UI holds a second copy of it.
+            //
+            // THE ROW STAYS ON THE WIRE, deliberately. Two demo pages are on
+            // this design and must keep rendering exactly as they do today,
+            // and everything the editor knows about a page's design —
+            // `renders`, `fixed_blocks`, `content_fields`, `image_defaults` —
+            // is read off this list by key. Dropping the row instead of
+            // marking it would leave those pages' editors with no facts at
+            // all, i.e. every capability question answered "no opinion".
+            'offerable' => false,
+            // No trade. It was drawn for none in particular, which is the
+            // other half of why it is retired; see `vertical` on the kits
+            // below and {@see INDUSTRY_VERTICALS}.
+            'vertical'  => null,
             // Task 11: the blurb is the FIRST sentence a tenant reads about
             // this product, and it used to be written for a designer -- "a
             // hairline rule down the margin acts as index, ruler and spine".
@@ -119,6 +155,10 @@ class LandingOnboardingService
             // two directions and not two shades of one.
             'key'   => 'nocturne_ritual',
             'name'  => 'Nocturne Ritual',
+            // THE TRADE THIS DESIGN WAS DRAWN FOR. See {@see INDUSTRY_VERTICALS}
+            // for the other end of the join and for why this is a fact on the
+            // row rather than a list of template keys hanging off an industry.
+            'vertical' => 'beauty',
             // The author's own words for it, from the kit collection's
             // README: "Dark, cinematic ritual luxury / Premium spas, massage
             // and evening wellness brands". Written the way the Ruled Page's
@@ -184,6 +224,7 @@ class LandingOnboardingService
             // design, and only the CONTENT is the tenant's.
             'key'   => 'editorial_atelier',
             'name'  => 'Editorial Atelier',
+            'vertical' => 'beauty',
             // The author's own words for it, from the kit collection's
             // README: "Sharp editorial fashion / Hair studios and image-led
             // beauty ateliers". Written the way the other two blurbs are —
@@ -221,6 +262,7 @@ class LandingOnboardingService
             // as the design, and only the CONTENT is the tenant's.
             'key'   => 'organic_wellness',
             'name'  => 'Organic Wellness',
+            'vertical' => 'beauty',
             // The author's own words for it, from the kit collection's
             // README: "Bright modern organic / Skin, body and approachable
             // wellness studios".
@@ -265,6 +307,14 @@ class LandingOnboardingService
             // was never allowed to be a hand-written list.
             'key'   => 'maison_vela',
             'name'  => 'Maison Vela',
+            // `dining`, not `hospitality`, although the kit folder is called
+            // that: all three of these designs are RESTAURANTS — a brasserie,
+            // a garden dining room and a chef-led tasting room — down to the
+            // menu band, the covers and the service hours. A hotel is
+            // hospitality and is emphatically not one of them, and naming the
+            // trade after what the kits actually are is what makes the
+            // `hotel` industry's absence from it obvious rather than a bug.
+            'vertical' => 'dining',
             // The author's own words for it, from the kit collection's README:
             // "Grand European brasserie / Polished city restaurants and
             // celebratory dining rooms". Written the way the other blurbs are
@@ -305,6 +355,7 @@ class LandingOnboardingService
             // `renders` does not name that band and the picker cannot offer it.
             'key'   => 'luma_garden',
             'name'  => 'Luma Garden',
+            'vertical' => 'dining',
             // The author's own words for it, from the kit collection's README:
             // "Luminous Mediterranean garden / All-day restaurants and
             // produce-led destinations".
@@ -341,6 +392,7 @@ class LandingOnboardingService
             // `renders` does not name that band and the picker cannot offer it.
             'key'   => 'ember_table',
             'name'  => 'Ember Table',
+            'vertical' => 'dining',
             // The author's own words for it, from the kit collection's README:
             // "Cinematic chef-led tasting room / Intimate restaurants, wine
             // bars and open-fire kitchens".
@@ -385,6 +437,68 @@ class LandingOnboardingService
      * @var list<string>
      */
     private const SUPPORT_KEYS = ['palette', 'font_pairing', 'tones', 'brand_color'];
+
+    /**
+     * THE TRADES DESIGNS ARE DRAWN FOR — the id vocabulary both halves of
+     * the offer join on.
+     *
+     * A vertical is not an industry and deliberately does not share its
+     * spelling: an industry is what a BUSINESS is (nine of them, the
+     * platform's own `Organization::INDUSTRIES`), while a vertical is what a
+     * KIT was drawn for (two of them today, because six kits have shipped in
+     * two families). Collapsing the two would mean either nine verticals,
+     * seven of them empty, or a template row claiming to be "the restaurant
+     * industry", which it is not — it is a design a restaurant would suit.
+     *
+     * An id outside this list, on either side of the join, is normalised to
+     * null rather than published: an unknown vertical would reach the editor
+     * as a heading it has no words for, above a group of designs it could
+     * not explain.
+     *
+     * @var list<string>
+     */
+    public const VERTICALS = ['beauty', 'dining'];
+
+    /**
+     * WHICH TRADE'S DESIGNS AN INDUSTRY IS OFFERED FIRST — the one place
+     * industries and designs are mapped to each other, anywhere in the
+     * product.
+     *
+     * The final scenario's step 1: a beauty brand is shown the three beauty
+     * kits, a restaurant the three dining ones. That decision has to be
+     * ONE fact, server-side, or it becomes a `switch (industry)` in
+     * TypeScript — the second-source-of-truth failure this whole round of
+     * work exists to remove — and a seventh kit would then need a frontend
+     * release to be offered to anybody.
+     *
+     * The join is deliberately industry → VERTICAL rather than industry →
+     * template keys: a list of keys here would be a second copy of
+     * {@see TEMPLATES}' own membership, and adding a fourth beauty kit would
+     * mean editing two lists instead of one. Adding a whole new vertical is
+     * three lines — an id in {@see VERTICALS}, a `vertical` on the new
+     * rows, an entry here — plus the two words the editor prints as its
+     * heading.
+     *
+     * AN INDUSTRY ABSENT FROM THIS MAP HAS NO KITS OF ITS OWN, and that is
+     * the common case: seven of the nine (`hotel`, `medical`, `fitness`,
+     * `education`, `legal`, `real_estate`, `other`) are not here. They are
+     * NOT left with an empty picker — see {@see templates()}' `offerable`
+     * and the editor's own grouping: every offerable design is shown to
+     * everybody, and the vertical only decides what is shown FIRST, under
+     * "made for your trade", versus what follows under "other designs". A
+     * tenant may always choose any of the six; nobody is ever offered none.
+     *
+     * `hotel` is the deliberate near-miss. The three dining kits are
+     * restaurants — see `maison_vela`'s own note — so a hotel is offered
+     * them as other designs rather than as its own trade's, which is the
+     * honest description of what they are until a hotel kit ships.
+     *
+     * @var array<string, string>
+     */
+    public const INDUSTRY_VERTICALS = [
+        'beauty'     => 'beauty',
+        'restaurant' => 'dining',
+    ];
 
     /**
      * WHERE a block a template pins ends up, as a three-word vocabulary
@@ -462,6 +576,75 @@ class LandingOnboardingService
     }
 
     /**
+     * THE DESIGNS A TENANT MAY ACTUALLY CHOOSE — every row that has not been
+     * retired from the offer.
+     *
+     * The single fact behind the final scenario's step 2. Both create paths
+     * (the wizard's `POST /onboarding` and `POST /landing-pages`) validate
+     * against THIS rather than {@see templateKeys()}, and the editor's
+     * picker draws from the same `offerable` flag on the wire — so "may a
+     * tenant choose this design" has one answer, and retiring a design (or
+     * bringing one back) is one bool in {@see TEMPLATES}.
+     *
+     * DISTINCT FROM {@see templateKeys()}, which is still every key that can
+     * legally be STORED. A page already on a retired design keeps rendering,
+     * keeps its capability facts on the wire, and can still be saved — see
+     * `LandingPageController::update()`, which accepts the offer plus
+     * whatever the page is already on. Retiring a design withdraws it from
+     * the offer; it does not orphan the pages that took it.
+     *
+     * @return list<string>
+     */
+    public static function offerableTemplateKeys(): array
+    {
+        return array_values(array_map(
+            static fn (array $row): string => $row['key'],
+            array_filter(self::TEMPLATES, self::isOfferable(...)),
+        ));
+    }
+
+    /**
+     * Whether one authored row is on offer. Absent means yes: a design added
+     * without an opinion is a design somebody meant to ship, and the one row
+     * that is NOT on offer says so in as many words.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function isOfferable(array $row): bool
+    {
+        return ($row['offerable'] ?? true) === true;
+    }
+
+    /**
+     * The trade an industry's designs are drawn for, or null where no kit
+     * has been drawn for it yet.
+     *
+     * The read side of {@see INDUSTRY_VERTICALS}, normalised through
+     * {@see VERTICALS} so a typo in that map reaches the editor as "no
+     * trade of its own" — every design offered under one neutral heading —
+     * rather than as a heading with no words behind it.
+     */
+    public static function verticalForIndustry(string $industry): ?string
+    {
+        $vertical = self::INDUSTRY_VERTICALS[$industry] ?? null;
+
+        return in_array($vertical, self::VERTICALS, true) ? $vertical : null;
+    }
+
+    /**
+     * One template row's own trade, normalised the same way and for the same
+     * reason.
+     *
+     * @param array<string, mixed> $row
+     */
+    private static function verticalOf(array $row): ?string
+    {
+        $vertical = $row['vertical'] ?? null;
+
+        return in_array($vertical, self::VERTICALS, true) ? $vertical : null;
+    }
+
+    /**
      * The template registry as the wizard and the editor consume it: every
      * authored row, plus the three CAPABILITY facts a screen needs in order
      * to stop offering a control the chosen design cannot honour.
@@ -484,6 +667,13 @@ class LandingOnboardingService
     public static function templates(): array
     {
         return array_map(fn (array $row): array => array_merge($row, [
+            // The final scenario's two offer facts, normalised the same way
+            // every other fact on this row is. `offerable` is what a picker
+            // filters on; `vertical` is what it GROUPS on, joined against the
+            // matching key on `industries[*]` — never against a template id
+            // compared on the far side of the wire.
+            'offerable'      => self::isOfferable($row),
+            'vertical'       => self::verticalOf($row),
             'supports'       => self::supportsFor($row),
             'renders'        => self::rendersFor($row['key']),
             'fixed_blocks'   => self::fixedBlocksFor($row),
@@ -834,6 +1024,73 @@ class LandingOnboardingService
     }
 
     /**
+     * ADD THE BLOCKS THE PAGE'S NEW DESIGN NEEDS, AND NOTHING ELSE — what a
+     * change of design does to the rows of a page that already exists (the
+     * final scenario, step 5).
+     *
+     * A design is a composition, not a skin: Nocturne Ritual draws an offer
+     * bar, a highlights band and a questions block that The Ruled Page has no
+     * partial for, and until this existed a page moved onto it arrived with
+     * three of the author's fifteen blocks simply missing — with no control
+     * anywhere that would have told the tenant why. {@see seedSectionsFor()}
+     * already answers "which rows does a page on this design start with"; a
+     * design change is the same question asked a second time, so it is the
+     * same function rather than a second list.
+     *
+     * ADDITIVE, ABSOLUTELY. Nothing here deletes a row and nothing here
+     * touches `content`: a block the NEW design will not draw keeps its row
+     * and keeps every word the tenant wrote in it, so switching design and
+     * switching back loses nothing. (The editor already says so on the row —
+     * "your words are kept" — off the served `renders` fact.) That is why
+     * this is a one-way top-up and not a re-seed: a re-seed would be a
+     * silent delete with a friendly name.
+     *
+     * A row that already exists is left exactly as it is, `enabled` and
+     * `sort` included — a tenant who switched a band off, or moved it, has
+     * said something about it, and arriving on a new design must not undo
+     * that. New rows land after the last one, on in the seed's own order.
+     *
+     * The page cap is honoured (SectionType::MAX_SECTIONS_PER_PAGE, the same
+     * ceiling LandingPageSectionController::store() enforces): a page already
+     * at the cap gains nothing rather than growing past a limit every other
+     * writer respects. Reachable only from a page carrying many added text
+     * and gallery bands, and the alternative — a page the add endpoint then
+     * refuses to let the tenant fix — is worse than a design with one block
+     * short.
+     *
+     * @return int how many rows were added, for the caller that wants to say so
+     */
+    public static function addMissingSections(LandingPage $page, IndustryProfile $profile): int
+    {
+        $existing = $page->sections()->pluck('key')->all();
+        $have     = array_flip($existing);
+        $sort     = (int) ($page->sections()->max('sort') ?? -1);
+        $room     = SectionType::MAX_SECTIONS_PER_PAGE - count($existing);
+        $added    = 0;
+
+        foreach (self::seedSectionsFor($page->template_key, $profile) as $key) {
+            if ($room <= 0) {
+                break;
+            }
+
+            if (isset($have[$key])) {
+                continue;
+            }
+
+            $page->sections()->create([
+                'key'     => $key,
+                'enabled' => true,
+                'sort'    => ++$sort,
+            ]);
+
+            $room--;
+            $added++;
+        }
+
+        return $added;
+    }
+
+    /**
      * Which of a template's blocks it draws in a place of its own choosing,
      * and where — the third capability fact, beside `supports` and
      * `renders`.
@@ -1016,6 +1273,17 @@ class LandingOnboardingService
                     // same six palettes on the same screen.
                     'palette'        => $profile->defaultPalette,
                     'sections'       => $profile->defaultSections,
+                    // THE OTHER END OF THE DESIGN JOIN (the final scenario,
+                    // step 1). The editor holds both this list and
+                    // `templates`, and offers the designs whose own
+                    // `vertical` equals the SELECTED industry's first — a
+                    // comparison of two served values, never of a template
+                    // id spelled out in TypeScript. Null for the seven
+                    // industries no kit has been drawn for yet, which the
+                    // picker reads as "no trade of its own": every offerable
+                    // design, under one neutral heading, never an empty
+                    // picker. See INDUSTRY_VERTICALS.
+                    'vertical'       => self::verticalForIndustry($id),
                 ];
             })
             ->values()

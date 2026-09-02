@@ -103,62 +103,59 @@ describe('locale completeness — landing pages + reviews', () => {
 })
 
 /**
- * Landing phase 3c Task 6, fix round 1: the ten design-panel per-id name
- * keys are named with a template-literal `t()` call —
- * `` t(`landing_pages.design.palette_name_${p.id}`, p.label) `` and
- * `` t(`landing_pages.design.pairing_name_${fp.id}`, fp.label) `` in
- * `DesignPanel.tsx` — so `T_CALL_RE` above never matches them (it requires
- * a literal quote character immediately after `t(`) and `usedKeys()` never
- * finds them, the exact same gap this file's own docblock already
- * documents for `nav.groups.*`/`nav.items.*` (and that `field_${field.name}`
- * in `LandingEditor.tsx`'s `FIELD_FALLBACK` shares silently, with no net of
- * its own at all). Task 6's own report flagged this as a known gap rather
- * than a thing the scan above could be made to close.
+ * THE FINAL SCENARIO — the design picker's three group HEADINGS.
  *
- * Hardcoded here as a literal list — never derived from `designChoices.ts`'s
- * own `PALETTE_IDS`/`FONT_PAIRING_IDS` — for the identical reason
- * `designChoices.test.ts` hardcodes its own expected id lists rather than
- * importing them from the module under test: if this list were built FROM
- * the same module whose ids it exists to check translations for, a palette
- * or pairing removed from `designChoices.ts` would silently disappear from
- * the expected-keys list in the same edit, and a translation actually
- * missing for a still-real id could never be caught. Read with `readAt`/
- * `readLocale`, the same two helpers the scan-based test above already
- * uses — a missing key and a present-but-blank one are both failures here,
- * since a blank string is not a translation.
+ * `DesignPanel.tsx` names them through a lookup rather than a literal —
+ * `` t(GROUP_HEADING[group.kind].key, ...) `` — so `T_CALL_RE` at the top of
+ * this file cannot see the family at all, exactly like the industry names
+ * and the field labels below. The value it renders is what tells a tenant
+ * WHY they are being shown these designs and not others; a missing
+ * translation falls through to English in the middle of a translated screen.
+ *
+ * These replace the ten palette/pairing NAME keys this describe used to
+ * pin. Those cards are gone — six palettes and four type pairings that only
+ * ever acted on the design retired from the offer, see `DesignPanel.tsx`'s
+ * own note — and their keys are deleted from all five locales rather than
+ * left behind as translated strings nothing asks for.
+ *
+ * Hardcoded rather than derived from `editorCatalog.ts`'s
+ * `TemplateGroupKind`, for the same reason every other hand-kept list here
+ * is: a list built FROM the module it exists to check loses an id and its
+ * expectation in the same edit, and a translation actually missing for a
+ * still-real kind could never be caught.
  */
-describe('locale completeness — design panel palette/pairing names (dynamic t() keys, hand-verified)', () => {
-  const DESIGN_PANEL_ID_KEYS = [
-    // designChoices.ts's PALETTES, in Palette::all()'s own order.
-    'landing_pages.design.palette_name_champagne_noir',
-    'landing_pages.design.palette_name_porcelain',
-    'landing_pages.design.palette_name_midnight_brass',
-    'landing_pages.design.palette_name_clinic_air',
-    'landing_pages.design.palette_name_terracotta',
-    'landing_pages.design.palette_name_slate_amber',
-    // designChoices.ts's FONT_PAIRINGS, in ThemeRules::FONT_PAIRINGS's own order.
-    'landing_pages.design.pairing_name_editorial',
-    'landing_pages.design.pairing_name_modern',
-    'landing_pages.design.pairing_name_classic',
-    'landing_pages.design.pairing_name_grand',
+describe('locale completeness — design group headings (dynamic t() keys, hand-verified)', () => {
+  const DESIGN_GROUP_KEYS = [
+    // `TemplateGroupKind`'s three values, in the order a tenant meets them.
+    'landing_pages.design.designs_own_trade',
+    'landing_pages.design.designs_other_trades',
+    'landing_pages.design.designs_all',
   ]
 
-  // A canary against the hardcoded list itself drifting silently short —
-  // mirrors the "actually found the keys" canary above, same reasoning.
-  it('names exactly ten keys, six palettes and four pairings', () => {
-    expect(DESIGN_PANEL_ID_KEYS.length).toBe(10)
+  /*
+   * A canary that RECOMPUTES rather than counts: every kind the picker can
+   * produce has a heading, and no heading is named twice. Counting to three
+   * would pass just as happily with the same key written three times.
+   */
+  it('names one distinct heading for every group a picker can draw', () => {
+    const kinds = DESIGN_GROUP_KEYS.map(key => key.replace('landing_pages.design.designs_', ''))
+
+    expect(new Set(kinds).size).toBe(kinds.length)
+    expect(kinds).toContain('own_trade')
+    expect(kinds).toContain('other_trades')
+    expect(kinds).toContain('all')
   })
 
   for (const locale of LOCALES) {
-    it(`every design-panel palette/pairing name key resolves to a non-empty string in ${locale}/common.json`, () => {
+    it(`every design group heading resolves to a non-empty string in ${locale}/common.json`, () => {
       const json = readLocale(locale)
-      const missing = DESIGN_PANEL_ID_KEYS.filter(key => {
+      const missing = DESIGN_GROUP_KEYS.filter(key => {
         const value = readAt(json, key)
         return typeof value !== 'string' || value.trim() === ''
       })
       expect(
         missing,
-        `${locale}/common.json is missing (or has a blank) design key: ${missing.join(', ') || '(none)'}`,
+        `${locale}/common.json is missing (or has a blank) design group key: ${missing.join(', ') || '(none)'}`,
       ).toEqual([])
     })
   }
@@ -303,55 +300,19 @@ describe('locale completeness — addable section type names and blurbs (dynamic
   }
 })
 
-/**
- * The tone round: `LandingEditor.tsx`'s per-section colour picker names each
- * swatch with a template-literal `t()` call —
- * `` t(`landing_pages.editor.tone_name_${tone.id}`, …) `` — twice over (once
- * on the swatch's own label/title, once on the "you are on this one" caption
- * beside the row), so `T_CALL_RE` at the top of this file cannot see the
- * family at all. Fourth time, same reasoning as the three describes above.
+/*
+ * THE SECTION-TONE NAME NET IS GONE, with the control it covered.
  *
- * The ids are `App\Landing\SectionType::TONES`' keys — the allowlist the
- * save endpoint validates against and the onboarding response publishes as
- * `section_tones`. The list is SERVED, so a tone the backend adds appears in
- * the picker with no release on this side: the only thing missing would be
- * its name, and `TONE_NAME_FALLBACK`'s `?? tone.id` fallback would then
- * render a raw id (`page`, `soft`) as the label of a colour swatch a
- * customer is asked to choose between. That is the failure this net exists
- * to make loud.
- *
- * Hardcoded rather than derived for the fourth time and the same reason: a
- * list built from the module it checks loses an id and its expectation in
- * one edit. `sectionTones.ts` (which owns the swatch recipes) is where the
- * matching client-side list lives, and it is deliberately not imported here.
+ * `SectionType::TONES` is still a served allowlist and `tone` is still a
+ * column the save endpoint validates — but the only design that ever READ a
+ * band's tone class is retired from the offer, so the swatch row was three
+ * dead controls per card on every design a tenant can now choose (see
+ * `DesignPanel.tsx`'s note). With the picker removed, the three
+ * `landing_pages.editor.tone_name_*` keys have no reader, and they are
+ * deleted from all five locales rather than kept as translations of a
+ * control nobody can reach. If the tones ever come back, so does this
+ * describe.
  */
-describe('locale completeness — section tone names (dynamic t() keys, hand-verified)', () => {
-  const TONE_NAME_KEYS = [
-    // SectionType::TONES' three ids, in that constant's own order.
-    'landing_pages.editor.tone_name_page',
-    'landing_pages.editor.tone_name_soft',
-    'landing_pages.editor.tone_name_accent',
-  ]
-
-  // The same canary the describes above carry: three tones, no fewer.
-  it('names exactly the three tones the allowlist ships', () => {
-    expect(TONE_NAME_KEYS.length).toBe(3)
-  })
-
-  for (const locale of LOCALES) {
-    it(`every tone name key resolves to a non-empty string in ${locale}/common.json`, () => {
-      const json = readLocale(locale)
-      const missing = TONE_NAME_KEYS.filter(key => {
-        const value = readAt(json, key)
-        return typeof value !== 'string' || value.trim() === ''
-      })
-      expect(
-        missing,
-        `${locale}/common.json is missing (or has a blank) tone name key: ${missing.join(', ') || '(none)'}`,
-      ).toEqual([])
-    })
-  }
-})
 
 /**
  * The gallery round closes the gap this file's own header has documented

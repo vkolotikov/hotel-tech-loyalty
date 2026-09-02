@@ -15,22 +15,21 @@ import {
   addableTypes, appendSection, buildSectionRows, buildSectionsPayload, fieldHintKey, fieldLabelKey,
   freeGalleryLeaves, gallerySlotName,
   gallerySlots, instanceRowLabel, moveSection,
-  moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex, setSectionTone,
+  moveSectionToKey, removeSection, removeSectionContent, safeImageUrl, sectionIndex,
   stripImageLeaves, toggleSection, visibleFaqPairs,
   type AddableType, type EditorSectionRow, type PageSection, type SectionAvailability,
   type SectionTypeOption,
 } from './editorSections'
-import { selectedTone, toneChoices, type ToneChoice } from './sectionTones'
 import { downscaledName, downscaleTarget, drawToBlob } from './imageDownscale'
 import { addressHost, buildAddressUrl, pageVisibilityState, previewSlug } from './publishAddress'
 import { LandingPreview } from './LandingPreview'
 import type { DraftPayload } from './livePreview'
 import { DesignPanel } from './DesignPanel'
-import { paletteFor, themePayload } from './designChoices'
-import type { IndustryOption } from './industryChoices'
+import { themePayload } from './designChoices'
+import { verticalFor, type IndustryOption } from './industryChoices'
 import {
-  catalogPayload, resolveTemplateKey, templateContentFields, templateFixedBlocks, templateImageDefaults,
-  templatePhotoBlocks,
+  catalogPayload, designChangeImpact, resolveTemplateKey, templateContentFields, templateFixedBlocks,
+  templateImageDefaults, templatePhotoBlocks,
   templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -41,15 +40,6 @@ import {
   templateDrawsBlock, visibleRows,
   type BlockPlacement, type BuilderTab, type RowStatus, type SectionFilter,
 } from './builderShape'
-// Task 6 (landing phase 3c, D4 — distinct from the phase 3b "Task 6" this
-// file's photo controls below still refer to by that same number): the
-// self-hosted @font-face sheet DesignPanel's cards render against, see
-// that file's own header comment. Imported here (and by LandingWizard.tsx,
-// the only other screen that renders DesignPanel) so it is bundled into
-// the `LandingPages` route chunk both screens already live in (App.tsx's
-// `lazy(() => import('./pages/LandingPages'))`), never into the app
-// shell's own initial load.
-import '../../styles/landing-preview-fonts.css'
 
 /**
  * The row shape `GET /v1/admin/landing-pages` (`show`) returns for the
@@ -145,21 +135,21 @@ type LandingEditorProps = {
    * server might not.
    */
   maxSections: number | null
-  /**
-   * `onboarding.section_tones` — `SectionType::TONES`' ids, in the order the
-   * picker should offer them.
-   *
-   * The third served allowlist on this screen, for the third identical
-   * reason: it is what `LandingPageSectionController::update()` validates a
-   * band's colour against, so a swatch row built from a hand-kept copy here
-   * is a swatch row that can offer a colour the save would 422 on.
-   *
-   * `null` (an older backend, or a failed onboarding fetch) draws NO tone
-   * control at all rather than falling back to a guessed list — see
-   * `toneChoices` in `sectionTones.ts`, which owns that refusal.
-   */
-  sectionTones: string[] | null
 }
+
+/**
+ * The last-resort accent for the brand-colour swatch, used only when the
+ * response carried no industry rows at all (an older backend, or a failed
+ * onboarding fetch) AND the page has no brand colour of its own.
+ *
+ * Not a mirror of any server constant and deliberately not one of the
+ * industry accents: it is the neutral the swatch falls back to so the
+ * control still renders something honest rather than an empty square, in a
+ * state where nothing has told this build what the page would actually
+ * paint. Every reachable state resolves the SERVED industry accent instead —
+ * see `accentFallback`.
+ */
+const DEFAULT_ACCENT = '#6b7280'
 
 // bg-dark-surface, never bg-dark-card — the two are different shades, and
 // dark-surface is the house default (Appendix A §7.4); LandingWizard.tsx
@@ -233,17 +223,6 @@ const ADD_AT_END = 'END'
  *  all — so the card's own `<label>` names the group rather than pointing
  *  `htmlFor` at an id no single element carries. */
 const COMPOSITE_FIELD_TYPES = ['image', 'gallery', 'faq_pairs']
-
-/** The tenant's word for each tone (`App\Landing\SectionType::TONES`' ids) —
- *  `t()` fallbacks, so the swatch row is never a line of unlabelled colour.
- *  Named for what the tenant is choosing, not for the band class behind it;
- *  see `localeCompleteness.test.ts` for the hand-verified net over these
- *  template-literal keys. */
-const TONE_NAME_FALLBACK: Record<string, string> = {
-  page: 'Page background',
-  soft: 'Soft band',
-  accent: 'Accent band',
-}
 
 /** `t()` fallback text per content-field name — the same words across every
  *  section that has that field, so a label means the same thing on the
@@ -520,7 +499,7 @@ function sectionErrorMessage(e: unknown, fallback: string): string {
  * the query, bump `previewNonce`.
  */
 export function LandingEditor({
-  sections: availability, industries, templates, sectionTypes, maxSections, sectionTones,
+  sections: availability, industries, templates, sectionTypes, maxSections,
 }: LandingEditorProps) {
   const { t } = useTranslation()
   const qc = useQueryClient()
@@ -689,6 +668,27 @@ export function LandingEditor({
   const contentFields = templateContentFields(templates, templateKey)
   const imageDefaults = templateImageDefaults(templates, templateKey)
 
+  /**
+   * THE TWO FACTS THE DESIGN TAB NEEDS ABOUT THE TENANT'S TRADE (the final
+   * scenario, steps 1 and 3) — both read off the SERVED industry rows for
+   * whichever industry the FORM currently holds, so correcting the industry
+   * in the Design tab's Advanced block re-offers the right designs and
+   * repaints the accent swatch immediately, before any save.
+   *
+   *  - `vertical` is the trade whose designs are offered first. It is
+   *    compared against each design's own served `vertical` inside
+   *    `templateGroups`; nothing on this side knows which design belongs to
+   *    which trade.
+   *  - `accentFallback` is the colour this page publishes when the tenant
+   *    has set no brand colour of their own — `IndustryProfile`'s house
+   *    accent, which is exactly what `Accent::for()` falls back to
+   *    server-side. The swatch used to fall back to the selected PALETTE's
+   *    accent, which was a colour no kit design would ever have painted.
+   */
+  const formIndustry = typeof f.industry === 'string' ? f.industry : ''
+  const vertical = verticalFor(industries, formIndustry)
+  const accentFallback = industries.find(o => o.id === formIndustry)?.accent ?? DEFAULT_ACCENT
+
   // The best business name this screen can honestly show in a card — the
   // page itself carries no such field (theme/content have no "name"),
   // so the brand's own name (BrandSwitcher's own data, already loaded) is
@@ -798,27 +798,22 @@ export function LandingEditor({
   const toggleRow = (key: string) =>
     update('sections', toggleSection(f.sections ?? [], key))
 
-  /**
-   * The swatch row every section card offers, computed once for the whole
-   * list: the SERVED tone ids painted in the colours of the palette the page
-   * is currently wearing — including an unsaved palette change queued in
-   * `form` this session, which is why it reads `themeFields` rather than
-   * `page.theme`. Switch palette and every band's swatches restyle with it,
-   * because the tone a band is on genuinely is a different colour now.
+  /*
+   * THE PER-BAND COLOUR SWATCHES ARE GONE (the final scenario, step 3).
    *
-   * `paletteFor` resolves an absent or unrecognised id to the stylesheet's
-   * own no-choice default (porcelain), which is exactly what such a page
-   * actually renders as.
+   * They painted `SectionType::TONES` in the colours of the palette the page
+   * was wearing, and every one of them acted on exactly one design:
+   * `ruled_page`, whose layout is the only one that ever read a band's tone
+   * class. That design is retired from the offer, so on every design a
+   * tenant can now choose the swatches were three dead controls per card —
+   * twenty-one on a full page — over layouts whose authors composed the
+   * dark/paper/sand rhythm themselves and say so in their own headers.
+   *
+   * The BACKEND half is untouched and still load-bearing: `tone` is still a
+   * column, `SectionType::bandClass()` still resolves it, and the two demo
+   * pages on the retired design still render with whatever tones they were
+   * given. What is gone is the control that could no longer change anything.
    */
-  const tonePalette = paletteFor(themeFields.palette)
-  // Template fidelity 1.2: EMPTY WHEN THIS DESIGN DOES NOT READ TONES.
-  // `SectionRow` already renders no colour control for an empty list (that
-  // is how an older backend serving no tone allowlist is handled), so
-  // gating here rather than in the row is one decision in one place — and
-  // it takes twenty-one dead swatches off a Nocturne page, three per card,
-  // on a design whose layout says in words that a band on the wrong surface
-  // breaks the composed dark/paper/sand sequence rather than just that band.
-  const tones: ToneChoice[] = supports.tones ? toneChoices(sectionTones, tonePalette) : []
 
   /**
    * What the preview pane renders RIGHT NOW — the live-preview round.
@@ -859,18 +854,6 @@ export function LandingEditor({
     content: stripImageLeaves(f.content),
     sections: buildSectionsPayload(rows),
   }
-
-  /**
-   * Queued into `form` and saved by the Save button through the existing
-   * `PUT /sections` call — never a straight-to-server write, the same as the
-   * enable toggle and the reorder controls beside it, and unlike add/remove
-   * (which must write at once because the row has to exist server-side
-   * before anything can be written into it). `saveMut.onSuccess` is what
-   * bumps `previewNonce`, so the preview refreshes when — and only when —
-   * there is genuinely a newer saved draft to show.
-   */
-  const setToneRow = (key: string, tone: string | null) =>
-    update('sections', setSectionTone(f.sections ?? [], key, tone))
 
   // Which row is currently being dragged, and which one the pointer is
   // over. Held HERE rather than per row because both questions are about
@@ -1035,6 +1018,91 @@ export function LandingEditor({
     }
 
     update('industry', id)
+  }
+
+  /**
+   * THE FINAL SCENARIO, STEP 5 — changing design, safely and honestly.
+   *
+   * A design is a composition, not a skin: the six kits draw different sets
+   * of blocks, and moving between two of them genuinely changes what appears
+   * on the page. So the tenant is told, before the change is queued, exactly
+   * what it does — named block by block, off `designChangeImpact`, which
+   * reads the SERVED `renders`/`fixed_blocks` facts for both designs. No
+   * template id is compared here; this function does not know which design
+   * draws what and must not learn.
+   *
+   * The three promises the sentence makes, and where each is kept:
+   *
+   *  - NOTHING IS DISCARDED. A block the new design will not draw keeps its
+   *    row and every word in it — the server's design change is purely
+   *    additive (`LandingOnboardingService::addMissingSections`), and
+   *    switching back brings it straight back.
+   *  - WHAT THE NEW DESIGN NEEDS IS SEEDED. The blocks named as gained are
+   *    the rows that same writer creates on the save.
+   *  - IT IS STILL A SAVE. Like every other control on this screen, this
+   *    queues into `form` and waits for the Save button; the confirm is
+   *    about consequence, not about committing.
+   *
+   * A confirm rather than an inline note, mirroring `handleIndustryChange`
+   * above and `handleRemove` before it: those are the two other controls
+   * here whose effect a tenant cannot see until after they act.
+   */
+  const handleTemplateChange = (key: string) => {
+    if (key === templateKey) return
+
+    const impact = designChangeImpact({
+      options: templates,
+      fromKey: templateKey,
+      toKey: key,
+      rowTypeIds: rows.map(row => row.typeId),
+    })
+
+    /*
+     * THE TENANT'S OWN WORD FOR A BLOCK — never a raw type id in a dialog.
+     *
+     * The SERVED label first (`onboarding.sections[*].label`), because that
+     * is the industry's own vocabulary and the exact word printed on the
+     * section card this dialog is about: a clinic reads "Clinicians", a
+     * school reads "Instructors", and "team" would be the platform talking
+     * about itself. Only the blocks no industry seeds — the offer bar, the
+     * highlights band, the questions — have no row on that response, and
+     * they are the ones `TYPE_NAME_FALLBACK` and the
+     * `section_type_name_*` locale family already exist to name.
+     */
+    const names = (ids: string[]) => ids
+      .map(id => availability.find(row => row.key === id)?.label
+        || t(`landing_pages.editor.section_type_name_${id}`, TYPE_NAME_FALLBACK[id] ?? id))
+      .join(', ')
+
+    const lines = [
+      t('landing_pages.design.change_confirm_lead', {
+        name: templates.find(o => o.key === key)?.name ?? '',
+        defaultValue: 'Switch to {{name}}? It is a different layout, not just different colours.',
+      }),
+    ]
+
+    if (impact.dropped.length > 0) {
+      lines.push(t('landing_pages.design.change_confirm_dropped', {
+        blocks: names(impact.dropped),
+        defaultValue: 'These will stop showing: {{blocks}}. Nothing you wrote in them is deleted — switch back and they return.',
+      }))
+    }
+
+    if (impact.added.length > 0) {
+      lines.push(t('landing_pages.design.change_confirm_added', {
+        blocks: names(impact.added),
+        defaultValue: 'This design adds blocks of its own, ready for you to fill in: {{blocks}}.',
+      }))
+    }
+
+    lines.push(t(
+      'landing_pages.design.change_confirm_save',
+      'Your words, your photographs and your brand colour all come with you. Nothing changes on your live page until you save.',
+    ))
+
+    if (!window.confirm(lines.join('\n\n'))) return
+
+    update('template_key', key)
   }
 
   const saveMut = useMutation({
@@ -1360,30 +1428,22 @@ export function LandingEditor({
           {tab === 'design' && (
             /*
               Task 6 (landing phase 3c, D4): the Design panel — palette +
-              type-pairing cards and the brand-colour input, all saved
-              through the SAME text-save path every other field on this
-              screen already uses (`update` + the sticky Save button below);
-              `image_url` handling is untouched (D4's one-writer rule stays
-              with the photo controls).
+              the design this page is on, the accent colour and the way to
+              change design — all saved through the SAME text-save path every
+              other field on this screen already uses (`update` + the sticky
+              Save button below); `image_url` handling is untouched (D4's
+              one-writer rule stays with the photo controls).
             */
             <div className={card + ' space-y-5'}>
               <h2 className="text-sm font-semibold text-white">{t('landing_pages.design.title', 'Design')}</h2>
-              {/*
-                Landing phase 3c, Plan A: `industries`/`templates` and their
-                two callbacks are what turn this into the whole Design panel —
-                industry and page style above the palette, type and brand
-                colour that were already here. The wizard renders the same
-                component with neither prop set (it asks about industry in its
-                own step 1 and never asks about the template), so its "Make it
-                yours" step is unchanged.
-              */}
               <DesignPanel
-                businessName={businessName}
-                palette={themeFields.palette}
-                fontPairing={themeFields.font_pairing}
                 brandColor={themeFields.brand_color}
-                onPaletteChange={id => updateTheme({ palette: id })}
-                onFontPairingChange={id => updateTheme({ font_pairing: id })}
+                // The colour this page would publish with no override — the
+                // industry's own house accent, off the SERVED industry rows,
+                // which is the same value `Accent::for()` falls back to
+                // server-side. Resolved here rather than in the panel because
+                // only this screen knows which industry the form is holding.
+                accentFallback={accentFallback}
                 onBrandColorChange={hex => updateTheme({ brand_color: hex })}
                 industries={industries}
                 industry={f.industry}
@@ -1391,9 +1451,15 @@ export function LandingEditor({
                 onIndustryChange={handleIndustryChange}
                 templates={templates}
                 templateKey={templateKey}
-                onTemplateChange={key => update('template_key', key)}
-                // Template fidelity 1.2 — the four bools that decide which of
-                // this panel's blocks are drawn at all. See `templateSupports`.
+                onTemplateChange={handleTemplateChange}
+                // The final scenario, step 1: the trade whose designs come
+                // first, off the SERVED industry row for whichever industry
+                // the form is currently holding — so a tenant who corrects
+                // their industry in the block below sees the designs for it
+                // straight away, without a save.
+                vertical={vertical}
+                // Template fidelity 1.2 — `brand_color` is the one bool this
+                // panel still reads. See `templateSupports`.
                 supports={supports}
               />
             </div>
@@ -1580,8 +1646,6 @@ export function LandingEditor({
                     endDrag()
                   }}
                   onToggle={() => toggleRow(row.key)}
-                  tones={tones}
-                  onToneChange={tone => setToneRow(row.key, tone)}
                   onMove={(dir, label) => moveRow(row.key, dir, label)}
                   // Home/End. Resolved to the first/last VISIBLE row's key
                   // here, where the rendered list is — a row this build does
@@ -2287,7 +2351,7 @@ function SectionRow({
   onFocusHandled,
   expanded, onToggleExpanded, reorderable, placement, drawn, drawnBy, templateName, thumbUrl,
   dragging, dragActive, dropTarget, onDragStart, onDragOverRow, onDragEnd, onDropRow,
-  onToggle, tones, onToneChange, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
+  onToggle, onMove, onMoveEdge, onRemove, removing, onFieldChange, onImageChanged,
 }: {
   row: EditorSectionRow
   isFirst: boolean
@@ -2349,11 +2413,6 @@ function SectionRow({
   onDragEnd: () => void
   onDropRow: () => void
   onToggle: () => void
-  /** The colours this band may sit on, already painted in the palette the
-   *  page is wearing. Empty (an older backend published no tone list) draws
-   *  no colour control at all. */
-  tones: ToneChoice[]
-  onToneChange: (tone: string) => void
   onMove: (direction: 'up' | 'down', label: string) => void
   onMoveEdge: (edge: 'first' | 'last', label: string) => void
   onRemove: (label: string) => void
@@ -2378,12 +2437,6 @@ function SectionRow({
   // control is its picture picker, and autofocusing it would either open a
   // file dialog nobody asked for or silently focus nothing at all.
   const firstWritableField = fields.findIndex(field => field.type !== 'image' && field.type !== 'gallery')
-
-  // Which swatch is lit. A row with no stored tone is not "unset" — it is
-  // sitting on the colour its section was authored with, and the served
-  // `default_tone` is what names that. Null only when this build recognises
-  // neither, which it says in words rather than silently lighting nothing.
-  const currentTone = selectedTone(row.tone, row.defaultTone, tones)
 
   // `draggable` is armed by the HANDLE, not left permanently on the card.
   // A permanently draggable card cannot have its text selected — every
@@ -2753,72 +2806,6 @@ function SectionRow({
       */}
       {isOpen && (
         <div id={bodyId} className="space-y-3 border-t border-dark-border/60 pt-3">
-          {/*
-            THE COLOUR OF THIS BAND.
-
-            First in the card, above the words, because it is the one control
-            here that changes how the section LOOKS rather than what it says
-            — and because a tenant who came to this card to recolour it
-            should not have to scroll past four textareas to find out whether
-            they can.
-
-            Swatches, not a dropdown of colour NAMES: "Soft band" means
-            nothing until you have seen it, and the same id is a different
-            colour in each of the six palettes. Each swatch is painted in the
-            actual colour that band will be, in the palette the page is
-            currently wearing (`toneChoices`), and the chosen one is named in
-            words beside them so the control is not colour-alone.
-
-            `aria-pressed` toggle buttons rather than a `radiogroup`: the
-            same shape `DesignPanel.tsx`'s palette and pairing cards already
-            use, and it is the honest one here — a radiogroup promises
-            arrow-key navigation with a roving tabindex, and claiming that
-            without implementing it is worse for a keyboard user than three
-            plain buttons they can tab through.
-          */}
-          {tones.length > 0 && (
-            <div>
-              <span className={label} id={`lp-${row.key}-tone`}>
-                {t('landing_pages.editor.tone_label', 'Background colour')}
-              </span>
-              <div className="flex items-center gap-2 flex-wrap" role="group" aria-labelledby={`lp-${row.key}-tone`}>
-                {tones.map(tone => {
-                  const toneName = t(`landing_pages.editor.tone_name_${tone.id}`, TONE_NAME_FALLBACK[tone.id] ?? tone.id)
-                  const active = tone.id === currentTone
-
-                  return (
-                    <button
-                      key={tone.id}
-                      type="button"
-                      aria-pressed={active}
-                      aria-label={toneName}
-                      title={toneName}
-                      onClick={() => onToneChange(tone.id)}
-                      className={'flex items-center justify-center w-8 h-8 shrink-0 rounded-lg border-2 outline-none '
-                        + 'transition-colors motion-reduce:transition-none '
-                        + 'focus-visible:ring-2 focus-visible:ring-primary-500/60 '
-                        + (active ? 'border-primary-500' : 'border-dark-border hover:border-dark-border2')}
-                    >
-                      {/* The ring is the palette colour itself, on a hairline
-                          so a white or near-black surface still has an edge
-                          against the card it sits on. */}
-                      <span
-                        aria-hidden
-                        className="block w-5 h-5 rounded-md border border-white/15"
-                        style={{ backgroundColor: tone.color }}
-                      />
-                    </button>
-                  )
-                })}
-                <span className="text-xs text-t-secondary">
-                  {currentTone === null
-                    ? t('landing_pages.editor.tone_unknown', 'Set by your design')
-                    : t(`landing_pages.editor.tone_name_${currentTone}`, TONE_NAME_FALLBACK[currentTone] ?? currentTone)}
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Task 2: the contact fields below are the ONLY per-page override
               in this whole section list — every other field here IS the
               page's content, but phone/email/address fall back to the

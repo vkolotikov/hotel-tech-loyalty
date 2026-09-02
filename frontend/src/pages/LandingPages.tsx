@@ -10,6 +10,7 @@ import { canAccess } from '../components/Layout'
 import { useAuthStore } from '../stores/authStore'
 import { useBrandStore } from '../stores/brandStore'
 import { useSubscription } from '../hooks/useSubscription'
+import { LandingBrandStep } from './landing/LandingBrandStep'
 import { LandingWizard } from './landing/LandingWizard'
 import { LandingEditor } from './landing/LandingEditor'
 import { LandingTeardown } from './landing/LandingTeardown'
@@ -168,7 +169,16 @@ export function LandingPages() {
     // round 1) — a brand switch remounts the whole component from scratch
     // rather than relying on every future piece of step state being wired
     // into that reset by hand.
-    return <LandingWizard key={currentBrandId ?? 'org'} prefill={data} onDone={() => setDoneForBrand(brandToken(currentBrandId))} />
+    return (
+      // THE THREE STEPS THE OWNER ASKED FOR, in order: which brand, which
+      // design, then everything else. The brand step sits above the wizard
+      // and above the editor alike (see the return below), so "whose page is
+      // this" is answered on the way in rather than discovered afterwards.
+      <div className="space-y-4">
+        <LandingBrandStep />
+        <LandingWizard key={currentBrandId ?? 'org'} prefill={data} onDone={() => setDoneForBrand(brandToken(currentBrandId))} />
+      </div>
+    )
   }
 
   // A landing page belongs to a single brand (Phase 1's BelongsToBrand),
@@ -200,30 +210,32 @@ export function LandingPages() {
   // drift RULING 4 closed for sections.
   return (
     <BrandRequired feature={t('landing_pages.brand_required', 'your landing page')}>
-      {/*
-        `sectionTypes`/`maxSections` (the builder round) ride the SAME
-        response for the same reason as the three lists above it:
-        `App\Landing\SectionType`'s catalogue and its page cap are served on
-        `onboarding`, never mirrored in TypeScript, so which sections a
-        tenant may add — and how many — is one fact with one source. Both
-        fall back to "the backend did not say", which `addableTypes()`
-        handles by simply not drawing the control / not pre-judging the cap,
-        rather than by guessing a number this build would then enforce
-        against a server that disagreed.
-      */}
-      <LandingEditor
-        key={currentBrandId ?? 'org'}
-        sections={data?.sections ?? []}
-        industries={data?.industries ?? []}
-        templates={data?.templates ?? []}
-        sectionTypes={data?.section_types ?? []}
-        maxSections={typeof data?.max_sections === 'number' ? data.max_sections : null}
-        // `section_tones` — `App\Landing\SectionType::TONES`' ids, the third
-        // served allowlist on this response. Null when the backend does not
-        // publish it, which draws no colour control rather than a guessed
-        // one; see `sectionTones.ts`'s `toneChoices`.
-        sectionTones={Array.isArray(data?.section_tones) ? data.section_tones : null}
-      />
+      <div className="space-y-4">
+        {/* Step 1, on the editor as on the wizard: whose page this is, and how
+            to go to another brand's. `BrandRequired` above already refuses to
+            open the editor in "All brands" mode, so by the time this renders
+            there is always exactly one brand to name. */}
+        <LandingBrandStep />
+        {/*
+          `sectionTypes`/`maxSections` (the builder round) ride the SAME
+          response for the same reason as the three lists above it:
+          `App\Landing\SectionType`'s catalogue and its page cap are served on
+          `onboarding`, never mirrored in TypeScript, so which sections a
+          tenant may add — and how many — is one fact with one source. Both
+          fall back to "the backend did not say", which `addableTypes()`
+          handles by simply not drawing the control / not pre-judging the cap,
+          rather than by guessing a number this build would then enforce
+          against a server that disagreed.
+        */}
+        <LandingEditor
+          key={currentBrandId ?? 'org'}
+          sections={data?.sections ?? []}
+          industries={data?.industries ?? []}
+          templates={data?.templates ?? []}
+          sectionTypes={data?.section_types ?? []}
+          maxSections={typeof data?.max_sections === 'number' ? data.max_sections : null}
+        />
+      </div>
     </BrandRequired>
   )
 }

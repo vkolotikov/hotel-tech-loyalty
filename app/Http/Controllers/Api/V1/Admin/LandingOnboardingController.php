@@ -52,7 +52,13 @@ class LandingOnboardingController extends Controller
         // closed one, and the three controllers that accept an address must
         // not disagree about how they refuse one.
         $data = $request->validate([
-            'template_key'       => ['required', 'string', Rule::in(LandingOnboardingService::templateKeys())],
+            // The final scenario, step 2: offerableTemplateKeys(), not
+            // templateKeys(). The wizard's design step draws from the same
+            // `offerable` flag on the wire, so what the picker offers and
+            // what this endpoint accepts are one list — and a design retired
+            // from the offer cannot be created by a caller who guessed its
+            // key either. See LandingOnboardingService::offerableTemplateKeys().
+            'template_key'       => ['required', 'string', Rule::in(LandingOnboardingService::offerableTemplateKeys())],
             // Landing phase 3c (wizard industry step): which industry's
             // words the page is written in -- the wizard's own first step,
             // and the value LandingOnboardingService::apply() moves the
@@ -113,6 +119,16 @@ class LandingOnboardingController extends Controller
             // for them.
             'industry.in'           => 'Please choose one of the listed industries.',
             'industry.string'       => 'Please choose one of the listed industries.',
+            // The final scenario: the wizard now ASKS which design, so this
+            // rule can fail for a real person rather than only for a direct
+            // API call. Laravel's own default is "The selected template key
+            // is invalid." — a raw field name at a tenant, exactly what the
+            // slug messages below already exist to prevent. Worded
+            // character-for-character as LandingPageController's, so the same
+            // mistake reads the same wherever it is made.
+            'template_key.required' => 'Please choose one of the available page styles.',
+            'template_key.string'   => 'Please choose one of the available page styles.',
+            'template_key.in'       => 'Please choose one of the available page styles.',
             'slug.required'         => 'Please choose a web address.',
             'slug.string'           => 'That web address is not valid.',
             'slug.max'              => 'Please use a shorter web address — up to 63 characters.',

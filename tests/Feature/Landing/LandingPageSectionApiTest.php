@@ -3,11 +3,13 @@ namespace Tests\Feature\Landing;
 
 use App\Http\Controllers\Api\V1\Admin\LandingPageController;
 use App\Http\Controllers\Api\V1\Admin\LandingPageSectionController;
+use App\Landing\IndustryProfile;
 use App\Landing\SectionType;
 use App\Models\LandingPage;
 use App\Models\LandingPageSection;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -177,10 +179,47 @@ class LandingPageSectionApiTest extends TestCase
         return $page;
     }
 
+    /**
+     * A create request the page endpoint will actually accept.
+     *
+     * The design is read from the registry rather than written out: the final
+     * scenario retired `ruled_page` from the OFFER, and
+     * `LandingPageController::store()` validates against
+     * `offerableTemplateKeys()`, so a literal here would fail every test in
+     * this file on the design it happened to name.
+     */
+    /**
+     * Strip the rows the DESIGN seeds for itself, leaving the industry's own
+     * bands — the shape every page in this file had before the wizard began
+     * asking which design (the final scenario, step 2).
+     *
+     * `store()` seeds `seedSectionsFor()`'s union: the industry's list PLUS
+     * the blocks the chosen design draws that no industry seeds. Every one of
+     * the owner's kits draws three of those, so a freshly created page now
+     * arrives with ten rows rather than seven — which is correct, and which
+     * silently changes what the three tests below are actually testing (the
+     * per-type instance cap becomes unreachable behind the whole-page one,
+     * and "a kit block can be added" starts from a page that already has it).
+     *
+     * DERIVED, not a literal ['announcement','trust','faq']: the question is
+     * "which rows did the design contribute", and the industry's own
+     * `defaultSections` is the only honest answer to it — a fourth kit block
+     * would otherwise quietly slip past a hand-written list.
+     */
+    private function withIndustryBandsOnly(LandingPage $page): LandingPage
+    {
+        $page->sections()
+            ->whereNotIn('key', IndustryProfile::for($page->industry)->defaultSections)
+            ->delete();
+
+        return $page->fresh('sections');
+    }
+
     private function creationRequest(string $slug): Request
     {
         $request = Request::create('/api/v1/admin/landing-pages', 'POST', [
-            'slug' => $slug, 'template_key' => 'ruled_page',
+            'slug'         => $slug,
+            'template_key' => LandingOnboardingService::offerableTemplateKeys()[0],
         ]);
         $request->setUserResolver(fn () => $this->user);
 
@@ -652,7 +691,11 @@ class LandingPageSectionApiTest extends TestCase
      */
     public function test_a_seventh_instance_of_a_type_is_refused_kindly(): void
     {
-        $page = $this->makePageWithSections();
+        // The industry's bands only. With the design's own three rows on the
+        // page as well, the sixth text band is the sixteenth row and the
+        // seventh add is refused by the WHOLE-PAGE cap instead — a true
+        // refusal, but the other one, and this test is about the per-type cap.
+        $page = $this->withIndustryBandsOnly($this->makePageWithSections());
 
         for ($i = 0; $i < SectionType::MAX_INSTANCES_PER_TYPE; $i++) {
             $this->addSection();
@@ -687,7 +730,11 @@ class LandingPageSectionApiTest extends TestCase
      */
     public function test_a_kit_block_can_be_added_once_under_its_own_key(): void
     {
-        $page = $this->makePageWithSections();
+        // A page whose design has NOT already seeded them — which is what
+        // every page was before the wizard began asking which design, and
+        // what a page on a design that draws none of them still is. Adding
+        // them by hand is the door this test holds open.
+        $page = $this->withIndustryBandsOnly($this->makePageWithSections());
         $lastSort = (int) $page->sections->max('sort');
 
         foreach (['announcement', 'trust', 'faq'] as $i => $type) {
@@ -712,7 +759,10 @@ class LandingPageSectionApiTest extends TestCase
      */
     public function test_a_second_copy_of_a_kit_block_is_refused_kindly(): void
     {
-        $page = $this->makePageWithSections();
+        // Added by hand rather than seeded by the design, so the refusal
+        // being tested is the second ADD and not the first — see
+        // withIndustryBandsOnly().
+        $page = $this->withIndustryBandsOnly($this->makePageWithSections());
 
         $this->addSection('trust');
 
@@ -1052,6 +1102,10 @@ class LandingPageSectionApiTest extends TestCase
     public function test_the_new_verbs_cannot_touch_another_organizations_sections(): void
     {
         $theirs = $this->makeOtherOrgPageWithSections();
+        // How many bands their page started with, read rather than written
+        // down: it is the industry's list plus whatever its design draws, and
+        // this test is about the count not CHANGING, not about the number.
+        $theirsBefore = LandingPageSection::where('landing_page_id', $theirs->id)->count();
         $mine   = $this->makePageWithSections();
 
         $key = $this->addSection();
@@ -1063,7 +1117,7 @@ class LandingPageSectionApiTest extends TestCase
 
         $this->assertDatabaseMissing('landing_page_sections', ['landing_page_id' => $mine->id, 'key' => $key]);
         // Their page still has every band it started with.
-        $this->assertSame(7, LandingPageSection::where('landing_page_id', $theirs->id)->count());
+        $this->assertSame($theirsBefore, LandingPageSection::where('landing_page_id', $theirs->id)->count());
     }
 
     public function test_adding_404s_when_this_brand_has_no_page_yet(): void

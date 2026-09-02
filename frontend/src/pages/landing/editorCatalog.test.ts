@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  catalogPayload, industryHasChanged, resolveTemplateKey, showTemplatePicker, templateCards,
+  catalogPayload, designChangeImpact, industryHasChanged, offerableTemplates, resolveTemplateKey,
+  showTemplatePicker, templateCards, templateGroups,
   templateContentFields, templateImageDefaults, templatePhotoBlocks,
   templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
@@ -496,5 +497,249 @@ describe('templatesDrawing', () => {
   // sending somebody there could drop the block too.
   it('does not name a template that published no renders list', () => {
     expect(templatesDrawing(TWO_TEMPLATES, 'hero', 'ruled_page')).toEqual([])
+  })
+
+  /*
+   * The final scenario, step 2. A way out has to be one a tenant can take:
+   * naming a retired design would send them to a picker with no such card
+   * in it, and to a save endpoint that refuses the key.
+   */
+  it('never names a design that has been retired from the offer', () => {
+    const withRetired: TemplateOption[] = [
+      { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text'], offerable: false },
+      { key: 'wide_gallery', name: 'The Wide Gallery', blurb: '', renders: ['hero', 'text'] },
+    ]
+
+    expect(templatesDrawing(withRetired, 'text', 'nocturne_ritual').map(o => o.key))
+      .toEqual(['wide_gallery'])
+  })
+})
+
+/**
+ * THE OFFER — the final scenario, step 2.
+ *
+ * Retiring a design is one bool in the server's registry. Everything that
+ * decides what a tenant may pick reads it here, so a design can be withdrawn
+ * without a frontend release and without orphaning the pages already on it.
+ */
+describe('offerableTemplates', () => {
+  const MIXED: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', offerable: false },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', offerable: true },
+    { key: 'luma_garden', name: 'Luma Garden', blurb: '' },
+  ]
+
+  it('withdraws a design the registry has retired', () => {
+    expect(offerableTemplates(MIXED).map(o => o.key)).toEqual(['nocturne_ritual', 'luma_garden'])
+  })
+
+  /*
+   * The opposite default from the server's, argued at the function: a row
+   * that did not say yes has not said yes SERVER-side, but a RESPONSE that
+   * says nothing at all is an older backend which has retired nothing.
+   * Hiding every design on the strength of a key it never sent would leave a
+   * tenant with an empty picker.
+   */
+  it('treats a response with no opinion as offering everything', () => {
+    expect(offerableTemplates(TWO_TEMPLATES).map(o => o.key)).toEqual(['ruled_page', 'wide_gallery'])
+  })
+
+  it('stops offering a retired design in the picker as well', () => {
+    expect(showTemplatePicker([MIXED[0]])).toBe(false)
+    expect(showTemplatePicker(MIXED)).toBe(true)
+  })
+})
+
+/**
+ * THE DESIGNS ON OFFER, THEIR OWN TRADE'S FIRST — the final scenario,
+ * step 1.
+ *
+ * The join is served on both ends: each design carries the trade it was
+ * drawn for, each industry carries the trade whose designs it is offered
+ * first. Nothing here compares an id spelled out in TypeScript, which is the
+ * property these tests exist to keep — a seventh kit, or a whole new trade,
+ * must be a backend data change.
+ */
+describe('templateGroups', () => {
+  const SIX: TemplateOption[] = [
+    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', offerable: false, vertical: null },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', vertical: 'beauty' },
+    { key: 'editorial_atelier', name: 'Editorial Atelier', blurb: '', vertical: 'beauty' },
+    { key: 'organic_wellness', name: 'Organic Wellness', blurb: '', vertical: 'beauty' },
+    { key: 'maison_vela', name: 'Maison Vela', blurb: '', vertical: 'dining' },
+    { key: 'luma_garden', name: 'Luma Garden', blurb: '', vertical: 'dining' },
+    { key: 'ember_table', name: 'Ember Table', blurb: '', vertical: 'dining' },
+  ]
+
+  it('offers a trade its own three designs first, and the rest after', () => {
+    const groups = templateGroups(SIX, 'nocturne_ritual', 'beauty')
+
+    expect(groups.map(g => g.kind)).toEqual(['own', 'other'])
+    expect(groups[0].cards.map(c => c.key))
+      .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness'])
+    expect(groups[1].cards.map(c => c.key))
+      .toEqual(['maison_vela', 'luma_garden', 'ember_table'])
+  })
+
+  it('reads the trade off the served value, whichever one it is', () => {
+    const groups = templateGroups(SIX, '', 'dining')
+
+    expect(groups[0].cards.map(c => c.key)).toEqual(['maison_vela', 'luma_garden', 'ember_table'])
+    expect(groups[1].cards.map(c => c.key))
+      .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness'])
+  })
+
+  /*
+   * THE RULE THIS FUNCTION EXISTS FOR. Seven of the platform's nine
+   * industries have no kit drawn for them — hotels, clinics, gyms, schools,
+   * law firms, agencies and "something else". A "made for your trade"
+   * heading over an empty group would tell every one of them the product has
+   * nothing for them, which is discouraging and untrue.
+   */
+  it('shows a trade with no kits every design under one neutral heading', () => {
+    for (const noKits of [null, undefined, '', 'fitness']) {
+      const groups = templateGroups(SIX, '', noKits)
+
+      expect(groups.map(g => g.kind)).toEqual(['all'])
+      expect(groups[0].cards.map(c => c.key)).toEqual([
+        'nocturne_ritual', 'editorial_atelier', 'organic_wellness',
+        'maison_vela', 'luma_garden', 'ember_table',
+      ])
+    }
+  })
+
+  it('never offers a retired design, under any heading', () => {
+    for (const vertical of ['beauty', 'dining', null]) {
+      const keys = templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key))
+
+      expect(keys).not.toContain('ruled_page')
+    }
+  })
+
+  /*
+   * NOBODY IS EVER OFFERED NOTHING, stated as the property rather than as
+   * one example: whatever trade is asked about, the offer is the whole
+   * offerable list — the vertical only decides the ORDER.
+   */
+  it('offers every offerable design to every trade', () => {
+    const offered = offerableTemplates(SIX).map(o => o.key).sort()
+
+    for (const vertical of ['beauty', 'dining', 'fitness', null]) {
+      const keys = templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key)).sort()
+
+      expect(keys).toEqual(offered)
+    }
+  })
+
+  it('marks the chosen design as selected wherever it sits', () => {
+    const groups = templateGroups(SIX, 'ember_table', 'beauty')
+
+    expect(groups[0].cards.some(c => c.selected)).toBe(false)
+    expect(groups[1].cards.find(c => c.key === 'ember_table')?.selected).toBe(true)
+  })
+
+  it('draws no picker at all when nothing is on offer', () => {
+    expect(templateGroups([{ key: 'ruled_page', name: '', blurb: '', offerable: false }], '', 'beauty'))
+      .toEqual([])
+  })
+})
+
+/**
+ * WHAT CHANGING DESIGN WOULD DO — the final scenario, step 5.
+ *
+ * The confirm a tenant reads before the change is queued is built from
+ * these two lists, and the server's own additive top-up is what keeps the
+ * promise the `added` half makes.
+ */
+describe('designChangeImpact', () => {
+  const OPTIONS: TemplateOption[] = [
+    {
+      key: 'ruled_page',
+      name: 'The Ruled Page',
+      blurb: '',
+      renders: ['hero', 'services', 'about', 'text', 'contact'],
+      fixed_blocks: {},
+    },
+    {
+      key: 'nocturne_ritual',
+      name: 'Nocturne Ritual',
+      blurb: '',
+      renders: ['hero', 'services', 'about', 'announcement', 'trust', 'faq'],
+      // Every kit prints its contact details inside the footer hub and ships
+      // no contact partial — which is why "draws" has to be the union.
+      fixed_blocks: { announcement: 'top', trust: 'fixed', faq: 'fixed', contact: 'footer' },
+    },
+  ]
+
+  const ROWS = ['hero', 'services', 'about', 'text', 'contact']
+
+  it('names the blocks that would stop showing', () => {
+    const { dropped } = designChangeImpact({
+      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+    })
+
+    expect(dropped).toEqual(['text'])
+  })
+
+  /*
+   * `contact` is the case that makes the union load-bearing: the target
+   * design ships no contact partial, so `renders` alone would report a phone
+   * number that is plainly on the page as about to disappear.
+   */
+  it('does not call a footer-hosted block dropped', () => {
+    const { dropped } = designChangeImpact({
+      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+    })
+
+    expect(dropped).not.toContain('contact')
+  })
+
+  it('names the blocks the new design brings that the page has no row for', () => {
+    const { added } = designChangeImpact({
+      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+    })
+
+    expect(added).toEqual(['announcement', 'trust', 'faq'])
+  })
+
+  it('does not offer to add a block the page already has a row for', () => {
+    const { added } = designChangeImpact({
+      options: OPTIONS,
+      fromKey: 'ruled_page',
+      toKey: 'nocturne_ritual',
+      rowTypeIds: [...ROWS, 'trust'],
+    })
+
+    expect(added).toEqual(['announcement', 'faq'])
+  })
+
+  it('says nothing at all about a change that is not one', () => {
+    expect(designChangeImpact({
+      options: OPTIONS, fromKey: 'nocturne_ritual', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+    })).toEqual({ dropped: [], added: [] })
+  })
+
+  /*
+   * NO OPINION IS NO WARNING. An older backend publishes no `renders`, and a
+   * dialog naming the wrong blocks is worse than the plain "this changes
+   * your layout" the panel says anyway.
+   */
+  it('warns about nothing when either design published no renders', () => {
+    expect(designChangeImpact({
+      options: TWO_TEMPLATES, fromKey: 'ruled_page', toKey: 'wide_gallery', rowTypeIds: ROWS,
+    })).toEqual({ dropped: [], added: [] })
+  })
+
+  it('counts a repeated row type once', () => {
+    const { dropped } = designChangeImpact({
+      options: OPTIONS,
+      fromKey: 'ruled_page',
+      toKey: 'nocturne_ritual',
+      // `text_1`/`text_2` are two rows of one TYPE; the caller maps rows to
+      // type ids, and the warning must not say "Text, Text".
+      rowTypeIds: [...ROWS, 'text'],
+    })
+
+    expect(dropped).toEqual(['text'])
   })
 })

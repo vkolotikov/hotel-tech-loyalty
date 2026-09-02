@@ -14,18 +14,11 @@ import { isDataBackedSection, isOfferable, unavailableReason, type SectionMeta }
 import { DesignPanel } from './DesignPanel'
 import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
 import {
-  industryCards, resolveIndustry, sectionsForIndustry, type IndustryOption,
+  industryCards, resolveIndustry, sectionsForIndustry, verticalFor, type IndustryOption,
 } from './industryChoices'
-import type { TemplateOption } from './editorCatalog'
-// Task 6, landing phase 3c (D4 — distinct from this file's OWN earlier
-// "Task 6 built steps 1-2" below, a different phase's numbering): the
-// self-hosted @font-face sheet DesignPanel's cards render against — see
-// that file's own header comment. Imported here (and by LandingEditor.tsx,
-// the only other screen that renders DesignPanel) so it is bundled into
-// the `LandingPages` route chunk both screens already live in (App.tsx's
-// `lazy(() => import('./pages/LandingPages'))`), never into the app
-// shell's own initial load.
-import '../../styles/landing-preview-fonts.css'
+import {
+  resolveTemplateKey, templateGroups, type TemplateOption,
+} from './editorCatalog'
 
 /**
  * The wizard's own onboarding contract (Appendix A §7.2 house triple):
@@ -183,7 +176,6 @@ export function LandingWizard(props: LandingWizardProps) {
     setForm(f => ({ ...f, [key]: value }))
 
   const businessName = prefill.business_name || t('landing_pages.wizard.your_business', 'your business')
-  const templateKey = form.template_key ?? templates[0]?.key ?? ''
   // Step 1's answer, narrowed against the ids the server actually offered —
   // never the raw draft value, which could be an id a later release removed
   // or a hand-edited localStorage entry. Falls through to the organisation's
@@ -191,6 +183,30 @@ export function LandingWizard(props: LandingWizardProps) {
   // which point `buildPayload` omits the key entirely and the backend files
   // the page under the org's industry exactly as it did before this step.
   const selectedIndustry = resolveIndustry(industryOptions, form.industry, prefill.industry)
+  // The final scenario, step 1: the trade step 1 just established, off the
+  // SERVED industry row — the value step 2 matches each design's own served
+  // `vertical` against. Null for the seven industries no kit has been drawn
+  // for yet, which shows every design under one heading rather than none.
+  // Nothing here compares an industry id or a template id.
+  const vertical = verticalFor(industryOptions, selectedIndustry)
+
+  // WHICH DESIGN THIS PAGE WILL BE CREATED ON (the final scenario, step 2).
+  //
+  // Narrowed against the designs the server is actually OFFERING, and
+  // defaulted to the first one this tenant's own trade is shown — never
+  // `templates[0]`, which is how a restaurant would have been handed a
+  // beauty kit the moment the registry's first row stopped being generic.
+  // `offeredTemplates` is the flattened grouping step 2 renders, so the
+  // pre-selected card and the first card on screen are the same card by
+  // construction — and changing industry on step 1 moves BOTH.
+  const offeredTemplates = templateGroups(templates, '', vertical).flatMap(group => group.cards)
+  const templateKey = resolveTemplateKey(
+    // Only the offer: a draft holding a design that has since been retired
+    // must not survive into a request the endpoint would then refuse.
+    templates.filter(o => offeredTemplates.some(c => c.key === o.key)),
+    form.template_key,
+    offeredTemplates[0]?.key,
+  )
   const headline = form.headline ?? prefill.headline ?? ''
   const subtext = form.subtext ?? prefill.subtext ?? ''
   const brandColor = form.brand_color ?? prefill.brand_color
@@ -204,21 +220,24 @@ export function LandingWizard(props: LandingWizardProps) {
   const phone = form.phone ?? prefill.phone ?? ''
   const email = form.email ?? prefill.email ?? ''
   const address = form.address ?? prefill.address ?? ''
-  // Same fallback shape as templateKey above: nothing chosen yet defaults to
-  // the house pairing (`DEFAULT_FONT_PAIRING_ID` — the CSS's own no-choice
-  // face) rather than leaving the picker in a genuinely unselected state,
-  // which the theme.font_pairing column has no room for anyway — the
-  // backend column is `nullable`, but a page this wizard creates always
-  // carries one of the four, exactly like template_key.
+  /*
+   * THE TWO THEME KEYS NOTHING ASKS ABOUT ANY MORE.
+   *
+   * `theme.font_pairing` and `theme.palette` are still columns, still
+   * validated by `ThemeRules`, and still read by the one design retired from
+   * the offer. Their PICKERS are gone — see `DesignPanel.tsx`'s own note —
+   * so `form.font_pairing` and `form.palette` can no longer be set by
+   * anybody, and these two resolve to the house default and to absent
+   * respectively on every page this wizard now creates.
+   *
+   * They are still SENT, deliberately and for one round only. Dropping them
+   * from `buildPayload` would be the second half of removing the palette
+   * machinery, and this round removes the UI and reports the backend that
+   * has become unreachable rather than deleting both at once. What they
+   * store is inert on every offerable design: each of the owner's kits ships
+   * its author's own `:root` and its layout reads neither key.
+   */
   const fontPairing: FontPairingKey = form.font_pairing ?? DEFAULT_FONT_PAIRING_ID
-  // Unlike fontPairing/brandColor, a palette is left GENUINELY unset until
-  // the tenant actually picks one — see `ApplyPayload['theme']`'s own
-  // comment: an untouched selection reaches `apply()` as an absent key, and
-  // `LandingOnboardingService::theme()` (landing phase 3c Task 6) fills it from the org's
-  // own industry default instead of this frontend module's own first
-  // palette. `DesignPanel` still needs SOMETHING to render the type-pairing
-  // cards' surfaces against before that choice exists, which is exactly
-  // what its own `paletteFor(undefined)` fallback is for.
   const palette = form.palette
 
   // The brand's own logo, if it has one — read from the store the app
@@ -290,8 +309,8 @@ export function LandingWizard(props: LandingWizardProps) {
   const stepTitle = (key: StepKey) => {
     switch (key) {
       case 'industry': return t('landing_pages.wizard.step_industry', 'Your industry')
+      case 'design': return t('landing_pages.wizard.step_design', 'Choose your design')
       case 'details': return t('landing_pages.wizard.step_details', 'Check your details')
-      case 'style': return t('landing_pages.wizard.step_style', 'Make it yours')
       case 'sections': return t('landing_pages.wizard.step_sections', 'Choose what to show')
     }
   }
@@ -466,6 +485,62 @@ export function LandingWizard(props: LandingWizardProps) {
 
       {step === 1 && (
         <div className="space-y-5">
+          {/*
+            THE OWNER'S SECOND STEP: pick one of the designs built for this
+            trade.
+
+            The SAME component the editor's Design tab renders, so the choice
+            a tenant makes here and the choice they can change later are one
+            control with one set of cards and one set of words. `pickerOpen`
+            is the one difference: this step IS the choice, so the cards are
+            open rather than behind a "Change design" button.
+
+            `vertical` is what puts their own trade's three designs first —
+            a served value matched against each design's own served
+            `vertical`, never a template id compared here. Every other design
+            follows under "other designs", so nobody is ever left with an
+            empty picker.
+          */}
+          <DesignPanel
+            brandColor={brandColor}
+            // Already resolved by the server: `prefill.brand_color` is the
+            // page's own, then the brand's, then the industry's house accent,
+            // all through `CssColor::safe()`. So the swatch's fallback here is
+            // the colour the page would really publish.
+            accentFallback={prefill.brand_color}
+            onBrandColorChange={hex => up('brand_color', hex)}
+            templates={templates}
+            templateKey={templateKey}
+            onTemplateChange={key => up('template_key', key)}
+            vertical={vertical}
+            pickerOpen
+          />
+
+          {logoUrl && (
+            <div className={card + ' flex items-center justify-between gap-4'}>
+              <div className="flex items-center gap-3 min-w-0">
+                <img
+                  src={logoUrl}
+                  alt=""
+                  className="w-10 h-10 rounded-lg border border-dark-border object-contain bg-dark-bg shrink-0"
+                />
+                <span className="text-xs text-t-secondary">
+                  {t('landing_pages.wizard.logo_hint', 'Your logo appears on your page automatically. No upload needed here.')}
+                </span>
+              </div>
+              <Link
+                to="/settings"
+                className="text-xs text-primary-400 hover:text-primary-300 font-semibold flex items-center gap-1 shrink-0"
+              >
+                {t('landing_pages.wizard.edit_in_settings', 'Edit in Settings')} <ExternalLink size={12} />
+              </Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 2 && (
+        <div className="space-y-5">
           <div className={card + ' space-y-4'}>
             <div className="flex items-center justify-between">
               <span className={kicker}>{t('landing_pages.wizard.details_kicker', 'Your details')}</span>
@@ -563,46 +638,6 @@ export function LandingWizard(props: LandingWizardProps) {
         </div>
       )}
 
-      {step === 2 && (
-        <div className="space-y-5">
-          {/* Task 6, landing phase 3c (D4): the wizard's own copy of the editor's Design
-              panel — same component, same six palettes and four pairings,
-              same self-hosted faces (../../styles/landing-preview-fonts.css,
-              imported at the top of this file). `palette` is left
-              genuinely absent until the tenant picks one here — see this
-              file's own `palette` const above for why. */}
-          <DesignPanel
-            businessName={businessName}
-            palette={palette}
-            fontPairing={fontPairing}
-            brandColor={brandColor}
-            onPaletteChange={id => up('palette', id)}
-            onFontPairingChange={id => up('font_pairing', id)}
-            onBrandColorChange={hex => up('brand_color', hex)}
-          />
-
-          {logoUrl && (
-            <div className={card + ' flex items-center justify-between gap-4'}>
-              <div className="flex items-center gap-3 min-w-0">
-                <img
-                  src={logoUrl}
-                  alt=""
-                  className="w-10 h-10 rounded-lg border border-dark-border object-contain bg-dark-bg shrink-0"
-                />
-                <span className="text-xs text-t-secondary">
-                  {t('landing_pages.wizard.logo_hint', 'Your logo appears on your page automatically. No upload needed here.')}
-                </span>
-              </div>
-              <Link
-                to="/settings"
-                className="text-xs text-primary-400 hover:text-primary-300 font-semibold flex items-center gap-1 shrink-0"
-              >
-                {t('landing_pages.wizard.edit_in_settings', 'Edit in Settings')} <ExternalLink size={12} />
-              </Link>
-            </div>
-          )}
-        </div>
-      )}
 
       {step === 3 && (
         <div className="space-y-3">
