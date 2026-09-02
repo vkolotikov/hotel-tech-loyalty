@@ -3252,6 +3252,7 @@
       "field_city_label": "Texte au-dessus de votre ville",
       "field_item_cta_label": "Texte de chaque lien de réservation",
       "field_fact": "Une ligne pour votre liste numérotée",
+      "field_fact_caption": "Ligne sous le chiffre",
       "field_promise": "Une promesse courte sous votre bouton",
       "field_feature_caption": "Ligne sous le point fort",
       "field_descriptor": "Mot sous le nom de votre établissement",

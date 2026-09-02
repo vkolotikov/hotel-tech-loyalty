@@ -201,6 +201,84 @@ final class TemplateImage
                 'alt'  => 'A guest taking a quiet moment after treatment in warm morning light',
             ],
         ],
+        // THE FIRST HOSPITALITY KIT. Two photographs, which is all this author
+        // drew, and therefore all that is offered: his hero is a full-bleed
+        // dining room and his story band is a plate of oysters.
+        //
+        // NO `team` ENTRY, because there is no team band on any hospitality
+        // template — no partial ships for it. NO `services` and NO `booking`
+        // either: his menu ledger is typographic and his closing panel is a
+        // heading on an oxblood field, so a default in either would be a
+        // picture no tenant could ever see.
+        //
+        // THE GALLERY GETS TWO TILES, not three. His own salon band draws no
+        // photograph at all (see that partial's note), so there is no authored
+        // order to follow, and a third default would be one of these two files
+        // printed twice in one band — the exact duplication this class refuses
+        // for a second gallery instance.
+        'maison_vela' => [
+            'hero' => [
+                'file' => 'hero-brasserie.webp',
+                'alt'  => 'An elegant dining room with deep red banquettes and warm brass lighting',
+            ],
+            'about' => [
+                'file' => 'oysters.webp',
+                'alt'  => 'Oysters over crushed ice beside a coupe of chilled sparkling wine',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-brasserie.webp',
+                'alt'  => 'The main dining room laid for service',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'oysters.webp',
+                'alt'  => 'A shellfish plate dressed over ice',
+            ],
+        ],
+        // THE SECOND HOSPITALITY KIT. Two photographs again, and the same three
+        // absences for the same three reasons: no `team` (no hospitality
+        // template draws one), no `services` (his menu cards are typographic)
+        // and no `booking` (his closing panel is a pine card with no picture
+        // in it).
+        'luma_garden' => [
+            'hero' => [
+                'file' => 'hero-garden.webp',
+                'alt'  => 'A garden terrace with limestone arches, olive trees and linen-laid tables',
+            ],
+            'about' => [
+                'file' => 'langoustine.webp',
+                'alt'  => 'Grilled langoustine plated with citrus and fennel',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-garden.webp',
+                'alt'  => 'Tables set under the garden canopy',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'langoustine.webp',
+                'alt'  => 'A plate from the coastal menu',
+            ],
+        ],
+        // THE THIRD HOSPITALITY KIT. Two photographs again, and the same three
+        // absences for the same three reasons: no `team` (no hospitality
+        // template draws one), no `services` (his ledger is typographic) and no
+        // `booking` (his closing panel is an ember field with no picture in it).
+        'ember_table' => [
+            'hero' => [
+                'file' => 'hero-dining.webp',
+                'alt'  => 'A candlelit dining room and an open hearth before evening service',
+            ],
+            'about' => [
+                'file' => 'seasonal-dish.webp',
+                'alt'  => 'Seasonal roasted vegetables plated on handmade ceramic',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-dining.webp',
+                'alt'  => 'The dining room in low evening light',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'seasonal-dish.webp',
+                'alt'  => 'A plate from the seasonal menu',
+            ],
+        ],
     ];
 
     /**

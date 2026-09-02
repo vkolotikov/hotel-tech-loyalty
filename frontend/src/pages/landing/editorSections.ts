@@ -1132,6 +1132,7 @@ export function fieldLabelKey(name: string): string {
   if (name.endsWith('_accent')) return 'accent'
   if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
   if (/^caption_\d+$/.test(name)) return 'caption'
+  if (/^fact_\d+_caption$/.test(name)) return 'fact_caption'
   if (/^fact_\d+$/.test(name)) return 'fact'
   if (/^promise_\d+$/.test(name)) return 'promise'
   if (/^note_\d+$/.test(name)) return 'note'

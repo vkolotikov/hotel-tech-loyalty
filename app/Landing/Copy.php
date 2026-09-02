@@ -157,13 +157,29 @@ final class Copy
      * ampersand and prints the second as a plain character: two italic
      * conjunctions in one lockup is not a design either author drew.
      *
+     * THE SECOND GESTURE IS THE TAIL, and it belongs to ONE design rather than
+     * to every name (the `$emphasiseTail` argument, hospitality kit 02). That
+     * author writes `Luma <em>Garden</em>` — the LAST WORD of the lockup set in
+     * his clay accent — in his header and again in his footer, with
+     * `.brand strong em { color: var(--color-clay) }`. It is the same class of
+     * derivation as the ampersand and the same escaping, but it is a property
+     * of the DESIGN and not of the name: kit 01-hospitality and kit
+     * 03-hospitality set no emphasis in their lockups at all, so they ask for
+     * none and get exactly the plain wordmark they always had.
+     *
+     * A ONE-WORD NAME GETS NO EMPHASIS EITHER WAY. "Vela" italicised whole is
+     * not a two-tone lockup, it is a slanted business name, and no author drew
+     * that. The ampersand wins where both could apply: it is the more specific
+     * signal, and "Hart & Bloom" set as `Hart & <em>Bloom</em>` would emphasise
+     * the wrong half.
+     *
      * ESCAPED THE SAME WAY EVERYTHING ELSE HERE IS. Both sides are escaped
      * individually and the only thing this method ever puts between them is
      * the literal `<em>` and an escaped `&` — there is no path by which a
      * character out of `$name` reaches the page unescaped, so no partial has
      * to contain a raw echo to draw the author's lockup.
      */
-    public static function wordmark(?string $name): HtmlString
+    public static function wordmark(?string $name, bool $emphasiseTail = false): HtmlString
     {
         // Flattened first: a wordmark is one line by construction, and a
         // newline a tenant left in their business name must not become a
@@ -173,11 +189,19 @@ final class Copy
         // The FIRST ampersand that stands alone between two words. Not
         // greedy, so "A & B & C" emphasises the first; \S on both sides, so
         // an ampersand inside a word ("R&D") is left exactly as typed.
-        if (preg_match('/^(.*?\S)\s+&\s+(\S.*)$/u', $flat, $parts) !== 1) {
-            return new HtmlString(e($flat));
+        if (preg_match('/^(.*?\S)\s+&\s+(\S.*)$/u', $flat, $parts) === 1) {
+            return new HtmlString(e($parts[1]) . ' <em>' . e('&') . '</em> ' . e($parts[2]));
         }
 
-        return new HtmlString(e($parts[1]) . ' <em>' . e('&') . '</em> ' . e($parts[2]));
+        // The tail, for the one design that asks for it. Greedy on the head,
+        // so only the LAST run of non-space characters is emphasised; the
+        // head must itself end in a real character, so a trailing space
+        // cannot produce an empty emphasis.
+        if ($emphasiseTail && preg_match('/^(.*\S)\s+(\S+)$/u', $flat, $tail) === 1) {
+            return new HtmlString(e($tail[1]) . ' <em>' . e($tail[2]) . '</em>');
+        }
+
+        return new HtmlString(e($flat));
     }
 
     /**

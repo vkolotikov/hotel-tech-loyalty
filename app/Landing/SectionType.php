@@ -149,6 +149,19 @@ final class SectionType
     public const MAX_TRUST_FEATURES = 4;
 
     /**
+     * How many lines the story band's numbered ledger holds.
+     *
+     * THREE, and it is the author's own composition rather than a round
+     * number: kit 01-beauty draws an ornamental 01/02/03 and kit 01-hospitality
+     * draws a three-cell <dl>, and a fourth line in either would wrap the row
+     * onto a second one the design has no rhythm for.
+     *
+     * One number, read by {@see factLeaves()} (which builds the type's own
+     * `fields`) and by the partials that print them, so the cap is stated once.
+     */
+    public const MAX_STORY_FACTS = 3;
+
+    /**
      * The social platforms the kits' footer hubs draw, in the author's own
      * order: leaf suffix => the platform's own spelling of its name.
      *
@@ -486,7 +499,8 @@ final class SectionType
                 // so nothing regresses; a tenant who writes one takes the
                 // ledger back.
                 'fields'     => array_merge(
-                    ['kicker', 'lead', 'lead_accent', 'body', 'fact_1', 'fact_2', 'fact_3'],
+                    ['kicker', 'lead', 'lead_accent', 'body'],
+                    self::factLeaves(),
                     // KIT 03'S ASIDE, beside the story rather than under it:
                     // a labelled note with up to three bulleted lines ("Our
                     // ingredient philosophy" / "Fragrance-aware options at
@@ -928,6 +942,36 @@ final class SectionType
         for ($n = 1; $n <= self::MAX_TRUST_FEATURES; $n++) {
             $leaves[] = 'feature_' . $n;
             $leaves[] = 'feature_' . $n . '_caption';
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE STORY LEDGER'S LEAF GRAMMAR — every leaf under `content.about` that
+     * holds one line of the numbered ledger, in render order.
+     *
+     * A PAIR, NOT A STRING, and it is the same superset move template fidelity
+     * 5.4 made for the trust strip, applied to the one other band in the six
+     * kits that draws the same shape. Kit 01-beauty's ledger is three flat
+     * sentences under an ornamental numeral; kit 01-hospitality's is a <dl> of
+     * three figures with a caption under each ("26" / "growers and makers").
+     * One superset serves both, and the migration is that `fact_N` did not
+     * move: a page that carries only the flat leaf comes back as a pair with an
+     * empty caption, which is byte-for-byte what it rendered before.
+     *
+     * The cap lives in {@see MAX_STORY_FACTS} and nowhere else — the "one fact
+     * in two places" this class has been bitten by before.
+     *
+     * @return list<string>
+     */
+    public static function factLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::MAX_STORY_FACTS; $n++) {
+            $leaves[] = 'fact_' . $n;
+            $leaves[] = 'fact_' . $n . '_caption';
         }
 
         return $leaves;

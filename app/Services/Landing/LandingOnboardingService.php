@@ -249,6 +249,126 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // The first of the three HOSPITALITY kits
+            // (resources/landing-kits/hospitality/01-maison-vela), converted
+            // the same way the three BeautyTech kits were: the author's own
+            // markup, his own :root palette and his own stylesheet ship as the
+            // design, and only the CONTENT is the tenant's.
+            //
+            // THE HOSPITALITY KITS SHARE THE BEAUTY KITS' BLOCK CONTRACT MINUS
+            // `team`. A restaurant sells its kitchen, not its roster, and none
+            // of the three authors drew a people band. Nothing here says so:
+            // this directory simply ships no team.blade.php, `renders` is
+            // derived from the partials on disk, and the editor stops offering
+            // the band. That is the whole mechanism, and it is why `renders`
+            // was never allowed to be a hand-written list.
+            'key'   => 'maison_vela',
+            'name'  => 'Maison Vela',
+            // The author's own words for it, from the kit collection's README:
+            // "Grand European brasserie / Polished city restaurants and
+            // celebratory dining rooms". Written the way the other blurbs are
+            // — what a tenant gets, in words somebody who has never
+            // commissioned a website can act on.
+            'blurb' => 'Grand and cinematic, with an oxblood-and-brass palette and a typographic menu. Made for polished city restaurants, brasseries and celebratory dining rooms.',
+            // Transcribed from the three refusals
+            // resources/views/landing/maison_vela/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent here on the BRASS family (the accent text this design
+            // paints on its ink bands) and on the paper-ground accent the
+            // two-tone heading companion needs, never on the oxblood, which is
+            // a surface with white type on it.
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // The second of the three HOSPITALITY kits
+            // (resources/landing-kits/hospitality/02-luma-garden), converted
+            // the same way: the author's own markup, his own :root palette and
+            // his own stylesheet ship as the design, and only the CONTENT is
+            // the tenant's. Like its two siblings it ships NO team partial, so
+            // `renders` does not name that band and the picker cannot offer it.
+            'key'   => 'luma_garden',
+            'name'  => 'Luma Garden',
+            // The author's own words for it, from the kit collection's README:
+            // "Luminous Mediterranean garden / All-day restaurants and
+            // produce-led destinations".
+            'blurb' => 'Light and Mediterranean, with a photographic hero and soft rounded menu cards. Made for garden restaurants, all-day dining rooms and produce-led kitchens.',
+            // Transcribed from the three refusals
+            // resources/views/landing/luma_garden/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent here on the CLAY family, which this author uses as text and
+            // as hairlines and never as a ground with type on it.
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // The third of the three HOSPITALITY kits
+            // (resources/landing-kits/hospitality/03-ember-table), converted
+            // the same way: the author's own markup, his own :root palette and
+            // his own stylesheet ship as the design, and only the CONTENT is
+            // the tenant's. Like its two siblings it ships NO team partial, so
+            // `renders` does not name that band and the picker cannot offer it.
+            'key'   => 'ember_table',
+            'name'  => 'Ember Table',
+            // The author's own words for it, from the kit collection's README:
+            // "Cinematic chef-led tasting room / Intimate restaurants, wine
+            // bars and open-fire kitchens".
+            'blurb' => 'Dark and cinematic, lit like an evening service, with a typographic menu and mono labels. Made for chef-led dining rooms, wine bars and open-fire kitchens.',
+            // Transcribed from the three refusals
+            // resources/views/landing/ember_table/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent here on the GOLD label family and on the accent an em takes
+            // on a light ground, never on the ember, which is a surface this
+            // page sets its type in night on.
+            'supports' => [
+                'palette'      => false,
+                'font_pairing' => false,
+                'tones'        => false,
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
@@ -437,12 +557,26 @@ class LandingOnboardingService
             $shared .= "\n" . self::viewBody('landing.' . $templateKey . '.' . $name);
         }
 
-        $out = [];
+        $out   = [];
+        $drawn = self::drawnBlocksFor($templateKey);
 
         foreach (SectionType::ids() as $id) {
             $type = SectionType::get($id);
 
             if ($type === null || $type->fields === []) {
+                continue;
+            }
+
+            // A BAND THIS DESIGN CANNOT PUT ON THE PAGE HAS NO FIELDS HERE.
+            // Without this the furniture reading below — which exists for
+            // `contact`, drawn inside the footer hub with no partial of its
+            // own — would answer for EVERY partial-less type by scanning the
+            // shared files, and `team` on a hospitality template (which ships
+            // no team partial at all) would come back carrying `kicker`,
+            // matched off the footer's own `$contactCopy['kicker']`. `renders`
+            // already removes the band; publishing leaves for it is the same
+            // untruth one level down.
+            if (! isset($drawn[$id])) {
                 continue;
             }
 
@@ -673,7 +807,30 @@ class LandingOnboardingService
                 && !in_array($id, $profile->defaultSections, true),
         ));
 
-        return array_values(array_merge($profile->defaultSections, $extra));
+        // The industry's own list, NARROWED to the blocks this design actually
+        // puts on the page. Every industry seeds `team`, and the three
+        // hospitality templates ship no team partial at all — a restaurant page
+        // created on one of them would otherwise arrive carrying a row whose
+        // band the layout silently drops, which is the dead control this whole
+        // capability round exists to remove, arriving through the SEEDING door
+        // instead of the picker.
+        //
+        // "Draws" is {@see drawnBlocksFor()}'s union, and it takes both halves:
+        // `renders` alone would drop `contact` from every kit template, because
+        // those designs draw the contact details INSIDE the footer hub and ship
+        // no contact partial — which is precisely what their `fixed_blocks`
+        // entry publishes as `footer`.
+        //
+        // A no-op for every template before this round: all four draw all seven
+        // of the seeded types, one way or the other.
+        $drawn = self::drawnBlocksFor($templateKey);
+
+        $seeded = array_values(array_filter(
+            $profile->defaultSections,
+            static fn (string $id) => isset($drawn[SectionType::typeOf($id) ?? $id]),
+        ));
+
+        return array_values(array_merge($seeded, $extra));
     }
 
     /**
@@ -710,6 +867,37 @@ class LandingOnboardingService
         }
 
         return $out;
+    }
+
+    /**
+     * EVERY BLOCK A TEMPLATE PUTS ON THE PAGE, one way or the other — the
+     * union of {@see rendersFor()} and the template's own `fixed_blocks`,
+     * as a lookup.
+     *
+     * BOTH HALVES ARE NEEDED, and each alone is wrong in a different
+     * direction:
+     *
+     *   - `renders` alone loses `contact` on every kit template. Those designs
+     *     print the address, the channels and the hours INSIDE the footer hub
+     *     and ship no contact.blade.php, which is exactly what their
+     *     `fixed_blocks` entry already publishes as `footer`.
+     *   - `fixed_blocks` alone is only the furniture and names none of the
+     *     ordinary bands.
+     *
+     * Asked by {@see seedSectionsFor()} (do not create a row for a band this
+     * design drops) and by {@see contentFieldsFor()} (do not publish leaves for
+     * one either). Both used to answer it separately, one of them wrongly.
+     *
+     * @return array<string, true>
+     */
+    private static function drawnBlocksFor(string $templateKey): array
+    {
+        $row = collect(self::TEMPLATES)->firstWhere('key', $templateKey) ?? [];
+
+        return array_flip(array_merge(
+            self::rendersFor($templateKey),
+            array_keys(self::fixedBlocksFor($row)),
+        ));
     }
 
     /**

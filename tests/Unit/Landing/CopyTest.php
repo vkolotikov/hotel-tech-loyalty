@@ -226,10 +226,12 @@ class CopyTest extends TestCase
      * lockups. They are derived from the business's own name (see
      * layout.blade.php's `$brandName` chain) and are not heading leaves at
      * all, so R6's mechanism neither covers them nor needs to. Phase 8
-     * answered kit 03's with {@see Copy::wordmark()} — see the group of tests
-     * under this one — and this test is here so that whoever reads R6 next
-     * knows the exception exists and that a SEVENTH kit with an infix
-     * emphasis somewhere else fails here rather than quietly losing it.
+     * answered kit 03-beauty's with {@see Copy::wordmark()} and phase 9
+     * answered kit 02-hospitality's with the same method's `$emphasiseTail`
+     * argument — see the two groups of tests under this one — and this test is
+     * here so that whoever reads R6 next knows the exception exists and that a
+     * SEVENTH kit with an infix emphasis somewhere else fails here rather than
+     * quietly losing it.
      */
     public function test_the_only_non_trailing_emphasis_in_any_kit_is_inside_a_brand_wordmark(): void
     {
@@ -335,6 +337,60 @@ class CopyTest extends TestCase
 & Moss")->toHtml());
         $this->assertStringNotContainsString('<br>', Copy::wordmark("A
 B")->toHtml());
+    }
+
+    // ─── The tail wordmark (hospitality kit 02) ──────────────────────────
+    //
+    // The SECOND gesture the same primitive draws, and it belongs to one
+    // design rather than to every name. Hospitality kit 02 writes
+    // `Luma <em>Garden</em>` in his header and again in his footer, with
+    // `.brand strong em { color: var(--color-clay) }` — the tail of the lockup
+    // set in his terracotta. It is trailing (so the survey above does not
+    // count it as an offender) but it is still not a heading leaf: the wordmark
+    // is the `$brandName` chain, which is chrome. So the template asks for it
+    // and the other five, which set no emphasis in their lockups, do not.
+
+    public function test_the_tail_is_only_emphasised_when_a_design_asks_for_it(): void
+    {
+        $this->assertSame('Luma Garden', Copy::wordmark('Luma Garden')->toHtml());
+        $this->assertSame('Luma <em>Garden</em>', Copy::wordmark('Luma Garden', true)->toHtml());
+    }
+
+    /** A one-word name is not italicised whole — that is a slanted name. */
+    public function test_a_one_word_name_gets_no_tail_emphasis(): void
+    {
+        $this->assertSame('Luma', Copy::wordmark('Luma', true)->toHtml());
+        $this->assertSame('', Copy::wordmark(null, true)->toHtml());
+    }
+
+    /** Only the LAST word, however many there are. */
+    public function test_the_tail_is_the_last_word_alone(): void
+    {
+        $this->assertSame('The Garden <em>Room</em>', Copy::wordmark('The Garden Room', true)->toHtml());
+    }
+
+    /**
+     * The conjunction wins where both could apply: it is the more specific
+     * signal, and `Hart & <em>Bloom</em>` would emphasise the wrong half.
+     */
+    public function test_a_conjunction_beats_the_tail(): void
+    {
+        $this->assertSame('Hart <em>&amp;</em> Bloom', Copy::wordmark('Hart & Bloom', true)->toHtml());
+    }
+
+    /** And the tail is escaped exactly as the conjunction's two sides are. */
+    public function test_the_tail_is_escaped(): void
+    {
+        $this->assertSame(
+            'Luma &lt;b&gt;x&lt;/b&gt; <em>&lt;script&gt;</em>',
+            Copy::wordmark('Luma <b>x</b> <script>', true)->toHtml(),
+        );
+    }
+
+    /** Trailing whitespace cannot produce an empty emphasis. */
+    public function test_trailing_whitespace_is_not_an_emphasis(): void
+    {
+        $this->assertSame('Luma <em>Garden</em>', Copy::wordmark("  Luma Garden   ", true)->toHtml());
     }
 
     /** Every h1/h2 in a kit that contains an <em>, inner HTML only. */

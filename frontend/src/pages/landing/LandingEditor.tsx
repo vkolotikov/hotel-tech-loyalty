@@ -371,6 +371,10 @@ const FIELD_FALLBACK: Record<string, string> = {
   // inputs are in order under one heading and the sentence is the same
   // beside each (the `caption_N` precedent).
   fact: 'A line for your numbered list',
+  // Template fidelity (hospitality kit 01): the ledger became a PAIR — a
+  // figure in the display face with a line under it — the same superset the
+  // trust strip's `feature_N_caption` already is.
+  fact_caption: 'Line under the number',
   // booking — the short promises under the button.
   promise: 'A short promise under your button',
 
