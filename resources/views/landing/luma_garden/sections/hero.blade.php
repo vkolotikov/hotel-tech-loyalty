@@ -51,8 +51,11 @@
     // The button's own wording. The industry's verb ("Reserve a table") is the
     // default and is this author's own string; the leaf is what lets a
     // restaurant that words its hero differently from its closing panel do so.
+    // It is the wording of the RESERVATION control: when the flow is not on
+    // offer the layout has relabelled every Reserve control for what it
+    // actually does (6.4), and this one follows it.
     $ctaLabel = trim((string) ($copy['cta_label'] ?? ''));
-    $ctaLabel = $ctaLabel !== '' ? $ctaLabel : $bookingLabel;
+    $ctaLabel = ($ctaLabel !== '' && $bookingIsFlow) ? $ctaLabel : $bookingLabel;
 @endphp
     <section @class(['hero', 'hero--solo' => $heroImage === null]) data-block="hero" data-variant="garden-split">
 @if ($heroImage !== null)

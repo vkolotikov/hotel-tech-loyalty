@@ -275,4 +275,38 @@ class BookingWidgetVocabTest extends TestCase
             BookingWidgetVocab::for('restaurant')['svc_provider_title'],
             'Restaurant MUST switch to "section" (table seating).');
     }
+
+    /* ─── Template fidelity phase 6.3 — the services widget's step bar ─── */
+
+    /**
+     * The step bar and the summary card used to sit outside this map with
+     * 'Master' hardcoded — the data model's noun, which a beauty guest read
+     * after leaving a page that said "Therapists". Six steps, the renderer's
+     * count (1=service · 2=provider · 3=date · 4=time · 5=extras · 6=confirm),
+     * in every industry, and the model's noun in none of them.
+     */
+    public function test_the_services_step_bar_speaks_the_industrys_nouns_never_the_data_models(): void
+    {
+        $industries = ['hotel', 'beauty', 'medical', 'restaurant', 'fitness', 'education', 'legal', 'real_estate', 'other', 'unknown_industry'];
+
+        foreach ($industries as $industry) {
+            $vocab = BookingWidgetVocab::for($industry);
+
+            $this->assertCount(6, $vocab['svc_steps'],
+                "Industry '{$industry}' must label all six steps the renderer draws.");
+            $this->assertNotContains('Master', $vocab['svc_steps'],
+                "Industry '{$industry}' shows the data model's noun on the step bar.");
+            $this->assertNotSame('Master', $vocab['svc_provider_label']);
+
+            foreach (['svc_steps', 'svc_provider_label', 'svc_any_provider', 'svc_no_providers'] as $key) {
+                $this->assertArrayHasKey($key, $vocab, "Industry '{$industry}' is missing '{$key}'.");
+            }
+        }
+
+        // The word the landing page printed for these people is the word
+        // the widget's bar prints for the step where you choose one.
+        $this->assertSame('Therapist', BookingWidgetVocab::for('beauty')['svc_steps'][1]);
+        $this->assertSame('Section', BookingWidgetVocab::for('restaurant')['svc_steps'][1]);
+        $this->assertSame('Practitioner', BookingWidgetVocab::for('medical')['svc_steps'][1]);
+    }
 }

@@ -140,12 +140,13 @@ export function isOfferable(s: { key: string; available: boolean; count: number 
  * generic `defaultValue`-style text neither screen can improve on for a
  * section with no authored reason.
  *
- * Every prefill row has shipped `reason` (industry-gated `booking` gets the
- * "online booking currently supports hotel stays" sentence; everything else
- * carries `null`) since Task 4, but nothing on this side of the wire read
- * it until this fix — a beauty tenant saw the generic "Add some from your
- * booking button" instruction for a feature no amount of writing would ever
- * turn on. Pulled out as its own function (rather than inlined at each of
+ * Every prefill row has shipped `reason` (`booking` gets a sentence naming
+ * what online booking needs — a service linked to a team member with
+ * working hours, since template fidelity phase 6 made the gate a capability
+ * test; everything else carries `null`) since Task 4, but nothing on this
+ * side of the wire read it until this fix — a beauty tenant saw the generic
+ * "Add some from your booking button" instruction for a feature they could
+ * not see how to turn on. Pulled out as its own function (rather than inlined at each of
  * the two render call sites) because this repo's vitest is
  * pure-function-only — no jsdom, no React Testing Library — so this is the
  * one place the preference itself, not just the mapping that feeds it, can

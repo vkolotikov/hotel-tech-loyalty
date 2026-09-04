@@ -80,7 +80,11 @@
 
     $role = filled($member->title) ? trim((string) $member->title) : $specialties->implode(' · ');
 @endphp
-            <li data-item-id="{{ $member->id }}"><span><strong>{{ $member->name }}</strong>{{ $role }}</span>@if ($bookingHref !== null)<a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ $rowCtaLabel }}</a>@endif</li>
+            {{-- `&master={id}` deep-links the appointment widget to this
+                 practitioner (template fidelity 6.2) — the same
+                 service_masters.id the widget's config publishes. Only on the
+                 live flow; the author's data-service-id hook stays as written. --}}
+            <li data-item-id="{{ $member->id }}"><span><strong>{{ $member->name }}</strong>{{ $role }}</span>@if ($bookingHref !== null)<a href="{{ $bookingIsFlow ? $bookingHref . '&master=' . $member->id : $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ $rowCtaLabel }}</a>@endif</li>
 @endforeach
           </ul>
         </div>

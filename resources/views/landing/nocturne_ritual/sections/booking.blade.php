@@ -20,12 +20,21 @@
   there is no origin to name.
 
   WHEN THIS BAND RENDERS AT ALL is PageContent::count('booking')'s answer,
-  and today that is the hotel industry only: the widget asks check-in /
-  check-out / adults / children, so no other industry advertises a band it
-  cannot honestly fill. A spa on this template therefore closes on the
-  footer's contact hub instead, and the layout's own comment explains where
-  every "Book" control points in that case. This partial does not
-  second-guess that: it is only included when the band is going to render.
+  and since template fidelity phase 6 that is a CAPABILITY test, not an
+  industry test: a hotel (the stay widget) or any tenant with a bookable
+  treatment, practitioner and schedule (the appointment widget). A spa that
+  cannot yet be booked online closes on the phone or the footer's contact
+  hub instead, and the layout's own comment explains where every "Book"
+  control points in that case. This partial does not second-guess that: it
+  is only included when the band is going to render.
+
+  THE PHONE LINE beside the button (6.4 / D6) is the one element here the
+  author did not draw: kits 02 and 03 both put a phone action beside their
+  button and this kit keeps its number in the footer alone. Rendered in the
+  kit's own `.text-link` voice inside the author's `.button-row`, so the
+  stylesheet stays his file verbatim; `booking.call_label` / `call_short`
+  are the leaves the catalogue has declared since 1.3 and only the Ruled
+  Page drew. Blank label, bare number — the author's footer shape.
 
   THE PHOTOGRAPH IS THIS BAND'S OWN (template fidelity 4.1 / R2). The kit
   reuses hero-nocturne.webp here, and that reuse is the author's
@@ -92,6 +101,14 @@
 
     $terms = trim((string) ($copy['terms'] ?? __('Live availability. Simple rescheduling. Secure confirmation.')));
 
+    // The phone action (6.4). The number is the one the business already
+    // publishes; ContactDetails::dial() is the same sanitiser the footer hub
+    // spells inline. The display string keeps the tenant's own spacing.
+    $phone     = $content->contact->phone;
+    $dial      = $content->contact->dial();
+    $callLabel = trim((string) ($copy['call_label'] ?? ''));
+    $callShort = trim((string) ($copy['call_short'] ?? ''));
+
     // The tenant's own chips, in leaf order, blanks closed up.
     // Spelled, for the reason the story band's ledger spells its three.
     $written = collect([$copy['promise_1'] ?? null, $copy['promise_2'] ?? null, $copy['promise_3'] ?? null])
@@ -129,9 +146,14 @@
 @if ($showsTerms)
         <p>{{ $terms }}</p>
 @endif
-@if ($bookingHref !== null)
+@if ($bookingHref !== null || $dial !== null)
         <div class="button-row">
+@if ($bookingHref !== null)
           <a class="button button--accent" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+@endif
+@if ($dial !== null)
+          <a class="text-link" href="tel:{{ $dial }}" aria-label="{{ $callShort !== '' ? $callShort : ($callLabel !== '' ? $callLabel : __('Call us')) }}">@include('landing.shared.kit-icon', ['name' => 'phone'])@if ($callLabel !== ''){{ $callLabel }} @endif{{ $phone }}</a>
+@endif
         </div>
 @endif
 @if ($promisesFit)

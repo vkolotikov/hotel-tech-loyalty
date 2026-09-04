@@ -262,8 +262,23 @@ Route::get('/services-widget', function (\Illuminate\Http\Request $request) {
 
     $apiBase = rtrim(url('/'), '/') . '/api';
 
+    // Resolve the org's industry so this EMBEDDED widget speaks the same
+    // vocabulary as the standalone /services/{token} page below (template
+    // fidelity phase 6.3). This was the one widget route that forwarded no
+    // industry at all, so the Blade fell through to its own generic default
+    // and a beauty guest arriving from a landing page that said "Therapists"
+    // was asked to choose a "Master". Same resolution as /booking-widget:
+    // `org` may be a numeric organisation id or a widget token; try both and
+    // fall through to the platform default when neither resolves.
+    $org = ctype_digit((string) $orgId)
+        ? \App\Models\Organization::withoutGlobalScopes()->find((int) $orgId)
+        : (\App\Models\Brand::resolveByToken((string) $orgId)?->organization);
+
+    $industry = $org?->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
+    $vocab    = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
+
     return response()
-        ->view('services-widget', compact('orgId', 'lang', 'color', 'apiBase'))
+        ->view('services-widget', compact('orgId', 'lang', 'color', 'apiBase', 'industry', 'vocab'))
         ->header('X-Frame-Options', 'ALLOWALL')
         ->header('Content-Security-Policy', "frame-ancestors *");
 });

@@ -31,10 +31,12 @@
   includes the partial, and the nav anchor never appears.
 
   The Book link per person carries the author's data-service-id hook with the
-  practitioner's own id. As on the services menu, the booking widget cannot
-  consume it yet (/booking-widget takes org, lang, color and tpl), so the
-  link opens the booking flow honestly and the attribute is the contract the
-  author declared — see this task's report.
+  practitioner's own id — his contract, kept as written — and, since template
+  fidelity phase 6.2, `&master={id}` on the appointment widget's URL, which
+  is what makes "Book with Amara" mean it: the id is the same
+  service_masters.id the widget's config publishes, and its presetMaster
+  keeps her chosen through the treatment step. Only on the live flow — a
+  fallback href (tel:, #site-footer) takes no query.
 --}}
 @php
     use App\Landing\Copy;
@@ -106,7 +108,7 @@
             <article data-item-id="{{ $member->id }}">
               <div><h3>{{ $member->name }}</h3>@if ($role !== '')<p>{{ $role }}</p>@endif</div>
 @if ($bookingHref !== null)
-              <a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ $rowCtaLabel }}</a>
+              <a href="{{ $bookingIsFlow ? $bookingHref . '&master=' . $member->id : $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $member->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book with :name', ['name' => $member->name]) }}">{{ $rowCtaLabel }}</a>
 @endif
             </article>
 @endforeach

@@ -27,11 +27,12 @@
   both put a phone action beside the button, which is what D6 records.
 
   WHEN THIS BAND RENDERS AT ALL is PageContent::count('booking')'s answer, and
-  today that is the hotel industry only: the widget asks check-in / check-out
-  / adults / children, so no other industry advertises a band it cannot
-  honestly fill. A studio on this template therefore closes on the footer's
-  contact hub instead. This partial does not second-guess that: it is only
-  included when the band is going to render.
+  since template fidelity phase 6 that is a CAPABILITY test, not an industry
+  test: a hotel (the stay widget) or any tenant with a bookable ritual,
+  therapist and schedule (the appointment widget). A studio that cannot yet
+  be booked online closes on the phone or the footer's contact hub instead.
+  This partial does not second-guess that: it is only included when the band
+  is going to render.
 --}}
 @php
     use App\Landing\Copy;

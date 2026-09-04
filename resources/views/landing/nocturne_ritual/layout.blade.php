@@ -192,24 +192,27 @@
     // The author's contract says data-action="open-booking" opens the
     // configured booking widget, and $bookingUrl (built by
     // LandingPageSecurity::widgetUrl from app.url, so it is permitted by
-    // construction) is that widget. It is offered only when the booking BAND
-    // itself renders — the same two-part gate every CTA in this codebase
-    // uses, row enabled AND has() — because PageContent::count('booking')
-    // gates that band to the hotel industry: the widget asks check-in /
-    // check-out / adults / children, and pointing a spa's "Book appointment"
-    // button at it would be worse than not offering one.
+    // construction) is that widget — the stay widget for a hotel, the
+    // appointment widget for a studio that can actually be booked, as
+    // PageContent::bookingMode() decides (template fidelity phase 6). It is
+    // offered only when the booking BAND itself renders — the same two-part
+    // gate every CTA in this codebase uses, row enabled AND has() — because
+    // count('booking') answers with that same mode.
     //
-    // Where booking is not offered the same control falls back to the footer
-    // hub, which is where this kit keeps the address and the phone — and it
-    // drops data-action with it, because a link that does not open the
-    // booking widget must not claim to. With neither, nothing is rendered:
-    // never a dead control.
+    // Where booking is not offered the control is NEVER DEAD and NEVER LIES
+    // (6.4): it dials the phone the business publishes when there is one,
+    // else it falls back to the footer hub where this kit keeps the address
+    // and the email — and it drops data-action either way, because a link
+    // that does not open the booking widget must not claim to. With none of
+    // the three, nothing is rendered.
     $bookingHref   = null;
     $bookingIsFlow = false;
 
     if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking') && filled($bookingUrl ?? null)) {
         $bookingHref   = $bookingUrl;
         $bookingIsFlow = true;
+    } elseif (($bookingDial = $content->contact->dial()) !== null) {
+        $bookingHref = 'tel:' . $bookingDial;
     } elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact')) {
         $bookingHref = '#site-footer';
     }
@@ -234,6 +237,15 @@
     // report rather than answered with a leaf on a block that has no row.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
+
+    // …unless the flow is not on offer (6.4). Then every Book control says
+    // what it actually does — dials, or takes the visitor to the contact
+    // details — rather than the tenant's booking verb over a phone link.
+    // The tenant's own label is the label of the BOOKING control and comes
+    // back the moment the flow does.
+    if (! $bookingIsFlow && $bookingHref !== null) {
+        $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
 
     // NAV ANCHORS come from $renderedSections, the one collection that
     // decides what renders, so a disabled or empty band can never be linked

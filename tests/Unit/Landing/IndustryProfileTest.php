@@ -127,6 +127,23 @@ class IndustryProfileTest extends TestCase
         $this->assertSame('', IndustryProfile::for('beauty')->kicker('nonsense'));
     }
 
+    /**
+     * Template fidelity phase 6: the booking band is gated on CAPABILITY
+     * (PageContent::bookingMode()), so a page in ANY industry can carry it
+     * the moment the tenant has a bookable service, practitioner and rota —
+     * including the seven whose defaultSections never seed the row, because
+     * every kit template draws the band. kicker() returns '' for a missing
+     * key, and '' over a band that renders is a blank eyebrow. So every
+     * profile authors one.
+     */
+    public function test_every_profile_supplies_a_booking_eyebrow_because_any_tenant_can_now_be_booked(): void
+    {
+        foreach (array_keys(IndustryProfile::all()) as $id) {
+            $this->assertNotSame('', IndustryProfile::for($id)->kicker('booking'),
+                "Profile [{$id}] would render the booking band with a blank eyebrow.");
+        }
+    }
+
     public function test_every_platform_industry_has_an_authored_profile(): void
     {
         foreach (Organization::INDUSTRIES as $id) {

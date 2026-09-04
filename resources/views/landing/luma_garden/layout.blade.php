@@ -134,16 +134,20 @@
     $brandDescriptor = $ownDescriptor !== '' ? $ownDescriptor : trim((string) ($content->contact->city ?? ''));
 
     // THE PRIMARY ACTION, resolved once for every control that carries it —
-    // the same two-part gate every CTA in this codebase uses, falling back to
-    // the footer hub (where this kit keeps the address and the phone) and
-    // dropping data-action with it, because a link that does not open the
-    // reservation widget must not claim to. With neither, nothing is rendered.
+    // the same two-part gate every CTA in this codebase uses, answered by
+    // PageContent::bookingMode() (template fidelity phase 6); else the phone
+    // the house publishes; else the footer hub (where this kit keeps the
+    // address and the email). data-action is dropped on both fallbacks,
+    // because a link that does not open the reservation widget must not
+    // claim to. With none of the three, nothing is rendered.
     $bookingHref   = null;
     $bookingIsFlow = false;
 
     if ($sections->firstWhere('key', 'booking')?->enabled && $content->has('booking') && filled($bookingUrl ?? null)) {
         $bookingHref   = $bookingUrl;
         $bookingIsFlow = true;
+    } elseif (($bookingDial = $content->contact->dial()) !== null) {
+        $bookingHref = 'tel:' . $bookingDial;
     } elseif ($sections->firstWhere('key', 'contact')?->enabled && $content->has('contact')) {
         $bookingHref = '#site-footer';
     }
@@ -159,6 +163,13 @@
     // on which the header bar's own wording is not a shortfall.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
+
+    // …unless the flow is not on offer (6.4): then every Reserve control
+    // says what it actually does. The tenant's label is the RESERVATION
+    // control's and comes back the moment the flow does.
+    if (! $bookingIsFlow && $bookingHref !== null) {
+        $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
 
     // NAV ANCHORS come from $renderedSections, the one collection that decides
     // what renders, so a disabled or empty band can never be linked to. hero

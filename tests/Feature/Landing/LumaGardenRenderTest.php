@@ -776,14 +776,51 @@ class LumaGardenRenderTest extends TestCase
 
     // ─── Booking, feedback and the chat launcher ──────────────────────────
 
-    public function test_a_restaurant_page_offers_no_booking_widget_and_no_dead_hook(): void
+    /**
+     * Template fidelity 6.6: a restaurant with nothing bookable on file
+     * renders no band and no dead hook — the capability gate (PageContent::
+     * bookingMode()), not the old industry gate. The Reserve controls dial
+     * the phone instead and say so (6.4).
+     */
+    public function test_a_restaurant_page_with_nothing_bookable_offers_no_booking_widget_and_no_dead_hook(): void
     {
+        $this->seedWidgetOrganization();
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringNotContainsString('data-block="booking"', $body);
         $this->assertStringNotContainsString('data-action="open-booking"', $body);
-        $this->assertStringContainsString('href="#site-footer"', $body);
+        $this->assertStringNotContainsString('/services-widget', $body);
+        $this->assertStringContainsString('href="tel:+37120000212"', $body);
+        $this->assertStringContainsString('Call to book', $body);
+    }
+
+    /** 6.1: a restaurant that can take a reservation online gets the band, on the appointment widget. */
+    public function test_a_bookable_restaurant_page_wires_every_hook_to_the_appointment_flow(): void
+    {
+        $this->seedWidgetOrganization();
+        $this->seedLikeTheKit();
+        \App\Models\ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'The garden', 'is_active' => true,
+        ]);
+        $this->seedBookableSchedule();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-block="booking"', $body);
+
+        preg_match_all('/<a[^>]*data-action="open-booking"[^>]*>/i', $body, $matches);
+        $this->assertNotEmpty($matches[0]);
+
+        foreach ($matches[0] as $tag) {
+            $this->assertStringContainsString('/services-widget?', $tag);
+            $this->assertStringContainsString('source=landing', $tag);
+            $this->assertStringContainsString('rel="noopener"', $tag);
+            $this->assertStringNotContainsString('/booking-widget', $tag);
+        }
+
+        $this->assertStringContainsString('Reserve a table', $body);
+        $this->assertStringNotContainsString('Call to book', $body);
     }
 
     public function test_a_hotel_page_wires_every_booking_hook_to_the_real_flow(): void

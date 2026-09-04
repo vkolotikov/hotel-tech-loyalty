@@ -58,9 +58,12 @@
 
     // The button's own wording. The industry's verb ("Reserve a table") is the
     // default; this author writes "Find a table" in his hero and "Reserve a
-    // table" in his closing panel, which one label could not say.
+    // table" in his closing panel, which one label could not say. It is the
+    // wording of the RESERVATION control: when the flow is not on offer the
+    // layout has relabelled every Reserve control for what it actually does
+    // (6.4), and this one follows it.
     $ctaLabel = trim((string) ($copy['cta_label'] ?? ''));
-    $ctaLabel = $ctaLabel !== '' ? $ctaLabel : $bookingLabel;
+    $ctaLabel = ($ctaLabel !== '' && $bookingIsFlow) ? $ctaLabel : $bookingLabel;
 @endphp
     <section @class(['hero', 'hero--solo' => $heroImage === null]) data-block="hero" data-variant="cinematic-service">
 @if ($heroImage !== null)

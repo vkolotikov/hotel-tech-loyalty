@@ -500,39 +500,61 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
-     * Task 4: the booking widget asks Check-in/Check-out/Adults/Children --
-     * hotel questions -- and is framed unmodified on every industry's page,
-     * so PageContent::count('booking') gates the section to the 'hotel'
-     * industry alone. Unlike an empty Services screen, "Booking (0)" has no
-     * self-explanatory fix on the tenant's own site -- there is no screen to
-     * go fill in -- so the wizard has to say WHY, naming the CTA text the
-     * page would otherwise print (LandingOnboardingService::SECTION_COPY's
+     * Template fidelity phase 6: the booking band is gated on CAPABILITY
+     * (PageContent::bookingMode() — a bookable service, linked to a team
+     * member with working hours, exactly what the scheduler enforces), not
+     * on the industry. A salon with treatments and therapists but no rota is
+     * the tenant every new salon is on day one, and unlike an empty Services
+     * screen, "Booking (0)" has no self-explanatory fix -- so the wizard says
+     * WHY, naming the ACTIONABLE precondition and the CTA text the page
+     * would otherwise print (LandingOnboardingService::SECTION_COPY's
      * 'reason' entry, sprintf'd against the profile the same way every other
-     * industry-flavoured string here is).
+     * industry-flavoured string here is). The old sentence — "Online booking
+     * currently supports hotel stays" — became a lie the moment the
+     * appointment widget was wired in, and must never come back.
      *
-     * 'beauty', not 'education', is the industry that actually exercises this:
-     * IndustryProfile::all()['education']['defaultSections'] never lists
-     * 'booking' at all (Task 3), and sections() only ever iterates
-     * $content->profile->defaultSections -- so an education organisation's
-     * prefill never mentions the key in the first place, gated or not. Only
-     * 'hotel' and 'beauty' still list 'booking' there; beauty deliberately,
-     * per IndustryProfile::all()'s own docblock ("the row goes inert, your
-     * gate decides") -- so beauty is the one non-hotel industry the wizard
-     * can actually be asked about this row for.
+     * 'beauty' is the industry that exercises this: it is the one non-hotel
+     * profile whose defaultSections list 'booking', so its prefill actually
+     * mentions the row (sections() iterates defaultSections).
      */
-    public function test_booking_is_unavailable_for_a_beauty_organisation_with_its_reason(): void
+    public function test_booking_is_unavailable_for_a_beauty_organisation_with_no_schedule_and_says_why(): void
     {
         $this->makeProperty(['phone' => '+371 111', 'address' => 'Elizabetes iela']);
+        $this->makeServices(2);
+        $this->makeTeam(1);
 
         $booking = $this->section($this->prefill(), 'booking');
 
         $this->assertFalse($booking['available']);
         $this->assertSame(0, $booking['count']);
+        $this->assertSame('Your Services and Team screens', $booking['source_label']);
         $this->assertSame(
-            "Online booking currently supports hotel stays. Your 'Book appointment' button will point "
-                . 'visitors at your contact details instead.',
+            'Online booking needs a service on your Services screen, linked to a team member on your Team '
+                . "screen who has working hours. Until then your 'Book appointment' button will point visitors "
+                . 'at your phone number or contact details instead.',
             $booking['reason'],
         );
+        $this->assertStringNotContainsString('hotel', $booking['reason']);
+    }
+
+    /**
+     * The same salon, once one therapist has working hours for one
+     * treatment: offered outright, with nothing to explain away — 'reason'
+     * is null exactly when 'available' is true, for booking as for every
+     * other section.
+     */
+    public function test_booking_is_available_for_a_beauty_organisation_that_can_be_booked(): void
+    {
+        $this->makeProperty();
+        $this->makeServices(2);
+        $this->makeTeam(1);
+        $this->seedBookableSchedule($this->org->id);
+
+        $booking = $this->section($this->prefill(), 'booking');
+
+        $this->assertTrue($booking['available']);
+        $this->assertSame(1, $booking['count']);
+        $this->assertNull($booking['reason']);
     }
 
     /**

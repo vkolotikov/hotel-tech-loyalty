@@ -82,6 +82,47 @@ trait SetsUpLandingSchema
      * at all. Tests that assert the booking flow have to seed the fact the
      * real world always has; tests that do not care keep their empty table.
      */
+    /**
+     * Make an organisation's page BOOKABLE — the exact precondition
+     * PageContent::bookingMode() asks for and ServiceSchedulingService
+     * enforces (template fidelity phase 6): an active service, linked to an
+     * active master, who has an active schedule row with a real window.
+     *
+     * Links the tenant's FIRST active service to its FIRST active master (in
+     * the page's own ordering, sort_order then name) unless told otherwise,
+     * and gives that master Monday 09:00–17:00. Returns the pair so a test
+     * can assert the deep links the chips carry name exactly these rows.
+     * Written through the query builder rather than the models so the
+     * tenant traits' creating hooks never re-file a row under a bound org.
+     *
+     * @return array{service: int, master: int}
+     */
+    protected function seedBookableSchedule(int $orgId = 1, ?int $serviceId = null, ?int $masterId = null): array
+    {
+        $db = \Illuminate\Support\Facades\DB::class;
+
+        $serviceId ??= $db::table('services')->where('organization_id', $orgId)->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')->value('id');
+        $masterId ??= $db::table('service_masters')->where('organization_id', $orgId)->where('is_active', true)
+            ->orderBy('sort_order')->orderBy('name')->value('id');
+
+        if ($serviceId === null || $masterId === null) {
+            throw new \RuntimeException('seedBookableSchedule() needs an active service and an active master to link.');
+        }
+
+        $db::table('service_master_service')->insert([
+            'organization_id' => $orgId, 'service_master_id' => $masterId, 'service_id' => $serviceId,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $db::table('service_master_schedules')->insert([
+            'organization_id' => $orgId, 'service_master_id' => $masterId,
+            'day_of_week' => 1, 'start_time' => '09:00:00', 'end_time' => '17:00:00', 'is_active' => true,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        return ['service' => (int) $serviceId, 'master' => (int) $masterId];
+    }
+
     protected function seedWidgetOrganization(int $id = 1, string $token = 'wt-landing-test-token'): void
     {
         if (\Illuminate\Support\Facades\DB::table('organizations')->where('id', $id)->exists()) {
@@ -159,6 +200,43 @@ trait SetsUpLandingSchema
                 $table->integer('sort_order')->default(0);
                 $table->boolean('is_active')->default(true);
                 $table->timestamps();
+            });
+        }
+
+        // The two tables that make a tenant BOOKABLE, as opposed to merely
+        // listed (template fidelity phase 6). PageContent::bookingMode()
+        // asks the exact question ServiceSchedulingService enforces -- an
+        // active service, linked to an active master, who has an active
+        // schedule row -- so every landing test needs the link table and
+        // the schedule table to exist even when it seeds neither; a page
+        // with services and no schedules is the common "not yet bookable"
+        // case, and sqlite has no table to answer that question against
+        // without these. Columns mirror
+        // 2026_04_18_100001_create_service_reservation_tables.
+        if (!Schema::hasTable('service_master_service')) {
+            Schema::create('service_master_service', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('service_master_id');
+                $table->unsignedBigInteger('service_id');
+                $table->decimal('price_override', 10, 2)->nullable();
+                $table->integer('duration_override_minutes')->nullable();
+                $table->timestamps();
+                $table->unique(['service_master_id', 'service_id']);
+            });
+        }
+
+        if (!Schema::hasTable('service_master_schedules')) {
+            Schema::create('service_master_schedules', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('service_master_id');
+                $table->unsignedTinyInteger('day_of_week');
+                $table->time('start_time');
+                $table->time('end_time');
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index(['service_master_id', 'day_of_week']);
             });
         }
 

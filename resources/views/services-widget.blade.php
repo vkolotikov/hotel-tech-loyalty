@@ -342,6 +342,10 @@ img{max-width:100%;display:block}
     initialColor: @json($color ? \App\Support\CssColor::safe($color) : ''),
     presetCategory: @json(request('category', '')),
     presetService: @json(request('service', '')),
+    // Template fidelity phase 6.2 — a landing page's "Book with <name>"
+    // link lands here with the practitioner already chosen. Numeric id of
+    // a master in this org's config; anything else is ignored below.
+    presetMaster: @json(request('master', '')),
     // Prefill from query params — used when the widget is loaded inside
     // the member mobile app's WebView, so the guest doesn't have to retype
     // their name/email/phone. All three are optional.
@@ -352,14 +356,19 @@ img{max-width:100%;display:block}
   }
 
   /* Industry Platform Plan Phase 9.x — per-industry vocabulary for the
-     services widget. The /services/{token} route resolves the org's
-     industry and passes BookingWidgetVocab::for($industry) into this
-     view. Hotel orgs see the existing universal copy verbatim
-     (back-compat); beauty / medical / restaurant get bespoke labels
-     on the service / provider / details steps. */
+     services widget. Both routes that render this view — the standalone
+     /services/{token} page and the embeddable /services-widget frame the
+     landing pages use (template fidelity phase 6.3) — resolve the org's
+     industry and pass BookingWidgetVocab::for($industry) in. Hotel orgs
+     see the existing universal copy verbatim (back-compat); beauty /
+     medical / restaurant get bespoke labels on the service / provider /
+     details steps, the step bar and the summary card. */
   {{-- @json() cannot take an inline array literal: its explode(',') options
        parsing truncates the array at compile time ("Unclosed '[' does not
-       match ')'"). Build the default in a PHP variable first, then @json it. --}}
+       match ')'"). Build the default in a PHP variable first, then @json it.
+       This default is the view's own last resort for a caller that passes
+       no $vocab at all; keep its keys in step with BookingWidgetVocab's
+       hotel defaults, which every route now actually sends. --}}
   @php
   $vocabDefault = [
     'svc_service_title'  => 'Select a service',
@@ -368,6 +377,10 @@ img{max-width:100%;display:block}
     'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
     'svc_details_title'  => 'Your details',
     'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+    'svc_steps'          => ['Service', 'Provider', 'Date', 'Time', 'Extras', 'Confirm'],
+    'svc_provider_label' => 'Provider',
+    'svc_any_provider'   => 'Any available',
+    'svc_no_providers'   => 'No providers configured for this service yet.',
   ];
   @endphp
   var VOCAB = @json($vocab ?? $vocabDefault);
@@ -463,11 +476,38 @@ img{max-width:100%;display:block}
         document.head.appendChild(tag)
       }
 
-      // preselect
+      // preselect — the deep links a landing page's chips carry (template
+      // fidelity phase 6.2): `?service=` from a service row, `?master=`
+      // from a practitioner, either or both.
+      //
+      // Only an id that is actually in this org's config counts. The ids
+      // match by construction (the page and the config read the same
+      // services/service_masters rows), but a service can be deactivated
+      // between the page rendering and the guest clicking, and a guessed
+      // id in the URL must not strand the guest on a step with no service
+      // behind it — an unknown preset simply falls back to choosing.
       if (CFG.presetCategory) state.categoryId = Number(CFG.presetCategory)
-      if (CFG.presetService) {
-        state.serviceId = Number(CFG.presetService)
-        state.step = 2
+      var presetMaster = CFG.presetMaster && getMaster(Number(CFG.presetMaster)) ? Number(CFG.presetMaster) : null
+      var presetService = CFG.presetService && getService(Number(CFG.presetService)) ? getService(Number(CFG.presetService)) : null
+      if (presetService) {
+        state.serviceId = presetService.id
+        var presetPerformers = mastersForService(presetService)
+        var presetMasterPerforms = presetMaster !== null && presetPerformers.some(function (m) { return m.id === presetMaster })
+        if (presetMasterPerforms) {
+          // Both halves named and consistent: straight to the calendar.
+          state.masterId = presetMaster
+          state.step = 3
+        } else {
+          // Same rule selectService applies to a manual choice — the
+          // provider step only when there is a provider to choose.
+          state.masterId = null
+          state.step = presetPerformers.length > 0 ? 2 : 3
+        }
+        if (state.step === 3) loadCalendar()
+      } else if (presetMaster !== null) {
+        // A practitioner but no service: the guest still picks what to
+        // book, and selectService() keeps this choice for them.
+        state.masterId = presetMaster
       }
 
       render()
@@ -548,14 +588,22 @@ img{max-width:100%;display:block}
   }
   function selectService(id) {
     state.serviceId = id
-    state.masterId = null
     state.date = null
     state.startAt = null
     state.extras = []
+    var svc = getService(id)
+    var performers = mastersForService(svc)
+    // A practitioner the guest ARRIVED with (?master= from a landing page's
+    // "Book with <name>" link) is kept across the service choice as long as
+    // they perform the chosen service — that is what the link meant. Any
+    // master chosen inside the widget is reset as before, so changing your
+    // mind about the service still asks about the provider.
+    var keepPreset = CFG.presetMaster && state.masterId === Number(CFG.presetMaster)
+      && performers.some(function (m) { return m.id === state.masterId })
+    state.masterId = keepPreset ? state.masterId : null
     // If the service has no configured masters, skip the master step
     // entirely — without "Any available" the page would be empty otherwise.
-    var svc = getService(id)
-    state.step = mastersForService(svc).length > 0 ? 2 : 3
+    state.step = keepPreset ? 3 : (performers.length > 0 ? 2 : 3)
     if (state.step === 3) loadCalendar()
     render()
   }
@@ -757,10 +805,15 @@ img{max-width:100%;display:block}
   }
 
   function renderStepper() {
-    // Step model: 1=Service · 2=Master · 3=Date · 4=Time · 5=Extras · 6=Confirm
+    // Step model: 1=Service · 2=Provider · 3=Date · 4=Time · 5=Extras · 6=Confirm
     // Step 7 is the post-submit "Booking confirmed" page — it visually
     // collapses to step 6 (Confirm) on the stepper.
-    var steps = ['Service', 'Master', 'Date', 'Time', 'Extras', 'Confirm']
+    //
+    // The labels are the industry's (VOCAB.svc_steps — "Treatment /
+    // Therapist" for beauty, "Booking / Section" for a restaurant): this
+    // bar used to hardcode 'Master', the data model's noun, and a guest
+    // arriving from a page that said "Therapists" read it here.
+    var steps = VOCAB.svc_steps
     var current = state.step === 7 ? 6 : state.step
     var h = '<div class="stepper">'
     steps.forEach(function (label, i) {
@@ -770,7 +823,7 @@ img{max-width:100%;display:block}
       else if (current > idx) cls += ' done'
       h += '<div class="' + cls + '">'
       h += '<div class="step-circle">' + (current > idx ? '✓' : idx) + '</div>'
-      h += '<div class="step-label">' + label + '</div>'
+      h += '<div class="step-label">' + escapeHtml(label) + '</div>'
       h += '</div>'
     })
     h += '</div>'
@@ -853,7 +906,7 @@ img{max-width:100%;display:block}
     // already skips this step in that case, but if the user lands here
     // via Back navigation we surface a helpful message instead of a void.
     if (masters.length === 0) {
-      h += '<p class="slot-empty">No providers configured for this service yet.</p>'
+      h += '<p class="slot-empty">' + escapeHtml(VOCAB.svc_no_providers) + '</p>'
       h += '<div class="btn-row"><button class="btn btn-outline" data-act="back" data-to="1">Back</button></div>'
       h += '</div>'
       return h
@@ -1058,8 +1111,8 @@ img{max-width:100%;display:block}
     h += '<div class="summary-body">'
     h += '<div class="summary-title">Booking summary</div>'
     h += '<div class="summary-row"><span class="lbl">Duration</span><span class="val">' + fmtMinutes(svc.duration_minutes) + '</span></div>'
-    if (master) h += '<div class="summary-row"><span class="lbl">Master</span><span class="val">' + escapeHtml(master.name) + '</span></div>'
-    else if (state.step >= 3) h += '<div class="summary-row"><span class="lbl">Master</span><span class="val">Any available</span></div>'
+    if (master) h += '<div class="summary-row"><span class="lbl">' + escapeHtml(VOCAB.svc_provider_label) + '</span><span class="val">' + escapeHtml(master.name) + '</span></div>'
+    else if (state.step >= 3) h += '<div class="summary-row"><span class="lbl">' + escapeHtml(VOCAB.svc_provider_label) + '</span><span class="val">' + escapeHtml(VOCAB.svc_any_provider) + '</span></div>'
     if (state.date) {
       var dateLabel = ''
       try { dateLabel = new Date(state.date).toLocaleDateString(CFG.lang || 'en', { month:'short', day:'numeric', year:'numeric' }) } catch(e) { dateLabel = state.date }

@@ -37,7 +37,7 @@ const availability = (): SectionAvailability[] => [
   { key: 'about', label: 'About', source_label: 'Words you write', available: false, count: 0 },
   { key: 'team', label: 'Therapists', source_label: 'Your Team screen', available: true, count: 3 },
   { key: 'reviews', label: 'Reviews', source_label: 'Reviews you feature', available: false, count: 0 },
-  { key: 'booking', label: 'Booking', source_label: 'Your booking button', available: true, count: 1 },
+  { key: 'booking', label: 'Booking', source_label: 'Your Services and Team screens', available: true, count: 1 },
   { key: 'contact', label: 'Contact', source_label: 'Your address in Settings', available: true, count: 1 },
 ]
 
@@ -99,13 +99,13 @@ describe('buildSectionRows', () => {
   it('carries the backend reason through to the merged row', () => {
     const withReason: SectionAvailability[] = availability().map(a => (
       a.key === 'booking'
-        ? { ...a, available: false, reason: "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead." }
+        ? { ...a, available: false, reason: "Online booking needs a service on your Services screen, linked to a team member on your Team screen who has working hours. Until then your 'Book appointment' button will point visitors at your phone number or contact details instead." }
         : a
     ))
     const rows = buildSectionRows(pageSections(), withReason, sectionTypes())
     const booking = rows.find(r => r.key === 'booking')
     expect(booking?.reason).toBe(
-      "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead.",
+      "Online booking needs a service on your Services screen, linked to a team member on your Team screen who has working hours. Until then your 'Book appointment' button will point visitors at your phone number or contact details instead.",
     )
   })
 

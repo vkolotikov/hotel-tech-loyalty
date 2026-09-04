@@ -63,9 +63,12 @@
 
     // The button's own wording. The industry's verb ("Book appointment") is
     // the default; the author writes "Find your ritual" here and "Book now"
-    // in his closing panel, which one label could not say.
+    // in his closing panel, which one label could not say. It is the wording
+    // of the BOOKING control: when the flow is not on offer the layout has
+    // relabelled every Book control for what it actually does (6.4), and
+    // this one follows it.
     $ctaLabel = trim((string) ($copy['cta_label'] ?? ''));
-    $ctaLabel = $ctaLabel !== '' ? $ctaLabel : $bookingLabel;
+    $ctaLabel = ($ctaLabel !== '' && $bookingIsFlow) ? $ctaLabel : $bookingLabel;
 @endphp
     <section class="hero" id="top" data-block="hero" data-variant="split-organic">
       <div @class(['container', 'hero__inner', 'hero__inner--solo' => $heroImage === null])>

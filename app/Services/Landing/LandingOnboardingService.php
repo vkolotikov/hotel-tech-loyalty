@@ -543,15 +543,22 @@ class LandingOnboardingService
         'team'     => ['label' => 'Team',     'source' => 'Your Team screen'],
         'reviews'  => ['label' => 'Reviews',  'source' => 'Reviews you have chosen to feature on your Reviews screen'],
         // 'reason' is the one entry here that is NOT a plain string: booking's
-        // unavailability (Task 4 -- PageContent::count('booking') gates the
-        // band to the 'hotel' industry) is the one case in this table whose
-        // explanation names the tenant's own CTA text, which only the profile
-        // knows -- see sectionReason() below, the same %s-sprintf shape
-        // 'source' itself has no need for. Every other key's absence is
-        // already self-explanatory from 'source' alone ("Add some from your
-        // Services screen"), so only 'booking' carries one.
-        'booking'  => ['label' => 'Booking',  'source' => 'Your booking button', 'reason' =>
-            "Online booking currently supports hotel stays. Your '%s' button will point visitors at your contact details instead."],
+        // unavailability is the one case in this table whose explanation
+        // names the tenant's own CTA text, which only the profile knows --
+        // see sectionReason() below, the same %s-sprintf shape 'source'
+        // itself has no need for. Every other key's absence is already
+        // self-explanatory from 'source' alone ("Add some from your Services
+        // screen"), so only 'booking' carries one.
+        //
+        // Template fidelity phase 6 replaced the industry gate with a
+        // capability gate (PageContent::bookingMode()), so the reason names
+        // the ACTIONABLE precondition -- the exact three facts the scheduler
+        // needs -- rather than the industry. "Online booking currently
+        // supports hotel stays" became a lie the moment the appointment
+        // widget was wired in, and a reason the tenant cannot act on is not
+        // a reason. 'source' names the two screens where they act on it.
+        'booking'  => ['label' => 'Booking',  'source' => 'Your Services and Team screens', 'reason' =>
+            "Online booking needs a service on your Services screen, linked to a team member on your Team screen who has working hours. Until then your '%s' button will point visitors at your phone number or contact details instead."],
         'contact'  => ['label' => 'Contact',  'source' => 'Your address and phone number in Properties'],
         'footer'   => ['label' => 'Footer',   'source' => 'Your business details in Properties'],
         // The three blocks the BeautyTech kits add. Described here for the

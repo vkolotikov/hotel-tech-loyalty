@@ -112,6 +112,30 @@ final class ContactDetails
     }
 
     /**
+     * The phone as a `tel:` target, or null when there is nothing to dial.
+     *
+     * tel: wants dialling characters and nothing else; the display string
+     * keeps whatever spacing the tenant typed. A + is meaningful only in
+     * first position, so any later one is dropped rather than dialled, and a
+     * value with no digit at all ("call us", "—") is not a number. This is
+     * the sanitiser every kit's booking and footer partial already spells
+     * inline; it is a method here because template fidelity 6.4 makes the
+     * LAYOUT ask the same question — "can the Book controls fall back to the
+     * phone?" — and a second copy of a regex in six layouts is how one of
+     * them drifts.
+     */
+    public function dial(): ?string
+    {
+        if (!filled($this->phone)) {
+            return null;
+        }
+
+        $dial = preg_replace(['/[^0-9+]/', '/(?<=.)\+/'], '', (string) $this->phone);
+
+        return filled($dial) && preg_match('/\d/', $dial) ? $dial : null;
+    }
+
+    /**
      * The same three guards {@see PageContent::imageUrl()} applies to every
      * photograph on the page, applied to the logo — a string, bounded, and
      * either same-origin storage or an explicit http(s) URL.
