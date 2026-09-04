@@ -167,11 +167,17 @@ class OrganizationIndustryResyncTest extends TestCase
      * hotel-industry org carries the hotel booking band and "Book your
      * stay"; correcting the ORG's industry to 'education' must change the
      * SAME published URL's response on the very next request — vocabulary,
-     * schema.org subtype, the booking band gone entirely (PageContent::
-     * count('booking') gates it to 'hotel' — see that method), and the
-     * hero CTA re-pointed at #contact, the honest target hero.blade.php
-     * falls back to once #booking no longer exists (see that partial's own
-     * comment on the two-part booking/contact check).
+     * schema.org subtype, the booking band gone entirely, and the hero CTA
+     * re-pointed at #contact, the honest target hero.blade.php falls back
+     * to once #booking no longer exists (see that partial's own comment on
+     * the two-part booking/contact check).
+     *
+     * WHY the band goes (template fidelity phase 6): PageContent::
+     * bookingMode() is a CAPABILITY gate. A hotel books stays
+     * unconditionally; every other industry needs a bookable course — a
+     * service linked to an instructor with working hours — and this academy
+     * has a course and nobody to teach it, so it cannot be booked and the
+     * band must not pretend otherwise. The test below it is the other half.
      */
     public function test_correcting_org_industry_changes_the_same_published_pages_response(): void
     {
@@ -215,14 +221,65 @@ class OrganizationIndustryResyncTest extends TestCase
         $this->assertStringContainsString('"@type":"EducationalOrganization"', $after);
         $this->assertStringNotContainsString('"@type":"Hotel"', $after);
 
-        // The booking band is gone entirely — not merely re-labelled —
-        // education is not in IndustryProfile's booking-eligible set.
+        // The booking band is gone entirely — not merely re-labelled — an
+        // academy with a course but no instructor on a rota cannot be
+        // booked, and no longer being a hotel, it no longer books stays.
         $this->assertStringNotContainsString('data-section="booking"', $after);
         $this->assertStringNotContainsString('id="booking"', $after);
         $this->assertStringNotContainsString('Book your stay', $after);
+        $this->assertStringNotContainsString('/services-widget', $after);
 
         // The hero CTA falls back to the contact band, the one target that
         // still exists on this page.
         $this->assertStringContainsString('<a class="rp-cta" href="#contact">', $after);
+    }
+
+    /**
+     * The other half of the capability gate: the same correction on an
+     * academy whose course IS bookable — an instructor with working hours —
+     * keeps the band, re-pointed from the stay widget at the APPOINTMENT
+     * widget, with education's own verb on it and `source=landing` for
+     * attribution. Nothing about the industry decides this; the rota does.
+     */
+    public function test_correcting_org_industry_keeps_the_band_when_the_tenant_can_actually_be_booked(): void
+    {
+        $org = $this->org(['industry' => 'hotel']);
+        $brand = $this->defaultBrand($org);
+
+        $page = LandingPage::create([
+            'organization_id' => $org->id, 'brand_id' => $brand->id, 'slug' => 'the-bookable-academy',
+            'template_key' => 'ruled_page', 'industry' => $org->resolved_industry, 'status' => 'published',
+            'published_at' => now(),
+            'content' => ['hero' => ['headline' => 'Hexa Academy']],
+        ]);
+        foreach (['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'] as $i => $key) {
+            $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
+        }
+        Property::create([
+            'organization_id' => $org->id, 'brand_id' => $brand->id, 'name' => 'Hexa Academy',
+            'phone' => '+371 20000000', 'address' => '1 Main St', 'city' => 'Riga',
+            'country' => 'Latvia', 'is_active' => true,
+        ]);
+        \App\Models\Service::create(['organization_id' => $org->id, 'brand_id' => $brand->id, 'name' => 'Algebra 101', 'is_active' => true]);
+        \App\Models\ServiceMaster::create(['organization_id' => $org->id, 'brand_id' => $brand->id, 'name' => 'Dr Vale', 'is_active' => true]);
+        $this->seedBookableSchedule($org->id);
+
+        $url = 'http://' . config('landing.host') . '/the-bookable-academy';
+
+        $before = $this->get($url)->getContent();
+        $this->assertStringContainsString('/booking-widget?', $before);
+        $this->assertStringNotContainsString('/services-widget', $before);
+
+        $org->update(['industry' => 'education']);
+
+        $after = $this->get($url)->getContent();
+
+        $this->assertStringContainsString('data-section="booking"', $after);
+        $this->assertStringContainsString('/services-widget?', $after);
+        $this->assertStringContainsString('source=landing', $after);
+        $this->assertStringNotContainsString('/booking-widget', $after);
+        $this->assertStringContainsString('Book a lesson', $after);
+        $this->assertStringNotContainsString('Book your stay', $after);
+        $this->assertStringContainsString('<a class="rp-cta" href="#booking">', $after);
     }
 }

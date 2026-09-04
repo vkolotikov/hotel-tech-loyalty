@@ -13,14 +13,13 @@
 
   data-item-id is the author's per-item hook and it carries the service's own
   id. data-service-id is the author's booking hook, and it carries the same
-  value — BUT the booking widget cannot yet consume it: /booking-widget
-  accepts org, lang, color and tpl and nothing else, so a per-service link
-  would land every row on the same form with the treatment unset. The
-  attribute is emitted because it is the author's declared contract and it is
-  the hook a future appointment-mode widget will read; the LINK is honest
-  about what it does today, which is open the booking flow. That gap is
-  recorded in this task's report rather than papered over with a query
-  parameter no endpoint reads.
+  value — and since template fidelity phase 6 the LINK carries it too, as
+  `&service={id}` on the appointment widget's URL. The ids match by
+  construction: this band lists App\Models\Service rows and
+  ServicePublicController::config() publishes `'id' => $s->id` from the same
+  table, so the widget opens with this treatment already chosen
+  (services-widget.blade.php's presetService). One attribute wide, and only
+  when $bookingIsFlow — a fallback href (tel:, #site-footer) takes no query.
 
   A row with no price asserts nothing — no zero, no bare currency code, no
   placeholder dash. A studio that quotes on consultation is a normal studio.
@@ -111,7 +110,7 @@
 @endif
             </div>
 @if ($bookingHref !== null)
-            <a class="service-row__action" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ $rowCtaLabel }} <span aria-hidden="true">↗</span></a>
+            <a class="service-row__action" href="{{ $bookingIsFlow ? $bookingHref . '&service=' . $service->id : $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ $rowCtaLabel }} <span aria-hidden="true">↗</span></a>
 @endif
           </article>
 @endforeach

@@ -128,8 +128,13 @@
     // the author words this one "Reserve your ritual" and the one in his
     // closing panel "Book now", which is a distinction the page cannot make
     // with a single label (template fidelity 5.2).
+    //
+    // The author's wording is the wording of the BOOKING control. When the
+    // flow is not on offer the layout has already relabelled every Book
+    // control for what it actually does (6.4), and this one follows it
+    // rather than printing "Reserve your ritual" over a phone link.
     $ctaLabel = trim((string) ($copy['cta_label'] ?? ''));
-    $ctaLabel = $ctaLabel !== '' ? $ctaLabel : $bookingLabel;
+    $ctaLabel = ($ctaLabel !== '' && $bookingIsFlow) ? $ctaLabel : $bookingLabel;
 @endphp
     <section @class(['hero', 'hero--cinematic', 'hero--plain' => $heroImage === null]) id="top" data-block="hero" data-variant="cinematic-image">
 @if ($heroImage !== null)

@@ -11,6 +11,7 @@ use App\Models\ReviewSubmission;
 use App\Models\Service;
 use App\Models\ServiceMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
@@ -606,25 +607,99 @@ class NocturneRitualRenderTest extends TestCase
     // ─── The integration contract ─────────────────────────────────────────
 
     /**
-     * The booking band is gated to the hotel industry by
-     * PageContent::count('booking'), because the widget asks hotel
-     * questions. On an industry it does not fit, the "Book" controls fall
-     * back to the footer's contact hub and DROP the data-action with them:
-     * a link that does not open the booking widget must not claim to.
+     * THE HALF OF THE OLD GATE THAT SURVIVES VERBATIM (template fidelity
+     * 6.6): a beauty org with the schedule removed renders no band and no
+     * dead hook. The gate is a CAPABILITY test now — PageContent::
+     * bookingMode() — and this tenant has treatments and practitioners,
+     * linked, but nobody with working hours, which is exactly the tenant
+     * the scheduler could never offer a time to. The "Book" controls DROP
+     * the data-action with the band: a link that does not open the booking
+     * widget must not claim to.
+     *
+     * And they are never dead (6.4): the business publishes a phone number,
+     * so every Book control dials it and says so.
      */
-    public function test_a_beauty_page_offers_no_booking_widget_and_no_dead_hook(): void
+    public function test_a_beauty_page_with_no_schedule_offers_no_booking_widget_and_no_dead_hook(): void
     {
+        $this->seedWidgetOrganization();
         $this->seedLikeTheKit();
+        $this->seedBookableSchedule();
+        DB::table('service_master_schedules')->delete();
+
         $body = $this->body();
 
         $this->assertStringNotContainsString('data-block="booking"', $body);
         $this->assertStringNotContainsString('data-action="open-booking"', $body);
         $this->assertStringNotContainsString('data-service-id', $body);
+        $this->assertStringNotContainsString('/services-widget', $body);
+        $this->assertStringNotContainsString('/booking-widget', $body);
 
-        // The control itself survives, pointing at the details the page does
-        // publish. Never a dead control, and never an absent one where there
-        // is somewhere real to go.
+        // The control itself survives, pointing at the phone the page does
+        // publish, and worded for what it does.
+        $this->assertStringContainsString('href="tel:+4401225555014"', $body);
+        $this->assertStringContainsString('Call to book', $body);
+        $this->assertStringNotContainsString('Book appointment', $body);
+    }
+
+    /** The last resort (6.4): no phone to dial, so the footer hub, relabelled. */
+    public function test_with_no_phone_the_book_controls_fall_back_to_the_footer_hub(): void
+    {
+        $this->seedLikeTheKit();
+        // The query builder, not the model: Property's TenantScope fails
+        // closed with no bound tenant and the update would touch nothing.
+        DB::table('properties')->update(['phone' => null]);
+
+        $body = $this->body();
+
+        $this->assertStringNotContainsString('data-action="open-booking"', $body);
+        $this->assertStringNotContainsString('href="tel:', $body);
         $this->assertStringContainsString('href="#site-footer"', $body);
+        $this->assertStringContainsString('Contact us to book', $body);
+    }
+
+    /**
+     * The other half (6.1 / 6.2): the same beauty org, once one practitioner
+     * has working hours, gets the band, and every hook on the page points at
+     * the APPOINTMENT widget — never the hotel one — with the row's own id
+     * on it, so "Book Still Water" opens on Still Water and "Book with Amara"
+     * opens on Amara. `source=landing` rides along for attribution (6.7).
+     */
+    public function test_a_bookable_beauty_page_wires_every_hook_to_the_appointment_flow(): void
+    {
+        $this->seedWidgetOrganization();
+        $this->seedLikeTheKit();
+        $ids = $this->seedBookableSchedule();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-block="booking"', $body);
+        $this->assertStringContainsString('data-action="open-booking"', $body);
+
+        preg_match_all('/<a[^>]*data-action="open-booking"[^>]*>/i', $body, $matches);
+        $this->assertNotEmpty($matches[0]);
+
+        foreach ($matches[0] as $tag) {
+            $this->assertStringContainsString('/services-widget?', $tag);
+            $this->assertStringContainsString('source=landing', $tag);
+            $this->assertStringContainsString('rel="noopener"', $tag);
+            $this->assertStringNotContainsString('/booking-widget', $tag);
+        }
+
+        // The deep links: one attribute wide, the page's own ids.
+        $this->assertStringContainsString('&amp;service=' . $ids['service'] . '"', $body);
+        $this->assertStringContainsString('&amp;master=' . $ids['master'] . '"', $body);
+        $this->assertStringContainsString('data-service-id="' . $ids['service'] . '"', $body);
+
+        // The flow is live, so the controls carry the booking verb, not the
+        // fallback's.
+        $this->assertStringNotContainsString('Call to book', $body);
+        $this->assertStringNotContainsString('Contact us to book', $body);
+
+        // 6.4: the phone line beside the button, in the closing panel.
+        $this->assertMatchesRegularExpression(
+            '/<section class="booking-panel[^"]*"[^>]*>.*?<a class="text-link" href="tel:\+4401225555014"/s',
+            $body,
+        );
     }
 
     public function test_a_hotel_page_wires_every_booking_hook_to_the_real_flow(): void
@@ -1581,6 +1656,10 @@ class NocturneRitualRenderTest extends TestCase
      */
     public function test_the_book_controls_take_the_wording_the_author_gives_each_placement(): void
     {
+        // The wording is the BOOKING controls' wording, so the flow has to be
+        // live: with no widget token the controls fall back to the phone and
+        // are relabelled for what they then do (6.4).
+        $this->seedWidgetOrganization();
         $page = $this->seedLikeTheKit('hotel');
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'     => ['cta_label' => 'Reserve your ritual'],

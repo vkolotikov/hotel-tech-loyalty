@@ -91,6 +91,23 @@ final class BookingWidgetVocab
             'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
             'svc_details_title'  => 'Your details',
             'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+
+            // Template fidelity phase 6.3 — the services widget's STEP BAR
+            // and its summary card used to sit outside this map entirely
+            // (`var steps = ['Service','Master','Date',…]`), so a beauty
+            // guest arriving from a page that said "Therapists" read
+            // "Master" — the data model's noun, never a customer's. Six
+            // labels, one per step the renderer draws (1=service, 2=provider,
+            // 3=date, 4=time, 5=extras, 6=confirm; the post-submit step 7
+            // collapses onto 6). The provider noun is the one that moves per
+            // industry; the rest are universal.
+            'svc_steps'          => ['Service', 'Provider', 'Date', 'Time', 'Extras', 'Confirm'],
+            // The summary card's row label for the chosen provider, the
+            // value it prints when none was chosen, and the empty state the
+            // provider step shows for a service nobody performs.
+            'svc_provider_label' => 'Provider',
+            'svc_any_provider'   => 'Any available',
+            'svc_no_providers'   => 'No providers configured for this service yet.',
         ];
     }
 
@@ -111,6 +128,10 @@ final class BookingWidgetVocab
             'svc_service_sub'    => "Choose the class or session you'd like to book.",
             'svc_provider_title' => 'Choose your trainer',
             'svc_provider_sub'   => 'Pick a specific trainer for your session.',
+            'svc_steps'          => ['Class', 'Trainer', 'Date', 'Time', 'Add-ons', 'Confirm'],
+            'svc_provider_label' => 'Trainer',
+            'svc_any_provider'   => 'Any available trainer',
+            'svc_no_providers'   => 'No trainer runs this class yet.',
         ];
     }
 
@@ -131,6 +152,10 @@ final class BookingWidgetVocab
             'svc_service_sub'    => "Choose the lesson or course you'd like to book.",
             'svc_provider_title' => 'Choose your teacher',
             'svc_provider_sub'   => 'Pick a specific teacher for your lesson.',
+            'svc_steps'          => ['Lesson', 'Teacher', 'Date', 'Time', 'Add-ons', 'Confirm'],
+            'svc_provider_label' => 'Teacher',
+            'svc_any_provider'   => 'Any available teacher',
+            'svc_no_providers'   => 'No teacher offers this lesson yet.',
         ];
     }
 
@@ -151,6 +176,10 @@ final class BookingWidgetVocab
             'svc_service_title'  => 'Select a service',
             'svc_provider_title' => 'Choose your specialist',
             'svc_provider_sub'   => "Pick a specific specialist for your {$noun}.",
+            'svc_steps'          => ['Service', 'Specialist', 'Date', 'Time', 'Add-ons', 'Confirm'],
+            'svc_provider_label' => 'Specialist',
+            'svc_any_provider'   => 'Any available specialist',
+            'svc_no_providers'   => "No specialist offers this {$noun} yet.",
         ];
     }
 
@@ -178,6 +207,13 @@ final class BookingWidgetVocab
             'svc_provider_sub'   => 'Pick the practitioner you would like for your visit.',
             'svc_details_title'  => 'Client details',
             'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+            // "Therapist" because that is the word the landing page a guest
+            // arrives from prints for these people (IndustryProfile beauty
+            // peopleLabel) — the step bar must say what the page said.
+            'svc_steps'          => ['Treatment', 'Therapist', 'Date', 'Time', 'Extras', 'Confirm'],
+            'svc_provider_label' => 'Therapist',
+            'svc_any_provider'   => 'Any available therapist',
+            'svc_no_providers'   => 'No therapist offers this treatment yet.',
         ];
     }
 
@@ -205,6 +241,10 @@ final class BookingWidgetVocab
             'svc_provider_sub'   => 'Pick the practitioner or doctor for your appointment.',
             'svc_details_title'  => 'Patient details',
             'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+            'svc_steps'          => ['Appointment', 'Practitioner', 'Date', 'Time', 'Add-ons', 'Confirm'],
+            'svc_provider_label' => 'Practitioner',
+            'svc_any_provider'   => 'Any available practitioner',
+            'svc_no_providers'   => 'No practitioner offers this appointment yet.',
         ];
     }
 
@@ -232,6 +272,12 @@ final class BookingWidgetVocab
             'svc_provider_sub'   => 'Pick where you would like to be seated.',
             'svc_details_title'  => 'Diner details',
             'svc_details_sub'    => "We'll send confirmation to the email you provide.",
+            // The hospitality kits word this band as a TABLE reservation, so
+            // the "provider" a diner picks is a section of the room.
+            'svc_steps'          => ['Booking', 'Section', 'Date', 'Time', 'Add-ons', 'Confirm'],
+            'svc_provider_label' => 'Section',
+            'svc_any_provider'   => 'Any available section',
+            'svc_no_providers'   => 'No section is set up for this booking yet.',
         ];
     }
 }

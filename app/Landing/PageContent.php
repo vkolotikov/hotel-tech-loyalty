@@ -60,7 +60,30 @@ final class PageContent
          * "Leave a review" link anyway would be advertising a dead end.
          */
         public readonly ?array          $feedbackForm,
+        /**
+         * Whether this page's tenant can ACTUALLY take an appointment
+         * online — the fact behind {@see bookingMode()}'s 'appointment'
+         * answer, computed once in for() by {@see appointmentsBookable()}.
+         * Private: no template reads it directly, because "can this tenant
+         * be booked" has exactly one public spelling, bookingMode(), and a
+         * partial that consulted this flag instead would be a second gate.
+         */
+        private readonly bool           $appointmentsBookable,
     ) {}
+
+    /**
+     * The two ways a landing page can be booked online (template fidelity
+     * phase 6), as returned by {@see bookingMode()}.
+     *
+     * 'stay' frames /booking-widget — rooms, check-in, check-out, guests.
+     * 'appointment' frames /services-widget — service, practitioner, date,
+     * time, extras, details, confirm. Spelled as constants because the
+     * controller branches the frame URL on the same two strings this class
+     * returns, and two literals kept in step by eye is how one of them
+     * drifts.
+     */
+    public const BOOKING_STAY        = 'stay';
+    public const BOOKING_APPOINTMENT = 'appointment';
 
     /** Fewer than this many reviews and no aggregate is shown at all. */
     public const MIN_REVIEWS_FOR_AGGREGATE = 4;
@@ -190,7 +213,80 @@ final class PageContent
             // used the token (BookingTab.tsx); this is the page catching up.
             widgetToken: self::widgetToken($orgId),
             feedbackForm: self::feedbackForm($orgId),
+            appointmentsBookable: self::appointmentsBookable($orgId, $brandId),
         );
+    }
+
+    /**
+     * How this page can be booked online, or null when it cannot be.
+     *
+     * Until template fidelity phase 6 the booking band was gated on the
+     * INDUSTRY — `industry === 'hotel'` — because the only widget this class
+     * knew about asks check-in / check-out / adults / children, and pointing
+     * a spa's "Book appointment" button at it would have been worse than no
+     * button. That gate went false the day /services-widget shipped: a
+     * seven-step appointment flow (service → practitioner → date → time →
+     * extras → details → confirm), already on the CSP frame allowlist, and
+     * every one of the owner's six kits composes a booking band around
+     * exactly that flow. So the question is no longer "which industry is
+     * this" but "which widget can this tenant honestly be sent to":
+     *
+     *   - BOOKING_STAY for a hotel, unconditionally, as before;
+     *   - BOOKING_APPOINTMENT for any other industry whose tenant can
+     *     actually take an appointment — see {@see appointmentsBookable()}
+     *     for the precondition, which is exactly what the scheduler
+     *     enforces and nothing looser;
+     *   - null otherwise, which is what makes count('booking') 0 and the
+     *     band, its nav anchor and every open-booking hook disappear
+     *     together.
+     *
+     * The industry test survives for hotels alone and reads the SAME resolved
+     * profile the kickers read (IndustryProfile::for($page->industry) in
+     * for() above), not a second, independent read of the org.
+     */
+    public function bookingMode(): ?string
+    {
+        if ($this->profile->industry === 'hotel') {
+            return self::BOOKING_STAY;
+        }
+
+        return $this->appointmentsBookable ? self::BOOKING_APPOINTMENT : null;
+    }
+
+    /**
+     * Can this page's tenant take an appointment online — yes or no, in one
+     * org-scoped query.
+     *
+     * THE PRECONDITION IS EXACTLY WHAT ServiceSchedulingService ENFORCES,
+     * and deliberately nothing looser: at least one active Service (the same
+     * brand-scoped, active set the services band lists), linked to at least
+     * one active ServiceMaster — `availableSlots()` returns [] on an empty
+     * master set — who has at least one active `service_master_schedules`
+     * row whose window is not empty — `workingWindowsForDate()` returns []
+     * with no schedule and skips a row whose end is not after its start.
+     * Anything looser ships a band whose widget says "no times available"
+     * forever, which is the dead control this whole class exists to refuse.
+     *
+     * Services are filtered the way the page's own list is (org AND brand),
+     * because the chips on this page are what the deep links carry; masters
+     * and schedules are org-scoped like the public widget's own config
+     * endpoint, which does not brand-filter either. withoutGlobalScopes() on
+     * every level for the reason every query in this class carries it: a
+     * public page request has no bound tenant, and TenantScope fails closed.
+     */
+    private static function appointmentsBookable(int $orgId, ?int $brandId): bool
+    {
+        return self::scopedToBrand(self::scoped(Service::query(), $orgId), $brandId)
+            ->where('services.is_active', true)
+            ->whereHas('masters', fn (Builder $masters) => $masters
+                ->withoutGlobalScopes()
+                ->where('service_masters.organization_id', $orgId)
+                ->where('service_masters.is_active', true)
+                ->whereHas('schedules', fn (Builder $rows) => $rows
+                    ->withoutGlobalScopes()
+                    ->where('service_master_schedules.is_active', true)
+                    ->whereColumn('service_master_schedules.end_time', '>', 'service_master_schedules.start_time')))
+            ->exists();
     }
 
     /**
@@ -585,22 +681,18 @@ final class PageContent
             // up (an eyebrow over blank space is a fragment), pointed at
             // whichever half of the band is the reason it exists.
             'gallery'  => count($this->galleryImages($sectionKey)),
-            // The booking widget asks Check-in / Check-out / Adults /
-            // Children -- hotel questions -- and is framed unmodified on
-            // every industry's page (booking.blade.php). Until it grows an
-            // appointment mode, it fits exactly one industry, so it is
-            // gated on $this->profile->industry -- the SAME resolved value
-            // the kickers already read (IndustryProfile::for($page->industry)
-            // in for() above), not a second, independent read of the org.
-            // 'other' industries besides hotel still LIST 'booking' in
-            // defaultSections (beauty's shipped list does, deliberately --
-            // see IndustryProfile::all()'s own docblock), so this is the one
-            // place that decides whether the row that lists it actually
-            // renders: has() -- and so the section loop, the wizard's
-            // availability count, and hero's CTA guard, all of which are
-            // expressed in terms of this method -- agree by construction
-            // rather than by each re-deriving the same industry check.
-            'booking'  => $this->profile->industry === 'hotel' ? 1 : 0,
+            // A CAPABILITY gate, not an industry gate (template fidelity
+            // phase 6). The band renders when there is a widget this tenant
+            // can honestly be sent to: the stay widget for a hotel, the
+            // appointment widget for anyone who can actually be booked --
+            // see bookingMode(), which is the one place that decides. This
+            // arm is still the one place that decides whether a row LISTING
+            // 'booking' (beauty's defaultSections does, and so does any
+            // kit that draws the band) actually renders: has() -- and so
+            // the section loop, the wizard's availability count and every
+            // Book control's href -- all read this method and agree by
+            // construction rather than each re-deriving the check.
+            'booking'  => $this->bookingMode() === null ? 0 : 1,
             // ─── The BeautyTech kits' three blocks ───────────────────────
             //
             // Each answered by the SAME question every arm above answers:

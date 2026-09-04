@@ -826,7 +826,8 @@ class PageContentTest extends TestCase
         $this->assertSame(1, $content->count('footer'));
         $this->assertSame(1, $content->count('about'));
         $this->assertSame(0, $content->count('services'));
-        // beauty, not hotel — the booking band is gated on the industry.
+        // beauty with nothing bookable on file — the booking band is gated
+        // on capability (bookingMode(), below), and this tenant has none.
         $this->assertSame(0, $content->count('booking'));
         $this->assertSame(0, $content->count('not_a_section'));
     }
@@ -1253,5 +1254,139 @@ class PageContentTest extends TestCase
 
             $this->assertSame([], PageContent::for($page->fresh())->socialLinks('contact'));
         }
+    }
+
+    // ─── Booking mode (template fidelity phase 6) ─────────────────────────
+    //
+    // The booking band used to be gated on `industry === 'hotel'`. It is
+    // gated on CAPABILITY now — which widget can this tenant honestly be sent
+    // to — and bookingMode() is the one place that answers. count('booking')
+    // is expressed in terms of it, so the two cannot drift.
+
+    /** A hotel books stays, whatever its Services screen holds. */
+    public function test_a_hotel_page_books_stays(): void
+    {
+        $page = LandingPage::create([
+            'organization_id' => 1, 'brand_id' => 1, 'slug' => 'the-hotel',
+            'template_key' => 'ruled_page', 'industry' => 'hotel', 'status' => 'published',
+        ]);
+
+        $content = PageContent::for($page);
+
+        $this->assertSame(PageContent::BOOKING_STAY, $content->bookingMode());
+        $this->assertSame(1, $content->count('booking'));
+    }
+
+    /**
+     * Services and a team are not enough: nobody can be booked until someone
+     * has working hours. This is the "not yet bookable" tenant every new
+     * salon is on day one, and the band must stay off their page rather than
+     * open a widget that says "no times available" forever.
+     */
+    public function test_services_and_team_with_no_schedule_cannot_be_booked(): void
+    {
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Facial', 'is_active' => true]);
+        ServiceMaster::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Zoe', 'is_active' => true]);
+
+        $content = PageContent::for($this->page(1));
+
+        $this->assertNull($content->bookingMode());
+        $this->assertSame(0, $content->count('booking'));
+    }
+
+    public function test_a_linked_master_with_working_hours_makes_appointments_bookable(): void
+    {
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Facial', 'is_active' => true]);
+        ServiceMaster::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Zoe', 'is_active' => true]);
+        $this->seedBookableSchedule();
+
+        $content = PageContent::for($this->page(1));
+
+        $this->assertSame(PageContent::BOOKING_APPOINTMENT, $content->bookingMode());
+        $this->assertSame(1, $content->count('booking'));
+    }
+
+    /**
+     * THE PRECONDITION IS EXACTLY THE SCHEDULER'S, NOTHING LOOSER. Each row
+     * below breaks one of the facts ServiceSchedulingService checks before
+     * it will offer a slot; the band must go with it every time, because a
+     * band whose widget can never offer a time is the dead control this
+     * whole class refuses.
+     */
+    public function test_the_precondition_is_exactly_what_the_scheduler_enforces(): void
+    {
+        $breakages = [
+            'inactive service'  => fn () => DB::table('services')->update(['is_active' => false]),
+            'inactive master'   => fn () => DB::table('service_masters')->update(['is_active' => false]),
+            'inactive schedule' => fn () => DB::table('service_master_schedules')->update(['is_active' => false]),
+            'empty window'      => fn () => DB::table('service_master_schedules')->update(['end_time' => '09:00:00']),
+            'schedule removed'  => fn () => DB::table('service_master_schedules')->delete(),
+            'link removed'      => fn () => DB::table('service_master_service')->delete(),
+        ];
+
+        // One page for every round: PageContent::for() re-reads the tenant's
+        // rows each time, and page() slugs are unique per org/brand.
+        $page = $this->page(1);
+
+        foreach ($breakages as $what => $break) {
+            DB::table('service_master_schedules')->delete();
+            DB::table('service_master_service')->delete();
+            DB::table('service_masters')->delete();
+            DB::table('services')->delete();
+
+            Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Facial', 'is_active' => true]);
+            ServiceMaster::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Zoe', 'is_active' => true]);
+            $this->seedBookableSchedule();
+
+            $this->assertSame(PageContent::BOOKING_APPOINTMENT, PageContent::for($page)->bookingMode(),
+                "The fixture must be bookable before `{$what}` is applied.");
+
+            $break();
+
+            $content = PageContent::for($page);
+
+            $this->assertNull($content->bookingMode(), "With `{$what}` the tenant is still reported bookable.");
+            $this->assertSame(0, $content->count('booking'), "With `{$what}` the band still counts.");
+        }
+    }
+
+    /** The worst answer available: one salon's page bookable on another salon's rota. */
+    public function test_another_tenants_schedule_does_not_make_this_page_bookable(): void
+    {
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Ours', 'is_active' => true]);
+        ServiceMaster::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Our Stylist', 'is_active' => true]);
+
+        Service::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Theirs', 'is_active' => true]);
+        ServiceMaster::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Their Stylist', 'is_active' => true]);
+        $this->seedBookableSchedule(2);
+
+        $this->assertNull(PageContent::for($this->page(1))->bookingMode());
+        $this->assertSame(PageContent::BOOKING_APPOINTMENT, PageContent::for($this->page(2))->bookingMode());
+    }
+
+    /**
+     * Brand-scoped the way the services list is: a sibling brand's bookable
+     * treatment does not put a band on this brand's page, while an
+     * UNASSIGNED (brand_id null) treatment counts for every brand's page —
+     * the same admission scopedToBrand() makes for the list itself, so the
+     * band and the chips inside it agree about which rows exist.
+     */
+    public function test_a_sibling_brands_bookable_service_does_not_count_but_an_unassigned_one_does(): void
+    {
+        $sibling = Service::create(['organization_id' => 1, 'brand_id' => 2, 'name' => 'Sibling Facial', 'is_active' => true]);
+        $master  = ServiceMaster::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Shared Stylist', 'is_active' => true]);
+        $this->seedBookableSchedule(1, $sibling->id, $master->id);
+
+        $page = $this->page(1, 1);
+
+        $this->assertNull(PageContent::for($page)->bookingMode());
+
+        $shared = Service::create(['organization_id' => 1, 'brand_id' => null, 'name' => 'Shared Facial', 'is_active' => true]);
+        DB::table('service_master_service')->insert([
+            'organization_id' => 1, 'service_master_id' => $master->id, 'service_id' => $shared->id,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->assertSame(PageContent::BOOKING_APPOINTMENT, PageContent::for($page->fresh())->bookingMode());
     }
 }

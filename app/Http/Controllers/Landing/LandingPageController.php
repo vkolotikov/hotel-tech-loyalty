@@ -244,11 +244,22 @@ class LandingPageController extends Controller
             // empty rather than erroring. Null token, no URL: a frame that
             // cannot bind is worse than no frame at all.
             // `tpl` dropped with the same edit; nothing reads it.
-            'bookingUrl' => $content->widgetToken === null ? null : LandingPageSecurity::widgetUrl('/booking-widget', [
-                'org'   => $content->widgetToken,
-                'lang'  => app()->getLocale(),
-                'color' => $accent->brand,
-            ]),
+            //
+            // WHICH widget is PageContent::bookingMode()'s answer (template
+            // fidelity phase 6): the stay widget for a hotel, the appointment
+            // widget for a tenant who can actually take one, and no URL at
+            // all when neither applies -- the same answer count('booking')
+            // gives, so the band and its href appear and disappear together.
+            // Both paths are on the frame allowlist; /services/{token} is
+            // deliberately NOT reached for here, because it is absent from
+            // WIDGET_FRAME_PATHS and widgetUrl() would throw on it.
+            //
+            // `source=landing` rides along on the appointment URL only.
+            // ServicePublicController::confirm() reads it and writes it to
+            // the booking, which is the one piece of evidence the owner has
+            // that the templates produce bookings rather than clicks; the
+            // stay widget has no such field and gets nothing it does not read.
+            'bookingUrl' => self::bookingUrl($content, $accent->brand),
             // The chat panel is FRAMED too, and for a harder reason than
             // booking's. The widget injects an inline <script> and positions
             // itself with inline style ATTRIBUTES; this page's script-src and
@@ -294,6 +305,35 @@ class LandingPageController extends Controller
                     '/review/' . $content->feedbackForm['id'],
                     ['key' => $content->feedbackForm['key'], 'color' => $accent->brand],
                 ),
+        ]);
+    }
+
+    /**
+     * The address of the booking flow this page may send a visitor to, or
+     * null when there is none -- see the `bookingUrl` entry in render() for
+     * why each half of that is what it is.
+     *
+     * The org token comes first in the query on purpose: the kits' service
+     * and practitioner chips append `&service=` / `&master=` to this string,
+     * so it must already carry a query for those to attach to, and it does
+     * whenever it is non-null (the token is never blank once the URL is
+     * built at all).
+     */
+    private static function bookingUrl(PageContent $content, string $brandColor): ?string
+    {
+        $mode = $content->bookingMode();
+
+        if ($content->widgetToken === null || $mode === null) {
+            return null;
+        }
+
+        $stay = $mode === PageContent::BOOKING_STAY;
+
+        return LandingPageSecurity::widgetUrl($stay ? '/booking-widget' : '/services-widget', [
+            'org'    => $content->widgetToken,
+            'lang'   => app()->getLocale(),
+            'color'  => $brandColor,
+            'source' => $stay ? null : 'landing',
         ]);
     }
 }

@@ -28,12 +28,13 @@
   what stops a screen reader announcing a question as a phone number.
 
   WHEN THIS BAND RENDERS AT ALL is PageContent::count('booking')'s answer, and
-  today that is the hotel industry only: the widget asks check-in / check-out /
-  adults / children, so no other industry advertises a band it cannot honestly
-  fill. A restaurant on this template therefore closes on the footer's contact
-  hub instead — which is exactly where its fixed Reserve pill already points.
-  This partial does not second-guess that: it is only included when the band is
-  going to render.
+  since template fidelity phase 6 that is a CAPABILITY test, not an industry
+  test: a hotel (the stay widget) or any tenant with a bookable service, section
+  and schedule (the appointment widget, in its restaurant vocabulary — "Booking
+  / Section"). A restaurant that cannot yet take a reservation online closes on
+  the phone or the footer's contact hub instead — which is exactly where its
+  fixed Reserve pill then points. This partial does not second-guess that: it
+  is only included when the band is going to render.
 --}}
 @php
     use App\Landing\Copy;

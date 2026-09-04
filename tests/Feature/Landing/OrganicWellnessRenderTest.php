@@ -10,6 +10,7 @@ use App\Models\ReviewSubmission;
 use App\Models\Service;
 use App\Models\ServiceMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\SetsUpLandingSchema;
 use Tests\TestCase;
@@ -733,14 +734,52 @@ class OrganicWellnessRenderTest extends TestCase
 
     // ─── Booking, feedback and the chat launcher ──────────────────────────
 
-    public function test_a_beauty_page_offers_no_booking_widget_and_no_dead_hook(): void
+    /**
+     * Template fidelity 6.6: a beauty org with the schedule removed renders
+     * no band and no dead hook — the capability gate (PageContent::
+     * bookingMode()), not the old industry gate. The Book controls dial the
+     * phone instead and say so (6.4).
+     */
+    public function test_a_beauty_page_with_no_schedule_offers_no_booking_widget_and_no_dead_hook(): void
     {
+        $this->seedWidgetOrganization();
         $this->seedLikeTheKit();
+        $this->seedBookableSchedule();
+        DB::table('service_master_schedules')->delete();
+
         $body = $this->body();
 
         $this->assertStringNotContainsString('data-block="booking"', $body);
         $this->assertStringNotContainsString('data-action="open-booking"', $body);
-        $this->assertStringContainsString('href="#site-footer"', $body);
+        $this->assertStringNotContainsString('/services-widget', $body);
+        $this->assertStringContainsString('href="tel:+37120000000"', $body);
+        $this->assertStringContainsString('Call to book', $body);
+    }
+
+    /** 6.1 / 6.2: once bookable, every hook opens the appointment widget on the row's own id. */
+    public function test_a_bookable_beauty_page_wires_every_hook_to_the_appointment_flow(): void
+    {
+        $this->seedWidgetOrganization();
+        $this->seedLikeTheKit();
+        $ids = $this->seedBookableSchedule();
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('data-block="booking"', $body);
+
+        preg_match_all('/<a[^>]*data-action="open-booking"[^>]*>/i', $body, $matches);
+        $this->assertNotEmpty($matches[0]);
+
+        foreach ($matches[0] as $tag) {
+            $this->assertStringContainsString('/services-widget?', $tag);
+            $this->assertStringContainsString('source=landing', $tag);
+            $this->assertStringContainsString('rel="noopener"', $tag);
+            $this->assertStringNotContainsString('/booking-widget', $tag);
+        }
+
+        $this->assertStringContainsString('&amp;service=' . $ids['service'] . '"', $body);
+        $this->assertStringContainsString('&amp;master=' . $ids['master'] . '"', $body);
+        $this->assertStringNotContainsString('Call to book', $body);
     }
 
     public function test_a_hotel_page_wires_every_booking_hook_to_the_real_flow(): void

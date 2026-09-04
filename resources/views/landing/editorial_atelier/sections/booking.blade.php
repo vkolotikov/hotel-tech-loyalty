@@ -29,11 +29,12 @@
   what D6 records. `call_short` is the compact label the narrow layout uses.
 
   WHEN THIS BAND RENDERS AT ALL is PageContent::count('booking')'s answer,
-  and today that is the hotel industry only: the widget asks check-in /
-  check-out / adults / children, so no other industry advertises a band it
-  cannot honestly fill. A salon on this template therefore closes on the
-  footer's contact hub instead. This partial does not second-guess that: it
-  is only included when the band is going to render.
+  and since template fidelity phase 6 that is a CAPABILITY test, not an
+  industry test: a hotel (the stay widget) or any tenant with a bookable
+  service, stylist and schedule (the appointment widget). A salon that
+  cannot yet be booked online closes on the phone or the footer's contact
+  hub instead. This partial does not second-guess that: it is only included
+  when the band is going to render.
 --}}
 @php
     use App\Landing\Copy;

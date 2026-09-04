@@ -116,7 +116,11 @@
 @endif
             </p>
 @if ($bookingHref !== null)
-            <a class="service-item__action" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ $rowCtaLabel }} <span aria-hidden="true">↗</span></a>
+            {{-- `&service={id}` deep-links the appointment widget to this row
+                 (template fidelity 6.2): the id is the same services.id the
+                 widget's config publishes, so it opens with the service
+                 chosen. Only on the live flow — a fallback href takes no query. --}}
+            <a class="service-item__action" href="{{ $bookingIsFlow ? $bookingHref . '&service=' . $service->id : $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" data-service-id="{{ $service->id }}" target="_blank" rel="noopener"@endif aria-label="{{ __('Book :name', ['name' => $service->name]) }}">{{ $rowCtaLabel }} <span aria-hidden="true">↗</span></a>
 @endif
           </li>
 @endforeach

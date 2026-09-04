@@ -350,7 +350,16 @@ class ServicePublicController extends Controller
             'extras.*.id'       => 'required_with:extras|integer',
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
             'payment_intent_id' => 'nullable|string|max:255',
+            // Attribution (template fidelity phase 6.7). The widget has read
+            // `?source=` and posted it since the mobile app's WebView needed
+            // 'mobile_app', but this rule was missing, so validate() dropped
+            // the field and every booking below was stamped 'widget' -- and
+            // the owner had no way to answer "is the landing page actually
+            // producing bookings?". A landing page sends 'landing'.
+            'source'            => self::SOURCE_RULES,
         ]);
+
+        $source = self::bookingSource($data);
 
         $orgId = app('current_organization_id');
         $idempotency = $request->header('Idempotency-Key');
@@ -418,7 +427,7 @@ class ServicePublicController extends Controller
             : "svc:{$service->id}";
 
         try {
-            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey) {
+            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source) {
                 DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
 
                 // Re-run the conflict check inside the lock — definitive source of truth.
@@ -486,7 +495,7 @@ class ServicePublicController extends Controller
                     'status'            => 'confirmed',
                     'payment_status'    => $paymentStatus,
                     'stripe_payment_intent_id' => $data['payment_intent_id'] ?? null,
-                    'source'            => 'widget',
+                    'source'            => $source,
                     'customer_notes'    => $data['customer_notes'] ?? null,
                 ]);
 
@@ -859,7 +868,7 @@ class ServicePublicController extends Controller
             ServiceBookingSubmission::withoutGlobalScopes()->create([
                 'organization_id'    => $orgId,
                 'idempotency_key'    => $idempotency,
-                'source'             => 'widget',
+                'source'             => self::bookingSource($data),
                 'outcome'            => $outcome,
                 'service_booking_id' => $bookingId,
                 'customer_email'     => $data['customer_email'] ?? null,
@@ -870,6 +879,32 @@ class ServicePublicController extends Controller
         } catch (\Throwable) {
             // swallow — submission log must never block the booking
         }
+    }
+
+    /**
+     * What a booking's `source` may look like on the wire.
+     *
+     * A FORMAT rule rather than an allowlist, on purpose. `source` is a
+     * hidden attribution tag no guest ever types; the values that exist
+     * today are 'widget' (the embed), 'mobile_app' (the member app's
+     * WebView) and 'landing' (a landing page, template fidelity phase 6),
+     * and a partner who embeds the widget with a tag of their own is
+     * producing attribution data, not an error. What the rule refuses is
+     * what would actually hurt: a value the 30-character column cannot hold
+     * (a Postgres error on the confirm, i.e. a lost booking) or characters
+     * that are not a tag. Lower-cased on the way in so 'Landing' and
+     * 'landing' are one row in a report.
+     */
+    public const SOURCE_RULES = ['nullable', 'string', 'max:30', 'regex:/^[A-Za-z0-9_-]+$/'];
+
+    public const DEFAULT_SOURCE = 'widget';
+
+    /** The validated `source`, normalised, or the default when none was sent. */
+    public static function bookingSource(array $data): string
+    {
+        $source = strtolower(trim((string) ($data['source'] ?? '')));
+
+        return $source === '' ? self::DEFAULT_SOURCE : $source;
     }
 
     private function bindOrg(Request $request): void

@@ -118,13 +118,21 @@ final class IndustryProfile
      * that round; before it, this method authored `beauty` alone and every
      * other industry silently inherited its vocabulary through the {@see
      * for()} fallback — a live education tenant was offered "Treatments"
-     * and "Therapists" as a direct result. `defaultSections` lists 'booking'
-     * only for `hotel`: the widget it embeds is hotel-shaped (see 4.3), so
-     * no other profile advertises a band it cannot honestly fill, and a
-     * profile that omits 'booking' from `defaultSections` also has no
-     * `booking` key under `kickers` — {@see kicker()} returns '' for a
-     * missing key rather than fatal, which is what lets a legacy section row
-     * from a template rollback render inert instead of crashing the page.
+     * and "Therapists" as a direct result.
+     *
+     * `defaultSections` lists 'booking' for `hotel` AND `beauty` — beauty
+     * deliberately, so that a salon's page is created with the row and the
+     * gate decides whether it renders. Which gate changed in template
+     * fidelity phase 6: {@see PageContent::bookingMode()} is a CAPABILITY
+     * test (a hotel, or any tenant with a bookable service, practitioner and
+     * schedule) rather than an industry test, so a band can now appear on a
+     * page in ANY industry — a kit template draws one, and a clinic with
+     * working hours on file gets it. That is why EVERY profile carries a
+     * `booking` kicker below, including the seven whose `defaultSections`
+     * never seed the row: {@see kicker()} returns '' for a missing key, and
+     * an empty string over a band that renders is a blank eyebrow, not a
+     * graceful degrade. The '' return itself stays, for the legacy section
+     * row a template rollback can leave behind on a key no profile knows.
      *
      * `fitness`'s accent is the one value NOT taken verbatim from the spec
      * table: the spec lists #C25A2B, which sits in Accent's WCAG dead band
@@ -195,6 +203,7 @@ final class IndustryProfile
                     'about'    => 'The clinic',
                     'team'     => 'Your care team',
                     'reviews'  => 'Patient words',
+                    'booking'  => 'Appointments',
                     'contact'  => 'Visit us',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -214,6 +223,7 @@ final class IndustryProfile
                     // the same ledger-authored replacement.
                     'team'     => 'Behind the pass',
                     'reviews'  => 'Word of mouth',
+                    'booking'  => 'Reservations',
                     'contact'  => 'Find us',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -234,6 +244,7 @@ final class IndustryProfile
                     'about'    => 'The firm',
                     'team'     => 'Who represents you',
                     'reviews'  => 'Client words',
+                    'booking'  => 'Consultations',
                     'contact'  => 'Reach us',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -251,6 +262,7 @@ final class IndustryProfile
                     'about'    => 'The agency',
                     'team'     => 'Your agents',
                     'reviews'  => 'From our clients',
+                    'booking'  => 'Viewings',
                     'contact'  => 'Talk to us',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -268,6 +280,7 @@ final class IndustryProfile
                     'about'    => 'The academy',
                     'team'     => 'Who teaches',
                     'reviews'  => 'From our students',
+                    'booking'  => 'Book a place',
                     'contact'  => 'Get in touch',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -287,6 +300,7 @@ final class IndustryProfile
                     'about'    => 'The studio',
                     'team'     => 'Your coaches',
                     'reviews'  => 'Member words',
+                    'booking'  => 'Save your spot',
                     'contact'  => 'Find the gym',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
@@ -305,6 +319,7 @@ final class IndustryProfile
                     'about'    => 'About us',
                     'team'     => 'The people',
                     'reviews'  => 'Kind words',
+                    'booking'  => 'Book a time',
                     'contact'  => 'Contact',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],

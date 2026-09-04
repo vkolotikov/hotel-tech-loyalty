@@ -59,10 +59,10 @@ describe('isOfferable', () => {
  * it is not just inlined at the two render call sites.
  */
 describe('unavailableReason', () => {
-  const generic = 'Nothing to show yet. Add some from Your booking button.'
+  const generic = 'Nothing to show yet. Add some from Your Services and Team screens.'
 
   it('prefers the backend reason when the row carries one', () => {
-    const reason = "Online booking currently supports hotel stays. Your 'Book appointment' button will point visitors at your contact details instead."
+    const reason = "Online booking needs a service on your Services screen, linked to a team member on your Team screen who has working hours. Until then your 'Book appointment' button will point visitors at your phone number or contact details instead."
     expect(unavailableReason(meta({ key: 'booking', reason }), generic)).toBe(reason)
   })
 
