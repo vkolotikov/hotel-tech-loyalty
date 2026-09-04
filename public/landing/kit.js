@@ -25,7 +25,7 @@
  * three hooks and only one of them needs JavaScript:
  *
  *   - data-action="open-booking" is a real <a href> to the booking flow,
- *     rendered server-side exactly the way ruled_page's booking band does it
+ *     rendered server-side by each kit's layout
  *     (LandingPageSecurity::widgetUrl('/booking-widget', …), opened in a new
  *     tab). Where no booking origin is configured the link is not rendered at
  *     all rather than rendered dead, so there is nothing for a click handler

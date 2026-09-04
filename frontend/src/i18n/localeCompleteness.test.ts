@@ -381,12 +381,9 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_phone',
     'landing_pages.editor.field_email',
     'landing_pages.editor.field_address',
-    // ...and the five WORDING overrides above them, also surfaced by 1.3.
-    'landing_pages.editor.field_phone_label',
+    // ...and the one WORDING override every kit's footer hub still reads
+    // (the other four the retired generic design printed left with it).
     'landing_pages.editor.field_email_label',
-    'landing_pages.editor.field_address_label',
-    'landing_pages.editor.field_map_label',
-    'landing_pages.editor.field_closed_label',
     // announcement.
     'landing_pages.editor.field_text',
     'landing_pages.editor.field_cta_label',

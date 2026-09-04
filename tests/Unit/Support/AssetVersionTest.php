@@ -6,7 +6,7 @@ use Tests\TestCase;
 
 /**
  * F2 (phase 3c final fix wave): the cache-bust query string for
- * ruled_page.css/js. Deliberately does not create, edit or delete anything
+ * the landing stylesheets and script. Deliberately does not create, edit or delete anything
  * under public/ — every assertion below reads real, already-committed
  * files (the two the fix actually targets, plus a couple of others already
  * on disk for the "different inputs" comparisons) rather than mutating the
@@ -24,15 +24,15 @@ class AssetVersionTest extends TestCase
 {
     public function test_a_real_file_gets_a_non_empty_version_query(): void
     {
-        $query = AssetVersion::query('landing/ruled_page.css');
+        $query = AssetVersion::query('landing/nocturne_ritual.css');
 
         $this->assertMatchesRegularExpression('/^\?v=[0-9a-f]{10}$/', $query);
     }
 
     public function test_two_different_files_get_different_versions(): void
     {
-        $css = AssetVersion::hash('landing/ruled_page.css');
-        $js  = AssetVersion::hash('landing/ruled_page.js');
+        $css = AssetVersion::hash('landing/nocturne_ritual.css');
+        $js  = AssetVersion::hash('landing/kit.js');
 
         $this->assertNotNull($css);
         $this->assertNotNull($js);
@@ -41,8 +41,8 @@ class AssetVersionTest extends TestCase
 
     public function test_the_same_file_gets_the_same_version_every_call(): void
     {
-        $first  = AssetVersion::query('landing/ruled_page.css');
-        $second = AssetVersion::query('landing/ruled_page.css');
+        $first  = AssetVersion::query('landing/nocturne_ritual.css');
+        $second = AssetVersion::query('landing/nocturne_ritual.css');
 
         $this->assertSame($first, $second, 'Calling the helper twice for the same unchanged file gave two different versions.');
     }

@@ -23,20 +23,18 @@ import {
  *
  * Six palette cards, four type-pairing cards, and — on the section rows next
  * door — twenty-one tone swatches. All three existed to make ONE generic
- * template (`ruled_page`) look varied, and they worked: that design reads
- * `theme.palette`, `theme.font_pairing` and each band's tone class, and
- * still does, for the pages already on it.
+ * template (`ruled_page`) look varied, and they worked: that design read
+ * `theme.palette`, `theme.font_pairing` and each band's tone class.
  *
  * Six faithful conversions of the owner's own HTML/CSS kits later, none of
  * that is a choice anybody is making. Each kit ships its author's complete
  * `:root` — their colours, their faces, their composed dark/paper/sand
- * rhythm — and its layout reads none of those three keys; that is exactly
- * what each row's `supports` has been publishing. With the generic design
- * retired from the offer (see `offerable` in `editorCatalog.ts`), every
- * design a tenant can now choose ignores all three, so the controls could
- * only ever be drawn to do nothing. A control that cannot act is not
- * rendered — this project's own rule — and the honest end state of that rule
- * for a control no offerable design honours is deletion, not a gate.
+ * rhythm — and its layout reads none of those three keys. The generic
+ * design was retired from the offer and then deleted outright, with its
+ * three keys' write paths, so the controls could only ever have been drawn
+ * to do nothing. A control that cannot act is not rendered — this project's
+ * own rule — and the honest end state of that rule for a control no shipped
+ * design honours is deletion, not a gate.
  *
  * THE ACCENT STAYS. It is the one override every kit was converted to
  * honour, spent on the family each author uses as accent TEXT rather than as
@@ -135,10 +133,9 @@ type DesignPanelProps = {
   /**
    * WHAT THE SELECTED DESIGN HONOURS, off the served `templates[*].supports`.
    *
-   * One reader left: `brand_color`. The other three bools described controls
-   * this panel no longer has — see this file's own note above — and they stay
-   * on the wire because they still describe something true about each design
-   * and because `ruled_page`, which really does read all four, still renders.
+   * One control: `brand_color`. The other three bools this map used to carry
+   * described controls this panel no longer has — see this file's own note
+   * above — and they left the wire with the design that read them.
    *
    * NEVER a template id compared in this file. Optional, and absent means
    * "everything", which is what a response with no `supports` at all gets.
@@ -149,7 +146,7 @@ type DesignPanelProps = {
 /** Everything on — what a response with no `supports` resolves to. Kept
  *  beside the prop it defaults so the two cannot drift. */
 const ALL_SUPPORTED: TemplateSupport = {
-  palette: true, font_pairing: true, tones: true, brand_color: true,
+  brand_color: true,
 }
 
 /** The heading over each group of designs. A three-word vocabulary off
@@ -380,7 +377,7 @@ export function DesignPanel({
                       <span
                         key={word}
                         className="text-[10px] font-mono uppercase tracking-[0.12em]"
-                        style={{ color: c.paletteAccent }}
+                        style={{ color: c.accent }}
                       >
                         {word}
                       </span>

@@ -73,7 +73,7 @@ class OrganizationIndustryResyncTest extends TestCase
     {
         return LandingPage::create([
             'organization_id' => $org->id, 'brand_id' => $brand->id, 'slug' => $slug,
-            'template_key' => 'ruled_page', 'industry' => $industry, 'status' => 'draft',
+            'template_key' => 'nocturne_ritual', 'industry' => $industry, 'status' => 'draft',
         ]);
     }
 
@@ -186,7 +186,7 @@ class OrganizationIndustryResyncTest extends TestCase
 
         $page = LandingPage::create([
             'organization_id' => $org->id, 'brand_id' => $brand->id, 'slug' => 'the-academy',
-            'template_key' => 'ruled_page', 'industry' => $org->resolved_industry, 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => $org->resolved_industry, 'status' => 'published',
             'published_at' => now(),
             'content' => ['hero' => ['headline' => 'Hexa Academy']],
         ]);
@@ -203,7 +203,7 @@ class OrganizationIndustryResyncTest extends TestCase
         $url = 'http://' . config('landing.host') . '/the-academy';
 
         $before = $this->get($url)->getContent();
-        $this->assertStringContainsString('data-section="booking"', $before);
+        $this->assertStringContainsString('data-block="booking"', $before);
         $this->assertStringContainsString('Book your stay', $before);
         $this->assertStringContainsString('"@type":"Hotel"', $before);
         $this->assertStringContainsString('Rooms &amp; Suites', $before);
@@ -224,14 +224,16 @@ class OrganizationIndustryResyncTest extends TestCase
         // The booking band is gone entirely — not merely re-labelled — an
         // academy with a course but no instructor on a rota cannot be
         // booked, and no longer being a hotel, it no longer books stays.
-        $this->assertStringNotContainsString('data-section="booking"', $after);
+        $this->assertStringNotContainsString('data-block="booking"', $after);
         $this->assertStringNotContainsString('id="booking"', $after);
         $this->assertStringNotContainsString('Book your stay', $after);
         $this->assertStringNotContainsString('/services-widget', $after);
 
-        // The hero CTA falls back to the contact band, the one target that
-        // still exists on this page.
-        $this->assertStringContainsString('<a class="rp-cta" href="#contact">', $after);
+        // Every Book control now says what it does — dials the number on
+        // the Property — rather than the industry's verb over a dead link.
+        $this->assertStringContainsString('href="tel:+37120000000"', $after);
+        $this->assertStringContainsString('Call to book', $after);
+        $this->assertStringNotContainsString('data-action="open-booking"', $after);
     }
 
     /**
@@ -248,7 +250,7 @@ class OrganizationIndustryResyncTest extends TestCase
 
         $page = LandingPage::create([
             'organization_id' => $org->id, 'brand_id' => $brand->id, 'slug' => 'the-bookable-academy',
-            'template_key' => 'ruled_page', 'industry' => $org->resolved_industry, 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => $org->resolved_industry, 'status' => 'published',
             'published_at' => now(),
             'content' => ['hero' => ['headline' => 'Hexa Academy']],
         ]);
@@ -274,12 +276,12 @@ class OrganizationIndustryResyncTest extends TestCase
 
         $after = $this->get($url)->getContent();
 
-        $this->assertStringContainsString('data-section="booking"', $after);
+        $this->assertStringContainsString('data-block="booking"', $after);
         $this->assertStringContainsString('/services-widget?', $after);
         $this->assertStringContainsString('source=landing', $after);
         $this->assertStringNotContainsString('/booking-widget', $after);
         $this->assertStringContainsString('Book a lesson', $after);
         $this->assertStringNotContainsString('Book your stay', $after);
-        $this->assertStringContainsString('<a class="rp-cta" href="#booking">', $after);
+        $this->assertStringContainsString('data-action="open-booking"', $after);
     }
 }

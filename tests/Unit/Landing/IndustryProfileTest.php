@@ -94,7 +94,7 @@ class IndustryProfileTest extends TestCase
 
     public function test_a_profile_supplies_the_eyebrow_for_every_section_it_ships(): void
     {
-        // On ruled_page the eyebrows are set vertically on the Rule and read
+        // The eyebrows are the small-caps labels every kit sets over a heading, read
         // as the page's index, so a missing one leaves a gap in the margin.
         // They are vocabulary, not decoration: a clinic's index has to be able
         // to read THE PROCEDURES where a salon's reads THE MENU.
@@ -178,57 +178,5 @@ class IndustryProfileTest extends TestCase
             IndustryProfile::for('restaurant')->servicesLabel,
             IndustryProfile::for('hospitality')->servicesLabel,
         );
-    }
-
-    /**
-     * The fixed nine-industry -> curated-palette mapping (Task 1, landing
-     * phase 3c; spec §3 D2). Spec §3 states six of the nine explicitly
-     * (beauty, hotel, medical, restaurant, education, fitness, other) and
-     * never once names 'legal' or 'real_estate' anywhere in the document —
-     * but slate_amber's OWN authored label in the same spec section reads
-     * "fitness, education, professional", and legal/real_estate are this
-     * platform's only two professional-services industries (see
-     * Organization::INDUSTRIES), so they take the bucket the spec already
-     * named for them rather than being left to silently inherit some other
-     * industry's palette through IndustryProfile::for()'s 'other' fallback.
-     */
-    public function test_every_industry_maps_to_its_curated_default_palette(): void
-    {
-        $expected = [
-            'beauty'      => 'champagne_noir',
-            'hotel'       => 'midnight_brass',
-            'medical'     => 'clinic_air',
-            'restaurant'  => 'terracotta',
-            'legal'       => 'slate_amber',
-            'real_estate' => 'slate_amber',
-            'education'   => 'slate_amber',
-            'fitness'     => 'slate_amber',
-            'other'       => 'porcelain',
-        ];
-
-        // Every id in Organization::INDUSTRIES is covered above -- a ninth
-        // or tenth industry added later without an entry here would fail
-        // loudly rather than silently reading null.
-        $this->assertEqualsCanonicalizing(Organization::INDUSTRIES, array_keys($expected));
-
-        foreach ($expected as $industry => $palette) {
-            $this->assertSame(
-                $palette,
-                IndustryProfile::for($industry)->defaultPalette,
-                "'{$industry}' does not map to the expected default palette '{$palette}'."
-            );
-        }
-    }
-
-    /** A typo in a defaultPalette value would otherwise silently resolve to null at render time, not fail loudly. */
-    public function test_every_default_palette_is_a_real_authored_palette(): void
-    {
-        foreach (IndustryProfile::all() as $id => $data) {
-            $this->assertContains(
-                $data['defaultPalette'],
-                Palette::ids(),
-                "Industry '{$id}' names a defaultPalette Palette does not author."
-            );
-        }
     }
 }

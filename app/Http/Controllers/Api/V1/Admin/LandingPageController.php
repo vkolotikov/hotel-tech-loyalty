@@ -365,16 +365,16 @@ class LandingPageController extends Controller
         }
 
         // D6 (landing phase 3c): `theme` gets an allowlist -- exactly
-        // App\Landing\ThemeRules::keys(), each with its own format/allowlist
-        // rule (ThemeRules::rules()). Before this, `theme` was constrained
+        // App\Landing\ThemeRules::keys(), each with its own format rule
+        // (ThemeRules::rules()). Before this, `theme` was constrained
         // only by `array` + `ScalarLeaves(depth: 1)` above -- SHAPE, not
         // membership or FORMAT -- so any flat scalar key was silently
-        // accepted (`theme.radius`, `theme.dark`, a `font_pairing` value
-        // outside the three curated ones, all round-tripped with a 200).
+        // accepted (`theme.radius`, `theme.dark`, all round-tripped with a
+        // 200).
         //
         // ThemeRules::validate() runs as its own Validator instance for the
         // identical reason the $contact block above is one: adding
-        // 'theme.palette' etc. as SIBLING rule keys to the SAME validate()
+        // 'theme.brand_color' as a SIBLING rule key to the SAME validate()
         // call above would trip Validator::$excludeUnvalidatedArrayKeys the
         // moment `theme` carries a key those dotted rules do not enumerate
         // -- the phase-3a trap, applied to `theme` instead of `content` (see
@@ -533,13 +533,11 @@ class LandingPageController extends Controller
                 // there is no per-key theme writer the way uploadImage()/
                 // removeImage() own `content.{slot}.image_url`, so nothing
                 // here forces every save to omit a key the way D4 forces
-                // image_url out of `content`. But the design panel (Task 6)
-                // does not exist yet, and this task must not leave a save
-                // that touches ONE theme key (a future `theme.palette`-only
-                // PATCH, from Task 6's cards or a direct API call) able to
-                // erase whichever OTHER allowlisted keys the tenant already
-                // had saved (`brand_color`, `font_pairing`) purely because
-                // this request happened not to repeat them. So: any
+                // image_url out of `content`. A save that touches ONE theme
+                // key (a direct API call, or a design panel that grows a
+                // second control) must not be able to erase whichever OTHER
+                // allowlisted keys the tenant already had saved purely
+                // because this request happened not to repeat them. So: any
                 // ThemeRules::keys() the SUBMITTED theme omits is carried
                 // forward from the FRESH, row-locked copy -- never from the
                 // stale `$page` resolved before this transaction opened,

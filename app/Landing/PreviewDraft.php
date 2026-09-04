@@ -19,9 +19,8 @@ use Illuminate\Validation\ValidationException;
  *
  * The obvious way to do that -- re-render the page in the browser from the
  * form state -- is the one way this must never be built. The template is
- * Blade: eight partials, a layout, PageContent's six queries, Accent's
- * contrast floor, Palette's tokens, SectionType::bandClass()'s authored
- * fallbacks. A JavaScript reimplementation would be a SECOND copy of the
+ * Blade: a dozen partials, a layout, PageContent's six queries, Accent's
+ * contrast floor. A JavaScript reimplementation would be a SECOND copy of the
  * whole design, and the moment the two disagree the preview is lying about
  * what publishing will produce -- which is the defect class this feature has
  * paid for most.
@@ -103,10 +102,9 @@ final class PreviewDraft
      * depth each column legitimately nests to (an array leaf is a TypeError
      * in `e()` and in `Accent::for()`, i.e. a 500, not a cosmetic problem;
      * see {@see \App\Support\ScalarTree}), and the section rows' own
-     * `key`/`enabled`/`sort`/`tone` rules copied FROM
+     * `key`/`enabled`/`sort` rules copied FROM
      * {@see \App\Http\Controllers\Api\V1\Admin\LandingPageSectionController::update()}
-     * rather than re-imagined, down to `Rule::in(SectionType::toneIds())`
-     * being the one tone allowlist.
+     * rather than re-imagined.
      *
      * `theme`'s allowlist is NOT here: it is {@see ThemeRules::validate()},
      * called from {@see theme()} below as its own Validator instance, for
@@ -126,21 +124,20 @@ final class PreviewDraft
             'sections.*.key'     => 'required|string|max:64',
             'sections.*.enabled' => 'required|boolean',
             'sections.*.sort'    => 'required|integer|min:0|max:999',
-            'sections.*.tone'    => ['sometimes', 'nullable', 'string', Rule::in(SectionType::toneIds())],
         ];
     }
 
     /**
-     * Character for character the section endpoint's own messages, for the
-     * same house reason (spec 9): Laravel's defaults here name raw indexed
-     * field paths a tenant never sees a form for.
+     * The section endpoint's own messages, for the same house reason (spec
+     * 9): Laravel's defaults name raw indexed field paths a tenant never
+     * sees a form for. Empty today — every rule above is on a key the
+     * editor never shows a field for and the defaults never reach a tenant
+     * — and kept as the one place a friendly message goes when a rule that
+     * needs one arrives.
      */
     public static function messages(): array
     {
-        return [
-            'sections.*.tone.string' => 'Please choose one of the colours offered for this section.',
-            'sections.*.tone.in'     => 'Please choose one of the colours offered for this section.',
-        ];
+        return [];
     }
 
     /**
@@ -352,7 +349,7 @@ final class PreviewDraft
      * refused on the grammar rather than on the page's happening not to
      * hold it.
      *
-     * @return list<array{key: string, enabled: bool, sort: int, tone: ?string}>
+     * @return list<array{key: string, enabled: bool, sort: int}>
      */
     private static function sections(LandingPage $page, mixed $submitted): array
     {
@@ -363,7 +360,6 @@ final class PreviewDraft
                 'key'     => (string) $section->key,
                 'enabled' => (bool) $section->enabled,
                 'sort'    => (int) $section->sort,
-                'tone'    => $section->tone,
             ];
         }
 
@@ -378,15 +374,6 @@ final class PreviewDraft
 
             $rows[$key]['enabled'] = (bool) $row['enabled'];
             $rows[$key]['sort']    = (int) $row['sort'];
-
-            // PRESENT-KEY TEST, not `?? null` -- the section endpoint's own
-            // contract, for its own reason: an absent `tone` means "this
-            // caller does not deal in colours, leave the stored one alone",
-            // while an explicit null means "put this band back to the
-            // colour its partial was authored with".
-            if (array_key_exists('tone', $row)) {
-                $rows[$key]['tone'] = $row['tone'];
-            }
         }
 
         return array_values($rows);
@@ -410,7 +397,6 @@ final class PreviewDraft
                 'key'             => (string) $row['key'],
                 'enabled'         => (bool) ($row['enabled'] ?? true),
                 'sort'            => (int) ($row['sort'] ?? 0),
-                'tone'            => is_string($row['tone'] ?? null) ? $row['tone'] : null,
             ]))
             ->sortBy('sort')
             ->values();

@@ -159,7 +159,7 @@ class LandingPageTeardownTest extends TestCase
             'organization_id' => $org->id,
             'brand_id'        => $brandId,
             'slug'            => $slug,
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'published',
             'published_at'    => now(),
@@ -700,7 +700,7 @@ class LandingPageTeardownTest extends TestCase
         LandingPage::create([
             'organization_id' => $org->id,
             'slug'            => 'still-blocked',
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'draft',
         ]);

@@ -161,7 +161,7 @@ class LandingHostIsolationTest extends TestCase
     {
         LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => 'glamour-salon',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'published',
             'published_at' => now(),
             'content' => ['hero' => ['headline' => 'The Art of Wellness']],
         ])->sections()->create(['key' => 'hero', 'enabled' => true, 'sort' => 0]);

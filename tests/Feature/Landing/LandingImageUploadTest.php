@@ -167,7 +167,7 @@ class LandingImageUploadTest extends TestCase
         $page = LandingPage::create([
             'organization_id' => $org->id,
             'slug'            => $slug,
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => LandingPage::STATUS_DRAFT,
             'content'         => $content,
@@ -355,11 +355,13 @@ class LandingImageUploadTest extends TestCase
     }
 
     /**
-     * The same verb on a design that ships no photographs still clears the
-     * slot outright — the model is default+override, not default-always, and
-     * a design with no default has nothing to restore.
+     * The same verb clears the tenant's OWN slot outright — the model is
+     * default+override, not default-always: what the band shows afterwards
+     * is the design's plate, but the question "has this tenant chosen a
+     * picture here" is answered no, which is what decides whether the
+     * control offers "Remove" or "Restore".
      */
-    public function test_removing_a_photo_clears_it_where_the_design_has_no_default(): void
+    public function test_removing_a_photo_clears_the_tenants_own_slot_outright(): void
     {
         $org = $this->org();
         Storage::disk('public')->put('landing/mine.png', 'bytes');
@@ -373,7 +375,10 @@ class LandingImageUploadTest extends TestCase
         $this->deleteJson($this->adminUrl('/api/v1/admin/landing-pages/image'), ['slot' => 'hero'])
             ->assertOk();
 
-        $this->assertNull(PageContent::for($page->fresh())->imageUrl('hero'));
+        $content = PageContent::for($page->fresh());
+
+        $this->assertNull($content->ownImageUrl('hero'));
+        $this->assertNotNull($content->imageUrl('hero'), 'The band was left with a hole rather than the design\'s own plate.');
     }
 
     /**

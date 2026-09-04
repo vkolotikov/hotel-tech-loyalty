@@ -177,7 +177,7 @@ describe('the filter chips', () => {
 describe('sectionThumbUrl', () => {
   it('addresses one wireframe per template and type, on the app’s own origin', () => {
     expect(sectionThumbUrl('nocturne_ritual', 'hero')).toBe('/landing/thumbs/nocturne_ritual/hero.svg')
-    expect(sectionThumbUrl('ruled_page', 'gallery')).toBe('/landing/thumbs/ruled_page/gallery.svg')
+    expect(sectionThumbUrl('maison_vela', 'gallery')).toBe('/landing/thumbs/maison_vela/gallery.svg')
   })
 
   // Both halves arrive off the wire and this string becomes a URL.

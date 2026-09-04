@@ -30,7 +30,6 @@ export type DraftSectionRow = {
   key: string
   enabled: boolean
   sort: number
-  tone: string | null
 }
 
 /**

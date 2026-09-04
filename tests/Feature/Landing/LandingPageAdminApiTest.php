@@ -237,7 +237,7 @@ class LandingPageAdminApiTest extends TestCase
 
         $this->actAs($this->makeUser($rival), null);
         $page = LandingPage::create([
-            'slug' => $slug, 'template_key' => 'ruled_page',
+            'slug' => $slug, 'template_key' => 'nocturne_ritual',
             'industry' => 'beauty', 'status' => LandingPage::STATUS_PUBLISHED,
         ]);
 
@@ -675,134 +675,54 @@ class LandingPageAdminApiTest extends TestCase
         }
     }
 
-    /** Task 1's six curated ids, exercised through the write path Task 4 will render from. */
-    public function test_a_valid_palette_is_accepted_and_persisted(): void
-    {
-        $this->create();
-
-        $page = $this->body($this->controller()->update($this->request([
-            'theme' => ['palette' => 'champagne_noir'],
-        ])))['page'];
-
-        $this->assertSame('champagne_noir', $page['theme']['palette']);
-    }
-
     /**
-     * The message names neither the raw field path nor Laravel's own
-     * "The selected theme.palette is invalid." wording.
+     * THE TWO KEYS THE RETIRED DESIGN OWNED ARE UNKNOWN KEYS NOW. `palette`
+     * and `font_pairing` were the generic house design's controls; with that
+     * design deleted nothing reads either, so ThemeRules names neither and
+     * a save that sends one gets the same refusal any stray key gets. A
+     * stale editor build echoing a stored value back is the caller this
+     * pins: it must be told, not silently kept.
      */
-    public function test_an_invalid_palette_is_refused_with_a_friendly_message(): void
+    public function test_the_retired_designs_theme_keys_are_refused_as_unknown(): void
     {
         $this->create();
 
-        try {
-            $this->controller()->update($this->request([
-                'theme' => ['palette' => 'nope'],
-            ]));
-            $this->fail('An unrecognised palette id was accepted.');
-        } catch (ValidationException $e) {
-            $message = $e->errors()['palette'][0] ?? '';
-            $this->assertSame('Please choose one of the available looks.', $message);
-            $this->assertStringNotContainsString('nope', $message);
-            $this->assertStringNotContainsString('theme.palette', $message);
+        foreach (['palette' => 'champagne_noir', 'font_pairing' => 'grand'] as $key => $value) {
+            try {
+                $this->controller()->update($this->request(['theme' => [$key => $value]]));
+                $this->fail("The retired theme key '{$key}' was accepted.");
+            } catch (ValidationException $e) {
+                $this->assertSame('Please choose a valid design option.', $e->errors()['theme'][0] ?? '');
+            }
         }
+
+        $this->assertArrayNotHasKey('palette', LandingPage::first()->theme ?? []);
     }
 
     /**
-     * `font_pairing` gets the same ThemeRules allowlist as `palette` now —
-     * this endpoint never format-checked it at all before D6 (only the
-     * onboarding wizard did), so a bad value used to round-trip with a 200.
-     *
-     * `grand` used to be this test's example invalid value ("grand is Task
-     * 3, not this one") — Task 3 (landing phase 3c, D3) has now added it to
-     * `ThemeRules::FONT_PAIRINGS`, so it is a genuinely valid pairing (see
-     * `test_grand_is_accepted_as_a_font_pairing` below) and can no longer
-     * stand in for "unrecognised" here. `baroque` is not, and never will be,
-     * one of the four curated pairings.
-     */
-    public function test_an_invalid_font_pairing_is_refused_with_a_friendly_message(): void
-    {
-        $this->create();
-
-        try {
-            $this->controller()->update($this->request([
-                'theme' => ['font_pairing' => 'baroque'],
-            ]));
-            $this->fail('An unrecognised font pairing was accepted.');
-        } catch (ValidationException $e) {
-            $message = $e->errors()['font_pairing'][0] ?? '';
-            $this->assertSame('Please choose one of the available type pairings.', $message);
-        }
-    }
-
-    /**
-     * The other half of the rename above: `grand` (Task 3, landing phase
-     * 3c, D3 — Cormorant Garamond over Inter, the reference pairing) must
-     * now round-trip through the exact same write path `editorial`,
-     * `modern` and `classic` already do — one allowlist
-     * (`ThemeRules::FONT_PAIRINGS`), no second place that has to agree.
-     */
-    public function test_grand_is_accepted_as_a_font_pairing(): void
-    {
-        $this->create();
-
-        $page = $this->body($this->controller()->update($this->request([
-            'theme' => ['font_pairing' => 'grand'],
-        ])))['page'];
-
-        $this->assertSame('grand', $page['theme']['font_pairing']);
-    }
-
-    /**
-     * The phase-3a trap, re-pinned for `theme`: adding per-key rules must
-     * not add them as SIBLING dotted keys in the same validate() call that
-     * already validates `theme` as `array`, or
-     * `Validator::$excludeUnvalidatedArrayKeys` silently drops whichever
-     * theme keys those dotted rules do not enumerate. All three allowlisted
-     * keys, saved together, must all survive.
-     */
-    public function test_multiple_theme_keys_round_trip_together(): void
-    {
-        $this->create();
-
-        $page = $this->body($this->controller()->update($this->request([
-            'theme' => [
-                'brand_color'  => '#1F5FA8',
-                'font_pairing' => 'modern',
-                'palette'      => 'porcelain',
-            ],
-        ])))['page'];
-
-        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
-        $this->assertSame('modern', $page['theme']['font_pairing']);
-        $this->assertSame('porcelain', $page['theme']['palette']);
-    }
-
-    /**
-     * The hazard this task's brief calls out explicitly: `update()` still
-     * REPLACES `theme` wholesale (same as `content`), and there is no
-     * per-key theme writer the way uploadImage()/removeImage() own
-     * `content.{slot}.image_url` — so a save that only touches ONE
-     * allowlisted key (as a future design-panel control might) must not
-     * erase the OTHER keys already on the page. Proven here the same way
-     * `test_updating_content_without_a_slug_leaves_the_address_alone`
+     * The carry-forward: `update()` still REPLACES `theme` wholesale (same
+     * as `content`), and there is no per-key theme writer the way
+     * uploadImage()/removeImage() own `content.{slot}.image_url` — so a
+     * save that carries `theme` but OMITS an allowlisted key must not erase
+     * what the tenant already had saved under it. With one key on the
+     * allowlist the omitting save is an empty `theme`, which is exactly what
+     * a save that touches nothing on the Design tab sends. Proven here the
+     * same way `test_updating_content_without_a_slug_leaves_the_address_alone`
      * proves the equivalent guarantee for `content`.
      */
-    public function test_a_theme_write_does_not_erase_sibling_theme_keys(): void
+    public function test_a_theme_write_that_omits_a_key_does_not_erase_it(): void
     {
         $this->create();
 
         $this->controller()->update($this->request([
-            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern'],
+            'theme' => ['brand_color' => '#1F5FA8'],
         ]));
 
         $page = $this->body($this->controller()->update($this->request([
-            'theme' => ['palette' => 'porcelain'],
+            'theme' => [],
         ])))['page'];
 
         $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
-        $this->assertSame('modern', $page['theme']['font_pairing']);
-        $this->assertSame('porcelain', $page['theme']['palette']);
     }
 
     /** A theme-only save must not touch `content` at all. */
@@ -815,11 +735,11 @@ class LandingPageAdminApiTest extends TestCase
         ]));
 
         $page = $this->body($this->controller()->update($this->request([
-            'theme' => ['palette' => 'porcelain'],
+            'theme' => ['brand_color' => '#1F5FA8'],
         ])))['page'];
 
         $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
-        $this->assertSame('porcelain', $page['theme']['palette']);
+        $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
     }
 
     /**
@@ -831,21 +751,20 @@ class LandingPageAdminApiTest extends TestCase
      * false for a stored `null`). This is the test that goes red the day
      * anyone "simplifies" that check to `isset`.
      */
-    public function test_an_explicit_null_clears_brand_color_while_omitted_keys_survive(): void
+    public function test_an_explicit_null_clears_brand_color_where_an_omitted_key_would_not(): void
     {
         $this->create();
 
         $this->controller()->update($this->request([
-            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+            'theme' => ['brand_color' => '#1F5FA8'],
         ]));
 
         $page = $this->body($this->controller()->update($this->request([
             'theme' => ['brand_color' => null],
         ])))['page'];
 
+        $this->assertArrayHasKey('brand_color', $page['theme']);
         $this->assertNull($page['theme']['brand_color']);
-        $this->assertSame('modern', $page['theme']['font_pairing']);
-        $this->assertSame('porcelain', $page['theme']['palette']);
     }
 
     /**
@@ -860,7 +779,7 @@ class LandingPageAdminApiTest extends TestCase
         $this->create();
 
         $this->controller()->update($this->request([
-            'theme' => ['brand_color' => '#1F5FA8', 'font_pairing' => 'modern', 'palette' => 'porcelain'],
+            'theme' => ['brand_color' => '#1F5FA8'],
         ]));
 
         $page = $this->body($this->controller()->update($this->request([
@@ -868,8 +787,6 @@ class LandingPageAdminApiTest extends TestCase
         ])))['page'];
 
         $this->assertSame('#1F5FA8', $page['theme']['brand_color']);
-        $this->assertSame('modern', $page['theme']['font_pairing']);
-        $this->assertSame('porcelain', $page['theme']['palette']);
         $this->assertSame('Quiet luxury', $page['content']['hero']['headline']);
     }
 
@@ -1255,7 +1172,7 @@ class LandingPageAdminApiTest extends TestCase
             'organization_id' => $this->org->id,
             'brand_id'        => null,
             'slug'            => $slug,
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => $status,
             'published_at'    => $status === 'published' ? now() : null,
@@ -1361,7 +1278,7 @@ class LandingPageAdminApiTest extends TestCase
                 'organization_id' => $this->org->id,
                 'brand_id'        => null,
                 'slug'            => $slug,
-                'template_key'    => 'ruled_page',
+                'template_key'    => 'nocturne_ritual',
                 'industry'        => 'beauty',
                 'status'          => 'draft',
                 'created_at'      => now(),
@@ -1512,7 +1429,7 @@ class LandingPageAdminApiTest extends TestCase
             DB::table('landing_pages')->insert([
                 'organization_id' => $rival->id,
                 'slug'            => 'contested',
-                'template_key'    => 'ruled_page',
+                'template_key'    => 'nocturne_ritual',
                 'industry'        => 'beauty',
                 'status'          => LandingPage::STATUS_DRAFT,
             ]);
@@ -1607,14 +1524,16 @@ class LandingPageAdminApiTest extends TestCase
     /**
      * THE FINAL SCENARIO, STEP 2 — a design retired from the offer cannot be
      * moved TO, and the message says so in the same words an unknown key
-     * gets. Retiring a design is one bool in the registry, and this is the
-     * write surface that has to honour it.
+     * gets. The generic house design (`ruled_page`) was retired and then
+     * deleted outright; its key is spelled here as a literal precisely
+     * because the registry no longer knows it, and a caller who remembers
+     * it must be refused rather than handed a page that cannot render.
      */
     public function test_a_retired_design_cannot_be_chosen(): void
     {
         $this->create();
 
-        $this->assertNotContains('ruled_page', LandingOnboardingService::offerableTemplateKeys());
+        $this->assertNotContains('ruled_page', LandingOnboardingService::templateKeys());
 
         try {
             $this->controller()->update($this->request(['template_key' => 'ruled_page']));
@@ -1633,36 +1552,14 @@ class LandingPageAdminApiTest extends TestCase
     }
 
     /**
-     * THE OTHER HALF OF RETIRING ONE: a page ALREADY on it keeps working.
-     *
-     * Two demo pages sit on `ruled_page`. Re-sending the design a page is
-     * already on must not be a refusal, or every save those pages make — a
-     * headline, an address, a photo caption — would 422 on a design nobody
-     * was trying to change. "You may choose any design on offer, or keep the
-     * one you have" is one rule; this is its second arm.
-     */
-    public function test_a_page_already_on_a_retired_design_can_still_be_saved(): void
-    {
-        $this->pageOnRetiredDesign();
-
-        $page = $this->body($this->controller()->update($this->request([
-            'template_key' => 'ruled_page',
-            'content'      => ['hero' => ['headline' => 'Still here']],
-        ])))['page'];
-
-        $this->assertSame('ruled_page', $page['template_key']);
-        $this->assertSame('Still here', $page['content']['hero']['headline']);
-    }
-
-    /**
      * THE FINAL SCENARIO, STEP 5 — changing design brings the blocks the new
      * design draws, and takes nothing away.
      *
-     * A design is a composition, not a skin: the owner's kits all draw an
-     * offer bar, a highlights band and a questions block that The Ruled Page
-     * ships no partial for. Before this, a page moved onto one of them
-     * arrived with three of the author's blocks simply absent, with no row to
-     * write them into and no control anywhere that said why.
+     * A design is a composition, not a skin: the three beauty kits draw a
+     * `team` band that the three hospitality kits ship no partial for, so a
+     * page created on Maison Vela and moved onto Nocturne Ritual would
+     * otherwise arrive with one of the author's blocks simply absent, with
+     * no row to write it into and no control anywhere that said why.
      *
      * Additive, and that is the load-bearing half: every row the page already
      * had is still there, in its own order, with its own `enabled` — and the
@@ -1670,13 +1567,15 @@ class LandingPageAdminApiTest extends TestCase
      */
     public function test_changing_design_adds_the_new_designs_blocks_and_removes_nothing(): void
     {
-        $page = $this->pageOnRetiredDesign();
+        $page = $this->pageOnDesign('maison_vela');
 
         $page->update(['content' => ['about' => ['body' => 'Twenty years on this street']]]);
-        $page->sections()->where('key', 'team')->update(['enabled' => false]);
+        $page->sections()->where('key', 'reviews')->update(['enabled' => false]);
 
         $before = $page->sections()->orderBy('sort')->pluck('key')->all();
-        $target = LandingOnboardingService::offerableTemplateKeys()[0];
+        $target = 'nocturne_ritual';
+
+        $this->assertNotContains('team', $before, 'Fixture is wrong: a hospitality design seeded a team row.');
 
         $this->controller()->update($this->request(['template_key' => $target]));
 
@@ -1688,17 +1587,14 @@ class LandingPageAdminApiTest extends TestCase
         // Nothing lost: every row that was there is still there, in order.
         $this->assertSame($before, array_slice($after, 0, count($before)));
 
-        // And the blocks the new design draws that no industry seeds are now
-        // rows the tenant can actually write into.
-        foreach (['announcement', 'trust', 'faq'] as $block) {
-            $this->assertContains($block, $after, "Moving to {$target} left its own {$block} block with no row.");
-            $this->assertNotContains($block, $before);
-        }
+        // And the block the new design draws that the old one did not is now
+        // a row the tenant can actually write into.
+        $this->assertContains('team', $after, "Moving to {$target} left its own team block with no row.");
 
         // Their words, and their own answers about what to show, survive the
         // move — a design change is not a reset.
         $this->assertSame('Twenty years on this street', $fresh->content['about']['body']);
-        $this->assertFalse((bool) $fresh->sections->firstWhere('key', 'team')->enabled);
+        $this->assertFalse((bool) $fresh->sections->firstWhere('key', 'reviews')->enabled);
     }
 
     /**
@@ -1719,25 +1615,24 @@ class LandingPageAdminApiTest extends TestCase
     }
 
     /**
-     * A page on the retired design, with the industry's own bands on it —
-     * the state the two demo pages are in, and the only starting point from
-     * which a design change actually gains blocks (every one of the six kits
-     * draws the same three that The Ruled Page draws none of).
+     * A page on a named design, carrying exactly the rows a page created on
+     * that design carries — the registry's own seed, not a hand list.
      *
-     * Written through the model rather than through store(), which no longer
-     * accepts this design at all. That is the point of it.
+     * Written through the model rather than through store() so the fixture
+     * can name the design it needs (a hospitality kit, which seeds no team
+     * row) rather than whichever design the registry lists first.
      */
-    private function pageOnRetiredDesign(string $slug = 'glamour-salon'): LandingPage
+    private function pageOnDesign(string $templateKey, string $slug = 'glamour-salon'): LandingPage
     {
         $page = LandingPage::create([
             'slug'         => $slug,
-            'template_key' => 'ruled_page',
+            'template_key' => $templateKey,
             'industry'     => $this->org->resolved_industry,
             'status'       => LandingPage::STATUS_DRAFT,
         ]);
 
         foreach (LandingOnboardingService::seedSectionsFor(
-            'ruled_page',
+            $templateKey,
             IndustryProfile::for($page->industry),
         ) as $i => $key) {
             $page->sections()->create(['key' => $key, 'enabled' => true, 'sort' => $i]);
@@ -1929,8 +1824,8 @@ class LandingPageAdminApiTest extends TestCase
     }
 
     /**
-     * The two controls save through the SAME request the palette/type/
-     * brand-colour controls already use, so one save has to carry all of it
+     * The two controls save through the SAME request the brand-colour
+     * control already uses, so one save has to carry all of it
      * at once without one field eating another — in particular the industry
      * write (which fires the resync sweep across landing_pages
      * mid-transaction) must not be undone by the page's own update a few
@@ -1943,14 +1838,13 @@ class LandingPageAdminApiTest extends TestCase
         $page = $this->body($this->controller()->update($this->request([
             'industry'     => 'medical',
             'template_key' => LandingOnboardingService::offerableTemplateKeys()[1],
-            'theme'        => ['palette' => 'clinic_air', 'brand_color' => '#123456'],
+            'theme'        => ['brand_color' => '#123456'],
             'content'      => ['hero' => ['headline' => 'Care, close by']],
         ])))['page'];
 
         $this->assertSame('medical', $page['industry']);
         $this->assertSame('medical', $this->org->fresh()->resolved_industry);
         $this->assertSame(LandingOnboardingService::offerableTemplateKeys()[1], $page['template_key']);
-        $this->assertSame('clinic_air', $page['theme']['palette']);
         $this->assertSame('#123456', $page['theme']['brand_color']);
         $this->assertSame('Care, close by', $page['content']['hero']['headline']);
     }

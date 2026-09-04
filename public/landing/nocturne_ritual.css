@@ -4,8 +4,8 @@
  * THE AUTHOR'S OWN style.css, from
  * resources/landing-kits/beauty-tech/01-nocturne-ritual/style.css, copied
  * byte for byte except for the three deliberate changes listed below. The
- * :root palette IS the design here and ships verbatim: unlike ruled_page,
- * this template does not consume App\Landing\Palette at all, and the layout
+ * :root palette IS the design here and ships verbatim: there is no palette
+ * system layered over it, and the layout
  * emits no palette token block for it (see layout.blade.php's own note).
  *
  * WHAT CHANGED, and nothing else did:
@@ -15,7 +15,7 @@
  *     landing CSP's style-src/font-src are 'self'-only
  *     (LandingPageSecurity::policy()), so that link cannot work here. Both
  *     families are served from public/landing/fonts/ instead — Cormorant
- *     Garamond reuses the six files ruled_page.css already declares, and
+ *     Garamond is six variable files (declared below), and
  *     Manrope's three subsets are new. Same discovery discipline as Task 3
  *     (landing phase 3c): Google's css2 endpoint fetched with a Chrome
  *     User-Agent (it serves a plain .ttf to any UA it does not recognise),
@@ -2425,7 +2425,7 @@ h3 {
    The one rule here that is not about counts is the chat launcher: the kit
    reserves `[data-ai-widget-slot]` for "the future AI chat widget" and
    deliberately ships no styling for it. That widget is now real (an iframe
-   framed from the admin origin, exactly as ruled_page does it), so the
+   framed from the admin origin), so the
    reserved slot finally gets the treatment the author left room for —
    bottom-right, which is the corner the kit's own notes keep clear.
    ========================================================================= */

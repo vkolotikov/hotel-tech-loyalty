@@ -220,7 +220,7 @@ class LandingOnboardingTest extends TestCase
     {
         $page = LandingPage::create([
             'slug'         => $slug,
-            'template_key' => 'ruled_page',
+            'template_key' => 'nocturne_ritual',
             'industry'     => $this->org->resolved_industry,
             'status'       => LandingPage::STATUS_DRAFT,
             'content'      => $content,
@@ -252,7 +252,7 @@ class LandingOnboardingTest extends TestCase
             'organization_id' => $this->org->id,
             'brand_id'        => $sibling,
             'slug'            => 'sibling-salon',
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'published',
             'created_at'      => now(),
@@ -316,7 +316,7 @@ class LandingOnboardingTest extends TestCase
             'template_key' => LandingOnboardingService::offerableTemplateKeys()[0],
             'slug'         => 'maison-mimi',
             'copy'         => ['headline' => 'Quiet luxury', 'subtext' => 'Considered care'],
-            'theme'        => ['brand_color' => '#1f5fa8', 'font_pairing' => 'editorial'],
+            'theme'        => ['brand_color' => '#1f5fa8'],
             'sections'     => [],
         ], $overrides);
     }
@@ -800,7 +800,7 @@ class LandingOnboardingTest extends TestCase
 
         foreach ($types as $type) {
             $this->assertSame(
-                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit'],
                 array_keys($type)
             );
             // The photo count rides the wire the same way `limit` does, and
@@ -811,17 +811,8 @@ class LandingOnboardingTest extends TestCase
                 count(SectionType::imageLeaves($type['repeatable'] ? $type['id'] . '_1' : $type['id'])),
                 $type['image_slots'],
             );
-            // A server-side view path has no business on the wire. Neither
-            // does `band` (the tone round): it is a class on a stylesheet the
-            // admin SPA does not load, and what the editor's colour picker
-            // actually needs off a type is which swatch to light for a
-            // section with no stored tone -- `default_tone`.
+            // A server-side view path has no business on the wire.
             $this->assertArrayNotHasKey('view', $type);
-            $this->assertArrayNotHasKey('band', $type);
-            // Every published default names a tone the picker will offer and
-            // the endpoint will accept -- the same round trip this test makes
-            // for `repeatable`, applied to the other served allowlist.
-            $this->assertContains($type['default_tone'], SectionType::toneIds());
 
             if ($type['addable']) {
                 $addable[] = $type['id'];
@@ -920,34 +911,39 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
-     * THE RETIRED DESIGN IS STILL A PAGE THAT RENDERS (the final scenario,
-     * step 2) — withdrawing it from the offer must not orphan the pages that
-     * already took it.
+     * EVERY SHIPPED DESIGN IS ON OFFER, AND THE RETIRED ONE IS GONE (the
+     * final scenario, step 2, taken to its end).
      *
-     * Two demo pages are on `ruled_page`. Its row therefore stays on the
-     * wire, carrying every capability fact the editor reads about a page's
-     * design (`renders`, `fixed_blocks`, `content_fields`, `image_defaults`),
-     * and only `offerable` says it is no longer on the menu. A response that
-     * simply dropped the row would leave those two editors unable to answer a
-     * single question about the page they are editing.
+     * The generic house design (`ruled_page`) was first retired from the
+     * offer and then deleted outright — its views, stylesheet and thumbnails
+     * are no longer in the repository and the pages that were on it were
+     * moved by migration. So the registry describes exactly the owner's six
+     * kits, every one of them offerable, and the key is spelled here as a
+     * literal precisely because nothing in the registry knows it any more.
+     *
+     * `offerable` stays as the mechanism (one bool in the registry withdraws
+     * a design from every picker and both create endpoints at once), which
+     * is why the offer is asserted against the registry rather than against
+     * a count.
      */
-    public function test_the_retired_design_is_still_described_but_not_offered(): void
+    public function test_every_shipped_design_is_offerable_and_the_retired_one_is_gone(): void
     {
         $this->makeProperty();
 
-        $byKey = collect($this->prefill()['templates'])->keyBy('key');
+        $served = collect($this->prefill()['templates']);
 
-        $this->assertTrue($byKey->has('ruled_page'), 'The retired design must still be described.');
-        $this->assertFalse($byKey['ruled_page']['offerable']);
-        $this->assertNotEmpty($byKey['ruled_page']['renders']);
-        $this->assertNotContains('ruled_page', LandingOnboardingService::offerableTemplateKeys());
-
-        // And every OTHER shipped design is on the menu, so retiring one is
-        // not quietly retiring more.
         $this->assertSame(
-            array_values(array_diff(LandingOnboardingService::templateKeys(), ['ruled_page'])),
+            LandingOnboardingService::templateKeys(),
             LandingOnboardingService::offerableTemplateKeys(),
+            'A shipped design is not on offer, and no design is retired today.',
         );
+        $this->assertSame(LandingOnboardingService::templateKeys(), $served->pluck('key')->all());
+        $this->assertTrue($served->every(fn (array $row) => $row['offerable'] === true));
+
+        $this->assertFalse($served->contains('key', 'ruled_page'), 'The retired design is still described.');
+        $this->assertNotContains('ruled_page', LandingOnboardingService::templateKeys());
+        $this->assertDirectoryDoesNotExist(resource_path('views/landing/ruled_page'));
+        $this->assertFileDoesNotExist(public_path('landing/ruled_page.css'));
     }
 
     /**
@@ -986,15 +982,16 @@ class LandingOnboardingTest extends TestCase
             $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
         }
 
-        // The template end of the same join: three beauty kits, three
-        // dining kits, and the retired generic belonging to no trade.
+        // The template end of the same join: three beauty kits and three
+        // dining kits, and nothing that belongs to no trade.
         $this->assertSame('beauty', $templates['nocturne_ritual']['vertical']);
         $this->assertSame('beauty', $templates['editorial_atelier']['vertical']);
         $this->assertSame('beauty', $templates['organic_wellness']['vertical']);
         $this->assertSame('dining', $templates['maison_vela']['vertical']);
         $this->assertSame('dining', $templates['luma_garden']['vertical']);
         $this->assertSame('dining', $templates['ember_table']['vertical']);
-        $this->assertNull($templates['ruled_page']['vertical']);
+        $this->assertTrue($templates->every(fn (array $row) => $row['vertical'] !== null),
+            'A shipped design claims no trade; every one of the six was drawn for one.');
 
         // NOBODY IS EVER LEFT WITH NOTHING TO CHOOSE. Seven of the nine
         // industries have no kit of their own; the offer is the whole
@@ -1010,15 +1007,15 @@ class LandingOnboardingTest extends TestCase
     }
 
     /**
-     * Landing phase 3c / template fidelity 1.1 — the two capability facts
-     * every template row now carries.
+     * Landing phase 3c / template fidelity 1.1 — the capability facts every
+     * template row carries.
      *
-     * `supports` is the authored half: four bools transcribed from what a
-     * template's own layout says it reads. Until it existed the fact that
-     * `nocturne_ritual` ignores `theme.palette`, `theme.font_pairing` and
-     * every section tone lived only as PROSE in that layout's header, and
-     * the editor — having no way to know — drew ten palette/type cards and
-     * twenty-one tone swatches over a design that reads none of them.
+     * `supports` is the authored half: one bool per design control,
+     * transcribed from what a template's own layout says it reads. ONE
+     * control is left — the accent — because the palette, the type pairings
+     * and the section tones were the retired generic design's and left with
+     * it; a `supports` map that still answered for them would be the wire
+     * describing controls no screen draws.
      *
      * Asserted per key rather than by comparing whole maps: the failure
      * this catches is one bool flipping, and "arrays differ" would not say
@@ -1033,24 +1030,17 @@ class LandingOnboardingTest extends TestCase
             ->map(fn (array $row) => $row['supports'])
             ->all();
 
-        $this->assertSame(
-            ['palette', 'font_pairing', 'tones', 'brand_color'],
-            array_keys($supports['ruled_page']),
-            'A template answered a different set of capability questions from the others.',
-        );
+        foreach ($supports as $key => $map) {
+            $this->assertSame(
+                ['brand_color'],
+                array_keys($map),
+                "'{$key}' answers a different set of capability questions from the one control left.",
+            );
 
-        // The Ruled Page is the template Palette, the font pairings and
-        // bandClass() were all built for.
-        foreach (['palette', 'font_pairing', 'tones', 'brand_color'] as $control) {
-            $this->assertTrue($supports['ruled_page'][$control], "ruled_page should honour {$control}.");
+            // Every kit's own "WHAT THIS TEMPLATE DELIBERATELY DOES NOT DO"
+            // note ends the same way: the accent is the ONE tenant override.
+            $this->assertTrue($map['brand_color'], "The accent is the one tenant override '{$key}' keeps.");
         }
-
-        // Nocturne's own four statements, in its layout's "WHAT THIS
-        // TEMPLATE DELIBERATELY DOES NOT DO" note.
-        $this->assertFalse($supports['nocturne_ritual']['palette']);
-        $this->assertFalse($supports['nocturne_ritual']['font_pairing']);
-        $this->assertFalse($supports['nocturne_ritual']['tones']);
-        $this->assertTrue($supports['nocturne_ritual']['brand_color'], 'The accent is the one tenant override this kit keeps.');
     }
 
     /**
@@ -1063,19 +1053,19 @@ class LandingOnboardingTest extends TestCase
      * the renderer would resolve actually exists". A hand-written list
      * would satisfy an equality against itself; this cannot.
      *
-     * The two named expectations below are the ones that make the fact
-     * worth serving at all. nocturne_ritual ships announcement/trust/faq
-     * and ruled_page ships none of them; ruled_page ships a `contact`
-     * partial and nocturne prints those details inside its footer hub
-     * instead, so the editor must not claim either design is missing a band
-     * it draws elsewhere.
+     * The named expectations below are the ones that make the fact worth
+     * serving at all. The three beauty kits ship a `team` partial and the
+     * three hospitality kits ship none (no restaurant author draws a team
+     * band), and no kit ships a `contact` partial at all — every one of the
+     * six prints those details inside its footer hub — so the editor must
+     * not claim a design is missing a band it draws elsewhere.
      *
-     * `text` used to be the third case here — nocturne shipped no partial
+     * `text` used to be a named case here — nocturne shipped no partial
      * for it, so "Add a Text block" was a control a tenant could press,
      * write into, save, and never see. Template fidelity 3.2 closed that
      * from both ends: the picker filters on this fact, AND the partial
-     * shipped, because the owner asked for all sections. Both templates
-     * now draw it, which is why the round trip above is the assertion that
+     * shipped, because the owner asked for all sections. Every template
+     * now draws it, which is why the round trip above is the assertion that
      * matters and the named cases are only the ones with an asymmetry left.
      */
     public function test_every_template_says_which_blocks_it_can_actually_draw(): void
@@ -1099,17 +1089,19 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        foreach (['announcement', 'trust', 'faq'] as $id) {
-            $this->assertContains($id, $renders['nocturne_ritual']);
-            $this->assertNotContains($id, $renders['ruled_page']);
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness'] as $key) {
+            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty kit and draws a team band.");
         }
 
-        $this->assertContains('contact', $renders['ruled_page']);
-        $this->assertNotContains('contact', $renders['nocturne_ritual']);
+        foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
+            $this->assertNotContains('team', $renders[$key], "'{$key}' is a hospitality kit and draws no team band.");
+        }
 
-        // 3.2: both draw the repeatable words band now.
-        $this->assertContains('text', $renders['ruled_page']);
-        $this->assertContains('text', $renders['nocturne_ritual']);
+        foreach ($renders as $key => $list) {
+            $this->assertNotContains('contact', $list, "'{$key}' claims a contact partial; every kit draws contact inside its footer hub.");
+            // 3.2: every design draws the repeatable words band.
+            $this->assertContains('text', $list);
+        }
     }
 
     /**
@@ -1152,22 +1144,23 @@ class LandingOnboardingTest extends TestCase
 
         // The named cases. `services` got a page slot in 4.1 for kit 02's
         // sticky editorial plate (R3), and kit 02 is the ONLY design that
-        // draws one: the Ruled Page's services band is a table and Nocturne's
-        // is a purely typographic menu, so an editor on either of those must
-        // not offer a photo control for it. This asymmetry is the whole
-        // reason the fact is served rather than assumed from the catalogue.
+        // draws one: Nocturne's services band is a purely typographic menu
+        // and the three hospitality menus are typographic too, so an editor
+        // on any of those must not offer a photo control for it. This
+        // asymmetry is the whole reason the fact is served rather than
+        // assumed from the catalogue.
         $this->assertContains('services', $photos['editorial_atelier']);
         $this->assertNotContains('services', $photos['nocturne_ritual']);
-        $this->assertNotContains('services', $photos['ruled_page']);
+        $this->assertNotContains('services', $photos['maison_vela']);
 
         foreach (['hero', 'about', 'team', 'booking', 'text', 'gallery'] as $id) {
             $this->assertContains($id, $photos['nocturne_ritual'],
                 "Nocturne draws a photograph in '{$id}' and does not say so.");
         }
 
-        // The Ruled Page draws no team or booking photograph of its own.
-        $this->assertNotContains('team', $photos['ruled_page']);
-        $this->assertNotContains('booking', $photos['ruled_page']);
+        // No hospitality author draws a closing photograph.
+        $this->assertNotContains('booking', $photos['maison_vela']);
+        $this->assertNotContains('booking', $photos['ember_table']);
     }
 
     /**
@@ -1201,9 +1194,10 @@ class LandingOnboardingTest extends TestCase
         $this->assertArrayHasKey('team', $defaults['nocturne_ritual']);
         $this->assertArrayHasKey('gallery_1.image_4', $defaults['nocturne_ritual']);
 
-        // A design that ships no photographs of its own publishes none, so
-        // its controls keep saying "Remove photo" and meaning it.
-        $this->assertSame([], $defaults['ruled_page']);
+        // Every one of the six kits is photography-led and ships its own.
+        foreach ($defaults as $key => $map) {
+            $this->assertArrayHasKey('hero', $map, "'{$key}' publishes no photograph for its own hero.");
+        }
     }
 
     /**
@@ -1213,9 +1207,10 @@ class LandingOnboardingTest extends TestCase
      * The whole point of the union is that the answer DIFFERS BY TEMPLATE,
      * so this asserts both sides of that: a Nocturne page arrives with the
      * author's offer bar, highlights and questions already on it, and a
-     * Ruled Page tenant still gets exactly the seven rows they always got —
-     * which is the concern that ruled out simply adding the three to
-     * beauty's `defaultSections`.
+     * hospitality page arrives with the same three but WITHOUT the team row
+     * every industry seeds — no restaurant author draws one, and a row the
+     * layout silently drops is the dead control this whole round exists to
+     * remove.
      *
      * Asserted through the service rather than against a literal list, and
      * the extra keys are derived from the catalogue on both sides, so a
@@ -1226,14 +1221,20 @@ class LandingOnboardingTest extends TestCase
         $profile = IndustryProfile::for('beauty');
 
         $nocturne = LandingOnboardingService::seedSectionsFor('nocturne_ritual', $profile);
-        $ruled    = LandingOnboardingService::seedSectionsFor('ruled_page', $profile);
-
-        $this->assertSame($profile->defaultSections, $ruled,
-            'The Ruled Page draws none of the kit blocks, so it must seed none of them.');
+        $maison   = LandingOnboardingService::seedSectionsFor('maison_vela', $profile);
 
         $this->assertSame(
             array_merge($profile->defaultSections, ['announcement', 'trust', 'faq']),
             $nocturne,
+        );
+
+        $this->assertSame(
+            array_merge(
+                array_values(array_diff($profile->defaultSections, ['team'])),
+                ['announcement', 'trust', 'faq'],
+            ),
+            $maison,
+            'A hospitality design draws no team band, so it must seed no team row.',
         );
 
         // The union stays inside the page cap with headroom for the
@@ -1301,11 +1302,6 @@ class LandingOnboardingTest extends TestCase
      * "a fact living in two places" failure mode calls for. Edit the
      * layout's list and this fails with the two lists printed side by side,
      * rather than the editor quietly hiding the wrong rows' arrows.
-     *
-     * ruled_page is the other half of the claim: it has no `$furniture` at
-     * all — every band renders straight out of `$renderedSections` in the
-     * tenant's own order — so its map must be empty, and a future template
-     * that grows one cannot forget to say so.
      */
     public function test_a_templates_fixed_blocks_match_its_own_layout(): void
     {
@@ -1347,7 +1343,6 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        $this->assertSame([], $fixed['ruled_page']);
         $this->assertSame('footer', $fixed['nocturne_ritual']['contact']);
     }
 
@@ -1419,7 +1414,7 @@ class LandingOnboardingTest extends TestCase
             'organization_id' => $this->org->id + 999,
             'brand_id'        => null,
             'slug'            => 'maison-mimi',
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'published',
             'created_at'      => now(),
@@ -1490,8 +1485,7 @@ class LandingOnboardingTest extends TestCase
         // $copy, and hero.blade.php reads headline/subtext off it.
         $this->assertSame('Quiet luxury', $page->content['hero']['headline']);
         $this->assertSame('Considered care', $page->content['hero']['subtext']);
-        $this->assertSame('#1f5fa8', $page->theme['brand_color']);
-        $this->assertSame('editorial', $page->theme['font_pairing']);
+        $this->assertSame(['brand_color' => '#1f5fa8'], $page->theme);
     }
 
     // ─── Theme allowlist (landing phase 3c, Task 2 / D6) ─────────────────
@@ -1519,11 +1513,6 @@ class LandingOnboardingTest extends TestCase
         $this->assertDatabaseCount('landing_pages', 0);
     }
 
-    /**
-     * Task 1's `palette` reaches the stored row through the wizard too —
-     * proof that LandingOnboardingService::theme() was updated to carry it
-     * through, not only that the controller's validation accepts it.
-     */
     public function test_an_org_that_never_picked_an_industry_gets_neutral_words_not_hotel_ones(): void
     {
         // Organization::resolved_industry answers 'hotel' (DEFAULT_INDUSTRY)
@@ -1560,64 +1549,6 @@ class LandingOnboardingTest extends TestCase
             $page->industry,
             'A page for an org that never picked an industry must not be filed under hotel.'
         );
-    }
-
-    public function test_apply_accepts_and_stores_a_valid_palette(): void
-    {
-        $this->makeProperty();
-
-        $this->apply($this->validPayload([
-            'theme' => ['brand_color' => '#1f5fa8', 'font_pairing' => 'editorial', 'palette' => 'midnight_brass'],
-        ]));
-
-        $page = LandingPage::first();
-
-        $this->assertSame('midnight_brass', $page->theme['palette']);
-    }
-
-    /**
-     * Task 6 (D2's deferred application, landing phase 3c): a tenant who
-     * never opens the palette picker still gets a page that fits its own
-     * industry — `theme.palette` stores `IndustryProfile::for($industry)
-     * ->defaultPalette`, not nothing at all. `validPayload()`'s own
-     * `theme` never sets `palette` (only `brand_color`/`font_pairing`),
-     * so this is exactly the "tenant made no choice" case; 'education' is
-     * used (rather than the fixture org's own default 'beauty') because
-     * its default, `slate_amber`, is unmistakably different from every
-     * other industry's — a wrong industry->palette mapping fails loud
-     * here rather than by accident matching beauty's `champagne_noir`.
-     */
-    public function test_apply_with_no_palette_choice_stores_the_industrys_own_default(): void
-    {
-        $org  = $this->makeOrg('Learning Loft', 'education');
-        $user = $this->makeUser($org);
-        $this->actAs($user, $this->defaultBrandId($org));
-
-        $this->makeProperty(['name' => 'Learning Loft']);
-
-        $this->apply($this->validPayload(['slug' => 'learning-loft']));
-
-        $page = LandingPage::where('slug', 'learning-loft')->first();
-
-        $this->assertSame('slate_amber', $page->theme['palette']);
-        $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
-    }
-
-    public function test_apply_refuses_an_invalid_palette_with_a_friendly_message(): void
-    {
-        $this->makeProperty();
-
-        try {
-            $this->apply($this->validPayload([
-                'theme' => ['palette' => 'nope'],
-            ]));
-            $this->fail('An unrecognised palette id was accepted.');
-        } catch (ValidationException $e) {
-            $message = $e->errors()['palette'][0] ?? '';
-            $this->assertSame('Please choose one of the available looks.', $message);
-        }
-
-        $this->assertDatabaseCount('landing_pages', 0);
     }
 
     /**
@@ -1695,7 +1626,7 @@ class LandingOnboardingTest extends TestCase
             'organization_id' => $this->org->id + 999,
             'brand_id'        => null,
             'slug'            => 'maison-mimi',
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'published',
             'created_at'      => now(),
@@ -1849,8 +1780,11 @@ class LandingOnboardingTest extends TestCase
             $this->assertSame($profile->servicesLabel, $industry['services_label']);
             $this->assertSame($profile->peopleLabel, $industry['people_label']);
             $this->assertSame($profile->primaryCta, $industry['primary_cta']);
-            $this->assertSame($profile->defaultPalette, $industry['palette']);
             $this->assertSame($profile->defaultSections, $industry['sections']);
+            // The retired generic design's per-industry palette is gone with
+            // it: a card is painted in the industry's own accent and nothing
+            // else.
+            $this->assertArrayNotHasKey('palette', $industry);
 
             // A colour a card can paint with, normalised the same way the
             // rendered page will normalise it.
@@ -1900,9 +1834,6 @@ class LandingOnboardingTest extends TestCase
         $page = LandingPage::with('sections')->where('slug', 'maison-mimi')->first();
 
         $this->assertSame('education', $page->industry);
-        // Education's own default palette, not beauty's -- the page was
-        // built from the profile the tenant chose, front to back.
-        $this->assertSame(IndustryProfile::for('education')->defaultPalette, $page->theme['palette']);
         // The CHOSEN industry's bands, in its own order, first -- the rows
         // after them are the design's own furniture (the final scenario:
         // the wizard now asks which design, and every one of the owner's
@@ -2041,10 +1972,11 @@ class LandingOnboardingTest extends TestCase
      * win is undone by Phase 5."*
      *
      * A leaf belongs to a TYPE, which every template shares; a DRAWN leaf
-     * belongs to a PARTIAL, which they do not. Phase 5 gave the kit template
-     * some thirty leaves the Ruled Page draws nowhere; the Ruled Page has
-     * always drawn four contact wording overrides the kits' icon-led footer
-     * has no room for. Both directions are a control that cannot act.
+     * belongs to a PARTIAL, which they do not. Kit 02 draws a price prefix
+     * and an edition mark kit 01 has no composition for; kit 03 draws a
+     * badge the others do not; no hospitality kit draws a team band or a
+     * per-row Book chip at all. Every direction is a control that cannot
+     * act on the design that does not draw it.
      */
     public function test_every_template_says_which_of_each_types_leaves_it_prints(): void
     {
@@ -2076,35 +2008,42 @@ class LandingOnboardingTest extends TestCase
         }
 
         // The named cases, both directions.
-        $kit   = $served['nocturne_ritual'];
-        $ruled = $served['ruled_page'];
+        $kit      = $served['nocturne_ritual'];
+        $atelier  = $served['editorial_atelier'];
+        $wellness = $served['organic_wellness'];
+        $brasserie = $served['maison_vela'];
 
-        // The two-tone heading companion is drawn by the kit and by nothing
-        // else — R6's whole primitive.
+        // The two-tone heading companion is drawn by every kit — R6's whole
+        // primitive — and the story ledger, the closing promises and the
+        // footer hub's social column, all 5.x, are all kit leaves.
         $this->assertContains('headline_accent', $kit['hero']);
-        $this->assertNotContains('headline_accent', $ruled['hero']);
-
-        // The story ledger, the closing promises and the footer hub's social
-        // column, all 5.x, all kit-only.
         $this->assertContains('fact_1', $kit['about']);
-        $this->assertNotContains('fact_1', $ruled['about']);
         $this->assertContains('promise_1', $kit['booking']);
-        $this->assertNotContains('promise_1', $ruled['booking']);
         $this->assertContains('social_instagram', $kit['contact']);
-        $this->assertNotContains('social_instagram', $ruled['contact']);
 
-        // And the direction that was already true before this round: the
-        // Ruled Page's contact band prints wording labels above each
-        // channel; the kits' hub is icons and has nowhere for them.
-        $this->assertContains('map_label', $ruled['contact']);
+        // The kits' icon-led footer hub has nowhere for the per-channel
+        // wording labels the retired generic design once printed.
         $this->assertNotContains('map_label', $kit['contact']);
 
-        // ContactDetails' three overridable VALUES are offered on BOTH,
-        // because it resolves them before any partial is reached — the one
-        // family no scan of a partial could ever find.
+        // One kit's leaf is not another's: kit 02's price prefix and edition
+        // mark, kit 03's badge and studio note, and the per-row Book chip no
+        // hospitality author draws.
+        $this->assertContains('price_prefix', $atelier['services']);
+        $this->assertNotContains('edition', $kit['hero']);
+        $this->assertContains('edition', $atelier['hero']);
+        $this->assertContains('badge_label', $wellness['services']);
+        $this->assertNotContains('badge_label', $atelier['services']);
+        $this->assertContains('item_cta_label', $kit['services']);
+        $this->assertNotContains('item_cta_label', $brasserie['services']);
+        $this->assertArrayNotHasKey('team', $brasserie);
+
+        // ContactDetails' three overridable VALUES are offered on EVERY
+        // design, because it resolves them before any partial is reached —
+        // the one family no scan of a partial could ever find.
         foreach (\App\Landing\ContactDetails::overridableFields() as $leaf) {
-            $this->assertContains($leaf, $kit['contact']);
-            $this->assertContains($leaf, $ruled['contact']);
+            foreach ($served as $key => $map) {
+                $this->assertContains($leaf, $map['contact'], "'{$key}' withholds the '{$leaf}' contact value.");
+            }
         }
 
         // The leaves that arrive through an allowlisted reader rather than by

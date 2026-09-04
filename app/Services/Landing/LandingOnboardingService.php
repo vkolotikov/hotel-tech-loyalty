@@ -7,6 +7,7 @@ use App\Landing\IndustryProfile;
 use App\Landing\PageContent;
 use App\Landing\SectionType;
 use App\Landing\TemplateImage;
+use App\Landing\ThemeRules;
 use App\Models\Brand;
 use App\Models\LandingPage;
 use App\Models\Organization;
@@ -62,14 +63,12 @@ class LandingOnboardingService
      * `supports` is the OTHER half of that registry, and it is the only
      * hand-written part of this array a reader has to check against
      * something outside it: it transcribes, one bool per design control,
-     * the four statements a template's own layout makes about what it
-     * reads. Until it existed those statements were PROSE — nocturne's
-     * layout.blade.php says in words that `theme.palette`, `theme.
-     * font_pairing` and section tones are "simply not read here" — and the
-     * editor, having no way to know, drew ten palette/type cards and
-     * twenty-one tone swatches on a page that ignores every one of them.
-     * A control that cannot act is not rendered; that rule needs this fact
-     * on the wire to be applied at all.
+     * what a template's own layout says it reads. One control is left —
+     * the accent (`brand_color`), the ONE tenant override every kit was
+     * converted to honour. The palette, the type pairings and the section
+     * tones that used to sit beside it were the generic house design's
+     * controls, and they left with that design: a control that cannot act
+     * is not rendered, and a control no shipped design honours is deleted.
      *
      * `offerable` and `vertical` (the final scenario) are the two OFFER
      * facts, and they are here for the same reason `supports` is: the
@@ -90,69 +89,17 @@ class LandingOnboardingService
      */
     public const TEMPLATES = [
         [
-            'key'   => 'ruled_page',
-            'name'  => 'The Ruled Page',
-            // RETIRED FROM THE OFFER (the final scenario, step 2). This is
-            // the one template on this list that is NOT one of the owner's
-            // kits: it is the generic house design the palette, the type
-            // pairings and the section tones were all built to make look
-            // varied. Six faithful kit conversions later there is nothing it
-            // is the best answer to, and a tenant who picks it gets a page
-            // none of the design controls left in the builder can style.
-            //
-            // `false` here — a fact in the registry, not a condition in a
-            // screen — is the whole mechanism: {@see offerableTemplateKeys()}
-            // is what the wizard's picker, the editor's picker and BOTH
-            // create endpoints read, so there is one answer to "may a tenant
-            // choose this" and no UI holds a second copy of it.
-            //
-            // THE ROW STAYS ON THE WIRE, deliberately. Two demo pages are on
-            // this design and must keep rendering exactly as they do today,
-            // and everything the editor knows about a page's design —
-            // `renders`, `fixed_blocks`, `content_fields`, `image_defaults` —
-            // is read off this list by key. Dropping the row instead of
-            // marking it would leave those pages' editors with no facts at
-            // all, i.e. every capability question answered "no opinion".
-            'offerable' => false,
-            // No trade. It was drawn for none in particular, which is the
-            // other half of why it is retired; see `vertical` on the kits
-            // below and {@see INDUSTRY_VERTICALS}.
-            'vertical'  => null,
-            // Task 11: the blurb is the FIRST sentence a tenant reads about
-            // this product, and it used to be written for a designer -- "a
-            // hairline rule down the margin acts as index, ruler and spine".
-            // Walked live as a salon owner it says nothing about what you
-            // get. Rewritten to describe the page, not the craft behind it;
-            // the visual restraint is still the pitch, in words somebody who
-            // has never commissioned a website can act on.
-            'blurb' => 'Calm and uncluttered, with plenty of white space. Your work and your prices do the talking — nothing on the page competes with them.',
-            // Every one, and this is the template App\Landing\Palette,
-            // the font pairings and SectionType::bandClass() were all
-            // built for: ruled_page's layout renders the palette block,
-            // the pairing block and each band's tone class.
-            'supports' => [
-                'palette'      => true,
-                'font_pairing' => true,
-                'tones'        => true,
-                'brand_color'  => true,
-            ],
-            // NOTHING IS FURNITURE HERE. ruled_page's layout renders every
-            // band straight out of $renderedSections, in the tenant's own
-            // `sort` order and nowhere else — grep it for `$furniture` and
-            // there is none. So every row on this design really can be
-            // moved, and the reorder controls tell the truth as they stand.
-            'fixed_blocks' => [],
-        ],
-        [
             // The first of the three BeautyTech kits
             // (resources/landing-kits/beauty-tech/01-nocturne-ritual),
             // converted into a real template rather than re-drawn: the
             // author's own markup, their own :root palette and their own
             // stylesheet ship as the design, and only the CONTENT is the
-            // tenant's. It is deliberately the opposite end of the range
-            // from The Ruled Page — dark where that is pale, photographic
-            // where that is typographic — so the picker is a choice between
-            // two directions and not two shades of one.
+            // tenant's.
+            //
+            // FIRST ROW, DELIBERATELY: {@see defaultTemplateFor()} falls
+            // back to the first offerable row for a trade no kit has been
+            // drawn for, so the order of this array is a fact the migration
+            // that retired the generic design relied on.
             'key'   => 'nocturne_ritual',
             'name'  => 'Nocturne Ritual',
             // THE TRADE THIS DESIGN WAS DRAWN FOR. See {@see INDUSTRY_VERTICALS}
@@ -161,24 +108,15 @@ class LandingOnboardingService
             'vertical' => 'beauty',
             // The author's own words for it, from the kit collection's
             // README: "Dark, cinematic ritual luxury / Premium spas, massage
-            // and evening wellness brands". Written the way the Ruled Page's
-            // blurb was rewritten in Task 11 — describing what a tenant gets,
+            // and evening wellness brands". Describing what a tenant gets,
             // in words somebody who has never commissioned a website can act
             // on, rather than the craft behind it.
             'blurb' => 'Dark and cinematic, built around your photographs. Made for premium spas, massage studios and evening wellness brands.',
-            // Transcribed from the four statements
-            // resources/views/landing/nocturne_ritual/layout.blade.php
-            // makes about itself, in its own "WHAT THIS TEMPLATE
-            // DELIBERATELY DOES NOT DO" note: no palette block (the kit's
-            // :root IS the design), no font pairing (Cormorant Garamond
-            // and Manrope are named in the kit's own tokens), no section
-            // tones (the dark/paper/sand rhythm is composed, and a band on
-            // the wrong surface breaks the sequence rather than just that
-            // band) — and the accent, which is "the ONE tenant override".
+            // Transcribed from resources/views/landing/nocturne_ritual/
+            // layout.blade.php's own "WHAT THIS TEMPLATE DELIBERATELY DOES
+            // NOT DO" note: the kit's :root IS the design, and the accent
+            // is "the ONE tenant override".
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -237,9 +175,6 @@ class LandingOnboardingService
             // DOES NOT DO" note — and the accent, which is "the ONE tenant
             // override".
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -274,9 +209,6 @@ class LandingOnboardingService
             // TEXT this kit sets its eight two-tone headings in, never on the
             // moss the page uses as ink (D2).
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -329,9 +261,6 @@ class LandingOnboardingService
             // two-tone heading companion needs, never on the oxblood, which is
             // a surface with white type on it.
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -366,9 +295,6 @@ class LandingOnboardingService
             // spent here on the CLAY family, which this author uses as text and
             // as hairlines and never as a ground with type on it.
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -404,9 +330,6 @@ class LandingOnboardingService
             // on a light ground, never on the ember, which is a surface this
             // page sets its type in night on.
             'supports' => [
-                'palette'      => false,
-                'font_pairing' => false,
-                'tones'        => false,
                 'brand_color'  => true,
             ],
             // THE KIT'S COMPOSITION, transcribed from the one place that
@@ -436,7 +359,7 @@ class LandingOnboardingService
      *
      * @var list<string>
      */
-    private const SUPPORT_KEYS = ['palette', 'font_pairing', 'tones', 'brand_color'];
+    private const SUPPORT_KEYS = ['brand_color'];
 
     /**
      * THE TRADES DESIGNS ARE DRAWN FOR — the id vocabulary both halves of
@@ -623,6 +546,40 @@ class LandingOnboardingService
     }
 
     /**
+     * THE DESIGN A PAGE IN THIS INDUSTRY GETS WHEN NOBODY CHOSE ONE — the
+     * first offerable design drawn for the industry's own trade, else the
+     * first offerable design of all.
+     *
+     * The same answer the wizard's design step pre-selects (the first card
+     * of the tenant's own trade, or the first card under "All designs" for
+     * a trade no kit has been drawn for), computed from the same two served
+     * facts — {@see INDUSTRY_VERTICALS} through {@see verticalForIndustry()},
+     * and each row's own `vertical` — so the two cannot disagree. Written
+     * here rather than in the migration that needed it first, because "which
+     * design does a page default to" is a registry question and the
+     * registry is here.
+     *
+     * The one caller today is the data migration that retired the generic
+     * house design (`ruled_page`): every page still on it moved onto this
+     * answer for its own industry. Deliberately not spelled with a template
+     * id: the fallback is the first row of {@see TEMPLATES}, which is
+     * `nocturne_ritual` by that array's own order and by nothing else.
+     */
+    public static function defaultTemplateFor(string $industry): string
+    {
+        $vertical  = self::verticalForIndustry($industry);
+        $offerable = array_values(array_filter(self::TEMPLATES, self::isOfferable(...)));
+
+        foreach ($offerable as $row) {
+            if ($vertical !== null && self::verticalOf($row) === $vertical) {
+                return $row['key'];
+            }
+        }
+
+        return $offerable[0]['key'];
+    }
+
+    /**
      * The trade an industry's designs are drawn for, or null where no kit
      * has been drawn for it yet.
      *
@@ -701,14 +658,12 @@ class LandingOnboardingService
      * list, so the moment two designs stopped drawing the same things the
      * editor started offering controls that could not act:
      *
-     *   - template fidelity 5.x gives `nocturne_ritual` some thirty leaves
-     *     `ruled_page` draws nowhere — the two-tone heading companions, the
-     *     hero's fact terms, the story ledger, the closing promises, the
-     *     footer hub's social column;
-     *   - and `ruled_page` has always drawn four `contact` wording overrides
-     *     (`phone_label`, `address_label`, `map_label`, `closed_label`) that
-     *     the kits' icon-led footer has no room for. That direction was
-     *     already true before this round.
+     *   - kit 02-beauty draws a `price_prefix` and an `edition` mark that
+     *     kit 01-beauty has no composition for; kit 03-beauty draws a
+     *     `badge_label` and three `note_N` lines the other two do not;
+     *   - the three hospitality kits draw no `team` band at all, and none of
+     *     them prints `services.item_cta_label` because no hospitality author
+     *     draws a per-row Book control.
      *
      * DERIVED FROM THE PARTIAL, exactly as `photo_blocks` and `renders` are,
      * because a hand list here would be the second source of truth this whole
@@ -965,15 +920,16 @@ class LandingOnboardingService
      *     them.
      *   - adding them to beauty's `defaultSections` instead — the other
      *     obvious fix — would seed three permanently-dead rows into every
-     *     RULED PAGE, which ships no partial for any of them. That is the
-     *     concern this template's own layout already records in prose.
+     *     page on a design that ships no partial for them. No shipped design
+     *     is in that position today (every kit draws all three), but the
+     *     seed is a function of the TEMPLATE so that the next design which
+     *     drops one of them does not have to remember this.
      *
-     * So the extra rows are a function of the TEMPLATE, resolved through the
-     * same two derivations everything else here uses:
-     * {@see SectionType::addableIds()} (a fixed type no industry seeds, with
-     * something to edit) intersected with {@see rendersFor()} (this template
-     * ships a partial for it). A Ruled Page tenant therefore still gets
-     * exactly the seven rows they got before, and neither list is copied.
+     * So the extra rows are resolved through the same two derivations
+     * everything else here uses: {@see SectionType::addableIds()} (a fixed
+     * type no industry seeds, with something to edit) intersected with
+     * {@see rendersFor()} (this template ships a partial for it), and neither
+     * list is copied.
      *
      * REPEATABLE TYPES ARE NOT SEEDED. `text` and `gallery` are addable and
      * drawn by both templates, and `addableIds()` names them — but they have
@@ -1035,10 +991,10 @@ class LandingOnboardingService
      * change of design does to the rows of a page that already exists (the
      * final scenario, step 5).
      *
-     * A design is a composition, not a skin: Nocturne Ritual draws an offer
-     * bar, a highlights band and a questions block that The Ruled Page has no
-     * partial for, and until this existed a page moved onto it arrived with
-     * three of the author's fifteen blocks simply missing — with no control
+     * A design is a composition, not a skin: the three beauty kits draw a
+     * `team` band that the three hospitality kits ship no partial for, and a
+     * restaurant page moved from Maison Vela onto Nocturne Ritual would
+     * otherwise arrive with that block simply missing — with no control
      * anywhere that would have told the tenant why. {@see seedSectionsFor()}
      * already answers "which rows does a page on this design start with"; a
      * design change is the same question asked a second time, so it is the
@@ -1205,7 +1161,7 @@ class LandingOnboardingService
      *
      * A row that omits the whole map, or one key of it, reads as FALSE —
      * see {@see SUPPORT_KEYS}. A template added without saying whether it
-     * honours the palette has not said yes.
+     * honours the accent has not said yes.
      *
      * @param  array<string, mixed> $row
      * @return array<string, bool>
@@ -1272,13 +1228,6 @@ class LandingOnboardingService
                     // would really use, not a value Accent::for() would
                     // normalise or discard at render time.
                     'accent'         => CssColor::safe($profile->accent),
-                    // The palette id only. What that palette LOOKS like is
-                    // already mirrored on the front end
-                    // (frontend/src/pages/landing/designChoices.ts, which
-                    // the design step's own cards render from), so sending
-                    // the tokens again here would be a second copy of the
-                    // same six palettes on the same screen.
-                    'palette'        => $profile->defaultPalette,
                     'sections'       => $profile->defaultSections,
                     // THE OTHER END OF THE DESIGN JOIN (the final scenario,
                     // step 1). The editor holds both this list and
@@ -1398,22 +1347,6 @@ class LandingOnboardingService
             // repeating it on every row would invite a reader to believe
             // otherwise.
             'max_sections'   => SectionType::MAX_SECTIONS_PER_PAGE,
-            // The tone allowlist (SectionType::TONES' ids, in the order the
-            // editor should offer them) — served for the third time for the
-            // third identical reason: it is what
-            // LandingPageSectionController::update() validates a section's
-            // colour against, so a picker built from a hand-kept copy in
-            // TypeScript is a picker that can offer a swatch the save would
-            // then 422 on.
-            //
-            // Ids only. What each one LOOKS like is a question about the
-            // palette the page is currently wearing, and the admin SPA
-            // already holds those colours for its own design cards
-            // (frontend/src/pages/landing/designChoices.ts) — sending a hex
-            // from here would be the server describing CSS it does not
-            // render, and would go stale against the palette the tenant
-            // switches to a moment later.
-            'section_tones'  => SectionType::toneIds(),
             'suggested_slug' => $page?->slug ?? $this->suggestSlug($org, $brand, $contact),
         ];
     }
@@ -1480,7 +1413,7 @@ class LandingOnboardingService
             // putting a business on the internet stays a deliberate,
             // separate act with its own button.
             'status'          => LandingPage::STATUS_DRAFT,
-            'theme'           => $this->theme($data, $profile),
+            'theme'           => $this->theme($data),
             'content'         => $this->content($data, $org, $brandId),
         ]);
 
@@ -1751,41 +1684,29 @@ class LandingOnboardingService
     }
 
     /**
-     * D6 (landing phase 3c Task 2): `palette` joins the two keys this
-     * method already carried through — App\Http\Controllers\Api\V1\Admin\
-     * LandingOnboardingController::store() now validates it (via
-     * App\Landing\ThemeRules::validate(), against exactly
-     * ThemeRules::keys()) the same as brand_color/font_pairing, so it must
-     * be extracted here too or a validated-and-accepted `theme.palette`
-     * would silently fail to reach the stored row — accepted by the
-     * controller, dropped by the service, the same class of bug D4's
-     * comment elsewhere in this codebase warns single-writer columns
-     * about.
+     * The theme keys the wizard stores — exactly {@see ThemeRules::KEYS},
+     * which App\Http\Controllers\Api\V1\Admin\LandingOnboardingController::
+     * store() has already validated the payload against. Extracted here by
+     * name so a key the controller accepts cannot be dropped by the service
+     * on its way to the row — the same class of bug D4's comment elsewhere
+     * in this codebase warns single-writer columns about.
      *
-     * Task 6 (landing phase 3c, D2's own deferred half — see
-     * `App\Landing\Palette`'s header docblock: "nothing in THIS round
-     * applies it to a page"; this is that application): a tenant who never
-     * opened the wizard's palette picker submits `theme.palette` absent,
-     * not merely falsy — the wizard's own `WizardForm.palette` field stays
-     * genuinely unset until touched (see `landingDraft.ts`), so `?? null`
-     * here would otherwise store no palette at all and leave the page
-     * rendering the CSS's bare `porcelain` default regardless of industry.
-     * Falling back to `$profile->defaultPalette` instead means EVERY new
-     * page opens on a palette curated for its own industry — the
-     * education tenant above gets `slate_amber`, not a beauty salon's
-     * `champagne_noir` inherited by accident of stylesheet order — while a
-     * tenant who DID choose one keeps exactly that choice, since the `??`
-     * only ever fires on the absent/null case.
+     * One key today: the accent. The palette and the type pairing that used
+     * to travel beside it were the generic house design's controls, and they
+     * were retired with that design — nothing offerable reads either, so
+     * nothing here stores either.
      *
      * @return array<string, string>
      */
-    private function theme(array $data, IndustryProfile $profile): array
+    private function theme(array $data): array
     {
-        return $this->kept([
-            'brand_color'  => $data['theme']['brand_color']  ?? null,
-            'font_pairing' => $data['theme']['font_pairing'] ?? null,
-            'palette'      => $data['theme']['palette']      ?? $profile->defaultPalette,
-        ]);
+        $theme = [];
+
+        foreach (ThemeRules::keys() as $key) {
+            $theme[$key] = $data['theme'][$key] ?? null;
+        }
+
+        return $this->kept($theme);
     }
 
     /**

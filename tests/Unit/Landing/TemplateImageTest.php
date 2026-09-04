@@ -149,18 +149,6 @@ class TemplateImageTest extends TestCase
     }
 
     /**
-     * A design that ships no photographs answers null for everything — which
-     * is exactly what every page rendered before this class existed did, and
-     * is why The Ruled Page's four byte goldens did not move.
-     */
-    public function test_a_design_with_no_photographs_answers_nothing(): void
-    {
-        $this->assertSame([], TemplateImage::map('ruled_page'));
-        $this->assertNull(TemplateImage::url('ruled_page', 'hero'));
-        $this->assertNull(TemplateImage::alt('ruled_page', 'hero'));
-    }
-
-    /**
      * `template_key` is a plain varchar off the page row with no constraint
      * behind it. A value that reached it by any route other than the
      * endpoints must resolve to nothing rather than to a path.

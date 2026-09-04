@@ -4,9 +4,9 @@
  * THE AUTHOR'S OWN style.css, from
  * resources/landing-kits/beauty-tech/02-editorial-atelier/style.css, copied
  * byte for byte except for the three deliberate changes listed below. The
- * :root palette IS the design here and ships verbatim: like nocturne_ritual
- * and unlike ruled_page, this template does not consume App\Landing\Palette
- * at all, and the layout emits no palette token block for it (see
+ * :root palette IS the design here and ships verbatim: like nocturne_ritual,
+ * there is no palette system layered over it,
+ * and the layout emits no palette token block for it (see
  * layout.blade.php's own note).
  *
  * WHAT CHANGED, and nothing else did:

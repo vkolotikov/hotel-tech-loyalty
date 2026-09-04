@@ -7,13 +7,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class LandingPageSection extends Model
 {
     /**
-     * `tone` is nullable and stays that way: null is not "unset", it is the
-     * value that means "render this band the way its partial was authored"
-     * — see App\Landing\SectionType::bandClass(). Never given a cast: it is
-     * a plain string id from SectionType::TONES, and the renderer
-     * re-whitelists it at read time regardless of what reached the column.
+     * `tone` is NOT fillable, deliberately. The column still exists
+     * (2026_08_31_090000_add_tone_to_landing_page_sections) but it was the
+     * generic house design's per-band colour, and that design is retired
+     * and deleted: none of the six kit layouts reads it, no endpoint
+     * validates it, and no screen offers it. Leaving the column is the safe
+     * direction on the live table; leaving a writer for a column nothing
+     * reads is not, so the writer went with the design.
      */
-    protected $fillable = ['landing_page_id', 'key', 'enabled', 'tone', 'sort', 'content'];
+    protected $fillable = ['landing_page_id', 'key', 'enabled', 'sort', 'content'];
 
     protected $casts = [
         'enabled' => 'boolean',

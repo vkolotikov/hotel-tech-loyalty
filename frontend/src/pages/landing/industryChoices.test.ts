@@ -3,7 +3,6 @@ import {
   INDUSTRY_NAMES, industryCards, industryName, resolveIndustry, sectionsForIndustry, verticalFor,
   type IndustryOption,
 } from './industryChoices'
-import { PALETTES } from './designChoices'
 
 /**
  * The industry step, proven where this repo's vitest can actually reach it.
@@ -12,13 +11,13 @@ import { PALETTES } from './designChoices'
  * Testing Library — so nothing here renders a card. What IS provable, and
  * what these tests hold, is everything the component would otherwise have to
  * get right inline: which card opens selected, that a card carries the
- * industry's own words and its own palette's accent, that a stale draft can
+ * industry's own words and its own accent, that a stale draft can
  * never send an id the endpoint would refuse, and that switching industry
  * cannot leave a section row in the payload the created page will not own.
  */
 
 /** The two profiles that differ in every way this module cares about:
- *  vocabulary, accent, default palette and — the load-bearing one —
+ *  vocabulary, accent and — the load-bearing one —
  *  whether `booking` is in the section list at all. Values mirror
  *  `App\Landing\IndustryProfile::all()`; the shape is the wire's. */
 const HOTEL: IndustryOption = {
@@ -27,7 +26,6 @@ const HOTEL: IndustryOption = {
   people_label: 'At your service',
   primary_cta: 'Book your stay',
   accent: '#1B3A5C',
-  palette: 'midnight_brass',
   sections: ['hero', 'services', 'about', 'team', 'reviews', 'booking', 'contact'],
 }
 
@@ -37,7 +35,6 @@ const EDUCATION: IndustryOption = {
   people_label: 'Instructors',
   primary_cta: 'Book a lesson',
   accent: '#35509E',
-  palette: 'slate_amber',
   sections: ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
 }
 
@@ -123,7 +120,7 @@ describe('resolveIndustry', () => {
    * The one narrowing between a draft (localStorage, hand-editable,
    * possibly written by a build that offered an id this one does not) and
    * the request. `mergeFormDraft` deliberately does NOT guard `industry`
-   * against a hardcoded list the way it must for palettes and pairings —
+   * against a hardcoded list —
    * this is where that guard lives instead, against the ids the SERVER
    * actually offered, which cannot drift from what the endpoint accepts.
    */
@@ -172,26 +169,7 @@ describe('industryCards', () => {
     expect(education.primaryCta).toBe('Book a lesson')
   })
 
-  it('paints each card in its own palette’s accent, not a shared one', () => {
-    const [hotel, education] = industryCards(OPTIONS, 'hotel')
 
-    const accentOf = (id: string) => PALETTES.find(p => p.id === id)!.accent
-
-    expect(hotel.paletteAccent).toBe(accentOf('midnight_brass'))
-    expect(education.paletteAccent).toBe(accentOf('slate_amber'))
-    expect(hotel.paletteAccent).not.toBe(education.paletteAccent)
-    // The industry's HOUSE accent is a separate colour from its palette's
-    // (the CTA is drawn in one, the eyebrows in the other) — a card that
-    // conflated them would show the same swatch twice.
-    expect(hotel.accent).toBe('#1B3A5C')
-  })
-
-  it('falls back to the no-choice palette for an unrecognised palette id', () => {
-    // paletteFor's own documented fallback — a card must always have
-    // something to render, never `undefined` piped into a style attribute.
-    const [card] = industryCards([{ ...HOTEL, palette: 'not_a_palette' }], 'hotel')
-    expect(card.paletteAccent).toBe(PALETTES.find(p => p.id === 'porcelain')!.accent)
-  })
 })
 
 describe('sectionsForIndustry', () => {

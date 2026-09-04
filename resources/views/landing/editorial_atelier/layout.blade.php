@@ -26,8 +26,8 @@
   WHAT THIS TEMPLATE DELIBERATELY DOES NOT DO, and why — the same three
   refusals nocturne_ritual makes, for the same three reasons:
 
-    - NO PALETTE BLOCK. App\Landing\Palette exists so the Ruled Page can be
-      re-coloured; this kit's :root IS the design, authored by hand, and
+    - NO PALETTE BLOCK. The palette system left with the generic house design;
+      this kit's :root IS the design, authored by hand, and
       overriding twenty tokens under it would produce a different page
       wearing its layout. `theme.palette` is simply not read here.
     - NO FONT PAIRING. The kit names Bodoni Moda and Manrope in its own

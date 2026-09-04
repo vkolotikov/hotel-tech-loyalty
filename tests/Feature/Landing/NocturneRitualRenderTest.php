@@ -418,26 +418,6 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringNotContainsString('Amara', $body);
     }
 
-    /**
-     * The other side of the default model, and the reason it is not simply
-     * "ship some photographs": The Ruled Page has none of its own, so its
-     * empty states are exactly what they were.
-     */
-    public function test_a_design_with_no_photographs_of_its_own_still_renders_its_empty_state(): void
-    {
-        Property::create([
-            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
-        ]);
-
-        $page = $this->published();
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
-    }
-
     public function test_an_empty_page_ships_no_empty_heading(): void
     {
         $page = LandingPage::create([
@@ -976,28 +956,6 @@ class NocturneRitualRenderTest extends TestCase
         }
     }
 
-    /**
-     * The same battery against a design that ships no photograph of its own,
-     * where the fallback is still the empty state. Both halves of the model
-     * have to be proven, or "it fell back to something" says nothing about
-     * which something.
-     */
-    #[DataProvider('hostileImages')]
-    public function test_a_hostile_hero_image_renders_no_img_where_the_design_has_no_default(mixed $value, ?string $needle): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne', 'image_url' => $value]]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
-
-        if ($needle !== null) {
-            $this->assertStringNotContainsString($needle, $body);
-        }
-    }
-
     #[DataProvider('hostileImages')]
     public function test_a_hostile_story_image_never_reaches_the_page_and_restores_the_default(mixed $value, ?string $needle): void
     {
@@ -1044,27 +1002,6 @@ class NocturneRitualRenderTest extends TestCase
         foreach (['javascript:', 'evil.example', 'nope'] as $needle) {
             $this->assertStringNotContainsString($needle, $body);
         }
-    }
-
-    /**
-     * A design with no photographs of its own is where "an empty gallery is
-     * not a section" still lives — and it has to, because it is the ruling
-     * that keeps a headed band off a page with nothing under it.
-     */
-    public function test_a_gallery_with_no_usable_picture_renders_no_band_where_the_design_has_no_defaults(): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
-            'heading' => 'Inside the house',
-            'image_1' => 'javascript:alert(1)',
-            'image_2' => ['nope'],
-        ]]);
-        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('Inside the house', $body);
     }
 
     public function test_a_gallery_renders_its_photographs_in_leaf_order(): void
@@ -1193,11 +1130,6 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringContainsString('landing/nocturne_ritual/assets/team-nocturne.webp', $body);
         $this->assertStringNotContainsString('/storage/avatars/amara.webp', $body);
         $this->assertStringContainsString('alt="Three practitioners together in the treatment space"', $body);
-
-        // On a design with no photograph of its own, the first
-        // practitioner's avatar is still what the band leads with.
-        $page->update(['template_key' => 'ruled_page']);
-        $this->assertStringContainsString('/storage/avatars/amara.webp', $this->body());
     }
 
     /**
@@ -1284,25 +1216,6 @@ class NocturneRitualRenderTest extends TestCase
             '#<meta property="og:image" content="https?://[^"]+/landing/nocturne_ritual/assets/hero-nocturne\.webp">#',
             $this->body(),
         );
-    }
-
-    /**
-     * No picture anywhere means no tag, rather than one pointing at nothing.
-     *
-     * Asserted through The Ruled Page because it is the only design that can
-     * reach that state — it ships no photographs of its own. Its layout also
-     * carries its OWN <head> and its own inline JSON-LD copy (the four byte
-     * goldens pin them), so it publishes no share image at all yet: that is
-     * the same known duplication `landing/shared/local-business-json-ld.blade.php`
-     * already records, and closing it is a deliberate golden re-capture this
-     * task was told not to make.
-     */
-    public function test_a_design_with_no_photographs_publishes_no_share_image(): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne']]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $this->assertStringNotContainsString('og:image', $this->body());
     }
 
     /**

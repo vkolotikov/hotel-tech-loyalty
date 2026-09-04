@@ -319,14 +319,11 @@ const FIELD_FALLBACK: Record<string, string> = {
   call_label: 'Phone line wording',
   call_short: 'Short phone label',
 
-  // contact — the five wording overrides `contact.blade.php` already reads.
-  // Distinct from `phone`/`email`/`address` above, which are the VALUES:
-  // these are the words printed above them.
-  phone_label: 'Wording above your phone number',
+  // contact — the one wording override every kit's footer hub reads (the
+  // text of the mail link, "Email the house"). Distinct from `email` above,
+  // which is the VALUE. The other four channel wordings the retired generic
+  // design printed left the catalogue with it.
   email_label: 'Wording above your email',
-  address_label: 'Wording above your address',
-  map_label: 'Map link wording',
-  closed_label: 'Closed-today wording',
 
   // ─── Template fidelity 5.1 / R6 ───────────────────────────────────────
   //
@@ -567,28 +564,29 @@ export function LandingEditor({
     update('content', { ...(f.content ?? {}), [sectionKey]: sectionCopy })
   }
 
-  // Task 6 (landing phase 3c, D4): the three theme keys the Design panel
+  // Task 6 (landing phase 3c, D4): the one theme key the Design panel
   // owns, narrowed from `f.theme` (an untyped `Record<string, unknown> |
   // null` — the raw JSON column, Task 1 interfaces) the same way `imageUrl`
   // narrows its own raw leaf a few lines below with `safeImageUrl` — a
   // legal non-string leaf must fall through to "unset" here rather than
-  // reach `DesignPanel`'s string-typed props.
+  // reach `DesignPanel`'s string-typed props. A stored `palette` or
+  // `font_pairing` from before the generic design was retired is NOT read
+  // here, and so never sent back: the server refuses both as unknown keys
+  // now, and this narrowing is what lets such a page still save.
   const themeFields = {
-    palette: typeof f.theme?.palette === 'string' ? f.theme.palette : undefined,
-    font_pairing: typeof f.theme?.font_pairing === 'string' ? f.theme.font_pairing : undefined,
     brand_color: typeof f.theme?.brand_color === 'string' ? f.theme.brand_color : undefined,
   }
 
-  // Merges one theme field into whatever the OTHER two currently hold —
-  // never a bare `{ [key]: value }`, which would silently drop a sibling
-  // field the tenant set in an earlier, still-unsaved edit this same
-  // session (`f.theme` already carries every prior queued change via
-  // `update`'s own `{...(p ?? page ?? {})}` merge). `themePayload` is the
-  // same allowlist-narrowing function `designChoices.test.ts` pins — used
-  // here, not only at `saveMut`'s wire boundary, so a stray key can never
-  // enter `form.theme` in the first place. Setting `form` (via `update`)
-  // is what flips `dirty` true, exactly like every other field on this
-  // screen — Save still has to be pressed; nothing here is a Task 4-style
+  // Merges one theme field into whatever the form currently holds — never
+  // a bare `{ [key]: value }`, which would silently drop a sibling field
+  // the tenant set in an earlier, still-unsaved edit this same session
+  // (`f.theme` already carries every prior queued change via `update`'s own
+  // `{...(p ?? page ?? {})}` merge). `themePayload` is the same
+  // allowlist-narrowing function `designChoices.test.ts` pins — used here,
+  // not only at `saveMut`'s wire boundary, so a stray key can never enter
+  // `form.theme` in the first place. Setting `form` (via `update`) is what
+  // flips `dirty` true, exactly like every other field on this screen —
+  // Save still has to be pressed; nothing here is a Task 4-style
   // straight-to-server write.
   const updateTheme = (patch: Partial<typeof themeFields>) =>
     update('theme', themePayload({ ...themeFields, ...patch }))
@@ -801,18 +799,16 @@ export function LandingEditor({
   /*
    * THE PER-BAND COLOUR SWATCHES ARE GONE (the final scenario, step 3).
    *
-   * They painted `SectionType::TONES` in the colours of the palette the page
-   * was wearing, and every one of them acted on exactly one design:
-   * `ruled_page`, whose layout is the only one that ever read a band's tone
-   * class. That design is retired from the offer, so on every design a
-   * tenant can now choose the swatches were three dead controls per card —
-   * twenty-one on a full page — over layouts whose authors composed the
-   * dark/paper/sand rhythm themselves and say so in their own headers.
+   * They painted the retired generic design's three tones in the colours of
+   * the palette the page was wearing, and every one of them acted on exactly
+   * one design: `ruled_page`, whose layout was the only one that ever read a
+   * band's tone class. That design is retired and deleted, so on every
+   * design a tenant can choose the swatches were three dead controls per
+   * card — twenty-one on a full page — over layouts whose authors composed
+   * the dark/paper/sand rhythm themselves and say so in their own headers.
    *
-   * The BACKEND half is untouched and still load-bearing: `tone` is still a
-   * column, `SectionType::bandClass()` still resolves it, and the two demo
-   * pages on the retired design still render with whatever tones they were
-   * given. What is gone is the control that could no longer change anything.
+   * The backend's write path went with it: no endpoint validates a `tone`
+   * and no row carries one on the wire. Only the column remains, unread.
    */
 
   /**

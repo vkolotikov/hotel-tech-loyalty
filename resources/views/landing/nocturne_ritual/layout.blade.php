@@ -26,18 +26,18 @@
 
   WHAT THIS TEMPLATE DELIBERATELY DOES NOT DO, and why:
 
-    - NO PALETTE BLOCK. App\Landing\Palette exists so the Ruled Page can be
-      re-coloured; this kit's :root IS the design, authored by hand, and
+    - NO PALETTE BLOCK. The palette system left with the generic house design;
+      this kit's :root IS the design, authored by hand, and
       overriding fifteen tokens under it would produce a different page
       wearing its layout. `theme.palette` is simply not read here — not
       whitelisted-and-ignored, not read — so there is no second inline block
       and no data-scheme on <html>.
     - NO FONT PAIRING. Same reason: the kit names Cormorant Garamond and
       Manrope in its own tokens, both self-hosted (see nocturne_ritual.css).
-    - NO SECTION TONES. SectionType::bandClass() answers "which surface does
-      the tenant want this band on", which is a Ruled Page question — this
-      kit alternates dark / paper / sand as a designed rhythm and a band on
-      the wrong surface breaks the sequence, not just that band. Each partial
+    - NO SECTION TONES. "Which surface does the tenant want this band on"
+      was the generic house design's question and left with it — this kit
+      alternates dark / paper / sand as a designed rhythm and a band on the
+      wrong surface breaks the sequence, not just that band. Each partial
       carries the class the author gave it.
 
   The ONE tenant override is the accent — see the nonced block below.
@@ -76,10 +76,10 @@
     // Three conditions: the tenant switched the band off; the band has
     // nothing to say (PageContent::has() — a section that would render empty
     // is omitted from the document entirely); or this template ships no
-    // partial for it. The third is not defensive here — `announcement`,
-    // `trust` and `faq` are this kit's blocks and ruled_page has no partials
-    // for them, so a page that switches templates legitimately gains and
-    // loses bands, keeping its stored copy either way.
+    // partial for it. The third is not defensive here — `team` is a beauty
+    // kit's block and the hospitality kits ship no partial for it, so a page
+    // that switches templates legitimately gains and loses bands, keeping
+    // its stored copy either way.
     $sectionViews = $sections
         ->mapWithKeys(fn ($section) => [$section->key => SectionType::viewFor($section->key, 'nocturne_ritual')]);
 

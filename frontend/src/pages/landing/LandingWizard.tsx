@@ -7,12 +7,11 @@ import { ArrowLeft, ArrowRight, Check, ExternalLink, Loader2 } from 'lucide-reac
 import { api } from '../../lib/api'
 import { useBrandStore } from '../../stores/brandStore'
 import {
-  STEPS, type StepKey, type FontPairingKey, type WizardForm,
+  STEPS, type StepKey, type WizardForm,
   emptyForm, loadDraft, saveDraft, clearDraft, buildPayload, type ApplyPayload,
 } from './landingDraft'
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionMeta } from './sections'
 import { DesignPanel } from './DesignPanel'
-import { DEFAULT_FONT_PAIRING_ID } from './designChoices'
 import {
   industryCards, resolveIndustry, sectionsForIndustry, verticalFor, type IndustryOption,
 } from './industryChoices'
@@ -122,7 +121,7 @@ const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 
  * a tenant testing the shipped wizard read as broken — correctly, because
  * there was nothing to pick. It now asks the question the page is actually
  * built out of: the industry, whose profile supplies every band's name, the
- * primary button's words, the house accent and the default palette. Each
+ * primary button's words and the house accent. Each
  * card is drawn in ITS OWN industry's words and colours, so the choice is
  * visible before it is made rather than explained after it.
  */
@@ -220,26 +219,6 @@ export function LandingWizard(props: LandingWizardProps) {
   const phone = form.phone ?? prefill.phone ?? ''
   const email = form.email ?? prefill.email ?? ''
   const address = form.address ?? prefill.address ?? ''
-  /*
-   * THE TWO THEME KEYS NOTHING ASKS ABOUT ANY MORE.
-   *
-   * `theme.font_pairing` and `theme.palette` are still columns, still
-   * validated by `ThemeRules`, and still read by the one design retired from
-   * the offer. Their PICKERS are gone — see `DesignPanel.tsx`'s own note —
-   * so `form.font_pairing` and `form.palette` can no longer be set by
-   * anybody, and these two resolve to the house default and to absent
-   * respectively on every page this wizard now creates.
-   *
-   * They are still SENT, deliberately and for one round only. Dropping them
-   * from `buildPayload` would be the second half of removing the palette
-   * machinery, and this round removes the UI and reports the backend that
-   * has become unreachable rather than deleting both at once. What they
-   * store is inert on every offerable design: each of the owner's kits ships
-   * its author's own `:root` and its layout reads neither key.
-   */
-  const fontPairing: FontPairingKey = form.font_pairing ?? DEFAULT_FONT_PAIRING_ID
-  const palette = form.palette
-
   // The brand's own logo, if it has one — read from the store the app
   // already populated (BrandSwitcher's own data), not a new request. There
   // is no logo field in `prefill` at all (LandingOnboardingService::prefill()
@@ -324,7 +303,7 @@ export function LandingWizard(props: LandingWizardProps) {
   // back unchanged.
   const payload: ApplyPayload = buildPayload({
     templateKey, industry: selectedIndustry,
-    slug: suggestedSlug, headline, subtext, brandColor, fontPairing, palette,
+    slug: suggestedSlug, headline, subtext, brandColor,
     contact: { phone, email, address },
     prefillContact: { phone: prefill.phone, email: prefill.email, address: prefill.address },
     sections: sectionMetas, sectionChoices: form.sections ?? {},
@@ -429,8 +408,8 @@ export function LandingWizard(props: LandingWizardProps) {
                 </div>
 
                 {/* The industry's own band names, drawn the way the page
-                    draws them: mono eyebrows in the palette this industry
-                    opens on (IndustryProfile::defaultPalette). Inline
+                    draws them: mono eyebrows in the industry's own accent
+                    (IndustryProfile::$accent). Inline
                     colour, deliberately — this is customer-facing page
                     styling being previewed, not admin chrome (Appendix A
                     §7.4), and the whole point of the card is that two
@@ -440,7 +419,7 @@ export function LandingWizard(props: LandingWizardProps) {
                     <span
                       key={word}
                       className="text-[10px] font-mono uppercase tracking-[0.12em]"
-                      style={{ color: card.paletteAccent }}
+                      style={{ color: card.accent }}
                     >
                       {word}
                     </span>
