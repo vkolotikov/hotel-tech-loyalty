@@ -1845,9 +1845,15 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
         $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
 
-        // The header bar and its mobile-menu twin.
-        $this->assertStringContainsString('Book a ritual</a>', $header[0]);
-        $this->assertStringContainsString('Book a ritual</a>', $header[0]);
+        // The header bar and its mobile-menu twin, captured APART: the
+        // <details> panel sits inside <header>, so one word asserted twice
+        // against the whole capture could not tell the two placements from
+        // each other (review, Minor 1). The bar is the header with the panel
+        // cut out; the panel is asserted on its own.
+        $this->assertSame(1, preg_match('#<details class="mobile-(?:menu|nav)">.*?</details>#s', $header[0], $mobile));
+        $bar = str_replace($mobile[0], '', $header[0]);
+        $this->assertStringContainsString('Book a ritual</a>', $bar);
+        $this->assertStringContainsString('Book a ritual</a>', $mobile[0]);
         // The footer lockup and the fixed pill.
         $this->assertStringContainsString('Book now</a>', $footer[0]);
         $this->assertStringContainsString('Book now</a>', $fab[0]);
