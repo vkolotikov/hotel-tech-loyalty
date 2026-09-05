@@ -122,6 +122,12 @@ export type SectionField = {
    *  the served `image_slots`. Never a literal eight: the cap the editor
    *  counts against and the cap the endpoints enforce are one number. */
   slots?: number
+  /** For `type: 'gallery'` only — whether this DESIGN prints a line of
+   *  prose under each tile's caption (`caption_N_note`), off the served
+   *  `content_fields`. The three hospitality kits do; the beauty kits' pills
+   *  do not, and a second box under a caption nothing prints would be a
+   *  control that cannot act. Absent means no. */
+  notes?: boolean
   /** For `type: 'faq_pairs'` only — how many question/answer couplets the
    *  band may hold, DERIVED from the `qN`/`aN` leaves the server actually
    *  published (see `faqPairsOf`). Never a literal six. */
@@ -568,13 +574,22 @@ export function fieldsForType(
   const slots = drawsPhotos ? imageSlotsOf(type) : 0
   const draws = drawnLeaves === null ? null : new Set(drawnLeaves)
 
+  // Whether the strip draws a second box under each caption — the line of
+  // prose the hospitality kits print under a tile's name. Decided by the
+  // catalogue (does the type carry `caption_1_note` at all) and then by the
+  // design (does THIS template print it), in the same two steps every other
+  // field takes below; "no opinion" from the design offers what the
+  // catalogue lists, exactly as it does for the plain fields.
+  const notes = type.fields.includes(galleryNoteLeaf(1))
+    && (draws === null || draws.has(galleryNoteLeaf(1)))
+
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
   // is named by the bare section key, a strip writes `content.<key>.image_N`
   // and names each picture. The two are different controls over different
   // leaves, so a type is offered exactly one of them.
   const photo: SectionField[] =
-    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots }]
+    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots, ...(notes ? { notes: true } : {}) }]
       : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image' }]
         : []
 
@@ -611,7 +626,10 @@ export function fieldsForType(
   // this block), they go with it: describing a picture that will never
   // appear is a control that cannot act just as surely as the picker is.
   for (const name of PHOTO_WORD_LEAVES) paired.add(name)
-  for (let n = 1; n <= imageSlotsOf(type); n++) paired.add(`caption_${n}`)
+  for (let n = 1; n <= imageSlotsOf(type); n++) {
+    paired.add(`caption_${n}`)
+    paired.add(galleryNoteLeaf(n))
+  }
 
   const rest: SectionField[] = []
 
@@ -655,6 +673,14 @@ export function fieldsForType(
  * them it is one edit on each side.
  */
 const PHOTO_WORD_LEAVES = ['alt', 'caption']
+
+/** The line under tile `n`'s caption — `SectionType::galleryNoteLeaves()`'s
+ *  own spelling (`caption_3_note` beside `caption_3` beside `image_3`),
+ *  named once so the strip, the consumption above and the label family all
+ *  agree on it. */
+export function galleryNoteLeaf(n: number): string {
+  return `caption_${n}_note`
+}
 
 /**
  * Swap a section with its neighbour in the CURRENT order and renumber
@@ -1048,6 +1074,7 @@ export const FIELD_PRESENTATION: Record<string, { multiline?: boolean; type?: st
 export function fieldLabelKey(name: string): string {
   if (name.endsWith('_accent')) return 'accent'
   if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
+  if (/^caption_\d+_note$/.test(name)) return 'caption_note'
   if (/^caption_\d+$/.test(name)) return 'caption'
   if (/^fact_\d+_caption$/.test(name)) return 'fact_caption'
   if (/^fact_\d+$/.test(name)) return 'fact'
@@ -1176,6 +1203,9 @@ export type GalleryPhoto = {
    *  `image_3`). Numbered to match the picture, never to match its position
    *  in the strip — a caption must not move when a gap above it closes. */
   captionLeaf: string
+  /** The line under that caption (`caption_3_note`), numbered the same way
+   *  and for the same reason. Drawn only when the design prints one. */
+  noteLeaf: string
 }
 
 /**
@@ -1219,7 +1249,7 @@ export function gallerySlots(
     const url = own ?? defaults[slot] ?? null
 
     if (url !== null) {
-      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}` })
+      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}`, noteLeaf: galleryNoteLeaf(n) })
     }
   }
 

@@ -266,6 +266,11 @@ const FIELD_FALLBACK: Record<string, string> = {
   // is the trade's word and means nothing to a salon owner.
   alt: 'What the photo shows',
   caption: 'Caption under the photo',
+  // The line of prose under a gallery tile's caption — the hospitality kits'
+  // card text ("Oysters, cocktails and the full cellar."). Drawn inside the
+  // strip beside the caption it sits under, and only on a design that prints
+  // it (see `SectionField.notes`).
+  caption_note: 'Line under the caption',
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
@@ -2854,6 +2859,7 @@ function SectionRow({
                   sectionKey={row.key}
                   stored={storedSection}
                   limit={field.slots ?? 0}
+                  notes={field.notes === true}
                   defaults={imageDefaults}
                   content={content}
                   onFieldChange={onFieldChange}
@@ -3503,13 +3509,16 @@ function useSavedFlash(): [boolean, () => void] {
  * already follows: a native multi-select `<input type="file">`, a strip of
  * thumbnails, and a remove button on each.
  */
-function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldChange, onChanged }: {
+function GalleryField({ sectionKey, stored, limit, notes, defaults, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
   stored: unknown
   /** The served cap. Zero means the backend published no count, and the
    *  control shows no picker rather than guessing at a number. */
   limit: number
+  /** Whether this design prints a line under each caption — `SectionField.
+   *  notes`, off the served `content_fields`. False draws no second box. */
+  notes: boolean
   /** The design's own photographs, slot => URL (template fidelity 4.1). */
   defaults: Record<string, string>
   /** `f.content[sectionKey]`, for the per-tile caption leaves. Ordinary
@@ -3668,6 +3677,24 @@ function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldCha
                   value={content[photo.captionLeaf] ?? ''}
                   onChange={e => onFieldChange(photo.captionLeaf, e.target.value)}
                 />
+                {notes && (
+                  /* The line under the caption, on the designs whose cards
+                     print one (the hospitality kits). An ordinary content
+                     leaf beside the caption it sits under, saved with the
+                     words like every other. */
+                  <>
+                    <label className={label + ' mt-2'} htmlFor={`lp-${sectionKey}-${photo.noteLeaf}`}>
+                      {t('landing_pages.editor.field_caption_note', FIELD_FALLBACK.caption_note)}
+                    </label>
+                    <input
+                      id={`lp-${sectionKey}-${photo.noteLeaf}`}
+                      className={input}
+                      maxLength={191}
+                      value={content[photo.noteLeaf] ?? ''}
+                      onChange={e => onFieldChange(photo.noteLeaf, e.target.value)}
+                    />
+                  </>
+                )}
                 {photo.isDefault && (
                   <p className="text-xs text-t-secondary/80 mt-1">
                     {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}

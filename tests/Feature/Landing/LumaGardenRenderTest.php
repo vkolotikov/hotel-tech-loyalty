@@ -168,6 +168,8 @@ class LumaGardenRenderTest extends TestCase
                 'subtext'        => 'Come for an easy lunch, a celebration under the canopy or a private evening composed around your guests.',
                 'caption_1'      => 'Terrace lunch',
                 'caption_2'      => 'Golden-hour dinner',
+                'caption_1_note' => 'Shade, chilled wine and the full garden menu.',
+                'caption_2_note' => 'Five courses as the courtyard moves into candlelight.',
             ],
             'reviews' => [
                 'kicker' => 'A diner postcard',
@@ -618,6 +620,35 @@ class LumaGardenRenderTest extends TestCase
         $this->assertStringContainsString('<h3>Terrace lunch</h3>', $body);
         $this->assertStringContainsString('<h3>Golden-hour dinner</h3>', $body);
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
+
+        // And his line of prose under each name, exactly where he drew it.
+        $this->assertMatchesRegularExpression(
+            '#<h3>Terrace lunch</h3>\s*<p>Shade, chilled wine and the full garden menu\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>Golden-hour dinner</h3>\s*<p>Five courses as the courtyard moves into candlelight\.</p>#',
+            $body,
+        );
+    }
+
+    /** The line under a caption: the tenant's words, escaped, and absent when blank. */
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Luma'], 'gallery_1' => [
+            'heading'        => 'The garden',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The terrace',
+            'caption_1_note' => 'Shade <b>&</b> chilled wine',
+            'caption_2'      => 'The courtyard',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The terrace</h3>\s*<p>Shade &lt;b&gt;&amp;&lt;/b&gt; chilled wine</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The courtyard</h3>\s*</article>#', $body);
     }
 
     public function test_a_tile_with_no_caption_draws_no_heading(): void

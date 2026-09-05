@@ -2037,6 +2037,21 @@ class LandingOnboardingTest extends TestCase
         $this->assertNotContains('item_cta_label', $brasserie['services']);
         $this->assertArrayNotHasKey('team', $brasserie);
 
+        // The line under each gallery caption is the hospitality authors'
+        // card prose; the beauty kits' pills print no such line, so the
+        // control is offered on the three designs that draw it and withheld
+        // on the three that do not — through the reader the partial indexes
+        // it by, never a template id.
+        foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
+            $this->assertContains('caption_1_note', $served[$key]['gallery'], "'{$key}' prints the line under each caption and does not offer it.");
+            $this->assertContains('caption_8_note', $served[$key]['gallery']);
+        }
+
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness'] as $key) {
+            $this->assertNotContains('caption_1_note', $served[$key]['gallery'], "'{$key}' offers a line under the caption its pills never print.");
+            $this->assertContains('caption_1', $served[$key]['gallery']);
+        }
+
         // ContactDetails' three overridable VALUES are offered on EVERY
         // design, because it resolves them before any partial is reached —
         // the one family no scan of a partial could ever find.

@@ -569,6 +569,30 @@ class SectionTypeTest extends TestCase
     }
 
     /**
+     * One caption AND one line under it per tile, both numbered to the
+     * picture they belong to and both bounded by the same count as the
+     * pictures — three lists that are one length by construction. Neither
+     * is an image leaf: they travel the plain content save.
+     */
+    public function test_a_gallery_carries_one_caption_and_one_line_per_tile(): void
+    {
+        $fields = SectionType::get('gallery')->fields;
+
+        foreach (range(1, SectionType::GALLERY_IMAGES) as $n) {
+            $this->assertContains("caption_{$n}", $fields);
+            $this->assertContains("caption_{$n}_note", $fields);
+            $this->assertFalse(SectionType::isImageField("caption_{$n}_note"));
+        }
+
+        $this->assertNotContains('caption_9', $fields);
+        $this->assertNotContains('caption_9_note', $fields);
+        $this->assertSame(
+            array_map(static fn (int $n) => "caption_{$n}_note", range(1, SectionType::GALLERY_IMAGES)),
+            SectionType::galleryNoteLeaves(),
+        );
+    }
+
+    /**
      * THE CAP, and the thing that makes it a cap rather than a suggestion:
      * a gallery holds eight pictures, so `gallery_1.image_9` is not a slot
      * — the endpoints' Rule::in never sees it and imageSlot() refuses it.

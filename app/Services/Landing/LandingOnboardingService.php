@@ -816,6 +816,11 @@ class LandingOnboardingService
         'imageAlt('      => [SectionType::class, 'altLeaves'],
         'imageCaption('  => [SectionType::class, 'captionLeaves'],
         'galleryPhotos(' => [SectionType::class, 'galleryCaptionLeaves'],
+        // The line under each caption arrives inside the same reader, but
+        // only a partial that actually PRINTS it draws it — the three beauty
+        // kits render the pills alone — so the proof is the index the partial
+        // reads it by, not the reader every gallery shares.
+        "\$photo['note']" => [SectionType::class, 'galleryNoteLeaves'],
         'faqPairs('      => [SectionType::class, 'faqLeaves'],
         'trustFeatures(' => [SectionType::class, 'trustLeaves'],
         'socialLinks('   => [SectionType::class, 'socialDestinationLeaves'],

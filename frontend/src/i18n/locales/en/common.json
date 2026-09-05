@@ -3210,6 +3210,7 @@
       "field_faq_pairs": "Questions and answers",
       "field_alt": "What the photo shows",
       "field_caption": "Caption under the photo",
+      "field_caption_note": "Line under the caption",
       "contact_caption": "Filled from your Properties screen — edit here to override for this page.",
       "no_photo": "No photo yet",
       "no_photos": "No photos yet",

@@ -170,6 +170,8 @@ class MaisonVelaRenderTest extends TestCase
                 'subtext'        => 'Begin at the marble bar, settle into the dining room or take the private salon for a celebration shaped entirely around your guests.',
                 'caption_1'      => 'The grand room',
                 'caption_2'      => 'The marble bar',
+                'caption_1_note' => 'White linen and unhurried service.',
+                'caption_2_note' => 'Oysters, cocktails and the full cellar.',
             ],
             'reviews' => [
                 'kicker' => 'Diner note',
@@ -619,6 +621,42 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('landing/maison_vela/assets/hero-brasserie.webp', $body);
         $this->assertStringContainsString('<h3>The grand room</h3>', $body);
         $this->assertStringContainsString('<h3>The marble bar</h3>', $body);
+
+        // And his line of prose under each name, exactly where he drew it —
+        // the `<p>` after the `<h3>`, inside the card.
+        $this->assertMatchesRegularExpression(
+            '#<h3>The grand room</h3>\s*<p>White linen and unhurried service\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>The marble bar</h3>\s*<p>Oysters, cocktails and the full cellar\.</p>#',
+            $body,
+        );
+    }
+
+    /**
+     * The line under a caption is the tenant's own words, escaped like every
+     * other, and a tile with none draws no paragraph — never an empty `<p>`
+     * in the author's card.
+     */
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'gallery_1' => [
+            'heading'        => 'The rooms',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The bar',
+            'caption_1_note' => 'Oysters <b>&</b> the cellar',
+            'caption_2'      => 'The room',
+            'caption_2_note' => '   ',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The bar</h3>\s*<p>Oysters &lt;b&gt;&amp;&lt;/b&gt; the cellar</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The room</h3>\s*</article>#', $body);
+        $this->assertStringNotContainsString('<p></p>', $body);
     }
 
     public function test_a_tile_with_no_caption_draws_no_heading(): void

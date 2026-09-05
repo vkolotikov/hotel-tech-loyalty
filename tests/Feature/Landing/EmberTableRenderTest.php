@@ -165,6 +165,8 @@ class EmberTableRenderTest extends TestCase
                 'heading'   => "An evening with\nmore than one mood.",
                 'caption_1' => 'The dining room',
                 'caption_2' => 'The wine bar',
+                'caption_1_note' => 'Low light, generous tables and the full menu.',
+                'caption_2_note' => 'Walk in for a glass, a plate or the whole evening.',
             ],
             'reviews' => [
                 'kicker' => 'Guest notes',
@@ -616,6 +618,44 @@ class EmberTableRenderTest extends TestCase
         $this->assertStringContainsString('<h3>The dining room</h3>', $body);
         $this->assertStringContainsString('<h3>The wine bar</h3>', $body);
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
+    }
+
+    /**
+     * His line of prose under each card's name, exactly where he drew it —
+     * the `<p>` after the `<h3>`, inside the card; the tenant's words,
+     * escaped, and absent when blank.
+     */
+    public function test_the_line_under_a_caption_is_drawn_where_the_author_drew_it(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '#<h3>The dining room</h3>\s*<p>Low light, generous tables and the full menu\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>The wine bar</h3>\s*<p>Walk in for a glass, a plate or the whole evening\.</p>#',
+            $body,
+        );
+    }
+
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'gallery_1' => [
+            'heading'        => 'The rooms',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The bar',
+            'caption_1_note' => 'Walk in <b>&</b> stay',
+            'caption_2'      => 'The room',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The bar</h3>\s*<p>Walk in &lt;b&gt;&amp;&lt;/b&gt; stay</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The room</h3>\s*</article>#', $body);
     }
 
     /** His header is an eyebrow and a heading at opposite ends of one row. */

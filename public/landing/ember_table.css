@@ -451,7 +451,8 @@ h2.eyebrow {
 }
 
 .experience-grid span,
-.experience-grid h3 {
+.experience-grid h3,
+.experience-grid p {
   position: relative;
   z-index: 1;
 }

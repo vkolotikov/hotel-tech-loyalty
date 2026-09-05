@@ -1222,12 +1222,13 @@ describe('the design own photographs', () => {
 
   /** A caption is numbered to match its PICTURE, never its position in the
    *  strip — a caption must not move when a gap above it closes. */
-  it('names the caption leaf beside each picture', () => {
+  it('names the caption leaf beside each picture, and the line under it', () => {
     const section = { image_3: '/storage/mine.jpg' }
     const photos = gallerySlots(section, 'gallery_1', 8)
 
     expect(photos).toHaveLength(1)
     expect(photos[0].captionLeaf).toBe('caption_3')
+    expect(photos[0].noteLeaf).toBe('caption_3_note')
   })
 
   /** A design with none leaves the strip exactly as it was. */
@@ -1285,6 +1286,38 @@ describe('photo controls follow what the design actually draws', () => {
     }
 
     expect(fieldsForType(captioned).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+  })
+
+  /**
+   * The line under each caption (`caption_N_note`, the hospitality kits'
+   * card prose) is consumed the same way — never eight more loose boxes —
+   * and the strip is told whether to draw it: only when the DESIGN prints
+   * it (`content_fields`), or when no design has answered and the catalogue
+   * lists it, which is the same "no opinion, offer everything" every plain
+   * field takes.
+   */
+  it('consumes the line under each caption into the strip, and says whether the design prints it', () => {
+    const galleryType = sectionTypes().find(o => o.id === 'gallery')!
+    const withNotes = {
+      ...galleryType,
+      fields: [
+        ...galleryType.fields,
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}`),
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}_note`),
+      ],
+    }
+
+    // No opinion from the design: the catalogue lists it, so the strip draws it.
+    expect(fieldsForType(withNotes).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+    expect(fieldsForType(withNotes)[0]).toMatchObject({ type: 'gallery', notes: true })
+
+    // A hospitality design prints the line; a beauty design's pills do not.
+    expect(fieldsForType(withNotes, true, ['kicker', 'heading', 'caption_1', 'caption_1_note'])[0])
+      .toMatchObject({ notes: true })
+    expect(fieldsForType(withNotes, true, ['kicker', 'heading', 'caption_1'])[0].notes).toBeUndefined()
+
+    // A catalogue that never listed it draws nothing, whatever the design says.
+    expect(fieldsForType(galleryType, true, ['kicker', 'caption_1_note'])[0].notes).toBeUndefined()
   })
 
   /** The row carries the decision, so everything reading `row.fields` — the

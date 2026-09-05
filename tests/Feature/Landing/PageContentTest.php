@@ -1089,8 +1089,10 @@ class PageContentTest extends TestCase
     public function test_a_gallery_merges_the_tenants_pictures_with_the_designs(): void
     {
         $page = $this->pageWithContent(['gallery_1' => [
-            'image_3'   => '/storage/landing/mine.jpg',
-            'caption_3' => 'Our treatment room',
+            'image_3'        => '/storage/landing/mine.jpg',
+            'caption_3'      => 'Our treatment room',
+            'caption_3_note' => '  Warm stone and a quiet hour.  ',
+            'caption_1_note' => ['not', 'a', 'line'],
         ]]);
         $page->update(['template_key' => 'nocturne_ritual']);
 
@@ -1099,6 +1101,12 @@ class PageContentTest extends TestCase
         $this->assertCount(4, $photos);
         $this->assertSame('/storage/landing/mine.jpg', $photos[2]['url']);
         $this->assertSame('Our treatment room', $photos[2]['caption']);
+        // The line under the caption is the tenant's alone, trimmed; a
+        // non-scalar leaf is blank, never an error, and a tile with none
+        // carries an empty string so a partial can test it without a guard.
+        $this->assertSame('Warm stone and a quiet hour.', $photos[2]['note']);
+        $this->assertSame('', $photos[0]['note']);
+        $this->assertSame('', $photos[1]['note']);
         // A replaced tile loses the design's description with the design's
         // picture; the untouched ones keep theirs.
         $this->assertSame('', $photos[2]['alt']);

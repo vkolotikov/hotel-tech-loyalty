@@ -1182,8 +1182,12 @@ final class PageContent
      *    own glass pills are claims about their fictional rooms; the leaf is
      *    the tenant's to fill and blank means no pill, which is exactly what
      *    this partial did before the field existed.
+     *  - `note` is the tenant's `caption_N_note` — the line of prose the
+     *    hospitality authors write under each card's name — and follows the
+     *    same rule: the tenant's, or blank, never the design's. A partial
+     *    that does not draw a line simply never reads the key.
      *
-     * @return list<array{url: string, alt: string, caption: string}>
+     * @return list<array{url: string, alt: string, caption: string, note: string}>
      */
     public function galleryPhotos(string $section): array
     {
@@ -1205,11 +1209,13 @@ final class PageContent
             }
 
             $caption = $this->leaf($section, 'caption_' . ($n + 1));
+            $note    = $this->leaf($section, 'caption_' . ($n + 1) . '_note');
 
             $photos[] = [
                 'url'     => $url,
                 'alt'     => $own !== null ? '' : (TemplateImage::alt($this->page->template_key, $slot) ?? ''),
                 'caption' => is_scalar($caption) ? trim((string) $caption) : '',
+                'note'    => is_scalar($note) ? trim((string) $note) : '',
             ];
         }
 

@@ -377,10 +377,7 @@ final class SectionType
                 // prices start or fix. `badge_label` is the pill kit 03
                 // draws on its featured card ("Guest favourite") — one word
                 // for the FIRST treatment in the tenant's own ordering,
-                // which is the only card that has a photograph to put it on. `badge_label` is the pill kit 03 draws
-                // on its featured card ("Guest favourite") — one word for the
-                // FIRST treatment in the tenant's own ordering, which is the
-                // only card that has a photograph to put it on.
+                // which is the only card that has a photograph to put it on.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
                     ['price_prefix', 'badge_label'],
@@ -620,9 +617,20 @@ final class SectionType
                 // exactly such a paragraph, so a tenant who writes one gets
                 // it in the composition the author already drew rather than
                 // in a new one.
+                //
+                // `caption_N_note` is the line of prose under each card's
+                // name that all three hospitality authors write ("Oysters,
+                // cocktails and the full cellar."). Their gallery is a row
+                // of text CARDS — a label, a name and a line — and on this
+                // platform the photograph fills the card with the name as
+                // its caption; the line had no leaf and was lost. Only the
+                // designs whose partial prints it publish it (see
+                // LandingOnboardingService::LEAF_READERS), so the beauty
+                // kits' caption pills gain no second box.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext'],
                     self::galleryCaptionLeaves(),
+                    self::galleryNoteLeaves(),
                 ),
                 'images'     => self::GALLERY_IMAGES,
             ],
@@ -808,6 +816,37 @@ final class SectionType
 
         for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
             $leaves[] = 'caption_' . $n;
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE LINE UNDER EACH TILE'S CAPTION — one per tile, numbered to match
+     * the picture and the caption beside it: `image_3`'s caption is
+     * `caption_3` and the line under that caption is `caption_3_note`.
+     *
+     * The three hospitality authors draw their gallery as a row of text
+     * cards, each a small label, a NAME and a LINE OF PROSE. The name became
+     * the photograph's caption; the line is this leaf. The same "the line
+     * under the value" superset {@see trustLeaves()} and {@see factLeaves()}
+     * already carry, spelled the same way (`<leaf>_<n>_caption` there,
+     * `caption_<n>_note` here, because the thing it sits under is itself the
+     * caption).
+     *
+     * Bounded by the same {@see GALLERY_IMAGES} as the pictures and the
+     * captions, so the three lists are one length by construction. A scalar
+     * leaf like every other line of copy on the page: it travels the plain
+     * content save and needs no writer of its own.
+     *
+     * @return list<string>
+     */
+    public static function galleryNoteLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
+            $leaves[] = 'caption_' . $n . '_note';
         }
 
         return $leaves;

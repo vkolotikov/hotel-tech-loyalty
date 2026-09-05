@@ -366,6 +366,8 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     // eight translations of one sentence.
     'landing_pages.editor.field_alt',
     'landing_pages.editor.field_caption',
+    // The line under a gallery tile's caption (the hospitality kits' card prose).
+    'landing_pages.editor.field_caption_note',
     // hero / services / about / team / reviews / text / gallery.
     'landing_pages.editor.field_headline',
     'landing_pages.editor.field_subtext',
