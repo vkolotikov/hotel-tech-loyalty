@@ -30,9 +30,14 @@
       per-row leaf would need a key the catalogue cannot enumerate (see
       SectionType's `services` note); his own page has exactly one such row.
     - the first column is his `NN / word` ordinal ("01 / Lunch"). The ORDINAL is
-      derived here (a stored number goes stale the moment a menu is removed) and
-      the WORD after it has no leaf, exactly as kit 02-beauty's per-tile gallery
-      word does not. Named rather than glossed.
+      derived here (a stored number goes stale the moment a menu is removed);
+      the WORD after it is the menu's CATEGORY — `Service.category->name`, the
+      Services screen's own grouping of the row ("Lunch", "Dinner", "The
+      counter"), which is exactly what his three words are. A menu filed
+      under no category prints the ordinal alone, never an invented word.
+      PageContent eager-loads the category through the same tenant choke
+      point as the rows, so it is never read lazily under a scope that fails
+      closed on the public render.
     - `duration_minutes` is NOT drawn. It is a treatment's field; a wine-bar
       lunch does not have one.
 
@@ -78,9 +83,15 @@
 
     $currency = $service->currency ?: $currencyFallback;
     $price    = Money::format($service->price, $currency, $priceSuffix);
+
+    // His `01 / Lunch`: the derived ordinal, then the menu's own category
+    // where it has one. The category is eager-loaded and tenant-scoped by
+    // PageContent; a row with none prints the ordinal alone.
+    $word  = trim((string) ($service->category?->name ?? ''));
+    $label = sprintf('%02d', $loop->iteration) . ($word !== '' ? ' / ' . $word : '');
 @endphp
         <article data-item-id="{{ $service->id }}">
-          <p aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</p>
+          <p aria-hidden="true">{{ $label }}</p>
           <div>
             <h3>{{ $service->name }}</h3>
 @if ($line !== '')

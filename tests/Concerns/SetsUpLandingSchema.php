@@ -166,6 +166,26 @@ trait SetsUpLandingSchema
             });
         }
 
+        // The Services screen's own grouping of a row. PageContent eager-loads
+        // it with every services query (Ember Table prints it after the menu's
+        // ordinal), so every landing render needs the table to exist even when
+        // no test files a service under one. Mirrors SetsUpMinimalSchema's own
+        // block, column for column.
+        if (!Schema::hasTable('service_categories')) {
+            Schema::create('service_categories', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->unsignedBigInteger('brand_id')->nullable();
+                $table->string('name');
+                $table->string('color', 20)->nullable();
+                $table->string('icon')->nullable();
+                $table->integer('sort_order')->default(0);
+                $table->boolean('is_active')->default(true);
+                $table->timestamps();
+                $table->index('organization_id');
+            });
+        }
+
         if (!Schema::hasTable('services')) {
             Schema::create('services', function ($table) {
                 $table->bigIncrements('id');

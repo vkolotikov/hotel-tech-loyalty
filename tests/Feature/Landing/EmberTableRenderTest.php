@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Models\ReviewForm;
 use App\Models\ReviewSubmission;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -103,13 +104,20 @@ class EmberTableRenderTest extends TestCase
             'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,
         ]);
 
+        // His `NN / word` labels are the menus' CATEGORIES — the Services
+        // screen's own grouping of each row.
         foreach ([
-            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null],
-            ['Four courses', 'A concise seasonal menu with choices at every course.', 82],
-            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138],
-        ] as $i => [$name, $short, $price]) {
+            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null, 'Lunch'],
+            ['Four courses', 'A concise seasonal menu with choices at every course.', 82, 'Dinner'],
+            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138, 'The counter'],
+        ] as $i => [$name, $short, $price, $category]) {
+            $group = ServiceCategory::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $category, 'sort_order' => $i, 'is_active' => true,
+            ]);
+
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
+                'category_id' => $group->id,
                 'short_description' => $short,
                 'price' => $price, 'currency' => 'EUR',
                 'sort_order' => $i, 'is_active' => true,
@@ -518,10 +526,42 @@ class EmberTableRenderTest extends TestCase
         $this->assertStringContainsString('<strong>From €82 per guest</strong>', $body);
         $this->assertStringContainsString('<strong>From €138 per guest</strong>', $body);
 
-        // The ordinal is derived, never stored — the author prints exactly
-        // these two digits, and the WORD he writes after them has no leaf.
-        $this->assertStringContainsString('<p aria-hidden="true">01</p>', $body);
-        $this->assertStringContainsString('<p aria-hidden="true">03</p>', $body);
+        // The ordinal is derived, never stored, and the WORD the author writes
+        // after it is the menu's own category off the Services screen — his
+        // `01 / Lunch`, `02 / Dinner`, `03 / The counter`, character for
+        // character.
+        $this->assertStringContainsString('<p aria-hidden="true">01 / Lunch</p>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">02 / Dinner</p>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">03 / The counter</p>', $body);
+    }
+
+    /**
+     * A menu filed under no category prints the ordinal alone — never an
+     * invented word — and a category's name is the tenant's own, escaped like
+     * every other line on the page.
+     */
+    public function test_a_menu_with_no_category_prints_the_ordinal_alone_and_a_category_is_escaped(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus']]);
+
+        $group = ServiceCategory::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Lunch <b>&</b> more', 'is_active' => true,
+        ]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte', 'category_id' => $group->id,
+            'price' => 40, 'currency' => 'EUR', 'sort_order' => 0, 'is_active' => true,
+        ]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Four courses',
+            'price' => 82, 'currency' => 'EUR', 'sort_order' => 1, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringContainsString('<p aria-hidden="true">01 / Lunch &lt;b&gt;&amp;&lt;/b&gt; more</p>', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">02</p>', $body);
     }
 
     /**

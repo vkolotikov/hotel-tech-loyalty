@@ -112,6 +112,17 @@ final class PageContent
         // tenant saw, not database luck.
         $services = self::scopedToBrand(self::scoped(Service::query(), $orgId), $brandId)
             ->where('is_active', true)
+            // The category is the Services screen's own grouping of a row
+            // ("Lunch", "Dinner", "The counter"), and Ember Table prints it
+            // after the ordinal exactly as its author drew it ("01 / Lunch").
+            // Eager-loaded HERE, through the same tenant choke point as the
+            // rows themselves, because a lazy `$service->category` in a
+            // partial would run under ServiceCategory's own TenantScope —
+            // which fails CLOSED on the public render, where no tenant is
+            // bound — and silently answer null on every live page.
+            // The constraint arrives as the RELATION, whose own Eloquent
+            // builder is what the choke point takes.
+            ->with(['category' => fn ($relation) => self::scoped($relation->getQuery(), $orgId)])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->limit(self::MAX_SERVICES)

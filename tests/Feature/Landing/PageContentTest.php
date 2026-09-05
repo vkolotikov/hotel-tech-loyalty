@@ -7,6 +7,7 @@ use App\Models\LandingPage;
 use App\Models\Property;
 use App\Models\ReviewSubmission;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\ServiceMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,35 @@ class PageContentTest extends TestCase
         $content = PageContent::for($this->page(1));
 
         $this->assertSame(['Ours'], $content->services->pluck('name')->all());
+    }
+
+    /**
+     * A menu's CATEGORY rides with the row through the same tenant choke
+     * point (Ember Table prints it after the ordinal). Two claims: it is
+     * loaded with no tenant bound — the public render's own state, where a
+     * lazy `$service->category` would run under ServiceCategory's fail-closed
+     * TenantScope and answer null — and a category row belonging to ANOTHER
+     * organisation is never followed, whatever the foreign key says.
+     */
+    public function test_a_services_category_is_loaded_for_the_public_render_and_never_another_tenants(): void
+    {
+        $ours   = ServiceCategory::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Lunch', 'is_active' => true]);
+        $theirs = ServiceCategory::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Their dinner', 'is_active' => true]);
+
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte', 'category_id' => $ours->id, 'is_active' => true, 'price' => 40, 'sort_order' => 0]);
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Crossed wire', 'category_id' => $theirs->id, 'is_active' => true, 'price' => 40, 'sort_order' => 1]);
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Unfiled', 'is_active' => true, 'price' => 40, 'sort_order' => 2]);
+
+        $this->assertFalse(app()->bound('current_organization_id'), 'Precondition: the public render binds no tenant.');
+
+        $services = PageContent::for($this->page(1))->services;
+
+        $this->assertTrue($services->every(fn (Service $s) => $s->relationLoaded('category')),
+            'The category was left to a lazy load the public render cannot make.');
+        $this->assertSame('Lunch', $services->firstWhere('name', 'À la carte')->category?->name);
+        $this->assertNull($services->firstWhere('name', 'Crossed wire')->category,
+            'A category belonging to another organisation was followed across the tenant boundary.');
+        $this->assertNull($services->firstWhere('name', 'Unfiled')->category);
     }
 
     public function test_inactive_services_are_not_advertised(): void
