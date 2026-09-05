@@ -2037,6 +2037,21 @@ class LandingOnboardingTest extends TestCase
         $this->assertNotContains('item_cta_label', $brasserie['services']);
         $this->assertArrayNotHasKey('team', $brasserie);
 
+        // The menu band's price SUFFIX ("€92 per guest") and SERVICE WINDOW
+        // ("Fri–Sun · 12:00") are what the three hospitality authors write
+        // and no beauty author does — kit 02-beauty's "from £88" has the
+        // prefix alone — so both are offered on the three menus that print
+        // them and on none of the treatment lists.
+        foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
+            $this->assertContains('price_suffix', $served[$key]['services'], "'{$key}' prints the price suffix and does not offer it.");
+            $this->assertContains('window', $served[$key]['services'], "'{$key}' prints the service window and does not offer it.");
+        }
+
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness'] as $key) {
+            $this->assertNotContains('price_suffix', $served[$key]['services'], "'{$key}' offers a price suffix its treatment list never prints.");
+            $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its treatment list never prints.");
+        }
+
         // The line under each gallery caption is the hospitality authors'
         // card prose; the beauty kits' pills print no such line, so the
         // control is offered on the three designs that draw it and withheld

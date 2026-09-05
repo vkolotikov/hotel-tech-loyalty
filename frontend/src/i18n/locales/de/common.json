@@ -3248,6 +3248,8 @@
       "field_note_label": "Beschriftung auf Ihrem Hauptfoto",
       "field_edition": "Kleines Zeichen neben Ihrem Einstieg",
       "field_price_prefix": "Wort vor jedem Preis",
+      "field_price_suffix": "Wörter nach jedem Preis",
+      "field_window": "Servicezeiten statt eines Preises",
       "field_secondary_link_label": "Text des Links unter Ihrem Team",
       "field_index": "Zahl neben Ihrem Buchungsbereich",
       "field_label": "Badge auf Ihrer Angebotsleiste",

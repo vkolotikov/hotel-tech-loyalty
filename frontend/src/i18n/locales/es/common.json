@@ -3248,6 +3248,8 @@
       "field_note_label": "Etiqueta sobre tu foto principal",
       "field_edition": "Marca pequeña junto a tu apertura",
       "field_price_prefix": "Palabra antes de cada precio",
+      "field_price_suffix": "Palabras después de cada precio",
+      "field_window": "Horario de servicio en lugar de un precio",
       "field_secondary_link_label": "Texto del enlace bajo tu equipo",
       "field_index": "Número junto a tu panel de reservas",
       "field_label": "Etiqueta en tu barra de oferta",

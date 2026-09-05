@@ -54,7 +54,16 @@ final class Money
         'BGN' => ['лв', false],
     ];
 
-    public static function format(float|int|string|null $amount, ?string $currency): ?string
+    /**
+     * `$suffix` is the words a menu writes AFTER the money — "per guest",
+     * "per person", "for two" — the tenant's own, trimmed, and joined with
+     * an ORDINARY space: the amount and its symbol stay one word (the
+     * non-breaking space above), the suffix is a second word that may wrap.
+     * "€92 per guest", never "€92 per guest" glued to the symbol and never
+     * a suffix on its own: a row with no price asserts no price, suffix or
+     * not.
+     */
+    public static function format(float|int|string|null $amount, ?string $currency, ?string $suffix = null): ?string
     {
         if ($amount === null || $amount === '' || !is_numeric($amount)) {
             return null;
@@ -63,14 +72,16 @@ final class Money
         $value  = (float) $amount;
         $code   = strtoupper(trim((string) $currency));
         $number = self::number($value);
+        $tail   = trim((string) $suffix);
+        $tail   = $tail === '' ? '' : ' ' . $tail;
 
         if ($code === '' || !isset(self::SYMBOLS[$code])) {
-            return $code === '' ? $number : $number . ' ' . $code;
+            return ($code === '' ? $number : $number . ' ' . $code) . $tail;
         }
 
         [$symbol, $leads] = self::SYMBOLS[$code];
 
-        return $leads ? $symbol . $number : $number . "\u{00A0}" . $symbol;
+        return ($leads ? $symbol . $number : $number . "\u{00A0}" . $symbol) . $tail;
     }
 
     /**

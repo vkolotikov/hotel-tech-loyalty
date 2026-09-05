@@ -3248,6 +3248,8 @@
       "field_note_label": "Mention sur votre photo principale",
       "field_edition": "Petite marque à côté de votre ouverture",
       "field_price_prefix": "Mot avant chaque prix",
+      "field_price_suffix": "Mots après chaque prix",
+      "field_window": "Horaires de service affichés à la place d’un prix",
       "field_secondary_link_label": "Texte du lien sous votre équipe",
       "field_index": "Numéro à côté de votre panneau de réservation",
       "field_label": "Badge sur votre bandeau d’offre",

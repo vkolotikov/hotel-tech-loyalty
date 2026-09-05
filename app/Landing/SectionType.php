@@ -374,13 +374,30 @@ final class SectionType
                 // "Prices shown are starting points". A LABEL rather than a
                 // boolean flag, because "from" is not the same word in five
                 // locales and the tenant is the one who knows whether their
-                // prices start or fix. `badge_label` is the pill kit 03
-                // draws on its featured card ("Guest favourite") — one word
-                // for the FIRST treatment in the tenant's own ordering,
-                // which is the only card that has a photograph to put it on.
+                // prices start or fix. `price_suffix` is its symmetric twin,
+                // the words the three hospitality authors write AFTER the
+                // money ("€92 per guest"), joined by App\Landing\Money after
+                // an ordinary space. `badge_label` is the pill kit 03 draws
+                // on its featured card ("Guest favourite") — one word for the
+                // FIRST treatment in the tenant's own ordering, which is the
+                // only card that has a photograph to put it on.
+                //
+                // `window` is the SERVICE WINDOW the hospitality authors
+                // write where a price would otherwise go ("Fri–Sun · 12:00",
+                // "Evenings"). A BAND leaf, deliberately, and the honest
+                // shortfall is stated here: each author writes a different
+                // window on each row, and a per-row leaf would have to be
+                // keyed by the service's id — a key this catalogue cannot
+                // enumerate, the totality net cannot see and the editor
+                // cannot draw a control for without a release, or a column
+                // on the shared `services` table for one landing template's
+                // sake. So it is one line per band, printed in the row's own
+                // value cell where the author drew it, on the rows that have
+                // no price (kits 01 and 03) or as the meta row's opening cell
+                // (kit 02).
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
-                    ['price_prefix', 'badge_label'],
+                    ['price_prefix', 'price_suffix', 'window', 'badge_label'],
                     self::photoLeaves(),
                 ),
                 'images'     => 1,

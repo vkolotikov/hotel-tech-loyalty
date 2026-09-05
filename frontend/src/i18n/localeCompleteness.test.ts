@@ -456,6 +456,10 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_note_label',
     'landing_pages.editor.field_edition',
     'landing_pages.editor.field_price_prefix',
+    // The hospitality menus: words after every price, and the service window a
+    // menu without a price shows in its place.
+    'landing_pages.editor.field_price_suffix',
+    'landing_pages.editor.field_window',
     'landing_pages.editor.field_secondary_link_label',
     'landing_pages.editor.field_index',
     'landing_pages.editor.field_label',

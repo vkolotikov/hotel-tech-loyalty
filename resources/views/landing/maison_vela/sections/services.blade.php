@@ -24,10 +24,15 @@
       is the line under it, which on a restaurant page is where the courses
       and the days go. Both fit exactly.
     - the right-hand column is `price`, through App\Landing\Money, with
-      `services.price_prefix` in front of it ("From €48"). The author also
-      writes a SERVICE WINDOW there on the rows that have no price
-      ("Evenings"), and a Service row has no such field — see the task report,
-      which names this rather than inventing one.
+      `services.price_prefix` in front of it ("From €48") and
+      `services.price_suffix` after it ("€125 per guest"), both the band's.
+    - on a row that has NO price the same column carries `services.window`
+      — the SERVICE WINDOW the author writes there ("Evenings"). One line per
+      band rather than per row, because a Service row has no such field and
+      a per-row leaf would need a key the catalogue cannot enumerate (see
+      SectionType's `services` note); a restaurant with one service pattern
+      gets exactly his composition, and one with several writes the pattern
+      into each menu's own line under its name.
     - `duration_minutes` is NOT drawn. It is a treatment's field; a brasserie
       lunch does not have one, and printing "120 min" beside a tasting menu
       would be a number the restaurant never wrote.
@@ -44,8 +49,11 @@
 
     $currencyFallback = $content->contact->currency;
 
-    // The word before every price. Trimmed, never invented.
+    // The words before and after every price, and the window a priceless
+    // row shows instead. Trimmed, never invented.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $priceSuffix = trim((string) ($copy['price_suffix'] ?? ''));
+    $window      = trim((string) ($copy['window'] ?? ''));
 
     $kicker  = trim((string) ($copy['kicker'] ?? $profile->kicker('services')));
     $subtext = trim((string) ($copy['subtext'] ?? ''));
@@ -70,7 +78,7 @@
     }
 
     $currency = $service->currency ?: $currencyFallback;
-    $price    = Money::format($service->price, $currency);
+    $price    = Money::format($service->price, $currency, $priceSuffix);
 @endphp
         <article data-item-id="{{ $service->id }}">
           <span aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
@@ -82,6 +90,8 @@
           </div>
 @if ($price !== null)
           <strong>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</strong>
+@elseif ($window !== '')
+          <strong>{{ $window }}</strong>
 @endif
         </article>
 @endforeach

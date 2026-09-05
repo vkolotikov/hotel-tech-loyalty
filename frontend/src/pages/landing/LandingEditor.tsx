@@ -380,8 +380,12 @@ const FIELD_FALLBACK: Record<string, string> = {
   // own caption, labelled above.
   note_label: 'Label on your main photo',
   edition: 'Small mark beside your opening',
-  // services — the word before every price ("from £88").
+  // services — the word before every price ("from £88"), the words after
+  // it ("€92 per guest"), and the service window a menu without a price
+  // shows in its place ("Fri–Sun · 12:00"). One line per band each.
   price_prefix: 'Word before every price',
+  price_suffix: 'Words after every price',
+  window: 'Service times shown instead of a price',
   // team — the one link under the list, on a design with no per-person one.
   secondary_link_label: 'Wording on the link under your team',
   // booking — the ornamental numeral beside the closing panel.

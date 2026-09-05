@@ -151,6 +151,8 @@ class MaisonVelaRenderTest extends TestCase
                 'heading'        => "Three menus.\nOne sense of occasion.",
                 'subtext'        => 'Classic technique, exceptional produce and enough flexibility to make lunch feel easy or dinner last all evening.',
                 'price_prefix'   => 'From',
+                'price_suffix'   => 'per guest',
+                'window'         => 'Evenings',
             ],
             'about' => [
                 'kicker'         => 'The pleasure of doing things properly',
@@ -512,8 +514,10 @@ class MaisonVelaRenderTest extends TestCase
 
         $this->assertStringContainsString('<h3>Le Déjeuner</h3>', $body);
         $this->assertStringContainsString('Two or three courses · Friday to Sunday · 12:00–15:00', $body);
-        $this->assertStringContainsString('<strong>From €48</strong>', $body);
-        $this->assertStringContainsString('<strong>From €125</strong>', $body);
+        // The band's prefix before the money and its suffix after it — his
+        // "€125 per guest" — through Money, with an ordinary space each side.
+        $this->assertStringContainsString('<strong>From €48 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €125 per guest</strong>', $body);
 
         // The ordinal is derived, never stored.
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
@@ -521,18 +525,39 @@ class MaisonVelaRenderTest extends TestCase
     }
 
     /**
-     * A menu with no price prints no price column at all rather than an empty
-     * one — the author writes a service WINDOW there ("Evenings") and a
-     * Service row has no such field. Named in the task report rather than
-     * invented here.
+     * A menu with no price shows the band's SERVICE WINDOW in the value
+     * column instead — the author's own "Evenings" on his à la carte row —
+     * and never an empty cell or a bare suffix. One line per band, printed
+     * where he drew it; see the partial's own note on why not per row.
      */
-    public function test_a_menu_with_no_price_prints_no_price_column(): void
+    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        $this->assertStringContainsString('<strong>Evenings</strong>', $body);
+        $this->assertSame(1, substr_count($body, '<strong>Evenings</strong>'));
         $this->assertSame(2, substr_count($body, '<strong>From €'));
+        $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /** With no window written, a priceless row prints no value column at all. */
+    public function test_a_menu_with_no_price_and_no_window_prints_no_value_column(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'services' => ['heading' => 'Menus', 'price_suffix' => 'per guest']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        // The ledger and nothing else: the footer lockup's own <strong> is
+        // not the menu's.
+        $this->assertSame(1, preg_match('#<div class="menu-list">(.*?)</div>\s*</section>#s', $body, $ledger));
+        $this->assertStringNotContainsString('<strong>', $ledger[1]);
     }
 
     /** And no duration is printed anywhere: it is a treatment's field. */
@@ -1096,7 +1121,7 @@ class MaisonVelaRenderTest extends TestCase
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'  => ['proof' => '<b>proof</b>'],
             'about' => ['fact_1' => '<b>fact</b>', 'fact_1_caption' => '<b>caption</b>'],
-            'services' => ['price_prefix' => '<b>prefix</b>'],
+            'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],
             'booking'  => ['call_label' => '<b>call</b>'],
         ])]);
 
@@ -1104,7 +1129,7 @@ class MaisonVelaRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
 
-        foreach (['proof', 'fact', 'caption', 'prefix', 'call'] as $needle) {
+        foreach (['proof', 'fact', 'caption', 'prefix', 'suffix', 'window', 'call'] as $needle) {
             $this->assertStringNotContainsString('<b>' . $needle . '</b>', $body);
             $this->assertStringContainsString('&lt;b&gt;' . $needle . '&lt;/b&gt;', $body);
         }

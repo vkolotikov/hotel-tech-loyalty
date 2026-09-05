@@ -151,6 +151,8 @@ class EmberTableRenderTest extends TestCase
                 'heading'      => "Three ways\nto join us.",
                 'subtext'      => 'Menus move with the market and the weather. These are the shapes of service; the plates change often.',
                 'price_prefix' => 'From',
+                'price_suffix' => 'per guest',
+                'window'       => 'Fri–Sun · 12:00',
             ],
             'about' => [
                 'kicker' => 'From the kitchen',
@@ -511,8 +513,10 @@ class EmberTableRenderTest extends TestCase
 
         $this->assertStringContainsString('<h3>Kitchen tasting</h3>', $body);
         $this->assertStringContainsString('Eight seats facing the fire.', $body);
-        $this->assertStringContainsString('<strong>From €82</strong>', $body);
-        $this->assertStringContainsString('<strong>From €138</strong>', $body);
+        // The band's prefix before the money and its suffix after it — his
+        // "€82 per guest" — through Money, with an ordinary space each side.
+        $this->assertStringContainsString('<strong>From €82 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €138 per guest</strong>', $body);
 
         // The ordinal is derived, never stored — the author prints exactly
         // these two digits, and the WORD he writes after them has no leaf.
@@ -521,18 +525,39 @@ class EmberTableRenderTest extends TestCase
     }
 
     /**
-     * A menu with no price prints no value column at all rather than an empty
-     * one — the author writes a service WINDOW there ("Fri–Sun · 12:00") and a
-     * Service row has no such field. Named in the task report rather than
-     * invented here.
+     * A menu with no price shows the band's SERVICE WINDOW in the value
+     * column instead — the author's own "Fri–Sun · 12:00" on his lunch row —
+     * and never an empty cell or a bare suffix. One line per band, printed
+     * where he drew it; see the partial's own note on why not per row.
      */
-    public function test_a_menu_with_no_price_prints_no_value_column(): void
+    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        $this->assertStringContainsString('<strong>Fri–Sun · 12:00</strong>', $body);
+        $this->assertSame(1, substr_count($body, '<strong>Fri–Sun · 12:00</strong>'));
         $this->assertSame(2, substr_count($body, '<strong>From €'));
+        $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /** With no window written, a priceless row prints no value column at all. */
+    public function test_a_menu_with_no_price_and_no_window_prints_no_value_column(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus', 'price_suffix' => 'per guest']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        // The ledger and nothing else: the footer lockup's own <strong> is
+        // not the menu's.
+        $this->assertSame(1, preg_match('#<div class="menu-list">(.*?)</div>\s*</section>#s', $body, $ledger));
+        $this->assertStringNotContainsString('<strong>', $ledger[1]);
     }
 
     /** And no duration is printed anywhere: it is a treatment's field. */
@@ -1124,7 +1149,7 @@ class EmberTableRenderTest extends TestCase
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'     => ['proof' => '<b>proof</b>'],
             'about'    => ['note_1' => '<b>line</b>'],
-            'services' => ['price_prefix' => '<b>prefix</b>'],
+            'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],
             'booking'  => ['call_label' => '<b>call</b>'],
         ])]);
 
@@ -1132,7 +1157,7 @@ class EmberTableRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
 
-        foreach (['proof', 'line', 'prefix', 'call'] as $needle) {
+        foreach (['proof', 'line', 'prefix', 'suffix', 'window', 'call'] as $needle) {
             $this->assertStringNotContainsString('<b>' . $needle . '</b>', $body);
             $this->assertStringContainsString('&lt;b&gt;' . $needle . '&lt;/b&gt;', $body);
         }

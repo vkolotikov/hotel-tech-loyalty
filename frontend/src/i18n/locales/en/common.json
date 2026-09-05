@@ -3292,6 +3292,8 @@
       "field_note_label": "Label on your main photo",
       "field_edition": "Small mark beside your opening",
       "field_price_prefix": "Word before every price",
+      "field_price_suffix": "Words after every price",
+      "field_window": "Service times shown instead of a price",
       "field_secondary_link_label": "Wording on the link under your team",
       "field_index": "Number beside your booking panel",
       "field_label": "Badge on your offer bar",
