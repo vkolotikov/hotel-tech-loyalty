@@ -1346,4 +1346,46 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('application/ld+json', $body);
         $this->assertStringContainsString('"@type":"Restaurant"', str_replace(' ', '', $body));
     }
+
+    /**
+     * THE CHROME'S OWN WORDS (the improvements round, item D). With no
+     * `booking.cta_label` written and the flow live, the header bar, its
+     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * word THE AUTHOR gave that control — transcribed from his index.html —
+     * while the closing panel keeps the industry's verb. The one leaf still
+     * overrides all four at once (see the wording test), and with the flow off
+     * every one of them says what it does instead (6.4).
+     */
+    public function test_the_chrome_takes_the_authors_own_words_until_the_tenant_writes_theirs(): void
+    {
+        $this->seedWidgetOrganization();
+        $page = $this->seedLikeTheKit();
+        \App\Models\ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'The main room', 'is_active' => true,
+        ]);
+        $this->seedBookableSchedule();
+
+        $content = $page->content;
+        $content['booking']['cta_label'] = '';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header".*?</header>#s', $body, $header));
+        $this->assertSame(1, preg_match('#<footer class="site-footer".*?</footer>#s', $body, $footer));
+        $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
+        $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
+
+        // The header bar and its mobile-menu twin.
+        $this->assertStringContainsString('Reserve</a>', $header[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        $this->assertSame(1, substr_count($header[0], 'Reserve</a>'));
+        // The footer lockup and the fixed pill.
+        $this->assertStringContainsString('Reserve a table</a>', $footer[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $fab[0]);
+        // The closing panel: the industry's verb, as before.
+        $this->assertStringContainsString('Reserve a table</a>', $panel[0]);
+        // The flow is live, so no control has been relabelled for a fallback.
+        $this->assertStringNotContainsString('Call to book', $body);
+    }
 }

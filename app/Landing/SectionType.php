@@ -493,7 +493,16 @@ final class SectionType
                     // ("06"), aria-hidden in the author's markup — the same
                     // ruling as `hero.edition`, and blank draws nothing.
                     ['index'],
-                    self::photoLeaves(),
+                    // ALT ONLY, not `photoLeaves()`. Kit 01-beauty is the one
+                    // design that puts a photograph in its closing panel and
+                    // it draws no caption under it; no other author draws
+                    // the photograph at all. A `booking.caption` leaf was in
+                    // the catalogue for a round and was the ONE leaf no
+                    // shipped design printed — a control that could not act,
+                    // which LandingOnboardingTest's totality net had to name
+                    // as its single allowed orphan. Removed rather than
+                    // allowed by rule.
+                    self::altLeaves(),
                 ),
                 'images'     => 1,
             ],

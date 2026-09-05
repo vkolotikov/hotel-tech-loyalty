@@ -231,10 +231,9 @@
     // and `booking.cta_label` — resolved HERE, because it is the label the
     // three CHROME controls carry as well as the closing panel's own, and no
     // partial decides for itself what a Book control says any more than it
-    // decides where one points. The author's own page words those four
-    // identically in four of the six kits; the header's variant is the one
-    // string this shape cannot reach, and it is recorded in the phase 5
-    // report rather than answered with a leaf on a block that has no row.
+    // decides where one points. The closing panel falls back to the
+    // industry's verb; the chrome falls back to the author's own words per
+    // placement — see $chromeLabels below.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
 
@@ -245,6 +244,29 @@
     // back the moment the flow does.
     if (! $bookingIsFlow && $bookingHref !== null) {
         $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
+
+    // THE CHROME'S OWN WORDS. The header bar, its mobile-menu twin, the footer
+    // lockup and the fixed pill carry the tenant's `booking.cta_label` when one
+    // is written; otherwise each carries the word THE AUTHOR gave that control,
+    // transcribed from resources/landing-kits/beauty-tech/01-nocturne-ritual/index.html, rather
+    // than the industry's verb — which stays the closing panel's fallback and
+    // the hero's, because those two are bands with leaves of their own and the
+    // chrome has no row. One leaf, four placements, and the author's own word
+    // on each until the tenant writes theirs. When the flow is off, every
+    // control says what it does (6.4), chrome included.
+    $ownBookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
+    $chromeLabels    = [
+        'header' => 'Book a ritual',
+        'mobile' => 'Book a ritual',
+        'footer' => 'Book now',
+        'fab'    => 'Book now',
+    ];
+
+    foreach ($chromeLabels as $placement => $authored) {
+        $chromeLabels[$placement] = (! $bookingIsFlow && $bookingHref !== null)
+            ? $bookingLabel
+            : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
     // NAV ANCHORS come from $renderedSections, the one collection that
@@ -416,7 +438,7 @@
      in-page controls above are not conditional on it. Rendered only when it
      has somewhere real to go. --}}
 @if ($bookingHref !== null)
-  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 
 {{-- The template's interactive layer: one file, one entry point, no

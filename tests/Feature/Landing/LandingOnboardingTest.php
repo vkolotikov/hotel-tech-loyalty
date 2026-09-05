@@ -2121,19 +2121,15 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        // `booking.caption` is the ONE leaf the catalogue declares that no
-        // shipped design prints: `photoLeaves()` is merged into every
-        // single-plate type, and neither kit 02 nor kit 03 puts a photograph
-        // in its closing panel at all (kit 01 does, and draws no caption
-        // under it). It is LISTED rather than allowed by rule, so a second
-        // cannot join it unnoticed.
-        //
-        // The other three closed with kit 02, which is the design each was
-        // added for: `hero.caption` is the sentence in his note on the hero
-        // plate, and `services.alt` / `services.caption` belong to the
-        // band-level editorial photograph R3 gave that band a slot for.
+        // NONE. `booking.caption` was the last: `photoLeaves()` was merged
+        // into every single-plate type, and no author draws a caption under
+        // a closing photograph (kit 01-beauty draws the photograph alone;
+        // the others draw none). The booking type now carries `alt` only,
+        // so every leaf the catalogue declares is one some shipped design
+        // prints — a leaf no control can act on is a lie in the catalogue,
+        // and this is the net that keeps one from arriving.
         $this->assertSame(
-            ['booking.caption'],
+            [],
             $orphans,
             'A catalogue leaf is reachable on no design at all — either a partial must read it, '
             . 'or LEAF_READERS must name the reader that does.',

@@ -132,6 +132,12 @@ export type SectionField = {
    *  band may hold, DERIVED from the `qN`/`aN` leaves the server actually
    *  published (see `faqPairsOf`). Never a literal six. */
   pairs?: number
+  /** For `type: 'image'` only — which of the two WORD leaves (`alt`,
+   *  `caption`) this type carries AND this design prints, so the plate draws
+   *  a box for each of those and none for a word nothing reads (a closing
+   *  panel's photograph takes a description and no caption). Absent means
+   *  none. */
+  words?: string[]
 }
 
 /**
@@ -588,9 +594,13 @@ export function fieldsForType(
   // is named by the bare section key, a strip writes `content.<key>.image_N`
   // and names each picture. The two are different controls over different
   // leaves, so a type is offered exactly one of them.
+  // The words the single plate draws a box for: the ones this type carries
+  // that this design prints — the same two-step answer `notes` takes above.
+  const words = PHOTO_WORD_LEAVES.filter(w => type.fields.includes(w) && (draws === null || draws.has(w)))
+
   const photo: SectionField[] =
     slots > 1 ? [{ name: 'gallery', type: 'gallery', slots, ...(notes ? { notes: true } : {}) }]
-      : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image' }]
+      : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image', ...(words.length > 0 ? { words } : {}) }]
         : []
 
   // THE QUESTIONS BAND IS ONE CONTROL, NOT FIFTEEN (template fidelity 3.3).

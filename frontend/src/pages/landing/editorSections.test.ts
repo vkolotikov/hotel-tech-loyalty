@@ -1278,6 +1278,24 @@ describe('photo controls follow what the design actually draws', () => {
     expect(fieldsForType(withWords, false).map(f => f.name)).not.toContain('caption')
   })
 
+  /**
+   * The plate is told WHICH words to draw a box for: the ones the type
+   * carries and the design prints. A closing panel's photograph takes a
+   * description and no caption (`booking` carries `alt` alone), and a design
+   * that prints neither gets a plate with no word boxes at all.
+   */
+  it('tells the plate which picture words to draw, and only those', () => {
+    const both = { ...heroType(), fields: [...heroType().fields, 'alt', 'caption'] }
+    const altOnly = { ...heroType(), fields: [...heroType().fields, 'alt'] }
+
+    expect(fieldsForType(both)[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt', 'caption'] })
+    expect(fieldsForType(altOnly)[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt'] })
+    // The design's own answer narrows the catalogue's, never widens it.
+    expect(fieldsForType(both, true, ['kicker', 'alt'])[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt'] })
+    expect(fieldsForType(both, true, ['kicker'])[0]).toEqual({ name: 'image_url', type: 'image' })
+    expect(fieldsForType(heroType())[0]).toEqual({ name: 'image_url', type: 'image' })
+  })
+
   it('consumes one caption leaf per gallery tile rather than listing eight', () => {
     const galleryType = sectionTypes().find(o => o.id === 'gallery')!
     const captioned = {

@@ -159,10 +159,10 @@
     //
     // The restaurant industry's own verb is "Reserve a table", which is this
     // author's wording in three of his five controls — so on a restaurant page
-    // the default IS his string there. His HERO says "Find a table" (which has
-    // its own `hero.cta_label` leaf) and his FOOTER lockup says "Reserve",
-    // which is the one authored string this shape cannot reach, exactly as on
-    // the four kit templates before this one.
+    // the closing panel's default IS his string. His HERO says "Find a table"
+    // (which has its own `hero.cta_label` leaf) and his FOOTER lockup says
+    // "Reserve" — the chrome's own words, per placement, in $chromeLabels
+    // below.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
 
@@ -171,6 +171,29 @@
     // control's and comes back the moment the flow does.
     if (! $bookingIsFlow && $bookingHref !== null) {
         $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
+
+    // THE CHROME'S OWN WORDS. The header bar, its mobile-menu twin, the footer
+    // lockup and the fixed pill carry the tenant's `booking.cta_label` when one
+    // is written; otherwise each carries the word THE AUTHOR gave that control,
+    // transcribed from resources/landing-kits/hospitality/03-ember-table/index.html, rather
+    // than the industry's verb — which stays the closing panel's fallback and
+    // the hero's, because those two are bands with leaves of their own and the
+    // chrome has no row. One leaf, four placements, and the author's own word
+    // on each until the tenant writes theirs. When the flow is off, every
+    // control says what it does (6.4), chrome included.
+    $ownBookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
+    $chromeLabels    = [
+        'header' => 'Reserve a table',
+        'mobile' => 'Reserve a table',
+        'footer' => 'Reserve',
+        'fab'    => 'Reserve a table',
+    ];
+
+    foreach ($chromeLabels as $placement => $authored) {
+        $chromeLabels[$placement] = (! $bookingIsFlow && $bookingHref !== null)
+            ? $bookingLabel
+            : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
     // NAV ANCHORS come from $renderedSections, the one collection that decides
@@ -317,7 +340,7 @@
      retires it below 48rem so it never covers a phone's content. Rendered
      only when it has somewhere real to go. --}}
 @if ($bookingHref !== null)
-  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 
 {{-- The template's interactive layer: one file, one entry point, no

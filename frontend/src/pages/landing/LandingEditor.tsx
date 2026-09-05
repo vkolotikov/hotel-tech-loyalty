@@ -2907,6 +2907,7 @@ function SectionRow({
                   // single plate — the endpoints' own spelling, which is
                   // also how the served map is keyed.
                   defaultUrl={imageDefaults[row.key] ?? null}
+                  words={field.words ?? []}
                   content={content}
                   onFieldChange={onFieldChange}
                   onChanged={onImageChanged}
@@ -3275,7 +3276,7 @@ function FaqPairsField({ sectionKey, content, pairs, onFieldChange }: {
  * every `text_N` alongside `hero`/`about` precisely so this endpoint could
  * accept them. `imageErrorMessage` already surfaces its refusal in words.
  */
-function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, onChanged }: {
+function ImageField({ sectionKey, imageUrl, defaultUrl, words, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** The TENANT's own upload for this slot, off the raw query — null when
    *  they have not made one. Never the effective picture: the difference
@@ -3284,6 +3285,10 @@ function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, 
   /** The DESIGN's own photograph for this slot, off the served
    *  `image_defaults` — null when it ships none (template fidelity 4.1). */
   defaultUrl: string | null
+  /** Which word leaves this plate draws a box for (`alt`, `caption`) —
+   *  `SectionField.words`, off the catalogue and the served `content_fields`.
+   *  A closing panel's photograph takes a description and no caption. */
+  words: string[]
   /** `f.content[sectionKey]`, for the two WORD leaves that belong to this
    *  picture. They are ordinary content and save with the words; only the
    *  picture itself has an endpoint of its own. */
@@ -3417,33 +3422,40 @@ function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, 
           Ordinary content leaves — they queue into the same save as the
           headline, and the one-writer rule that protects the picture does
           not apply to them. Offered only once there is a picture to
-          describe. */}
-      {shown && (
+          describe, and only the ones this type carries and this design
+          prints (`words`): a closing panel's photograph takes a description
+          and no caption, and a box for a word nothing reads is a control
+          that cannot act. */}
+      {shown && words.length > 0 && (
         <div className="grid gap-2 sm:grid-cols-2 pt-1">
-          <div>
-            <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
-              {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
-            </label>
-            <input
-              id={`lp-${sectionKey}-alt`}
-              className={input}
-              maxLength={191}
-              value={content.alt ?? ''}
-              onChange={e => onFieldChange('alt', e.target.value)}
-            />
-          </div>
-          <div>
-            <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
-              {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
-            </label>
-            <input
-              id={`lp-${sectionKey}-caption`}
-              className={input}
-              maxLength={191}
-              value={content.caption ?? ''}
-              onChange={e => onFieldChange('caption', e.target.value)}
-            />
-          </div>
+          {words.includes('alt') && (
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
+                {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
+              </label>
+              <input
+                id={`lp-${sectionKey}-alt`}
+                className={input}
+                maxLength={191}
+                value={content.alt ?? ''}
+                onChange={e => onFieldChange('alt', e.target.value)}
+              />
+            </div>
+          )}
+          {words.includes('caption') && (
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
+                {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+              </label>
+              <input
+                id={`lp-${sectionKey}-caption`}
+                className={input}
+                maxLength={191}
+                value={content.caption ?? ''}
+                onChange={e => onFieldChange('caption', e.target.value)}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
