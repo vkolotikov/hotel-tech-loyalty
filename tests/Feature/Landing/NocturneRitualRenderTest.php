@@ -418,26 +418,6 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringNotContainsString('Amara', $body);
     }
 
-    /**
-     * The other side of the default model, and the reason it is not simply
-     * "ship some photographs": The Ruled Page has none of its own, so its
-     * empty states are exactly what they were.
-     */
-    public function test_a_design_with_no_photographs_of_its_own_still_renders_its_empty_state(): void
-    {
-        Property::create([
-            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Nocturne', 'is_active' => true,
-        ]);
-
-        $page = $this->published();
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
-    }
-
     public function test_an_empty_page_ships_no_empty_heading(): void
     {
         $page = LandingPage::create([
@@ -976,28 +956,6 @@ class NocturneRitualRenderTest extends TestCase
         }
     }
 
-    /**
-     * The same battery against a design that ships no photograph of its own,
-     * where the fallback is still the empty state. Both halves of the model
-     * have to be proven, or "it fell back to something" says nothing about
-     * which something.
-     */
-    #[DataProvider('hostileImages')]
-    public function test_a_hostile_hero_image_renders_no_img_where_the_design_has_no_default(mixed $value, ?string $needle): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne', 'image_url' => $value]]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('landing/nocturne_ritual/assets/', $body);
-
-        if ($needle !== null) {
-            $this->assertStringNotContainsString($needle, $body);
-        }
-    }
-
     #[DataProvider('hostileImages')]
     public function test_a_hostile_story_image_never_reaches_the_page_and_restores_the_default(mixed $value, ?string $needle): void
     {
@@ -1044,27 +1002,6 @@ class NocturneRitualRenderTest extends TestCase
         foreach (['javascript:', 'evil.example', 'nope'] as $needle) {
             $this->assertStringNotContainsString($needle, $body);
         }
-    }
-
-    /**
-     * A design with no photographs of its own is where "an empty gallery is
-     * not a section" still lives — and it has to, because it is the ruling
-     * that keeps a headed band off a page with nothing under it.
-     */
-    public function test_a_gallery_with_no_usable_picture_renders_no_band_where_the_design_has_no_defaults(): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne'], 'gallery_1' => [
-            'heading' => 'Inside the house',
-            'image_1' => 'javascript:alert(1)',
-            'image_2' => ['nope'],
-        ]]);
-        $page->sections()->create(['key' => 'gallery_1', 'enabled' => true, 'sort' => 9]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $body = $this->body();
-
-        $this->assertSame(200, $this->statusCode());
-        $this->assertStringNotContainsString('Inside the house', $body);
     }
 
     public function test_a_gallery_renders_its_photographs_in_leaf_order(): void
@@ -1193,11 +1130,6 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringContainsString('landing/nocturne_ritual/assets/team-nocturne.webp', $body);
         $this->assertStringNotContainsString('/storage/avatars/amara.webp', $body);
         $this->assertStringContainsString('alt="Three practitioners together in the treatment space"', $body);
-
-        // On a design with no photograph of its own, the first
-        // practitioner's avatar is still what the band leads with.
-        $page->update(['template_key' => 'ruled_page']);
-        $this->assertStringContainsString('/storage/avatars/amara.webp', $this->body());
     }
 
     /**
@@ -1284,25 +1216,6 @@ class NocturneRitualRenderTest extends TestCase
             '#<meta property="og:image" content="https?://[^"]+/landing/nocturne_ritual/assets/hero-nocturne\.webp">#',
             $this->body(),
         );
-    }
-
-    /**
-     * No picture anywhere means no tag, rather than one pointing at nothing.
-     *
-     * Asserted through The Ruled Page because it is the only design that can
-     * reach that state — it ships no photographs of its own. Its layout also
-     * carries its OWN <head> and its own inline JSON-LD copy (the four byte
-     * goldens pin them), so it publishes no share image at all yet: that is
-     * the same known duplication `landing/shared/local-business-json-ld.blade.php`
-     * already records, and closing it is a deliberate golden re-capture this
-     * task was told not to make.
-     */
-    public function test_a_design_with_no_photographs_publishes_no_share_image(): void
-    {
-        $page = $this->published(['hero' => ['headline' => 'Nocturne']]);
-        $page->update(['template_key' => 'ruled_page']);
-
-        $this->assertStringNotContainsString('og:image', $this->body());
     }
 
     /**
@@ -1675,6 +1588,9 @@ class NocturneRitualRenderTest extends TestCase
         // The industry's verb is gone from the page: every control that
         // carried it now carries one of the three above.
         $this->assertStringNotContainsString('Book appointment', $body);
+        // And so is the author's own header word: the tenant's `cta_label`
+        // overrides every chrome control at once, not only the closing panel.
+        $this->assertStringNotContainsString('Book a ritual', $body);
     }
 
     /**
@@ -1902,4 +1818,44 @@ class NocturneRitualRenderTest extends TestCase
         $this->assertStringNotContainsString('href="#main-content">Skip to content<', $file);
     }
 
+
+    /**
+     * THE CHROME'S OWN WORDS (the improvements round, item D). With no
+     * `booking.cta_label` written and the flow live, the header bar, its
+     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * word THE AUTHOR gave that control — transcribed from his index.html —
+     * while the closing panel keeps the industry's verb. The one leaf still
+     * overrides all four at once (see the wording test), and with the flow off
+     * every one of them says what it does instead (6.4).
+     */
+    public function test_the_chrome_takes_the_authors_own_words_until_the_tenant_writes_theirs(): void
+    {
+        $this->seedWidgetOrganization();
+        $page = $this->seedLikeTheKit();
+        $this->seedBookableSchedule();
+
+        $content = $page->content;
+        $content['booking']['cta_label'] = '';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header".*?</header>#s', $body, $header));
+        $this->assertSame(1, preg_match('#<footer class="site-footer".*?</footer>#s', $body, $footer));
+        $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
+        $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
+
+        // The header bar and its mobile-menu twin.
+        $this->assertStringContainsString('Book a ritual</a>', $header[0]);
+        $this->assertStringContainsString('Book a ritual</a>', $header[0]);
+        // The footer lockup and the fixed pill.
+        $this->assertStringContainsString('Book now</a>', $footer[0]);
+        $this->assertStringContainsString('Book now</a>', $fab[0]);
+        // The closing panel: the industry's verb, as before.
+        $this->assertStringContainsString('Book appointment</a>', $panel[0]);
+        $this->assertStringNotContainsString('Book appointment</a>', $header[0]);
+        $this->assertStringNotContainsString('Book appointment</a>', $fab[0]);
+        // The flow is live, so no control has been relabelled for a fallback.
+        $this->assertStringNotContainsString('Call to book', $body);
+    }
 }

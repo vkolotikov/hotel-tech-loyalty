@@ -266,6 +266,11 @@ const FIELD_FALLBACK: Record<string, string> = {
   // is the trade's word and means nothing to a salon owner.
   alt: 'What the photo shows',
   caption: 'Caption under the photo',
+  // The line of prose under a gallery tile's caption — the hospitality kits'
+  // card text ("Oysters, cocktails and the full cellar."). Drawn inside the
+  // strip beside the caption it sits under, and only on a design that prints
+  // it (see `SectionField.notes`).
+  caption_note: 'Line under the caption',
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
@@ -319,14 +324,11 @@ const FIELD_FALLBACK: Record<string, string> = {
   call_label: 'Phone line wording',
   call_short: 'Short phone label',
 
-  // contact — the five wording overrides `contact.blade.php` already reads.
-  // Distinct from `phone`/`email`/`address` above, which are the VALUES:
-  // these are the words printed above them.
-  phone_label: 'Wording above your phone number',
+  // contact — the one wording override every kit's footer hub reads (the
+  // text of the mail link, "Email the house"). Distinct from `email` above,
+  // which is the VALUE. The other four channel wordings the retired generic
+  // design printed left the catalogue with it.
   email_label: 'Wording above your email',
-  address_label: 'Wording above your address',
-  map_label: 'Map link wording',
-  closed_label: 'Closed-today wording',
 
   // ─── Template fidelity 5.1 / R6 ───────────────────────────────────────
   //
@@ -378,8 +380,12 @@ const FIELD_FALLBACK: Record<string, string> = {
   // own caption, labelled above.
   note_label: 'Label on your main photo',
   edition: 'Small mark beside your opening',
-  // services — the word before every price ("from £88").
+  // services — the word before every price ("from £88"), the words after
+  // it ("€92 per guest"), and the service window a menu without a price
+  // shows in its place ("Fri–Sun · 12:00"). One line per band each.
   price_prefix: 'Word before every price',
+  price_suffix: 'Words after every price',
+  window: 'Service times shown instead of a price',
   // team — the one link under the list, on a design with no per-person one.
   secondary_link_label: 'Wording on the link under your team',
   // booking — the ornamental numeral beside the closing panel.
@@ -567,28 +573,29 @@ export function LandingEditor({
     update('content', { ...(f.content ?? {}), [sectionKey]: sectionCopy })
   }
 
-  // Task 6 (landing phase 3c, D4): the three theme keys the Design panel
+  // Task 6 (landing phase 3c, D4): the one theme key the Design panel
   // owns, narrowed from `f.theme` (an untyped `Record<string, unknown> |
   // null` — the raw JSON column, Task 1 interfaces) the same way `imageUrl`
   // narrows its own raw leaf a few lines below with `safeImageUrl` — a
   // legal non-string leaf must fall through to "unset" here rather than
-  // reach `DesignPanel`'s string-typed props.
+  // reach `DesignPanel`'s string-typed props. A stored `palette` or
+  // `font_pairing` from before the generic design was retired is NOT read
+  // here, and so never sent back: the server refuses both as unknown keys
+  // now, and this narrowing is what lets such a page still save.
   const themeFields = {
-    palette: typeof f.theme?.palette === 'string' ? f.theme.palette : undefined,
-    font_pairing: typeof f.theme?.font_pairing === 'string' ? f.theme.font_pairing : undefined,
     brand_color: typeof f.theme?.brand_color === 'string' ? f.theme.brand_color : undefined,
   }
 
-  // Merges one theme field into whatever the OTHER two currently hold —
-  // never a bare `{ [key]: value }`, which would silently drop a sibling
-  // field the tenant set in an earlier, still-unsaved edit this same
-  // session (`f.theme` already carries every prior queued change via
-  // `update`'s own `{...(p ?? page ?? {})}` merge). `themePayload` is the
-  // same allowlist-narrowing function `designChoices.test.ts` pins — used
-  // here, not only at `saveMut`'s wire boundary, so a stray key can never
-  // enter `form.theme` in the first place. Setting `form` (via `update`)
-  // is what flips `dirty` true, exactly like every other field on this
-  // screen — Save still has to be pressed; nothing here is a Task 4-style
+  // Merges one theme field into whatever the form currently holds — never
+  // a bare `{ [key]: value }`, which would silently drop a sibling field
+  // the tenant set in an earlier, still-unsaved edit this same session
+  // (`f.theme` already carries every prior queued change via `update`'s own
+  // `{...(p ?? page ?? {})}` merge). `themePayload` is the same
+  // allowlist-narrowing function `designChoices.test.ts` pins — used here,
+  // not only at `saveMut`'s wire boundary, so a stray key can never enter
+  // `form.theme` in the first place. Setting `form` (via `update`) is what
+  // flips `dirty` true, exactly like every other field on this screen —
+  // Save still has to be pressed; nothing here is a Task 4-style
   // straight-to-server write.
   const updateTheme = (patch: Partial<typeof themeFields>) =>
     update('theme', themePayload({ ...themeFields, ...patch }))
@@ -801,18 +808,16 @@ export function LandingEditor({
   /*
    * THE PER-BAND COLOUR SWATCHES ARE GONE (the final scenario, step 3).
    *
-   * They painted `SectionType::TONES` in the colours of the palette the page
-   * was wearing, and every one of them acted on exactly one design:
-   * `ruled_page`, whose layout is the only one that ever read a band's tone
-   * class. That design is retired from the offer, so on every design a
-   * tenant can now choose the swatches were three dead controls per card —
-   * twenty-one on a full page — over layouts whose authors composed the
-   * dark/paper/sand rhythm themselves and say so in their own headers.
+   * They painted the retired generic design's three tones in the colours of
+   * the palette the page was wearing, and every one of them acted on exactly
+   * one design: `ruled_page`, whose layout was the only one that ever read a
+   * band's tone class. That design is retired and deleted, so on every
+   * design a tenant can choose the swatches were three dead controls per
+   * card — twenty-one on a full page — over layouts whose authors composed
+   * the dark/paper/sand rhythm themselves and say so in their own headers.
    *
-   * The BACKEND half is untouched and still load-bearing: `tone` is still a
-   * column, `SectionType::bandClass()` still resolves it, and the two demo
-   * pages on the retired design still render with whatever tones they were
-   * given. What is gone is the control that could no longer change anything.
+   * The backend's write path went with it: no endpoint validates a `tone`
+   * and no row carries one on the wire. Only the column remains, unread.
    */
 
   /**
@@ -2858,6 +2863,7 @@ function SectionRow({
                   sectionKey={row.key}
                   stored={storedSection}
                   limit={field.slots ?? 0}
+                  notes={field.notes === true}
                   defaults={imageDefaults}
                   content={content}
                   onFieldChange={onFieldChange}
@@ -2901,6 +2907,7 @@ function SectionRow({
                   // single plate — the endpoints' own spelling, which is
                   // also how the served map is keyed.
                   defaultUrl={imageDefaults[row.key] ?? null}
+                  words={field.words ?? []}
                   content={content}
                   onFieldChange={onFieldChange}
                   onChanged={onImageChanged}
@@ -3269,7 +3276,7 @@ function FaqPairsField({ sectionKey, content, pairs, onFieldChange }: {
  * every `text_N` alongside `hero`/`about` precisely so this endpoint could
  * accept them. `imageErrorMessage` already surfaces its refusal in words.
  */
-function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, onChanged }: {
+function ImageField({ sectionKey, imageUrl, defaultUrl, words, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** The TENANT's own upload for this slot, off the raw query — null when
    *  they have not made one. Never the effective picture: the difference
@@ -3278,6 +3285,10 @@ function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, 
   /** The DESIGN's own photograph for this slot, off the served
    *  `image_defaults` — null when it ships none (template fidelity 4.1). */
   defaultUrl: string | null
+  /** Which word leaves this plate draws a box for (`alt`, `caption`) —
+   *  `SectionField.words`, off the catalogue and the served `content_fields`.
+   *  A closing panel's photograph takes a description and no caption. */
+  words: string[]
   /** `f.content[sectionKey]`, for the two WORD leaves that belong to this
    *  picture. They are ordinary content and save with the words; only the
    *  picture itself has an endpoint of its own. */
@@ -3411,33 +3422,40 @@ function ImageField({ sectionKey, imageUrl, defaultUrl, content, onFieldChange, 
           Ordinary content leaves — they queue into the same save as the
           headline, and the one-writer rule that protects the picture does
           not apply to them. Offered only once there is a picture to
-          describe. */}
-      {shown && (
+          describe, and only the ones this type carries and this design
+          prints (`words`): a closing panel's photograph takes a description
+          and no caption, and a box for a word nothing reads is a control
+          that cannot act. */}
+      {shown && words.length > 0 && (
         <div className="grid gap-2 sm:grid-cols-2 pt-1">
-          <div>
-            <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
-              {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
-            </label>
-            <input
-              id={`lp-${sectionKey}-alt`}
-              className={input}
-              maxLength={191}
-              value={content.alt ?? ''}
-              onChange={e => onFieldChange('alt', e.target.value)}
-            />
-          </div>
-          <div>
-            <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
-              {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
-            </label>
-            <input
-              id={`lp-${sectionKey}-caption`}
-              className={input}
-              maxLength={191}
-              value={content.caption ?? ''}
-              onChange={e => onFieldChange('caption', e.target.value)}
-            />
-          </div>
+          {words.includes('alt') && (
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-alt`}>
+                {t('landing_pages.editor.field_alt', FIELD_FALLBACK.alt)}
+              </label>
+              <input
+                id={`lp-${sectionKey}-alt`}
+                className={input}
+                maxLength={191}
+                value={content.alt ?? ''}
+                onChange={e => onFieldChange('alt', e.target.value)}
+              />
+            </div>
+          )}
+          {words.includes('caption') && (
+            <div>
+              <label className={label} htmlFor={`lp-${sectionKey}-caption`}>
+                {t('landing_pages.editor.field_caption', FIELD_FALLBACK.caption)}
+              </label>
+              <input
+                id={`lp-${sectionKey}-caption`}
+                className={input}
+                maxLength={191}
+                value={content.caption ?? ''}
+                onChange={e => onFieldChange('caption', e.target.value)}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -3507,13 +3525,16 @@ function useSavedFlash(): [boolean, () => void] {
  * already follows: a native multi-select `<input type="file">`, a strip of
  * thumbnails, and a remove button on each.
  */
-function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldChange, onChanged }: {
+function GalleryField({ sectionKey, stored, limit, notes, defaults, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
   stored: unknown
   /** The served cap. Zero means the backend published no count, and the
    *  control shows no picker rather than guessing at a number. */
   limit: number
+  /** Whether this design prints a line under each caption — `SectionField.
+   *  notes`, off the served `content_fields`. False draws no second box. */
+  notes: boolean
   /** The design's own photographs, slot => URL (template fidelity 4.1). */
   defaults: Record<string, string>
   /** `f.content[sectionKey]`, for the per-tile caption leaves. Ordinary
@@ -3672,6 +3693,24 @@ function GalleryField({ sectionKey, stored, limit, defaults, content, onFieldCha
                   value={content[photo.captionLeaf] ?? ''}
                   onChange={e => onFieldChange(photo.captionLeaf, e.target.value)}
                 />
+                {notes && (
+                  /* The line under the caption, on the designs whose cards
+                     print one (the hospitality kits). An ordinary content
+                     leaf beside the caption it sits under, saved with the
+                     words like every other. */
+                  <>
+                    <label className={label + ' mt-2'} htmlFor={`lp-${sectionKey}-${photo.noteLeaf}`}>
+                      {t('landing_pages.editor.field_caption_note', FIELD_FALLBACK.caption_note)}
+                    </label>
+                    <input
+                      id={`lp-${sectionKey}-${photo.noteLeaf}`}
+                      className={input}
+                      maxLength={191}
+                      value={content[photo.noteLeaf] ?? ''}
+                      onChange={e => onFieldChange(photo.noteLeaf, e.target.value)}
+                    />
+                  </>
+                )}
                 {photo.isDefault && (
                   <p className="text-xs text-t-secondary/80 mt-1">
                     {t('landing_pages.editor.photo_is_the_designs', 'This photo comes with your design. Add your own to replace it.')}

@@ -10,9 +10,9 @@
  *  1. The self-hosted @font-face block below. The kit asked for Italiana, Inter
  *     and DM Mono through a fonts.googleapis.com <link>; the landing CSP's
  *     style-src/font-src are 'self'-only (LandingPageSecurity::policy()), so
- *     that link cannot work here. INTER IS ALREADY ON DISK (ruled_page.css
- *     declares the same three variable files, which carry the full 100..900
- *     axis); Italiana and DM Mono are new. Same discovery discipline as the
+ *     that link cannot work here. Inter is the same three variable files the
+ *     retired house design once declared (kept, and now declared here, they
+ *     carry the full 100..900 axis); Italiana and DM Mono are new. Same discovery discipline as the
  *     four kit templates before this one: the css2 endpoint fetched with a
  *     Chrome User-Agent (it serves a plain .ttf to any UA it does not
  *     recognise), every file's own axes read back with fontTools, and every
@@ -451,7 +451,8 @@ h2.eyebrow {
 }
 
 .experience-grid span,
-.experience-grid h3 {
+.experience-grid h3,
+.experience-grid p {
   position: relative;
   z-index: 1;
 }

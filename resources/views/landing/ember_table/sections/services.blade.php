@@ -22,14 +22,22 @@
     - `name` is the menu ("À la carte", "Kitchen tasting") and
       `short_description` is the line under it. Both fit exactly.
     - the right-hand column is `price`, through App\Landing\Money, with
-      `services.price_prefix` in front of it. The author writes a per-guest
-      SUFFIX on two of his three ("€82 per guest") and a SERVICE WINDOW on the
-      third ("Fri–Sun · 12:00"), and a Service row has a field for neither —
-      see the task report, which names this rather than inventing one.
+      `services.price_prefix` in front of it and `services.price_suffix`
+      after it — his "€82 per guest" — both the band's.
+    - on a row that has NO price the same column carries `services.window`,
+      the SERVICE WINDOW he writes there ("Fri–Sun · 12:00"). One line per
+      band rather than per row, because a Service row has no such field and a
+      per-row leaf would need a key the catalogue cannot enumerate (see
+      SectionType's `services` note); his own page has exactly one such row.
     - the first column is his `NN / word` ordinal ("01 / Lunch"). The ORDINAL is
-      derived here (a stored number goes stale the moment a menu is removed) and
-      the WORD after it has no leaf, exactly as kit 02-beauty's per-tile gallery
-      word does not. Named rather than glossed.
+      derived here (a stored number goes stale the moment a menu is removed);
+      the WORD after it is the menu's CATEGORY — `Service.category->name`, the
+      Services screen's own grouping of the row ("Lunch", "Dinner", "The
+      counter"), which is exactly what his three words are. A menu filed
+      under no category prints the ordinal alone, never an invented word.
+      PageContent eager-loads the category through the same tenant choke
+      point as the rows, so it is never read lazily under a scope that fails
+      closed on the public render.
     - `duration_minutes` is NOT drawn. It is a treatment's field; a wine-bar
       lunch does not have one.
 
@@ -45,8 +53,11 @@
 
     $currencyFallback = $content->contact->currency;
 
-    // The word before every price. Trimmed, never invented.
+    // The words before and after every price, and the window a priceless
+    // row shows instead. Trimmed, never invented.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $priceSuffix = trim((string) ($copy['price_suffix'] ?? ''));
+    $window      = trim((string) ($copy['window'] ?? ''));
 
     $kicker  = trim((string) ($copy['kicker'] ?? $profile->kicker('services')));
     $subtext = trim((string) ($copy['subtext'] ?? ''));
@@ -71,10 +82,16 @@
     }
 
     $currency = $service->currency ?: $currencyFallback;
-    $price    = Money::format($service->price, $currency);
+    $price    = Money::format($service->price, $currency, $priceSuffix);
+
+    // His `01 / Lunch`: the derived ordinal, then the menu's own category
+    // where it has one. The category is eager-loaded and tenant-scoped by
+    // PageContent; a row with none prints the ordinal alone.
+    $word  = trim((string) ($service->category?->name ?? ''));
+    $label = sprintf('%02d', $loop->iteration) . ($word !== '' ? ' / ' . $word : '');
 @endphp
         <article data-item-id="{{ $service->id }}">
-          <p aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</p>
+          <p aria-hidden="true">{{ $label }}</p>
           <div>
             <h3>{{ $service->name }}</h3>
 @if ($line !== '')
@@ -83,6 +100,8 @@
           </div>
 @if ($price !== null)
           <strong>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</strong>
+@elseif ($window !== '')
+          <strong>{{ $window }}</strong>
 @endif
         </article>
 @endforeach

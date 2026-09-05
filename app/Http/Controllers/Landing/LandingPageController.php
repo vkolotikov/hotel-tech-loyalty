@@ -291,8 +291,7 @@ class LandingPageController extends Controller
             // at this. Null is a real and common answer — an organisation
             // with no review form, or none active — and the templates render
             // no link at all when it is null rather than a link that opens
-            // on "Form not found or inactive". ruled_page ignores this key
-            // entirely, which is why adding it moves none of its bytes.
+            // on "Form not found or inactive".
             //
             // An outbound link rather than a frame, exactly like bookingUrl
             // above (see sections/booking.blade.php on why the booking

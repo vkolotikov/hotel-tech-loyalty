@@ -186,25 +186,25 @@ export type TemplateOption = {
 }
 
 /**
- * The four design controls a template can answer for, and the order this
- * module reasons about them in — `LandingOnboardingService::SUPPORT_KEYS`,
- * restated only as the TYPE of the map, never as a copy of its values.
+ * The design controls a template can answer for, and the order this module
+ * reasons about them in — `LandingOnboardingService::SUPPORT_KEYS`, restated
+ * only as the TYPE of the map, never as a copy of its values.
+ *
+ * ONE control: the accent. The palette, the type pairings and the section
+ * tones this map used to answer for were the retired generic design's, and
+ * they left with it — see `DesignPanel.tsx`'s own note.
  */
 export type TemplateSupport = {
-  palette: boolean
-  font_pairing: boolean
-  tones: boolean
   brand_color: boolean
 }
 
 /** Everything on, which is what every template did before 1.1 existed. */
 const SUPPORTS_EVERYTHING: TemplateSupport = {
-  palette: true, font_pairing: true, tones: true, brand_color: true,
+  brand_color: true,
 }
 
 /**
- * What the SELECTED template honours, as four bools that are always
- * present.
+ * What the SELECTED template honours, as bools that are always present.
  *
  * THE ABSENT-KEY DIRECTION IS DELIBERATE AND IT IS THE OPPOSITE OF THE
  * SERVER'S. Server-side, a template row that forgets to declare a control
@@ -225,9 +225,6 @@ export function templateSupports(options: TemplateOption[], selectedKey: string)
   if (supports == null || typeof supports !== 'object') return SUPPORTS_EVERYTHING
 
   return {
-    palette: supports.palette === true,
-    font_pairing: supports.font_pairing === true,
-    tones: supports.tones === true,
     brand_color: supports.brand_color === true,
   }
 }

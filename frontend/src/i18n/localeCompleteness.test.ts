@@ -366,6 +366,8 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     // eight translations of one sentence.
     'landing_pages.editor.field_alt',
     'landing_pages.editor.field_caption',
+    // The line under a gallery tile's caption (the hospitality kits' card prose).
+    'landing_pages.editor.field_caption_note',
     // hero / services / about / team / reviews / text / gallery.
     'landing_pages.editor.field_headline',
     'landing_pages.editor.field_subtext',
@@ -381,12 +383,9 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_phone',
     'landing_pages.editor.field_email',
     'landing_pages.editor.field_address',
-    // ...and the five WORDING overrides above them, also surfaced by 1.3.
-    'landing_pages.editor.field_phone_label',
+    // ...and the one WORDING override every kit's footer hub still reads
+    // (the other four the retired generic design printed left with it).
     'landing_pages.editor.field_email_label',
-    'landing_pages.editor.field_address_label',
-    'landing_pages.editor.field_map_label',
-    'landing_pages.editor.field_closed_label',
     // announcement.
     'landing_pages.editor.field_text',
     'landing_pages.editor.field_cta_label',
@@ -457,6 +456,10 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_note_label',
     'landing_pages.editor.field_edition',
     'landing_pages.editor.field_price_prefix',
+    // The hospitality menus: words after every price, and the service window a
+    // menu without a price shows in its place.
+    'landing_pages.editor.field_price_suffix',
+    'landing_pages.editor.field_window',
     'landing_pages.editor.field_secondary_link_label',
     'landing_pages.editor.field_index',
     'landing_pages.editor.field_label',

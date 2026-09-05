@@ -112,6 +112,17 @@ final class PageContent
         // tenant saw, not database luck.
         $services = self::scopedToBrand(self::scoped(Service::query(), $orgId), $brandId)
             ->where('is_active', true)
+            // The category is the Services screen's own grouping of a row
+            // ("Lunch", "Dinner", "The counter"), and Ember Table prints it
+            // after the ordinal exactly as its author drew it ("01 / Lunch").
+            // Eager-loaded HERE, through the same tenant choke point as the
+            // rows themselves, because a lazy `$service->category` in a
+            // partial would run under ServiceCategory's own TenantScope —
+            // which fails CLOSED on the public render, where no tenant is
+            // bound — and silently answer null on every live page.
+            // The constraint arrives as the RELATION, whose own Eloquent
+            // builder is what the choke point takes.
+            ->with(['category' => fn ($relation) => self::scoped($relation->getQuery(), $orgId)])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->limit(self::MAX_SERVICES)
@@ -1016,9 +1027,10 @@ final class PageContent
      *    fails every guard and still never reaches the DOM; what it falls
      *    back to is now the author's plate rather than an empty band.
      *
-     * `ruled_page` has no defaults at all and must not gain any: its empty
-     * states are drawn for the absence of a picture and its four byte
-     * goldens pin the markup of a page with none.
+     * A template key this map does not know answers null for every slot —
+     * which is exactly what every page rendered before this class existed
+     * did, and is how a page on a design with no photographs of its own
+     * would fall back to its empty states.
      */
     public function imageUrl(string $section): ?string
     {
@@ -1101,8 +1113,7 @@ final class PageContent
      * (template fidelity 4.2 / R3).
      *
      * `Service.image` is already a tenant-uploaded column on the Services
-     * screen and `ruled_page/sections/services.blade.php` already reads it.
-     * Kit 03's featured service card wants the same picture, and the reason
+     * screen. Kit 03's featured service card wants that picture, and the reason
      * it is NOT a page slot is a number: a page may carry up to
      * {@see MAX_SERVICES} rows, and modelling that as page content would put
      * twenty-four more slots in an allowlist whose whole value is being
@@ -1182,8 +1193,12 @@ final class PageContent
      *    own glass pills are claims about their fictional rooms; the leaf is
      *    the tenant's to fill and blank means no pill, which is exactly what
      *    this partial did before the field existed.
+     *  - `note` is the tenant's `caption_N_note` — the line of prose the
+     *    hospitality authors write under each card's name — and follows the
+     *    same rule: the tenant's, or blank, never the design's. A partial
+     *    that does not draw a line simply never reads the key.
      *
-     * @return list<array{url: string, alt: string, caption: string}>
+     * @return list<array{url: string, alt: string, caption: string, note: string}>
      */
     public function galleryPhotos(string $section): array
     {
@@ -1205,11 +1220,13 @@ final class PageContent
             }
 
             $caption = $this->leaf($section, 'caption_' . ($n + 1));
+            $note    = $this->leaf($section, 'caption_' . ($n + 1) . '_note');
 
             $photos[] = [
                 'url'     => $url,
                 'alt'     => $own !== null ? '' : (TemplateImage::alt($this->page->template_key, $slot) ?? ''),
                 'caption' => is_scalar($caption) ? trim((string) $caption) : '',
+                'note'    => is_scalar($note) ? trim((string) $note) : '',
             ];
         }
 

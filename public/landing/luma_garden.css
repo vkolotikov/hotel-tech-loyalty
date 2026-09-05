@@ -457,7 +457,8 @@ h2.eyebrow {
 }
 
 .occasion-list span,
-.occasion-list h3 {
+.occasion-list h3,
+.occasion-list p {
   position: relative;
   z-index: 1;
   color: var(--color-white);

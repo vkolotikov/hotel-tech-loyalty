@@ -13,11 +13,11 @@
   `photo_blocks` exists to prevent.
 
   So the picture FILLS the card he drew: his hairline, his `min-height: 15rem`,
-  a veil in his own pine, and his `<h3>` as the photograph's caption. The band
-  is exactly the height he drew it at every count, and the stylesheet's appended
-  block carries that rule with the same reasoning. What is lost is his per-card
-  LINE of prose, which has no leaf — the same shortfall kit 02-beauty's per-tile
-  word has, and recorded the same way.
+  a veil in his own pine, his `<h3>` as the photograph's caption and his `<p>`
+  — the line of prose under the name — as the caption's note (`caption_N_note`,
+  printed exactly where he drew it and only when the tenant has written one).
+  The band is exactly the height he drew it at every count, and the
+  stylesheet's appended block carries that rule with the same reasoning.
 
   THE ORDINAL IS DERIVED, and it is the author's own: he prints exactly `01`…
   `04` there. A stored number goes stale the moment a photograph is removed.
@@ -69,6 +69,9 @@
           <img src="{{ $photo['url'] }}" width="1536" height="1024" loading="lazy" decoding="async" alt="{{ $photo['alt'] }}">
 @if ($photo['caption'] !== '')
           <h3>{{ $photo['caption'] }}</h3>
+@endif
+@if ($photo['note'] !== '')
+          <p>{{ $photo['note'] }}</p>
 @endif
         </article>
 @endforeach

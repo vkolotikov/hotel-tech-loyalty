@@ -26,8 +26,8 @@
   WHAT THIS TEMPLATE DELIBERATELY DOES NOT DO, and why — the same three
   refusals nocturne_ritual makes, for the same three reasons:
 
-    - NO PALETTE BLOCK. App\Landing\Palette exists so the Ruled Page can be
-      re-coloured; this kit's :root IS the design, authored by hand, and
+    - NO PALETTE BLOCK. The palette system left with the generic house design;
+      this kit's :root IS the design, authored by hand, and
       overriding twenty tokens under it would produce a different page
       wearing its layout. `theme.palette` is simply not read here.
     - NO FONT PAIRING. The kit names Bodoni Moda and Manrope in its own
@@ -166,10 +166,9 @@
     // own; the hero words its own through `hero.cta_label`.
     //
     // The author writes "Book a chair" in the header and the hero and "Book
-    // now" in the other three. The hero has a leaf; the header's variant is
-    // the one authored string this shape cannot reach, exactly as it is on
-    // nocturne_ritual, and it is recorded in the phase 7/8 report rather
-    // than answered with a leaf on a block that has no row.
+    // now" in the other three. The hero has a leaf; the closing panel falls
+    // back to the industry's verb; the chrome falls back to his own words
+    // per placement — see $chromeLabels below.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
 
@@ -178,6 +177,29 @@
     // comes back the moment the flow does.
     if (! $bookingIsFlow && $bookingHref !== null) {
         $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
+
+    // THE CHROME'S OWN WORDS. The header bar, its mobile-menu twin, the footer
+    // lockup and the fixed pill carry the tenant's `booking.cta_label` when one
+    // is written; otherwise each carries the word THE AUTHOR gave that control,
+    // transcribed from resources/landing-kits/beauty-tech/02-editorial-atelier/index.html, rather
+    // than the industry's verb — which stays the closing panel's fallback and
+    // the hero's, because those two are bands with leaves of their own and the
+    // chrome has no row. One leaf, four placements, and the author's own word
+    // on each until the tenant writes theirs. When the flow is off, every
+    // control says what it does (6.4), chrome included.
+    $ownBookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
+    $chromeLabels    = [
+        'header' => 'Book a chair',
+        'mobile' => 'Book a chair',
+        'footer' => 'Book now',
+        'fab'    => 'Book now',
+    ];
+
+    foreach ($chromeLabels as $placement => $authored) {
+        $chromeLabels[$placement] = (! $bookingIsFlow && $bookingHref !== null)
+            ? $bookingLabel
+            : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
     // NAV ANCHORS come from $renderedSections, the one collection that
@@ -334,7 +356,7 @@
      in-page controls above are not conditional on it. Rendered only when it
      has somewhere real to go. --}}
 @if ($bookingHref !== null)
-  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 
 {{-- The template's interactive layer: one file, one entry point, no

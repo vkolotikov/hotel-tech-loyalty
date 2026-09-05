@@ -60,9 +60,9 @@
     }
 
     /* Appendix B spec 1.1's calming, at the only address it can still reach.
-       While the widget ran inside the landing page, ruled_page.css held these
-       rules; framed, that stylesheet cannot cross the boundary and they moved
-       here with the widget. Attention-grab animation is refused on a page the
+       While the widget ran inside the landing page, the landing stylesheet
+       held these rules; framed, that stylesheet cannot cross the boundary and
+       they moved here with the widget. Attention-grab animation is refused on a page the
        visitor has already chosen to open. */
     #htchat-panel, #htchat-panel *,
     #htchat-panel::before, #htchat-panel::after {

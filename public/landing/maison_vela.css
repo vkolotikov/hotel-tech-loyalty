@@ -502,7 +502,8 @@ h2.eyebrow {
 }
 
 .salon__cards span,
-.salon__cards h3 {
+.salon__cards h3,
+.salon__cards p {
   position: relative;
   z-index: 1;
 }

@@ -15,15 +15,16 @@
   `photo_blocks` exists to prevent.
 
   So the picture FILLS the card he drew: his border, his `min-height: 13rem`,
-  his two overlay tokens as the veil, and his `<h3>` as the photograph's
-  caption. The band is exactly the height he drew it at every count, and the
-  stylesheet's appended block carries that rule with the same reasoning. What
-  is lost is his per-card LINE of prose, which has no leaf — the same
-  shortfall kit 02's per-tile word has, and recorded the same way.
+  his two overlay tokens as the veil, his `<h3>` as the photograph's caption
+  and his `<p>` — the line of prose under the name — as the caption's note
+  (`caption_N_note`, printed exactly where he drew it and only when the
+  tenant has written one). The band is exactly the height he drew it at every
+  count, and the stylesheet's appended block carries that rule with the same
+  reasoning.
 
   THE ORDINAL IS DERIVED. A stored number goes stale the moment a photograph
   is removed. (The author writes a phrase there — "Walk-ins welcome" — which
-  has no leaf either; kits 02 and 03 write exactly this ordinal.)
+  has no leaf; kits 02 and 03 write exactly this ordinal.)
 
   THE PICTURES are PageContent::galleryPhotos(), the one allowlisted read of
   this band's eight photo leaves: the same three guards the hero's plate goes
@@ -69,6 +70,9 @@
             <img src="{{ $photo['url'] }}" width="1536" height="1024" loading="lazy" decoding="async" alt="{{ $photo['alt'] }}">
 @if ($photo['caption'] !== '')
             <h3>{{ $photo['caption'] }}</h3>
+@endif
+@if ($photo['note'] !== '')
+            <p>{{ $photo['note'] }}</p>
 @endif
           </article>
 @endforeach

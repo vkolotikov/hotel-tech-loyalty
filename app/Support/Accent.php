@@ -186,9 +186,9 @@ final class Accent
     {
         $house   = CssColor::safe($profileDefault);
         $wanted  = CssColor::safe($hex, $house);
-        // PAPER when $surface is null (no palette resolved) or hostile
-        // (defence in depth only - every real caller today hands this a
-        // Palette::tokens['bg'] literal, not tenant input).
+        // PAPER when $surface is null or hostile (defence in depth only -
+        // every real caller today hands this the kit's own page-ground
+        // literal, not tenant input).
         $surface = CssColor::safe($surface, self::PAPER);
 
         // No tenant colour, or one CssColor rejected: nothing to derive. The

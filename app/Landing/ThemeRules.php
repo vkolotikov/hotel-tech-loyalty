@@ -2,69 +2,66 @@
 namespace App\Landing;
 
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /**
- * D6's shared `theme` allowlist (landing phase 3c).
+ * The shared `theme` allowlist (landing phase 3c, D6).
  *
  * Before this class, `LandingPageController::update()` validated `theme`
  * only as `array` + `ScalarLeaves(depth: 1)` — SHAPE, not membership or
  * FORMAT, so any flat scalar key was silently accepted and stored
  * (`test_non_string_scalars_are_still_accepted`'s old `theme.radius`/
  * `theme.dark` proved it). `LandingOnboardingController::store()` had the
- * opposite gap: it format-checked `brand_color`/`font_pairing` but named no
- * shared source for those two rules, so Task 1's new `palette` key would
- * have needed a THIRD copy of "what does a valid palette look like" the
- * moment anything else wanted to check it.
+ * opposite gap: it format-checked its own keys but named no shared source
+ * for the rules, so a second write surface would have needed a second copy
+ * of "what may `theme` contain".
  *
- * One constant, one rule set, one message set — read by both controllers —
- * so Task 3 (adding the `grand` font pairing) and Plan B (adding `locale`)
- * each touch this file alone and the two write surfaces cannot drift apart
- * about what `theme` is allowed to contain. Render-time re-whitelisting
- * (Accent, the font-pairing switch in layout.blade.php, `Palette::for()`)
- * stays as its own, independent defense-in-depth layer — this class is the
- * write-time gate, not a replacement for the read-time one.
+ * One constant, one rule set, one message set — read by both controllers
+ * and by the live preview — so the write surfaces cannot drift apart about
+ * what `theme` is allowed to contain. Render-time re-whitelisting
+ * (`Accent::for()`) stays as its own, independent defense-in-depth layer —
+ * this class is the write-time gate, not a replacement for the read-time
+ * one.
+ *
+ * ONE KEY. `theme` used to carry three — `brand_color`, `font_pairing` and
+ * `palette` — and the last two were the generic house design's controls:
+ * six curated palettes and four type pairings that only that design's
+ * layout ever read. That design is retired and deleted; the six kits each
+ * ship their author's own `:root` and read neither key, so neither is
+ * accepted any more. A stored `palette` or `font_pairing` left on a row
+ * from before the retirement is inert (every kit render test pins that a
+ * stored one emits nothing) and washes out on the next save, because the
+ * editor sends only the keys this class names. An API caller who echoes
+ * one back gets the same unknown-key refusal any other stray key gets —
+ * which is exactly what makes this class worth keeping at one key: the
+ * REFUSAL is the contract, and a `theme` that accepted anything flat would
+ * be a schemaless column again.
  */
 final class ThemeRules
 {
     /**
-     * The only keys `theme` may ever carry. Exactly D6's `{brand_color,
-     * font_pairing, palette}` — Plan B adds `locale` here (and to rules()
-     * below) so the two plans cannot disagree about the allowlist.
+     * The only key `theme` may carry: the tenant's accent, the ONE override
+     * every kit was converted to honour.
      */
-    public const KEYS = ['brand_color', 'font_pairing', 'palette'];
+    public const KEYS = ['brand_color'];
 
-    /**
-     * The pairings allowed today. Task 3 adds `grand` here — and ONLY
-     * here — per this task's brief: editing this one array is what makes
-     * `font_pairing` accept the fourth pairing everywhere `rules()` is
-     * consulted, with no second allowlist to remember to update.
-     */
-    public const FONT_PAIRINGS = ['editorial', 'modern', 'classic', 'grand'];
-
-    /** Exactly D6's `{brand_color, font_pairing, palette}`, in that order. */
+    /** @return list<string> */
     public static function keys(): array
     {
         return self::KEYS;
     }
 
     /**
-     * The per-key Laravel rules. `brand_color` is unchanged from what
-     * `LandingOnboardingController::store()` already enforced (a free-form
-     * string up to 32 characters — `Accent::for()` re-validates the actual
-     * colour syntax at render time, so this is a length guard, not a format
-     * one). `font_pairing` and `palette` are each an allowlist against this
-     * class's own constant and {@see Palette::ids()} respectively — never a
-     * hand-copied list, so the six palette ids can only ever come from one
-     * place.
+     * The per-key Laravel rules. `brand_color` is a free-form string up to
+     * 32 characters — a LENGTH guard, not a format one: `Accent::for()`
+     * re-validates the actual colour syntax at render time, and a value it
+     * cannot read degrades to the industry's own accent rather than to an
+     * error.
      */
     public static function rules(): array
     {
         return [
-            'brand_color'  => ['nullable', 'string', 'max:32'],
-            'font_pairing' => ['nullable', 'string', Rule::in(self::FONT_PAIRINGS)],
-            'palette'      => ['nullable', 'string', Rule::in(Palette::ids())],
+            'brand_color' => ['nullable', 'string', 'max:32'],
         ];
     }
 
@@ -72,21 +69,14 @@ final class ThemeRules
      * Friendly text for every rule above — the house rule this whole class
      * exists to keep (spec §9's "slug must never leak" lesson, applied
      * here the same way the `content.contact.*` messages already are):
-     * Laravel's own default for a failed `in` rule spells the field name
-     * and lists the raw allowed values verbatim ("The selected font
-     * pairing is invalid." at best, "The selected theme.palette is
-     * invalid." at worst if a dotted key is ever named in a rule set), and
-     * neither is something a tenant editing a marketing page should read.
+     * Laravel's own defaults spell the field name, and that is not
+     * something a tenant editing a marketing page should read.
      */
     public static function messages(): array
     {
         return [
-            'brand_color.string'  => 'Please enter a valid accent colour.',
-            'brand_color.max'     => 'Please enter a shorter accent colour.',
-            'font_pairing.string' => 'Please choose one of the available type pairings.',
-            'font_pairing.in'     => 'Please choose one of the available type pairings.',
-            'palette.string'      => 'Please choose one of the available looks.',
-            'palette.in'          => 'Please choose one of the available looks.',
+            'brand_color.string' => 'Please enter a valid accent colour.',
+            'brand_color.max'    => 'Please enter a shorter accent colour.',
         ];
     }
 
@@ -101,7 +91,7 @@ final class ThemeRules
      * call for the keys that are actually present.
      *
      * Deliberately a SEPARATE `Validator` instance, never rules keyed
-     * `'theme.palette'` etc. added as siblings inside the SAME
+     * `'theme.brand_color'` added as siblings inside the SAME
      * `$request->validate()` call that already validates `theme` itself
      * as `array`: that is the phase-3a trap
      * (`Validator::$excludeUnvalidatedArrayKeys`, on by default since

@@ -153,6 +153,8 @@ class LumaGardenRenderTest extends TestCase
                 'heading'        => "From bright lunch\nto golden hour.",
                 'subtext'        => 'Each menu follows the garden and the coast: abundant produce, whole fish, open-fire cooking and desserts meant for sharing.',
                 'price_prefix'   => 'From',
+                'price_suffix'   => 'per guest',
+                'window'         => 'Wed–Sun · 12:00',
             ],
             'about' => [
                 'kicker'  => 'The garden leads',
@@ -168,6 +170,8 @@ class LumaGardenRenderTest extends TestCase
                 'subtext'        => 'Come for an easy lunch, a celebration under the canopy or a private evening composed around your guests.',
                 'caption_1'      => 'Terrace lunch',
                 'caption_2'      => 'Golden-hour dinner',
+                'caption_1_note' => 'Shade, chilled wine and the full garden menu.',
+                'caption_2_note' => 'Five courses as the courtyard moves into candlelight.',
             ],
             'reviews' => [
                 'kicker' => 'A diner postcard',
@@ -509,8 +513,10 @@ class LumaGardenRenderTest extends TestCase
 
         $this->assertStringContainsString('<h3>Garden Lunch</h3>', $body);
         $this->assertStringContainsString('A relaxed two- or three-course menu', $body);
-        $this->assertStringContainsString('<strong>From €42</strong>', $body);
-        $this->assertStringContainsString('<strong>From €92</strong>', $body);
+        // The band's prefix before the money and its suffix after it — his
+        // "€92 per guest" — through Money, with an ordinary space each side.
+        $this->assertStringContainsString('<strong>From €42 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €92 per guest</strong>', $body);
 
         // The ordinal is derived, never stored — the author prints exactly
         // these two digits.
@@ -536,14 +542,40 @@ class LumaGardenRenderTest extends TestCase
     }
 
     /**
-     * `duration_minutes` IS printed on this design, in the meta row where the
-     * author writes a service window ("Wed–Sun · 12:00") the platform has no
-     * field for. A menu with no duration leaves the cell empty rather than
-     * dropping the row, because it is what holds the card's ruled bottom edge.
+     * The meta row's opening cell is the author's SERVICE WINDOW ("Wed–Sun ·
+     * 12:00") — the band's `window`, one line per band, on every card,
+     * exactly where he drew it. Where the tenant has written one it wins
+     * over the row's duration: the window is what the author put in that
+     * cell, the duration is only there because the Services screen has the
+     * field. See the partial's own note on why not per row.
      */
-    public function test_a_menu_with_a_duration_prints_it_and_one_without_keeps_its_rule(): void
+    public function test_the_service_window_opens_every_cards_meta_row(): void
     {
         $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertSame(3, substr_count($body, '<span>Wed–Sun · 12:00</span>'));
+        $this->assertStringNotContainsString('150 min', $body);
+        $this->assertStringNotContainsString('<span></span>', $body);
+    }
+
+    /**
+     * With no window written, `duration_minutes` — what a Service row
+     * actually carries — is printed there instead, and a menu with no
+     * duration leaves the cell empty rather than dropping the row, because
+     * it is what holds the card's ruled bottom edge.
+     */
+    public function test_without_a_window_a_menu_with_a_duration_prints_it_and_one_without_keeps_its_rule(): void
+    {
+        $this->published(['hero' => ['headline' => 'Luma'], 'services' => ['heading' => 'Menus']]);
+
+        foreach ([['Garden Lunch', null], ['Evening Menu', 150]] as $i => [$name, $minutes]) {
+            Service::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $name, 'duration_minutes' => $minutes,
+                'price' => 42, 'currency' => 'EUR', 'sort_order' => $i, 'is_active' => true,
+            ]);
+        }
+
         $body = $this->body();
 
         $this->assertStringContainsString('<span>150 min</span>', $body);
@@ -618,6 +650,35 @@ class LumaGardenRenderTest extends TestCase
         $this->assertStringContainsString('<h3>Terrace lunch</h3>', $body);
         $this->assertStringContainsString('<h3>Golden-hour dinner</h3>', $body);
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
+
+        // And his line of prose under each name, exactly where he drew it.
+        $this->assertMatchesRegularExpression(
+            '#<h3>Terrace lunch</h3>\s*<p>Shade, chilled wine and the full garden menu\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>Golden-hour dinner</h3>\s*<p>Five courses as the courtyard moves into candlelight\.</p>#',
+            $body,
+        );
+    }
+
+    /** The line under a caption: the tenant's words, escaped, and absent when blank. */
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Luma'], 'gallery_1' => [
+            'heading'        => 'The garden',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The terrace',
+            'caption_1_note' => 'Shade <b>&</b> chilled wine',
+            'caption_2'      => 'The courtyard',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The terrace</h3>\s*<p>Shade &lt;b&gt;&amp;&lt;/b&gt; chilled wine</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The courtyard</h3>\s*</article>#', $body);
     }
 
     public function test_a_tile_with_no_caption_draws_no_heading(): void
@@ -1071,7 +1132,7 @@ class LumaGardenRenderTest extends TestCase
         $page = $this->seedLikeTheKit('hotel');
         $page->update(['content' => array_replace_recursive($page->content, [
             'about'    => ['note_1' => '<b>line</b>'],
-            'services' => ['price_prefix' => '<b>prefix</b>'],
+            'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],
             'booking'  => ['call_label' => '<b>call</b>'],
             'contact'  => ['descriptor' => '<b>descriptor</b>'],
         ])]);
@@ -1080,7 +1141,7 @@ class LumaGardenRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
 
-        foreach (['line', 'prefix', 'call', 'descriptor'] as $needle) {
+        foreach (['line', 'prefix', 'suffix', 'window', 'call', 'descriptor'] as $needle) {
             $this->assertStringNotContainsString('<b>' . $needle . '</b>', $body);
             $this->assertStringContainsString('&lt;b&gt;' . $needle . '&lt;/b&gt;', $body);
         }
@@ -1302,5 +1363,46 @@ class LumaGardenRenderTest extends TestCase
 
         $this->assertStringContainsString('application/ld+json', $body);
         $this->assertStringContainsString('"@type":"Restaurant"', str_replace(' ', '', $body));
+    }
+
+    /**
+     * THE CHROME'S OWN WORDS (the improvements round, item D). With no
+     * `booking.cta_label` written and the flow live, the header bar, its
+     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * word THE AUTHOR gave that control — transcribed from his index.html —
+     * while the closing panel keeps the industry's verb. The one leaf still
+     * overrides all four at once (see the wording test), and with the flow off
+     * every one of them says what it does instead (6.4).
+     */
+    public function test_the_chrome_takes_the_authors_own_words_until_the_tenant_writes_theirs(): void
+    {
+        $this->seedWidgetOrganization();
+        $page = $this->seedLikeTheKit();
+        \App\Models\ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'The main room', 'is_active' => true,
+        ]);
+        $this->seedBookableSchedule();
+
+        $content = $page->content;
+        $content['booking']['cta_label'] = '';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header".*?</header>#s', $body, $header));
+        $this->assertSame(1, preg_match('#<footer class="site-footer".*?</footer>#s', $body, $footer));
+        $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
+        $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
+
+        // The header bar and its mobile-menu twin.
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        // The footer lockup and the fixed pill.
+        $this->assertStringContainsString('Reserve a table</a>', $footer[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $fab[0]);
+        // The closing panel: the industry's verb, as before.
+        $this->assertStringContainsString('Reserve a table</a>', $panel[0]);
+        // The flow is live, so no control has been relabelled for a fallback.
+        $this->assertStringNotContainsString('Call to book', $body);
     }
 }

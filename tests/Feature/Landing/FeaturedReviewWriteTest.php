@@ -140,7 +140,7 @@ class FeaturedReviewWriteTest extends TestCase
             'organization_id' => $org->id,
             'brand_id'        => null,
             'slug'            => 'glamour-salon-' . uniqid(),
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => 'published',
             'published_at'    => now(),
@@ -172,7 +172,7 @@ class FeaturedReviewWriteTest extends TestCase
     }
 
     /**
-     * The public renderer's response for the ruled_page template is a plain
+     * The public renderer's response for a landing template is a plain
      * view() Response, not a StreamedResponse -- ->streamedContent() would
      * fail the test with "The response is not a streamed response." rather
      * than assert anything. RuledPageSectionsTest, which exercises the same
@@ -225,7 +225,7 @@ class FeaturedReviewWriteTest extends TestCase
             ->value('id');
 
         $before = $this->get($this->landingUrl($page->slug));
-        $this->assertStringNotContainsString('data-section="reviews"', $this->body($before));
+        $this->assertStringNotContainsString('data-block="testimonials"', $this->body($before));
 
         Sanctum::actingAs($this->user($org), ['*']);
 
@@ -233,7 +233,7 @@ class FeaturedReviewWriteTest extends TestCase
             ->assertOk();
 
         $after = $this->get($this->landingUrl($page->slug));
-        $this->assertStringContainsString('data-section="reviews"', $this->body($after));
+        $this->assertStringContainsString('data-block="testimonials"', $this->body($after));
     }
 
     /**
@@ -265,7 +265,7 @@ class FeaturedReviewWriteTest extends TestCase
         $this->putJson($this->adminUrl(sprintf(self::FEATURED_URI, $id)), ['featured' => true])->assertOk();
 
         $this->assertStringContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $this->body($this->get($this->landingUrl($page->slug))),
             'Fixture is wrong: the band never appeared, so its disappearance would prove nothing.',
         );
@@ -277,7 +277,7 @@ class FeaturedReviewWriteTest extends TestCase
         $this->assertDatabaseHas('review_submissions', ['id' => $id, 'is_featured' => false]);
 
         $this->assertStringNotContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $this->body($this->get($this->landingUrl($page->slug))),
             "A review the tenant removed is still on their public page.",
         );
@@ -324,7 +324,7 @@ class FeaturedReviewWriteTest extends TestCase
         ]);
 
         $this->assertStringContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $this->body($this->get($this->landingUrl($page->slug))),
             'Featuring a review reported success and the band still cannot render.',
         );
@@ -361,7 +361,7 @@ class FeaturedReviewWriteTest extends TestCase
         ]);
 
         $this->assertStringContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $this->body($this->get($this->landingUrl($page->slug))),
             'Removing one featured review took the whole band down with it.',
         );

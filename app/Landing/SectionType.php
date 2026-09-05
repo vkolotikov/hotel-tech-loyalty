@@ -8,7 +8,7 @@ namespace App\Landing;
  * Before this class existed, "what is a section" was answered by whoever
  * happened to be asking:
  *
- *   - the renderer asked `view()->exists('landing.ruled_page.sections.' .
+ *   - the renderer asked `view()->exists('landing.<template>.sections.' .
  *     $section->key)` — a KEY→VIEW lookup, which is fine while every page
  *     has exactly one band of each kind and stops being fine the moment a
  *     page can carry two of them (`text_1` names no partial);
@@ -23,8 +23,8 @@ namespace App\Landing;
  * needs to know what a section is now reads THIS, and nothing else holds a
  * second list.
  *
- * Authored in the house shape {@see IndustryProfile} and {@see Palette}
- * already use — an id-keyed array of plain data, a private constructor, and
+ * Authored in the house shape {@see IndustryProfile} already uses — an
+ * id-keyed array of plain data, a private constructor, and
  * resolvers that take an UNTRUSTED string and hand back either a value
  * object or null. Callers never index `all()` by hand.
  *
@@ -69,38 +69,34 @@ final class SectionType
     public const MAX_SECTIONS_PER_PAGE = 16;
 
     /**
-     * The template whose partials {@see viewFor()} resolves against unless a
-     * caller names another one.
-     *
-     * It used to be the only one, spelled into a `landing.ruled_page.
-     * sections.` prefix constant. `nocturne_ritual` (the first of the
-     * BeautyTech kits) is a SECOND template rendering the SAME catalogue
-     * through its own partials, so the prefix became a function of the
-     * template rather than a fact about this class. Defaulted here so every
-     * existing caller — the ruled_page layout, the endpoints, the tests —
-     * keeps resolving exactly what it resolved before.
-     */
-    public const DEFAULT_TEMPLATE = 'ruled_page';
-
-    /**
      * Every template that ships partials under resources/views/landing/
      * {key}/sections/, in the order they were built.
      *
      * NOT a second copy of {@see \App\Services\Landing\LandingOnboardingService::TEMPLATES}
      * — that is the tenant-facing registry (which templates a page may be
      * SET to, with the words the picker prints). This is the narrower fact
-     * that a type-to-partial question has more than one answer now, and it
+     * that a type-to-partial question has more than one answer, and it
      * exists so SectionTypeTest can ask "does this type render ANYWHERE"
-     * rather than assuming ruled_page. A type is legitimately renderable by
-     * one template and not the other: `announcement`, `trust` and `faq` are
-     * the nocturne kit's blocks and ruled_page has no partial for any of
-     * them, which the renderer already handles by skipping the band (see
-     * the layout's $renderedSections filter — "a section key with no partial
-     * is skipped rather than fatal").
+     * rather than assuming one design. A type is legitimately renderable by
+     * one template and not another: `team` is drawn by the three beauty
+     * kits and by none of the three hospitality kits, which the renderer
+     * already handles by skipping the band (see each layout's
+     * $renderedSections filter — "a section key with no partial is skipped
+     * rather than fatal").
+     *
+     * There is no default template any more. `viewFor()` and `viewForType()`
+     * take the template as a required argument, because the one design that
+     * used to be the default (`ruled_page`, the generic house template) is
+     * retired and deleted: the six kits are the whole product, and a caller
+     * that does not say which of them it means is asking an unanswerable
+     * question.
      *
      * @var list<string>
      */
-    public const TEMPLATES_WITH_PARTIALS = ['ruled_page', 'nocturne_ritual', 'editorial_atelier', 'organic_wellness'];
+    public const TEMPLATES_WITH_PARTIALS = [
+        'nocturne_ritual', 'editorial_atelier', 'organic_wellness',
+        'maison_vela', 'luma_garden', 'ember_table',
+    ];
 
     /**
      * How many question/answer pairs one FAQ band may carry.
@@ -208,80 +204,6 @@ final class SectionType
      */
     private const SLOT_SEPARATOR = '.';
 
-    /**
-     * THE TONE ALLOWLIST — every colour a tenant may put a band on, and the
-     * band modifier class each one renders as.
-     *
-     * ONE list, here, next to the types it applies to. The endpoint
-     * validates against it, the renderer resolves through it and the editor
-     * is served it; nothing anywhere holds a second copy, for the same
-     * reason this class exists at all (see the header docblock's four
-     * answers to one question).
-     *
-     * PALETTE-DERIVED PRESETS, NEVER FREE HEX. Every value below is a
-     * surface the ACTIVE palette already authors, so the choice is legible
-     * in all six palettes and both schemes without anyone checking: a
-     * tenant cannot pick a colour that makes their own text unreadable,
-     * and a page cannot end up as eight unrelated bands. That is the same
-     * ruling `theme.palette` is built on (D2, "palettes are data") applied
-     * one level down.
-     *
-     * The ids are named for the tenant, not for the CSS — `soft`, not
-     * `paper-2` — because they are what the editor's swatch row is keyed
-     * on and what a hand-edited draft would carry.
-     *
-     * WHY THREE AND NOT FOUR. The obvious fourth ("a deep band",
-     * `band--ink`) is not a fourth colour: D1's tonal ruling collapsed
-     * ink and paper-2 onto the SAME surface (`--bg-2`; see
-     * public/landing/ruled_page.css's "Surface rhythm" block, where both
-     * classes carry the identical declaration). Offering both would put
-     * two swatches in the picker that paint the same pixels — a choice
-     * that changes nothing, which is worse than no choice at all.
-     * `band--ink` survives as an AUTHORED DEFAULT (contact/reviews still
-     * emit it, byte for byte) and answers the `soft` swatch through
-     * {@see CLASS_TONES}; it is simply not something a tenant can newly
-     * select.
-     *
-     * @var array<string, string> tone id => band modifier class ('' = the page's own surface)
-     */
-    public const TONES = [
-        // The page's own background — the plain `.band`, no modifier. What
-        // hero, services and team have always rendered as.
-        'page'   => '',
-        // The tinted band, `--bg-2`. About/booking/text's authored surface.
-        'soft'   => 'band--paper-2',
-        // Accent-tinted: `--halo` (the palette's own accent-bright at .30)
-        // composited over `--bg-2`. New in this round — see the stylesheet's
-        // `.band--accent` rule, and PaletteTest's contrast floor for it,
-        // which measures the composite against `--text`/`--text-soft` in all
-        // six palettes rather than trusting that an accent tint is bound to
-        // be readable.
-        'accent' => 'band--accent',
-    ];
-
-    /**
-     * The reverse question, and a DIFFERENT one: given the class a section
-     * is authored with, which tone swatch is it already showing?
-     *
-     * The editor needs this and the renderer never does. A section with no
-     * stored tone still sits on a colour, and a picker that shows nothing
-     * selected for it would invite the tenant to "choose" the shade the
-     * band is already painted.
-     *
-     * `band--ink` maps to `soft` because the two ARE the same surface
-     * today (see TONES' own note) — the honest answer to "what colour is
-     * the contact band" is "the tinted one", even though the bytes it
-     * emits say `band--ink`.
-     *
-     * @var array<string, string> band modifier class => tone id
-     */
-    private const CLASS_TONES = [
-        ''              => 'page',
-        'band--paper-2' => 'soft',
-        'band--ink'     => 'soft',
-        'band--accent'  => 'accent',
-    ];
-
     private function __construct(
         /** The type id — also the section KEY for every non-repeatable type. */
         public readonly string $id,
@@ -315,25 +237,6 @@ final class SectionType
          * @var list<string>
          */
         public readonly array $fields,
-        /**
-         * The band modifier class this type's partial was AUTHORED with —
-         * `band--paper-2` for about, `band--ink` for contact, `''` for hero.
-         *
-         * Transcribed from the partials, which used to be the only place it
-         * was written down (eight `class="band band--x rp-y"` literals). It
-         * lives here now because a section's surface became a question with
-         * TWO answers — the tenant's stored `tone` when they set one, this
-         * when they did not — and a fallback expressed in eight blades is a
-         * fallback that drifts. {@see bandClass()} is the one place the two
-         * are reconciled, and RuledPageSectionsTest pins the exact class
-         * each key renders with a null tone.
-         *
-         * Not a tone id: `band--ink` is not one (see TONES), and turning
-         * contact's authored default into `soft` would change the bytes
-         * every existing page renders — which is the one thing this whole
-         * feature must not do.
-         */
-        public readonly string $band,
         /**
          * HOW MANY photos one instance of this type carries — 0 for a band
          * with no plate, 1 for the single-plate bands (hero, about, text),
@@ -385,12 +288,13 @@ final class SectionType
      * verb's file sweep, the editor's strip) is derived from the number,
      * so a gallery of ten would be one edit here and nothing else.
      *
-     * `band` is likewise transcribed rather than invented: it is the exact
-     * modifier class each partial's own `<section class="band …">` already
-     * carried before the tone round, and RuledPageSectionsTest asserts the
-     * rendered class per key so the table and the partials cannot diverge.
+     * There is no per-type SURFACE here any more. The generic house design
+     * carried an authored band class per type and a tenant-chosen `tone`
+     * over it; the six kits each compose their own dark/paper/sand rhythm
+     * in their own partials and read neither, so the fact left with the
+     * design that read it.
      *
-     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, band: string, images: int}>
+     * @return array<string, array{repeatable: bool, view: string, fields: list<string>, images: int}>
      */
     public static function all(): array
     {
@@ -446,7 +350,6 @@ final class SectionType
                     // record could invent one; blank renders nothing at all.
                     ['edition'],
                 ),
-                'band'       => '',
                 'images'     => 1,
             ],
             // The price list. Its ROWS come from the Services screen, not
@@ -471,19 +374,32 @@ final class SectionType
                 // "Prices shown are starting points". A LABEL rather than a
                 // boolean flag, because "from" is not the same word in five
                 // locales and the tenant is the one who knows whether their
-                // prices start or fix. `badge_label` is the pill kit 03
-                // draws on its featured card ("Guest favourite") — one word
-                // for the FIRST treatment in the tenant's own ordering,
-                // which is the only card that has a photograph to put it on. `badge_label` is the pill kit 03 draws
+                // prices start or fix. `price_suffix` is its symmetric twin,
+                // the words the three hospitality authors write AFTER the
+                // money ("€92 per guest"), joined by App\Landing\Money after
+                // an ordinary space. `badge_label` is the pill kit 03 draws
                 // on its featured card ("Guest favourite") — one word for the
                 // FIRST treatment in the tenant's own ordering, which is the
                 // only card that has a photograph to put it on.
+                //
+                // `window` is the SERVICE WINDOW the hospitality authors
+                // write where a price would otherwise go ("Fri–Sun · 12:00",
+                // "Evenings"). A BAND leaf, deliberately, and the honest
+                // shortfall is stated here: each author writes a different
+                // window on each row, and a per-row leaf would have to be
+                // keyed by the service's id — a key this catalogue cannot
+                // enumerate, the totality net cannot see and the editor
+                // cannot draw a control for without a release, or a column
+                // on the shared `services` table for one landing template's
+                // sake. So it is one line per band, printed in the row's own
+                // value cell where the author drew it, on the rows that have
+                // no price (kits 01 and 03) or as the meta row's opening cell
+                // (kit 02).
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
-                    ['price_prefix', 'badge_label'],
+                    ['price_prefix', 'price_suffix', 'window', 'badge_label'],
                     self::photoLeaves(),
                 ),
-                'band'       => '',
                 'images'     => 1,
             ],
             'about' => [
@@ -512,7 +428,6 @@ final class SectionType
                     ['note_label', 'note_1', 'note_2', 'note_3'],
                     self::photoLeaves(),
                 ),
-                'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
             // R1: the team band's photograph is its OWN slot, not the first
@@ -536,7 +451,6 @@ final class SectionType
                     ['secondary_link_label'],
                     self::photoLeaves(),
                 ),
-                'band'       => '',
                 'images'     => 1,
             ],
             // THE ONE BAND THAT COULD NOT NAME ITSELF (template fidelity
@@ -551,7 +465,6 @@ final class SectionType
                 'repeatable' => false,
                 'view'       => 'reviews',
                 'fields'     => ['kicker', 'heading', 'heading_accent', 'subtext'],
-                'band'       => 'band--ink',
                 'images'     => 0,
             ],
             // R2: the closing panel's photograph is its OWN slot. Kit 01
@@ -580,9 +493,17 @@ final class SectionType
                     // ("06"), aria-hidden in the author's markup — the same
                     // ruling as `hero.edition`, and blank draws nothing.
                     ['index'],
-                    self::photoLeaves(),
+                    // ALT ONLY, not `photoLeaves()`. Kit 01-beauty is the one
+                    // design that puts a photograph in its closing panel and
+                    // it draws no caption under it; no other author draws
+                    // the photograph at all. A `booking.caption` leaf was in
+                    // the catalogue for a round and was the ONE leaf no
+                    // shipped design printed — a control that could not act,
+                    // which LandingOnboardingTest's totality net had to name
+                    // as its single allowed orphan. Removed rather than
+                    // allowed by rule.
+                    self::altLeaves(),
                 ),
-                'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
             // phone/email/address are the three fields ContactDetails lets a
@@ -622,19 +543,24 @@ final class SectionType
             //     which is why the conversion rendered no column at all. A
             //     blank leaf renders no icon: this page never links to `#`.
             //   - `legal_note` is the sentence after the copyright line.
+            //   - `email_label` is the one wording override left of the five
+            //     the generic house design's contact band once printed
+            //     above each channel ("Email the house"): every kit's footer
+            //     hub reads it as the text of the mail link. The other four
+            //     (`phone_label`, `address_label`, `map_label`,
+            //     `closed_label`) had no reader on any kit — the hub is
+            //     icon-led and draws no wording above a channel — and left
+            //     the catalogue with the design that read them, because a
+            //     leaf no shipped design prints is a control that cannot act
+            //     (LandingOnboardingTest's totality net pins exactly that).
             'contact' => [
                 'repeatable' => false,
                 'view'       => 'contact',
                 'fields'     => array_merge(
-                    [
-                        'kicker', 'phone', 'email', 'address',
-                        'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label',
-                        'descriptor',
-                    ],
+                    ['kicker', 'phone', 'email', 'address', 'email_label', 'descriptor'],
                     self::socialLeaves(),
                     ['legal_note'],
                 ),
-                'band'       => 'band--ink',
                 'images'     => 0,
             ],
             // CHROME, and this is where that is written down (template
@@ -677,7 +603,6 @@ final class SectionType
                 'repeatable' => false,
                 'view'       => 'footer',
                 'fields'     => [],
-                'band'       => '',
                 'images'     => 0,
             ],
             // The repeatable band this catalogue was built for.
@@ -688,7 +613,6 @@ final class SectionType
                     ['kicker', 'heading', 'heading_accent', 'body'],
                     self::photoLeaves(),
                 ),
-                'band'       => 'band--paper-2',
                 'images'     => 1,
             ],
             // The picture grid. EIGHT, and the number is a judgement rather
@@ -719,11 +643,21 @@ final class SectionType
                 // exactly such a paragraph, so a tenant who writes one gets
                 // it in the composition the author already drew rather than
                 // in a new one.
+                //
+                // `caption_N_note` is the line of prose under each card's
+                // name that all three hospitality authors write ("Oysters,
+                // cocktails and the full cellar."). Their gallery is a row
+                // of text CARDS — a label, a name and a line — and on this
+                // platform the photograph fills the card with the name as
+                // its caption; the line had no leaf and was lost. Only the
+                // designs whose partial prints it publish it (see
+                // LandingOnboardingService::LEAF_READERS), so the beauty
+                // kits' caption pills gain no second box.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext'],
                     self::galleryCaptionLeaves(),
+                    self::galleryNoteLeaves(),
                 ),
-                'band'       => '',
                 'images'     => self::GALLERY_IMAGES,
             ],
             // ─── The BeautyTech kits' three additional blocks ─────────────
@@ -735,13 +669,12 @@ final class SectionType
             // answer for; the other twelve map straight onto types that
             // already existed.
             //
-            // ruled_page ships no partial for any of them, deliberately.
-            // These are the kits' composition, not a change to the Ruled
-            // Page's, and the renderer already treats a type with no partial
-            // as a band to skip rather than an error (see viewFor()'s note).
-            // A tenant who switches templates therefore gains or loses them
-            // with the design that authors them, and their stored copy is
-            // waiting untouched if they switch back.
+            // Every one of the six kits draws all three. The renderer treats
+            // a type with no partial as a band to skip rather than an error
+            // (see viewFor()'s note), so a design that drops one of them
+            // later simply stops drawing it, and a tenant who switches
+            // designs gains or loses a block with the design that authors
+            // it, their stored copy waiting untouched if they switch back.
 
             // The offer bar above the header. `text` is the whole band —
             // count() reads it and nothing else, so an announcement with a
@@ -756,7 +689,6 @@ final class SectionType
                 // the band's own gate: `count()` still reads `text` alone, so
                 // a badge with no sentence beside it is not a section.
                 'fields'     => ['label', 'text', 'cta_label'],
-                'band'       => '',
                 'images'     => 0,
             ],
             // The trust strip under the hero: a line somebody said about the
@@ -786,7 +718,6 @@ final class SectionType
                 // stays in the document outline. Designs that draw no
                 // heading here simply do not publish the leaf.
                 'fields'     => array_merge(['heading', 'quote'], self::trustLeaves()),
-                'band'       => '',
                 'images'     => 0,
             ],
             // The questions band. Its pairs are flat scalar leaves —
@@ -802,7 +733,6 @@ final class SectionType
                     ['kicker', 'heading', 'heading_accent', 'subtext'],
                     self::faqLeaves(),
                 ),
-                'band'       => '',
                 'images'     => 0,
             ],
         ];
@@ -912,6 +842,37 @@ final class SectionType
 
         for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
             $leaves[] = 'caption_' . $n;
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE LINE UNDER EACH TILE'S CAPTION — one per tile, numbered to match
+     * the picture and the caption beside it: `image_3`'s caption is
+     * `caption_3` and the line under that caption is `caption_3_note`.
+     *
+     * The three hospitality authors draw their gallery as a row of text
+     * cards, each a small label, a NAME and a LINE OF PROSE. The name became
+     * the photograph's caption; the line is this leaf. The same "the line
+     * under the value" superset {@see trustLeaves()} and {@see factLeaves()}
+     * already carry, spelled the same way (`<leaf>_<n>_caption` there,
+     * `caption_<n>_note` here, because the thing it sits under is itself the
+     * caption).
+     *
+     * Bounded by the same {@see GALLERY_IMAGES} as the pictures and the
+     * captions, so the three lists are one length by construction. A scalar
+     * leaf like every other line of copy on the page: it travels the plain
+     * content save and needs no writer of its own.
+     *
+     * @return list<string>
+     */
+    public static function galleryNoteLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
+            $leaves[] = 'caption_' . $n . '_note';
         }
 
         return $leaves;
@@ -1373,7 +1334,6 @@ final class SectionType
             repeatable: $data['repeatable'],
             view:       $data['view'],
             fields:     $data['fields'],
-            band:       $data['band'],
             images:     $data['images'],
             // Derived, never authored: `image` is "does this band have a
             // picture in it" and `images` is "how many", and one of those
@@ -1381,73 +1341,6 @@ final class SectionType
             // drift.
             image:      $data['images'] > 0,
         );
-    }
-
-    /** The tone ids, in the order the editor should offer them. @return list<string> */
-    public static function toneIds(): array
-    {
-        return array_keys(self::TONES);
-    }
-
-    /**
-     * THE ONE PLACE A BAND'S SURFACE IS DECIDED — the tenant's stored tone
-     * when they set one, the section's authored default when they did not.
-     *
-     * Every section partial calls this and none of them knows what a tone
-     * is; that is the point. The alternative that was NOT taken is a
-     * `$section->tone === 'accent' ? … : …` ternary in each of the eight
-     * `<section class="band …">` tags, which is eight places to add the
-     * fourth tone to and eight places for one of them to be missed.
-     *
-     * A NULL TONE RENDERS EXACTLY WHAT THE PAGE RENDERED BEFORE TONES
-     * EXISTED. That is not a nicety — it is what keeps every already-live
-     * page, and the renderer's four byte goldens, unchanged by this
-     * feature. There is deliberately no "if no tone then `soft`" anywhere:
-     * the fallback is the AUTHORED class, per type, from the catalogue
-     * above.
-     *
-     * An unrecognised tone (a hand-edited row, a value written by a build
-     * that knew a tone this one has since dropped) falls through to the
-     * authored default rather than rendering as an arbitrary class name —
-     * the same read-time re-whitelisting `theme.palette` and
-     * `theme.font_pairing` already get in the layout, and for the same
-     * reason: `tone` is a plain varchar with no database constraint behind
-     * it, and a value that reached the column by any route other than the
-     * endpoint must not be able to put attacker-chosen text into a `class`.
-     *
-     * Returns the FULL class list (`band` plus the modifier, space
-     * separated) rather than just the modifier, so a caller cannot forget
-     * the base class — `.band` is what carries the padding, the reading
-     * spine and the seam rules, and a band without it is not a band.
-     */
-    public static function bandClass(string $key, ?string $tone = null): string
-    {
-        $modifier = $tone === null ? null : (self::TONES[$tone] ?? null);
-
-        if ($modifier === null) {
-            $modifier = self::forKey($key)?->band ?? '';
-        }
-
-        return $modifier === '' ? 'band' : 'band ' . $modifier;
-    }
-
-    /**
-     * Which tone the editor should show as already selected for a section
-     * carrying no stored tone — the swatch equivalent of its authored
-     * class. Null for a type this catalogue does not know.
-     *
-     * Takes a TYPE ID, like {@see get()} and unlike {@see bandClass()}: the
-     * answer is a fact about the type, so every `text_N` on a page shares
-     * one, and {@see payload()} — the only caller — is a per-type table.
-     *
-     * The renderer never asks: it needs the CLASS, and turning the class
-     * into a tone and back would lose `band--ink`.
-     */
-    public static function defaultToneFor(string $typeId): ?string
-    {
-        $type = self::get($typeId);
-
-        return $type === null ? null : (self::CLASS_TONES[$type->band] ?? null);
     }
 
     /**
@@ -1516,18 +1409,19 @@ final class SectionType
      * bands share one partial. The caller still asks `view()->exists()` on
      * the result — a key this catalogue knows may still name a partial that
      * has not shipped yet, and a live page losing one band is recoverable
-     * where a 500 is not. That guard is now load-bearing rather than
-     * defensive: `announcement`, `trust` and `faq` are types only the
-     * nocturne kit renders, so a ruled_page page carrying one of those rows
-     * resolves a view that legitimately does not exist and skips the band.
+     * where a 500 is not. That guard is load-bearing rather than defensive:
+     * `team` is a type only the three beauty kits render, so a hospitality
+     * page carrying that row resolves a view that legitimately does not
+     * exist and skips the band.
      *
      * $template is a LITERAL at every call site — each layout names its own
      * directory — and never `$page->template_key`, which is a plain varchar
      * with no constraint behind it. Nothing here has to sanitise it for that
      * reason, and the `view()->exists()` the caller still makes is what
-     * catches a name that resolves to nothing anyway.
+     * catches a name that resolves to nothing anyway. REQUIRED, with no
+     * default: see {@see TEMPLATES_WITH_PARTIALS}.
      */
-    public static function viewFor(string $key, string $template = self::DEFAULT_TEMPLATE): ?string
+    public static function viewFor(string $key, string $template): ?string
     {
         $type = self::forKey($key);
 
@@ -1540,7 +1434,7 @@ final class SectionType
      * The two questions are genuinely different and only one of them can be
      * asked of `text`: {@see typeOf()} deliberately refuses a repeatable
      * type's bare id as a key (`text` is a type, `text_1` is a section), so
-     * `viewFor('text')` is null even though `landing.ruled_page.sections.
+     * `viewFor('text', …)` is null even though `landing.<template>.sections.
      * text` exists and is exactly the partial a `text` band renders through.
      *
      * Anything enumerating the CATALOGUE — "which of these thirteen types
@@ -1549,7 +1443,7 @@ final class SectionType
      * drops every repeatable type. {@see \App\Services\Landing\LandingOnboardingService::rendersFor()}
      * is that caller, and it is why this exists.
      */
-    public static function viewForType(string $typeId, string $template = self::DEFAULT_TEMPLATE): ?string
+    public static function viewForType(string $typeId, string $template): ?string
     {
         $type = self::get($typeId);
 
@@ -1602,13 +1496,6 @@ final class SectionType
      * repeatable types so the editor can grey out "Add" at the cap rather
      * than discovering it through a 422.
      *
-     * `band` is absent for the same reason as `view` — it is a class name
-     * on a stylesheet the admin SPA does not load. What the editor needs is
-     * `default_tone`: which swatch to show lit for a row whose `tone` is
-     * null, so the picker says "this band is already the tinted one" rather
-     * than showing nothing selected and inviting the tenant to pick the
-     * colour it is already painted. {@see defaultToneFor()}.
-     *
      * `image_slots` is the whole truth about photos — how many this type
      * holds — and `image` is the OLD question, kept for the build of the
      * admin SPA that is already deployed when this ships. It is published
@@ -1629,7 +1516,7 @@ final class SectionType
      * which is why `announcement`, `trust` and `faq` were reachable from no
      * screen in the product.
      *
-     * @return list<array{id: string, repeatable: bool, addable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null, default_tone: string|null}>
+     * @return list<array{id: string, repeatable: bool, addable: bool, fields: list<string>, image: bool, image_slots: int, limit: int|null}>
      */
     public static function payload(): array
     {
@@ -1638,14 +1525,13 @@ final class SectionType
 
         foreach (self::all() as $id => $type) {
             $rows[] = [
-                'id'           => $id,
-                'repeatable'   => $type['repeatable'],
-                'addable'      => isset($addable[$id]),
-                'fields'       => $type['fields'],
-                'image'        => $type['images'] === 1,
-                'image_slots'  => $type['images'],
-                'limit'        => $type['repeatable'] ? self::MAX_INSTANCES_PER_TYPE : null,
-                'default_tone' => self::defaultToneFor($id),
+                'id'          => $id,
+                'repeatable'  => $type['repeatable'],
+                'addable'     => isset($addable[$id]),
+                'fields'      => $type['fields'],
+                'image'       => $type['images'] === 1,
+                'image_slots' => $type['images'],
+                'limit'       => $type['repeatable'] ? self::MAX_INSTANCES_PER_TYPE : null,
             ];
         }
 

@@ -28,7 +28,7 @@ import type { IndustryOption } from './industryChoices'
  */
 
 const ONE_TEMPLATE: TemplateOption[] = [
-  { key: 'ruled_page', name: 'The Ruled Page', blurb: 'Calm and uncluttered.' },
+  { key: 'plain_kit', name: 'Plain Kit', blurb: 'Calm and uncluttered.' },
 ]
 
 /** Today's registry plus the second row `LandingOnboardingService::TEMPLATES`
@@ -47,7 +47,6 @@ const industry = (id: string): IndustryOption => ({
   people_label: 'Team',
   primary_cta: 'Get in touch',
   accent: '#123456',
-  palette: 'porcelain',
   sections: ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
 })
 
@@ -69,22 +68,22 @@ describe('showTemplatePicker', () => {
 
 describe('resolveTemplateKey', () => {
   it('prefers what the tenant has unsaved over what is stored', () => {
-    expect(resolveTemplateKey(TWO_TEMPLATES, 'wide_gallery', 'ruled_page')).toBe('wide_gallery')
+    expect(resolveTemplateKey(TWO_TEMPLATES, 'wide_gallery', 'plain_kit')).toBe('wide_gallery')
   })
 
   it('falls back to the stored key when nothing is unsaved', () => {
-    expect(resolveTemplateKey(TWO_TEMPLATES, undefined, 'ruled_page')).toBe('ruled_page')
+    expect(resolveTemplateKey(TWO_TEMPLATES, undefined, 'plain_kit')).toBe('plain_kit')
   })
 
   it('ignores an unsaved key the server no longer offers', () => {
-    expect(resolveTemplateKey(ONE_TEMPLATE, 'wide_gallery', 'ruled_page')).toBe('ruled_page')
+    expect(resolveTemplateKey(ONE_TEMPLATE, 'wide_gallery', 'plain_kit')).toBe('plain_kit')
   })
 
   it('resolves to nothing when neither value is offered', () => {
     // The older-backend case (no `templates` on the response at all) — the
     // picker is already hidden for it, and this makes sure the panel cannot
     // draw a selected card that is not on screen either.
-    expect(resolveTemplateKey([], 'ruled_page', 'ruled_page')).toBe('')
+    expect(resolveTemplateKey([], 'plain_kit', 'plain_kit')).toBe('')
   })
 })
 
@@ -92,7 +91,7 @@ describe('templateCards', () => {
   it('keeps the server order and marks exactly one card selected', () => {
     const cards = templateCards(TWO_TEMPLATES, 'wide_gallery')
 
-    expect(cards.map(c => c.key)).toEqual(['ruled_page', 'wide_gallery'])
+    expect(cards.map(c => c.key)).toEqual(['plain_kit', 'wide_gallery'])
     expect(cards.filter(c => c.selected).map(c => c.key)).toEqual(['wide_gallery'])
   })
 
@@ -100,9 +99,9 @@ describe('templateCards', () => {
     // These describe the page a tenant is choosing and are authored once, in
     // English, beside the views they describe — the same rule the industry
     // vocabulary and the section labels already cross this wire under.
-    const [card] = templateCards(ONE_TEMPLATE, 'ruled_page')
+    const [card] = templateCards(ONE_TEMPLATE, 'plain_kit')
 
-    expect(card.name).toBe('The Ruled Page')
+    expect(card.name).toBe('Plain Kit')
     expect(card.blurb).toBe('Calm and uncluttered.')
   })
 
@@ -136,9 +135,9 @@ describe('catalogPayload', () => {
     industries: INDUSTRIES,
     templates: TWO_TEMPLATES,
     industry: 'beauty',
-    templateKey: 'ruled_page',
+    templateKey: 'plain_kit',
     savedIndustry: 'beauty',
-    savedTemplateKey: 'ruled_page',
+    savedTemplateKey: 'plain_kit',
   }
 
   it('sends neither key on an ordinary save that changed neither', () => {
@@ -208,55 +207,52 @@ describe('catalogPayload', () => {
  */
 describe('templateSupports', () => {
   const GATED: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', supports: { palette: true, font_pairing: true, tones: true, brand_color: true } },
-    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', supports: { palette: false, font_pairing: false, tones: false, brand_color: true } },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', supports: { brand_color: false } },
+    { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', supports: { brand_color: true } },
   ]
 
   it('reads the served map for the selected template', () => {
-    expect(templateSupports(GATED, 'ruled_page'))
-      .toEqual({ palette: true, font_pairing: true, tones: true, brand_color: true })
-    expect(templateSupports(GATED, 'nocturne_ritual'))
-      .toEqual({ palette: false, font_pairing: false, tones: false, brand_color: true })
+    expect(templateSupports(GATED, 'plain_kit')).toEqual({ brand_color: false })
+    expect(templateSupports(GATED, 'nocturne_ritual')).toEqual({ brand_color: true })
   })
 
   /**
    * A RESPONSE THAT NEVER ANSWERED IS NOT A REFUSAL. An older backend
-   * publishes no `supports` at all, and hiding four controls a tenant has
-   * been using on the strength of a key that was never sent would be a
+   * publishes no `supports` at all, and hiding a control a tenant has been
+   * using on the strength of a key that was never sent would be a
    * regression dressed as a gate.
    */
   it('assumes everything when the response carries no supports at all', () => {
-    expect(templateSupports(TWO_TEMPLATES, 'ruled_page'))
-      .toEqual({ palette: true, font_pairing: true, tones: true, brand_color: true })
+    expect(templateSupports(TWO_TEMPLATES, 'nocturne_ritual')).toEqual({ brand_color: true })
   })
 
   it('assumes everything for a key the response does not list', () => {
-    expect(templateSupports(GATED, 'wide_gallery').palette).toBe(true)
-    expect(templateSupports([], 'ruled_page').tones).toBe(true)
+    expect(templateSupports(GATED, 'wide_gallery').brand_color).toBe(true)
+    expect(templateSupports([], 'nocturne_ritual').brand_color).toBe(true)
   })
 
   /**
    * A MAP THAT IS PRESENT BUT INCOMPLETE takes the opposite direction, and
    * the same one the server takes: the row answered, and it did not answer
-   * yes. Anything other than a literal `true` is a no.
+   * yes. Anything other than a literal `true` is a no — and a key this build
+   * no longer knows (the retired design's `palette`) is not carried through.
    */
-  it('reads a key missing from a present map as false', () => {
+  it('reads a key missing from a present map as false, and drops keys it does not know', () => {
     const partial: TemplateOption[] = [
       { key: 'k', name: 'K', blurb: '', supports: { palette: true } as Record<string, boolean> },
     ]
-    expect(templateSupports(partial, 'k'))
-      .toEqual({ palette: true, font_pairing: false, tones: false, brand_color: false })
+    expect(templateSupports(partial, 'k')).toEqual({ brand_color: false })
   })
 
-  it('reads an explicit null map as an unanswered response, not as four noes', () => {
+  it('reads an explicit null map as an unanswered response, not as a no', () => {
     const nulled: TemplateOption[] = [{ key: 'k', name: 'K', blurb: '', supports: null }]
-    expect(templateSupports(nulled, 'k').palette).toBe(true)
+    expect(templateSupports(nulled, 'k').brand_color).toBe(true)
   })
 })
 
 describe('templateRenders', () => {
   const WITH_RENDERS: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text', 'contact'] },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', renders: ['hero', 'text', 'contact'] },
     { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', renders: ['hero', 'announcement', 'trust', 'faq'] },
   ]
 
@@ -270,7 +266,7 @@ describe('templateRenders', () => {
    * older backend published no list would empty the whole builder.
    */
   it('answers null, never an empty list, when the response does not say', () => {
-    expect(templateRenders(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templateRenders(TWO_TEMPLATES, 'plain_kit')).toBeNull()
     expect(templateRenders(WITH_RENDERS, 'wide_gallery')).toBeNull()
   })
 
@@ -284,7 +280,7 @@ describe('templateRenders', () => {
 
 describe('templateFixedBlocks', () => {
   const WITH_FIXED: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', fixed_blocks: {} },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', fixed_blocks: {} },
     {
       key: 'nocturne_ritual',
       name: 'Nocturne Ritual',
@@ -300,15 +296,15 @@ describe('templateFixedBlocks', () => {
 
   /**
    * UNLIKE `templateRenders`, THE TWO EMPTY CASES ARE ONE ANSWER HERE, and
-   * that difference is deliberate. "This design pins nothing" (ruled_page,
+   * that difference is deliberate. "This design pins nothing" (a design
    * whose layout has no `$furniture` at all) and "this build was not told"
    * (an older backend) both end in the editor suppressing no controls —
    * which is the behaviour that build already had. `renders` needs the
    * distinction because its two answers differ; this one does not.
    */
   it('reads an absent map and an empty one the same way — nothing is pinned', () => {
-    expect(templateFixedBlocks(WITH_FIXED, 'ruled_page')).toEqual({})
-    expect(templateFixedBlocks(TWO_TEMPLATES, 'ruled_page')).toEqual({})
+    expect(templateFixedBlocks(WITH_FIXED, 'plain_kit')).toEqual({})
+    expect(templateFixedBlocks(TWO_TEMPLATES, 'plain_kit')).toEqual({})
     expect(templateFixedBlocks(WITH_FIXED, 'nobody')).toEqual({})
   })
 
@@ -331,13 +327,13 @@ describe('templateFixedBlocks', () => {
  */
 describe('templatePhotoBlocks', () => {
   const WITH_PHOTOS: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', photo_blocks: ['hero', 'about', 'text', 'gallery'] },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', photo_blocks: ['hero', 'about', 'text', 'gallery'] },
     { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', photo_blocks: ['hero', 'about', 'team', 'booking'] },
   ]
 
   it('carries the served list through', () => {
     expect(templatePhotoBlocks(WITH_PHOTOS, 'nocturne_ritual')).toEqual(['hero', 'about', 'team', 'booking'])
-    expect(templatePhotoBlocks(WITH_PHOTOS, 'ruled_page')).not.toContain('team')
+    expect(templatePhotoBlocks(WITH_PHOTOS, 'plain_kit')).not.toContain('team')
   })
 
   /**
@@ -346,7 +342,7 @@ describe('templatePhotoBlocks', () => {
    * key it never sent would be worse than the state that build shipped.
    */
   it('answers null when the response does not say, and for an unknown key', () => {
-    expect(templatePhotoBlocks(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templatePhotoBlocks(TWO_TEMPLATES, 'plain_kit')).toBeNull()
     expect(templatePhotoBlocks(WITH_PHOTOS, 'nobody')).toBeNull()
   })
 
@@ -365,13 +361,13 @@ describe('templatePhotoBlocks', () => {
  * The plan's own open question §7 — a leaf belongs to a type, which every
  * template shares, and a DRAWN leaf belongs to a partial, which they do not.
  * Without it, Phase 5's thirty new kit-only leaves would appear as thirty
- * controls a Ruled Page tenant can type into and never see.
+ * controls a tenant on another design can type into and never see.
  */
 describe('templateContentFields', () => {
   const WITH_FIELDS: TemplateOption[] = [
     {
-      key: 'ruled_page', name: 'The Ruled Page', blurb: '',
-      content_fields: { hero: ['kicker', 'headline', 'subtext'], contact: ['kicker', 'map_label'] },
+      key: 'plain_kit', name: 'Plain Kit', blurb: '',
+      content_fields: { hero: ['kicker', 'headline', 'subtext'], contact: ['kicker', 'email_label'] },
     },
     {
       key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '',
@@ -382,8 +378,8 @@ describe('templateContentFields', () => {
   it('carries the served map through, per type', () => {
     expect(templateContentFields(WITH_FIELDS, 'nocturne_ritual')?.hero)
       .toEqual(['kicker', 'headline', 'headline_accent', 'cta_label'])
-    expect(templateContentFields(WITH_FIELDS, 'ruled_page')?.hero).not.toContain('headline_accent')
-    expect(templateContentFields(WITH_FIELDS, 'ruled_page')?.contact).toContain('map_label')
+    expect(templateContentFields(WITH_FIELDS, 'plain_kit')?.hero).not.toContain('headline_accent')
+    expect(templateContentFields(WITH_FIELDS, 'plain_kit')?.contact).toContain('email_label')
   })
 
   /**
@@ -393,7 +389,7 @@ describe('templateContentFields', () => {
    * list, which would blank a card.
    */
   it('answers null when the response does not say, and for an unknown key', () => {
-    expect(templateContentFields(TWO_TEMPLATES, 'ruled_page')).toBeNull()
+    expect(templateContentFields(TWO_TEMPLATES, 'plain_kit')).toBeNull()
     expect(templateContentFields(WITH_FIELDS, 'nobody')).toBeNull()
   })
 
@@ -434,7 +430,7 @@ describe('templateContentFields', () => {
  */
 describe('templateImageDefaults', () => {
   const WITH_DEFAULTS: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', image_defaults: {} },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', image_defaults: {} },
     {
       key: 'nocturne_ritual',
       name: 'Nocturne Ritual',
@@ -454,8 +450,8 @@ describe('templateImageDefaults', () => {
    *  makes: "this design has none" and "this build was not told" both end in
    *  every control saying "Remove photo" and meaning it. */
   it('reads an absent map and an empty one the same way', () => {
-    expect(templateImageDefaults(WITH_DEFAULTS, 'ruled_page')).toEqual({})
-    expect(templateImageDefaults(TWO_TEMPLATES, 'ruled_page')).toEqual({})
+    expect(templateImageDefaults(WITH_DEFAULTS, 'plain_kit')).toEqual({})
+    expect(templateImageDefaults(TWO_TEMPLATES, 'plain_kit')).toEqual({})
     expect(templateImageDefaults(WITH_DEFAULTS, 'nobody')).toEqual({})
   })
 
@@ -469,7 +465,7 @@ describe('templateImageDefaults', () => {
 
 describe('templatesDrawing', () => {
   const THREE: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text', 'contact'] },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', renders: ['hero', 'text', 'contact'] },
     { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', renders: ['hero', 'trust'] },
     { key: 'wide_gallery', name: 'The Wide Gallery', blurb: '', renders: ['hero', 'text'] },
   ]
@@ -481,11 +477,11 @@ describe('templatesDrawing', () => {
    */
   it('names the other designs that would draw the block', () => {
     expect(templatesDrawing(THREE, 'text', 'nocturne_ritual').map(o => o.name))
-      .toEqual(['The Ruled Page', 'The Wide Gallery'])
+      .toEqual(['Plain Kit', 'The Wide Gallery'])
   })
 
   it('never names the design the tenant is already on', () => {
-    expect(templatesDrawing(THREE, 'hero', 'ruled_page').map(o => o.key))
+    expect(templatesDrawing(THREE, 'hero', 'plain_kit').map(o => o.key))
       .toEqual(['nocturne_ritual', 'wide_gallery'])
   })
 
@@ -496,7 +492,7 @@ describe('templatesDrawing', () => {
   // A template that has not claimed it draws anything is not a way out:
   // sending somebody there could drop the block too.
   it('does not name a template that published no renders list', () => {
-    expect(templatesDrawing(TWO_TEMPLATES, 'hero', 'ruled_page')).toEqual([])
+    expect(templatesDrawing(TWO_TEMPLATES, 'hero', 'plain_kit')).toEqual([])
   })
 
   /*
@@ -506,7 +502,7 @@ describe('templatesDrawing', () => {
    */
   it('never names a design that has been retired from the offer', () => {
     const withRetired: TemplateOption[] = [
-      { key: 'ruled_page', name: 'The Ruled Page', blurb: '', renders: ['hero', 'text'], offerable: false },
+      { key: 'plain_kit', name: 'Plain Kit', blurb: '', renders: ['hero', 'text'], offerable: false },
       { key: 'wide_gallery', name: 'The Wide Gallery', blurb: '', renders: ['hero', 'text'] },
     ]
 
@@ -524,7 +520,7 @@ describe('templatesDrawing', () => {
  */
 describe('offerableTemplates', () => {
   const MIXED: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', offerable: false },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', offerable: false },
     { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', offerable: true },
     { key: 'luma_garden', name: 'Luma Garden', blurb: '' },
   ]
@@ -541,7 +537,7 @@ describe('offerableTemplates', () => {
    * tenant with an empty picker.
    */
   it('treats a response with no opinion as offering everything', () => {
-    expect(offerableTemplates(TWO_TEMPLATES).map(o => o.key)).toEqual(['ruled_page', 'wide_gallery'])
+    expect(offerableTemplates(TWO_TEMPLATES).map(o => o.key)).toEqual(['plain_kit', 'wide_gallery'])
   })
 
   it('stops offering a retired design in the picker as well', () => {
@@ -562,7 +558,7 @@ describe('offerableTemplates', () => {
  */
 describe('templateGroups', () => {
   const SIX: TemplateOption[] = [
-    { key: 'ruled_page', name: 'The Ruled Page', blurb: '', offerable: false, vertical: null },
+    { key: 'plain_kit', name: 'Plain Kit', blurb: '', offerable: false, vertical: null },
     { key: 'nocturne_ritual', name: 'Nocturne Ritual', blurb: '', vertical: 'beauty' },
     { key: 'editorial_atelier', name: 'Editorial Atelier', blurb: '', vertical: 'beauty' },
     { key: 'organic_wellness', name: 'Organic Wellness', blurb: '', vertical: 'beauty' },
@@ -612,7 +608,7 @@ describe('templateGroups', () => {
     for (const vertical of ['beauty', 'dining', null]) {
       const keys = templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key))
 
-      expect(keys).not.toContain('ruled_page')
+      expect(keys).not.toContain('plain_kit')
     }
   })
 
@@ -639,7 +635,7 @@ describe('templateGroups', () => {
   })
 
   it('draws no picker at all when nothing is on offer', () => {
-    expect(templateGroups([{ key: 'ruled_page', name: '', blurb: '', offerable: false }], '', 'beauty'))
+    expect(templateGroups([{ key: 'plain_kit', name: '', blurb: '', offerable: false }], '', 'beauty'))
       .toEqual([])
   })
 })
@@ -654,8 +650,8 @@ describe('templateGroups', () => {
 describe('designChangeImpact', () => {
   const OPTIONS: TemplateOption[] = [
     {
-      key: 'ruled_page',
-      name: 'The Ruled Page',
+      key: 'plain_kit',
+      name: 'Plain Kit',
       blurb: '',
       renders: ['hero', 'services', 'about', 'text', 'contact'],
       fixed_blocks: {},
@@ -675,7 +671,7 @@ describe('designChangeImpact', () => {
 
   it('names the blocks that would stop showing', () => {
     const { dropped } = designChangeImpact({
-      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+      options: OPTIONS, fromKey: 'plain_kit', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
     })
 
     expect(dropped).toEqual(['text'])
@@ -688,7 +684,7 @@ describe('designChangeImpact', () => {
    */
   it('does not call a footer-hosted block dropped', () => {
     const { dropped } = designChangeImpact({
-      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+      options: OPTIONS, fromKey: 'plain_kit', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
     })
 
     expect(dropped).not.toContain('contact')
@@ -696,7 +692,7 @@ describe('designChangeImpact', () => {
 
   it('names the blocks the new design brings that the page has no row for', () => {
     const { added } = designChangeImpact({
-      options: OPTIONS, fromKey: 'ruled_page', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
+      options: OPTIONS, fromKey: 'plain_kit', toKey: 'nocturne_ritual', rowTypeIds: ROWS,
     })
 
     expect(added).toEqual(['announcement', 'trust', 'faq'])
@@ -705,7 +701,7 @@ describe('designChangeImpact', () => {
   it('does not offer to add a block the page already has a row for', () => {
     const { added } = designChangeImpact({
       options: OPTIONS,
-      fromKey: 'ruled_page',
+      fromKey: 'plain_kit',
       toKey: 'nocturne_ritual',
       rowTypeIds: [...ROWS, 'trust'],
     })
@@ -726,14 +722,14 @@ describe('designChangeImpact', () => {
    */
   it('warns about nothing when either design published no renders', () => {
     expect(designChangeImpact({
-      options: TWO_TEMPLATES, fromKey: 'ruled_page', toKey: 'wide_gallery', rowTypeIds: ROWS,
+      options: TWO_TEMPLATES, fromKey: 'plain_kit', toKey: 'wide_gallery', rowTypeIds: ROWS,
     })).toEqual({ dropped: [], added: [] })
   })
 
   it('counts a repeated row type once', () => {
     const { dropped } = designChangeImpact({
       options: OPTIONS,
-      fromKey: 'ruled_page',
+      fromKey: 'plain_kit',
       toKey: 'nocturne_ritual',
       // `text_1`/`text_2` are two rows of one TYPE; the caller maps rows to
       // type ids, and the warning must not say "Text, Text".

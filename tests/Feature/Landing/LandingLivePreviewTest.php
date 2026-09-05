@@ -167,7 +167,7 @@ class LandingLivePreviewTest extends TestCase
             'organization_id' => $org->id,
             'brand_id'        => $brandId,
             'slug'            => 'live-preview-' . uniqid(),
-            'template_key'    => 'ruled_page',
+            'template_key'    => 'nocturne_ritual',
             'industry'        => 'beauty',
             'status'          => LandingPage::STATUS_DRAFT,
             'content'         => [
@@ -249,7 +249,6 @@ class LandingLivePreviewTest extends TestCase
                 'key'     => $s->key,
                 'enabled' => (bool) $s->enabled,
                 'sort'    => (int) $s->sort,
-                'tone'    => $s->tone,
             ], $overrides[$s->key] ?? []))
             ->values()
             ->all();
@@ -285,7 +284,7 @@ class LandingLivePreviewTest extends TestCase
         $before = $this->snapshot($this->page);
 
         $url = $this->draftUrl([
-            'theme'    => ['palette' => 'midnight_brass', 'brand_color' => '#123456'],
+            'theme'    => ['brand_color' => '#123456'],
             'content'  => ['hero' => ['headline' => self::TYPED_HEADLINE]],
             'sections' => $this->sectionsPayload(['about' => ['enabled' => false, 'sort' => 0]]),
         ]);
@@ -451,18 +450,17 @@ class LandingLivePreviewTest extends TestCase
         $this->draftUrl(['theme' => ['radius' => '4px']]);
     }
 
-    public function test_a_font_pairing_outside_the_allowlist_is_refused(): void
+    /**
+     * The retired generic design's two theme keys are unknown keys now, and
+     * a preview refuses them exactly as a save does — a stale editor build
+     * echoing a stored `palette` back must not render a draft the save would
+     * then 422 on.
+     */
+    public function test_a_retired_theme_key_is_refused(): void
     {
         $this->expectException(ValidationException::class);
 
-        $this->draftUrl(['theme' => ['font_pairing' => 'comic']]);
-    }
-
-    public function test_a_tone_outside_the_allowlist_is_refused(): void
-    {
-        $this->expectException(ValidationException::class);
-
-        $this->draftUrl(['sections' => $this->sectionsPayload(['hero' => ['tone' => 'neon']])]);
+        $this->draftUrl(['theme' => ['palette' => 'midnight_brass', 'font_pairing' => 'grand']]);
     }
 
     public function test_a_section_key_outside_the_grammar_is_refused(): void
@@ -589,7 +587,12 @@ class LandingLivePreviewTest extends TestCase
         $this->assertStringContainsString('The suites', $body);
         $this->assertStringContainsString('/storage/landing/saved-one.jpg', $body);
         $this->assertStringContainsString('/storage/landing/saved-two.jpg', $body);
-        $this->assertStringContainsString('data-count="2"', $body);
+        // The two saved pictures fill slots 1 and 2; the design's own
+        // photographs stand in the slots the tenant has not filled
+        // (TemplateImage — Nocturne ships four), exactly as a live render
+        // would show them. Never the payload's, which carried none.
+        $this->assertStringContainsString('data-count="4"', $body);
+        $this->assertStringContainsString('landing/nocturne_ritual/assets/', $body);
     }
 
     /** A gallery picture named in the payload is refused, exactly as `image_url` is. */
@@ -610,12 +613,12 @@ class LandingLivePreviewTest extends TestCase
         // is em-split on its last word and echoed again in <title>, and the
         // about band's opening words are wrapped in their own span, so
         // neither string is a position anything can be measured from.
-        // `data-section` is the one marker each band carries exactly once.
+        // `data-block` is the one marker each band carries exactly once.
         $saved = $this->get($this->savedUrl($this->page))->getContent();
 
         $this->assertLessThan(
-            strpos($saved, 'data-section="about"'),
-            strpos($saved, 'data-section="hero"'),
+            strpos($saved, 'data-block="story"'),
+            strpos($saved, 'data-block="hero"'),
             'The fixture does not start with the hero above the about band.',
         );
 
@@ -628,8 +631,8 @@ class LandingLivePreviewTest extends TestCase
         ]))->getContent();
 
         $this->assertLessThan(
-            strpos($body, 'data-section="hero"'),
-            strpos($body, 'data-section="about"'),
+            strpos($body, 'data-block="hero"'),
+            strpos($body, 'data-block="story"'),
             'The unsaved order is not what rendered.',
         );
     }
@@ -640,17 +643,8 @@ class LandingLivePreviewTest extends TestCase
             'sections' => $this->sectionsPayload(['about' => ['enabled' => false]]),
         ]))->getContent();
 
-        $this->assertStringContainsString('data-section="hero"', $body);
-        $this->assertStringNotContainsString('data-section="about"', $body);
-    }
-
-    public function test_a_tone_chosen_in_the_payload_is_what_the_band_renders(): void
-    {
-        $body = $this->get($this->draftUrl([
-            'sections' => $this->sectionsPayload(['about' => ['tone' => 'accent']]),
-        ]))->getContent();
-
-        $this->assertStringContainsString('band band--accent', $body);
+        $this->assertStringContainsString('data-block="hero"', $body);
+        $this->assertStringNotContainsString('data-block="story"', $body);
     }
 
     /**
@@ -665,8 +659,8 @@ class LandingLivePreviewTest extends TestCase
             'sections' => [['key' => 'hero', 'enabled' => true, 'sort' => 0]],
         ]))->getContent();
 
-        $this->assertStringContainsString('data-section="hero"', $body);
-        $this->assertStringContainsString('data-section="about"', $body);
+        $this->assertStringContainsString('data-block="hero"', $body);
+        $this->assertStringContainsString('data-block="story"', $body);
     }
 
     // ─── The endpoint's own shape ─────────────────────────────────────────

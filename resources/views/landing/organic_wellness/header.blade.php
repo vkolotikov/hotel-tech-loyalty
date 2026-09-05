@@ -74,7 +74,7 @@
 @endif
 
 @if ($bookingHref !== null)
-      <a class="button button--primary button--small header-booking" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+      <a class="button button--primary button--small header-booking" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['header'] }}</a>
 @endif
 
 @if ($navAnchors->isNotEmpty() || $bookingHref !== null)
@@ -91,7 +91,7 @@
           <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
 @endforeach
 @if ($bookingHref !== null)
-          <a class="button button--primary" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+          <a class="button button--primary" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['mobile'] }}</a>
 @endif
         </nav>
       </details>

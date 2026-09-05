@@ -7,8 +7,8 @@
  * the shipped wizard said so. Industry is the question that was worth
  * asking all along: `App\Landing\IndustryProfile` supplies the whole page's
  * vocabulary (what the services band is CALLED, what the people band is
- * called, what the primary button says), its house accent and its default
- * palette, and the booking band exists at all only for `hotel`. Picking a
+ * called, what the primary button says) and its house accent, and it decides
+ * which of the owner's designs a tenant is offered first. Picking a
  * different card visibly changes the page.
  *
  * Everything here is pure — no React, no DOM, no i18next — because this
@@ -17,19 +17,16 @@
  * functions return; `industryChoices.test.ts` is what actually proves the
  * card data, the pre-selection and the section filter.
  *
- * The ID LIST IS NOT MIRRORED HERE. `designChoices.ts` next door hardcodes
- * the six palette ids because nothing serves them; this module deliberately
- * does the opposite, because the onboarding prefill DOES serve the
+ * The ID LIST IS NOT MIRRORED HERE. The onboarding prefill SERVES the
  * industries (`LandingOnboardingService::industries()`, built from
- * `Organization::INDUSTRIES` itself). Every function below therefore
- * resolves against the rows the SERVER sent, so a tenth industry added
- * backend-side appears in the wizard with no frontend release at all, and
- * an id this build has never heard of can never be sent back as a choice
- * the endpoint would 422 on. The only per-id data that lives here is the
- * English display NAME, which is UI copy (translated through i18n) rather
- * than part of the contract.
+ * `Organization::INDUSTRIES` itself), so every function below resolves
+ * against the rows the SERVER sent: a tenth industry added backend-side
+ * appears in the wizard with no frontend release at all, and an id this
+ * build has never heard of can never be sent back as a choice the endpoint
+ * would 422 on. The only per-id data that lives here is the English display
+ * NAME, which is UI copy (translated through i18n) rather than part of the
+ * contract.
  */
-import { paletteFor } from './designChoices'
 
 /**
  * One row of `onboarding.industries` — the wire shape, snake_case,
@@ -51,8 +48,6 @@ export type IndustryOption = {
   primary_cta: string
   /** The industry's house accent, already through `CssColor::safe()`. */
   accent: string
-  /** A `designChoices` palette id — `IndustryProfile::defaultPalette`. */
-  palette: string
   /** The bands a page in this industry is created with. */
   sections: string[]
   /**
@@ -82,13 +77,10 @@ export type IndustryCard = {
   /** This industry's own words, in the order the page uses them. */
   vocabulary: string[]
   primaryCta: string
-  /** The industry's house accent (the page's default CTA colour). */
-  accent: string
-  /** The accent of the palette this industry opens on — the colour the
-   *  page's own headings and rules are drawn in, which is what makes two
+  /** The industry's house accent — the page's default CTA colour, and the
+   *  colour the card's own band names are drawn in, which is what makes two
    *  cards look like two different pages rather than two labels. */
-  paletteAccent: string
-  paletteId: string
+  accent: string
   selected: boolean
 }
 
@@ -159,8 +151,7 @@ export function industryName(id: string): string {
  * organisation's own current industry does, which is the card the step
  * opens pre-selected on. This is the ONE narrowing between the draft and
  * the request, which is why `mergeFormDraft` leaves `industry` as a plain
- * string rather than guarding it against a hardcoded list the way it has to
- * for palettes and font pairings (there is no endpoint serving those).
+ * string rather than guarding it against a hardcoded list.
  *
  * Returns `''` only when the response carried no industries at all (an
  * older backend): the payload then omits `industry` entirely and the server
@@ -198,8 +189,6 @@ export function industryCards(options: IndustryOption[], selectedId: string): In
     vocabulary: [option.services_label, option.people_label],
     primaryCta: option.primary_cta,
     accent: option.accent,
-    paletteAccent: paletteFor(option.palette).accent,
-    paletteId: option.palette,
     selected: option.id === selectedId,
   }))
 }

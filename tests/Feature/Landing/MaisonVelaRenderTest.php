@@ -151,6 +151,8 @@ class MaisonVelaRenderTest extends TestCase
                 'heading'        => "Three menus.\nOne sense of occasion.",
                 'subtext'        => 'Classic technique, exceptional produce and enough flexibility to make lunch feel easy or dinner last all evening.',
                 'price_prefix'   => 'From',
+                'price_suffix'   => 'per guest',
+                'window'         => 'Evenings',
             ],
             'about' => [
                 'kicker'         => 'The pleasure of doing things properly',
@@ -170,6 +172,8 @@ class MaisonVelaRenderTest extends TestCase
                 'subtext'        => 'Begin at the marble bar, settle into the dining room or take the private salon for a celebration shaped entirely around your guests.',
                 'caption_1'      => 'The grand room',
                 'caption_2'      => 'The marble bar',
+                'caption_1_note' => 'White linen and unhurried service.',
+                'caption_2_note' => 'Oysters, cocktails and the full cellar.',
             ],
             'reviews' => [
                 'kicker' => 'Diner note',
@@ -510,8 +514,10 @@ class MaisonVelaRenderTest extends TestCase
 
         $this->assertStringContainsString('<h3>Le Déjeuner</h3>', $body);
         $this->assertStringContainsString('Two or three courses · Friday to Sunday · 12:00–15:00', $body);
-        $this->assertStringContainsString('<strong>From €48</strong>', $body);
-        $this->assertStringContainsString('<strong>From €125</strong>', $body);
+        // The band's prefix before the money and its suffix after it — his
+        // "€125 per guest" — through Money, with an ordinary space each side.
+        $this->assertStringContainsString('<strong>From €48 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €125 per guest</strong>', $body);
 
         // The ordinal is derived, never stored.
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
@@ -519,18 +525,39 @@ class MaisonVelaRenderTest extends TestCase
     }
 
     /**
-     * A menu with no price prints no price column at all rather than an empty
-     * one — the author writes a service WINDOW there ("Evenings") and a
-     * Service row has no such field. Named in the task report rather than
-     * invented here.
+     * A menu with no price shows the band's SERVICE WINDOW in the value
+     * column instead — the author's own "Evenings" on his à la carte row —
+     * and never an empty cell or a bare suffix. One line per band, printed
+     * where he drew it; see the partial's own note on why not per row.
      */
-    public function test_a_menu_with_no_price_prints_no_price_column(): void
+    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        $this->assertStringContainsString('<strong>Evenings</strong>', $body);
+        $this->assertSame(1, substr_count($body, '<strong>Evenings</strong>'));
         $this->assertSame(2, substr_count($body, '<strong>From €'));
+        $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /** With no window written, a priceless row prints no value column at all. */
+    public function test_a_menu_with_no_price_and_no_window_prints_no_value_column(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'services' => ['heading' => 'Menus', 'price_suffix' => 'per guest']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        // The ledger and nothing else: the footer lockup's own <strong> is
+        // not the menu's.
+        $this->assertSame(1, preg_match('#<div class="menu-list">(.*?)</div>\s*</section>#s', $body, $ledger));
+        $this->assertStringNotContainsString('<strong>', $ledger[1]);
     }
 
     /** And no duration is printed anywhere: it is a treatment's field. */
@@ -619,6 +646,42 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('landing/maison_vela/assets/hero-brasserie.webp', $body);
         $this->assertStringContainsString('<h3>The grand room</h3>', $body);
         $this->assertStringContainsString('<h3>The marble bar</h3>', $body);
+
+        // And his line of prose under each name, exactly where he drew it —
+        // the `<p>` after the `<h3>`, inside the card.
+        $this->assertMatchesRegularExpression(
+            '#<h3>The grand room</h3>\s*<p>White linen and unhurried service\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>The marble bar</h3>\s*<p>Oysters, cocktails and the full cellar\.</p>#',
+            $body,
+        );
+    }
+
+    /**
+     * The line under a caption is the tenant's own words, escaped like every
+     * other, and a tile with none draws no paragraph — never an empty `<p>`
+     * in the author's card.
+     */
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'gallery_1' => [
+            'heading'        => 'The rooms',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The bar',
+            'caption_1_note' => 'Oysters <b>&</b> the cellar',
+            'caption_2'      => 'The room',
+            'caption_2_note' => '   ',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The bar</h3>\s*<p>Oysters &lt;b&gt;&amp;&lt;/b&gt; the cellar</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The room</h3>\s*</article>#', $body);
+        $this->assertStringNotContainsString('<p></p>', $body);
     }
 
     public function test_a_tile_with_no_caption_draws_no_heading(): void
@@ -1058,7 +1121,7 @@ class MaisonVelaRenderTest extends TestCase
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'  => ['proof' => '<b>proof</b>'],
             'about' => ['fact_1' => '<b>fact</b>', 'fact_1_caption' => '<b>caption</b>'],
-            'services' => ['price_prefix' => '<b>prefix</b>'],
+            'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],
             'booking'  => ['call_label' => '<b>call</b>'],
         ])]);
 
@@ -1066,7 +1129,7 @@ class MaisonVelaRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
 
-        foreach (['proof', 'fact', 'caption', 'prefix', 'call'] as $needle) {
+        foreach (['proof', 'fact', 'caption', 'prefix', 'suffix', 'window', 'call'] as $needle) {
             $this->assertStringNotContainsString('<b>' . $needle . '</b>', $body);
             $this->assertStringContainsString('&lt;b&gt;' . $needle . '&lt;/b&gt;', $body);
         }
@@ -1282,5 +1345,47 @@ class MaisonVelaRenderTest extends TestCase
 
         $this->assertStringContainsString('application/ld+json', $body);
         $this->assertStringContainsString('"@type":"Restaurant"', str_replace(' ', '', $body));
+    }
+
+    /**
+     * THE CHROME'S OWN WORDS (the improvements round, item D). With no
+     * `booking.cta_label` written and the flow live, the header bar, its
+     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * word THE AUTHOR gave that control — transcribed from his index.html —
+     * while the closing panel keeps the industry's verb. The one leaf still
+     * overrides all four at once (see the wording test), and with the flow off
+     * every one of them says what it does instead (6.4).
+     */
+    public function test_the_chrome_takes_the_authors_own_words_until_the_tenant_writes_theirs(): void
+    {
+        $this->seedWidgetOrganization();
+        $page = $this->seedLikeTheKit();
+        \App\Models\ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'The main room', 'is_active' => true,
+        ]);
+        $this->seedBookableSchedule();
+
+        $content = $page->content;
+        $content['booking']['cta_label'] = '';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header".*?</header>#s', $body, $header));
+        $this->assertSame(1, preg_match('#<footer class="site-footer".*?</footer>#s', $body, $footer));
+        $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
+        $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
+
+        // The header bar and its mobile-menu twin.
+        $this->assertStringContainsString('Reserve</a>', $header[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        $this->assertSame(1, substr_count($header[0], 'Reserve</a>'));
+        // The footer lockup and the fixed pill.
+        $this->assertStringContainsString('Reserve a table</a>', $footer[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $fab[0]);
+        // The closing panel: the industry's verb, as before.
+        $this->assertStringContainsString('Reserve a table</a>', $panel[0]);
+        // The flow is live, so no control has been relabelled for a fallback.
+        $this->assertStringNotContainsString('Call to book', $body);
     }
 }

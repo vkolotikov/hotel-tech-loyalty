@@ -8,14 +8,11 @@
   about what may honestly be claimed — which is not a thing to re-derive per
   design.
 
-  KNOWN, DELIBERATE DUPLICATION, recorded rather than hidden:
-  landing/ruled_page/layout.blade.php still carries its own copy of exactly
-  this logic. That copy is what four BYTE goldens in RuledPageRenderTest pin,
-  and the task that added the nocturne template was explicitly not allowed to
-  move them (it adds a template; it does not change one). Extracting
-  ruled_page's copy into this file is a one-line change plus a deliberate
-  golden re-capture, and it is the next editor's to make — this note exists
-  so they find it. Until then: a fix here needs the same fix there.
+  THE ONE COPY. The generic house design used to carry its own copy of
+  exactly this logic (pinned by byte goldens, which is why it was never
+  folded in here); that design is retired and deleted, so this file is now
+  the only place these rules live and every one of the six kit layouts
+  includes it.
 
   WHAT THE RULES ARE (transcribed from that copy, unchanged):
 

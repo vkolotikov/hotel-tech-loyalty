@@ -20,7 +20,7 @@ class LandingPageModelTest extends TestCase
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1,
-            'slug' => 'glamour-salon', 'template_key' => 'ruled_page',
+            'slug' => 'glamour-salon', 'template_key' => 'nocturne_ritual',
             'industry' => 'beauty', 'status' => 'draft',
         ]);
 
@@ -34,9 +34,9 @@ class LandingPageModelTest extends TestCase
         // Different brand_id values: one org, two brands, one page each — the
         // landing_pages_org_brand_unique constraint allows this combination.
         LandingPage::create(['organization_id' => 1, 'brand_id' => 1, 'slug' => 'draft-one',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'draft']);
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'draft']);
         LandingPage::create(['organization_id' => 1, 'brand_id' => 2, 'slug' => 'live-one',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'published',
             'published_at' => now()]);
 
         $slugs = LandingPage::withoutGlobalScopes()->published()->pluck('slug')->all();
@@ -48,7 +48,7 @@ class LandingPageModelTest extends TestCase
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => 'json-test',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'draft',
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'draft',
             'theme' => ['font_pair' => 'fraunces_inter', 'logo_media_id' => 12],
             'seo'   => ['title' => 'Glamour Salon'],
         ]);
@@ -91,7 +91,7 @@ class LandingPageModelTest extends TestCase
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => 'glamour-salon',
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'draft',
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'draft',
         ]);
 
         $this->assertStringContainsString(config('landing.host'), $page->url);

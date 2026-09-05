@@ -26,18 +26,18 @@
 
   WHAT THIS TEMPLATE DELIBERATELY DOES NOT DO, and why:
 
-    - NO PALETTE BLOCK. App\Landing\Palette exists so the Ruled Page can be
-      re-coloured; this kit's :root IS the design, authored by hand, and
+    - NO PALETTE BLOCK. The palette system left with the generic house design;
+      this kit's :root IS the design, authored by hand, and
       overriding fifteen tokens under it would produce a different page
       wearing its layout. `theme.palette` is simply not read here — not
       whitelisted-and-ignored, not read — so there is no second inline block
       and no data-scheme on <html>.
     - NO FONT PAIRING. Same reason: the kit names Cormorant Garamond and
       Manrope in its own tokens, both self-hosted (see nocturne_ritual.css).
-    - NO SECTION TONES. SectionType::bandClass() answers "which surface does
-      the tenant want this band on", which is a Ruled Page question — this
-      kit alternates dark / paper / sand as a designed rhythm and a band on
-      the wrong surface breaks the sequence, not just that band. Each partial
+    - NO SECTION TONES. "Which surface does the tenant want this band on"
+      was the generic house design's question and left with it — this kit
+      alternates dark / paper / sand as a designed rhythm and a band on the
+      wrong surface breaks the sequence, not just that band. Each partial
       carries the class the author gave it.
 
   The ONE tenant override is the accent — see the nonced block below.
@@ -76,10 +76,10 @@
     // Three conditions: the tenant switched the band off; the band has
     // nothing to say (PageContent::has() — a section that would render empty
     // is omitted from the document entirely); or this template ships no
-    // partial for it. The third is not defensive here — `announcement`,
-    // `trust` and `faq` are this kit's blocks and ruled_page has no partials
-    // for them, so a page that switches templates legitimately gains and
-    // loses bands, keeping its stored copy either way.
+    // partial for it. The third is not defensive here — `team` is a beauty
+    // kit's block and the hospitality kits ship no partial for it, so a page
+    // that switches templates legitimately gains and loses bands, keeping
+    // its stored copy either way.
     $sectionViews = $sections
         ->mapWithKeys(fn ($section) => [$section->key => SectionType::viewFor($section->key, 'nocturne_ritual')]);
 
@@ -231,10 +231,9 @@
     // and `booking.cta_label` — resolved HERE, because it is the label the
     // three CHROME controls carry as well as the closing panel's own, and no
     // partial decides for itself what a Book control says any more than it
-    // decides where one points. The author's own page words those four
-    // identically in four of the six kits; the header's variant is the one
-    // string this shape cannot reach, and it is recorded in the phase 5
-    // report rather than answered with a leaf on a block that has no row.
+    // decides where one points. The closing panel falls back to the
+    // industry's verb; the chrome falls back to the author's own words per
+    // placement — see $chromeLabels below.
     $bookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
     $bookingLabel = $bookingLabel !== '' ? $bookingLabel : $content->profile->primaryCta;
 
@@ -245,6 +244,29 @@
     // back the moment the flow does.
     if (! $bookingIsFlow && $bookingHref !== null) {
         $bookingLabel = str_starts_with($bookingHref, 'tel:') ? __('Call to book') : __('Contact us to book');
+    }
+
+    // THE CHROME'S OWN WORDS. The header bar, its mobile-menu twin, the footer
+    // lockup and the fixed pill carry the tenant's `booking.cta_label` when one
+    // is written; otherwise each carries the word THE AUTHOR gave that control,
+    // transcribed from resources/landing-kits/beauty-tech/01-nocturne-ritual/index.html, rather
+    // than the industry's verb — which stays the closing panel's fallback and
+    // the hero's, because those two are bands with leaves of their own and the
+    // chrome has no row. One leaf, four placements, and the author's own word
+    // on each until the tenant writes theirs. When the flow is off, every
+    // control says what it does (6.4), chrome included.
+    $ownBookingLabel = trim((string) ($page->content['booking']['cta_label'] ?? ''));
+    $chromeLabels    = [
+        'header' => 'Book a ritual',
+        'mobile' => 'Book a ritual',
+        'footer' => 'Book now',
+        'fab'    => 'Book now',
+    ];
+
+    foreach ($chromeLabels as $placement => $authored) {
+        $chromeLabels[$placement] = (! $bookingIsFlow && $bookingHref !== null)
+            ? $bookingLabel
+            : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
     // NAV ANCHORS come from $renderedSections, the one collection that
@@ -416,7 +438,7 @@
      in-page controls above are not conditional on it. Rendered only when it
      has somewhere real to go. --}}
 @if ($bookingHref !== null)
-  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $bookingLabel }}</a>
+  <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 
 {{-- The template's interactive layer: one file, one entry point, no

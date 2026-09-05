@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   STEPS, clampStep, mergeFormDraft, parseDraft, draftKey, loadDraft, saveDraft, clearDraft,
-  buildPayload, type DraftStorage, type FontPairingKey,
+  buildPayload, type DraftStorage,
 } from './landingDraft'
 import type { SectionMeta } from './sections'
 
@@ -24,7 +24,7 @@ class FakeStorage implements DraftStorage {
 
 describe('mergeFormDraft', () => {
   it('keeps a known string field from the patch', () => {
-    expect(mergeFormDraft({ template_key: 'ruled_page' })).toEqual({ template_key: 'ruled_page' })
+    expect(mergeFormDraft({ template_key: 'nocturne_ritual' })).toEqual({ template_key: 'nocturne_ritual' })
   })
 
   // The exact failure this function exists to survive: a draft written
@@ -39,8 +39,8 @@ describe('mergeFormDraft', () => {
   })
 
   it('drops a key this build does not recognise', () => {
-    const merged = mergeFormDraft({ template_key: 'ruled_page', shoe_size: 42 })
-    expect(merged).toEqual({ template_key: 'ruled_page' })
+    const merged = mergeFormDraft({ template_key: 'nocturne_ritual', shoe_size: 42 })
+    expect(merged).toEqual({ template_key: 'nocturne_ritual' })
     expect('shoe_size' in merged).toBe(false)
   })
 
@@ -58,16 +58,16 @@ describe('mergeFormDraft', () => {
   })
 
   // Task 7's own fields. brand_color is a plain string, same rules as
-  // template_key/headline/subtext above; font_pairing and sections each get
-  // their own guard beyond "is it a string" — see below.
+  // template_key/headline/subtext above; sections gets
+  // its own guard beyond "is it a string" — see below.
   it('keeps a valid brand_color', () => {
     expect(mergeFormDraft({ brand_color: '#1f5fa8' })).toEqual({ brand_color: '#1f5fa8' })
   })
 
   /**
    * Landing phase 3c (the industry step): `industry` is a plain string
-   * field here ON PURPOSE, unlike `font_pairing`/`palette` below, which are
-   * checked against a hardcoded id list. The onboarding response SERVES the
+   * field here ON PURPOSE, never
+   * checked against a hardcoded id list: the onboarding response SERVES the
    * offered industries, so the narrowing happens against that live list
    * instead (`resolveIndustry`, ./industryChoices, and its own tests) —
    * strictly better than a mirror of `Organization::INDUSTRIES` that could
@@ -80,18 +80,15 @@ describe('mergeFormDraft', () => {
     expect('industry' in mergeFormDraft({ headline: 'Welcome' })).toBe(false)
   })
 
-  it('keeps a font_pairing that is one of the three the backend accepts', () => {
-    expect(mergeFormDraft({ font_pairing: 'modern' })).toEqual({ font_pairing: 'modern' })
-  })
-
-  // The one guard font_pairing needs that a plain string field does not:
-  // `LandingOnboardingController::store()` 422s on anything outside
-  // editorial/modern/classic, so a value from a Phase-3-removed pairing (or
-  // a hand-edited localStorage entry) must not reach the request at all.
-  it('drops a font_pairing that is not one of the three known keys', () => {
-    const merged = mergeFormDraft({ font_pairing: 'brutalist' })
-    expect(merged).toEqual({})
+  // A draft written before the generic house design was retired still
+  // carries the two theme keys it owned. Neither is a field of the form any
+  // more and `LandingOnboardingController::store()` 422s on both as unknown
+  // keys, so a restored draft must not carry them into the request.
+  it('drops the retired designs font_pairing and palette from a stale draft', () => {
+    const merged = mergeFormDraft({ font_pairing: 'modern', palette: 'champagne_noir', headline: 'Hi' })
+    expect(merged).toEqual({ headline: 'Hi' })
     expect('font_pairing' in merged).toBe(false)
+    expect('palette' in merged).toBe(false)
   })
 
   it('keeps a sections map, entry by entry', () => {
@@ -227,10 +224,10 @@ describe('loadDraft / saveDraft / clearDraft — brand isolation', () => {
 
   it('round-trips step and form for a single brand', () => {
     const storage = new FakeStorage()
-    saveDraft(9, 1, { template_key: 'ruled_page', headline: 'Hi', subtext: 'There' }, storage)
+    saveDraft(9, 1, { template_key: 'nocturne_ritual', headline: 'Hi', subtext: 'There' }, storage)
     expect(loadDraft(9, storage)).toEqual({
       step: 1,
-      form: { template_key: 'ruled_page', headline: 'Hi', subtext: 'There' },
+      form: { template_key: 'nocturne_ritual', headline: 'Hi', subtext: 'There' },
     })
   })
 
@@ -248,12 +245,11 @@ describe('buildPayload', () => {
   })
 
   const base = {
-    templateKey: 'ruled_page',
+    templateKey: 'nocturne_ritual',
     slug: 'glamour-salon',
     headline: 'The Art of Wellness',
     subtext: 'Quiet luxury',
     brandColor: '#1f5fa8',
-    fontPairing: 'modern' as FontPairingKey,
     // Untouched by default: the resolved value equals the effective
     // prefill, which is exactly the "tenant never edited this" case —
     // `contact: {}` on every existing test above that doesn't care about
@@ -270,10 +266,10 @@ describe('buildPayload', () => {
     })
 
     expect(payload).toEqual({
-      template_key: 'ruled_page',
+      template_key: 'nocturne_ritual',
       slug: 'glamour-salon',
       copy: { headline: 'The Art of Wellness', subtext: 'Quiet luxury' },
-      theme: { brand_color: '#1f5fa8', font_pairing: 'modern' },
+      theme: { brand_color: '#1f5fa8' },
       contact: {},
       sections: [{ key: 'hero', enabled: true }],
     })

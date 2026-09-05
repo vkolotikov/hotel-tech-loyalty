@@ -84,11 +84,11 @@ class LandingPageSecurity
             "object-src 'none'",
             "script-src 'self'",
             // Task 3 (landing phase 3c; D3): both Google Fonts hosts are
-            // gone. Every face the landing template uses is self-hosted
+            // gone. Every face the landing templates use is self-hosted
             // woff2 under public/landing/fonts/, declared by @font-face
-            // rules in ruled_page.css itself -- style-src needs the nonce
-            // for the tenant-derived token blocks and nothing external any
-            // more, and font-src needs no external host at all.
+            // rules in each kit's own stylesheet -- style-src needs the
+            // nonce for the tenant-derived token blocks and nothing external
+            // any more, and font-src needs no external host at all.
             "style-src 'self' 'nonce-{$nonce}'",
             "font-src 'self'",
             "img-src 'self' data: https:",

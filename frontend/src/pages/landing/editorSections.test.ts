@@ -4,7 +4,7 @@ import {
   visibleFaqPairs,
   moveSection, moveSectionTo, moveSectionToKey, orderedSections, parseSectionKey, removeSection, removeSectionContent,
   freeGalleryLeaves, gallerySlots,
-  safeImageUrl, sectionIndex, setSectionTone, stripImageLeaves, toggleSection,
+  safeImageUrl, sectionIndex, stripImageLeaves, toggleSection,
   FIELD_PRESENTATION,
   type EditorSectionRow, type PageSection, type SectionAvailability, type SectionTypeOption,
 } from './editorSections'
@@ -83,9 +83,6 @@ describe('buildSectionRows', () => {
       // Gallery round: what makes a tenant-added band appear. A fixed row
       // never renders that line, so this is the harmless default.
       writtenBy: 'words',
-      // Tone round: the band's colour and the swatch to light while it has
-      // none.
-      tone: null, defaultTone: 'page',
     })
   })
 
@@ -224,48 +221,22 @@ describe('buildSectionsPayload', () => {
     // Force the exact stale-state scenario: reviews stored as enabled:true, but no longer offerable.
     const stale: EditorSectionRow[] = rows.map(r => (r.key === 'reviews' ? { ...r, enabled: true } : r))
     const payload = buildSectionsPayload(stale)
-    expect(payload.find(p => p.key === 'reviews')).toEqual({ key: 'reviews', enabled: false, sort: 4, tone: null })
+    expect(payload.find(p => p.key === 'reviews')).toEqual({ key: 'reviews', enabled: false, sort: 4 })
   })
 
   it('leaves a copy-backed row enabled even when unavailable with zero count (about)', () => {
     const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     const payload = buildSectionsPayload(rows)
     // `about` is available:false/count:0 in the fixture, but copy-backed sections are always offerable.
-    expect(payload.find(p => p.key === 'about')).toEqual({ key: 'about', enabled: true, sort: 2, tone: null })
+    expect(payload.find(p => p.key === 'about')).toEqual({ key: 'about', enabled: true, sort: 2 })
   })
 
-  it('produces exactly {key, enabled, sort, tone} per row, dropping label/sourceLabel/available/count', () => {
+  it('produces exactly {key, enabled, sort} per row, dropping label/sourceLabel/available/count', () => {
     const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
     const payload = buildSectionsPayload(rows)
     for (const row of payload) {
-      expect(Object.keys(row).sort()).toEqual(['enabled', 'key', 'sort', 'tone'])
+      expect(Object.keys(row).sort()).toEqual(['enabled', 'key', 'sort'])
     }
-  })
-
-  /**
-   * `tone` is ALWAYS on the wire, as a string or an explicit null, never
-   * missing and never `undefined`.
-   *
-   * The server tells an absent `tone` ("leave whatever is stored alone")
-   * from an explicit null ("put this band back to its own colour") by
-   * testing for the key, and `JSON.stringify` drops an undefined value — so
-   * a row that lost its tone key on the way out would silently take the
-   * first path, and the tenant's "Page background" swatch would appear to do
-   * nothing at all.
-   */
-  it('always sends tone, as an explicit null when the row has none', () => {
-    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
-    for (const row of buildSectionsPayload(rows)) {
-      expect(row).toHaveProperty('tone')
-      expect(row.tone).toBeNull()
-    }
-  })
-
-  it('carries a stored tone through to the wire', () => {
-    const toned = pageSections().map(s => (s.key === 'about' ? { ...s, tone: 'accent' } : s))
-    const payload = buildSectionsPayload(buildSectionRows(toned, availability(), sectionTypes()))
-    expect(payload.find(p => p.key === 'about')?.tone).toBe('accent')
-    expect(payload.find(p => p.key === 'hero')?.tone).toBeNull()
   })
 })
 
@@ -311,7 +282,7 @@ describe('field authority — the served catalogue, not a mirror', () => {
     expect(fieldsFor('hero')).toContain('kicker')
     expect(fieldsFor('booking')).toEqual(expect.arrayContaining(['call_label', 'call_short']))
     expect(fieldsFor('contact')).toEqual(
-      expect.arrayContaining(['phone_label', 'email_label', 'address_label', 'map_label', 'closed_label']),
+      expect.arrayContaining(['email_label', 'descriptor', 'legal_note']),
     )
   })
 
@@ -354,9 +325,9 @@ describe('field authority — the served catalogue, not a mirror', () => {
     expect(contact.find(f => f.name === 'phone')).toMatchObject({ maxLength: 64 })
     expect(contact.find(f => f.name === 'email')).toMatchObject({ type: 'email', maxLength: 191 })
     expect(contact.find(f => f.name === 'address')).toMatchObject({ maxLength: 191 })
-    // The five WORDING overrides beside them are plain text — they are the
-    // words above the value, not the value.
-    expect(contact.find(f => f.name === 'phone_label')).toEqual({ name: 'phone_label' })
+    // The WORDING override beside them is plain text — it is the
+    // words on the mail link, not the value.
+    expect(contact.find(f => f.name === 'email_label')).toEqual({ name: 'email_label' })
   })
 
   /**
@@ -529,33 +500,33 @@ describe('stripImageLeaves', () => {
 // exist to prove this module reads the SERVED catalogue correctly, and a
 // fixture derived from a frontend constant would prove only that the module
 // agrees with itself.
-/** `SectionType::payload()`'s own rows, `default_tone` included — the swatch
- *  each type shows lit while a row of it carries no tone of its own (`page`
- *  for the plain bands, `soft` for the tinted and the ink ones alike; see
- *  that constant's note on why ink answers soft). */
+/** `SectionType::payload()`'s own rows, spelled out rather than imported
+ *  from anywhere, because they ARE the wire: these tests prove this module
+ *  reads the SERVED catalogue correctly, and a fixture derived from a
+ *  frontend constant would prove only that the module agrees with itself. */
 const sectionTypes = (): SectionTypeOption[] => [
-  { id: 'hero', repeatable: false, fields: ['kicker', 'headline', 'subtext'], image: true, limit: null, default_tone: 'page' },
-  { id: 'services', repeatable: false, fields: ['kicker', 'heading', 'subtext'], image: false, limit: null, default_tone: 'page' },
-  { id: 'about', repeatable: false, fields: ['kicker', 'lead', 'body'], image: true, limit: null, default_tone: 'soft' },
-  { id: 'team', repeatable: false, fields: ['kicker', 'heading', 'subtext'], image: false, limit: null, default_tone: 'page' },
-  { id: 'reviews', repeatable: false, fields: ['kicker'], image: false, limit: null, default_tone: 'soft' },
-  { id: 'booking', repeatable: false, fields: ['kicker', 'heading', 'terms', 'call_label', 'call_short'], image: false, limit: null, default_tone: 'soft' },
-  // The REAL nine, as `SectionType::all()` publishes them. The five
-  // `*_label` overrides are what template fidelity 1.3 is about: every one
-  // is read by `contact.blade.php` and none of them had a control, because
-  // the editor's own hand-written mirror stopped at the first four.
+  { id: 'hero', repeatable: false, fields: ['kicker', 'headline', 'subtext'], image: true, limit: null },
+  { id: 'services', repeatable: false, fields: ['kicker', 'heading', 'subtext'], image: false, limit: null },
+  { id: 'about', repeatable: false, fields: ['kicker', 'lead', 'body'], image: true, limit: null },
+  { id: 'team', repeatable: false, fields: ['kicker', 'heading', 'subtext'], image: false, limit: null },
+  { id: 'reviews', repeatable: false, fields: ['kicker'], image: false, limit: null },
+  { id: 'booking', repeatable: false, fields: ['kicker', 'heading', 'terms', 'call_label', 'call_short'], image: false, limit: null },
+  // The REAL fields, as `SectionType::all()` publishes them. The one
+  // `*_label` override left is what template fidelity 1.3 was about: it
+  // is read by every kit's footer hub and had no control, because
+  // the editor's own hand-written mirror stopped at the first four fields.
   {
-    id: 'contact', repeatable: false, image: false, limit: null, default_tone: 'soft',
-    fields: ['kicker', 'phone', 'email', 'address', 'phone_label', 'email_label', 'address_label', 'map_label', 'closed_label'],
+    id: 'contact', repeatable: false, image: false, limit: null,
+    fields: ['kicker', 'phone', 'email', 'address', 'email_label', 'descriptor', 'legal_note'],
   },
-  { id: 'footer', repeatable: false, fields: [], image: false, limit: null, default_tone: 'page' },
-  { id: 'text', repeatable: true, addable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6, default_tone: 'soft' },
+  { id: 'footer', repeatable: false, fields: [], image: false, limit: null },
+  { id: 'text', repeatable: true, addable: true, fields: ['kicker', 'heading', 'body'], image: true, image_slots: 1, limit: 6 },
   // The gallery round. `image: false` with `image_slots: 8` is the wire's
   // own shape and not a mistake — `SectionType::payload()` publishes the
   // legacy bool as `images === 1` so a bundle that predates galleries draws
   // no photo control for one rather than a one-photo control the endpoints
   // would refuse. See that method's docblock.
-  { id: 'gallery', repeatable: true, addable: true, fields: ['kicker', 'heading'], image: false, image_slots: 8, limit: 6, default_tone: 'page' },
+  { id: 'gallery', repeatable: true, addable: true, fields: ['kicker', 'heading'], image: false, image_slots: 8, limit: 6 },
   // Template fidelity 3.1: three FIXED types no industry seeds, which the
   // BeautyTech kits draw and which the add picker may therefore offer. The
   // `addable` key is the wire's own, and it is what separates these from
@@ -563,14 +534,14 @@ const sectionTypes = (): SectionTypeOption[] => [
   // addable because it is chrome.
   {
     id: 'announcement', repeatable: false, addable: true, fields: ['text', 'cta_label'],
-    image: false, image_slots: 0, limit: null, default_tone: 'page',
+    image: false, image_slots: 0, limit: null,
   },
   {
     id: 'trust', repeatable: false, addable: true, fields: ['quote', 'feature_1', 'feature_2', 'feature_3'],
-    image: false, image_slots: 0, limit: null, default_tone: 'page',
+    image: false, image_slots: 0, limit: null,
   },
   {
-    id: 'faq', repeatable: false, addable: true, image: false, image_slots: 0, limit: null, default_tone: 'page',
+    id: 'faq', repeatable: false, addable: true, image: false, image_slots: 0, limit: null,
     fields: ['kicker', 'heading', 'subtext', 'q1', 'a1', 'q2', 'a2', 'q3', 'a3', 'q4', 'a4', 'q5', 'a5', 'q6', 'a6'],
   },
 ]
@@ -786,8 +757,8 @@ describe('buildSectionRows — tenant-added rows', () => {
   it('reaches the wire, which is the whole point — the added rows carry their sort', () => {
     const rows = buildSectionRows(withText(), availability(), sectionTypes())
     const payload = buildSectionsPayload(rows)
-    expect(payload).toContainEqual({ key: 'text_1', enabled: true, sort: 7, tone: null })
-    expect(payload).toContainEqual({ key: 'text_4', enabled: false, sort: 8, tone: null })
+    expect(payload).toContainEqual({ key: 'text_1', enabled: true, sort: 7 })
+    expect(payload).toContainEqual({ key: 'text_4', enabled: false, sort: 8 })
   })
 
   it('marks added rows removable and fixed rows not', () => {
@@ -845,9 +816,9 @@ describe('buildSectionRows — tenant-added rows', () => {
    */
   it('never forces an unwritten added row off at the wire', () => {
     const rows = buildSectionRows(withText(), availability(), sectionTypes(), {})
-    expect(buildSectionsPayload(rows)).toContainEqual({ key: 'text_1', enabled: true, sort: 7, tone: null })
+    expect(buildSectionsPayload(rows)).toContainEqual({ key: 'text_1', enabled: true, sort: 7 })
     // Contrast: reviews is data-backed with zero rows, and IS forced off.
-    expect(buildSectionsPayload(rows)).toContainEqual({ key: 'reviews', enabled: false, sort: 4, tone: null })
+    expect(buildSectionsPayload(rows)).toContainEqual({ key: 'reviews', enabled: false, sort: 4 })
   })
 
   it('still drops a key that is neither fixed nor a legal instance', () => {
@@ -927,7 +898,7 @@ describe('appendSection', () => {
   it('lands the new row at the bottom of the local order', () => {
     const next = appendSection(pageSections(), 'text_1')
     expect(orderedSections(next).at(-1)!.key).toBe('text_1')
-    expect(next.find(s => s.key === 'text_1')).toEqual({ key: 'text_1', enabled: true, sort: 7, tone: null })
+    expect(next.find(s => s.key === 'text_1')).toEqual({ key: 'text_1', enabled: true, sort: 7 })
   })
 
   /** The server clamps to the same 0..999 window `update()` validates, so a
@@ -939,7 +910,7 @@ describe('appendSection', () => {
   })
 
   it('starts at 0 on a page with no rows at all', () => {
-    expect(appendSection([], 'text_1')).toEqual([{ key: 'text_1', enabled: true, sort: 0, tone: null }])
+    expect(appendSection([], 'text_1')).toEqual([{ key: 'text_1', enabled: true, sort: 0 }])
   })
 
   it('does not mutate its input', () => {
@@ -1251,12 +1222,13 @@ describe('the design own photographs', () => {
 
   /** A caption is numbered to match its PICTURE, never its position in the
    *  strip — a caption must not move when a gap above it closes. */
-  it('names the caption leaf beside each picture', () => {
+  it('names the caption leaf beside each picture, and the line under it', () => {
     const section = { image_3: '/storage/mine.jpg' }
     const photos = gallerySlots(section, 'gallery_1', 8)
 
     expect(photos).toHaveLength(1)
     expect(photos[0].captionLeaf).toBe('caption_3')
+    expect(photos[0].noteLeaf).toBe('caption_3_note')
   })
 
   /** A design with none leaves the strip exactly as it was. */
@@ -1306,6 +1278,24 @@ describe('photo controls follow what the design actually draws', () => {
     expect(fieldsForType(withWords, false).map(f => f.name)).not.toContain('caption')
   })
 
+  /**
+   * The plate is told WHICH words to draw a box for: the ones the type
+   * carries and the design prints. A closing panel's photograph takes a
+   * description and no caption (`booking` carries `alt` alone), and a design
+   * that prints neither gets a plate with no word boxes at all.
+   */
+  it('tells the plate which picture words to draw, and only those', () => {
+    const both = { ...heroType(), fields: [...heroType().fields, 'alt', 'caption'] }
+    const altOnly = { ...heroType(), fields: [...heroType().fields, 'alt'] }
+
+    expect(fieldsForType(both)[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt', 'caption'] })
+    expect(fieldsForType(altOnly)[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt'] })
+    // The design's own answer narrows the catalogue's, never widens it.
+    expect(fieldsForType(both, true, ['kicker', 'alt'])[0]).toEqual({ name: 'image_url', type: 'image', words: ['alt'] })
+    expect(fieldsForType(both, true, ['kicker'])[0]).toEqual({ name: 'image_url', type: 'image' })
+    expect(fieldsForType(heroType())[0]).toEqual({ name: 'image_url', type: 'image' })
+  })
+
   it('consumes one caption leaf per gallery tile rather than listing eight', () => {
     const galleryType = sectionTypes().find(o => o.id === 'gallery')!
     const captioned = {
@@ -1314,6 +1304,38 @@ describe('photo controls follow what the design actually draws', () => {
     }
 
     expect(fieldsForType(captioned).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+  })
+
+  /**
+   * The line under each caption (`caption_N_note`, the hospitality kits'
+   * card prose) is consumed the same way — never eight more loose boxes —
+   * and the strip is told whether to draw it: only when the DESIGN prints
+   * it (`content_fields`), or when no design has answered and the catalogue
+   * lists it, which is the same "no opinion, offer everything" every plain
+   * field takes.
+   */
+  it('consumes the line under each caption into the strip, and says whether the design prints it', () => {
+    const galleryType = sectionTypes().find(o => o.id === 'gallery')!
+    const withNotes = {
+      ...galleryType,
+      fields: [
+        ...galleryType.fields,
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}`),
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}_note`),
+      ],
+    }
+
+    // No opinion from the design: the catalogue lists it, so the strip draws it.
+    expect(fieldsForType(withNotes).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+    expect(fieldsForType(withNotes)[0]).toMatchObject({ type: 'gallery', notes: true })
+
+    // A hospitality design prints the line; a beauty design's pills do not.
+    expect(fieldsForType(withNotes, true, ['kicker', 'heading', 'caption_1', 'caption_1_note'])[0])
+      .toMatchObject({ notes: true })
+    expect(fieldsForType(withNotes, true, ['kicker', 'heading', 'caption_1'])[0].notes).toBeUndefined()
+
+    // A catalogue that never listed it draws nothing, whatever the design says.
+    expect(fieldsForType(galleryType, true, ['kicker', 'caption_1_note'])[0].notes).toBeUndefined()
   })
 
   /** The row carries the decision, so everything reading `row.fields` — the
@@ -1415,83 +1437,7 @@ describe('moveSectionToKey', () => {
   })
 })
 
-describe('setSectionTone', () => {
-  it('puts one section on a colour and touches nothing else', () => {
-    const next = setSectionTone(pageSections(), 'about', 'accent')
-    expect(next.find(s => s.key === 'about')).toEqual({ key: 'about', enabled: true, sort: 2, tone: 'accent' })
-    expect(next.filter(s => s.key !== 'about')).toEqual(pageSections().filter(s => s.key !== 'about'))
-  })
 
-  it('leaves position and enabled alone — colour, order and visibility are three separate choices', () => {
-    const off = toggleSection(pageSections(), 'about')
-    const next = setSectionTone(off, 'about', 'page')
-    expect(next.find(s => s.key === 'about')).toEqual({ key: 'about', enabled: false, sort: 2, tone: 'page' })
-  })
-
-  it('null clears a stored tone, putting the band back on its authored colour', () => {
-    const toned = setSectionTone(pageSections(), 'about', 'accent')
-    expect(setSectionTone(toned, 'about', null).find(s => s.key === 'about')?.tone).toBeNull()
-  })
-
-  it('an unknown key is a no-op', () => {
-    expect(setSectionTone(pageSections(), 'nonexistent', 'accent')).toEqual(pageSections())
-  })
-
-  it('does not mutate its input', () => {
-    const input = pageSections()
-    setSectionTone(input, 'about', 'accent')
-    expect(input.find(s => s.key === 'about')).toEqual({ key: 'about', enabled: true, sort: 2 })
-  })
-})
-
-describe('buildSectionRows — tone', () => {
-  it('carries a stored tone and the served default onto a fixed row', () => {
-    const toned = pageSections().map(s => (s.key === 'about' ? { ...s, tone: 'accent' } : s))
-    const rows = buildSectionRows(toned, availability(), sectionTypes())
-
-    expect(rows.find(r => r.key === 'about')).toMatchObject({ tone: 'accent', defaultTone: 'soft' })
-    expect(rows.find(r => r.key === 'hero')).toMatchObject({ tone: null, defaultTone: 'page' })
-  })
-
-  /**
-   * `contact` is authored `band--ink` server-side, which is NOT a tone — the
-   * catalogue answers `soft` for it, because ink and paper-2 are the same
-   * surface. The editor never learns the class at all, only the swatch.
-   */
-  it('takes the ink bands default tone off the wire rather than inventing one', () => {
-    const rows = buildSectionRows(pageSections(), availability(), sectionTypes())
-    expect(rows.find(r => r.key === 'contact')?.defaultTone).toBe('soft')
-    expect(rows.find(r => r.key === 'reviews')?.defaultTone).toBe('soft')
-  })
-
-  it('reads a tenant-added rows default tone off its TYPE, not its key', () => {
-    const added: PageSection[] = [...pageSections(), { key: 'text_4', enabled: true, sort: 8, tone: 'page' }]
-    const rows = buildSectionRows(added, availability(), sectionTypes())
-    expect(rows.find(r => r.key === 'text_4')).toMatchObject({ tone: 'page', defaultTone: 'soft' })
-  })
-
-  it('normalises a missing, null, empty or non-string tone to null', () => {
-    const odd: PageSection[] = [
-      { key: 'hero', enabled: true, sort: 0 },
-      { key: 'about', enabled: true, sort: 2, tone: null },
-      { key: 'team', enabled: true, sort: 3, tone: '' },
-      { key: 'contact', enabled: true, sort: 6, tone: 7 as unknown as string },
-    ]
-    const rows = buildSectionRows(odd, availability(), sectionTypes())
-    expect(rows).toHaveLength(4)
-    for (const row of rows) expect(row.tone).toBeNull()
-  })
-
-  it('leaves defaultTone null when the catalogue publishes none (an older backend)', () => {
-    const bare: SectionTypeOption[] = sectionTypes().map(type => {
-      const copy = { ...type }
-      delete copy.default_tone
-      return copy
-    })
-    const rows = buildSectionRows(pageSections(), availability(), bare)
-    expect(rows.every(r => r.defaultTone === null)).toBe(true)
-  })
-})
 
 // ─── The gallery round: the photo strip's own maths ─────────────────────
 //

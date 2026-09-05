@@ -53,7 +53,7 @@ class LandingRoutingTest extends TestCase
     {
         return LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => $slug,
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => $status,
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => $status,
             'published_at' => $status === 'published' ? now() : null,
         ]);
     }

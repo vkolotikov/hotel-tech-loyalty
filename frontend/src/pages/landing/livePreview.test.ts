@@ -293,9 +293,9 @@ describe('previewCaptionState', () => {
 
 describe('draftFingerprint', () => {
   const payload = (over: Partial<DraftPayload> = {}): DraftPayload => ({
-    theme: { palette: 'porcelain', brand_color: '#123456' },
+    theme: { brand_color: '#123456' },
     content: { hero: { headline: 'Hello' } },
-    sections: [{ key: 'hero', enabled: true, sort: 0, tone: null }],
+    sections: [{ key: 'hero', enabled: true, sort: 0 }],
     ...over,
   })
 
@@ -304,8 +304,8 @@ describe('draftFingerprint', () => {
   })
 
   it('ignores key order, which spreads and Object.entries reshuffle freely', () => {
-    const a = draftFingerprint({ ...payload(), theme: { palette: 'porcelain', brand_color: '#123456' } }, 0)
-    const b = draftFingerprint({ ...payload(), theme: { brand_color: '#123456', palette: 'porcelain' } }, 0)
+    const a = draftFingerprint({ ...payload(), theme: { brand_color: '#123456', nonce: 1 } }, 0)
+    const b = draftFingerprint({ ...payload(), theme: { nonce: 1, brand_color: '#123456' } }, 0)
 
     expect(a).toBe(b)
   })
@@ -320,14 +320,14 @@ describe('draftFingerprint', () => {
   it('changes when sections are reordered, because for sections the order IS the content', () => {
     const before = draftFingerprint(payload({
       sections: [
-        { key: 'hero', enabled: true, sort: 0, tone: null },
-        { key: 'about', enabled: true, sort: 1, tone: null },
+        { key: 'hero', enabled: true, sort: 0 },
+        { key: 'about', enabled: true, sort: 1 },
       ],
     }), 0)
     const after = draftFingerprint(payload({
       sections: [
-        { key: 'about', enabled: true, sort: 0, tone: null },
-        { key: 'hero', enabled: true, sort: 1, tone: null },
+        { key: 'about', enabled: true, sort: 0 },
+        { key: 'hero', enabled: true, sort: 1 },
       ],
     }), 0)
 
@@ -341,16 +341,6 @@ describe('draftFingerprint', () => {
     expect(draftFingerprint(payload(), 1)).not.toBe(draftFingerprint(payload(), 0))
   })
 
-  it('treats a tone cleared to null as a change', () => {
-    const before = draftFingerprint(payload({
-      sections: [{ key: 'hero', enabled: true, sort: 0, tone: 'accent' }],
-    }), 0)
-    const after = draftFingerprint(payload({
-      sections: [{ key: 'hero', enabled: true, sort: 0, tone: null }],
-    }), 0)
-
-    expect(after).not.toBe(before)
-  })
 
   it('survives the non-object leaves a schemaless JSON column can hold', () => {
     // theme/content are raw `array` casts server-side: a number, a boolean

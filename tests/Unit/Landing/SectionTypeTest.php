@@ -3,6 +3,7 @@ namespace Tests\Unit\Landing;
 
 use App\Landing\IndustryProfile;
 use App\Landing\SectionType;
+use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Support\Facades\View;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
@@ -51,27 +52,32 @@ class SectionTypeTest extends TestCase
     }
 
     /**
-     * Every type names a partial that has actually shipped — in at least ONE
-     * of the templates that ship partials.
+     * Every type is DRAWN by at least one shipped template — through a
+     * partial of its own, or as furniture the template's layout places
+     * itself.
      *
-     * It used to be "in ruled_page", and that was the same assertion while
-     * ruled_page was the only template. It is not any more: `nocturne_ritual`
-     * renders this same catalogue through its own directory, and a type may
-     * legitimately belong to one design and not the other. `announcement`,
-     * `trust` and `faq` are the BeautyTech kits' blocks and The Ruled Page
-     * has no partial for any of them; `text` is the Ruled Page's repeatable
-     * band and the nocturne kit does not compose one.
+     * A type may legitimately belong to one design and not another: `team`
+     * is the three beauty kits' band and no hospitality kit ships a partial
+     * for it. That is not a hole the renderer falls through — every layout
+     * filters on view()->exists() before including anything, so a page
+     * carrying a row its current template cannot draw simply loses that band
+     * and keeps its stored copy for whenever it switches back.
      *
-     * That is not a hole the renderer falls through — both layouts filter on
-     * view()->exists() before including anything, so a page carrying a row
-     * its current template cannot draw simply loses that band and keeps its
-     * stored copy for whenever it switches back. What this test still
-     * catches is the real failure: a type NO template can render, which is a
-     * row nothing will ever draw and an entry in the editor's form builder
-     * for a band that does not exist.
+     * FURNITURE COUNTS, and `contact` is why: no kit ships a contact partial
+     * at all — every one of the six prints the address, the channels and the
+     * hours inside its footer hub — and each says so through `fixed_blocks`
+     * (placement `footer`). A type with no partial anywhere is drawn all the
+     * same if some layout pins it; only a type that no template draws by
+     * EITHER route is the real failure this catches: a row nothing will ever
+     * draw and an entry in the editor's form builder for a band that does
+     * not exist.
      */
-    public function test_every_type_resolves_to_a_view_that_exists(): void
+    public function test_every_type_is_drawn_by_at_least_one_shipped_template(): void
     {
+        $pinned = collect(LandingOnboardingService::templates())
+            ->mapWithKeys(fn (array $row) => [$row['key'] => array_keys($row['fixed_blocks'])])
+            ->all();
+
         foreach (SectionType::ids() as $id) {
             $type = SectionType::get($id);
 
@@ -79,14 +85,26 @@ class SectionTypeTest extends TestCase
 
             $drawnBy = array_values(array_filter(
                 SectionType::TEMPLATES_WITH_PARTIALS,
-                fn (string $template) => View::exists('landing.' . $template . '.sections.' . $type->view),
+                fn (string $template) => View::exists('landing.' . $template . '.sections.' . $type->view)
+                    || in_array($id, $pinned[$template] ?? [], true),
             ));
 
             $this->assertNotEmpty(
                 $drawnBy,
-                "The '{$id}' type names a partial ({$type->view}) that no shipped template has."
+                "The '{$id}' type names a partial ({$type->view}) that no shipped template has or pins."
             );
         }
+
+        // The two named asymmetries, so a kit that quietly drops one has to
+        // come past this: no kit ships a contact partial, and only the
+        // beauty kits ship a team one.
+        foreach (SectionType::TEMPLATES_WITH_PARTIALS as $template) {
+            $this->assertFalse(View::exists('landing.' . $template . '.sections.contact'));
+            $this->assertContains('contact', $pinned[$template]);
+        }
+
+        $this->assertTrue(View::exists('landing.nocturne_ritual.sections.team'));
+        $this->assertFalse(View::exists('landing.maison_vela.sections.team'));
     }
 
     /**
@@ -294,7 +312,7 @@ class SectionTypeTest extends TestCase
     {
         $this->assertSame('about', SectionType::typeOf('about'));
         $this->assertSame('hero', SectionType::typeOf('hero'));
-        $this->assertSame('landing.ruled_page.sections.about', SectionType::viewFor('about'));
+        $this->assertSame('landing.nocturne_ritual.sections.about', SectionType::viewFor('about', 'nocturne_ritual'));
     }
 
     /**
@@ -305,7 +323,7 @@ class SectionTypeTest extends TestCase
     public function test_a_repeatable_type_has_no_bare_key(): void
     {
         $this->assertNull(SectionType::typeOf('text'));
-        $this->assertNull(SectionType::viewFor('text'));
+        $this->assertNull(SectionType::viewFor('text', 'nocturne_ritual'));
         $this->assertFalse(SectionType::isInstanceKey('text'));
     }
 
@@ -314,7 +332,7 @@ class SectionTypeTest extends TestCase
         foreach (['text_1', 'text_2', 'text_6'] as $key) {
             $this->assertSame('text', SectionType::typeOf($key));
             $this->assertTrue(SectionType::isInstanceKey($key));
-            $this->assertSame('landing.ruled_page.sections.text', SectionType::viewFor($key),
+            $this->assertSame('landing.nocturne_ritual.sections.text', SectionType::viewFor($key, 'nocturne_ritual'),
                 "Instance keys must all render through ONE partial; {$key} does not.");
         }
     }
@@ -363,7 +381,7 @@ class SectionTypeTest extends TestCase
     public function test_a_key_outside_the_grammar_is_not_a_section(string $key): void
     {
         $this->assertNull(SectionType::typeOf($key), "'{$key}' resolved to a section type.");
-        $this->assertNull(SectionType::viewFor($key), "'{$key}' resolved to a view.");
+        $this->assertNull(SectionType::viewFor($key, 'nocturne_ritual'), "'{$key}' resolved to a view.");
         $this->assertNull(SectionType::forKey($key));
         $this->assertFalse(SectionType::isInstanceKey($key));
     }
@@ -487,7 +505,7 @@ class SectionTypeTest extends TestCase
         foreach (['gallery_1', 'gallery_3', 'gallery_6'] as $key) {
             $this->assertSame('gallery', SectionType::typeOf($key));
             $this->assertTrue(SectionType::isInstanceKey($key));
-            $this->assertSame('landing.ruled_page.sections.gallery', SectionType::viewFor($key));
+            $this->assertSame('landing.nocturne_ritual.sections.gallery', SectionType::viewFor($key, 'nocturne_ritual'));
         }
 
         $this->assertSame('gallery_1', SectionType::nextInstanceKey('gallery', ['text_1', 'hero']));
@@ -548,6 +566,30 @@ class SectionTypeTest extends TestCase
             $this->assertContains($target['leaf'], SectionType::imageLeaves($target['key']),
                 "The image slot '{$slot}' names a leaf its section does not hold.");
         }
+    }
+
+    /**
+     * One caption AND one line under it per tile, both numbered to the
+     * picture they belong to and both bounded by the same count as the
+     * pictures — three lists that are one length by construction. Neither
+     * is an image leaf: they travel the plain content save.
+     */
+    public function test_a_gallery_carries_one_caption_and_one_line_per_tile(): void
+    {
+        $fields = SectionType::get('gallery')->fields;
+
+        foreach (range(1, SectionType::GALLERY_IMAGES) as $n) {
+            $this->assertContains("caption_{$n}", $fields);
+            $this->assertContains("caption_{$n}_note", $fields);
+            $this->assertFalse(SectionType::isImageField("caption_{$n}_note"));
+        }
+
+        $this->assertNotContains('caption_9', $fields);
+        $this->assertNotContains('caption_9_note', $fields);
+        $this->assertSame(
+            array_map(static fn (int $n) => "caption_{$n}_note", range(1, SectionType::GALLERY_IMAGES)),
+            SectionType::galleryNoteLeaves(),
+        );
     }
 
     /**
@@ -652,7 +694,7 @@ class SectionTypeTest extends TestCase
 
         foreach ($payload as $row) {
             $this->assertSame(
-                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit', 'default_tone'],
+                ['id', 'repeatable', 'addable', 'fields', 'image', 'image_slots', 'limit'],
                 array_keys($row),
                 "The '{$row['id']}' row does not carry exactly the published keys."
             );
@@ -671,16 +713,6 @@ class SectionTypeTest extends TestCase
                 in_array($row['id'], SectionType::addableIds(), true),
                 $row['addable'],
                 "The '{$row['id']}' row publishes an `addable` its own allowlist disagrees with."
-            );
-
-            // `band` is a class name on a stylesheet the admin SPA never
-            // loads — the same reason `view` is kept off the wire. What the
-            // editor needs is the SWATCH the row is already showing.
-            $this->assertArrayNotHasKey('band', $row);
-            $this->assertContains(
-                $row['default_tone'],
-                SectionType::toneIds(),
-                "The '{$row['id']}' row publishes a default tone the picker does not offer."
             );
 
             $this->assertSame(
@@ -727,149 +759,5 @@ class SectionTypeTest extends TestCase
 
         $this->assertSame(0, $rows['reviews']['image_slots']);
         $this->assertFalse($rows['reviews']['image']);
-    }
-
-    // ─── Tones (the per-section colour round) ─────────────────────────────
-
-    /**
-     * The allowlist, pinned by literal value.
-     *
-     * Hardcoded rather than derived from the constant it checks, for the
-     * reason `designChoices.test.ts` and localeCompleteness.test.ts's
-     * hand-verified nets both give: a list built FROM the thing it exists to
-     * police loses an id and its expectation in the same edit. Three ids and
-     * three classes, and the classes matter as much as the ids — every one
-     * of them has to be a selector the shipped stylesheet actually defines,
-     * or a tenant picks a colour and nothing happens.
-     *
-     * `band--ink` is deliberately NOT here: D1 collapsed it onto the same
-     * `--bg-2` surface `band--paper-2` uses, so offering both would put two
-     * swatches in the picker that paint identical pixels. It survives as an
-     * authored default only — see the constant's own note.
-     */
-    public function test_the_tone_allowlist_is_the_three_curated_surfaces(): void
-    {
-        $this->assertSame(
-            ['page' => '', 'soft' => 'band--paper-2', 'accent' => 'band--accent'],
-            SectionType::TONES
-        );
-        $this->assertSame(['page', 'soft', 'accent'], SectionType::toneIds());
-    }
-
-    /**
-     * Every band class the catalogue names — the three tones' and the four
-     * authored defaults' — is a rule public/landing/ruled_page.css actually
-     * ships. Read off the stylesheet itself rather than from a second list
-     * here, because the stylesheet is the rendering truth and a tone whose
-     * class nothing styles is a control that silently does nothing.
-     */
-    public function test_every_band_class_the_catalogue_names_is_defined_in_the_stylesheet(): void
-    {
-        $css = file_get_contents(public_path('landing/ruled_page.css'));
-
-        $classes = array_filter(array_unique(array_merge(
-            array_values(SectionType::TONES),
-            array_column(SectionType::all(), 'band'),
-        )));
-
-        $this->assertNotEmpty($classes);
-
-        foreach ($classes as $class) {
-            $this->assertMatchesRegularExpression(
-                '/^\.' . preg_quote($class, '/') . '\{/m',
-                $css,
-                "The stylesheet defines no rule for '{$class}'."
-            );
-        }
-    }
-
-    /**
-     * THE DEFAULT-PRESERVATION CONTRACT, and the reason the whole feature
-     * could ship without moving a byte of any live page: a section with no
-     * stored tone renders EXACTLY the class its partial was authored with.
-     *
-     * Asserted per key against literal strings, not against the catalogue —
-     * these are the exact class attributes the four RuledPageRenderTest byte
-     * goldens contain, so this test failing and those goldens moving are the
-     * same event, and this one says which section did it.
-     */
-    public function test_a_null_tone_renders_each_sections_authored_default(): void
-    {
-        $this->assertSame('band', SectionType::bandClass('hero'));
-        $this->assertSame('band', SectionType::bandClass('services'));
-        $this->assertSame('band', SectionType::bandClass('team'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('about'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('booking'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('text_1'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('text_4'));
-        $this->assertSame('band', SectionType::bandClass('gallery_1'));
-        $this->assertSame('band band--ink', SectionType::bandClass('reviews'));
-        $this->assertSame('band band--ink', SectionType::bandClass('contact'));
-    }
-
-    public function test_a_stored_tone_overrides_the_authored_default(): void
-    {
-        // Every tone on a band authored as paper-2 ...
-        $this->assertSame('band', SectionType::bandClass('about', 'page'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'soft'));
-        $this->assertSame('band band--accent', SectionType::bandClass('about', 'accent'));
-
-        // ... and on one authored as ink, and one authored plain, so the
-        // override is proved to run in both directions rather than only
-        // happening to agree with what was already there.
-        $this->assertSame('band band--accent', SectionType::bandClass('contact', 'accent'));
-        $this->assertSame('band', SectionType::bandClass('contact', 'page'));
-        $this->assertSame('band band--accent', SectionType::bandClass('hero', 'accent'));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('text_2', 'soft'));
-    }
-
-    /**
-     * A value that reached the column by some route other than the endpoint
-     * — a hand-edited row, a build that knew a tone this one has dropped —
-     * renders as if no tone had been stored. `tone` is a plain varchar with
-     * no database constraint behind it, so this is the same read-time
-     * re-whitelisting the layout already applies to `theme.palette` and
-     * `theme.font_pairing`, and it is what stops arbitrary stored text
-     * reaching a `class` attribute.
-     */
-    public function test_an_unrecognised_tone_falls_back_to_the_authored_default(): void
-    {
-        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'not-a-tone'));
-        $this->assertSame('band band--ink', SectionType::bandClass('contact', 'ink'));
-        $this->assertSame('band', SectionType::bandClass('hero', ''));
-        $this->assertSame('band band--paper-2', SectionType::bandClass('about', 'band--accent'));
-    }
-
-    /** A key this catalogue does not know still gets a usable band class. */
-    public function test_an_unknown_key_still_renders_a_plain_band(): void
-    {
-        // `gallery` bare is a repeatable type's id, which is NOT a key — the
-        // same non-key `text` is, and the same answer.
-        $this->assertSame('band', SectionType::bandClass('gallery'));
-        $this->assertSame('band', SectionType::bandClass('text_9'));
-        $this->assertSame('band band--accent', SectionType::bandClass('carousel', 'accent'));
-    }
-
-    /**
-     * The editor's "you are already on this colour" answer, per type.
-     * `contact`/`reviews` answer `soft` despite emitting `band--ink`,
-     * because ink and paper-2 are one surface — see SectionType::TONES.
-     */
-    public function test_the_default_tone_per_type_is_the_swatch_its_authored_class_shows(): void
-    {
-        $this->assertSame('page', SectionType::defaultToneFor('hero'));
-        $this->assertSame('page', SectionType::defaultToneFor('services'));
-        $this->assertSame('page', SectionType::defaultToneFor('team'));
-        $this->assertSame('page', SectionType::defaultToneFor('footer'));
-        $this->assertSame('soft', SectionType::defaultToneFor('about'));
-        $this->assertSame('soft', SectionType::defaultToneFor('booking'));
-        $this->assertSame('soft', SectionType::defaultToneFor('contact'));
-        $this->assertSame('soft', SectionType::defaultToneFor('reviews'));
-        $this->assertSame('soft', SectionType::defaultToneFor('text'));
-        // The gallery is authored on the page's own surface: it sits between
-        // whatever bands the tenant put it between, and the pictures are the
-        // colour in it.
-        $this->assertSame('page', SectionType::defaultToneFor('gallery'));
-        $this->assertNull(SectionType::defaultToneFor('not-a-type'));
     }
 }

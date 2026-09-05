@@ -5,8 +5,8 @@ namespace App\Support;
 /**
  * A cache-busting query string for a static file under public/.
  *
- * F2 (phase 3c final fix wave): layout.blade.php linked ruled_page.css and
- * ruled_page.js with a bare asset() call, so the URL never changed even
+ * F2 (phase 3c final fix wave): the landing layout linked its stylesheet and
+ * its script with a bare asset() call, so the URL never changed even
  * though this branch rewrote both files wholesale — a browser holding a
  * cached 3b stylesheet pairs it with the rebuilt 3c markup and renders
  * nonsense, forever, until that visitor's cache happens to expire on its

@@ -36,7 +36,7 @@ class LandingSeoTest extends TestCase
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => $brandId, 'slug' => $slug,
-            'template_key' => 'ruled_page', 'industry' => $industry, 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => $industry, 'status' => 'published',
             'published_at' => now(),
             'content' => ['hero' => ['headline' => 'The Art of Wellness']],
         ]);
@@ -398,7 +398,7 @@ class LandingSeoTest extends TestCase
         $body = $this->body($page);
 
         $this->assertStringNotContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $body,
             'Fixture is wrong: this page was supposed to render no reviews band at all.'
         );
@@ -430,7 +430,7 @@ class LandingSeoTest extends TestCase
 
         $body = $this->body($page);
 
-        $this->assertStringContainsString('data-section="reviews"', $body);
+        $this->assertStringContainsString('data-block="testimonials"', $body);
         $this->assertArrayHasKey('aggregateRating', $this->jsonLd($body));
     }
 
@@ -485,7 +485,7 @@ class LandingSeoTest extends TestCase
         $body = $this->body($page);
 
         $this->assertStringNotContainsString(
-            'data-section="reviews"',
+            'data-block="testimonials"',
             $body,
             "Fixture is wrong: the reviews band still rendered with its section row {$how}.",
         );

@@ -30,17 +30,6 @@ export type PageSection = {
   key: string
   enabled: boolean
   sort: number
-  /**
-   * The band's colour — one of `App\Landing\SectionType::TONES`' ids, or
-   * null.
-   *
-   * NULL IS A VALUE, not an omission: it means "render this band the way its
-   * partial was authored", which is what every row on every page created
-   * before this control existed already means. Optional on this type because
-   * a response from a backend that predates the column carries no such key
-   * at all, which `buildSectionRows` normalises to null.
-   */
-  tone?: string | null
 }
 
 /** The wire shape of one row of `onboarding.sections`. Kept as a separate
@@ -120,18 +109,6 @@ export type SectionTypeOption = {
    */
   image_slots?: number | null
   limit: number | null
-  /**
-   * Which tone swatch a row of this type shows as chosen while its own
-   * `tone` is null — `SectionType::defaultToneFor()`, served.
-   *
-   * Served rather than derived because the fact behind it is a band
-   * modifier class in a stylesheet the admin SPA does not load: `about` is
-   * authored `band--paper-2` and `contact` `band--ink`, and the second of
-   * those is not a tone at all (the two are the same surface — see the
-   * constant's own note). Optional: an older backend publishes no such key,
-   * and the picker then lights nothing rather than guessing.
-   */
-  default_tone?: string | null
 }
 
 /** One editable control on a section row — the served catalogue's field
@@ -145,10 +122,22 @@ export type SectionField = {
    *  the served `image_slots`. Never a literal eight: the cap the editor
    *  counts against and the cap the endpoints enforce are one number. */
   slots?: number
+  /** For `type: 'gallery'` only — whether this DESIGN prints a line of
+   *  prose under each tile's caption (`caption_N_note`), off the served
+   *  `content_fields`. The three hospitality kits do; the beauty kits' pills
+   *  do not, and a second box under a caption nothing prints would be a
+   *  control that cannot act. Absent means no. */
+  notes?: boolean
   /** For `type: 'faq_pairs'` only — how many question/answer couplets the
    *  band may hold, DERIVED from the `qN`/`aN` leaves the server actually
    *  published (see `faqPairsOf`). Never a literal six. */
   pairs?: number
+  /** For `type: 'image'` only — which of the two WORD leaves (`alt`,
+   *  `caption`) this type carries AND this design prints, so the plate draws
+   *  a box for each of those and none for a word nothing reads (a closing
+   *  panel's photograph takes a description and no caption). Absent means
+   *  none. */
+  words?: string[]
 }
 
 /**
@@ -196,14 +185,6 @@ export type EditorSectionRow = Omit<SectionMeta, 'key'> & {
    *  their pictures band render. Always `'words'` for a fixed row, which
    *  never asks. See `writtenBy`. */
   writtenBy: 'words' | 'photos'
-  /** This row's stored tone, normalised: a string id or null, never
-   *  undefined, so the save always says what it means (see
-   *  `buildSectionsPayload`). */
-  tone: string | null
-  /** The swatch to light when `tone` is null — the served
-   *  `section_types[*].default_tone` for this row's TYPE. Null when the
-   *  backend published none. */
-  defaultTone: string | null
 }
 
 /**
@@ -337,9 +318,6 @@ export function buildSectionRows(
         // A fixed row never renders the "not written yet" line, so this is
         // the harmless default rather than a claim about the band.
         writtenBy: 'words',
-        tone: normaliseTone(row.tone),
-        // A fixed key IS its type id, so the catalogue lookup is direct.
-        defaultTone: defaultToneOf(row.key, sectionTypes),
       }]
     }
 
@@ -388,27 +366,8 @@ export function buildSectionRows(
       siblings: perType.get(parsed.typeId) ?? 1,
       fields: fieldsForType(parsed.type, drawsPhotos(parsed.typeId), drawnLeaves(parsed.typeId)),
       writtenBy: writtenBy(parsed.type),
-      tone: normaliseTone(row.tone),
-      // Off the TYPE (`text`), never the key (`text_1`) — every instance of
-      // a repeatable type shares one authored surface, exactly as they
-      // share one partial.
-      defaultTone: normaliseTone(parsed.type.default_tone),
     }]
   })
-}
-
-/** A stored tone as the rest of this module wants it: a non-empty string, or
- *  null. Covers the three ways a row can fail to carry one — the key absent
- *  (a backend that predates the column), an explicit null, and a non-string
- *  leaf out of the raw JSON. */
-function normaliseTone(value: unknown): string | null {
-  return typeof value === 'string' && value !== '' ? value : null
-}
-
-/** The served default tone for a type id, or null when the catalogue does
- *  not name it. */
-function defaultToneOf(typeId: string, sectionTypes: SectionTypeOption[]): string | null {
-  return normaliseTone(sectionTypes.find(type => type.id === typeId)?.default_tone)
 }
 
 /**
@@ -621,14 +580,27 @@ export function fieldsForType(
   const slots = drawsPhotos ? imageSlotsOf(type) : 0
   const draws = drawnLeaves === null ? null : new Set(drawnLeaves)
 
+  // Whether the strip draws a second box under each caption — the line of
+  // prose the hospitality kits print under a tile's name. Decided by the
+  // catalogue (does the type carry `caption_1_note` at all) and then by the
+  // design (does THIS template print it), in the same two steps every other
+  // field takes below; "no opinion" from the design offers what the
+  // catalogue lists, exactly as it does for the plain fields.
+  const notes = type.fields.includes(galleryNoteLeaf(1))
+    && (draws === null || draws.has(galleryNoteLeaf(1)))
+
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
   // is named by the bare section key, a strip writes `content.<key>.image_N`
   // and names each picture. The two are different controls over different
   // leaves, so a type is offered exactly one of them.
+  // The words the single plate draws a box for: the ones this type carries
+  // that this design prints — the same two-step answer `notes` takes above.
+  const words = PHOTO_WORD_LEAVES.filter(w => type.fields.includes(w) && (draws === null || draws.has(w)))
+
   const photo: SectionField[] =
-    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots }]
-      : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image' }]
+    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots, ...(notes ? { notes: true } : {}) }]
+      : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image', ...(words.length > 0 ? { words } : {}) }]
         : []
 
   // THE QUESTIONS BAND IS ONE CONTROL, NOT FIFTEEN (template fidelity 3.3).
@@ -664,7 +636,10 @@ export function fieldsForType(
   // this block), they go with it: describing a picture that will never
   // appear is a control that cannot act just as surely as the picker is.
   for (const name of PHOTO_WORD_LEAVES) paired.add(name)
-  for (let n = 1; n <= imageSlotsOf(type); n++) paired.add(`caption_${n}`)
+  for (let n = 1; n <= imageSlotsOf(type); n++) {
+    paired.add(`caption_${n}`)
+    paired.add(galleryNoteLeaf(n))
+  }
 
   const rest: SectionField[] = []
 
@@ -708,6 +683,14 @@ export function fieldsForType(
  * them it is one edit on each side.
  */
 const PHOTO_WORD_LEAVES = ['alt', 'caption']
+
+/** The line under tile `n`'s caption — `SectionType::galleryNoteLeaves()`'s
+ *  own spelling (`caption_3_note` beside `caption_3` beside `image_3`),
+ *  named once so the strip, the consumption above and the label family all
+ *  agree on it. */
+export function galleryNoteLeaf(n: number): string {
+  return `caption_${n}_note`
+}
 
 /**
  * Swap a section with its neighbour in the CURRENT order and renumber
@@ -814,10 +797,7 @@ export function moveSectionToKey(sections: PageSection[], key: string, targetKey
 export function appendSection(sections: PageSection[], key: string): PageSection[] {
   const highest = sections.reduce((max, s) => Math.max(max, s.sort), -1)
 
-  // `tone: null` explicitly, matching what `store()` just inserted: a new
-  // band arrives on its type's authored colour, and the picker lights that
-  // swatch rather than nothing until the tenant chooses.
-  return [...sections, { key, enabled: true, sort: Math.min(999, highest + 1), tone: null }]
+  return [...sections, { key, enabled: true, sort: Math.min(999, highest + 1) }]
 }
 
 /** Drop a row the server has already deleted. No renumbering: the gap it
@@ -977,23 +957,6 @@ export function toggleSection(sections: PageSection[], key: string): PageSection
 }
 
 /**
- * Put one section on a colour. Every other row, and this row's own position
- * and enabled flag, is untouched — same discipline as `toggleSection` above,
- * and for the same reason: colour, order and visibility are three
- * independent choices about one band.
- *
- * `null` is a legitimate argument, not a way of saying "leave it": it puts
- * the band back on the colour its partial was authored with (the server
- * clears the column; `SectionType::bandClass()` then falls through to the
- * authored class). Nothing here writes an id it has not been handed — the
- * caller passes a tone the SERVED list offered, and the endpoint refuses
- * anything else.
- */
-export function setSectionTone(sections: PageSection[], key: string, tone: string | null): PageSection[] {
-  return sections.map(s => (s.key === key ? { ...s, tone } : s))
-}
-
-/**
  * The exact wire body `PUT /v1/admin/landing-pages/sections` accepts.
  *
  * Takes `EditorSectionRow[]` — the ALREADY-MERGED rows `buildSectionRows`
@@ -1010,21 +973,11 @@ export function setSectionTone(sections: PageSection[], key: string, tone: strin
  */
 export function buildSectionsPayload(
   rows: EditorSectionRow[],
-): { key: string; enabled: boolean; sort: number; tone: string | null }[] {
+): { key: string; enabled: boolean; sort: number }[] {
   return rows.map(row => ({
     key: row.key,
     enabled: isOfferable(row) ? row.enabled : false,
     sort: row.sort,
-    // ALWAYS SENT, and always as a string or an explicit null — never
-    // omitted and never `undefined`. `update()` server-side distinguishes an
-    // absent `tone` ("this caller does not deal in colours; leave what is
-    // stored alone") from an explicit null ("put this band back to its own
-    // colour"), and this editor is the second: it renders the tenant's whole
-    // section list from the saved rows, so what it sends IS the intended
-    // state of every row it names. Sending `undefined` would silently take
-    // the first path — JSON.stringify drops the key — and the "reset to the
-    // page's own colour" swatch would appear to do nothing.
-    tone: row.tone,
   }))
 }
 
@@ -1131,6 +1084,7 @@ export const FIELD_PRESENTATION: Record<string, { multiline?: boolean; type?: st
 export function fieldLabelKey(name: string): string {
   if (name.endsWith('_accent')) return 'accent'
   if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
+  if (/^caption_\d+_note$/.test(name)) return 'caption_note'
   if (/^caption_\d+$/.test(name)) return 'caption'
   if (/^fact_\d+_caption$/.test(name)) return 'fact_caption'
   if (/^fact_\d+$/.test(name)) return 'fact'
@@ -1259,6 +1213,9 @@ export type GalleryPhoto = {
    *  `image_3`). Numbered to match the picture, never to match its position
    *  in the strip — a caption must not move when a gap above it closes. */
   captionLeaf: string
+  /** The line under that caption (`caption_3_note`), numbered the same way
+   *  and for the same reason. Drawn only when the design prints one. */
+  noteLeaf: string
 }
 
 /**
@@ -1302,7 +1259,7 @@ export function gallerySlots(
     const url = own ?? defaults[slot] ?? null
 
     if (url !== null) {
-      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}` })
+      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}`, noteLeaf: galleryNoteLeaf(n) })
     }
   }
 

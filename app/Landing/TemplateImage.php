@@ -37,11 +37,9 @@ namespace App\Landing;
  * idea and the author drew one mosaic; defaulting `gallery_2` to the same
  * four photographs would publish the same pictures twice.
  *
- * `ruled_page` IS ABSENT AND MUST STAY ABSENT. It is a typographic design
- * that ships no photographs of its own, its empty states are drawn for the
- * absence of a picture, and its four byte goldens pin the markup of a page
- * with none. A template with no entry here resolves every slot to null,
- * which is exactly what every page rendered before this class existed did.
+ * A template with no entry here resolves every slot to null, which is
+ * exactly what every page rendered before this class existed did, and is
+ * what a hostile or unknown `template_key` resolves to as well.
  */
 final class TemplateImage
 {

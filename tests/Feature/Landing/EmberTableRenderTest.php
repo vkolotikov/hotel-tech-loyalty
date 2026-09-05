@@ -9,6 +9,7 @@ use App\Models\Property;
 use App\Models\ReviewForm;
 use App\Models\ReviewSubmission;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Services\Landing\LandingOnboardingService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -103,13 +104,20 @@ class EmberTableRenderTest extends TestCase
             'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,
         ]);
 
+        // His `NN / word` labels are the menus' CATEGORIES — the Services
+        // screen's own grouping of each row.
         foreach ([
-            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null],
-            ['Four courses', 'A concise seasonal menu with choices at every course.', 82],
-            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138],
-        ] as $i => [$name, $short, $price]) {
+            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null, 'Lunch'],
+            ['Four courses', 'A concise seasonal menu with choices at every course.', 82, 'Dinner'],
+            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138, 'The counter'],
+        ] as $i => [$name, $short, $price, $category]) {
+            $group = ServiceCategory::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $category, 'sort_order' => $i, 'is_active' => true,
+            ]);
+
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
+                'category_id' => $group->id,
                 'short_description' => $short,
                 'price' => $price, 'currency' => 'EUR',
                 'sort_order' => $i, 'is_active' => true,
@@ -151,6 +159,8 @@ class EmberTableRenderTest extends TestCase
                 'heading'      => "Three ways\nto join us.",
                 'subtext'      => 'Menus move with the market and the weather. These are the shapes of service; the plates change often.',
                 'price_prefix' => 'From',
+                'price_suffix' => 'per guest',
+                'window'       => 'Fri–Sun · 12:00',
             ],
             'about' => [
                 'kicker' => 'From the kitchen',
@@ -165,6 +175,8 @@ class EmberTableRenderTest extends TestCase
                 'heading'   => "An evening with\nmore than one mood.",
                 'caption_1' => 'The dining room',
                 'caption_2' => 'The wine bar',
+                'caption_1_note' => 'Low light, generous tables and the full menu.',
+                'caption_2_note' => 'Walk in for a glass, a plate or the whole evening.',
             ],
             'reviews' => [
                 'kicker' => 'Guest notes',
@@ -509,28 +521,83 @@ class EmberTableRenderTest extends TestCase
 
         $this->assertStringContainsString('<h3>Kitchen tasting</h3>', $body);
         $this->assertStringContainsString('Eight seats facing the fire.', $body);
-        $this->assertStringContainsString('<strong>From €82</strong>', $body);
-        $this->assertStringContainsString('<strong>From €138</strong>', $body);
+        // The band's prefix before the money and its suffix after it — his
+        // "€82 per guest" — through Money, with an ordinary space each side.
+        $this->assertStringContainsString('<strong>From €82 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €138 per guest</strong>', $body);
 
-        // The ordinal is derived, never stored — the author prints exactly
-        // these two digits, and the WORD he writes after them has no leaf.
-        $this->assertStringContainsString('<p aria-hidden="true">01</p>', $body);
-        $this->assertStringContainsString('<p aria-hidden="true">03</p>', $body);
+        // The ordinal is derived, never stored, and the WORD the author writes
+        // after it is the menu's own category off the Services screen — his
+        // `01 / Lunch`, `02 / Dinner`, `03 / The counter`, character for
+        // character.
+        $this->assertStringContainsString('<p aria-hidden="true">01 / Lunch</p>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">02 / Dinner</p>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">03 / The counter</p>', $body);
     }
 
     /**
-     * A menu with no price prints no value column at all rather than an empty
-     * one — the author writes a service WINDOW there ("Fri–Sun · 12:00") and a
-     * Service row has no such field. Named in the task report rather than
-     * invented here.
+     * A menu filed under no category prints the ordinal alone — never an
+     * invented word — and a category's name is the tenant's own, escaped like
+     * every other line on the page.
      */
-    public function test_a_menu_with_no_price_prints_no_value_column(): void
+    public function test_a_menu_with_no_category_prints_the_ordinal_alone_and_a_category_is_escaped(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus']]);
+
+        $group = ServiceCategory::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Lunch <b>&</b> more', 'is_active' => true,
+        ]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte', 'category_id' => $group->id,
+            'price' => 40, 'currency' => 'EUR', 'sort_order' => 0, 'is_active' => true,
+        ]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Four courses',
+            'price' => 82, 'currency' => 'EUR', 'sort_order' => 1, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringContainsString('<p aria-hidden="true">01 / Lunch &lt;b&gt;&amp;&lt;/b&gt; more</p>', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertStringContainsString('<p aria-hidden="true">02</p>', $body);
+    }
+
+    /**
+     * A menu with no price shows the band's SERVICE WINDOW in the value
+     * column instead — the author's own "Fri–Sun · 12:00" on his lunch row —
+     * and never an empty cell or a bare suffix. One line per band, printed
+     * where he drew it; see the partial's own note on why not per row.
+     */
+    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        $this->assertStringContainsString('<strong>Fri–Sun · 12:00</strong>', $body);
+        $this->assertSame(1, substr_count($body, '<strong>Fri–Sun · 12:00</strong>'));
         $this->assertSame(2, substr_count($body, '<strong>From €'));
+        $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /** With no window written, a priceless row prints no value column at all. */
+    public function test_a_menu_with_no_price_and_no_window_prints_no_value_column(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus', 'price_suffix' => 'per guest']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h3>À la carte</h3>', $body);
+        // The ledger and nothing else: the footer lockup's own <strong> is
+        // not the menu's.
+        $this->assertSame(1, preg_match('#<div class="menu-list">(.*?)</div>\s*</section>#s', $body, $ledger));
+        $this->assertStringNotContainsString('<strong>', $ledger[1]);
     }
 
     /** And no duration is printed anywhere: it is a treatment's field. */
@@ -616,6 +683,44 @@ class EmberTableRenderTest extends TestCase
         $this->assertStringContainsString('<h3>The dining room</h3>', $body);
         $this->assertStringContainsString('<h3>The wine bar</h3>', $body);
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
+    }
+
+    /**
+     * His line of prose under each card's name, exactly where he drew it —
+     * the `<p>` after the `<h3>`, inside the card; the tenant's words,
+     * escaped, and absent when blank.
+     */
+    public function test_the_line_under_a_caption_is_drawn_where_the_author_drew_it(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression(
+            '#<h3>The dining room</h3>\s*<p>Low light, generous tables and the full menu\.</p>#',
+            $body,
+        );
+        $this->assertMatchesRegularExpression(
+            '#<h3>The wine bar</h3>\s*<p>Walk in for a glass, a plate or the whole evening\.</p>#',
+            $body,
+        );
+    }
+
+    public function test_the_line_under_a_caption_is_escaped_and_absent_when_blank(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'gallery_1' => [
+            'heading'        => 'The rooms',
+            'image_1'        => '/storage/one.webp',
+            'image_2'        => '/storage/two.webp',
+            'caption_1'      => 'The bar',
+            'caption_1_note' => 'Walk in <b>&</b> stay',
+            'caption_2'      => 'The room',
+        ]]);
+
+        $body = $this->body();
+
+        $this->assertMatchesRegularExpression('#<h3>The bar</h3>\s*<p>Walk in &lt;b&gt;&amp;&lt;/b&gt; stay</p>#', $body);
+        $this->assertStringNotContainsString('<b>&</b>', $body);
+        $this->assertMatchesRegularExpression('#<h3>The room</h3>\s*</article>#', $body);
     }
 
     /** His header is an eyebrow and a heading at opposite ends of one row. */
@@ -1084,7 +1189,7 @@ class EmberTableRenderTest extends TestCase
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'     => ['proof' => '<b>proof</b>'],
             'about'    => ['note_1' => '<b>line</b>'],
-            'services' => ['price_prefix' => '<b>prefix</b>'],
+            'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],
             'booking'  => ['call_label' => '<b>call</b>'],
         ])]);
 
@@ -1092,7 +1197,7 @@ class EmberTableRenderTest extends TestCase
 
         $this->assertSame(200, $this->statusCode());
 
-        foreach (['proof', 'line', 'prefix', 'call'] as $needle) {
+        foreach (['proof', 'line', 'prefix', 'suffix', 'window', 'call'] as $needle) {
             $this->assertStringNotContainsString('<b>' . $needle . '</b>', $body);
             $this->assertStringContainsString('&lt;b&gt;' . $needle . '&lt;/b&gt;', $body);
         }
@@ -1310,5 +1415,47 @@ class EmberTableRenderTest extends TestCase
 
         $this->assertStringContainsString('application/ld+json', $body);
         $this->assertStringContainsString('"@type":"Restaurant"', str_replace(' ', '', $body));
+    }
+
+    /**
+     * THE CHROME'S OWN WORDS (the improvements round, item D). With no
+     * `booking.cta_label` written and the flow live, the header bar, its
+     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * word THE AUTHOR gave that control — transcribed from his index.html —
+     * while the closing panel keeps the industry's verb. The one leaf still
+     * overrides all four at once (see the wording test), and with the flow off
+     * every one of them says what it does instead (6.4).
+     */
+    public function test_the_chrome_takes_the_authors_own_words_until_the_tenant_writes_theirs(): void
+    {
+        $this->seedWidgetOrganization();
+        $page = $this->seedLikeTheKit();
+        \App\Models\ServiceMaster::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'The main room', 'is_active' => true,
+        ]);
+        $this->seedBookableSchedule();
+
+        $content = $page->content;
+        $content['booking']['cta_label'] = '';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header".*?</header>#s', $body, $header));
+        $this->assertSame(1, preg_match('#<footer class="site-footer".*?</footer>#s', $body, $footer));
+        $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
+        $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
+
+        // The header bar and its mobile-menu twin.
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $header[0]);
+        // The footer lockup and the fixed pill.
+        $this->assertStringContainsString('Reserve</a>', $footer[0]);
+        $this->assertStringNotContainsString('Reserve a table</a>', $footer[0]);
+        $this->assertStringContainsString('Reserve a table</a>', $fab[0]);
+        // The closing panel: the industry's verb, as before.
+        $this->assertStringContainsString('Reserve a table</a>', $panel[0]);
+        // The flow is live, so no control has been relabelled for a fallback.
+        $this->assertStringNotContainsString('Call to book', $body);
     }
 }

@@ -7,6 +7,7 @@ use App\Models\LandingPage;
 use App\Models\Property;
 use App\Models\ReviewSubmission;
 use App\Models\Service;
+use App\Models\ServiceCategory;
 use App\Models\ServiceMaster;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
@@ -37,7 +38,7 @@ class PageContentTest extends TestCase
         return LandingPage::create([
             'organization_id' => $orgId, 'brand_id' => $brandId,
             'slug' => 'org-' . $orgId . '-brand-' . ($brandId ?? 'none'),
-            'template_key' => 'ruled_page', 'industry' => 'beauty', 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => 'beauty', 'status' => 'published',
         ]);
     }
 
@@ -51,6 +52,35 @@ class PageContentTest extends TestCase
         $content = PageContent::for($this->page(1));
 
         $this->assertSame(['Ours'], $content->services->pluck('name')->all());
+    }
+
+    /**
+     * A menu's CATEGORY rides with the row through the same tenant choke
+     * point (Ember Table prints it after the ordinal). Two claims: it is
+     * loaded with no tenant bound — the public render's own state, where a
+     * lazy `$service->category` would run under ServiceCategory's fail-closed
+     * TenantScope and answer null — and a category row belonging to ANOTHER
+     * organisation is never followed, whatever the foreign key says.
+     */
+    public function test_a_services_category_is_loaded_for_the_public_render_and_never_another_tenants(): void
+    {
+        $ours   = ServiceCategory::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Lunch', 'is_active' => true]);
+        $theirs = ServiceCategory::create(['organization_id' => 2, 'brand_id' => 1, 'name' => 'Their dinner', 'is_active' => true]);
+
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte', 'category_id' => $ours->id, 'is_active' => true, 'price' => 40, 'sort_order' => 0]);
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Crossed wire', 'category_id' => $theirs->id, 'is_active' => true, 'price' => 40, 'sort_order' => 1]);
+        Service::create(['organization_id' => 1, 'brand_id' => 1, 'name' => 'Unfiled', 'is_active' => true, 'price' => 40, 'sort_order' => 2]);
+
+        $this->assertFalse(app()->bound('current_organization_id'), 'Precondition: the public render binds no tenant.');
+
+        $services = PageContent::for($this->page(1))->services;
+
+        $this->assertTrue($services->every(fn (Service $s) => $s->relationLoaded('category')),
+            'The category was left to a lazy load the public render cannot make.');
+        $this->assertSame('Lunch', $services->firstWhere('name', 'À la carte')->category?->name);
+        $this->assertNull($services->firstWhere('name', 'Crossed wire')->category,
+            'A category belonging to another organisation was followed across the tenant boundary.');
+        $this->assertNull($services->firstWhere('name', 'Unfiled')->category);
     }
 
     public function test_inactive_services_are_not_advertised(): void
@@ -833,6 +863,13 @@ class PageContentTest extends TestCase
     }
 
     // ─── The gallery band (the second repeatable type) ────────────────────
+    //
+    // `gallery_2`, never `gallery_1`, throughout this block: every kit ships
+    // its author's own photographs for the FIRST gallery band (TemplateImage
+    // — "ONLY gallery_1, deliberately"), so on `gallery_1` a slot the tenant
+    // has not filled is the design's picture and these tests would be
+    // counting the author's mosaic. A second band is the tenant's own idea
+    // and has no defaults, which is exactly the state these claims are about.
 
     /**
      * A gallery IS its pictures, so it counts pictures — and, being a
@@ -842,7 +879,7 @@ class PageContentTest extends TestCase
     public function test_a_gallery_counts_the_pictures_it_will_actually_show(): void
     {
         $content = PageContent::for($this->pageWithContent([
-            'gallery_1' => [
+            'gallery_2' => [
                 'heading' => 'The rooms',
                 'image_1' => '/storage/landing/one.jpg',
                 'image_2' => '/storage/landing/two.jpg',
@@ -850,13 +887,13 @@ class PageContentTest extends TestCase
             ],
         ]));
 
-        $this->assertSame(3, $content->count('gallery_1'));
-        $this->assertTrue($content->has('gallery_1'));
+        $this->assertSame(3, $content->count('gallery_2'));
+        $this->assertTrue($content->has('gallery_2'));
         $this->assertSame([
             '/storage/landing/one.jpg',
             '/storage/landing/two.jpg',
             'https://cdn.example.test/landing/three.jpg',
-        ], $content->galleryImages('gallery_1'));
+        ], $content->galleryImages('gallery_2'));
     }
 
     /**
@@ -872,7 +909,7 @@ class PageContentTest extends TestCase
     public function test_a_gallery_publishes_its_pictures_in_leaf_order_with_gaps_closed(): void
     {
         $content = PageContent::for($this->pageWithContent([
-            'gallery_1' => [
+            'gallery_2' => [
                 'image_8' => '/storage/landing/eighth.jpg',
                 'image_1' => '/storage/landing/first.jpg',
                 'image_5' => '/storage/landing/fifth.jpg',
@@ -883,8 +920,8 @@ class PageContentTest extends TestCase
             '/storage/landing/first.jpg',
             '/storage/landing/fifth.jpg',
             '/storage/landing/eighth.jpg',
-        ], $content->galleryImages('gallery_1'));
-        $this->assertSame(3, $content->count('gallery_1'));
+        ], $content->galleryImages('gallery_2'));
+        $this->assertSame(3, $content->count('gallery_2'));
     }
 
     /**
@@ -901,14 +938,14 @@ class PageContentTest extends TestCase
     public function test_a_gallery_with_a_caption_and_no_pictures_is_not_a_section(): void
     {
         $content = PageContent::for($this->pageWithContent([
-            'gallery_1' => ['kicker' => 'Our work', 'heading' => 'The rooms'],
-            'gallery_2' => [],
+            'gallery_2' => ['kicker' => 'Our work', 'heading' => 'The rooms'],
+            'gallery_3' => [],
         ]));
 
-        $this->assertSame(0, $content->count('gallery_1'));
-        $this->assertFalse($content->has('gallery_1'));
         $this->assertSame(0, $content->count('gallery_2'));
-        $this->assertSame([], $content->galleryImages('gallery_1'));
+        $this->assertFalse($content->has('gallery_2'));
+        $this->assertSame(0, $content->count('gallery_3'));
+        $this->assertSame([], $content->galleryImages('gallery_2'));
     }
 
     /**
@@ -923,7 +960,7 @@ class PageContentTest extends TestCase
     public function test_a_gallery_of_hostile_leaves_counts_nothing(): void
     {
         $content = PageContent::for($this->pageWithContent([
-            'gallery_1' => [
+            'gallery_2' => [
                 'image_1' => 'javascript:alert(1)',
                 'image_2' => '//evil.example/x.jpg',
                 'image_3' => '"><script>',
@@ -935,15 +972,15 @@ class PageContentTest extends TestCase
             ],
         ]));
 
-        $this->assertSame(0, $content->count('gallery_1'));
-        $this->assertSame([], $content->galleryImages('gallery_1'));
+        $this->assertSame(0, $content->count('gallery_2'));
+        $this->assertSame([], $content->galleryImages('gallery_2'));
     }
 
     /** Only the bad leaves drop; the good ones still publish, in order. */
     public function test_one_hostile_leaf_does_not_take_the_rest_of_the_gallery_with_it(): void
     {
         $content = PageContent::for($this->pageWithContent([
-            'gallery_1' => [
+            'gallery_2' => [
                 'image_1' => '/storage/landing/first.jpg',
                 'image_2' => 'javascript:alert(1)',
                 'image_3' => '/storage/landing/third.jpg',
@@ -952,7 +989,7 @@ class PageContentTest extends TestCase
 
         $this->assertSame(
             ['/storage/landing/first.jpg', '/storage/landing/third.jpg'],
-            $content->galleryImages('gallery_1'),
+            $content->galleryImages('gallery_2'),
         );
     }
 
@@ -1050,9 +1087,10 @@ class PageContentTest extends TestCase
             $content->imageAlt('about'),
         );
 
-        // And a design with no photographs of its own answers null, which is
-        // what every page rendered before this model existed did.
-        $page->update(['template_key' => 'ruled_page']);
+        // And a design this map does not know — a hand-edited or stale
+        // `template_key` — answers null, which is what every page rendered
+        // before this model existed did.
+        $page->update(['template_key' => 'not-a-design']);
         $this->assertNull(PageContent::for($page->fresh())->imageUrl('about'));
     }
 
@@ -1081,8 +1119,10 @@ class PageContentTest extends TestCase
     public function test_a_gallery_merges_the_tenants_pictures_with_the_designs(): void
     {
         $page = $this->pageWithContent(['gallery_1' => [
-            'image_3'   => '/storage/landing/mine.jpg',
-            'caption_3' => 'Our treatment room',
+            'image_3'        => '/storage/landing/mine.jpg',
+            'caption_3'      => 'Our treatment room',
+            'caption_3_note' => '  Warm stone and a quiet hour.  ',
+            'caption_1_note' => ['not', 'a', 'line'],
         ]]);
         $page->update(['template_key' => 'nocturne_ritual']);
 
@@ -1091,6 +1131,12 @@ class PageContentTest extends TestCase
         $this->assertCount(4, $photos);
         $this->assertSame('/storage/landing/mine.jpg', $photos[2]['url']);
         $this->assertSame('Our treatment room', $photos[2]['caption']);
+        // The line under the caption is the tenant's alone, trimmed; a
+        // non-scalar leaf is blank, never an error, and a tile with none
+        // carries an empty string so a partial can test it without a guard.
+        $this->assertSame('Warm stone and a quiet hour.', $photos[2]['note']);
+        $this->assertSame('', $photos[0]['note']);
+        $this->assertSame('', $photos[1]['note']);
         // A replaced tile loses the design's description with the design's
         // picture; the untouched ones keep theirs.
         $this->assertSame('', $photos[2]['alt']);
@@ -1268,7 +1314,7 @@ class PageContentTest extends TestCase
     {
         $page = LandingPage::create([
             'organization_id' => 1, 'brand_id' => 1, 'slug' => 'the-hotel',
-            'template_key' => 'ruled_page', 'industry' => 'hotel', 'status' => 'published',
+            'template_key' => 'nocturne_ritual', 'industry' => 'hotel', 'status' => 'published',
         ]);
 
         $content = PageContent::for($page);

@@ -72,4 +72,40 @@ class MoneyTest extends TestCase
     {
         $this->assertSame('£1,450', Money::format(1450, 'GBP'));
     }
+
+    // ─── The suffix: "€92 per guest" ─────────────────────────────────────
+
+    public function test_a_suffix_follows_the_amount_after_an_ordinary_space(): void
+    {
+        // The three hospitality authors' own string, character for character.
+        $this->assertSame('€92 per guest', Money::format(92, 'EUR', 'per guest'));
+        $this->assertSame('€125 per guest', Money::format(125.00, 'EUR', 'per guest'));
+        $this->assertSame('£1,450.50 for two', Money::format(1450.5, 'GBP', 'for two'));
+    }
+
+    public function test_the_suffix_never_glues_to_a_trailing_symbol(): void
+    {
+        // The amount and its symbol are one word (the non-breaking space);
+        // the suffix is a second word after an ordinary space, so "zł per
+        // guest" can wrap between the two and never reads as "złper guest".
+        $this->assertSame("145\u{00A0}zł per guest", Money::format(145, 'PLN', 'per guest'));
+        $this->assertSame('145 XYZ per guest', Money::format(145, 'XYZ', 'per guest'));
+        $this->assertSame('145 per guest', Money::format(145, null, 'per guest'));
+    }
+
+    public function test_a_blank_suffix_changes_nothing(): void
+    {
+        $this->assertSame('€92', Money::format(92, 'EUR', null));
+        $this->assertSame('€92', Money::format(92, 'EUR', ''));
+        $this->assertSame('€92', Money::format(92, 'EUR', '   '));
+        $this->assertSame('€92 per guest', Money::format(92, 'EUR', '  per guest  '));
+    }
+
+    public function test_a_suffix_alone_is_not_a_price(): void
+    {
+        // A row with no price asserts no price — "per guest" on its own is
+        // a fragment, not a value.
+        $this->assertNull(Money::format(null, 'EUR', 'per guest'));
+        $this->assertNull(Money::format('', 'EUR', 'per guest'));
+    }
 }
