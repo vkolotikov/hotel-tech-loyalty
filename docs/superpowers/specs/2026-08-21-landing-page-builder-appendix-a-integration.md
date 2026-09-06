@@ -1,5 +1,7 @@
 # Integration Brief — Industry Landing-Page Builder (`/s/{slug}`)
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 **Verdict up front:** this is greenfield. No landing-page / site-builder / page-template model exists in `c:/wamp64/www/Hexa-Tech`. Grep for `landing|site_builder|page_builder` hits only `ContentPlannerCampaign.landing_page` (free-text), `LoyaltyTier.soft_landing`, and analytics `top_landing`. There is no `landing_pages` feature key. Every subsystem below already exists and must be plugged into, not invented.
 
 ---

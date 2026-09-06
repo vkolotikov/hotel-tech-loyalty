@@ -1,5 +1,7 @@
 # Landing Phase 3b — Media Pipeline Repair and Image Upload — Design
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 The user's decision, made before this spec: **fix the pipeline first, then build
 upload**. Every fact below was verified at the current tip by direct read, with
 citations, before being designed against.

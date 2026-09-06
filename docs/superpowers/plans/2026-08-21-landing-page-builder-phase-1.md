@@ -1,5 +1,7 @@
 # Landing-Page Builder — Phase 1 Implementation Plan
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A published landing page renders at `https://sites.hexa-tech.uk/{slug}`, built from one designed template and the tenant's existing data, with no admin UI.

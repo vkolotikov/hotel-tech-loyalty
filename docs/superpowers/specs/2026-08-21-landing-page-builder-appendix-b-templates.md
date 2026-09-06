@@ -1,5 +1,7 @@
 # HexaTech Beauty Landing Templates — Final Three, Build Spec
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 ## 1. Decision
 
 **Ship: `ruled_page`, `hot_mauve`, `standing_appointment`.**
