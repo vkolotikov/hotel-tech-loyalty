@@ -1,5 +1,7 @@
 # Landing Phase 3a — Correctness and Reachability — Implementation Plan
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Contact details editable inside the builder with Property fallback; all nine industries speak their own vocabulary; the hotel-shaped booking widget appears only on hotel pages; Landing Pages becomes a nav group; the Phase 2 locale gaps close.

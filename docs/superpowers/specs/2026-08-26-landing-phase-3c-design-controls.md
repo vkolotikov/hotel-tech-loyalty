@@ -1,5 +1,7 @@
 # Landing Phase 3c — Template Rebuild and Curated Design Controls — Design
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 The user's decisions, made before this spec: **curated choices, always looks
 good** (no free-form design editing); the quality bar is
 **https://test.beauty-tech.uk/** ("use as an example"); design/style settings

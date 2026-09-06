@@ -1,5 +1,7 @@
 # Industry Landing-Page Builder — Design
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 **Status:** approved in outline, awaiting review of this document
 **Date:** 2026-08-21
 **Plan tier:** Enterprise only

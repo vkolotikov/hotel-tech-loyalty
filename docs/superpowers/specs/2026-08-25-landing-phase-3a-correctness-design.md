@@ -1,5 +1,7 @@
 # Landing Pages Phase 3a — Correctness and Reachability — Design
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 Live-use feedback from the first real tenant walkthrough (an AI education
 business, org "Hexa Academy"), each item verified against the deployed code
 before this spec was written.

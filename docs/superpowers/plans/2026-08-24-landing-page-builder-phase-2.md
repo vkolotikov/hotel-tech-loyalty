@@ -1,5 +1,7 @@
 # Landing-Page Builder Phase 2 — Wizard and Editor — Implementation Plan
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A non-technical tenant on the Enterprise plan can create, edit and publish their landing page entirely from the admin panel, without an API client.

@@ -1,5 +1,7 @@
 # Landing Phase 3c Plan A — The Look and the Controls — Implementation Plan
 
+> **Status (2026-09-06):** historical design record. The current, verified state of the landing-page builder is documented in [docs/landing-page-builder.md](../../landing-page-builder.md); where this document differs, that one wins.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Rebuild the `ruled_page` template to the beauty-tech.uk reference quality, palette-parameterized, with curated design controls in the editor and wizard.
