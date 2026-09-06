@@ -32,8 +32,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   apply the change list including deletions, tests on the artifact, fresh build, push, verify by content.
 - Commit messages end with `Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>` (or the current
   model's name).
-- `feature/landing-phase-3c` carries three unshipped non-landing commits (email compliance); do not let
-  them ride a landing deploy by accident.
+- `feature/landing-phase-3c` carries unshipped non-landing work (37 source files of email deliverability
+  and staff-capability changes; see `docs/landing-page-builder.md` §8). Do not let it ride a landing
+  deploy: build deploy file lists from landing paths, never from `git log origin/main..HEAD`.
 
 ## Landing-page code rules
 
