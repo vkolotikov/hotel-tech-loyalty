@@ -1,7 +1,9 @@
 # Landing-page builder — current state
 
-**Last verified:** 2026-09-06. Production `main` = `876a6684e` (Laravel Cloud, app `hotel-tech-loyalty`).
-Feature branch `feature/landing-phase-3c`, tip `838c9128a` (one test-only commit ahead of what main carries).
+**Last verified:** 2026-09-06. Production `main` = `928d3e66c` (Laravel Cloud, app `hotel-tech-loyalty`),
+which carries every landing commit of `feature/landing-phase-3c` up to and including this document.
+Run `git fetch && git log --oneline -3 origin/main` for anything newer; the branch's own history is not
+on `main` (deploys are source patches), so compare by content, not by commit list.
 
 This is the canonical description of what exists today. The design specs and plans under
 `docs/superpowers/` are historical records of how it got here and are superseded where they differ.
