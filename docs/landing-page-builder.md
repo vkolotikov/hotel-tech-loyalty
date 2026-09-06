@@ -196,12 +196,26 @@ server refuses theme keys the old bundle still sends.
 
 ## 8. Unshipped, local-only work on this branch (not landing)
 
-`feature/landing-phase-3c` carries three commits no remote has: `a9ea9b957` (remove dead BYO-SMTP
-settings), `0da3a92aa` (email suppression list + SES bounce/complaint webhook), `2df4310ad` (referral links).
-They add `database/migrations/2026_08_14_090000_create_email_suppressions_table.php` and
-`2026_08_14_100000_remove_dead_byo_smtp_settings.php` and touch `frontend/src/pages/Settings.tsx` and
-`portal/PortalJoin.tsx`. They were **deliberately not deployed** with the landing work; they need their own
-review before shipping.
+Deploys are source patches, so the branch's commit history is never on `main` and
+`git log origin/main..feature/landing-phase-3c` is meaningless as a "what is undeployed" list. Compare by
+content instead:
+
+```bash
+git diff --name-status feature/landing-phase-3c origin/main -- . ':(exclude)frontend/dist' ':(exclude)public/spa' ':(exclude)resources/spa-shell' ':(exclude)*.png' ':(exclude).playwright-mcp' ':(exclude).superpowers'
+```
+
+On 2026-09-06 that lists **37 source files** (the two sides' committed SPA builds and 15 junk files —
+stray PNGs, `.playwright-mcp/` snapshots — are excluded above). Every landing path is identical. The 37 are
+unshipped, local-only work from 2026-08-13..17 that no remote has, dominated by **email deliverability and
+compliance**: `app/Mail/*` (`SendsAsVenue`, venue identity on every guest mail), `MailIdentityService`,
+`CampaignRateLimiter`, `SendNotificationCampaignChunk`, `EmailSuppression` + `BlockSuppressedRecipients` +
+`Webhooks/SesWebhookController`, `config/mail.php`, `config/services.php`, `bootstrap/app.php`,
+`AppServiceProvider`, the migrations `2026_08_14_090000_create_email_suppressions_table.php` and
+`2026_08_14_100000_remove_dead_byo_smtp_settings.php`, `docs/EMAIL_DELIVERABILITY.md`, plus
+`RequireStaffCapability` middleware, `Settings`/`Notification`/`Member`/`Referral`/`WalletPass` controller
+changes, `HotelSetting`, `frontend/src/pages/Settings.tsx`, `portal/PortalJoin.tsx`, and seven feature
+tests. It was **deliberately not deployed** with the landing work and needs its own review, its own
+deploy, and a production check of the SES webhook and mail identity settings before it ships.
 
 ## 9. Local-only records (gitignored, on the workstation)
 

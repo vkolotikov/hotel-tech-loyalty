@@ -17,10 +17,12 @@ anything else, read these three files in this order and confirm in one paragraph
 
 State as of this handoff:
 
-- Production `main` is `876a6684e`. The feature branch `feature/landing-phase-3c` is at `838c9128a`; the
-  only difference is a test-only commit that is being deployed right after this handoff was written — check
-  `git log --oneline origin/main..feature/landing-phase-3c` and treat anything still listed there (other than
-  the three email-compliance commits `a9ea9b957`, `0da3a92aa`, `2df4310ad`) as undeployed landing work.
+- Production `main` carries every landing commit of `feature/landing-phase-3c` by content (verified
+  2026-09-06 with `git diff` over all landing paths: empty). Deploys are source patches, so
+  `git log origin/main..feature/...` lists history that IS deployed — never use it to decide what is
+  undeployed; use the content diff in `docs/landing-page-builder.md` §8. What that diff shows today is 37
+  non-landing source files of unshipped email-deliverability and staff-capability work; leave them alone
+  unless the owner asks for that project.
 - Six owner-designed templates are live (three beauty, three dining), pixel-matched to the author's kits in
   `resources/landing-kits/`. The generic template is gone. The product flow is brand → design → configure.
 - Baselines: backend 1311 tests across the three landing suites; frontend 779 passing plus exactly 3
@@ -52,8 +54,9 @@ Suggested first tasks, in the owner's priority order (confirm with the owner bef
    (needs a `services` column, a migration, catalogue leaf, editor label × 5 locales, kit renders, tests,
    screenshot acceptance), then Editorial Atelier's per-tile gallery word.
 3. Drop the unused `landing_page_sections.tone` column in a guarded migration.
-4. The three email-compliance commits on the branch need their own review before they ship; do not bundle
-   them with landing work.
+4. The unshipped email-deliverability work on the branch (§8 of the doc: 37 files) needs its own review and
+   its own deploy; never let it ride a landing deploy, and never pass `database/migrations/` or
+   `frontend/src/` as whole directories to a deploy file list.
 
 Reply first with your one-paragraph understanding and the test numbers from task 1. Do not start task 2
 until the owner says which item to take.
