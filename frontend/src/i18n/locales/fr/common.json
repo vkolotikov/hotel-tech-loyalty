@@ -3167,6 +3167,7 @@
       "field_alt": "Ce que montre la photo",
       "field_caption": "Légende sous la photo",
       "field_caption_note": "Ligne sous la légende",
+      "field_caption_label": "Mot après le numéro",
       "contact_caption": "Rempli depuis votre page Établissements — modifiez ici pour le remplacer sur cette page.",
       "no_photo": "Pas encore de photo",
       "no_photos": "Pas encore de photos",

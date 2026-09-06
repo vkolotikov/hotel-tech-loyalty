@@ -368,6 +368,8 @@ describe('locale completeness — content field labels (dynamic t() keys, hand-v
     'landing_pages.editor.field_caption',
     // The line under a gallery tile's caption (the hospitality kits' card prose).
     'landing_pages.editor.field_caption_note',
+    // The word after a gallery tile's ordinal (kit 02-beauty's "01 / Layers").
+    'landing_pages.editor.field_caption_label',
     // hero / services / about / team / reviews / text / gallery.
     'landing_pages.editor.field_headline',
     'landing_pages.editor.field_subtext',

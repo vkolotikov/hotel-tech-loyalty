@@ -194,6 +194,11 @@ class EditorialAtelierRenderTest extends TestCase
                 'caption_2' => 'Precision bob',
                 'caption_3' => 'Tools of the trade',
                 'caption_4' => 'Room to breathe',
+                // His word after each ordinal: "01 / Layers".
+                'caption_1_label' => 'Layers',
+                'caption_2_label' => 'Shape',
+                'caption_3_label' => 'Ritual',
+                'caption_4_label' => 'Space',
             ],
             'team' => [
                 'kicker'  => 'Meet the artists',
@@ -885,6 +890,54 @@ class EditorialAtelierRenderTest extends TestCase
         $this->assertStringContainsString('data-count="5"', $body);
         $this->assertSame(2, substr_count($body, 'gallery-card--portrait'));
         $this->assertSame(1, substr_count($body, 'gallery-card--space'));
+    }
+
+    /**
+     * The author's figcaption is two-part — `<span>01 / Layers</span> Soft
+     * structure` — and the WORD after the ordinal is the tile's own
+     * `caption_N_label`. The ordinal stays derived; the word is the tenant's.
+     */
+    public function test_each_tile_prints_the_authors_word_after_its_ordinal(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figcaption><span>01 / Layers</span>Soft structure</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span>02 / Shape</span>Precision bob</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span>04 / Space</span>Room to breathe</figcaption>', $body);
+    }
+
+    /**
+     * A tile with no word prints the ordinal alone, decorative as before —
+     * never an invented word and never a dangling slash.
+     */
+    public function test_a_tile_without_a_word_prints_the_ordinal_alone(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $content = $page->content;
+        unset($content['gallery_1']['caption_2_label']);
+        $content['gallery_1']['caption_3_label'] = '   ';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figcaption><span aria-hidden="true">02</span>Precision bob</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span aria-hidden="true">03</span>Tools of the trade</figcaption>', $body);
+        $this->assertStringNotContainsString('02 /', $body);
+        $this->assertStringContainsString('<span>01 / Layers</span>', $body);
+    }
+
+    /** The word is the tenant's, escaped like every other line on the page. */
+    public function test_the_tile_word_is_escaped(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['gallery_1' => ['caption_1_label' => '<b>Layers</b>']])]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('<b>Layers</b>', $body);
+        $this->assertStringContainsString('<span>01 / &lt;b&gt;Layers&lt;/b&gt;</span>', $body);
     }
 
     // ─── Photographs, share image and the logo ────────────────────────────

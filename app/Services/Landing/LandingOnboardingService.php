@@ -821,6 +821,9 @@ class LandingOnboardingService
         // kits render the pills alone — so the proof is the index the partial
         // reads it by, not the reader every gallery shares.
         "\$photo['note']" => [SectionType::class, 'galleryNoteLeaves'],
+        // The word after each tile's ordinal, the same way: kit 02-beauty's
+        // "01 / Layers" is the one figcaption that prints it.
+        "\$photo['label']" => [SectionType::class, 'galleryLabelLeaves'],
         'faqPairs('      => [SectionType::class, 'faqLeaves'],
         'trustFeatures(' => [SectionType::class, 'trustLeaves'],
         'socialLinks('   => [SectionType::class, 'socialDestinationLeaves'],

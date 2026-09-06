@@ -27,12 +27,15 @@
   they no longer have; that is the trade D4 records, and neutralising them
   would change the author's own page.
 
-  CAPTIONS ARE THE AUTHOR'S TWO-PART FIGCAPTION and only one part of it is
-  the tenant's. His reads `<span>01 / Layers</span> Soft structure`: the
-  ordinal is DERIVED here (a stored number goes stale the moment a photograph
-  is removed) and the words after it are `caption_N`. His per-tile word
-  ("Layers", "Shape") has no leaf — see the phase 7/8 report, which names it
-  rather than glossing it.
+  CAPTIONS ARE THE AUTHOR'S TWO-PART FIGCAPTION. His reads `<span>01 /
+  Layers</span> Soft structure`: the ordinal is DERIVED here (a stored number
+  goes stale the moment a photograph is removed), his WORD after it is the
+  tile's own `caption_N_label` ("Layers", "Shape", "Ritual", "Space") and the
+  words after the span are `caption_N`. A tile with no word prints the
+  ordinal alone — decorative, so aria-hidden as before — never an invented
+  word and never a dangling slash; with a word the span carries content and
+  is read, as the author's own is. The figcaption is a flex row, so the
+  whitespace between the two parts is nothing.
 
   EMPTY IS NOT A STATE THIS FILE HANDLES. A gallery with no readable pictures
   counts 0, has() is false, and the layout never includes this partial.
@@ -70,7 +73,11 @@
 @foreach ($photos as $photo)
         <figure class="gallery-card gallery-card--{{ $variants[$loop->index % 4] }}">
           <img src="{{ $photo['url'] }}" width="1024" height="1536" loading="lazy" decoding="async" alt="{{ $photo['alt'] }}">
+@if ($photo['label'] !== '')
+          <figcaption><span>{{ sprintf('%02d', $loop->iteration) }} / {{ $photo['label'] }}</span>{{ $photo['caption'] }}</figcaption>
+@else
           <figcaption><span aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>{{ $photo['caption'] }}</figcaption>
+@endif
         </figure>
 @endforeach
       </div>

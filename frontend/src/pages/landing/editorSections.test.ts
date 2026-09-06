@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, faqPairsOf, fieldsForType, instanceRowLabel,
+  addableTypes, appendSection, buildSectionRows, buildSectionsPayload, faqPairsOf, fieldLabelKey, fieldsForType, instanceRowLabel,
   visibleFaqPairs,
   moveSection, moveSectionTo, moveSectionToKey, orderedSections, parseSectionKey, removeSection, removeSectionContent,
   freeGalleryLeaves, gallerySlots,
@@ -1229,6 +1229,7 @@ describe('the design own photographs', () => {
     expect(photos).toHaveLength(1)
     expect(photos[0].captionLeaf).toBe('caption_3')
     expect(photos[0].noteLeaf).toBe('caption_3_note')
+    expect(photos[0].labelLeaf).toBe('caption_3_label')
   })
 
   /** A design with none leaves the strip exactly as it was. */
@@ -1336,6 +1337,38 @@ describe('photo controls follow what the design actually draws', () => {
 
     // A catalogue that never listed it draws nothing, whatever the design says.
     expect(fieldsForType(galleryType, true, ['kicker', 'caption_1_note'])[0].notes).toBeUndefined()
+  })
+
+  /**
+   * The word after each tile's ordinal (`caption_N_label`, kit 02-beauty's
+   * "01 / Layers") takes the same route as the line: consumed into the strip,
+   * never eight loose boxes, and drawn only where the design prints it.
+   */
+  it('consumes the word after each ordinal into the strip, and says whether the design prints it', () => {
+    const galleryType = sectionTypes().find(o => o.id === 'gallery')!
+    const withLabels = {
+      ...galleryType,
+      fields: [
+        ...galleryType.fields,
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}`),
+        ...Array.from({ length: 8 }, (_, i) => `caption_${i + 1}_label`),
+      ],
+    }
+
+    // No opinion from the design: the catalogue lists it, so the strip draws it.
+    expect(fieldsForType(withLabels).map(f => f.name)).toEqual(['gallery', 'kicker', 'heading'])
+    expect(fieldsForType(withLabels)[0]).toMatchObject({ type: 'gallery', labels: true })
+
+    // Kit 02-beauty prints the word; the other five galleries do not.
+    expect(fieldsForType(withLabels, true, ['kicker', 'heading', 'caption_1', 'caption_1_label'])[0])
+      .toMatchObject({ labels: true })
+    expect(fieldsForType(withLabels, true, ['kicker', 'heading', 'caption_1'])[0].labels).toBeUndefined()
+
+    // A catalogue that never listed it draws nothing, whatever the design says.
+    expect(fieldsForType(galleryType, true, ['kicker', 'caption_1_label'])[0].labels).toBeUndefined()
+
+    // One label family for all eight, like the caption and the line under it.
+    expect(fieldLabelKey('caption_3_label')).toBe('caption_label')
   })
 
   /** The row carries the decision, so everything reading `row.fields` — the

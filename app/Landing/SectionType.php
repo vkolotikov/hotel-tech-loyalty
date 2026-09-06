@@ -655,10 +655,18 @@ final class SectionType
                 // designs whose partial prints it publish it (see
                 // LandingOnboardingService::LEAF_READERS), so the beauty
                 // kits' caption pills gain no second box.
+                //
+                // `caption_N_label` is the WORD kit 02-beauty writes after
+                // each tile's ordinal ("01 / Layers", "02 / Shape") — a
+                // short tag in the figcaption's label type, before the
+                // caption proper. The ordinal is derived; the word is the
+                // tenant's. Offered only where the partial prints it,
+                // through the same reader as the line above.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext'],
                     self::galleryCaptionLeaves(),
                     self::galleryNoteLeaves(),
+                    self::galleryLabelLeaves(),
                 ),
                 'images'     => self::GALLERY_IMAGES,
             ],
@@ -875,6 +883,31 @@ final class SectionType
 
         for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
             $leaves[] = 'caption_' . $n . '_note';
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE WORD AFTER EACH TILE'S ORDINAL — one per tile, numbered like the
+     * picture, the caption and the line: `image_3`'s word is
+     * `caption_3_label`.
+     *
+     * Kit 02-beauty's figcaption is two-part, `<span>01 / Layers</span>
+     * Soft structure`: a derived ordinal, HIS WORD ("Layers", "Shape",
+     * "Ritual", "Space") in the label type, then the caption proper. The
+     * ordinal was always derived here and the caption always the tenant's;
+     * the word had no leaf and printed nothing. Bounded by the same
+     * {@see GALLERY_IMAGES}; a scalar leaf like every other line of copy.
+     *
+     * @return list<string>
+     */
+    public static function galleryLabelLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
+            $leaves[] = 'caption_' . $n . '_label';
         }
 
         return $leaves;

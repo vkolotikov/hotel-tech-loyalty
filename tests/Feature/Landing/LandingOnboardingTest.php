@@ -2067,6 +2067,17 @@ class LandingOnboardingTest extends TestCase
             $this->assertContains('caption_1', $served[$key]['gallery']);
         }
 
+        // The word after each tile's ordinal ("01 / Layers") is kit
+        // 02-beauty's figcaption alone: offered on the one design whose
+        // partial prints it and withheld on the five that do not — again
+        // through the index the partial reads it by, never a template id.
+        $this->assertContains('caption_1_label', $served['editorial_atelier']['gallery'], "'editorial_atelier' prints the word after the ordinal and does not offer it.");
+        $this->assertContains('caption_8_label', $served['editorial_atelier']['gallery']);
+
+        foreach (['nocturne_ritual', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table'] as $key) {
+            $this->assertNotContains('caption_1_label', $served[$key]['gallery'], "'{$key}' offers a word after the ordinal its gallery never prints.");
+        }
+
         // ContactDetails' three overridable VALUES are offered on EVERY
         // design, because it resolves them before any partial is reached —
         // the one family no scan of a partial could ever find.
