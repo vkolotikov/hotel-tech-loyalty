@@ -198,7 +198,11 @@ trait SetsUpLandingSchema
                 $table->text('short_description')->nullable();
                 $table->integer('duration_minutes')->nullable();
                 $table->decimal('price', 10, 2)->nullable();
+                // The menu row's own "starting price" mark and service
+                // window (2026_09_06_180000_add_menu_row_fields_to_services).
+                $table->boolean('price_is_from')->default(false);
                 $table->string('currency', 8)->nullable();
+                $table->string('service_window', 120)->nullable();
                 $table->string('image')->nullable();
                 $table->text('gallery')->nullable();
                 $table->integer('sort_order')->default(0);

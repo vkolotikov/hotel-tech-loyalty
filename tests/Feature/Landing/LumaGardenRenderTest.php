@@ -103,15 +103,20 @@ class LumaGardenRenderTest extends TestCase
             'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,
         ]);
 
+        // His three cards with the per-row variance he drew: each card's own
+        // SERVICE WINDOW opening the meta row ("Wed–Sun · 12:00"), a STARTING
+        // price on the lunch ("From €42") and fixed prices with the band's
+        // suffix on the other two ("€92 per guest") — off the Services screen.
         foreach ([
-            ['Garden Lunch', 'A relaxed two- or three-course menu with market plates and a glass from the coast.', 42, null],
-            ['Evening Menu', 'Five courses moving from the garden to the sea and finally to the open hearth.', 92, 150],
-            ['Sunday Table', 'Large plates, chilled bottles and the pleasure of a long lunch without a schedule.', 68, null],
-        ] as $i => [$name, $short, $price, $minutes]) {
+            ['Garden Lunch', 'A relaxed two- or three-course menu with market plates and a glass from the coast.', 42, null, true, 'Wed–Sun · 12:00'],
+            ['Evening Menu', 'Five courses moving from the garden to the sea and finally to the open hearth.', 92, 150, false, 'Tue–Sat · 18:00'],
+            ['Sunday Table', 'Large plates, chilled bottles and the pleasure of a long lunch without a schedule.', 68, null, false, 'Sundays · 13:00'],
+        ] as $i => [$name, $short, $price, $minutes, $from, $window]) {
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
                 'short_description' => $short, 'duration_minutes' => $minutes,
                 'price' => $price, 'currency' => 'EUR',
+                'price_is_from' => $from, 'service_window' => $window,
                 'sort_order' => $i, 'is_active' => true,
             ]);
         }
@@ -152,9 +157,10 @@ class LumaGardenRenderTest extends TestCase
                 'kicker'         => 'Choose the mood',
                 'heading'        => "From bright lunch\nto golden hour.",
                 'subtext'        => 'Each menu follows the garden and the coast: abundant produce, whole fish, open-fire cooking and desserts meant for sharing.',
-                'price_prefix'   => 'From',
+                // The word before a starting price and each card's window
+                // are the rows' own now, and the author's "From" is this
+                // design's default word, so only the suffix is written.
                 'price_suffix'   => 'per guest',
-                'window'         => 'Wed–Sun · 12:00',
             ],
             'about' => [
                 'kicker'  => 'The garden leads',
@@ -506,17 +512,24 @@ class LumaGardenRenderTest extends TestCase
 
     // ─── The menu cards ───────────────────────────────────────────────────
 
-    public function test_the_menu_cards_are_the_services_screens_own_and_carry_the_price_prefix(): void
+    /**
+     * Each card prints the price the author drew for it, off the row's own
+     * two fields on the Services screen: a STARTING price carries the word
+     * and no suffix ("From €42"), a fixed price carries the band's suffix and
+     * no word ("€92 per guest") — through Money, an ordinary space each side.
+     */
+    public function test_the_menu_cards_are_the_services_screens_own_and_each_prints_the_price_its_row_says(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>Garden Lunch</h3>', $body);
         $this->assertStringContainsString('A relaxed two- or three-course menu', $body);
-        // The band's prefix before the money and its suffix after it — his
-        // "€92 per guest" — through Money, with an ordinary space each side.
-        $this->assertStringContainsString('<strong>From €42 per guest</strong>', $body);
-        $this->assertStringContainsString('<strong>From €92 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €42</strong>', $body);
+        $this->assertStringContainsString('<strong>€92 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>€68 per guest</strong>', $body);
+        $this->assertStringNotContainsString('From €42 per guest', $body);
+        $this->assertStringNotContainsString('From €92', $body);
 
         // The ordinal is derived, never stored — the author prints exactly
         // these two digits.
@@ -543,20 +556,81 @@ class LumaGardenRenderTest extends TestCase
 
     /**
      * The meta row's opening cell is the author's SERVICE WINDOW ("Wed–Sun ·
-     * 12:00") — the band's `window`, one line per band, on every card,
-     * exactly where he drew it. Where the tenant has written one it wins
-     * over the row's duration: the window is what the author put in that
-     * cell, the duration is only there because the Services screen has the
-     * field. See the partial's own note on why not per row.
+     * 12:00") — each card's own line off the Services screen, exactly where
+     * he drew it, a different one on every card. Where a row has one it
+     * wins over the row's duration: the window is what the author put in
+     * that cell, the duration is only there because the Services screen has
+     * the field.
      */
-    public function test_the_service_window_opens_every_cards_meta_row(): void
+    public function test_each_cards_own_service_window_opens_its_meta_row(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
-        $this->assertSame(3, substr_count($body, '<span>Wed–Sun · 12:00</span>'));
+        $this->assertSame(1, substr_count($body, '<span>Wed–Sun · 12:00</span>'));
+        $this->assertSame(1, substr_count($body, '<span>Tue–Sat · 18:00</span>'));
+        $this->assertSame(1, substr_count($body, '<span>Sundays · 13:00</span>'));
         $this->assertStringNotContainsString('150 min', $body);
         $this->assertStringNotContainsString('<span></span>', $body);
+    }
+
+    /**
+     * The band's `services.window` is the fallback for a card with no line
+     * of its own — one line for every such card, as before the rows had a
+     * field — and a card's own line wins over it, as both win over the
+     * duration.
+     */
+    public function test_the_bands_window_is_the_fallback_for_a_card_without_its_own(): void
+    {
+        $this->published(['hero' => ['headline' => 'Luma'], 'services' => ['heading' => 'Menus', 'window' => 'Wed–Sun · 12:00']]);
+
+        foreach ([['Garden Lunch', null], ['Evening Menu', 'Tue–Sat · 18:00']] as $i => [$name, $window]) {
+            Service::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $name, 'duration_minutes' => 150,
+                'service_window' => $window, 'price' => 42, 'currency' => 'EUR', 'sort_order' => $i, 'is_active' => true,
+            ]);
+        }
+
+        $body = $this->body();
+
+        $this->assertSame(1, substr_count($body, '<span>Wed–Sun · 12:00</span>'));
+        $this->assertSame(1, substr_count($body, '<span>Tue–Sat · 18:00</span>'));
+        $this->assertStringNotContainsString('150 min', $body);
+    }
+
+    /** A card's own window is the tenant's line, escaped like every other. */
+    public function test_a_cards_own_window_is_escaped(): void
+    {
+        $this->published(['hero' => ['headline' => 'Luma'], 'services' => ['heading' => 'Menus']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Garden Lunch',
+            'service_window' => '<b>Wed–Sun</b><script>alert(1)</script>',
+            'price' => 42, 'currency' => 'EUR', 'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('<b>Wed–Sun</b>', $body);
+        $this->assertStringContainsString('<span>&lt;b&gt;Wed–Sun&lt;/b&gt;&lt;script&gt;', $body);
+    }
+
+    /**
+     * The word before a starting price is the tenant's `services.price_prefix`
+     * where one is written and the author's own "From" until then; the row's
+     * mark decides which cards say it, and the band's word alone marks none.
+     */
+    public function test_the_prefix_word_is_the_tenants_or_the_authors_and_only_a_marked_card_says_it(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'Ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>Ab €42</strong>', $body);
+        $this->assertStringNotContainsString('From €42', $body);
+        $this->assertStringContainsString('<strong>€92 per guest</strong>', $body);
+        $this->assertStringNotContainsString('Ab €92', $body);
     }
 
     /**
@@ -593,7 +667,8 @@ class LumaGardenRenderTest extends TestCase
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>Bar snacks</h3>', $body);
-        $this->assertSame(3, substr_count($body, '<strong>From €'));
+        $this->assertSame(1, substr_count($body, '<strong>From €'));
+        $this->assertSame(2, substr_count($body, ' per guest</strong>'));
     }
 
     public function test_the_card_grid_says_how_many_menus_it_has(): void
@@ -1130,6 +1205,9 @@ class LumaGardenRenderTest extends TestCase
     public function test_the_leaves_only_this_design_draws_are_escaped(): void
     {
         $page = $this->seedLikeTheKit('hotel');
+        // Every seeded card carries its own window, which would win over the
+        // band's; cleared so the band's fallback is what prints here.
+        Service::withoutGlobalScopes()->update(['service_window' => null]);
         $page->update(['content' => array_replace_recursive($page->content, [
             'about'    => ['note_1' => '<b>line</b>'],
             'services' => ['price_prefix' => '<b>prefix</b>', 'price_suffix' => '<b>suffix</b>', 'window' => '<b>window</b>'],

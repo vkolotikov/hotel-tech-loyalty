@@ -46,7 +46,11 @@
     $rowCtaLabel = trim((string) ($copy['item_cta_label'] ?? ''));
     $rowCtaLabel = $rowCtaLabel !== '' ? $rowCtaLabel : __('Book');
 
+    // The word before a STARTING price — the tenant's, else kit 02-beauty's
+    // own "from" (every price on this author's page fixes) — printed only
+    // on the cards the Services screen marks.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $prefixWord  = $pricePrefix !== '' ? $pricePrefix : 'from';
     $badgeLabel  = trim((string) ($copy['badge_label'] ?? ''));
 
     $kicker  = trim((string) ($copy['kicker'] ?? $profile->kicker('services')));
@@ -103,6 +107,7 @@
 
     $currency = $service->currency ?: $currencyFallback;
     $price    = \App\Landing\Money::format($service->price, $currency);
+    $isFrom   = (bool) $service->price_is_from;
 @endphp
           <article @class([
             'service-card',
@@ -131,7 +136,7 @@
 <span>{{ $service->duration_minutes }} min</span>
 @endif
 @if ($price !== null)
-<span>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</span>
+<span>{{ $isFrom ? $prefixWord . ' ' . $price : $price }}</span>
 @endif
               </p>
               <h3>{{ $service->name }}</h3>

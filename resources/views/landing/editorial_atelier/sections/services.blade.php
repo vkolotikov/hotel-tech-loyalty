@@ -24,12 +24,14 @@
   The row NUMBER is computed from the loop and never stored — a stored number
   goes stale the moment a treatment is deleted.
 
-  "FROM £88" IS A LEAF, NOT A GUESS (template fidelity 5.2). The author
-  prints a prefix before every price and his own intro paragraph promises it
-  ("Prices shown are starting points"). `services.price_prefix` is that word;
-  blank prints the price alone, which is what a studio with fixed prices
-  should say. It is a word rather than a flag because "from" is not the same
-  word in five locales.
+  "FROM £88" IS THE ROW'S OWN MARK AND THE BAND'S OWN WORD (template
+  fidelity 5.2). The author prints a prefix before every price and his own
+  intro paragraph promises it ("Prices shown are starting points"). Which
+  rows start at their price is the Services screen's `Service.price_is_from`
+  — the row knows whether its price starts or fixes — and the WORD is
+  `services.price_prefix`, the tenant's, else this author's own "from",
+  because "from" is not the same word in five locales. An unmarked row
+  prints the price alone, which is what a fixed price should say.
 
   A row with no price asserts nothing — no zero, no bare currency code, no
   placeholder dash. A studio that quotes on consultation is a normal studio.
@@ -48,8 +50,10 @@
     $rowCtaLabel = trim((string) ($copy['item_cta_label'] ?? ''));
     $rowCtaLabel = $rowCtaLabel !== '' ? $rowCtaLabel : __('Book');
 
-    // The word before every price. Trimmed, never invented.
+    // The word before a STARTING price: the tenant's, else the author's own
+    // "from". Trimmed, never invented; printed only on the rows marked.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $prefixWord  = $pricePrefix !== '' ? $pricePrefix : 'from';
 
     $kicker  = trim((string) ($copy['kicker'] ?? $profile->kicker('services')));
     $subtext = trim((string) ($copy['subtext'] ?? ''));
@@ -92,6 +96,7 @@
 
     $currency = $service->currency ?: $currencyFallback;
     $price    = \App\Landing\Money::format($service->price, $currency);
+    $isFrom   = (bool) $service->price_is_from;
 @endphp
           <li @class(['service-item', 'service-item--flat' => $bookingHref === null])>
             <span class="service-item__number">{{ sprintf('%02d', $loop->iteration) }}</span>
@@ -112,7 +117,7 @@
 <span>{{ $service->duration_minutes }} min</span>
 @endif
 @if ($price !== null)
-<strong>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</strong>
+<strong>{{ $isFrom ? $prefixWord . ' ' . $price : $price }}</strong>
 @endif
             </p>
 @if ($bookingHref !== null)

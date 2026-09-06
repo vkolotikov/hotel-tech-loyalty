@@ -16,6 +16,9 @@ class Service extends Model
     protected $fillable = [
         'organization_id', 'brand_id', 'category_id', 'name', 'slug', 'description', 'short_description',
         'duration_minutes', 'buffer_after_minutes', 'price', 'currency',
+        // The menu row's own "starting price" mark ("From €48") and service
+        // window ("Fri–Sun · 12:00"), printed per row by the landing menus.
+        'price_is_from', 'service_window',
         'image', 'gallery', 'tags', 'sort_order', 'is_active', 'meta',
     ];
 
@@ -25,6 +28,7 @@ class Service extends Model
         'meta'                 => 'array',
         'is_active'            => 'boolean',
         'price'                => 'decimal:2',
+        'price_is_from'        => 'boolean',
         'duration_minutes'     => 'integer',
         'buffer_after_minutes' => 'integer',
         'sort_order'           => 'integer',

@@ -67,6 +67,10 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 - `app/Support/Accent.php`, `app/Support/AssetVersion.php` (content-hash `?v=` on landing assets).
 - Models `LandingPage`, `LandingPageSection`, `LandingPageRedirect`; tables from
   `2026_08_21_100000_create_landing_pages_table.php`. `landing_page_sections.tone` exists but is unused.
+  The menu rows are `Service` rows (`app/Models/Service.php`, edited on the Services screen and its admin
+  `ServiceController`); their per-row `service_window` and `price_is_from` columns come from
+  `2026_09_06_180000_add_menu_row_fields_to_services.php`, whose backfill ticks every row of a page that
+  had written a band `price_prefix`, so the deploy changed no live page.
 
 **Templates**
 
@@ -129,8 +133,14 @@ renders it from a non-persisted model through a signed URL. There is no JavaScri
   tenant's; the editor never regroups it.
 - Text leaves per section come from the catalogue. Restaurants' gallery cards carry `caption_M` (tile
   title) and `caption_M_note` (the line of prose); 8 image slots per gallery.
-- Services band: rows come from the Services screen (never from content); band leaves include
-  `item_cta_label`, `price_suffix` and `window` (band-level; per-row variance is an open item).
+- Services band: rows come from the Services screen (never from content). Each row carries its own
+  `service_window` ("Fri–Sun · 12:00", printed where the author put a window: a priceless row's value
+  cell on Vela and Ember, every card's meta cell on Luma) and `price_is_from` (a starting price: the word
+  before the money and no suffix, "From €48"). The band leaves are the words: `price_prefix` is the word
+  for marked rows (blank prints the kit author's own, "From" on the restaurants and "from" on the beauty
+  lists), `price_suffix` follows fixed prices only ("€125 per guest"), `window` is the fallback for a row
+  with no window of its own, and `item_cta_label` is the per-row Book chip. The band word never marks a
+  row by itself.
 - Booking chrome (header, footer, floating button) says each author's own words until the tenant writes
   `booking.cta_label`.
 - Ember Table's `01 / Lunch` menu label comes from `Service.category`.
@@ -184,8 +194,6 @@ server refuses theme keys the old bundle still sends.
 
 ## 7. Open items (as of 2026-09-06)
 
-- Per-row menu window / price prefix variance ("From €48") needs a column on `services`; today the leaves
-  are band-level.
 - Editorial Atelier's per-tile gallery word (same route as the restaurant caption note).
 - The acceptance seed has no bookable rota, so the booking band never appears in screenshot runs.
 - Legacy `theme.palette` / `font_pairing` keys on live rows are inert and wash out on the next save.

@@ -24,6 +24,12 @@
   A row with no price asserts nothing — no zero, no bare currency code, no
   placeholder dash. A studio that quotes on consultation is a normal studio.
 
+  A row the Services screen marks as a STARTING price (`Service.price_is_from`)
+  carries the word before its money: the tenant's `services.price_prefix`,
+  else kit 02-beauty's own "from", the one beauty author who writes such a
+  word. Every price on THIS author's page fixes, so his rows never say it
+  unless marked.
+
   THERE IS NO PHOTOGRAPH IN THIS BAND, and the `services` type declares one
   anyway (template fidelity 4.1 / R3). That is not drift: the slot is for the
   SECOND kit, whose services band carries a sticky editorial plate beside the
@@ -50,6 +56,11 @@
     // as theirs (template fidelity 5.2).
     $rowCtaLabel = trim((string) ($copy['item_cta_label'] ?? ''));
     $rowCtaLabel = $rowCtaLabel !== '' ? $rowCtaLabel : __('Book');
+
+    // The word before a STARTING price — the tenant's, else kit 02-beauty's
+    // own "from" — printed only on the rows the Services screen marks.
+    $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $prefixWord  = $pricePrefix !== '' ? $pricePrefix : 'from';
 @endphp
     <section class="section section--dark service-menu" id="services" data-block="services" data-variant="editorial-list">
       <div class="shell">
@@ -106,7 +117,7 @@
               <span>{{ $service->duration_minutes }} min</span>
 @endif
 @if (($servicePrice = \App\Landing\Money::format($service->price, $currency)) !== null)
-              <strong>{{ $servicePrice }}</strong>
+              <strong>{{ $service->price_is_from ? $prefixWord . ' ' . $servicePrice : $servicePrice }}</strong>
 @endif
             </div>
 @if ($bookingHref !== null)

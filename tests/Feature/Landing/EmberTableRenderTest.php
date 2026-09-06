@@ -106,11 +106,14 @@ class EmberTableRenderTest extends TestCase
 
         // His `NN / word` labels are the menus' CATEGORIES — the Services
         // screen's own grouping of each row.
+        // His lunch row has no price and carries its own SERVICE WINDOW
+        // ("Fri–Sun · 12:00"); the other two are fixed prices with the
+        // band's suffix ("€82 per guest"). No row of his starts at a price.
         foreach ([
-            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null, 'Lunch'],
-            ['Four courses', 'A concise seasonal menu with choices at every course.', 82, 'Dinner'],
-            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138, 'The counter'],
-        ] as $i => [$name, $short, $price, $category]) {
+            ['À la carte', 'Bright plates, the hearth lit, room for another glass.', null, 'Lunch', 'Fri–Sun · 12:00'],
+            ['Four courses', 'A concise seasonal menu with choices at every course.', 82, 'Dinner', null],
+            ['Kitchen tasting', 'Eight seats facing the fire. One menu, served by the cooks.', 138, 'The counter', null],
+        ] as $i => [$name, $short, $price, $category, $window]) {
             $group = ServiceCategory::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $category, 'sort_order' => $i, 'is_active' => true,
             ]);
@@ -119,7 +122,7 @@ class EmberTableRenderTest extends TestCase
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
                 'category_id' => $group->id,
                 'short_description' => $short,
-                'price' => $price, 'currency' => 'EUR',
+                'price' => $price, 'currency' => 'EUR', 'service_window' => $window,
                 'sort_order' => $i, 'is_active' => true,
             ]);
         }
@@ -158,9 +161,7 @@ class EmberTableRenderTest extends TestCase
                 'kicker'       => 'Choose the pace',
                 'heading'      => "Three ways\nto join us.",
                 'subtext'      => 'Menus move with the market and the weather. These are the shapes of service; the plates change often.',
-                'price_prefix' => 'From',
                 'price_suffix' => 'per guest',
-                'window'       => 'Fri–Sun · 12:00',
             ],
             'about' => [
                 'kicker' => 'From the kitchen',
@@ -514,17 +515,19 @@ class EmberTableRenderTest extends TestCase
 
     // ─── The menu ledger ──────────────────────────────────────────────────
 
-    public function test_the_menu_rows_are_the_services_screens_own_and_carry_the_price_prefix(): void
+    public function test_the_menu_rows_are_the_services_screens_own_and_a_fixed_price_carries_the_bands_suffix(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>Kitchen tasting</h3>', $body);
         $this->assertStringContainsString('Eight seats facing the fire.', $body);
-        // The band's prefix before the money and its suffix after it — his
-        // "€82 per guest" — through Money, with an ordinary space each side.
-        $this->assertStringContainsString('<strong>From €82 per guest</strong>', $body);
-        $this->assertStringContainsString('<strong>From €138 per guest</strong>', $body);
+        // The band's suffix after the money — his "€82 per guest" — through
+        // Money, with an ordinary space; no row of his starts at a price, so
+        // no word before any of them.
+        $this->assertStringContainsString('<strong>€82 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>€138 per guest</strong>', $body);
+        $this->assertStringNotContainsString('From €', $body);
 
         // The ordinal is derived, never stored, and the WORD the author writes
         // after it is the menu's own category off the Services screen — his
@@ -565,12 +568,11 @@ class EmberTableRenderTest extends TestCase
     }
 
     /**
-     * A menu with no price shows the band's SERVICE WINDOW in the value
-     * column instead — the author's own "Fri–Sun · 12:00" on his lunch row —
-     * and never an empty cell or a bare suffix. One line per band, printed
-     * where he drew it; see the partial's own note on why not per row.
+     * A menu with no price shows ITS OWN service window in the value column
+     * instead — the author's "Fri–Sun · 12:00" on his lunch row — and never
+     * an empty cell or a bare suffix.
      */
-    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
+    public function test_a_menu_with_no_price_shows_its_own_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
@@ -578,8 +580,70 @@ class EmberTableRenderTest extends TestCase
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
         $this->assertStringContainsString('<strong>Fri–Sun · 12:00</strong>', $body);
         $this->assertSame(1, substr_count($body, '<strong>Fri–Sun · 12:00</strong>'));
-        $this->assertSame(2, substr_count($body, '<strong>From €'));
         $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /**
+     * A row the Services screen marks as a STARTING price carries the word
+     * and no suffix — the author's own "From" until the tenant writes theirs
+     * in `services.price_prefix` — and the band's word alone marks no row.
+     */
+    public function test_a_starting_price_carries_the_word_and_drops_the_suffix(): void
+    {
+        $page = $this->seedLikeTheKit();
+        Service::withoutGlobalScopes()->where('name', 'Four courses')->update(['price_is_from' => true]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>From €82</strong>', $body);
+        $this->assertStringNotContainsString('€82 per guest', $body);
+        $this->assertStringContainsString('<strong>€138 per guest</strong>', $body);
+
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'Ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>Ab €82</strong>', $body);
+        $this->assertStringNotContainsString('From €', $body);
+        $this->assertStringNotContainsString('Ab €138', $body);
+    }
+
+    /**
+     * The band's `services.window` is the fallback for a priceless row with
+     * no line of its own, and a row's own line wins over it.
+     */
+    public function test_the_bands_window_is_the_fallback_for_a_priceless_menu_without_its_own(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus', 'window' => 'Fri–Sun · 12:00']]);
+
+        foreach ([['À la carte', null], ['Sunday lunch', 'Sundays · 13:00']] as $i => [$name, $window]) {
+            Service::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $name, 'service_window' => $window,
+                'sort_order' => $i, 'is_active' => true,
+            ]);
+        }
+
+        $body = $this->body();
+
+        $this->assertSame(1, substr_count($body, '<strong>Fri–Sun · 12:00</strong>'));
+        $this->assertSame(1, substr_count($body, '<strong>Sundays · 13:00</strong>'));
+    }
+
+    /** A row's own window is the tenant's line, escaped like every other. */
+    public function test_a_rows_own_window_is_escaped(): void
+    {
+        $this->published(['hero' => ['headline' => 'Ember'], 'services' => ['heading' => 'Menus']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'service_window' => '<b>Fri–Sun</b><script>alert(1)</script>',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('<b>Fri–Sun</b>', $body);
+        $this->assertStringContainsString('<strong>&lt;b&gt;Fri–Sun&lt;/b&gt;&lt;script&gt;', $body);
     }
 
     /** With no window written, a priceless row prints no value column at all. */
@@ -1186,6 +1250,11 @@ class EmberTableRenderTest extends TestCase
     public function test_the_leaves_only_this_design_draws_are_escaped(): void
     {
         $page = $this->seedLikeTheKit('hotel');
+        // The band's word prints only on a row marked as a starting price and
+        // the band's window only on a priceless row with no line of its own,
+        // so one row is marked and the seeded lunch window is cleared.
+        Service::withoutGlobalScopes()->update(['service_window' => null]);
+        Service::withoutGlobalScopes()->where('name', 'Four courses')->update(['price_is_from' => true]);
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'     => ['proof' => '<b>proof</b>'],
             'about'    => ['note_1' => '<b>line</b>'],

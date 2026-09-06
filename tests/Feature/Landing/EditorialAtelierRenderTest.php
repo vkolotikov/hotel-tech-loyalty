@@ -116,10 +116,13 @@ class EditorialAtelierRenderTest extends TestCase
             ['Event Styling', 'Modern polish, soft structure or a considered evening look.', 75, 95],
             ['Scalp & Hair Ritual', 'A restorative wash, targeted conditioning and signature blow-dry.', 45, 58],
         ] as $i => [$name, $short, $minutes, $price]) {
+            // Every one of his prices is a STARTING price ("from £88"): the
+            // row's own mark on the Services screen.
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
                 'short_description' => $short,
                 'duration_minutes' => $minutes, 'price' => $price, 'currency' => 'GBP',
+                'price_is_from' => true,
                 'sort_order' => $i, 'is_active' => true,
             ]);
         }
@@ -174,7 +177,6 @@ class EditorialAtelierRenderTest extends TestCase
                 'kicker'       => 'The service edit',
                 'heading'      => 'Start with what your hair needs.',
                 'subtext'      => 'Every visit begins with a proper conversation. Prices shown are starting points.',
-                'price_prefix' => 'from',
                 'caption'      => 'Precision, without the formality.',
             ],
             'about' => [
@@ -1170,28 +1172,49 @@ class EditorialAtelierRenderTest extends TestCase
     }
 
     /**
-     * 5.2 — "from £88". A word rather than a flag, because it is not the same
-     * word in five locales and a studio with fixed prices should not say it
-     * at all.
+     * 5.2 — "from £88". The row's own mark on the Services screen says the
+     * price starts; the WORD is the tenant's `services.price_prefix` where
+     * one is written (it is not the same word in five locales) and the
+     * author's own "from" until then.
      */
-    public function test_the_price_prefix_is_the_tenants_word_and_is_absent_by_default(): void
-    {
-        $this->seedLikeTheKit();
-
-        $this->assertStringContainsString('<strong>from £88</strong>', $this->body());
-    }
-
-    public function test_a_studio_with_no_price_prefix_prints_the_price_alone(): void
+    public function test_a_starting_price_carries_the_authors_word_until_the_tenant_writes_theirs(): void
     {
         $page = $this->seedLikeTheKit();
-        $content = $page->content;
-        unset($content['services']['price_prefix']);
-        $page->update(['content' => $content]);
+
+        $this->assertStringContainsString('<strong>from £88</strong>', $this->body());
+
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>ab £88</strong>', $body);
+        $this->assertStringNotContainsString('from £88', $body);
+    }
+
+    /**
+     * A fixed price prints alone even with the band's word written: the
+     * row's mark decides, the word is only the word.
+     */
+    public function test_a_fixed_price_prints_alone_even_when_the_band_word_is_written(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'from']])]);
+        Service::withoutGlobalScopes()->where('name', 'Signature Cut & Finish')->update(['price_is_from' => false]);
 
         $body = $this->body();
 
         $this->assertStringContainsString('<strong>£88</strong>', $body);
         $this->assertStringNotContainsString('from £88', $body);
+        $this->assertStringContainsString('<strong>from £165</strong>', $body);
+    }
+
+    /** A service window is a menu's line; this treatment list never draws one. */
+    public function test_a_service_window_is_never_drawn_on_this_design(): void
+    {
+        $this->seedLikeTheKit();
+        Service::withoutGlobalScopes()->where('name', 'Signature Cut & Finish')->update(['service_window' => 'Tue–Sat · 10:00']);
+
+        $this->assertStringNotContainsString('Tue–Sat · 10:00', $this->body());
     }
 
     /**

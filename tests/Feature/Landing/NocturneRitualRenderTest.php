@@ -1864,4 +1864,41 @@ class NocturneRitualRenderTest extends TestCase
         // The flow is live, so no control has been relabelled for a fallback.
         $this->assertStringNotContainsString('Call to book', $body);
     }
+
+    // ─── The menu's per-row price mark ──────────────────────────────────
+
+    /**
+     * A row the Services screen marks as a STARTING price carries the word
+     * before its money — kit 02-beauty's own "from", the one beauty author
+     * who writes such a word (every price on this author's page fixes) —
+     * until the tenant writes theirs in `services.price_prefix`; a fixed
+     * price prints alone whatever the band says.
+     */
+    public function test_a_starting_price_carries_the_word_and_a_fixed_price_prints_alone(): void
+    {
+        $page = $this->seedLikeTheKit();
+        Service::withoutGlobalScopes()->where('name', 'Still Water')->update(['price_is_from' => true]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>from £145</strong>', $body);
+        $this->assertStringContainsString('<strong>£118</strong>', $body);
+
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>ab £145</strong>', $body);
+        $this->assertStringContainsString('<strong>£118</strong>', $body);
+        $this->assertStringNotContainsString('ab £118', $body);
+    }
+
+    /** A service window is a menu's line; this treatment list never draws one. */
+    public function test_a_service_window_is_never_drawn_on_this_design(): void
+    {
+        $this->seedLikeTheKit();
+        Service::withoutGlobalScopes()->where('name', 'Still Water')->update(['service_window' => 'Tue–Sat · 10:00']);
+
+        $this->assertStringNotContainsString('Tue–Sat · 10:00', $this->body());
+    }
 }
