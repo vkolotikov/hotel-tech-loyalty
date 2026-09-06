@@ -3167,6 +3167,7 @@
       "field_alt": "Was auf dem Foto zu sehen ist",
       "field_caption": "Bildunterschrift",
       "field_caption_note": "Zeile unter der Bildunterschrift",
+      "field_caption_label": "Wort nach der Nummer",
       "contact_caption": "Übernommen von Ihrer Objekte-Seite — hier bearbeiten, um es für diese Seite zu überschreiben.",
       "no_photo": "Noch kein Foto",
       "no_photos": "Noch keine Fotos",

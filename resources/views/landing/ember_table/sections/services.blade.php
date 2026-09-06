@@ -21,14 +21,18 @@
 
     - `name` is the menu ("À la carte", "Kitchen tasting") and
       `short_description` is the line under it. Both fit exactly.
-    - the right-hand column is `price`, through App\Landing\Money, with
-      `services.price_prefix` in front of it and `services.price_suffix`
-      after it — his "€82 per guest" — both the band's.
-    - on a row that has NO price the same column carries `services.window`,
-      the SERVICE WINDOW he writes there ("Fri–Sun · 12:00"). One line per
-      band rather than per row, because a Service row has no such field and a
-      per-row leaf would need a key the catalogue cannot enumerate (see
-      SectionType's `services` note); his own page has exactly one such row.
+    - the right-hand column is `price`, through App\Landing\Money. A fixed
+      price prints `services.price_suffix` after the money — his "€82 per
+      guest" — and no word; a row the Services screen marks as a STARTING
+      price (`Service.price_is_from`) prints the WORD before the money and
+      nothing after it: the tenant's `services.price_prefix`, else the
+      hospitality authors' own "From". The row decides which; the band
+      supplies the words.
+    - on a row that has NO price the same column carries the row's own
+      SERVICE WINDOW, `Service.service_window` off the Services screen —
+      his "Fri–Sun · 12:00" on the lunch — else the band's
+      `services.window`, the one line per band that was all a page could
+      say before the rows had a field, kept as the fallback.
     - the first column is his `NN / word` ordinal ("01 / Lunch"). The ORDINAL is
       derived here (a stored number goes stale the moment a menu is removed);
       the WORD after it is the menu's CATEGORY — `Service.category->name`, the
@@ -53,9 +57,12 @@
 
     $currencyFallback = $content->contact->currency;
 
-    // The words before and after every price, and the window a priceless
-    // row shows instead. Trimmed, never invented.
+    // The word before a STARTING price — the tenant's, else the authors'
+    // own "From" — the words after a fixed one, and the band's fallback
+    // window for a priceless row with none of its own. Trimmed, never
+    // invented.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $prefixWord  = $pricePrefix !== '' ? $pricePrefix : 'From';
     $priceSuffix = trim((string) ($copy['price_suffix'] ?? ''));
     $window      = trim((string) ($copy['window'] ?? ''));
 
@@ -82,7 +89,15 @@
     }
 
     $currency = $service->currency ?: $currencyFallback;
-    $price    = Money::format($service->price, $currency, $priceSuffix);
+
+    // The row's own mark decides its composition: a starting price is the
+    // word and the money, a fixed price the money and the band's suffix.
+    $isFrom = (bool) $service->price_is_from;
+    $price  = Money::format($service->price, $currency, $isFrom ? null : $priceSuffix);
+
+    // The row's own window, else the band's.
+    $rowWindow = trim((string) $service->service_window);
+    $rowWindow = $rowWindow !== '' ? $rowWindow : $window;
 
     // His `01 / Lunch`: the derived ordinal, then the menu's own category
     // where it has one. The category is eager-loaded and tenant-scoped by
@@ -99,9 +114,9 @@
 @endif
           </div>
 @if ($price !== null)
-          <strong>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</strong>
-@elseif ($window !== '')
-          <strong>{{ $window }}</strong>
+          <strong>{{ $isFrom ? $prefixWord . ' ' . $price : $price }}</strong>
+@elseif ($rowWindow !== '')
+          <strong>{{ $rowWindow }}</strong>
 @endif
         </article>
 @endforeach

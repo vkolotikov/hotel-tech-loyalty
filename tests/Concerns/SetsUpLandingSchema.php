@@ -46,11 +46,9 @@ trait SetsUpLandingSchema
                 $table->unsignedBigInteger('landing_page_id');
                 $table->string('key', 32);
                 $table->boolean('enabled')->default(true);
-                // Mirrors 2026_08_31_090000_add_tone_to_landing_page_sections:
-                // nullable with no default, because null is a real value here
-                // ("render this band the way it was authored") and not merely
-                // an absent one.
-                $table->string('tone', 16)->nullable();
+                // No `tone`: the retired design's per-band colour was dropped
+                // by 2026_09_06_190000_drop_tone_from_landing_page_sections
+                // (DropToneColumnMigrationTest adds it back to test the drop).
                 $table->integer('sort')->default(0);
                 $table->text('content')->nullable();
                 $table->timestamps();
@@ -198,7 +196,11 @@ trait SetsUpLandingSchema
                 $table->text('short_description')->nullable();
                 $table->integer('duration_minutes')->nullable();
                 $table->decimal('price', 10, 2)->nullable();
+                // The menu row's own "starting price" mark and service
+                // window (2026_09_06_180000_add_menu_row_fields_to_services).
+                $table->boolean('price_is_from')->default(false);
                 $table->string('currency', 8)->nullable();
+                $table->string('service_window', 120)->nullable();
                 $table->string('image')->nullable();
                 $table->text('gallery')->nullable();
                 $table->integer('sort_order')->default(0);

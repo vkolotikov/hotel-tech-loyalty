@@ -369,32 +369,34 @@ final class SectionType
                 // hardcoded `__('Book')` until template fidelity 5.2. Kit 01
                 // writes exactly "Book"; kit 03 writes "Reserve this ritual".
                 //
-                // `price_prefix` is the word kit 02 puts before every price
-                // ("from £88"), and its own intro paragraph promises it —
-                // "Prices shown are starting points". A LABEL rather than a
-                // boolean flag, because "from" is not the same word in five
-                // locales and the tenant is the one who knows whether their
-                // prices start or fix. `price_suffix` is its symmetric twin,
-                // the words the three hospitality authors write AFTER the
-                // money ("€92 per guest"), joined by App\Landing\Money after
-                // an ordinary space. `badge_label` is the pill kit 03 draws
-                // on its featured card ("Guest favourite") — one word for the
-                // FIRST treatment in the tenant's own ordering, which is the
-                // only card that has a photograph to put it on.
+                // `price_prefix` is the WORD before a starting price — kit
+                // 02's "from £88", whose own intro paragraph promises it
+                // ("Prices shown are starting points"). WHICH rows start at
+                // their price is not a leaf at all: it is the row's own
+                // `Service.price_is_from` on the Services screen, because the
+                // row knows whether its price starts or fixes and the three
+                // hospitality authors mark sibling rows differently ("From
+                // €48" beside "€125 per guest"). The word stays here because
+                // "from" is not the same word in five locales; blank, each
+                // kit prints its author's own. `price_suffix` is the words
+                // the three hospitality authors write AFTER a fixed price
+                // ("€92 per guest"), joined by App\Landing\Money after an
+                // ordinary space; a starting price prints without it, as
+                // every one of them composes it. `badge_label` is the pill
+                // kit 03 draws on its featured card ("Guest favourite") — one
+                // word for the FIRST treatment in the tenant's own ordering,
+                // which is the only card that has a photograph to put it on.
                 //
                 // `window` is the SERVICE WINDOW the hospitality authors
                 // write where a price would otherwise go ("Fri–Sun · 12:00",
-                // "Evenings"). A BAND leaf, deliberately, and the honest
-                // shortfall is stated here: each author writes a different
-                // window on each row, and a per-row leaf would have to be
-                // keyed by the service's id — a key this catalogue cannot
-                // enumerate, the totality net cannot see and the editor
-                // cannot draw a control for without a release, or a column
-                // on the shared `services` table for one landing template's
-                // sake. So it is one line per band, printed in the row's own
-                // value cell where the author drew it, on the rows that have
-                // no price (kits 01 and 03) or as the meta row's opening cell
-                // (kit 02).
+                // "Evenings"). Since 2026_09_06_180000 each row carries its
+                // own, `Service.service_window`, and that is what the menus
+                // print; this band leaf is the FALLBACK for a row with none —
+                // one line per band, which was all a page could say before
+                // the rows had a field — kept so no page that wrote it
+                // changes. Printed in the row's own value cell where the
+                // author drew it: on the rows that have no price (kits 01
+                // and 03) or as the meta row's opening cell (kit 02).
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext', 'item_cta_label'],
                     ['price_prefix', 'price_suffix', 'window', 'badge_label'],
@@ -653,10 +655,18 @@ final class SectionType
                 // designs whose partial prints it publish it (see
                 // LandingOnboardingService::LEAF_READERS), so the beauty
                 // kits' caption pills gain no second box.
+                //
+                // `caption_N_label` is the WORD kit 02-beauty writes after
+                // each tile's ordinal ("01 / Layers", "02 / Shape") — a
+                // short tag in the figcaption's label type, before the
+                // caption proper. The ordinal is derived; the word is the
+                // tenant's. Offered only where the partial prints it,
+                // through the same reader as the line above.
                 'fields'     => array_merge(
                     ['kicker', 'heading', 'heading_accent', 'subtext'],
                     self::galleryCaptionLeaves(),
                     self::galleryNoteLeaves(),
+                    self::galleryLabelLeaves(),
                 ),
                 'images'     => self::GALLERY_IMAGES,
             ],
@@ -873,6 +883,31 @@ final class SectionType
 
         for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
             $leaves[] = 'caption_' . $n . '_note';
+        }
+
+        return $leaves;
+    }
+
+    /**
+     * THE WORD AFTER EACH TILE'S ORDINAL — one per tile, numbered like the
+     * picture, the caption and the line: `image_3`'s word is
+     * `caption_3_label`.
+     *
+     * Kit 02-beauty's figcaption is two-part, `<span>01 / Layers</span>
+     * Soft structure`: a derived ordinal, HIS WORD ("Layers", "Shape",
+     * "Ritual", "Space") in the label type, then the caption proper. The
+     * ordinal was always derived here and the caption always the tenant's;
+     * the word had no leaf and printed nothing. Bounded by the same
+     * {@see GALLERY_IMAGES}; a scalar leaf like every other line of copy.
+     *
+     * @return list<string>
+     */
+    public static function galleryLabelLeaves(): array
+    {
+        $leaves = [];
+
+        for ($n = 1; $n <= self::GALLERY_IMAGES; $n++) {
+            $leaves[] = 'caption_' . $n . '_label';
         }
 
         return $leaves;

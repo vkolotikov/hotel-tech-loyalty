@@ -37,6 +37,10 @@ interface Service {
   buffer_after_minutes: number
   price: number
   currency: string
+  /** A starting price: the landing menus print the word before it ("From €48"). */
+  price_is_from: boolean
+  /** One line of service window the landing menus print per row ("Fri–Sun · 12:00"). */
+  service_window: string | null
   image: string | null
   gallery: string[] | null
   tags: string[] | null
@@ -198,7 +202,7 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
 
       <div className="flex items-center gap-3 mt-4 text-xs text-gray-400">
         <span className="flex items-center gap-1"><Clock size={12} />{service.duration_minutes}min</span>
-        <span className="font-bold text-white">{service.currency} {Number(service.price).toFixed(0)}</span>
+        <span className="font-bold text-white">{service.price_is_from ? 'from ' : ''}{service.currency} {Number(service.price).toFixed(0)}</span>
         {service.masters && service.masters.length > 0 && (
           <span className="text-gray-500">· {service.masters.length} master{service.masters.length === 1 ? '' : 's'}</span>
         )}
@@ -229,6 +233,8 @@ function ServiceForm({
   const [buffer, setBuffer] = useState<string>(String(service?.buffer_after_minutes ?? 0))
   const [price, setPrice] = useState<string>(service?.price != null ? String(service.price) : '')
   const [currency, setCurrency] = useState(service?.currency || 'EUR')
+  const [priceIsFrom, setPriceIsFrom] = useState<boolean>(service?.price_is_from ?? false)
+  const [serviceWindow, setServiceWindow] = useState(service?.service_window || '')
   const [tagsStr, setTagsStr] = useState((service?.tags || []).join(', '))
   const [isActive, setIsActive] = useState(service?.is_active ?? true)
   const [selectedMasters, setSelectedMasters] = useState<number[]>(service?.masters?.map(m => m.id) || [])
@@ -251,6 +257,8 @@ function ServiceForm({
     fd.append('buffer_after_minutes', String(Number(buffer) || 0))
     fd.append('price', String(Number(price) || 0))
     fd.append('currency', currency)
+    fd.append('price_is_from', priceIsFrom ? '1' : '0')
+    fd.append('service_window', serviceWindow.trim())
     fd.append('is_active', isActive ? '1' : '0')
     const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean)
     fd.append('tags', JSON.stringify(tags))
@@ -336,6 +344,28 @@ function ServiceForm({
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Price</label>
               <input type="number" inputMode="decimal" value={price} onChange={e => setPrice(e.target.value)} min={0} step={1} className={inputCls} />
+            </div>
+          </div>
+
+          {/* The two per-row fields the landing menus print: a starting-price
+              mark ("From €48" instead of "€48 per guest") and one line of
+              service window, shown where the design puts a window. */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Starting price</label>
+              <div className="flex items-center justify-between rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2">
+                <span className="text-xs text-gray-400">Show as “From …”</span>
+                <button type="button" onClick={() => setPriceIsFrom(!priceIsFrom)} aria-pressed={priceIsFrom} aria-label="Starting price"
+                  className={`w-11 h-6 rounded-full transition-all flex-shrink-0 ${priceIsFrom ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
+                  <div className="w-5 h-5 rounded-full bg-white shadow-sm transition-all" style={{ transform: `translateX(${priceIsFrom ? '22px' : '2px'})` }} />
+                </button>
+              </div>
+              <p className="text-[11px] text-gray-600 mt-1">On your website the price reads “From €48” and drops the “per guest” suffix.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 mb-1.5">Service window</label>
+              <input value={serviceWindow} onChange={e => setServiceWindow(e.target.value)} maxLength={120} placeholder="Fri–Sun · 12:00" className={inputCls} />
+              <p className="text-[11px] text-gray-600 mt-1">Printed on your website's menu where the design shows a window, e.g. on a menu without a price.</p>
             </div>
           </div>
 

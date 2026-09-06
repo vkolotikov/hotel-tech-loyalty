@@ -271,6 +271,9 @@ const FIELD_FALLBACK: Record<string, string> = {
   // strip beside the caption it sits under, and only on a design that prints
   // it (see `SectionField.notes`).
   caption_note: 'Line under the caption',
+  // The word after a gallery tile's ordinal — kit 02-beauty's "01 / Layers".
+  // Drawn inside the strip like the line, only on a design that prints it.
+  caption_label: 'Word after the number',
   // The gallery round: label above the photo STRIP. Not a `content` field —
   // like `image_url` above it, this names a control rather than a leaf.
   gallery: 'Photos',
@@ -2864,6 +2867,7 @@ function SectionRow({
                   stored={storedSection}
                   limit={field.slots ?? 0}
                   notes={field.notes === true}
+                  labels={field.labels === true}
                   defaults={imageDefaults}
                   content={content}
                   onFieldChange={onFieldChange}
@@ -3525,7 +3529,7 @@ function useSavedFlash(): [boolean, () => void] {
  * already follows: a native multi-select `<input type="file">`, a strip of
  * thumbnails, and a remove button on each.
  */
-function GalleryField({ sectionKey, stored, limit, notes, defaults, content, onFieldChange, onChanged }: {
+function GalleryField({ sectionKey, stored, limit, notes, labels, defaults, content, onFieldChange, onChanged }: {
   sectionKey: string
   /** `page.content[sectionKey]`, raw and off the QUERY — see the call site. */
   stored: unknown
@@ -3535,6 +3539,9 @@ function GalleryField({ sectionKey, stored, limit, notes, defaults, content, onF
   /** Whether this design prints a line under each caption — `SectionField.
    *  notes`, off the served `content_fields`. False draws no second box. */
   notes: boolean
+  /** Whether this design prints a word after each tile's ordinal
+   *  (`SectionField.labels`, kit 02-beauty's "01 / Layers"). */
+  labels: boolean
   /** The design's own photographs, slot => URL (template fidelity 4.1). */
   defaults: Record<string, string>
   /** `f.content[sectionKey]`, for the per-tile caption leaves. Ordinary
@@ -3708,6 +3715,23 @@ function GalleryField({ sectionKey, stored, limit, notes, defaults, content, onF
                       maxLength={191}
                       value={content[photo.noteLeaf] ?? ''}
                       onChange={e => onFieldChange(photo.noteLeaf, e.target.value)}
+                    />
+                  </>
+                )}
+                {labels && (
+                  /* The word after the tile's ordinal ("01 / Layers"), on the
+                     one design whose figcaption prints it. An ordinary content
+                     leaf like the caption and the line. */
+                  <>
+                    <label className={label + ' mt-2'} htmlFor={`lp-${sectionKey}-${photo.labelLeaf}`}>
+                      {t('landing_pages.editor.field_caption_label', FIELD_FALLBACK.caption_label)}
+                    </label>
+                    <input
+                      id={`lp-${sectionKey}-${photo.labelLeaf}`}
+                      className={input}
+                      maxLength={40}
+                      value={content[photo.labelLeaf] ?? ''}
+                      onChange={e => onFieldChange(photo.labelLeaf, e.target.value)}
                     />
                   </>
                 )}

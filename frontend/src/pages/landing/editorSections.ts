@@ -128,6 +128,9 @@ export type SectionField = {
    *  do not, and a second box under a caption nothing prints would be a
    *  control that cannot act. Absent means no. */
   notes?: boolean
+  /** Whether the strip draws the word after each tile's ordinal
+   *  (`caption_N_label`, kit 02-beauty's "01 / Layers") — decided like `notes`. */
+  labels?: boolean
   /** For `type: 'faq_pairs'` only — how many question/answer couplets the
    *  band may hold, DERIVED from the `qN`/`aN` leaves the server actually
    *  published (see `faqPairsOf`). Never a literal six. */
@@ -589,6 +592,11 @@ export function fieldsForType(
   const notes = type.fields.includes(galleryNoteLeaf(1))
     && (draws === null || draws.has(galleryNoteLeaf(1)))
 
+  // The word after each tile's ordinal — kit 02-beauty's "01 / Layers" —
+  // decided the same two-step way.
+  const labels = type.fields.includes(galleryLabelLeaf(1))
+    && (draws === null || draws.has(galleryLabelLeaf(1)))
+
   // ONE photo control per row, and which one is decided by the count rather
   // than by the type id: a single plate writes `content.<key>.image_url` and
   // is named by the bare section key, a strip writes `content.<key>.image_N`
@@ -599,7 +607,7 @@ export function fieldsForType(
   const words = PHOTO_WORD_LEAVES.filter(w => type.fields.includes(w) && (draws === null || draws.has(w)))
 
   const photo: SectionField[] =
-    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots, ...(notes ? { notes: true } : {}) }]
+    slots > 1 ? [{ name: 'gallery', type: 'gallery', slots, ...(notes ? { notes: true } : {}), ...(labels ? { labels: true } : {}) }]
       : slots === 1 ? [{ name: SINGLE_IMAGE_FIELD, type: 'image', ...(words.length > 0 ? { words } : {}) }]
         : []
 
@@ -639,6 +647,7 @@ export function fieldsForType(
   for (let n = 1; n <= imageSlotsOf(type); n++) {
     paired.add(`caption_${n}`)
     paired.add(galleryNoteLeaf(n))
+    paired.add(galleryLabelLeaf(n))
   }
 
   const rest: SectionField[] = []
@@ -690,6 +699,12 @@ const PHOTO_WORD_LEAVES = ['alt', 'caption']
  *  agree on it. */
 export function galleryNoteLeaf(n: number): string {
   return `caption_${n}_note`
+}
+
+/** The word after tile `n`'s ordinal — `SectionType::galleryLabelLeaves()`'s
+ *  own spelling (`caption_3_label`), named once for the same reason. */
+export function galleryLabelLeaf(n: number): string {
+  return `caption_${n}_label`
 }
 
 /**
@@ -1085,6 +1100,7 @@ export function fieldLabelKey(name: string): string {
   if (name.endsWith('_accent')) return 'accent'
   if (/^feature_\d+_caption$/.test(name)) return 'feature_caption'
   if (/^caption_\d+_note$/.test(name)) return 'caption_note'
+  if (/^caption_\d+_label$/.test(name)) return 'caption_label'
   if (/^caption_\d+$/.test(name)) return 'caption'
   if (/^fact_\d+_caption$/.test(name)) return 'fact_caption'
   if (/^fact_\d+$/.test(name)) return 'fact'
@@ -1216,6 +1232,8 @@ export type GalleryPhoto = {
   /** The line under that caption (`caption_3_note`), numbered the same way
    *  and for the same reason. Drawn only when the design prints one. */
   noteLeaf: string
+  /** The word after the tile's ordinal (`caption_3_label`), the same way. */
+  labelLeaf: string
 }
 
 /**
@@ -1259,7 +1277,7 @@ export function gallerySlots(
     const url = own ?? defaults[slot] ?? null
 
     if (url !== null) {
-      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}`, noteLeaf: galleryNoteLeaf(n) })
+      photos.push({ leaf, slot, url, isDefault: own === null, captionLeaf: `caption_${n}`, noteLeaf: galleryNoteLeaf(n), labelLeaf: galleryLabelLeaf(n) })
     }
   }
 

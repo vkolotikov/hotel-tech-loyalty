@@ -1123,6 +1123,8 @@ class PageContentTest extends TestCase
             'caption_3'      => 'Our treatment room',
             'caption_3_note' => '  Warm stone and a quiet hour.  ',
             'caption_1_note' => ['not', 'a', 'line'],
+            'caption_3_label' => '  Ritual ',
+            'caption_1_label' => ['not', 'a', 'word'],
         ]]);
         $page->update(['template_key' => 'nocturne_ritual']);
 
@@ -1137,6 +1139,11 @@ class PageContentTest extends TestCase
         $this->assertSame('Warm stone and a quiet hour.', $photos[2]['note']);
         $this->assertSame('', $photos[0]['note']);
         $this->assertSame('', $photos[1]['note']);
+        // The word after the tile's ordinal (kit 02-beauty's "01 / Layers")
+        // follows the same rule: the tenant's, trimmed, or blank.
+        $this->assertSame('Ritual', $photos[2]['label']);
+        $this->assertSame('', $photos[0]['label']);
+        $this->assertSame('', $photos[1]['label']);
         // A replaced tile loses the design's description with the design's
         // picture; the untouched ones keep theirs.
         $this->assertSame('', $photos[2]['alt']);

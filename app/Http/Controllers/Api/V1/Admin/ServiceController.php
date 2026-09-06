@@ -54,6 +54,10 @@ class ServiceController extends Controller
             'buffer_after_minutes' => 'nullable|integer|min:0|max:240',
             'price'                => 'nullable|numeric|min:0',
             'currency'             => 'nullable|string|max:10',
+            // The landing menus' per-row fields: a starting-price mark and
+            // one line of service window (2026_09_06_180000 migration).
+            'price_is_from'        => 'nullable|boolean',
+            'service_window'       => 'nullable|string|max:120',
             'image'                => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags'                 => 'nullable|array',
             'sort_order'           => 'nullable|integer',
@@ -93,7 +97,8 @@ class ServiceController extends Controller
             $this->syncMasters($service, $masterIds);
         }
 
-        return response()->json($service->load(['category', 'masters']), 201);
+        // The row as stored, defaults included, the same shape update() returns.
+        return response()->json($service->fresh(['category', 'masters']), 201);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -116,6 +121,8 @@ class ServiceController extends Controller
             'buffer_after_minutes' => 'nullable|integer|min:0|max:240',
             'price'                => 'nullable|numeric|min:0',
             'currency'             => 'nullable|string|max:10',
+            'price_is_from'        => 'nullable|boolean',
+            'service_window'       => 'nullable|string|max:120',
             'image'                => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
             'tags'                 => 'nullable|array',
             'sort_order'           => 'nullable|integer',

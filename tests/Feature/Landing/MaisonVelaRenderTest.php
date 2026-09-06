@@ -103,15 +103,21 @@ class MaisonVelaRenderTest extends TestCase
             'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,
         ]);
 
+        // His three rows with the per-row variance he drew: a STARTING price
+        // on the lunch ("From €48"), a SERVICE WINDOW on the priceless à la
+        // carte ("Evenings") and a fixed price that takes the band's suffix
+        // on the tasting menu ("€125 per guest") — each row's own two fields
+        // off the Services screen.
         foreach ([
-            ['Le Déjeuner', 'Two or three courses · Friday to Sunday · 12:00–15:00', 48],
-            ['À la carte', 'Shellfish, seasonal plates and brasserie signatures · Tuesday to Saturday', null],
-            ['Menu Vela', 'Six courses chosen by the kitchen · optional cellar pairing', 125],
-        ] as $i => [$name, $short, $price]) {
+            ['Le Déjeuner', 'Two or three courses · Friday to Sunday · 12:00–15:00', 48, true, null],
+            ['À la carte', 'Shellfish, seasonal plates and brasserie signatures · Tuesday to Saturday', null, false, 'Evenings'],
+            ['Menu Vela', 'Six courses chosen by the kitchen · optional cellar pairing', 125, false, null],
+        ] as $i => [$name, $short, $price, $from, $window]) {
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
                 'short_description' => $short,
                 'price' => $price, 'currency' => 'EUR',
+                'price_is_from' => $from, 'service_window' => $window,
                 'sort_order' => $i, 'is_active' => true,
             ]);
         }
@@ -150,9 +156,10 @@ class MaisonVelaRenderTest extends TestCase
                 'kicker'         => 'At the table',
                 'heading'        => "Three menus.\nOne sense of occasion.",
                 'subtext'        => 'Classic technique, exceptional produce and enough flexibility to make lunch feel easy or dinner last all evening.',
-                'price_prefix'   => 'From',
+                // The word before a starting price and a priceless row's
+                // window are the rows' own now, and the author's "From" is
+                // this design's default word, so only the suffix is written.
                 'price_suffix'   => 'per guest',
-                'window'         => 'Evenings',
             ],
             'about' => [
                 'kicker'         => 'The pleasure of doing things properly',
@@ -507,17 +514,23 @@ class MaisonVelaRenderTest extends TestCase
 
     // ─── The menu ledger ──────────────────────────────────────────────────
 
-    public function test_the_menu_rows_are_the_services_screens_own_and_carry_the_price_prefix(): void
+    /**
+     * Each row prints the price the author drew for it, off the row's own
+     * two fields on the Services screen: a STARTING price carries the word
+     * and no suffix ("From €48"), a fixed price carries the band's suffix and
+     * no word ("€125 per guest") — through Money, an ordinary space each side.
+     */
+    public function test_the_menu_rows_are_the_services_screens_own_and_each_prints_the_price_its_row_says(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
 
         $this->assertStringContainsString('<h3>Le Déjeuner</h3>', $body);
         $this->assertStringContainsString('Two or three courses · Friday to Sunday · 12:00–15:00', $body);
-        // The band's prefix before the money and its suffix after it — his
-        // "€125 per guest" — through Money, with an ordinary space each side.
-        $this->assertStringContainsString('<strong>From €48 per guest</strong>', $body);
-        $this->assertStringContainsString('<strong>From €125 per guest</strong>', $body);
+        $this->assertStringContainsString('<strong>From €48</strong>', $body);
+        $this->assertStringContainsString('<strong>€125 per guest</strong>', $body);
+        $this->assertStringNotContainsString('From €48 per guest', $body);
+        $this->assertStringNotContainsString('From €125', $body);
 
         // The ordinal is derived, never stored.
         $this->assertStringContainsString('<span aria-hidden="true">01</span>', $body);
@@ -525,12 +538,11 @@ class MaisonVelaRenderTest extends TestCase
     }
 
     /**
-     * A menu with no price shows the band's SERVICE WINDOW in the value
-     * column instead — the author's own "Evenings" on his à la carte row —
-     * and never an empty cell or a bare suffix. One line per band, printed
-     * where he drew it; see the partial's own note on why not per row.
+     * A menu with no price shows ITS OWN service window in the value column
+     * instead — the author's "Evenings" on his à la carte row — and never an
+     * empty cell or a bare suffix.
      */
-    public function test_a_menu_with_no_price_shows_the_service_window_in_its_place(): void
+    public function test_a_menu_with_no_price_shows_its_own_service_window_in_its_place(): void
     {
         $this->seedLikeTheKit();
         $body = $this->body();
@@ -538,8 +550,85 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('<h3>À la carte</h3>', $body);
         $this->assertStringContainsString('<strong>Evenings</strong>', $body);
         $this->assertSame(1, substr_count($body, '<strong>Evenings</strong>'));
-        $this->assertSame(2, substr_count($body, '<strong>From €'));
+        $this->assertSame(1, substr_count($body, '<strong>From €'));
         $this->assertStringNotContainsString('<strong>per guest</strong>', $body);
+    }
+
+    /**
+     * The band's `services.window` is the fallback for a priceless row with
+     * no line of its own — one line for every such row, as before the rows
+     * had a field — and a row's own line wins over it.
+     */
+    public function test_the_bands_window_is_the_fallback_for_a_priceless_menu_without_its_own(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'services' => ['heading' => 'Menus', 'window' => 'Evenings']]);
+
+        foreach ([['À la carte', null], ['Sunday lunch', 'Sundays · 13:00']] as $i => [$name, $window]) {
+            Service::create([
+                'organization_id' => 1, 'brand_id' => 1, 'name' => $name, 'service_window' => $window,
+                'sort_order' => $i, 'is_active' => true,
+            ]);
+        }
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>Evenings</strong>', $body);
+        $this->assertStringContainsString('<strong>Sundays · 13:00</strong>', $body);
+        $this->assertSame(1, substr_count($body, '<strong>Evenings</strong>'));
+    }
+
+    /** A row's own window is the tenant's line, escaped like every other. */
+    public function test_a_rows_own_window_is_escaped(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'services' => ['heading' => 'Menus']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'À la carte',
+            'service_window' => '<b>Evenings</b><script>alert(1)</script>',
+            'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('<b>Evenings</b>', $body);
+        $this->assertStringContainsString('&lt;b&gt;Evenings&lt;/b&gt;&lt;script&gt;', $body);
+    }
+
+    /**
+     * The word before a starting price is the tenant's `services.price_prefix`
+     * where one is written — "from" is not the same word in five locales —
+     * and the author's own "From" until then.
+     */
+    public function test_the_tenants_own_prefix_word_replaces_the_authors(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'Ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>Ab €48</strong>', $body);
+        $this->assertStringNotContainsString('From €48', $body);
+        $this->assertStringContainsString('<strong>€125 per guest</strong>', $body);
+    }
+
+    /**
+     * The row's mark decides; the band's word alone marks nothing. A written
+     * prefix over rows the Services screen calls fixed prints no word at all
+     * — the state the migration's backfill makes unreachable for the pages
+     * that had a prefix before their rows had a mark.
+     */
+    public function test_a_band_prefix_alone_marks_no_row(): void
+    {
+        $this->published(['hero' => ['headline' => 'Vela'], 'services' => ['heading' => 'Menus', 'price_prefix' => 'From', 'price_suffix' => 'per guest']]);
+        Service::create([
+            'organization_id' => 1, 'brand_id' => 1, 'name' => 'Le Déjeuner',
+            'price' => 48, 'currency' => 'EUR', 'sort_order' => 0, 'is_active' => true,
+        ]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>€48 per guest</strong>', $body);
+        $this->assertStringNotContainsString('From €', $body);
     }
 
     /** With no window written, a priceless row prints no value column at all. */
@@ -1118,6 +1207,9 @@ class MaisonVelaRenderTest extends TestCase
     public function test_the_leaves_only_this_design_draws_are_escaped(): void
     {
         $page = $this->seedLikeTheKit('hotel');
+        // The seeded à la carte row carries its own window, which would win
+        // over the band's; cleared so the band's fallback is what prints here.
+        Service::withoutGlobalScopes()->update(['service_window' => null]);
         $page->update(['content' => array_replace_recursive($page->content, [
             'hero'  => ['proof' => '<b>proof</b>'],
             'about' => ['fact_1' => '<b>fact</b>', 'fact_1_caption' => '<b>caption</b>'],

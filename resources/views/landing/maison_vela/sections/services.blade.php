@@ -23,16 +23,18 @@
     - `name` is the menu ("Le Déjeuner", "Menu Vela") and `short_description`
       is the line under it, which on a restaurant page is where the courses
       and the days go. Both fit exactly.
-    - the right-hand column is `price`, through App\Landing\Money, with
-      `services.price_prefix` in front of it ("From €48") and
-      `services.price_suffix` after it ("€125 per guest"), both the band's.
-    - on a row that has NO price the same column carries `services.window`
-      — the SERVICE WINDOW the author writes there ("Evenings"). One line per
-      band rather than per row, because a Service row has no such field and
-      a per-row leaf would need a key the catalogue cannot enumerate (see
-      SectionType's `services` note); a restaurant with one service pattern
-      gets exactly his composition, and one with several writes the pattern
-      into each menu's own line under its name.
+    - the right-hand column is `price`, through App\Landing\Money, in one
+      of the two compositions he draws on sibling rows. A row the Services
+      screen marks as a STARTING price (`Service.price_is_from`) prints the
+      WORD before the money and nothing after it ("From €48"): the tenant's
+      `services.price_prefix`, else this author's own "From". A fixed price
+      prints `services.price_suffix` after the money and no word ("€125 per
+      guest"). The row decides which; the band supplies the words.
+    - on a row that has NO price the same column carries the row's own
+      SERVICE WINDOW ("Evenings"), `Service.service_window` off the
+      Services screen, else the band's `services.window` — the one line per
+      band that was all a page could say before the rows had a field, kept
+      as the fallback so no page that wrote it changes.
     - `duration_minutes` is NOT drawn. It is a treatment's field; a brasserie
       lunch does not have one, and printing "120 min" beside a tasting menu
       would be a number the restaurant never wrote.
@@ -49,9 +51,12 @@
 
     $currencyFallback = $content->contact->currency;
 
-    // The words before and after every price, and the window a priceless
-    // row shows instead. Trimmed, never invented.
+    // The word before a STARTING price — the tenant's, else the author's
+    // own "From" — the words after a fixed one, and the band's fallback
+    // window for a priceless row with none of its own. Trimmed, never
+    // invented.
     $pricePrefix = trim((string) ($copy['price_prefix'] ?? ''));
+    $prefixWord  = $pricePrefix !== '' ? $pricePrefix : 'From';
     $priceSuffix = trim((string) ($copy['price_suffix'] ?? ''));
     $window      = trim((string) ($copy['window'] ?? ''));
 
@@ -78,7 +83,15 @@
     }
 
     $currency = $service->currency ?: $currencyFallback;
-    $price    = Money::format($service->price, $currency, $priceSuffix);
+
+    // The row's own mark decides its composition: a starting price is the
+    // word and the money, a fixed price the money and the band's suffix.
+    $isFrom = (bool) $service->price_is_from;
+    $price  = Money::format($service->price, $currency, $isFrom ? null : $priceSuffix);
+
+    // The row's own window, else the band's.
+    $rowWindow = trim((string) $service->service_window);
+    $rowWindow = $rowWindow !== '' ? $rowWindow : $window;
 @endphp
         <article data-item-id="{{ $service->id }}">
           <span aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span>
@@ -89,9 +102,9 @@
 @endif
           </div>
 @if ($price !== null)
-          <strong>{{ $pricePrefix !== '' ? $pricePrefix . ' ' . $price : $price }}</strong>
-@elseif ($window !== '')
-          <strong>{{ $window }}</strong>
+          <strong>{{ $isFrom ? $prefixWord . ' ' . $price : $price }}</strong>
+@elseif ($rowWindow !== '')
+          <strong>{{ $rowWindow }}</strong>
 @endif
         </article>
 @endforeach

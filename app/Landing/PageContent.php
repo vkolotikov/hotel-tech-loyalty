@@ -1197,8 +1197,10 @@ final class PageContent
      *    hospitality authors write under each card's name — and follows the
      *    same rule: the tenant's, or blank, never the design's. A partial
      *    that does not draw a line simply never reads the key.
+     *  - `label` is the tenant's `caption_N_label` — the word kit 02-beauty
+     *    writes after each tile's ordinal ("01 / Layers") — same rule again.
      *
-     * @return list<array{url: string, alt: string, caption: string, note: string}>
+     * @return list<array{url: string, alt: string, caption: string, note: string, label: string}>
      */
     public function galleryPhotos(string $section): array
     {
@@ -1221,12 +1223,14 @@ final class PageContent
 
             $caption = $this->leaf($section, 'caption_' . ($n + 1));
             $note    = $this->leaf($section, 'caption_' . ($n + 1) . '_note');
+            $label   = $this->leaf($section, 'caption_' . ($n + 1) . '_label');
 
             $photos[] = [
                 'url'     => $url,
                 'alt'     => $own !== null ? '' : (TemplateImage::alt($this->page->template_key, $slot) ?? ''),
                 'caption' => is_scalar($caption) ? trim((string) $caption) : '',
                 'note'    => is_scalar($note) ? trim((string) $note) : '',
+                'label'   => is_scalar($label) ? trim((string) $label) : '',
             ];
         }
 

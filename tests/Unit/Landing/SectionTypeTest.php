@@ -582,13 +582,21 @@ class SectionTypeTest extends TestCase
             $this->assertContains("caption_{$n}", $fields);
             $this->assertContains("caption_{$n}_note", $fields);
             $this->assertFalse(SectionType::isImageField("caption_{$n}_note"));
+            // The word after the tile's ordinal — kit 02-beauty's "01 / Layers".
+            $this->assertContains("caption_{$n}_label", $fields);
+            $this->assertFalse(SectionType::isImageField("caption_{$n}_label"));
         }
 
         $this->assertNotContains('caption_9', $fields);
         $this->assertNotContains('caption_9_note', $fields);
+        $this->assertNotContains('caption_9_label', $fields);
         $this->assertSame(
             array_map(static fn (int $n) => "caption_{$n}_note", range(1, SectionType::GALLERY_IMAGES)),
             SectionType::galleryNoteLeaves(),
+        );
+        $this->assertSame(
+            array_map(static fn (int $n) => "caption_{$n}_label", range(1, SectionType::GALLERY_IMAGES)),
+            SectionType::galleryLabelLeaves(),
         );
     }
 

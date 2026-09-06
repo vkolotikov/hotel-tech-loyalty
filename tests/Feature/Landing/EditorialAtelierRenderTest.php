@@ -116,10 +116,13 @@ class EditorialAtelierRenderTest extends TestCase
             ['Event Styling', 'Modern polish, soft structure or a considered evening look.', 75, 95],
             ['Scalp & Hair Ritual', 'A restorative wash, targeted conditioning and signature blow-dry.', 45, 58],
         ] as $i => [$name, $short, $minutes, $price]) {
+            // Every one of his prices is a STARTING price ("from £88"): the
+            // row's own mark on the Services screen.
             Service::create([
                 'organization_id' => 1, 'brand_id' => 1, 'name' => $name,
                 'short_description' => $short,
                 'duration_minutes' => $minutes, 'price' => $price, 'currency' => 'GBP',
+                'price_is_from' => true,
                 'sort_order' => $i, 'is_active' => true,
             ]);
         }
@@ -174,7 +177,6 @@ class EditorialAtelierRenderTest extends TestCase
                 'kicker'       => 'The service edit',
                 'heading'      => 'Start with what your hair needs.',
                 'subtext'      => 'Every visit begins with a proper conversation. Prices shown are starting points.',
-                'price_prefix' => 'from',
                 'caption'      => 'Precision, without the formality.',
             ],
             'about' => [
@@ -192,6 +194,11 @@ class EditorialAtelierRenderTest extends TestCase
                 'caption_2' => 'Precision bob',
                 'caption_3' => 'Tools of the trade',
                 'caption_4' => 'Room to breathe',
+                // His word after each ordinal: "01 / Layers".
+                'caption_1_label' => 'Layers',
+                'caption_2_label' => 'Shape',
+                'caption_3_label' => 'Ritual',
+                'caption_4_label' => 'Space',
             ],
             'team' => [
                 'kicker'  => 'Meet the artists',
@@ -885,6 +892,54 @@ class EditorialAtelierRenderTest extends TestCase
         $this->assertSame(1, substr_count($body, 'gallery-card--space'));
     }
 
+    /**
+     * The author's figcaption is two-part — `<span>01 / Layers</span> Soft
+     * structure` — and the WORD after the ordinal is the tile's own
+     * `caption_N_label`. The ordinal stays derived; the word is the tenant's.
+     */
+    public function test_each_tile_prints_the_authors_word_after_its_ordinal(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figcaption><span>01 / Layers</span>Soft structure</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span>02 / Shape</span>Precision bob</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span>04 / Space</span>Room to breathe</figcaption>', $body);
+    }
+
+    /**
+     * A tile with no word prints the ordinal alone, decorative as before —
+     * never an invented word and never a dangling slash.
+     */
+    public function test_a_tile_without_a_word_prints_the_ordinal_alone(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $content = $page->content;
+        unset($content['gallery_1']['caption_2_label']);
+        $content['gallery_1']['caption_3_label'] = '   ';
+        $page->update(['content' => $content]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<figcaption><span aria-hidden="true">02</span>Precision bob</figcaption>', $body);
+        $this->assertStringContainsString('<figcaption><span aria-hidden="true">03</span>Tools of the trade</figcaption>', $body);
+        $this->assertStringNotContainsString('02 /', $body);
+        $this->assertStringContainsString('<span>01 / Layers</span>', $body);
+    }
+
+    /** The word is the tenant's, escaped like every other line on the page. */
+    public function test_the_tile_word_is_escaped(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['gallery_1' => ['caption_1_label' => '<b>Layers</b>']])]);
+
+        $body = $this->body();
+
+        $this->assertSame(200, $this->statusCode());
+        $this->assertStringNotContainsString('<b>Layers</b>', $body);
+        $this->assertStringContainsString('<span>01 / &lt;b&gt;Layers&lt;/b&gt;</span>', $body);
+    }
+
     // ─── Photographs, share image and the logo ────────────────────────────
 
     public function test_the_page_publishes_a_share_image_and_names_it_in_its_structured_data(): void
@@ -1170,28 +1225,49 @@ class EditorialAtelierRenderTest extends TestCase
     }
 
     /**
-     * 5.2 — "from £88". A word rather than a flag, because it is not the same
-     * word in five locales and a studio with fixed prices should not say it
-     * at all.
+     * 5.2 — "from £88". The row's own mark on the Services screen says the
+     * price starts; the WORD is the tenant's `services.price_prefix` where
+     * one is written (it is not the same word in five locales) and the
+     * author's own "from" until then.
      */
-    public function test_the_price_prefix_is_the_tenants_word_and_is_absent_by_default(): void
-    {
-        $this->seedLikeTheKit();
-
-        $this->assertStringContainsString('<strong>from £88</strong>', $this->body());
-    }
-
-    public function test_a_studio_with_no_price_prefix_prints_the_price_alone(): void
+    public function test_a_starting_price_carries_the_authors_word_until_the_tenant_writes_theirs(): void
     {
         $page = $this->seedLikeTheKit();
-        $content = $page->content;
-        unset($content['services']['price_prefix']);
-        $page->update(['content' => $content]);
+
+        $this->assertStringContainsString('<strong>from £88</strong>', $this->body());
+
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'ab']])]);
+
+        $body = $this->body();
+
+        $this->assertStringContainsString('<strong>ab £88</strong>', $body);
+        $this->assertStringNotContainsString('from £88', $body);
+    }
+
+    /**
+     * A fixed price prints alone even with the band's word written: the
+     * row's mark decides, the word is only the word.
+     */
+    public function test_a_fixed_price_prints_alone_even_when_the_band_word_is_written(): void
+    {
+        $page = $this->seedLikeTheKit();
+        $page->update(['content' => array_replace_recursive($page->content, ['services' => ['price_prefix' => 'from']])]);
+        Service::withoutGlobalScopes()->where('name', 'Signature Cut & Finish')->update(['price_is_from' => false]);
 
         $body = $this->body();
 
         $this->assertStringContainsString('<strong>£88</strong>', $body);
         $this->assertStringNotContainsString('from £88', $body);
+        $this->assertStringContainsString('<strong>from £165</strong>', $body);
+    }
+
+    /** A service window is a menu's line; this treatment list never draws one. */
+    public function test_a_service_window_is_never_drawn_on_this_design(): void
+    {
+        $this->seedLikeTheKit();
+        Service::withoutGlobalScopes()->where('name', 'Signature Cut & Finish')->update(['service_window' => 'Tue–Sat · 10:00']);
+
+        $this->assertStringNotContainsString('Tue–Sat · 10:00', $this->body());
     }
 
     /**
