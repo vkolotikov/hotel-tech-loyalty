@@ -46,11 +46,9 @@ trait SetsUpLandingSchema
                 $table->unsignedBigInteger('landing_page_id');
                 $table->string('key', 32);
                 $table->boolean('enabled')->default(true);
-                // Mirrors 2026_08_31_090000_add_tone_to_landing_page_sections:
-                // nullable with no default, because null is a real value here
-                // ("render this band the way it was authored") and not merely
-                // an absent one.
-                $table->string('tone', 16)->nullable();
+                // No `tone`: the retired design's per-band colour was dropped
+                // by 2026_09_06_190000_drop_tone_from_landing_page_sections
+                // (DropToneColumnMigrationTest adds it back to test the drop).
                 $table->integer('sort')->default(0);
                 $table->text('content')->nullable();
                 $table->timestamps();

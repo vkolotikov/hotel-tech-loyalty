@@ -7,13 +7,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class LandingPageSection extends Model
 {
     /**
-     * `tone` is NOT fillable, deliberately. The column still exists
-     * (2026_08_31_090000_add_tone_to_landing_page_sections) but it was the
-     * generic house design's per-band colour, and that design is retired
-     * and deleted: none of the six kit layouts reads it, no endpoint
-     * validates it, and no screen offers it. Leaving the column is the safe
-     * direction on the live table; leaving a writer for a column nothing
-     * reads is not, so the writer went with the design.
+     * There is no `tone` here, deliberately. It was the generic house
+     * design's per-band colour (2026_08_31_090000_add_tone_to_landing_page_sections);
+     * that design was retired and deleted with everything that read it, the
+     * writer went with the design, and the column itself was dropped by
+     * 2026_09_06_190000_drop_tone_from_landing_page_sections once nothing
+     * could reach it.
      */
     protected $fillable = ['landing_page_id', 'key', 'enabled', 'sort', 'content'];
 

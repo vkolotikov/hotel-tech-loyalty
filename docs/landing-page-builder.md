@@ -66,7 +66,8 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   — the admin API under `routes/api.php` (`Route::prefix('landing-pages')`, around line 1289).
 - `app/Support/Accent.php`, `app/Support/AssetVersion.php` (content-hash `?v=` on landing assets).
 - Models `LandingPage`, `LandingPageSection`, `LandingPageRedirect`; tables from
-  `2026_08_21_100000_create_landing_pages_table.php`. `landing_page_sections.tone` exists but is unused.
+  `2026_08_21_100000_create_landing_pages_table.php`; the retired design's `landing_page_sections.tone`
+  column was dropped by `2026_09_06_190000_drop_tone_from_landing_page_sections.php`.
   The menu rows are `Service` rows (`app/Models/Service.php`, edited on the Services screen and its admin
   `ServiceController`); their per-row `service_window` and `price_is_from` columns come from
   `2026_09_06_180000_add_menu_row_fields_to_services.php`, whose backfill ticks every row of a page that
@@ -132,7 +133,9 @@ renders it from a non-persisted model through a signed URL. There is no JavaScri
 - Sections: at most 16 per page, 6 instances per repeatable type (`SectionType::MAX_*`). Order is the
   tenant's; the editor never regroups it.
 - Text leaves per section come from the catalogue. Restaurants' gallery cards carry `caption_M` (tile
-  title) and `caption_M_note` (the line of prose); 8 image slots per gallery.
+  title) and `caption_M_note` (the line of prose); Editorial Atelier's tiles carry `caption_M_label`, the
+  word after the derived ordinal ("01 / Layers"); 8 image slots per gallery. Each of these is offered
+  only on the designs whose partial prints it (`LandingOnboardingService::LEAF_READERS`).
 - Services band: rows come from the Services screen (never from content). Each row carries its own
   `service_window` ("Fri–Sun · 12:00", printed where the author put a window: a priceless row's value
   cell on Vela and Ember, every card's meta cell on Luma) and `price_is_from` (a starting price: the word
@@ -194,10 +197,8 @@ server refuses theme keys the old bundle still sends.
 
 ## 7. Open items (as of 2026-09-06)
 
-- Editorial Atelier's per-tile gallery word (same route as the restaurant caption note).
 - The acceptance seed has no bookable rota, so the booking band never appears in screenshot runs.
 - Legacy `theme.palette` / `font_pairing` keys on live rows are inert and wash out on the next save.
-- `landing_page_sections.tone` column is unused and could be dropped in a later migration.
 - Cyrillic display faces are absent for some kits (Google publishes none); hospitality icon coordinates
   drift 1–3 px from the author's; `og:image` is nocturne-only.
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
