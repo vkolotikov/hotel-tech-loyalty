@@ -130,7 +130,10 @@ a button (never an inline iframe on the page), bound by `widget_token` only, wit
 
 **Live preview renders real Blade.** The editor POSTs the unsaved draft, the server validates it with the
 real rules, stashes it for 90 s (shared cache required: `CACHE_DRIVER=database`), and the landing host
-renders it from a non-persisted model through a signed URL. There is no JavaScript re-render.
+renders it from a non-persisted model through a signed URL. There is no JavaScript re-render. The draft
+carries `theme`, `content`, the section rows, and since 2026-09-07 the picked `template_key` and `industry`
+(validated as the save validates them), so a design or trade chosen in the panel shows in the pane before
+Save; blocks the new design adds are seeded only by the save.
 
 ## 4. Content model in one screen
 
@@ -208,7 +211,8 @@ server refuses theme keys the old bundle still sends.
   key the row never stored is still refused), and the editor sends only `brand_color`. Until 2026-09-07 the
   editor echoed the raw stored theme and every save of such a page failed with "Validation failed".
 - Cyrillic display faces are absent for some kits (Google publishes none); hospitality icon coordinates
-  drift 1–3 px from the author's; `og:image` is nocturne-only.
+  drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
+  the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
 
 ## 8. Unshipped, local-only work on this branch (not landing)

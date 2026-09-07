@@ -2,9 +2,11 @@
 namespace Tests\Feature\Landing;
 
 use App\Http\Controllers\Api\V1\Admin\LandingPageController;
+use App\Landing\IndustryProfile;
 use App\Landing\PreviewDraft;
 use App\Models\LandingPage;
 use App\Models\Organization;
+use App\Models\Property;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -379,6 +381,76 @@ class LandingLivePreviewTest extends TestCase
         $response->assertHeader('X-Landing-Preview-Source', 'saved');
         $this->assertStringNotContainsString('RIVAL SECRET LAUNCH', $response->getContent());
         $this->assertStringContainsString(self::SAVED_HEADLINE, $response->getContent());
+    }
+
+    // ─── The design and the trade a draft can carry (2026-09-07) ─────────
+
+    /**
+     * Picking a design in the editor changes `template_key` on the FORM, and
+     * the pane promises "Live — including the changes you have not saved
+     * yet". Until 2026-09-07 the draft carried no design at all, so the pane
+     * kept rendering the saved kit and a tenant who picked another saw
+     * nothing change — the owner's "only one template active all the time".
+     */
+    public function test_a_draft_can_carry_a_design_and_the_pane_renders_it(): void
+    {
+        $response = $this->get($this->draftUrl(['template_key' => 'editorial_atelier']));
+
+        $response->assertOk();
+        $response->assertHeader('X-Landing-Preview-Source', 'draft');
+        $this->assertStringContainsString('landing/editorial_atelier.css', $response->getContent());
+        $this->assertStringNotContainsString('landing/nocturne_ritual.css', $response->getContent());
+        $this->assertSame('nocturne_ritual', $this->page->fresh()->template_key, 'Rendering a draft wrote the design.');
+    }
+
+    /** A retired or invented design is refused exactly as a save would refuse it. */
+    public function test_a_draft_design_off_the_offer_is_refused(): void
+    {
+        foreach (['ruled_page', 'no_such_design'] as $key) {
+            try {
+                $this->controller()->previewDraft($this->request(['template_key' => $key]));
+                $this->fail("'{$key}' was accepted as a draft design.");
+            } catch (ValidationException $e) {
+                $this->assertArrayHasKey('template_key', $e->errors());
+            }
+        }
+    }
+
+    /**
+     * The trade too: the industry card rewrites the page's words on save, and
+     * the pane speaks them before that save — here the footer's contact
+     * label, which a restaurant reads one way and a salon another.
+     */
+    public function test_a_draft_can_carry_an_industry_and_the_pane_speaks_its_words(): void
+    {
+        Property::create([
+            'organization_id' => $this->org->id, 'brand_id' => $this->page->brand_id, 'name' => 'Glamour',
+            'phone' => '+371 20 000 000', 'email' => 'hello@glamour.example', 'address' => '1 High Street',
+            'city' => 'Riga', 'country' => 'Latvia', 'currency' => 'EUR', 'timezone' => 'Europe/Riga', 'is_active' => true,
+        ]);
+
+        $salon      = IndustryProfile::for('beauty')->kicker('contact') . '</p>';
+        $restaurant = IndustryProfile::for('restaurant')->kicker('contact') . '</p>';
+        $this->assertNotSame($salon, $restaurant, 'The two trades share a contact label; pick another marker.');
+
+        $saved = $this->get($this->savedUrl($this->page))->getContent();
+        $draft = $this->get($this->draftUrl(['industry' => 'restaurant']))->getContent();
+
+        $this->assertStringContainsString($salon, $saved);
+        $this->assertStringContainsString($restaurant, $draft);
+        $this->assertStringNotContainsString($salon, $draft);
+        $this->assertSame('beauty', $this->page->fresh()->industry, 'Rendering a draft wrote the page industry.');
+        $this->assertSame('beauty', $this->org->fresh()->industry, 'Rendering a draft moved the organisation.');
+    }
+
+    public function test_a_draft_industry_off_the_list_is_refused(): void
+    {
+        try {
+            $this->controller()->previewDraft($this->request(['industry' => 'astrology']));
+            $this->fail('An unknown industry was accepted as a draft trade.');
+        } catch (ValidationException $e) {
+            $this->assertArrayHasKey('industry', $e->errors());
+        }
     }
 
     private function stashKeyFromUrl(string $url): string
