@@ -2037,6 +2037,13 @@ class LandingOnboardingTest extends TestCase
         $this->assertNotContains('item_cta_label', $brasserie['services']);
         $this->assertArrayNotHasKey('team', $brasserie);
 
+        // Every design honours the row's starting-price mark, so the WORD
+        // before it is offered on all six — kit 02-beauty's own leaf first,
+        // the others' since the mark moved onto the row (2026-09-06).
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table'] as $key) {
+            $this->assertContains('price_prefix', $served[$key]['services'], "'{$key}' prints the word before a starting price and does not offer it.");
+        }
+
         // The menu band's price SUFFIX ("€92 per guest") and SERVICE WINDOW
         // ("Fri–Sun · 12:00") are what the three hospitality authors write
         // and no beauty author does — kit 02-beauty's "from £88" has the

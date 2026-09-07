@@ -303,11 +303,12 @@ describe('locale completeness — addable section type names and blurbs (dynamic
 /*
  * THE SECTION-TONE NAME NET IS GONE, with the control it covered.
  *
- * `SectionType::TONES` is still a served allowlist and `tone` is still a
- * column the save endpoint validates — but the only design that ever READ a
- * band's tone class is retired from the offer, so the swatch row was three
- * dead controls per card on every design a tenant can now choose (see
- * `DesignPanel.tsx`'s note). With the picker removed, the three
+ * The tone machinery went with the retired design — `SectionType::TONES`,
+ * the save endpoint's validation and the editor's swatch row on 2026-09-05,
+ * the `landing_page_sections.tone` column itself on 2026-09-06 — because the
+ * only design that ever READ a band's tone class is gone from the offer, and
+ * the swatch row was three dead controls per card on every design a tenant
+ * can now choose (see `DesignPanel.tsx`'s note). With the picker removed, the three
  * `landing_pages.editor.tone_name_*` keys have no reader, and they are
  * deleted from all five locales rather than kept as translations of a
  * control nobody can reach. If the tones ever come back, so does this

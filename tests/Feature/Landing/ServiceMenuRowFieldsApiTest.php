@@ -110,8 +110,10 @@ class ServiceMenuRowFieldsApiTest extends TestCase
         $this->assertSame('Evenings', $json['service_window']);
         $this->assertTrue($json['price_is_from']);
 
-        // Cleared the way the form clears them: an empty string arrives as
-        // null through ConvertEmptyStringsToNull, the mark as '0'.
+        // Cleared: null for the window (standing in for the empty string the
+        // kernel's ConvertEmptyStringsToNull turns into null before any
+        // controller runs — the controller is called directly here, so that
+        // middleware itself is not exercised), '0' for the mark.
         $json = $this->controller()->update($this->request([
             'service_window' => null, 'price_is_from' => '0',
         ], 'PUT'), $service->id)->getData(true);
@@ -137,6 +139,25 @@ class ServiceMenuRowFieldsApiTest extends TestCase
         $this->assertSame('À la carte', $json['name']);
         $this->assertSame('Evenings', $json['service_window']);
         $this->assertTrue($json['price_is_from']);
+    }
+
+    /**
+     * A mark that arrives as null — an empty string through the kernel's
+     * ConvertEmptyStringsToNull, or an explicit null — is a fixed price,
+     * never a NOT NULL violation surfacing as a 500.
+     */
+    public function test_a_null_mark_is_a_fixed_price_not_an_error(): void
+    {
+        $json = $this->controller()->store($this->request($this->menu(['price_is_from' => null])))->getData(true);
+
+        $this->assertFalse($json['price_is_from']);
+
+        $service = Service::create($this->menu(['organization_id' => 1, 'brand_id' => 1, 'is_active' => true, 'price_is_from' => true]));
+
+        $json = $this->controller()->update($this->request(['price_is_from' => null], 'PUT'), $service->id)->getData(true);
+
+        $this->assertFalse($json['price_is_from']);
+        $this->assertFalse((bool) $this->stored($service->id)->price_is_from);
     }
 
     // ─── Bounds ──────────────────────────────────────────────────────────

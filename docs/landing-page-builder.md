@@ -70,8 +70,12 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   column was dropped by `2026_09_06_190000_drop_tone_from_landing_page_sections.php`.
   The menu rows are `Service` rows (`app/Models/Service.php`, edited on the Services screen and its admin
   `ServiceController`); their per-row `service_window` and `price_is_from` columns come from
-  `2026_09_06_180000_add_menu_row_fields_to_services.php`, whose backfill ticks every row of a page that
-  had written a band `price_prefix`, so the deploy changed no live page.
+  `2026_09_06_180000_add_menu_row_fields_to_services.php`, whose backfill ticks every row in scope of a
+  page that had written a band `price_prefix` on a design that printed the word (all but Nocturne Ritual,
+  which never read it), so no page lost a word it showed. Two consequences are by design: a restaurant page
+  that had written both a prefix and a suffix now prints its starting prices without the suffix, the
+  authors' composition; and a row assigned to no brand sits in every brand page's scope, so a mark set
+  for one page shows wherever the organisation's other pages list that row.
 
 **Templates**
 
@@ -151,9 +155,10 @@ renders it from a non-persisted model through a signed URL. There is no JavaScri
 
 ## 5. Tests
 
-Suites: `tests/Feature/Landing/` (27 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
-Baseline at `838c9128a`: **1311 backend tests** (Feature/Landing 1022, Unit/Landing 117, Unit/Support 172);
-frontend `npx vitest run` **779 passed + exactly 3 pre-existing `plannerMeta` failures**; `npx tsc -b` clean.
+Suites: `tests/Feature/Landing/` (30 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
+Baseline after the menu-row batch (2026-09-06): **1349 backend tests** (Feature/Landing 1060, Unit/Landing 117,
+Unit/Support 172); frontend `npx vitest run` **780 passed + exactly 3 pre-existing `plannerMeta` failures**;
+`npx tsc -b` clean.
 
 Run them like this, and only like this:
 
