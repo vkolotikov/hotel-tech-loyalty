@@ -208,7 +208,8 @@ server refuses theme keys the old bundle still sends.
   key the row never stored is still refused), and the editor sends only `brand_color`. Until 2026-09-07 the
   editor echoed the raw stored theme and every save of such a page failed with "Validation failed".
 - Cyrillic display faces are absent for some kits (Google publishes none); hospitality icon coordinates
-  drift 1–3 px from the author's; `og:image` is nocturne-only.
+  drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
+  the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
 
 ## 8. Unshipped, local-only work on this branch (not landing)

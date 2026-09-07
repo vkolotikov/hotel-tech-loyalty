@@ -173,6 +173,18 @@ class NocturneRitualRenderTest extends TestCase
                 'subtext' => 'Our small team brings together bodywork, facial practice and thoughtful hosting.',
             ],
             'reviews' => ['kicker' => 'Guest notes'],
+            // His closing panel, word for word: the paragraph AND the three
+            // promises, which the partial prints together only when the
+            // promises are written.
+            'booking' => [
+                'kicker'    => 'Your time, held.',
+                'heading'   => "Choose a ritual.\nWe will take it from there.",
+                'terms'     => 'Online booking shows live appointment times. Choose the closest ritual and we will confirm the details with you.',
+                'promise_1' => 'Live availability',
+                'promise_2' => 'Simple rescheduling',
+                'promise_3' => 'Secure confirmation',
+                'cta_label' => 'Book now',
+            ],
             'faq'     => [
                 'kicker'  => 'Before you arrive',
                 'heading' => 'A few useful things.',
