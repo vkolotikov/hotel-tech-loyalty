@@ -1,6 +1,6 @@
 # Landing-page builder — current state
 
-**Last verified:** 2026-09-06. Production `main` = `928d3e66c` (Laravel Cloud, app `hotel-tech-loyalty`),
+**Last verified:** 2026-09-07. Production `main` = `14c2c8e3b` (Laravel Cloud, app `hotel-tech-loyalty`),
 which carries every landing commit of `feature/landing-phase-3c` up to and including this document.
 Run `git fetch && git log --oneline -3 origin/main` for anything newer; the branch's own history is not
 on `main` (deploys are source patches), so compare by content, not by commit list.
@@ -203,7 +203,10 @@ server refuses theme keys the old bundle still sends.
 ## 7. Open items (as of 2026-09-06)
 
 - The acceptance seed has no bookable rota, so the booking band never appears in screenshot runs.
-- Legacy `theme.palette` / `font_pairing` keys on live rows are inert and wash out on the next save.
+- Legacy `theme.palette` / `font_pairing` keys on live rows are inert and wash out on the next save: the
+  update endpoint drops any non-allowlisted key the row already stores when a client echoes it back (a
+  key the row never stored is still refused), and the editor sends only `brand_color`. Until 2026-09-07 the
+  editor echoed the raw stored theme and every save of such a page failed with "Validation failed".
 - Cyrillic display faces are absent for some kits (Google publishes none); hospitality icon coordinates
   drift 1–3 px from the author's; `og:image` is nocturne-only.
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).

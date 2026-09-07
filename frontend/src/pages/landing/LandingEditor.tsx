@@ -1132,7 +1132,16 @@ export function LandingEditor({
         // A dedicated "did the address change" branch here would be a
         // second place that question could give a different answer.
         api.put('/v1/admin/landing-pages', {
-          theme: body.theme ?? {},
+          // Narrowed to the keys the server accepts (`ThemeRules::KEYS`),
+          // never the raw `body.theme`: `f.theme` is a clone of the stored
+          // row, and a page saved before the generic design was retired
+          // still carries `palette`/`font_pairing` there. Echoing those
+          // back 422'd every save of such a page until the tenant happened
+          // to touch the brand colour (live, 2026-09-06). The same
+          // narrowing the live preview already sends.
+          theme: themePayload({
+            brand_color: typeof body.theme?.brand_color === 'string' ? body.theme.brand_color : undefined,
+          }),
           // Fix round 1 (ruling 3b-4): `body.content` can carry an
           // `image_url` leaf dragged in by reference the instant a
           // SIBLING field on that same section is edited (`updateContent`'s
@@ -1220,7 +1229,14 @@ export function LandingEditor({
       const err = e as { response?: { data?: {
         error?: string; message?: string; errors?: Record<string, string[]>
       } } }
-      const fieldError = err.response?.data?.errors?.slug?.[0]
+      // The address first, then whichever OTHER field the server named —
+      // every message under `errors` is hand-written for a tenant
+      // ("Please choose a valid design option.", "Please choose one of the
+      // listed industries."), so the first of them always beats the
+      // envelope's "Validation failed".
+      const errors = err.response?.data?.errors
+      const fieldError = errors?.slug?.[0]
+        ?? Object.values(errors ?? {}).find(list => Array.isArray(list) && typeof list[0] === 'string')?.[0]
       toast.error(
         fieldError
         ?? err.response?.data?.error
