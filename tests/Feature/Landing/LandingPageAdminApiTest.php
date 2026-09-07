@@ -439,6 +439,37 @@ class LandingPageAdminApiTest extends TestCase
         $this->controller()->update($this->request(['slug' => 'taken-elsewhere']));
     }
 
+    // ─── The retired theme keys a row may still store (fix, 2026-09-07) ──
+
+    /**
+     * A page saved before the generic design was retired still stores its
+     * `palette` and `font_pairing`. This server serves that theme back on
+     * every GET, so a client that echoes it — the editor did, until
+     * 2026-09-07 — is returning the server's own output, not inventing a
+     * key. Such a save is accepted and the retired keys wash out of the row,
+     * which is what the docs always promised the next save would do.
+     */
+    public function test_echoing_the_retired_theme_keys_a_row_already_stores_is_accepted_and_washes_them_out(): void
+    {
+        $created = $this->create()['page'];
+        $legacy  = ['brand_color' => '#a34100', 'palette' => 'champagne_noir', 'font_pairing' => 'editorial'];
+        LandingPage::withoutGlobalScopes()->findOrFail($created['id'])->update(['theme' => $legacy]);
+
+        $updated = $this->body($this->controller()->update($this->request(['theme' => $legacy])))['page'];
+
+        $this->assertSame(['brand_color' => '#a34100'], $updated['theme']);
+        $this->assertSame(['brand_color' => '#a34100'], LandingPage::withoutGlobalScopes()->findOrFail($created['id'])->theme);
+    }
+
+    /** A key the row never stored is still refused: the allowlist stays the contract. */
+    public function test_a_theme_key_the_row_never_stored_is_still_refused(): void
+    {
+        $this->create();
+
+        $this->expectException(ValidationException::class);
+        $this->controller()->update($this->request(['theme' => ['brand_color' => '#a34100', 'palette' => 'champagne_noir']]));
+    }
+
     /** Editing copy is not a rename, and must not manufacture a redirect. */
     public function test_updating_content_without_a_slug_leaves_the_address_alone(): void
     {

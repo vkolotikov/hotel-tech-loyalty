@@ -386,6 +386,27 @@ class LandingPageController extends Controller
         $theme = $data['theme'] ?? null;
 
         if (is_array($theme)) {
+            // A key the row ALREADY stores but the allowlist no longer names
+            // is the retired design's leftover (`palette`, `font_pairing`),
+            // and this endpoint serves it back on every GET. A client that
+            // echoes it is returning this server's own output, not inventing
+            // a key — the editor did exactly that until 2026-09-07, and every
+            // page from before the retirement answered "Validation failed"
+            // to every save. Such keys are washed out here, so the write
+            // below replaces them with nothing: the wash-out the docs always
+            // promised the next save would do. A key the row never stored is
+            // still refused by ThemeRules::validate() — the allowlist stays
+            // the contract for anything new.
+            $stored = is_array($page->theme) ? $page->theme : [];
+
+            foreach (array_keys($theme) as $key) {
+                if (!in_array($key, ThemeRules::keys(), true) && array_key_exists($key, $stored)) {
+                    unset($theme[$key]);
+                }
+            }
+
+            $data['theme'] = $theme;
+
             ThemeRules::validate($theme);
         }
 
