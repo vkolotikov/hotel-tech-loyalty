@@ -52,6 +52,9 @@ final class TemplateImage
      */
     private const ASSET_DIR = 'landing/%s/assets/%s';
 
+    /** Where a design's picture of its author's page ships (2026-09-07). */
+    private const PREVIEW_FILE = 'landing/previews/%s.jpg';
+
     /**
      * THE AUTHORED MAP: template key → slot → [file, alt].
      *
@@ -324,6 +327,33 @@ final class TemplateImage
      *
      * @return array<string, string>
      */
+    /**
+     * The picture a design is chosen by: its author's own page at 1440,
+     * cropped to the first screen and shipped beside the kit as
+     * `public/landing/previews/<key>.jpg`. Derived from the FILE — a design
+     * with no picture on disk publishes null, never a URL that 404s — and
+     * content-hashed like every other landing asset, so a re-rendered
+     * picture is never served stale.
+     *
+     * $templateKey is a plain varchar off the page row. It is used in a path
+     * ONLY when it is a bare key, and only after the file for it is found —
+     * the same rule map() keeps for the photographs.
+     */
+    public static function preview(?string $templateKey): ?string
+    {
+        if (!is_string($templateKey) || preg_match('/^[a-z][a-z0-9_]{0,63}$/', $templateKey) !== 1) {
+            return null;
+        }
+
+        $relative = sprintf(self::PREVIEW_FILE, $templateKey);
+
+        if (!is_file(public_path($relative))) {
+            return null;
+        }
+
+        return asset($relative) . \App\Support\AssetVersion::query($relative);
+    }
+
     public static function map(?string $templateKey): array
     {
         $out = [];

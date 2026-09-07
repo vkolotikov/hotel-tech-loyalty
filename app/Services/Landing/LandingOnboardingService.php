@@ -644,6 +644,10 @@ class LandingOnboardingService
             'photo_blocks'   => self::photoBlocksFor($row['key']),
             'content_fields' => self::contentFieldsFor($row['key']),
             'image_defaults' => TemplateImage::map($row['key']),
+            // The picture of the author's own page a tenant chooses by
+            // (2026-09-07): the file shipped beside the kit, or nothing —
+            // never for a design no longer on offer.
+            'preview_image'  => self::isOfferable($row) ? TemplateImage::preview($row['key']) : null,
         ]), self::TEMPLATES);
     }
 

@@ -29,7 +29,7 @@ import { themePayload } from './designChoices'
 import { verticalFor, type IndustryOption } from './industryChoices'
 import {
   catalogPayload, designChangeImpact, resolveTemplateKey, templateContentFields, templateFixedBlocks,
-  templateImageDefaults, templatePhotoBlocks,
+  templateHasChanged, templateImageDefaults, templatePhotoBlocks,
   templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
 } from './editorCatalog'
@@ -1066,13 +1066,35 @@ export function LandingEditor({
    * above and `handleRemove` before it: those are the two other controls
    * here whose effect a tenant cannot see until after they act.
    */
+  /*
+   * A picked design goes straight onto the form (2026-09-07). The live pane
+   * carries `template_key` in its draft, so the tenant sees the page in the
+   * new design at once and confirms by looking; the lines the browser dialog
+   * used to say are shown UNDER the picker instead, with a way back, and
+   * nothing reaches the server until Save. The dialog went because a browser
+   * told to stop showing dialogs from this page swallowed the choice
+   * silently — "could not change template", with nothing on screen to say
+   * why.
+   */
   const handleTemplateChange = (key: string) => {
     if (key === templateKey) return
 
+    update('template_key', key)
+  }
+
+  /*
+   * THE FINAL SCENARIO, STEP 5 — changing design, safely and honestly, as
+   * lines under the picker while a different design is being looked at.
+   */
+  const designChangeNote = ((): string[] => {
+    const savedKey = page?.template_key
+
+    if (!templateHasChanged(templateKey, savedKey)) return []
+
     const impact = designChangeImpact({
       options: templates,
-      fromKey: templateKey,
-      toKey: key,
+      fromKey: savedKey as string,
+      toKey: templateKey,
       rowTypeIds: rows.map(row => row.typeId),
     })
 
@@ -1095,7 +1117,7 @@ export function LandingEditor({
 
     const lines = [
       t('landing_pages.design.change_confirm_lead', {
-        name: templates.find(o => o.key === key)?.name ?? '',
+        name: templates.find(o => o.key === templateKey)?.name ?? '',
         defaultValue: 'Switch to {{name}}? It is a different layout, not just different colours.',
       }),
     ]
@@ -1119,10 +1141,8 @@ export function LandingEditor({
       'Your words, your photographs and your brand colour all come with you. Nothing changes on your live page until you save.',
     ))
 
-    if (!window.confirm(lines.join('\n\n'))) return
-
-    update('template_key', key)
-  }
+    return lines
+  })()
 
   const saveMut = useMutation({
     mutationFn: async (body: Partial<LandingPageDTO>) => {
@@ -1487,6 +1507,8 @@ export function LandingEditor({
                 templates={templates}
                 templateKey={templateKey}
                 onTemplateChange={handleTemplateChange}
+                savedTemplateKey={page.template_key}
+                designChangeNote={designChangeNote}
                 // The final scenario, step 1: the trade whose designs come
                 // first, off the SERVED industry row for whichever industry
                 // the form is currently holding — so a tenant who corrects

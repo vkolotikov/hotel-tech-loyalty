@@ -3082,6 +3082,8 @@
       "chosen_kicker": "Your design",
       "change_open": "Change design",
       "change_cancel": "Keep this design",
+      "previewing_note": "You are looking at {{name}} in the preview. Save to keep it.",
+      "keep_saved": "Keep {{name}}",
       "designs_own_trade": "Made for your trade",
       "designs_other_trades": "Other designs",
       "designs_other_trades_note": "Drawn for another trade. Nothing stops you using one — your own words and sections stay exactly as they are.",

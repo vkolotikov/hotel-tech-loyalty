@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   catalogPayload, designChangeImpact, industryHasChanged, offerableTemplates, resolveTemplateKey,
-  showTemplatePicker, templateCards, templateGroups,
+  showTemplatePicker, templateCards, templateGroups, templateHasChanged,
   templateContentFields, templateImageDefaults, templatePhotoBlocks,
   templateFixedBlocks, templateRenders, templateSupports, templatesDrawing,
   type TemplateOption,
@@ -107,6 +107,26 @@ describe('templateCards', () => {
 
   it('marks nothing selected when the selection is not on the list', () => {
     expect(templateCards(ONE_TEMPLATE, '').some(c => c.selected)).toBe(false)
+  })
+
+  /** The picture of the author's page rides on the card, and a design the
+   *  server ships no picture for carries null rather than a broken image. */
+  it('carries the served preview picture, or null', () => {
+    const [withPicture] = templateCards([{ ...ONE_TEMPLATE[0], preview_image: 'https://x.test/landing/previews/plain_kit.jpg' }], '')
+    const [without] = templateCards(ONE_TEMPLATE, '')
+
+    expect(withPicture.previewImage).toBe('https://x.test/landing/previews/plain_kit.jpg')
+    expect(without.previewImage).toBeNull()
+  })
+})
+
+describe('templateHasChanged', () => {
+  it('is true only when a design was picked that differs from the saved one', () => {
+    expect(templateHasChanged('wide_gallery', 'plain_kit')).toBe(true)
+    expect(templateHasChanged('plain_kit', 'plain_kit')).toBe(false)
+    expect(templateHasChanged('', 'plain_kit')).toBe(false)
+    expect(templateHasChanged('wide_gallery', undefined)).toBe(false)
+    expect(templateHasChanged(undefined, 'plain_kit')).toBe(false)
   })
 })
 
