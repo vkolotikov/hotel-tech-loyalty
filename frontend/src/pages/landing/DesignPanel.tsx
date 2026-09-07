@@ -4,7 +4,7 @@ import { Check } from 'lucide-react'
 import { pickerSafeHex } from './designChoices'
 import { industryCards, type IndustryOption } from './industryChoices'
 import {
-  industryHasChanged, showTemplatePicker, templateGroups,
+  industryHasChanged, showTemplatePicker, templateGroups, templateHasChanged,
   type TemplateGroupKind, type TemplateOption, type TemplateSupport,
 } from './editorCatalog'
 
@@ -115,6 +115,17 @@ type DesignPanelProps = {
    * change design.
    */
   pickerOpen?: boolean
+  /**
+   * The design the SAVED row is on (2026-09-07). While `templateKey` differs
+   * from it, the panel says so under the picker, prints `designChangeNote`
+   * and offers the way back — the confirmation the browser dialog used to
+   * be, done by looking at the pane instead. Absent in the wizard, where no
+   * row is saved yet.
+   */
+  savedTemplateKey?: string
+  /** The lines that explain what the picked design changes (dropped and
+   *  added blocks); computed by the editor, which knows the page's rows. */
+  designChangeNote?: string[]
 
   // ─── Industry, under its own warning ─────────────────────────────────
 
@@ -161,6 +172,7 @@ const GROUP_HEADING: Record<TemplateGroupKind, { key: string; fallback: string }
 export function DesignPanel({
   brandColor, accentFallback, onBrandColorChange,
   templates, templateKey, onTemplateChange, vertical, pickerOpen,
+  savedTemplateKey, designChangeNote,
   industries, industry, savedIndustry, onIndustryChange,
   supports = ALL_SUPPORTED,
 }: DesignPanelProps) {
@@ -226,6 +238,38 @@ export function DesignPanel({
         </div>
       )}
 
+      {/*
+        A DESIGN PICKED BUT NOT SAVED (2026-09-07). The pane is already
+        showing it — the draft carries `template_key` — so the choice is
+        confirmed by looking rather than by a browser dialog, which a browser
+        told to stop showing dialogs would swallow silently. The lines the
+        dialog used to say, and a way back to the saved design.
+      */}
+      {onTemplateChange && templateHasChanged(templateKey, savedTemplateKey) && (
+        <div className="rounded-xl border border-primary-500/40 bg-primary-500/[0.06] p-4 space-y-2">
+          <p className="text-sm text-white">
+            {t('landing_pages.design.previewing_note', {
+              name: chosen?.name ?? '',
+              defaultValue: 'You are looking at {{name}} in the preview. Save to keep it.',
+            })}
+          </p>
+          {(designChangeNote ?? []).map((line, i) => (
+            <p key={i} className="text-xs text-t-secondary leading-relaxed">{line}</p>
+          ))}
+          <button
+            type="button"
+            onClick={() => onTemplateChange(savedTemplateKey as string)}
+            className="text-xs text-primary-400 hover:text-primary-300 font-semibold outline-none
+              focus-visible:ring-2 focus-visible:ring-primary-500/40 rounded"
+          >
+            {t('landing_pages.design.keep_saved', {
+              name: templateOptions.find(o => o.key === savedTemplateKey)?.name ?? '',
+              defaultValue: 'Keep {{name}}',
+            })}
+          </button>
+        </div>
+      )}
+
       {showPicker && onTemplateChange && (
         <div className="space-y-4">
           <p className="text-sm text-t-secondary leading-relaxed">
@@ -259,6 +303,17 @@ export function DesignPanel({
                     onClick={() => onTemplateChange(c.key)}
                     className={cardBase + ' ' + (c.selected ? cardActive : cardInactive)}
                   >
+                    {/* The author's own page, first screen — a design is chosen
+                        by looking at it. Decorative: the name below is the label. */}
+                    {c.previewImage && (
+                      <img
+                        src={c.previewImage}
+                        alt=""
+                        loading="lazy"
+                        decoding="async"
+                        className="w-full aspect-[8/5] object-cover object-top rounded-lg border border-dark-border mb-3"
+                      />
+                    )}
                     <div className="flex items-center justify-between gap-2">
                       {/* Untranslated, from the server — see `TemplateOption`. */}
                       <span className="text-sm font-semibold text-white truncate">{c.name}</span>

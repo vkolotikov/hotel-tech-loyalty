@@ -96,8 +96,11 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 - `LandingWizard.tsx` + `LandingBrandStep.tsx` — brand → design → configure.
 - `LandingEditor.tsx` — three tabs (Content / Design / Publish via `?tab=`), collapsed section cards,
   drag-and-drop ordering, add-a-block rails, photo Replace/Restore, gallery strip, FAQ form.
-- `DesignPanel.tsx` — accent colour only. `LandingPreview.tsx`, `livePreview.ts`, `previewBridge.ts`,
-  `previewFreshness.ts` — live preview. `editorSections.ts` (`fieldsForType`, `FIELD_PRESENTATION`,
+- `DesignPanel.tsx` — the design picker (cards carry the served `preview_image`, a first-screen picture
+  of each author's page from `public/landing/previews/<key>.jpg` via `TemplateImage::preview()`; picking a
+  design updates the form at once, the live pane shows it, and an inline note with the way back replaces
+  the old browser confirm) and the accent colour. `LandingPreview.tsx`, `livePreview.ts`,
+  `previewBridge.ts`, `previewFreshness.ts` — live preview. `editorSections.ts` (`fieldsForType`, `FIELD_PRESENTATION`,
   `stripImageLeaves`, `safeImageUrl`), `editorCatalog.ts` (`TemplateOption`), `sections.ts`,
   `landingDraft.ts`, `industryChoices.ts`, `seoCard.ts`, `imageDownscale.ts`, `publishAddress.ts`,
   `landingAccess.ts`, `wizardGate.ts`, `builderShape.ts`, `featuredReviewFeedback.ts`, `LandingTeardown.tsx`.

@@ -153,6 +153,26 @@ class TemplateImageTest extends TestCase
      * behind it. A value that reached it by any route other than the
      * endpoints must resolve to nothing rather than to a path.
      */
+    /**
+     * The picture of a design is the file shipped for it, or nothing: a
+     * known key with a preview on disk resolves to that asset; a key with no
+     * file, an unknown key and a hostile one all resolve to null, and the
+     * hostile one is never interpolated into a path.
+     */
+    public function test_the_preview_of_a_design_is_the_shipped_file_or_nothing(): void
+    {
+        $url = TemplateImage::preview('nocturne_ritual');
+
+        $this->assertIsString($url);
+        $this->assertStringContainsString('landing/previews/nocturne_ritual.jpg', $url);
+        $this->assertMatchesRegularExpression('#^https?://#', $url);
+
+        $this->assertNull(TemplateImage::preview('no_such_design'));
+        $this->assertNull(TemplateImage::preview('../../.env'));
+        $this->assertNull(TemplateImage::preview(''));
+        $this->assertNull(TemplateImage::preview(null));
+    }
+
     public function test_an_unknown_or_hostile_template_key_resolves_to_nothing(): void
     {
         foreach ([null, '', 'nope', '../../etc/passwd', 'nocturne_ritual/../..'] as $key) {

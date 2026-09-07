@@ -1172,6 +1172,34 @@ class LandingOnboardingTest extends TestCase
      * of this map in TypeScript would be a copy that offers to restore an
      * original that does not exist.
      */
+    /**
+     * A design is chosen by looking at it (2026-09-07): every design on offer
+     * publishes a picture of its author's own page, derived from the file
+     * shipped beside the kit — never a URL invented here — so the picker's
+     * cards and the wizard's can show the page before a tenant commits.
+     * A retired design publishes none.
+     */
+    public function test_each_offerable_design_publishes_a_preview_of_its_authors_page(): void
+    {
+        $this->makeProperty();
+
+        $rows = collect($this->prefill()['templates'])->keyBy('key');
+
+        foreach ($rows as $key => $row) {
+            $this->assertArrayHasKey('preview_image', $row, "'{$key}' publishes no preview_image key.");
+
+            if ($row['offerable']) {
+                $this->assertIsString($row['preview_image'], "'{$key}' is on offer and has no preview.");
+                $this->assertStringContainsString('landing/previews/' . $key . '.jpg', $row['preview_image']);
+                $this->assertFileExists(public_path('landing/previews/' . $key . '.jpg'), "'{$key}' names a preview that is not deployed.");
+            } else {
+                $this->assertNull($row['preview_image'], "'{$key}' is retired and still advertises a preview.");
+            }
+        }
+
+        $this->assertGreaterThanOrEqual(6, $rows->where('offerable', true)->count());
+    }
+
     public function test_each_template_publishes_its_own_photographs(): void
     {
         $this->makeProperty();

@@ -3038,6 +3038,8 @@
       "chosen_kicker": "Ihr Design",
       "change_open": "Design wechseln",
       "change_cancel": "Dieses Design behalten",
+      "previewing_note": "Du siehst {{name}} in der Vorschau. Speichern, um es zu behalten.",
+      "keep_saved": "{{name}} behalten",
       "designs_own_trade": "Für Ihre Branche gestaltet",
       "designs_other_trades": "Weitere Designs",
       "designs_other_trades_note": "Für eine andere Branche gestaltet. Sie können es trotzdem verwenden — Ihre Texte und Abschnitte bleiben genau so, wie sie sind.",

@@ -183,6 +183,13 @@ export type TemplateOption = {
    * so a default and the upload that replaces it name the same thing.
    */
   image_defaults?: Record<string, string> | null
+  /**
+   * A picture of the author's own page (2026-09-07): the file shipped
+   * beside the kit, served as an absolute URL, or null for a design that
+   * ships none or is no longer on offer. Shown on the card, so a design is
+   * chosen by looking at it rather than by reading a blurb.
+   */
+  preview_image?: string | null
 }
 
 /**
@@ -510,6 +517,9 @@ export type TemplateCard = {
   name: string
   blurb: string
   selected: boolean
+  /** The served `preview_image`, or null — never an empty string a card
+   *  would try to load. */
+  previewImage: string | null
 }
 
 /**
@@ -565,6 +575,7 @@ export function templateCards(options: TemplateOption[], selectedKey: string): T
     name: option.name,
     blurb: option.blurb,
     selected: option.key === selectedKey,
+    previewImage: typeof option.preview_image === 'string' && option.preview_image !== '' ? option.preview_image : null,
   }))
 }
 
@@ -588,6 +599,16 @@ export function industryHasChanged(selected: string | undefined, saved: string |
     && typeof saved === 'string'
     && saved !== ''
     && selected !== saved
+}
+
+/**
+ * Whether the tenant has picked a design other than the saved one — the
+ * same question as `industryHasChanged`, asked of the other catalogue key,
+ * and for the same reason: the note under the picker and the way back to
+ * the saved design exist only while a different design is being looked at.
+ */
+export function templateHasChanged(selected: string | undefined, saved: string | undefined): boolean {
+  return industryHasChanged(selected, saved)
 }
 
 /**
