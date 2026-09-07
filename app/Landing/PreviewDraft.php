@@ -3,6 +3,8 @@ namespace App\Landing;
 
 use App\Models\LandingPage;
 use App\Models\LandingPageSection;
+use App\Models\Organization;
+use App\Services\Landing\LandingOnboardingService;
 use App\Rules\ScalarLeaves;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -114,9 +116,22 @@ final class PreviewDraft
      * `sections` is capped at the same page cap the create verb enforces so
      * a caller cannot post ten thousand rows at a renderer.
      */
-    public static function rules(): array
+    public static function rules(LandingPage $page): array
     {
         return [
+            // The design and the trade the FORM holds (2026-09-07). The pane
+            // promises "including the changes you have not saved yet", and
+            // a design picked in the panel is such a change; without these
+            // two the pane kept rendering the saved kit and a tenant who
+            // picked another saw nothing move. Validated exactly as
+            // LandingPageController::update() validates them — the offer
+            // plus the page's own current design, and the industry list —
+            // so a preview cannot show a page a save would refuse.
+            'template_key' => ['sometimes', 'string', Rule::in(array_values(array_unique(array_merge(
+                LandingOnboardingService::offerableTemplateKeys(),
+                [$page->template_key],
+            ))))],
+            'industry'     => ['sometimes', 'string', Rule::in(Organization::INDUSTRIES)],
             'theme'   => ['sometimes', 'array', new ScalarLeaves(depth: 1)],
             'content' => ['sometimes', 'array', new ScalarLeaves(depth: 2)],
 
@@ -137,7 +152,13 @@ final class PreviewDraft
      */
     public static function messages(): array
     {
-        return [];
+        return [
+            // The same words the save gives for the same two mistakes.
+            'template_key.string' => 'Please choose one of the available page styles.',
+            'template_key.in'     => 'Please choose one of the available page styles.',
+            'industry.string'     => 'Please choose one of the listed industries.',
+            'industry.in'         => 'Please choose one of the listed industries.',
+        ];
     }
 
     /**
@@ -160,6 +181,15 @@ final class PreviewDraft
             'theme'           => self::theme($page, $data['theme'] ?? null),
             'content'         => self::content($page, $data['content'] ?? null),
             'sections'        => self::sections($page, $data['sections'] ?? null),
+            // The design and the trade to render in: the draft's where it
+            // named one (already validated), else the page's own. Normalised
+            // the way update() normalises the industry, so an alias renders
+            // as its canonical trade.
+            'template_key'    => is_string($data['template_key'] ?? null) && $data['template_key'] !== ''
+                ? $data['template_key']
+                : $page->template_key,
+            'industry'        => Organization::normaliseIndustry(is_string($data['industry'] ?? null) ? $data['industry'] : null)
+                ?? $page->industry,
         ];
 
         $key = Str::random(self::KEY_LENGTH);
@@ -221,6 +251,17 @@ final class PreviewDraft
         // than a promise.
         $page = new LandingPage();
         $page->setRawAttributes($stored->getAttributes());
+
+        // The draft's design and trade over the stored row's — the layout
+        // this render picks and the vocabulary IndustryProfile speaks — so
+        // the pane shows the page the tenant is about to save, not the one
+        // they are leaving. Absent on an older stash, the stored ones stand.
+        if (is_string($draft['template_key'] ?? null) && $draft['template_key'] !== '') {
+            $page->template_key = $draft['template_key'];
+        }
+        if (is_string($draft['industry'] ?? null) && $draft['industry'] !== '') {
+            $page->industry = $draft['industry'];
+        }
 
         $page->theme   = is_array($draft['theme'] ?? null) ? $draft['theme'] : [];
         $page->content = is_array($draft['content'] ?? null) ? $draft['content'] : [];

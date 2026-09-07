@@ -50,6 +50,13 @@ export type DraftPayload = {
   theme: Record<string, unknown>
   content: Record<string, unknown>
   sections: DraftSectionRow[]
+  /** The design and the trade the form holds, and ONLY when they moved off
+   *  the saved row to a value the server offers — `catalogPayload`'s own
+   *  narrowing, the same one the save sends. Absent, the server renders the
+   *  page's own. Without these the pane kept showing the saved kit after a
+   *  tenant picked another (live, 2026-09-07). */
+  template_key?: string
+  industry?: string
 }
 
 /**

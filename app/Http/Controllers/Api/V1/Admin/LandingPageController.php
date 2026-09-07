@@ -1023,7 +1023,7 @@ class LandingPageController extends Controller
         $page = $this->current();
         abort_if($page === null, 404);
 
-        $data = $request->validate(PreviewDraft::rules(), PreviewDraft::messages());
+        $data = $request->validate(PreviewDraft::rules($page), PreviewDraft::messages());
 
         $key = PreviewDraft::stash($page, $data);
 

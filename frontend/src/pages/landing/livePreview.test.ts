@@ -310,6 +310,13 @@ describe('draftFingerprint', () => {
     expect(a).toBe(b)
   })
 
+  /** A design or a trade picked but not yet saved is a different draft — the
+   *  pane re-renders for it exactly as it does for a typed word. */
+  it('tells a draft on another design or trade apart from the saved one', () => {
+    expect(draftFingerprint({ ...payload(), template_key: 'editorial_atelier' }, 0)).not.toBe(draftFingerprint(payload(), 0))
+    expect(draftFingerprint({ ...payload(), industry: 'restaurant' }, 0)).not.toBe(draftFingerprint(payload(), 0))
+  })
+
   it('changes when a single copy leaf changes', () => {
     const before = draftFingerprint(payload(), 0)
     const after = draftFingerprint(payload({ content: { hero: { headline: 'Hello!' } } }), 0)

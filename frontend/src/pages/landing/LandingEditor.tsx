@@ -861,6 +861,17 @@ export function LandingEditor({
     theme: themePayload(themeFields),
     content: stripImageLeaves(f.content),
     sections: buildSectionsPayload(rows),
+    // The picked design and trade, narrowed exactly as the save narrows
+    // them: the pane promises "including the changes you have not saved
+    // yet", and a design picked in the panel is such a change.
+    ...catalogPayload({
+      industries,
+      templates,
+      industry: f.industry,
+      templateKey: f.template_key,
+      savedIndustry: page?.industry,
+      savedTemplateKey: page?.template_key,
+    }),
   }
 
   // Which row is currently being dragged, and which one the pointer is

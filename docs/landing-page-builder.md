@@ -130,7 +130,10 @@ a button (never an inline iframe on the page), bound by `widget_token` only, wit
 
 **Live preview renders real Blade.** The editor POSTs the unsaved draft, the server validates it with the
 real rules, stashes it for 90 s (shared cache required: `CACHE_DRIVER=database`), and the landing host
-renders it from a non-persisted model through a signed URL. There is no JavaScript re-render.
+renders it from a non-persisted model through a signed URL. There is no JavaScript re-render. The draft
+carries `theme`, `content`, the section rows, and since 2026-09-07 the picked `template_key` and `industry`
+(validated as the save validates them), so a design or trade chosen in the panel shows in the pane before
+Save; blocks the new design adds are seeded only by the save.
 
 ## 4. Content model in one screen
 
