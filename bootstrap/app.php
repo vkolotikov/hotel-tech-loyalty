@@ -55,6 +55,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'brand'              => \App\Http\Middleware\BrandMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
+            'staff.can'          => \App\Http\Middleware\RequireStaffCapability::class,
             'landing.security'   => \App\Http\Middleware\LandingPageSecurity::class,
         ]);
 
