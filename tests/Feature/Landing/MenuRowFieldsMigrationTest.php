@@ -53,12 +53,12 @@ class MenuRowFieldsMigrationTest extends TestCase
     }
 
     /** A page on a kit, with whatever the tenant wrote under `services`. */
-    private function page(int $orgId, ?int $brandId, array $services): LandingPage
+    private function page(int $orgId, ?int $brandId, array $services, string $templateKey = 'maison_vela'): LandingPage
     {
         return LandingPage::create([
             'organization_id' => $orgId, 'brand_id' => $brandId,
             'slug' => 'p-' . $orgId . '-' . ($brandId ?? 'none') . '-' . uniqid(),
-            'template_key' => 'maison_vela', 'industry' => 'restaurant', 'status' => 'published',
+            'template_key' => $templateKey, 'industry' => 'restaurant', 'status' => 'published',
             'published_at' => now(),
             'content' => ['hero' => ['headline' => 'Vela'], 'services' => $services],
             'theme'   => [],
@@ -178,6 +178,30 @@ class MenuRowFieldsMigrationTest extends TestCase
         $this->assertTrue($this->isFrom($brandTwo));
         $this->assertTrue($this->isFrom($unassigned));
         $this->assertFalse($this->isFrom($stranger));
+    }
+
+    /**
+     * Nocturne Ritual printed no word before this migration — its treatment
+     * list never read `price_prefix` — so a mark there would ADD a word the
+     * page never showed. Its rows are left alone: the page renders exactly as
+     * it did, and a stray band word becomes the word for rows the tenant
+     * marks later. The other five designs printed the word on every row, so
+     * theirs are ticked; a row both pages share follows the page that ticks.
+     */
+    public function test_a_page_on_the_design_that_printed_no_word_before_is_left_alone(): void
+    {
+        $this->page(1, 1, ['price_prefix' => 'from'], 'nocturne_ritual');
+        $this->page(1, 2, ['price_prefix' => 'from'], 'editorial_atelier');
+
+        $nocturne = $this->row(1, 1, 'Still Water');
+        $atelier  = $this->row(1, 2, 'Signature Cut');
+        $shared   = $this->row(1, null, 'Unassigned');
+
+        $this->migration()->up();
+
+        $this->assertFalse($this->isFrom($nocturne));
+        $this->assertTrue($this->isFrom($atelier));
+        $this->assertTrue($this->isFrom($shared));
     }
 
     public function test_a_blank_or_missing_prefix_ticks_nothing(): void

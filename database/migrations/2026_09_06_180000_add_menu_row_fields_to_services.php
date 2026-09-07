@@ -36,6 +36,14 @@ use Illuminate\Support\Facades\Schema;
  * code that may change after it has run. Every such row, active or not,
  * because the band prefix marked every row the page could ever list.
  *
+ * Nocturne Ritual is the one design that printed NO word before this
+ * migration — its treatment list never read `price_prefix` — so its pages
+ * are skipped: a mark there would ADD a word the page never showed, and a
+ * stray band word on such a page simply becomes the word for the rows the
+ * tenant marks later. The one visible change a page can see is by design: a
+ * restaurant page that had written both a prefix and a suffix now prints
+ * its starting prices without the suffix, the authors' own composition.
+ *
  * Safe on the live table: `ADD COLUMN ... NULL` and `ADD COLUMN ... DEFAULT
  * false` are catalogue-only changes on Postgres 11+ (no table rewrite), there
  * is no index to build, and the backfill is one UPDATE per page that wrote a
@@ -45,6 +53,9 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
+    /** The one design whose menu printed no word before this migration. */
+    private const PRINTED_NO_WORD = 'nocturne_ritual';
+
     public function up(): void
     {
         if (!Schema::hasTable('services')) {
@@ -102,11 +113,11 @@ return new class extends Migration
         }
 
         DB::table('landing_pages')
-            ->select(['id', 'organization_id', 'brand_id', 'content'])
+            ->select(['id', 'organization_id', 'brand_id', 'template_key', 'content'])
             ->orderBy('id')
             ->chunk(100, function ($pages) {
                 foreach ($pages as $page) {
-                    if (!$this->hasBandPrefix($page->content)) {
+                    if ($page->template_key === self::PRINTED_NO_WORD || !$this->hasBandPrefix($page->content)) {
                         continue;
                     }
 

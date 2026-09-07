@@ -74,6 +74,13 @@ class ServiceController extends Controller
             'gallery_files.*.max'   => 'One of the photos is larger than 5 MB. Please use a smaller file.',
         ]);
 
+        // A mark that arrives as null — an empty string through
+        // ConvertEmptyStringsToNull, or an explicit null — is a fixed price,
+        // never a NOT NULL violation.
+        if (array_key_exists('price_is_from', $data)) {
+            $data['price_is_from'] = (bool) $data['price_is_from'];
+        }
+
         $masterIds = $data['master_ids'] ?? [];
         unset($data['image'], $data['master_ids']);
 
@@ -138,6 +145,10 @@ class ServiceController extends Controller
             'gallery_files.*.mimes' => 'One of the files is not a photo we can use. Please upload JPEG, PNG or WebP images.',
             'gallery_files.*.max'   => 'One of the photos is larger than 5 MB. Please use a smaller file.',
         ]);
+
+        if (array_key_exists('price_is_from', $data)) {
+            $data['price_is_from'] = (bool) $data['price_is_from'];
+        }
 
         $masterIds = $data['master_ids'] ?? null;
         unset($data['image'], $data['master_ids']);
