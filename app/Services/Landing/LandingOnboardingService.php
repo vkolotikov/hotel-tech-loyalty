@@ -380,6 +380,38 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // THE SECOND GYM KIT (resources/landing-kits/gym-tech/02-foundry-strength),
+            // converted the same way: the author's own markup, his own :root
+            // palette and his own stylesheet ship as the design, and only the
+            // CONTENT is the tenant's. Fourteen blocks, no gallery, a team
+            // band — the same contract as its sibling, on a dark ground.
+            'key'   => 'foundry_strength',
+            'name'  => 'Foundry Strength',
+            'vertical' => 'gym',
+            // The author's own words for it, from the kit collection's
+            // README: "private strength and personal training club".
+            'blurb' => 'Dark and quiet, a private club with a bronze accent and a ledger of ways to train. Made for personal trainers, strength coaches and small private gyms.',
+            // Transcribed from the three refusals
+            // resources/views/landing/foundry_strength/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the bronze family, never on the black,
+            // the charcoal or the bone.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**

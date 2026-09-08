@@ -297,6 +297,20 @@ final class TemplateImage
                 'alt'  => 'An instructor giving a client a precise alignment cue on the reformer',
             ],
         ],
+        // THE SECOND GYM KIT. Two photographs again, for the same two bands
+        // and with the same absences for the same reasons: his coach band,
+        // his ledger, his closing panel are typographic, and he draws no
+        // gallery.
+        'foundry_strength' => [
+            'hero' => [
+                'file' => 'hero-strength.webp',
+                'alt'  => 'A coach supervising a barbell squat in a quiet private strength club',
+            ],
+            'about' => [
+                'file' => 'training-plan.webp',
+                'alt'  => 'A coach and a client reviewing a personalised strength plan together',
+            ],
+        ],
     ];
 
     /**

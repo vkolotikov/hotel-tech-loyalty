@@ -993,6 +993,7 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('dining', $templates['luma_garden']['vertical']);
         $this->assertSame('dining', $templates['ember_table']['vertical']);
         $this->assertSame('gym', $templates['aera_reformer']['vertical']);
+        $this->assertSame('gym', $templates['foundry_strength']['vertical']);
         $this->assertTrue($templates->every(fn (array $row) => $row['vertical'] !== null),
             'A shipped design claims no trade; every shipped kit was drawn for one.');
 
@@ -1092,7 +1093,7 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength'] as $key) {
             $this->assertContains('team', $renders[$key], "'{$key}' is a beauty or gym kit and draws a team band.");
         }
 
@@ -1102,7 +1103,9 @@ class LandingOnboardingTest extends TestCase
 
         // The gym kits draw the shared contract minus the gallery: no
         // gallery partial ships, so the picker never offers one there.
-        $this->assertNotContains('gallery', $renders['aera_reformer'], "'aera_reformer' claims a gallery partial the author never drew.");
+        foreach (['aera_reformer', 'foundry_strength'] as $key) {
+            $this->assertNotContains('gallery', $renders[$key], "'{$key}' claims a gallery partial the author never drew.");
+        }
 
         foreach ($renders as $key => $list) {
             $this->assertNotContains('contact', $list, "'{$key}' claims a contact partial; every kit draws contact inside its footer hub.");
@@ -2099,7 +2102,7 @@ class LandingOnboardingTest extends TestCase
         // Every design honours the row's starting-price mark, so the WORD
         // before it is offered on all of them — kit 02-beauty's own leaf
         // first, the others' since the mark moved onto the row (2026-09-06).
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength'] as $key) {
             $this->assertContains('price_prefix', $served[$key]['services'], "'{$key}' prints the word before a starting price and does not offer it.");
         }
 
@@ -2113,17 +2116,20 @@ class LandingOnboardingTest extends TestCase
             $this->assertContains('window', $served[$key]['services'], "'{$key}' prints the service window and does not offer it.");
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength'] as $key) {
             $this->assertNotContains('price_suffix', $served[$key]['services'], "'{$key}' offers a price suffix its treatment list never prints.");
             $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its treatment list never prints.");
         }
 
-        // The gym kit's session cards carry no link, no badge and no
-        // photograph, so none of those controls is offered on it.
-        foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
-            $this->assertNotContains($leaf, $served['aera_reformer']['services'], "'aera_reformer' offers '{$leaf}' on cards that never print it.");
+        // The gym kits' session cards carry no link, no badge and no
+        // photograph, so none of those controls is offered on them, and no
+        // gym kit draws a gallery.
+        foreach (['aera_reformer', 'foundry_strength'] as $key) {
+            foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
+                $this->assertNotContains($leaf, $served[$key]['services'], "'{$key}' offers '{$leaf}' on cards that never print it.");
+            }
+            $this->assertArrayNotHasKey('gallery', $served[$key], "'{$key}' offers a gallery it cannot draw.");
         }
-        $this->assertArrayNotHasKey('gallery', $served['aera_reformer'], "'aera_reformer' offers a gallery it cannot draw.");
 
         // The line under each gallery caption is the hospitality authors'
         // card prose; the beauty kits' pills print no such line, so the

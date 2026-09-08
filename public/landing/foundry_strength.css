@@ -1,0 +1,1294 @@
+/*
+ * Foundry Strength — template stylesheet.
+ *
+ * THE AUTHOR'S OWN style.css, from
+ * resources/landing-kits/gym-tech/02-foundry-strength/style.css, copied byte
+ * for byte except for the TWO deliberate changes listed below.
+ *
+ * WHAT CHANGED, and nothing else did:
+ *
+ *  1. The self-hosted @font-face block below. The kit asked for Bodoni Moda
+ *     (`opsz,wght@6..96,400;6..96,500`) and Manrope (400–700) through a
+ *     fonts.googleapis.com <link>; the landing CSP's style-src/font-src are
+ *     'self'-only (LandingPageSecurity::policy()), so that link cannot work
+ *     here. Both families were already on disk: Bodoni Moda is the pair of
+ *     variable files editorial_atelier.css declares (the optical-size axis
+ *     rides inside them), Manrope the three nocturne_ritual.css declares.
+ *     THE DECLARED RANGES ARE THIS AUTHOR'S OWN REQUEST: Bodoni stops at
+ *     500 and Manrope reaches 700, because his eyebrows, nav and buttons
+ *     are set at 700 and must land where his page lands them.
+ *
+ *     BODONI MODA PUBLISHES NO CYRILLIC. Latin and latin-ext only — the
+ *     same fact editorial_atelier.css records — so a Russian tenant's
+ *     display headings fall through to the author's own stack (Georgia,
+ *     serif). The BODY face, Manrope, carries Cyrillic and latin-ext, so
+ *     every word of running copy is covered.
+ *
+ *  2. The "tenant states" section APPENDED at the very end of this file.
+ *     The kit is a mock with exactly three ways to train, one coach, one
+ *     member note, three questions and two photographs; a real page has
+ *     anywhere from none to twenty-four sessions and up to twelve coaches.
+ *     Those rules answer counts the mock never had to, plus the two things
+ *     this author drew nowhere: a words band and a chat launcher. Every rule
+ *     below the banner is written in the kit's own tokens and every one is
+ *     additive: no rule above the banner was edited to make any of it work.
+ *
+ * TOKEN TRAPS when copying a rule out of another kit's stylesheet into this
+ * file, all of which produce silence rather than an error:
+ *
+ *   1. The spacing ramp is `--s1`..`--s9` (0.4rem to 10rem), not `--space-N`.
+ *   2. `--line` is a LIGHT hairline (bone at 20%) because this page is dark;
+ *      `--line-dark` is the one for the bone story band. Aera Reformer's
+ *      meanings are the other way round.
+ *   3. The accent is `--bronze` (a FILL that carries black text);
+ *      `--bronze-soft` is accent TEXT on the dark page; `--bronze-halo` is
+ *      the pulse's glow. `--radius` is 0.35rem here, not 0.9rem.
+ */
+
+/* --- self-hosted faces (the kit's fonts.googleapis.com <link>, resolved) --- */
+@font-face{font-family:'Bodoni Moda';font-style:normal;font-weight:400 500;font-display:swap;
+  src:url('fonts/bodoni-moda-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Bodoni Moda';font-style:normal;font-weight:400 500;font-display:swap;
+  src:url('fonts/bodoni-moda-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('fonts/manrope-var-cyrillic.woff2') format('woff2');
+  unicode-range:U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('fonts/manrope-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:Manrope;font-style:normal;font-weight:400 700;font-display:swap;
+  src:url('fonts/manrope-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+/* --- end self-hosted faces ----------------------------------------------- */
+
+:root {
+  --black: #0d0d0c;
+  --charcoal: #191816;
+  --smoke: #272522;
+  --bone: #eee8dd;
+  --paper: #f7f2e9;
+  --bronze: #b98352;
+  --bronze-soft: #d3ab84;
+  --muted: #a9a197;
+  --white: #fff;
+  --line: rgba(238, 232, 221, 0.2);
+  --line-dark: rgba(13, 13, 12, 0.15);
+  --glass: rgba(13, 13, 12, 0.82);
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --bronze-halo: rgba(185, 131, 82, 0.15);
+  --earth-muted: #5f5850;
+  --display: "Bodoni Moda", Georgia, serif;
+  --body: "Manrope", Arial, sans-serif;
+  --fs-2xs: 0.68rem;
+  --fs-xs: 0.78rem;
+  --fs-body: 1rem;
+  --fs-lead: clamp(1.05rem, 1.5vw, 1.35rem);
+  --fs-h3: clamp(1.65rem, 2.3vw, 2.5rem);
+  --fs-h2: clamp(3.2rem, 6vw, 6.8rem);
+  --fs-hero: clamp(4.3rem, 7.7vw, 8rem);
+  --fs-quote: clamp(2rem, 3.4vw, 3.6rem);
+  --container: 90rem;
+  --gutter: clamp(1.1rem, 4vw, 4.5rem);
+  --s1: 0.4rem;
+  --s2: 0.7rem;
+  --s3: 1rem;
+  --s4: 1.5rem;
+  --s5: 2rem;
+  --s6: 3rem;
+  --s7: 4.5rem;
+  --s8: 7rem;
+  --s9: 10rem;
+  --radius: 0.35rem;
+  --pill: 999px;
+  --border: 1px;
+  --touch: 3rem;
+  --header: 5.5rem;
+  --widget: 7.5rem;
+  --fab-clearance: 15rem;
+  --shadow: 0 1.5rem 4rem var(--shadow-color);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --transition: 240ms ease;
+}
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: var(--black);
+  color: var(--bone);
+  font: var(--fs-body) / 1.7 var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+svg {
+  display: block;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+p,
+blockquote,
+dl,
+dd,
+figure,
+ol {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.94;
+}
+[id] {
+  scroll-margin-top: calc(var(--header) + var(--s4));
+}
+:focus-visible {
+  outline: 2px solid var(--bronze);
+  outline-offset: var(--s1);
+}
+.container {
+  width: min(calc(100% - var(--gutter) * 2), var(--container));
+  margin-inline: auto;
+}
+.section {
+  padding-block: var(--s9);
+}
+.eyebrow,
+.footer-label {
+  color: var(--bronze-soft);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+.icon {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+}
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: var(--s3);
+  left: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--bone);
+  color: var(--black);
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+.announcement {
+  display: grid;
+  min-height: 2.4rem;
+  place-items: center;
+  padding: var(--s1) var(--gutter);
+  background: var(--bronze);
+  color: var(--black);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: center;
+}
+.announcement a {
+  border-bottom: var(--border) solid currentColor;
+}
+.site-header {
+  position: absolute;
+  z-index: 30;
+  top: 2.4rem;
+  width: 100%;
+}
+.header__inner {
+  display: grid;
+  min-height: 4.7rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s6);
+  padding-inline: var(--s4);
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(1rem);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--s3);
+  line-height: 1;
+}
+.brand > svg {
+  width: 2.7rem;
+  height: 2.7rem;
+  color: var(--bronze);
+}
+.brand > span {
+  display: grid;
+}
+.brand strong {
+  font: 1.2rem var(--display);
+}
+.brand small {
+  margin-top: 0.25rem;
+  color: var(--muted);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.desktop-nav {
+  display: flex;
+  justify-content: center;
+  gap: var(--s5);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+.desktop-nav a {
+  position: relative;
+  padding-block: var(--s2);
+}
+.desktop-nav a::after {
+  position: absolute;
+  right: 50%;
+  bottom: 0;
+  left: 50%;
+  height: var(--border);
+  background: var(--bronze);
+  content: "";
+  transition: all var(--transition);
+}
+.desktop-nav a:hover::after {
+  right: 0;
+  left: 0;
+}
+.header__book {
+  display: inline-flex;
+  min-height: var(--touch);
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+}
+.mobile-nav {
+  display: none;
+}
+.mobile-nav summary {
+  cursor: pointer;
+  list-style: none;
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.mobile-nav summary::-webkit-details-marker {
+  display: none;
+}
+.mobile-nav summary span {
+  display: inline-block;
+  margin-left: var(--s2);
+  transition: transform var(--transition);
+}
+.mobile-nav[open] summary span {
+  transform: rotate(45deg);
+}
+.mobile-nav nav {
+  position: absolute;
+  top: calc(100% + var(--s2));
+  right: var(--gutter);
+  left: var(--gutter);
+  display: grid;
+  padding: var(--s3);
+  border: var(--border) solid var(--line);
+  background: var(--charcoal);
+  box-shadow: var(--shadow);
+}
+.mobile-nav nav a {
+  min-height: var(--touch);
+  align-content: center;
+  padding-inline: var(--s3);
+  border-bottom: var(--border) solid var(--line);
+}
+.hero {
+  position: relative;
+  min-height: 58rem;
+  overflow: hidden;
+  background: var(--charcoal);
+}
+.hero > img,
+.hero__shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hero > img {
+  object-fit: cover;
+  object-position: left center;
+  animation: image-in 1.3s var(--ease) both;
+}
+.hero__shade {
+  background: linear-gradient(
+    90deg,
+    transparent 20%,
+    var(--glass) 68%,
+    var(--black) 100%
+  );
+}
+.hero__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 58rem;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--header);
+  padding-left: 52%;
+}
+.hero h1 {
+  max-width: 9ch;
+  margin-top: var(--s4);
+  font-size: var(--fs-hero);
+}
+.hero h1 em {
+  color: var(--bronze-soft);
+  font-weight: 400;
+}
+.hero__content > p:not(.eyebrow) {
+  max-width: 34rem;
+  margin-top: var(--s5);
+  color: var(--muted);
+  font-size: var(--fs-lead);
+}
+.hero .button {
+  margin-top: var(--s6);
+}
+.hero__content > * {
+  animation: copy-in 0.9s var(--ease) both;
+}
+.hero__content h1 {
+  animation-delay: 80ms;
+}
+.hero__content > p {
+  animation-delay: 160ms;
+}
+.hero__content .button {
+  animation-delay: 240ms;
+}
+.hero__status {
+  position: absolute;
+  z-index: 4;
+  bottom: var(--s6);
+  left: var(--gutter);
+  display: grid;
+  min-width: 19rem;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
+  border: var(--border) solid var(--line);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(1rem);
+  transition:
+    transform var(--transition),
+    border-color var(--transition);
+}
+.hero__status:hover {
+  border-color: var(--bronze);
+  transform: translateY(-0.25rem);
+}
+.pulse {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: var(--pill);
+  background: var(--bronze);
+  box-shadow: 0 0 0 0.35rem var(--bronze-halo);
+}
+.hero__status small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.hero__status strong {
+  grid-column: 2;
+  font-family: var(--display);
+  font-size: var(--fs-lead);
+  font-weight: 400;
+}
+.hero__status .icon {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+.button,
+.booking-fab {
+  display: inline-flex;
+  min-height: var(--touch);
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  padding: var(--s2) var(--s5);
+  border: var(--border) solid var(--bronze);
+  border-radius: var(--radius);
+  background: var(--bronze);
+  color: var(--black);
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition:
+    transform var(--transition),
+    background var(--transition),
+    box-shadow var(--transition);
+}
+.button:hover,
+.booking-fab:hover {
+  background: var(--bronze-soft);
+  box-shadow: var(--shadow);
+  transform: translateY(-0.2rem);
+}
+.button--light {
+  border-color: var(--bone);
+  background: var(--bone);
+}
+.proof {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-block: var(--border) solid var(--line);
+  background: var(--charcoal);
+}
+.proof p {
+  display: grid;
+  min-height: 7.5rem;
+  place-items: center;
+  padding: var(--s3);
+  border-right: var(--border) solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+.proof p:last-child {
+  border: 0;
+}
+.proof strong {
+  color: var(--bone);
+  font: var(--fs-h3) var(--display);
+}
+.section-heading {
+  display: grid;
+  grid-template-columns: 1fr 0.65fr;
+  align-items: end;
+  gap: var(--s7);
+}
+.section-heading h2,
+.method h2,
+.coach h2,
+.faq h2,
+.booking h2 {
+  margin-top: var(--s3);
+  font-size: var(--fs-h2);
+}
+.section-heading > p {
+  max-width: 34rem;
+  color: var(--muted);
+  font-size: var(--fs-lead);
+}
+.training-list {
+  margin-top: var(--s7);
+  border-top: var(--border) solid var(--line);
+}
+.training-list article {
+  display: grid;
+  min-height: 10rem;
+  grid-template-columns: 3rem 4rem 1fr auto;
+  align-items: center;
+  gap: var(--s5);
+  padding: var(--s5);
+  border-bottom: var(--border) solid var(--line);
+  transition:
+    padding var(--transition),
+    background var(--transition);
+}
+.training-list article:hover {
+  padding-inline: var(--s6);
+  background: var(--charcoal);
+}
+.training-list article > span {
+  color: var(--bronze);
+}
+.training-list article > svg {
+  width: 3rem;
+  height: 3rem;
+  color: var(--bronze);
+}
+.training-list h3 {
+  font-size: var(--fs-h3);
+}
+.training-list p {
+  margin-top: var(--s2);
+  color: var(--muted);
+}
+.training-list strong {
+  font-size: var(--fs-xs);
+  white-space: nowrap;
+}
+.training-list .featured {
+  background: var(--smoke);
+}
+.method {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bone);
+  color: var(--black);
+}
+.method__copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: var(--s9) var(--gutter);
+}
+.method__copy > p:not(.eyebrow) {
+  max-width: 37rem;
+  margin-top: var(--s5);
+  color: var(--earth-muted);
+  font-size: var(--fs-lead);
+}
+.method ol {
+  padding: 0;
+  margin-top: var(--s7);
+  border-top: var(--border) solid var(--line-dark);
+  list-style: none;
+}
+.method li {
+  display: grid;
+  min-height: 5rem;
+  grid-template-columns: 3rem 1fr auto;
+  align-items: center;
+  border-bottom: var(--border) solid var(--line-dark);
+  transition:
+    padding var(--transition),
+    background var(--transition);
+}
+.method li:hover {
+  padding-inline: var(--s3);
+  background: var(--paper);
+}
+.method li span {
+  color: var(--bronze);
+  font-size: var(--fs-xs);
+}
+.method li strong {
+  font-family: var(--display);
+  font-size: var(--fs-h3);
+  font-weight: 400;
+}
+.method li small {
+  color: var(--earth-muted);
+}
+.method figure {
+  position: relative;
+  min-height: 48rem;
+  overflow: hidden;
+}
+.method figure img {
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.9s var(--ease);
+}
+.method figure:hover img {
+  transform: scale(1.04);
+}
+.method figcaption {
+  position: absolute;
+  right: var(--s4);
+  bottom: var(--s4);
+  padding: var(--s3) var(--s4);
+  background: var(--glass);
+  color: var(--bone);
+  font-size: var(--fs-xs);
+}
+.coach {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: end;
+  gap: var(--s8);
+}
+.coach > div > p:last-child {
+  max-width: 37rem;
+  margin-top: var(--s4);
+  color: var(--muted);
+  font-size: var(--fs-lead);
+}
+.coach dl {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: var(--border) solid var(--line);
+}
+.coach dl div {
+  min-height: 9rem;
+  padding: var(--s4);
+  border-right: var(--border) solid var(--line);
+}
+.coach dt {
+  font: var(--fs-h3) var(--display);
+}
+.coach dd {
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.review {
+  background: var(--bronze);
+  color: var(--black);
+}
+.review .eyebrow {
+  color: var(--black);
+}
+.review__inner {
+  display: grid;
+  grid-template-columns: 9rem 1fr 13rem;
+  align-items: end;
+  gap: var(--s7);
+}
+.review blockquote {
+  font: var(--fs-quote) / 1.08 var(--display);
+}
+.review__inner > div {
+  padding-top: var(--s3);
+  border-top: var(--border) solid var(--line-dark);
+  font-size: var(--fs-xs);
+}
+.rating {
+  letter-spacing: 0.15em;
+}
+.faq {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr;
+  gap: var(--s8);
+}
+.faq details {
+  border-top: var(--border) solid var(--line);
+}
+.faq details:last-child {
+  border-bottom: var(--border) solid var(--line);
+}
+.faq details[open] {
+  padding-inline: var(--s3);
+  background: var(--charcoal);
+}
+.faq summary {
+  display: grid;
+  min-height: 4.8rem;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  cursor: pointer;
+  font: var(--fs-h3) var(--display);
+  list-style: none;
+}
+.faq summary::before {
+  margin-right: var(--s3);
+  color: var(--bronze);
+  content: "+";
+}
+.faq details[open] summary::before {
+  content: "−";
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq details p {
+  padding: 0 var(--s6) var(--s4);
+  color: var(--muted);
+}
+.booking {
+  padding-block: var(--s8);
+  background: var(--smoke);
+}
+.booking__inner {
+  display: grid;
+  grid-template-columns: 1fr 0.7fr;
+  align-items: end;
+  gap: var(--s8);
+}
+.booking__inner > div:last-child {
+  display: grid;
+  gap: var(--s4);
+  justify-items: start;
+}
+.booking__inner > div:last-child > p:first-child {
+  max-width: 32rem;
+}
+.booking__inner > div:last-child > p:last-child {
+  font-size: var(--fs-xs);
+}
+.site-footer {
+  background: var(--black);
+}
+.footer-hub {
+  display: grid;
+  grid-template-columns: minmax(15rem, 1.35fr) repeat(
+      3,
+      minmax(9rem, 0.7fr)
+    ) var(--widget);
+  gap: var(--s6);
+  padding-block: var(--s7);
+}
+.footer-hub__booking,
+.footer-hub__review,
+.footer-hub__contact,
+.footer-hub__social {
+  display: grid;
+  align-content: start;
+  gap: var(--s3);
+}
+.footer-hub__booking > p {
+  max-width: 23rem;
+  color: var(--muted);
+}
+.footer-hub__booking .button {
+  justify-self: start;
+}
+.footer-rating {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  color: var(--muted);
+}
+.footer-rating strong {
+  color: var(--bone);
+  font: var(--fs-h3) var(--display);
+}
+.footer-hub__review > a,
+.footer-hub__contact a {
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  text-underline-offset: var(--s1);
+}
+.footer-hub__contact {
+  font-style: normal;
+}
+.footer-hub__contact a,
+.footer-hub__contact span {
+  display: flex;
+  min-height: var(--touch);
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--fs-xs);
+}
+.footer-hub__social > div {
+  display: flex;
+  gap: var(--s2);
+}
+.footer-hub__social a {
+  display: grid;
+  width: var(--touch);
+  min-height: var(--touch);
+  place-items: center;
+  border: var(--border) solid var(--line);
+  border-radius: var(--pill);
+  transition:
+    transform var(--transition),
+    border-color var(--transition);
+}
+.footer-hub__social a:hover {
+  border-color: var(--bronze);
+  transform: translateY(-0.2rem);
+}
+.footer-hub__social svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+.footer-hub__ai-slot {
+  min-width: var(--widget);
+  min-height: var(--widget);
+  justify-self: end;
+}
+.footer-bottom {
+  display: flex;
+  min-height: 5rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s4);
+  padding-left: var(--fab-clearance);
+  border-top: var(--border) solid var(--line);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+.footer-bottom div {
+  display: flex;
+  gap: var(--s4);
+}
+.booking-fab {
+  position: fixed;
+  z-index: 50;
+  bottom: 1.25rem;
+  left: 1.25rem;
+  box-shadow: var(--shadow);
+}
+@keyframes copy-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.3rem);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes image-in {
+  from {
+    opacity: 0.7;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (max-width: 74rem) {
+  .desktop-nav,
+  .header__book {
+    display: none;
+  }
+  .header__inner {
+    position: relative;
+    grid-template-columns: 1fr auto;
+  }
+  .mobile-nav {
+    display: block;
+  }
+  .footer-hub {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .footer-hub__ai-slot {
+    grid-column: 2;
+  }
+}
+@media (max-width: 54rem) {
+  :root {
+    --fs-h2: clamp(2.7rem, 10vw, 4.8rem);
+    --fs-hero: clamp(3.6rem, 13vw, 5.8rem);
+    --s9: 6rem;
+  }
+  .hero > img {
+    object-position: 35% center;
+  }
+  .hero__shade {
+    background: linear-gradient(0deg, var(--black) 4%, transparent 72%);
+  }
+  .hero__content {
+    min-height: 52rem;
+    justify-content: flex-end;
+    padding: 0 0 11rem;
+  }
+  .hero__content {
+    padding-left: 0;
+  }
+  .hero__content > p:not(.eyebrow) {
+    font-size: var(--fs-body);
+  }
+  .hero .button {
+    display: none;
+  }
+  .hero__status {
+    right: var(--gutter);
+    bottom: var(--s4);
+    left: var(--gutter);
+  }
+  .proof {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .proof p:nth-child(2) {
+    border-right: 0;
+  }
+  .proof p:nth-child(-n + 2) {
+    border-bottom: var(--border) solid var(--line);
+  }
+  .section-heading,
+  .coach,
+  .faq,
+  .booking__inner {
+    grid-template-columns: 1fr;
+    gap: var(--s5);
+  }
+  .training-list article {
+    grid-template-columns: 2.5rem 3rem 1fr;
+  }
+  .training-list article > strong {
+    grid-column: 3;
+  }
+  .method {
+    grid-template-columns: 1fr;
+  }
+  .method figure {
+    grid-row: 1;
+    min-height: 34rem;
+  }
+  .review__inner {
+    grid-template-columns: 1fr;
+    gap: var(--s5);
+  }
+  .booking__inner > div:last-child {
+    justify-items: stretch;
+  }
+  .booking .button {
+    width: 100%;
+  }
+  body {
+    padding-bottom: calc(
+      var(--touch) + var(--s5) + env(safe-area-inset-bottom)
+    );
+  }
+  .booking-fab {
+    right: var(--s3);
+    bottom: calc(var(--s3) + env(safe-area-inset-bottom));
+    left: var(--s3);
+    width: auto;
+    min-height: calc(var(--touch) + var(--s1));
+  }
+  .footer-bottom {
+    padding-left: 0;
+  }
+}
+@media (max-width: 36rem) {
+  :root {
+    --gutter: 1rem;
+    --fs-hero: clamp(3.1rem, 15vw, 4.25rem);
+    --fs-h3: clamp(1.4rem, 7vw, 2rem);
+    --s7: 3.5rem;
+    --s8: 4.75rem;
+  }
+  .announcement {
+    min-height: 2.2rem;
+  }
+  .site-header {
+    top: 2.2rem;
+  }
+  .brand small {
+    display: none;
+  }
+  .hero {
+    min-height: 44rem;
+  }
+  .hero__content {
+    min-height: 44rem;
+    padding-bottom: 10rem;
+  }
+  .training-list article {
+    grid-template-columns: 2rem 1fr;
+    gap: var(--s3);
+    padding-inline: 0;
+  }
+  .training-list article > svg {
+    grid-column: 1;
+    width: 2rem;
+  }
+  .training-list article > div {
+    grid-column: 2;
+  }
+  .training-list article > strong {
+    grid-column: 2;
+  }
+  .method__copy {
+    padding-block: var(--s8);
+  }
+  .method li {
+    grid-template-columns: 2.4rem 1fr;
+  }
+  .method li small {
+    display: none;
+  }
+  .method figure {
+    min-height: 29rem;
+  }
+  .coach dl {
+    grid-template-columns: 1fr;
+  }
+  .coach dl div {
+    min-height: auto;
+    border-right: 0;
+    border-bottom: var(--border) solid var(--line);
+  }
+  .footer-hub {
+    grid-template-columns: 1fr;
+  }
+  .footer-hub__ai-slot {
+    grid-column: 1;
+    min-height: 0;
+    justify-self: start;
+  }
+  .footer-bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: var(--s4);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms;
+  }
+  .hero > img,
+  .hero__content > * {
+    animation: none;
+  }
+}
+
+/* =========================================================================
+   TENANT STATES — appended, never edited into the kit above.
+
+   The kit is a mock: exactly three ways to train, one coach, one member
+   note, three questions, a hero photograph and a plan photograph. A real
+   page has anywhere from none to twenty-four sessions and up to twelve
+   coaches, and a brand-new club has none of anything. Everything below
+   answers a count the mock never had to answer, in the kit's own tokens, so
+   that a page which is missing a photograph or a column reads as a designed
+   composition rather than a hole. Nothing above this banner was changed to
+   make any of it work.
+
+   TOKEN TRAP, restated because every rule below had to avoid it: `--line`
+   is the LIGHT hairline for this dark page and `--line-dark` the one for
+   the bone band; the accent fill is `--bronze` and carries black text. See
+   the file header.
+   ========================================================================= */
+
+/* --- the highlight strip with fewer than four cells ----------------------
+   Four cells in the author's markup; the rating that closes his row is
+   null below four ratings org-wide by design, and a tenant may write fewer
+   highlights than three. His `repeat(4, 1fr)` would leave empty columns. */
+.proof[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.proof[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.proof[data-count="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* --- the method band with no photograph ----------------------------------
+   The author's band is a two-column split, copy left and a tall figure
+   right. With no picture at all the copy takes the whole band rather than
+   half a grid with a hole in it. */
+.method--solo {
+  grid-template-columns: 1fr;
+}
+
+/* --- the coach band: more coaches than the author's three cells ----------
+   His <dl> is three cells on a ruled top edge. A club with four or more
+   coaches beside the head coach wraps onto a second row, which needs the
+   rule the first row already has. */
+.coach dl div:nth-child(n + 4) {
+  border-top: var(--border) solid var(--line);
+}
+
+/* --- footer hub: the columns a tenant actually has -----------------------
+   The kit's five-column hub assumes a review link, contact details and
+   social destinations all exist. The review link only renders where a
+   review form is actually reachable, and a blank social leaf renders no
+   icon, so the hub is told how many columns it really has. This is the
+   author's own `.footer-hub` grid rule with the repeat count changed and
+   nothing else. */
+.footer-hub--3 {
+  grid-template-columns: minmax(15rem, 1.35fr) repeat(2, minmax(9rem, 0.7fr)) var(--widget);
+}
+
+.footer-hub--2 {
+  grid-template-columns: minmax(15rem, 1.35fr) minmax(9rem, 0.7fr) var(--widget);
+}
+
+.footer-hub--1 {
+  grid-template-columns: minmax(15rem, 1.35fr) var(--widget);
+}
+
+@media (max-width: 74rem) {
+  .footer-hub--1,
+  .footer-hub--2,
+  .footer-hub--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 36rem) {
+  .footer-hub--1,
+  .footer-hub--2,
+  .footer-hub--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- the brand mark -------------------------------------------------------
+   The author's lockup opens on HIS OWN glyph — a bronze "F" drawn as an
+   inline SVG, which is Foundry's mark and nobody else's. A tenant gets the
+   same 2.7rem box in the same place: their logo in it when they have one,
+   else their initial set in the display face on a bronze rule, so the
+   header and footer compositions do not move. `contain` because a logo has
+   its own aspect ratio and `cover` would crop somebody's mark; the width
+   overrides the author's global `img { width: 100% }`. */
+.brand__mark {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: var(--border) solid var(--bronze);
+  border-radius: var(--radius);
+  color: var(--bronze);
+  font: 1.4rem var(--display);
+}
+
+.brand__mark img {
+  display: block;
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+/* --- an eyebrow that IS the band's heading --------------------------------
+   Two bands can end up with no visible <h2> of their own, and a section with
+   no heading at all is a nameless entry in the document outline under a nav
+   anchor that points at it. Both render the EYEBROW as the heading element
+   instead. The author's `h1, h2, h3` rule sets the display face, a tight
+   letter-spacing and a 0.94 line-height; `.eyebrow` overrides everything
+   about that type except the family and the leading, which a <p> inherits
+   from `body` and an <h2> does not. Additive — on a <p> these are the values
+   already inherited. */
+.eyebrow {
+  font-family: var(--body);
+  line-height: 1.7;
+}
+
+/* --- the words band the author did not draw -------------------------------
+   `text` is the repeatable band a tenant needs when their business does not
+   fit the eleven the author composed, and template fidelity 3.2 says to ship
+   it rather than offer a picker entry that renders nothing. It is assembled
+   from HIS OWN PARTS — the split `.section-heading` his training ledger
+   uses and a photograph in his radius and shadow — so the only thing this
+   file adds is a measure for the prose under it. */
+.text-band__body {
+  max-width: 37rem;
+  margin-top: var(--s6);
+  color: var(--muted);
+}
+
+.text-band__body p + p {
+  margin-top: var(--s4);
+}
+
+.text-band__media {
+  margin-top: var(--s7);
+}
+
+.text-band__media img {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+.text-band__media figcaption {
+  max-width: 28rem;
+  margin-top: var(--s3);
+  color: var(--muted);
+  font-size: var(--fs-xs);
+}
+
+/* --- the chat launcher, in the author's tokens ----------------------------
+   The author reserves the footer's `[data-ai-widget-slot]` and keeps the
+   bottom-RIGHT corner clear (his booking pill is fixed bottom-left). The
+   launcher is his charcoal glass on his hairline, bone glyph, bronze rule on
+   hover — the same recipe as his hero status card — and the panel is his
+   charcoal card. Below 54rem his booking pill becomes a full-width bar along
+   the bottom edge, so the launcher lifts above it. */
+.ai-launcher {
+  position: fixed;
+  z-index: 50;
+  right: 1.25rem;
+  bottom: 1.25rem;
+  display: grid;
+  width: var(--touch);
+  height: var(--touch);
+  padding: 0;
+  place-items: center;
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--glass);
+  box-shadow: var(--shadow);
+  color: var(--bone);
+  cursor: pointer;
+  backdrop-filter: blur(1rem);
+  transition:
+    transform var(--transition),
+    border-color var(--transition);
+}
+
+.ai-launcher:hover {
+  border-color: var(--bronze);
+  transform: translateY(-0.2rem);
+}
+
+.ai-launcher .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ai-launcher__glyph--close,
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--open {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--close {
+  display: block;
+}
+
+.ai-panel {
+  position: fixed;
+  z-index: 49;
+  right: 1.25rem;
+  bottom: calc(1.25rem + var(--touch) + var(--s3));
+  width: min(23rem, calc(100vw - 2.5rem));
+  height: min(32rem, calc(100svh - 9rem));
+  border: var(--border) solid var(--line);
+  border-radius: var(--radius);
+  background: var(--charcoal);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 54rem) {
+  .ai-launcher {
+    bottom: calc(var(--s3) + var(--touch) + var(--s1) + var(--s3) + env(safe-area-inset-bottom));
+  }
+
+  .ai-panel {
+    bottom: calc(var(--s3) + var(--touch) + var(--s1) + var(--s3) + var(--touch) + var(--s3) + env(safe-area-inset-bottom));
+  }
+}
