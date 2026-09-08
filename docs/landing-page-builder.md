@@ -178,10 +178,11 @@ Save; blocks the new design adds are seeded only by the save.
 
 ## 5. Tests
 
-Suites: `tests/Feature/Landing/` (30 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
-Baseline after the menu-row batch (2026-09-06): **1349 backend tests** (Feature/Landing 1060, Unit/Landing 117,
-Unit/Support 172); frontend `npx vitest run` **780 passed + exactly 3 pre-existing `plannerMeta` failures**;
-`npx tsc -b` clean.
+Suites: `tests/Feature/Landing/` (33 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
+Baseline after the gym kits (2026-09-08): **1530 backend tests** (Feature/Landing 1240, Unit/Landing 118,
+Unit/Support 172); frontend `npx vitest run` **786 passed + exactly 3 pre-existing `plannerMeta` failures**;
+`npx tsc -b` clean. Each kit's render test is 52–65 tests; the whole Feature/Landing suite takes about 16
+minutes on the workstation.
 
 Run them like this, and only like this:
 
