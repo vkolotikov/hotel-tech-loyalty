@@ -1179,6 +1179,30 @@ class LandingOnboardingTest extends TestCase
      * cards and the wizard's can show the page before a tenant commits.
      * A retired design publishes none.
      */
+    /**
+     * THE TRADES THE LANDING PRODUCT IS FOR (2026-09-08): the five the owner
+     * draws designs for. The other four stay on the platform's own list —
+     * signup, the CRM presets — and stay on this wire so a page already
+     * filed under one of them still has its name and its chip; they are
+     * simply not on offer.
+     */
+    public function test_only_the_five_trades_with_designs_are_on_offer(): void
+    {
+        $this->makeProperty();
+
+        $rows = collect($this->prefill()['industries'])->keyBy('id');
+
+        $this->assertSame(
+            ['hotel', 'beauty', 'medical', 'restaurant', 'fitness'],
+            $rows->filter(fn (array $row) => ($row['offerable'] ?? null) === true)->keys()->values()->all(),
+        );
+
+        foreach (['legal', 'real_estate', 'education', 'other'] as $id) {
+            $this->assertArrayHasKey($id, $rows->all(), "'{$id}' left the wire; a page filed under it would have no name.");
+            $this->assertFalse($rows[$id]['offerable'] ?? null, "'{$id}' is on offer.");
+        }
+    }
+
     public function test_each_offerable_design_publishes_a_preview_of_its_authors_page(): void
     {
         $this->makeProperty();

@@ -1007,34 +1007,28 @@ export function LandingEditor({
   }
 
   /**
-   * Template fidelity 1.2: the industry picker asks first.
+   * Template fidelity 1.2, revised 2026-09-08: the trade chips no longer ask
+   * first.
    *
-   * It is the most destructive control in the builder — saving it rewrites
-   * every heading, the wording on every button, the words the rest of the
-   * workspace uses, and which sections are on offer — and it is the one
-   * control here whose effect a tenant cannot see until after they save.
-   * `handleRemove` already puts a plain-language `window.confirm` in front
-   * of the only other irreversible control on this screen; this is the same
-   * pattern, in the same words, for the same reason.
+   * Changing the trade is still the most consequential control in the
+   * builder — saving it rewrites every heading, the wording on every button,
+   * the words the rest of the workspace uses, and which sections are on
+   * offer. Until 2026-09-08 a `window.confirm` stood in front of it, in the
+   * same words `DesignPanel` prints under the chips. Two things retired it:
    *
-   * Only when they are actually MOVING off the saved industry: re-selecting
-   * the card the panel opened on is not a change and must not interrogate
-   * anybody. The confirm text is the change note `DesignPanel` already
-   * shows, so what a tenant is warned about and what they are asked to
-   * confirm are one sentence.
+   *  - The panel now answers "which designs does that trade get?" by being
+   *    clicked — the gallery follows the chip — and a dialog on every click
+   *    turned looking around into an interrogation.
+   *  - The warning is already standing, in the tenant's line of sight, for
+   *    as long as they are off the saved trade (`industry_change_note`,
+   *    drawn by `DesignPanel` while `industryHasChanged`), and nothing
+   *    reaches the server until Save. Same shape as `handleTemplateChange`
+   *    below, for the same reason: confirm by looking, commit by saving.
+   *
+   * `handleRemove` keeps its dialog — that one deletes on the spot.
    */
   const handleIndustryChange = (id: string) => {
     if (id === f.industry) return
-
-    if (id !== page?.industry) {
-      const confirmed = window.confirm(
-        t(
-          'landing_pages.design.industry_change_note',
-          'Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.',
-        ),
-      )
-      if (!confirmed) return
-    }
 
     update('industry', id)
   }
@@ -1059,12 +1053,13 @@ export function LandingEditor({
    *  - WHAT THE NEW DESIGN NEEDS IS SEEDED. The blocks named as gained are
    *    the rows that same writer creates on the save.
    *  - IT IS STILL A SAVE. Like every other control on this screen, this
-   *    queues into `form` and waits for the Save button; the confirm is
-   *    about consequence, not about committing.
+   *    queues into `form` and waits for the Save button; the note is about
+   *    consequence, not about committing.
    *
-   * A confirm rather than an inline note, mirroring `handleIndustryChange`
-   * above and `handleRemove` before it: those are the two other controls
-   * here whose effect a tenant cannot see until after they act.
+   * Lines under the picker rather than a dialog, and since 2026-09-08 the
+   * trade chips work the same way (see `handleIndustryChange` above): the
+   * pane shows the effect, the note names it, Save commits it. Only
+   * `handleRemove` still asks first — it deletes on the spot.
    */
   /*
    * A picked design goes straight onto the form (2026-09-07). The live pane
@@ -1085,6 +1080,12 @@ export function LandingEditor({
   /*
    * THE FINAL SCENARIO, STEP 5 — changing design, safely and honestly, as
    * lines under the picker while a different design is being looked at.
+   *
+   * Consequences only. The panel's own first line already names the design
+   * in the pane (`previewing_note`), so the dialog's old opener — "Switch to
+   * X? It is a different layout…" — is not repeated here as a question
+   * nobody is being asked; what follows is what stops showing, what is
+   * added, and what comes along.
    */
   const designChangeNote = ((): string[] => {
     const savedKey = page?.template_key
@@ -1115,12 +1116,7 @@ export function LandingEditor({
         || t(`landing_pages.editor.section_type_name_${id}`, TYPE_NAME_FALLBACK[id] ?? id))
       .join(', ')
 
-    const lines = [
-      t('landing_pages.design.change_confirm_lead', {
-        name: templates.find(o => o.key === templateKey)?.name ?? '',
-        defaultValue: 'Switch to {{name}}? It is a different layout, not just different colours.',
-      }),
-    ]
+    const lines: string[] = []
 
     if (impact.dropped.length > 0) {
       lines.push(t('landing_pages.design.change_confirm_dropped', {
@@ -1509,13 +1505,6 @@ export function LandingEditor({
                 onTemplateChange={handleTemplateChange}
                 savedTemplateKey={page.template_key}
                 designChangeNote={designChangeNote}
-                // The gallery is OPEN on the Design tab (2026-09-08). Behind a
-                // "Change design" link the six designs, their pictures and the
-                // regrouping that follows the industry card were never seen —
-                // "I still do not see design variations" — and a tenant who
-                // came here to look at designs should not have to find a link
-                // to be shown any.
-                pickerOpen
                 // The final scenario, step 1: the trade whose designs come
                 // first, off the SERVED industry row for whichever industry
                 // the form is currently holding — so a tenant who corrects
