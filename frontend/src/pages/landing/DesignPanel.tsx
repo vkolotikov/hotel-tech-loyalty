@@ -15,9 +15,10 @@ import {
  * Shared verbatim between `LandingEditor`'s Design tab and `LandingWizard`'s
  * own design step, so the two screens cannot offer different choices or
  * describe the same design differently. Only the layout differs (this is a
- * column in the editor, a full-width step in the wizard) and one behaviour:
- * the wizard is CHOOSING, so its picker is open; the editor is EDITING a
- * page that already has a design, so its picker sits behind "Change design".
+ * column in the editor, a full-width step in the wizard). The gallery is
+ * open on both since 2026-09-08: behind a "Change design" link the designs,
+ * their pictures and the regrouping that follows the industry card were
+ * never seen. The toggle survives for a caller that still wants it closed.
  *
  * ─── WHAT USED TO BE HERE, AND WHY IT IS NOT ────────────────────────────
  *
@@ -109,10 +110,9 @@ type DesignPanelProps = {
    * Whether the picker starts open.
    *
    * The wizard's design step IS the choice, so it opens open and draws no
-   * toggle. The editor is editing a page that already has a design, so the
-   * picker sits behind "Change design" — which keeps the Design tab to the
-   * three things it is now for: the design, the accent, and the way to
-   * change design.
+   * toggle; the editor opens it too (2026-09-08), because a tenant who comes
+   * to the Design tab to look at designs should not have to find a link to
+   * be shown any. Left unset, the picker sits behind "Change design".
    */
   pickerOpen?: boolean
   /**

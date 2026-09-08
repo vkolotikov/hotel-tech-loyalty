@@ -1509,6 +1509,13 @@ export function LandingEditor({
                 onTemplateChange={handleTemplateChange}
                 savedTemplateKey={page.template_key}
                 designChangeNote={designChangeNote}
+                // The gallery is OPEN on the Design tab (2026-09-08). Behind a
+                // "Change design" link the six designs, their pictures and the
+                // regrouping that follows the industry card were never seen —
+                // "I still do not see design variations" — and a tenant who
+                // came here to look at designs should not have to find a link
+                // to be shown any.
+                pickerOpen
                 // The final scenario, step 1: the trade whose designs come
                 // first, off the SERVED industry row for whichever industry
                 // the form is currently holding — so a tenant who corrects
