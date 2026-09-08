@@ -1,0 +1,494 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Foundry is a private strength club for precise one-to-one and semi-private coaching in Riga."
+    />
+    <title>Foundry — Private Strength Club</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400;6..96,500&amp;family=Manrope:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body id="top">
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="announcement" data-block="announcement">
+      Private training · limited memberships ·
+      <a href="#booking" data-action="open-booking">View assessment times</a>
+    </div>
+    <header class="site-header" data-block="header">
+      <div class="container header__inner">
+        <a class="brand" href="#top" aria-label="Foundry home"
+          ><svg viewBox="0 0 42 42" aria-hidden="true">
+            <path
+              d="M7 35V7h28M7 21h21"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            /></svg
+          ><span
+            ><strong>Foundry</strong><small>Strength club · Riga</small></span
+          ></a
+        >
+        <nav class="desktop-nav" aria-label="Main navigation">
+          <a href="#training">Training</a><a href="#method">Method</a
+          ><a href="#coach">Coach</a><a href="#contact">Contact</a>
+        </nav>
+        <a class="header__book" href="#booking" data-action="open-booking"
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M7 3v3m10-3v3M4 9h16M5 5h14v15H5z"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+            /></svg
+          >Book assessment</a
+        >
+        <details class="mobile-nav">
+          <summary>Menu <span>+</span></summary>
+          <nav aria-label="Mobile navigation">
+            <a href="#training">Training</a><a href="#method">Method</a
+            ><a href="#coach">Coach</a><a href="#contact">Contact</a
+            ><a href="#booking" data-action="open-booking">Book assessment</a>
+          </nav>
+        </details>
+      </div>
+    </header>
+    <main id="main">
+      <section class="hero" data-block="hero" data-variant="private-strength">
+        <img
+          src="assets/hero-strength.webp"
+          width="1536"
+          height="1024"
+          alt="A coach supervising a safe barbell squat in the Foundry private strength club"
+        />
+        <div class="hero__shade"></div>
+        <div class="container hero__content">
+          <p class="eyebrow">Strength, made personal</p>
+          <h1>Train for the life<br /><em>beyond</em> the gym.</h1>
+          <p>
+            Private coaching, intelligent programming and a quiet club built
+            around measurable progress.
+          </p>
+          <a class="button" href="#booking" data-action="open-booking"
+            >Book your assessment<svg
+              class="icon"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path
+                d="M5 12h13m-4-5 5 5-5 5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              /></svg
+          ></a>
+        </div>
+        <a class="hero__status" href="#booking" data-action="open-booking"
+          ><span class="pulse"></span><small>Assessment opening</small
+          ><strong>Tuesday · 18:00</strong
+          ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M5 12h13m-4-5 5 5-5 5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.7"
+            /></svg
+        ></a>
+      </section>
+      <section class="proof" data-block="trust" aria-label="Foundry highlights">
+        <p><strong>1:1</strong><span>Dedicated coaching</span></p>
+        <p><strong>6</strong><span>Semi-private limit</span></p>
+        <p><strong>12 wk</strong><span>Progress cycles</span></p>
+        <p><strong>4.9</strong><span>Member rating</span></p>
+      </section>
+      <section
+        class="training section container"
+        id="training"
+        data-block="services"
+        data-variant="training-ledger"
+      >
+        <header class="section-heading">
+          <div>
+            <p class="eyebrow">Ways to train</p>
+            <h2>A plan with a point.</h2>
+          </div>
+          <p>
+            You will know what you are doing, why it matters and how today
+            connects to the next twelve weeks.
+          </p>
+        </header>
+        <div class="training-list">
+          <article>
+            <span>01</span
+            ><svg viewBox="0 0 48 48" aria-hidden="true">
+              <path
+                d="M9 24h30M6 18v12m5-15v18m26-18v18m5-15v12"
+                fill="none"
+                stroke="currentColor"
+              />
+            </svg>
+            <div>
+              <h3>Strength assessment</h3>
+              <p>
+                Movement screen, training history and a practical starting plan.
+              </p>
+            </div>
+            <strong>75 min · €85</strong>
+          </article>
+          <article class="featured">
+            <span>02</span
+            ><svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="24" cy="14" r="6" fill="none" stroke="currentColor" />
+              <path
+                d="M12 41c1-13 5-19 12-19s11 6 12 19M7 29h34"
+                fill="none"
+                stroke="currentColor"
+              />
+            </svg>
+            <div>
+              <h3>Private coaching</h3>
+              <p>
+                One coach, one programme and every session adjusted in real
+                time.
+              </p>
+            </div>
+            <strong>60 min · from €70</strong>
+          </article>
+          <article>
+            <span>03</span
+            ><svg viewBox="0 0 48 48" aria-hidden="true">
+              <circle cx="17" cy="16" r="5" fill="none" stroke="currentColor" />
+              <circle cx="32" cy="18" r="5" fill="none" stroke="currentColor" />
+              <path
+                d="M7 39c1-10 4-16 10-16s9 6 10 16m-3-9c2-4 4-6 8-6 6 0 9 6 9 15"
+                fill="none"
+                stroke="currentColor"
+              />
+            </svg>
+            <div>
+              <h3>Semi-private training</h3>
+              <p>
+                Your own programme, coached beside a small group of committed
+                members.
+              </p>
+            </div>
+            <strong>60 min · from €32</strong>
+          </article>
+        </div>
+      </section>
+      <section
+        class="method"
+        id="method"
+        data-block="story"
+        data-variant="measured-progress"
+      >
+        <div class="method__copy">
+          <p class="eyebrow">Inside the method</p>
+          <h2>Less noise.<br />More signal.</h2>
+          <p>
+            We combine careful coaching with simple performance data. No
+            theatre, no random workouts—just work that earns its place.
+          </p>
+          <ol>
+            <li>
+              <span>01</span><strong>Assess</strong
+              ><small>Find the useful starting point</small>
+            </li>
+            <li>
+              <span>02</span><strong>Build</strong
+              ><small>Train the patterns that matter</small>
+            </li>
+            <li>
+              <span>03</span><strong>Review</strong
+              ><small>Measure, adjust and progress</small>
+            </li>
+          </ol>
+        </div>
+        <figure>
+          <img
+            src="assets/training-plan.webp"
+            width="1122"
+            height="1402"
+            loading="lazy"
+            alt="Foundry coach and client reviewing a personalised strength plan"
+          />
+          <figcaption>Every programme has a reason.</figcaption>
+        </figure>
+      </section>
+      <section
+        class="coach section container"
+        id="coach"
+        data-block="team"
+        data-variant="lead-coach"
+      >
+        <div>
+          <p class="eyebrow">Head coach</p>
+          <h2>Luca Berziņš</h2>
+          <p>
+            Strength and conditioning coach specialising in sustainable
+            performance for busy adults.
+          </p>
+        </div>
+        <dl>
+          <div>
+            <dt>11 yrs</dt>
+            <dd>Coaching experience</dd>
+          </div>
+          <div>
+            <dt>220+</dt>
+            <dd>Member programmes</dd>
+          </div>
+          <div>
+            <dt>1 plan</dt>
+            <dd>Built around you</dd>
+          </div>
+        </dl>
+      </section>
+      <section
+        class="review section"
+        data-block="testimonials"
+        data-variant="member-note"
+      >
+        <div class="container review__inner">
+          <p class="eyebrow">Member note</p>
+          <blockquote>
+            “The first gym where I never feel lost. Every set has a purpose, and
+            I am stronger without feeling broken.”
+          </blockquote>
+          <div>
+            <p class="rating">★★★★★</p>
+            <strong>Anna K.</strong>
+            <p>Private coaching member</p>
+          </div>
+        </div>
+      </section>
+      <section
+        class="faq section container"
+        data-block="faq"
+        data-variant="membership-questions"
+      >
+        <header>
+          <p class="eyebrow">Before you begin</p>
+          <h2>Clear from day one.</h2>
+        </header>
+        <div>
+          <details>
+            <summary>Do I need lifting experience?</summary>
+            <p>
+              No. The assessment gives us a safe, useful starting point whether
+              this is your first programme or your fiftieth.
+            </p>
+          </details>
+          <details>
+            <summary>Is this an open gym?</summary>
+            <p>
+              Foundry is appointment-led. Members train in coached private or
+              semi-private sessions, so the floor stays calm.
+            </p>
+          </details>
+          <details>
+            <summary>Can you work around an injury?</summary>
+            <p>
+              Often, yes. Share your history before booking; where needed, we
+              will coordinate with your clinician.
+            </p>
+          </details>
+        </div>
+      </section>
+      <section
+        class="booking"
+        id="booking"
+        data-block="booking"
+        data-variant="assessment-cta"
+      >
+        <div class="container booking__inner">
+          <div>
+            <p class="eyebrow">Your starting point</p>
+            <h2>Book the assessment.<br />We build the rest.</h2>
+          </div>
+          <div>
+            <p>
+              Seventy-five focused minutes to understand your movement, goals
+              and best route forward.
+            </p>
+            <a
+              class="button button--light"
+              href="#booking"
+              data-action="open-booking"
+              >Choose a time</a
+            >
+            <p>
+              Prefer to call? <a href="tel:+37120000822">+371 20 000 822</a>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <footer
+      class="site-footer"
+      id="contact"
+      data-block="footer"
+      data-variant="club-hub"
+    >
+      <div class="container footer-hub">
+        <div class="footer-hub__booking">
+          <a class="brand" href="#top"
+            ><svg viewBox="0 0 42 42" aria-hidden="true">
+              <path
+                d="M7 35V7h28M7 21h21"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+              /></svg
+            ><span
+              ><strong>Foundry</strong><small>Strength club · Riga</small></span
+            ></a
+          >
+          <p>Private coaching and purposeful strength training.</p>
+          <a class="button" href="#booking" data-action="open-booking"
+            >Book assessment</a
+          >
+        </div>
+        <div class="footer-hub__review" data-block="feedback">
+          <p class="footer-label">Member review</p>
+          <p class="footer-rating">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="m12 3 2.6 5.3 5.9.9-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9-4.3-4.2 5.9-.9z"
+                fill="currentColor"
+              /></svg
+            ><strong>4.9</strong> / 5
+          </p>
+          <a href="#contact" data-action="open-feedback">Leave a review</a>
+        </div>
+        <address class="footer-hub__contact" data-block="contact">
+          <p class="footer-label">Contact</p>
+          <a href="https://maps.google.com/?q=8+Sporta+iela+Riga"
+            ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <circle
+                cx="12"
+                cy="10"
+                r="2.5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              /></svg
+            >8 Sporta iela, Riga</a
+          ><a href="tel:+37120000822"
+            ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                d="M7 4 4 6c1 7 7 13 14 14l2-3-5-3-2 2c-3-1-4-3-5-5l2-2Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              /></svg
+            >+371 20 000 822</a
+          ><a href="mailto:train@foundry.example"
+            ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect
+                x="3"
+                y="5"
+                width="18"
+                height="14"
+                rx="2"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <path
+                d="m4 7 8 6 8-6"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              /></svg
+            >Email the club</a
+          ><span
+            ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              />
+              <path
+                d="M12 7v5l3 2"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.7"
+              /></svg
+            >Mon–Sat 06–21</span
+          >
+        </address>
+        <div class="footer-hub__social">
+          <p class="footer-label">Follow</p>
+          <div>
+            <a href="https://instagram.com" aria-label="Instagram"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect
+                  x="3"
+                  y="3"
+                  width="18"
+                  height="18"
+                  rx="5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.7"
+                />
+                <circle cx="17.5" cy="6.5" r="1" fill="currentColor" /></svg></a
+            ><a href="https://facebook.com" aria-label="Facebook"
+              ><svg viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M14 21v-8h3l.5-3H14V8.5c0-1 .5-1.5 1.7-1.5H18V4.2c-.7-.1-1.7-.2-2.8-.2-2.8 0-4.7 1.7-4.7 4.8V10H8v3h2.5v8Z"
+                  fill="currentColor"
+                /></svg
+            ></a>
+          </div>
+        </div>
+        <div
+          class="footer-hub__ai-slot"
+          data-block="assistant"
+          data-variant="widget-slot"
+          data-ai-widget-slot
+          aria-hidden="true"
+        ></div>
+      </div>
+      <div class="container footer-bottom">
+        <p>© 2026 Foundry Strength. Fictional demonstration.</p>
+        <div><a href="#top">Privacy</a><a href="#top">Accessibility</a></div>
+      </div>
+    </footer>
+    <a class="booking-fab" href="#booking" data-action="open-booking"
+      ><svg class="icon" viewBox="0 0 24 24" aria-hidden="true">
+        <path
+          d="M7 3v3m10-3v3M4 9h16M5 5h14v15H5z"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.7"
+        /></svg
+      >Book assessment</a
+    >
+  </body>
+</html>

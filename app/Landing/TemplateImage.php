@@ -280,6 +280,23 @@ final class TemplateImage
                 'alt'  => 'A plate from the seasonal menu',
             ],
         ],
+        // THE FIRST GYM KIT. Two photographs, which is all this author drew:
+        // his hero is a full-bleed reformer studio and his story band is a
+        // coaching close-up. NO `team` entry — his coach band is typographic
+        // (a name, a line and three cells) — and NO `services`, NO `booking`
+        // and no gallery at all: none of those bands draws a picture on this
+        // design, so a default in any of them would be a picture no tenant
+        // could ever see.
+        'aera_reformer' => [
+            'hero' => [
+                'file' => 'hero-reformer.webp',
+                'alt'  => 'An instructor guiding a client through a reformer session in a warm, calm studio',
+            ],
+            'about' => [
+                'file' => 'coached-movement.webp',
+                'alt'  => 'An instructor giving a client a precise alignment cue on the reformer',
+            ],
+        ],
     ];
 
     /**
