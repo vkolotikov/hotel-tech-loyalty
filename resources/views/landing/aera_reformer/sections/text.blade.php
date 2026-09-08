@@ -72,7 +72,7 @@
 @if ($kicker !== '')
           <p class="eyebrow">{{ $kicker }}</p>
 @endif
-          <h2>{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
+          <h2>{{ Copy::heading((string) ($fields['heading'] ?? ''), $fields['heading_accent'] ?? null) }}</h2>
 @elseif ($kicker !== '')
           <h2 class="eyebrow">{{ $kicker }}</h2>
 @endif

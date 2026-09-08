@@ -232,6 +232,11 @@ class FoundryStrengthRenderTest extends TestCase
 
         $this->assertDoesNotMatchRegularExpression('/\son[a-z]+\s*=/i', $body);
         $this->assertStringNotContainsString('javascript:', $body);
+
+        // Blade's \B@ rule: a directive glued to a word character is not
+        // compiled and prints as text. The seed renders every band, so no
+        // directive may reach the page.
+        $this->assertDoesNotMatchRegularExpression('/@(include|if|endif|foreach|endforeach|else|class)\b/', $body);
     }
 
     public function test_every_inline_style_block_carries_the_request_nonce(): void

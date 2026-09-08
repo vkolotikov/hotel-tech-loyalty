@@ -412,6 +412,38 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // THE THIRD GYM KIT (resources/landing-kits/gym-tech/03-tempo-studio),
+            // converted the same way: the author's own markup, his own :root
+            // palette and his own stylesheet ship as the design, and only the
+            // CONTENT is the tenant's. Fourteen blocks, no gallery, a team
+            // band of coach cards — the same contract as its two siblings.
+            'key'   => 'tempo_studio',
+            'name'  => 'Tempo Studio',
+            'vertical' => 'gym',
+            // The author's own words for it, from the kit collection's
+            // README: "premium tech-led group strength and conditioning".
+            'blurb' => 'High-energy and tech-led, navy with an acid accent and protocol cards. Made for group training studios, HIIT and conditioning gyms.',
+            // Transcribed from the three refusals
+            // resources/views/landing/tempo_studio/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the acid alone; the blue is this page's
+            // structural fill and stays the author's.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**

@@ -1,15 +1,13 @@
 {{--
-  Before you begin (data-block="faq", data-variant="membership-questions").
+  Your first class (data-block="faq", data-variant="first-class").
 
-  The author's split: an intro column — eyebrow and display heading — and
-  beside it a ruled list of native <details>, each summary a question in the
-  display face with a bronze `+` the stylesheet swaps for `−` off [open].
-  Native, so it works with no JavaScript at all. NONE IS OPEN: the author
-  opens none of his pairs (gym-6).
+  The author's split: an intro column — eyebrow and a two-line display
+  heading — and beside it a ruled list of native <details>, each summary a
+  question in the display face with an acid `+` the stylesheet swaps for `−`
+  off [open]. NONE IS OPEN: the author opens none of his pairs (gym-6).
 
   THE PAIRS come from PageContent::faqPairs(), which drops any pair missing
-  either half. `faq.subtext` is not read here — this design draws no line
-  under its heading. count() gates the band on the pairs.
+  either half. `faq.subtext` is not read here. count() gates the band.
 --}}
 @php
     use App\Landing\Copy;
@@ -20,7 +18,7 @@
 
     $title = $heading !== '' ? $heading : ($kicker !== '' ? $kicker : __('Before you arrive'));
 @endphp
-    <section class="faq section container" id="faq" data-block="faq" data-variant="membership-questions" aria-labelledby="faq-title">
+    <section class="faq section container" id="faq" data-block="faq" data-variant="first-class" aria-labelledby="faq-title">
       <header>
 @if ($kicker !== '' && $heading !== '')
         <p class="eyebrow">{{ $kicker }}</p>

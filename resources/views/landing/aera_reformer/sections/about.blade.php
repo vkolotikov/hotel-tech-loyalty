@@ -134,7 +134,7 @@
                anchor that points at it. --}}
 @if ($lead !== '')
         <p class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('about') }}</p>
-        <h2>{{ Copy::heading($lead, $copy['lead_accent'] ?? null) }}</h2>
+        <h2>{{ Copy::heading((string) ($copy['lead'] ?? ''), $copy['lead_accent'] ?? null) }}</h2>
 @else
         <h2 class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('about') }}</h2>
 @endif

@@ -311,6 +311,19 @@ final class TemplateImage
                 'alt'  => 'A coach and a client reviewing a personalised strength plan together',
             ],
         ],
+        // THE THIRD GYM KIT. Two photographs again, for the same two bands,
+        // and the same absences: his coach cards, his protocol cards and his
+        // closing panel are typographic, and he draws no gallery.
+        'tempo_studio' => [
+            'hero' => [
+                'file' => 'hero-conditioning.webp',
+                'alt'  => 'A group completing a coached functional training session in a blue-lit studio',
+            ],
+            'about' => [
+                'file' => 'coached-interval.webp',
+                'alt'  => 'A coach guiding a group through a controlled kettlebell interval',
+            ],
+        ],
     ];
 
     /**

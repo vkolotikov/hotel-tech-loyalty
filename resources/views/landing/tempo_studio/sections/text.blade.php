@@ -1,16 +1,15 @@
 {{--
-  A tenant-added words band (data-block="text", data-variant="club-words").
+  A tenant-added words band (data-block="text", data-variant="studio-words").
 
   THE BAND THE AUTHOR DID NOT DRAW, assembled from his own parts: the split
-  `.section-heading` his training ledger uses — eyebrow and display heading
-  on the left, the opening paragraph on the right — then the prose in his
-  body face, and a photograph in his radius and shadow. The rules this band
-  adds are in the stylesheet's appended block with their reason beside them.
+  `.section-heading` his protocol band uses — eyebrow and display heading on
+  the left, the opening paragraph on the right — then the prose in his body
+  face, and a photograph in his radius and shadow. The rules this band adds
+  are in the stylesheet's appended block with their reason beside them.
 
   REPEATABLE, so nothing below is spelled with a literal section key. THE
-  PHOTOGRAPH is PageContent::imageUrl($section->key), with the same three
-  guards every other picture on this page goes through. count() gates the
-  band on the BODY.
+  PHOTOGRAPH is PageContent::imageUrl($section->key). count() gates the band
+  on the BODY.
 --}}
 @php
     use App\Landing\Copy;
@@ -33,7 +32,7 @@
     $alt     = trim((string) ($fields['alt'] ?? ''));
     $caption = trim((string) ($fields['caption'] ?? ''));
 @endphp
-    <section class="section container" id="{{ $section->key }}" data-block="text" data-variant="club-words">
+    <section class="section container" id="{{ $section->key }}" data-block="text" data-variant="studio-words">
       <header class="section-heading">
         <div>
 @if ($heading !== '')

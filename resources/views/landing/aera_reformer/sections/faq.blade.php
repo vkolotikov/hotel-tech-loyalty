@@ -44,7 +44,7 @@
              it: `$title` falls back to the eyebrow and then to this band's
              default name, and appending an accent to a fallback the tenant
              did not write would put the emphasis on somebody else's words. --}}
-        <h2 id="faq-title">{{ $heading !== '' ? Copy::heading($heading, $copy['heading_accent'] ?? null) : Copy::heading($title) }}</h2>
+        <h2 id="faq-title">{{ $heading !== '' ? Copy::heading((string) ($copy['heading'] ?? ''), $copy['heading_accent'] ?? null) : Copy::heading($title) }}</h2>
       </header>
       <div>
 @foreach ($pairs as $pair)
