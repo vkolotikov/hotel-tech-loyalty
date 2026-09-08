@@ -19,7 +19,7 @@ An Enterprise-plan tenant builds one public page per brand in three steps:
 Pages are served on `sites.hexa-tech.uk/{slug}` (`config/landing.php`, `routes/landing.php`), never on an
 admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may frame the preview.
 
-### The six templates ("kits")
+### The nine templates ("kits")
 
 | Vertical | Key | Author's kit source |
 |---|---|---|
@@ -29,6 +29,14 @@ admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may
 | dining | `maison_vela` | `resources/landing-kits/hospitality/01-maison-vela/` |
 | dining | `luma_garden` | `resources/landing-kits/hospitality/02-luma-garden/` |
 | dining | `ember_table` | `resources/landing-kits/hospitality/03-ember-table/` |
+| gym | `aera_reformer` | `resources/landing-kits/gym-tech/01-aera-reformer/` |
+| gym | `foundry_strength` | `resources/landing-kits/gym-tech/02-foundry-strength/` |
+| gym | `tempo_studio` | `resources/landing-kits/gym-tech/03-tempo-studio/` |
+
+The gym kits (2026-09-08) draw the shared contract minus the gallery and keep a team band; each is
+documented band by band in its own layout and partials, and the rulings that were needed to fill the
+author's shapes from the record (the lead-coach band, the two-part steps split on the author's middle dot,
+the next-up card's closing time, the acid-versus-blue accent) are numbered gym-1..27 in the local ledger.
 
 The industry picked at signup maps server-side to a vertical (`LandingOnboardingService::industries()`;
 orgs with no explicit industry fall back to `IndustryProfile::FALLBACK_INDUSTRY = 'other'`). Only the
@@ -84,7 +92,9 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 - `public/landing/<key>.css`, `public/landing/<key>/assets/`, `public/landing/thumbs/<key>/*.svg`,
   `public/landing/kit.js` (one shared script), `public/landing/fonts/` (self-hosted woff2).
 - Block contract: 15 `data-block` types (announcement, header, hero, trust, services, story, gallery, team,
-  testimonials, faq, booking, contact, feedback, assistant, footer); restaurants drop `team`. Integration
+  testimonials, faq, booking, contact, feedback, assistant, footer); restaurants drop `team`, the gym kits
+  drop `gallery`. Which blocks a design draws is derived from the partials it ships
+  (`LandingOnboardingService::rendersFor`), never listed. Integration
   hooks: `data-action="open-booking"` (+`data-service-id`), `data-action="open-feedback"`,
   `[data-ai-widget-slot]`.
 - Blade rule: `{{ }}` only (no raw echo); no inline `style=` or `<script>` (the CSP blocks them).
@@ -224,13 +234,16 @@ server refuses theme keys the old bundle still sends.
   drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
   the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
-- Hotel, Medical and Fitness are on offer in the Design tab but have no kits of their own yet, so those
-  trades see all six designs under a "designs made for … are coming" note. Nine owner-designed kits wait in
-  `c:\wamp64\www\hexa-template-builder` (gym-tech: Aera Reformer, Foundry Strength, Tempo Studio;
-  hotel-tech; med-tech), same 15-block contract minus the gallery; the owner's order is gym first. Each
-  conversion is a registry row with `vertical` set (plus `INDUSTRY_VERTICALS` for a new vertical), the
-  kit under `resources/landing-kits/<brand>/`, pixel-matched layout and partials, a preview JPEG, and the
-  per-template test — the editor needs no change.
+- Hotel and Medical are on offer in the Design tab but have no kits of their own yet, so those two trades
+  see all nine designs under a "designs made for … are coming" note. Six owner-designed kits wait in
+  `c:\wamp64\www\hexa-template-builder` (hotel-tech: Maison Lume, Northline, Orbit; med-tech: Ardea
+  Aesthetics, Forma Dental, Numa Skin Lab), same 15-block contract minus the gallery. Each conversion is a
+  registry row with `vertical` set (plus `INDUSTRY_VERTICALS` for the new vertical), the kit under
+  `resources/landing-kits/<brand>/`, pixel-matched layout and partials, thumbnails, a preview JPEG, and the
+  per-template test — the editor needs no change. The gym conversion (2026-09-08) is the worked example.
+- A kit's fixed-format words have no leaf on this platform: the closing panel falls back to the industry's
+  verb rather than the author's ("Choose a time", "View live schedule"), and an infix accent (Foundry's
+  "*beyond*") is rendered as the trailing fragment the catalogue's companion leaf supports.
 
 ## 8. Unshipped, local-only work on this branch (not landing)
 

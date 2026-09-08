@@ -522,7 +522,7 @@ class LandingOnboardingService
      */
     /**
      * THE TRADES THE LANDING PRODUCT IS FOR (2026-09-08, the owner's): the
-     * five he draws designs for — beauty and dining are live, gym, hotel and
+     * five he draws designs for — beauty, dining and gym are live, hotel and
      * medical are being converted. The platform's other four industries
      * stay on `Organization::INDUSTRIES` (signup, the CRM presets) and stay
      * on the landing wire so a page already filed under one keeps its name
