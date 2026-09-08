@@ -393,7 +393,11 @@ export function offerableTemplates(options: TemplateOption[]): TemplateOption[] 
  *  - `other` — drawn for another trade, and still theirs to choose.
  *  - `all`   — no trade of their own, so no split would be honest: one list.
  */
-export type TemplateGroupKind = 'own' | 'other' | 'all'
+/** `own`: the trade's designs (plus the page's current one); `all`: a trade
+ *  whose kits are not converted yet sees every design, under the "coming"
+ *  heading. There is no "other trades" group any more (2026-09-08): the
+ *  trade chip is the way to see the others. */
+export type TemplateGroupKind = 'own' | 'all'
 
 export type TemplateGroup = {
   kind: TemplateGroupKind
@@ -436,22 +440,29 @@ export function templateGroups(
 ): TemplateGroup[] {
   const offered = offerableTemplates(options)
 
-  if (offered.length === 0) return []
+  // THE PAGE'S CURRENT DESIGN IS ALWAYS IN THE GALLERY (2026-09-08), even
+  // when it belongs to another trade or has left the offer: a page cannot
+  // be shown a gallery its own design is missing from, and "the design you
+  // have" is a rule, not a special case.
+  const current = options.find(o => o.key === selectedKey)
+  const withCurrent = (list: TemplateOption[]): TemplateOption[] =>
+    current !== undefined && !list.some(o => o.key === current.key) ? [...list, current] : list
 
+  if (offered.length === 0 && current === undefined) return []
+
+  // THE OWNER'S RULE (2026-09-08): a trade sees ITS designs and nothing
+  // from another trade beside them — the trade chip is the way to see the
+  // others. A trade whose kits are not converted yet sees every design
+  // there is under the "coming" heading, until its own arrive.
   if (typeof vertical === 'string' && vertical !== '') {
     const own = offered.filter(o => o.vertical === vertical)
 
     if (own.length > 0) {
-      const other = offered.filter(o => o.vertical !== vertical)
-
-      return [
-        { kind: 'own', cards: templateCards(own, selectedKey) },
-        ...(other.length > 0 ? [{ kind: 'other' as const, cards: templateCards(other, selectedKey) }] : []),
-      ]
+      return [{ kind: 'own', cards: templateCards(withCurrent(own), selectedKey) }]
     }
   }
 
-  return [{ kind: 'all', cards: templateCards(offered, selectedKey) }]
+  return [{ kind: 'all', cards: templateCards(withCurrent(offered), selectedKey) }]
 }
 
 /**

@@ -126,24 +126,23 @@ describe('locale completeness — landing pages + reviews', () => {
  */
 describe('locale completeness — design group headings (dynamic t() keys, hand-verified)', () => {
   const DESIGN_GROUP_KEYS = [
-    // `TemplateGroupKind`'s three values, in the order a tenant meets them.
-    'landing_pages.design.designs_own_trade',
-    'landing_pages.design.designs_other_trades',
-    'landing_pages.design.designs_all',
+    // `TemplateGroupKind`'s two values (2026-09-08): a trade's own designs,
+    // and every design for a trade whose kits are still coming.
+    'landing_pages.design.designs_made_for',
+    'landing_pages.design.designs_coming',
   ]
 
   /*
    * A canary that RECOMPUTES rather than counts: every kind the picker can
-   * produce has a heading, and no heading is named twice. Counting to three
-   * would pass just as happily with the same key written three times.
+   * produce has a heading, and no heading is named twice. Counting to two
+   * would pass just as happily with the same key written twice.
    */
   it('names one distinct heading for every group a picker can draw', () => {
     const kinds = DESIGN_GROUP_KEYS.map(key => key.replace('landing_pages.design.designs_', ''))
 
     expect(new Set(kinds).size).toBe(kinds.length)
-    expect(kinds).toContain('own_trade')
-    expect(kinds).toContain('other_trades')
-    expect(kinds).toContain('all')
+    expect(kinds).toContain('made_for')
+    expect(kinds).toContain('coming')
   })
 
   for (const locale of LOCALES) {

@@ -418,6 +418,18 @@ class LandingOnboardingService
      *
      * @var array<string, string>
      */
+    /**
+     * THE TRADES THE LANDING PRODUCT IS FOR (2026-09-08, the owner's): the
+     * five he draws designs for — beauty and dining are live, gym, hotel and
+     * medical are being converted. The platform's other four industries
+     * stay on `Organization::INDUSTRIES` (signup, the CRM presets) and stay
+     * on the landing wire so a page already filed under one keeps its name
+     * and its chip; they are simply not on offer. One list, served as an
+     * `offerable` flag on each `industries[*]` row — never a copy of these
+     * ids in TypeScript.
+     */
+    public const LANDING_INDUSTRIES = ['hotel', 'beauty', 'medical', 'restaurant', 'fitness'];
+
     public const INDUSTRY_VERTICALS = [
         'beauty'     => 'beauty',
         'restaurant' => 'dining',
@@ -1252,6 +1264,10 @@ class LandingOnboardingService
                     // design, under one neutral heading, never an empty
                     // picker. See INDUSTRY_VERTICALS.
                     'vertical'       => self::verticalForIndustry($id),
+                    // Whether the landing product offers this trade at all
+                    // (LANDING_INDUSTRIES). A picker shows the offered rows
+                    // plus the one the page is filed under.
+                    'offerable'      => in_array($id, self::LANDING_INDUSTRIES, true),
                 ];
             })
             ->values()

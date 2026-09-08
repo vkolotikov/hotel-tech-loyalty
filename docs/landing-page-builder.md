@@ -1,6 +1,6 @@
 # Landing-page builder — current state
 
-**Last verified:** 2026-09-07. Production `main` = `14c2c8e3b` (Laravel Cloud, app `hotel-tech-loyalty`),
+**Last verified:** 2026-09-07. Production `main` = `08292f50b` (Laravel Cloud, app `hotel-tech-loyalty`),
 which carries every landing commit of `feature/landing-phase-3c` up to and including this document.
 Run `git fetch && git log --oneline -3 origin/main` for anything newer; the branch's own history is not
 on `main` (deploys are source patches), so compare by content, not by commit list.
@@ -96,10 +96,17 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 - `LandingWizard.tsx` + `LandingBrandStep.tsx` — brand → design → configure.
 - `LandingEditor.tsx` — three tabs (Content / Design / Publish via `?tab=`), collapsed section cards,
   drag-and-drop ordering, add-a-block rails, photo Replace/Restore, gallery strip, FAQ form.
-- `DesignPanel.tsx` — the design picker (cards carry the served `preview_image`, a first-screen picture
-  of each author's page from `public/landing/previews/<key>.jpg` via `TemplateImage::preview()`; picking a
-  design updates the form at once, the live pane shows it, and an inline note with the way back replaces
-  the old browser confirm) and the accent colour. `LandingPreview.tsx`, `livePreview.ts`,
+- `DesignPanel.tsx` — the Design tab, three numbered steps (2026-09-08): (1) the trade, as chips for the
+  trades on offer (`industries[*].offerable`, i.e. `LandingOnboardingService::LANDING_INDUSTRIES` — the
+  five trades kits are drawn for; the signup list is separate and unchanged) plus the page's own; (2) the
+  design, a gallery of the selected trade's own designs (`templates[*].vertical` joined against
+  `industries[*].vertical`, see `templateGroups`), every design with a note when the trade has no kits of
+  its own yet, the page's own design always present, the saved one badged "Current"; cards carry the
+  served `preview_image`, a first-screen picture of each author's page from
+  `public/landing/previews/<key>.jpg` via `TemplateImage::preview()`; (3) the accent colour. Picking a
+  design or a trade updates the form at once and the live pane shows it; standing notes under the chips
+  and under the gallery carry the consequences and the way back — no browser confirms on this tab (only
+  removing a section still asks). `LandingPreview.tsx`, `livePreview.ts`,
   `previewBridge.ts`, `previewFreshness.ts` — live preview. `editorSections.ts` (`fieldsForType`, `FIELD_PRESENTATION`,
   `stripImageLeaves`, `safeImageUrl`), `editorCatalog.ts` (`TemplateOption`), `sections.ts`,
   `landingDraft.ts`, `industryChoices.ts`, `seoCard.ts`, `imageDownscale.ts`, `publishAddress.ts`,
@@ -206,7 +213,7 @@ Laravel Cloud watches `hotel-tech-loyalty:main`, runs `migrate --force`, and **r
 Ops note: an admin tab left open across a deploy must be reloaded before saving a landing page, because the
 server refuses theme keys the old bundle still sends.
 
-## 7. Open items (as of 2026-09-06)
+## 7. Open items (as of 2026-09-08)
 
 - The acceptance seed has no bookable rota, so the booking band never appears in screenshot runs.
 - Legacy `theme.palette` / `font_pairing` keys on live rows are inert and wash out on the next save: the
@@ -217,6 +224,13 @@ server refuses theme keys the old bundle still sends.
   drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
   the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
+- Hotel, Medical and Fitness are on offer in the Design tab but have no kits of their own yet, so those
+  trades see all six designs under a "designs made for … are coming" note. Nine owner-designed kits wait in
+  `c:\wamp64\www\hexa-template-builder` (gym-tech: Aera Reformer, Foundry Strength, Tempo Studio;
+  hotel-tech; med-tech), same 15-block contract minus the gallery; the owner's order is gym first. Each
+  conversion is a registry row with `vertical` set (plus `INDUSTRY_VERTICALS` for a new vertical), the
+  kit under `resources/landing-kits/<brand>/`, pixel-matched layout and partials, a preview JPEG, and the
+  per-template test — the editor needs no change.
 
 ## 8. Unshipped, local-only work on this branch (not landing)
 

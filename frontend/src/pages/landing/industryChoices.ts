@@ -67,6 +67,36 @@ export type IndustryOption = {
    * predates the key has said nothing, which lands in the same place.
    */
   vertical?: string | null
+  /**
+   * Whether the landing product offers this trade at all —
+   * `LandingOnboardingService::LANDING_INDUSTRIES`, served as a flag on the
+   * row (2026-09-08). Absent on an older backend, which `industryChips`
+   * reads as "on offer", the behaviour that build already had.
+   */
+  offerable?: boolean | null
+}
+
+/** One trade chip: the id the server knows, the name a tenant reads. */
+export type IndustryChip = {
+  id: string
+  name: string
+  selected: boolean
+}
+
+/**
+ * THE TRADE CHIPS (2026-09-08): the rows on offer, in the server's order,
+ * plus the trade the page is already filed under even when it has left the
+ * offer — a page on Education must still see its own chip, or it could not
+ * be told apart from an unfiled one, nor be moved off it deliberately.
+ */
+export function industryChips(options: IndustryOption[], selectedId: string): IndustryChip[] {
+  return options
+    .filter(option => option.offerable !== false || option.id === selectedId)
+    .map(option => ({
+      id: option.id,
+      name: industryName(option.id),
+      selected: option.id === selectedId,
+    }))
 }
 
 /** What one card needs, with nothing left for the component to derive. */

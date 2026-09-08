@@ -587,32 +587,43 @@ describe('templateGroups', () => {
     { key: 'ember_table', name: 'Ember Table', blurb: '', vertical: 'dining' },
   ]
 
-  it('offers a trade its own three designs first, and the rest after', () => {
+  /**
+   * THE RULE (2026-09-08, the owner's): a trade sees ITS designs, and
+   * nothing from another trade beside them — the trade chip is the way to
+   * see the others. The page's CURRENT design is the one exception: a page
+   * cannot be shown a gallery its own design is missing from.
+   */
+  it('offers a trade its own designs and nothing else', () => {
     const groups = templateGroups(SIX, 'nocturne_ritual', 'beauty')
 
-    expect(groups.map(g => g.kind)).toEqual(['own', 'other'])
+    expect(groups.map(g => g.kind)).toEqual(['own'])
     expect(groups[0].cards.map(c => c.key))
       .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness'])
-    expect(groups[1].cards.map(c => c.key))
-      .toEqual(['maison_vela', 'luma_garden', 'ember_table'])
   })
 
   it('reads the trade off the served value, whichever one it is', () => {
     const groups = templateGroups(SIX, '', 'dining')
 
+    expect(groups.map(g => g.kind)).toEqual(['own'])
     expect(groups[0].cards.map(c => c.key)).toEqual(['maison_vela', 'luma_garden', 'ember_table'])
-    expect(groups[1].cards.map(c => c.key))
-      .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness'])
+  })
+
+  it('keeps the page’s current design in the gallery even when it belongs to another trade', () => {
+    const groups = templateGroups(SIX, 'ember_table', 'beauty')
+
+    expect(groups.map(g => g.kind)).toEqual(['own'])
+    expect(groups[0].cards.map(c => c.key))
+      .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'ember_table'])
+    expect(groups[0].cards.filter(c => c.selected).map(c => c.key)).toEqual(['ember_table'])
   })
 
   /*
-   * THE RULE THIS FUNCTION EXISTS FOR. Seven of the platform's nine
-   * industries have no kit drawn for them — hotels, clinics, gyms, schools,
-   * law firms, agencies and "something else". A "made for your trade"
-   * heading over an empty group would tell every one of them the product has
-   * nothing for them, which is discouraging and untrue.
+   * NOBODY IS EVER OFFERED NOTHING. A trade whose kits are not converted yet
+   * sees every design there is, under the "coming" heading, until its own
+   * arrive — the day they do, this branch stops being taken for it, with no
+   * change here.
    */
-  it('shows a trade with no kits every design under one neutral heading', () => {
+  it('shows a trade with no kits every design under the coming heading', () => {
     for (const noKits of [null, undefined, '', 'fitness']) {
       const groups = templateGroups(SIX, '', noKits)
 
@@ -624,34 +635,16 @@ describe('templateGroups', () => {
     }
   })
 
-  it('never offers a retired design, under any heading', () => {
+  it('never offers a retired design unless the page is already on it', () => {
     for (const vertical of ['beauty', 'dining', null]) {
-      const keys = templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key))
-
-      expect(keys).not.toContain('plain_kit')
+      expect(templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key))).not.toContain('plain_kit')
     }
-  })
 
-  /*
-   * NOBODY IS EVER OFFERED NOTHING, stated as the property rather than as
-   * one example: whatever trade is asked about, the offer is the whole
-   * offerable list — the vertical only decides the ORDER.
-   */
-  it('offers every offerable design to every trade', () => {
-    const offered = offerableTemplates(SIX).map(o => o.key).sort()
+    const onRetired = templateGroups(SIX, 'plain_kit', 'beauty')
 
-    for (const vertical of ['beauty', 'dining', 'fitness', null]) {
-      const keys = templateGroups(SIX, '', vertical).flatMap(g => g.cards.map(c => c.key)).sort()
-
-      expect(keys).toEqual(offered)
-    }
-  })
-
-  it('marks the chosen design as selected wherever it sits', () => {
-    const groups = templateGroups(SIX, 'ember_table', 'beauty')
-
-    expect(groups[0].cards.some(c => c.selected)).toBe(false)
-    expect(groups[1].cards.find(c => c.key === 'ember_table')?.selected).toBe(true)
+    expect(onRetired[0].cards.map(c => c.key))
+      .toEqual(['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'plain_kit'])
+    expect(onRetired[0].cards.find(c => c.key === 'plain_kit')?.selected).toBe(true)
   })
 
   it('draws no picker at all when nothing is on offer', () => {

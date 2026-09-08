@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  INDUSTRY_NAMES, industryCards, industryName, resolveIndustry, sectionsForIndustry, verticalFor,
+  INDUSTRY_NAMES, industryCards, industryChips, industryName, resolveIndustry, sectionsForIndustry, verticalFor,
   type IndustryOption,
 } from './industryChoices'
 
@@ -137,6 +137,37 @@ describe('resolveIndustry', () => {
     // page is filed under the org's own industry, exactly as before this
     // step existed.
     expect(resolveIndustry([], 'hotel', 'education')).toBe('')
+  })
+})
+
+/**
+ * THE FIVE TRADES THE LANDING PRODUCT IS FOR (2026-09-08). The server says
+ * which rows are on offer; the chips show those, in the server's order, plus
+ * the trade the page is already filed under — a page on a trade that left
+ * the offer must still see its own chip, or it could never be told apart
+ * from an unfiled one.
+ */
+describe('industryChips', () => {
+  const HOTEL_ON = { ...HOTEL, offerable: true }
+  const EDUCATION_OFF = { ...EDUCATION, offerable: false }
+
+  it('offers only the trades on offer, in the order the server sent', () => {
+    expect(industryChips([HOTEL_ON, EDUCATION_OFF], 'hotel').map(c => c.id)).toEqual(['hotel'])
+  })
+
+  it('always keeps the trade the page is filed under, even off the offer', () => {
+    const chips = industryChips([HOTEL_ON, EDUCATION_OFF], 'education')
+
+    expect(chips.map(c => c.id)).toEqual(['hotel', 'education'])
+    expect(chips.map(c => c.selected)).toEqual([false, true])
+  })
+
+  it('treats a row with no offerable flag as on offer, which is what an older backend sends', () => {
+    expect(industryChips([HOTEL, EDUCATION], '').map(c => c.id)).toEqual(['hotel', 'education'])
+  })
+
+  it('names each chip the way the wizard does', () => {
+    expect(industryChips([HOTEL_ON], 'hotel')[0].name).toBe('Hotel')
   })
 })
 

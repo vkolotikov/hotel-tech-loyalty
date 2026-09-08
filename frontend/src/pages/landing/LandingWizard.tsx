@@ -13,7 +13,7 @@ import {
 import { isDataBackedSection, isOfferable, unavailableReason, type SectionMeta } from './sections'
 import { DesignPanel } from './DesignPanel'
 import {
-  industryCards, resolveIndustry, sectionsForIndustry, verticalFor, type IndustryOption,
+  industryChips, resolveIndustry, sectionsForIndustry, verticalFor, type IndustryOption,
 } from './industryChoices'
 import {
   resolveTemplateKey, templateGroups, type TemplateOption,
@@ -275,11 +275,12 @@ export function LandingWizard(props: LandingWizardProps) {
     ? servicesSection.count
     : null
 
-  // Every card is drawn from the industry it represents, in THAT industry's
-  // vocabulary and colours — a salon card says "Treatments / Therapists /
-  // Book appointment", a school card says "Courses / Instructors / Book a
-  // lesson" — so the choice visibly changes something before it is made.
-  const cards = industryCards(industryOptions, selectedIndustry)
+  // The trades this product draws designs for, as chips (2026-09-08) — the
+  // same control the editor's Design tab draws, so a tenant meets one
+  // picker for one question on both screens. The server says which trades
+  // are on offer; the org's own stays visible even off the offer.
+  const chips = industryChips(industryOptions, selectedIndustry)
+  const selectedOption = industryOptions.find(o => o.id === selectedIndustry)
   // Shown only once the tenant has moved OFF their own industry: picking
   // the card that was already selected changes nothing at all, and a
   // standing warning about a change nobody made is just noise.
@@ -387,69 +388,36 @@ export function LandingWizard(props: LandingWizardProps) {
             })}
           </p>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cards.map(card => (
+          <div className="flex flex-wrap gap-2">
+            {chips.map(chip => (
               <button
-                key={card.id}
+                key={chip.id}
                 type="button"
-                aria-pressed={card.selected}
-                onClick={() => up('industry', card.id)}
-                className={'text-left rounded-xl border p-4 transition-all outline-none '
+                aria-pressed={chip.selected}
+                onClick={() => up('industry', chip.id)}
+                className={'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all outline-none '
                   + 'focus-visible:ring-2 focus-visible:ring-primary-500/40 '
-                  + (card.selected
-                    ? 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
-                    : 'border-dark-border bg-dark-surface hover:border-primary-500/40 hover:bg-primary-500/[0.04]')}
+                  + (chip.selected
+                    ? 'border-primary-500 bg-primary-500/[0.12] text-white'
+                    : 'border-dark-border bg-dark-surface text-t-secondary hover:border-primary-500/40 hover:text-white')}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-semibold text-white truncate">
-                    {t(`landing_pages.wizard.industry_name_${card.id}`, card.name)}
-                  </span>
-                  {card.selected && <Check size={16} className="text-primary-500 shrink-0" />}
-                </div>
-
-                {/* The industry's own band names, drawn the way the page
-                    draws them: mono eyebrows in the industry's own accent
-                    (IndustryProfile::$accent). Inline
-                    colour, deliberately — this is customer-facing page
-                    styling being previewed, not admin chrome (Appendix A
-                    §7.4), and the whole point of the card is that two
-                    industries do not look alike. */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-3">
-                  {card.vocabulary.map(word => (
-                    <span
-                      key={word}
-                      className="text-[10px] font-mono uppercase tracking-[0.12em]"
-                      style={{ color: card.accent }}
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </div>
-
-                {/* The page's own primary button, at card size. Every
-                    profile's accent clears the WCAG 4.5:1 floor against a
-                    white label — see IndustryProfile::all()'s docblock on
-                    the one accent that had to be darkened to keep that
-                    true — so the label is safe as plain white here. */}
-                <span
-                  className="inline-block mt-3 rounded-full px-2.5 py-1 text-[10px] font-semibold text-white"
-                  style={{ backgroundColor: card.accent }}
-                >
-                  {card.primaryCta}
-                </span>
-
-                {serviceCount !== null && (
-                  <p className="text-[10px] text-t-secondary mt-3">
-                    {t('landing_pages.wizard.services_count', {
-                      count: serviceCount,
-                      label: card.vocabulary[0],
-                      defaultValue: '{{count}} {{label}} ready to show',
-                    })}
-                  </p>
-                )}
+                {t(`landing_pages.wizard.industry_name_${chip.id}`, chip.name)}
               </button>
             ))}
           </div>
+
+          {/* What the chosen trade will call the rows the business already
+              has — the one hint the old cards carried that still earns its
+              place: it says the page will not open empty. */}
+          {serviceCount !== null && selectedOption && (
+            <p className="text-xs text-t-secondary">
+              {t('landing_pages.wizard.services_count', {
+                count: serviceCount,
+                label: selectedOption.services_label,
+                defaultValue: '{{count}} {{label}} ready to show',
+              })}
+            </p>
+          )}
 
           {industryChanged && (
             <p className="text-xs text-t-secondary leading-relaxed">
@@ -492,7 +460,6 @@ export function LandingWizard(props: LandingWizardProps) {
             templateKey={templateKey}
             onTemplateChange={key => up('template_key', key)}
             vertical={vertical}
-            pickerOpen
           />
 
           {logoUrl && (
