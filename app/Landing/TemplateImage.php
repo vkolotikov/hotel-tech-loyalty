@@ -280,6 +280,50 @@ final class TemplateImage
                 'alt'  => 'A plate from the seasonal menu',
             ],
         ],
+        // THE FIRST GYM KIT. Two photographs, which is all this author drew:
+        // his hero is a full-bleed reformer studio and his story band is a
+        // coaching close-up. NO `team` entry — his coach band is typographic
+        // (a name, a line and three cells) — and NO `services`, NO `booking`
+        // and no gallery at all: none of those bands draws a picture on this
+        // design, so a default in any of them would be a picture no tenant
+        // could ever see.
+        'aera_reformer' => [
+            'hero' => [
+                'file' => 'hero-reformer.webp',
+                'alt'  => 'An instructor guiding a client through a reformer session in a warm, calm studio',
+            ],
+            'about' => [
+                'file' => 'coached-movement.webp',
+                'alt'  => 'An instructor giving a client a precise alignment cue on the reformer',
+            ],
+        ],
+        // THE SECOND GYM KIT. Two photographs again, for the same two bands
+        // and with the same absences for the same reasons: his coach band,
+        // his ledger, his closing panel are typographic, and he draws no
+        // gallery.
+        'foundry_strength' => [
+            'hero' => [
+                'file' => 'hero-strength.webp',
+                'alt'  => 'A coach supervising a barbell squat in a quiet private strength club',
+            ],
+            'about' => [
+                'file' => 'training-plan.webp',
+                'alt'  => 'A coach and a client reviewing a personalised strength plan together',
+            ],
+        ],
+        // THE THIRD GYM KIT. Two photographs again, for the same two bands,
+        // and the same absences: his coach cards, his protocol cards and his
+        // closing panel are typographic, and he draws no gallery.
+        'tempo_studio' => [
+            'hero' => [
+                'file' => 'hero-conditioning.webp',
+                'alt'  => 'A group completing a coached functional training session in a blue-lit studio',
+            ],
+            'about' => [
+                'file' => 'coached-interval.webp',
+                'alt'  => 'A coach guiding a group through a controlled kettlebell interval',
+            ],
+        ],
     ];
 
     /**

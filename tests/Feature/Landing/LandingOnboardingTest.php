@@ -976,24 +976,29 @@ class LandingOnboardingTest extends TestCase
 
         $this->assertSame('beauty', $industries['beauty']['vertical']);
         $this->assertSame('dining', $industries['restaurant']['vertical']);
-        // The seven with no kits of their own, named so that shipping one
+        // The first GymTech kit (2026-09-08) gave fitness a trade of its own.
+        $this->assertSame('gym', $industries['fitness']['vertical']);
+        // The six with no kits of their own, named so that shipping one
         // for them has to come past this list.
-        foreach (['hotel', 'medical', 'fitness', 'education', 'legal', 'real_estate', 'other'] as $id) {
+        foreach (['hotel', 'medical', 'education', 'legal', 'real_estate', 'other'] as $id) {
             $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
         }
 
-        // The template end of the same join: three beauty kits and three
-        // dining kits, and nothing that belongs to no trade.
+        // The template end of the same join: three beauty kits, three
+        // dining kits and the gym kits, and nothing that belongs to no trade.
         $this->assertSame('beauty', $templates['nocturne_ritual']['vertical']);
         $this->assertSame('beauty', $templates['editorial_atelier']['vertical']);
         $this->assertSame('beauty', $templates['organic_wellness']['vertical']);
         $this->assertSame('dining', $templates['maison_vela']['vertical']);
         $this->assertSame('dining', $templates['luma_garden']['vertical']);
         $this->assertSame('dining', $templates['ember_table']['vertical']);
+        $this->assertSame('gym', $templates['aera_reformer']['vertical']);
+        $this->assertSame('gym', $templates['foundry_strength']['vertical']);
+        $this->assertSame('gym', $templates['tempo_studio']['vertical']);
         $this->assertTrue($templates->every(fn (array $row) => $row['vertical'] !== null),
-            'A shipped design claims no trade; every one of the six was drawn for one.');
+            'A shipped design claims no trade; every shipped kit was drawn for one.');
 
-        // NOBODY IS EVER LEFT WITH NOTHING TO CHOOSE. Seven of the nine
+        // NOBODY IS EVER LEFT WITH NOTHING TO CHOOSE. Six of the nine
         // industries have no kit of their own; the offer is the whole
         // offerable list for every one of them, and the vertical only
         // decides what comes FIRST.
@@ -1089,12 +1094,18 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness'] as $key) {
-            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty kit and draws a team band.");
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty or gym kit and draws a team band.");
         }
 
         foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
             $this->assertNotContains('team', $renders[$key], "'{$key}' is a hospitality kit and draws no team band.");
+        }
+
+        // The gym kits draw the shared contract minus the gallery: no
+        // gallery partial ships, so the picker never offers one there.
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+            $this->assertNotContains('gallery', $renders[$key], "'{$key}' claims a gallery partial the author never drew.");
         }
 
         foreach ($renders as $key => $list) {
@@ -2090,9 +2101,9 @@ class LandingOnboardingTest extends TestCase
         $this->assertArrayNotHasKey('team', $brasserie);
 
         // Every design honours the row's starting-price mark, so the WORD
-        // before it is offered on all six — kit 02-beauty's own leaf first,
-        // the others' since the mark moved onto the row (2026-09-06).
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table'] as $key) {
+        // before it is offered on all of them — kit 02-beauty's own leaf
+        // first, the others' since the mark moved onto the row (2026-09-06).
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
             $this->assertContains('price_prefix', $served[$key]['services'], "'{$key}' prints the word before a starting price and does not offer it.");
         }
 
@@ -2106,9 +2117,19 @@ class LandingOnboardingTest extends TestCase
             $this->assertContains('window', $served[$key]['services'], "'{$key}' prints the service window and does not offer it.");
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
             $this->assertNotContains('price_suffix', $served[$key]['services'], "'{$key}' offers a price suffix its treatment list never prints.");
             $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its treatment list never prints.");
+        }
+
+        // The gym kits' session cards carry no link, no badge and no
+        // photograph, so none of those controls is offered on them, and no
+        // gym kit draws a gallery.
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+            foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
+                $this->assertNotContains($leaf, $served[$key]['services'], "'{$key}' offers '{$leaf}' on cards that never print it.");
+            }
+            $this->assertArrayNotHasKey('gallery', $served[$key], "'{$key}' offers a gallery it cannot draw.");
         }
 
         // The line under each gallery caption is the hospitality authors'

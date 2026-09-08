@@ -66,4 +66,12 @@
 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.7 20v-7h2.7l.4-3h-3.1V8.1c0-.9.3-1.5 1.6-1.5H17V4a22 22 0 0 0-2.4-.1c-2.4 0-4.1 1.5-4.1 4.2V10H8v3h2.5v7h3.2Z" fill="currentColor"></path></svg>
 @elseif ($name === 'tiktok')
 <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M14.5 4v10.2a4.2 4.2 0 1 1-3.2-4.1v3a1.5 1.5 0 1 0 .4 1.1V4h2.8Zm0 0c.6 2.2 2.1 3.6 4.4 3.9v3.2a8.3 8.3 0 0 1-4.4-1.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+{{-- The GymTech kits' arrow (gym-12, 2026-09-08): the glyph on Aera
+     Reformer's availability pill, transcribed from the author's own markup.
+     No shared arrow existed, so this is a new shape rather than a variant of
+     one — the calendar and the six footer icons those kits draw are the same
+     drawings as the shared ones to within a pixel and use the branches
+     above. --}}
+@elseif ($name === 'arrow')
+<svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h13m-4-5 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"></path></svg>
 @endif

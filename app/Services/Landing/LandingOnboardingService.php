@@ -344,6 +344,106 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // THE FIRST GYM KIT (resources/landing-kits/gym-tech/01-aera-reformer),
+            // converted the same way the six before it were: the author's own
+            // markup, his own :root palette and his own stylesheet ship as the
+            // design, and only the CONTENT is the tenant's. The GymTech kits
+            // draw the shared contract MINUS the gallery — fourteen blocks —
+            // and, unlike the hospitality three, DO draw a team band: the
+            // author's "lead coach" composition (see that partial's note).
+            'key'   => 'aera_reformer',
+            'name'  => 'Aera Reformer',
+            // THE TRADE THIS DESIGN WAS DRAWN FOR — `gym`, which
+            // INDUSTRY_VERTICALS joins to the `fitness` industry.
+            'vertical' => 'gym',
+            // The author's own words for it, from the kit collection's
+            // README: "warm boutique Pilates and movement coaching".
+            'blurb' => 'Warm and editorial, with a full-bleed photograph and calm ivory cards. Made for reformer Pilates, movement and small-group coaching studios.',
+            // Transcribed from the three refusals
+            // resources/views/landing/aera_reformer/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the terracotta family and on the sand an
+            // em takes on the dark story band, never on the ink.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE SECOND GYM KIT (resources/landing-kits/gym-tech/02-foundry-strength),
+            // converted the same way: the author's own markup, his own :root
+            // palette and his own stylesheet ship as the design, and only the
+            // CONTENT is the tenant's. Fourteen blocks, no gallery, a team
+            // band — the same contract as its sibling, on a dark ground.
+            'key'   => 'foundry_strength',
+            'name'  => 'Foundry Strength',
+            'vertical' => 'gym',
+            // The author's own words for it, from the kit collection's
+            // README: "private strength and personal training club".
+            'blurb' => 'Dark and quiet, a private club with a bronze accent and a ledger of ways to train. Made for personal trainers, strength coaches and small private gyms.',
+            // Transcribed from the three refusals
+            // resources/views/landing/foundry_strength/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the bronze family, never on the black,
+            // the charcoal or the bone.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE THIRD GYM KIT (resources/landing-kits/gym-tech/03-tempo-studio),
+            // converted the same way: the author's own markup, his own :root
+            // palette and his own stylesheet ship as the design, and only the
+            // CONTENT is the tenant's. Fourteen blocks, no gallery, a team
+            // band of coach cards — the same contract as its two siblings.
+            'key'   => 'tempo_studio',
+            'name'  => 'Tempo Studio',
+            'vertical' => 'gym',
+            // The author's own words for it, from the kit collection's
+            // README: "premium tech-led group strength and conditioning".
+            'blurb' => 'High-energy and tech-led, navy with an acid accent and protocol cards. Made for group training studios, HIIT and conditioning gyms.',
+            // Transcribed from the three refusals
+            // resources/views/landing/tempo_studio/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the acid alone; the blue is this page's
+            // structural fill and stays the author's.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
@@ -368,10 +468,11 @@ class LandingOnboardingService
      * A vertical is not an industry and deliberately does not share its
      * spelling: an industry is what a BUSINESS is (nine of them, the
      * platform's own `Organization::INDUSTRIES`), while a vertical is what a
-     * KIT was drawn for (two of them today, because six kits have shipped in
-     * two families). Collapsing the two would mean either nine verticals,
-     * seven of them empty, or a template row claiming to be "the restaurant
-     * industry", which it is not — it is a design a restaurant would suit.
+     * KIT was drawn for (three of them today, because seven kits have shipped
+     * in three families). Collapsing the two would mean either nine
+     * verticals, six of them empty, or a template row claiming to be "the
+     * restaurant industry", which it is not — it is a design a restaurant
+     * would suit.
      *
      * An id outside this list, on either side of the join, is normalised to
      * null rather than published: an unknown vertical would reach the editor
@@ -380,7 +481,7 @@ class LandingOnboardingService
      *
      * @var list<string>
      */
-    public const VERTICALS = ['beauty', 'dining'];
+    public const VERTICALS = ['beauty', 'dining', 'gym'];
 
     /**
      * WHICH TRADE'S DESIGNS AN INDUSTRY IS OFFERED FIRST — the one place
@@ -403,13 +504,14 @@ class LandingOnboardingService
      * heading.
      *
      * AN INDUSTRY ABSENT FROM THIS MAP HAS NO KITS OF ITS OWN, and that is
-     * the common case: seven of the nine (`hotel`, `medical`, `fitness`,
+     * still the common case: six of the nine (`hotel`, `medical`,
      * `education`, `legal`, `real_estate`, `other`) are not here. They are
      * NOT left with an empty picker — see {@see templates()}' `offerable`
-     * and the editor's own grouping: every offerable design is shown to
-     * everybody, and the vertical only decides what is shown FIRST, under
-     * "made for your trade", versus what follows under "other designs". A
-     * tenant may always choose any of the six; nobody is ever offered none.
+     * and the editor's own grouping: a trade with kits of its own sees
+     * those, and a trade without sees every offerable design under a note
+     * that its own are coming. Nobody is ever offered none.
+     *
+     * `fitness` → `gym` arrived with the first GymTech kit (2026-09-08).
      *
      * `hotel` is the deliberate near-miss. The three dining kits are
      * restaurants — see `maison_vela`'s own note — so a hotel is offered
@@ -420,7 +522,7 @@ class LandingOnboardingService
      */
     /**
      * THE TRADES THE LANDING PRODUCT IS FOR (2026-09-08, the owner's): the
-     * five he draws designs for — beauty and dining are live, gym, hotel and
+     * five he draws designs for — beauty, dining and gym are live, hotel and
      * medical are being converted. The platform's other four industries
      * stay on `Organization::INDUSTRIES` (signup, the CRM presets) and stay
      * on the landing wire so a page already filed under one keeps its name
@@ -433,6 +535,7 @@ class LandingOnboardingService
     public const INDUSTRY_VERTICALS = [
         'beauty'     => 'beauty',
         'restaurant' => 'dining',
+        'fitness'    => 'gym',
     ];
 
     /**
