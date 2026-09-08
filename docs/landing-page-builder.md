@@ -97,6 +97,17 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   (`LandingOnboardingService::rendersFor`), never listed. Integration
   hooks: `data-action="open-booking"` (+`data-service-id`), `data-action="open-feedback"`,
   `[data-ai-widget-slot]`.
+- Header rule (owner's ruling, 2026-09-08): a landing page is ONE page, so the header carries the brand
+  and the Book control only — no anchor list, no mobile menu. The appended block shows the author's
+  mobile-hidden Book control again at his breakpoint and pins it to the END of his header grid
+  (`justify-self: end`), because the removed nav's `1fr` column would otherwise stretch it across the
+  header. The fixed Book pill renders only while the booking flow is on (`$bookingIsFlow`).
+- Tenant-length rules (same date): the hero marks `data-length="long"` (over 28 characters) / `"xlong"`
+  (over 48) and the appended block steps the size from the author's own hero token (×0.78 / ×0.64; Luma
+  Garden ×0.70 / ×0.50 for its 399 px copy column) and widens his ch/em `max-width` cap (11em / 12em);
+  an about or text kicker with no lead becomes the `<h2>` itself; headings wrap inside a word rather than
+  widen the page; the dining footer hub closes to one column under 36rem. All of it lives in the appended
+  block after each author's CSS — the byte-for-byte tests prove his part untouched.
 - Blade rule: `{{ }}` only (no raw echo); no inline `style=` or `<script>` (the CSP blocks them).
   Compile-order landmines are documented in the layouts (`@endif@if` never compiles; a literal `@php`
   inside a `{{-- --}}` comment swallows the file).
@@ -117,7 +128,10 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   design or a trade updates the form at once and the live pane shows it; standing notes under the chips
   and under the gallery carry the consequences and the way back — no browser confirms on this tab (only
   removing a section still asks). `LandingPreview.tsx`, `livePreview.ts`,
-  `previewBridge.ts`, `previewFreshness.ts` — live preview. `editorSections.ts` (`fieldsForType`, `FIELD_PRESENTATION`,
+  `previewBridge.ts`, `previewFreshness.ts` — live preview: the pane renders the page at a real device
+  width (1440 desktop, 390 mobile — `frameGeometry` in `livePreview.ts`) and scales it to the pane with a
+  CSS transform, so "desktop" shows the desktop layout; the Design tab gives the pane 8 of the 12 grid
+  columns, the other tabs 5 (2026-09-08). `editorSections.ts` (`fieldsForType`, `FIELD_PRESENTATION`,
   `stripImageLeaves`, `safeImageUrl`), `editorCatalog.ts` (`TemplateOption`), `sections.ts`,
   `landingDraft.ts`, `industryChoices.ts`, `seoCard.ts`, `imageDownscale.ts`, `publishAddress.ts`,
   `landingAccess.ts`, `wizardGate.ts`, `builderShape.ts`, `featuredReviewFeedback.ts`, `LandingTeardown.tsx`.
@@ -179,10 +193,10 @@ Save; blocks the new design adds are seeded only by the save.
 ## 5. Tests
 
 Suites: `tests/Feature/Landing/` (33 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
-Baseline after the gym kits (2026-09-08): **1530 backend tests** (Feature/Landing 1240, Unit/Landing 118,
-Unit/Support 172); frontend `npx vitest run` **786 passed + exactly 3 pre-existing `plannerMeta` failures**;
-`npx tsc -b` clean. Each kit's render test is 52–65 tests; the whole Feature/Landing suite takes about 16
-minutes on the workstation.
+Baseline after the polish round (2026-09-08): **1569 backend tests** (Feature/Landing 1279, Unit/Landing
+118, Unit/Support 172); frontend `npx vitest run` **790 passed + exactly 3 pre-existing `plannerMeta`
+failures**; `npx tsc -b` clean. Each kit's render test is 55–112 tests; the whole Feature/Landing suite
+takes about 15 minutes on the workstation.
 
 Run them like this, and only like this:
 

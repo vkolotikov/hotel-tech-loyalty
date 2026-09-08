@@ -1475,7 +1475,11 @@ export function LandingEditor({
         somebody went to look at a colour.
       */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-7 space-y-5 min-w-0">
+        {/* THE DESIGN TAB GIVES THE PANE THE ROOM (polish-7, 2026-09-08):
+            a design is chosen by looking at it, so the pane takes eight of
+            the twelve columns there and the controls four. The Content and
+            Publish tabs keep the form's seven — their work is in the fields. */}
+        <div className={(tab === 'design' ? 'xl:col-span-4' : 'xl:col-span-7') + ' space-y-5 min-w-0'}>
           {tab === 'design' && (
             /*
               Task 6 (landing phase 3c, D4): the Design panel — palette +
@@ -1802,7 +1806,7 @@ export function LandingEditor({
           </div>
         </div>
 
-        <div className="xl:col-span-5">
+        <div className={tab === 'design' ? 'xl:col-span-8' : 'xl:col-span-5'}>
           <div className="xl:sticky xl:top-4">
             {/*
               TEMPLATE FIDELITY 2.5 — the card and the pane share a subject.

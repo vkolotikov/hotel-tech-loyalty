@@ -705,17 +705,16 @@ class FoundryStrengthRenderTest extends TestCase
         $this->assertStringNotContainsString('aria-hidden="true">F</span>', $body);
     }
 
-    public function test_the_header_links_only_to_bands_that_render(): void
+    /** No navigation on any kit (polish-1, 2026-09-08): the header is the brand and the Book control. */
+    public function test_the_header_carries_no_navigation(): void
     {
-        $page = $this->seedLikeTheKit('hotel');
-        $page->sections()->where('key', 'team')->update(['enabled' => false]);
+        $this->seedLikeTheKit('hotel');
+        $body = $this->body();
 
-        preg_match('/<nav class="desktop-nav"[^>]*>(.*?)<\/nav>/s', $this->body(), $nav);
-
-        $this->assertNotEmpty($nav, 'The desktop nav is missing.');
-        $this->assertStringNotContainsString('href="#team"', $nav[1]);
-        $this->assertStringContainsString('href="#services"', $nav[1]);
-        $this->assertLessThanOrEqual(4, substr_count($nav[1], '<a '));
+        $this->assertStringNotContainsString('desktop-nav', $body);
+        $this->assertStringNotContainsString('mobile-nav', $body);
+        $this->assertStringNotContainsString('<details class="mobile-menu"', $body);
+        $this->assertStringNotContainsString('>Menu ', $body);
     }
 
     public function test_a_hostile_business_name_never_reaches_the_lockup_unescaped(): void
@@ -775,7 +774,7 @@ class FoundryStrengthRenderTest extends TestCase
         $this->seedLikeTheKit('hotel');
         $body = $this->body();
 
-        $this->assertGreaterThanOrEqual(4, substr_count($body, 'Book assessment</a>'));
+        $this->assertGreaterThanOrEqual(3, substr_count($body, 'Book assessment</a>'));
         $this->assertMatchesRegularExpression('/Book your assessment<svg class="icon"[^>]*><path d="M5 12h13m-4-5 5 5-5 5"/', $body);
         $this->assertStringContainsString('Prefer to call? <a href="tel:+37120000822">+371 20 000 822</a>', $body);
     }
@@ -899,5 +898,40 @@ class FoundryStrengthRenderTest extends TestCase
 
         $this->assertFileExists(public_path('landing/thumbs/foundry_strength/contact.svg'));
         $this->assertFileDoesNotExist(public_path('landing/thumbs/foundry_strength/gallery.svg'));
+    }
+
+    // ─── The polish round (2026-09-08) ────────────────────────────────────
+
+    /** A label with no lead behind it becomes the band's heading, in the heading's own type — never a caps label at display size (polish-2). */
+    public function test_a_kicker_with_no_lead_becomes_the_story_heading(): void
+    {
+        $this->published(['hero' => ['headline' => 'X'], 'about' => ['kicker' => 'Digital is convenient. Metal makes it unforgettable.', 'body' => 'Prose.']]);
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h2>Digital is convenient. Metal makes it unforgettable.</h2>', $body);
+        $this->assertStringNotContainsString('class="eyebrow">Digital is convenient', $body);
+    }
+
+    /** The hero marks a long headline for the stylesheet: over 28 characters `long`, over 48 `xlong` (polish-3). */
+    public function test_a_long_headline_is_marked_for_the_stylesheet(): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Digital Business Cards for People Who Get Remembered']]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="xlong">', $this->body());
+
+        $page->update(['content' => ['hero' => ['headline' => 'Train for the life beyond the gym.']]]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="long">', $this->body());
+
+        $page->update(['content' => ['hero' => ['headline' => 'Strength, with space for you']]]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading">', $this->body());
+    }
+
+    /** The fixed Book pill renders only while the booking FLOW is on; a phone fallback keeps the header and hero controls and no third pill (polish-4). */
+    public function test_no_fixed_pill_without_a_booking_flow(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertStringContainsString('href="tel:', $body);
+        $this->assertStringNotContainsString('booking-fab', $body);
     }
 }

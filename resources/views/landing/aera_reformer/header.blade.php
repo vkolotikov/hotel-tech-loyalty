@@ -21,7 +21,7 @@
   conjunction, if the business has one, is set in the accent by
   App\Landing\Copy::wordmark() — derived from the name, never a leaf.
 
-  $navAnchors, $brandName, $brandDescriptor and the booking trio are all
+  $brandName, $brandDescriptor and the booking trio are all
   resolved once in layout.blade.php; see the comments there for each chain.
   The desktop bar takes the first four and the mobile panel takes all five,
   which is exactly what the author's markup does.
@@ -30,6 +30,12 @@
   with no JavaScript at all. landing/kit.js only adds the two courtesies a
   native <details> cannot do for itself — close on Escape, close when you tap
   outside.
+
+  NO NAVIGATION (polish-1, 2026-09-08, the owner's ruling): a landing page is
+  ONE page, so the header carries the brand and the Book control and nothing
+  else — no anchor list, no mobile menu. The author hid the Book control at
+  his mobile breakpoint in favour of a menu; the stylesheet's appended block
+  shows it there instead, in his own header grid (brand | book).
 --}}
 @php
     use App\Landing\Copy;
@@ -54,28 +60,8 @@
 @endif
       </a>
 @endif
-@if ($navAnchors->isNotEmpty())
-      <nav class="desktop-nav" aria-label="{{ __('Primary navigation') }}">
-@foreach ($navAnchors->take(4) as $anchor)
-        <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
-@endforeach
-      </nav>
-@endif
 @if ($bookingHref !== null)
       <a class="header__book" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['header'] }}</a>
-@endif
-@if ($navAnchors->isNotEmpty() || $bookingHref !== null)
-      <details class="mobile-nav">
-        <summary>{{ __('Menu') }} <span>+</span></summary>
-        <nav aria-label="{{ __('Mobile navigation') }}">
-@foreach ($navAnchors as $anchor)
-          <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
-@endforeach
-@if ($bookingHref !== null)
-          <a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>{{ $chromeLabels['mobile'] }}</a>
-@endif
-        </nav>
-      </details>
 @endif
     </div>
   </header>

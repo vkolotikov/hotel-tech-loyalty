@@ -72,7 +72,7 @@
 @endif
           <h2>{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
 @elseif ($kicker !== '')
-          <h2 class="kicker">{{ $kicker }}</h2>
+          <h2>{{ Copy::heading($kicker) }}</h2>
 @endif
         </div>
 @if ($intro !== null)

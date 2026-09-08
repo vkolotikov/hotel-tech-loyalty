@@ -18,6 +18,12 @@
   are the bands this page is actually going to render. The mobile menu is a
   native <details>; landing/kit.js only adds close-on-Escape and
   close-on-tap-outside.
+
+  NO NAVIGATION (polish-1, 2026-09-08, the owner's ruling): a landing page is
+  ONE page, so the header carries the brand and the Book control and nothing
+  else — no anchor list, no mobile menu. The author hid the Book control at
+  his mobile breakpoint in favour of a menu; the stylesheet's appended block
+  shows it there instead, in his own header grid (brand | book).
 --}}
 @php
     use App\Landing\Copy;
@@ -36,28 +42,8 @@
         <strong>{{ Copy::wordmark($brandName) }}@if ($brandDescriptor !== '')<small>{{ $brandDescriptor }}</small>@endif</strong>
       </a>
 @endif
-@if ($navAnchors->isNotEmpty())
-      <nav class="desktop-nav" aria-label="{{ __('Main navigation') }}">
-@foreach ($navAnchors->take(4) as $anchor)
-        <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
-@endforeach
-      </nav>
-@endif
 @if ($bookingHref !== null)
       <a class="header__book" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>{{ $chromeLabels['header'] }}@include('landing.shared.kit-icon', ['name' => 'arrow'])</a>
-@endif
-@if ($navAnchors->isNotEmpty() || $bookingHref !== null)
-      <details class="mobile-nav">
-        <summary>{{ __('Menu') }} <span>+</span></summary>
-        <nav aria-label="{{ __('Mobile navigation') }}">
-@foreach ($navAnchors as $anchor)
-          <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
-@endforeach
-@if ($bookingHref !== null)
-          <a href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>{{ $chromeLabels['mobile'] }}</a>
-@endif
-        </nav>
-      </details>
 @endif
     </div>
   </header>

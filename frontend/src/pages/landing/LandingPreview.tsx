@@ -6,7 +6,7 @@ import { api } from '../../lib/api'
 import { useBrandStore } from '../../stores/brandStore'
 import { isPreviewUrlExpired, previewRefetchIntervalMs } from './previewFreshness'
 import {
-  DRAFT_STASH_TTL_MS, LIVE_PREVIEW_DEBOUNCE_MS, draftFingerprint, initialLivePreviewState,
+  DRAFT_STASH_TTL_MS, LIVE_PREVIEW_DEBOUNCE_MS, draftFingerprint, frameGeometry, initialLivePreviewState,
   livePreviewIsActive, livePreviewReducer, previewCaptionState,
   type DraftPayload, type FrameSlot,
 } from './livePreview'
@@ -89,6 +89,36 @@ export function LandingPreview({ nonce, draft, dirty, focusKey, onSelect }: {
   // this screen is, per the standing instruction on this bug class.
   const { currentBrandId } = useBrandStore()
   const [device, setDevice] = useState<Device>('desktop')
+
+  // THE PANE'S WIDTH, MEASURED (polish-7). The frame renders at a real
+  // device width and is scaled to fit this box — see `frameGeometry`, which
+  // owns the numbers and their tests. A callback ref rather than an effect,
+  // because the box is rendered conditionally (loading, error and expired
+  // states draw something else) and must be re-measured whenever it mounts.
+  const [boxWidth, setBoxWidth] = useState(0)
+  const boxObserver = useRef<ResizeObserver | null>(null)
+
+  const measureBox = (el: HTMLDivElement | null) => {
+    boxObserver.current?.disconnect()
+    boxObserver.current = null
+
+    if (el === null) return
+
+    setBoxWidth(el.getBoundingClientRect().width)
+
+    if (typeof ResizeObserver === 'undefined') return
+
+    const observer = new ResizeObserver(entries => {
+      const width = entries[0]?.contentRect.width ?? 0
+      setBoxWidth(prev => (Math.abs(prev - width) < 0.5 ? prev : width))
+    })
+    observer.observe(el)
+    boxObserver.current = observer
+  }
+
+  useEffect(() => () => boxObserver.current?.disconnect(), [])
+
+  const geometry = frameGeometry(device, boxWidth)
 
   // `Date.now()` may not be called during render (it's impure), so "now"
   // lives in state, updated only from the interval callback below (never
@@ -363,12 +393,16 @@ export function LandingPreview({ nonce, draft, dirty, focusKey, onSelect }: {
              inside them — and the two frames themselves are never unmounted
              at all, which is what makes a swap free of a repaint. */
           <div
+            ref={measureBox}
             className={device === 'mobile'
               ? 'relative mx-auto rounded-[28px] border-4 border-[#222] bg-black overflow-hidden'
               : 'relative border border-dark-border rounded-lg overflow-hidden bg-black'}
+            // The box is the SCALED frame's size: a real phone (390 px, shown
+            // at 300) or one desktop screen (1440 × 900, shown at the pane's
+            // width). See `frameGeometry`.
             style={device === 'mobile'
-              ? { aspectRatio: '9/16', maxWidth: 280 }
-              : { height: 640 }}
+              ? { width: 300, height: geometry.boxHeight }
+              : { height: geometry.boxHeight }}
           >
             {slots.map(slot => {
               const frame = state[slot]
@@ -396,8 +430,16 @@ export function LandingPreview({ nonce, draft, dirty, focusKey, onSelect }: {
                   // page twice.
                   aria-hidden={visible ? undefined : true}
                   tabIndex={visible ? undefined : -1}
-                  className="absolute inset-0 w-full h-full border-0"
+                  // Rendered at the device's real width and scaled from the
+                  // top-left corner to fit the box (polish-7): the page
+                  // inside lays itself out for 1440 or 390 px, not for
+                  // whatever width the editor happens to leave the pane.
+                  className="absolute top-0 left-0 border-0"
                   style={{
+                    width: geometry.width,
+                    height: geometry.height,
+                    transform: `scale(${geometry.scale})`,
+                    transformOrigin: '0 0',
                     opacity: visible ? 1 : 0,
                     pointerEvents: visible ? 'auto' : 'none',
                     zIndex: visible ? 1 : 0,

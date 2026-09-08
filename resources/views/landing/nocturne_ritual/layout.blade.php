@@ -269,33 +269,6 @@
             : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
-    // NAV ANCHORS come from $renderedSections, the one collection that
-    // decides what renders, so a disabled or empty band can never be linked
-    // to. A band is anchorable when it can NAME itself: its own copy kicker
-    // (while that still reads as a signpost rather than a sentence), else the
-    // industry vocabulary's word for it, else — for this kit's own three
-    // blocks, which no industry profile has ever heard of — the label the
-    // block's partial prints by default. hero is excluded by key: the
-    // wordmark already points at the top.
-    $navLabel = function ($key) use ($page, $profile) {
-        $custom = trim((string) ($page->content[$key]['kicker'] ?? ''));
-
-        if ($custom !== '' && mb_strlen($custom) <= 24) {
-            return $custom;
-        }
-
-        $house = trim((string) $profile->kicker($key));
-
-        return $house !== '' ? $house : (['faq' => 'FAQ'][$key] ?? '');
-    };
-
-    $navAnchors = $mainSections
-        ->reject(fn ($section) => $section->key === 'hero')
-        ->map(fn ($section) => ['key' => $section->key, 'label' => $navLabel($section->key)])
-        ->when($showsFaq, fn ($links) => $links->push(['key' => 'faq', 'label' => $navLabel('faq')]))
-        ->filter(fn ($anchor) => $anchor['label'] !== '' && mb_strlen($anchor['label']) <= 24)
-        ->take(5)
-        ->values();
 @endphp
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -437,7 +410,7 @@
      below 42rem so it never covers a phone's content, which is why the
      in-page controls above are not conditional on it. Rendered only when it
      has somewhere real to go. --}}
-@if ($bookingHref !== null)
+@if ($bookingIsFlow)
   <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 

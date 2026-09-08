@@ -61,7 +61,7 @@
              what "one sentence set large" has always meant for this band), and
              the body follows it.
 
-             The eyebrow changes ELEMENT rather than style when there is no
+             The eyebrow becomes THE HEADING ITSELF, in the heading's own type, when there is no
              lead, and that is not decoration: with no display heading this band
              would otherwise have no heading at all, which puts a nameless
              section in the document outline and under the nav anchor that
@@ -70,7 +70,7 @@
         <p class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('about') }}</p>
         <h2>{{ Copy::heading($lead, $copy['lead_accent'] ?? null) }}</h2>
 @else
-        <h2 class="eyebrow">{{ $copy['kicker'] ?? $profile->kicker('about') }}</h2>
+        <h2>{{ Copy::heading((string) ($copy['kicker'] ?? $profile->kicker('about'))) }}</h2>
 @endif
 @foreach ($paragraphs as $paragraph)
         <p>{{ trim($paragraph) }}</p>

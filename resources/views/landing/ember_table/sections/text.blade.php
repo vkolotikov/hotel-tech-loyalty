@@ -66,9 +66,24 @@
 @endphp
     <section class="text-band section container" id="{{ $section->key }}" data-block="text" data-variant="service-note">
       <header class="section-heading">
+{{-- The eyebrow changes ELEMENT rather than style when there is no heading
+     (polish-2, 2026-09-08): with no h2 this band would otherwise have no
+     heading at all, which puts a nameless section in the document outline,
+     and an empty <h2> is a blank line at display size. With neither, the
+     band is prose under the tenant's own paragraph rhythm and needs no
+     heading invented for it — there is no industry word to fall back on
+     here. --}}
+@if ($heading !== '')
+@if ($kicker !== '')
         <p class="eyebrow">{{ $kicker }}</p>
+@endif
         <h2>{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
-        <p>{{ $intro !== null ? trim($intro) : '' }}</p>
+@elseif ($kicker !== '')
+        <h2>{{ Copy::heading($kicker) }}</h2>
+@endif
+@if ($intro !== null)
+        <p>{{ trim($intro) }}</p>
+@endif
       </header>
 
 @if ($paragraphs !== [])

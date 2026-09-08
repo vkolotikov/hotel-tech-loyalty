@@ -103,7 +103,7 @@
 @endif
           <h2>{{ Copy::heading($heading, $fields['heading_accent'] ?? null) }}</h2>
 @elseif ($kicker !== '')
-          <h2 class="eyebrow eyebrow--ink">{{ $kicker }}</h2>
+          <h2>{{ Copy::heading($kicker) }}</h2>
 @endif
 @foreach ($paragraphs as $paragraph)
 @if ($loop->first)
