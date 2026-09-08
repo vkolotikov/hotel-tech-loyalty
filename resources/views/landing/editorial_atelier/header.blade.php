@@ -8,7 +8,7 @@
   and there should not be — a nav a tenant can type into is a nav that can
   point at a band that is not there.
 
-  $navAnchors, $brandName, $brandDescriptor and the booking trio are all
+  $brandName, $brandDescriptor and the booking trio are all
   resolved once in layout.blade.php; see the comments there for each chain.
   The desktop bar takes the first five and the mobile panel takes all five
   with an ordinal beside each, which is exactly what the author's markup does
@@ -25,6 +25,12 @@
   with no JavaScript at all. landing/kit.js only adds the two courtesies a
   native <details> cannot do for itself — close on Escape, close when you tap
   outside.
+
+  NO NAVIGATION (polish-1, 2026-09-08, the owner's ruling): a landing page is
+  ONE page, so the header carries the brand and the Book control and nothing
+  else — no anchor list, no mobile menu. The author hid the Book control at
+  his mobile breakpoint in favour of a menu; the stylesheet's appended block
+  shows it there instead, in his own header grid (brand | book).
 --}}
 @php
     use App\Landing\Copy;
@@ -52,37 +58,10 @@
       </a>
 @endif
 
-@if ($navAnchors->isNotEmpty())
-      <nav class="desktop-nav" aria-label="Primary navigation">
-@foreach ($navAnchors as $anchor)
-        <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }}</a>
-@endforeach
-      </nav>
-@endif
 
 @if ($bookingHref !== null)
       <a class="button button--ink header-book" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['header'] }}</a>
 @endif
 
-@if ($navAnchors->isNotEmpty() || $bookingHref !== null)
-      <details class="mobile-menu">
-        <summary>
-          <span>{{ __('Menu') }}</span>
-          <span class="mobile-menu__mark" aria-hidden="true">+</span>
-        </summary>
-        <nav class="mobile-menu__panel" aria-label="Mobile navigation">
-@foreach ($navAnchors as $anchor)
-          {{-- The author's own ordinal beside each link, computed from the
-               loop and never stored: a stored number goes stale the moment a
-               band is switched off. aria-hidden because "Services 01" is not
-               what the link says. --}}
-          <a href="#{{ $anchor['key'] }}">{{ $anchor['label'] }} <span aria-hidden="true">{{ sprintf('%02d', $loop->iteration) }}</span></a>
-@endforeach
-@if ($bookingHref !== null)
-          <a class="button button--oxblood" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['mobile'] }}</a>
-@endif
-        </nav>
-      </details>
-@endif
     </div>
   </header>

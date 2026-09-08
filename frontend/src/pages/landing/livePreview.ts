@@ -316,6 +316,35 @@ export function isDraftStashExpired(mintedAt: number, now: number, ttlMs: number
  *                had expired and the server answered with the saved row
  *                (see the reducer's `loaded` arm, which is what notices).
  */
+/**
+ * THE FRAME RENDERS AT A REAL DEVICE WIDTH AND IS SCALED TO THE PANE
+ * (polish-7, 2026-09-08).
+ *
+ * The pane used to size the iframe to its own box — about 430 CSS px beside
+ * the editor — so the page inside rendered its MOBILE layout under a
+ * "desktop" label, and the owner could not judge the desktop design from
+ * the editor at all. The frame is now 1440 px wide on desktop and 390 px on
+ * mobile (a real phone, not the 280 px the old box gave it), and a CSS
+ * transform scales it down to whatever width the pane has. The box takes the
+ * scaled height so the pane shows one full desktop screen (16:10) or one
+ * phone screen; the page still scrolls inside the frame.
+ *
+ * Never scaled UP: a pane wider than the frame shows it at 1:1. Before the
+ * pane has been measured (`boxWidth` 0) the frame is unscaled, which is one
+ * paint before the observer fires.
+ */
+export const DESKTOP_FRAME = { width: 1440, height: 900 } as const
+export const MOBILE_FRAME = { width: 390, height: 844 } as const
+
+export type FrameGeometry = { width: number; height: number; scale: number; boxHeight: number }
+
+export function frameGeometry(device: 'desktop' | 'mobile', boxWidth: number): FrameGeometry {
+  const frame = device === 'mobile' ? MOBILE_FRAME : DESKTOP_FRAME
+  const scale = boxWidth > 0 ? Math.min(1, boxWidth / frame.width) : 1
+
+  return { width: frame.width, height: frame.height, scale, boxHeight: frame.height * scale }
+}
+
 export type PreviewCaptionState = 'live' | 'saved' | 'stale'
 
 export function previewCaptionState(state: LivePreviewState): PreviewCaptionState {

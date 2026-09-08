@@ -3,6 +3,7 @@ import {
   DRAFT_STASH_TTL_MS,
   LIVE_PREVIEW_DEBOUNCE_MS,
   draftFingerprint,
+  frameGeometry,
   initialLivePreviewState,
   isDraftStashExpired,
   livePreviewIsActive,
@@ -27,6 +28,31 @@ const painted = (url = '/preview?draft=one', at = 1_000, seq = 1): LivePreviewSt
     { type: 'rendered', seq, url, at },
     { type: 'loaded', url, at, ttlMs: DRAFT_STASH_TTL_MS },
   ])
+
+describe('frameGeometry', () => {
+  // The pane used to render the page at its own width — about 430 CSS px
+  // beside the editor — which is the MOBILE layout labelled "desktop". The
+  // frame now renders at a real desktop width and is scaled to the pane.
+  it('renders the desktop frame at 1440 wide and scales it to the pane', () => {
+    expect(frameGeometry('desktop', 720)).toEqual({ width: 1440, height: 900, scale: 0.5, boxHeight: 450 })
+  })
+
+  it('never scales the frame up', () => {
+    expect(frameGeometry('desktop', 2000)).toEqual({ width: 1440, height: 900, scale: 1, boxHeight: 900 })
+  })
+
+  it('renders the mobile frame at a real phone width', () => {
+    const g = frameGeometry('mobile', 300)
+    expect(g.width).toBe(390)
+    expect(g.height).toBe(844)
+    expect(g.scale).toBeCloseTo(300 / 390, 6)
+    expect(g.boxHeight).toBeCloseTo(844 * 300 / 390, 6)
+  })
+
+  it('is unscaled before the pane has been measured', () => {
+    expect(frameGeometry('desktop', 0).scale).toBe(1)
+  })
+})
 
 describe('LIVE_PREVIEW_DEBOUNCE_MS', () => {
   it('waits long enough to be a pause in typing, not a pause between keystrokes', () => {

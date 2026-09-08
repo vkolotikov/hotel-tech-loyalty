@@ -2532,3 +2532,51 @@ h1 em {
 .text-band__body p + p {
   margin-top: var(--space-4);
 }
+
+/* --- the polish round (2026-09-08) — appended tenant states -----------------
+   Found by rendering what a tenant types rather than the author's mock:
+
+   1. A LONG HEADLINE. The author's mock headline is two to four words; a
+      tenant's nine-word headline at the same display size fills a phone screen
+      and most of a desktop one. The hero partial marks the h1 by length
+      (data-length="long" over 28 characters, "xlong" over 48) and the size
+      steps down from the author's own token, so his clamp still governs.
+      The author also caps the h1's width (in ch or em, for his own words:
+      Tempo's cap is 3.7em), which squeezed a nine-word headline into a
+      305 px column at 1440; a long headline widens the cap to hold about
+      three lines, and the box still never exceeds its container.
+   2. A WORD LONGER THAN A PHONE ("UNFORGETTABLE." in display caps) widened six
+      of the nine designs past the viewport; a heading may now break inside a
+      word rather than push the page.
+   3. NO NAVIGATION (the owner's ruling: a landing page is one page). The author
+      hid the header's Book control at his mobile breakpoint in favour of a
+      menu that no longer exists, so it is shown there again, in his own header
+      grid (brand | book). */
+h1[data-length="long"] {
+  font-size: calc(var(--font-size-display) * 0.78);
+  max-width: 11em;
+}
+
+h1[data-length="xlong"] {
+  font-size: calc(var(--font-size-display) * 0.64);
+  max-width: 12em;
+}
+
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}
+
+/* The Book control takes the END of the author's header grid (polish-9). His
+   grid is brand | nav | book; with the nav gone the control fell into the
+   nav's 1fr column and stretched across it (Luma Garden drew a header-wide
+   bar, the others hugged the brand). justify-self sizes it to its content
+   and holds it at the right edge whatever the column count. */
+.site-header__inner .header-book {
+  justify-self: end;
+}
+
+@media (max-width: 60rem) {
+  .header-book { display: inline-flex; grid-column: 3; justify-self: end; }
+}

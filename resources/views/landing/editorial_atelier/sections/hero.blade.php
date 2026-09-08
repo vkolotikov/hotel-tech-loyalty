@@ -59,6 +59,19 @@
         $page->seo['title'] ?? null,
     ])->first(fn ($candidate) => filled($candidate));
 
+    // THE HEADLINE'S LENGTH, for the stylesheet (polish-3, 2026-09-08). The
+    // authors' mock headlines are two to four words; a tenant's nine-word
+    // headline at the same display size fills a phone screen and most of a
+    // desktop one. Marked here, sized in the appended block: over 28
+    // characters is `long`, over 48 is `xlong`, measured on the plain text
+    // with the accent included.
+    $headingSize = null;
+
+    if (filled($heading)) {
+        $headingChars = mb_strlen(trim(Copy::plain($heading, $copy['headline_accent'] ?? null)));
+        $headingSize  = $headingChars > 48 ? 'xlong' : ($headingChars > 28 ? 'long' : null);
+    }
+
     $eyebrow = trim((string) ($copy['kicker'] ?? ''));
     $lead    = trim((string) ($copy['subtext'] ?? ''));
     $edition = trim((string) ($copy['edition'] ?? ''));
@@ -90,7 +103,7 @@
           <p class="kicker" data-field="hero-eyebrow">{{ $eyebrow }}</p>
 @endif
 @if (filled($heading))
-          <h1 data-field="hero-heading">{{ Copy::heading($heading, $copy['headline_accent'] ?? null) }}</h1>
+          <h1 data-field="hero-heading"@if ($headingSize !== null) data-length="{{ $headingSize }}"@endif>{{ Copy::heading($heading, $copy['headline_accent'] ?? null) }}</h1>
 @endif
 @if ($lead !== '')
           <p class="hero__intro" data-field="hero-copy">{{ $lead }}</p>

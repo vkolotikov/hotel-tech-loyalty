@@ -130,25 +130,6 @@
             : ($ownBookingLabel !== '' ? $ownBookingLabel : $authored);
     }
 
-    $navLabel = function ($key) use ($page, $profile) {
-        $custom = trim((string) ($page->content[$key]['kicker'] ?? ''));
-
-        if ($custom !== '' && mb_strlen($custom) <= 24) {
-            return $custom;
-        }
-
-        $house = trim((string) $profile->kicker($key));
-
-        return $house !== '' ? $house : (['faq' => 'FAQ'][$key] ?? '');
-    };
-
-    $navAnchors = $mainSections
-        ->reject(fn ($section) => $section->key === 'hero')
-        ->map(fn ($section) => ['key' => $section->key, 'label' => $navLabel($section->key)])
-        ->when($showsFaq, fn ($links) => $links->push(['key' => 'faq', 'label' => $navLabel('faq')]))
-        ->filter(fn ($anchor) => $anchor['label'] !== '' && mb_strlen($anchor['label']) <= 24)
-        ->take(5)
-        ->values();
 @endphp
 <!doctype html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -235,7 +216,7 @@
 {{-- The persistent Book pill, bottom-LEFT, with the author's calendar; below
      54rem the stylesheet stretches it into a full-width bar. Rendered only
      when it has somewhere real to go. --}}
-@if ($bookingHref !== null)
+@if ($bookingIsFlow)
   <a class="booking-fab" href="{{ $bookingHref }}"@if ($bookingIsFlow) data-action="open-booking" target="_blank" rel="noopener"@endif>@include('landing.shared.kit-icon', ['name' => 'calendar']){{ $chromeLabels['fab'] }}</a>
 @endif
 <script src="{{ asset('landing/kit.js') }}{{ AssetVersion::query('landing/kit.js') }}" defer></script>

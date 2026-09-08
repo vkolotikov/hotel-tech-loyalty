@@ -1441,8 +1441,7 @@ class MaisonVelaRenderTest extends TestCase
 
     /**
      * THE CHROME'S OWN WORDS (the improvements round, item D). With no
-     * `booking.cta_label` written and the flow live, the header bar, its
-     * mobile-menu twin, the footer lockup and the fixed pill each carry the
+     * `booking.cta_label` written and the flow live, the header bar, the footer lockup and the fixed pill each carry the
      * word THE AUTHOR gave that control — transcribed from his index.html —
      * while the closing panel keeps the industry's verb. The one leaf still
      * overrides all four at once (see the wording test), and with the flow off
@@ -1468,15 +1467,9 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertSame(1, preg_match('#<a class="booking-fab"[^>]*>.*?</a>#s', $body, $fab));
         $this->assertSame(1, preg_match('#<section[^>]*data-block="booking"[^>]*>.*?</section>#s', $body, $panel));
 
-        // The header bar and its mobile-menu twin, captured APART: the
-        // <details> panel sits inside <header>, so one word asserted twice
-        // against the whole capture could not tell the two placements from
-        // each other (review, Minor 1). The bar is the header with the panel
-        // cut out; the panel is asserted on its own.
-        $this->assertSame(1, preg_match('#<details class="mobile-(?:menu|nav)">.*?</details>#s', $header[0], $mobile));
-        $bar = str_replace($mobile[0], '', $header[0]);
+        // The header bar alone — there is no menu any more (polish-1).
+        $bar = $header[0];
         $this->assertStringContainsString('Reserve</a>', $bar);
-        $this->assertStringContainsString('Reserve a table</a>', $mobile[0]);
         // The footer lockup and the fixed pill.
         $this->assertStringContainsString('Reserve a table</a>', $footer[0]);
         $this->assertStringContainsString('Reserve a table</a>', $fab[0]);
@@ -1484,5 +1477,58 @@ class MaisonVelaRenderTest extends TestCase
         $this->assertStringContainsString('Reserve a table</a>', $panel[0]);
         // The flow is live, so no control has been relabelled for a fallback.
         $this->assertStringNotContainsString('Call to book', $body);
+    }
+
+    /** A landing page is ONE page (polish-1, 2026-09-08, the owner's ruling): the header carries the brand and the Book control and nothing else — no anchor list, no mobile menu. */
+    public function test_the_header_carries_no_navigation(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertSame(1, preg_match('#<header class="site-header"[^>]*>.*?</header>#s', $body, $header), 'the header renders');
+        $this->assertStringNotContainsString('<nav', $header[0]);
+        $this->assertStringNotContainsString('<details', $header[0]);
+        $this->assertStringNotContainsString('<ul', $header[0]);
+        $this->assertLessThanOrEqual(2, preg_match_all('#<a #', $header[0]), 'the brand link and the Book control, nothing more');
+    }
+
+    /** The story's eyebrow becomes its HEADING when the tenant wrote a kicker and no lead (polish-2): no nameless section, no eyebrow set at display size. */
+    public function test_a_kicker_with_no_lead_becomes_the_story_heading(): void
+    {
+        $this->published(['hero' => ['headline' => 'X'], 'about' => ['kicker' => 'Digital is convenient. Metal makes it unforgettable.', 'body' => 'Prose.']]);
+        $body = $this->body();
+
+        $this->assertStringContainsString('<h2>Digital is convenient. Metal makes it unforgettable.</h2>', $body);
+        $this->assertStringNotContainsString('Digital is convenient. Metal makes it unforgettable.</p>', $body);
+    }
+
+    /** The hero marks a long headline for the stylesheet: over 28 characters `long`, over 48 `xlong` (polish-3). */
+    public function test_a_long_headline_is_marked_for_the_stylesheet(): void
+    {
+        $page = $this->published(['hero' => ['headline' => 'Digital Business Cards for People Who Get Remembered']]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="xlong">', $this->body());
+
+        $page->update(['content' => ['hero' => ['headline' => 'Train for the life beyond the gym.']]]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="long">', $this->body());
+
+        $page->update(['content' => ['hero' => ['headline' => 'Strength, with space for you']]]);
+        $this->assertStringContainsString('<h1 data-field="hero-heading">', $this->body());
+    }
+
+    /** The fixed Book pill renders only while the booking FLOW is on (polish-4): a phone or footer fallback keeps the header and hero controls and draws no third pill. */
+    public function test_the_fixed_pill_follows_the_booking_flow(): void
+    {
+        $this->seedLikeTheKit();
+        $body = $this->body();
+
+        $this->assertSame(str_contains($body, 'data-action="open-booking"'), str_contains($body, 'booking-fab'));
+    }
+
+    /** With no booking flow at all — no booking URL on the page — there is no pill: the phone or footer fallback keeps the header and hero controls only (polish-4). */
+    public function test_no_fixed_pill_without_a_booking_flow(): void
+    {
+        $this->published(['hero' => ['headline' => 'X'], 'about' => ['lead' => 'L', 'body' => 'B']]);
+
+        $this->assertStringNotContainsString('booking-fab', $this->body());
     }
 }
