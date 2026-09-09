@@ -13,6 +13,14 @@ export interface Readiness {
   sections: { key: string; label: string; score: number; hints: string[] }[]
 }
 
+export interface CalendarGenerationResult {
+  status: 'completed' | 'partial' | 'failed'
+  created_count: number
+  posts: Post[]
+  failed_windows: { start_date: string; end_date: string; reason: string }[]
+  message: string
+}
+
 export interface Audience {
   id?: number
   name: string
@@ -304,7 +312,7 @@ export const cp = {
     api.post(`${BASE}/posts/${id}/mark-published`, url ? { published_url: url } : {}).then(r => r.data),
 
   generateCalendar: (payload: { planner_profile_id: number; start_date: string; end_date: string; platforms?: string[]; fill_empty_only?: boolean; instructions?: string }) =>
-    api.post(`${BASE}/calendar/generate`, payload, { timeout: 600_000 }).then(r => r.data),
+    api.post<CalendarGenerationResult>(`${BASE}/calendar/generate`, payload, { timeout: 600_000 }).then(r => r.data),
 }
 
 /** Extract a human error message from an axios error. */

@@ -36,7 +36,7 @@ class VoiceAgentConfig extends Model
                 'voice' => 'alloy',
                 'tts_model' => 'gpt-4o-mini-tts',
                 'realtime_enabled' => false,
-                'realtime_model' => 'gpt-4o-realtime-preview',
+                'realtime_model' => 'gpt-realtime-1.5',
                 'language' => 'en',
                 'temperature' => 0.8,
             ]);

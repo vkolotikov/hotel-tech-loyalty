@@ -13,6 +13,7 @@ import {
   WEEKDAY_ROLE_META,
   type PlannerProfile,
   type Post,
+  type CalendarGenerationResult,
 } from './lib'
 
 /* ─── Date helpers (local to calendar) ───────────────────────────── */
@@ -61,6 +62,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
   const [genInstructions, setGenInstructions] = useState('')
   const [genFillEmpty, setGenFillEmpty] = useState(true)
   const [genStage, setGenStage] = useState(0)
+  const [genNotice, setGenNotice] = useState<{ message: string; windows: CalendarGenerationResult['failed_windows'] } | null>(null)
 
   const todayStr = fmtDateISO(new Date())
 
@@ -165,13 +167,26 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
   const generateMutation = useMutation({
     mutationFn: (payload: { planner_profile_id: number; start_date: string; end_date: string; fill_empty_only: boolean; instructions?: string }) =>
       cp.generateCalendar(payload),
-    onSuccess: (resp: { created_count?: number }) => {
-      toast.success(`${resp?.created_count ?? 0} posts planned`)
+    onSuccess: (resp: CalendarGenerationResult) => {
       queryClient.invalidateQueries({ queryKey: ['cp-posts'] })
+      if (resp.status === 'partial' || resp.failed_windows?.length > 0) {
+        setGenNotice({ message: resp.message, windows: resp.failed_windows ?? [] })
+        setGenFillEmpty(true)
+        toast(resp.message, { icon: '⚠️' })
+        return
+      }
+      toast.success(resp.message || `${resp?.created_count ?? 0} posts planned`)
       setGenRange(null)
       setGenInstructions('')
     },
-    onError: e => toast.error(errMsg(e)),
+    onError: e => {
+      // Even an interrupted response may have saved earlier drafts.
+      queryClient.invalidateQueries({ queryKey: ['cp-posts'] })
+      const data = (e as { response?: { data?: Partial<CalendarGenerationResult> } }).response?.data
+      setGenNotice({ message: errMsg(e), windows: Array.isArray(data?.failed_windows) ? data.failed_windows : [] })
+      setGenFillEmpty(true)
+      toast.error(errMsg(e))
+    },
   })
 
   // Cycle the staged progress messages while the calendar generation runs.
@@ -186,6 +201,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
   const genTo = genRange === 'week' ? weekEnd : monthEnd
 
   const startGeneration = () => {
+    setGenNotice(null)
     generateMutation.mutate({
       planner_profile_id: profile.id,
       start_date: fmtDateISO(genFrom),
@@ -193,6 +209,11 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
       fill_empty_only: genFillEmpty,
       instructions: genInstructions.trim() || undefined,
     })
+  }
+
+  const openGeneration = (range: 'week' | 'month') => {
+    setGenNotice(null)
+    setGenRange(range)
   }
 
   const togglePlatform = (p: string) =>
@@ -492,14 +513,14 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
         </div>
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => setGenRange('week')}
+            onClick={() => openGeneration('week')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
           >
             <Sparkles size={14} />
             Generate week
           </button>
           <button
-            onClick={() => setGenRange('month')}
+            onClick={() => openGeneration('month')}
             className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
           >
             <Sparkles size={14} />
@@ -550,7 +571,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
             Let the AI plan a strategic month of posts based on your brand, pillars, and weekly rhythm — or switch views to add posts by hand.
           </p>
           <button
-            onClick={() => setGenRange('month')}
+            onClick={() => openGeneration('month')}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
           >
             <Sparkles size={16} />
@@ -626,6 +647,21 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                   {genFrom.toLocaleString('default', { day: 'numeric', month: 'long' })} —{' '}
                   {genTo.toLocaleString('default', { day: 'numeric', month: 'long', year: 'numeric' })}
                 </p>
+                {genNotice && (
+                  <div role="alert" className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200">
+                    <p>{genNotice.message}</p>
+                    {genNotice.windows.length > 0 && (
+                      <div className="mt-2">
+                        <p className="font-medium">Dates still to plan:</p>
+                        <ul className="mt-1 list-inside list-disc">
+                          {genNotice.windows.map(window => (
+                            <li key={`${window.start_date}-${window.end_date}`}>{window.start_date} – {window.end_date}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-white">Instructions (optional)</label>
                   <textarea
@@ -657,7 +693,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                     className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
                   >
                     <Sparkles size={14} />
-                    Start
+                    {genNotice && genFillEmpty ? 'Retry empty slots' : 'Start'}
                   </button>
                 </div>
               </div>

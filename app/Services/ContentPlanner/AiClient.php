@@ -3,6 +3,7 @@
 namespace App\Services\ContentPlanner;
 
 use Anthropic\Client;
+use Anthropic\Core\Exceptions\APIException;
 use App\Models\ContentPlannerAiGeneration;
 use App\Models\ContentPlannerProfile;
 use Illuminate\Support\Facades\Log;
@@ -40,9 +41,10 @@ final class AiClient
      * suffix. Throws \RuntimeException on API errors or unparseable JSON
      * (after logging an error row).
      */
-    public function generateJson(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens = 4000): array
+    public function generateJson(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens = 4000, ?CalendarGenerationBudget $calendarBudget = null): array
     {
-        $text = $this->call($profile, $generationType, $prompt, $maxTokens);
+        $calendarBudget = $generationType === 'calendar' ? ($calendarBudget ?? new CalendarGenerationBudget) : null;
+        $text = $this->call($profile, $generationType, $prompt, $maxTokens, $calendarBudget);
         $data = $this->extractJson($text);
 
         if (is_array($data)) {
@@ -51,7 +53,7 @@ final class AiClient
 
         // Retry once with a stricter instruction appended.
         $retryPrompt = $prompt . "\n\nReturn ONLY valid JSON, no prose.";
-        $text = $this->call($profile, $generationType, $retryPrompt, $maxTokens);
+        $text = $this->call($profile, $generationType, $retryPrompt, $maxTokens, $calendarBudget);
         $data = $this->extractJson($text);
 
         if (is_array($data)) {
@@ -63,6 +65,10 @@ final class AiClient
             $generationType,
             'AI returned unparseable JSON after retry. Preview: ' . mb_substr($text, 0, 300)
         );
+
+        if ($calendarBudget !== null) {
+            throw new CalendarGenerationException('invalid_ai_response', 'The AI service returned an invalid calendar. Please retry.');
+        }
 
         throw new \RuntimeException("AI returned invalid JSON for '{$generationType}' generation. Please try again.");
     }
@@ -80,7 +86,7 @@ final class AiClient
      *
      * @throws \RuntimeException on API failure (after logging an error row)
      */
-    private function call(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens): string
+    private function call(ContentPlannerProfile $profile, string $generationType, string $prompt, int $maxTokens, ?CalendarGenerationBudget $calendarBudget = null): string
     {
         try {
             $response = $this->client->messages->create(
@@ -89,6 +95,10 @@ final class AiClient
                 messages: [
                     ['role' => 'user', 'content' => $prompt],
                 ],
+                requestOptions: $calendarBudget === null ? null : [
+                    'maxRetries' => 0,
+                    'transporter' => new CalendarAiTransport($calendarBudget),
+                ],
             );
         } catch (Throwable $e) {
             Log::error("ContentPlanner AiClient API error ({$generationType}): " . $e->getMessage(), [
@@ -96,6 +106,17 @@ final class AiClient
             ]);
 
             $this->logError($profile, $generationType, $e->getMessage());
+
+            if ($calendarBudget !== null) {
+                if ($e instanceof CalendarGenerationException) {
+                    throw $e;
+                }
+                if ($e instanceof APIException) {
+                    throw new CalendarGenerationException('provider_unavailable', 'The AI service could not complete this calendar request. Please retry.', $e);
+                }
+                // Local programming/storage errors are not provider outages.
+                throw $e;
+            }
 
             throw new \RuntimeException(
                 "AI request failed for '{$generationType}' generation: " . $e->getMessage(),

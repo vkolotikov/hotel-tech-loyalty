@@ -183,6 +183,8 @@
     return n;
   })();
   var isVoiceCall = false;
+  var isVoiceConnecting = false;
+  var voiceCallGeneration = 0;
   var voicePc = null; // WebRTC PeerConnection
   var voiceDataChannel = null;
   var voiceAudioEl = null;
@@ -2043,7 +2045,7 @@
 
   // ── Voice Agent: WebRTC ──
   function toggleVoiceCall() {
-    if (isVoiceCall) {
+    if (isVoiceCall || isVoiceConnecting) {
       endVoiceCall();
     } else {
       startVoiceCall();
@@ -2051,11 +2053,13 @@
   }
 
   function startVoiceCall() {
-    if (isVoiceCall) return;
+    if (isVoiceCall || isVoiceConnecting) return;
+    isVoiceConnecting = true;
+    var generation = ++voiceCallGeneration;
     showVoiceOverlay('Connecting…');
 
     // 1. Get ephemeral token from our backend
-    fetch(API + '/realtime-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+    return fetch(API + '/realtime-session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
       .then(function (r) {
         if (!r.ok) {
           return r.text().then(function (raw) {
@@ -2070,36 +2074,52 @@
         return r.json();
       })
       .then(function (data) {
+        if (generation !== voiceCallGeneration) return;
         if (!data.client_secret) throw new Error('No client secret');
-        return connectWebRTC(data.client_secret, data.voice, data.language_name || 'English');
+        return connectWebRTC(data.client_secret, data.language_name || 'English', generation);
       })
       .catch(function (err) {
+        if (generation !== voiceCallGeneration) return;
         console.error('HotelChat voice error:', err);
-        removeVoiceOverlay();
+        endVoiceCall();
         alert('Voice call unavailable: ' + (err.message || 'Unknown error'));
       });
   }
 
-  function connectWebRTC(ephemeralKey, voice, languageName) {
+  function connectWebRTC(ephemeralKey, languageName, generation) {
     // 2. Create PeerConnection
-    voicePc = new RTCPeerConnection();
+    var pc = new RTCPeerConnection();
+    voicePc = pc;
+    function requireCurrentAttempt() {
+      if (generation !== voiceCallGeneration || voicePc !== pc) throw new Error('Voice call cancelled');
+    }
 
     // 3. Set up audio output
-    voiceAudioEl = document.createElement('audio');
-    voiceAudioEl.autoplay = true;
-    voicePc.ontrack = function (e) {
-      voiceAudioEl.srcObject = e.streams[0];
+    var audioEl = document.createElement('audio');
+    voiceAudioEl = audioEl;
+    audioEl.autoplay = true;
+    pc.ontrack = function (e) {
+      if (generation === voiceCallGeneration) audioEl.srcObject = e.streams[0];
     };
 
     // 4. Get microphone and add track
     return navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-      stream.getTracks().forEach(function (track) {
-        voicePc.addTrack(track, stream);
-      });
+      // Permission may resolve after the visitor cancelled or began another
+      // call. These tracks have no sender yet, so close them explicitly.
+      try {
+        requireCurrentAttempt();
+        stream.getTracks().forEach(function (track) { pc.addTrack(track, stream); });
+      } catch (err) {
+        stream.getTracks().forEach(function (track) { track.stop(); });
+        throw err;
+      }
 
       // 5. Create data channel for events
-      voiceDataChannel = voicePc.createDataChannel('oai-events');
-      voiceDataChannel.onopen = function () {
+      var channel = pc.createDataChannel('oai-events');
+      voiceDataChannel = channel;
+      channel.onopen = function () {
+        if (generation !== voiceCallGeneration) return;
+        isVoiceConnecting = false;
         isVoiceCall = true;
         updateVoiceCallUI(true);
         updateVoiceOverlayStatus('Listening…');
@@ -2108,41 +2128,44 @@
         // this turn, so we re-pin the language here too — otherwise the
         // model picks one (frequently Spanish) for the greeting.
         var lang = languageName || 'English';
-        voiceDataChannel.send(JSON.stringify({
+        channel.send(JSON.stringify({
           type: 'response.create',
           response: {
-            modalities: ['text', 'audio'],
+            output_modalities: ['audio'],
             instructions: 'Greet the caller warmly in ' + lang + ' and ask how you can help. You MUST speak ' + lang + ' for the entire conversation.',
           },
         }));
       };
-      voiceDataChannel.onmessage = function (e) {
+      channel.onmessage = function (e) {
+        if (generation !== voiceCallGeneration) return;
         handleRealtimeEvent(JSON.parse(e.data));
       };
-      voiceDataChannel.onclose = function () {
-        endVoiceCall();
+      channel.onclose = function () {
+        if (generation === voiceCallGeneration) endVoiceCall();
       };
 
       // 6. Create and set local offer
-      return voicePc.createOffer();
+      return pc.createOffer();
     }).then(function (offer) {
-      return voicePc.setLocalDescription(offer);
+      requireCurrentAttempt();
+      return pc.setLocalDescription(offer);
     }).then(function () {
-      // 7. Send offer to OpenAI Realtime API
-      var model = 'gpt-4o-realtime-preview';
-      return fetch('https://api.openai.com/v1/realtime?model=' + model, {
+      requireCurrentAttempt();
+      // 7. Use the session defaults supplied with the GA client secret.
+      return fetch('https://api.openai.com/v1/realtime/calls', {
         method: 'POST',
         headers: {
           'Authorization': 'Bearer ' + ephemeralKey,
           'Content-Type': 'application/sdp',
         },
-        body: voicePc.localDescription.sdp,
+        body: pc.localDescription.sdp,
       });
     }).then(function (r) {
       if (!r.ok) throw new Error('OpenAI Realtime SDP exchange failed');
       return r.text();
     }).then(function (sdp) {
-      return voicePc.setRemoteDescription({ type: 'answer', sdp: sdp });
+      requireCurrentAttempt();
+      return pc.setRemoteDescription({ type: 'answer', sdp: sdp });
     });
   }
 
@@ -2150,7 +2173,8 @@
     if (!event || !event.type) return;
 
     switch (event.type) {
-      case 'response.audio_transcript.done':
+      case 'response.output_audio_transcript.done':
+      case 'response.audio_transcript.done': // An already-open legacy session.
         // AI finished speaking — add transcript to chat
         if (event.transcript) {
           messages.push({ role: 'assistant', content: event.transcript });
@@ -2190,22 +2214,28 @@
   }
 
   function endVoiceCall() {
+    // Invalidate asynchronous work before close() can fire channel callbacks.
+    voiceCallGeneration++;
     isVoiceCall = false;
+    isVoiceConnecting = false;
+    var channel = voiceDataChannel;
+    var pc = voicePc;
+    var audioEl = voiceAudioEl;
+    voiceDataChannel = null;
+    voicePc = null;
+    voiceAudioEl = null;
 
-    if (voiceDataChannel) {
-      try { voiceDataChannel.close(); } catch (e) {}
-      voiceDataChannel = null;
+    if (channel) {
+      try { channel.close(); } catch (e) {}
     }
-    if (voicePc) {
-      voicePc.getSenders().forEach(function (sender) {
+    if (pc) {
+      pc.getSenders().forEach(function (sender) {
         if (sender.track) sender.track.stop();
       });
-      try { voicePc.close(); } catch (e) {}
-      voicePc = null;
+      try { pc.close(); } catch (e) {}
     }
-    if (voiceAudioEl) {
-      voiceAudioEl.srcObject = null;
-      voiceAudioEl = null;
+    if (audioEl) {
+      audioEl.srcObject = null;
     }
 
     updateVoiceCallUI(false);

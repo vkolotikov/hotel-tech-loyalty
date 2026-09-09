@@ -8,6 +8,7 @@ use App\Models\Task;
 use App\Services\CustomFieldService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /**
@@ -22,6 +23,8 @@ use Illuminate\Validation\Rule;
  */
 class TaskController extends Controller
 {
+    private const LEGACY_TASK_TITLE_LIMIT = 50;
+
     public function __construct(protected CustomFieldService $customFields) {}
 
     public function index(Request $request): JsonResponse
@@ -83,14 +86,16 @@ class TaskController extends Controller
         $data['assigned_to'] = $data['assigned_to'] ?? $request->user()->id;
         $data['custom_data'] = $this->customFields->validate('task', $data['custom_data'] ?? null);
 
-        $task = Task::create($data);
-        $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
+        $task = DB::transaction(function () use ($data) {
+            $task = Task::create($data);
+            $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
 
-        // Mirror to the linked inquiry's denormalised next-task columns
-        // so the leads list row updates immediately. The Inquiries page
-        // reads next_task_type/due/notes off the inquiry row (no join);
-        // without this sync, freshly-created tasks are invisible there.
-        $this->syncInquiryNextTask($task->inquiry_id);
+            // A failed mirror must not leave a saved task behind a 500 response
+            // that invites the user to retry and create a duplicate.
+            $this->syncInquiryNextTask($task->inquiry_id);
+
+            return $task;
+        });
 
         return response()->json($task, 201);
     }
@@ -111,10 +116,20 @@ class TaskController extends Controller
             ->first();
 
         if ($next) {
+            // The leads list uses this legacy varchar(50) as a display title.
+            // Keep the authoritative task title intact, make shortening visible,
+            // and retain the full title in the legacy notes as well.
+            $title = $next->title;
+            $notes = $next->description;
+            if (mb_strlen($title, 'UTF-8') > self::LEGACY_TASK_TITLE_LIMIT) {
+                $title = mb_substr($title, 0, self::LEGACY_TASK_TITLE_LIMIT - 1, 'UTF-8').'…';
+                $notes = $next->title.($notes === null || $notes === '' ? '' : "\n\n".$notes);
+            }
+
             $inquiry->forceFill([
-                'next_task_type'      => $next->title,
+                'next_task_type'      => $title,
                 'next_task_due'       => $next->due_at?->toDateString(),
-                'next_task_notes'     => $next->description,
+                'next_task_notes'     => $notes,
                 'next_task_completed' => false,
             ])->save();
         } else {
@@ -142,9 +157,11 @@ class TaskController extends Controller
             $data['custom_data'] = $this->customFields->validate('task', $data['custom_data']);
         }
 
-        $task->fill($data)->save();
-        $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
-        $this->syncInquiryNextTask($task->inquiry_id);
+        DB::transaction(function () use ($task, $data) {
+            $task->fill($data)->save();
+            $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
+            $this->syncInquiryNextTask($task->inquiry_id);
+        });
 
         return response()->json($task);
     }
@@ -161,45 +178,51 @@ class TaskController extends Controller
         }
 
         $data = $request->validate([
-            'outcome' => 'nullable|string|max:200',
+            'outcome' => 'nullable|string|max:60',
         ]);
 
-        $task->forceFill([
-            'completed_at' => now(),
-            'outcome'      => $data['outcome'] ?? null,
-        ])->save();
+        DB::transaction(function () use ($task, $data, $request) {
+            $task->forceFill([
+                'completed_at' => now(),
+                'outcome'      => $data['outcome'] ?? null,
+            ])->save();
 
-        if ($task->inquiry_id) {
-            Activity::create([
-                'organization_id' => $task->organization_id,
-                'brand_id'        => $task->brand_id,
-                'inquiry_id'      => $task->inquiry_id,
-                'type'            => 'task_completed',
-                'subject'         => $task->title,
-                'body'            => $data['outcome'] ?? null,
-                'metadata'        => ['task_id' => $task->id, 'task_type' => $task->type],
-                'created_by'      => $request->user()->id,
-                'occurred_at'     => now(),
-            ]);
-        }
+            if ($task->inquiry_id) {
+                Activity::create([
+                    'organization_id' => $task->organization_id,
+                    'brand_id'        => $task->brand_id,
+                    'inquiry_id'      => $task->inquiry_id,
+                    'type'            => 'task_completed',
+                    'subject'         => $task->title,
+                    'body'            => $data['outcome'] ?? null,
+                    'metadata'        => ['task_id' => $task->id, 'task_type' => $task->type],
+                    'created_by'      => $request->user()->id,
+                    'occurred_at'     => now(),
+                ]);
+            }
 
-        $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
-        $this->syncInquiryNextTask($task->inquiry_id);
+            $task->load(['assignee:id,name', 'inquiry:id,guest_id,status']);
+            $this->syncInquiryNextTask($task->inquiry_id);
+        });
         return response()->json($task);
     }
 
     public function reopen(Task $task): JsonResponse
     {
-        $task->forceFill(['completed_at' => null, 'outcome' => null])->save();
-        $this->syncInquiryNextTask($task->inquiry_id);
+        DB::transaction(function () use ($task) {
+            $task->forceFill(['completed_at' => null, 'outcome' => null])->save();
+            $this->syncInquiryNextTask($task->inquiry_id);
+        });
         return response()->json($task->fresh());
     }
 
     public function destroy(Task $task): JsonResponse
     {
-        $inquiryId = $task->inquiry_id;
-        $task->delete();
-        $this->syncInquiryNextTask($inquiryId);
+        DB::transaction(function () use ($task) {
+            $inquiryId = $task->inquiry_id;
+            $task->delete();
+            $this->syncInquiryNextTask($inquiryId);
+        });
         return response()->json(['message' => 'Task deleted']);
     }
 }
