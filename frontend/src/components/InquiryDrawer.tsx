@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import {
@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { isCrmRecordId } from '../lib/crmRecordId'
 import EditableField from './EditableField'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { ChatHistoryPanel } from './ChatHistoryPanel'
@@ -145,9 +146,16 @@ export function InquiryDrawer({
   const [confirmDelete, setConfirmDelete] = useState(false)
   const kebabRef = useRef<HTMLButtonElement>(null)
 
-  const inq = inquiry ?? null
+  const inq = inquiry && isCrmRecordId(inquiry.id) ? inquiry : null
   const inquiryId = inq?.id ?? null
+  const guestId = inq?.guest && isCrmRecordId(inq.guest.id) ? inq.guest.id : null
   const loading = open && !inq // empty state when row is missing
+  // Field blur/save callbacks can outlive a list refetch or selection change.
+  const selection = useRef({ open, inquiryId, guestId })
+  useLayoutEffect(() => {
+    selection.current = { open, inquiryId, guestId }
+    return () => { selection.current = { open: false, inquiryId: null, guestId: null } }
+  }, [open, inquiryId, guestId])
 
   // Reset state when the drawer opens for a new inquiry.
   useEffect(() => {
@@ -198,16 +206,19 @@ export function InquiryDrawer({
   // PUT one field at a time — partial-PUT contract verified for both
   // inquiries and guests endpoints. No need to send the full object.
   const updateInquiryMutation = useMutation({
-    mutationFn: (patch: Partial<Inquiry>) =>
-      api.put(`/v1/admin/inquiries/${inquiryId}`, patch).then(r => r.data),
-    onSuccess: () => {
+    mutationFn: ({ id, patch }: { id: number | null; patch: Partial<Inquiry> }) => {
+      if (!isCrmRecordId(id) || !selection.current.open || selection.current.inquiryId !== id) return Promise.resolve(null)
+      return api.put(`/v1/admin/inquiries/${id}`, patch).then(r => ({ data: r.data }))
+    },
+    onSuccess: (result, { id }) => {
+      if (!result || id == null) return
       // Invalidating the list query is enough — the drawer reads its
       // inquiry from the parent's already-loaded list, so the next
       // refetch will flow fresh data through the `inquiry` prop.
       qc.invalidateQueries({ queryKey: ['inquiries'] })
       qc.invalidateQueries({ queryKey: ['inquiries-today'] })
       qc.invalidateQueries({ queryKey: ['inquiries-kpis'] })
-      if (inquiryId != null) onInquiryUpdated?.(inquiryId)
+      onInquiryUpdated?.(id)
     },
     onError: (e: any) => {
       toast.error(e?.response?.data?.message || t('inquiryDrawer.toasts.save_failed', 'Save failed'))
@@ -215,11 +226,15 @@ export function InquiryDrawer({
   })
 
   const updateGuestMutation = useMutation({
-    mutationFn: (patch: Partial<Guest>) =>
-      api.put(`/v1/admin/guests/${inq?.guest?.id}`, patch).then(r => r.data),
-    onSuccess: () => {
+    mutationFn: ({ id, ownerId, patch }: { id: number | null; ownerId: number | null; patch: Partial<Guest> }) => {
+      const current = selection.current
+      if (!isCrmRecordId(id) || !current.open || current.inquiryId !== ownerId || current.guestId !== id) return Promise.resolve(null)
+      return api.put(`/v1/admin/guests/${id}`, patch).then(r => ({ data: r.data }))
+    },
+    onSuccess: (result, { id }) => {
+      if (!result) return
       qc.invalidateQueries({ queryKey: ['inquiries'] })
-      qc.invalidateQueries({ queryKey: ['guest', inq?.guest?.id] })
+      qc.invalidateQueries({ queryKey: ['guest', id] })
     },
     onError: (e: any) => {
       toast.error(e?.response?.data?.message || t('inquiryDrawer.toasts.save_failed', 'Save failed'))
@@ -241,10 +256,10 @@ export function InquiryDrawer({
   })
 
   const saveInq = (key: keyof Inquiry) => async (next: string | number | null) =>
-    void await updateInquiryMutation.mutateAsync({ [key]: next as any } as Partial<Inquiry>)
+    void await updateInquiryMutation.mutateAsync({ id: inquiryId, patch: { [key]: next as any } as Partial<Inquiry> })
 
   const saveGuest = (key: keyof Guest) => async (next: string | number | null) =>
-    void await updateGuestMutation.mutateAsync({ [key]: next as any } as Partial<Guest>)
+    void await updateGuestMutation.mutateAsync({ id: guestId, ownerId: inquiryId, patch: { [key]: next as any } as Partial<Guest> })
 
   if (!open) return null
 
@@ -415,8 +430,8 @@ export function InquiryDrawer({
             </div>
           </div>
 
-          {/* Body — generous padding + section cards */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {/* A new record remounts the fields, discarding the previous draft. */}
+          <div key={`${inquiryId}:${guestId}`} className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
             {!inq && (
               <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
                 <div className="w-16 h-16 rounded-2xl bg-dark-bg border border-dark-border flex items-center justify-center mb-4">

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useLayoutEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -9,6 +9,7 @@ import {
 import toast from 'react-hot-toast'
 import { formatDistanceToNow } from 'date-fns'
 import { api } from '../lib/api'
+import { isCrmRecordId } from '../lib/crmRecordId'
 
 /**
  * Right-side drawer for viewing AND editing a guest's full CRM profile,
@@ -271,7 +272,8 @@ function DeleteConfirmModal({
 // CustomerDrawer
 // ---------------------------------------------------------------------------
 
-export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuestDeleted }: Props) {
+export function CustomerDrawer({ open, guestId: requestedGuestId, onClose, onGuestUpdated, onGuestDeleted }: Props) {
+  const guestId = isCrmRecordId(requestedGuestId) ? requestedGuestId : null
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [tab, setTab] = useState<Tab>('profile')
@@ -310,8 +312,15 @@ export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuest
     enabled: open && guestId != null && confirmDelete,
   })
 
-  const guest = guestQuery.data
+  const guest = guestId !== null && guestQuery.data?.id === guestId ? guestQuery.data : undefined
   const loading = guestQuery.isLoading
+  const displayedGuestId = guest?.id ?? null
+  // Guard queued field saves even before TanStack applies new mutation options.
+  const selection = useRef({ open, guestId: displayedGuestId })
+  useLayoutEffect(() => {
+    selection.current = { open, guestId: displayedGuestId }
+    return () => { selection.current = { open: false, guestId: null } }
+  }, [open, displayedGuestId])
 
   // ESC closes (unless we're loading or inside a sub-modal).
   useEffect(() => {
@@ -338,14 +347,18 @@ export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuest
 
   // Diff-PUT a single field.
   const updateMutation = useMutation({
-    mutationFn: (patch: Partial<CustomerDrawerGuest>) =>
-      api.put(`/v1/admin/guests/${guestId}`, patch).then(r => r.data),
-    onSuccess: (resp: any) => {
-      const updated: CustomerDrawerGuest = resp?.data ?? resp ?? guest
-      queryClient.setQueryData(['guest', guestId], updated)
+    mutationFn: ({ id, patch }: { id: number | null; patch: Partial<CustomerDrawerGuest> }) => {
+      if (!isCrmRecordId(id) || !selection.current.open || selection.current.guestId !== id) return Promise.resolve(null)
+      return api.put(`/v1/admin/guests/${id}`, patch).then(r => ({ data: r.data }))
+    },
+    onSuccess: (result, { id }) => {
+      if (!result) return
+      const updated: CustomerDrawerGuest | undefined = result.data?.data ?? result.data
+      if (updated?.id === id) queryClient.setQueryData(['guest', id], updated)
+      else queryClient.invalidateQueries({ queryKey: ['guest', id] })
       queryClient.invalidateQueries({ queryKey: ['customers-list'] })
       queryClient.invalidateQueries({ queryKey: ['inquiries'] })
-      onGuestUpdated?.(updated)
+      if (updated?.id === id) onGuestUpdated?.(updated)
       toast.success(t('customerDrawer.toasts.saved', 'Saved'))
     },
     onError: (e: any) => {
@@ -370,8 +383,8 @@ export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuest
     },
   })
 
-  const saveField = (key: keyof CustomerDrawerGuest) => (next: string | null) =>
-    updateMutation.mutateAsync({ [key]: next } as Partial<CustomerDrawerGuest>)
+  const saveField = (key: keyof CustomerDrawerGuest) => async (next: string | null) =>
+    void await updateMutation.mutateAsync({ id: displayedGuestId, patch: { [key]: next } as Partial<CustomerDrawerGuest> })
 
   if (!open) return null
 
@@ -490,7 +503,8 @@ export function CustomerDrawer({ open, guestId, onClose, onGuestUpdated, onGuest
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto p-4">
+          {/* A new customer must not inherit an open field's unsaved draft. */}
+          <div key={guestId} className="flex-1 overflow-y-auto p-4">
             {loading ? (
               <div className="space-y-3 animate-pulse">
                 {[0, 1, 2, 3, 4].map(i => (
