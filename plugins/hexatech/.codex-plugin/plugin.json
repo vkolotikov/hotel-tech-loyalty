@@ -1,6 +1,6 @@
 {
   "name": "hexatech",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find customers and bookings in Hexa-Tech and add notes when requested.",
   "author": {
     "name": "Hexa-Tech",
@@ -12,7 +12,7 @@
   "interface": {
     "displayName": "Hexa-Tech",
     "shortDescription": "Look up customers, review bookings, and add notes.",
-    "longDescription": "Connect your Hexa-Tech account to find customers, review reservations, room bookings, and service appointments, and add customer or booking notes when you ask. Access follows your account permissions.",
+    "longDescription": "Connect your Hexa-Tech account to find customers, review reservations, room bookings, and service appointments, and add notes when you ask. This registered connection supports the FDS Cards pilot across all brands permitted in the signed-in workspace. Access follows your account permissions.",
     "developerName": "Hexa-Tech",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
@@ -23,5 +23,5 @@
       "Help me add a note to a Hexa-Tech booking."
     ]
   },
-  "mcpServers": "./.mcp.json"
+  "apps": "./.app.json"
 }
