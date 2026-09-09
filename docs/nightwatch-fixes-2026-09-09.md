@@ -26,9 +26,26 @@ Tests use isolated databases and fake AI transports. The task fixture enforces P
 
 Focused implementation checks passed: task and related model tests **67 / 229 assertions**, widget Realtime **12 / 90**, neighboring widget **36 / 127**, middleware and controller guards **14 / 58**, calendar **14 / 82**, calendar UI **5**, and voice browser harness **7**. Existing widget lead analytics checks and TypeScript also passed. These development counts will not be added to the later artifact run as if they were disjoint tests.
 
-Nightwatch issues **19, 23, 29, 30, 32 and 33** were marked resolved after confirming their deployed fixes; the open count changed from 31 to 25. Issue 27 remains open until this release is deployed. Issue 31 remains open as the reminder that SES feedback processing is unavailable. Other old issue groups are not bulk-closed.
+Nightwatch issues **19, 23, 29, 30, 32 and 33** were marked resolved after confirming their deployed fixes. **Issue 27** was also resolved after the new task fix deployed and its live source was verified. The open count changed from **31 to 24**. Issue 31 remains open as the reminder that SES feedback processing is unavailable. Other old issue groups were not bulk-closed.
 
 A production metadata-only check confirmed all six saved voice configurations use `gpt-4o-realtime-preview`, including the enabled organization 19 configuration. The compatibility mapping covers them without changing saved settings. Newly created configurations and the settings menu use documented GA choices; an existing saved value remains visible until the user changes it.
+
+## Completed release
+
+The reviewed feature source is `64146ab2c`; its explicit 21-file source patch is `e0a76d04b`. Production commit **`dbf0a1eb31e35465da5844957716f814ddda243e`** includes the fresh artifact build, based on the prior production `f9dbfcef7`. Laravel Cloud deployment **`depl-a2b4e6c4-b4fb-4854-8652-8b4dff6e385b`** succeeded. The deployment worktree was clean and all reviewed source paths matched the feature source before pushing main.
+
+Artifact verification completed with **234 backend tests / 1,670 assertions** across calendar, tasks, widgets, middleware, authentication, brand creation, ChatGPT authentication/connections/setup/subscription/tools/transport, and controller existence. TypeScript passed. Full Vitest reported **829 passed and the same three pre-existing `plannerMeta` failures**; the five new calendar UI cases passed. The seven voice browser tests and existing lead analytics harness passed. The production build and route-cache command succeeded. Existing build warnings remain; dependency manifests and lockfiles did not change.
+
+Live verification confirmed:
+
+- All ten changed runtime files (nine PHP files and the public widget script) have the same normalized SHA-256 hashes as the tested source. Read-only command receipt: `comm-a2b4e7c6-f035-4b80-9b4f-21b788b1e6e0`.
+- The live SPA entry `/spa/assets/index-GDPDF1QP.js` and all nine followed application chunks returned 200. Actual served content includes `Retry empty slots`, `failed_windows`, the GA voice model menu, the existing CRM safe-integer guards, and the ChatGPT lead connection copy. Cloud rebuild hashes correctly differ from the local build.
+- The public widget script uses `/v1/realtime/calls` and cancellation ownership guards; its former `/v1/realtime?model=` exchange is absent. Its normalized SHA-256 is `20a19203df4eaed7ff2255e386e45dcf197bb3ae47f7854487db5e1d7137f8ee`.
+- Unauthenticated `/api/v1/auth/subscription` returns 401 without a missing-login-route error. An invalid widget key returns 404.
+- Production `chatgpt:status` passes, retaining the configured organization 19 pilot, exact callback, signing keys and public OAuth client. Receipt: `comm-a2b4e837-8b23-422e-b1c8-958f80e07ab0`. The earlier successful real ChatGPT lead and customer searches are recorded in `docs/crm-plugin-fixes-2026-09-09.md`; this follow-up does not modify those tools.
+- Cloud log reads covering **18:30:00-18:32:30 UTC** returned 78, 92 and 29 entries in three uncapped windows: **199 entries and zero error entries**. This is a short post-deployment observation, not a promise about future requests or all historical issues.
+
+No live tasks, customer records, calendar drafts, emails, AI generations or voice sessions were created for verification. Full browser-to-provider voice operation still needs a normal microphone-enabled call. On the user's side, reload the portal and affected website/widget before using the new UI. The existing ChatGPT connection does not need replacement; other staff and businesses must still complete their own authorized OAuth connection within the rollout policy.
 
 ## References
 
