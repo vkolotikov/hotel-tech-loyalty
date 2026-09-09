@@ -140,7 +140,13 @@ class BrandController extends Controller
         // resurrect-deleted-brand bypass.
         $brand = DB::transaction(function () use ($orgId, $org, $data) {
             if ($org && !$org->hasFeature('brands')) {
-                DB::statement('SELECT pg_advisory_xact_lock(?, ?)', [crc32('brand_store'), $orgId]);
+                // PostgreSQL's two-key overload accepts signed int32 values.
+                // Preserve the CRC32 bits while converting PHP's unsigned result.
+                $lockNamespace = crc32('brand_store');
+                if ($lockNamespace > 0x7fffffff) {
+                    $lockNamespace -= 0x100000000;
+                }
+                DB::statement('SELECT pg_advisory_xact_lock(?, ?)', [$lockNamespace, $orgId]);
                 $count = Brand::withTrashed()
                     ->where('organization_id', $orgId)
                     ->count();
