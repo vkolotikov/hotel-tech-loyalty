@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Internal;
 
 use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use App\OAuth\PluginSubscriptionCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -75,6 +76,10 @@ class InternalEntitlementController extends Controller
         // (subscription_status:{saas_org_id}) so subscription status
         // change reflects on the very next request.
         Cache::forget("subscription_status:{$saasId}");
+
+        // OAuth has its own verified snapshot; the SPA's shared timestamp is
+        // not evidence that its cached subscription status was refreshed.
+        PluginSubscriptionCache::invalidate((int) $org->id);
 
         return response()->json(['ok' => true, 'found' => true]);
     }

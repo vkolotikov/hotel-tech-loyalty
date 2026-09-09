@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hexatech": {
+      "type": "http",
+      "url": "https://app.hexa-tech.uk/mcp"
+    }
+  }
+}

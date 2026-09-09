@@ -36,6 +36,14 @@ return [
     */
 
     'guards' => [
+        'plugin-web' => [
+            'driver' => 'session',
+            'provider' => 'plugin_users',
+        ],
+        'plugin' => [
+            'driver' => 'passport',
+            'provider' => 'plugin_users',
+        ],
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
@@ -60,6 +68,10 @@ return [
     */
 
     'providers' => [
+        'plugin_users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\PluginUser::class,
+        ],
         'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
