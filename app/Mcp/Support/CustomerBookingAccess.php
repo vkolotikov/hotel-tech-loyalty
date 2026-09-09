@@ -6,6 +6,7 @@ use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\BookingNote;
 use App\Models\Guest;
+use App\Models\Inquiry;
 use App\Models\Reservation;
 use App\Models\ServiceBooking;
 use App\Models\Staff;
@@ -23,6 +24,8 @@ use Illuminate\Validation\ValidationException;
 class CustomerBookingAccess
 {
     public const MAX_BOOKING_PAGE = 100;
+
+    public const MAX_LEAD_PAGE = 100;
 
     public function authorize(): User
     {
@@ -64,6 +67,73 @@ class CustomerBookingAccess
                 'body_truncated' => mb_strlen($note->description ?? '') > 2000,
                 'performed_by' => $note->performed_by, 'created_at' => $note->created_at?->toIso8601String(),
             ])->values()->all(), 'has_more_notes' => $notes->count() > 10];
+    }
+
+    public function listLeads(array $data): array
+    {
+        $user = $this->authorize();
+        $timezone = $user->organization->timezone ?: 'UTC';
+        $day = CarbonImmutable::now($timezone)->toDateString();
+        $from = CarbonImmutable::parse($data['from'] ?? $data['to'] ?? $day, $timezone)->startOfDay();
+        $to = CarbonImmutable::parse($data['to'] ?? $data['from'] ?? $day, $timezone)->startOfDay();
+        if ($to->lessThan($from) || $from->diffInDays($to) > 89) {
+            throw ValidationException::withMessages(['to' => 'The lead creation date range must be ordered and contain at most 90 calendar days.']);
+        }
+
+        // CRM leads are Inquiry rows. Keep TenantScope and apply the complete
+        // permitted brand set, independently of any selected SPA brand context.
+        $query = Inquiry::query()->withoutGlobalScope(BrandScope::class)
+            ->where('inquiries.created_at', '>=', $from->utc())
+            ->where('inquiries.created_at', '<', $to->addDay()->utc());
+        $this->restrictToPermittedBrands($query);
+        if (isset($data['brand_id'])) {
+            $query->where('inquiries.brand_id', $data['brand_id']);
+        }
+        if (isset($data['status'])) {
+            $query->where('inquiries.status', $data['status']);
+        }
+        if (isset($data['query'])) {
+            $query->where(function (Builder $nested) use ($data) {
+                $this->search($nested, ['inquiries.event_name', 'inquiries.source'], $data['query']);
+                $nested->orWhereHas('guest', function (Builder $guest) use ($data) {
+                    $this->search($guest, ['full_name', 'company'], $data['query']);
+                });
+            });
+        }
+
+        $total = (clone $query)->count();
+        $limit = $data['limit'] ?? 20;
+        $page = $data['page'] ?? 1;
+        $rows = $query->select(['id', 'guest_id', 'brand_id', 'pipeline_stage_id',
+            'event_name', 'inquiry_type', 'source', 'status', 'priority', 'created_at'])
+            ->with(['guest:id,full_name,company', 'brand:id,name', 'pipelineStage:id,name,kind'])
+            ->orderByDesc('inquiries.created_at')->orderByDesc('inquiries.id')
+            ->offset(($page - 1) * $limit)->limit($limit + 1)->get();
+        $more = $rows->count() > $limit;
+        $truncated = $more && $page >= self::MAX_LEAD_PAGE;
+        $rows = $rows->take($limit);
+
+        return [
+            'date_basis' => 'created_at', 'from' => $from->toDateString(), 'to' => $to->toDateString(),
+            'timezone' => $timezone, 'status_filter' => $data['status'] ?? null,
+            'brand_id_filter' => $data['brand_id'] ?? null, 'query' => $data['query'] ?? null,
+            'total_count' => $total, 'returned_count' => $rows->count(), 'page' => $page, 'limit' => $limit,
+            'leads' => $rows->map(fn (Inquiry $lead) => [
+                'id' => $lead->id, 'created_at' => $lead->created_at?->toIso8601String(),
+                'title' => $lead->event_name, 'type' => $lead->inquiry_type, 'source' => $lead->source,
+                'status' => $lead->status, 'priority' => $lead->priority,
+                // Related models retain TenantScope. Corrupt cross-tenant links
+                // must not reveal another organization's identity or metadata.
+                'customer' => $lead->guest?->only(['id', 'full_name', 'company']),
+                'brand' => $lead->brand?->only(['id', 'name']),
+                'pipeline_stage' => $lead->pipelineStage?->only(['id', 'name', 'kind']),
+            ])->values()->all(),
+            'next_page' => $more && ! $truncated ? $page + 1 : null,
+            'results_truncated' => $truncated,
+            'truncation_message' => $truncated
+                ? 'More matching leads exist beyond the page limit. Narrow the creation date range or query, or restart with a larger limit (up to 25).'
+                : null,
+        ];
     }
 
     public function listBookings(array $data): array
@@ -214,18 +284,21 @@ class CustomerBookingAccess
             default => throw ValidationException::withMessages(['kind' => 'Choose room, reservation, or service.']),
         };
         if ($kind !== 'room') {
-            $user = auth()->user();
-            // The app's brand middleware handles one selected brand. The connector
-            // has no brand selector: constrain to the complete allowed pivot set.
-            $restricted = DB::table('brand_user')->where('user_id', $user->id)->exists();
-            if ($restricted && ! $user->isPlatformAdmin()) {
-                // Retain the restriction even if every assigned brand was archived
-                // or an old pivot points outside the user's current organization.
-                $query->whereIn('brand_id', $user->brands()->pluck('brands.id')->all());
-            }
+            $this->restrictToPermittedBrands($query);
         }
 
         return $query;
+    }
+
+    private function restrictToPermittedBrands(Builder $query): void
+    {
+        $user = auth()->user();
+        $restricted = DB::table('brand_user')->where('user_id', $user->id)->exists();
+        if ($restricted && ! $user->isPlatformAdmin()) {
+            // Retain the restriction even when every assignment is archived or
+            // belongs to a former organization, so stale pivots fail closed.
+            $query->whereIn($query->getModel()->qualifyColumn('brand_id'), $user->brands()->pluck('brands.id')->all());
+        }
     }
 
     private function customerColumns(): array

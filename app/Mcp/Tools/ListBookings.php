@@ -15,10 +15,10 @@ class ListBookings extends HexaTechTool
     protected string $description = 'List bookings starting in an inclusive date range (up to 90 days), defaulting to today through 30 days ahead in the organization timezone. Choose room for the room/PMS booking calendar, reservation for CRM hotel reservations, or service for appointments. These are separate collections; do not add their totals as if they were unique bookings. A null currency is unknown: do not assume a currency for that amount. Optional query searches references, and customer names/emails for room/service or room numbers for reservation. Results include cancelled records and current status. Follow next_page while present. If results_truncated is true, the page limit was reached: narrow the date range or query, or restart with a larger limit. Never present truncated results as complete.';
 
     protected array $rules = ['kind' => 'required|in:room,reservation,service',
-        'from' => 'sometimes|date_format:Y-m-d', 'to' => 'sometimes|date_format:Y-m-d',
-        'query' => 'sometimes|string|min:2|max:120|regex:/\S/u',
-        'limit' => 'sometimes|integer|min:1|max:50',
-        'page' => 'sometimes|integer|min:1|max:'.CustomerBookingAccess::MAX_BOOKING_PAGE];
+        'from' => 'sometimes|filled|date_format:Y-m-d', 'to' => 'sometimes|filled|date_format:Y-m-d',
+        'query' => 'sometimes|filled|string|min:2|max:120|regex:/\S/u',
+        'limit' => 'sometimes|filled|integer|min:1|max:50',
+        'page' => 'sometimes|filled|integer|min:1|max:'.CustomerBookingAccess::MAX_BOOKING_PAGE];
 
     public function schema(JsonSchema $schema): array
     {
