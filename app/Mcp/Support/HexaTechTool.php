@@ -14,6 +14,8 @@ abstract class HexaTechTool extends Tool
 {
     protected array $rules = [];
 
+    protected array $messages = [];
+
     protected bool $readOnly = true;
 
     public function toArray(): array
@@ -37,7 +39,7 @@ abstract class HexaTechTool extends Tool
             if ($unknown) {
                 return Response::error('Only the documented tool arguments are accepted.');
             }
-            $data = $request->validate($this->rules);
+            $data = $request->validate($this->rules, $this->messages);
 
             return Response::structured($this->execute($data, $access));
         } catch (ValidationException $error) {

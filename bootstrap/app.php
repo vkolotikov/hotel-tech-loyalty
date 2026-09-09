@@ -38,6 +38,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // to UA-only without this.
         $middleware->trustProxies(at: '*');
 
+        // Login belongs to the SPA, so there is no named Laravel login route.
+        // API guests are rendered as 401 below, including without JSON Accept;
+        // ordinary browser auth redirects still land on the SPA login page.
+        $middleware->redirectGuestsTo('/login');
+
         $middleware->prepend(\App\Http\Middleware\Cors::class);
 
         // Global, and prepended so it runs before the `web` group. The landing
@@ -73,8 +78,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\Throwable $e, Request $request) {
             if ($request->is('api/*') || $request->expectsJson()) {
                 // Sanctum's redirect-to-login → return 401 JSON
-                if ($e instanceof \Symfony\Component\Routing\Exception\RouteNotFoundException
-                    || $e instanceof \Illuminate\Auth\AuthenticationException) {
+                if ($e instanceof \Illuminate\Auth\AuthenticationException) {
                     return response()->json(['error' => 'Unauthenticated', 'message' => 'Authentication required.'], 401);
                 }
 

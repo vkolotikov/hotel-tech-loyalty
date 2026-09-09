@@ -96,15 +96,20 @@ class PluginTransportTest extends TestCase
         $this->get('/mcp')->assertStatus(405)->assertHeader('Allow', 'POST');
     }
 
-    public function test_catalog_has_only_six_scoped_customer_and_booking_tools(): void
+    public function test_catalog_has_only_scoped_lead_customer_and_booking_tools(): void
     {
         $this->bypassIdentityForProtocolTests();
         $response = $this->postJson('/mcp', ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list']);
         $response->assertOk();
         $tools = collect($response->json('result.tools'))->keyBy('name');
         $this->assertEqualsCanonicalizing([
-            'search_customers', 'get_customer', 'list_bookings', 'get_booking', 'add_customer_note', 'add_booking_note',
+            'list_leads', 'search_customers', 'get_customer', 'list_bookings', 'get_booking', 'add_customer_note', 'add_booking_note',
         ], $tools->keys()->all());
+        $this->assertEmpty($tools['list_leads']['inputSchema']['required'] ?? []);
+        $this->assertSame(25, $tools['list_leads']['inputSchema']['properties']['limit']['maximum']);
+        $this->assertSame('date', $tools['list_leads']['inputSchema']['properties']['from']['format']);
+        $this->assertContains('query', $tools['search_customers']['inputSchema']['required']);
+        $this->assertStringContainsString('list_leads', $tools['search_customers']['inputSchema']['properties']['query']['description']);
         foreach ($tools as $name => $tool) {
             $this->assertSame('object', $tool['inputSchema']['type']);
             $this->assertSame(! str_starts_with($name, 'add_'), $tool['annotations']['readOnlyHint']);

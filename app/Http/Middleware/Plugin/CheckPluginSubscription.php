@@ -8,9 +8,13 @@ use App\OAuth\PluginSubscriptionCache;
 use Carbon\CarbonImmutable;
 use Closure;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckPluginSubscription
@@ -31,11 +35,11 @@ class CheckPluginSubscription
                 // A webhook may arrive while the upstream requests are running.
                 // A late response only fills the obsolete version's cache key.
                 if ($snapshot === null || $version !== PluginSubscriptionCache::version((int) $org->id)) {
-                    return $this->unavailable();
+                    return $this->unavailable($request);
                 }
             } catch (\Throwable) {
                 // Never expose upstream response bodies, credentials or URLs.
-                return $this->unavailable();
+                return $this->unavailable($request);
             }
         } else {
             $snapshot = [
@@ -89,8 +93,13 @@ class CheckPluginSubscription
         if (Cache::has($failureKey)) {
             return null;
         }
-        $lock = Cache::lock($key.':lock', 15);
-        if (! $lock->get()) {
+        // Two bounded network attempts per step take at most ~21 seconds.
+        // Concurrent tool calls should reuse the refresh instead of failing
+        // immediately simply because another call owns the refresh lock.
+        $lock = Cache::lock($key.':lock', 30);
+        try {
+            $lock->block(max(0, min(22, (int) config('chatgpt.subscription_lock_wait_seconds', 22))));
+        } catch (\Illuminate\Contracts\Cache\LockTimeoutException) {
             return null;
         }
 
@@ -98,6 +107,9 @@ class CheckPluginSubscription
             $snapshot = Cache::get($key);
             if (is_array($snapshot)) {
                 return $snapshot;
+            }
+            if (Cache::has($failureKey)) {
+                return null;
             }
             $snapshot = $this->fetchSnapshot($org, $principal);
             if ($snapshot === null) {
@@ -110,8 +122,11 @@ class CheckPluginSubscription
                 (int) config('chatgpt.subscription_max_age_seconds', 300))));
 
             return $snapshot;
-        } catch (\Throwable) {
+        } catch (\Throwable $error) {
             // Failures belong to this user, never every staff member in an org.
+            Log::notice('ChatGPT subscription verification unavailable', [
+                'reason' => $error instanceof ConnectionException ? 'upstream_connection_failure' : 'verification_failure',
+            ]);
             Cache::put($failureKey, true, 30);
 
             return null;
@@ -130,14 +145,14 @@ class CheckPluginSubscription
 
         // The resource-specific MCP bearer is never sent to the SaaS app.
         $signature = hash_hmac('sha256', $principal->email.'|'.$org->saas_org_id, $secret);
-        $issued = Http::timeout(3)->connectTimeout(2)
+        $issued = $this->billingRequest()
             ->withHeaders(['X-Service-Signature' => $signature])
             ->post($base.'/auth/service-token', ['email' => $principal->email, 'orgId' => $org->saas_org_id]);
         $token = $issued->successful() ? $issued->json('token') : null;
         if (! is_string($token) || $token === '') {
             return null;
         }
-        $response = Http::withToken($token)->timeout(3)->connectTimeout(2)->get($base.'/tools/bootstrap');
+        $response = $this->billingRequest()->withToken($token)->get($base.'/tools/bootstrap');
         $payload = $response->json();
         if (! $response->successful() || ! is_array($payload) || ! array_key_exists('subscription', $payload)) {
             return null;
@@ -161,8 +176,35 @@ class CheckPluginSubscription
         ];
     }
 
-    private function unavailable(): Response
+    private function billingRequest(): PendingRequest
     {
+        // A live SaaS cold response exceeded the former three-second deadline.
+        // Retry only transient transport/server failures, never permission or
+        // subscription denials. No stale ACTIVE snapshot is used as a fallback.
+        return Http::withoutRedirecting()->timeout(5)->connectTimeout(2)->retry(2, 200,
+            static fn (\Exception $error) => $error instanceof ConnectionException
+                || ($error instanceof RequestException && $error->response->serverError()),
+            throw: false);
+    }
+
+    private function unavailable(Request $request): Response
+    {
+        $payload = $request->isJson() ? $request->json()->all() : [];
+        $params = $payload['params'] ?? null;
+        if ($request->isMethod('POST') && ($payload['jsonrpc'] ?? null) === '2.0'
+            && ($payload['method'] ?? null) === 'tools/call'
+            && is_array($params) && is_string($params['name'] ?? null) && $params['name'] !== ''
+            && (! array_key_exists('arguments', $params) || is_array($params['arguments']))
+            && (is_int($payload['id'] ?? null) || is_string($payload['id'] ?? null))) {
+            // MCP hosts can hide an HTTP 503 body behind "internal error".
+            // Return a tool failure, without running the tool or granting access,
+            // so the assistant can explain the temporary problem accurately.
+            return response()->json(['jsonrpc' => '2.0', 'id' => $payload['id'], 'result' => [
+                'isError' => true,
+                'content' => [['type' => 'text', 'text' => 'Hexa-Tech could not verify workspace access because subscription verification is temporarily unavailable. The tool was not run and no records were changed. Retry after 30 seconds; the result and any count remain unknown.']],
+            ]], 200, ['Retry-After' => '30']);
+        }
+
         return response()->json(['error' => 'subscription_unavailable',
             'message' => 'Your subscription could not be verified. Please retry shortly.'], 503,
             ['Retry-After' => '30']);

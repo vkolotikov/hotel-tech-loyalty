@@ -9,10 +9,12 @@ use App\Models\User;
 use App\OAuth\PluginSubscriptionCache;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Http\Request;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Sleep;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\TestCase;
 
@@ -208,6 +210,7 @@ class PluginSubscriptionTest extends TestCase
 
     public function test_inflight_lock_for_one_user_does_not_block_another(): void
     {
+        config(['chatgpt.subscription_lock_wait_seconds' => 0]);
         $key = PluginSubscriptionCache::snapshotKey(1, 7, 7, PluginSubscriptionCache::version(1));
         $lock = Cache::lock($key.':lock', 15);
         $this->assertTrue($lock->get());
@@ -220,6 +223,134 @@ class PluginSubscriptionTest extends TestCase
         } finally {
             $lock->release();
         }
+    }
+
+    public function test_transient_service_connection_failure_is_retried_without_changing_identity(): void
+    {
+        Sleep::fake();
+        $attempts = 0;
+        Http::fake(function ($request) use (&$attempts) {
+            if (str_ends_with($request->url(), '/auth/service-token')) {
+                if (++$attempts === 1) {
+                    throw new ConnectionException('Private upstream URL and credentials must not be exposed.');
+                }
+                return Http::response(['token' => 'separate-service-test-token']);
+            }
+            return Http::response(['subscription' => ['status' => 'ACTIVE']]);
+        });
+        try {
+            $response = $this->checkSubscription();
+            $this->assertSame(200, $response->getStatusCode());
+            $this->assertSame(7, json_decode($response->getContent(), true)['user_id']);
+            $this->assertSame(2, $attempts);
+            $this->assertSame(200, $this->checkSubscription()->getStatusCode());
+            $this->assertSame(2, $attempts);
+            Http::assertNotSent(fn ($request) => $request->hasHeader('Authorization', 'Bearer mcp-only-test-token'));
+        } finally {
+            Sleep::fake(false);
+        }
+    }
+
+    public function test_transient_bootstrap_server_failure_is_retried_and_cancellation_still_denies(): void
+    {
+        Sleep::fake();
+        Http::fake([
+            '*/auth/service-token' => Http::response(['token' => 'test-token']),
+            '*/tools/bootstrap' => Http::sequence()->push([], 503)
+                ->push(['subscription' => ['status' => 'CANCELED']]),
+        ]);
+        try {
+            $this->assertSame(403, $this->checkSubscription()->getStatusCode());
+            Http::assertSentCount(3);
+        } finally {
+            Sleep::fake(false);
+        }
+    }
+
+    public function test_waiting_request_reuses_concurrent_snapshot_or_failure_without_another_fetch(): void
+    {
+        foreach ([true, false] as $successful) {
+            PluginSubscriptionCache::invalidate(1);
+            $key = PluginSubscriptionCache::snapshotKey(1, 7, 7, PluginSubscriptionCache::version(1));
+            $lock = Cache::lock($key.':lock', 30);
+            $this->assertTrue($lock->get());
+            Sleep::fake(true, true);
+            Sleep::whenFakingSleep(function () use ($key, $lock, $successful) {
+                Cache::put($successful ? $key : $key.':unavailable',
+                    $successful ? ['status' => 'ACTIVE', 'trial_end' => null] : true, 30);
+                $lock->release();
+            });
+            try {
+                $this->assertSame($successful ? 200 : 503, $this->checkSubscription()->getStatusCode());
+                Http::assertNothingSent();
+            } finally {
+                $lock->release();
+                Sleep::fake(false);
+                $this->travelBack();
+            }
+        }
+    }
+
+    public function test_tool_call_verification_failure_is_an_actionable_tool_error_without_executing_it(): void
+    {
+        config(['services.saas.jwt_secret' => '']);
+        $request = Request::create('/mcp', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode([
+            'jsonrpc' => '2.0', 'id' => 'lead-check', 'method' => 'tools/call',
+            'params' => ['name' => 'list_leads', 'arguments' => []],
+        ]));
+        $request->setUserResolver(fn () => User::findOrFail(7));
+        $executed = false;
+        $response = app(CheckPluginSubscription::class)->handle($request, function () use (&$executed) {
+            $executed = true;
+            return response()->json(['unexpected' => true]);
+        });
+        $data = json_decode($response->getContent(), true);
+        $this->assertFalse($executed);
+        $this->assertSame(200, $response->getStatusCode());
+        $this->assertSame('lead-check', $data['id']);
+        $this->assertTrue($data['result']['isError']);
+        $this->assertStringContainsString('30 seconds', $data['result']['content'][0]['text']);
+        $this->assertStringContainsString('not run', $data['result']['content'][0]['text']);
+        $this->assertSame('30', $response->headers->get('Retry-After'));
+        Http::assertNothingSent();
+    }
+
+    public function test_exhausted_connections_back_off_without_disclosing_exception_details(): void
+    {
+        Sleep::fake();
+        $attempts = 0;
+        Http::fake(function () use (&$attempts) {
+            $attempts++;
+            throw new ConnectionException('PRIVATE-UPSTREAM-CREDENTIAL');
+        });
+        try {
+            foreach ([1, 2] as $call) {
+                $response = $this->checkSubscription();
+                $this->assertSame(503, $response->getStatusCode());
+                $this->assertSame(2, $attempts);
+                $this->assertStringNotContainsString('PRIVATE-UPSTREAM-CREDENTIAL', $response->getContent());
+            }
+        } finally {
+            Sleep::fake(false);
+        }
+    }
+
+    public function test_unavailable_discovery_notifications_and_malformed_calls_keep_transport_failure(): void
+    {
+        config(['services.saas.jwt_secret' => '']);
+        foreach ([
+            ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize'],
+            ['jsonrpc' => '2.0', 'method' => 'notifications/initialized'],
+            ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call'],
+            ['jsonrpc' => '2.0', 'id' => 3, 'method' => 'tools/call', 'params' => ['name' => 'list_leads', 'arguments' => 'bad']],
+        ] as $payload) {
+            $request = Request::create('/mcp', 'POST', server: ['CONTENT_TYPE' => 'application/json'], content: json_encode($payload));
+            $request->setUserResolver(fn () => User::findOrFail(7));
+            $response = app(CheckPluginSubscription::class)->handle($request, fn () => $this->fail('No downstream execution is allowed.'));
+            $this->assertSame(503, $response->getStatusCode());
+            $this->assertSame('subscription_unavailable', json_decode($response->getContent(), true)['error']);
+        }
+        Http::assertNothingSent();
     }
 
     public function test_active_same_org_billing_principal_supports_local_staff_without_replacing_identity(): void

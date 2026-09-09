@@ -13,6 +13,7 @@ return [
     'billing_user_ids' => array_values(array_filter(array_map('trim', explode(',', env('CHATGPT_PLUGIN_BILLING_USER_IDS', ''))),
         fn ($id) => ctype_digit($id) && (int) $id > 0)),
     'subscription_max_age_seconds' => 300,
+    'subscription_lock_wait_seconds' => 22,
     'redirect_uris' => array_values(array_filter(array_map('trim', explode(',', env('CHATGPT_PLUGIN_REDIRECT_URIS', ''))))),
     'allowed_origins' => array_values(array_filter(array_map('trim', explode(',', env('CHATGPT_PLUGIN_ALLOWED_ORIGINS', ''))))),
 ];

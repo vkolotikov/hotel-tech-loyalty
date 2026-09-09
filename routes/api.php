@@ -990,7 +990,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // the route-matcher race against numeric ids.
             Route::get('guests/{id}/delete-impact',       [GuestController::class, 'deleteImpact']);
             Route::get('guests/{guest}',                  [GuestController::class, 'show']);
-            Route::put('guests/{guest}',                  [GuestController::class, 'update']);
+            Route::put('guests/{guest}',                  [GuestController::class, 'update'])
+                ->middleware(\App\Http\Middleware\ValidateCrmRecordId::class.':guest');
             Route::delete('guests/{guest}',               [GuestController::class, 'destroy']);
             Route::get('guests/{guest}/inquiries',        [GuestController::class, 'inquiries']);
             Route::get('guests/{guest}/reservations',     [GuestController::class, 'reservations']);
@@ -1018,7 +1019,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // the route-matcher race against numeric ids.
             Route::get('inquiries/{id}/delete-impact',    [InquiryController::class, 'deleteImpact']);
             Route::get('inquiries/{inquiry}',             [InquiryController::class, 'show']);
-            Route::put('inquiries/{inquiry}',             [InquiryController::class, 'update']);
+            Route::put('inquiries/{inquiry}',             [InquiryController::class, 'update'])
+                ->middleware(\App\Http\Middleware\ValidateCrmRecordId::class.':inquiry');
             Route::delete('inquiries/{inquiry}',          [InquiryController::class, 'destroy']);
             Route::post('inquiries/{inquiry}/complete-task', [InquiryController::class, 'completeTask']);
             Route::post('inquiries/{inquiry}/log-contact',   [InquiryController::class, 'logContact']);
