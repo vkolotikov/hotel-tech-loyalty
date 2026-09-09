@@ -28,7 +28,10 @@ class GuardPluginTransport
         }
 
         if ($request->is('mcp') && $request->isMethod('POST')) {
-            if (! $request->isJson()) {
+            // ChatGPT first sends a bodyless probe without Content-Type.
+            // Let unauthenticated probes reach the OAuth 401 challenge; actual
+            // bearer-authenticated tool requests must still use JSON.
+            if ($request->bearerToken() && ! $request->isJson()) {
                 return $this->privateResponse(response()->json(['error' => 'Use application/json.'], 415));
             }
             // Bound parser work independently of the reverse proxy's limits.
