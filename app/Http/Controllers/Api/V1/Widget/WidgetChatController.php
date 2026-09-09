@@ -767,9 +767,11 @@ class WidgetChatController extends Controller
                 'messages_count'  => $existingChatConv->messages_count + 1,
                 'status'          => 'waiting',
             ]);
+            $leadReceipt = null;
             try {
                 if (!$existingChatConv->inquiry_id) {
                     $this->autoCaptureLeadFromMessage($existingChatConv, $visitor ?? null, $request->message);
+                    $leadReceipt = \App\Support\WidgetLeadReceipt::forInquiry($existingChatConv->inquiry_id);
                 }
             } catch (\Throwable $e) {
                 \Log::warning('Widget auto-lead capture (ai-paused) failed: ' . $e->getMessage());
@@ -777,6 +779,7 @@ class WidgetChatController extends Controller
             return response()->json([
                 'response'   => null,
                 'ai_paused'  => true,
+                'lead_receipt' => $leadReceipt,
                 'session_id' => $request->session_id,
             ]);
         }
@@ -1107,9 +1110,11 @@ class WidgetChatController extends Controller
         // their message, promote the conversation to a lead and create an
         // Inquiry automatically so it lands in CRM (admin) + staff app
         // without the agent needing to run the manual capture form.
+        $leadReceipt = null;
         try {
             if (isset($chatConv) && $chatConv && !$chatConv->inquiry_id) {
                 $this->autoCaptureLeadFromMessage($chatConv, $visitor ?? null, $request->message);
+                $leadReceipt = \App\Support\WidgetLeadReceipt::forInquiry($chatConv->inquiry_id);
             }
         } catch (\Throwable $e) {
             \Log::warning('Widget auto-lead capture failed: ' . $e->getMessage());
@@ -1119,6 +1124,7 @@ class WidgetChatController extends Controller
             'response'      => $aiResponse,
             'session_id'    => $request->session_id,
             'ai_message_id' => $aiMessageId,
+            'lead_receipt'  => $leadReceipt,
             // Optional UX hints from the structured reply schema. The
             // widget renders follow_ups as quick-reply chips and
             // actions as buttons (call/whatsapp/email/sms/url).
@@ -1551,6 +1557,7 @@ class WidgetChatController extends Controller
             'success'    => true,
             'inquiry_id' => $inquiry->id,
             'guest_id'   => $guest->id,
+            'lead_receipt' => \App\Support\WidgetLeadReceipt::forInquiry($inquiry->id),
         ]);
     }
 
