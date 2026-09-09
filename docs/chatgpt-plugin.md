@@ -150,13 +150,15 @@ After changing tool schemas or authentication, restart or deploy the server, ref
 
 ## Current delivery boundary
 
-The integration and safeguards described above are implemented locally. Production release, pilot configuration, live OAuth client/callback wiring, account linking and real tool-use verification are pending until recorded as completed for the target deployment. The repository alone does not install a marketplace entry or publish to the public directory. Do not treat local tests or `chatgpt:status` as a live account-linking result.
+The integration was deployed to production on 9 September 2026 through the isolated source-patch process. The FDS Cards workspace pilot, dedicated public OAuth client, exact ChatGPT callback and persistent signing secrets are configured. Production `chatgpt:status` passed; HTTPS discovery returned the expected metadata, and unauthenticated MCP access returned an OAuth challenge. Live ChatGPT account linking and tool use are still being verified. The repository alone does not install a marketplace entry or publish to the public directory. Do not treat local tests or `chatgpt:status` as a live account-linking result.
+
+The first real ChatGPT connection attempt exposed a bodyless authentication probe without a JSON content type. The transport guard was corrected to allow an unauthenticated probe to receive the OAuth challenge. Requests carrying a bearer token still require JSON; the size limit and host/origin restrictions remain enforced. The correction has its own regression test.
 
 The work is on `feature/chatgpt-plugin`, based on `c11f7ce7bc17112543cd09ccbfaa89c23bb58f78`. That base carries other unshipped work. Release only this integration's reviewed changes through the repository's [source-patch process](landing-page-builder.md#6-deploy-recipe-merging-to-main-is-deploying); do not merge the whole branch into production. Existing modified files such as `Settings.tsx` may contain unrelated baseline changes: apply the integration's reviewed diff hunks to the production base rather than copying whole feature-branch files. Include the new source files and OAuth migrations, then validate the resulting artifact.
 
 ## Local verification
 
-The final aggregate backend and release-artifact run is pending. Feature suites cover OAuth, MCP transport, tenant and brand access, subscription freshness, disconnect, setup commands, note safety and portal append behavior. Run each scoped suite with the repository's required PHP 8.4.20 runtime; never run bare `artisan test`.
+The isolated release artifact passed 196 backend tests with 957 assertions, including 85 plugin tests and existing authentication, tenant, middleware, security, brand and entitlement suites. After the live-probe correction, the affected OAuth and transport suites passed again: 26 tests, 250 assertions. Run scoped suites with the repository's required PHP 8.4.20 runtime; never run bare `artisan test`.
 
 | Implementation check | Latest observed result |
 | --- | --- |
@@ -164,9 +166,12 @@ The final aggregate backend and release-artifact run is pending. Feature suites 
 | `npx tsc -b` | Passed |
 | `npx vitest run` | 799 passed; exactly 3 documented pre-existing `plannerMeta` failures |
 | Plugin manifest and skill validators | Passed |
+| Composer validation and route-cache smoke check | Passed on the isolated release artifact |
+| Artifact production build | Passed; existing CSS import/chunk-size warnings |
+| Local PostgreSQL 18 migration and grant/revocation locking checks | Passed in a disposable isolated schema; no application data used |
 | New frontend connection/account/note renderer tests | 9 passed; included in the full frontend result |
 | Browser previews with mock account/API data | Account disconnect and portal note append verified at 1440 and 390 widths; not a live OAuth or billing test |
 
-Tests use isolated in-memory SQLite data and temporary signing keys. Focused subscription tests use controlled upstream responses; they do not verify production billing configuration. PostgreSQL locking behavior, actual migration installation, remote reachability and the live account-linking/tool examples remain deployment checks. The [dated review](chatgpt-plugin-review-2026-09-09.md) preserves the earlier findings and baseline reproductions; it predates the fixes described here.
+Most tests use isolated in-memory SQLite data and temporary signing keys. Focused subscription tests use controlled upstream responses. A separate local PostgreSQL 18 check applied all five OAuth migrations, confirmed that grant issuance and disconnect contend on the same client row, and verified access-token, refresh-token and pending-code revocation. Production migrations, matching RSA signing keys and billing verification for the configured pilot principal were also checked successfully. Live account-linking and tool-use examples remain separate checks. The dated review preserves the earlier findings and baseline reproductions; it predates the fixes described here.
 
 Dependency installation added 13 packages without changing existing locked package versions or removing packages. The previously reported dependency advisories were baseline findings; this documentation update is not a fresh security audit.
