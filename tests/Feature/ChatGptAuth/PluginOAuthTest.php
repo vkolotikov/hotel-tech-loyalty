@@ -252,6 +252,10 @@ class PluginOAuthTest extends TestCase
         $response->assertOk();
         $this->assertStringContainsString('search_customers', $response->getContent());
         $this->assertSame(1, app('current_organization_id'));
+        $this->call('POST', self::ORIGIN.'/mcp', [], [], [], [
+            'HTTP_AUTHORIZATION' => 'Bearer '.$tokens['access_token'],
+            'CONTENT_TYPE' => 'text/plain',
+        ], 'not json')->assertStatus(415);
     }
 
     public function test_pilot_restriction_blocks_linking_existing_tokens_and_refresh(): void

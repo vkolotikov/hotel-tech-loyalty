@@ -61,8 +61,17 @@ class PluginTransportTest extends TestCase
 
     public function test_transport_bounds_payload_and_requires_json(): void
     {
-        $this->post('/mcp', ['body' => 'text'])->assertStatus(415);
+        $this->withHeader('Authorization', 'Bearer invalid')
+            ->post('/mcp', ['body' => 'text'])->assertStatus(415);
         $this->postJson('/mcp', ['body' => str_repeat('x', 65537)])->assertStatus(413);
+    }
+
+    public function test_bodyless_authentication_probe_gets_oauth_challenge_without_content_type(): void
+    {
+        $response = $this->call('POST', '/mcp');
+        $response->assertUnauthorized();
+        $this->assertStringContainsString('resource_metadata=', $response->headers->get('WWW-Authenticate', ''));
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control', ''));
     }
 
     public function test_unauthenticated_client_gets_discovery_challenge(): void
