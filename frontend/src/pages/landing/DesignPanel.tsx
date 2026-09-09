@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { Check } from 'lucide-react'
 import { pickerSafeHex } from './designChoices'
 import { industryChips, industryName, type IndustryOption } from './industryChoices'
+import { industryIcon } from './industryIcons'
 import {
   industryHasChanged, templateGroups, templateHasChanged,
   type TemplateOption, type TemplateSupport,
@@ -37,6 +38,16 @@ import {
  * warning and a design picker behind a "Change design" link. Three reports
  * of "I do not see the designs" later, the picker IS the tab.
  *
+ * COMPACT (2026-09-09, the owner: "minimize copy in builder, make it more
+ * compact, more visual"): the chips wear their trade's icon
+ * (`industryIcon`), a card is its picture and its name — the author's blurb
+ * survives only as the card's tooltip — and there is no standing paragraph
+ * under the chips, under the gallery or under the colour. The ONE line of
+ * warning that stays is the one shown once the tenant has moved OFF the
+ * saved trade, because that save rewrites their copy; the note under a
+ * picked-but-unsaved design says what is being looked at, what would stop
+ * showing (only when something would), and offers the way back.
+ *
  * No unit tests target this file directly — `vitest.config.ts` is node-env,
  * pure-function-only (no DOM, no React Testing Library); what IS tested is
  * this component's data (`editorCatalog.test.ts`, `industryChoices.test.ts`)
@@ -46,18 +57,20 @@ import {
 
 const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-500'
 
-const chipBase = 'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all outline-none '
-  + 'focus-visible:ring-2 focus-visible:ring-primary-500/40'
+const chipBase = 'inline-flex items-center gap-1.5 rounded-full border pl-2.5 pr-3.5 py-1.5 text-xs font-semibold '
+  + 'transition-all outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40'
 const chipActive = 'border-primary-500 bg-primary-500/[0.12] text-white'
 const chipInactive = 'border-dark-border bg-dark-bg text-t-secondary hover:border-primary-500/40 hover:text-white'
 
 // The house "selected card" idiom (LandingWizard.tsx's own cards, predating
 // this component): border + a soft ring in primary-500, versus a plain
 // border that brightens on hover.
-const cardBase = 'text-left rounded-xl border p-3 transition-all outline-none '
+const cardBase = 'text-left rounded-xl border p-2 transition-all outline-none '
   + 'focus-visible:ring-2 focus-visible:ring-primary-500/40'
 const cardActive = 'border-primary-500 bg-primary-500/[0.08] ring-1 ring-primary-500/30'
 const cardInactive = 'border-dark-border bg-dark-bg hover:border-primary-500/40 hover:bg-primary-500/[0.04]'
+
+const currentBadge = 'rounded-full border border-primary-500/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-primary-400'
 
 type DesignPanelProps = {
   brandColor: string | undefined
@@ -140,40 +153,40 @@ export function DesignPanel({
   const nextStep = () => String(++step)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {showTrade && (
         <section className="space-y-3">
           <StepHeading n={nextStep()} title={t('landing_pages.design.trade_kicker', 'Your trade')} />
           <div className="flex flex-wrap gap-2">
-            {chips.map(chip => (
-              <button
-                key={chip.id}
-                type="button"
-                aria-pressed={chip.selected}
-                onClick={() => onIndustryChange(chip.id)}
-                className={chipBase + ' ' + (chip.selected ? chipActive : chipInactive)}
-              >
-                {/* The wizard's own key, deliberately reused rather than a
-                    second family: one industry, one word for it. */}
-                {t(`landing_pages.wizard.industry_name_${chip.id}`, chip.name)}
-              </button>
-            ))}
+            {chips.map(chip => {
+              const Icon = industryIcon(chip.id)
+
+              return (
+                <button
+                  key={chip.id}
+                  type="button"
+                  aria-pressed={chip.selected}
+                  onClick={() => onIndustryChange(chip.id)}
+                  className={chipBase + ' ' + (chip.selected ? chipActive : chipInactive)}
+                >
+                  <Icon size={14} aria-hidden className="shrink-0" />
+                  {/* The wizard's own key, deliberately reused rather than a
+                      second family: one industry, one word for it. */}
+                  {t(`landing_pages.wizard.industry_name_${chip.id}`, chip.name)}
+                </button>
+              )
+            })}
           </div>
-          <p className="text-xs text-t-secondary leading-relaxed">
-            {t(
-              'landing_pages.design.trade_intro',
-              'Your page speaks your trade’s words — headings, section names, button wording — and your trade decides which designs you see.',
-            )}
-          </p>
           {/* Shown only once the tenant has moved OFF the saved trade: the
               one control here that rewrites their copy on save deserves a
-              standing warning, and only then. */}
+              line of warning, and only then. One line — the consequences
+              are seen in the pane. */}
           {industryMoved && (
             <p className="text-xs text-warning leading-relaxed">
-              {t(
-                'landing_pages.design.industry_change_note',
-                'Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.',
-              )}
+              {t('landing_pages.design.industry_change_note', {
+                trade: tradeName,
+                defaultValue: 'Saving switches your page to {{trade}} words and sections.',
+              })}
             </p>
           )}
         </section>
@@ -207,31 +220,48 @@ export function DesignPanel({
                 type="button"
                 aria-pressed={c.selected}
                 onClick={() => onTemplateChange(c.key)}
+                // The author's blurb, off the wire, as the tooltip: the card
+                // itself is the picture and the name (compact, 2026-09-09).
+                title={c.blurb}
                 className={cardBase + ' ' + (c.selected ? cardActive : cardInactive)}
               >
                 {/* The author's own page, first screen — a design is chosen by
-                    looking at it. Decorative: the name below is the label. */}
+                    looking at it. Decorative: the name below is the label.
+                    The "Current" badge sits on the picture's corner so the
+                    name keeps the card's full width (a two-column card is
+                    narrow enough that the badge beside the name truncated
+                    "Nocturne Ritual"). */}
                 {c.previewImage && (
-                  <img
-                    src={c.previewImage}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="w-full aspect-[8/5] object-cover object-top rounded-lg border border-dark-border"
-                  />
+                  <div className="relative">
+                    <img
+                      src={c.previewImage}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full aspect-[8/5] object-cover object-top rounded-lg border border-dark-border"
+                    />
+                    {c.key === savedTemplateKey && (
+                      <span className={currentBadge + ' absolute top-1.5 right-1.5 bg-dark-bg/90'}>
+                        {t('landing_pages.design.current_badge', 'Current')}
+                      </span>
+                    )}
+                  </div>
                 )}
-                <div className="flex items-center justify-between gap-2 mt-3">
+                <div className="flex items-center justify-between gap-2 mt-2 px-0.5">
                   {/* Untranslated, from the server — see `TemplateOption`. */}
                   <span className="text-sm font-semibold text-white truncate">{c.name}</span>
                   {c.key === savedTemplateKey ? (
-                    <span className="shrink-0 rounded-full border border-primary-500/40 px-2 py-0.5 text-[10px] font-mono uppercase tracking-[0.12em] text-primary-400">
-                      {t('landing_pages.design.current_badge', 'Current')}
-                    </span>
+                    // A design with no picture (a retired one still on the
+                    // row) keeps the badge beside its name.
+                    !c.previewImage && (
+                      <span className={currentBadge + ' shrink-0'}>
+                        {t('landing_pages.design.current_badge', 'Current')}
+                      </span>
+                    )
                   ) : c.selected ? (
                     <Check size={16} className="text-primary-500 shrink-0" />
                   ) : null}
                 </div>
-                <p className="text-xs text-t-secondary leading-relaxed mt-1.5">{c.blurb}</p>
               </button>
             ))}
           </div>
@@ -244,7 +274,7 @@ export function DesignPanel({
             lines the dialog used to say, and a way back to the saved design.
           */}
           {templateHasChanged(templateKey, savedTemplateKey) && (
-            <div className="rounded-xl border border-primary-500/40 bg-primary-500/[0.06] p-4 space-y-2">
+            <div className="rounded-xl border border-primary-500/40 bg-primary-500/[0.06] p-3 space-y-1.5">
               <p className="text-sm text-white">
                 {t('landing_pages.design.previewing_note', {
                   name: chosen?.name ?? '',
@@ -300,12 +330,6 @@ export function DesignPanel({
             />
             <span className="text-xs text-t-secondary font-mono">{resolvedBrandColor}</span>
           </div>
-          <p className="text-xs text-t-secondary leading-relaxed">
-            {t(
-              'landing_pages.design.color_note',
-              'The one colour that is yours on every design — your buttons, your links and the small type your designer set in accent.',
-            )}
-          </p>
         </section>
       )}
     </div>

@@ -3028,21 +3028,17 @@
     "preview_caption_stale": "No se pudo actualizar ahora mismo: se muestra la última versión que pudimos cargar.",
     "design": {
       "title": "Diseño",
-      "industry_change_note": "Al guardar, tu página se reescribe con las palabras del nuevo sector —títulos, nombres de secciones y el texto de tus botones— y cambia qué secciones puedes mostrar (la reserva en línea solo se ofrece a hoteles). Esto también cambia las palabras que usa el resto de tu espacio de trabajo. Nada de lo que ya has guardado —reservas, clientes, ajustes— se modifica ni se elimina.",
+      "industry_change_note": "Al guardar, tu página pasa a las palabras y secciones de {{trade}}.",
       "color_kicker": "Color de marca",
       "color_label": "Color de marca",
       "chosen_kicker": "Su diseño",
       "previewing_note": "Estás viendo {{name}} en la vista previa. Guarda para conservarlo.",
       "keep_saved": "Conservar {{name}}",
       "trade_kicker": "Tu sector",
-      "trade_intro": "Tu página habla con las palabras de tu sector — títulos, nombres de sección, textos de botones — y tu sector decide qué diseños ves.",
       "designs_made_for": "Hecho para {{trade}}",
       "designs_coming": "Los diseños para {{trade}} están en camino. Mientras tanto, cualquiera de estos sirve.",
       "current_badge": "Actual",
-      "color_note": "El único color que es suyo en todos los diseños: sus botones, sus enlaces y el texto pequeño que su diseñador puso en acento.",
-      "change_confirm_dropped": "Estos dejarán de mostrarse: {{blocks}}. No se borra nada de lo que escribió en ellos — vuelva atrás y reaparecen.",
-      "change_confirm_added": "Este diseño añade bloques propios, listos para que los rellene: {{blocks}}.",
-      "change_confirm_save": "Sus textos, sus fotografías y su color de marca le acompañan. Nada cambia en su página publicada hasta que guarde."
+      "change_confirm_dropped": "Estos dejarán de mostrarse: {{blocks}}. No se borra nada de lo que escribió en ellos — vuelva atrás y reaparecen."
     },
     "wizard": {
       "kicker": "Configuración de la página",
@@ -3291,12 +3287,6 @@
       "locked_title": "Editar esta página requiere tu plan anterior",
       "locked_body": "Tu plan ya no incluye el creador de páginas, así que el asistente, la edición y Publicar están desactivados aquí. Retirar la página de la web siempre funciona: usa el botón de arriba.",
       "upgrade_cta": "Ver planes"
-    },
-    "brand_step": {
-      "kicker": "Paso 1 — Marca",
-      "title": "Está editando la página de {{name}}",
-      "note": "Cada marca tiene su propia página, su propia dirección web y sus propias fotografías. Cambie de marca para trabajar en otra.",
-      "unchosen": "Elija una marca: esta página se crearía para {{name}}"
     }
   },
   "reviews": {

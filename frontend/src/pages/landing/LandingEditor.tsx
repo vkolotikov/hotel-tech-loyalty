@@ -1084,8 +1084,9 @@ export function LandingEditor({
    * Consequences only. The panel's own first line already names the design
    * in the pane (`previewing_note`), so the dialog's old opener — "Switch to
    * X? It is a different layout…" — is not repeated here as a question
-   * nobody is being asked; what follows is what stops showing, what is
-   * added, and what comes along.
+   * nobody is being asked; what follows is what stops showing, if anything
+   * (compact since 2026-09-09: added blocks are visible in the pane and
+   * "nothing changes until you save" is already the note's first line).
    */
   const designChangeNote = ((): string[] => {
     const savedKey = page?.template_key
@@ -1125,18 +1126,9 @@ export function LandingEditor({
       }))
     }
 
-    if (impact.added.length > 0) {
-      lines.push(t('landing_pages.design.change_confirm_added', {
-        blocks: names(impact.added),
-        defaultValue: 'This design adds blocks of its own, ready for you to fill in: {{blocks}}.',
-      }))
-    }
-
-    lines.push(t(
-      'landing_pages.design.change_confirm_save',
-      'Your words, your photographs and your brand colour all come with you. Nothing changes on your live page until you save.',
-    ))
-
+    // Only what STOPS showing is worth a line (compact, 2026-09-09): blocks
+    // a design adds are visible in the pane already, and "nothing changes
+    // until you save" is what the note's own first line says.
     return lines
   })()
 

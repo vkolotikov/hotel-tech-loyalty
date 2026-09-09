@@ -3028,21 +3028,17 @@
     "preview_caption_stale": "Impossible d’actualiser pour le moment — voici la dernière version que nous avons pu charger.",
     "design": {
       "title": "Design",
-      "industry_change_note": "L’enregistrement réécrit votre page dans les mots du nouveau métier — titres, noms de sections et texte de vos boutons — et modifie les sections que vous pouvez afficher (la réservation en ligne n’est proposée qu’aux hôtels). Cela change aussi les mots employés dans le reste de votre espace de travail. Rien de ce que vous avez déjà enregistré — réservations, clients, paramètres — n’est modifié ni supprimé.",
+      "industry_change_note": "En enregistrant, votre page passe aux mots et aux sections de {{trade}}.",
       "color_kicker": "Couleur de marque",
       "color_label": "Couleur de marque",
       "chosen_kicker": "Votre design",
       "previewing_note": "Vous voyez {{name}} dans l’aperçu. Enregistrez pour le garder.",
       "keep_saved": "Garder {{name}}",
       "trade_kicker": "Votre métier",
-      "trade_intro": "Votre page parle la langue de votre métier — titres, noms de sections, libellés de boutons — et votre métier décide des designs proposés.",
       "designs_made_for": "Conçu pour {{trade}}",
       "designs_coming": "Les designs pour {{trade}} arrivent. En attendant, chacun de ceux-ci convient.",
       "current_badge": "Actuel",
-      "color_note": "La seule couleur qui vous appartient sur tous les designs : vos boutons, vos liens et les petits textes que votre créateur a mis en accent.",
-      "change_confirm_dropped": "Ceux-ci cesseront d’apparaître : {{blocks}}. Rien de ce que vous y avez écrit n’est supprimé — revenez en arrière et ils réapparaissent.",
-      "change_confirm_added": "Ce design ajoute ses propres blocs, prêts à être remplis : {{blocks}}.",
-      "change_confirm_save": "Vos textes, vos photographies et votre couleur de marque vous suivent. Rien ne change sur votre page publiée tant que vous n’enregistrez pas."
+      "change_confirm_dropped": "Ceux-ci cesseront d’apparaître : {{blocks}}. Rien de ce que vous y avez écrit n’est supprimé — revenez en arrière et ils réapparaissent."
     },
     "wizard": {
       "kicker": "Configuration de la page",
@@ -3291,12 +3287,6 @@
       "locked_title": "Modifier cette page nécessite votre offre précédente",
       "locked_body": "Votre offre n’inclut plus le créateur de pages : l’assistant, la modification et la publication sont donc désactivés ici. Retirer cette page du web fonctionne toujours — utilisez le bouton ci-dessus.",
       "upgrade_cta": "Voir les offres"
-    },
-    "brand_step": {
-      "kicker": "Étape 1 — Marque",
-      "title": "Vous modifiez la page de {{name}}",
-      "note": "Chaque marque a sa propre page, sa propre adresse web et ses propres photographies. Changez de marque pour travailler sur une autre.",
-      "unchosen": "Choisissez une marque — cette page serait créée pour {{name}}"
     }
   },
   "reviews": {
