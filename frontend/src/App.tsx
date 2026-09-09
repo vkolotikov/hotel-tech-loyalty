@@ -61,6 +61,7 @@ const CampaignDetail = lazy(() => import('./pages/CampaignDetail').then(m => ({ 
 const ReviewFormBuilder = lazy(() => import('./pages/ReviewFormBuilder').then(m => ({ default: m.ReviewFormBuilder })))
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then(m => ({ default: m.ReviewDetail })))
 const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })))
+const AccountConnections = lazy(() => import('./pages/AccountConnections').then(m => ({ default: m.AccountConnections })))
 const Properties = lazy(() => import('./pages/Properties').then(m => ({ default: m.Properties })))
 const Brands = lazy(() => import('./pages/Brands').then(m => ({ default: m.Brands })))
 const GuestDetail = lazy(() => import('./pages/GuestDetail').then(m => ({ default: m.GuestDetail })))
@@ -269,6 +270,7 @@ export default function App() {
         <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/account/connections" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountConnections /></Suspense></ChunkErrorBoundary>} />
 
           {/* Public member entry points. Outside MemberRoute: nobody
               signing up or claiming an account has a session yet. */}

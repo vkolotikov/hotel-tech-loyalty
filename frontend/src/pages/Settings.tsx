@@ -27,6 +27,7 @@ import { IndustrySwitcherPanel } from '../components/IndustrySwitcherPanel'
 import { TeamSettings } from '../components/TeamSettings'
 import { AiUsagePanel } from '../components/AiUsagePanel'
 import { ApiTokensPanel } from '../components/ApiTokensPanel'
+import { ChatGptConnectionsPanel } from '../components/ChatGptConnectionsPanel'
 import { MessengerConnectPanel } from '../components/MessengerConnectPanel'
 import { DocumentationCenter } from '../components/DocumentationCenter'
 
@@ -2433,6 +2434,8 @@ export function Settings() {
 
     return (
       <div className="space-y-8">
+        <ChatGptConnectionsPanel />
+
         {/* API tokens panel — for external systems pushing leads in. */}
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1 mb-3">Developer API</h3>

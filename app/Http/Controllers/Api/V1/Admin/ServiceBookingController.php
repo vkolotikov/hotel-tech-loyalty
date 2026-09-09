@@ -435,7 +435,8 @@ class ServiceBookingController extends Controller
             'status'              => 'nullable|string|in:pending,confirmed,in_progress,completed,cancelled,no_show',
             'payment_status'      => 'nullable|string|in:unpaid,paid,refunded,failed',
             'cancellation_reason' => 'nullable|string|max:500',
-            'staff_notes'         => 'nullable|string|max:2000',
+            'staff_notes'         => 'nullable|string|max:2000|prohibits:append_staff_note',
+            'append_staff_note'   => 'nullable|string|max:2000|prohibits:staff_notes',
         ]);
 
         // Row-lock the booking so two concurrent updates serialize instead of
@@ -445,6 +446,17 @@ class ServiceBookingController extends Controller
 
             if (($data['status'] ?? null) === 'cancelled' && !$booking->cancelled_at) {
                 $data['cancelled_at'] = now();
+            }
+
+            // The portal adds a note to the latest locked value so an update
+            // never overwrites notes added by ChatGPT or another staff member.
+            // Keep the existing staff_notes replacement contract for clients
+            // that explicitly use it; the two operations cannot be combined.
+            $note = trim($data['append_staff_note'] ?? '');
+            unset($data['append_staff_note']);
+            if ($note !== '') {
+                $existing = $booking->staff_notes ?? '';
+                $data['staff_notes'] = $existing.($existing !== '' ? "\n\n" : '').$note;
             }
 
             $booking->update(array_filter($data, fn ($v) => $v !== null));

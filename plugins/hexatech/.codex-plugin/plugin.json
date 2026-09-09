@@ -1,0 +1,27 @@
+{
+  "name": "hexatech",
+  "version": "0.1.0",
+  "description": "Find customers and bookings in Hexa-Tech and add notes when requested.",
+  "author": {
+    "name": "Hexa-Tech",
+    "url": "https://app.hexa-tech.uk/"
+  },
+  "homepage": "https://app.hexa-tech.uk/",
+  "keywords": ["customers", "bookings", "hospitality", "crm"],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Hexa-Tech",
+    "shortDescription": "Look up customers, review bookings, and add notes.",
+    "longDescription": "Connect your Hexa-Tech account to find customers, review reservations, room bookings, and service appointments, and add customer or booking notes when you ask. Access follows your account permissions.",
+    "developerName": "Hexa-Tech",
+    "category": "Productivity",
+    "capabilities": ["Read", "Write"],
+    "websiteURL": "https://app.hexa-tech.uk/",
+    "defaultPrompt": [
+      "Find a customer in Hexa-Tech.",
+      "Show my upcoming Hexa-Tech bookings.",
+      "Help me add a note to a Hexa-Tech booking."
+    ]
+  },
+  "mcpServers": "./.mcp.json"
+}

@@ -1,0 +1,12 @@
+:root { color-scheme: light; font: 16px/1.65 system-ui, sans-serif; color: #182436; background: #f2f5fa; }
+body { margin: 0; padding: 6vh 20px; }
+main { box-sizing: border-box; max-width: 580px; margin: 0 auto; padding: 38px; border: 1px solid #dbe2ed; border-radius: 20px; background: white; box-shadow: 0 12px 40px #1824360b; }
+h1 { font-size: 30px; line-height: 1.18; letter-spacing: -.7px; }
+.eyebrow { color: #315ac6; font-size: 12px; font-weight: 750; letter-spacing: 1.6px; }
+button, .button { display: block; box-sizing: border-box; width: 100%; margin: 15px 0; padding: 13px 18px; border: 1px solid #294fab; border-radius: 9px; background: #294fab; color: white; font: inherit; font-weight: 650; text-align: center; cursor: pointer; text-decoration: none; }
+.secondary { background: white; border-color: #b8c4d9; color: #253954; }
+button:disabled { opacity: .6; cursor: wait; }
+button:focus-visible, a:focus-visible { outline: 3px solid #77b7ff; outline-offset: 3px; }
+.note { color: #586779; font-size: 14px; }
+#status { color: #654111; }
+@media (max-width: 480px) { main { padding: 25px; } h1 { font-size: 26px; } }

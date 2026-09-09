@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors,
-  Menu, X, MoreHorizontal, Lock,
+  Menu, X, MoreHorizontal, Lock, Link2,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -915,6 +915,11 @@ export function Layout({ children }: { children: ReactNode }) {
 
         {/* User + logout */}
         <div className="border-t border-dark-border p-3">
+          <Link to="/account/connections" title="Connected apps" onClick={() => setMobileOpen(false)}
+            className={clsx('mb-3 flex min-h-9 items-center gap-2 rounded-lg px-2 text-xs text-t-secondary hover:bg-dark-surface2 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400', displayCollapsed && 'justify-center')}>
+            <Link2 size={15} aria-hidden="true" />
+            {!displayCollapsed && 'Connected apps'}
+          </Link>
           {!displayCollapsed && (
             <div className="flex items-center gap-2 mb-2.5">
               <div className="w-7 h-7 bg-primary-500 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0">
@@ -1367,6 +1372,10 @@ function SubscriptionWall() {
           </p>
         )}
 
+        <Link to="/account/connections" className="rounded text-sm text-gray-300 underline underline-offset-4 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-400">
+          Manage connected apps
+        </Link>
+
         {/* Logout button */}
         <button
           onClick={() => { void logoutAndRedirect() }}
@@ -1378,4 +1387,3 @@ function SubscriptionWall() {
     </div>
   )
 }
-

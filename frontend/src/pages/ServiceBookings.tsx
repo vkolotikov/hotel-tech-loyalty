@@ -28,6 +28,7 @@ interface ServiceBooking {
   currency: string
   status: string
   payment_status: string
+  staff_notes?: string | null
 }
 
 interface Paginated {
@@ -517,7 +518,7 @@ export default function ServiceBookings() {
   )
 }
 
-function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: ServiceBooking; onClose: () => void; onChanged: () => void }) {
+export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: ServiceBooking; onClose: () => void; onChanged: () => void }) {
   const qc = useQueryClient()
   const { data: detail } = useQuery<any>({
     queryKey: ['service-booking-detail', booking.id],
@@ -533,8 +534,9 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
     setSavingStatus(true)
     try {
       await api.patch(`/v1/admin/service-bookings/${booking.id}/status`, {
-        status, payment_status: paymentStatus, staff_notes: staffNotes || undefined,
+        status, payment_status: paymentStatus, append_staff_note: staffNotes.trim() || undefined,
       })
+      setStaffNotes('')
       toast.success('Updated')
       qc.invalidateQueries({ queryKey: ['service-booking-detail', booking.id] })
       onChanged()
@@ -592,6 +594,15 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
 
         <hr className="border-white/[0.06] my-4" />
 
+        {(detail?.staff_notes ?? booking.staff_notes) && (
+          <section className="mb-5" aria-label="Existing staff notes">
+            <h3 className="text-xs font-semibold text-gray-300 mb-2">Staff notes</h3>
+            <p className="max-h-64 overflow-y-auto whitespace-pre-wrap break-words rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-3 text-sm leading-relaxed text-gray-200">
+              {detail?.staff_notes ?? booking.staff_notes}
+            </p>
+          </section>
+        )}
+
         <div className="space-y-3">
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">Status</label>
@@ -609,8 +620,8 @@ function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: Service
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Staff note</label>
-            <textarea value={staffNotes} onChange={e => setStaffNotes(e.target.value)} rows={3} className={inputCls + ' resize-none'} />
+            <label htmlFor="new-staff-note" className="block text-xs font-semibold text-gray-300 mb-1.5">Add staff note</label>
+            <textarea id="new-staff-note" value={staffNotes} onChange={e => setStaffNotes(e.target.value)} maxLength={2000} rows={3} className={inputCls + ' resize-none'} />
           </div>
           <button onClick={save} disabled={savingStatus}
             className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>

@@ -10,6 +10,9 @@ class Cors
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->is('mcp')) {
+            return app(\App\Http\Middleware\Plugin\PluginCors::class)->handle($request, $next);
+        }
         if ($request->isMethod('OPTIONS')) {
             return response('', 204, $this->headers($request));
         }
