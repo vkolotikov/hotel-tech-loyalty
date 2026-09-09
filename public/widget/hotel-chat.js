@@ -51,6 +51,47 @@
   if (!cfg.key || !cfg.api) { console.warn('HotelChat: missing key or api'); return; }
 
   var API = cfg.api;
+  // BEGIN confirmed-lead analytics
+  var reportedLeadReceipts = {};
+  function reportConfirmedLead(data) {
+    var receipt = data && data.lead_receipt;
+    if (typeof receipt !== 'string' || !/^[a-f0-9]{64}$/.test(receipt)) return;
+    var ownHosts = ['fds-cards.co.uk', 'fdscards.de', 'fdscards.fr', 'fdscards.es', 'fdscards.lv', 'fdscards.ee',
+      'hexa-academy.co.uk', 'hexa-academy.lv', 'hexa-tech.uk', 'beauty-tech.uk', 'hotel-tech.ai',
+      'gym.hexa-tech.uk', 'med.hexa-tech.uk', 'hospitality.hexa-tech.uk'];
+    if (ownHosts.indexOf(location.hostname) === -1) return;
+    var academy = window.academyAnalytics;
+    var hexa = window.hexaAnalytics;
+    var yoo = window.yootheme && window.yootheme.consent;
+    var allowed = academy ? academy.isAllowed() : hexa ? hexa.isAllowed()
+      : yoo && typeof yoo.hasConsent === 'function' && yoo.hasConsent('statistics.google_analytics');
+    if (!allowed || typeof window.gtag !== 'function') return;
+    var tag = document.querySelector('script[data-measurement][data-host="' + location.hostname + '"]');
+    var destination = tag && tag.dataset.measurement;
+    if (!/^G-[A-Z0-9]+$/.test(destination || '')) return;
+    var storageKey = 'hexatech.confirmed-chat-leads.' + destination;
+    var seen = [];
+    try { seen = JSON.parse(sessionStorage.getItem(storageKey) || '[]'); } catch (_) {}
+    if (!Array.isArray(seen)) seen = [];
+    if (reportedLeadReceipts[receipt] || seen.indexOf(receipt) !== -1) return;
+    reportedLeadReceipts[receipt] = true;
+    try { sessionStorage.setItem(storageKey, JSON.stringify(seen.concat([receipt]).slice(-100))); } catch (_) {}
+    var safeLocation = new URL(location.origin + location.pathname);
+    var original = new URL(location.href);
+    ['source', 'medium', 'campaign', 'id', 'content', 'term'].forEach(function (name) {
+      var code = original.searchParams.get('utm_' + name) || (name === 'id' ? original.searchParams.get('campaign_id') : '');
+      if (code && /^[a-zA-Z0-9_-]{1,100}$/.test(code)) safeLocation.searchParams.set('utm_' + name, code);
+    });
+    var parameters = {send_to: destination, method: 'chat', form_type: 'chat', event_id: receipt,
+      page_location: safeLocation.href, page_referrer: ''};
+    // Academy wraps gtag for its form hooks. Its consent gate has already been
+    // checked above, so use the existing Google queue for this verified receipt.
+    if (academy) {
+      if (!window.dataLayer) return;
+      (function () { window.dataLayer.push(arguments); })('event', 'generate_lead', parameters);
+    } else window.gtag('event', 'generate_lead', parameters);
+  }
+  // END confirmed-lead analytics
   // Restore prior session so a page refresh / re-open rehydrates the chat
   // history instead of showing a blank panel. Keyed by widget api so two
   // widgets on one domain don't stomp on each other.
@@ -594,6 +635,10 @@
         body: JSON.stringify(payload),
       }).then(function (r) {
         if (!r.ok) throw new Error('lead failed');
+        return r.json();
+      }).then(function (data) {
+        if (!data || data.success !== true) throw new Error('lead not confirmed');
+        try { reportConfirmedLead(data); } catch (_) {}
         leadCaptured = true;
         try { localStorage.setItem(LEAD_KEY, '1'); } catch (e) {}
         bubble.textContent = T.leadThanks;
@@ -1589,8 +1634,9 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: sessionId, message: msg, lang: lastUserLang }),
     })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error('message failed'); return r.json(); })
       .then(function (data) {
+        try { reportConfirmedLead(data); } catch (_) {}
         // Server may pause AI auto-reply when an agent has taken over the
         // conversation from the inbox. Show a friendly system note instead.
         if (data && data.ai_paused) {
