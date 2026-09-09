@@ -12,7 +12,7 @@ This is the canonical description of what exists today. The design specs and pla
 
 An Enterprise-plan tenant builds one public page per brand in three steps:
 
-1. **Brand** — pick the brand (its name, logo and `primary_color` seed the page).
+1. **Brand** — pick the brand in the top bar (its name, logo and `primary_color` seed the page).
 2. **Design** — pick one of the three owner-drawn templates for that brand's trade.
 3. **Configure** — edit copy, photos, section order and the accent colour; publish.
 
@@ -114,7 +114,8 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 
 **Frontend** (`frontend/src/pages/landing/`)
 
-- `LandingWizard.tsx` + `LandingBrandStep.tsx` — brand → design → configure.
+- `LandingWizard.tsx` — trade → design → details → sections; the brand is the top bar's `BrandSwitcher`
+  (the builder's own "Step 1 — Brand" block was removed on 2026-09-09 at the owner's request).
 - `LandingEditor.tsx` — three tabs (Content / Design / Publish via `?tab=`), collapsed section cards,
   drag-and-drop ordering, add-a-block rails, photo Replace/Restore, gallery strip, FAQ form.
 - `DesignPanel.tsx` — the Design tab, three numbered steps (2026-09-08): (1) the trade, as chips for the
@@ -125,9 +126,14 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   its own yet, the page's own design always present, the saved one badged "Current"; cards carry the
   served `preview_image`, a first-screen picture of each author's page from
   `public/landing/previews/<key>.jpg` via `TemplateImage::preview()`; (3) the accent colour. Picking a
-  design or a trade updates the form at once and the live pane shows it; standing notes under the chips
-  and under the gallery carry the consequences and the way back — no browser confirms on this tab (only
-  removing a section still asks). `LandingPreview.tsx`, `livePreview.ts`,
+  design or a trade updates the form at once and the live pane shows it — no browser confirms on this tab
+  (only removing a section still asks). Compact since 2026-09-09 (owner: "minimize copy in builder, more
+  compact, more visual"): the chips wear their trade's icon (`industryIcons.ts`, presentation-only, keyed
+  by industry id), a card is its picture and name with the author's blurb as its tooltip, no standing
+  paragraphs under the chips, the gallery or the colour; a one-line warning appears only once the tenant
+  has moved off the saved trade, and the picked-design note says what would stop showing (when anything
+  would) plus the way back. The old "Step 1 — Brand" block above the wizard and the editor is gone — the
+  top bar's `BrandSwitcher` is the one place a brand is chosen. `LandingPreview.tsx`, `livePreview.ts`,
   `previewBridge.ts`, `previewFreshness.ts` — live preview: the pane renders the page at a real device
   width (1440 desktop, 390 mobile — `frameGeometry` in `livePreview.ts`) and scales it to the pane with a
   CSS transform, so "desktop" shows the desktop layout; the Design tab gives the pane 8 of the 12 grid

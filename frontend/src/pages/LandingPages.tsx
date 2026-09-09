@@ -10,7 +10,6 @@ import { canAccess } from '../components/Layout'
 import { useAuthStore } from '../stores/authStore'
 import { useBrandStore } from '../stores/brandStore'
 import { useSubscription } from '../hooks/useSubscription'
-import { LandingBrandStep } from './landing/LandingBrandStep'
 import { LandingWizard } from './landing/LandingWizard'
 import { LandingEditor } from './landing/LandingEditor'
 import { LandingTeardown } from './landing/LandingTeardown'
@@ -169,15 +168,13 @@ export function LandingPages() {
     // round 1) — a brand switch remounts the whole component from scratch
     // rather than relying on every future piece of step state being wired
     // into that reset by hand.
+    // WHOSE PAGE THIS IS is the app's top-bar BrandSwitcher, the same control
+    // as on every other screen. The builder used to repeat it as a "Step 1 —
+    // Brand" block above the wizard and the editor; the owner had it removed
+    // (2026-09-09: "no need brand selections on top left of the builder, we
+    // have brand selections on the right header already").
     return (
-      // THE THREE STEPS THE OWNER ASKED FOR, in order: which brand, which
-      // design, then everything else. The brand step sits above the wizard
-      // and above the editor alike (see the return below), so "whose page is
-      // this" is answered on the way in rather than discovered afterwards.
-      <div className="space-y-4">
-        <LandingBrandStep />
-        <LandingWizard key={currentBrandId ?? 'org'} prefill={data} onDone={() => setDoneForBrand(brandToken(currentBrandId))} />
-      </div>
+      <LandingWizard key={currentBrandId ?? 'org'} prefill={data} onDone={() => setDoneForBrand(brandToken(currentBrandId))} />
     )
   }
 
@@ -211,11 +208,9 @@ export function LandingPages() {
   return (
     <BrandRequired feature={t('landing_pages.brand_required', 'your landing page')}>
       <div className="space-y-4">
-        {/* Step 1, on the editor as on the wizard: whose page this is, and how
-            to go to another brand's. `BrandRequired` above already refuses to
-            open the editor in "All brands" mode, so by the time this renders
-            there is always exactly one brand to name. */}
-        <LandingBrandStep />
+        {/* No brand block here either (see the wizard branch above):
+            `BrandRequired` refuses to open the editor in "All brands" mode,
+            and the top bar names the one brand this page belongs to. */}
         {/*
           `sectionTypes`/`maxSections` (the builder round) ride the SAME
           response for the same reason as the three lists above it:

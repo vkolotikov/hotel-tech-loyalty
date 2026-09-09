@@ -3072,21 +3072,17 @@
     "preview_caption_stale": "Could not refresh just now — showing the last version we could load.",
     "design": {
       "title": "Design",
-      "industry_change_note": "Saving this rewrites your page in the new trade’s words — headings, section names and the wording on your buttons — and changes which sections you can show (online booking is offered to hotels only). It also changes the words the rest of your workspace uses. Nothing you have already saved — bookings, clients, settings — is changed or deleted.",
+      "industry_change_note": "Saving switches your page to {{trade}} words and sections.",
       "color_kicker": "Brand colour",
       "color_label": "Brand colour",
       "chosen_kicker": "Your design",
       "previewing_note": "You are looking at {{name}} in the preview. Save to keep it.",
       "keep_saved": "Keep {{name}}",
       "trade_kicker": "Your trade",
-      "trade_intro": "Your page speaks your trade’s words — headings, section names, button wording — and your trade decides which designs you see.",
       "designs_made_for": "Made for {{trade}}",
       "designs_coming": "Designs made for {{trade}} are coming. Until then, any of these works.",
       "current_badge": "Current",
-      "color_note": "The one colour that is yours on every design — your buttons, your links and the small type your designer set in accent.",
-      "change_confirm_dropped": "These will stop showing: {{blocks}}. Nothing you wrote in them is deleted — switch back and they return.",
-      "change_confirm_added": "This design adds blocks of its own, ready for you to fill in: {{blocks}}.",
-      "change_confirm_save": "Your words, your photographs and your brand colour all come with you. Nothing changes on your live page until you save."
+      "change_confirm_dropped": "These will stop showing: {{blocks}}. Nothing you wrote in them is deleted — switch back and they return."
     },
     "wizard": {
       "kicker": "Landing page setup",
@@ -3335,12 +3331,6 @@
       "locked_title": "Editing this page needs your previous plan",
       "locked_body": "Your plan no longer includes the page builder, so the wizard, editing and Publish are turned off here. Taking this page offline still always works — use the button above.",
       "upgrade_cta": "View plans"
-    },
-    "brand_step": {
-      "kicker": "Step 1 — Brand",
-      "title": "You are editing {{name}}’s page",
-      "note": "Each brand has its own page, its own web address and its own photographs. Switch brand to work on another one.",
-      "unchosen": "Pick a brand — this page would be built for {{name}}"
     }
   },
   "reviews": {
