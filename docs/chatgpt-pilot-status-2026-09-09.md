@@ -2,6 +2,8 @@
 
 **The pilot is connected and live read-only checks passed.** ChatGPT linked the approved Hexa-Tech account, discovered all six tools, and successfully searched customers and all three booking types. The Codex package is installed locally; start a new Codex thread to load it.
 
+This is the historical six-tool release record. See [CRM and plugin fixes](crm-plugin-fixes-2026-09-09.md) for the subsequent seven-tool release and corrections to the earlier application errors.
+
 ## Delivery state
 
 | Component | Observed state |

@@ -1,6 +1,8 @@
 **Hexa-Tech ChatGPT / Codex plugin review — 9 September 2026**
 
-Yes, one integration can serve different Hexa-Tech businesses and their staff. The existing draft has a credible foundation, including explicit account approval and organization-bound OAuth grants. **Verdict: request changes before production enablement or customer distribution.** The package alone is not a working hosted integration.
+Historical review of the initial draft. The [connected pilot status](chatgpt-pilot-status-2026-09-09.md) and subsequent [CRM and plugin fixes](crm-plugin-fixes-2026-09-09.md) record the later implementation and verification.
+
+Yes, one integration can serve different Hexa-Tech businesses and their staff. The existing draft has a credible foundation, including explicit account approval and organization-bound OAuth grants. **Verdict at initial review: request changes before production enablement or customer distribution.** The package alone is not a working hosted integration.
 
 This review covers the saved instructions, the existing changes on `feature/chatgpt-plugin`, OAuth and MCP implementation, tenant/brand access, booking and note models, existing authentication/subscription middleware, dependency changes, package/ZIP consistency, and release instructions. The user confirmed the audience is businesses and their staff. Application source, existing draft files, dependencies, `.env`, deployment settings, and production data were not changed. This report is the only repository file added by the review; diagnostic tests were written outside the repository in the workstation temporary directory.
 

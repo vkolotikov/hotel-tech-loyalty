@@ -1,6 +1,8 @@
 # Production log triage, 9 September 2026
 
-Status: investigation only. No application fix, migration, dependency change, or deployment was made for this report. The precise client/session responsible for the malformed CRM requests is still unknown.
+Historical investigation record: the statements below describe the earlier inspection. The subsequent corrections are tracked in [CRM and plugin fixes](crm-plugin-fixes-2026-09-09.md).
+
+Status at inspection: investigation only. No application fix, migration, dependency change, or deployment was made for this report. The precise client/session responsible for the malformed CRM requests is still unknown.
 
 The screenshot errors come from existing application paths. The ChatGPT plugin source had not been committed, pushed, or deployed when these logs were inspected. Work on the live environment for the plugin had consisted of read-only inspection and OAuth secrets/environment configuration; the integration remained disabled. No CRM PUT requests were issued as part of that work. The plugin's tool transport is `/mcp`, and it does not implement brand creation or these CRM update endpoints.
 
