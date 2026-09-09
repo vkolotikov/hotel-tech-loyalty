@@ -375,6 +375,40 @@ class PluginOAuthTest extends TestCase
         }
     }
 
+    public function test_consent_form_keeps_its_origin_and_only_accepts_valid_origin_approval(): void
+    {
+        $this->app->bind(PreventRequestForgery::class, fn ($app) => new class($app, $app['encrypter']) extends PreventRequestForgery
+        {
+            protected function runningUnitTests()
+            {
+                return false;
+            }
+        });
+        $this->get($this->authorizationUrl())->assertRedirect()
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->get(self::ORIGIN.'/plugin/login')->assertOk()
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->actingAs(PluginUser::findOrFail(1), 'plugin-web');
+        $this->readyBridge();
+        $this->get($this->authorizationUrl())->assertOk()
+            ->assertHeader('Referrer-Policy', 'same-origin');
+
+        $form = ['_token' => session()->token(), 'auth_token' => session('authToken')];
+        // A no-referrer document makes browsers send Origin:null for form
+        // navigation. Keep rejecting that header instead of relaxing the gate.
+        $this->withHeader('Origin', 'null')->post(self::ORIGIN.'/oauth/authorize', $form)
+            ->assertForbidden()->assertJsonPath('error', 'Origin is not allowed.')
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+        $this->assertSame(0, DB::table('oauth_auth_codes')->count());
+
+        $response = $this->withHeader('Origin', self::ORIGIN)
+            ->post(self::ORIGIN.'/oauth/authorize', $form)->assertRedirect()
+            ->assertHeader('Referrer-Policy', 'no-referrer');
+        parse_str(parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+        $this->assertNotEmpty($query['code']);
+        $this->exchange($query['code'])->assertOk();
+    }
+
     private function authorizationUrl(array $override = []): string
     {
         return self::ORIGIN.'/oauth/authorize?'.http_build_query(array_merge([

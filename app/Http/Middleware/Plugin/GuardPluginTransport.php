@@ -40,7 +40,17 @@ class GuardPluginTransport
             }
         }
 
-        return $this->privateResponse($next($request));
+        $response = $this->privateResponse($next($request));
+        if ($request->isMethod('GET') && $request->is('oauth/authorize')
+            && $response->getStatusCode() === 200
+            && str_starts_with((string) $response->headers->get('Content-Type'), 'text/html')) {
+            // no-referrer makes HTML form navigation send Origin:null, which
+            // our origin gate correctly rejects. Preserve the same-origin
+            // form's origin while keeping cross-origin referrers suppressed.
+            $response->headers->set('Referrer-Policy', 'same-origin');
+        }
+
+        return $response;
     }
 
     private function privateResponse(Response $response): Response
