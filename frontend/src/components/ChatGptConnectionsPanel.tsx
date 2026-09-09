@@ -102,7 +102,7 @@ export function ChatGptConnectionsPanel() {
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-[#54626e]">Read customer and booking information and add internal notes within your staff permissions.</p>
+                <p className="text-xs text-[#54626e]">Read CRM leads, customer and booking information, and add customer or booking notes within your staff permissions.</p>
                 {confirmDisconnect ? (
                   <div className="space-y-3 rounded-xl border border-[#dde3e8] bg-white p-4">
                     <p className="font-medium">Disconnect all your ChatGPT and Codex access?</p>

@@ -13,6 +13,7 @@
     <p><strong>{{ $client->name }}</strong> is requesting access as {{ $user->email }}.</p>
     <p>Workspace: <strong>{{ $user->organization?->name ?? 'Your Hexa-Tech workspace' }}</strong></p>
     <ul>
+        <li>List CRM leads by creation date and read their summaries and counts.</li>
         <li>Find customers and read their details.</li>
         <li>Find bookings and read their details.</li>
         <li>Add internal notes to customers and bookings when you request it.</li>

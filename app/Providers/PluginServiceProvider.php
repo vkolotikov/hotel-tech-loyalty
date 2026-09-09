@@ -33,7 +33,7 @@ class PluginServiceProvider extends ServiceProvider
             ->by($request->user()
                 ? $request->user()->organization_id.':'.$request->user()->getAuthIdentifier()
                 : 'unauthenticated:'.$request->ip()));
-        Passport::tokensCan(['mcp:use' => 'Work with customers and bookings']);
+        Passport::tokensCan(['mcp:use' => 'Read CRM leads, customers and bookings, and add requested customer or booking notes']);
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(30));
         Passport::useAccessTokenEntity(PluginAccessTokenEntity::class);
