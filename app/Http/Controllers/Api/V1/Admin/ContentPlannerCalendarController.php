@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\ContentPlannerProfile;
 use App\Services\ContentCalendarGenerationService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 
 /**
  * AI calendar generation — fills a date range with strategically planned draft posts.
@@ -35,12 +38,16 @@ class ContentPlannerCalendarController extends Controller
 
         $validated = $request->validate([
             'start_date' => 'required|date',
-            'end_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
             'platforms' => 'nullable|array',
             'fill_empty_only' => 'nullable|boolean',
             'instructions' => 'nullable|string',
             'planner_profile_id' => 'nullable|integer',
         ]);
+
+        if (Carbon::parse($validated['start_date'])->startOfDay()->diffInDays(Carbon::parse($validated['end_date'])->startOfDay()) > 62) {
+            throw ValidationException::withMessages(['end_date' => 'Calendar generation range cannot exceed 62 days.']);
+        }
 
         if (!empty($validated['planner_profile_id'])) {
             $profile = ContentPlannerProfile::find($validated['planner_profile_id']);
@@ -77,19 +84,32 @@ class ContentPlannerCalendarController extends Controller
             );
 
             $createdCount = count($result['created']);
+            $failedWindows = $result['failed_windows'];
+            $incomplete = $failedWindows !== [];
+            $status = $incomplete ? ($createdCount > 0 ? 'partial' : 'failed') : 'completed';
+            $message = $incomplete
+                ? ($createdCount > 0
+                    ? "Saved {$createdCount} draft posts, but the calendar is incomplete. Retry with empty slots only to finish the remaining dates."
+                    : 'Calendar generation could not finish. No new posts were saved. Please retry.')
+                : ($createdCount > 0
+                    ? "Generated {$createdCount} calendar posts across {$result['weeks_processed']} week(s)."
+                    : 'No new posts were generated — the selected slots may already be filled.');
 
             return response()->json([
+                'status' => $status,
                 'created_count' => $createdCount,
                 'posts' => $result['created'],
                 'skipped_dates' => $result['skipped_dates'],
-                'message' => $createdCount > 0
-                    ? "Generated {$createdCount} calendar posts across {$result['weeks_processed']} week(s)."
-                    : 'No new posts were generated — the selected slots may already be filled.',
-            ]);
+                'failed_windows' => $failedWindows,
+                'message' => $message,
+            ], $status === 'failed' ? 503 : 200);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['error' => 'Invalid calendar request', 'message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
+            report($e);
             return response()->json([
                 'error' => 'Calendar generation failed',
-                'message' => $e->getMessage(),
+                'message' => 'Calendar generation stopped unexpectedly. Any drafts already saved remain in your calendar. Please reload before retrying.',
             ], 500);
         }
     }

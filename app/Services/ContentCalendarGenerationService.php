@@ -6,8 +6,12 @@ use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerVisualBrief;
 use App\Services\ContentPlanner\AiClient;
+use App\Services\ContentPlanner\CalendarGenerationBudget;
+use App\Services\ContentPlanner\CalendarGenerationException;
 use App\Services\ContentPlanner\ContextBuilder;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use InvalidArgumentException;
 
@@ -40,10 +44,11 @@ class ContentCalendarGenerationService
      *
      * $opts: ['platforms' => [..]|null, 'fill_empty_only' => bool (default true), 'instructions' => string|null]
      *
-     * @return array{created: array, skipped_dates: array, weeks_processed: int}
+     * @return array{created: array, skipped_dates: array, failed_windows: array, weeks_processed: int}
      */
-    public function generate(ContentPlannerProfile $profile, string $startDate, string $endDate, array $opts = []): array
+    public function generate(ContentPlannerProfile $profile, string $startDate, string $endDate, array $opts = [], ?CalendarGenerationBudget $budget = null): array
     {
+        $budget ??= new CalendarGenerationBudget;
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->startOfDay();
 
@@ -66,7 +71,7 @@ class ContentCalendarGenerationService
                 ->values();
         }
         if ($channels->isEmpty()) {
-            throw new \RuntimeException('No active channels to plan for. Activate at least one social channel first.');
+            throw new InvalidArgumentException('No active channels to plan for. Activate at least one social channel first.');
         }
 
         $activePlatforms = $channels
@@ -101,7 +106,7 @@ class ContentCalendarGenerationService
         $skipped = [];
         $newDigestLines = [];
         $weeksProcessed = 0;
-        $chunkErrors = [];
+        $failedWindows = [];
 
         $cursor = $start->copy();
         while ($cursor->lte($end)) {
@@ -148,28 +153,33 @@ class ContentCalendarGenerationService
             );
 
             try {
-                $result = $this->ai->generateJson($profile, 'calendar', $prompt, 16000);
-            } catch (\Throwable $e) {
+                $result = $this->ai->generateJson($profile, 'calendar', $prompt, 16000, $budget);
+                if (!is_array($result['items'] ?? null) || !array_is_list($result['items'])) {
+                    throw new CalendarGenerationException('invalid_ai_response', 'The AI service returned an invalid calendar. Please retry.');
+                }
+            } catch (CalendarGenerationException $e) {
                 Log::error(sprintf(
                     'Content calendar chunk failed (%s to %s): %s',
                     $cursor->toDateString(),
                     $chunkEnd->toDateString(),
                     $e->getMessage()
                 ));
-                $chunkErrors[] = $e->getMessage();
-                $weeksProcessed++;
-                $cursor = $chunkEnd->copy()->addDay();
-                continue;
+                // Stop after a provider failure or the shared deadline. Asking
+                // the same failing provider about later weeks only adds delay.
+                $failedWindows = $this->unfinishedWindows($cursor, $end, $e->reason);
+                break;
             }
 
             $items = is_array($result['items'] ?? null) ? $result['items'] : [];
+            $invalidItems = false;
 
             foreach ($items as $item) {
                 if (!is_array($item)) {
+                    $invalidItems = true;
                     continue;
                 }
 
-                $dateRaw = $item['date'] ?? null;
+                $dateRaw = $this->str($item['date'] ?? null);
                 $date = null;
                 if ($dateRaw !== null && $dateRaw !== '') {
                     try {
@@ -178,9 +188,10 @@ class ContentCalendarGenerationService
                         $date = null;
                     }
                 }
-                $platform = mb_strtolower(trim((string) ($item['platform'] ?? '')));
+                $platform = mb_strtolower($this->str($item['platform'] ?? null) ?? '');
 
                 if (!$date || $date->lt($cursor) || $date->gt($chunkEnd)) {
+                    $invalidItems = true;
                     $skipped[] = [
                         'date' => (string) $dateRaw,
                         'platform' => $platform,
@@ -189,6 +200,7 @@ class ContentCalendarGenerationService
                     continue;
                 }
                 if (!in_array($platform, $activePlatforms, true)) {
+                    $invalidItems = true;
                     $skipped[] = [
                         'date' => $date->toDateString(),
                         'platform' => $platform,
@@ -226,7 +238,7 @@ class ContentCalendarGenerationService
                 // item: one malformed row must not abort the whole run after
                 // the paid AI call.
                 try {
-                    $post = ContentPlannerPost::create([
+                    $attributes = [
                         'organization_id' => $profile->organization_id,
                         'brand_id' => $profile->brand_id,
                         'planner_profile_id' => $profile->id,
@@ -251,16 +263,28 @@ class ContentCalendarGenerationService
                         'main_copy' => $this->str($item['draft_copy'] ?? null),
                         'goal' => $reason !== null ? mb_substr($reason, 0, 250) : null,
                         'created_by' => auth()->id(),
-                    ]);
+                    ];
 
                     $visualIdea = $this->str($item['visual_idea'] ?? null);
-                    if ($visualIdea !== null) {
-                        ContentPlannerVisualBrief::updateOrCreate(
-                            ['post_id' => $post->id],
-                            ['description' => $visualIdea]
-                        );
-                    }
+                    // A failed visual write must not leave a saved post that
+                    // the response incorrectly reports as skipped/not created.
+                    $post = DB::transaction(function () use ($attributes, $visualIdea) {
+                        $post = ContentPlannerPost::create($attributes);
+                        if ($visualIdea !== null) {
+                            ContentPlannerVisualBrief::updateOrCreate(
+                                ['post_id' => $post->id],
+                                ['description' => $visualIdea]
+                            );
+                        }
+
+                        return $post;
+                    });
+                } catch (QueryException $e) {
+                    // Storage failures are server errors, not invalid AI items
+                    // or provider outages. Earlier committed drafts remain.
+                    throw $e;
                 } catch (\Throwable $e) {
+                    $invalidItems = true;
                     Log::warning('Calendar item insert failed: ' . $e->getMessage(), [
                         'profile_id' => $profile->id,
                         'date' => $date->toDateString(),
@@ -279,19 +303,38 @@ class ContentCalendarGenerationService
                 $newDigestLines[] = sprintf('- [%s] %s | %s', $platform, $topic, $hook ?? '');
             }
 
+            if ($invalidItems) {
+                $failedWindows = $this->unfinishedWindows($cursor, $end, 'invalid_ai_response');
+                break;
+            }
+
             $weeksProcessed++;
             $cursor = $chunkEnd->copy()->addDay();
-        }
-
-        if (empty($created) && !empty($chunkErrors)) {
-            throw new \RuntimeException('Calendar generation failed: ' . $chunkErrors[0]);
         }
 
         return [
             'created' => $created,
             'skipped_dates' => $skipped,
+            'failed_windows' => $failedWindows,
             'weeks_processed' => $weeksProcessed,
         ];
+    }
+
+    private function unfinishedWindows(Carbon $start, Carbon $end, string $reason): array
+    {
+        $windows = [];
+        $cursor = $start->copy();
+        while ($cursor->lte($end)) {
+            $last = $cursor->copy()->endOfWeek(Carbon::SUNDAY)->startOfDay()->min($end);
+            $windows[] = [
+                'start_date' => $cursor->toDateString(),
+                'end_date' => $last->toDateString(),
+                'reason' => $windows === [] ? $reason : 'not_attempted',
+            ];
+            $cursor = $last->copy()->addDay();
+        }
+
+        return $windows;
     }
 
     /**

@@ -3000,61 +3000,92 @@ class WidgetChatController extends Controller
             $langName = $this->languageCodeToName($lang ?: 'en');
             $instructions = "IMPORTANT: Always speak and respond in {$langName}. Never switch languages unless the caller explicitly asks you to.\n\n" . $instructions;
 
+            // The Beta interface and 4o preview models were retired in May
+            // 2026. Preserve explicit current models; map only known retired
+            // families without rewriting the organization's saved settings.
+            $model = trim((string) $voiceConfig->realtime_model);
+            if (str_starts_with($model, 'gpt-4o-mini-realtime-preview')) {
+                $model = 'gpt-realtime-mini';
+            } elseif ($model === '' || str_starts_with($model, 'gpt-4o-realtime-preview')) {
+                $model = 'gpt-realtime-1.5';
+            }
+            // This setting is also used for TTS, whose voice list is broader.
+            $voice = strtolower((string) $voiceConfig->voice);
+            if (! in_array($voice, ['alloy', 'ash', 'ballad', 'coral', 'echo', 'sage', 'shimmer', 'verse', 'marin', 'cedar'], true)) {
+                $voice = 'alloy';
+            }
             $sessionPayload = [
-                'model' => $voiceConfig->realtime_model ?? 'gpt-4o-realtime-preview',
-                'voice' => $voiceConfig->voice ?? 'alloy',
-                'instructions' => $instructions,
-                'modalities' => ['audio', 'text'],
-                // Whisper transcription with explicit language so the model doesn't
-                // mis-detect (was switching languages mid-conversation).
-                'input_audio_transcription' => array_filter([
-                    'model'    => 'whisper-1',
-                    'language' => $lang,
-                ]),
-                'temperature' => max(0.6, (float) ($voiceConfig->temperature ?? 0.8)),
-                // Use semantic VAD — the model decides if the caller is
-                // actually done speaking instead of relying on a fixed
-                // silence-duration timer. eagerness=low makes it the most
-                // patient available, waiting through mid-sentence pauses
-                // ("hello,... can you tell me...") instead of jumping in.
-                'turn_detection' => [
-                    'type'      => 'semantic_vad',
-                    'eagerness' => 'low',
+                'expires_after' => ['anchor' => 'created_at', 'seconds' => 60],
+                'session' => [
+                    'type' => 'realtime',
+                    'model' => $model,
+                    'instructions' => $instructions,
+                    'output_modalities' => ['audio'],
+                    'audio' => [
+                        'input' => [
+                            'transcription' => array_filter(['model' => 'whisper-1', 'language' => $lang]),
+                            'turn_detection' => ['type' => 'semantic_vad', 'eagerness' => 'low'],
+                        ],
+                        'output' => ['voice' => $voice],
+                    ],
                 ],
             ];
 
-            $response = \Illuminate\Support\Facades\Http::withHeaders([
-                'Authorization' => 'Bearer ' . $apiKey,
-                'OpenAI-Beta'   => 'realtime=v1',
-                'Content-Type'  => 'application/json',
-            ])->post('https://api.openai.com/v1/realtime/sessions', $sessionPayload);
+            // GA client secrets carry session defaults, which clients can
+            // override. Keep the handshake token short-lived; it may create
+            // multiple sessions until expiry. Never redirect
+            // a request carrying the server key or retry minting implicitly.
+            $response = \Illuminate\Support\Facades\Http::withToken($apiKey)
+                ->withoutRedirecting()->connectTimeout(5)->timeout(30)
+                ->post('https://api.openai.com/v1/realtime/client_secrets', $sessionPayload);
 
-            if ($response->failed()) {
-                $body = $response->json();
-                $upstreamMsg = $body['error']['message'] ?? substr((string) $response->body(), 0, 300);
-                \Log::error('OpenAI realtime session failed', [
-                    'status' => $response->status(),
-                    'body'   => substr((string) $response->body(), 0, 500),
+            if (! $response->successful()) {
+                \Log::warning('widget.realtime_session.failed', [
+                    'reason' => 'upstream_rejected', 'status' => $response->status(),
+                    'organization_id' => $config->organization_id,
+                    'request_id' => $this->safeRealtimeDiagnostic($response->header('x-request-id')),
+                    'error_code' => $this->safeRealtimeDiagnostic($response->json('error.code')),
+                    'error_type' => $this->safeRealtimeDiagnostic($response->json('error.type')),
+                    'error_param' => $this->safeRealtimeDiagnostic($response->json('error.param')),
                 ]);
-                return response()->json([
-                    'error'   => 'OpenAI ' . $response->status() . ': ' . $upstreamMsg,
-                    'details' => $body ?: $response->body(),
-                ], 502);
+                return response()->json(['error' => 'The voice provider could not create a session. Please try again later.',
+                    'upstream_status' => $response->status()], 502);
             }
 
             $data = $response->json();
+            $secret = $data['value'] ?? null;
+            $expiresAt = $data['expires_at'] ?? null;
+            if (! is_string($secret) || trim($secret) === '' || ! is_int($expiresAt) || $expiresAt <= time()) {
+                \Log::warning('widget.realtime_session.failed', ['reason' => 'invalid_response',
+                    'organization_id' => $config->organization_id,
+                    'request_id' => $this->safeRealtimeDiagnostic($response->header('x-request-id'))]);
+                return response()->json(['error' => 'The voice provider returned an invalid session. Please try again later.'], 502);
+            }
 
             return response()->json([
-                'client_secret' => $data['client_secret']['value'] ?? null,
-                'expires_at' => $data['client_secret']['expires_at'] ?? null,
-                'session_id' => $data['id'] ?? null,
-                'voice' => $voiceConfig->voice,
+                'client_secret' => $secret,
+                'expires_at' => $expiresAt,
+                'session_id' => $data['session']['id'] ?? null,
+                'model' => $model,
+                'voice' => $voice,
                 'language' => $lang ?: 'en',
                 'language_name' => $langName,
-            ]);
+            ])->header('Cache-Control', 'no-store, private');
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            \Log::warning('widget.realtime_session.failed', ['reason' => 'connection_failed',
+                'organization_id' => $config->organization_id]);
+            return response()->json(['error' => 'The voice provider could not be reached. Please try again later.'], 502);
         } catch (\Throwable $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            report($e);
+            return response()->json(['error' => 'Unable to create a voice session. Please try again later.'], 500);
         }
+    }
+
+    private function safeRealtimeDiagnostic(mixed $value): ?string
+    {
+        // Provider identifiers are useful for triage; request/response bodies
+        // and exception messages can contain credentials or private context.
+        return is_string($value) && preg_match('/\A[a-zA-Z0-9_.\[\]-]{1,160}\z/', $value) ? $value : null;
     }
 
     private function languageCodeToName(string $code): string

@@ -147,6 +147,7 @@ const FONT_OPTIONS = ['Inter', 'Roboto', 'Open Sans', 'Lato', 'Poppins', 'Montse
 const LAUNCHER_SHAPES = ['circle', 'rounded-square', 'pill', 'square'] as const
 const LAUNCHER_ICONS = ['chat', 'message', 'support', 'question', 'sales'] as const
 const VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'marin', 'nova', 'onyx', 'sage', 'shimmer', 'verse']
+const REALTIME_MODELS = ['gpt-realtime-1.5', 'gpt-realtime', 'gpt-realtime-mini']
 
 const STORAGE_KEY = 'loyalty-chatbot-widget-tab'
 
@@ -908,14 +909,11 @@ export function ChatbotWidget() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className={label}>Realtime Model</label>
-            <select value={v.realtime_model || 'gpt-4o-realtime-preview'} onChange={e => updateVoice('realtime_model', e.target.value)} className={input}>
-              <option value="gpt-realtime-1.5">gpt-realtime-1.5 — latest GPT-5 realtime ★</option>
-              <option value="gpt-realtime-mini">gpt-realtime-mini — fast & affordable GPT-5 realtime</option>
-              <option value="gpt-4.1-realtime-preview">gpt-4.1-realtime-preview — stable GPT-4.1</option>
-              <option value="gpt-4o-realtime-preview">gpt-4o-realtime-preview</option>
-              <option value="gpt-4o-realtime-preview-2025-06-03">gpt-4o-realtime-preview-2025-06-03</option>
-              <option value="gpt-4o-realtime-preview-2024-12-17">gpt-4o-realtime-preview-2024-12-17</option>
-              <option value="gpt-4o-mini-realtime-preview">gpt-4o-mini-realtime-preview (cheap)</option>
+            <select value={v.realtime_model || 'gpt-realtime-1.5'} onChange={e => updateVoice('realtime_model', e.target.value)} className={input}>
+              {v.realtime_model && !REALTIME_MODELS.includes(v.realtime_model) && (
+                <option value={v.realtime_model}>{v.realtime_model} (current saved model)</option>
+              )}
+              {REALTIME_MODELS.map(model => <option key={model} value={model}>{model}</option>)}
             </select>
           </div>
           <div>
