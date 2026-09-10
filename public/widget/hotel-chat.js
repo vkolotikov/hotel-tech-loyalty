@@ -54,8 +54,12 @@
   // BEGIN confirmed-lead analytics
   var reportedLeadReceipts = {};
   function reportConfirmedLead(data) {
+    reportWidgetAnalytics('generate_lead', data);
+  }
+  function reportWidgetAnalytics(event, data) {
+    if (event !== 'contact_click' && event !== 'generate_lead') return;
     var receipt = data && data.lead_receipt;
-    if (typeof receipt !== 'string' || !/^[a-f0-9]{64}$/.test(receipt)) return;
+    if (event === 'generate_lead' && (typeof receipt !== 'string' || !/^[a-f0-9]{64}$/.test(receipt))) return;
     var ownHosts = ['fds-cards.co.uk', 'fdscards.de', 'fdscards.fr', 'fdscards.es', 'fdscards.lv', 'fdscards.ee',
       'hexa-academy.co.uk', 'hexa-academy.lv', 'hexa-tech.uk', 'beauty-tech.uk', 'hotel-tech.ai',
       'gym.hexa-tech.uk', 'med.hexa-tech.uk', 'hospitality.hexa-tech.uk'];
@@ -69,27 +73,30 @@
     var tag = document.querySelector('script[data-measurement][data-host="' + location.hostname + '"]');
     var destination = tag && tag.dataset.measurement;
     if (!/^G-[A-Z0-9]+$/.test(destination || '')) return;
-    var storageKey = 'hexatech.confirmed-chat-leads.' + destination;
-    var seen = [];
-    try { seen = JSON.parse(sessionStorage.getItem(storageKey) || '[]'); } catch (_) {}
-    if (!Array.isArray(seen)) seen = [];
-    if (reportedLeadReceipts[receipt] || seen.indexOf(receipt) !== -1) return;
-    reportedLeadReceipts[receipt] = true;
-    try { sessionStorage.setItem(storageKey, JSON.stringify(seen.concat([receipt]).slice(-100))); } catch (_) {}
+    if (event === 'generate_lead') {
+      var storageKey = 'hexatech.confirmed-chat-leads.' + destination;
+      var seen = [];
+      try { seen = JSON.parse(sessionStorage.getItem(storageKey) || '[]'); } catch (_) {}
+      if (!Array.isArray(seen)) seen = [];
+      if (reportedLeadReceipts[receipt] || seen.indexOf(receipt) !== -1) return;
+      reportedLeadReceipts[receipt] = true;
+      try { sessionStorage.setItem(storageKey, JSON.stringify(seen.concat([receipt]).slice(-100))); } catch (_) {}
+    }
     var safeLocation = new URL(location.origin + location.pathname);
     var original = new URL(location.href);
     ['source', 'medium', 'campaign', 'id', 'content', 'term'].forEach(function (name) {
       var code = original.searchParams.get('utm_' + name) || (name === 'id' ? original.searchParams.get('campaign_id') : '');
       if (code && /^[a-zA-Z0-9_-]{1,100}$/.test(code)) safeLocation.searchParams.set('utm_' + name, code);
     });
-    var parameters = {send_to: destination, method: 'chat', form_type: 'chat', event_id: receipt,
+    var parameters = {send_to: destination, method: 'chat',
       page_location: safeLocation.href, page_referrer: ''};
+    if (event === 'generate_lead') { parameters.form_type = 'chat'; parameters.event_id = receipt; }
     // Academy wraps gtag for its form hooks. Its consent gate has already been
     // checked above, so use the existing Google queue for this verified receipt.
     if (academy) {
       if (!window.dataLayer) return;
-      (function () { window.dataLayer.push(arguments); })('event', 'generate_lead', parameters);
-    } else window.gtag('event', 'generate_lead', parameters);
+      (function () { window.dataLayer.push(arguments); })('event', event, parameters);
+    } else window.gtag('event', event, parameters);
   }
   // END confirmed-lead analytics
   // Restore prior session so a page refresh / re-open rehydrates the chat
@@ -757,7 +764,11 @@
     btn.setAttribute('aria-label', 'Open chat with us');
     btn.title = 'Chat with us';
     btn.innerHTML = ICONS.chat + '<span class="htchat-pulse" aria-hidden="true"></span>';
-    btn.onclick = togglePanel;
+    btn.onclick = function () {
+      // User opening the launcher is an interaction. Automatic popups never report one.
+      if (!isOpen) { try { reportWidgetAnalytics('contact_click'); } catch (_) {} }
+      togglePanel();
+    };
     document.body.appendChild(btn);
     applyPosition(btn);
   }
