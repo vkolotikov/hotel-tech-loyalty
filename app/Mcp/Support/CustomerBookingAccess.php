@@ -73,7 +73,11 @@ class CustomerBookingAccess
     {
         $user = $this->authorize();
         $timezone = $user->organization->timezone ?: 'UTC';
-        $day = CarbonImmutable::now($timezone)->toDateString();
+        if (isset($data['period']) && (isset($data['from']) || isset($data['to']))) {
+            throw ValidationException::withMessages(['period' => 'Choose period or explicit from/to dates, not both.']);
+        }
+        $day = CarbonImmutable::now($timezone);
+        $day = (($data['period'] ?? null) === 'yesterday' ? $day->subDay() : $day)->toDateString();
         $from = CarbonImmutable::parse($data['from'] ?? $data['to'] ?? $day, $timezone)->startOfDay();
         $to = CarbonImmutable::parse($data['to'] ?? $data['from'] ?? $day, $timezone)->startOfDay();
         if ($to->lessThan($from) || $from->diffInDays($to) > 89) {
@@ -290,9 +294,9 @@ class CustomerBookingAccess
         return $query;
     }
 
-    private function restrictToPermittedBrands(Builder $query): void
+    public function restrictToPermittedBrands(Builder $query): void
     {
-        $user = auth()->user();
+        $user = $this->authorize();
         $restricted = DB::table('brand_user')->where('user_id', $user->id)->exists();
         if ($restricted && ! $user->isPlatformAdmin()) {
             // Retain the restriction even when every assignment is archived or

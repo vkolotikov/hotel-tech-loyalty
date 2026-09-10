@@ -1,7 +1,7 @@
 {
   "name": "hexatech",
-  "version": "0.2.0",
-  "description": "List CRM leads by date, find customers and bookings, and add requested notes in Hexa-Tech.",
+  "version": "0.3.0",
+  "description": "Read CRM leads and chatbot conversations, draft email proposals, update requested lead statuses and add notes in Hexa-Tech.",
   "author": {
     "name": "Hexa-Tech",
     "url": "https://app.hexa-tech.uk/"
@@ -11,14 +11,15 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Hexa-Tech",
-    "shortDescription": "Review today's CRM leads, customers, bookings, and notes.",
-    "longDescription": "Connect your Hexa-Tech account to list CRM leads by creation date, find customers, review bookings, and add customer or booking notes when you ask. Today's leads use your workspace timezone and include an authorized total count. This registered connection supports the FDS Cards pilot across permitted workspace brands. Access follows your account permissions.",
+    "shortDescription": "Read lead interests and chats, draft proposals, update CRM status.",
+    "longDescription": "Connect your Hexa-Tech staff account to review yesterday's leads, read enquiry requirements and linked chatbot messages, and prepare tailored email proposals in ChatGPT. Update CRM status only when requested, with an audit record. Email drafts are not sent. Customer, booking and internal-note tools remain available across permitted workspace brands. Access follows your account permissions.",
     "developerName": "Hexa-Tech",
     "category": "Productivity",
     "capabilities": ["Read", "Write"],
     "websiteURL": "https://app.hexa-tech.uk/",
     "defaultPrompt": [
-      "Show today's CRM leads in Hexa-Tech.",
+      "Show yesterday's CRM leads and what they are interested in, using their chatbot conversations.",
+      "Prepare an email proposal for this lead for my review.",
       "Show my upcoming Hexa-Tech bookings.",
       "Help me add a note to a Hexa-Tech booking."
     ]

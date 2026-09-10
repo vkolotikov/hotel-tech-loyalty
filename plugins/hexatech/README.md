@@ -1,6 +1,6 @@
 # Hexa-Tech plugin
 
-List CRM leads by date, find customers, review bookings, and add requested customer or booking notes through your connected Hexa-Tech account. Version 0.2.0 adds today's CRM leads to the registered FDS Cards pilot connection.
+Review CRM leads and their chatbot conversations, prepare email proposals in ChatGPT, update requested CRM statuses, and use the existing customer, booking and internal-note tools. Version 0.3.0 adds lead context and status workflows to the registered FDS Cards pilot connection.
 
 This package uses the supported plugin-creator layout:
 
@@ -21,6 +21,11 @@ The mapping follows the supported [OpenAI plugin packaging layout](https://devel
 | Tool | Purpose |
 | --- | --- |
 | `list_leads` | List CRM leads created today or in a date range, with an authorized total count. |
+| `get_lead` | Read enquiry requirements, contact, configured custom fields and available status stages. |
+| `list_lead_activities` | Read recorded notes, proposal/email text and status history. |
+| `list_lead_conversations` | Find chatbot/inbox conversations linked to a lead. |
+| `get_lead_conversation` | Read customer, chatbot and staff messages with pagination. |
+| `update_lead_status` | Apply a requested stage with conflict detection, retry protection and a staff audit. |
 | `search_customers` | Find customers matching a search. |
 | `get_customer` | Read one customer's details. |
 | `list_bookings` | Find reservations, room bookings, or service bookings. |
@@ -39,7 +44,9 @@ Example requests:
 
 The server enforces account permissions. This plugin does not create or cancel bookings, take payments, or send messages.
 
-Lead date filters use the workspace timezone and the lead's creation timestamp. Omit dates for today. Lead totals and the number of rows shown on one page are separate; follow pagination for a complete list. Leads and customer profiles are different records. Blank customer searches are not supported, and no lead-editing tool is provided. Temporary account-verification failures do not mean the lead count is zero; respect the returned retry guidance.
+Lead date filters use the workspace timezone and the lead's creation timestamp. Omit dates for today or use `period: yesterday` for the previous calendar day. Lead totals and the rows shown on one page are separate; follow pagination for a complete list. Leads and customer profiles are different records. Blank customer searches are not supported. Temporary account-verification failures do not mean the lead count is zero; respect the returned retry guidance.
+
+Try: "Show yesterday's leads and what they are interested in, read their chatbot conversations, and prepare response email proposals for my review." Then request a specific CRM stage change for selected leads. Drafts remain in the chat and are not sent or saved as CRM emails. The tool does not claim a draft was sent. Existing proposal text in timeline activities is readable; attachment metadata is available, but file contents are not. Property-linked won conversions must be completed in the CRM portal.
 
 Access requires an active staff account in an enabled workspace and a verified active subscription or unexpired trial. During the pilot, only explicitly approved organizations can connect. The FDS Cards pilot covers all brands the signed-in account is permitted to access in its workspace, including Hexa-Tech where permitted. It is not restricted to records labelled FDS Cards. The server continues to enforce the account's actual workspace and brand permissions; names and package installation do not expand them.
 

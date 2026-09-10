@@ -9,6 +9,11 @@ This guide describes the implemented integration. Deployment and live-verificati
 | Tool | Operation |
 | --- | --- |
 | `list_leads` | List CRM inquiries by creation date, with authorized counts, status, brand and basic customer identity. Defaults to today in the workspace timezone. |
+| `get_lead` | Read requirements, contact, configured fields, attachment metadata and status options/revision. |
+| `list_lead_activities` | Read recorded notes and proposal/email text with pagination. |
+| `list_lead_conversations` | Find directly linked and same-customer legacy chatbot/inbox conversations. |
+| `get_lead_conversation` | Read visitor, agent and AI messages, without changing read state. |
+| `update_lead_status` | Apply a requested stage with conflict detection, retry protection and audit. |
 | `search_customers` | Find customers using a nonblank name, company or contact search of at least two characters. |
 | `get_customer` | Read one customer. |
 | `list_bookings` | Find reservations, room bookings, and service appointments. |
@@ -18,10 +23,12 @@ This guide describes the implemented integration. Deployment and live-verificati
 
 Booking kind and ID identify the record together. Note actions require an explicit user request and a UUID `request_id`. Repeating the same note request with its original ID returns the saved result without appending another note; retry with the same ID and text after an uncertain response. The integration does not create or cancel bookings, take payments, send communications, or provide general database access.
 
+Version 0.3.0 prepares email drafts in ChatGPT from the lead and its actual conversation messages. Drafts are not sent or saved to CRM. Existing proposal text in activity records is readable; file attachments expose metadata only. `period: yesterday` resolves the previous day in the workspace timezone. Status updates require a current `get_lead` revision and a configured stage ID. Leads without a pipeline may use one unambiguous brand/workspace default; it is assigned only on the requested write. Lost requires an active reason, and property-linked won conversions remain in the portal. Status changes, their timeline and their staff audit are one transaction. Tool annotations declare this operation as a write that overwrites status.
+
 ### Reading results accurately
 
 - For today's leads, call `list_leads` without dates or a query. Dates use the organization's configured timezone, not the assistant's timezone. One supplied date selects that day; two select an inclusive range of at most 90 calendar days. The filter is lead creation time, not a booking date or the last 24 hours. All current statuses are included unless an exact status is supplied.
-- Lead lists report `total_count` for all authorized matches and `returned_count` for the current page. Each page contains at most 25 leads (default 20), up to 100 pages. Follow `next_page` with the same filters and limit; honor `results_truncated`. Optional `brand_id` only narrows the connected account's permissions. Lead IDs are inquiry IDs; lead editing and lead notes are not supported. Use a returned `customer.id` only when a separate customer action is requested.
+- Lead lists report `total_count` for all authorized matches and `returned_count` for the current page. Each page contains at most 25 leads (default 20), up to 100 pages. Follow `next_page` with the same filters and limit; honor `results_truncated`. Optional `brand_id` only narrows the connected account's permissions. Lead IDs are inquiry IDs; the only lead edit exposed is the explicit status transition through `update_lead_status`. Use a returned `customer.id` only when a separate customer action is requested.
 - Never use a blank customer search to list leads. A tool failure leaves the count unknown; it does not mean zero leads.
 - Customer search returns `next_after_id`; send it back as `after_id` with the same search to continue. Each page contains at most 25 customers.
 - Booking lists return `next_page`. Keep the kind, filters and page size unchanged while following it. Existing booking behavior permits dates up to 90 days apart, with both endpoints included (up to 91 dates), up to 50 bookings per page and 100 pages. If `results_truncated` is true, additional matches exist: narrow the date range or search, or restart with a larger page size. A null `next_page` is not proof of completeness when this flag is true.
@@ -71,7 +78,7 @@ Set these deployment values:
 | `CHATGPT_PLUGIN_BILLING_USER_IDS` | Optional comma-separated local staff user IDs with existing SaaS memberships, used only to verify billing for their own organization. See below. |
 | `PASSPORT_PRIVATE_KEY`, `PASSPORT_PUBLIC_KEY` | Passport signing keys, supplied securely or provisioned through the application's existing Passport key storage. |
 
-The OAuth scope is `mcp:use` and covers all seven tools, including notes; this version does not offer a separate read-only OAuth grant. The server requires an active staff account and organization and applies the application's business and brand access rules. OAuth consent takes place in Hexa-Tech using the existing signed-in application session. Never paste login tokens, authorization codes, or private keys into a chat or the plugin files.
+The OAuth scope is `mcp:use` and covers all twelve tools, including notes and explicitly requested lead status changes; this version does not offer a separate read-only OAuth grant. The server requires an active staff account and organization and applies the application's business and brand access rules. OAuth consent takes place in Hexa-Tech using the existing signed-in application session. Never paste login tokens, authorization codes, or private keys into a chat or the plugin files.
 
 The pilot allowlist controls organizations, not brands. The connector has no persistent brand picker: customers and room/PMS records are organization-scoped; CRM leads, reservations and service appointments also honor the staff account's assigned-brand restrictions. A connection display name does not change this access. Staff with unrestricted access can work across their permitted brands, including when the connection is named for one brand. Token organization binding prevents a later account move from carrying a previous organization's grant into a new one.
 

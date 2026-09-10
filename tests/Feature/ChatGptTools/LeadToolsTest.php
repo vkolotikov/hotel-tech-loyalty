@@ -136,6 +136,20 @@ class LeadToolsTest extends TestCase
         $this->assertFalse($data['results_truncated']);
     }
 
+    public function test_yesterday_is_resolved_in_workspace_timezone_and_cannot_mix_with_dates(): void
+    {
+        $this->lead(1, '2026-09-07 21:00:00');
+        $this->lead(2, '2026-09-08 20:59:59');
+        $this->lead(3, '2026-09-08 21:00:00');
+        $response = HexaTechServer::tool(ListLeads::class, ['period' => 'yesterday']);
+        $response->assertOk();
+        $this->assertSame('2026-09-08', $this->data($response)['from']);
+        $this->assertSame([2, 1], array_column($this->data($response)['leads'], 'id'));
+        foreach ([['period' => 'yesterday', 'from' => '2026-09-01'], ['period' => 'tomorrow'], ['period' => null]] as $args) {
+            HexaTechServer::tool(ListLeads::class, $args)->assertHasErrors();
+        }
+    }
+
     public function test_day_boundaries_handle_both_dst_transitions(): void
     {
         foreach ([
