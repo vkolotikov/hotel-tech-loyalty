@@ -104,6 +104,7 @@ class PluginTransportTest extends TestCase
         $tools = collect($response->json('result.tools'))->keyBy('name');
         $this->assertEqualsCanonicalizing([
             'list_leads', 'search_customers', 'get_customer', 'list_bookings', 'get_booking', 'add_customer_note', 'add_booking_note',
+            'get_lead', 'list_lead_activities', 'list_lead_conversations', 'get_lead_conversation', 'update_lead_status',
         ], $tools->keys()->all());
         $this->assertEmpty($tools['list_leads']['inputSchema']['required'] ?? []);
         $this->assertSame(25, $tools['list_leads']['inputSchema']['properties']['limit']['maximum']);
@@ -112,8 +113,8 @@ class PluginTransportTest extends TestCase
         $this->assertStringContainsString('list_leads', $tools['search_customers']['inputSchema']['properties']['query']['description']);
         foreach ($tools as $name => $tool) {
             $this->assertSame('object', $tool['inputSchema']['type']);
-            $this->assertSame(! str_starts_with($name, 'add_'), $tool['annotations']['readOnlyHint']);
-            $this->assertSame(false, $tool['annotations']['destructiveHint']);
+            $this->assertSame(! str_starts_with($name, 'add_') && $name !== 'update_lead_status', $tool['annotations']['readOnlyHint']);
+            $this->assertSame($name === 'update_lead_status', $tool['annotations']['destructiveHint']);
             $this->assertSame(false, $tool['annotations']['openWorldHint']);
             $schemes = $tool['securitySchemes'] ?? $tool['_meta']['securitySchemes'] ?? [];
             $this->assertSame([['type' => 'oauth2', 'scopes' => ['mcp:use']]], $schemes);

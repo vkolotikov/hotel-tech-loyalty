@@ -18,13 +18,15 @@ abstract class HexaTechTool extends Tool
 
     protected bool $readOnly = true;
 
+    protected bool $destructive = false;
+
     public function toArray(): array
     {
         $result = parent::toArray();
         $security = [['type' => 'oauth2', 'scopes' => ['mcp:use']]];
         $result['securitySchemes'] = $security;
         $result['_meta']['securitySchemes'] = $security;
-        $result['annotations'] = ['readOnlyHint' => $this->readOnly, 'destructiveHint' => false,
+        $result['annotations'] = ['readOnlyHint' => $this->readOnly, 'destructiveHint' => $this->destructive,
             'openWorldHint' => false, 'idempotentHint' => true];
         $result['inputSchema']['additionalProperties'] = false;
 
@@ -51,7 +53,7 @@ abstract class HexaTechTool extends Tool
         } catch (\Throwable $error) {
             report($error);
 
-            return Response::error('HexaTech could not complete this request. Retry shortly; for a note, reuse the same request_id.');
+            return Response::error('HexaTech could not complete this request. Retry shortly; for a write, reuse the same request_id and unchanged arguments.');
         }
     }
 
