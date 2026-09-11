@@ -1,5 +1,7 @@
 <?php
 
+\Illuminate\Support\Facades\Route::get('v1/reports/business-outcomes', [\App\Http\Controllers\Api\V1\Integrations\BusinessReportController::class, 'show'])->middleware('throttle:30,1');
+
 use App\Http\Controllers\Api\V1\Auth\AuthController;
 use App\Http\Controllers\Api\V1\Member\MemberController;
 use App\Http\Controllers\Api\V1\Member\PointsController;
@@ -453,6 +455,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             // Personal API tokens for external integrations.
             Route::get('api-tokens',                [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'index']);
+            Route::post('business-reporting-key', [\App\Http\Controllers\Api\V1\Integrations\BusinessReportController::class, 'issue'])->middleware('staff.can:can_view_analytics');
             Route::post('api-tokens',               [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'store']);
             Route::delete('api-tokens/{id}',        [\App\Http\Controllers\Api\V1\Admin\ApiTokenController::class, 'destroy']);
 

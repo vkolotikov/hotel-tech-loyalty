@@ -1,0 +1,74 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Services\BusinessOutcomeReport;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Tests\TestCase;
+
+class BusinessOutcomeReportTest extends TestCase
+{
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->travelTo(\Carbon\Carbon::parse('2026-09-11 12:00:00', 'UTC'));
+        Schema::create('chat_conversations', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->string('page_url'); $t->integer('inquiry_id')->nullable(); $t->string('channel')->nullable();
+        });
+        Schema::create('chat_messages', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->integer('conversation_id'); $t->string('sender_type'); $t->timestamp('created_at');
+        });
+        Schema::create('inquiries', function (Blueprint $t) {
+            $t->id(); $t->integer('organization_id'); $t->timestamp('created_at'); $t->string('external_source')->nullable();
+        });
+    }
+
+    public function test_visitor_activity_and_saved_leads_are_distinct_and_tenant_isolated(): void
+    {
+        foreach ([[1,1,'https://fdscards.lv/?private=secret',1], [2,2,'https://fdscards.lv/',2], [3,1,'https://unowned.test/',3], [4,1,'https://fdscards.lv/',1]] as [$id,$org,$url,$inquiry]) {
+            DB::table('chat_conversations')->insert(['id'=>$id,'organization_id'=>$org,'page_url'=>$url,'inquiry_id'=>$inquiry,'channel'=>'widget']);
+            DB::table('chat_messages')->insert(['id'=>$id,'organization_id'=>$org,'conversation_id'=>$id,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+        }
+        DB::table('chat_messages')->insert([
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'ai','created_at'=>'2026-09-11 10:00:01'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:01:00'],
+            ['organization_id'=>2,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:02:00'],
+        ]);
+        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00','external_source'=>null]);
+        $p = app(BusinessOutcomeReport::class)->build(1);
+        $this->assertSame(3, collect($p['rows'])->where('kind','chat_message')->count());
+        $this->assertSame(2, collect($p['rows'])->where('kind','chat_started')->count());
+        $this->assertSame(1, collect($p['rows'])->where('kind','chat_lead')->count());
+        $this->assertStringNotContainsString('secret', json_encode($p));
+        $this->assertStringNotContainsString('page_url', json_encode($p));
+        DB::table('inquiries')->where('id',1)->update(['external_source'=>'fds_card_builder']);
+        $this->assertSame(0, collect(app(BusinessOutcomeReport::class)->build(1)['rows'])->where('kind','chat_lead')->count());
+    }
+
+    public function test_old_conversations_do_not_become_new_conversions_when_someone_replies(): void
+    {
+        DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://hexa-academy.lv/','channel'=>'widget']);
+        DB::table('chat_messages')->insert([
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2025-01-01 10:00:00'],
+            ['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00'],
+        ]);
+        $p = app(BusinessOutcomeReport::class)->build(1);
+        $this->assertCount(1,$p['rows']);
+        $this->assertSame('chat_message',$p['rows'][0]['kind']);
+        $this->assertSame('academy-lv',$p['rows'][0]['site']);
+    }
+
+    public function test_report_requires_its_own_key_and_binds_the_organization_on_server(): void
+    {
+        Schema::create('business_report_keys', function (Blueprint $t) {
+            $t->integer('organization_id'); $t->string('token_hash');
+        });
+        DB::table('business_report_keys')->insert(['organization_id'=>17,'token_hash'=>hash('sha256',str_repeat('a',64))]);
+        $this->getJson('/api/v1/reports/business-outcomes')->assertUnauthorized();
+        $this->withToken(str_repeat('b',64))->getJson('/api/v1/reports/business-outcomes')->assertUnauthorized();
+        $this->mock(BusinessOutcomeReport::class)->shouldReceive('build')->once()->with(17)->andReturn(['source'=>'chat','rows'=>[]]);
+        $this->withToken(str_repeat('a',64))->getJson('/api/v1/reports/business-outcomes?organization_id=999')->assertOk()->assertJsonPath('source','chat');
+    }
+}
