@@ -24,6 +24,27 @@ The tools at `/mcp` are unchanged and keep their documented behaviour; see
 `docs/chatgpt-plugin.md`. Nothing here creates or cancels bookings, takes payments, sends
 customer communications, or provides general database access.
 
+## The Voice Gateway
+
+`POST /api/v1/admin/voice/turn` takes `{said, session_id?}` from the signed-in portal and returns
+`{spoken, tools_used, session_id}`. It runs one turn: the model is offered the voice tools, any
+tool it asks for is executed through the **same** `handle()` entry point as `/mcp/voice` — so
+`VoiceCapability`, argument validation and brand scoping apply identically — and the sentence it
+ends with is returned. It sits in the admin route group, so it also inherits the portal's
+authentication, tenancy and subscription middleware.
+
+The tool catalogue and the system prompt are both read from `HexaTechVoiceServer`. Adding a tool
+there is the whole change; there is no second list to update, in PHP or TypeScript.
+
+Tool calling reuses `DispatchesAiChat::callProviderWithTools()`, added beside the existing chat
+dispatch rather than as a separate HTTP client, so a voice turn passes the same model
+entitlement check (`assertModelAllowed`) and usage tracking as every other AI call.
+`VOICE_PROVIDER` must be `openai`; other providers are refused rather than silently degraded.
+
+A turn stops after `voice.max_tool_calls` model round trips and says so out loud, because
+silence is indistinguishable from a broken product to someone listening. There is no audio yet —
+phase 2b adds speech-to-text and text-to-speech over this endpoint.
+
 ## How a spoken answer differs from a text one
 
 Responses are written to be read aloud, not parsed:
