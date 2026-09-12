@@ -66,6 +66,15 @@ class PluginTransportTest extends TestCase
         $this->postJson('/mcp', ['body' => str_repeat('x', 65537)])->assertStatus(413);
     }
 
+    public function test_the_voice_endpoint_gets_the_same_payload_and_json_limits(): void
+    {
+        // The guard matched the literal path 'mcp', so a second MCP server
+        // mounted beneath it would otherwise take unbounded, untyped bodies.
+        $this->withHeader('Authorization', 'Bearer invalid')
+            ->post('/mcp/voice', ['body' => 'text'])->assertStatus(415);
+        $this->postJson('/mcp/voice', ['body' => str_repeat('x', 65537)])->assertStatus(413);
+    }
+
     public function test_bodyless_authentication_probe_gets_oauth_challenge_without_content_type(): void
     {
         $response = $this->call('POST', '/mcp');

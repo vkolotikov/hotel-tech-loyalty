@@ -27,7 +27,10 @@ class GuardPluginTransport
             return $this->privateResponse(response()->json(['error' => 'Origin is not allowed.'], 403));
         }
 
-        if ($request->is('mcp') && $request->isMethod('POST')) {
+        // Every MCP server mounted under /mcp, including /mcp/voice, gets the
+        // same limits. A literal 'mcp' match would leave a second server's
+        // endpoint accepting unbounded, untyped bodies.
+        if ($request->is('mcp', 'mcp/*') && $request->isMethod('POST')) {
             // ChatGPT first sends a bodyless probe without Content-Type.
             // Let unauthenticated probes reach the OAuth 401 challenge; actual
             // bearer-authenticated tool requests must still use JSON.
