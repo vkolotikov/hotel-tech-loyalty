@@ -408,6 +408,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('setup/status',       [SetupController::class, 'status']);
             Route::post('setup/initialize',  [SetupController::class, 'initialize']);
 
+            // Staff voice assistant. Gated again inside the gateway by
+            // VoiceCapability, so the org allowlist applies here exactly as it
+            // does on /mcp/voice. See docs/voice-assistant.md.
+            Route::post('voice/turn', \App\Http\Controllers\Api\V1\Admin\VoiceTurnController::class);
+
             // ─── Ops Diagnostics (super_admin only) ────────────────────────────
             // SaaS connectivity probe — DNS resolve + /up health + /auth/token
             // ping. Replaces the old public /billing/diag, which leaked a JWT
