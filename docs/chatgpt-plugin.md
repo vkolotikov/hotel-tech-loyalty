@@ -16,6 +16,10 @@ This guide describes the implemented integration. Deployment and live-verificati
 | `add_customer_note` | Add a note to a customer. |
 | `add_booking_note` | Add a note to a booking. |
 
+A second, voice-shaped MCP server is served at `/mcp/voice` for the staff voice assistant. It
+reuses this integration's OAuth, tenancy, throttling, subscription verification and brand
+scoping unchanged, and leaves the tools above untouched. See `docs/voice-assistant.md`.
+
 Booking kind and ID identify the record together. Note actions require an explicit user request and a UUID `request_id`. Repeating the same note request with its original ID returns the saved result without appending another note; retry with the same ID and text after an uncertain response. The integration does not create or cancel bookings, take payments, send communications, or provide general database access.
 
 ### Reading results accurately
