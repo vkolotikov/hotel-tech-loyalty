@@ -4,8 +4,10 @@ namespace Tests\Feature\Voice;
 
 use App\Mcp\Servers\HexaTechVoiceServer;
 use App\Mcp\Tools\Voice\VoiceDailyBrief;
+use App\Mcp\Tools\Voice\VoiceFindCustomer;
 use App\Mcp\Tools\Voice\VoiceLeadCount;
 use App\Mcp\Tools\Voice\VoiceNextBookings;
+use Illuminate\Support\Facades\DB;
 
 class VoiceReadToolsTest extends VoiceTestCase
 {
@@ -67,6 +69,48 @@ class VoiceReadToolsTest extends VoiceTestCase
         foreach (['4500', 'EUR', 'total_amount', 'currency', 'payment_status'] as $forbidden) {
             $this->assertStringNotContainsString($forbidden, $encoded);
         }
+    }
+
+    public function test_find_customer_separates_matches_by_company_when_names_collide(): void
+    {
+        DB::table('guests')->where('id', 1)->update(['company' => 'Northside']);
+        $this->guest(3, 'Morgan Lloyd', ['company' => 'Riverside']);
+
+        $response = HexaTechVoiceServer::tool(VoiceFindCustomer::class, ['query' => 'Morgan']);
+        $response->assertOk()->assertDontSee(['PRIVATE_EMAIL', 'PRIVATE_PHONE']);
+
+        $data = $this->data($response);
+        $this->assertTrue($data['needs_disambiguation']);
+        // Both render as "Morgan L.", so the company is what makes the question answerable.
+        $this->assertStringContainsString('Morgan L. at Northside', $data['spoken_summary']);
+        $this->assertStringContainsString('Morgan L. at Riverside', $data['spoken_summary']);
+        $this->assertStringContainsString('Which one do you mean?', $data['spoken_summary']);
+    }
+
+    public function test_find_customer_asks_for_more_detail_when_matches_sound_identical(): void
+    {
+        $this->guest(3, 'Morgan Lloyd');
+
+        $data = $this->data(HexaTechVoiceServer::tool(VoiceFindCustomer::class, ['query' => 'Morgan']));
+
+        $this->assertTrue($data['needs_disambiguation']);
+        // Offering "Morgan L. or Morgan L.?" aloud is not a question anyone can answer.
+        $this->assertStringContainsString('two people called Morgan L.', $data['spoken_summary']);
+        $this->assertStringContainsString('surname', $data['spoken_summary']);
+    }
+
+    public function test_find_customer_rejects_a_blank_search(): void
+    {
+        HexaTechVoiceServer::tool(VoiceFindCustomer::class, ['query' => ' '])->assertHasErrors();
+        HexaTechVoiceServer::tool(VoiceFindCustomer::class, [])->assertHasErrors();
+    }
+
+    public function test_a_customer_from_another_organization_is_never_reachable(): void
+    {
+        $found = $this->data(HexaTechVoiceServer::tool(VoiceFindCustomer::class, ['query' => 'FOREIGN']));
+
+        $this->assertSame(0, $found['match_count']);
+        $this->assertStringContainsString('could not find', $found['spoken_summary']);
     }
 
     public function test_daily_brief_never_speaks_a_full_page_as_a_total(): void

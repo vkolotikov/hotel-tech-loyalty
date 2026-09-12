@@ -156,6 +156,14 @@ abstract class VoiceTestCase extends TestCase
         $this->serviceBooking(1, '2026-09-12 08:00:00', 'Morgan Lee');
     }
 
+    protected function guest(int $id, string $fullName, array $overrides = []): void
+    {
+        DB::table('guests')->insert(array_merge([
+            'id' => $id, 'organization_id' => 1, 'full_name' => $fullName,
+            'company' => null, 'email' => null, 'phone' => null, 'passport_no' => null,
+        ], $overrides));
+    }
+
     protected function lead(int $id, string $createdAt, array $overrides = []): void
     {
         DB::table('inquiries')->insert(array_merge([
