@@ -26,20 +26,23 @@ class BusinessOutcomeReport
             ->where('c.organization_id', $organization)->where('m.organization_id', $organization)
             ->where('m.sender_type', 'visitor')->where('m.created_at', '>=', $from)->where('m.created_at', '<=', $now)
             ->where(fn ($query) => $query->whereNull('c.channel')->orWhereIn('c.channel', ['web', 'widget']))
-            ->select(['m.id', 'm.conversation_id', 'm.created_at', 'c.page_url', 'c.inquiry_id', 'c.entry_source_channel', 'c.entry_source_site'])
+            ->select(['m.id', 'm.conversation_id', 'm.created_at', 'c.page_url', 'c.inquiry_id', 'c.entry_source_channel', 'c.entry_source_site', 'c.marketing_attribution'])
             ->orderBy('m.id')->limit(20001)->get();
         $truncated = $messages->count() > 20000;
         $rows = [];
         $conversations = [];
         $inquiries = [];
         $entries = [];
-        $append = function ($id, $at, $kind, $site, $source = 'unknown') use (&$rows) {
-            $rows[] = ['id' => $id, 'occurred_at' => CarbonImmutable::parse($at, 'UTC')->toIso8601String(),
+        $append = function ($id, $at, $kind, $site, $source = 'unknown', $attribution = null) use (&$rows) {
+            $row = ['id' => $id, 'occurred_at' => CarbonImmutable::parse($at, 'UTC')->toIso8601String(),
                 'kind' => $kind, 'site' => $site, 'product' => 'chat', 'amount' => null, 'currency' => null, 'source_channel' => $source];
+            if ($attribution) $row['attribution'] = $attribution;
+            $rows[] = $row;
         };
         foreach ($messages->take(20000) as $message) {
             $host = preg_replace('/^www\./', '', strtolower(parse_url($message->page_url ?? '', PHP_URL_HOST) ?? ''));
-            $site = self::HOSTS[$host] ?? null;
+            // A thread may resume on a different page or brand. Its captured entry site is immutable.
+            $site = in_array($message->entry_source_site, self::HOSTS, true) ? $message->entry_source_site : (self::HOSTS[$host] ?? null);
             if (! $site) {
                 continue;
             }
@@ -48,7 +51,8 @@ class BusinessOutcomeReport
             if ($message->inquiry_id) {
                 $inquiries[$message->inquiry_id] ??= $site;
                 $entries[$message->inquiry_id][] = ['site' => $site, 'at' => $message->created_at,
-                    'source' => $message->entry_source_site === $site ? ($message->entry_source_channel ?? 'unknown') : 'unknown'];
+                    'source' => $message->entry_source_site === $site ? ($message->entry_source_channel ?? 'unknown') : 'unknown',
+                    'attribution' => $message->marketing_attribution];
             }
         }
         // Count a conversation only on its first visitor message, never an auto greeting.
@@ -64,9 +68,19 @@ class BusinessOutcomeReport
         foreach (DB::table('inquiries')->where('organization_id', $organization)->whereIn('id', array_keys($inquiries))
             ->where('created_at', '>=', $from)->where('created_at', '<=', $now)
             ->whereNull('external_source')->get(['id', 'created_at']) as $inquiry) {
-            $candidates = collect($entries[$inquiry->id] ?? [])->where('site', $inquiries[$inquiry->id])->filter(fn ($e) => $e['at'] <= $inquiry->created_at)
-                ->pluck('source')->filter(fn ($s) => $s !== 'unknown')->unique();
-            $append('chat-lead-'.$inquiry->id, $inquiry->created_at, 'chat_lead', $inquiries[$inquiry->id], $candidates->count() === 1 ? $candidates->first() : 'unknown');
+            $matching = collect($entries[$inquiry->id] ?? [])->where('site', $inquiries[$inquiry->id])->filter(fn ($e) => $e['at'] <= $inquiry->created_at);
+            $candidates = $matching->pluck('source')->filter(fn ($s) => $s !== 'unknown')->unique();
+            $touches = []; $truncated = false;
+            foreach ($matching->pluck('attribution')->unique() as $raw) {
+                $observed = WidgetAttribution::exported($raw, $inquiries[$inquiry->id], $inquiry->created_at);
+                if ($observed) { $touches = array_merge($touches, $observed['touches']); $truncated = $truncated || $observed['truncated']; }
+            }
+            $touches = WidgetAttribution::cleanTouches($touches, $inquiry->created_at);
+            if (count($touches) > 12) { $touches = array_merge([$touches[0]], array_slice($touches, -11)); $truncated = true; }
+            $attribution = $touches ? ['version' => 1, 'touches' => $touches, 'truncated' => $truncated] : null;
+            $known = collect($touches)->filter(fn ($t) => ! in_array($t['channel'], ['unknown', 'internal'], true))->last();
+            $source = $known['channel'] ?? ($candidates->count() === 1 ? $candidates->first() : 'unknown');
+            $append('chat-lead-'.$inquiry->id, $inquiry->created_at, 'chat_lead', $inquiries[$inquiry->id], $source, $attribution);
         }
         usort($rows, fn ($a, $b) => strcmp($b['occurred_at'], $a['occurred_at']));
 
@@ -75,7 +89,8 @@ class BusinessOutcomeReport
             'limits' => ['Owned-host web conversations only. Visitor messages exclude AI and staff replies.',
                 'Enquiries require a saved CRM inquiry; messages alone are interactions.',
                 'Builder imports are excluded; enquiry counts are records, not unique customers.',
-                'Only the channel enum captured when a conversation starts is exported; old conversations remain unknown. No private messages, URLs or click identifiers.']];
+                'Consented observed channel/campaign touches are retained for new enquiries. Old conversations remain unknown. No private messages, URLs or click identifiers.',
+                'Observed touches share a site and explicit chat session; they are not a complete cross-device journey or causal credit model.']];
     }
 
     public static function captureEntry(\App\Models\ChatConversation $conversation, string $url): void

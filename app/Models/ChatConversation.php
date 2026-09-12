@@ -51,6 +51,7 @@ class ChatConversation extends Model
     ];
 
     protected $casts = [
+        'marketing_attribution' => 'array',
         'lead_captured' => 'boolean',
         'ai_enabled' => 'boolean',
         'messages_count' => 'integer',

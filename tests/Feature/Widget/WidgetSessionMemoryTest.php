@@ -107,11 +107,13 @@ class WidgetSessionMemoryTest extends TestCase
                 $t->text('page_url')->nullable();
                 $t->string('entry_source_channel', 20)->nullable();
                 $t->string('entry_source_site', 40)->nullable();
+                $t->json('marketing_attribution')->nullable();
                 $t->string('channel', 32)->nullable();
                 $t->boolean('rating_requested')->default(false);
                 $t->integer('rating')->nullable();
                 $t->integer('messages_count')->default(0);
                 $t->boolean('lead_captured')->default(false);
+                $t->unsignedBigInteger('inquiry_id')->nullable();
                 $t->timestamp('last_message_at')->nullable();
                 $t->timestamps();
             });
@@ -213,6 +215,51 @@ class WidgetSessionMemoryTest extends TestCase
             $this->postJson("/api/v1/widget/{$key}/init", [])
                 ->assertStatus(404);
         }
+    }
+
+    public function test_init_retains_consented_campaign_path_and_freezes_it_after_an_enquiry(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-09-12 12:00:00', 'UTC'));
+        [, $key] = $this->makeWidget();
+        $touch = fn ($channel, $campaign, $at) => ['channel'=>$channel,'campaign_id'=>$campaign,'observed_at'=>$at,'evidence'=>'utm'];
+        $meta = $touch('meta','12345','2026-09-11T12:00:00Z');
+        $google = $touch('google','45678','2026-09-12T10:00:00Z');
+        $payload = ['page_url'=>'https://fdscards.lv/contact','analytics_consent'=>true,
+            'attribution'=>['version'=>1,'touches'=>[$meta],'truncated'=>false]];
+        $response = $this->postJson("/api/v1/widget/{$key}/init", $payload)->assertOk();
+        $payload['session_id'] = $response->json('session_id');
+        $payload['attribution']['touches'][] = $google;
+        $this->postJson("/api/v1/widget/{$key}/init", $payload)->assertOk();
+        $conversation = \App\Models\ChatConversation::where('session_id', $payload['session_id'])->firstOrFail();
+        $this->assertSame(['meta','google'], array_column($conversation->marketing_attribution['touches'], 'channel'));
+        $conversation->inquiry_id = 12;
+        $conversation->save();
+        $payload['attribution']['touches'][] = $touch('chatgpt','late','2026-09-12T11:00:00Z');
+        $this->postJson("/api/v1/widget/{$key}/init", $payload)->assertOk();
+        $this->assertCount(2, $conversation->fresh()->marketing_attribution['touches']);
+        $payload['analytics_consent'] = false;
+        $this->postJson("/api/v1/widget/{$key}/init", $payload)->assertOk();
+        $this->assertNull($conversation->fresh()->marketing_attribution);
+    }
+
+    public function test_human_handoff_messages_capture_the_current_campaign_too(): void
+    {
+        foreach (['chatbot_behavior_configs','chatbot_model_configs'] as $table) {
+            if (!Schema::hasTable($table)) Schema::create($table, function ($t) {
+                $t->id(); $t->unsignedBigInteger('organization_id'); $t->unsignedBigInteger('brand_id')->nullable();
+            });
+        }
+        $this->travelTo(\Carbon\Carbon::parse('2026-09-12 12:00:00', 'UTC'));
+        [, $key] = $this->makeWidget();
+        $session = $this->postJson("/api/v1/widget/{$key}/init", ['page_url'=>'https://fdscards.lv/'])->assertOk()->json('session_id');
+        $conversation = \App\Models\ChatConversation::where('session_id',$session)->firstOrFail();
+        $conversation->ai_enabled = false;
+        $conversation->save();
+        $this->postJson("/api/v1/widget/{$key}/message", ['session_id'=>$session,'message'=>'Is a colleague available?',
+            'page_url'=>'https://fdscards.lv/contact','analytics_consent'=>true,
+            'attribution'=>['version'=>1,'touches'=>[['channel'=>'meta','campaign_id'=>'12345','observed_at'=>'2026-09-12T11:00:00Z','evidence'=>'utm']]]])
+            ->assertOk()->assertJsonPath('ai_paused',true);
+        $this->assertSame('12345',$conversation->fresh()->marketing_attribution['touches'][0]['campaign_id']);
     }
 
     public function test_a_session_id_from_another_org_is_never_resumed(): void

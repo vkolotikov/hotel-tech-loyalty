@@ -17,6 +17,7 @@ class BusinessOutcomeReportTest extends TestCase
         Schema::create('chat_conversations', function (Blueprint $t) {
             $t->id(); $t->integer('organization_id'); $t->string('page_url'); $t->integer('inquiry_id')->nullable(); $t->string('channel')->nullable();
             $t->string('entry_source_channel')->nullable(); $t->string('entry_source_site')->nullable();
+            $t->json('marketing_attribution')->nullable();
         });
         Schema::create('chat_messages', function (Blueprint $t) {
             $t->id(); $t->integer('organization_id'); $t->integer('conversation_id'); $t->string('sender_type'); $t->timestamp('created_at');
@@ -95,5 +96,26 @@ class BusinessOutcomeReportTest extends TestCase
         $this->withToken(str_repeat('b',64))->getJson('/api/v1/reports/business-outcomes')->assertUnauthorized();
         $this->mock(BusinessOutcomeReport::class)->shouldReceive('build')->once()->with(17)->andReturn(['source'=>'chat','rows'=>[]]);
         $this->withToken(str_repeat('a',64))->getJson('/api/v1/reports/business-outcomes?organization_id=999')->assertOk()->assertJsonPath('source','chat');
+    }
+
+    public function test_saved_enquiry_exports_only_its_observed_campaigns_before_conversion(): void
+    {
+        $touch = fn ($channel, $campaign, $time) => ['channel'=>$channel,'campaign_id'=>$campaign,'observed_at'=>$time,'evidence'=>'utm', 'private'=>'secret'];
+        DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fds-cards.co.uk/?email=private@example.test',
+            'inquiry_id'=>1,'channel'=>'widget','entry_source_site'=>'fds-lv','entry_source_channel'=>'meta',
+            'marketing_attribution'=>json_encode(['version'=>1,'site'=>'fds-lv','truncated'=>false,'touches'=>[
+                $touch('meta','meta-123','2026-09-10T10:00:00Z'), $touch('google','google-456','2026-09-11T09:00:00Z'),
+                $touch('chatgpt','too-late','2026-09-11T11:00:00Z'),
+            ]])]);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00']);
+        $report = app(BusinessOutcomeReport::class)->build(1);
+        $lead = collect($report['rows'])->firstWhere('kind','chat_lead');
+        $this->assertSame('fds-lv', $lead['site'], 'Resuming on a UK page must not move the original Latvian enquiry.');
+        $this->assertSame('google', $lead['source_channel']);
+        $this->assertSame(['meta-123','google-456'], array_column($lead['attribution']['touches'],'campaign_id'));
+        $this->assertStringNotContainsString('private', json_encode($report['rows']));
+        $this->assertStringNotContainsString('too-late', json_encode($report));
+        $this->assertArrayNotHasKey('attribution', collect($report['rows'])->firstWhere('kind','chat_message'));
     }
 }

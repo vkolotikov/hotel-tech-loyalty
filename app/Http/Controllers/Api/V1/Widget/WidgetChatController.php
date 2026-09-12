@@ -608,6 +608,7 @@ class WidgetChatController extends Controller
                 $conv->status          = 'active';
                 $conv->last_message_at = now();
             }
+            \App\Services\WidgetAttribution::capture($conv, $request);
             $conv->save();
 
             // When resuming, return prior messages so the widget can
@@ -708,6 +709,7 @@ class WidgetChatController extends Controller
         if ($visitor && !$conv->visitor_id) {
             $conv->visitor_id = $visitor->id;
         }
+        \App\Services\WidgetAttribution::capture($conv, $request);
         $conv->save();
 
         return $conv;
@@ -747,6 +749,10 @@ class WidgetChatController extends Controller
             ->where('session_id', $request->session_id)
             ->where('organization_id', $orgId)
             ->first();
+        if ($existingChatConv) {
+            \App\Services\WidgetAttribution::capture($existingChatConv, $request);
+            if ($existingChatConv->isDirty('marketing_attribution')) $existingChatConv->save();
+        }
         if ($existingChatConv && $existingChatConv->ai_enabled === false) {
             try {
                 $visitor = $this->resolveVisitor($request, (int) $orgId);
@@ -1522,7 +1528,12 @@ class WidgetChatController extends Controller
                     }
                 }
 
-                ChatConversation::where('session_id', $validated['session_id'])->update($convUpdate);
+                $leadConversation = ChatConversation::where('session_id', $validated['session_id'])
+                    ->where('organization_id', $orgId)->first();
+                if ($leadConversation) {
+                    \App\Services\WidgetAttribution::capture($leadConversation, $request);
+                    $leadConversation->fill($convUpdate)->save();
+                }
             }
         } catch (\Throwable $e) {
             \Log::warning('Widget lead visitor link failed: ' . $e->getMessage());
@@ -1843,6 +1854,16 @@ class WidgetChatController extends Controller
             'current_page'       => $request->input('url'),
             'current_page_title' => $request->input('title'),
         ])->save();
+
+        // Attribution uses the explicit chat session only; the visitor fingerprint cannot join a journey.
+        if (is_string($request->input('session_id')) && strlen($request->input('session_id')) <= 64) {
+            $conversation = ChatConversation::withoutGlobalScope(BrandScope::class)
+                ->where('organization_id', $config->organization_id)->where('session_id', $request->input('session_id'))->first();
+            if ($conversation) {
+                \App\Services\WidgetAttribution::capture($conversation, $request);
+                if ($conversation->isDirty('marketing_attribution')) $conversation->save();
+            }
+        }
 
         return response()->json(['ok' => true, 'page_view_id' => $pv->id]);
     }

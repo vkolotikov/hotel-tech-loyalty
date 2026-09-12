@@ -99,6 +99,76 @@
     } else window.gtag('event', event, parameters);
   }
   // END confirmed-lead analytics
+  // BEGIN consented campaign journey
+  var marketingStorageKey = 'hexatech.chat-journey.v1.' + (cfg.key || 'default');
+  var ownedMarketingHosts = ['fds-cards.co.uk', 'fdscards.de', 'fdscards.fr', 'fdscards.es', 'fdscards.lv', 'fdscards.ee',
+    'hexa-academy.co.uk', 'hexa-academy.lv', 'hexa-tech.uk', 'beauty-tech.uk', 'hotel-tech.ai',
+    'gym.hexa-tech.uk', 'med.hexa-tech.uk', 'hospitality.hexa-tech.uk'];
+  function marketingAllowed() {
+    if (ownedMarketingHosts.indexOf(location.hostname.replace(/^www\./, '')) === -1) return false;
+    try {
+      if (window.academyAnalytics) return window.academyAnalytics.isAllowed() === true;
+      if (window.hexaAnalytics) return window.hexaAnalytics.isAllowed() === true;
+      var consent = window.yootheme && window.yootheme.consent;
+      return !!(consent && typeof consent.hasConsent === 'function' && consent.hasConsent('statistics.google_analytics'));
+    } catch (_) { return false; }
+  }
+  function currentMarketingTouch() {
+    var url = new URL(location.href), q = url.searchParams;
+    var source = (q.get('utm_source') || '').toLowerCase(), medium = (q.get('utm_medium') || '').toLowerCase();
+    var paid = ['cpc', 'ppc', 'paid', 'paid_social', 'paidsocial', 'paid_search', 'display', 'cpm'].indexOf(medium) !== -1;
+    var channel = 'unknown', evidence = 'referrer';
+    if (q.has('gclid') || q.has('wbraid') || q.has('gbraid')) { channel = 'google'; evidence = 'google_click'; }
+    else if (paid && ['google', 'googleads', 'adwords'].indexOf(source) !== -1) channel = 'google';
+    else if (paid && ['facebook', 'fb', 'instagram', 'ig', 'meta'].indexOf(source) !== -1) channel = 'meta';
+    else if (paid && ['chatgpt', 'openai', 'chatgpt.com'].indexOf(source) !== -1) channel = 'chatgpt';
+    else if (medium === 'email') channel = 'email';
+    else if (medium === 'organic') channel = 'organic';
+    else if (['facebook', 'fb', 'instagram', 'ig', 'meta', 'linkedin', 'tiktok'].indexOf(source) !== -1 || q.has('fbclid')) channel = 'social';
+    else if (source) channel = 'other';
+    if (source && evidence !== 'google_click') evidence = 'utm';
+    if (channel === 'unknown') {
+      var host = '';
+      try { host = new URL(document.referrer).hostname.toLowerCase().replace(/^www\./, ''); } catch (_) {}
+      if (ownedMarketingHosts.indexOf(host) !== -1) channel = 'internal';
+      else if (/^(www\.)?(google\.[a-z.]+|bing\.com|search\.yahoo\.com|duckduckgo\.com|search\.brave\.com)$/.test(host)) channel = 'organic';
+      else if (/(^|\.)(facebook\.com|instagram\.com|linkedin\.com|tiktok\.com|t\.co|x\.com)$/.test(host)) channel = 'social';
+      else if (host) channel = 'referral';
+    }
+    var campaign = q.get('utm_id') || q.get('campaign_id');
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(campaign || '')) campaign = null;
+    return {channel: channel, campaign_id: campaign, observed_at: new Date().toISOString(), evidence: evidence};
+  }
+  function marketingPayload() {
+    if (!marketingAllowed()) {
+      try { localStorage.removeItem(marketingStorageKey); } catch (_) {}
+      return {analytics_consent: false};
+    }
+    var history = {version: 1, touches: [], truncated: false};
+    try {
+      var previous = JSON.parse(localStorage.getItem(marketingStorageKey) || 'null');
+      if (previous && previous.version === 1 && Array.isArray(previous.touches)) history = previous;
+    } catch (_) {}
+    var oldest = Date.now() - 30 * 86400000;
+    history = {version: 1, truncated: history.truncated === true, touches: history.touches.filter(function (t) {
+      return t && ['google', 'meta', 'chatgpt', 'organic', 'social', 'direct', 'referral', 'email', 'other', 'internal', 'unknown'].indexOf(t.channel) !== -1
+        && ['utm', 'google_click', 'referrer', 'handoff'].indexOf(t.evidence) !== -1
+        && Date.parse(t.observed_at) >= oldest && Date.parse(t.observed_at) <= Date.now();
+    }).map(function (t) { return {channel: t.channel, campaign_id: /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(t.campaign_id || '') ? t.campaign_id : null,
+      observed_at: new Date(t.observed_at).toISOString(), evidence: t.evidence}; })};
+    var touch = currentMarketingTouch(), last = history.touches[history.touches.length - 1];
+    var navigation = (touch.channel === 'internal' || touch.channel === 'unknown') && last;
+    var duplicate = last && last.channel === touch.channel && last.campaign_id === touch.campaign_id && Date.now() - Date.parse(last.observed_at) < 1800000;
+    if (!navigation && !duplicate) history.touches.push(touch);
+    if (history.touches.length > 12) {
+      history.touches = [history.touches[0]].concat(history.touches.slice(-11)); history.truncated = true;
+    }
+    try { localStorage.setItem(marketingStorageKey, JSON.stringify(history)); } catch (_) {}
+    return {analytics_consent: true, attribution: history};
+  }
+  // Capture the landing touch before somebody navigates to the page where they open chat.
+  marketingPayload();
+  // END consented campaign journey
   // Restore prior session so a page refresh / re-open rehydrates the chat
   // history instead of showing a blank panel. Keyed by widget api so two
   // widgets on one domain don't stomp on each other.
@@ -627,7 +697,7 @@
     };
 
     send.onclick = function () {
-      var payload = { session_id: sessionId };
+      var payload = Object.assign({ session_id: sessionId, page_url: location.href }, marketingPayload());
       var any = false;
       Object.keys(inputs).forEach(function (k) {
         var v = inputs[k].value.trim();
@@ -709,12 +779,13 @@
     fetch(API + '/page-view', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         visitor_cookie: getVisitorCookie(),
+        session_id: sessionId,
         url: location.href,
         title: document.title,
         referrer: document.referrer || null,
-      }),
+      }, marketingPayload())),
     }).catch(function () {});
   }
 
@@ -1314,12 +1385,12 @@
     fetch(API + '/init', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+      body: JSON.stringify(Object.assign({
         session_id: sessionId || null,
         visitor_cookie: getVisitorCookie(),
         page_url: location.href,
         page_title: document.title,
-      }),
+      }, marketingPayload())),
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -1645,7 +1716,7 @@
     fetch(API + '/message', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session_id: sessionId, message: msg, lang: lastUserLang }),
+      body: JSON.stringify(Object.assign({ session_id: sessionId, message: msg, lang: lastUserLang, page_url: location.href }, marketingPayload())),
     })
       .then(function (r) { if (!r.ok) throw new Error('message failed'); return r.json(); })
       .then(function (data) {
