@@ -54,6 +54,16 @@
   // BEGIN confirmed-lead analytics
   var reportedLeadReceipts = {};
   function reportConfirmedLead(data) {
+    // Academy's advertising choice is independent of the Google consent gate below.
+    // The adapter owns consent and receipt deduplication; forward no visitor fields.
+    var receipt = data && data.lead_receipt;
+    if (['hexa-academy.co.uk', 'hexa-academy.lv'].indexOf(location.hostname) !== -1
+        && typeof receipt === 'string' && /^[a-f0-9]{64}$/.test(receipt)) {
+      try {
+        var ads = window.academyOpenAiAds;
+        if (ads && typeof ads.lead === 'function') ads.lead(receipt, 'chat');
+      } catch (_) { /* Advertising failures must not interrupt the existing receipt flow. */ }
+    }
     reportWidgetAnalytics('generate_lead', data);
   }
   function reportWidgetAnalytics(event, data) {
