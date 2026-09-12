@@ -105,6 +105,8 @@ class WidgetSessionMemoryTest extends TestCase
                 $t->string('visitor_ip', 64)->nullable();
                 $t->string('visitor_user_agent')->nullable();
                 $t->text('page_url')->nullable();
+                $t->string('entry_source_channel', 20)->nullable();
+                $t->string('entry_source_site', 40)->nullable();
                 $t->string('channel', 32)->nullable();
                 $t->boolean('rating_requested')->default(false);
                 $t->integer('rating')->nullable();
@@ -175,7 +177,7 @@ class WidgetSessionMemoryTest extends TestCase
     {
         [$orgId, $key] = $this->makeWidget();
 
-        $first = $this->postJson("/api/v1/widget/{$key}/init", []);
+        $first = $this->postJson("/api/v1/widget/{$key}/init", ['page_url'=>'https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social']);
         $first->assertOk();
         $sessionId = $first->json('session_id');
         $this->assertNotEmpty($sessionId);
@@ -189,7 +191,10 @@ class WidgetSessionMemoryTest extends TestCase
         $conv->save();
 
         // The visitor closes the panel and reopens it — init runs again.
-        $this->postJson("/api/v1/widget/{$key}/init", ['session_id' => $sessionId])->assertOk();
+        $this->postJson("/api/v1/widget/{$key}/init", ['session_id' => $sessionId, 'page_url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc'])->assertOk();
+        $entry = \Illuminate\Support\Facades\DB::table('chat_conversations')->where('session_id', $sessionId)->first();
+        $this->assertSame('meta', $entry->entry_source_channel);
+        $this->assertSame('fds-lv', $entry->entry_source_site);
 
         $after = AiConversation::withoutGlobalScopes()->where('session_id', $sessionId)->firstOrFail();
 

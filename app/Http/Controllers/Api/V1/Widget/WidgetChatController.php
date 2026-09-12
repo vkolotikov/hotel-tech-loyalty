@@ -604,6 +604,7 @@ class WidgetChatController extends Controller
                 'channel'            => 'widget',
             ]);
             if ($isNewConv) {
+                \App\Services\BusinessOutcomeReport::captureEntry($conv, $pageUrl ?? '');
                 $conv->status          = 'active';
                 $conv->last_message_at = now();
             }
@@ -698,6 +699,7 @@ class WidgetChatController extends Controller
                 'last_message_at' => now(),
                 'page_url'        => $request->input('page_url') ?: $request->header('Referer'),
             ]);
+            \App\Services\BusinessOutcomeReport::captureEntry($conv, $conv->page_url ?? '');
         }
 
         // Re-stamp brand + visitor so the conversation always surfaces in the

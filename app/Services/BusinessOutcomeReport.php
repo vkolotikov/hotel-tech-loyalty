@@ -26,15 +26,16 @@ class BusinessOutcomeReport
             ->where('c.organization_id', $organization)->where('m.organization_id', $organization)
             ->where('m.sender_type', 'visitor')->where('m.created_at', '>=', $from)->where('m.created_at', '<=', $now)
             ->where(fn ($query) => $query->whereNull('c.channel')->orWhereIn('c.channel', ['web', 'widget']))
-            ->select(['m.id', 'm.conversation_id', 'm.created_at', 'c.page_url', 'c.inquiry_id'])
+            ->select(['m.id', 'm.conversation_id', 'm.created_at', 'c.page_url', 'c.inquiry_id', 'c.entry_source_channel', 'c.entry_source_site'])
             ->orderBy('m.id')->limit(20001)->get();
         $truncated = $messages->count() > 20000;
         $rows = [];
         $conversations = [];
         $inquiries = [];
-        $append = function ($id, $at, $kind, $site) use (&$rows) {
+        $entries = [];
+        $append = function ($id, $at, $kind, $site, $source = 'unknown') use (&$rows) {
             $rows[] = ['id' => $id, 'occurred_at' => CarbonImmutable::parse($at, 'UTC')->toIso8601String(),
-                'kind' => $kind, 'site' => $site, 'product' => 'chat', 'amount' => null, 'currency' => null];
+                'kind' => $kind, 'site' => $site, 'product' => 'chat', 'amount' => null, 'currency' => null, 'source_channel' => $source];
         };
         foreach ($messages->take(20000) as $message) {
             $host = preg_replace('/^www\./', '', strtolower(parse_url($message->page_url ?? '', PHP_URL_HOST) ?? ''));
@@ -46,6 +47,8 @@ class BusinessOutcomeReport
             $conversations[$message->conversation_id] ??= $site;
             if ($message->inquiry_id) {
                 $inquiries[$message->inquiry_id] ??= $site;
+                $entries[$message->inquiry_id][] = ['site' => $site, 'at' => $message->created_at,
+                    'source' => $message->entry_source_site === $site ? ($message->entry_source_channel ?? 'unknown') : 'unknown'];
             }
         }
         // Count a conversation only on its first visitor message, never an auto greeting.
@@ -61,7 +64,9 @@ class BusinessOutcomeReport
         foreach (DB::table('inquiries')->where('organization_id', $organization)->whereIn('id', array_keys($inquiries))
             ->where('created_at', '>=', $from)->where('created_at', '<=', $now)
             ->whereNull('external_source')->get(['id', 'created_at']) as $inquiry) {
-            $append('chat-lead-'.$inquiry->id, $inquiry->created_at, 'chat_lead', $inquiries[$inquiry->id]);
+            $candidates = collect($entries[$inquiry->id] ?? [])->where('site', $inquiries[$inquiry->id])->filter(fn ($e) => $e['at'] <= $inquiry->created_at)
+                ->pluck('source')->filter(fn ($s) => $s !== 'unknown')->unique();
+            $append('chat-lead-'.$inquiry->id, $inquiry->created_at, 'chat_lead', $inquiries[$inquiry->id], $candidates->count() === 1 ? $candidates->first() : 'unknown');
         }
         usort($rows, fn ($a, $b) => strcmp($b['occurred_at'], $a['occurred_at']));
 
@@ -70,6 +75,33 @@ class BusinessOutcomeReport
             'limits' => ['Owned-host web conversations only. Visitor messages exclude AI and staff replies.',
                 'Enquiries require a saved CRM inquiry; messages alone are interactions.',
                 'Builder imports are excluded; enquiry counts are records, not unique customers.',
-                'No private messages or inferred advertising attribution are exported.']];
+                'Only the channel enum captured when a conversation starts is exported; old conversations remain unknown. No private messages, URLs or click identifiers.']];
+    }
+
+    public static function captureEntry(\App\Models\ChatConversation $conversation, string $url): void
+    {
+        // page_url is refreshed on resume. Never use that mutable field to reconstruct an old source.
+        if ($conversation->exists) return;
+        $host = preg_replace('/^www\./', '', strtolower(parse_url($url, PHP_URL_HOST) ?? ''));
+        $conversation->entry_source_site = self::HOSTS[$host] ?? null;
+        $conversation->entry_source_channel = $conversation->entry_source_site ? self::entrySource($url) : 'unknown';
+    }
+
+    private static function entrySource(string $url): string
+    {
+        parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $params);
+        $source = is_string($params['utm_source'] ?? null) ? strtolower($params['utm_source']) : '';
+        $medium = is_string($params['utm_medium'] ?? null) ? strtolower($params['utm_medium']) : '';
+        $paid = in_array($medium, ['cpc', 'ppc', 'paid', 'paid_social', 'paidsocial', 'paid_search', 'display', 'cpm'], true);
+        if (isset($params['gclid']) || isset($params['wbraid']) || isset($params['gbraid'])) return 'google';
+        if ($paid && in_array($source, ['google', 'googleads', 'adwords'], true)) return 'google';
+        if ($paid && in_array($source, ['facebook', 'fb', 'instagram', 'ig', 'meta'], true)) return 'meta';
+        if ($paid && in_array($source, ['chatgpt', 'openai', 'chatgpt.com'], true)) return 'chatgpt';
+        if ($medium === 'email') return 'email';
+        if ($medium === 'organic') return 'organic';
+        if (! $paid && in_array($source, ['facebook', 'fb', 'instagram', 'ig', 'meta', 'linkedin', 'tiktok'], true)) return 'social';
+        // A Facebook click ID is shared by paid and organic clicks; it cannot prove ad spend.
+        if (isset($params['fbclid'])) return 'social';
+        return 'unknown';
     }
 }

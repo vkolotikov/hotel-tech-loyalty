@@ -16,6 +16,7 @@ class BusinessOutcomeReportTest extends TestCase
         $this->travelTo(\Carbon\Carbon::parse('2026-09-11 12:00:00', 'UTC'));
         Schema::create('chat_conversations', function (Blueprint $t) {
             $t->id(); $t->integer('organization_id'); $t->string('page_url'); $t->integer('inquiry_id')->nullable(); $t->string('channel')->nullable();
+            $t->string('entry_source_channel')->nullable(); $t->string('entry_source_site')->nullable();
         });
         Schema::create('chat_messages', function (Blueprint $t) {
             $t->id(); $t->integer('organization_id'); $t->integer('conversation_id'); $t->string('sender_type'); $t->timestamp('created_at');
@@ -58,6 +59,30 @@ class BusinessOutcomeReportTest extends TestCase
         $this->assertCount(1,$p['rows']);
         $this->assertSame('chat_message',$p['rows'][0]['kind']);
         $this->assertSame('academy-lv',$p['rows'][0]['site']);
+    }
+
+    public function test_entry_campaign_is_sanitized_and_later_or_conflicting_sources_are_not_used(): void
+    {
+        DB::table('inquiries')->insert(['id'=>1, 'organization_id'=>1, 'created_at'=>'2026-09-11 10:01:00']);
+        $conversation = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&email=private@example.test');
+        $conversation->exists = true;
+        BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/?utm_source=google&utm_medium=cpc');
+        $this->assertSame('meta', $conversation->entry_source_channel);
+        DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc','inquiry_id'=>1,'channel'=>'widget',
+            'entry_source_channel'=>$conversation->entry_source_channel,'entry_source_site'=>$conversation->entry_source_site]);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+        $p = app(BusinessOutcomeReport::class)->build(1);
+        $this->assertSame('meta', collect($p['rows'])->firstWhere('kind','chat_lead')['source_channel']);
+        $this->assertStringNotContainsString('private@example.test', json_encode($p));
+        DB::table('chat_messages')->update(['created_at'=>'2026-09-11 10:02:00']);
+        $this->assertSame('unknown', collect(app(BusinessOutcomeReport::class)->build(1)['rows'])->firstWhere('kind','chat_lead')['source_channel']);
+        DB::table('chat_messages')->update(['created_at'=>'2026-09-11 10:00:00']);
+        DB::table('chat_conversations')->update(['entry_source_channel'=>null]);
+        $this->assertSame('unknown', collect(app(BusinessOutcomeReport::class)->build(1)['rows'])->firstWhere('kind','chat_lead')['source_channel']);
+        $other = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($other, 'https://fdscards.lv/?fbclid=secret');
+        $this->assertSame('social', $other->entry_source_channel);
     }
 
     public function test_report_requires_its_own_key_and_binds_the_organization_on_server(): void
