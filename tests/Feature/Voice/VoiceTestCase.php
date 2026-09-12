@@ -100,6 +100,27 @@ abstract class VoiceTestCase extends TestCase
             $t->timestamps();
         });
 
+        // CustomerBookingAccess::appendOnce() records each note here and reads
+        // it back to make a retried request_id idempotent.
+        if (! Schema::hasTable('audit_logs')) {
+            Schema::create('audit_logs', function ($t) {
+                $t->id();
+                $t->unsignedBigInteger('organization_id')->nullable();
+                $t->unsignedBigInteger('user_id')->nullable();
+                $t->string('causer_type')->nullable();
+                $t->unsignedBigInteger('causer_id')->nullable();
+                $t->string('action')->nullable();
+                $t->string('subject_type')->nullable();
+                $t->unsignedBigInteger('subject_id')->nullable();
+                $t->text('description')->nullable();
+                $t->text('old_values')->nullable();
+                $t->text('new_values')->nullable();
+                $t->string('ip_address')->nullable();
+                $t->string('user_agent')->nullable();
+                $t->timestamps();
+            });
+        }
+
         Schema::dropIfExists('service_bookings');
         Schema::create('service_bookings', function ($t) {
             $t->id();
