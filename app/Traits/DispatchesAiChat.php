@@ -399,4 +399,48 @@ trait DispatchesAiChat
 
         throw new \RuntimeException("AI call failed after {$maxAttempts} attempts [{$label}]: {$lastError}");
     }
+
+    /**
+     * Tool-calling variant of callProvider(). Returns the assistant's message
+     * rather than a string, because a turn may be a tool request instead of an
+     * answer. Reuses assertModelAllowed() and trackUsage() so a voice turn is
+     * subject to the same plan entitlement and spend recording as chat; a
+     * separate HTTP client here would silently bypass both.
+     *
+     * OpenAI only. Callers must refuse other providers rather than degrade.
+     *
+     * @return array{content:?string, tool_calls:array<int, array{id:string, name:string, arguments:array}>}
+     */
+    protected function callProviderWithTools(string $systemPrompt, array $messages, array $tools,
+        string $model, int $maxTokens, string $feature = 'voice_turn'): array
+    {
+        $this->assertModelAllowed($model);
+
+        $response = Http::withToken((string) config('openai.api_key'))
+            ->timeout((int) config('voice.turn_budget_seconds', 6))
+            ->post('https://api.openai.com/v1/chat/completions', [
+                'model' => $model,
+                'max_tokens' => $maxTokens,
+                'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages),
+                'tools' => $tools,
+                'tool_choice' => 'auto',
+            ])->throw()->json();
+
+        $this->trackUsage($model, $feature,
+            (int) data_get($response, 'usage.prompt_tokens', 0),
+            (int) data_get($response, 'usage.completion_tokens', 0));
+
+        $message = data_get($response, 'choices.0.message', []);
+
+        return [
+            'content' => $message['content'] ?? null,
+            'tool_calls' => array_map(fn ($call) => [
+                'id' => $call['id'],
+                'name' => $call['function']['name'],
+                // Malformed arguments are a model error, not a crash: an empty
+                // array lets validation produce a speakable complaint.
+                'arguments' => json_decode($call['function']['arguments'] ?? '{}', true) ?: [],
+            ], $message['tool_calls'] ?? []),
+        ];
+    }
 }

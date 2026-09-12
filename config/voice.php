@@ -16,4 +16,13 @@ return [
 
     // A write proposal must be confirmed within this window.
     'proposal_ttl_seconds' => 120,
+
+    // The gateway's own model settings. Voice answers are short, so the token
+    // ceiling is low; the turn budget exists because the Alexa adapter has
+    // roughly eight seconds for an entire turn.
+    'model' => env('VOICE_MODEL', 'gpt-4o'),
+    'provider' => env('VOICE_PROVIDER', 'openai'),
+    'max_tokens' => 400,
+    'max_tool_calls' => 4,
+    'turn_budget_seconds' => 6,
 ];
