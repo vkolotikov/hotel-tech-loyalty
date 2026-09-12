@@ -33,4 +33,27 @@ abstract class VoiceTool extends HexaTechTool
     {
         return new SpeakableRenderer((string) ($staff->language ?: 'en'));
     }
+
+    /**
+     * listBookings() returns a page, never a total. Report what was actually
+     * counted and whether more exist, so a page is never spoken as a total.
+     *
+     * @return array{count:int, at_least:bool}
+     */
+    protected function countBookings(array $result): array
+    {
+        return [
+            'count' => count($result['bookings']),
+            'at_least' => ($result['next_page'] ?? null) !== null || ($result['results_truncated'] ?? false),
+        ];
+    }
+
+    /** "at least fifty appointments" when the page was full, else "one appointment". */
+    protected function spokenBookingCount(array $counted, SpeakableRenderer $renderer,
+        string $singular, string $plural): string
+    {
+        $phrase = $renderer->countPhrase($counted['count'], $singular, $plural);
+
+        return $counted['at_least'] ? 'at least '.$phrase : $phrase;
+    }
 }
