@@ -279,6 +279,23 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // Throttle is generous on read (the iframe page hits config) but
     // strict on submit to keep spam in check. embed_key is the only
     // gate — admins regenerate it from the editor when leaked.
+    // Alexa skill endpoint. No HTTP authentication by design: every request is
+    // proven to come from Alexa by its signature, and the Echo is resolved to a
+    // paired staff member inside the controller. See docs/voice-assistant.md.
+    Route::post('voice/alexa', \App\Http\Controllers\Voice\AlexaSkillController::class)
+        ->middleware('throttle:120,1,voice-alexa');
+
+    // A person's own Echo links, beside plugin-connections and like it outside
+    // check.subscription, so an Echo can always be unlinked.
+    Route::prefix('auth/voice-alexa')
+        ->middleware(['saas.auth', 'auth:sanctum', 'tenant', 'admin', 'throttle:60,1,voice-alexa-links'])
+        ->group(function () {
+            Route::get('links', [\App\Http\Controllers\Voice\VoiceAlexaLinkController::class, 'index']);
+            Route::post('pairing-code', [\App\Http\Controllers\Voice\VoiceAlexaLinkController::class, 'pairingCode']);
+            Route::patch('links/{link}', [\App\Http\Controllers\Voice\VoiceAlexaLinkController::class, 'update'])->whereNumber('link');
+            Route::delete('links/{link}', [\App\Http\Controllers\Voice\VoiceAlexaLinkController::class, 'destroy'])->whereNumber('link');
+        });
+
     Route::prefix('public/lead-forms')->middleware('throttle:200,1')->group(function () {
         Route::get('{embedKey}',         [LeadFormPublicController::class, 'show']);
         Route::post('{embedKey}/submit', [LeadFormPublicController::class, 'submit'])->middleware('throttle:5,1,leadform-submit');
