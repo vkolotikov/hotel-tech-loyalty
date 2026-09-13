@@ -54,7 +54,9 @@ class AlexaSkillController extends Controller
             // that 400 is all it ever shows. The reason and the claimed skill id
             // (neither is secret) tell a wrong VOICE_ALEXA_SKILL_IDS apart from an
             // untrusted certificate chain or a forged request.
-            \Illuminate\Support\Facades\Log::notice('Alexa skill request rejected', [
+            // Warning, not notice: deployments commonly log at warning or error,
+            // and a filtered diagnostic is no diagnostic at all.
+            \Illuminate\Support\Facades\Log::warning('Alexa skill request rejected', [
                 'reason' => $rejected->getMessage(),
                 'skill_id' => data_get(json_decode($request->getContent(), true), 'context.System.application.applicationId'),
                 'certificate_url' => $request->header('SignatureCertChainUrl'),

@@ -264,7 +264,9 @@ class AlexaSkillEndpointTest extends VoiceTestCase
             'request' => ['type' => 'LaunchRequest']]);
         $this->call('POST', self::PATH, [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertStatus(400);
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('notice')->once()->withArgs(
+        // Warning, not notice: deployments commonly run LOG_LEVEL=error or
+        // warning, and a filtered diagnostic is no diagnostic at all.
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('warning')->once()->withArgs(
             fn (string $message, array $context = []) => $message === 'Alexa skill request rejected'
                 && str_contains($context['reason'] ?? '', 'not an Alexa URL')
                 && ($context['skill_id'] ?? null) === 'amzn1.ask.skill.typo');
