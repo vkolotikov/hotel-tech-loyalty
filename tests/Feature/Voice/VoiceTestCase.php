@@ -121,6 +121,20 @@ abstract class VoiceTestCase extends TestCase
             });
         }
 
+        // Echo accounts paired to staff members (phase 3). Only a hash of the
+        // Amazon account id is stored; one row per Amazon account.
+        Schema::create('voice_alexa_links', function ($t) {
+            $t->id();
+            $t->string('alexa_user_hash', 64)->unique();
+            $t->unsignedBigInteger('user_id')->index();
+            $t->unsignedBigInteger('organization_id')->index();
+            $t->boolean('can_write')->default(false);
+            $t->timestamp('linked_at')->nullable();
+            $t->timestamp('last_used_at')->nullable();
+            $t->timestamp('revoked_at')->nullable();
+            $t->timestamps();
+        });
+
         Schema::dropIfExists('service_bookings');
         Schema::create('service_bookings', function ($t) {
             $t->id();
