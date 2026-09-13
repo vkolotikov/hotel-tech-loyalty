@@ -9,6 +9,27 @@ use Tests\TestCase;
 
 class WidgetAttributionTest extends TestCase
 {
+    public function test_ad_identity_is_exact_and_survives_the_frozen_enquiry_export(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-09-13 12:00:00', 'UTC'));
+        $conversation = new ChatConversation;
+        $conversation->entry_source_site = 'fds-lv';
+        $meta = $this->touch('meta', '100', '2026-09-12T09:00:00Z') + ['ad_id'=>'200','ad_group_id'=>'300'];
+        $second = array_replace($meta,['ad_id'=>'201']);
+        $organic = $this->touch('organic', 'organic', '2026-09-13T09:00:00Z') + ['ad_id'=>'200'];
+        WidgetAttribution::capture($conversation,$this->request([$meta,$second,$organic]));
+        $conversation->inquiry_id = 100;
+        WidgetAttribution::capture($conversation,$this->request([array_replace($meta,['ad_id'=>'202'])]));
+        $export = WidgetAttribution::exported($conversation->marketing_attribution,'fds-lv','2026-09-13T12:00:00Z');
+        $this->assertCount(3,$export['touches']);
+        $this->assertSame('200',$export['touches'][0]['ad_id']);
+        $this->assertSame('201',$export['touches'][1]['ad_id']);
+        $this->assertArrayNotHasKey('ad_id',$export['touches'][2]);
+        $this->assertSame('300',$export['touches'][0]['ad_group_id']);
+        $this->assertNull(WidgetAttribution::adId('qr_card_10eur','chatgpt'));
+        $this->assertNull(WidgetAttribution::adId('private@example.test','meta'));
+    }
+
     private function request(array $touches, bool $consent = true, string $host = 'fdscards.lv'): Request
     {
         return Request::create('/', 'POST', ['analytics_consent' => $consent, 'page_url' => 'https://'.$host.'/?email=private@example.test',

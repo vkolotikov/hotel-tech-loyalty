@@ -147,7 +147,19 @@
     }
     var campaign = q.get('utm_id') || q.get('campaign_id');
     if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(campaign || '')) campaign = null;
-    return {channel: channel, campaign_id: campaign, observed_at: new Date().toISOString(), evidence: evidence};
+    return Object.assign({channel: channel, campaign_id: campaign, observed_at: new Date().toISOString(), evidence: evidence},
+      marketingAdFields({channel:channel,ad_id:q.get('ad_id') || q.get('utm_content'),ad_group_id:q.get('ad_group_id') || (channel !== 'google' ? q.get('utm_term') : null)}));
+  }
+  function marketingAdId(value, channel, group) {
+    if (typeof value !== 'string' || value.length > 100 || ['google','meta','chatgpt'].indexOf(channel) === -1) return null;
+    if (/^[0-9]{1,30}$/.test(value) || /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i.test(value)) return value;
+    return channel === 'chatgpt' && (group ? /^adgrp_[a-f0-9]{32}$/i : /^ad_[a-f0-9]{32}$/i).test(value) ? value : null;
+  }
+  function marketingAdFields(touch) {
+    var fields = {}, ad = marketingAdId(touch.ad_id,touch.channel), group = marketingAdId(touch.ad_group_id,touch.channel,true);
+    if (ad !== null) fields.ad_id = ad;
+    if (group !== null) fields.ad_group_id = group;
+    return fields;
   }
   function marketingPayload() {
     if (!marketingAllowed()) {
@@ -164,11 +176,11 @@
       return t && ['google', 'meta', 'chatgpt', 'organic', 'social', 'direct', 'referral', 'email', 'other', 'internal', 'unknown'].indexOf(t.channel) !== -1
         && ['utm', 'google_click', 'referrer', 'handoff'].indexOf(t.evidence) !== -1
         && Date.parse(t.observed_at) >= oldest && Date.parse(t.observed_at) <= Date.now();
-    }).map(function (t) { return {channel: t.channel, campaign_id: /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(t.campaign_id || '') ? t.campaign_id : null,
-      observed_at: new Date(t.observed_at).toISOString(), evidence: t.evidence}; })};
+    }).map(function (t) { return Object.assign({channel: t.channel, campaign_id: /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/.test(t.campaign_id || '') ? t.campaign_id : null,
+      observed_at: new Date(t.observed_at).toISOString(), evidence: t.evidence},marketingAdFields(t)); })};
     var touch = currentMarketingTouch(), last = history.touches[history.touches.length - 1];
     var navigation = (touch.channel === 'internal' || touch.channel === 'unknown') && last;
-    var duplicate = last && last.channel === touch.channel && last.campaign_id === touch.campaign_id && Date.now() - Date.parse(last.observed_at) < 1800000;
+    var duplicate = last && last.channel === touch.channel && last.campaign_id === touch.campaign_id && last.ad_id === touch.ad_id && last.ad_group_id === touch.ad_group_id && Date.now() - Date.parse(last.observed_at) < 1800000;
     if (!navigation && !duplicate) history.touches.push(touch);
     if (history.touches.length > 12) {
       history.touches = [history.touches[0]].concat(history.touches.slice(-11)); history.truncated = true;

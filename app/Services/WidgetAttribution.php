@@ -12,6 +12,13 @@ class WidgetAttribution
     public const CHANNELS = ['google', 'meta', 'chatgpt', 'organic', 'social', 'direct', 'referral', 'email', 'other', 'internal', 'unknown'];
     public const EVIDENCE = ['utm', 'google_click', 'referrer', 'handoff'];
 
+    public static function adId(mixed $value, string $channel, bool $group = false): ?string
+    {
+        if (! is_string($value) || strlen($value) > 100 || ! in_array($channel, ['google', 'meta', 'chatgpt'], true)) return null;
+        if (preg_match('/^[0-9]{1,30}$/D', $value) || preg_match('/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/iD', $value)) return $value;
+        return $channel === 'chatgpt' && preg_match($group ? '/^adgrp_[a-f0-9]{32}$/iD' : '/^ad_[a-f0-9]{32}$/iD', $value) ? $value : null;
+    }
+
     public static function capture(ChatConversation $conversation, Request $request): void
     {
         if (! $request->exists('analytics_consent')) return; // Old clients cannot erase an existing snapshot.
@@ -55,7 +62,9 @@ class WidgetAttribution
             $campaign = $row['campaign_id'] ?? null;
             if (! is_string($campaign) || ! preg_match('/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$/D', $campaign)) $campaign = null;
             $touch = ['channel' => $row['channel'], 'campaign_id' => $campaign,
-                'observed_at' => $at->toIso8601String(), 'evidence' => $row['evidence']];
+                'observed_at' => $at->toIso8601String(), 'evidence' => $row['evidence']]
+                + array_filter(['ad_id' => self::adId($row['ad_id'] ?? null, $row['channel']),
+                    'ad_group_id' => self::adId($row['ad_group_id'] ?? null, $row['channel'], true)], fn ($id) => $id !== null);
             $touches[json_encode($touch)] = $touch;
         }
         $touches = array_values($touches);

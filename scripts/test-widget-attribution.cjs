@@ -17,16 +17,22 @@ function fixture(url, referrer, allowed = true) {
 }
 fixture('https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&utm_id=12345&email=private@example.test', '', false);
 assert.equal(store.size, 0, 'Denied analytics must not write journey storage.');
-let landing = fixture('https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&utm_id=12345&email=private@example.test', 'https://facebook.com/');
+let landing = fixture('https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&utm_id=12345&utm_content=200&utm_term=300&email=private@example.test', 'https://facebook.com/');
 assert.equal(landing.payload().attribution.touches.length, 1);
 assert.equal(landing.payload().attribution.touches[0].campaign_id, '12345');
+assert.equal(landing.payload().attribution.touches[0].ad_id, '200');
+assert.equal(landing.payload().attribution.touches[0].ad_group_id, '300');
+let secondAd = fixture('https://fdscards.lv/?utm_source=facebook&utm_medium=paid_social&utm_id=12345&utm_content=201&utm_term=300', '');
+assert.deepEqual(secondAd.payload().attribution.touches.map(t=>t.ad_id), ['200','201']);
 now += 60000;
 let page = fixture('https://fdscards.lv/contact', 'https://fdscards.lv/');
 assert.equal(page.payload().attribution.touches[0].channel, 'meta', 'Opening chat later must retain the landing campaign.');
 now += 86400000;
 let returning = fixture('https://fdscards.lv/?utm_source=google&utm_medium=cpc&campaign_id=45678&gclid=private-click-id', '');
-assert.deepEqual(returning.payload().attribution.touches.map(t => t.channel), ['meta', 'google']);
+assert.deepEqual(returning.payload().attribution.touches.map(t => t.channel), ['meta', 'meta', 'google']);
 assert.equal(JSON.stringify(returning.payload()).includes('private'), false);
+let numericKeyword = fixture('https://fdscards.lv/?utm_source=google&utm_medium=cpc&utm_id=45678&utm_term=300&ad_group_id=400', '');
+assert.equal(numericKeyword.payload().attribution.touches.at(-1).ad_group_id,'400');
 let revoked = fixture('https://fdscards.lv/contact', '', false);
 assert.equal(revoked.payload().analytics_consent, false);
 assert.equal(store.size, 0);
