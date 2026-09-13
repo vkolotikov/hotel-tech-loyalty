@@ -1,5 +1,6 @@
 import { ArrowLeft } from 'lucide-react'
 import { Link, Navigate } from 'react-router-dom'
+import { AlexaLinksPanel } from '../components/AlexaLinksPanel'
 import { ChatGptConnectionsPanel } from '../components/ChatGptConnectionsPanel'
 import { useAuthStore } from '../stores/authStore'
 
@@ -23,6 +24,7 @@ export function AccountConnections() {
       </header>
       <div className="mx-auto max-w-2xl px-4 py-6 sm:px-0 sm:py-8">
         <ChatGptConnectionsPanel />
+        <AlexaLinksPanel />
       </div>
     </main>
   )
