@@ -16,13 +16,21 @@ class VoiceToolCatalogue
     /** @var array<string, class-string<VoiceTool>>|null */
     private ?array $byName = null;
 
-    /** @return array<int, array{type:string, function:array}> */
-    public function definitions(): array
+    /**
+     * @param  bool  $includeWrites  false offers only tools whose own
+     *   readOnlyHint annotation is true, for devices that may not write
+     * @return array<int, array{type:string, function:array}>
+     */
+    public function definitions(bool $includeWrites = true): array
     {
         $definitions = [];
 
         foreach ($this->byName() as $name => $class) {
             $tool = (new $class)->toArray();
+            if (! $includeWrites && ! $this->readOnlyHint($tool)) {
+                continue;
+            }
+
             $definitions[] = ['type' => 'function', 'function' => [
                 'name' => $name,
                 'description' => $tool['description'],
@@ -31,6 +39,19 @@ class VoiceToolCatalogue
         }
 
         return $definitions;
+    }
+
+    /** An unknown tool counts as a write, so the safe answer is the default. */
+    public function isReadOnly(string $name): bool
+    {
+        $class = $this->classFor($name);
+
+        return $class !== null && $this->readOnlyHint((new $class)->toArray());
+    }
+
+    private function readOnlyHint(array $tool): bool
+    {
+        return ($tool['annotations']['readOnlyHint'] ?? false) === true;
     }
 
     /** @return class-string<VoiceTool>|null */

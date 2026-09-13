@@ -23,7 +23,12 @@ class VoiceGateway
         private VoiceCapability $capability,
     ) {}
 
-    public function turn(User $staff, string $said, string $sessionId): array
+    /**
+     * @param  bool  $allowWrites  false for a device that may only read, such as
+     *   an Echo whose owner has not allowed notes. Write tools are then neither
+     *   offered to the model nor run if it names one anyway.
+     */
+    public function turn(User $staff, string $said, string $sessionId, bool $allowWrites = true): array
     {
         // Gate before the model call, so a denied organization costs nothing.
         $this->capability->assertEnabled($staff);
@@ -34,7 +39,7 @@ class VoiceGateway
 
         $messages = [...$this->session->history((int) $staff->id, $sessionId),
             ['role' => 'user', 'content' => $said]];
-        $tools = $this->catalogue->definitions();
+        $tools = $this->catalogue->definitions($allowWrites);
         $used = [];
         $spoken = null;
 
@@ -54,7 +59,7 @@ class VoiceGateway
                     $reply['tool_calls'])];
 
             foreach ($reply['tool_calls'] as $call) {
-                $result = $this->runner->run($call['name'], $call['arguments']);
+                $result = $this->runner->run($call['name'], $call['arguments'], $allowWrites);
                 $used[] = $call['name'];
                 // A tool failure is returned to the model as content, so it can
                 // say the count is unknown rather than inventing a number.

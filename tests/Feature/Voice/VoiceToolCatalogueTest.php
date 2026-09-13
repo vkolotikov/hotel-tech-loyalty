@@ -57,4 +57,25 @@ class VoiceToolCatalogueTest extends VoiceTestCase
         $denied = $runner->run('voice_lead_count', []);
         $this->assertFalse($denied['ok'], 'The capability gate still applies through the gateway.');
     }
+
+    public function test_a_read_only_catalogue_offers_no_note_tools(): void
+    {
+        $definitions = (new VoiceToolCatalogue)->definitions(includeWrites: false);
+        $names = array_column(array_column($definitions, 'function'), 'name');
+
+        // Filtered on each tool's own readOnlyHint annotation, not a list.
+        $this->assertSame(['voice_daily_brief', 'voice_lead_count', 'voice_next_bookings', 'voice_find_customer'], $names);
+    }
+
+    public function test_the_runner_refuses_a_write_tool_when_writes_are_off(): void
+    {
+        $runner = new \App\Voice\VoiceToolRunner(new VoiceToolCatalogue);
+
+        $refused = $runner->run('voice_propose_note',
+            ['subject_type' => 'booking', 'subject_id' => 'service:1', 'body' => 'Quiet room'], allowWrites: false);
+
+        // Defence in depth: a model can name a tool it was never offered.
+        $this->assertFalse($refused['ok']);
+        $this->assertStringContainsString('turned off', $refused['error']);
+    }
 }

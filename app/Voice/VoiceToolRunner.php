@@ -17,12 +17,18 @@ class VoiceToolRunner
     public function __construct(private VoiceToolCatalogue $catalogue) {}
 
     /** @return array{ok:bool, result:?array, error:?string} */
-    public function run(string $name, array $arguments): array
+    public function run(string $name, array $arguments, bool $allowWrites = true): array
     {
         $class = $this->catalogue->classFor($name);
 
         if ($class === null) {
             return $this->failed('The tool "'.$name.'" is not available.');
+        }
+
+        // A model can name a tool it was never offered, so read-only mode is
+        // enforced here as well as in the catalogue.
+        if (! $allowWrites && ! $this->catalogue->isReadOnly($name)) {
+            return $this->failed('Adding notes is turned off for this device.');
         }
 
         try {

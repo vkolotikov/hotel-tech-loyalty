@@ -84,4 +84,26 @@ class VoiceGatewayTest extends VoiceTestCase
         $this->expectException(\Illuminate\Auth\Access\AuthorizationException::class);
         app(VoiceGateway::class)->turn($this->staff, 'how many leads today', 'session-4');
     }
+
+    public function test_a_read_only_turn_neither_offers_nor_runs_note_tools(): void
+    {
+        config(['openai.api_key' => 'test-key']);
+        $this->fakeModel(
+            $this->toolCall('voice_propose_note',
+                ['subject_type' => 'booking', 'subject_id' => 'service:1', 'body' => 'Quiet room']),
+            $this->finalAnswer('Adding notes is turned off on this device.'));
+
+        $turn = app(VoiceGateway::class)->turn($this->staff, 'note that they want a quiet room', 'session-5',
+            allowWrites: false);
+
+        $this->assertSame(['voice_propose_note'], $turn['tools_used']);
+
+        $recorded = Http::recorded();
+        $offered = array_column(array_column($recorded[0][0]->data()['tools'], 'function'), 'name');
+        $this->assertNotContains('voice_propose_note', $offered);
+        $this->assertNotContains('voice_commit_note', $offered);
+
+        $toolReply = collect($recorded[1][0]->data()['messages'])->firstWhere('role', 'tool');
+        $this->assertStringContainsString('turned off', $toolReply['content']);
+    }
 }
