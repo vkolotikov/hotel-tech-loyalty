@@ -241,3 +241,18 @@ label; no Amazon account identifier is ever rendered.
 Creating the skill in the Amazon developer console, pasting the interaction model, setting the
 HTTPS endpoint, adding beta testers, and saying the words to a real Echo. None of that can be
 done from this repository.
+
+## Deviations recorded during execution
+
+- **Link endpoints moved** from the admin group to `/api/v1/auth/voice-alexa/*`, beside
+  `plugin-connections`. The admin group carries `check.subscription`, and a person must be able
+  to unlink after a subscription lapses, just as they can disconnect ChatGPT.
+- **The panel is English**, not translated into five locales. The Connected apps page it sits on
+  is untranslated, and one translated section on an English page would be worse than consistent.
+- **Issuing a code also requires the plugin identity check**, so a code is never handed out for
+  an organization whose Echo could not then answer.
+- **Endpoint tests travel back to real time.** The shared voice fixtures travel a day before the
+  machine clock that mints the test certificates, which made every signed request "not yet
+  valid".
+- **One ownership test was vacuous** before the routes existed, because a missing route is also
+  a 404. It now proves the same request succeeds on the caller's own link first.

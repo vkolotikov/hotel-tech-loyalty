@@ -45,6 +45,63 @@ A turn stops after `voice.max_tool_calls` model round trips and says so out loud
 silence is indistinguishable from a broken product to someone listening. There is no audio yet —
 phase 2b adds speech-to-text and text-to-speech over this endpoint.
 
+## Alexa (internal pilot)
+
+An Echo is ears and a mouth: Alexa transcribes, `POST /api/v1/voice/alexa` answers through the
+Voice Gateway, and Alexa speaks the reply. Every request is verified as Amazon requires — the
+certificate URL and chain, the `echo-api.amazon.com` subject name, `Signature-256` over the raw
+body, a 150-second timestamp window and the skill id — and fails with 400 if any check fails.
+Every other outcome is answered with speech, because Alexa reads any other response as a broken
+skill.
+
+### Linking an Echo
+
+The pilot links an Echo with a code, not OAuth account linking:
+
+1. In **Connected apps** (`/account/connections`), choose **Link an Echo**. A six-digit code
+   appears. It works once and expires after ten minutes.
+2. Say "Alexa, open Hexa Tech", then "link code" followed by the digits.
+
+The Amazon account is stored only as a SHA-256. Re-linking an Echo moves it to the new person.
+Five wrong codes from one Amazon account pause linking for fifteen minutes. Disabling and
+re-enabling the skill gives the Echo a new Amazon identity, so it has to be linked again.
+
+A new link **reads only**. Its owner can allow notes from Connected apps, and can unlink it at any
+time, including after voice is switched off for the workspace. An Echo speaks and writes as
+whoever linked it, whoever is standing in front of it — which is why notes stay off until
+someone deliberately takes that on.
+
+### Enabling it
+
+- `VOICE_ALEXA_ENABLED=true`.
+- `VOICE_ALEXA_SKILL_IDS` — the skill id from the Amazon developer console. Empty rejects all.
+- `VOICE_ALEXA_CA_BUNDLE` — optional path to trusted roots. Empty uses OpenSSL's default bundle.
+- The organization must be in **both** `VOICE_ORGANIZATION_IDS` and
+  `CHATGPT_PLUGIN_ORGANIZATION_IDS`. Every voice tool runs `CustomerBookingAccess::authorize()`,
+  which requires the plugin allowlist. The endpoint and the pairing-code request both check this
+  up front, so the refusal is spoken rather than failing in the middle of an answer.
+- The subscription is checked by running the shipped `CheckPluginSubscription` middleware
+  unchanged; a lapsed or unverifiable subscription is spoken.
+
+### Amazon developer console (manual)
+
+1. Create a custom skill, locale **English (UK)**, hosting **Provision your own**.
+2. Paste `docs/alexa/interaction-model.en-GB.json` into the JSON editor and build the model.
+3. Set the endpoint to HTTPS `https://<your domain>/api/v1/voice/alexa`, with the certificate
+   option for a trusted certificate authority.
+4. Copy the skill id into `VOICE_ALEXA_SKILL_IDS`.
+5. Leave **Account linking** off for the pilot. Test in the console simulator, then add FDS Cards
+   staff as beta testers — up to 500 people for 90 days, renewable, without public certification.
+
+### Before a public launch
+
+- Replace pairing codes with OAuth account linking. The plugin OAuth stack accepts only the
+  ChatGPT client, rejects confidential clients (Alexa needs a client secret), requires a
+  `resource` parameter Alexa does not send, and issues 30-day refresh tokens where Alexa
+  recommends at least 180 days. The skill already depends on the `AlexaAccountResolver`
+  interface, so OAuth becomes a second implementation rather than a rewrite.
+- As of September 2026 the Alexa+ MCP add-on route remains United States only.
+
 ## How a spoken answer differs from a text one
 
 Responses are written to be read aloud, not parsed:

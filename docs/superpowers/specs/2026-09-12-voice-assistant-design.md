@@ -357,6 +357,22 @@ transcribed text (§5), which is what makes a lower-accuracy locale safe rather 
 
 Phases 1 to 3 are the committed work. Phase 4 is optional and scoped when its gate clears.
 
+### Status, 13 September 2026
+
+Phase 1 (the tool surface) and phase 2a (the Voice Gateway, text in and text out) are built.
+The in-app half of phase 2 is **superseded**: the admin SPA already ships a real-time staff voice
+agent — `AiChat.tsx` over OpenAI Realtime and WebRTC, with `CrmVoiceToolset`'s 30 tools, on
+`main` since March–June 2026. A second push-to-talk UI would duplicate it. In-app voice in
+Russian therefore probably needs a test rather than a build.
+
+Phase 3 serves the channel that agent cannot reach, an Echo. For the internal FDS Cards pilot it
+pairs devices with a portal code instead of OAuth account linking; the reasons are recorded in
+`docs/superpowers/plans/2026-09-13-voice-phase-3-alexa-adapter.md`.
+
+Two tool sets now exist: `CrmVoiceToolset` for the in-app agent, and the voice MCP tools for
+`/mcp/voice`, the gateway and Alexa. Converging them is a separate decision, because the in-app
+agent confirms mutations in a modal that an Echo does not have.
+
 ### Why the Alexa skill is phase 3 and not phase 1
 
 The Alexa adapter is deliberately close behind, not far behind — but it cannot come first,
