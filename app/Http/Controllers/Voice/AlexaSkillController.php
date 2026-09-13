@@ -49,8 +49,17 @@ class AlexaSkillController extends Controller
         try {
             $payload = $this->verifier->verify($request->getContent(),
                 $request->header('SignatureCertChainUrl'), $request->header('Signature-256'));
-        } catch (AlexaVerificationException) {
-            // Amazon requires 400 for a request that cannot be proven genuine.
+        } catch (AlexaVerificationException $rejected) {
+            // Amazon requires 400 for a request that cannot be proven genuine, and
+            // that 400 is all it ever shows. The reason and the claimed skill id
+            // (neither is secret) tell a wrong VOICE_ALEXA_SKILL_IDS apart from an
+            // untrusted certificate chain or a forged request.
+            \Illuminate\Support\Facades\Log::notice('Alexa skill request rejected', [
+                'reason' => $rejected->getMessage(),
+                'skill_id' => data_get(json_decode($request->getContent(), true), 'context.System.application.applicationId'),
+                'certificate_url' => $request->header('SignatureCertChainUrl'),
+            ]);
+
             return response()->json(['error' => 'invalid_alexa_request'], 400);
         }
 

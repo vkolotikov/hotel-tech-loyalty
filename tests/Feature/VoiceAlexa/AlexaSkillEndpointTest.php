@@ -252,4 +252,21 @@ class AlexaSkillEndpointTest extends VoiceTestCase
         $this->assertStringContainsString("isn't available", $this->speech($response));
         $this->assertTrue($response->json('response.shouldEndSession'));
     }
+
+    public function test_a_rejected_request_is_logged_with_its_reason_and_skill_id(): void
+    {
+        // Amazon only ever sees a 400. Without the reason in the log, a wrong
+        // skill id or an untrusted certificate chain cannot be told apart.
+        $this->fake();
+        \Illuminate\Support\Facades\Log::spy();
+
+        $body = json_encode(['context' => ['System' => ['application' => ['applicationId' => 'amzn1.ask.skill.typo']]],
+            'request' => ['type' => 'LaunchRequest']]);
+        $this->call('POST', self::PATH, [], [], [], ['CONTENT_TYPE' => 'application/json'], $body)->assertStatus(400);
+
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('notice')->once()->withArgs(
+            fn (string $message, array $context = []) => $message === 'Alexa skill request rejected'
+                && str_contains($context['reason'] ?? '', 'not an Alexa URL')
+                && ($context['skill_id'] ?? null) === 'amzn1.ask.skill.typo');
+    }
 }
