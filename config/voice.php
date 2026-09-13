@@ -25,4 +25,16 @@ return [
     'max_tokens' => 400,
     'max_tool_calls' => 4,
     'turn_budget_seconds' => 6,
+
+    // Alexa skill adapter (phase 3). Off by default, and an empty skill list
+    // rejects every request. The CA bundle must hold the roots Amazon's
+    // echo-api certificate chains to; when unset, OpenSSL's default is used.
+    'alexa' => [
+        'enabled' => (bool) env('VOICE_ALEXA_ENABLED', false),
+        'skill_ids' => array_values(array_filter(array_map('trim', explode(',', env('VOICE_ALEXA_SKILL_IDS', ''))))),
+        'ca_bundle' => env('VOICE_ALEXA_CA_BUNDLE'),
+        'timestamp_tolerance_seconds' => 150,
+        'certificate_cache_seconds' => 3600,
+        'pairing_ttl_seconds' => 600,
+    ],
 ];
