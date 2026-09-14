@@ -412,19 +412,28 @@ trait DispatchesAiChat
      * @return array{content:?string, tool_calls:array<int, array{id:string, name:string, arguments:array}>}
      */
     protected function callProviderWithTools(string $systemPrompt, array $messages, array $tools,
-        string $model, int $maxTokens, string $feature = 'voice_turn'): array
+        string $model, int $maxTokens, string $feature = 'voice_turn', ?string $reasoningEffort = null): array
     {
         $this->assertModelAllowed($model);
 
+        $params = [
+            'model' => $model,
+            // Accepted by every current chat model; GPT-5 and o-series models
+            // reject the older max_tokens.
+            'max_completion_tokens' => $maxTokens,
+            'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages),
+            'tools' => $tools,
+            'tool_choice' => 'auto',
+        ];
+
+        // Reasoning models only; gpt-4o and gpt-4.1 reject the parameter.
+        if ($reasoningEffort !== null && $reasoningEffort !== '' && preg_match('/^(gpt-5|o1|o3|o4)/i', $model)) {
+            $params['reasoning_effort'] = $reasoningEffort;
+        }
+
         $response = Http::withToken((string) config('openai.api_key'))
             ->timeout((int) config('voice.turn_budget_seconds', 6))
-            ->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $model,
-                'max_tokens' => $maxTokens,
-                'messages' => array_merge([['role' => 'system', 'content' => $systemPrompt]], $messages),
-                'tools' => $tools,
-                'tool_choice' => 'auto',
-            ])->throw()->json();
+            ->post('https://api.openai.com/v1/chat/completions', $params)->throw()->json();
 
         $this->trackUsage($model, $feature,
             (int) data_get($response, 'usage.prompt_tokens', 0),

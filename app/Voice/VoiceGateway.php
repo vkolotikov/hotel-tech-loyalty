@@ -5,6 +5,7 @@ namespace App\Voice;
 use App\Mcp\Servers\HexaTechVoiceServer;
 use App\Models\User;
 use App\Traits\DispatchesAiChat;
+use Carbon\CarbonImmutable;
 use ReflectionClass;
 use RuntimeException;
 
@@ -37,6 +38,7 @@ class VoiceGateway
             throw new RuntimeException('Only the openai provider supports voice tool calling.');
         }
 
+        $system = $this->systemPrompt($staff);
         $messages = [...$this->session->history((int) $staff->id, $sessionId),
             ['role' => 'user', 'content' => $said]];
         $tools = $this->catalogue->definitions($allowWrites);
@@ -44,8 +46,9 @@ class VoiceGateway
         $spoken = null;
 
         for ($step = 0; $step < (int) config('voice.max_tool_calls', 4); $step++) {
-            $reply = $this->callProviderWithTools($this->systemPrompt(), $messages, $tools,
-                (string) config('voice.model'), (int) config('voice.max_tokens', 400));
+            $reply = $this->callProviderWithTools($system, $messages, $tools,
+                (string) config('voice.model'), (int) config('voice.max_tokens', 400),
+                reasoningEffort: config('voice.reasoning_effort'));
 
             if ($reply['tool_calls'] === []) {
                 $spoken = $reply['content'];
@@ -78,10 +81,17 @@ class VoiceGateway
         ];
     }
 
-    /** The server's own instructions are the system prompt; there is no second copy. */
-    private function systemPrompt(): string
+    /**
+     * The server's own instructions are the system prompt; there is no second
+     * copy. Only the date is added: the model has no clock, and "and
+     * yesterday?" needs a today to count back from.
+     */
+    private function systemPrompt(User $staff): string
     {
-        return (new ReflectionClass(HexaTechVoiceServer::class))
-            ->getDefaultProperties()['instructions'] ?? '';
+        $timezone = $staff->organization?->timezone ?: 'UTC';
+        $today = CarbonImmutable::now($timezone);
+
+        return rtrim((new ReflectionClass(HexaTechVoiceServer::class))->getDefaultProperties()['instructions'] ?? '')
+            ."\nToday is {$today->format('l')} {$today->toDateString()} in the organization timezone, {$timezone}.";
     }
 }

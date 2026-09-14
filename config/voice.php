@@ -19,9 +19,15 @@ return [
 
     // The gateway's own model settings. Voice answers are short, so the token
     // ceiling is low; the turn budget exists because the Alexa adapter has
-    // roughly eight seconds for an entire turn.
-    'model' => env('VOICE_MODEL', 'gpt-4o'),
+    // roughly eight seconds for an entire turn. Measured in September 2026,
+    // gpt-5.4 took about a second per call, as gpt-4.1 did, and resolved
+    // follow-ups such as "and yesterday?" to the right date.
+    'model' => env('VOICE_MODEL', 'gpt-5.4'),
     'provider' => env('VOICE_PROVIDER', 'openai'),
+    // Sent to reasoning models only (gpt-5 family, o-series). With tools on
+    // Chat Completions, gpt-5.4 and gpt-5.5 rejected "low" and accepted "none",
+    // which is also the fastest.
+    'reasoning_effort' => env('VOICE_REASONING_EFFORT', 'none'),
     'max_tokens' => 400,
     'max_tool_calls' => 4,
     'turn_budget_seconds' => 6,

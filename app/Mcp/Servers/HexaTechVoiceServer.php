@@ -18,11 +18,13 @@ class HexaTechVoiceServer extends Server
 
     protected string $instructions = <<<'TEXT'
         Answer an authenticated staff member's spoken questions about their HexaTech
-        organization. You are being read aloud, so keep every answer to at most three
-        sentences unless detail was requested.
-        Speak the `spoken_*` fields exactly as returned; they are already worded for
-        speech. Never read a phone number, email address or document number aloud, and
-        never ask for one. Customers are identified by first name and last initial.
+        organization. You are being read aloud, so answer in one short, complete, natural
+        sentence, never a fragment such as "two leads". Use up to three sentences only
+        for a summary of the day or when detail was requested.
+        Use the `spoken_*` fields inside your sentences exactly as returned; they are
+        already worded for speech. Never read a phone number, email address or document
+        number aloud, and never ask for one. Customers are identified by first name and
+        last initial.
         Never state a total the tools did not return: if a tool fails, say the count is
         unknown, never zero.
         Adding a note takes two turns. Call voice_propose_note, read its `read_back`

@@ -85,6 +85,76 @@ class VoiceGatewayTest extends VoiceTestCase
         app(VoiceGateway::class)->turn($this->staff, 'how many leads today', 'session-4');
     }
 
+    public function test_a_long_conversation_never_sends_a_tool_result_without_its_request(): void
+    {
+        // Each question calls two tools, so a fixed message count cuts through the
+        // middle of a question. That is what OpenAI rejected with HTTP 400 on the
+        // fourth question of a live Echo session.
+        config(['openai.api_key' => 'test-key']);
+        $twoTools = ['choices' => [['message' => ['role' => 'assistant', 'content' => null, 'tool_calls' => [
+            ['id' => 'call_a', 'type' => 'function', 'function' => ['name' => 'voice_lead_count', 'arguments' => '{}']],
+            ['id' => 'call_b', 'type' => 'function', 'function' => ['name' => 'voice_next_bookings', 'arguments' => '{}']],
+        ]]]], 'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5]];
+
+        $replies = [];
+        for ($question = 1; $question <= 6; $question++) {
+            $replies[] = $twoTools;
+            $replies[] = $this->finalAnswer("Answer {$question}.");
+        }
+        $this->fakeModel(...$replies);
+
+        for ($question = 1; $question <= 6; $question++) {
+            $this->assertSame("Answer {$question}.",
+                app(VoiceGateway::class)->turn($this->staff, "question {$question}", 'long-session')['spoken']);
+        }
+
+        foreach (Http::recorded() as [$request]) {
+            $messages = $request->data()['messages'];
+            foreach ($messages as $index => $message) {
+                if ($message['role'] !== 'tool') {
+                    continue;
+                }
+                $previous = $index - 1;
+                while ($previous >= 0 && $messages[$previous]['role'] === 'tool') {
+                    $previous--;
+                }
+                $this->assertTrue($previous >= 0 && $messages[$previous]['role'] === 'assistant'
+                    && ! empty($messages[$previous]['tool_calls']), "A tool result at {$index} was sent without its request.");
+            }
+        }
+    }
+
+    public function test_the_model_is_told_todays_date_in_the_organization_timezone(): void
+    {
+        // Without it, "and yesterday?" has nothing to count back from.
+        config(['openai.api_key' => 'test-key']);
+        $this->fakeModel($this->finalAnswer('Fine.'));
+
+        app(VoiceGateway::class)->turn($this->staff, 'and yesterday?', 'dated-session');
+
+        $system = Http::recorded()[0][0]->data()['messages'][0]['content'];
+        $this->assertStringContainsString('2026-09-12', $system);
+        $this->assertStringContainsString('Europe/Riga', $system);
+    }
+
+    public function test_newer_models_get_their_own_token_and_reasoning_settings(): void
+    {
+        config(['openai.api_key' => 'test-key', 'voice.model' => 'gpt-5.4', 'voice.reasoning_effort' => 'none']);
+        $this->fakeModel($this->finalAnswer('Fine.'), $this->finalAnswer('Fine.'));
+
+        app(VoiceGateway::class)->turn($this->staff, 'hello', 'model-a');
+        config(['voice.model' => 'gpt-4.1']);
+        app(VoiceGateway::class)->turn($this->staff, 'hello', 'model-b');
+
+        $first = Http::recorded()[0][0]->data();
+        $second = Http::recorded()[1][0]->data();
+
+        $this->assertSame(['gpt-5.4', 400, 'none'], [$first['model'], $first['max_completion_tokens'], $first['reasoning_effort']]);
+        $this->assertArrayNotHasKey('max_tokens', $first, 'GPT-5 models reject max_tokens.');
+        $this->assertSame('gpt-4.1', $second['model']);
+        $this->assertArrayNotHasKey('reasoning_effort', $second, 'Non-reasoning models reject reasoning_effort.');
+    }
+
     public function test_a_read_only_turn_neither_offers_nor_runs_note_tools(): void
     {
         config(['openai.api_key' => 'test-key']);
