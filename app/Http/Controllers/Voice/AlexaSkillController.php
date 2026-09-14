@@ -9,6 +9,7 @@ use App\Models\VoiceAlexaLink;
 use App\Voice\Alexa\AlexaAccountResolver;
 use App\Voice\Alexa\AlexaPairing;
 use App\Voice\Alexa\AlexaPairingLockedException;
+use App\Voice\Alexa\AlexaQuestionIntents;
 use App\Voice\Alexa\AlexaRequestVerifier;
 use App\Voice\Alexa\AlexaResponse;
 use App\Voice\Alexa\AlexaVerificationException;
@@ -33,6 +34,10 @@ class AlexaSkillController extends Controller
     private const PAIR_REPROMPT = 'Say link code, followed by the six digits from Connected apps.';
 
     private const HELP = 'You can ask how many leads came in today, what is booked next, or to find a customer. What would you like to know?';
+
+    // Only speech that starts with a known opening reaches the model, so say
+    // which openings work rather than repeating the general help.
+    private const FALLBACK = "Sorry, I didn't catch a question. Try starting with how many, what, who or find, for example: how many leads came in today?";
 
     private const REPROMPT = 'What would you like to know?';
 
@@ -106,7 +111,7 @@ class AlexaSkillController extends Controller
     private function handle(array $payload): JsonResponse
     {
         $type = data_get($payload, 'request.type');
-        $intent = data_get($payload, 'request.intent.name');
+        $intent = (string) data_get($payload, 'request.intent.name', '');
         $sessionId = 'alexa:'.data_get($payload, 'session.sessionId', '');
         $link = $this->accounts->resolve($payload);
 
@@ -124,13 +129,18 @@ class AlexaSkillController extends Controller
                 : $this->say('Hexa-Tech is ready. Ask me something like: how many leads came in today?', reprompt: self::REPROMPT);
         }
 
-        return match ($intent) {
-            'PairIntent' => $this->pair($payload),
-            'AMAZON.StopIntent', 'AMAZON.CancelIntent', 'AMAZON.NavigateHomeIntent' => $this->say('Goodbye.', end: true),
-            'AskIntent' => $link === null
-                ? $this->say(self::PAIR_INSTRUCTIONS, reprompt: self::PAIR_REPROMPT)
-                : $this->ask($link, $payload, $sessionId),
-            // Help, Fallback and anything unrecognised.
+        $question = AlexaQuestionIntents::questionFrom($intent, data_get($payload, 'request.intent.slots.query.value'));
+        $asking = $question !== null || AlexaQuestionIntents::isQuestionIntent($intent);
+
+        return match (true) {
+            $intent === 'PairIntent' => $this->pair($payload),
+            in_array($intent, ['AMAZON.StopIntent', 'AMAZON.CancelIntent', 'AMAZON.NavigateHomeIntent'], true) => $this->say('Goodbye.', end: true),
+            $asking && $link === null => $this->say(self::PAIR_INSTRUCTIONS, reprompt: self::PAIR_REPROMPT),
+            // Alexa matched an opening such as "what" but heard nothing after it.
+            $asking && $question === null => $this->say(self::REPROMPT, reprompt: self::REPROMPT),
+            $asking => $this->ask($link, $question, $sessionId),
+            $intent === 'AMAZON.FallbackIntent' => $this->say(self::FALLBACK, reprompt: self::REPROMPT),
+            // Help and anything unrecognised.
             default => $this->say(self::HELP, reprompt: self::REPROMPT),
         };
     }
@@ -153,13 +163,8 @@ class AlexaSkillController extends Controller
             : $this->say('This Echo is now linked to your Hexa-Tech account. It can read your workspace, but not add notes until you allow that in Connected apps. What would you like to know?', reprompt: self::REPROMPT);
     }
 
-    private function ask(VoiceAlexaLink $link, array $payload, string $sessionId): JsonResponse
+    private function ask(VoiceAlexaLink $link, string $question, string $sessionId): JsonResponse
     {
-        $query = trim((string) data_get($payload, 'request.intent.slots.query.value', ''));
-        if ($query === '') {
-            return $this->say(self::REPROMPT, reprompt: self::REPROMPT);
-        }
-
         $staff = $link->user;
 
         // Nothing else authenticates a skill request: the tools read exactly
@@ -173,7 +178,7 @@ class AlexaSkillController extends Controller
         }
 
         try {
-            $turn = $this->gateway->turn($staff, $query, $sessionId, allowWrites: (bool) $link->can_write);
+            $turn = $this->gateway->turn($staff, $question, $sessionId, allowWrites: (bool) $link->can_write);
         } catch (AuthorizationException $denied) {
             // VoiceCapability's messages are written to be heard.
             return $this->say($denied->getMessage(), end: true);

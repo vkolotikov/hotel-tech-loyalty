@@ -253,6 +253,41 @@ class AlexaSkillEndpointTest extends VoiceTestCase
         $this->assertTrue($response->json('response.shouldEndSession'));
     }
 
+    public function test_the_opening_words_are_put_back_before_the_question_reaches_the_model(): void
+    {
+        $this->fake($this->finalAnswer('Two leads came in today.'));
+        $this->link();
+
+        $this->alexa($this->intent('HowManyIntent', ['query' => 'leads came in today']))->assertOk();
+
+        $sent = collect(Http::recorded())->first(fn ($pair) => str_contains($pair[0]->url(), 'api.openai.com'))[0]->data();
+        $this->assertSame('how many leads came in today', collect($sent['messages'])->last()['content']);
+    }
+
+    public function test_an_unmatched_phrase_suggests_how_to_start_a_question(): void
+    {
+        $this->fake();
+        $this->link();
+
+        $text = $this->speech($this->alexa($this->intent('AMAZON.FallbackIntent')));
+
+        // Distinct from the general help, which already mentions example questions.
+        $this->assertStringContainsString('Try starting with', $text);
+    }
+
+    public function test_yes_reaches_the_model_so_a_read_back_note_can_be_confirmed(): void
+    {
+        // Without the built-in yes intent, "yes" fell to Fallback and a note
+        // proposed by voice could never be confirmed on an Echo.
+        $this->fake($this->finalAnswer('Saved.'));
+        $this->link(canWrite: true);
+
+        $this->assertSame('Saved.', $this->speech($this->alexa($this->intent('AMAZON.YesIntent'))));
+
+        $sent = collect(Http::recorded())->first(fn ($pair) => str_contains($pair[0]->url(), 'api.openai.com'))[0]->data();
+        $this->assertSame('yes', collect($sent['messages'])->last()['content']);
+    }
+
     public function test_every_verified_request_is_logged_without_what_was_said(): void
     {
         // A pilot device that "doesn't answer" is undiagnosable without knowing

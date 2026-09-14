@@ -145,7 +145,7 @@ export function AlexaLinksPanel() {
               <div role="status" className="space-y-2 rounded-xl border border-[#dde3e8] bg-white p-4">
                 <p className="font-medium">Say to your Echo:</p>
                 <p>
-                  “Alexa, open Hexa Tech”, then “link code{' '}
+                  “Alexa, open hexa”, then “link code{' '}
                   <span className="font-mono font-semibold tracking-widest">{spaced(pairing.code)}</span>”.
                 </p>
                 <p className="text-xs text-[#54626e]">
