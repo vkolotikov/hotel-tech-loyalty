@@ -45,6 +45,26 @@ A turn stops after `voice.max_tool_calls` model round trips and says so out loud
 silence is indistinguishable from a broken product to someone listening. There is no audio yet —
 phase 2b adds speech-to-text and text-to-speech over this endpoint.
 
+### Model and memory
+
+The default model is `gpt-5.4` over Chat Completions with `reasoning_effort` set to `none`
+(`VOICE_MODEL`, `VOICE_REASONING_EFFORT`). Measured in September 2026 with the voice tools,
+`gpt-5.4` took about a second per model call, the same as `gpt-4.1`. Over the Responses API with
+low reasoning, `gpt-5.4` and `gpt-5.5` took 1.6 to 2.4 seconds per call, which is too much of
+Alexa's eight seconds for a turn that needs two or three calls. With tools on Chat Completions the
+GPT-5 models rejected `low` and accepted `none`. `reasoning_effort` is sent only to reasoning
+models, and `max_completion_tokens` replaces `max_tokens`, which GPT-5 rejects.
+
+The system prompt is the voice server's instructions plus one line giving today's weekday and
+date in the organization's timezone, so "and yesterday?" resolves to a real date. Answers are
+asked for as complete sentences, because GPT-5 models otherwise answered with fragments such as
+"two leads".
+
+A session remembers its last five questions for fifteen minutes. History is trimmed by whole
+questions (a user message and every assistant and tool message after it). Trimming a fixed
+number of messages once separated a tool result from the call that requested it, and OpenAI
+rejected the fourth question of a live Echo session with HTTP 400.
+
 ## Alexa (internal pilot)
 
 An Echo is ears and a mouth: Alexa transcribes, `POST /api/v1/voice/alexa` answers through the
@@ -60,7 +80,7 @@ The pilot links an Echo with a code, not OAuth account linking:
 
 1. In **Connected apps** (`/account/connections`), choose **Link an Echo**. A six-digit code
    appears. It works once and expires after ten minutes.
-2. Say "Alexa, open Hexa Tech", then "link code" followed by the digits.
+2. Say "Alexa, open hexa", then "link code" followed by the digits.
 
 The Amazon account is stored only as a SHA-256. Re-linking an Echo moves it to the new person.
 Five wrong codes from one Amazon account pause linking for fifteen minutes. Disabling and
@@ -83,10 +103,30 @@ someone deliberately takes that on.
 - The subscription is checked by running the shipped `CheckPluginSubscription` middleware
   unchanged; a lapsed or unverifiable subscription is spoken.
 
+### How a question reaches the model
+
+Free speech needs `AMAZON.SearchQuery`, which matches only after a carrier phrase and then strips
+that phrase from what it sends: "how many leads came in today" arrives as "leads came in today".
+So each opening, such as "how many", "what is", "who", "find" or "and", is its own intent in
+`App\Voice\Alexa\AlexaQuestionIntents`, and the controller puts the opening back before the
+question reaches the model. All the carriers of one intent mean the same words, so the rebuilt
+question is identical whichever of two overlapping intents Alexa picks.
+
+Speech that starts with none of those openings reaches `AMAZON.FallbackIntent`, which answers
+with the openings that work. "Yes" and "no" go to the model like questions, because it may be
+waiting for one before saving a note it read back.
+
+`docs/alexa/interaction-model.json` is generated from that class. Run
+`php artisan voice:alexa-model` after changing it; `AlexaInteractionModelFileTest` fails while
+the committed file differs.
+
 ### Amazon developer console (manual)
 
-1. Create a custom skill, locale **English (UK)**, hosting **Provision your own**.
-2. Paste `docs/alexa/interaction-model.en-GB.json` into the JSON editor and build the model.
+1. Create a custom skill, locales **English (UK)** and **English (US)**, hosting **Provision your
+   own**.
+2. Paste `docs/alexa/interaction-model.json` into the JSON editor of each locale and build the
+   model. The invocation name is `hexa`: "Alexa, open hexa", or "Alexa, ask hexa how many leads
+   came in today".
 3. Set the endpoint to HTTPS `https://<your domain>/api/v1/voice/alexa`, with the certificate
    option for a trusted certificate authority.
 4. Copy the skill id into `VOICE_ALEXA_SKILL_IDS`.
@@ -100,6 +140,9 @@ someone deliberately takes that on.
   `resource` parameter Alexa does not send, and issues 30-day refresh tokens where Alexa
   recommends at least 180 days. The skill already depends on the `AlexaAccountResolver`
   interface, so OAuth becomes a second implementation rather than a rewrite.
+- Amazon allows a one-word invocation name such as `hexa` only for a brand, and checks that at
+  certification rather than in a beta test. Be ready to show the brand or choose two words. The
+  pilot moved from "hexa tech" to "hexa" after an Echo failed to open the skill with two words.
 - As of September 2026 the Alexa+ MCP add-on route remains United States only.
 
 ## How a spoken answer differs from a text one
