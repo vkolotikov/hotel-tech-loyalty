@@ -65,17 +65,42 @@ class AlexaSkillController extends Controller
             return response()->json(['error' => 'invalid_alexa_request'], 400);
         }
 
+        $started = microtime(true);
+
         if (! config('voice.alexa.enabled')) {
-            return $this->say("Hexa-Tech voice isn't available right now.", end: true);
+            $response = $this->say("Hexa-Tech voice isn't available right now.", end: true);
+        } else {
+            try {
+                $response = $this->handle($payload);
+            } catch (Throwable $error) {
+                report($error);
+                $response = $this->say("Sorry, I couldn't reach Hexa-Tech just now. Please try again.", end: true);
+            }
         }
 
-        try {
-            return $this->handle($payload);
-        } catch (Throwable $error) {
-            report($error);
+        $this->logRequest($payload, $response, $started);
 
-            return $this->say("Sorry, I couldn't reach Hexa-Tech just now. Please try again.", end: true);
-        }
+        return $response;
+    }
+
+    /**
+     * One line per verified request, so a device that "doesn't answer" can be
+     * diagnosed: which request type and intent Alexa sent, how long the answer
+     * took, and Amazon's own reason when it ends a session. What was said is
+     * never logged, only its length, because a question can name a customer.
+     */
+    private function logRequest(array $payload, JsonResponse $response, float $started): void
+    {
+        \Illuminate\Support\Facades\Log::notice('Alexa skill request', [
+            'type' => data_get($payload, 'request.type'),
+            'intent' => data_get($payload, 'request.intent.name'),
+            'query_chars' => mb_strlen((string) data_get($payload, 'request.intent.slots.query.value', '')),
+            'new_session' => data_get($payload, 'session.new'),
+            'reason' => data_get($payload, 'request.reason'),
+            'error' => data_get($payload, 'request.error.type'),
+            'ends_session' => data_get($response->getData(true), 'response.shouldEndSession'),
+            'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+        ]);
     }
 
     private function handle(array $payload): JsonResponse

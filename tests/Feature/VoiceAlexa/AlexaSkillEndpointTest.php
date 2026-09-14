@@ -253,6 +253,38 @@ class AlexaSkillEndpointTest extends VoiceTestCase
         $this->assertTrue($response->json('response.shouldEndSession'));
     }
 
+    public function test_every_verified_request_is_logged_without_what_was_said(): void
+    {
+        // A pilot device that "doesn't answer" is undiagnosable without knowing
+        // which request type and intent Alexa actually sent, and why Amazon
+        // ended a session. What the person said is never logged, only its length.
+        $this->fake();
+        $this->link();
+        \Illuminate\Support\Facades\Log::spy();
+
+        $this->alexa($this->intent('AMAZON.FallbackIntent'))->assertOk();
+        $this->alexa(['type' => 'SessionEndedRequest', 'reason' => 'ERROR',
+            'error' => ['type' => 'INVALID_RESPONSE', 'message' => 'x']])->assertOk();
+        $this->alexa($this->intent('AskIntent', ['query' => 'Morgan Lee private details']))->assertOk();
+
+        $logged = [];
+        \Illuminate\Support\Facades\Log::shouldHaveReceived('notice')->withArgs(
+            function (string $message, array $context = []) use (&$logged) {
+                if ($message === 'Alexa skill request') {
+                    $logged[] = $context;
+                }
+
+                return true;
+            });
+
+        $this->assertSame(['IntentRequest', 'SessionEndedRequest', 'IntentRequest'], array_column($logged, 'type'));
+        $this->assertSame('AMAZON.FallbackIntent', $logged[0]['intent']);
+        $this->assertSame(['ERROR', 'INVALID_RESPONSE'], [$logged[1]['reason'], $logged[1]['error']]);
+        $this->assertSame(26, $logged[2]['query_chars']);
+        $this->assertIsInt($logged[2]['duration_ms']);
+        $this->assertStringNotContainsString('Morgan', json_encode($logged));
+    }
+
     public function test_a_rejected_request_is_logged_with_its_reason_and_skill_id(): void
     {
         // Amazon only ever sees a 400. Without the reason in the log, a wrong
