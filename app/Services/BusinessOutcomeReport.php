@@ -70,14 +70,18 @@ class BusinessOutcomeReport
             ->whereNull('external_source')->get(['id', 'created_at']) as $inquiry) {
             $matching = collect($entries[$inquiry->id] ?? [])->where('site', $inquiries[$inquiry->id])->filter(fn ($e) => $e['at'] <= $inquiry->created_at);
             $candidates = $matching->pluck('source')->filter(fn ($s) => $s !== 'unknown')->unique();
-            $touches = []; $truncated = false;
+            // NOT $truncated. That name already holds "the 20000-row cap was hit", which the
+            // consumer uses to reject an incomplete replacement; reusing it here overwrote that
+            // answer with one enquiry's touch-list truncation on every report containing an
+            // enquiry, so a cut-off snapshot could be accepted and a complete one rejected.
+            $touches = []; $touchesTruncated = false;
             foreach ($matching->pluck('attribution')->unique() as $raw) {
                 $observed = WidgetAttribution::exported($raw, $inquiries[$inquiry->id], $inquiry->created_at);
-                if ($observed) { $touches = array_merge($touches, $observed['touches']); $truncated = $truncated || $observed['truncated']; }
+                if ($observed) { $touches = array_merge($touches, $observed['touches']); $touchesTruncated = $touchesTruncated || $observed['truncated']; }
             }
             $touches = WidgetAttribution::cleanTouches($touches, $inquiry->created_at);
-            if (count($touches) > 12) { $touches = array_merge([$touches[0]], array_slice($touches, -11)); $truncated = true; }
-            $attribution = $touches ? ['version' => 1, 'touches' => $touches, 'truncated' => $truncated] : null;
+            if (count($touches) > 12) { $touches = array_merge([$touches[0]], array_slice($touches, -11)); $touchesTruncated = true; }
+            $attribution = $touches ? ['version' => 1, 'touches' => $touches, 'truncated' => $touchesTruncated] : null;
             $known = collect($touches)->filter(fn ($t) => ! in_array($t['channel'], ['unknown', 'internal'], true))->last();
             $source = $known['channel'] ?? ($candidates->count() === 1 ? $candidates->first() : 'unknown');
             $append('chat-lead-'.$inquiry->id, $inquiry->created_at, 'chat_lead', $inquiries[$inquiry->id], $source, $attribution);
@@ -93,16 +97,58 @@ class BusinessOutcomeReport
                 'Observed touches share a site and explicit chat session; they are not a complete cross-device journey or causal credit model.']];
     }
 
-    public static function captureEntry(\App\Models\ChatConversation $conversation, string $url): void
+    public static function captureEntry(\App\Models\ChatConversation $conversation, string $url, ?int $visitorId = null): void
     {
         // page_url is refreshed on resume. Never use that mutable field to reconstruct an old source.
         if ($conversation->exists) return;
+        // The SITE stays the page the chat is running on: that is which brand was being visited,
+        // and it must not follow the visitor back to wherever they first arrived.
         $host = preg_replace('/^www\./', '', strtolower(parse_url($url, PHP_URL_HOST) ?? ''));
         $conversation->entry_source_site = self::HOSTS[$host] ?? null;
-        $conversation->entry_source_channel = $conversation->entry_source_site ? self::entrySource($url) : 'unknown';
+        if (! $conversation->entry_source_site) {
+            $conversation->entry_source_channel = 'unknown';
+
+            return;
+        }
+        // The CHANNEL comes from where they landed, which is a different page. $url is whatever
+        // page the visitor had reached when they opened the panel, and a gclid or utm_* is long
+        // gone by then -- so a paid click classified from that page alone looked like plain
+        // organic search. The earliest page view of this session still holds both.
+        $landing = self::landingView($visitorId);
+        $conversation->entry_source_channel = self::entrySource($landing->url ?? $url, $landing->referrer ?? '');
     }
 
-    private static function entrySource(string $url): string
+    /**
+     * The first page of THIS browsing session, with the URL and referrer it carried.
+     *
+     * The lookback is deliberately short. A returning visitor's first ever page view is not
+     * this conversation's acquisition, and crediting a months-old campaign for today's enquiry
+     * is a worse answer than admitting the source is unknown.
+     */
+    private static function landingView(?int $visitorId): ?object
+    {
+        if (! $visitorId) {
+            return null;
+        }
+
+        // Never fatal. This runs on the hot path of every new conversation, and losing a channel
+        // label costs a line in a report while a thrown query costs the visitor their chat: the
+        // init request 500s and the panel never opens. Reporting is not worth that trade.
+        try {
+            return DB::table('visitor_page_views')->where('visitor_id', $visitorId)
+                ->where('viewed_at', '>=', CarbonImmutable::now('UTC')->subHours(6))
+                ->orderBy('viewed_at')->orderBy('id')
+                ->first(['url', 'referrer']);
+        } catch (\Throwable $e) {
+            \Log::warning('Landing page lookup failed; entry channel falls back to the current page', [
+                'visitor_id' => $visitorId, 'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    private static function entrySource(string $url, string $referrer = ''): string
     {
         parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $params);
         $source = is_string($params['utm_source'] ?? null) ? strtolower($params['utm_source']) : '';
@@ -117,6 +163,21 @@ class BusinessOutcomeReport
         if (! $paid && in_array($source, ['facebook', 'fb', 'instagram', 'ig', 'meta', 'linkedin', 'tiktok'], true)) return 'social';
         // A Facebook click ID is shared by paid and organic clicks; it cannot prove ad spend.
         if (isset($params['fbclid'])) return 'social';
-        return 'unknown';
+
+        // The referrer, which until now was never consulted: every visitor who arrived without
+        // a utm_* tag or a click id was filed 'unknown', so ordinary search, social and referral
+        // traffic was indistinguishable from traffic we genuinely could not see. The widget's own
+        // browser-side classifier has had this fallback all along; the server did not.
+        $host = preg_replace('/^www\./', '', strtolower((string) (parse_url($referrer, PHP_URL_HOST) ?? '')));
+        if ($host === '') {
+            // No referrer and no tag is not evidence of a direct visit: privacy settings, apps and
+            // https-to-http hops all strip it. Unknown is the honest answer, not 'direct'.
+            return 'unknown';
+        }
+        if (isset(self::HOSTS[$host])) return 'internal';
+        if (preg_match('/^(google\.[a-z.]{2,}|bing\.com|duckduckgo\.com|search\.yahoo\.com|ecosia\.org|search\.brave\.com|yandex\.[a-z.]{2,})$/', $host)) return 'organic';
+        if (preg_match('/(^|\.)(facebook\.com|instagram\.com|linkedin\.com|tiktok\.com|t\.co|x\.com|twitter\.com|pinterest\.[a-z.]{2,})$/', $host)) return 'social';
+
+        return 'referral';
     }
 }

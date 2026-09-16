@@ -118,4 +118,89 @@ class BusinessOutcomeReportTest extends TestCase
         $this->assertStringNotContainsString('too-late', json_encode($report));
         $this->assertArrayNotHasKey('attribution', collect($report['rows'])->firstWhere('kind','chat_message'));
     }
+
+    public function test_a_paid_click_is_read_from_the_landing_page_not_the_page_chat_was_opened_on(): void
+    {
+        // The defect: a visitor arrives from Google Ads on /?gclid=..., browses to /pricing, then
+        // opens the chat. captureEntry saw only /pricing and a google.com referrer, so a paid
+        // click was filed as free organic search on every conversation that did not start on the
+        // landing page -- which is nearly all of them.
+        Schema::create('visitor_page_views', function (Blueprint $t) {
+            $t->id(); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
+        });
+        DB::table('visitor_page_views')->insert([
+            ['visitor_id'=>7,'url'=>'https://fdscards.lv/?gclid=EAIaIQobChMItest','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00'],
+            ['visitor_id'=>7,'url'=>'https://fdscards.lv/pricing','referrer'=>'https://fdscards.lv/','viewed_at'=>'2026-09-11 09:04:00'],
+        ]);
+
+        $conversation = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/pricing', 7);
+        $this->assertSame('google', $conversation->entry_source_channel, 'The click id on the landing page decides the channel.');
+        $this->assertSame('fds-lv', $conversation->entry_source_site, 'The site is still the page the chat runs on.');
+        $this->assertStringNotContainsString('EAIaIQobChMItest', json_encode($conversation->getAttributes()), 'The click id itself is never stored.');
+
+        // Without a visitor there is nothing to look up, and the old behaviour stands.
+        $blind = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($blind, 'https://fdscards.lv/pricing');
+        $this->assertSame('unknown', $blind->entry_source_channel);
+
+        // A page view older than this browsing session cannot claim today's enquiry.
+        DB::table('visitor_page_views')->where('visitor_id', 7)->update(['viewed_at'=>'2026-09-01 09:00:00']);
+        $stale = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($stale, 'https://fdscards.lv/pricing', 7);
+        $this->assertSame('unknown', $stale->entry_source_channel);
+    }
+
+    public function test_the_referrer_names_traffic_that_carries_no_campaign_tag(): void
+    {
+        // Without this, organic search, social and plain referrals were all 'unknown', which made
+        // traffic we could see indistinguishable from traffic we could not.
+        Schema::create('visitor_page_views', function (Blueprint $t) {
+            $t->id(); $t->integer('visitor_id'); $t->text('url'); $t->text('referrer')->nullable(); $t->timestamp('viewed_at');
+        });
+        $cases = [
+            ['https://www.google.com/search?q=metal+cards', 'organic'],
+            ['https://www.facebook.com/somepage', 'social'],
+            ['https://duckduckgo.com/', 'organic'],
+            ['https://some-blog.example/post', 'referral'],
+            ['https://hexa-academy.lv/courses', 'internal'],
+            ['', 'unknown'],
+        ];
+        foreach ($cases as $i => [$referrer, $expected]) {
+            DB::table('visitor_page_views')->insert(['visitor_id'=>100+$i,'url'=>'https://fdscards.lv/','referrer'=>$referrer ?: null,'viewed_at'=>'2026-09-11 09:00:00']);
+            $conversation = new \App\Models\ChatConversation;
+            BusinessOutcomeReport::captureEntry($conversation, 'https://fdscards.lv/', 100+$i);
+            $this->assertSame($expected, $conversation->entry_source_channel, "referrer {$referrer} should classify as {$expected}");
+        }
+
+        // A campaign tag still outranks the referrer it arrived with.
+        DB::table('visitor_page_views')->insert(['visitor_id'=>200,'url'=>'https://fdscards.lv/?utm_source=google&utm_medium=cpc','referrer'=>'https://www.google.com/','viewed_at'=>'2026-09-11 09:00:00']);
+        $paid = new \App\Models\ChatConversation;
+        BusinessOutcomeReport::captureEntry($paid, 'https://fdscards.lv/', 200);
+        $this->assertSame('google', $paid->entry_source_channel);
+    }
+
+    public function test_the_truncated_flag_reports_the_row_cap_not_one_enquiry_touch_list(): void
+    {
+        // $truncated carried "the 20000-row cap was hit", which the consumer uses to reject an
+        // incomplete replacement. The enquiry loop reused the same name for its own touch-list
+        // truncation, so one long journey made a complete report claim it was cut off.
+        $touches = [];
+        for ($i = 0; $i < 14; $i++) {
+            // All before the enquiry: a touch observed after conversion is dropped, and fourteen
+            // spread across days would have been trimmed to eleven before the cap ever applied.
+            $touches[] = ['channel'=>'meta','campaign_id'=>'campaign-'.$i,'observed_at'=>sprintf('2026-09-10T%02d:00:00Z', $i),'evidence'=>'utm'];
+        }
+        DB::table('chat_conversations')->insert(['id'=>1,'organization_id'=>1,'page_url'=>'https://fdscards.lv/','inquiry_id'=>1,'channel'=>'widget',
+            'entry_source_site'=>'fds-lv','entry_source_channel'=>'meta',
+            'marketing_attribution'=>json_encode(['version'=>1,'site'=>'fds-lv','truncated'=>false,'touches'=>$touches])]);
+        DB::table('chat_messages')->insert(['organization_id'=>1,'conversation_id'=>1,'sender_type'=>'visitor','created_at'=>'2026-09-11 10:00:00']);
+        DB::table('inquiries')->insert(['id'=>1,'organization_id'=>1,'created_at'=>'2026-09-11 10:01:00']);
+
+        $report = app(BusinessOutcomeReport::class)->build(1);
+        $lead = collect($report['rows'])->firstWhere('kind','chat_lead');
+        $this->assertCount(12, $lead['attribution']['touches'], 'The journey itself is capped at twelve.');
+        $this->assertTrue($lead['attribution']['truncated'], 'That enquiry says its own journey was shortened.');
+        $this->assertFalse($report['truncated'], 'The snapshot is complete and must not claim otherwise.');
+    }
 }
