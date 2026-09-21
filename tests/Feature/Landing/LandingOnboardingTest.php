@@ -980,9 +980,11 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('gym', $industries['fitness']['vertical']);
         // The HotelTech kits (2026-09-11) gave hotel one.
         $this->assertSame('hotel', $industries['hotel']['vertical']);
-        // The five with no kits of their own, named so that shipping one
+        // The MedTech kits (2026-09-21) gave medical one.
+        $this->assertSame('medical', $industries['medical']['vertical']);
+        // The four with no kits of their own, named so that shipping one
         // for them has to come past this list.
-        foreach (['medical', 'education', 'legal', 'real_estate', 'other'] as $id) {
+        foreach (['education', 'legal', 'real_estate', 'other'] as $id) {
             $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
         }
 
@@ -1000,6 +1002,9 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('hotel', $templates['maison_lume']['vertical']);
         $this->assertSame('hotel', $templates['northline_retreat']['vertical']);
         $this->assertSame('hotel', $templates['orbit_city']['vertical']);
+        $this->assertSame('medical', $templates['ardea_aesthetics']['vertical']);
+        $this->assertSame('medical', $templates['forma_dental']['vertical']);
+        $this->assertSame('medical', $templates['numa_skin_lab']['vertical']);
         $this->assertTrue($templates->every(fn (array $row) => $row['vertical'] !== null),
             'A shipped design claims no trade; every shipped kit was drawn for one.');
 
@@ -1099,18 +1104,27 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
-            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty, gym or hotel kit and draws a team band.");
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city', 'ardea_aesthetics', 'forma_dental', 'numa_skin_lab'] as $key) {
+            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty, gym, hotel or medical kit and draws a team band.");
         }
 
         foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
             $this->assertNotContains('team', $renders[$key], "'{$key}' is a hospitality kit and draws no team band.");
         }
 
-        // The gym and hotel kits draw the shared contract minus the gallery:
-        // no gallery partial ships, so the picker never offers one there.
-        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
+        // The gym and hotel kits, and the first medical kit, draw the shared
+        // contract minus the gallery: no gallery partial ships, so the picker
+        // never offers one there. (Ardea's author marks his story band's
+        // three-line list `gallery`; a list of three lines has no room for a
+        // picture and the marker is not printed — med-1.)
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city', 'ardea_aesthetics'] as $key) {
             $this->assertNotContains('gallery', $renders[$key], "'{$key}' claims a gallery partial the author never drew.");
+        }
+
+        // The other two medical kits draw one: their first-visit steps and
+        // method cards carry the tenant's photographs (med-2).
+        foreach (['forma_dental', 'numa_skin_lab'] as $key) {
+            $this->assertContains('gallery', $renders[$key], "'{$key}' draws its steps as a gallery and does not say so.");
         }
 
         foreach ($renders as $key => $list) {
@@ -2108,7 +2122,7 @@ class LandingOnboardingTest extends TestCase
         // Every design honours the row's starting-price mark, so the WORD
         // before it is offered on all of them — kit 02-beauty's own leaf
         // first, the others' since the mark moved onto the row (2026-09-06).
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city', 'ardea_aesthetics', 'forma_dental', 'numa_skin_lab'] as $key) {
             $this->assertContains('price_prefix', $served[$key]['services'], "'{$key}' prints the word before a starting price and does not offer it.");
         }
 
@@ -2129,7 +2143,7 @@ class LandingOnboardingTest extends TestCase
             $this->assertContains('window', $served[$key]['services'], "'{$key}' prints the service window and does not offer it.");
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'ardea_aesthetics', 'forma_dental', 'numa_skin_lab'] as $key) {
             $this->assertNotContains('price_suffix', $served[$key]['services'], "'{$key}' offers a price suffix its treatment list never prints.");
             $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its treatment list never prints.");
         }
@@ -2137,12 +2151,31 @@ class LandingOnboardingTest extends TestCase
         // The gym kits' session cards and the hotel kits' room cards carry
         // no link, no badge and no photograph, so none of those controls is
         // offered on them, and neither family draws a gallery.
-        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city', 'ardea_aesthetics'] as $key) {
             foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
                 $this->assertNotContains($leaf, $served[$key]['services'], "'{$key}' offers '{$leaf}' on cards that never print it.");
             }
             $this->assertArrayNotHasKey('gallery', $served[$key], "'{$key}' offers a gallery it cannot draw.");
         }
+
+        // The two medical kits that DO draw a gallery (med-2): the same
+        // linkless, badgeless, pictureless cards, and a gallery whose tiles
+        // print the line under the caption. Forma's steps sit under a split
+        // heading with an intro paragraph and carry no word after the
+        // ordinal; Numa's method cards carry the word ("SCAN / 01") and its
+        // header has no intro.
+        foreach (['forma_dental', 'numa_skin_lab'] as $key) {
+            foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
+                $this->assertNotContains($leaf, $served[$key]['services'], "'{$key}' offers '{$leaf}' on cards that never print it.");
+            }
+            $this->assertContains('caption_1_note', $served[$key]['gallery'], "'{$key}' prints the line under each caption and does not offer it.");
+            $this->assertContains('caption_8_note', $served[$key]['gallery']);
+        }
+
+        $this->assertContains('subtext', $served['forma_dental']['gallery']);
+        $this->assertNotContains('caption_1_label', $served['forma_dental']['gallery']);
+        $this->assertNotContains('subtext', $served['numa_skin_lab']['gallery']);
+        $this->assertContains('caption_1_label', $served['numa_skin_lab']['gallery']);
 
         // The line under each gallery caption is the hospitality authors'
         // card prose; the beauty kits' pills print no such line, so the

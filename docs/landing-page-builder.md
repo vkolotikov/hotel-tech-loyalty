@@ -1,8 +1,8 @@
 # Landing-page builder — current state
 
-**Last verified:** 2026-09-21. Production `main` = `ef466665b` (Laravel Cloud, app `hotel-tech-loyalty`),
-which carries every landing commit of `feature/landing-phase-3c` up to the compact-builder round
-(2026-09-09); the hotel kits this document describes ship with the deploy that carries it.
+**Last verified:** 2026-09-21. Production `main` = `48d22bbd5` (Laravel Cloud, app `hotel-tech-loyalty`),
+which carries every landing commit of `feature/landing-phase-3c` up to the hotel-kits round
+(2026-09-21); the medical kits this document describes ship with the deploy that carries it.
 Run `git fetch && git log --oneline -3 origin/main` for anything newer; the branch's own history is not
 on `main` (deploys are source patches), so compare by content, not by commit list.
 
@@ -20,7 +20,7 @@ An Enterprise-plan tenant builds one public page per brand in three steps:
 Pages are served on `sites.hexa-tech.uk/{slug}` (`config/landing.php`, `routes/landing.php`), never on an
 admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may frame the preview.
 
-### The twelve templates ("kits")
+### The fifteen templates ("kits")
 
 | Vertical | Key | Author's kit source |
 |---|---|---|
@@ -36,6 +36,9 @@ admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may
 | hotel | `maison_lume` | `resources/landing-kits/hotel-tech/01-maison-lume/` |
 | hotel | `northline_retreat` | `resources/landing-kits/hotel-tech/02-northline-retreat/` |
 | hotel | `orbit_city` | `resources/landing-kits/hotel-tech/03-orbit-city/` |
+| medical | `ardea_aesthetics` | `resources/landing-kits/med-tech/01-ardea-aesthetics/` |
+| medical | `forma_dental` | `resources/landing-kits/med-tech/02-forma-dental/` |
+| medical | `numa_skin_lab` | `resources/landing-kits/med-tech/03-numa-skin-lab/` |
 
 The gym kits (2026-09-08) draw the shared contract minus the gallery and keep a team band; each is
 documented band by band in its own layout and partials, and the rulings that were needed to fill the
@@ -52,6 +55,20 @@ business's initials. A hotel page is always bookable online (`PageContent::booki
 with no rota to check), so every Book control on it opens the stay widget. Rulings hotel-1..14 in the
 local ledger; two are the owner's to revisit (the room cards could read the booking engine's
 `BookingRoom` rows instead of `Service` rows; Orbit's blue-and-acid accent mapping).
+
+The medical kits (2026-09-21) are the gym author's page anatomy written in the beauty kits' token
+vocabulary (`--color-*`, `--space-N`), so their partials are Aera's with the clinic's own shapes written
+in. Ardea Aesthetics is the closest (its author marks his story list `gallery`; a list of three lines
+has no room for a picture, so the marker is not printed and no gallery partial ships). Forma Dental's
+first-visit steps and Numa Skin Lab's method cards ARE galleries under the dining rule: the tenant's
+photographs fill the cards under a veil in the author's own overlay token, his `<h3>` is the caption,
+his line the `caption_N_note`, and Numa's mono tag ("SCAN / 01") is the `caption_N_label` word before the
+derived ordinal. The availability card, scan card and the hero's small line (`hero__note`, `hero__small`,
+`hero__meta`) are the gym rulings (`hero.note_label` over `hero.proof`, `hero.edition`); the price lines
+differ per kit (Ardea "From €190", Forma "60 minutes · €85" — the one medical card that prints a
+duration — Numa "From €160" beside a "01 / Texture" tag built from the treatment's category); the team
+bands are the lead-practitioner composition. Numa is dark: its accent is lifted for its black like
+Northline's and Orbit's. Rulings med-1..8 in the local ledger.
 
 The industry picked at signup maps server-side to a vertical (`LandingOnboardingService::industries()`;
 orgs with no explicit industry fall back to `IndustryProfile::FALLBACK_INDUSTRY = 'other'`). Only the
@@ -213,11 +230,11 @@ Save; blocks the new design adds are seeded only by the save.
 
 ## 5. Tests
 
-Suites: `tests/Feature/Landing/` (36 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
-Baseline after the hotel kits (2026-09-21): **1799 backend tests** (Feature/Landing 1509, Unit/Landing
+Suites: `tests/Feature/Landing/` (39 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
+Baseline after the medical kits (2026-09-21): **2023 backend tests** (Feature/Landing 1733, Unit/Landing
 118, Unit/Support 172); frontend `npx vitest run` **790 passed + exactly 3 pre-existing `plannerMeta`
 failures**; `npx tsc -b` clean. Each kit's render test is 55–112 tests; the whole Feature/Landing suite
-takes about 18 minutes on the workstation.
+takes about 28 minutes on the workstation.
 
 Run them like this, and only like this:
 
@@ -270,14 +287,14 @@ server refuses theme keys the old bundle still sends.
   drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
   the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
-- Medical is on offer in the Design tab but has no kits of its own yet, so that trade sees all twelve
-  designs under a "designs made for … are coming" note. Three owner-designed kits wait in
-  `c:\wamp64\www\hexa-template-builder\med-tech` (Ardea Aesthetics, Forma Dental, Numa Skin Lab), same
-  15-block contract minus the gallery. Each conversion is a registry row with `vertical` set (plus
-  `INDUSTRY_VERTICALS` for the new vertical), the kit under `resources/landing-kits/<brand>/`,
-  pixel-matched layout and partials, thumbnails, a preview JPEG, and the per-template test — the editor
-  needs no change. The hotel conversion (2026-09-11) is the worked example, and the one to start from if
-  the medical kits are the same author's hand again: diff their stylesheets against the twelve first.
+- Medical has its three kits (2026-09-21: Ardea Aesthetics, Forma Dental, Numa Skin Lab — the gym
+  author's page anatomy in the beauty kits' token vocabulary; rulings med-1..8 in the local ledger).
+  The four industries with no kits of their own — education, legal, real estate, other — see all fifteen
+  designs under a "designs made for … are coming" note. A future conversion is a registry row with
+  `vertical` set (plus `INDUSTRY_VERTICALS` for the new vertical), the kit under
+  `resources/landing-kits/<brand>/`, pixel-matched layout and partials, thumbnails, a preview JPEG, and
+  the per-template test — the editor needs no change. The medical conversion is the worked example, and
+  the one to start from: diff the new stylesheets against the fifteen first.
 - The long-headline thresholds (`data-length`) were recalibrated on 2026-09-11 to 38 / 50 characters
   after the 28 / 48 pair was found marking five authors' own mock headlines and shrinking three live heroes.
 - A kit's fixed-format words have no leaf on this platform: the closing panel falls back to the industry's

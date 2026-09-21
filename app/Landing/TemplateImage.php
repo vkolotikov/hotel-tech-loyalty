@@ -363,6 +363,68 @@ final class TemplateImage
                 'alt'  => 'A hotel room with a midnight-blue headboard, a warm reading light and a city view',
             ],
         ],
+        // THE FIRST MEDICAL KIT. Two photographs, for the same two bands as
+        // the gym and hotel pages — the consultation is the hero and the
+        // skin examination is the story's plate — and the same absences: his
+        // treatment cards, his physician band and his closing panel are
+        // typographic, and he draws no gallery of pictures.
+        'ardea_aesthetics' => [
+            'hero' => [
+                'file' => 'hero-consultation.webp',
+                'alt'  => 'A physician speaking with a client in a quiet private consultation room',
+            ],
+            'about' => [
+                'file' => 'skin-consultation.webp',
+                'alt'  => 'A physician carefully examining a client’s skin with a handheld light',
+            ],
+        ],
+        // THE SECOND MEDICAL KIT. The studio welcome is the hero and the
+        // natural smile is the manifesto's plate; his care cards are
+        // typographic. His first-visit steps are this design's GALLERY
+        // (med-2), drawn without pictures, so — as on the six kits before it
+        // that draw one — his own two photographs stand in the first two
+        // slots until the tenant's arrive.
+        'forma_dental' => [
+            'hero' => [
+                'file' => 'hero-studio.webp',
+                'alt'  => 'A dentist welcoming a patient inside a warm private dental studio',
+            ],
+            'about' => [
+                'file' => 'natural-smile.webp',
+                'alt'  => 'A patient with a natural, healthy smile in the dental studio',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-studio.webp',
+                'alt'  => 'A dentist welcoming a patient inside a warm private dental studio',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'natural-smile.webp',
+                'alt'  => 'A patient with a natural, healthy smile in the dental studio',
+            ],
+        ],
+        // THE THIRD MEDICAL KIT. The analysis consultation is the hero and
+        // the device close-up is the technology band's plate; his treatment
+        // ledger is typographic. His method cards are this design's GALLERY
+        // (med-2), drawn without pictures, so his own two photographs stand
+        // in the first two slots until the tenant's arrive.
+        'numa_skin_lab' => [
+            'hero' => [
+                'file' => 'hero-analysis.webp',
+                'alt'  => 'A specialist discussing a personalised skin plan with a client in a private studio',
+            ],
+            'about' => [
+                'file' => 'precision-device.webp',
+                'alt'  => 'A specialist preparing a precision skin treatment device in the private studio',
+            ],
+            'gallery_1.image_1' => [
+                'file' => 'hero-analysis.webp',
+                'alt'  => 'A specialist discussing a personalised skin plan with a client in a private studio',
+            ],
+            'gallery_1.image_2' => [
+                'file' => 'precision-device.webp',
+                'alt'  => 'A specialist preparing a precision skin treatment device in the private studio',
+            ],
+        ],
     ];
 
     /**

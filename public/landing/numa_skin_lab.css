@@ -1,0 +1,855 @@
+/*
+ * Numa Skin Lab — template stylesheet.
+ *
+ * THE AUTHOR'S OWN style.css, from
+ * resources/landing-kits/med-tech/03-numa-skin-lab/style.css, copied byte for
+ * byte except for the TWO deliberate changes listed below.
+ *
+ * WHAT CHANGED, and nothing else did:
+ *
+ *  1. The self-hosted @font-face block below. The kit asked for DM Mono
+ *     (300 and 400), Instrument Serif (upright and italic) and Space Grotesk
+ *     (400–600) through a fonts.googleapis.com <link>; the landing CSP's
+ *     style-src/font-src are 'self'-only (LandingPageSecurity::policy()), so
+ *     that link cannot work here. Instrument Serif and Space Grotesk were
+ *     already on disk (the files orbit_city.css and tempo_studio.css
+ *     declare), DM Mono 400 too (ember_table.css); DM Mono 300 was fetched
+ *     for this kit (2026-09-21) from the css2 response to the author's exact
+ *     request. THE DECLARED RANGE IS THIS AUTHOR'S OWN REQUEST —
+ *     `DM+Mono:wght@300;400`, `Instrument+Serif:ital@0;1` and
+ *     `Space+Grotesk:wght@400;500;600` — so the mono face has the light
+ *     weight his eyebrows and ledger tags are set in, the body face stops at
+ *     600 exactly as Google hands it to his page, and a <strong> asking for
+ *     700 lands where his lands.
+ *
+ *     NONE OF THE THREE FAMILIES PUBLISHES CYRILLIC. All three ship latin
+ *     and latin-ext; a Latvian or Polish tenant is covered by latin-ext for
+ *     everything, and a Russian tenant's copy falls through to the author's
+ *     own declared stacks (Georgia, Arial, monospace), which is exactly what
+ *     happens on his page. Recorded as a fact rather than left as an
+ *     omission — the same ruling aera_reformer.css makes.
+ *
+ *  2. The "tenant states" section APPENDED at the very end of this file.
+ *     The kit is a mock with exactly three protocols, one specialist, one
+ *     patient signal, three questions, three method cards and two
+ *     photographs; a real page has anywhere from none to twenty-four
+ *     protocols, up to twelve practitioners and up to eight photographs.
+ *     Those rules answer counts the mock never had to, plus the two things
+ *     this author drew nowhere: a words band and a chat launcher, and the
+ *     one thing he drew without pictures: the method cards that are this
+ *     design's gallery. Every rule below the banner is written in the kit's
+ *     own tokens and every one is additive: no rule above the banner was
+ *     edited to make any of it work.
+ *
+ * TOKEN TRAPS when copying a rule out of another kit's stylesheet into this
+ * file, all of which produce silence rather than an error:
+ *
+ *   1. The spacing ramp is `--space-1`..`--space-9` (0.4rem to 10rem).
+ *   2. THIS IS A DARK PAGE: `--color-line` is the LIGHT hairline (ice at
+ *      17%) and `--color-line-dark` is the one for the ice bands (the
+ *      technology band and the closing band) — the opposite sense from the
+ *      two medical kits before it.
+ *   3. The accent is `--color-blue` (TEXT on dark, and the fill of the
+ *      primary button with ink type on it); `--color-blue-dark` is the
+ *      deeper sibling that starts the method band's gradient. `--color-ink`
+ *      is the type on the ice bands and the fill of the closing button;
+ *      `--color-black` / `--color-graphite` / `--color-panel` are surfaces.
+ *   4. The rounded corner is `--radius-card` (declared in the author's
+ *      second `:root`, the "premium interaction layer" at the end of his
+ *      file); the glow is `--shadow-glow` from the same block, and
+ *      `--color-shade` / `--color-shade-strong` are his overlay tokens.
+ *   5. `--container` is 91rem and `--gutter` is a clamp; there is no reading
+ *      measure — the author caps prose per element (30rem / 32rem / 36rem).
+ */
+
+/* --- self-hosted faces (the kit's fonts.googleapis.com <link>, resolved) --- */
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:300;font-display:swap;
+  src:url('fonts/dm-mono-300-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:300;font-display:swap;
+  src:url('fonts/dm-mono-300.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/dm-mono-400-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'DM Mono';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/dm-mono-400.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Instrument Serif';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/instrument-serif-400-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Instrument Serif';font-style:normal;font-weight:400;font-display:swap;
+  src:url('fonts/instrument-serif-400.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;
+  src:url('fonts/instrument-serif-italic-400-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Instrument Serif';font-style:italic;font-weight:400;font-display:swap;
+  src:url('fonts/instrument-serif-italic-400.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/space-grotesk-var-latin-ext.woff2') format('woff2');
+  unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF}
+@font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 600;font-display:swap;
+  src:url('fonts/space-grotesk-var.woff2') format('woff2');
+  unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD}
+/* --- end self-hosted faces ----------------------------------------------- */
+
+:root {
+  --color-black: #090d11;
+  --color-graphite: #111820;
+  --color-panel: #17212a;
+  --color-ice: #e8f2f5;
+  --color-ice-deep: #c9dce2;
+  --color-blue: #58bfe5;
+  --color-blue-dark: #1686b0;
+  --color-white: #ffffff;
+  --color-muted: #89969e;
+  --color-ink: #12191e;
+  --color-line: rgba(232, 242, 245, 0.17);
+  --color-line-dark: rgba(18, 25, 30, 0.17);
+  --color-shade: rgba(9, 13, 17, 0.16);
+  --color-shade-strong: rgba(9, 13, 17, 0.92);
+  --color-focus: #80d8f5;
+  --color-shadow: rgba(0, 0, 0, 0.32);
+  --font-display: "Instrument Serif", Georgia, serif;
+  --font-body: "Space Grotesk", Arial, sans-serif;
+  --font-mono: "DM Mono", monospace;
+  --font-size-2xs: 0.67rem;
+  --font-size-xs: 0.77rem;
+  --font-size-sm: 0.9rem;
+  --font-size-body: 1rem;
+  --font-size-lead: clamp(1.05rem, 1.5vw, 1.35rem);
+  --font-size-h3: clamp(1.6rem, 2vw, 2.2rem);
+  --font-size-h2: clamp(3.1rem, 5.8vw, 6.2rem);
+  --font-size-hero: clamp(4.2rem, 8.2vw, 8.7rem);
+  --font-size-quote: clamp(2rem, 3.7vw, 4rem);
+  --line-body: 1.65;
+  --line-heading: 0.9;
+  --letter-label: 0.18em;
+  --container: 91rem;
+  --gutter: clamp(1.2rem, 4vw, 4.5rem);
+  --space-1: 0.4rem;
+  --space-2: 0.7rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2rem;
+  --space-6: 3rem;
+  --space-7: 4.5rem;
+  --space-8: 7rem;
+  --space-9: 10rem;
+  --radius-sm: 0.2rem;
+  --radius-pill: 999px;
+  --border: 1px;
+  --touch-target: 3rem;
+  --header-height: 5.5rem;
+  --widget-space: 7.5rem;
+  --fab-offset: 1.25rem;
+  --fab-clearance: 13rem;
+  --shadow: 0 2rem 5rem var(--color-shadow);
+  --transition: 200ms ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; overflow-x: hidden; background: var(--color-black); color: var(--color-ice); font-family: var(--font-body); font-size: var(--font-size-body); line-height: var(--line-body); -webkit-font-smoothing: antialiased; }
+img { display: block; width: 100%; max-width: 100%; height: auto; }
+a { color: inherit; text-decoration: none; }
+h1, h2, h3, p, blockquote, dl, dd { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: -0.045em; }
+[id] { scroll-margin-top: calc(var(--header-height) + var(--space-4)); }
+:focus-visible { outline: 2px solid var(--color-focus); outline-offset: var(--space-1); }
+.container { width: min(calc(100% - var(--gutter) * 2), var(--container)); margin-inline: auto; }
+.section { padding-block: var(--space-9); }
+.eyebrow, .footer-label { font-family: var(--font-mono); font-size: var(--font-size-2xs); font-weight: 400; letter-spacing: var(--letter-label); text-transform: uppercase; }
+.icon { width: 1.05rem; height: 1.05rem; flex: 0 0 auto; }
+.icon--social { width: 1.2rem; height: 1.2rem; }
+.skip-link { position: fixed; z-index: 100; top: var(--space-3); left: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--color-ice); color: var(--color-ink); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.announcement { display: grid; min-height: 2.5rem; place-items: center; padding: var(--space-1) var(--gutter); background: var(--color-blue); color: var(--color-ink); font-family: var(--font-mono); font-size: var(--font-size-2xs); text-align: center; text-transform: uppercase; }
+.announcement a { border-bottom: var(--border) solid currentColor; }
+.site-header { position: absolute; z-index: 30; top: 2.5rem; left: 0; width: 100%; }
+.header__inner { display: grid; min-height: var(--header-height); grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-6); border-bottom: var(--border) solid var(--color-line); }
+.brand { display: grid; grid-template-columns: auto auto; column-gap: var(--space-3); align-items: center; line-height: 1; }
+.brand > span { display: grid; width: 2.7rem; height: 2.7rem; grid-row: span 2; place-items: center; border: var(--border) solid var(--color-line); font-family: var(--font-display); font-size: var(--font-size-h3); }
+.brand strong { font-family: var(--font-body); font-weight: 600; letter-spacing: var(--letter-label); }
+.brand small { color: var(--color-muted); font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav { display: flex; justify-content: center; gap: var(--space-5); font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.desktop-nav a, .header__book { transition: color var(--transition); }
+.desktop-nav a:hover, .header__book:hover { color: var(--color-blue); }
+.header__book { display: inline-flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.mobile-nav { display: none; position: relative; }
+.mobile-nav summary { min-height: var(--touch-target); align-content: center; cursor: pointer; font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); list-style: none; text-transform: uppercase; }
+.mobile-nav summary::-webkit-details-marker { display: none; }
+.mobile-nav summary span { margin-left: var(--space-2); color: var(--color-blue); }
+.mobile-nav nav { position: absolute; top: calc(100% + var(--space-3)); right: 0; display: grid; min-width: 16rem; padding: var(--space-3); border: var(--border) solid var(--color-line); background: var(--color-graphite); box-shadow: var(--shadow); }
+.mobile-nav nav a { min-height: var(--touch-target); align-content: center; border-bottom: var(--border) solid var(--color-line); }
+
+.hero { position: relative; min-height: 53rem; overflow: hidden; }
+.hero > img, .hero__shade { position: absolute; inset: 0; width: 100%; height: 100%; }
+.hero > img { object-fit: cover; object-position: center; }
+.hero__shade { background: linear-gradient(90deg, var(--color-shade) 0%, var(--color-shade) 42%, var(--color-shade-strong) 82%); }
+.hero__content { position: relative; z-index: 1; display: grid; min-height: 53rem; grid-template-columns: 1fr 0.52fr; align-items: end; gap: var(--space-8); padding-top: calc(var(--header-height) + var(--space-8)); padding-bottom: var(--space-8); }
+.hero__content > div:first-child { grid-column: 2; }
+.hero__content > div:last-child { grid-column: 2; }
+.hero__content .eyebrow { margin-bottom: var(--space-5); color: var(--color-blue); }
+.hero h1 { font-size: var(--font-size-hero); line-height: var(--line-heading); }
+.hero h1 em { color: var(--color-blue); font-weight: 400; }
+.hero__content > div:last-child > p { max-width: 32rem; color: var(--color-ice-deep); font-size: var(--font-size-lead); }
+.hero .button { margin-top: var(--space-5); }
+.hero__meta { position: absolute; z-index: 2; bottom: var(--space-5); left: var(--gutter); font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.button, .booking-fab { display: inline-flex; min-height: var(--touch-target); align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-2) var(--space-5); border: var(--border) solid var(--color-blue); background: var(--color-blue); color: var(--color-ink); font-family: var(--font-mono); font-size: var(--font-size-2xs); letter-spacing: var(--letter-label); text-transform: uppercase; transition: transform var(--transition), background var(--transition); }
+.button:hover, .booking-fab:hover { transform: translateY(-0.15rem); }
+.button--ink { border-color: var(--color-ink); background: var(--color-ink); color: var(--color-white); }
+.button--blue { border-color: var(--color-blue); background: var(--color-blue); color: var(--color-ink); }
+.trust { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: var(--border) solid var(--color-line); background: var(--color-graphite); }
+.trust p { display: flex; min-height: 6.5rem; align-items: center; justify-content: center; gap: var(--space-2); padding: var(--space-3); border-right: var(--border) solid var(--color-line); color: var(--color-muted); font-family: var(--font-mono); font-size: var(--font-size-2xs); text-align: center; text-transform: uppercase; }
+.trust p:last-child { border-right: 0; }
+.trust strong { color: var(--color-ice); font-family: var(--font-display); font-size: var(--font-size-h3); font-weight: 400; }
+.section-heading { display: grid; grid-template-columns: 9rem 1fr 0.55fr; align-items: end; gap: var(--space-7); }
+.section-heading h2, .technology h2, .method h2, .specialist h2, .faq h2, .booking h2 { font-size: var(--font-size-h2); line-height: var(--line-heading); }
+.section-heading > p:last-child { max-width: 33rem; color: var(--color-muted); }
+.protocol-list { margin-top: var(--space-8); border-top: var(--border) solid var(--color-line); }
+.protocol-list article { display: grid; min-height: 8rem; grid-template-columns: 10rem 1fr auto; align-items: center; gap: var(--space-5); border-bottom: var(--border) solid var(--color-line); transition: background var(--transition), padding var(--transition); }
+.protocol-list article:hover { padding-inline: var(--space-3); background: var(--color-graphite); }
+.protocol-list article > p { color: var(--color-blue); font-family: var(--font-mono); font-size: var(--font-size-2xs); text-transform: uppercase; }
+.protocol-list h3 { font-size: var(--font-size-h3); }
+.protocol-list div p { color: var(--color-muted); }
+.protocol-list strong { font-family: var(--font-mono); font-size: var(--font-size-2xs); font-weight: 400; text-transform: uppercase; }
+.technology { display: grid; grid-template-columns: 1fr 1fr; background: var(--color-ice); color: var(--color-ink); }
+.technology__image img { height: 100%; max-height: 55rem; object-fit: cover; }
+.technology__copy { display: flex; flex-direction: column; justify-content: center; padding: var(--space-9) var(--gutter); }
+.technology__copy .eyebrow { margin-bottom: var(--space-5); color: var(--color-blue-dark); }
+.technology__copy > p:not(.eyebrow) { max-width: 36rem; margin-top: var(--space-5); color: var(--color-muted); font-size: var(--font-size-lead); }
+.technology__copy > div { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-6); }
+.technology__copy span { padding: var(--space-2) var(--space-3); border: var(--border) solid var(--color-line-dark); border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: var(--font-size-2xs); text-transform: uppercase; }
+.method { background: var(--color-blue-dark); }
+.method header { display: grid; grid-template-columns: 0.45fr 1fr; align-items: end; gap: var(--space-7); }
+.method-grid { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: var(--space-7); border-top: var(--border) solid var(--color-line); }
+.method-grid article { min-height: 15rem; padding: var(--space-5); border-right: var(--border) solid var(--color-line); }
+.method-grid article:last-child { border-right: 0; }
+.method-grid span { font-family: var(--font-mono); font-size: var(--font-size-2xs); }
+.method-grid h3 { margin-block: var(--space-6) var(--space-2); font-size: var(--font-size-h3); }
+.method-grid p { color: var(--color-ice-deep); }
+.specialist { display: grid; grid-template-columns: 1fr 1fr; align-items: end; gap: var(--space-8); }
+.specialist > div > p:last-child { max-width: 38rem; margin-top: var(--space-4); color: var(--color-muted); font-size: var(--font-size-lead); }
+.specialist dl { display: grid; grid-template-columns: repeat(3, 1fr); border-top: var(--border) solid var(--color-line); }
+.specialist dl div { min-height: 9rem; padding: var(--space-4); border-right: var(--border) solid var(--color-line); }
+.specialist dl div:last-child { border-right: 0; }
+.specialist dt { font-family: var(--font-display); font-size: var(--font-size-h3); }
+.specialist dd { color: var(--color-muted); font-family: var(--font-mono); font-size: var(--font-size-2xs); }
+.review { display: grid; grid-template-columns: 10rem 1fr 10rem; align-items: end; gap: var(--space-7); border-top: var(--border) solid var(--color-line); }
+.review blockquote { font-family: var(--font-display); font-size: var(--font-size-quote); line-height: 1; }
+.review > p:last-child, .review > div { color: var(--color-muted); font-family: var(--font-mono); font-size: var(--font-size-2xs); }
+.rating { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-3); color: var(--color-blue); }
+.faq { background: var(--color-graphite); }
+.faq__grid { display: grid; grid-template-columns: 0.6fr 1fr; gap: var(--space-8); }
+.faq details { border-top: var(--border) solid var(--color-line); }
+.faq details:last-child { border-bottom: var(--border) solid var(--color-line); }
+.faq summary { min-height: 4.8rem; align-content: center; cursor: pointer; font-family: var(--font-display); font-size: var(--font-size-h3); list-style: none; }
+.faq summary::before { margin-right: var(--space-3); color: var(--color-blue); content: "+"; }
+.faq details[open] summary::before { content: "−"; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq details p { max-width: 40rem; padding: 0 var(--space-6) var(--space-4); color: var(--color-muted); }
+.booking { padding-block: var(--space-8); background: var(--color-ice); color: var(--color-ink); }
+.booking__inner { display: grid; grid-template-columns: 8rem 1fr 0.6fr; align-items: end; gap: var(--space-7); }
+.booking__inner > div:last-child { display: grid; gap: var(--space-4); justify-items: start; }
+.booking__inner > div:last-child > p { max-width: 30rem; color: var(--color-muted); }
+.booking__inner > div:last-child > a:last-child { border-bottom: var(--border) solid var(--color-line-dark); font-family: var(--font-mono); font-size: var(--font-size-2xs); }
+
+.site-footer { background: var(--color-black); }
+.footer-hub { display: grid; grid-template-columns: minmax(15rem, 1.35fr) repeat(3, minmax(9rem, 0.7fr)) var(--widget-space); gap: var(--space-6); padding-block: var(--space-7); }
+.footer-hub__booking, .footer-hub__review, .footer-hub__contact, .footer-hub__social { display: grid; align-content: start; gap: var(--space-3); }
+.brand--footer { justify-self: start; }
+.footer-label { color: var(--color-blue); }
+.footer-hub__booking > p { max-width: 23rem; color: var(--color-muted); }
+.footer-hub__booking .button { justify-self: start; margin-top: var(--space-2); }
+.footer-rating { display: flex; align-items: center; gap: var(--space-2); color: var(--color-muted); }
+.footer-rating strong { color: var(--color-ice); font-family: var(--font-display); font-size: var(--font-size-h3); font-weight: 400; }
+.footer-hub__review > a, .footer-hub__contact a { text-decoration: underline; text-decoration-color: var(--color-line); text-underline-offset: var(--space-1); }
+.footer-hub__contact { font-style: normal; }
+.footer-hub__contact a, .footer-hub__contact span { display: flex; min-height: var(--touch-target); align-items: center; gap: var(--space-2); font-size: var(--font-size-sm); }
+.footer-hub__social > div { display: flex; gap: var(--space-2); }
+.footer-hub__social a { display: grid; width: var(--touch-target); min-height: var(--touch-target); place-items: center; border: var(--border) solid var(--color-line); border-radius: var(--radius-pill); transition: background var(--transition); }
+.footer-hub__social a:hover { background: var(--color-panel); }
+.footer-hub__ai-slot { min-width: var(--widget-space); min-height: var(--widget-space); justify-self: end; }
+.footer-bottom { display: flex; min-height: 5rem; align-items: center; justify-content: space-between; gap: var(--space-4); border-top: var(--border) solid var(--color-line); color: var(--color-muted); font-family: var(--font-mono); font-size: var(--font-size-2xs); text-transform: uppercase; }
+.footer-bottom div { display: flex; gap: var(--space-4); }
+.booking-fab { position: fixed; z-index: 50; bottom: var(--fab-offset); left: var(--fab-offset); box-shadow: var(--shadow); }
+
+@media (max-width: 74rem) {
+  .desktop-nav, .header__book { display: none; }
+  .header__inner { grid-template-columns: 1fr auto; }
+  .mobile-nav { display: block; }
+  .footer-hub { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .footer-hub__ai-slot { grid-column: 2; }
+}
+
+@media (max-width: 56rem) {
+  :root { --font-size-hero: clamp(3.8rem, 14vw, 6.2rem); --space-9: 7rem; }
+  .hero > img { object-position: 37% center; }
+  .hero__shade { background: linear-gradient(180deg, var(--color-shade) 15%, var(--color-shade-strong) 88%); }
+  .hero__content { min-height: 49rem; grid-template-columns: 1fr; align-content: end; gap: var(--space-5); padding-bottom: var(--space-7); }
+  .hero__content > div:first-child, .hero__content > div:last-child { grid-column: 1; }
+  .hero__meta { display: none; }
+  .trust { grid-template-columns: repeat(2, 1fr); }
+  .trust p:nth-child(2) { border-right: 0; }
+  .trust p:nth-child(-n+2) { border-bottom: var(--border) solid var(--color-line); }
+  .section-heading { grid-template-columns: 1fr; gap: var(--space-5); }
+  .protocol-list article { min-height: 10rem; grid-template-columns: 1fr; align-content: center; gap: var(--space-2); padding-block: var(--space-4); }
+  .technology { grid-template-columns: 1fr; }
+  .technology__image { max-height: 36rem; }
+  .technology__copy { padding-block: var(--space-8); }
+  .method header, .specialist, .faq__grid, .booking__inner { grid-template-columns: 1fr; gap: var(--space-5); }
+  .method-grid { grid-template-columns: 1fr; }
+  .method-grid article { min-height: auto; border-right: 0; border-bottom: var(--border) solid var(--color-line); }
+  .review { grid-template-columns: 1fr; gap: var(--space-5); }
+  .booking__inner > div:last-child { justify-items: stretch; }
+  .booking .button { width: 100%; }
+  .booking-fab { display: none; }
+}
+
+@media (max-width: 36rem) {
+  :root { --gutter: 1rem; --space-8: 5.5rem; }
+  .brand small { display: none; }
+  .hero { min-height: 48rem; }
+  .hero__content { min-height: 48rem; }
+  .hero .button { width: 100%; }
+  .specialist dl { grid-template-columns: 1fr; }
+  .specialist dl div { min-height: auto; border-right: 0; border-bottom: var(--border) solid var(--color-line); }
+  .faq details p { padding-inline: var(--space-4); }
+  .footer-hub { grid-template-columns: 1fr; }
+  .footer-hub__ai-slot { grid-column: 1; justify-self: start; }
+  .footer-bottom { align-items: flex-start; flex-direction: column; justify-content: center; padding-block: var(--space-4); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { transition-duration: 0.01ms; }
+}
+
+/* Premium interaction layer */
+:root {
+  --color-glass: rgba(17, 24, 32, 0.86);
+  --color-blue-soft: rgba(88, 191, 229, 0.13);
+  --color-blue-glow: rgba(88, 191, 229, 0.28);
+  --color-ice-soft: rgba(232, 242, 245, 0.08);
+  --font-size-card-label: 0.66rem;
+  --radius-card: 0.75rem;
+  --ease-premium: cubic-bezier(0.22, 1, 0.36, 1);
+  --shadow-glow: 0 1.2rem 4rem var(--color-blue-glow);
+}
+
+.header__inner {
+  min-height: calc(var(--header-height) - var(--space-3));
+  padding-inline: var(--space-4);
+  border: var(--border) solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-glass);
+  box-shadow: 0 1rem 3rem var(--color-shadow);
+  backdrop-filter: blur(1rem);
+}
+.desktop-nav a { position: relative; padding-block: var(--space-2); }
+.desktop-nav a::after { position: absolute; right: 50%; bottom: 0; left: 50%; height: var(--border); background: var(--color-blue); content: ""; box-shadow: 0 0 1rem var(--color-blue-glow); transition: right var(--transition), left var(--transition); }
+.desktop-nav a:hover::after, .desktop-nav a:focus-visible::after { right: 0; left: 0; }
+.mobile-nav summary span { display: inline-block; transition: transform var(--transition); }
+.mobile-nav[open] summary span { transform: rotate(45deg); }
+.mobile-nav nav a { padding-inline: var(--space-3); transition: padding var(--transition), color var(--transition), background var(--transition); }
+.mobile-nav nav a:hover, .mobile-nav nav a:focus-visible { padding-left: var(--space-4); background: var(--color-blue-soft); color: var(--color-blue); }
+
+.hero::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background-image: linear-gradient(var(--color-line) var(--border), transparent var(--border)), linear-gradient(90deg, var(--color-line) var(--border), transparent var(--border));
+  background-size: 8rem 8rem;
+  content: "";
+  opacity: 0.18;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(90deg, var(--color-white), transparent 60%);
+  mask-image: linear-gradient(90deg, var(--color-white), transparent 60%);
+}
+.hero > img { transform: scale(1.025); animation: numa-image-in 1.4s var(--ease-premium) both; }
+.hero__content { z-index: 3; }
+.hero__content .eyebrow, .hero__content h1, .hero__content > div:last-child { animation: numa-copy-in 0.9s var(--ease-premium) both; }
+.hero__content h1 { animation-delay: 100ms; }
+.hero__content > div:last-child { animation-delay: 190ms; }
+.hero__scan-card {
+  position: absolute;
+  z-index: 4;
+  top: calc(var(--header-height) + var(--space-7));
+  bottom: auto;
+  left: var(--gutter);
+  display: grid;
+  min-width: 20rem;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: var(--space-3);
+  overflow: hidden;
+  padding: var(--space-4);
+  border: var(--border) solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-glass);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(1rem);
+  animation: numa-copy-in 1s 330ms var(--ease-premium) both;
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+.hero__scan-card:hover, .hero__scan-card:focus-visible { border-color: var(--color-blue); box-shadow: var(--shadow-glow); transform: translateY(-0.25rem); }
+.hero__scan-card > span:nth-child(2) { display: grid; grid-column: 1; grid-row: 1; line-height: 1.4; }
+.hero__scan-card small { color: var(--color-blue); font-family: var(--font-mono); font-size: var(--font-size-card-label); letter-spacing: var(--letter-label); text-transform: uppercase; }
+.hero__scan-card strong { color: var(--color-ice); font-family: var(--font-display); font-size: var(--font-size-lead); font-weight: 400; }
+.hero__scan-card > .icon { grid-column: 2; grid-row: 1; }
+.scan-card__signal { position: absolute; right: 0; bottom: 0; left: 0; height: 0.18rem; background: var(--color-blue); box-shadow: 0 0 1rem var(--color-blue-glow); transform-origin: left; animation: numa-scan 2.8s ease-in-out infinite; }
+
+.button, .booking-fab { overflow: hidden; isolation: isolate; transition: color var(--transition), transform var(--transition), box-shadow var(--transition); }
+.button { position: relative; }
+.booking-fab { position: fixed; }
+.button::before, .booking-fab::before { position: absolute; z-index: -1; inset: 0; background: var(--color-ice); content: ""; transform: translateX(-102%); transition: transform 380ms var(--ease-premium); }
+.button:hover::before, .button:focus-visible::before, .booking-fab:hover::before, .booking-fab:focus-visible::before { transform: translateX(0); }
+.button:hover, .button:focus-visible, .booking-fab:hover, .booking-fab:focus-visible { border-color: var(--color-ice); box-shadow: var(--shadow-glow); }
+.button--ink::before { background: var(--color-blue); }
+
+.trust p { position: relative; overflow: hidden; transition: color var(--transition), background var(--transition); }
+.trust p::after { position: absolute; right: 25%; bottom: 0; left: 25%; height: 0.18rem; background: var(--color-blue); content: ""; transform: scaleX(0); transition: transform 360ms var(--ease-premium); }
+.trust p:hover { background: var(--color-panel); color: var(--color-ice); }
+.trust p:hover::after { transform: scaleX(1); }
+.protocol-list article { position: relative; overflow: hidden; }
+.protocol-list article::after { width: 2.5rem; height: 2.5rem; border: var(--border) solid var(--color-line); content: "↗"; display: grid; place-items: center; color: var(--color-blue); font-family: var(--font-mono); font-size: var(--font-size-sm); opacity: 0; transform: translateX(-0.6rem); transition: opacity var(--transition), transform var(--transition), background var(--transition); }
+.protocol-list article:hover { padding-inline: var(--space-4); background: linear-gradient(90deg, var(--color-graphite), var(--color-panel)); }
+.protocol-list article:hover::after { background: var(--color-blue-soft); opacity: 1; transform: translateX(0); }
+.protocol-list article:hover > strong { display: none; }
+
+.technology__image { position: relative; overflow: hidden; }
+.technology__image img { transition: transform 1s var(--ease-premium); }
+.technology__image:hover img { transform: scale(1.04); }
+.technology__image > p { position: absolute; right: var(--space-4); bottom: var(--space-4); left: var(--space-4); padding: var(--space-3) var(--space-4); border: var(--border) solid var(--color-line); border-radius: var(--radius-card); background: var(--color-glass); color: var(--color-ice); font-family: var(--font-mono); font-size: var(--font-size-card-label); letter-spacing: var(--letter-label); text-align: center; text-transform: uppercase; backdrop-filter: blur(1rem); }
+.technology__image > p span { display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: var(--space-2); border-radius: var(--radius-pill); background: var(--color-blue); box-shadow: 0 0 1rem var(--color-blue-glow); }
+.technology__copy span { transition: border-color var(--transition), background var(--transition), transform var(--transition); }
+.technology__copy span:hover { border-color: var(--color-blue-dark); background: var(--color-blue-soft); transform: translateY(-0.15rem); }
+
+.method { position: relative; overflow: hidden; background: linear-gradient(120deg, var(--color-blue-dark), var(--color-panel)); }
+.method::after { position: absolute; top: -14rem; right: -10rem; width: 34rem; height: 34rem; border: var(--border) solid var(--color-line); border-radius: var(--radius-pill); content: ""; }
+.method .container { position: relative; z-index: 1; }
+.method-grid article { transition: background var(--transition), transform var(--transition); }
+.method-grid article:hover { background: var(--color-blue-soft); transform: translateY(-0.3rem); }
+.specialist dl div { transition: background var(--transition), transform var(--transition); }
+.specialist dl div:hover { background: var(--color-graphite); transform: translateY(-0.25rem); }
+.review { position: relative; }
+.review::before { position: absolute; top: var(--space-5); left: 10rem; color: var(--color-blue-soft); content: "“"; font-family: var(--font-display); font-size: var(--font-size-hero); line-height: 1; transform: scale(1.8); transform-origin: top left; }
+.review > * { position: relative; z-index: 1; }
+.faq details { transition: background var(--transition), padding var(--transition); }
+.faq details[open] { padding-inline: var(--space-3); background: var(--color-panel); }
+.faq summary { display: grid; grid-template-columns: auto 1fr; align-items: center; }
+.faq summary::before { transition: transform var(--transition); }
+.faq details[open] summary::before { transform: rotate(180deg); }
+.booking { position: relative; overflow: hidden; background: linear-gradient(120deg, var(--color-ice), var(--color-ice-deep)); }
+.booking::after { position: absolute; top: -12rem; right: -7rem; width: 31rem; height: 31rem; border: var(--border) solid var(--color-line-dark); border-radius: var(--radius-pill); content: ""; }
+.booking__inner { position: relative; z-index: 1; }
+.footer-hub__contact a, .footer-hub__review > a, .footer-bottom a { transition: color var(--transition), transform var(--transition); }
+.footer-hub__contact a:hover, .footer-hub__review > a:hover, .footer-bottom a:hover { color: var(--color-blue); }
+.footer-hub__social a { transition: color var(--transition), background var(--transition), transform var(--transition), box-shadow var(--transition); }
+.footer-hub__social a:hover { color: var(--color-blue); box-shadow: 0 0 1.5rem var(--color-blue-glow); transform: translateY(-0.2rem); }
+.footer-bottom { padding-left: var(--fab-clearance); }
+
+@keyframes numa-copy-in { from { opacity: 0; transform: translateY(1.4rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes numa-image-in { from { opacity: 0.68; transform: scale(1.09); } to { opacity: 1; transform: scale(1.025); } }
+@keyframes numa-scan { 0%, 100% { transform: scaleX(0.18); opacity: 0.55; } 50% { transform: scaleX(1); opacity: 1; } }
+
+@media (max-width: 74rem) {
+  .mobile-nav { position: static; }
+  .header__inner { position: relative; }
+  .mobile-nav nav { top: calc(100% + var(--space-2)); right: var(--gutter); left: var(--gutter); min-width: 0; border-radius: var(--radius-card); }
+}
+
+@media (max-width: 56rem) {
+  :root { --font-size-h2: clamp(2.7rem, 10vw, 4.9rem); --font-size-quote: clamp(1.8rem, 7.4vw, 3rem); --space-9: 6rem; }
+  .hero__scan-card { top: calc(var(--header-height) + var(--space-7)); bottom: auto; min-width: 18rem; }
+  .hero .button { display: none; }
+  .hero__content { padding-bottom: calc(var(--touch-target) + var(--space-7)); }
+  .protocol-list article { grid-template-columns: 1fr auto; }
+  .protocol-list article > p, .protocol-list article > div { grid-column: 1; }
+  .protocol-list article > strong { grid-column: 1; }
+  .protocol-list article::after { grid-column: 2; grid-row: 1 / span 3; opacity: 1; transform: none; }
+  .protocol-list article:hover > strong { display: block; }
+  .method::after, .booking::after { opacity: 0.35; }
+  .review::before { top: var(--space-5); left: var(--gutter); }
+  body { padding-bottom: calc(var(--touch-target) + var(--space-5) + env(safe-area-inset-bottom)); }
+  .footer-bottom { padding-left: 0; }
+  .booking-fab { right: auto; bottom: calc(var(--space-3) + env(safe-area-inset-bottom)); left: var(--space-3); display: flex; width: calc(100% - var(--space-3) * 2); min-height: calc(var(--touch-target) + var(--space-1)); }
+}
+
+@media (max-width: 36rem) {
+  :root { --font-size-hero: clamp(3.3rem, 16vw, 4.6rem); --font-size-h3: clamp(1.45rem, 7vw, 2rem); --space-7: 3.5rem; --space-8: 4.75rem; }
+  .announcement { min-height: 2.2rem; padding-inline: var(--space-3); }
+  .site-header { top: 2.2rem; }
+  .header__inner { padding-inline: var(--space-3); }
+  .brand > span { width: 2.4rem; height: 2.4rem; }
+  .hero, .hero__content { min-height: 50rem; }
+  .hero > img { object-position: 22% center; }
+  .hero__scan-card { top: calc(var(--header-height) + var(--space-5)); right: var(--gutter); left: var(--gutter); min-width: 0; padding: var(--space-3); }
+  .hero__content { padding-bottom: var(--space-6); }
+  .hero__content .eyebrow { margin-bottom: var(--space-3); }
+  .hero .button { width: 100%; }
+  .trust p { min-height: 5.3rem; padding: var(--space-2); }
+  .section-heading { gap: var(--space-4); }
+  .protocol-list { margin-top: var(--space-5); }
+  .protocol-list article { min-height: auto; padding-block: var(--space-4); }
+  .technology__image { height: 29rem; }
+  .technology__image img { height: 100%; object-fit: cover; }
+  .technology__image > p { right: var(--space-2); bottom: var(--space-2); left: var(--space-2); padding-inline: var(--space-2); }
+  .technology__copy { padding-inline: var(--gutter); }
+  .method-grid article { padding-inline: 0; }
+  .review blockquote { line-height: 1.08; }
+  .faq summary { min-height: 4.3rem; }
+  .footer-hub { gap: var(--space-6); }
+  .footer-hub__ai-slot { min-height: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero > img, .hero__content .eyebrow, .hero__content h1, .hero__content > div:last-child, .hero__scan-card, .scan-card__signal { animation: none; }
+}
+
+/* =========================================================================
+   TENANT STATES — appended, never edited into the kit above.
+
+   The kit is a mock: exactly three protocols, one specialist, one patient
+   signal, three questions, three method cards and two photographs. A real
+   page has anywhere from none to twenty-four protocols, up to twelve
+   practitioners and up to eight photographs, and a brand-new clinic has
+   none of anything. Everything below answers a count the mock never had to
+   answer, in the kit's own tokens, so that a page which is missing a
+   photograph or a column reads as a designed composition rather than a
+   hole. Nothing above this banner was changed to make any of it work.
+
+   TOKEN TRAP, restated because every rule below had to avoid it: this is a
+   DARK page — `--color-line` is the light hairline and `--color-line-dark`
+   is the one for the ice bands; the accent is `--color-blue` with
+   `--color-blue-dark` as its deeper sibling; the rounded corner is
+   `--radius-card` and the overlay tokens are `--color-shade` /
+   `--color-shade-strong`. See the file header.
+   ========================================================================= */
+
+/* --- the fact strip with fewer than four cells ---------------------------
+   Four cells in the author's markup; the rating that leads his row is null
+   below four ratings org-wide by design, and a tenant may write fewer
+   highlights than three. His `repeat(4, 1fr)` would leave empty columns. */
+.trust[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.trust[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.trust[data-count="3"] {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* --- the technology band with no photograph ------------------------------
+   The author's band is a two-column split, photograph left. With no
+   picture at all the copy takes the whole band rather than half a grid
+   with a hole in it. */
+.technology--solo {
+  grid-template-columns: 1fr;
+}
+
+/* --- the method cards, for one to eight photographs ----------------------
+   THE ONE BAND THAT IS NOT THE AUTHOR'S COMPOSITION, and the reason is
+   written down rather than glossed. His three cards carry a mono tag, a
+   name and a line of prose and NO photograph. On this platform a `gallery`
+   band IS its pictures: PageContent::count() counts photographs for this
+   type, the image endpoints are the only writer of its eight slots, and a
+   design that drew none would offer eight photo controls that could never
+   appear.
+
+   So the picture fills the card he drew, inside his own hairline, under a
+   veil in his own shade tokens, and his <h3> becomes the photograph's
+   caption. His card's `min-height: 15rem` is untouched and the picture is
+   absolutely positioned, so THE BAND IS EXACTLY THE HEIGHT HE DREW IT at
+   every count. */
+.method-grid article.method__photo {
+  position: relative;
+  overflow: hidden;
+}
+
+.method-grid article.method__photo img {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  height: 100%;
+  object-fit: cover;
+}
+
+.method-grid article.method__photo::after {
+  position: absolute;
+  z-index: 0;
+  content: "";
+  inset: 0;
+  background: linear-gradient(to top, var(--color-shade-strong), var(--color-shade));
+}
+
+.method-grid article.method__photo > span,
+.method-grid article.method__photo h3,
+.method-grid article.method__photo p {
+  position: relative;
+  z-index: 1;
+}
+
+/* One and two photographs: his fixed three-column track would leave the
+   row part-empty. Bounded at SectionType::GALLERY_IMAGES, so the counts are
+   enumerable and are enumerated rather than approximated. */
+.method-grid[data-count="1"] {
+  grid-template-columns: 1fr;
+}
+
+.method-grid[data-count="2"] {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Four and up wrap onto a second row, which his single `:last-child` rule
+   never had to think about: the third card of every row needs its dividing
+   rule removed, and every card after the first row needs the hairline his
+   grid's own `border-top` gives the first. */
+.method-grid article:nth-child(3n) {
+  border-right: 0;
+}
+
+.method-grid article:nth-child(n + 4) {
+  border-top: var(--border) solid var(--color-line);
+}
+
+/* --- the specialist band: nobody beside the specialist ------------------
+   His band is a two-column split, the record's cells on the right. A
+   single-specialist clinic fills one column, and the band closes to it
+   rather than leaving half of itself empty. A fourth and later colleague
+   wraps the cells onto a second row, which needs the rule the first has. */
+.specialist--solo {
+  grid-template-columns: 1fr;
+}
+
+.specialist dl div:nth-child(n + 4) {
+  border-top: var(--border) solid var(--color-line);
+}
+
+/* --- footer hub: the columns a tenant actually has -----------------------
+   The kit's five-column hub assumes a review link, contact details and
+   social destinations all exist. The review link only renders where a
+   review form is actually reachable, and a blank social leaf renders no
+   icon, so the hub is told how many columns it really has. This is the
+   author's own `.footer-hub` grid rule with the repeat count changed and
+   nothing else. */
+.footer-hub--3 {
+  grid-template-columns: minmax(15rem, 1.35fr) repeat(2, minmax(9rem, 0.7fr)) var(--widget-space);
+}
+
+.footer-hub--2 {
+  grid-template-columns: minmax(15rem, 1.35fr) minmax(9rem, 0.7fr) var(--widget-space);
+}
+
+.footer-hub--1 {
+  grid-template-columns: minmax(15rem, 1.35fr) var(--widget-space);
+}
+
+@media (max-width: 74rem) {
+  .footer-hub--1,
+  .footer-hub--2,
+  .footer-hub--3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 36rem) {
+  .footer-hub--1,
+  .footer-hub--2,
+  .footer-hub--3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- the social icons at the author's own size ---------------------------
+   His social anchors carry `icon icon--social` (1.2rem); the shared icon
+   partial emits `icon` alone, so the column gives its icons his size. */
+.footer-hub__social .icon {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+/* --- the brand logo -------------------------------------------------------
+   The kit derives a MONOGRAM from the first letter of the business name and
+   sets it in a ruled ring; a tenant with a real logo puts it in that same
+   ring — the same box, the same hairline, the same place in the lockup — so
+   the header and footer compositions do not move. `contain` because a logo
+   has its own aspect ratio and `cover` would crop somebody's mark; the
+   width overrides the author's global `img { width: 100% }`. */
+.brand > span img {
+  display: block;
+  width: 72%;
+  height: 72%;
+  object-fit: contain;
+}
+
+/* --- an eyebrow that IS the band's heading --------------------------------
+   The signal band can end up with no visible <h2> of its own, and a section
+   with no heading at all is a nameless entry in the document outline. It
+   renders the EYEBROW as the heading element instead. The author's
+   `.eyebrow` rule already sets his mono face and weight, which outranks the
+   `h1, h2, h3` rule; the leading is what an <h2> would not inherit from
+   `body`. Additive — on a <p> this is the value already inherited. */
+.eyebrow {
+  line-height: var(--line-body);
+}
+
+/* --- the words band the author did not draw -------------------------------
+   `text` is the repeatable band a tenant needs when their business does not
+   fit the eleven the author composed, and template fidelity 3.2 says to ship
+   it rather than offer a picker entry that renders nothing. It is assembled
+   from HIS OWN PARTS — the three-track `.section-heading` his protocols
+   band uses and a photograph in his card radius — so the only thing this
+   file adds is a measure for the prose under it. */
+.text-band__body {
+  max-width: 36rem;
+  margin-top: var(--space-6);
+  color: var(--color-ice-deep);
+}
+
+.text-band__body p + p {
+  margin-top: var(--space-4);
+}
+
+.text-band__media {
+  margin-top: var(--space-7);
+}
+
+.text-band__media img {
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow);
+}
+
+.text-band__media figcaption {
+  max-width: 28rem;
+  margin-top: var(--space-3);
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+}
+
+/* --- the chat launcher, in the author's tokens ----------------------------
+   The author reserves the footer's `[data-ai-widget-slot]` and keeps the
+   bottom-RIGHT corner clear (his booking pill is fixed bottom-left). The
+   launcher is his blue button — ice-blue field with ink type, pill radius,
+   his glow on hover — and the panel is his graphite panel in his card
+   radius. Below 56rem his booking pill becomes a full-width bar along the
+   bottom edge, so the launcher lifts above it. */
+.ai-launcher {
+  position: fixed;
+  z-index: 50;
+  right: var(--fab-offset);
+  bottom: var(--fab-offset);
+  display: grid;
+  width: var(--touch-target);
+  height: var(--touch-target);
+  padding: 0;
+  place-items: center;
+  border: var(--border) solid var(--color-blue);
+  border-radius: var(--radius-pill);
+  background: var(--color-blue);
+  box-shadow: var(--shadow);
+  color: var(--color-ink);
+  cursor: pointer;
+  transition:
+    transform var(--transition),
+    box-shadow var(--transition),
+    background var(--transition);
+}
+
+.ai-launcher:hover {
+  background: var(--color-ice);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-0.2rem);
+}
+
+.ai-launcher .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.ai-launcher__glyph--close,
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--open {
+  display: none;
+}
+
+.ai-launcher[aria-expanded="true"] .ai-launcher__glyph--close {
+  display: block;
+}
+
+.ai-panel {
+  position: fixed;
+  z-index: 49;
+  right: var(--fab-offset);
+  bottom: calc(var(--fab-offset) + var(--touch-target) + var(--space-3));
+  width: min(23rem, calc(100vw - (2 * var(--fab-offset))));
+  height: min(32rem, calc(100svh - 9rem));
+  border: var(--border) solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-graphite);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 56rem) {
+  .ai-launcher {
+    bottom: calc(var(--space-3) + var(--touch-target) + var(--space-1) + var(--space-3) + env(safe-area-inset-bottom));
+  }
+
+  .ai-panel {
+    bottom: calc(var(--space-3) + var(--touch-target) + var(--space-1) + var(--space-3) + var(--touch-target) + var(--space-3) + env(safe-area-inset-bottom));
+  }
+}
+
+/* --- the polish round (2026-09-08) — appended tenant states -----------------
+   Found by rendering what a tenant types rather than the author's mock:
+
+   1. A LONG HEADLINE. The author's mock headline is two to four words; a
+      tenant's nine-word headline at the same display size fills a phone screen
+      and most of a desktop one. The hero partial marks the h1 by length
+      (data-length="long" over 38 characters, "xlong" over 50 — recalibrated
+      2026-09-11 so no author's own mock headline is marked) and the size
+      steps down from the author's own token, so his clamp still governs.
+      A long headline is also capped to hold about three lines, and the box
+      still never exceeds its container.
+   2. A WORD LONGER THAN A PHONE ("UNFORGETTABLE." in display caps) widens a
+      design past the viewport; a heading may now break inside a word rather
+      than push the page.
+   3. NO NAVIGATION (the owner's ruling: a landing page is one page). The author
+      hid the header's Book control at his mobile breakpoint in favour of a
+      menu that no longer exists, so it is shown there again, in his own header
+      grid (brand | book). */
+h1[data-length="long"] {
+  font-size: calc(var(--font-size-hero) * 0.78);
+  max-width: 11em;
+}
+
+h1[data-length="xlong"] {
+  font-size: calc(var(--font-size-hero) * 0.64);
+  max-width: 12em;
+}
+
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}
+
+/* The Book control takes the END of the author's header grid (polish-9). His
+   grid is brand | nav | book; with the nav gone the control fell into the
+   nav's 1fr column. justify-self sizes it to its content and holds it at the
+   right edge whatever the column count. */
+.header__inner .header__book {
+  justify-self: end;
+}
+
+@media (max-width: 74rem) {
+  .header__book { display: inline-flex; }
+}

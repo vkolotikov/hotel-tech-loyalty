@@ -538,6 +538,105 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // THE FIRST MEDICAL KIT (resources/landing-kits/med-tech/01-ardea-aesthetics),
+            // the GymTech page anatomy on a clinic in a stylesheet written
+            // in the beauty kits' token vocabulary: the author's own markup,
+            // his own :root palette and his own stylesheet ship as the
+            // design, and only the CONTENT is the tenant's. Fourteen blocks —
+            // his gallery marker sits on the story's three-line list, which
+            // has no room for a picture, so no gallery partial ships (med-1).
+            'key'   => 'ardea_aesthetics',
+            'name'  => 'Ardea Aesthetics',
+            // THE TRADE THIS DESIGN WAS DRAWN FOR — `medical`, which
+            // INDUSTRY_VERTICALS joins to the `medical` industry.
+            'vertical' => 'medical',
+            // The author's own words for it, from the kit collection's
+            // README: "quiet medical editorial — aesthetic physicians and
+            // private skin clinics".
+            'blurb' => 'Quiet and editorial, with a washed consultation photograph and chalk-and-copper cards. Made for aesthetic physicians, injectables practices and private skin clinics.',
+            // Transcribed from the three refusals
+            // resources/views/landing/ardea_aesthetics/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the copper family and on the sand an em
+            // takes on the ink story band, never on the ink.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // Pinned against `$furniture` in this template's own layout by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE SECOND MEDICAL KIT (resources/landing-kits/med-tech/02-forma-dental):
+            // the same page with more of its own shapes — a split hero under
+            // a sticky header, rounded care cards, a plum manifesto, a
+            // three-step first-visit band that is this design's gallery
+            // (med-2), a dentist band on clay and a plum closing card.
+            // Fifteen blocks, the gallery among them.
+            'key'   => 'forma_dental',
+            'name'  => 'Forma Dental',
+            'vertical' => 'medical',
+            // The author's own words for it, from the kit collection's
+            // README: "warm boutique dentistry — cosmetic, general and small
+            // family dental studios".
+            'blurb' => 'Warm and boutique, a cream studio photograph beside plum and clay cards. Made for cosmetic, general and small family dental studios.',
+            // Transcribed from the three refusals
+            // resources/views/landing/forma_dental/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the clay family and on the rose the plum
+            // bands set their labels in, never on the plum.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // Pinned against `$furniture` in this template's own layout by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE THIRD MEDICAL KIT (resources/landing-kits/med-tech/03-numa-skin-lab),
+            // the DARK one: a cinematic hero with a glowing scan card, a
+            // mono treatment ledger, an ice technology band, a blue-gradient
+            // method band that is this design's gallery (med-2), a
+            // specialist record and an ice closing band. Fifteen blocks, the
+            // gallery among them.
+            'key'   => 'numa_skin_lab',
+            'name'  => 'Numa Skin Lab',
+            'vertical' => 'medical',
+            // The author's own words for it, from the kit collection's
+            // README: "precision skin technology — laser, imaging and
+            // device-led specialist clinics".
+            'blurb' => 'Dark and precise, a cinematic analysis photograph with ice-blue signal lines and a mono treatment ledger. Made for laser, imaging and device-led specialist skin clinics.',
+            // Transcribed from the three refusals
+            // resources/views/landing/numa_skin_lab/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on his ice blue and its deeper sibling,
+            // never on the near-white type or the black of this dark page.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // Pinned against `$furniture` in this template's own layout by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
@@ -575,7 +674,7 @@ class LandingOnboardingService
      *
      * @var list<string>
      */
-    public const VERTICALS = ['beauty', 'dining', 'gym', 'hotel'];
+    public const VERTICALS = ['beauty', 'dining', 'gym', 'hotel', 'medical'];
 
     /**
      * WHICH TRADE'S DESIGNS AN INDUSTRY IS OFFERED FIRST — the one place
@@ -631,6 +730,7 @@ class LandingOnboardingService
         'restaurant' => 'dining',
         'fitness'    => 'gym',
         'hotel'      => 'hotel',
+        'medical'    => 'medical',
     ];
 
     /**
