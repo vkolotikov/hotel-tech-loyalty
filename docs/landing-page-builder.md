@@ -1,7 +1,8 @@
 # Landing-page builder — current state
 
-**Last verified:** 2026-09-07. Production `main` = `08292f50b` (Laravel Cloud, app `hotel-tech-loyalty`),
-which carries every landing commit of `feature/landing-phase-3c` up to and including this document.
+**Last verified:** 2026-09-21. Production `main` = `ef466665b` (Laravel Cloud, app `hotel-tech-loyalty`),
+which carries every landing commit of `feature/landing-phase-3c` up to the compact-builder round
+(2026-09-09); the hotel kits this document describes ship with the deploy that carries it.
 Run `git fetch && git log --oneline -3 origin/main` for anything newer; the branch's own history is not
 on `main` (deploys are source patches), so compare by content, not by commit list.
 
@@ -19,7 +20,7 @@ An Enterprise-plan tenant builds one public page per brand in three steps:
 Pages are served on `sites.hexa-tech.uk/{slug}` (`config/landing.php`, `routes/landing.php`), never on an
 admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may frame the preview.
 
-### The nine templates ("kits")
+### The twelve templates ("kits")
 
 | Vertical | Key | Author's kit source |
 |---|---|---|
@@ -32,11 +33,25 @@ admin host. The admin SPA runs on six hosts (`config/pwa.php`), all of which may
 | gym | `aera_reformer` | `resources/landing-kits/gym-tech/01-aera-reformer/` |
 | gym | `foundry_strength` | `resources/landing-kits/gym-tech/02-foundry-strength/` |
 | gym | `tempo_studio` | `resources/landing-kits/gym-tech/03-tempo-studio/` |
+| hotel | `maison_lume` | `resources/landing-kits/hotel-tech/01-maison-lume/` |
+| hotel | `northline_retreat` | `resources/landing-kits/hotel-tech/02-northline-retreat/` |
+| hotel | `orbit_city` | `resources/landing-kits/hotel-tech/03-orbit-city/` |
 
 The gym kits (2026-09-08) draw the shared contract minus the gallery and keep a team band; each is
 documented band by band in its own layout and partials, and the rulings that were needed to fill the
 author's shapes from the record (the lead-coach band, the two-part steps split on the author's middle dot,
 the next-up card's closing time, the acid-versus-blue accent) are numbered gym-1..27 in the local ledger.
+
+The hotel kits (2026-09-11) are the gym author's hand on a hotel — Maison Lume's stylesheet is within a
+hundred lines of Aera Reformer's — so their partials are Aera's with the hotel's own shapes written in:
+the room cards list the tenant's `Service` rows under a "From €145 · breakfast included" line (the
+band's `price_suffix` after the author's dot, no duration), the hosts band is the lead-coach composition,
+the story list's lines split on the tenant's first middle dot into the author's title-over-detail pair,
+the guest note carries its own stars and the month it was left, and the monogram ring holds the
+business's initials. A hotel page is always bookable online (`PageContent::bookingMode()` answers `stay`
+with no rota to check), so every Book control on it opens the stay widget. Rulings hotel-1..14 in the
+local ledger; two are the owner's to revisit (the room cards could read the booking engine's
+`BookingRoom` rows instead of `Service` rows; Orbit's blue-and-acid accent mapping).
 
 The industry picked at signup maps server-side to a vertical (`LandingOnboardingService::industries()`;
 orgs with no explicit industry fall back to `IndustryProfile::FALLBACK_INDUSTRY = 'other'`). Only the
@@ -102,8 +117,8 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
   mobile-hidden Book control again at his breakpoint and pins it to the END of his header grid
   (`justify-self: end`), because the removed nav's `1fr` column would otherwise stretch it across the
   header. The fixed Book pill renders only while the booking flow is on (`$bookingIsFlow`).
-- Tenant-length rules (same date): the hero marks `data-length="long"` (over 28 characters) / `"xlong"`
-  (over 48) and the appended block steps the size from the author's own hero token (×0.78 / ×0.64; Luma
+- Tenant-length rules (same date): the hero marks `data-length="long"` (over 38 characters) / `"xlong"`
+  (over 50; recalibrated 2026-09-11 so no author's own mock headline is marked — the longest is 38) and the appended block steps the size from the author's own hero token (×0.78 / ×0.64; Luma
   Garden ×0.70 / ×0.50 for its 399 px copy column) and widens his ch/em `max-width` cap (11em / 12em);
   an about or text kicker with no lead becomes the `<h2>` itself; headings wrap inside a word rather than
   widen the page; the dining footer hub closes to one column under 36rem. All of it lives in the appended
@@ -198,11 +213,11 @@ Save; blocks the new design adds are seeded only by the save.
 
 ## 5. Tests
 
-Suites: `tests/Feature/Landing/` (33 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
-Baseline after the polish round (2026-09-08): **1569 backend tests** (Feature/Landing 1279, Unit/Landing
+Suites: `tests/Feature/Landing/` (36 files), `tests/Unit/Landing/` (6), `tests/Unit/Support/` (8).
+Baseline after the hotel kits (2026-09-21): **1799 backend tests** (Feature/Landing 1509, Unit/Landing
 118, Unit/Support 172); frontend `npx vitest run` **790 passed + exactly 3 pre-existing `plannerMeta`
 failures**; `npx tsc -b` clean. Each kit's render test is 55–112 tests; the whole Feature/Landing suite
-takes about 15 minutes on the workstation.
+takes about 18 minutes on the workstation.
 
 Run them like this, and only like this:
 
@@ -255,13 +270,16 @@ server refuses theme keys the old bundle still sends.
   drift 1–3 px from the author's. (`og:image` resolves the same hero-then-logo chain on all six layouts;
   the earlier "nocturne-only" note was stale.)
 - Stock photo library for tenants (owner decision D1 left kit photographs as defaults for now).
-- Hotel and Medical are on offer in the Design tab but have no kits of their own yet, so those two trades
-  see all nine designs under a "designs made for … are coming" note. Six owner-designed kits wait in
-  `c:\wamp64\www\hexa-template-builder` (hotel-tech: Maison Lume, Northline, Orbit; med-tech: Ardea
-  Aesthetics, Forma Dental, Numa Skin Lab), same 15-block contract minus the gallery. Each conversion is a
-  registry row with `vertical` set (plus `INDUSTRY_VERTICALS` for the new vertical), the kit under
-  `resources/landing-kits/<brand>/`, pixel-matched layout and partials, thumbnails, a preview JPEG, and the
-  per-template test — the editor needs no change. The gym conversion (2026-09-08) is the worked example.
+- Medical is on offer in the Design tab but has no kits of its own yet, so that trade sees all twelve
+  designs under a "designs made for … are coming" note. Three owner-designed kits wait in
+  `c:\wamp64\www\hexa-template-builder\med-tech` (Ardea Aesthetics, Forma Dental, Numa Skin Lab), same
+  15-block contract minus the gallery. Each conversion is a registry row with `vertical` set (plus
+  `INDUSTRY_VERTICALS` for the new vertical), the kit under `resources/landing-kits/<brand>/`,
+  pixel-matched layout and partials, thumbnails, a preview JPEG, and the per-template test — the editor
+  needs no change. The hotel conversion (2026-09-11) is the worked example, and the one to start from if
+  the medical kits are the same author's hand again: diff their stylesheets against the twelve first.
+- The long-headline thresholds (`data-length`) were recalibrated on 2026-09-11 to 38 / 50 characters
+  after the 28 / 48 pair was found marking five authors' own mock headlines and shrinking three live heroes.
 - A kit's fixed-format words have no leaf on this platform: the closing panel falls back to the industry's
   verb rather than the author's ("Choose a time", "View live schedule"), and an infix accent (Foundry's
   "*beyond*") is rendered as the trailing fragment the catalogue's companion leaf supports.

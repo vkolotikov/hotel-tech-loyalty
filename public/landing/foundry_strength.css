@@ -1299,7 +1299,8 @@ h3 {
    1. A LONG HEADLINE. The author's mock headline is two to four words; a
       tenant's nine-word headline at the same display size fills a phone screen
       and most of a desktop one. The hero partial marks the h1 by length
-      (data-length="long" over 28 characters, "xlong" over 48) and the size
+      (data-length="long" over 38 characters, "xlong" over 50 — recalibrated
+      2026-09-11 so no author's own mock headline is marked) and the size
       steps down from the author's own token, so his clamp still governs.
       The author also caps the h1's width (in ch or em, for his own words:
       Tempo's cap is 3.7em), which squeezed a nine-word headline into a

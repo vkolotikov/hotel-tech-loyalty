@@ -978,9 +978,11 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('dining', $industries['restaurant']['vertical']);
         // The first GymTech kit (2026-09-08) gave fitness a trade of its own.
         $this->assertSame('gym', $industries['fitness']['vertical']);
-        // The six with no kits of their own, named so that shipping one
+        // The HotelTech kits (2026-09-11) gave hotel one.
+        $this->assertSame('hotel', $industries['hotel']['vertical']);
+        // The five with no kits of their own, named so that shipping one
         // for them has to come past this list.
-        foreach (['hotel', 'medical', 'education', 'legal', 'real_estate', 'other'] as $id) {
+        foreach (['medical', 'education', 'legal', 'real_estate', 'other'] as $id) {
             $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
         }
 
@@ -995,6 +997,9 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('gym', $templates['aera_reformer']['vertical']);
         $this->assertSame('gym', $templates['foundry_strength']['vertical']);
         $this->assertSame('gym', $templates['tempo_studio']['vertical']);
+        $this->assertSame('hotel', $templates['maison_lume']['vertical']);
+        $this->assertSame('hotel', $templates['northline_retreat']['vertical']);
+        $this->assertSame('hotel', $templates['orbit_city']['vertical']);
         $this->assertTrue($templates->every(fn (array $row) => $row['vertical'] !== null),
             'A shipped design claims no trade; every shipped kit was drawn for one.');
 
@@ -1094,17 +1099,17 @@ class LandingOnboardingTest extends TestCase
             }
         }
 
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
-            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty or gym kit and draws a team band.");
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
+            $this->assertContains('team', $renders[$key], "'{$key}' is a beauty, gym or hotel kit and draws a team band.");
         }
 
         foreach (['maison_vela', 'luma_garden', 'ember_table'] as $key) {
             $this->assertNotContains('team', $renders[$key], "'{$key}' is a hospitality kit and draws no team band.");
         }
 
-        // The gym kits draw the shared contract minus the gallery: no
-        // gallery partial ships, so the picker never offers one there.
-        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+        // The gym and hotel kits draw the shared contract minus the gallery:
+        // no gallery partial ships, so the picker never offers one there.
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
             $this->assertNotContains('gallery', $renders[$key], "'{$key}' claims a gallery partial the author never drew.");
         }
 
@@ -2103,8 +2108,15 @@ class LandingOnboardingTest extends TestCase
         // Every design honours the row's starting-price mark, so the WORD
         // before it is offered on all of them — kit 02-beauty's own leaf
         // first, the others' since the mark moved onto the row (2026-09-06).
-        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+        foreach (['nocturne_ritual', 'editorial_atelier', 'organic_wellness', 'maison_vela', 'luma_garden', 'ember_table', 'aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
             $this->assertContains('price_prefix', $served[$key]['services'], "'{$key}' prints the word before a starting price and does not offer it.");
+        }
+
+        // The hotel authors' room line is "From €145 · breakfast included":
+        // the band's price SUFFIX after the dot, and no service window.
+        foreach (['maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
+            $this->assertContains('price_suffix', $served[$key]['services'], "'{$key}' prints the price suffix and does not offer it.");
+            $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its room cards never print.");
         }
 
         // The menu band's price SUFFIX ("€92 per guest") and SERVICE WINDOW
@@ -2122,10 +2134,10 @@ class LandingOnboardingTest extends TestCase
             $this->assertNotContains('window', $served[$key]['services'], "'{$key}' offers a service window its treatment list never prints.");
         }
 
-        // The gym kits' session cards carry no link, no badge and no
-        // photograph, so none of those controls is offered on them, and no
-        // gym kit draws a gallery.
-        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio'] as $key) {
+        // The gym kits' session cards and the hotel kits' room cards carry
+        // no link, no badge and no photograph, so none of those controls is
+        // offered on them, and neither family draws a gallery.
+        foreach (['aera_reformer', 'foundry_strength', 'tempo_studio', 'maison_lume', 'northline_retreat', 'orbit_city'] as $key) {
             foreach (['item_cta_label', 'badge_label', 'image_url'] as $leaf) {
                 $this->assertNotContains($leaf, $served[$key]['services'], "'{$key}' offers '{$leaf}' on cards that never print it.");
             }

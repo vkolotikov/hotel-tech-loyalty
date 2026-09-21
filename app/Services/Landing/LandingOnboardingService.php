@@ -444,6 +444,100 @@ class LandingOnboardingService
                 'footer'       => 'footer',
             ],
         ],
+        [
+            // THE FIRST HOTEL KIT (resources/landing-kits/hotel-tech/01-maison-lume),
+            // the GymTech author's hand on a hotel: Aera Reformer's page
+            // anatomy and stylesheet within a hundred lines, converted the
+            // same way — his own markup, his own :root palette and his own
+            // stylesheet ship as the design, and only the CONTENT is the
+            // tenant's. Fourteen blocks, no gallery, a hosts band in his
+            // lead-coach composition (see that partial's note).
+            'key'   => 'maison_lume',
+            'name'  => 'Maison Lume',
+            // THE TRADE THIS DESIGN WAS DRAWN FOR — `hotel`, which
+            // INDUSTRY_VERTICALS joins to the `hotel` industry.
+            'vertical' => 'hotel',
+            // The author's own words for it, from the kit collection's
+            // README: "intimate old-city townhouse hotel".
+            'blurb' => 'Warm and editorial, with a full-bleed suite photograph and calm ivory cards. Made for townhouse hotels, guesthouses and small city hotels.',
+            // Transcribed from the three refusals
+            // resources/views/landing/maison_lume/layout.blade.php makes
+            // about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the terracotta family and on the sand an
+            // em takes on the dark story band, never on the ink.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // THE KIT'S COMPOSITION, transcribed from the one place that
+            // decides it: `$furniture` in this template's own
+            // layout.blade.php. Pinned against that literal by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE SECOND HOTEL KIT (resources/landing-kits/hotel-tech/02-northline-retreat),
+            // the same author's anatomy on a dark lake-green page with
+            // Newsreader and Manrope: fourteen blocks, no gallery, the same
+            // hosts band. Converted the same way.
+            'key'   => 'northline_retreat',
+            'name'  => 'Northline Retreat',
+            'vertical' => 'hotel',
+            // The author's own words for it, from the kit collection's
+            // README: "Nordic lakeside retreat and sauna stay".
+            'blurb' => 'Dark, quiet and Nordic, with a misty lake photograph and warm timber accents. Made for lakeside retreats, cabins, sauna stays and countryside hotels.',
+            // Transcribed from the three refusals
+            // resources/views/landing/northline_retreat/layout.blade.php
+            // makes about itself, and the accent, which is "the ONE tenant
+            // override" — spent on the terracotta family and on the sand,
+            // never on the near-white ink of this dark page.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // Pinned against `$furniture` in this template's own layout by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
+        [
+            // THE THIRD HOTEL KIT (resources/landing-kits/hotel-tech/03-orbit-city),
+            // the same author's anatomy on a midnight-navy page with the acid
+            // and the two faces of his Tempo Studio gym page: fourteen
+            // blocks, no gallery, the same hosts band. Converted the same way.
+            'key'   => 'orbit_city',
+            'name'  => 'Orbit City',
+            'vertical' => 'hotel',
+            // The author's own words for it, from the kit collection's
+            // README: "premium smart city hotel".
+            'blurb' => 'Sharp and tech-led, midnight navy with an acid accent and a faint grid. Made for smart city hotels, business hotels and design-led urban stays.',
+            // Transcribed from the three refusals
+            // resources/views/landing/orbit_city/layout.blade.php makes about
+            // itself, and the accent, which is "the ONE tenant override" —
+            // spent on his blue and, in its bright variant, on his acid,
+            // never on the near-white ink of this dark page.
+            'supports' => [
+                'brand_color'  => true,
+            ],
+            // Pinned against `$furniture` in this template's own layout by
+            // LandingOnboardingTest::test_a_templates_fixed_blocks_match_its_own_layout.
+            'fixed_blocks' => [
+                'announcement' => 'top',
+                'trust'        => 'fixed',
+                'faq'          => 'fixed',
+                'contact'      => 'footer',
+                'footer'       => 'footer',
+            ],
+        ],
     ];
 
     /**
@@ -481,7 +575,7 @@ class LandingOnboardingService
      *
      * @var list<string>
      */
-    public const VERTICALS = ['beauty', 'dining', 'gym'];
+    public const VERTICALS = ['beauty', 'dining', 'gym', 'hotel'];
 
     /**
      * WHICH TRADE'S DESIGNS AN INDUSTRY IS OFFERED FIRST — the one place
@@ -536,6 +630,7 @@ class LandingOnboardingService
         'beauty'     => 'beauty',
         'restaurant' => 'dining',
         'fitness'    => 'gym',
+        'hotel'      => 'hotel',
     ];
 
     /**

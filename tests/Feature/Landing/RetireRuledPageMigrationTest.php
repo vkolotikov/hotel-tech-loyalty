@@ -95,7 +95,9 @@ class RetireRuledPageMigrationTest extends TestCase
         // of the registry has to come past this test.
         $this->assertSame('nocturne_ritual', LandingOnboardingService::defaultTemplateFor('beauty'));
         $this->assertSame('maison_vela', LandingOnboardingService::defaultTemplateFor('restaurant'));
-        $this->assertSame('nocturne_ritual', LandingOnboardingService::defaultTemplateFor('hotel'));
+        // Hotel got kits of its own on 2026-09-11 (the migration ran before them, on 2026-09-05,
+        // when a hotel page fell back to the first design of all).
+        $this->assertSame('maison_lume', LandingOnboardingService::defaultTemplateFor('hotel'));
         $this->assertSame('nocturne_ritual', LandingOnboardingService::defaultTemplateFor('education'));
         $this->assertSame('nocturne_ritual', LandingOnboardingService::defaultTemplateFor('not-an-industry'));
     }

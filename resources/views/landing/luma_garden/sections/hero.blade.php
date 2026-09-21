@@ -48,14 +48,16 @@
     // THE HEADLINE'S LENGTH, for the stylesheet (polish-3, 2026-09-08). The
     // authors' mock headlines are two to four words; a tenant's nine-word
     // headline at the same display size fills a phone screen and most of a
-    // desktop one. Marked here, sized in the appended block: over 28
-    // characters is `long`, over 48 is `xlong`, measured on the plain text
-    // with the accent included.
+    // desktop one. Marked here, sized in the appended block: over 38
+    // characters is `long`, over 50 is `xlong`, measured on the plain text
+    // with the accent included. The thresholds spare every author's own
+    // mock headline (the longest, Organic Wellness's, is 38 characters) and
+    // still catch the nine-word one that made seven lines (hotel-11, 2026-09-11).
     $headingSize = null;
 
     if (filled($heading)) {
         $headingChars = mb_strlen(trim(Copy::plain($heading, $copy['headline_accent'] ?? null)));
-        $headingSize  = $headingChars > 48 ? 'xlong' : ($headingChars > 28 ? 'long' : null);
+        $headingSize  = $headingChars > 50 ? 'xlong' : ($headingChars > 38 ? 'long' : null);
     }
 
     $eyebrow = trim((string) ($copy['kicker'] ?? ''));

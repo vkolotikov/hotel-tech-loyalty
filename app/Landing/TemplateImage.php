@@ -324,6 +324,45 @@ final class TemplateImage
                 'alt'  => 'A coach guiding a group through a controlled kettlebell interval',
             ],
         ],
+        // THE FIRST HOTEL KIT. Two photographs, for the same two bands as
+        // the author's gym pages — the suite is the hero and the courtyard
+        // breakfast is the story's figure — and the same absences: his room
+        // cards, his hosts band and his closing panel are typographic, and
+        // he draws no gallery.
+        'maison_lume' => [
+            'hero' => [
+                'file' => 'hero-suite.webp',
+                'alt'  => 'A warm limewashed suite overlooking old-city rooftops',
+            ],
+            'about' => [
+                'file' => 'courtyard-breakfast.webp',
+                'alt'  => 'A breakfast table set beneath an olive tree in an old-stone courtyard',
+            ],
+        ],
+        // THE SECOND HOTEL KIT. The lake at dawn is the hero, the lakeside
+        // sauna at blue hour is the story's figure; the same absences.
+        'northline_retreat' => [
+            'hero' => [
+                'file' => 'hero-lake.webp',
+                'alt'  => 'A retreat suite opening onto a misty forest lake at dawn',
+            ],
+            'about' => [
+                'file' => 'lakeside-sauna.webp',
+                'alt'  => 'A guest walking toward a warmly lit lakeside sauna at blue hour',
+            ],
+        ],
+        // THE THIRD HOTEL KIT. The evening lobby welcome is the hero, the
+        // city room with its reading light is the story's figure.
+        'orbit_city' => [
+            'hero' => [
+                'file' => 'hero-arrival.webp',
+                'alt'  => 'Guests receiving a warm evening welcome in a midnight-blue city hotel lobby',
+            ],
+            'about' => [
+                'file' => 'city-room.webp',
+                'alt'  => 'A hotel room with a midnight-blue headboard, a warm reading light and a city view',
+            ],
+        ],
     ];
 
     /**

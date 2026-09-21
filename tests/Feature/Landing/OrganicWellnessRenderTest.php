@@ -1346,13 +1346,13 @@ class OrganicWellnessRenderTest extends TestCase
         $this->assertStringNotContainsString('Digital is convenient. Metal makes it unforgettable.</p>', $body);
     }
 
-    /** The hero marks a long headline for the stylesheet: over 28 characters `long`, over 48 `xlong` (polish-3). */
+    /** The hero marks a long headline for the stylesheet: over 38 characters `long`, over 50 `xlong` (polish-3). */
     public function test_a_long_headline_is_marked_for_the_stylesheet(): void
     {
         $page = $this->published(['hero' => ['headline' => 'Digital Business Cards for People Who Get Remembered']]);
         $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="xlong">', $this->body());
 
-        $page->update(['content' => ['hero' => ['headline' => 'Train for the life beyond the gym.']]]);
+        $page->update(['content' => ['hero' => ['headline' => 'Train for the life beyond the gym today.']]]);
         $this->assertStringContainsString('<h1 data-field="hero-heading" data-length="long">', $this->body());
 
         $page->update(['content' => ['hero' => ['headline' => 'Strength, with space for you']]]);
