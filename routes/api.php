@@ -337,20 +337,21 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::put('profile',           [MemberController::class, 'updateProfile']);
             // Throttled: this is a credential-verification surface, so it is
             // an oracle for guessing the current password if left open.
-            // PUT password is deliberately absent: MemberController::updatePassword
-            // ships with the unreleased member work. The route reached production
-            // in ee2c5c0bb without it, so an authenticated member changing their
-            // password got a 500. Re-add it with the method, not before.
+            // Shipped together with MemberController::updatePassword (the
+            // route once reached production without the method, in ee2c5c0bb,
+            // and answered 500 — never separate the two again).
+            Route::put('password',          [MemberController::class, 'updatePassword'])->middleware('throttle:6,1,member-password');
             Route::post('profile/avatar',   [MemberController::class, 'uploadAvatar']);
             Route::delete('account',        [MemberController::class, 'deleteAccount']);
             Route::get('card',              [MemberController::class, 'card']);
             // Mints a single-use, 2-minute URL for the Apple Wallet pass.
             // Authenticated by header, so the member's long-lived Sanctum
             // token never has to travel in a query string (and therefore into
-            // access logs and Safari history) the way ?token= does.
-            // card/apple-wallet/link is deliberately absent: WalletPassController
-            // has apple() but not appleLink(), which ships with the unreleased
-            // member work. Same deploy, same failure. Re-add it with the method.
+            // access logs and Safari history) the way ?token= used to.
+            // Shipped together with WalletPassController::appleLink (the route
+            // once reached production without the method — same deploy, same
+            // 500 — never separate the two again).
+            Route::get('card/apple-wallet/link', [\App\Http\Controllers\Api\V1\Member\WalletPassController::class, 'appleLink']);
             Route::get('points',            [PointsController::class, 'balance']);
             Route::get('points/history',    [PointsController::class, 'history']);
             // Tier benefits the member holds, and requests for the ones

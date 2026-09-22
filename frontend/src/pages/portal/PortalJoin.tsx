@@ -30,6 +30,11 @@ export function PortalJoin() {
   const navigate = useNavigate()
   const setAuth = useAuthStore(s => s.setAuth)
   const orgToken = params.get('org') ?? ''
+  // Referral links are `/portal/join?org=<token>&ref=<code>`. Reading `ref`
+  // here is what makes a shared referral actually pay out: without it the
+  // friend lands on a form with an empty referral field and neither side is
+  // rewarded unless they happen to type the code by hand.
+  const refCode = params.get('ref') ?? ''
   const [error, setError] = useState<string | null>(null)
 
   const { data: ctx, isLoading, isError } = useQuery<JoinContext>({
@@ -143,7 +148,14 @@ export function PortalJoin() {
           minLength={8}
           autoComplete="new-password"
         />
-        <Input name="referral_code" label="Referral code (optional)" hint="If a friend gave you a code, you'll both be rewarded" />
+        <Input
+          name="referral_code"
+          label="Referral code (optional)"
+          defaultValue={refCode}
+          hint={refCode
+            ? "Your friend's code is filled in — you'll both be rewarded"
+            : "If a friend gave you a code, you'll both be rewarded"}
+        />
 
         <button
           type="submit"
