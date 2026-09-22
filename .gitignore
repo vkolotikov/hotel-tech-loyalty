@@ -30,3 +30,6 @@ Thumbs.db
 # /frontend/dist — committed for Laravel Cloud deployment
 /frontend/.env
 /frontend/.env.production.local
+
+# Playwright MCP snapshots and console logs (rig junk, never source)
+.playwright-mcp/
