@@ -72,9 +72,37 @@ class SendEmailCampaignChunk implements ShouldQueue
             return;
         }
 
+
+        // Hourly budget check. Chunk spacing paces ONE campaign; this bounds
+        // the total, which is the only number the provider sees. Over budget
+        // means LATER, never dropped — a campaign that finishes an hour late is
+        // a non-event, a campaign that silently skipped 400 people is a support
+        // incident nobody can reconstruct.
+        $limiter = app(\App\Services\CampaignRateLimiter::class);
+        if ($limiter->allowance($campaign->organization_id, count($slice)) < 1) {
+            \Illuminate\Support\Facades\Log::info('campaign chunk deferred: hourly send budget exhausted', [
+                'campaign_id'     => $campaign->id,
+                'organization_id' => $campaign->organization_id,
+                'offset'          => $this->offset,
+            ]);
+
+            // Re-queue THIS chunk (same offset) at the top of the next hour.
+            self::dispatch($this->campaignId, $this->memberIds, $this->offset)
+                ->delay(now()->addMinutes(max(1, 60 - (int) now()->format('i'))));
+
+            return;
+        }
+
         $isMarketing = ($campaign->category ?? 'marketing') !== EmailComplianceService::TRANSACTIONAL;
         $category = $isMarketing ? 'marketing' : EmailComplianceService::TRANSACTIONAL;
-        $orgName = Organization::find($campaign->organization_id)?->name;
+        $org = Organization::find($campaign->organization_id);
+
+        // The same sender identity every other venue mail carries: the venue's
+        // own sender name and reply-to when it set them, its organisation name
+        // and email otherwise — never the raw columns, so the two campaign
+        // paths and the transactional mail cannot disagree about who sent it.
+        $identity = app(\App\Services\MailIdentityService::class)->forOrganization($campaign->organization_id);
+        $orgName  = $identity['from_name'] ?: $org?->name;
 
         $recipients = LoyaltyMember::whereIn('id', $slice)->with('user:id,name,email');
         $compliance->scopeEligible($recipients, $category);
@@ -95,9 +123,36 @@ class SendEmailCampaignChunk implements ShouldQueue
                     $html .= $compliance->footerHtml($member, $orgName);
                 }
 
-                Mail::html($html, function ($mail) use ($email, $campaign, $member, $compliance, $category) {
+                Mail::html($html, function ($mail) use ($email, $campaign, $member, $compliance, $category, $identity, $orgName) {
                     $mail->to($email, $member->user->name ?? null)
                          ->subject($campaign->subject);
+
+                    // Send AS the venue, not as the platform.
+                    //
+                    // Every campaign previously went out with the global
+                    // MAIL_FROM ("Hotel Loyalty" <noreply@hotel-tech.ai>), so a
+                    // salon's members received marketing from a hotel brand
+                    // they had never heard of — which is both confusing and a
+                    // spam-report magnet.
+                    //
+                    // The From ADDRESS stays on the platform domain on purpose:
+                    // that is the domain SPF and DKIM are published for, and
+                    // swapping in an unauthenticated tenant address would break
+                    // alignment and make deliverability worse, not better.
+                    // (Per-tenant authenticated sending domains are the real
+                    // fix — see docs/EMAIL_DELIVERABILITY.md.)
+                    if ($identity['from_name']) {
+                        $mail->from($identity['from_address'], $identity['from_name']);
+                    }
+
+                    // Replies reach the venue rather than a noreply mailbox
+                    // nobody reads. Recipients replying to a marketing email is
+                    // a positive engagement signal to mailbox providers, and
+                    // right now those replies are silently discarded.
+                    if ($identity['reply_to']) {
+                        $mail->replyTo($identity['reply_to'], $identity['from_name'] ?: null);
+                    }
+
                     $compliance->applyHeaders($mail, $member, $category);
                 });
                 $sent++;
@@ -113,6 +168,8 @@ class SendEmailCampaignChunk implements ShouldQueue
 
         // Counters accumulate per chunk, so progress survives a crash and
         // is visible to the admin while the send is still running.
+        $limiter->record($campaign->organization_id, $sent);
+
         $campaign->increment('sent_count', $sent);
         $campaign->increment('failed_count', $failed);
         $campaign->forceFill(['last_progress_at' => now()])->save();
@@ -127,10 +184,18 @@ class SendEmailCampaignChunk implements ShouldQueue
             return;
         }
 
+        // Pacing between chunks. The old fixed 5s meant 100 recipients every
+        // 5 seconds — roughly 72,000/hour — which no shared SMTP relay will
+        // accept. Exceeding a relay's ceiling gets mail deferred or the
+        // account throttled, and looks like a spam run to the receiving side.
+        //
+        // Configurable so the interval can be tuned to whatever the relay
+        // actually permits without a code change; the default is deliberately
+        // conservative (100 per 60s = 6,000/hour).
+        $spacing = max(1, (int) config('mail.campaign_chunk_seconds', 60));
+
         self::dispatch($this->campaignId, $this->memberIds, $nextOffset)
-            // Brief spacing between chunks: kinder to the relay and keeps
-            // one campaign from monopolising the worker.
-            ->delay(now()->addSeconds(5));
+            ->delay(now()->addSeconds($spacing));
     }
 
     /**
