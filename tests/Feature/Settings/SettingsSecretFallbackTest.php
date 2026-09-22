@@ -78,7 +78,7 @@ class SettingsSecretFallbackTest extends TestCase
 
     protected function tearDown(): void
     {
-        foreach (['EXPO_ACCESS_TOKEN', 'MAIL_FROM_NAME'] as $key) {
+        foreach (['EXPO_ACCESS_TOKEN', 'SMOOBU_BASE_URL'] as $key) {
             unset($_SERVER[$key], $_ENV[$key]);
             putenv($key);
         }
@@ -126,7 +126,7 @@ class SettingsSecretFallbackTest extends TestCase
 
         foreach ([
             ['expo_access_token', 'Expo Access Token'],
-            ['mail_from_name',    'From Name'],
+            ['booking_smoobu_base_url', 'Smoobu Base URL'],
         ] as [$key, $label]) {
             DB::table('hotel_settings')->insert([
                 'organization_id' => $org->id,
@@ -170,7 +170,7 @@ class SettingsSecretFallbackTest extends TestCase
     public function test_an_unset_tenant_secret_is_reported_as_not_set_never_as_the_platforms_value(): void
     {
         $this->platformEnv('EXPO_ACCESS_TOKEN', self::PLATFORM_SECRET);
-        $this->platformEnv('MAIL_FROM_NAME', 'Platform Sender');
+        $this->platformEnv('SMOOBU_BASE_URL', 'https://platform.smoobu.example');
 
         Sanctum::actingAs($this->superAdminWithEmptyRows());
 
@@ -191,9 +191,9 @@ class SettingsSecretFallbackTest extends TestCase
         // The guard is narrow: a NON-secret setting still falls back to the
         // platform value, exactly as before, so the screen keeps telling the
         // truth about what is in effect.
-        $plain = $this->item($response->json(), 'mail_from_name');
+        $plain = $this->item($response->json(), 'booking_smoobu_base_url');
         $this->assertNotNull($plain);
-        $this->assertSame('Platform Sender', $plain['value']);
+        $this->assertSame('https://platform.smoobu.example', $plain['value']);
         $this->assertTrue($plain['has_value']);
     }
 }

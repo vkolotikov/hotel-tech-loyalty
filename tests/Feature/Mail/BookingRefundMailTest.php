@@ -32,7 +32,7 @@ use Tests\TestCase;
  *   HotelSetting pulls:
  *     - booking_currency → currency (default EUR)
  *     - company_name → hotelName (default "the hotel")
- *     - mail_from_address → supportEmail (default support@...)
+ *     - organizations.email → supportEmail (default support@...)
  *
  *   Industry resolution:
  *     - Fallback to DEFAULT_INDUSTRY (hotel) when no org found
@@ -55,6 +55,14 @@ class BookingRefundMailTest extends TestCase
     {
         parent::setUp();
         $this->setUpBookingRefundSchema();
+
+        // The minimal organizations table omits `email`; refund mail now reads
+        // the venue's own contact from it.
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('organizations', 'email')) {
+            \Illuminate\Support\Facades\Schema::table('organizations', function ($t) {
+                $t->string('email')->nullable();
+            });
+        }
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
@@ -191,18 +199,36 @@ class BookingRefundMailTest extends TestCase
             'Missing company_name HotelSetting must fall back to default.');
     }
 
-    public function test_support_email_pulled_from_mail_from_address(): void
+    public function test_support_email_is_the_venues_own_address(): void
     {
-        HotelSetting::create([
-            'key' => 'mail_from_address', 'value' => 'help@forrest.test',
-            'type' => 'string', 'group' => 'mail', 'label' => 'From',
-        ]);
-        \App\Models\HotelSetting::flushCacheFor((int) app('current_organization_id'));
-
+        // Was: the `mail_from_address` setting. That key is gone with the dead
+        // BYO-SMTP block, and in practice it was empty for every org — so a
+        // guest asking about a refund from a venue was told to contact
+        // support@hotel-tech.ai, a desk that cannot help them.
         $mirror = BookingMirrorFactory::new()->create();
+
+        \Illuminate\Support\Facades\DB::table('organizations')
+            ->where('id', $mirror->organization_id)
+            ->update(['email' => 'help@forrest.test']);
+
         $mail = new BookingRefundMail($mirror, 100.00, true);
 
-        $this->assertSame('help@forrest.test', $mail->supportEmail);
+        $this->assertSame('help@forrest.test', $mail->supportEmail,
+            'Refund mail must point the guest at the venue that took their money.');
+    }
+
+    public function test_support_email_falls_back_when_the_venue_has_none(): void
+    {
+        $mirror = BookingMirrorFactory::new()->create();
+
+        \Illuminate\Support\Facades\DB::table('organizations')
+            ->where('id', $mirror->organization_id)
+            ->update(['email' => null]);
+
+        $mail = new BookingRefundMail($mirror, 100.00, true);
+
+        $this->assertSame('support@hotel-tech.ai', $mail->supportEmail,
+            'A venue with no contact set still needs SOME reachable address on the mail.');
     }
 
     public function test_industry_falls_back_to_hotel_when_org_not_found(): void

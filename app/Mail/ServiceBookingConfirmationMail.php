@@ -19,6 +19,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class ServiceBookingConfirmationMail extends Mailable
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public function __construct(
@@ -42,7 +44,11 @@ class ServiceBookingConfirmationMail extends Mailable
         // → falls through to hotel framing (Reservation Confirmed,
         // hotel vocabulary). The services widget already passes this.
         public ?string $industry = null,
-    ) {}
+    ) {
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
+    }
 
     public function envelope(): Envelope
     {
@@ -56,6 +62,8 @@ class ServiceBookingConfirmationMail extends Mailable
         };
         return new Envelope(
             subject: "{$bookingNoun} Confirmed — {$this->serviceName} at {$this->hotelName}",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

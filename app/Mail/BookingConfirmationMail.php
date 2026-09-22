@@ -25,6 +25,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class BookingConfirmationMail extends Mailable
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public function __construct(
@@ -70,7 +72,11 @@ class BookingConfirmationMail extends Mailable
         // restaurant / etc.). Null = legacy call site → falls through
         // to hotel framing.
         public ?string $industry = null,
-    ) {}
+    ) {
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
+    }
 
     public function envelope(): Envelope
     {
@@ -85,6 +91,8 @@ class BookingConfirmationMail extends Mailable
         };
         return new Envelope(
             subject: "{$confirmedNoun} — {$this->hotelName} ({$this->checkIn})",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

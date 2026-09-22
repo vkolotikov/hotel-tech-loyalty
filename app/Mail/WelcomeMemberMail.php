@@ -13,18 +13,26 @@ use Illuminate\Queue\SerializesModels;
 
 class WelcomeMemberMail extends Mailable
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels, HasIndustryVocab;
 
     public function __construct(
         public LoyaltyMember $member,
         public Organization $organization,
         public string $code,
-    ) {}
+    ) {
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
+    }
 
     public function envelope(): Envelope
     {
         return new Envelope(
             subject: "Welcome to {$this->organization->name} — set your password",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

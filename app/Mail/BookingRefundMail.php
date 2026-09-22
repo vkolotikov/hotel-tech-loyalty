@@ -28,6 +28,8 @@ use Illuminate\Queue\SerializesModels;
  */
 class BookingRefundMail extends Mailable implements ShouldQueue
 {
+    use Concerns\SendsAsVenue;
+
     use Queueable, SerializesModels;
 
     public $tries = 3;
@@ -61,13 +63,25 @@ class BookingRefundMail extends Mailable implements ShouldQueue
         $this->isFull           = $isFull;
         $this->currency         = HotelSetting::getValue('booking_currency', 'EUR');
         $this->hotelName        = HotelSetting::getValue('company_name', 'the hotel');
-        $this->supportEmail     = HotelSetting::getValue('mail_from_address', 'support@hotel-tech.ai');
+        // The venue's own contact, not a platform address. This used to read
+        // the `mail_from_address` setting, which was removed with the dead
+        // BYO-SMTP block (2026_08_14_100000) — and which in practice was empty
+        // for every org anyway, so guests were told to contact
+        // support@hotel-tech.ai about a refund from a venue we do not staff.
+        $this->supportEmail     = Organization::withoutGlobalScopes()
+            ->whereKey($mirror->organization_id)
+            ->value('email')
+            ?: HotelSetting::getValue('mail_reply_to', 'support@hotel-tech.ai');
         // Phase 8.x — resolve org industry once via the mirror's FK so
         // the subject + Blade can flex vocab. Hotel default for legacy
         // call sites + null safety.
         $this->industry         = Organization::withoutGlobalScopes()
             ->find($mirror->organization_id)?->resolved_industry
             ?? Organization::DEFAULT_INDUSTRY;
+    
+        // Capture the acting tenant NOW; envelope() runs later in the
+        // worker, where no org is bound. See Concerns\SendsAsVenue.
+        $this->captureVenue();
     }
 
     public function envelope(): Envelope
@@ -77,6 +91,8 @@ class BookingRefundMail extends Mailable implements ShouldQueue
         $type = $this->isFull ? 'Refund' : 'Partial refund';
         return new Envelope(
             subject: "{$type} confirmed — {$this->hotelName} · {$this->bookingReference}",
+            from:    $this->venueFrom(),
+            replyTo: $this->venueReplyTo(),
         );
     }
 

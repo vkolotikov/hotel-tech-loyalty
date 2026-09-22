@@ -28,9 +28,12 @@ use Tests\TestCase;
  * that controls mobile app releases — to any tenant's super_admin who opened
  * Settings.
  *
+ * The SMTP password is simply the one that surfaced first, while auditing
+ * deliverability: that credential sends as the platform's own domain, so
+ * whoever reassembled it could burn the sending reputation every tenant shares.
+ *
  * These tests assert the two independent guarantees that each break the chain,
- * so restoring either behaviour fails loudly. The guard in index() itself is
- * asserted by SettingsSecretFallbackTest through the HTTP endpoint.
+ * so restoring either behaviour fails loudly.
  */
 class SecretMaskingTest extends TestCase
 {
@@ -94,16 +97,16 @@ class SecretMaskingTest extends TestCase
         $overlap = array_values(array_intersect($secrets, $fallback));
         sort($overlap);
 
-        // NINE platform credentials sit in both lists. Before the guard in
+        // EIGHT platform credentials sit in both lists. Before the guard in
         // index(), every one of them was substituted from the platform's own
         // env and returned masked to any tenant administrator whose org had not
         // set its own value — including the OpenAI and Anthropic API keys, the
         // Twilio auth token, and the Expo access token that controls mobile app
         // releases.
         //
-        // `mail_password` leaves this list when the BYO-SMTP settings are
-        // deleted outright (the venue-identity slice) — a credential we do not
-        // hold cannot leak. Until then it stays here, guarded like the others.
+        // `mail_password` was the ninth and the one we noticed first. It is
+        // absent now because the BYO-SMTP settings were deleted outright rather
+        // than fixed — a credential we do not hold cannot leak.
         $this->assertSame(
             [
                 'ai_anthropic_api_key',
@@ -111,7 +114,6 @@ class SecretMaskingTest extends TestCase
                 'booking_smoobu_api_key',
                 'expo_access_token',
                 'google_maps_api_key',
-                'mail_password',
                 'twilio_auth_token',
                 'whatsapp_access_token',
                 'whatsapp_verify_token',
@@ -119,6 +121,20 @@ class SecretMaskingTest extends TestCase
             $overlap,
             'A SECRET key gained or lost an ENV fallback. index() must never expose a platform env '
             . 'value for a tenant that has not set its own — re-read the guard there first.',
+        );
+    }
+
+    public function test_mail_password_stays_encrypted_even_though_the_setting_is_gone(): void
+    {
+        // The BYO-SMTP settings were deleted (2026_08_14_100000), so nothing
+        // writes this key any more. It stays in ENCRYPTED_KEYS deliberately: a
+        // stale row surviving in some environment must still decrypt rather
+        // than read as ciphertext, and if the feature is ever revived it must
+        // not come back in plaintext.
+        $this->assertContains(
+            'mail_password',
+            \App\Models\HotelSetting::ENCRYPTED_KEYS,
+            'Keep the key encrypted-at-rest even after removal — cheaper than a migration that re-leaks it.',
         );
     }
 }

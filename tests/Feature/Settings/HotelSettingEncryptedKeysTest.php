@@ -71,16 +71,21 @@ class HotelSettingEncryptedKeysTest extends TestCase
 
     public function test_encrypted_keys_list_is_complete_and_exact(): void
     {
-        // Lock the four credential-bearing keys. Adding a 5th
-        // credential to this list is a deliberate architectural
-        // decision — this test catches accidental additions /
+        // Lock the credential-bearing keys. Adding one is a deliberate
+        // architectural decision — this test catches accidental additions and
         // removals.
+        //
+        // mail_password joined the list when per-tenant SMTP became a real
+        // feature: it was previously plaintext in hotel_settings AND, because
+        // only ENCRYPTED_KEYS are excluded from cachedMapFor(), written a
+        // second time in the clear into the cache store.
         $this->assertSame(
             [
                 'stripe_secret_key',
                 'stripe_webhook_secret',
                 'booking_smoobu_api_key',
                 'booking_smoobu_webhook_secret',
+                'mail_password',
             ],
             HotelSetting::ENCRYPTED_KEYS,
             'ENCRYPTED_KEYS list changed — verify the migration story for the new/removed key first.',
