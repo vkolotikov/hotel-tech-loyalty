@@ -131,6 +131,13 @@ class ChatSystemMessageVisibilityTest extends TestCase
             ['agent_typing_until', 'timestamp'], ['active_agent_name', 'string'],
             ['active_agent_avatar', 'string'], ['intent_tag', 'string'],
             ['lead_captured', 'boolean'], ['inquiry_id', 'unsignedBigInteger'],
+            // A new conversation records where it started
+            // (2026_09_12_120000_capture_chat_entry_source) and any consented
+            // marketing touches (2026_09_12_160000_capture_consented_chat_touches);
+            // without these columns initSession()'s insert fails and its catch
+            // answers "Init failed" with no session_id.
+            ['entry_source_channel', 'string'], ['entry_source_site', 'string'],
+            ['marketing_attribution', 'text'],
         ];
         Schema::table('chat_conversations', function ($t) use ($extraConvCols) {
             foreach ($extraConvCols as [$col, $type]) {
