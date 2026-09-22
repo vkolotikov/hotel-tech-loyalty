@@ -7,6 +7,7 @@ use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Console\Events\ScheduledTaskFinished;
 use Illuminate\Console\Events\ScheduledTaskSkipped;
 use Illuminate\Console\Events\ScheduledTaskStarting;
+use Illuminate\Mail\Events\MessageSending;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -29,6 +30,24 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Schema::defaultStringLength(191);
+
+        // Suppression enforcement for EVERY outbound email, on every kind of
+        // process: web requests send mail synchronously too (the welcome mail,
+        // the booking confirmations, the settings test message), so this
+        // listener must NOT sit inside the console-only block below.
+        //
+        // Registered on the event rather than inside the send sites because
+        // there are ~26 of them across 18 files and only one currently consults
+        // the compliance service. Returning false from a MessageSending
+        // listener cancels the send, so this cannot be bypassed by a call site
+        // added later — see App\Listeners\BlockSuppressedRecipients.
+        //
+        // Event discovery already registers this listener from its handle()
+        // type-hint (and the framework keeps one entry, not two); the explicit
+        // line states the intent and survives discovery being switched off.
+        // SuppressionListenerRegistrationTest boots a web-shaped application
+        // and checks the listener is there either way.
+        Event::listen(MessageSending::class, \App\Listeners\BlockSuppressedRecipients::class);
 
         // Only attach scheduler observers when running in console — there is
         // no point paying the listener-registration cost on every HTTP request.

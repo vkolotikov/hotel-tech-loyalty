@@ -196,13 +196,14 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
     });
 
-    // The Amazon SES bounce/complaint webhook is deliberately absent here.
-    // Its route reached production in ee2c5c0bb ahead of the controller that
-    // serves it -- the class ships with the email/deliverability work, which
-    // is still unreleased -- so POST /api/v1/webhooks/ses answered 500 rather
-    // than accepting SNS notifications. Re-add the route in the same change
-    // that ships App\Http\Controllers\Api\V1\Webhooks\SesWebhookController,
-    // never before it.
+    // Amazon SES bounce/complaint notifications, delivered by SNS. Public by
+    // nature (SNS is the caller); the controller verifies the SNS signature
+    // and the topic ARN before it records anything, and answers 403 to
+    // everything until SES_TOPIC_ARN is configured. Shipped together with
+    // App\Http\Controllers\Api\V1\Webhooks\SesWebhookController (the route
+    // once reached production without the class, in ee2c5c0bb, and answered
+    // 500 — never separate the two again).
+    Route::post('webhooks/ses', [\App\Http\Controllers\Api\V1\Webhooks\SesWebhookController::class, 'handle'])->middleware('throttle:600,1');
 
     // ─── Public Services Reservation Widget API ─────────────────────────────
     Route::prefix('services')->middleware('throttle:60,1')->group(function () {
