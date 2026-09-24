@@ -1356,7 +1356,18 @@
     },
     "select_page": "Seleccionar página",
     "deselect_page": "Quitar selección",
-    "points_short": "pts"
+    "points_short": "pts",
+    "portal": {
+      "title": "Portal de miembros",
+      "intro": "Comparta el enlace de registro con los nuevos clientes. Los miembros importados crean su contraseña con el segundo enlace.",
+      "join_link": "Enlace de registro",
+      "claim_link": "Clientes existentes",
+      "copy": "Copiar enlace",
+      "copy_failed": "No se pudo copiar: seleccione el enlace y cópielo a mano",
+      "qr_alt": "Código QR del enlace de registro",
+      "download_qr": "Descargar QR",
+      "unavailable": "El enlace del portal aún no está disponible."
+    }
   },
   "settings": {
     "title": "Ajustes",

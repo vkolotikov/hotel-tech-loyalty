@@ -1356,7 +1356,18 @@
     },
     "select_page": "Sélectionner la page",
     "deselect_page": "Désélectionner",
-    "points_short": "pts"
+    "points_short": "pts",
+    "portal": {
+      "title": "Portail membre",
+      "intro": "Partagez le lien d'inscription avec vos nouveaux clients. Les membres importés définissent leur mot de passe via le second lien.",
+      "join_link": "Lien d'inscription",
+      "claim_link": "Clients existants",
+      "copy": "Copier le lien",
+      "copy_failed": "Copie impossible — sélectionnez le lien et copiez-le manuellement",
+      "qr_alt": "Code QR du lien d'inscription",
+      "download_qr": "Télécharger le QR",
+      "unavailable": "Le lien du portail n'est pas encore disponible."
+    }
   },
   "settings": {
     "title": "Paramètres",

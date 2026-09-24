@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
-import { Users, ArrowLeftRight, ListChecks } from 'lucide-react'
+import { Users, ArrowLeftRight, ListChecks, Smartphone } from 'lucide-react'
 import { HubTabs } from '../../components/HubTabs'
+import { MemberPortalLinkCard } from '../../components/MemberPortalLinkCard'
 
 const Members         = lazy(() => import('../Members').then(m => ({ default: m.Members })))
 const MemberDuplicates = lazy(() => import('../MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
@@ -34,6 +35,13 @@ export function MembersHub() {
           icon: <ListChecks size={15} />,
           description: 'Reusable target lists for push + email campaigns.',
           render: () => <Suspense fallback={fallback}><Segments /></Suspense>,
+        },
+        {
+          key: 'portal',
+          label: 'Member portal',
+          icon: <Smartphone size={15} />,
+          description: 'The link and QR your customers use to join or sign in.',
+          render: () => <MemberPortalLinkCard />,
         },
       ]}
     />

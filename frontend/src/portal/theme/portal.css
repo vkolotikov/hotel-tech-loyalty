@@ -1,0 +1,122 @@
+/*
+ * Member portal tokens. Scoped to [data-portal] so nothing here leaks into
+ * the staff console, and every colour is an `R G B` triplet so Tailwind's
+ * `<alpha-value>` works (`bg-p-accent/10` is the soft tint).
+ *
+ * Light first: a member reads this on a phone in daylight. Dark follows the
+ * OS unless the root says otherwise. The accent arrives from the server
+ * (PortalTheme, contrast-checked) as --p-accent-l / --p-accent-d and their
+ * ink and deep companions; the fallbacks below are the generic industry
+ * accent.
+ */
+[data-portal] {
+  --p-bg: 247 246 243;
+  --p-surface: 255 255 255;
+  --p-surface-2: 240 238 233;
+  --p-text: 23 25 28;
+  --p-text-2: 95 100 107;
+  --p-border: 228 225 218;
+  --p-accent: var(--p-accent-l, 47 93 138);
+  --p-accent-ink: var(--p-accent-l-ink, 255 255 255);
+  --p-accent-deep: var(--p-accent-l-deep, 36 72 107);
+  --p-success: 31 122 77;
+  --p-warning: 138 92 0;
+  --p-danger: 179 38 30;
+  --p-radius-card: 18px;
+  --p-radius-control: 12px;
+  --p-shadow: 0 1px 2px rgba(23, 25, 28, 0.06), 0 8px 24px -12px rgba(23, 25, 28, 0.18);
+  --p-font-body: 'Inter', system-ui, sans-serif;
+  /* The venue's face arrives as --p-font-venue (applyPortalTheme, on the root); the fallback is the generic face. */
+  --p-font-display: var(--p-font-venue, 'PortalDisplay-Manrope', 'Manrope', 'Inter', system-ui, sans-serif);
+
+  color-scheme: light;
+  background-color: rgb(var(--p-bg));
+  color: rgb(var(--p-text));
+  font-family: var(--p-font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-portal] select,
+[data-portal] input,
+[data-portal] textarea {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-portal]:not([data-portal-theme="light"]) {
+    --p-bg: 15 17 19;
+    --p-surface: 24 27 31;
+    --p-surface-2: 34 38 43;
+    --p-text: 242 242 240;
+    --p-text-2: 162 167 174;
+    --p-border: 46 51 58;
+    --p-accent: var(--p-accent-d, 127 176 224);
+    --p-accent-ink: var(--p-accent-d-ink, 15 17 19);
+    --p-accent-deep: var(--p-accent-d-deep, 168 204 240);
+    --p-success: 76 195 138;
+    --p-warning: 229 185 92;
+    --p-danger: 242 139 130;
+    --p-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+    color-scheme: dark;
+  }
+  [data-portal]:not([data-portal-theme="light"]) select,
+  [data-portal]:not([data-portal-theme="light"]) input,
+  [data-portal]:not([data-portal-theme="light"]) textarea {
+    color-scheme: dark;
+  }
+}
+
+[data-portal][data-portal-theme="dark"] {
+  --p-bg: 15 17 19;
+  --p-surface: 24 27 31;
+  --p-surface-2: 34 38 43;
+  --p-text: 242 242 240;
+  --p-text-2: 162 167 174;
+  --p-border: 46 51 58;
+  --p-accent: var(--p-accent-d, 127 176 224);
+  --p-accent-ink: var(--p-accent-d-ink, 15 17 19);
+  --p-accent-deep: var(--p-accent-d-deep, 168 204 240);
+  --p-success: 76 195 138;
+  --p-warning: 229 185 92;
+  --p-danger: 242 139 130;
+  --p-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px -12px rgba(0, 0, 0, 0.6);
+  color-scheme: dark;
+}
+
+[data-portal][data-portal-theme="dark"] select,
+[data-portal][data-portal-theme="dark"] input,
+[data-portal][data-portal-theme="dark"] textarea {
+  color-scheme: dark;
+}
+
+/* One orchestrated moment: the member card rises once on first paint. */
+@keyframes p-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+[data-portal] .p-rise { animation: p-rise 220ms ease-out both; }
+[data-portal] .p-lift { transition: transform 160ms ease-out, box-shadow 160ms ease-out; }
+[data-portal] .p-lift:hover { transform: translateY(-2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-portal] .p-rise { animation: none; }
+  [data-portal] .p-lift, [data-portal] .p-lift:hover { transition: none; transform: none; }
+  [data-portal] * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+/* Focus is never tenant-derived: a fixed 2px ring in the text colour. */
+[data-portal] :focus-visible {
+  outline: 2px solid rgb(var(--p-text));
+  outline-offset: 2px;
+}
+
+/* Display faces, self-hosted under public/landing/fonts (served on every
+   host). Distinct family names so the SPA's Google Fonts imports of the same
+   families can never win a race against these. Each src is the variable
+   woff2 of its family, covering weights 400–700 in one file. */
+@font-face { font-family: 'PortalDisplay-Playfair';   src: url('/landing/fonts/playfair-display-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'PortalDisplay-Cormorant';  src: url('/landing/fonts/cormorant-garamond-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'PortalDisplay-Fraunces';   src: url('/landing/fonts/fraunces-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'PortalDisplay-Newsreader'; src: url('/landing/fonts/newsreader-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'PortalDisplay-Space';      src: url('/landing/fonts/space-grotesk-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }
+@font-face { font-family: 'PortalDisplay-Manrope';    src: url('/landing/fonts/manrope-var.woff2') format('woff2'); font-weight: 400 700; font-display: swap; }

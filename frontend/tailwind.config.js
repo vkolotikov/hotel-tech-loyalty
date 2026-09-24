@@ -39,9 +39,34 @@ export default {
         error:         'rgb(var(--color-error, 255 55 95) / <alpha-value>)',
         warning:       'rgb(var(--color-warning, 255 214 10) / <alpha-value>)',
         info:          'rgb(var(--color-info, 10 132 255) / <alpha-value>)',
+        // Member portal tokens — see src/portal/theme/portal.css. Only
+        // frontend/src/portal uses these; the sweep test forbids the reverse.
+        p: {
+          bg:            'rgb(var(--p-bg) / <alpha-value>)',
+          surface:       'rgb(var(--p-surface) / <alpha-value>)',
+          'surface-2':   'rgb(var(--p-surface-2) / <alpha-value>)',
+          text:          'rgb(var(--p-text) / <alpha-value>)',
+          'text-2':      'rgb(var(--p-text-2) / <alpha-value>)',
+          border:        'rgb(var(--p-border) / <alpha-value>)',
+          accent:        'rgb(var(--p-accent) / <alpha-value>)',
+          'accent-ink':  'rgb(var(--p-accent-ink) / <alpha-value>)',
+          'accent-deep': 'rgb(var(--p-accent-deep) / <alpha-value>)',
+          success:       'rgb(var(--p-success) / <alpha-value>)',
+          warning:       'rgb(var(--p-warning) / <alpha-value>)',
+          danger:        'rgb(var(--p-danger) / <alpha-value>)',
+        },
+      },
+      borderRadius: {
+        'p-card':    'var(--p-radius-card)',
+        'p-control': 'var(--p-radius-control)',
+      },
+      boxShadow: {
+        p: 'var(--p-shadow)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        'p-display': ['var(--p-font-display)'],
+        'p-body': ['var(--p-font-body)'],
       },
     },
   },

@@ -2502,6 +2502,15 @@ class AuthController extends Controller
         }
 
         $user->update(['password' => Hash::make($validated['password'])]);
+
+        // The code was sent to this address and the caller just proved they
+        // control it — the one place email_verified_at should be set for
+        // the claim flow. Set directly rather than through update(): the
+        // column is deliberately absent from User::$fillable (mass-
+        // assigning it would let a crafted request body self-verify), same
+        // as the SaaS-sync branch above.
+        $user->email_verified_at = now();
+        $user->save();
         $record->update(['verified_at' => now()]);
 
         // Bind org context so subsequent scoped queries work (same as login)

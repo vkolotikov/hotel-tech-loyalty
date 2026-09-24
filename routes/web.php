@@ -618,6 +618,9 @@ Route::post('/unsubscribe/{token}/resubscribe', [\App\Http\Controllers\Unsubscri
  */
 Route::get('/manifest.webmanifest', function (\Illuminate\Http\Request $request) {
     $brand = config('pwa.hosts')[strtolower($request->getHost())] ?? config('pwa.default');
+    // The member portal installs as its own app: a member's home screen
+    // must not read "… Admin" nor open on the staff dashboard.
+    $portal = $request->query('app') === 'portal';
 
     $icon = fn (string $file, int $size, string $purpose) => [
         'src'     => '/spa/pwa/' . $file,
@@ -626,31 +629,33 @@ Route::get('/manifest.webmanifest', function (\Illuminate\Http\Request $request)
         'purpose' => $purpose,
     ];
 
+    $icons = [
+        $icon('icon-192.png', 192, 'any'),
+        $icon('icon-512.png', 512, 'any'),
+        // Windows and Android crop icons to their own shape; the maskable
+        // variant keeps the mark inside the safe area so it survives that.
+        $icon('icon-maskable-512.png', 512, 'maskable'),
+    ];
+
     return response()->json([
-        'id'               => '/',
-        'name'             => $brand['name'],
-        'short_name'       => $brand['short_name'],
-        'start_url'        => '/',
+        'id'               => $portal ? '/portal' : '/',
+        'name'             => $portal ? $brand['short_name'] . ' Member' : $brand['name'],
+        'short_name'       => $portal ? 'Member' : $brand['short_name'],
+        'start_url'        => $portal ? '/portal' : '/',
         'scope'            => '/',
         'display'          => 'standalone',
         'orientation'      => 'any',
-        'theme_color'      => config('pwa.theme_color'),
-        'background_color' => config('pwa.background_color'),
-        'categories'       => ['business', 'productivity'],
+        'theme_color'      => $portal ? '#F7F6F3' : config('pwa.theme_color'),
+        'background_color' => $portal ? '#F7F6F3' : config('pwa.background_color'),
+        'categories'       => $portal ? ['lifestyle'] : ['business', 'productivity'],
 
         // Clicking the taskbar icon while a window is already open should
         // raise that window, not open a second copy of the same console.
         'launch_handler'   => ['client_mode' => 'focus-existing'],
 
-        'icons' => [
-            $icon('icon-192.png', 192, 'any'),
-            $icon('icon-512.png', 512, 'any'),
-            // Windows and Android crop icons to their own shape; the maskable
-            // variant keeps the mark inside the safe area so it survives that.
-            $icon('icon-maskable-512.png', 512, 'maskable'),
-        ],
+        'icons' => $icons,
 
-        'shortcuts' => array_map(fn ($s) => [
+        'shortcuts' => $portal ? [] : array_map(fn ($s) => [
             'name' => $s['name'],
             'url'  => $s['url'],
             'icons' => [$icon('icon-192.png', 192, 'any')],

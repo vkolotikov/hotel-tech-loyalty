@@ -6,7 +6,6 @@ import { queryClient } from './lib/queryClient'
 import { useAuthStore } from './stores/authStore'
 import { APP_BASE, api } from './lib/api'
 import { Layout, canAccess } from './components/Layout'
-import { PortalLayout } from './pages/portal/PortalLayout'
 import type { NavGate } from './components/Layout'
 import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { useTheme } from './hooks/useTheme'
@@ -24,16 +23,11 @@ import { Setup } from './pages/Setup'
 // Offers, Benefits, Tiers) is now loaded INSIDE the hub components
 // at pages/hubs/* — see MembersHub / ProgramHub / RewardsHub /
 // CampaignsHub. The hub wrappers do their own lazy-load.
-// Member-facing portal. Lazy so a staff session never downloads it.
-const PortalHome     = lazy(() => import('./pages/portal/PortalHome').then(m => ({ default: m.PortalHome })))
-const PortalRewards  = lazy(() => import('./pages/portal/PortalRewards').then(m => ({ default: m.PortalRewards })))
-const PortalOffers   = lazy(() => import('./pages/portal/PortalOffers').then(m => ({ default: m.PortalOffers })))
-const PortalActivity = lazy(() => import('./pages/portal/PortalActivity').then(m => ({ default: m.PortalActivity })))
-const PortalProfile  = lazy(() => import('./pages/portal/PortalProfile').then(m => ({ default: m.PortalProfile })))
-const PortalBenefits = lazy(() => import('./pages/portal/PortalBenefits').then(m => ({ default: m.PortalBenefits })))
-// Public — no auth guard. These are how someone BECOMES a member.
-const PortalJoin     = lazy(() => import('./pages/portal/PortalJoin').then(m => ({ default: m.PortalJoin })))
-const PortalClaim    = lazy(() => import('./pages/portal/PortalClaim').then(m => ({ default: m.PortalClaim })))
+// Member portal. One lazy chunk so a staff session never downloads it;
+// join and claim are public entry points and stay outside its guard.
+const PortalRoutes = lazy(() => import('./portal/PortalApp').then(m => ({ default: m.PortalApp })))
+const PortalJoin   = lazy(() => import('./portal/pages/Join').then(m => ({ default: m.Join })))
+const PortalClaim  = lazy(() => import('./portal/pages/Claim').then(m => ({ default: m.Claim })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -180,28 +174,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <Layout>{children}</Layout>
 }
 
-/**
- * Guard for the member-facing portal.
- *
- * Mirror image of ProtectedRoute: that one requires `user_type === 'staff'`,
- * which is why a member signing in on the web used to be bounced straight
- * back to the login screen even though the whole /v1/member/* API was
- * already there. Staff who land here are sent to the admin console rather
- * than shown an empty portal.
- */
-function MemberRoute({ children }: { children: React.ReactNode }) {
-  const { token, user } = useAuthStore()
-  if (!token) return <Navigate to="/login" replace />
-  if (user?.user_type === 'staff') return <Navigate to="/" replace />
-  return (
-    <PortalLayout>
-      <ChunkErrorBoundary>
-        <Suspense fallback={<PageLoader />}>{children}</Suspense>
-      </ChunkErrorBoundary>
-    </PortalLayout>
-  )
-}
-
 function GatedRoute({ gate, product, feature, children }: { gate?: NavGate; product?: string; feature?: string; children: React.ReactNode }) {
   const { staff } = useAuthStore()
   const { hasProduct, hasFeature, isLoading } = useSubscription()
@@ -272,18 +244,13 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/account/connections" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AccountConnections /></Suspense></ChunkErrorBoundary>} />
 
-          {/* Public member entry points. Outside MemberRoute: nobody
+          {/* Public member entry points. Outside the portal guard: nobody
               signing up or claiming an account has a session yet. */}
           <Route path="/portal/join"  element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalJoin /></Suspense></ChunkErrorBoundary>} />
           <Route path="/portal/claim" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalClaim /></Suspense></ChunkErrorBoundary>} />
 
           {/* Member portal — same login, different app. */}
-          <Route path="/portal"          element={<MemberRoute><PortalHome /></MemberRoute>} />
-          <Route path="/portal/rewards"  element={<MemberRoute><PortalRewards /></MemberRoute>} />
-          <Route path="/portal/offers"   element={<MemberRoute><PortalOffers /></MemberRoute>} />
-          <Route path="/portal/benefits" element={<MemberRoute><PortalBenefits /></MemberRoute>} />
-          <Route path="/portal/activity" element={<MemberRoute><PortalActivity /></MemberRoute>} />
-          <Route path="/portal/profile"  element={<MemberRoute><PortalProfile /></MemberRoute>} />
+          <Route path="/portal/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />

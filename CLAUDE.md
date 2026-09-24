@@ -48,6 +48,12 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Verify page work with your eyes first (real browser screenshot at 1440 against the author's original),
   tests second.
 
+## Member-portal code rules
+
+- `frontend/src/portal/` uses only `p-*` tokens and member endpoints; every string is `t('portal.…')` in all five
+  locales; new API lives under `member/portal/*` and the mobile app's member endpoints keep their shapes. Read
+  `docs/member-portal.md` before touching it.
+
 ## Secrets
 
 Never echo credential values. `.env` is local; production settings live in Laravel Cloud.

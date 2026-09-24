@@ -34,7 +34,7 @@ class PublicJoinController extends Controller
 
         if (!$brand || !$brand->organization) {
             return response()->json([
-                'error' => 'This sign-up link is not valid. Please check with the hotel for a current link.',
+                'error' => 'This sign-up link is not valid. Please check with the venue for a current link.',
             ], 404);
         }
 
@@ -66,6 +66,8 @@ class PublicJoinController extends Controller
             'starting_tier'   => $tier->name,
             // Shown on the form as the reason to bother signing up.
             'welcome_bonus'   => (int) HotelSetting::getValue('welcome_bonus_points', 0),
+            // The page paints the venue before any session exists.
+            'theme'           => \App\Services\Portal\PortalTheme::for($org),
         ]);
     }
 }

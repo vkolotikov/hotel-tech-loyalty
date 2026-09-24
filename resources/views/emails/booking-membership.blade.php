@@ -58,21 +58,25 @@
 
     <div class="panel">
         <div class="panel-title">How to activate</div>
+        @if (!empty($portalUrl))
         <p style="margin:0 0 8px;">
             <strong style="color:#e3c66a;">1.</strong>
-            Download the <strong style="color:#ffffff;">{{ $hotelName }}</strong> member app from the App Store or Google Play.
+            Open the member portal:
+            <a href="{{ $portalUrl }}" style="color:#e3c66a;font-weight:600;">{{ $portalUrl }}</a>
         </p>
+        @else
+        <p style="margin:0 0 8px;">
+            <strong style="color:#e3c66a;">1.</strong>
+            Open the <strong style="color:#ffffff;">{{ $hotelName }}</strong> member portal or member app.
+        </p>
+        @endif
         <p style="margin:0 0 8px;">
             <strong style="color:#e3c66a;">2.</strong>
-            On the login screen, tap <strong style="color:#ffffff;">"Forgot password"</strong>.
-        </p>
-        <p style="margin:0 0 8px;">
-            <strong style="color:#e3c66a;">3.</strong>
-            Enter your email <strong style="color:#ffffff;">{{ $email }}</strong>.
+            Enter your email <strong style="color:#ffffff;">{{ $email }}</strong> and choose 'I already have a code'.
         </p>
         <p style="margin:0;">
-            <strong style="color:#e3c66a;">4.</strong>
-            Enter the 6-digit code above and choose your new password.
+            <strong style="color:#e3c66a;">3.</strong>
+            Enter the 6-digit code above and choose your password.
         </p>
     </div>
 

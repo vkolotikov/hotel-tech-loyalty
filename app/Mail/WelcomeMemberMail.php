@@ -47,6 +47,7 @@ class WelcomeMemberMail extends Mailable
                 'hotelName'    => $this->organization->name,
                 'email'        => $this->member->user->email,
                 'code'         => $this->code,
+                'portalUrl'    => \App\Services\Portal\PortalLinks::claim(),
             ], $this->industryVocabFor($this->organization)),
         );
     }

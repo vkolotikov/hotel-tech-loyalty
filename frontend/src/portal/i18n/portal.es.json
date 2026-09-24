@@ -1,0 +1,95 @@
+{
+  "nav": { "home": "Inicio", "book": "Reservar", "rewards": "Recompensas", "bookings": "Reservas", "profile": "Perfil", "activity": "Actividad" },
+  "common": {
+    "loading": "Cargando…", "retry": "Reintentar", "error": "Algo salió mal. Inténtelo de nuevo.",
+    "save": "Guardar cambios", "saved": "Guardado", "cancel": "Cancelar", "confirm": "Confirmar", "close": "Cerrar",
+    "copy": "Copiar", "copied": "Copiado", "share": "Compartir", "sign_out": "Cerrar sesión", "back": "Atrás", "see_all": "Ver todo",
+    "points": "puntos", "optional": "opcional", "previous": "Anterior", "next": "Siguiente", "page_of": "Página {{page}} de {{total}}"
+  },
+  "shell": { "greeting": "Hola, {{name}}", "membership": "Mi membresía", "menu": "Menú", "portal_off": "El portal de miembros está desactivado para este establecimiento. Póngase en contacto con ellos directamente." },
+  "home": {
+    "balance": "Saldo de puntos", "lifetime": "{{count}} ganados en total", "progress_to": "Progreso hacia {{tier}}",
+    "points_to_go": "Faltan {{count}} puntos", "member_number": "Número de socio", "show_at_counter": "Muestre esto en recepción para ganar o canjear puntos.",
+    "next_booking": "Su próximo {{noun}}", "no_upcoming": "Aún no hay nada reservado.", "view_booking": "Ver",
+    "quick_rewards": "Canjear puntos", "quick_rewards_hint": "Explore el catálogo de recompensas",
+    "quick_offers": "Sus ofertas", "quick_offers_hint": "Descuentos disponibles para usted",
+    "recent_activity": "Actividad reciente", "no_activity": "Sus puntos aparecerán aquí después de su primera visita.",
+    "member_since": "Socio desde {{date}}", "contact": "¿Preguntas? Contacte con {{venue}}",
+    "wallet_apple": "Añadir a Apple Wallet", "wallet_google": "Añadir a Google Wallet",
+    "wallet_unavailable": "Los pases de wallet aún no están configurados para este establecimiento.", "wallet_error": "No se pudo preparar el pase. Inténtelo de nuevo."
+  },
+  "rewards": {
+    "title": "Recompensas", "you_have": "Tiene {{count}} puntos", "tab_benefits": "Beneficios", "tab_catalogue": "Catálogo",
+    "tab_offers": "Ofertas", "tab_codes": "Mis códigos",
+    "benefits_empty": "Aún no hay beneficios en su nivel. Siga ganando puntos para desbloquearlos.", "tier_level": "Nivel {{tier}}",
+    "request": "Solicitar", "requested": "Solicitado — el establecimiento lo confirmará", "approved": "Aprobado — listo cuando usted quiera",
+    "cancel_request": "Cancelar solicitud", "request_sent": "Solicitado", "request_cancelled": "Solicitud cancelada",
+    "request_failed": "No se pudo enviar la solicitud", "automatic": "Se aplica automáticamente", "voucher": "Se emite como vale — pregunte en recepción",
+    "last_used": "Usado por última vez el {{date}}",
+    "catalogue_empty": "No hay recompensas disponibles en este momento. Vuelva pronto.", "redeem": "Canjear", "already_claimed": "Ya reclamado",
+    "out_of_stock": "Agotado", "points_needed": "Necesita {{count}} puntos más", "redeem_title": "¿Canjear «{{name}}»?",
+    "redeem_body": "Se gastarán {{count}} puntos. Recibirá un código para mostrar en recepción.", "redeemed": "Canjeado — su código es {{code}}", "redeemed_prefix": "Canjeado: su código es",
+    "redeem_failed": "No se pudo canjear esta recompensa",
+    "offers_yours": "Listas para usted", "offers_available": "Disponibles para usted", "offers_empty": "No hay ofertas por ahora. Le avisaremos cuando llegue alguna.",
+    "claim": "Reclamar oferta", "claimed": "Oferta reclamada — muéstrela en recepción", "claim_failed": "No se pudo reclamar esa oferta",
+    "already_claimed_offer": "Ya reclamada — vea arriba", "fully_claimed": "Totalmente reclamada", "used_on": "Usada el {{date}}",
+    "valid_until": "Válida hasta {{date}}", "ready_to_use": "Lista para usar — muestre esto en recepción", "ends": "Termina el {{date}}",
+    "percent_off": "{{value}}% de descuento", "amount_off": "{{value}} de descuento", "points_multiplier": "Puntos x{{value}}",
+    "codes_empty": "Los códigos que canjee se guardarán aquí.", "code_pending": "Muestre en recepción", "code_fulfilled": "Usado", "code_cancelled": "Cancelado",
+    "codes_hint": "Cada código funciona una sola vez. El establecimiento lo marcará como usado al presentarlo."
+  },
+  "bookings": {
+    "title": "Reservas", "upcoming": "Próximas", "past": "Pasadas", "empty_upcoming": "No hay {{noun}} próximos.", "empty_past": "Aún no hay {{noun}} pasados.",
+    "reference": "Referencia", "when": "Cuándo", "where": "Dónde", "with": "Con", "guests": "Huéspedes", "nights": "Noches",
+    "nights_guests": "{{nights}} noches · {{guests}} huéspedes", "party": "Para {{count}} personas", "total": "Total", "discount": "Descuento de socio",
+    "payment": "Pago", "notes": "Sus notas", "policy": "Política de cancelación", "contact_to_change": "Para cambiar o cancelar, contacte con {{venue}}.",
+    "status": { "pending": "Pendiente de confirmación", "confirmed": "Confirmada", "in_progress": "En curso", "completed": "Completada", "cancelled": "Cancelada" },
+    "payment_status": { "unpaid": "Pago en el local", "authorized": "Tarjeta retenida", "paid": "Pagado", "refunded": "Reembolsado", "failed": "Pago fallido", "partially_refunded": "Reembolsado parcialmente",
+      "open": "Pago pendiente", "pending": "Pago en proceso", "disputed": "Pago en revisión", "invoice_waiting": "Factura pendiente", "channel_managed": "Gestionado por su canal de reserva", "capture_expired": "Retención de tarjeta caducada", "cancelled": "Pago cancelado", "mock": "Pago de prueba" },
+    "not_found": "No pudimos encontrar esa reserva."
+  },
+  "activity": { "title": "Actividad", "entries": "{{count}} entradas", "empty": "Aún no hay actividad de puntos. Su primera visita aparecerá aquí.", "balance": "saldo {{count}}", "reversed": "revertido",
+    "type": { "earn": "Ganado", "bonus": "Bono", "redeem": "Canjeado", "adjust": "Ajuste", "expire": "Caducado", "reverse": "Revertido" } },
+  "profile": {
+    "title": "Perfil", "name": "Nombre", "email": "Correo electrónico", "email_hint": "Contacte con el establecimiento si necesita cambiarlo", "phone": "Teléfono",
+    "birthday": "Fecha de nacimiento", "language": "Idioma", "communication": "Comunicación",
+    "marketing": "Ofertas y novedades por correo electrónico", "marketing_hint": "Correos ocasionales sobre recompensas, ofertas y eventos. Puede desactivarlo en cualquier momento.",
+    "push": "Notificaciones push", "push_hint": "Actualizaciones de puntos y recordatorios en su teléfono.",
+    "service_messages": "Seguirá recibiendo mensajes de servicio sobre su cuenta (restablecimiento de contraseña, confirmaciones de reserva y similares) independientemente de estos ajustes.",
+    "invite_title": "Invitar a un amigo", "invite_body": "Comparta su enlace — ambos serán recompensados cuando se una.", "invite_share": "Compartir mi enlace", "invite_copy": "Copiar enlace",
+    "invite_stats": "{{count}} amigos se han unido", "invite_unavailable": "Los enlaces de referidos aún no están disponibles.",
+    "password_title": "Contraseña", "password_change": "Cambiar contraseña", "password_current": "Contraseña actual", "password_new": "Nueva contraseña",
+    "password_confirm": "Confirme la nueva contraseña", "password_hint": "Al menos 8 caracteres", "password_changed": "Contraseña cambiada. Se ha cerrado sesión en otros dispositivos.",
+    "password_failed": "No se pudo cambiar la contraseña", "password_mismatch": "Esas dos contraseñas no coinciden.",
+    "delete_title": "Eliminar cuenta", "delete_body": "Esto elimina su membresía y puntos en este establecimiento. No se puede deshacer.",
+    "delete_confirm_label": "Escriba DELETE para confirmar", "delete_password": "Su contraseña", "delete_button": "Eliminar mi cuenta", "delete_failed": "No se pudo eliminar la cuenta",
+    "save_failed": "No se pudieron guardar sus cambios", "member_number": "Número de socio {{number}}"
+  },
+  "join": {
+    "title": "Únase a {{venue}}", "with_bonus": "Empiece con {{count}} puntos de regalo.", "no_bonus": "Gane puntos en cada visita.",
+    "name": "Su nombre", "email": "Correo electrónico", "phone": "Teléfono (opcional)", "password": "Contraseña", "password_confirm": "Confirmar contraseña",
+    "referral": "Código de referido (opcional)", "referral_prefilled": "El código de su amigo ya está completado — ambos serán recompensados",
+    "referral_hint": "Si un amigo le dio un código, ambos serán recompensados", "submit": "Crear mi membresía",
+    "already": "¿Ya es socio?", "sign_in": "Iniciar sesión", "existing": "¿Ya es cliente desde hace tiempo?", "set_up": "Configure su cuenta existente",
+    "incomplete_title": "Este enlace está incompleto", "incomplete_body": "Los enlaces de registro incluyen un código que indica a qué programa se está uniendo. Utilice el enlace que le dio el establecimiento.",
+    "closed_title": "El registro no está disponible", "closed_body": "Este enlace de registro no es válido, o el programa aún no está abierto a nuevos socios. Consulte con el establecimiento.",
+    "failed": "No se pudo crear su cuenta.", "go_sign_in": "Ir a iniciar sesión"
+  },
+  "claim": {
+    "title": "Configure su cuenta", "intro": "¿Ya es cliente? Elija una contraseña para ver sus puntos en línea.", "code_sent": "Le hemos enviado un código de 6 dígitos a {{email}}.",
+    "have_code": "Ya tengo un código", "enter_code": "Introduzca el código del correo enviado a {{email}}.",
+    "email": "Su correo electrónico", "email_hint": "Use la dirección que el establecimiento tiene registrada para usted", "send_code": "Enviarme un código",
+    "code": "Código de 6 dígitos", "password": "Elija una contraseña", "password_confirm": "Confirmar contraseña", "finish": "Finalizar configuración",
+    "resend": "¿No lo recibió? Enviar otro código", "resent": "Un nuevo código está en camino.", "change_email": "Usar otro correo electrónico",
+    "rate_limited": "Se acaba de enviar un código. Espere un minuto antes de solicitar otro.", "send_failed": "No se pudo enviar un código a esa dirección.",
+    "claim_failed": "Ese código no funcionó. Revíselo e inténtelo de nuevo.", "already_set_up": "¿Ya está configurado?"
+  },
+  "vocab": {
+    "hotel":      { "booking": "estancia", "booking_plural": "estancias", "service": "servicio", "service_plural": "servicios", "staff": "anfitrión", "venue": "hotel", "visit": "estancia" },
+    "beauty":     { "booking": "cita", "booking_plural": "citas", "service": "tratamiento", "service_plural": "tratamientos", "staff": "estilista", "venue": "salón", "visit": "visita" },
+    "medical":    { "booking": "cita", "booking_plural": "citas", "service": "procedimiento", "service_plural": "procedimientos", "staff": "profesional", "venue": "clínica", "visit": "visita" },
+    "restaurant": { "booking": "reserva", "booking_plural": "reservas", "service": "servicio", "service_plural": "servicios", "staff": "anfitrión", "venue": "local", "visit": "visita" },
+    "fitness":    { "booking": "sesión", "booking_plural": "sesiones", "service": "clase", "service_plural": "clases", "staff": "entrenador", "venue": "estudio", "visit": "sesión" },
+    "other":      { "booking": "cita", "booking_plural": "citas", "service": "servicio", "service_plural": "servicios", "staff": "miembro del equipo", "venue": "local", "visit": "visita" }
+  }
+}

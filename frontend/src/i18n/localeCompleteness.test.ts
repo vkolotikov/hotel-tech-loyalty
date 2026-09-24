@@ -41,9 +41,10 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'pages/landing'),
   path.join(SRC_DIR, 'pages/LandingPages.tsx'),
   path.join(SRC_DIR, 'pages/Reviews.tsx'),
+  path.join(SRC_DIR, 'portal'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'portal.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
@@ -77,8 +78,12 @@ function readAt(json: unknown, dottedKey: string): unknown {
 }
 
 function readLocale(locale: string): unknown {
-  const file = path.join(LOCALES_DIR, locale, 'common.json')
-  return JSON.parse(fs.readFileSync(file, 'utf8'))
+  const common = JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, locale, 'common.json'), 'utf8'))
+  // The member portal registers its bundle under `portal` at runtime
+  // (src/portal/i18n/index.ts); resolve `portal.*` keys the same way.
+  const portalFile = path.join(SRC_DIR, 'portal/i18n', `portal.${locale}.json`)
+  const portal = fs.existsSync(portalFile) ? JSON.parse(fs.readFileSync(portalFile, 'utf8')) : {}
+  return { ...common, portal }
 }
 
 describe('locale completeness — landing pages + reviews', () => {
@@ -91,6 +96,19 @@ describe('locale completeness — landing pages + reviews', () => {
     expect(keys).toContain('landing_pages.wizard.business_name_hint')
     expect(keys).toContain('reviews.featured_on')
     expect(keys).toContain('reviews.landing_page')
+    // Task 11 gives the portal its first real call sites (the shell + the
+    // five stub pages), so the regex scan above now finds this key — the
+    // canary that used to explain its absence is restored.
+    expect(keys).toContain('portal.nav.home')
+  })
+
+  // The portal-bundle canary: proves the file the merge above reads for
+  // `portal.*` actually exists and carries the key a member's first screen
+  // needs, independent of any `t()` call site.
+  it('the portal bundle carries its first-screen key', () => {
+    const portalFile = path.join(SRC_DIR, 'portal/i18n', 'portal.en.json')
+    const portal = JSON.parse(fs.readFileSync(portalFile, 'utf8'))
+    expect(readAt(portal, 'nav.home')).toBe('Home')
   })
 
   for (const locale of LOCALES) {

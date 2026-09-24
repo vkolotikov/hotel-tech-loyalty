@@ -402,6 +402,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('notifications/{id}/read', [MemberNotificationController::class, 'markRead']);
         });
 
+        // ─── Member portal (web) ──────────────────────────────────────────────
+        // Its own prefix so the mobile app's endpoints above keep their shapes.
+        // member.only refuses staff tokens at the door (several member routes
+        // answer 500 to them) and honours the venue's portal_enabled switch.
+        Route::prefix('member/portal')->middleware('member.only')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Member\Portal\PortalController::class, 'index']);
+            Route::get('bookings', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'index']);
+            Route::get('bookings/{kind}/{id}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'show'])
+                ->whereIn('kind', ['service', 'stay'])
+                ->whereNumber('id');
+        });
+
         // ─── AI Chatbot ────────────────────────────────────────────────────────
         Route::post('chatbot/message', [ChatbotController::class, 'message']);
 
@@ -647,6 +659,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
 
             Route::get('members',                 [MemberAdminController::class, 'index']);
             Route::get('members/stats',           [MemberAdminController::class, 'stats']);
+            // The portal join link + QR for the Members hub card.
+            Route::get('member-portal/link', [\App\Http\Controllers\Api\V1\Admin\MemberPortalLinkController::class, 'show']);
             Route::get('members/export',          [MemberAdminController::class, 'export']);
             Route::get('members/duplicates',      [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'suggestions']);
             Route::post('members/merge',          [\App\Http\Controllers\Api\V1\Admin\MemberMergeController::class, 'merge']);

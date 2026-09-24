@@ -1,0 +1,95 @@
+{
+  "nav": { "home": "Start", "book": "Buchen", "rewards": "Prämien", "bookings": "Buchungen", "profile": "Profil", "activity": "Verlauf" },
+  "common": {
+    "loading": "Wird geladen…", "retry": "Erneut versuchen", "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "save": "Änderungen speichern", "saved": "Gespeichert", "cancel": "Abbrechen", "confirm": "Bestätigen", "close": "Schließen",
+    "copy": "Kopieren", "copied": "Kopiert", "share": "Teilen", "sign_out": "Abmelden", "back": "Zurück", "see_all": "Alle anzeigen",
+    "points": "Punkte", "optional": "optional", "previous": "Zurück", "next": "Weiter", "page_of": "Seite {{page}} von {{total}}"
+  },
+  "shell": { "greeting": "Hallo, {{name}}", "membership": "Meine Mitgliedschaft", "menu": "Menü", "portal_off": "Das Mitgliederportal ist für dieses Unternehmen deaktiviert. Bitte wenden Sie sich direkt an das Unternehmen." },
+  "home": {
+    "balance": "Punktestand", "lifetime": "{{count}} insgesamt gesammelt", "progress_to": "Fortschritt bis {{tier}}",
+    "points_to_go": "Noch {{count}} Punkte", "member_number": "Mitgliedsnummer", "show_at_counter": "Zeigen Sie dies am Empfang, um Punkte zu sammeln oder einzulösen.",
+    "next_booking": "Ihr nächster {{noun}}", "no_upcoming": "Noch nichts gebucht.", "view_booking": "Ansehen",
+    "quick_rewards": "Punkte einlösen", "quick_rewards_hint": "Prämienkatalog ansehen",
+    "quick_offers": "Ihre Angebote", "quick_offers_hint": "Für Sie verfügbare Rabatte",
+    "recent_activity": "Letzte Aktivitäten", "no_activity": "Ihre Punkte erscheinen hier nach Ihrem ersten Besuch.",
+    "member_since": "Mitglied seit {{date}}", "contact": "Fragen? Kontaktieren Sie {{venue}}",
+    "wallet_apple": "Zu Apple Wallet hinzufügen", "wallet_google": "Zu Google Wallet hinzufügen",
+    "wallet_unavailable": "Wallet-Karten sind für dieses Unternehmen noch nicht eingerichtet.", "wallet_error": "Die Karte konnte nicht vorbereitet werden. Bitte versuchen Sie es erneut."
+  },
+  "rewards": {
+    "title": "Prämien", "you_have": "Sie haben {{count}} Punkte", "tab_benefits": "Vorteile", "tab_catalogue": "Katalog",
+    "tab_offers": "Angebote", "tab_codes": "Meine Codes",
+    "benefits_empty": "Auf Ihrer Stufe gibt es noch keine Vorteile. Sammeln Sie weiter Punkte, um sie freizuschalten.", "tier_level": "Stufe {{tier}}",
+    "request": "Jetzt anfragen", "requested": "Angefragt — das Unternehmen bestätigt in Kürze", "approved": "Genehmigt — bereit zur Nutzung",
+    "cancel_request": "Anfrage stornieren", "request_sent": "Angefragt", "request_cancelled": "Anfrage storniert",
+    "request_failed": "Die Anfrage konnte nicht gesendet werden", "automatic": "Wird automatisch angewendet", "voucher": "Wird als Gutschein ausgestellt — bitte am Empfang nachfragen",
+    "last_used": "Zuletzt verwendet am {{date}}",
+    "catalogue_empty": "Derzeit sind keine Prämien verfügbar. Schauen Sie bald wieder vorbei.", "redeem": "Einlösen", "already_claimed": "Bereits erhalten",
+    "out_of_stock": "Nicht vorrätig", "points_needed": "Noch {{count}} Punkte nötig", "redeem_title": "„{{name}}“ einlösen?",
+    "redeem_body": "Dafür werden {{count}} Punkte eingelöst. Sie erhalten einen Code für den Empfang.", "redeemed": "Eingelöst — Ihr Code lautet {{code}}", "redeemed_prefix": "Eingelöst – Ihr Code lautet",
+    "redeem_failed": "Diese Prämie konnte nicht eingelöst werden",
+    "offers_yours": "Für Sie bereit", "offers_available": "Für Sie verfügbar", "offers_empty": "Derzeit keine Angebote. Wir informieren Sie, sobald es welche gibt.",
+    "claim": "Angebot einlösen", "claimed": "Angebot eingelöst — bitte am Empfang zeigen", "claim_failed": "Das Angebot konnte nicht eingelöst werden",
+    "already_claimed_offer": "Bereits eingelöst — siehe oben", "fully_claimed": "Vollständig eingelöst", "used_on": "Verwendet am {{date}}",
+    "valid_until": "Gültig bis {{date}}", "ready_to_use": "Einsatzbereit — bitte am Empfang zeigen", "ends": "Endet am {{date}}",
+    "percent_off": "{{value}}% Rabatt", "amount_off": "{{value}} Rabatt", "points_multiplier": "{{value}}-fache Punkte",
+    "codes_empty": "Eingelöste Codes werden hier gesammelt.", "code_pending": "Am Empfang zeigen", "code_fulfilled": "Verwendet", "code_cancelled": "Storniert",
+    "codes_hint": "Jeder Code funktioniert einmal. Das Unternehmen markiert ihn bei Vorlage als verwendet."
+  },
+  "bookings": {
+    "title": "Buchungen", "upcoming": "Bevorstehend", "past": "Vergangen", "empty_upcoming": "Keine bevorstehenden {{noun}}.", "empty_past": "Noch keine vergangenen {{noun}}.",
+    "reference": "Referenz", "when": "Wann", "where": "Wo", "with": "Mit", "guests": "Gäste", "nights": "Nächte",
+    "nights_guests": "{{nights}} Nächte · {{guests}} Gäste", "party": "Für {{count}} Personen", "total": "Gesamt", "discount": "Mitgliederrabatt",
+    "payment": "Zahlung", "notes": "Ihre Notizen", "policy": "Stornierungsbedingungen", "contact_to_change": "Um zu ändern oder zu stornieren, kontaktieren Sie {{venue}}.",
+    "status": { "pending": "Wartet auf Bestätigung", "confirmed": "Bestätigt", "in_progress": "Läuft", "completed": "Abgeschlossen", "cancelled": "Storniert" },
+    "payment_status": { "unpaid": "Zahlung vor Ort", "authorized": "Karte vorgemerkt", "paid": "Bezahlt", "refunded": "Erstattet", "failed": "Zahlung fehlgeschlagen", "partially_refunded": "Teilweise erstattet",
+      "open": "Zahlung offen", "pending": "Zahlung in Bearbeitung", "disputed": "Zahlung wird geprüft", "invoice_waiting": "Rechnung ausstehend", "channel_managed": "Über Ihren Buchungskanal abgewickelt", "capture_expired": "Kartenreservierung abgelaufen", "cancelled": "Zahlung storniert", "mock": "Testzahlung" },
+    "not_found": "Diese Buchung konnte nicht gefunden werden."
+  },
+  "activity": { "title": "Verlauf", "entries": "{{count}} Einträge", "empty": "Noch keine Punkteaktivität. Ihr erster Besuch erscheint hier.", "balance": "Stand {{count}}", "reversed": "rückgängig gemacht",
+    "type": { "earn": "Gesammelt", "bonus": "Bonus", "redeem": "Eingelöst", "adjust": "Anpassung", "expire": "Verfallen", "reverse": "Rückgängig gemacht" } },
+  "profile": {
+    "title": "Profil", "name": "Name", "email": "E-Mail", "email_hint": "Kontaktieren Sie das Unternehmen, falls Sie dies ändern müssen", "phone": "Telefon",
+    "birthday": "Geburtsdatum", "language": "Sprache", "communication": "Kommunikation",
+    "marketing": "Angebote und Neuigkeiten per E-Mail", "marketing_hint": "Gelegentliche E-Mails zu Prämien, Angeboten und Veranstaltungen. Sie können dies jederzeit deaktivieren.",
+    "push": "Push-Benachrichtigungen", "push_hint": "Punkteupdates und Erinnerungen auf Ihrem Handy.",
+    "service_messages": "Servicemitteilungen zu Ihrem Konto – Passwort-Zurücksetzen, Buchungsbestätigungen und Ähnliches – erhalten Sie unabhängig von diesen Einstellungen.",
+    "invite_title": "Einen Freund einladen", "invite_body": "Teilen Sie Ihren Link — Sie beide werden belohnt, sobald er beitritt.", "invite_share": "Meinen Link teilen", "invite_copy": "Link kopieren",
+    "invite_stats": "{{count}} Freunde beigetreten", "invite_unavailable": "Empfehlungslinks sind noch nicht verfügbar.",
+    "password_title": "Passwort", "password_change": "Passwort ändern", "password_current": "Aktuelles Passwort", "password_new": "Neues Passwort",
+    "password_confirm": "Neues Passwort bestätigen", "password_hint": "Mindestens 8 Zeichen", "password_changed": "Passwort geändert. Andere Geräte wurden abgemeldet.",
+    "password_failed": "Das Passwort konnte nicht geändert werden", "password_mismatch": "Die beiden Passwörter stimmen nicht überein.",
+    "delete_title": "Konto löschen", "delete_body": "Dies entfernt Ihre Mitgliedschaft und Punkte bei diesem Unternehmen. Dies kann nicht rückgängig gemacht werden.",
+    "delete_confirm_label": "Geben Sie zur Bestätigung DELETE ein", "delete_password": "Ihr Passwort", "delete_button": "Mein Konto löschen", "delete_failed": "Das Konto konnte nicht gelöscht werden",
+    "save_failed": "Ihre Änderungen konnten nicht gespeichert werden", "member_number": "Mitgliedsnummer {{number}}"
+  },
+  "join": {
+    "title": "{{venue}} beitreten", "with_bonus": "Starten Sie mit {{count}} Punkten von uns.", "no_bonus": "Sammeln Sie bei jedem Besuch Punkte.",
+    "name": "Ihr Name", "email": "E-Mail", "phone": "Telefon (optional)", "password": "Passwort", "password_confirm": "Passwort bestätigen",
+    "referral": "Empfehlungscode (optional)", "referral_prefilled": "Der Code Ihres Freundes ist bereits eingetragen — Sie beide werden belohnt",
+    "referral_hint": "Wenn Ihnen ein Freund einen Code gegeben hat, werden Sie beide belohnt", "submit": "Meine Mitgliedschaft erstellen",
+    "already": "Bereits Mitglied?", "sign_in": "Anmelden", "existing": "Schon länger Kunde bei uns?", "set_up": "Ihr bestehendes Konto einrichten",
+    "incomplete_title": "Dieser Link ist unvollständig", "incomplete_body": "Anmeldelinks enthalten einen Code, der angibt, welchem Programm Sie beitreten. Bitte verwenden Sie den Link, den Sie vom Unternehmen erhalten haben.",
+    "closed_title": "Anmeldung nicht verfügbar", "closed_body": "Dieser Anmeldelink ist ungültig, oder das Programm ist noch nicht für neue Mitglieder geöffnet. Bitte wenden Sie sich an das Unternehmen.",
+    "failed": "Ihr Konto konnte nicht erstellt werden.", "go_sign_in": "Zur Anmeldung"
+  },
+  "claim": {
+    "title": "Konto einrichten", "intro": "Bereits Kunde? Wählen Sie ein Passwort, um Ihre Punkte online zu sehen.", "code_sent": "Wir haben einen 6-stelligen Code an {{email}} gesendet.",
+    "have_code": "Ich habe bereits einen Code", "enter_code": "Geben Sie den Code aus der E-Mail an {{email}} ein.",
+    "email": "Ihre E-Mail", "email_hint": "Verwenden Sie die Adresse, die das Unternehmen für Sie gespeichert hat", "send_code": "Code senden",
+    "code": "6-stelliger Code", "password": "Passwort wählen", "password_confirm": "Passwort bestätigen", "finish": "Einrichtung abschließen",
+    "resend": "Nicht erhalten? Weiteren Code senden", "resent": "Ein neuer Code ist unterwegs.", "change_email": "Andere E-Mail verwenden",
+    "rate_limited": "Es wurde gerade ein Code gesendet. Bitte warten Sie eine Minute, bevor Sie einen weiteren anfordern.", "send_failed": "An diese Adresse konnte kein Code gesendet werden.",
+    "claim_failed": "Dieser Code hat nicht funktioniert. Bitte prüfen und erneut versuchen.", "already_set_up": "Bereits eingerichtet?"
+  },
+  "vocab": {
+    "hotel":      { "booking": "Aufenthalt", "booking_plural": "Aufenthalte", "service": "Leistung", "service_plural": "Leistungen", "staff": "Gastgeber(in)", "venue": "Hotel", "visit": "Aufenthalt" },
+    "beauty":     { "booking": "Termin", "booking_plural": "Termine", "service": "Behandlung", "service_plural": "Behandlungen", "staff": "Stylist(in)", "venue": "Salon", "visit": "Besuch" },
+    "medical":    { "booking": "Termin", "booking_plural": "Termine", "service": "Eingriff", "service_plural": "Eingriffe", "staff": "Behandler(in)", "venue": "Praxis", "visit": "Besuch" },
+    "restaurant": { "booking": "Reservierung", "booking_plural": "Reservierungen", "service": "Service", "service_plural": "Leistungen", "staff": "Gastgeber(in)", "venue": "Lokal", "visit": "Besuch" },
+    "fitness":    { "booking": "Einheit", "booking_plural": "Einheiten", "service": "Kurs", "service_plural": "Kurse", "staff": "Trainer(in)", "venue": "Studio", "visit": "Einheit" },
+    "other":      { "booking": "Termin", "booking_plural": "Termine", "service": "Leistung", "service_plural": "Leistungen", "staff": "Mitarbeiter(in)", "venue": "Unternehmen", "visit": "Besuch" }
+  }
+}

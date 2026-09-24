@@ -1356,7 +1356,18 @@
     },
     "select_page": "Seite auswählen",
     "deselect_page": "Auswahl aufheben",
-    "points_short": "Pkt"
+    "points_short": "Pkt",
+    "portal": {
+      "title": "Mitgliederportal",
+      "intro": "Teilen Sie den Beitrittslink mit neuen Kunden. Importierte Mitglieder setzen ihr Passwort über den zweiten Link.",
+      "join_link": "Beitrittslink",
+      "claim_link": "Bestehende Kunden",
+      "copy": "Link kopieren",
+      "copy_failed": "Kopieren fehlgeschlagen – Link markieren und manuell kopieren",
+      "qr_alt": "QR-Code des Beitrittslinks",
+      "download_qr": "QR herunterladen",
+      "unavailable": "Der Portal-Link ist noch nicht verfügbar."
+    }
   },
   "settings": {
     "title": "Einstellungen",

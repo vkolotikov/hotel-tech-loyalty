@@ -148,4 +148,26 @@ class WebManifestTest extends TestCase
                 . 'so it would install under the generic platform name.');
         }
     }
+
+    public function test_the_portal_variant_starts_in_the_portal_and_drops_admin_shortcuts(): void
+    {
+        $m = $this->get('http://beauty-tech.uk/manifest.webmanifest?app=portal')->assertOk()->json();
+
+        $this->assertSame('BeautyTech Member', $m['name']);
+        $this->assertSame('Member', $m['short_name']);
+        $this->assertSame('/portal', $m['start_url']);
+        $this->assertSame('/portal', $m['id']);
+        $this->assertSame('/', $m['scope']);
+        $this->assertSame([], $m['shortcuts']);
+        $this->assertSame('#F7F6F3', $m['theme_color']);
+        $this->assertContains('192x192', array_column($m['icons'], 'sizes'));
+    }
+
+    public function test_the_admin_manifest_is_unchanged_by_the_portal_variant(): void
+    {
+        $m = $this->manifest();
+
+        $this->assertSame('/', $m['start_url']);
+        $this->assertNotSame([], $m['shortcuts']);
+    }
 }

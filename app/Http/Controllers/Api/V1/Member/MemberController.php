@@ -3,8 +3,6 @@
 namespace App\Http\Controllers\Api\V1\Member;
 
 use App\Http\Controllers\Controller;
-use App\Models\LoyaltyMember;
-use App\Models\LoyaltyTier;
 use App\Services\LoyaltyService;
 use App\Services\QrCodeService;
 use Illuminate\Http\JsonResponse;
@@ -24,16 +22,13 @@ class MemberController extends Controller
     public function profile(Request $request): JsonResponse
     {
         $user = $request->user();
-        $member = $user->loyaltyMember()->with(['tier', 'user'])->first();
 
-        // Self-heal for orphaned member-type users whose loyalty_member row
-        // is missing — can happen with legacy accounts that predate the
-        // transactional register flow, or if an admin created a User without
-        // enrolling them. Without this, the mobile app shows a hard 404.
-        if (!$member && $user->user_type === 'member' && $user->organization_id) {
-            $member = $this->ensureLoyaltyMember($user);
-            $member?->load(['tier', 'user']);
-        }
+        // Finds the existing loyalty_member row, or heals a member-type user
+        // that should have one but doesn't — legacy accounts that predate
+        // the transactional register flow, or a User an admin created
+        // without enrolling them. Without this, the mobile app shows a hard
+        // 404. Null for a non-member token, same as the plain lookup did.
+        $member = app(\App\Services\MemberProvisioner::class)->ensureForUser($user);
 
         if (!$member) {
             return response()->json([
@@ -65,36 +60,6 @@ class MemberController extends Controller
                 'email'        => $org->email,
                 'phone'        => $org->phone,
             ] : null,
-        ]);
-    }
-
-    /**
-     * Create a loyalty_member row for a user that should have one but doesn't.
-     * Returns null if no default tier is configured for the org (the caller
-     * will surface a clear error to the client).
-     */
-    private function ensureLoyaltyMember($user): ?LoyaltyMember
-    {
-        if (!app()->bound('current_organization_id')) {
-            app()->instance('current_organization_id', $user->organization_id);
-        }
-
-        $tier = LoyaltyTier::withoutGlobalScopes()
-            ->where('organization_id', $user->organization_id)
-            ->where('is_active', true)
-            ->orderBy('min_points')
-            ->first();
-
-        if (!$tier) return null;
-
-        return LoyaltyMember::create([
-            'user_id'       => $user->id,
-            'tier_id'       => $tier->id,
-            'member_number' => $this->qrService->generateMemberNumber(),
-            'qr_code_token' => hash_hmac('sha256', $user->id . now()->timestamp, config('app.key')),
-            'referral_code' => $this->qrService->generateReferralCode(),
-            'joined_at'     => $user->created_at ?? now(),
-            'is_active'     => true,
         ]);
     }
 

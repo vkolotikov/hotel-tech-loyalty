@@ -840,7 +840,16 @@ class LoyaltyService
             'unsubscribed_at'     => $member->unsubscribed_at?->toIso8601String(),
             'member_since'      => $member->joined_at->format('Y-m-d'),
             'created_at'        => $member->created_at?->toIso8601String(),
-            'user'              => $member->user->only('id', 'name', 'email', 'phone', 'nationality', 'language', 'avatar_url'),
+            // `date_of_birth` is cast to a Carbon `date` on User, so it can't
+            // ride along in `only()` — that serialises the full datetime
+            // (`1990-05-12T00:00:00.000000Z`), which `<input type="date">`
+            // on the portal profile page rejects outright and silently
+            // blanks. Format it explicitly to the plain `Y-m-d` the input
+            // (and a round-trip PUT back to updateProfile()) expects.
+            'user'              => array_merge(
+                $member->user->only('id', 'name', 'email', 'phone', 'nationality', 'language', 'avatar_url'),
+                ['date_of_birth' => $member->user->date_of_birth?->format('Y-m-d')],
+            ),
         ];
     }
 

@@ -1360,7 +1360,18 @@
     },
     "select_page": "Select page",
     "deselect_page": "Deselect page",
-    "points_short": "pts"
+    "points_short": "pts",
+    "portal": {
+      "title": "Member portal",
+      "intro": "Share the join link with new customers. People you imported set their password through the second link.",
+      "join_link": "Join link",
+      "claim_link": "Existing customers",
+      "copy": "Copy link",
+      "copy_failed": "Could not copy — select the link and copy it by hand",
+      "qr_alt": "QR code for the join link",
+      "download_qr": "Download QR",
+      "unavailable": "The portal link is not available yet."
+    }
   },
   "settings": {
     "title": "Settings",

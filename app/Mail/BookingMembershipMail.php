@@ -48,8 +48,9 @@ class BookingMembershipMail extends Mailable
         return new Content(
             view: 'emails.booking-membership',
             with: [
-                'industry' => $industry,
-                'profile'  => $profile,
+                'industry'  => $industry,
+                'profile'   => $profile,
+                'portalUrl' => \App\Services\Portal\PortalLinks::claim(),
             ],
         );
     }
