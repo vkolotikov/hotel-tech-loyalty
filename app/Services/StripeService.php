@@ -65,9 +65,16 @@ class StripeService
      * @param float  $amount      Amount in major units (e.g. 150.00 EUR)
      * @param string $description Human-readable description
      * @param array  $metadata    Stripe metadata (booking ref, org, etc.)
+     * @param array  $options     Caller-specific behaviour. `allow_redirects: 'never'` keeps the PI to
+     *                            payment methods that never navigate the browser away — the member portal's
+     *                            own confirm() call has nowhere to read a `?payment_intent=...` return to,
+     *                            so a redirect method there would leave an authorised intent with no
+     *                            booking. Omitted (the hotel and services widgets, which DO handle the
+     *                            redirect return), the payload is exactly what it was before this option
+     *                            existed.
      * @return array{client_secret: string, payment_intent_id: string}
      */
-    public function createPaymentIntent(float $amount, string $description, array $metadata = []): array
+    public function createPaymentIntent(float $amount, string $description, array $metadata = [], array $options = []): array
     {
         $this->boot();
 
@@ -89,7 +96,9 @@ class StripeService
             'metadata'             => collect($metadata)
                 ->map(fn ($v) => is_string($v) ? mb_substr($v, 0, 500) : $v)
                 ->all(),
-            'automatic_payment_methods' => ['enabled' => true],
+            'automatic_payment_methods' => ($options['allow_redirects'] ?? null) === 'never'
+                ? ['enabled' => true, 'allow_redirects' => 'never']
+                : ['enabled' => true],
             // Authorize-then-capture flow. The PI lands in
             // `requires_capture` after stripe.confirmPayment() succeeds on
             // the widget; the booking flow calls capturePaymentIntent()
@@ -237,11 +246,15 @@ class StripeService
     /**
      * Convert major-unit amount to Stripe's smallest currency unit.
      * Most currencies use cents (×100), but some (JPY, KRW) are zero-decimal.
+     * `$currency` defaults to this organisation's Stripe currency — the one
+     * createPaymentIntent() charges in. Public so every comparison with a
+     * PaymentIntent's `amount` uses this one conversion.
      */
-    private function toSmallestUnit(float $amount): int
+    public function toSmallestUnit(float $amount, ?string $currency = null): int
     {
+        $currency ??= $this->currency();
         $zeroDecimal = ['bif','clp','djf','gnf','jpy','kmf','krw','mga','pyg','rwf','ugx','vnd','vuv','xaf','xof','xpf'];
-        if (in_array(strtolower($this->currency), $zeroDecimal, true)) {
+        if (in_array(strtolower($currency), $zeroDecimal, true)) {
             return (int) round($amount);
         }
         return (int) round($amount * 100);

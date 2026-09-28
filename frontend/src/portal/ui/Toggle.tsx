@@ -1,5 +1,7 @@
+import type { ReactNode } from 'react'
+
 export function Toggle({ label, hint, checked, onChange, disabled }: {
-  label: string; hint?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean
+  label: string; hint?: ReactNode; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean
 }) {
   return (
     <div className="flex items-start justify-between gap-4 py-2 min-h-11">

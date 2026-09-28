@@ -1419,6 +1419,10 @@
       "stock": "Stock",
       "stock_hint": "Empty = unlimited",
       "per_member_limit": "Per-member limit",
+      "discount_type": "Discount type",
+      "discount_value": "Discount value",
+      "discount_none": "No discount",
+      "applies_to": "Applies to",
       "expires": "Expires",
       "active_visible": "Active (visible to members)",
       "image": "Image",
@@ -1623,7 +1627,8 @@
       "free_night": "free night",
       "upgrade": "upgrade",
       "bonus_points": "bonus points",
-      "cashback": "cashback"
+      "cashback": "cashback",
+      "fixed_amount": "fixed amount"
     },
     "form": {
       "edit_title": "Edit Offer",
@@ -1634,6 +1639,11 @@
       "upload_image": "Upload Image",
       "type": "Type",
       "value": "Value",
+      "code": "Code",
+      "code_hint": "Members type this in the portal",
+      "tiers": "Tiers",
+      "per_member_limit": "Per-member limit",
+      "applies_to": "Applies to",
       "start_date": "Start Date",
       "start_placeholder": "Pick start date",
       "end_date": "End Date",
@@ -1664,6 +1674,7 @@
       "recognition": "recognition",
       "points": "points",
       "access": "access",
+      "discount": "discount",
       "other": "other"
     },
     "fulfillment_modes": {
@@ -1716,6 +1727,26 @@
   "tiers": {
     "title": "Tiers",
     "add": "Add Tier",
+    "value_type": "Value type",
+    "value_amount": "Amount",
+    "applies_to": "Applies to",
+    "format": {
+      "percent_off": "{{amount}}% off",
+      "amount_off": "{{amount}} off",
+      "points_multiplier": "{{amount}}× points"
+    },
+    "applies": {
+      "all": "All bookings",
+      "services": "Services only",
+      "stays": "Stays only"
+    },
+    "types": {
+      "text": "Free text",
+      "percent_discount": "Percent discount",
+      "fixed_amount": "Fixed amount",
+      "points_multiplier": "Points multiplier",
+      "free_item": "Free item"
+    },
     "preview": {
       "title": "Tier preview calculator",
       "subtitle": "— what tier would a member qualify for?",
@@ -1771,6 +1802,7 @@
     "expanded": {
       "title": "Tier Benefits",
       "remove": "Remove",
+      "edit": "Edit",
       "select_benefit": "Select benefit…",
       "value_placeholder": "Value (optional)",
       "assign": "Assign"
@@ -1785,6 +1817,11 @@
       "benefit_removed": "Benefit removed"
     },
     "loading": "Loading…"
+  },
+  "service_bookings": {
+    "source_portal": "Member portal",
+    "list_price": "List",
+    "discount": "Discount"
   },
   "knowledge_base": {
     "brand_required": "the knowledge base",

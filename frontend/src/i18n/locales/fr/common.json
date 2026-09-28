@@ -1415,6 +1415,10 @@
       "stock": "Stock",
       "stock_hint": "Vide = illimité",
       "per_member_limit": "Limite par membre",
+      "discount_type": "Type de remise",
+      "discount_value": "Valeur de la remise",
+      "discount_none": "Aucune remise",
+      "applies_to": "S'applique à",
       "expires": "Expire le",
       "active_visible": "Active (visible des membres)",
       "image": "Image",
@@ -1619,7 +1623,8 @@
       "free_night": "nuit gratuite",
       "upgrade": "surclassement",
       "bonus_points": "points bonus",
-      "cashback": "cashback"
+      "cashback": "cashback",
+      "fixed_amount": "montant fixe"
     },
     "form": {
       "edit_title": "Modifier l'offre",
@@ -1630,6 +1635,11 @@
       "upload_image": "Téléverser une image",
       "type": "Type",
       "value": "Valeur",
+      "code": "Code",
+      "code_hint": "Les membres saisissent ceci dans le portail",
+      "tiers": "Niveaux",
+      "per_member_limit": "Limite par membre",
+      "applies_to": "S'applique à",
       "start_date": "Date de début",
       "start_placeholder": "Choisir la date de début",
       "end_date": "Date de fin",
@@ -1660,6 +1670,7 @@
       "recognition": "reconnaissance",
       "points": "points",
       "access": "accès",
+      "discount": "remise",
       "other": "autre"
     },
     "fulfillment_modes": {
@@ -1712,6 +1723,26 @@
   "tiers": {
     "title": "Niveaux",
     "add": "Ajouter un niveau",
+    "value_type": "Type de valeur",
+    "value_amount": "Montant",
+    "applies_to": "S'applique à",
+    "format": {
+      "percent_off": "{{amount}} % de réduction",
+      "amount_off": "{{amount}} de réduction",
+      "points_multiplier": "{{amount}}× points"
+    },
+    "applies": {
+      "all": "Toutes les réservations",
+      "services": "Services uniquement",
+      "stays": "Séjours uniquement"
+    },
+    "types": {
+      "text": "Texte libre",
+      "percent_discount": "Remise en pourcentage",
+      "fixed_amount": "Montant fixe",
+      "points_multiplier": "Multiplicateur de points",
+      "free_item": "Article gratuit"
+    },
     "preview": {
       "title": "Calculateur de niveau",
       "subtitle": "— quel niveau un membre obtiendrait-il ?",
@@ -1767,6 +1798,7 @@
     "expanded": {
       "title": "Avantages du niveau",
       "remove": "Retirer",
+      "edit": "Modifier",
       "select_benefit": "Choisir un avantage…",
       "value_placeholder": "Valeur (optionnel)",
       "assign": "Assigner"
@@ -1781,6 +1813,11 @@
       "benefit_removed": "Avantage retiré"
     },
     "loading": "Chargement…"
+  },
+  "service_bookings": {
+    "source_portal": "Portail membre",
+    "list_price": "Liste",
+    "discount": "Remise"
   },
   "knowledge_base": {
     "brand_required": "la base de connaissances",

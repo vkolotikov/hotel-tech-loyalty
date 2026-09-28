@@ -6,6 +6,9 @@ use App\Models\LoyaltyMember;
 use App\Models\MemberOffer;
 use App\Models\SpecialOffer;
 use App\Models\TierBenefit;
+use App\Services\Booking\BookingScope;
+use App\Services\Booking\CouponResolver;
+use App\Services\Booking\CouponSelection;
 use Illuminate\Support\Collection;
 
 /**
@@ -83,22 +86,13 @@ class DiscountService
                 continue;
             }
 
-            if ($tb->value_type === self::PERCENT) {
+            if ($tb->value_type === self::PERCENT || $tb->value_type === self::FIXED) {
                 $candidates[] = [
                     'source'   => 'tier_benefit',
                     'label'    => $tb->benefit->name,
-                    'type'     => self::PERCENT,
+                    'type'     => $tb->value_type,
                     'value'    => $value,
-                    'discount' => round($amount * min($value, 100) / 100, 2),
-                ];
-            } elseif ($tb->value_type === self::FIXED) {
-                $candidates[] = [
-                    'source'   => 'tier_benefit',
-                    'label'    => $tb->benefit->name,
-                    'type'     => self::FIXED,
-                    'value'    => $value,
-                    // Never discount more than the bill.
-                    'discount' => round(min($value, $amount), 2),
+                    'discount' => $this->discountFor($tb->value_type, $value, $amount),
                 ];
             }
         }
@@ -123,7 +117,7 @@ class DiscountService
                     'label'          => $offer->title,
                     'type'           => self::PERCENT,
                     'value'          => $value,
-                    'discount'       => round($amount * min($value, 100) / 100, 2),
+                    'discount'       => $this->discountFor(self::PERCENT, $value, $amount),
                     'member_offer_id' => $claim->id,
                 ];
             } elseif (str_contains($type, 'amount') || str_contains($type, 'fixed')) {
@@ -132,7 +126,7 @@ class DiscountService
                     'label'          => $offer->title,
                     'type'           => self::FIXED,
                     'value'          => $value,
-                    'discount'       => round(min($value, $amount), 2),
+                    'discount'       => $this->discountFor(self::FIXED, $value, $amount),
                     'member_offer_id' => $claim->id,
                 ];
             }
@@ -153,6 +147,54 @@ class DiscountService
             'considered' => array_slice($candidates, 1),
             'currency'   => config('app.currency', 'EUR'),
         ];
+    }
+
+    /**
+     * The booking flavour of quote(): automatic tier benefits filtered by the
+     * booking's scope, and the one coupon the member explicitly chose. Nothing
+     * else is a candidate — a claim the member did not pick is never consumed.
+     */
+    public function quoteForBooking(LoyaltyMember $member, float $amount, BookingScope $scope, ?CouponSelection $coupon = null): array
+    {
+        $candidates = [];
+        foreach ($this->benefitsFor($member) as $tb) {
+            if (!in_array($tb->value_type, [self::PERCENT, self::FIXED], true) || (float) $tb->value_amount <= 0) continue;
+            if (!$scope->admits($tb->applies_to ?? 'all')) continue;
+            $candidates[] = ['source' => 'tier_benefit', 'source_id' => $tb->id, 'label' => $tb->benefit?->name ?? 'Member discount', 'type' => $tb->value_type, 'value' => (float) $tb->value_amount, 'discount' => $this->discountFor($tb->value_type, (float) $tb->value_amount, $amount)];
+        }
+
+        $couponOut = null;
+        if ($coupon !== null) {
+            $c = app(CouponResolver::class)->candidate($member, $coupon, $scope);
+            $c['discount'] = $this->discountFor($c['type'], $c['value'], $amount);
+            $couponOut = ['source' => $c['source'], 'source_id' => $c['source_id'], 'label' => $c['label'], 'status' => $c['applies'] ? 'applied' : 'wrong_scope', 'discount' => $c['discount']];
+            if ($c['applies']) $candidates[] = $c;
+        }
+
+        usort($candidates, fn ($a, $b) => $b['discount'] <=> $a['discount']);
+        $best = $candidates[0] ?? null;
+        if ($best) unset($best['applies']);
+        $discount = $best ? min($best['discount'], $amount) : 0.0;
+        if ($couponOut && $couponOut['status'] === 'applied' && ($best === null || $best['source'] === 'tier_benefit')) {
+            $couponOut['status'] = 'outbid';
+        }
+
+        return [
+            'amount'   => round($amount, 2),
+            'discount' => round($discount, 2),
+            'total'    => round($amount - $discount, 2),
+            'applied'  => $best,
+            'coupon'   => $couponOut,
+            'currency' => config('app.currency', 'EUR'),
+        ];
+    }
+
+    /** The shared money formula: percent (capped at 100%) or fixed, never more than the bill. */
+    private function discountFor(string $type, float $value, float $amount): float
+    {
+        return $type === self::PERCENT
+            ? round($amount * min($value, 100) / 100, 2)
+            : round(min($value, $amount), 2);
     }
 
     /**

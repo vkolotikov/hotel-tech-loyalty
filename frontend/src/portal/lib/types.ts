@@ -158,3 +158,76 @@ export interface Claim {
 }
 
 export interface LaravelPage<T> { data: T[]; current_page: number; last_page: number; total: number }
+
+// ─── Service booking (the Book flow) ───────────────────────────────────────
+//
+// These mirror the server's actual JSON key-for-key (read from
+// ServiceCatalogue::build(), PortalServiceBookingController's own
+// quotePayload()/paymentIntent(), PricingResult::toArray(),
+// CouponResolver::resolveCode() and DiscountService::quoteForBooking()),
+// not the brief's own draft, which under-listed a few fields the server
+// actually sends and left a couple of string fields wider than the values
+// the server can produce.
+
+export interface CatalogueCategory { id: number; name: string; slug: string; description: string | null; icon: string | null; image: string | null; color: string | null }
+
+export interface CatalogueService {
+  id: number; category_id: number | null; name: string; description: string | null; short_description: string | null
+  duration_minutes: number; buffer_after_minutes: number; price: number; member_price: number; currency: string | null
+  image: string | null; gallery: string[]; tags: string[]; master_ids: number[]
+}
+
+export interface CatalogueMaster { id: number; name: string; title: string | null; bio: string | null; avatar: string | null; specialties: string[]; service_ids: number[] }
+
+export interface CatalogueExtra {
+  id: number; name: string; description: string | null
+  // ServiceExtra::$casts['price'] is 'decimal:2', which Eloquent serializes as a string ("12.00") — the
+  // portal endpoint (PortalServiceBookingController::index()) re-casts it to a number before sending it.
+  price: number; price_type: string
+  duration_minutes: number | null; lead_time_hours: number | null; image: string | null; icon: string | null
+  category: string | null; currency: string | null
+}
+
+export interface CatalogueRules { currency: string; lead_minutes: number; slot_step: number; max_advance_days: number; allow_master_choice: boolean; cancellation_policy: string }
+
+export interface Catalogue {
+  categories: CatalogueCategory[]
+  services: CatalogueService[]
+  masters: CatalogueMaster[]
+  extras: CatalogueExtra[]
+  rules: CatalogueRules
+  pricing: { automatic: { label: string; type: string; value: number } | null }
+}
+
+export interface Slot { start: string; end: string; duration_minutes: number; time_label: string; masters: number[] }
+
+export type CouponRef = { member_offer_id: number } | { redemption_id: number }
+
+export interface QuoteBody {
+  service_id: number; master_id?: number | null; start_at: string; party_size?: number
+  extras?: { id: number; quantity?: number }[]; coupon?: CouponRef | null
+}
+
+export interface QuoteLine { id: number; name: string; unit_price: number; quantity: number; line_total: number }
+
+export interface Quote {
+  service: { id: number; name: string; duration_minutes: number }
+  master: { id: number; name: string } | null
+  start_at: string
+  end_at: string
+  duration_minutes: number
+  lines: { service_price: number; extras: QuoteLine[]; extras_total: number }
+  list_amount: number
+  discount: { amount: number; label: string; source: 'tier_benefit' | 'offer' | 'reward' } | null
+  coupon: { source: 'offer' | 'reward'; source_id: number; label: string; status: 'applied' | 'outbid' | 'wrong_scope'; discount: number } | null
+  total_amount: number
+  currency: string
+  payment: { mode: 'online' | 'at_venue'; reason: 'payments_off' | 'mock_mode' | 'currency_mismatch' | null }
+  policy: { cancellation_policy: string | null; cancel_hours: number }
+}
+
+export interface ResolvedCoupon { kind: 'offer' | 'reward'; coupon: CouponRef; label: string; type: 'percent_discount' | 'fixed_amount'; value: number; value_label: string; valid_until: string | null }
+
+export interface ConfirmBody extends QuoteBody { payment_intent_id?: string | null; notes?: string | null }
+
+export interface PaymentIntentReply { client_secret: string; payment_intent_id: string; amount: number; currency: string }

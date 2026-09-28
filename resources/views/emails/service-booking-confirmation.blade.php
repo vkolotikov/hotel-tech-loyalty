@@ -79,11 +79,24 @@
             @endforeach
         </table>
         <table role="presentation" class="row total-row" cellpadding="0" cellspacing="0" border="0">
+            @if (!empty($discountLabel) && !empty($discountAmount))
+                <tr>
+                    <td class="lbl">{{ $discountLabel }}</td>
+                    <td class="val">&minus;{{ number_format($discountAmount, 2) }} {{ $currency }}</td>
+                </tr>
+            @endif
             <tr>
                 <td class="lbl">Total</td>
                 <td class="val">{{ $currency }} {{ number_format($grossTotal, 2) }}</td>
             </tr>
         </table>
+        @if ($paymentStatus === 'paid')
+            <p style="font-size:12px;color:rgba(255,255,255,0.62);margin:12px 0 0;">Paid online.</p>
+        @elseif ($paymentStatus === 'authorized')
+            <p style="font-size:12px;color:rgba(255,255,255,0.62);margin:12px 0 0;">Card authorised. The payment is taken shortly after booking.</p>
+        @elseif ($paymentStatus === 'unpaid')
+            <p style="font-size:12px;color:rgba(255,255,255,0.62);margin:12px 0 0;">Pay at the venue.</p>
+        @endif
     </div>
 
     @if(!empty($cancellationPolicy))

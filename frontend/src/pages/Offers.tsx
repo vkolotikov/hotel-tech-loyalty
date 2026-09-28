@@ -8,6 +8,7 @@ import { Card } from '../components/ui/Card'
 import { DatePicker, normalizeDate } from '../components/ui/DatePicker'
 import { format } from 'date-fns'
 import toast from 'react-hot-toast'
+import { buildOfferFormData, offerTierIds } from '../components/admin/offerFormData'
 
 export function Offers() {
   const { t } = useTranslation()
@@ -79,6 +80,7 @@ export function Offers() {
                     {t(`offers.types.${offer.type}`, { defaultValue: String(offer.type ?? '').replace(/_/g, ' ') })}
                   </span>
                   <h4 className="font-semibold text-white">{offer.title}</h4>
+                  {offer.code && <div className="font-mono text-xs text-primary-300 mt-0.5">{offer.code}</div>}
                 </div>
               </div>
               <p className="text-sm text-t-secondary mb-3 line-clamp-2">{offer.description}</p>
@@ -129,12 +131,30 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
     description: offer?.description ?? '',
     type: offer?.type ?? 'discount',
     value: offer?.value ?? '',
+    code: offer?.code ?? '',
+    tier_ids: offerTierIds(offer?.tier_ids),
+    per_member_limit: offer?.per_member_limit != null ? String(offer.per_member_limit) : '',
+    applies_to: offer?.applies_to ?? 'all',
     start_date: normalizeDate(offer?.start_date ?? '') || new Date().toISOString().slice(0, 10),
     end_date: normalizeDate(offer?.end_date ?? ''),
     usage_limit: offer?.usage_limit ?? '',
     is_featured: offer?.is_featured ?? false,
     is_active: offer?.is_active ?? true,
   })
+
+  // Tier targeting checkboxes — same list the Tiers page itself reads, so
+  // there is one source of truth for "which tiers exist" rather than a
+  // second, driftable copy in this form.
+  const { data: tiersData } = useQuery({
+    queryKey: ['admin-tiers'],
+    queryFn: () => api.get('/v1/admin/tiers').then(r => r.data),
+  })
+  const tiers: { id: number; name: string }[] = tiersData?.tiers ?? []
+
+  const toggleTier = (id: number) => setForm(f => ({
+    ...f,
+    tier_ids: f.tier_ids.includes(id) ? f.tier_ids.filter(tid => tid !== id) : [...f.tier_ids, id],
+  }))
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -148,20 +168,7 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
 
   const save = async () => {
     try {
-      const formData = new FormData()
-      formData.append('title', form.title)
-      formData.append('description', form.description)
-      formData.append('type', form.type)
-      formData.append('value', String(form.value))
-      formData.append('start_date', form.start_date)
-      formData.append('end_date', form.end_date)
-      // On edit, send '' when cleared so the limit actually resets to
-      // unlimited (ConvertEmptyStringsToNull → null server-side).
-      if (form.usage_limit) formData.append('usage_limit', String(form.usage_limit))
-      else if (offer) formData.append('usage_limit', '')
-      formData.append('is_featured', form.is_featured ? '1' : '0')
-      formData.append('is_active', form.is_active ? '1' : '0')
-      if (imageFile) formData.append('image', imageFile)
+      const formData = buildOfferFormData(form, { editing: !!offer, imageFile })
 
       if (offer) {
         formData.append('_method', 'PUT')
@@ -229,7 +236,7 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.type', 'Type')}</label>
               <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
-                {['discount','points_multiplier','free_night','upgrade','bonus_points','cashback'].map(typeKey => (
+                {['discount','points_multiplier','free_night','upgrade','bonus_points','cashback','fixed_amount'].map(typeKey => (
                   <option key={typeKey} value={typeKey}>{t(`offers.types.${typeKey}`, typeKey.replace(/_/g, ' '))}</option>
                 ))}
               </select>
@@ -237,6 +244,37 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
             <div>
               <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.value', 'Value')}</label>
               <input type="number" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.code', 'Code')}</label>
+              <input
+                type="text"
+                value={form.code}
+                maxLength={24}
+                onChange={(e) => setForm({ ...form, code: e.target.value })}
+                onBlur={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white font-mono uppercase placeholder-[#636366] placeholder:normal-case"
+                placeholder={t('offers.form.code_hint', 'Members type this in the portal')}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.per_member_limit', 'Per-member limit')}</label>
+              <input
+                type="number"
+                min={1}
+                value={form.per_member_limit}
+                onChange={(e) => setForm({ ...form, per_member_limit: e.target.value })}
+                placeholder={t('offers.form.usage_limit_placeholder', 'Unlimited')}
+                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.applies_to', 'Applies to')}</label>
+              <select value={form.applies_to} onChange={(e) => setForm({ ...form, applies_to: e.target.value })} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
+                {['all','services','stays'].map(scope => (
+                  <option key={scope} value={scope}>{t(`tiers.applies.${scope}`, scope)}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.start_date', 'Start Date')}</label>
@@ -256,6 +294,17 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
                 placeholder={t('offers.form.usage_limit_placeholder', 'Unlimited')}
                 className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
               />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#a0a0a0] mb-1">{t('offers.form.tiers', 'Tiers')}</label>
+            <div className="flex flex-wrap gap-3">
+              {tiers.map(tier => (
+                <label key={tier.id} className="flex items-center gap-1.5 text-sm text-[#a0a0a0]">
+                  <input type="checkbox" checked={form.tier_ids.includes(tier.id)} onChange={() => toggleTier(tier.id)} />
+                  {tier.name}
+                </label>
+              ))}
             </div>
           </div>
           <div className="flex gap-4">

@@ -15,11 +15,25 @@ export function resolveLocale(locale: string): string {
   return locale === 'en' ? 'en-GB' : locale
 }
 
-export function formatDay(value: string, locale: string): string {
+/**
+ * The venue's own calendar day, never the client's or the raw UTC day — a
+ * member in one time zone booking a venue in another must see the venue's
+ * "today", since that is where the appointment happens. Falls back to the
+ * UTC day if `timezone` is not a valid IANA zone name.
+ */
+export function venueToday(timezone: string, now: Date = new Date()): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+  } catch {
+    return now.toISOString().slice(0, 10)
+  }
+}
+
+export function formatDay(value: string, locale: string, options?: Intl.DateTimeFormatOptions): string {
   const [datePart] = value.split(/[T ]/)
   const [y, m, d] = datePart.split('-').map(Number)
   if (!y || !m || !d) return value
-  return new Intl.DateTimeFormat(resolveLocale(locale), { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
+  return new Intl.DateTimeFormat(resolveLocale(locale), options ?? { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(y, m - 1, d))
 }
 
 export function formatDateTime(iso: string, locale: string, timeZone?: string): string {

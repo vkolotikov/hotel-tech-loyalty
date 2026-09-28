@@ -8,10 +8,11 @@ use App\Models\Service;
 use App\Models\ServiceBooking;
 use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
-use App\Models\ServiceCategory;
 use App\Models\ServiceExtra;
-use App\Models\ServiceMaster;
 use App\Models\Organization;
+use App\Services\Booking\ExtraLeadTimeException;
+use App\Services\Booking\ServiceCatalogue;
+use App\Services\Booking\ServiceQuoteBuilder;
 use App\Services\ServiceSchedulingService;
 use App\Services\StripeService;
 use Illuminate\Http\JsonResponse;
@@ -33,60 +34,7 @@ class ServicePublicController extends Controller
             return response()->json(['error' => 'Organization not found'], 404);
         }
 
-        $categories = ServiceCategory::withoutGlobalScopes()
-            ->where('organization_id', $orgId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get(['id', 'name', 'slug', 'description', 'icon', 'image', 'color']);
-
-        $services = Service::withoutGlobalScopes()
-            ->with(['masters' => fn($q) => $q->where('service_masters.is_active', true)])
-            ->where('organization_id', $orgId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn($s) => [
-                'id'                   => $s->id,
-                'category_id'          => $s->category_id,
-                'name'                 => $s->name,
-                'description'          => $s->description,
-                'short_description'    => $s->short_description,
-                'duration_minutes'     => $s->duration_minutes,
-                'buffer_after_minutes' => $s->buffer_after_minutes,
-                'price'                => (float) $s->price,
-                'currency'             => $s->currency,
-                'image'                => $s->image,
-                'gallery'              => $s->gallery ?? [],
-                'tags'                 => $s->tags ?? [],
-                'master_ids'           => $s->masters->pluck('id')->all(),
-            ])
-            ->values();
-
-        $masters = ServiceMaster::withoutGlobalScopes()
-            ->with(['services:id'])
-            ->where('organization_id', $orgId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->get()
-            ->map(fn($m) => [
-                'id'          => $m->id,
-                'name'        => $m->name,
-                'title'       => $m->title,
-                'bio'         => $m->bio,
-                'avatar'      => $m->avatar,
-                'specialties' => $m->specialties ?? [],
-                'service_ids' => $m->services->pluck('id')->all(),
-            ])
-            ->values();
-
-        $extras = ServiceExtra::withoutGlobalScopes()
-            ->where('organization_id', $orgId)
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            // `lead_time_hours` lets the widget hide extras that need
-            // more notice than the chosen service start time allows.
-            // Server enforces the same on quote()/confirm().
-            ->get(['id', 'name', 'description', 'price', 'price_type', 'duration_minutes', 'lead_time_hours', 'image', 'icon', 'category', 'currency']);
+        $cat = app(ServiceCatalogue::class)->build($orgId);
 
         $brandPrimary = $this->getStringSetting($orgId, 'primary_color', '#2d6a4f');
         $brandLogo    = $this->getStringSetting($orgId, 'company_logo', '');
@@ -113,24 +61,23 @@ class ServicePublicController extends Controller
         $mockMode      = $this->getStringSetting($orgId, 'booking_mock_mode', 'false') === 'true';
         $paymentEnabled = $stripe->isEnabled() && !$mockMode;
 
-        return response()->json([
-            'categories' => $categories,
-            'services'   => $services,
-            'masters'    => $masters,
-            'extras'     => $extras,
-            'currency'   => $this->getStringSetting($orgId, 'services_currency', 'EUR'),
-            'lead_minutes' => (int) $this->getStringSetting($orgId, 'services_lead_minutes', '60'),
-            'slot_step'    => (int) $this->getStringSetting($orgId, 'services_slot_step', '15'),
-            'max_advance_days' => (int) $this->getStringSetting($orgId, 'services_max_advance_days', '60'),
-            'allow_master_choice' => $this->getStringSetting($orgId, 'services_allow_master_choice', 'true') === 'true',
-            'require_deposit'     => $this->getStringSetting($orgId, 'services_require_deposit', 'false') === 'true',
-            'deposit_percent'     => (int) $this->getStringSetting($orgId, 'services_deposit_percent', '100'),
-            'cancellation_policy' => $this->getStringSetting($orgId, 'services_cancellation_policy', ''),
-            'style'      => $style,
-            'payment_enabled'        => $paymentEnabled,
-            'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
-            'mock_mode'              => $mockMode,
-        ]);
+        return response()->json(array_merge(
+            [
+                'categories' => $cat['categories'],
+                'services'   => $cat['services'],
+                'masters'    => $cat['masters'],
+                'extras'     => $cat['extras'],
+            ],
+            $cat['rules'],
+            [
+                'require_deposit'     => $this->getStringSetting($orgId, 'services_require_deposit', 'false') === 'true',
+                'deposit_percent'     => (int) $this->getStringSetting($orgId, 'services_deposit_percent', '100'),
+                'style'      => $style,
+                'payment_enabled'        => $paymentEnabled,
+                'stripe_publishable_key' => $paymentEnabled ? $stripe->publishableKey() : null,
+                'mock_mode'              => $mockMode,
+            ],
+        ));
     }
 
     /** GET /v1/services/availability?service_id=&master_id=&date=YYYY-MM-DD */
@@ -179,7 +126,7 @@ class ServicePublicController extends Controller
     }
 
     /** POST /v1/services/quote — returns price breakdown without reserving. */
-    public function quote(Request $request, ServiceSchedulingService $scheduler): JsonResponse
+    public function quote(Request $request): JsonResponse
     {
         $this->bindOrg($request);
 
@@ -196,76 +143,37 @@ class ServicePublicController extends Controller
         $service = Service::findOrFail($data['service_id']);
 
         try {
-            $reservation = $scheduler->reserveSlot(
+            $q = app(ServiceQuoteBuilder::class)->build(
                 $service,
                 $data['service_master_id'] ?? null,
                 $data['start_at'],
+                (int) ($data['party_size'] ?? 1),
+                $data['extras'] ?? [],
             );
+        } catch (ExtraLeadTimeException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 409);
-        }
-
-        $partySize = (int) ($data['party_size'] ?? 1);
-        $servicePrice = (float) $reservation['price'];
-
-        $extrasBreakdown = [];
-        $extrasTotal = 0;
-        if (!empty($data['extras'])) {
-            $extraIds = collect($data['extras'])->pluck('id')->all();
-            $extras = ServiceExtra::whereIn('id', $extraIds)->get()->keyBy('id');
-
-            // Reject any extra whose preparation lead time can't be met
-            // before the chosen slot. The widget hides these client-side;
-            // we block them again here so a manipulated request can't
-            // sneak through.
-            $startTs = $reservation['start']->getTimestamp();
-            $hoursUntilStart = max(0, (int) (($startTs - time()) / 3600));
-            foreach ($data['extras'] as $line) {
-                $extra = $extras->get($line['id']);
-                if (!$extra) continue;
-                $required = (int) ($extra->lead_time_hours ?? 0);
-                if ($required > 0 && $hoursUntilStart < $required) {
-                    return response()->json([
-                        'error' => "\"{$extra->name}\" requires at least {$required}h notice. Please remove it or pick a later slot.",
-                    ], 422);
-                }
-            }
-
-            foreach ($data['extras'] as $line) {
-                $extra = $extras->get($line['id']);
-                if (!$extra) continue;
-                $qty = (int) ($line['quantity'] ?? 1);
-                $multiplier = $extra->price_type === 'per_person' ? $partySize * $qty : $qty;
-                $lineTotal = round((float) $extra->price * $multiplier, 2);
-                $extrasTotal += $lineTotal;
-                $extrasBreakdown[] = [
-                    'id'         => $extra->id,
-                    'name'       => $extra->name,
-                    'unit_price' => (float) $extra->price,
-                    'quantity'   => $qty,
-                    'line_total' => $lineTotal,
-                ];
-            }
         }
 
         return response()->json([
             'service' => [
                 'id'    => $service->id,
                 'name'  => $service->name,
-                'price' => $servicePrice,
+                'price' => $q['service_price'],
             ],
             'master' => [
-                'id'   => $reservation['master']->id,
-                'name' => $reservation['master']->name,
+                'id'   => $q['master']->id,
+                'name' => $q['master']->name,
             ],
-            'start_at'         => $reservation['start']->toIso8601String(),
-            'end_at'           => $reservation['end']->toIso8601String(),
-            'duration_minutes' => $reservation['duration_minutes'],
-            'service_price'    => $servicePrice,
-            'extras'           => $extrasBreakdown,
-            'extras_total'     => round($extrasTotal, 2),
-            'total_amount'     => round($servicePrice + $extrasTotal, 2),
-            'currency'         => $service->currency ?: 'EUR',
+            'start_at'         => $q['start']->toIso8601String(),
+            'end_at'           => $q['end']->toIso8601String(),
+            'duration_minutes' => $q['duration_minutes'],
+            'service_price'    => $q['service_price'],
+            'extras'           => $q['extras'],
+            'extras_total'     => $q['extras_total'],
+            'total_amount'     => $q['list_total'],
+            'currency'         => $q['currency'],
         ]);
     }
 
@@ -308,11 +216,17 @@ class ServicePublicController extends Controller
                 $data['service_master_id'] ?? null,
                 $data['start_at'],
             );
+            // computeTotal() now re-derives the total through
+            // ServiceQuoteBuilder, which re-validates extra lead times —
+            // ExtraLeadTimeException extends RuntimeException, so it is
+            // caught here too and answered as the same 409 a slot
+            // conflict already gets. Distinguishing it as a 422 is
+            // quote()'s job this phase, not payment-intent's.
+            $total = $this->computeTotal($service, $reservation, $data);
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 409);
         }
 
-        $total = $this->computeTotal($service, $reservation, $data);
         $orgId = app('current_organization_id');
 
         try {
@@ -366,10 +280,17 @@ class ServicePublicController extends Controller
 
         // Idempotent replay
         if ($idempotency) {
+            // Portal success rows live in the same table (source
+            // 'member_portal') and are keyed by the authenticated member's
+            // own idempotency key — an unauthenticated widget caller must
+            // never be able to fish one back out by guessing/reusing that
+            // key, so this replay is refused anything but a widget's own
+            // row (no source, or a source that isn't the portal's).
             $existing = ServiceBookingSubmission::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
                 ->where('idempotency_key', $idempotency)
                 ->where('outcome', 'success')
+                ->where(fn ($q) => $q->whereNull('source')->orWhere('source', '!=', 'member_portal'))
                 ->first();
             if ($existing && $existing->service_booking_id) {
                 $booking = ServiceBooking::find($existing->service_booking_id);
@@ -444,7 +365,7 @@ class ServicePublicController extends Controller
                 $extraRows = [];
                 if (!empty($data['extras'])) {
                     $extraIds = collect($data['extras'])->pluck('id')->all();
-                    $extraModels = ServiceExtra::whereIn('id', $extraIds)->get()->keyBy('id');
+                    $extraModels = ServiceExtra::whereIn('id', $extraIds)->where('is_active', true)->get()->keyBy('id');
 
                     // Same lead-time guard as quote() — if a guest skipped
                     // quote (or quote was issued earlier than the lead
@@ -686,7 +607,7 @@ class ServicePublicController extends Controller
             ->value('value') ?: 'support@hotel-tech.ai';
         $cancellationPolicy = \App\Models\HotelSetting::withoutGlobalScopes()
             ->where('organization_id', $orgId)
-            ->where('key', 'service_cancellation_policy')
+            ->where('key', 'services_cancellation_policy')
             ->value('value') ?: null;
 
         // Auto-enrol the guest as a Bronze member so subsequent flows can
@@ -841,24 +762,16 @@ class ServicePublicController extends Controller
 
     // ─── Helpers ───────────────────────────────────────────────────────────
 
+    /** @throws \RuntimeException|ExtraLeadTimeException */
     private function computeTotal(Service $service, array $reservation, array $data): float
     {
-        $partySize = (int) ($data['party_size'] ?? 1);
-        $total = (float) $reservation['price'];
-
-        if (!empty($data['extras'])) {
-            $extraIds = collect($data['extras'])->pluck('id')->all();
-            $extras = ServiceExtra::whereIn('id', $extraIds)->get()->keyBy('id');
-            foreach ($data['extras'] as $line) {
-                $extra = $extras->get($line['id']);
-                if (!$extra) continue;
-                $qty = (int) ($line['quantity'] ?? 1);
-                $multiplier = $extra->price_type === 'per_person' ? $partySize * $qty : $qty;
-                $total += round((float) $extra->price * $multiplier, 2);
-            }
-        }
-
-        return round($total, 2);
+        return app(ServiceQuoteBuilder::class)->build(
+            $service,
+            $reservation['master']->id,
+            $reservation['start']->toIso8601String(),
+            (int) ($data['party_size'] ?? 1),
+            $data['extras'] ?? [],
+        )['list_total'];
     }
 
     private function logSubmission(?int $orgId, ?string $idempotency, array $data, ?int $bookingId, string $outcome, ?string $error = null): void

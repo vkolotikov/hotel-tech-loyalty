@@ -1433,6 +1433,10 @@
       "stock": "Остаток",
       "stock_hint": "Пусто = без лимита",
       "per_member_limit": "Лимит на участника",
+      "discount_type": "Тип скидки",
+      "discount_value": "Величина скидки",
+      "discount_none": "Без скидки",
+      "applies_to": "Применяется к",
       "expires": "Срок",
       "active_visible": "Активно (видно участникам)",
       "image": "Изображение",
@@ -1639,7 +1643,8 @@
       "free_night": "бесплатная ночь",
       "upgrade": "апгрейд",
       "bonus_points": "бонусные баллы",
-      "cashback": "кэшбэк"
+      "cashback": "кэшбэк",
+      "fixed_amount": "фиксированная сумма"
     },
     "form": {
       "edit_title": "Изменить предложение",
@@ -1650,6 +1655,11 @@
       "upload_image": "Загрузить изображение",
       "type": "Тип",
       "value": "Значение",
+      "code": "Код",
+      "code_hint": "Участники вводят это в портале",
+      "tiers": "Уровни",
+      "per_member_limit": "Лимит на участника",
+      "applies_to": "Применяется к",
       "start_date": "Начало",
       "start_placeholder": "Выберите дату начала",
       "end_date": "Окончание",
@@ -1680,6 +1690,7 @@
       "recognition": "признание",
       "points": "баллы",
       "access": "доступ",
+      "discount": "скидка",
       "other": "другое"
     },
     "fulfillment_modes": {
@@ -1732,6 +1743,26 @@
   "tiers": {
     "title": "Уровни",
     "add": "Добавить уровень",
+    "value_type": "Тип значения",
+    "value_amount": "Сумма",
+    "applies_to": "Применяется к",
+    "format": {
+      "percent_off": "Скидка {{amount}}%",
+      "amount_off": "Скидка {{amount}}",
+      "points_multiplier": "Баллы ×{{amount}}"
+    },
+    "applies": {
+      "all": "Все бронирования",
+      "services": "Только услуги",
+      "stays": "Только проживания"
+    },
+    "types": {
+      "text": "Произвольный текст",
+      "percent_discount": "Процентная скидка",
+      "fixed_amount": "Фиксированная сумма",
+      "points_multiplier": "Множитель баллов",
+      "free_item": "Бесплатный товар"
+    },
     "preview": {
       "title": "Калькулятор уровня",
       "subtitle": "— на какой уровень попадёт участник?",
@@ -1787,6 +1818,7 @@
     "expanded": {
       "title": "Привилегии уровня",
       "remove": "Удалить",
+      "edit": "Изменить",
       "select_benefit": "Выберите привилегию…",
       "value_placeholder": "Значение (опционально)",
       "assign": "Назначить"
@@ -1801,6 +1833,11 @@
       "benefit_removed": "Привилегия удалена"
     },
     "loading": "Загрузка…"
+  },
+  "service_bookings": {
+    "source_portal": "Портал участника",
+    "list_price": "Прайс",
+    "discount": "Скидка"
   },
   "knowledge_base": {
     "brand_required": "базы знаний",

@@ -19,21 +19,25 @@ class ServiceBooking extends Model
         'customer_name', 'customer_email', 'customer_phone', 'party_size',
         'start_at', 'end_at', 'duration_minutes',
         'service_price', 'extras_total', 'total_amount', 'currency',
+        'list_amount', 'discount_amount', 'discount_source', 'discount_source_id', 'discount_label',
         'status', 'payment_status', 'stripe_payment_intent_id',
         'source', 'customer_notes', 'staff_notes',
-        'cancelled_at', 'cancellation_reason', 'meta',
+        'cancelled_at', 'cancellation_reason', 'meta', 'points_awarded_at',
     ];
 
     protected $casts = [
-        'start_at'         => 'datetime',
-        'end_at'           => 'datetime',
-        'cancelled_at'     => 'datetime',
-        'meta'             => 'array',
-        'service_price'    => 'decimal:2',
-        'extras_total'     => 'decimal:2',
-        'total_amount'     => 'decimal:2',
-        'duration_minutes' => 'integer',
-        'party_size'       => 'integer',
+        'start_at'          => 'datetime',
+        'end_at'            => 'datetime',
+        'cancelled_at'      => 'datetime',
+        'meta'              => 'array',
+        'service_price'     => 'decimal:2',
+        'extras_total'      => 'decimal:2',
+        'total_amount'      => 'decimal:2',
+        'list_amount'       => 'decimal:2',
+        'discount_amount'   => 'decimal:2',
+        'points_awarded_at' => 'datetime',
+        'duration_minutes'  => 'integer',
+        'party_size'        => 'integer',
     ];
 
     protected static function booted(): void

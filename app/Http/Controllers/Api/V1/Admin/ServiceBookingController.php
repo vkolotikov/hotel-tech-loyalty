@@ -9,11 +9,13 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
+use App\Services\Loyalty\BookingPointsService;
 use App\Services\ServiceSchedulingService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ServiceBookingController extends Controller
 {
@@ -144,7 +146,7 @@ class ServiceBookingController extends Controller
     /** GET /v1/admin/service-bookings — paginated list. */
     public function index(Request $request): JsonResponse
     {
-        $query = ServiceBooking::with(['service:id,name', 'master:id,name'])
+        $query = ServiceBooking::with(['service:id,name', 'master:id,name', 'member.user:id,name'])
             ->orderByDesc('start_at');
 
         if ($search = $request->input('search')) {
@@ -173,7 +175,37 @@ class ServiceBookingController extends Controller
             $query->where('start_at', '<=', $to . ' 23:59:59');
         }
 
-        return response()->json($query->paginate($request->integer('per_page', 25)));
+        $paginated = $query->paginate($request->integer('per_page', 25));
+        $paginated->setCollection(
+            $paginated->getCollection()->map(fn (ServiceBooking $b) => $this->withMemberAndDiscount($b))
+        );
+
+        return response()->json($paginated);
+    }
+
+    /**
+     * Shape a booking's plain array with the member + discount the admin
+     * SPA's list/detail views need, without renaming or dropping any
+     * existing key. `member`/`discount` overwrite whatever the raw
+     * eager-loaded relation produced in `toArray()` — the caller must have
+     * eager-loaded `member.user` for the name to be present.
+     */
+    private function withMemberAndDiscount(ServiceBooking $b): array
+    {
+        $arr = $b->toArray();
+
+        $arr['member'] = $b->member ? [
+            'id'            => $b->member->id,
+            'name'          => $b->member->user?->name,
+            'member_number' => $b->member->member_number,
+        ] : null;
+
+        $arr['discount'] = ((float) $b->discount_amount) > 0 ? [
+            'amount' => round((float) $b->discount_amount, 2),
+            'label'  => $b->discount_label ?: 'Member discount',
+        ] : null;
+
+        return $arr;
     }
 
     /** GET /v1/admin/service-bookings/calendar?month=YYYY-MM */
@@ -239,6 +271,21 @@ class ServiceBookingController extends Controller
             ]);
         } catch (\Throwable) {}
 
+        // Award loyalty points for whichever rows this bulk action just
+        // completed. Query-builder ->update() above fires no model events,
+        // so this is the only place a bulk completion can trigger points.
+        if ($validated['action'] === 'mark_complete'
+            || ($validated['action'] === 'mark_status' && ($validated['value'] ?? null) === 'completed')
+        ) {
+            foreach ($rows as $b) {
+                try {
+                    app(BookingPointsService::class)->awardForServiceBooking($b->fresh());
+                } catch (\Throwable $e) {
+                    Log::warning('service_booking.points_failed', ['id' => $b->id, 'error' => $e->getMessage()]);
+                }
+            }
+        }
+
         return response()->json([
             'updated' => $updated,
             'message' => "{$updated} booking" . ($updated === 1 ? '' : 's') . ' updated.',
@@ -303,10 +350,10 @@ class ServiceBookingController extends Controller
 
     public function show(int $id): JsonResponse
     {
-        $booking = ServiceBooking::with(['service', 'master', 'extras', 'guest', 'member'])
+        $booking = ServiceBooking::with(['service', 'master', 'extras', 'guest', 'member.user'])
             ->findOrFail($id);
 
-        $arr = $booking->toArray();
+        $arr = $this->withMemberAndDiscount($booking);
         $arr['submissions'] = ServiceBookingSubmission::where('service_booking_id', $booking->id)
             ->orderByDesc('created_at')
             ->limit(20)
@@ -470,6 +517,14 @@ class ServiceBookingController extends Controller
 
             return $booking;
         });
+
+        if (($data['status'] ?? null) === 'completed') {
+            try {
+                app(BookingPointsService::class)->awardForServiceBooking($booking->fresh());
+            } catch (\Throwable $e) {
+                Log::warning('service_booking.points_failed', ['id' => $booking->id, 'error' => $e->getMessage()]);
+            }
+        }
 
         return response()->json($booking->fresh(['service', 'master', 'extras']));
     }

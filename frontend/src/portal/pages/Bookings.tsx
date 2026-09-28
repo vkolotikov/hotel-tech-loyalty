@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -27,6 +27,11 @@ export function Bookings() {
   const [params, setParams] = useSearchParams()
   const scope = params.get('scope') === 'past' ? 'past' : 'upcoming'
   const [page, setPage] = useState(1)
+  // Captured once, at mount, from the URL — not read fresh from `params` on every render — so that once
+  // the confirmation is shown it stays visible for the rest of this mount even after the effect below drops
+  // `?confirmed=1` from the address bar; a reload or Back at that point lands on a URL with no `confirmed`
+  // param at all, so the banner does not come back (see the minor finding from fix round 1).
+  const [showConfirmedBanner] = useState(() => params.get('confirmed') === '1')
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['portal-bookings', scope, page],
@@ -37,9 +42,38 @@ export function Bookings() {
   const rows = data?.data ?? []
   const lastPage = data ? Math.max(1, Math.ceil(data.meta.total / data.meta.per_page)) : 1
 
+  // The reference for the confirmation banner: the just-confirmed booking is usually already in this
+  // scope's freshly-invalidated list (Book.tsx navigates here right after `confirm()` succeeds), but on a
+  // cold load — a bookmark, a shared confirmation link, the "past" tab — it might not be. This query shares
+  // its key with BookingSheet's own (the sheet is about to mount for the same kind/id anyway), so it costs
+  // nothing extra beyond the one request that screen needed regardless.
+  const confirmedInList = rows.find(b => !!kind && !!id && b.kind === kind && b.id === Number(id))
+  const confirmedBooking = useQuery({
+    queryKey: ['portal-booking', kind, id],
+    queryFn: () => portalApi.booking(kind as BookingKind, Number(id)),
+    enabled: showConfirmedBanner && !!kind && !!id && !confirmedInList,
+    retry: false,
+  })
+  const confirmedReference = confirmedInList?.reference ?? confirmedBooking.data?.reference ?? null
+
+  // Drop `?confirmed=1` the moment the banner has something to show — not merely once shown, so a slow
+  // resolve of `confirmedReference` doesn't strip the param before it's known there's anything to display.
+  useEffect(() => {
+    if (showConfirmedBanner && confirmedReference && kind && id) {
+      navigate(`/portal/bookings/${kind}/${id}?scope=${scope}`, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showConfirmedBanner, confirmedReference])
+
   return (
     <div className="space-y-4">
       <h1 className="font-p-display text-2xl">{t('portal.bookings.title', 'Bookings')}</h1>
+      {showConfirmedBanner && confirmedReference && (
+        <Notice tone="success">
+          <strong>{t('portal.book.confirmed_title', "You're booked")}</strong>{' '}
+          {t('portal.book.confirmed_body', "Reference {{reference}}. We've emailed the details.", { reference: confirmedReference })}
+        </Notice>
+      )}
       <Tabs
         value={scope}
         onChange={key => { setPage(1); setParams({ scope: key }, { replace: true }) }}

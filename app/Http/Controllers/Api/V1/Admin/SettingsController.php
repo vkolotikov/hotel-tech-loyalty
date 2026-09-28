@@ -500,6 +500,14 @@ class SettingsController extends Controller
             ['key' => 'ai_openai_model',              'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'OpenAI Model',          'scope' => 'system'],
             ['key' => 'ai_anthropic_api_key',         'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic API Key',     'scope' => 'system'],
             ['key' => 'ai_anthropic_model',           'value' => '', 'type' => 'string', 'group' => 'integrations', 'label' => 'Anthropic Model',       'scope' => 'system'],
+
+            // Member portal (phase 2) — booking + loyalty behaviour the
+            // portal reads at booking/cancel/confirm time.
+            ['key' => 'services_require_staff_confirmation', 'value' => 'false', 'type' => 'boolean', 'group' => 'booking', 'label' => 'Member portal bookings need staff confirmation'],
+            ['key' => 'points_on_bookings',                  'value' => 'true',  'type' => 'boolean', 'group' => 'loyalty', 'label' => 'Award points when a booking is completed'],
+            ['key' => 'services_cancel_hours',               'value' => '24',    'type' => 'integer', 'group' => 'booking', 'label' => 'Free cancellation window for appointments (hours)'],
+            ['key' => 'booking_cancel_hours',                'value' => '48',    'type' => 'integer', 'group' => 'booking', 'label' => 'Free cancellation window for stays (hours)'],
+            ['key' => 'portal_enabled',                      'value' => 'true',  'type' => 'boolean', 'group' => 'loyalty', 'label' => 'Member web portal'],
         ];
 
         foreach ($defaults as $d) {

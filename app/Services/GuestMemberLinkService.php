@@ -126,6 +126,81 @@ class GuestMemberLinkService
     }
 
     /**
+     * The one guest that represents this member, for the portal booking
+     * flow to attach a reservation to. Prefers a guest already linked by
+     * member_id; otherwise reuses a guest with the member's email (linking
+     * it); otherwise creates a new one.
+     *
+     * The new guest is created with member_id already set, so
+     * Guest::created's auto-Bronze hook (which only fires when
+     * `$guest->member_id` is empty — see Guest::booted()) sees an
+     * already-linked guest and never calls ensureMemberForGuest() again.
+     * This is what keeps a member from ever picking up a second
+     * membership through this path.
+     */
+    public function ensureGuestForMember(LoyaltyMember $member): Guest
+    {
+        $orgId = (int) $member->organization_id;
+
+        $linked = Guest::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('member_id', $member->id)
+            ->orderBy('id')
+            ->first();
+        if ($linked) return $linked;
+
+        $email = strtolower(trim((string) $member->user?->email));
+        if ($email !== '') {
+            $byEmail = Guest::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->orderBy('id')
+                ->first();
+            if ($byEmail) {
+                $byEmail->forceFill(['member_id' => $member->id])->save();
+                return $byEmail;
+            }
+        }
+
+        // Clamped to the real column lengths (2026_03_28_100001_create_crm_tables):
+        // `users.name` and `users.email` are longer, and PostgreSQL refuses an
+        // over-long value — an overlong name used to fail the member's confirm.
+        return Guest::withoutGlobalScopes()->create([
+            'organization_id' => $orgId,
+            'member_id'       => $member->id,
+            'first_name'      => $this->clamp($this->firstName($member), 100),
+            'last_name'       => $this->clamp($this->lastName($member), 100),
+            // `guests.full_name` is NOT NULL on PostgreSQL; without it every portal
+            // confirm by a member with no guest row yet failed (Task 21 browser pass).
+            'full_name'       => $this->clamp(trim((string) $member->user?->name) ?: ($email ?: 'Member'), 200),
+            'email'           => $this->clamp($email ?: null, 150),
+            'phone'           => $this->clamp($member->user?->phone, 50),
+            'lead_source'     => 'Member Portal',
+        ]);
+    }
+
+    private function clamp(?string $value, int $length): ?string
+    {
+        return $value === null ? null : mb_substr($value, 0, $length);
+    }
+
+    /** The member user's name, split on the first space. */
+    protected function firstName(LoyaltyMember $member): ?string
+    {
+        $name = trim((string) $member->user?->name);
+        if ($name === '') return null;
+        return Str::before($name, ' ');
+    }
+
+    /** The member user's name, split on the first space; null when there is no remainder. */
+    protected function lastName(LoyaltyMember $member): ?string
+    {
+        $name = trim((string) $member->user?->name);
+        if ($name === '' || !str_contains($name, ' ')) return null;
+        return Str::after($name, ' ');
+    }
+
+    /**
      * Try to link existing guests to a newly created member by email match.
      * Called when a member registers or is created by admin.
      */

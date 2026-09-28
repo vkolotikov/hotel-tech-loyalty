@@ -387,9 +387,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // Reuses the public widget controller — tenant middleware has already
             // bound the org so bindOrg() is a no-op and returns the same shape.
             Route::get('services',          [ServicePublicController::class, 'config']);
-            // Member-initiated service booking — customer fields auto-filled
-            // from user, status defaults to pending so staff confirms.
-            Route::post('service-bookings', [\App\Http\Controllers\Api\V1\Member\MemberServiceBookingController::class, 'store']);
+            // POST member/service-bookings retired 2026-09 (spec ruling portal-8): the portal books through member/portal/services/*
             // Member-initiated Contact Hotel chat — landings appear in the
             // staff Inbox alongside visitor widget conversations, tagged with
             // the member's tier.
@@ -412,6 +410,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('bookings/{kind}/{id}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'show'])
                 ->whereIn('kind', ['service', 'stay'])
                 ->whereNumber('id');
+            Route::post('coupons/resolve', [\App\Http\Controllers\Api\V1\Member\Portal\PortalCouponController::class, 'resolve'])
+                ->middleware('throttle:portal-coupon');
+            Route::get('services', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'index']);
+            Route::get('services/calendar', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'calendar']);
+            Route::get('services/availability', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'availability']);
+            Route::post('services/quote', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'quote']);
+            Route::post('services/payment-intent', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'paymentIntent'])
+                ->middleware('throttle:30,1');
+            Route::post('services/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'confirm'])
+                ->middleware('throttle:30,1');
         });
 
         // ─── AI Chatbot ────────────────────────────────────────────────────────
@@ -719,9 +727,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // The counter-facing side of the benefit/offer engine. `quote`
             // is read-only so staff can re-quote as an order changes;
             // `use-offer` is what finally burns a claim.
-            Route::post('discounts/quote',                     [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'quote']);
-            Route::get ('discounts/members/{memberId}',        [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'benefits']);
-            Route::post('discounts/offers/{id}/use',           [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'useOffer']);
+            Route::middleware('staff.can:can_redeem_points')->group(function () {
+                Route::post('discounts/quote',                 [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'quote']);
+                Route::get ('discounts/members/{memberId}',    [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'benefits']);
+                Route::post('discounts/offers/{id}/use',       [\App\Http\Controllers\Api\V1\Admin\DiscountController::class, 'useOffer']);
+            });
 
             Route::get('tiers/{tierId}/benefits',              [BenefitAdminController::class, 'tierBenefits']);
             Route::middleware('staff.can:can_manage_offers')->group(function () {

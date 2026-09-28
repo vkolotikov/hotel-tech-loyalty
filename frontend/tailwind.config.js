@@ -54,6 +54,7 @@ export default {
           success:       'rgb(var(--p-success) / <alpha-value>)',
           warning:       'rgb(var(--p-warning) / <alpha-value>)',
           danger:        'rgb(var(--p-danger) / <alpha-value>)',
+          scrim:         'rgb(var(--p-scrim) / <alpha-value>)',
         },
       },
       borderRadius: {

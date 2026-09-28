@@ -1415,6 +1415,10 @@
       "stock": "Stock",
       "stock_hint": "Vacío = ilimitado",
       "per_member_limit": "Límite por miembro",
+      "discount_type": "Tipo de descuento",
+      "discount_value": "Valor del descuento",
+      "discount_none": "Sin descuento",
+      "applies_to": "Se aplica a",
       "expires": "Caduca",
       "active_visible": "Activa (visible para miembros)",
       "image": "Imagen",
@@ -1619,7 +1623,8 @@
       "free_night": "noche gratis",
       "upgrade": "mejora",
       "bonus_points": "puntos bonus",
-      "cashback": "cashback"
+      "cashback": "cashback",
+      "fixed_amount": "importe fijo"
     },
     "form": {
       "edit_title": "Editar oferta",
@@ -1630,6 +1635,11 @@
       "upload_image": "Subir imagen",
       "type": "Tipo",
       "value": "Valor",
+      "code": "Código",
+      "code_hint": "Los miembros escriben esto en el portal",
+      "tiers": "Niveles",
+      "per_member_limit": "Límite por miembro",
+      "applies_to": "Se aplica a",
       "start_date": "Fecha de inicio",
       "start_placeholder": "Elegir fecha de inicio",
       "end_date": "Fecha de fin",
@@ -1660,6 +1670,7 @@
       "recognition": "reconocimiento",
       "points": "puntos",
       "access": "acceso",
+      "discount": "descuento",
       "other": "otro"
     },
     "fulfillment_modes": {
@@ -1712,6 +1723,26 @@
   "tiers": {
     "title": "Niveles",
     "add": "Añadir nivel",
+    "value_type": "Tipo de valor",
+    "value_amount": "Importe",
+    "applies_to": "Se aplica a",
+    "format": {
+      "percent_off": "{{amount}}% de descuento",
+      "amount_off": "{{amount}} de descuento",
+      "points_multiplier": "{{amount}}× puntos"
+    },
+    "applies": {
+      "all": "Todas las reservas",
+      "services": "Solo servicios",
+      "stays": "Solo estancias"
+    },
+    "types": {
+      "text": "Texto libre",
+      "percent_discount": "Descuento porcentual",
+      "fixed_amount": "Importe fijo",
+      "points_multiplier": "Multiplicador de puntos",
+      "free_item": "Artículo gratis"
+    },
     "preview": {
       "title": "Calculadora de niveles",
       "subtitle": "— ¿qué nivel alcanzaría un miembro?",
@@ -1767,6 +1798,7 @@
     "expanded": {
       "title": "Beneficios del nivel",
       "remove": "Quitar",
+      "edit": "Editar",
       "select_benefit": "Elegir beneficio…",
       "value_placeholder": "Valor (opcional)",
       "assign": "Asignar"
@@ -1781,6 +1813,11 @@
       "benefit_removed": "Beneficio retirado"
     },
     "loading": "Cargando…"
+  },
+  "service_bookings": {
+    "source_portal": "Portal de miembros",
+    "list_price": "Lista",
+    "discount": "Descuento"
   },
   "knowledge_base": {
     "brand_required": "la base de conocimiento",

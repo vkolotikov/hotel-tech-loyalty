@@ -39,7 +39,7 @@ class BenefitAdminController extends Controller
             'name'                 => 'required|string|max:255',
             'code'                 => 'required|string|max:50|unique:benefit_definitions,code',
             'description'          => 'nullable|string',
-            'category'             => 'required|in:accommodation,dining,wellness,transport,recognition,points,access,other',
+            'category'             => 'required|in:accommodation,dining,wellness,transport,recognition,points,access,discount,other',
             'fulfillment_mode'     => 'required|in:automatic,staff_approved,pms_linked,voucher,on_request',
             'usage_limit_per_stay' => 'nullable|integer|min:1',
             'usage_limit_per_year' => 'nullable|integer|min:1',
@@ -59,7 +59,7 @@ class BenefitAdminController extends Controller
         $validated = $request->validate([
             'name'                 => 'sometimes|string|max:255',
             'description'          => 'nullable|string',
-            'category'             => 'sometimes|in:accommodation,dining,wellness,transport,recognition,points,access,other',
+            'category'             => 'sometimes|in:accommodation,dining,wellness,transport,recognition,points,access,discount,other',
             'fulfillment_mode'     => 'sometimes|in:automatic,staff_approved,pms_linked,voucher,on_request',
             'usage_limit_per_stay' => 'nullable|integer|min:1',
             'usage_limit_per_year' => 'nullable|integer|min:1',
@@ -104,6 +104,9 @@ class BenefitAdminController extends Controller
             // a sentence on a screen. `value` stays as the human wording.
             'value_type'         => 'nullable|string|in:' . implode(',', \App\Services\DiscountService::VALUE_TYPES),
             'value_amount'       => 'nullable|numeric|min:0|max:1000000',
+            // Booking scope: which kind of booking this benefit's typed
+            // discount is allowed to apply to (see BookingScope).
+            'applies_to'         => 'nullable|in:all,services,stays',
             'custom_description' => 'nullable|string',
         ]);
 
@@ -118,22 +121,37 @@ class BenefitAdminController extends Controller
             return response()->json(['message' => 'A points multiplier must be at least 1.'], 422);
         }
 
-        $tierBenefit = TierBenefit::updateOrCreate(
-            [
-                'tier_id'     => $validated['tier_id'],
-                'benefit_id'  => $validated['benefit_id'],
-                'property_id' => $validated['property_id'] ?? null,
-            ],
-            [
-                'value'              => $validated['value'] ?? null,
-                'value_type'         => $validated['value_type'] ?? 'text',
-                'value_amount'       => $validated['value_amount'] ?? null,
-                'custom_description' => $validated['custom_description'] ?? null,
-                'is_active'          => true,
-            ]
-        );
+        // A re-assign only ever carries `value` (the human sentence) most of
+        // the time — updateOrCreate() used to reset value_type to 'text' and
+        // value_amount to null on every save regardless, quietly turning an
+        // enforceable discount back into decoration. Only a request that
+        // itself carries `value_type` (or `applies_to`) may change those
+        // columns; a prose-only re-assign keeps whatever was already typed.
+        $tb = TierBenefit::firstOrNew([
+            'tier_id'     => $validated['tier_id'],
+            'benefit_id'  => $validated['benefit_id'],
+            'property_id' => $validated['property_id'] ?? null,
+        ]);
+        $tb->fill([
+            'value'              => $validated['value'] ?? $tb->value,
+            'custom_description' => $validated['custom_description'] ?? $tb->custom_description,
+            'is_active'          => true,
+        ]);
+        if ($request->has('value_type')) {
+            $tb->value_type = $validated['value_type'] ?: 'text';
+            $tb->value_amount = $tb->value_type === 'text' ? null : ($validated['value_amount'] ?? null);
+        }
+        if ($request->has('applies_to')) {
+            $tb->applies_to = $validated['applies_to'] ?: 'all';
+        }
+        if (!$tb->exists) {
+            $tb->organization_id = app('current_organization_id');
+            $tb->value_type ??= 'text';
+            $tb->applies_to ??= 'all';
+        }
+        $tb->save();
 
-        return response()->json(['message' => 'Benefit assigned to tier', 'tier_benefit' => $tierBenefit]);
+        return response()->json(['message' => 'Benefit assigned to tier', 'tier_benefit' => $tb]);
     }
 
     public function removeTierBenefit(int $id): JsonResponse

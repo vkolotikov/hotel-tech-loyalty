@@ -20,7 +20,7 @@ export function Button({
       aria-busy={loading || undefined}
       className={`inline-flex items-center justify-center gap-2 font-semibold rounded-p-control p-lift
                   disabled:opacity-50 disabled:pointer-events-none
-                  ${size === 'sm' ? 'text-xs px-3 min-h-9' : 'text-sm px-4 min-h-11'}
+                  ${size === 'sm' ? 'text-xs px-3 min-h-9 p-tap' : 'text-sm px-4 min-h-11'}
                   ${full ? 'w-full' : ''} ${VARIANT[variant]} ${className}`}
     >
       {loading && <Loader2 size={15} className="animate-spin" aria-hidden />}

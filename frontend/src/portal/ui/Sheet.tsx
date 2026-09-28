@@ -56,7 +56,7 @@ export function Sheet({ open, onClose, title, children, footer }: {
     // !m-0: pages mount their sheets inside space-y-*, whose margin-top would
     // otherwise shift this fixed overlay down and leave a strip undimmed.
     <div className="fixed inset-0 !m-0 z-50 flex items-end sm:items-center justify-center" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="absolute inset-0 bg-p-text/40" aria-hidden />
+      <div className="absolute inset-0 bg-p-scrim/50" aria-hidden />
       <div
         ref={panel}
         role="dialog"

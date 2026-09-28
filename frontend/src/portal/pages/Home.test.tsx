@@ -86,6 +86,10 @@ describe('Home', () => {
     expect(render(base, clientWith([]))).toContain('Nothing booked yet.')
   })
 
+  it('invites the member to book when nothing is booked', () => {
+    expect(render(base, clientWith([]))).toContain('href="/portal/book"')
+  })
+
   it('labels the next booking the way the bookings list does', () => {
     const html = render(base, clientWith([booking]))
     expect(html).toContain('Facial')

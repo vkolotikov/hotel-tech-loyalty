@@ -20,7 +20,9 @@ interface Benefit {
   sort_order: number
 }
 
-const CATEGORIES = ['accommodation', 'dining', 'wellness', 'transport', 'recognition', 'points', 'access', 'other']
+// `discount` is what LoyaltyPresetService gives typed discount perks; it must be offered here so editing one
+// keeps its category (and the server's list in BenefitAdminController accepts it).
+const CATEGORIES = ['accommodation', 'dining', 'wellness', 'transport', 'recognition', 'points', 'access', 'discount', 'other']
 const FULFILLMENT_MODES = ['automatic', 'staff_approved', 'pms_linked', 'voucher', 'on_request']
 
 const emptyForm = {

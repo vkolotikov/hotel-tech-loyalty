@@ -2,12 +2,15 @@
 
 namespace App\Services;
 
+use App\Console\Commands\TypeBenefits;
 use App\Models\BenefitDefinition;
 use App\Models\CrmSetting;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Models\TierBenefit;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * One-click membership setup for the loyalty program — third member
@@ -162,6 +165,97 @@ class LoyaltyPresetService
     ];
 
     /**
+     * A preset tier's `perks` are display-only prose ("15% off treatments")
+     * — nothing computes them, so a member's bill never actually reflects
+     * the ladder they joined for. Run every perk of a freshly-created tier
+     * through the same parser `loyalty:type-benefits` uses, and for every
+     * one that matches ("NN% off …" / "<currency>NN off …"):
+     *
+     *   - reuse a BenefitDefinition with the same name in this org, or
+     *     create one (category `discount`) when none exists yet;
+     *   - create a typed TierBenefit — value stays the original prose,
+     *     value_type/value_amount/applies_to come from the parser.
+     *
+     * Perks the parser doesn't recognise are left exactly as they are
+     * (still shown via the tier's `perks` json — nothing to type).
+     *
+     * Guarded on tier_benefits existing so preset tests built on the
+     * lighter tier-only schema (no tier_benefits table) are unaffected;
+     * production always has the table (2026_03_18_100003).
+     *
+     * Only ever called right after a tier is actually created — the
+     * additive path already skips creating a tier whose name collides,
+     * so this never runs twice for the same tier and never double-writes.
+     */
+    private function typeParseablePerks(LoyaltyTier $tier, array $perks, int $organizationId): void
+    {
+        if (!Schema::hasTable('tier_benefits')) {
+            return;
+        }
+
+        foreach ($perks as $perkText) {
+            if (!is_string($perkText) || $perkText === '') {
+                continue;
+            }
+
+            $typed = TypeBenefits::parse($perkText);
+            if (!$typed) {
+                continue;
+            }
+
+            $definition = BenefitDefinition::withoutGlobalScopes()
+                ->where('organization_id', $organizationId)
+                ->whereRaw('LOWER(name) = ?', [mb_strtolower($perkText)])
+                ->first();
+
+            if (!$definition) {
+                $definition = BenefitDefinition::withoutGlobalScopes()->create([
+                    'organization_id' => $organizationId,
+                    'name'            => $perkText,
+                    'code'            => $this->uniqueBenefitCode($perkText, $organizationId),
+                    'category'        => 'discount',
+                    'is_active'       => true,
+                ]);
+            }
+
+            TierBenefit::withoutGlobalScopes()->create([
+                'organization_id' => $organizationId,
+                'tier_id'         => $tier->id,
+                'benefit_id'      => $definition->id,
+                'value'           => $perkText,
+                'value_type'      => $typed['type'],
+                'value_amount'    => $typed['amount'],
+                'applies_to'      => $typed['scope'],
+                'is_active'       => true,
+            ]);
+        }
+    }
+
+    /**
+     * benefit_definitions.code is unique per (organization_id, code)
+     * (2026_04_01_100001_fix_unique_constraints_for_multitenancy) — a slug
+     * of the perk text is stable and readable, with a numeric suffix on
+     * the rare within-org collision (two perks that slug identically).
+     */
+    private function uniqueBenefitCode(string $perkText, int $organizationId): string
+    {
+        $base = 'discount_'.\Illuminate\Support\Str::slug($perkText, '_');
+        $base = mb_substr($base, 0, 40) ?: 'discount_perk';
+
+        $code = $base;
+        $suffix = 1;
+        while (BenefitDefinition::withoutGlobalScopes()
+            ->where('organization_id', $organizationId)
+            ->where('code', $code)
+            ->exists()) {
+            $suffix++;
+            $code = $base.'_'.$suffix;
+        }
+
+        return $code;
+    }
+
+    /**
      * Apply a membership preset. Returns a summary.
      *
      * @return array{tiers_set:int,tiers_added:int,benefits_added:int,rewards_added:int,members_on_tiers:int,replaced:bool,noop?:bool}
@@ -255,11 +349,12 @@ class LoyaltyPresetService
                 $summary['replaced'] = true;
 
                 foreach ($preset['tiers'] as $i => $tier) {
-                    LoyaltyTier::withoutGlobalScopes()->create(array_merge($tier, [
+                    $created = LoyaltyTier::withoutGlobalScopes()->create(array_merge($tier, [
                         'organization_id' => $organizationId,
                         'sort_order'      => $tier['sort_order'] ?? ($i + 1),
                         'is_active'       => true,
                     ]));
+                    $this->typeParseablePerks($created, $tier['perks'] ?? [], $organizationId);
                 }
                 $summary['tiers_added'] = count($preset['tiers']);
             } else {
@@ -273,11 +368,12 @@ class LoyaltyPresetService
 
                 foreach ($preset['tiers'] as $i => $tier) {
                     if (in_array(mb_strtolower($tier['name']), $existing, true)) continue;
-                    LoyaltyTier::withoutGlobalScopes()->create(array_merge($tier, [
+                    $created = LoyaltyTier::withoutGlobalScopes()->create(array_merge($tier, [
                         'organization_id' => $organizationId,
                         'sort_order'      => $tier['sort_order'] ?? ($i + 1),
                         'is_active'       => true,
                     ]));
+                    $this->typeParseablePerks($created, $tier['perks'] ?? [], $organizationId);
                     $summary['tiers_added']++;
                 }
             }

@@ -11,6 +11,7 @@ import {
 import { ViewToggle } from '../components/ViewToggle'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
+import { ServiceBookingPricing } from '../components/admin/ServiceBookingPricing'
 
 interface ServiceBooking {
   id: number
@@ -29,6 +30,13 @@ interface ServiceBooking {
   status: string
   payment_status: string
   staff_notes?: string | null
+  // Always present from the index/show endpoints (Task 12's
+  // `withMemberAndDiscount()`); not present on the narrower `/today` rows,
+  // which never flow through this interface as a `ServiceBooking`.
+  source: string
+  member?: { id: number; name: string; member_number: string } | null
+  list_amount?: number | string | null
+  discount?: { amount: number; label: string } | null
 }
 
 interface Paginated {
@@ -443,7 +451,10 @@ export default function ServiceBookings() {
                     <div className="text-xs text-gray-500">{b.customer_email}</div>
                   </td>
                   <td className="p-4 text-gray-300">{new Date(b.start_at).toLocaleString()}</td>
-                  <td className="p-4 font-bold text-white">{money(b.total_amount, b.currency)}</td>
+                  <td className="p-4">
+                    <div className="font-bold text-white">{money(b.total_amount, b.currency)}</div>
+                    <ServiceBookingPricing row={b} />
+                  </td>
                   <td className="p-4">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${STATUS_COLOR[b.status] || 'bg-white/[0.05] text-gray-400'}`}>
                       {b.status.replace('_', ' ')}
@@ -590,6 +601,7 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
         <div className="space-y-1 mb-6">
           <p className="text-xs text-gray-500">Total</p>
           <p className="text-2xl font-bold text-white">{money(booking.total_amount, booking.currency)}</p>
+          <ServiceBookingPricing row={detail ?? booking} />
         </div>
 
         <hr className="border-white/[0.06] my-4" />

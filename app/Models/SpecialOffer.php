@@ -17,7 +17,8 @@ class SpecialOffer extends Model
      * `withoutGlobalScope(BrandScope::class)`.
      */
     protected $fillable = [
-        'organization_id', 'brand_id', 'title', 'description', 'type', 'value', 'tier_ids', 'start_date', 'end_date',
+        'organization_id', 'brand_id', 'title', 'description', 'type', 'value', 'code', 'applies_to',
+        'tier_ids', 'start_date', 'end_date',
         'usage_limit', 'times_used', 'per_member_limit', 'image_url', 'terms_conditions',
         'is_active', 'is_featured', 'ai_generated', 'created_by',
     ];
@@ -45,8 +46,8 @@ class SpecialOffer extends Model
     public function scopeActive($query)
     {
         return $query->where('is_active', true)
-            ->where('start_date', '<=', now())
-            ->where('end_date', '>=', now());
+            ->where('start_date', '<=', now()->toDateString())
+            ->where('end_date', '>=', now()->toDateString());
     }
 
     public function scopeForTier($query, int $tierId)

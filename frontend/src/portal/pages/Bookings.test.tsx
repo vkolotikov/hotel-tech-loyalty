@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PortalContext, type PortalContextValue } from '../PortalProvider'
 import { BookingRow, paymentLabel, statusTone } from './BookingRow'
-import type { PortalBooking, PortalBootstrap } from '../lib/types'
+import { Bookings } from './Bookings'
+import type { Paginated, PortalBooking, PortalBootstrap } from '../lib/types'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -16,6 +18,12 @@ vi.mock('react-i18next', () => ({
     },
     i18n: { language: 'en' },
   }),
+}))
+// The Bookings-page tests below only ever seed `['portal-bookings', ...]`/`['portal-booking', ...]`
+// through the query cache (see `renderBookingsPage`); the real calls stay never-resolving, same as
+// `Home.test.tsx`'s `bookings` stub, so nothing here dispatches a real network request.
+vi.mock('../lib/portalApi', () => ({
+  portalApi: { bookings: () => new Promise(() => {}), booking: () => new Promise(() => {}) },
 }))
 
 const data = {
@@ -62,5 +70,58 @@ describe('BookingRow', () => {
     const { t } = useTranslation()
     expect(paymentLabel('disputed', t)).toBe('Payment under review')
     expect(paymentLabel('weird', t)).toBeNull()
+  })
+})
+
+/** Routed like the real app (`bookings/:kind/:id` mounts the same `<Bookings>`, not a separate detail
+ *  page), so `useParams` actually reads `kind`/`id` off the path. */
+function renderBookingsPage(path: string, seed?: (c: QueryClient) => void) {
+  const client = new QueryClient()
+  seed?.(client)
+  const value: PortalContextValue = { data, isLoading: false, isError: false, error: null, refetch: () => {} }
+  return renderToStaticMarkup(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <PortalContext.Provider value={value}>
+          <Routes>
+            <Route path="/portal/bookings" element={<Bookings />} />
+            <Route path="/portal/bookings/:kind/:id" element={<Bookings />} />
+          </Routes>
+        </PortalContext.Provider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
+
+// `Bookings.tsx` drops `?confirmed=1` from the address bar in a `useEffect` once the banner has something
+// to show, keeping the banner visible for the rest of that mount via `showConfirmedBanner` local state — so
+// a reload or Back (which land on the now-stripped URL) don't show it again. `renderToStaticMarkup` never
+// runs that effect, so the `navigate(..., { replace: true })` call itself isn't exercised here; what IS
+// exercised, in the second test below, is the actual observable behaviour after that navigation has
+// happened — a mount with no `confirmed` param renders no banner, regardless of what's loaded.
+describe('Bookings — confirmation banner', () => {
+  it('shows "You\'re booked" with the reference once the list contains the just-confirmed booking', () => {
+    const html = renderBookingsPage('/portal/bookings/service/7?confirmed=1', c => {
+      const page: Paginated<PortalBooking> = { data: [service], meta: { scope: 'upcoming', page: 1, per_page: 20, total: 1 } }
+      c.setQueryData(['portal-bookings', 'upcoming', 1], page)
+    })
+    expect(html).toContain("You&#x27;re booked")
+    expect(html).toContain('SVC-ABC12345')
+  })
+
+  it('does not show the banner without ?confirmed=1, even with the same booking loaded', () => {
+    const html = renderBookingsPage('/portal/bookings/service/7', c => {
+      const page: Paginated<PortalBooking> = { data: [service], meta: { scope: 'upcoming', page: 1, per_page: 20, total: 1 } }
+      c.setQueryData(['portal-bookings', 'upcoming', 1], page)
+    })
+    expect(html).not.toContain("You&#x27;re booked")
+  })
+
+  it('does not show the banner on the plain list, with no :kind/:id in the URL at all', () => {
+    const html = renderBookingsPage('/portal/bookings', c => {
+      const page: Paginated<PortalBooking> = { data: [service], meta: { scope: 'upcoming', page: 1, per_page: 20, total: 1 } }
+      c.setQueryData(['portal-bookings', 'upcoming', 1], page)
+    })
+    expect(html).not.toContain("You&#x27;re booked")
   })
 })

@@ -8,6 +8,7 @@ import { Rewards } from './pages/Rewards'
 import { Bookings } from './pages/Bookings'
 import { Activity } from './pages/Activity'
 import { Profile } from './pages/Profile'
+import { Book } from './pages/book/Book'
 
 registerPortalLocales()
 
@@ -26,6 +27,7 @@ export function PortalApp() {
       <PortalShell>
         <Routes>
           <Route index element={<Home />} />
+          <Route path="book" element={<Book />} />
           <Route path="rewards" element={<Rewards />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="bookings/:kind/:id" element={<Bookings />} />

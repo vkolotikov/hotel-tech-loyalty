@@ -27,6 +27,7 @@ class Reward extends Model
         'organization_id', 'brand_id',
         'name', 'description', 'terms', 'image_url', 'category',
         'points_cost', 'stock', 'per_member_limit',
+        'discount_type', 'discount_value', 'applies_to',
         'expires_at', 'is_active', 'sort_order',
     ];
 
@@ -37,6 +38,7 @@ class Reward extends Model
         'stock'            => 'integer',
         'per_member_limit' => 'integer',
         'sort_order'       => 'integer',
+        'discount_value'   => 'decimal:2',
     ];
 
     public function redemptions(): HasMany

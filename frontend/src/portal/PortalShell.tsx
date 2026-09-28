@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Home, Gift, CalendarDays, User, LogOut } from 'lucide-react'
+import { Home, Gift, CalendarDays, CalendarPlus, User, LogOut } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { logoutAndRedirect } from '../lib/logout'
 import { usePortal } from './PortalProvider'
@@ -9,11 +9,15 @@ import { Notice } from './ui/Notice'
 import { Button } from './ui/Button'
 import { PageSkeleton } from './ui/Skeleton'
 
+// Tailwind only generates classes it can see as literals, so the column
+// count per visible nav item must be spelled out rather than interpolated.
+const MOBILE_COLS: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5' }
+
 /**
  * The member's frame: venue name up top, a thumb-reachable bar on phones,
  * tabs from `sm`. Destinations follow what the venue can do — no Rewards
- * for a clinic, no Book until phase 2 ships it — so nothing points at a
- * page that would be empty.
+ * for a clinic, no Book for a venue that doesn't take appointments — so
+ * nothing points at a page that would be empty.
  */
 export function PortalShell({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -22,6 +26,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   const items = [
     { to: '/portal', label: t('portal.nav.home', 'Home'), icon: Home, end: true, show: true, badge: 0 },
+    { to: '/portal/book', label: t('portal.nav.book', 'Book'), icon: CalendarPlus, end: false, show: !!data?.capabilities.services, badge: 0 },
     { to: '/portal/rewards', label: t('portal.nav.rewards', 'Rewards'), icon: Gift, end: false, show: !!data?.capabilities.loyalty, badge: 0 },
     { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: CalendarDays, end: false, show: true, badge: data?.counts.upcoming_bookings ?? 0 },
     { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: User, end: false, show: true, badge: 0 },
@@ -91,7 +96,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
       </main>
 
       <nav className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-p-surface/95 backdrop-blur border-t border-p-border" aria-label={t('portal.shell.menu', 'Menu')} style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <div className={`grid ${items.length === 3 ? 'grid-cols-3' : 'grid-cols-4'}`}>
+        <div className={`grid ${MOBILE_COLS[items.length] ?? 'grid-cols-4'}`}>
           {items.map(({ to, label, icon: Icon, end, badge }) => (
             <NavLink key={to} to={to} end={end}
               className={({ isActive }) => `relative flex flex-col items-center gap-0.5 py-2 min-h-14 text-[11px] font-medium transition-colors ${isActive ? 'text-p-accent-deep' : 'text-p-text-2'}`}>

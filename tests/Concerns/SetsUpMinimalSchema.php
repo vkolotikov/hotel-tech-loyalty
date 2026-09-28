@@ -361,6 +361,9 @@ trait SetsUpMinimalSchema
             Schema::create('service_bookings', function ($table) {
                 $table->bigIncrements('id');
                 $table->unsignedBigInteger('organization_id');
+                // The booking's own status — the capture cron skips `pending`
+                // and releases/flags `cancelled`/`no_show` (final review, I4).
+                $table->string('status', 30)->nullable();
                 $table->string('payment_status', 32)->nullable();
                 $table->string('stripe_payment_intent_id')->nullable();
                 $table->decimal('price_total', 12, 2)->default(0);

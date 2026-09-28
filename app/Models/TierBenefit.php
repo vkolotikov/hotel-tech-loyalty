@@ -14,7 +14,7 @@ class TierBenefit extends Model
         'organization_id', 'tier_id', 'benefit_id', 'property_id', 'value',
         // `value` stays the human sentence; `value_type` + `value_amount`
         // are what DiscountService can actually compute with.
-        'value_type', 'value_amount',
+        'value_type', 'value_amount', 'applies_to',
         'custom_description', 'is_active',
     ];
 

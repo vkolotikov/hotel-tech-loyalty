@@ -19,7 +19,7 @@ class MemberOffer extends Model
 {
     protected $fillable = [
         'organization_id', 'member_id', 'offer_id', 'ai_generated', 'ai_reason',
-        'claimed_at', 'used_at', 'expires_at', 'status',
+        'claimed_at', 'used_at', 'used_reference', 'expires_at', 'status',
     ];
 
     protected $casts = [

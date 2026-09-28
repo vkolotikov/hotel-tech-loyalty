@@ -11,6 +11,7 @@ const booking = {
   customer_name: 'Test customer', customer_email: 'customer@example.test', customer_phone: null,
   party_size: 1, start_at: '2026-09-09T10:00:00Z', end_at: '2026-09-09T11:00:00Z',
   duration_minutes: 60, total_amount: 50, currency: 'EUR', status: 'confirmed', payment_status: 'paid',
+  source: 'admin',
 }
 function render(notes: string | null) {
   const client = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })

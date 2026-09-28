@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { QueryError } from '../components/QueryError'
 import { Crown, Plus, Pencil, X, Users, Award, Star, Gem, ShieldCheck, Layers, Sparkles, Calculator } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { BenefitValueFields, benefitDisplay, type BenefitValue } from '../components/admin/BenefitValueFields'
 
 interface Tier {
   id: number
@@ -47,9 +48,16 @@ interface TierBenefit {
   tier_id: number
   benefit_id: number
   value: string | null
+  value_type: string
+  value_amount: number | string | null
+  applies_to: string | null
   custom_description: string | null
   is_active: boolean
   benefit: { id: number; name: string; code: string; category: string }
+}
+
+const emptyAssignForm: BenefitValue & { benefit_id: string } = {
+  benefit_id: '', value: '', value_type: 'text', value_amount: '', applies_to: 'all',
 }
 
 const emptyForm = {
@@ -66,7 +74,7 @@ export function Tiers() {
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [expandedTier, setExpandedTier] = useState<number | null>(null)
-  const [assignForm, setAssignForm] = useState({ benefit_id: '', value: '' })
+  const [assignForm, setAssignForm] = useState(emptyAssignForm)
 
   // Preview calculator state
   const [previewModel, setPreviewModel] = useState<'points' | 'nights' | 'stays' | 'spend' | 'hybrid'>('points')
@@ -138,11 +146,24 @@ export function Tiers() {
     mutationFn: (data: any) => api.post('/v1/admin/tier-benefits', data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-tier-benefits', expandedTier] })
-      setAssignForm({ benefit_id: '', value: '' })
+      setAssignForm(emptyAssignForm)
       toast.success(t('tiers.toasts.benefit_assigned', 'Benefit assigned'))
     },
     onError: () => toast.error(t('tiers.toasts.benefit_assign_failed', 'Failed to assign benefit')),
   })
+
+  // Pre-fills the assign bar from an already-assigned row, so re-posting the
+  // same tier_id/benefit_id (the backend upserts on that pair) carries the
+  // typed fields it already has instead of resetting them.
+  const editBenefit = (tb: TierBenefit) => {
+    setAssignForm({
+      benefit_id: String(tb.benefit_id),
+      value: tb.value ?? '',
+      value_type: (tb.value_type as BenefitValue['value_type']) || 'text',
+      value_amount: tb.value_amount == null ? '' : String(tb.value_amount),
+      applies_to: (tb.applies_to as BenefitValue['applies_to']) || 'all',
+    })
+  }
 
   const removeBenefitMutation = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/tier-benefits/${id}`),
@@ -422,28 +443,43 @@ export function Tiers() {
                     <h4 className="text-sm font-medium text-t-secondary">{t('tiers.expanded.title', 'Tier Benefits')}</h4>
                   </div>
 
-                  {tierBenefits.map(tb => (
+                  {tierBenefits.map(tb => {
+                    const display = benefitDisplay(tb, t)
+                    return (
                     <div key={tb.id} className="flex items-center justify-between bg-dark-bg rounded-lg px-4 py-2.5">
                       <div className="flex items-center gap-2">
                         <Award size={14} className="text-primary-400" />
                         <span className="text-white text-sm">{tb.benefit.name}</span>
-                        {tb.value && <span className="text-xs text-primary-400">({tb.value})</span>}
+                        {display && <span className="text-xs text-primary-400">({display})</span>}
                       </div>
-                      <button onClick={() => removeBenefitMutation.mutate(tb.id)} className="text-t-secondary hover:text-red-400 text-xs">{t('tiers.expanded.remove', 'Remove')}</button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => editBenefit(tb)} aria-label={t('tiers.expanded.edit', 'Edit')} className="text-t-secondary hover:text-white"><Pencil size={13} /></button>
+                        <button onClick={() => removeBenefitMutation.mutate(tb.id)} className="text-t-secondary hover:text-red-400 text-xs">{t('tiers.expanded.remove', 'Remove')}</button>
+                      </div>
                     </div>
-                  ))}
+                    )
+                  })}
 
-                  <div className="flex items-center gap-3 bg-dark-bg p-3 rounded-lg">
-                    <select value={assignForm.benefit_id} onChange={e => setAssignForm({ ...assignForm, benefit_id: e.target.value })}
-                      className="flex-1 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm">
-                      <option value="">{t('tiers.expanded.select_benefit', 'Select benefit...')}</option>
-                      {allBenefits.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                    </select>
-                    <input value={assignForm.value} onChange={e => setAssignForm({ ...assignForm, value: e.target.value })}
-                      placeholder={t('tiers.expanded.value_placeholder', 'Value (optional)')} className="w-32 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm" />
-                    <button disabled={!assignForm.benefit_id}
-                      onClick={() => assignBenefitMutation.mutate({ tier_id: tier.id, benefit_id: Number(assignForm.benefit_id), value: assignForm.value || null })}
-                      className="bg-primary-600 text-white px-3 py-1.5 rounded text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
+                  <div className="flex flex-col gap-3 bg-dark-bg p-3 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <select value={assignForm.benefit_id} onChange={e => setAssignForm({ ...assignForm, benefit_id: e.target.value })}
+                        className="flex-1 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm">
+                        <option value="">{t('tiers.expanded.select_benefit', 'Select benefit...')}</option>
+                        {allBenefits.map((b: any) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                      </select>
+                      <input value={assignForm.value} onChange={e => setAssignForm({ ...assignForm, value: e.target.value })}
+                        placeholder={t('tiers.expanded.value_placeholder', 'Value (optional)')} className="w-48 bg-dark-surface border border-dark-border rounded px-2 py-1.5 text-white text-sm" />
+                    </div>
+                    <BenefitValueFields value={assignForm} onChange={v => setAssignForm({ ...assignForm, ...v })} />
+                    <button disabled={!assignForm.benefit_id} onClick={() => assignBenefitMutation.mutate({
+                        tier_id: tier.id,
+                        benefit_id: Number(assignForm.benefit_id),
+                        value: assignForm.value || null,
+                        value_type: assignForm.value_type,
+                        value_amount: assignForm.value_type === 'text' ? null : (assignForm.value_amount === '' ? null : Number(assignForm.value_amount)),
+                        applies_to: assignForm.applies_to,
+                      })}
+                      className="self-start bg-primary-600 text-white px-3 py-1.5 rounded text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
                   </div>
                 </div>
               )}

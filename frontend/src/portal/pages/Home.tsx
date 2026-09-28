@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { ArrowRight, CalendarDays, Gift, Sparkles } from 'lucide-react'
+import { ArrowRight, CalendarDays, CalendarPlus, Gift, Sparkles } from 'lucide-react'
 import { usePortal } from '../PortalProvider'
 import { portalApi } from '../lib/portalApi'
 import { useVocab } from '../lib/vocab'
@@ -55,11 +55,24 @@ export function Home() {
             </Card>
           </Link>
         ) : upcomingLoaded ? (
-          <EmptyState icon={<CalendarDays size={18} aria-hidden />} title={t('portal.home.no_upcoming', 'Nothing booked yet.')} />
+          <div className="space-y-3">
+            <EmptyState icon={<CalendarDays size={18} aria-hidden />} title={t('portal.home.no_upcoming', 'Nothing booked yet.')} />
+            {capabilities.services && (
+              <Link to="/portal/book" className="flex items-center justify-center gap-2 bg-p-accent text-p-accent-ink rounded-p-control min-h-[44px] px-4 text-sm font-semibold p-lift">
+                <CalendarPlus size={16} aria-hidden /> {t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })}
+              </Link>
+            )}
+          </div>
         ) : upcomingPending ? (
           <Skeleton className="h-[72px]" />
         ) : null}
       </section>
+
+      {next && capabilities.services && (
+        <Link to="/portal/book" className="flex items-center justify-center gap-2 bg-p-surface border border-p-border text-p-text rounded-p-control min-h-[44px] px-4 text-sm font-semibold p-lift">
+          <CalendarPlus size={16} aria-hidden /> {t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })}
+        </Link>
+      )}
 
       {capabilities.loyalty && (
         <div className="grid grid-cols-2 gap-3">

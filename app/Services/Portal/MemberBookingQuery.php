@@ -154,7 +154,7 @@ final class MemberBookingQuery
             'payment_status'  => $b->payment_status,
             'total'           => (float) $b->total_amount,
             'currency'        => strtoupper((string) ($b->currency ?: 'EUR')),
-            'discount'        => null,
+            'discount'        => (float) $b->discount_amount > 0 ? ['amount' => round((float) $b->discount_amount, 2), 'label' => $b->discount_label ?: 'Member discount'] : null,
             'can_cancel'      => false,
             'cancel_deadline' => null,
             'notes'           => $b->customer_notes,

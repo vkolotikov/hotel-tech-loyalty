@@ -21,6 +21,9 @@ interface RewardRow {
   points_cost: number
   stock: number | null
   per_member_limit: number | null
+  discount_type: string | null
+  discount_value: number | string | null
+  applies_to: string | null
   expires_at: string | null
   is_active: boolean
   sort_order: number
@@ -31,6 +34,7 @@ interface RewardRow {
 const emptyForm = {
   name: '', description: '', terms: '', category: '',
   points_cost: '500', stock: '', per_member_limit: '',
+  discount_type: '', discount_value: '', applies_to: 'all',
   expires_at: '', is_active: true, sort_order: '0',
 }
 
@@ -75,7 +79,7 @@ export function Rewards() {
       // skipping them made "clear the stock to unlimited" silently keep
       // the old value while toasting success. Laravel's
       // ConvertEmptyStringsToNull turns the '' into a proper null.
-      const clearableOnEdit = ['description', 'terms', 'category', 'stock', 'per_member_limit', 'expires_at']
+      const clearableOnEdit = ['description', 'terms', 'category', 'stock', 'per_member_limit', 'expires_at', 'discount_type', 'discount_value']
       Object.entries(form).forEach(([k, v]) => {
         if (v === '' || v == null) {
           if (editId && clearableOnEdit.includes(k)) fd.append(k, '')
@@ -135,6 +139,9 @@ export function Rewards() {
       points_cost: String(r.points_cost),
       stock: r.stock === null ? '' : String(r.stock),
       per_member_limit: r.per_member_limit === null ? '' : String(r.per_member_limit),
+      discount_type: r.discount_type ?? '',
+      discount_value: r.discount_value == null ? '' : String(r.discount_value),
+      applies_to: r.applies_to ?? 'all',
       expires_at: r.expires_at ? r.expires_at.slice(0, 10) : '',
       is_active: r.is_active,
       sort_order: String(r.sort_order),
@@ -237,6 +244,33 @@ export function Rewards() {
                       <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.expires', 'Expires')}</label>
                       <input type="date" value={form.expires_at} onChange={e => setForm(f => ({ ...f, expires_at: e.target.value }))}
                         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.discount_type', 'Discount type')}</label>
+                      <select value={form.discount_type} onChange={e => setForm(f => ({ ...f, discount_type: e.target.value, discount_value: e.target.value ? f.discount_value : '' }))}
+                        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
+                        <option value="">{t('rewards.form.discount_none', 'No discount')}</option>
+                        <option value="percent_discount">{t('tiers.types.percent_discount', 'Percent discount')}</option>
+                        <option value="fixed_amount">{t('tiers.types.fixed_amount', 'Fixed amount')}</option>
+                      </select>
+                    </div>
+                    {form.discount_type && (
+                      <div>
+                        <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.discount_value', 'Discount value')}</label>
+                        <input type="number" min={0} step="0.01" value={form.discount_value} onChange={e => setForm(f => ({ ...f, discount_value: e.target.value }))}
+                          className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
+                      </div>
+                    )}
+                    <div>
+                      <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.applies_to', 'Applies to')}</label>
+                      <select value={form.applies_to} onChange={e => setForm(f => ({ ...f, applies_to: e.target.value }))}
+                        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
+                        {['all', 'services', 'stays'].map(scope => (
+                          <option key={scope} value={scope}>{t(`tiers.applies.${scope}`, scope)}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                   <label className="flex items-center gap-2 text-sm text-[#a0a0a0]">

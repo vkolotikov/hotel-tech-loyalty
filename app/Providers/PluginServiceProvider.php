@@ -33,6 +33,16 @@ class PluginServiceProvider extends ServiceProvider
             ->by($request->user()
                 ? $request->user()->organization_id.':'.$request->user()->getAuthIdentifier()
                 : 'unauthenticated:'.$request->ip()));
+
+        // Portal coupon-code resolution: 5 attempts/minute per member (or
+        // by IP before a member is known), so brute-forcing REW-/offer
+        // codes can't fish for other members' rewards. Registered here
+        // rather than AppServiceProvider — that provider is not listed in
+        // bootstrap/providers.php (only this one is), so its boot() never
+        // runs; this is the one place `RateLimiter::for` calls actually
+        // execute.
+        RateLimiter::for('portal-coupon', fn (Request $request) => Limit::perMinute(5)
+            ->by('portal-coupon:' . ($request->user()?->id ?? $request->ip())));
         Passport::tokensCan(['mcp:use' => 'Read lead requirements and conversations, customers and bookings; update requested lead statuses and add internal notes']);
         Passport::tokensExpireIn(now()->addHour());
         Passport::refreshTokensExpireIn(now()->addDays(30));

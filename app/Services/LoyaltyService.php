@@ -380,18 +380,28 @@ class LoyaltyService
     }
 
     /**
-     * Calculate points earned for a booking amount.
+     * One formula for "how many points does this spend earn" -- null-safe
+     * on a member without a tier (earns at the base 1.0 rate rather than
+     * crashing on a null `tier->earn_rate` dereference).
      */
-    public function calculateEarnedPoints(LoyaltyMember $member, float $amount, ?int $outletId = null, ?int $propertyId = null): int
+    public function pointsForSpend(LoyaltyMember $member, float $amount, ?int $propertyId = null, ?int $outletId = null): int
     {
-        $earnRate = $member->tier->earn_rate;
+        $base = (float) HotelSetting::getValue('points_per_currency', 1);
+        if ($base <= 0) {
+            $base = 1.0;
+        }
+
+        $earnRate = (float) ($member->tier?->earn_rate ?? 1.0);
 
         // Check outlet override
         if ($outletId) {
             $outlet = \App\Models\Outlet::find($outletId);
             if ($outlet?->earn_rate_override) {
-                $earnRate = $outlet->earn_rate_override;
+                $earnRate = (float) $outlet->earn_rate_override;
             }
+        }
+        if ($earnRate <= 0) {
+            $earnRate = 1.0;
         }
 
         // Apply the highest-matching active earn-rate event multiplier.
@@ -407,7 +417,16 @@ class LoyaltyService
         // holds, the other a promotion running this week.
         $tierMultiplier = app(DiscountService::class)->pointsMultiplierFor($member, $propertyId);
 
-        return (int) floor($amount * $earnRate * $multiplier * $tierMultiplier);
+        return (int) floor($amount * $base * $earnRate * $multiplier * $tierMultiplier);
+    }
+
+    /**
+     * Calculate points earned for a booking amount. Kept for existing
+     * callers; delegates to the single formula in pointsForSpend().
+     */
+    public function calculateEarnedPoints(LoyaltyMember $member, float $amount, ?int $outletId = null, ?int $propertyId = null): int
+    {
+        return $this->pointsForSpend($member, $amount, $propertyId, $outletId);
     }
 
     /**

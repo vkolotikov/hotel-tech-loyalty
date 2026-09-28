@@ -3,8 +3,10 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { usePortal } from '../PortalProvider'
 import { portalApi } from '../lib/portalApi'
+import { buildIcs, downloadIcs } from '../lib/ics'
 import type { BookingKind } from '../lib/types'
 import { Sheet } from '../ui/Sheet'
+import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
 import { DateTime } from '../ui/DateTime'
 import { Money } from '../ui/Money'
@@ -55,6 +57,15 @@ export function BookingSheet({ kind, id, onClose }: { kind: BookingKind; id: num
             {payment && <Row label={t('portal.bookings.payment', 'Payment')}>{payment}</Row>}
             {b.notes && <Row label={t('portal.bookings.notes', 'Your notes')}>{b.notes}</Row>}
           </div>
+          {venue && b.status !== 'cancelled' && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => downloadIcs(buildIcs(b, { name: venue.name, timezone: venue.timezone }), `${b.reference}.ics`)}
+            >
+              {t('portal.book.add_to_calendar', 'Add to calendar')}
+            </Button>
+          )}
           {b.kind === 'service' && portal?.policies.services_cancellation_policy && (
             <div>
               <p className="text-xs font-semibold text-p-text-2 mb-1">{t('portal.bookings.policy', 'Cancellation policy')}</p>

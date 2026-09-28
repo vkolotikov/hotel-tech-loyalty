@@ -54,6 +54,14 @@ class OfferController extends Controller
         $member = $request->user()->loyaltyMember;
         $offer = SpecialOffer::active()->findOrFail($offerId);
 
+        // tier_ids null/empty = open to every tier; otherwise the member's
+        // tier must be one of the listed ones. This was never checked here,
+        // so a bronze member could claim a gold-only offer by id.
+        $tierIds = array_map('intval', (array) ($offer->tier_ids ?? []));
+        if ($tierIds !== [] && !in_array((int) $member->tier_id, $tierIds, true)) {
+            return response()->json(['error' => 'wrong_tier', 'message' => 'This offer is for another membership level.'], 422);
+        }
+
         try {
             $memberOffer = DB::transaction(function () use ($member, $offer, $offerId) {
                 // Lock the offer row before reading the counter. `times_used`

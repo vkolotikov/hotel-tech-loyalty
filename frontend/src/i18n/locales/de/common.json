@@ -1415,6 +1415,10 @@
       "stock": "Bestand",
       "stock_hint": "Leer = unbegrenzt",
       "per_member_limit": "Limit pro Mitglied",
+      "discount_type": "Rabatttyp",
+      "discount_value": "Rabattwert",
+      "discount_none": "Kein Rabatt",
+      "applies_to": "Gilt für",
       "expires": "Läuft ab",
       "active_visible": "Aktiv (für Mitglieder sichtbar)",
       "image": "Bild",
@@ -1619,7 +1623,8 @@
       "free_night": "Gratis-Übernachtung",
       "upgrade": "Upgrade",
       "bonus_points": "Bonuspunkte",
-      "cashback": "Cashback"
+      "cashback": "Cashback",
+      "fixed_amount": "fester Betrag"
     },
     "form": {
       "edit_title": "Angebot bearbeiten",
@@ -1630,6 +1635,11 @@
       "upload_image": "Bild hochladen",
       "type": "Typ",
       "value": "Wert",
+      "code": "Code",
+      "code_hint": "Mitglieder geben dies im Portal ein",
+      "tiers": "Stufen",
+      "per_member_limit": "Limit pro Mitglied",
+      "applies_to": "Gilt für",
       "start_date": "Startdatum",
       "start_placeholder": "Startdatum wählen",
       "end_date": "Enddatum",
@@ -1660,6 +1670,7 @@
       "recognition": "Anerkennung",
       "points": "Punkte",
       "access": "Zugang",
+      "discount": "Rabatt",
       "other": "Sonstiges"
     },
     "fulfillment_modes": {
@@ -1712,6 +1723,26 @@
   "tiers": {
     "title": "Stufen",
     "add": "Stufe hinzufügen",
+    "value_type": "Werttyp",
+    "value_amount": "Betrag",
+    "applies_to": "Gilt für",
+    "format": {
+      "percent_off": "{{amount}} % Rabatt",
+      "amount_off": "{{amount}} Rabatt",
+      "points_multiplier": "{{amount}}× Punkte"
+    },
+    "applies": {
+      "all": "Alle Buchungen",
+      "services": "Nur Leistungen",
+      "stays": "Nur Aufenthalte"
+    },
+    "types": {
+      "text": "Freitext",
+      "percent_discount": "Prozentualer Rabatt",
+      "fixed_amount": "Fester Betrag",
+      "points_multiplier": "Punkte-Multiplikator",
+      "free_item": "Kostenloser Artikel"
+    },
     "preview": {
       "title": "Stufen-Vorschau-Rechner",
       "subtitle": "— welche Stufe würde ein Mitglied erreichen?",
@@ -1767,6 +1798,7 @@
     "expanded": {
       "title": "Stufenvorteile",
       "remove": "Entfernen",
+      "edit": "Bearbeiten",
       "select_benefit": "Vorteil auswählen…",
       "value_placeholder": "Wert (optional)",
       "assign": "Zuweisen"
@@ -1781,6 +1813,11 @@
       "benefit_removed": "Vorteil entfernt"
     },
     "loading": "Lädt…"
+  },
+  "service_bookings": {
+    "source_portal": "Mitgliederportal",
+    "list_price": "Liste",
+    "discount": "Rabatt"
   },
   "knowledge_base": {
     "brand_required": "die Wissensdatenbank",

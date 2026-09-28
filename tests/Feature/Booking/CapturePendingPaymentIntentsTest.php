@@ -265,6 +265,120 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->assertStringContainsString('[dry-run]', $output);
     }
 
+    // ── Service bookings and their own status (final review, Important 4) ──
+
+    /** A Stripe double that is switched on and answers `retrieve` with the given status. */
+    private function enabledStripe(string $status): \Mockery\MockInterface
+    {
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('retrievePaymentIntent')->andReturnUsing(
+            fn (string $id) => \Stripe\PaymentIntent::constructFrom(['id' => $id, 'status' => $status, 'amount' => 6000]),
+        );
+        $this->app->instance(StripeService::class, $stripe);
+        return $stripe;
+    }
+
+    private function serviceBooking(string $status, string $pi, string $paymentStatus = 'authorized'): int
+    {
+        return \DB::table('service_bookings')->insertGetId([
+            'organization_id'          => app('current_organization_id'),
+            'status'                   => $status,
+            'payment_status'           => $paymentStatus,
+            'stripe_payment_intent_id' => $pi,
+            'created_at'               => now()->subHour(),
+            'updated_at'               => now()->subHour(),
+        ]);
+    }
+
+    private function audits(string $action): int
+    {
+        return \DB::table('audit_logs')->where('action', $action)->count();
+    }
+
+    public function test_a_pending_service_booking_is_not_captured_before_staff_confirm_it(): void
+    {
+        $id = $this->serviceBooking('pending', 'pi_test_pending_1');
+        $stripe = $this->enabledStripe('requires_capture');
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->runCron();
+
+        $this->assertStringContainsString('No pending captures', Artisan::output());
+        $this->assertSame('authorized', \DB::table('service_bookings')->where('id', $id)->value('payment_status'));
+    }
+
+    public function test_a_confirmed_service_booking_is_captured_as_before(): void
+    {
+        $id = $this->serviceBooking('confirmed', 'pi_test_confirmed_1');
+        $stripe = $this->enabledStripe('requires_capture');
+        $stripe->shouldReceive('capturePaymentIntent')->once()->with('pi_test_confirmed_1')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_confirmed_1', 'status' => 'succeeded']));
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->runCron();
+
+        $this->assertSame('paid', \DB::table('service_bookings')->where('id', $id)->value('payment_status'));
+        $this->assertSame(1, $this->audits('service_booking.capture.recovered'));
+    }
+
+    public function test_a_cancelled_or_no_show_booking_has_its_hold_cancelled_not_captured(): void
+    {
+        $cancelled = $this->serviceBooking('cancelled', 'pi_test_cancelled_1');
+        $noShow = $this->serviceBooking('no_show', 'pi_test_noshow_1');
+        $stripe = $this->enabledStripe('requires_capture');
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_test_cancelled_1', 'abandoned')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_cancelled_1', 'status' => 'canceled']));
+        $stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_test_noshow_1', 'abandoned')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_noshow_1', 'status' => 'canceled']));
+
+        $this->runCron();
+
+        $this->assertSame('canceled', \DB::table('service_bookings')->where('id', $cancelled)->value('payment_status'));
+        $this->assertSame('canceled', \DB::table('service_bookings')->where('id', $noShow)->value('payment_status'));
+        $this->assertSame(2, $this->audits('service_booking.capture.cancelled_booking'));
+    }
+
+    public function test_a_cancelled_booking_whose_payment_was_already_taken_is_flagged_once_and_left_alone(): void
+    {
+        $id = $this->serviceBooking('cancelled', 'pi_test_taken_1');
+        $stripe = $this->enabledStripe('succeeded');
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->runCron();
+        $this->runCron(); // the row stays in the sweep; the flag must not repeat
+
+        $this->assertSame('authorized', \DB::table('service_bookings')->where('id', $id)->value('payment_status'));
+        $this->assertSame(1, $this->audits('service_booking.capture.needs_refund'));
+    }
+
+    public function test_dry_run_reports_both_cancelled_cases_and_writes_nothing(): void
+    {
+        $held = $this->serviceBooking('cancelled', 'pi_test_dry_held');
+        $taken = $this->serviceBooking('no_show', 'pi_test_dry_taken');
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_test_dry_held')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_dry_held', 'status' => 'requires_capture']));
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_test_dry_taken')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_dry_taken', 'status' => 'succeeded']));
+        $stripe->shouldNotReceive('capturePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $this->app->instance(StripeService::class, $stripe);
+
+        $this->runCron(['--dry-run' => true]);
+        $output = Artisan::output();
+
+        $this->assertStringContainsString("[dry-run] would cancel the hold on cancelled service booking #{$held}", $output);
+        $this->assertStringContainsString("[dry-run] would flag service booking #{$taken} for a refund", $output);
+        $this->assertSame('authorized', \DB::table('service_bookings')->where('id', $held)->value('payment_status'));
+        $this->assertSame('authorized', \DB::table('service_bookings')->where('id', $taken)->value('payment_status'));
+        $this->assertSame(0, \DB::table('audit_logs')->count());
+    }
+
     public function test_limit_option_caps_processed_rows(): void
     {
         // --limit caps the per-run sweep size (back-pressure for

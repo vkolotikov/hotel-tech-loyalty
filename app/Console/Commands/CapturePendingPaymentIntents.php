@@ -30,7 +30,9 @@ use Illuminate\Support\Facades\Log;
  *       AND payment_status IN ('authorized', 'pending')
  *       AND stripe_payment_intent_id LIKE 'pi_%'
  *       AND created_at BETWEEN now()-6 days AND now()-5 minutes
- *   - ServiceBooking rows under the same criteria.
+ *   - ServiceBooking rows under the same criteria, EXCEPT status 'pending'
+ *     (awaiting staff confirmation — captured on the first run after staff
+ *     confirm it; if they never do, the hold lapses uncharged).
  *
  *   The 5-minute lower bound gives the synchronous capture path
  *   plenty of slack so we don't race against a confirm() that's still
@@ -51,6 +53,13 @@ use Illuminate\Support\Facades\Log;
  *     authorising; the cron isn't responsible for those).
  *   - status = processing → leave alone (Stripe is working on it).
  *   - retrieve fails → audit, leave alone.
+ *
+ * Service bookings whose own status is 'cancelled' or 'no_show':
+ *   - status = requires_capture → cancel the PI (reason 'abandoned'),
+ *     payment_status='canceled', audit service_booking.capture.cancelled_booking.
+ *   - status = succeeded → leave the row as it is (a refund is the
+ *     operator's action) and write service_booking.capture.needs_refund once.
+ *   --dry-run reports both without writing.
  *
  * Idempotent — re-running over the same row is safe because we
  * dispatch on the live Stripe status, not on the local row's status.
@@ -107,8 +116,16 @@ class CapturePendingPaymentIntents extends Command
             ->get();
 
         // ── Service bookings ───────────────────────────────────────────
+        // A booking still awaiting staff confirmation (`status = pending`,
+        // `services_require_staff_confirmation`) is not charged until staff
+        // accept it: it is left out here and captured by the first run after
+        // it is confirmed, while still inside the six-day window. If staff
+        // never confirm it, the hold lapses uncharged. Filtered in the query,
+        // not per row, so pending rows never crowd real captures out of
+        // --limit.
         $services = ServiceBooking::withoutGlobalScopes()
             ->whereIn('payment_status', ['authorized', 'pending'])
+            ->where(fn ($q) => $q->where('status', '!=', 'pending')->orWhereNull('status'))
             ->whereNotNull('stripe_payment_intent_id')
             ->where('stripe_payment_intent_id', 'like', 'pi_%')
             ->where('stripe_payment_intent_id', 'not like', 'pi_mock_%')
@@ -132,6 +149,8 @@ class CapturePendingPaymentIntents extends Command
         $expired = 0;
         $skipped = 0;
         $failed  = 0;
+        $released = 0;
+        $needsRefund = 0;
 
         foreach ($bookings as $mirror) {
             $outcome = $this->processBooking($stripe, $mirror, $dryRun);
@@ -151,11 +170,13 @@ class CapturePendingPaymentIntents extends Command
                 case 'already_captured': $alreadyCaptured++;  break;
                 case 'expired':          $expired++;          break;
                 case 'failed':           $failed++;           break;
+                case 'released':         $released++;         break;
+                case 'needs_refund':     $needsRefund++;      break;
                 default:                 $skipped++;          break;
             }
         }
 
-        $this->info("Sweep complete: {$captured} captured · {$alreadyCaptured} already captured · {$expired} expired · {$skipped} skipped · {$failed} failed");
+        $this->info("Sweep complete: {$captured} captured · {$alreadyCaptured} already captured · {$expired} expired · {$skipped} skipped · {$failed} failed · {$released} released (booking cancelled) · {$needsRefund} need a refund");
 
         return self::SUCCESS;
     }
@@ -302,6 +323,19 @@ class CapturePendingPaymentIntents extends Command
 
         $status = (string) ($intent->status ?? '');
 
+        // A booking cancelled (or marked no-show) inside the capture window
+        // must not be charged: release a hold that is still open, and flag —
+        // never touch — one whose payment was already taken (a refund is the
+        // operator's decision, in the Stripe dashboard).
+        if (in_array($booking->status, ['cancelled', 'no_show'], true)) {
+            if ($status === 'requires_capture') {
+                return $this->releaseCancelledServiceBooking($stripe, $booking, $piId, $dryRun);
+            }
+            if ($status === 'succeeded') {
+                return $this->flagServiceBookingForRefund($booking, $piId, $dryRun);
+            }
+        }
+
         if ($status === 'requires_capture') {
             if ($dryRun) {
                 $this->line("[dry-run] would capture service booking #{$booking->id} (PI {$piId})");
@@ -351,6 +385,60 @@ class CapturePendingPaymentIntents extends Command
         }
 
         return 'skipped';
+    }
+
+    /** A cancelled / no-show service booking whose card is still only held: cancel the hold instead of capturing it. */
+    private function releaseCancelledServiceBooking(StripeService $stripe, ServiceBooking $booking, string $piId, bool $dryRun): string
+    {
+        if ($dryRun) {
+            $this->line("[dry-run] would cancel the hold on cancelled service booking #{$booking->id} (PI {$piId}, status {$booking->status})");
+            return 'released';
+        }
+        try {
+            $stripe->cancelPaymentIntent($piId, 'abandoned');
+        } catch (\Throwable $e) {
+            Log::error('Capture cron (service) — cancel of a cancelled booking\'s hold failed', [
+                'service_booking_id' => $booking->id,
+                'pi_id'              => $piId,
+                'error'              => $e->getMessage(),
+            ]);
+            return 'failed';
+        }
+        try {
+            $booking->update(['payment_status' => 'canceled']);
+        } catch (\Throwable) {}
+        $this->auditOutcome($booking->organization_id, 'service_booking.capture.cancelled_booking', $piId, [
+            'service_booking_id' => $booking->id,
+            'booking_status'     => $booking->status,
+        ], "Booking #{$booking->id} is {$booking->status}; PI {$piId} was cancelled instead of captured", 'service_booking', (int) $booking->id);
+        return 'released';
+    }
+
+    /**
+     * A cancelled / no-show service booking whose payment was already taken:
+     * left exactly as it is (a refund is the operator's action) and flagged
+     * with one audit row. The row stays in the sweep while its
+     * payment_status is still open, so the flag is written only once.
+     */
+    private function flagServiceBookingForRefund(ServiceBooking $booking, string $piId, bool $dryRun): string
+    {
+        if ($dryRun) {
+            $this->line("[dry-run] would flag service booking #{$booking->id} for a refund (PI {$piId} already captured, status {$booking->status})");
+            return 'needs_refund';
+        }
+        $flagged = AuditLog::withoutGlobalScopes()
+            ->where('organization_id', $booking->organization_id)
+            ->where('action', 'service_booking.capture.needs_refund')
+            ->where('subject_type', 'service_booking')
+            ->where('subject_id', $booking->id)
+            ->exists();
+        if (!$flagged) {
+            $this->auditOutcome($booking->organization_id, 'service_booking.capture.needs_refund', $piId, [
+                'service_booking_id' => $booking->id,
+                'booking_status'     => $booking->status,
+            ], "Booking #{$booking->id} is {$booking->status} but PI {$piId} was already captured — refund it in the Stripe dashboard if due", 'service_booking', (int) $booking->id);
+        }
+        return 'needs_refund';
     }
 
     /**
@@ -462,14 +550,14 @@ class CapturePendingPaymentIntents extends Command
         return $processed;
     }
 
-    private function auditOutcome(?int $orgId, string $action, string $piId, array $extra, string $description): void
+    private function auditOutcome(?int $orgId, string $action, string $piId, array $extra, string $description, string $subjectType = 'stripe_payment', ?int $subjectId = null): void
     {
         try {
             AuditLog::create([
                 'organization_id' => $orgId,
                 'action'          => $action,
-                'subject_type'    => 'stripe_payment',
-                'subject_id'      => null,
+                'subject_type'    => $subjectType,
+                'subject_id'      => $subjectId,
                 'new_values'      => array_merge(['payment_intent_id' => $piId], $extra),
                 'description'     => $description,
             ]);

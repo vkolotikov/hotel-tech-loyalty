@@ -74,8 +74,18 @@ class DiscountController extends Controller
     public function useOffer(Request $request, int $memberOfferId): JsonResponse
     {
         try {
-            $claim = DB::transaction(function () use ($memberOfferId) {
-                $claim = MemberOffer::whereKey($memberOfferId)->lockForUpdate()->first();
+            $orgId = app('current_organization_id');
+            $claim = DB::transaction(function () use ($memberOfferId, $orgId) {
+                // MemberOffer is deliberately not tenant-scoped (see the
+                // model doc-block) — every query site anchors to a member
+                // instead. This one didn't: any authenticated staff account
+                // could mark ANY organisation's claim used just by
+                // incrementing the id. Join through the member to the
+                // caller's own organisation.
+                $claim = MemberOffer::whereKey($memberOfferId)
+                    ->whereHas('member', fn ($q) => $q->withoutGlobalScopes()->where('organization_id', $orgId))
+                    ->lockForUpdate()
+                    ->first();
 
                 if (!$claim) {
                     abort(404, 'Offer claim not found.');

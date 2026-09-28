@@ -14,6 +14,7 @@ use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * Admin CRUD for the redemption catalog + redemption-fulfilment ledger.
@@ -57,6 +58,12 @@ class RewardAdminController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $this->validatePayload($request);
+        // Not sent by the caller: fall back to the column default explicitly
+        // so the in-memory model returned below (not re-fetched) carries it —
+        // Eloquent::create() never backfills a DB column default onto the
+        // instance it hands back.
+        $data['applies_to'] = $data['applies_to'] ?? 'all';
+        $this->clearDiscountValueWhenTypeCleared($request, $data);
 
         if ($request->hasFile('image')) {
             $data['image_url'] = MediaService::upload($request->file('image'), 'rewards');
@@ -77,6 +84,7 @@ class RewardAdminController extends Controller
         $old = $reward->toArray();
 
         $data = $this->validatePayload($request, $reward->id);
+        $this->clearDiscountValueWhenTypeCleared($request, $data);
 
         if ($request->hasFile('image')) {
             $data['image_url'] = MediaService::upload($request->file('image'), 'rewards');
@@ -264,9 +272,28 @@ class RewardAdminController extends Controller
         return response()->json(['redemption' => $row->fresh(['reward', 'member.user'])]);
     }
 
+    /**
+     * A reward's discount couldn't be cleared once set: sending
+     * `discount_type: null` left `discount_value` in place, because
+     * `discount_value` simply wasn't present in the request the client sent
+     * to clear it, so `$reward->update($data)` never touched that column.
+     * Only clear when `discount_type` was actually SENT and is empty — a
+     * request that omits the field entirely (e.g. "just rename this
+     * reward") must leave the discount exactly as it was, the same
+     * has()-gated pattern `BenefitAdminController::assignTierBenefit` uses
+     * for its own typed fields.
+     */
+    private function clearDiscountValueWhenTypeCleared(Request $request, array &$data): void
+    {
+        if ($request->has('discount_type') && !$request->filled('discount_type')) {
+            $data['discount_type'] = null;
+            $data['discount_value'] = null;
+        }
+    }
+
     private function validatePayload(Request $request, ?int $id = null): array
     {
-        return $request->validate([
+        return Validator::make($request->all(), [
             'name'             => 'required|string|max:191',
             'description'      => 'nullable|string',
             'terms'            => 'nullable|string',
@@ -274,10 +301,24 @@ class RewardAdminController extends Controller
             'points_cost'      => 'required|integer|min:1|max:1000000',
             'stock'            => 'nullable|integer|min:0|max:1000000',
             'per_member_limit' => 'nullable|integer|min:1|max:1000',
+            // Typed discount: what makes a reward's redemption enforceable
+            // against a real booking total, not just a catalog description.
+            'discount_type'    => 'nullable|in:percent_discount,fixed_amount',
+            'discount_value'   => 'nullable|numeric|min:0.01|max:100000|required_with:discount_type',
+            // Booking scope: which kind of booking this reward's discount is
+            // allowed to apply to (see BookingScope).
+            'applies_to'       => 'nullable|in:all,services,stays',
             'expires_at'       => 'nullable|date',
             'is_active'        => 'sometimes|boolean',
             'sort_order'       => 'sometimes|integer|min:0|max:10000',
             'image'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
-        ]);
+        ])->after(function ($validator) use ($request) {
+            // A percentage above 100 would hand money back — the same guard
+            // BenefitAdminController applies to tier benefits.
+            if ($request->input('discount_type') === 'percent_discount'
+                && (float) $request->input('discount_value', 0) > 100) {
+                $validator->errors()->add('discount_value', 'A percentage discount cannot exceed 100%.');
+            }
+        })->validate();
     }
 }

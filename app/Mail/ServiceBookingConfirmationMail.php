@@ -44,6 +44,13 @@ class ServiceBookingConfirmationMail extends Mailable
         // → falls through to hotel framing (Reservation Confirmed,
         // hotel vocabulary). The services widget already passes this.
         public ?string $industry = null,
+        // Phase 9.x (member portal) — the member's discount, if any, and
+        // the payment wording for the row underneath the total. Null when
+        // there is no discount or the call site (the widget) has no
+        // payment status to report.
+        public ?float $discountAmount = null,
+        public ?string $discountLabel = null,
+        public ?string $paymentStatus = null,
     ) {
         // Capture the acting tenant NOW; envelope() runs later in the
         // worker, where no org is bound. See Concerns\SendsAsVenue.

@@ -53,6 +53,16 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - `frontend/src/portal/` uses only `p-*` tokens and member endpoints; every string is `t('portal.…')` in all five
   locales; new API lives under `member/portal/*` and the mobile app's member endpoints keep their shapes. Read
   `docs/member-portal.md` before touching it.
+- Prices are computed server-side at quote, payment-intent and confirm; the client never sends a total. Coupons
+  are explicit (never applied without the member choosing them); automatic tier benefits are scoped by
+  `applies_to`.
+- A payment intent pays for exactly one booking of one slot; a hold is released on every failed confirm but
+  never when a booking already carries the intent.
+- Booking-flow decisions (which sentence, which step to bounce back to, whether to clear the coupon or the
+  slot) live in pure functions — `frontend/src/portal/pages/book/steps.ts`, `payOutcome.ts` — because the
+  frontend tests render to a string and cannot run effects or handlers.
+- Error sentences come from `bookErrorKey()` / `bookErrorFallback()` in `frontend/src/portal/lib/portalApi.ts`;
+  never keep a second, local copy of them.
 
 ## Secrets
 

@@ -304,4 +304,15 @@ class StripeServiceHelpersTest extends TestCase
         $this->assertStringContainsString('Settings', $msg,
             'Auth error message should reference the admin Settings location to re-paste the key.');
     }
+
+    public function test_to_smallest_unit_knows_zero_decimal_currencies(): void
+    {
+        // Final review, Minor 3: the one conversion to Stripe's minor units.
+        // With an explicit currency it needs no organisation and no key.
+        $stripe = new StripeService();
+
+        $this->assertSame(5400, $stripe->toSmallestUnit(5400.0, 'JPY'));
+        $this->assertSame(5400, $stripe->toSmallestUnit(54.0, 'eur'));
+        $this->assertSame(1999, $stripe->toSmallestUnit(19.99, 'EUR'));
+    }
 }

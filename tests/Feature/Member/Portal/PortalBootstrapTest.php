@@ -374,6 +374,26 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         $this->assertSame(0, $json['counts']['upcoming_bookings']);
     }
 
+    /**
+     * Final review, escalated Minor 6: portal booking needs a membership row
+     * (quote, payment-intent and confirm all answer `no_membership` without
+     * one), so a member-less user at a venue that takes appointments must not
+     * be shown Book at all.
+     */
+    public function test_a_user_without_a_member_row_at_a_bookable_venue_is_not_offered_booking(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $this->rota($org);
+        LoyaltyMember::withoutGlobalScopes()->whereKey($member->id)->delete();
+        LoyaltyTier::withoutGlobalScopes()->where('organization_id', $org->id)->update(['is_active' => false]);
+
+        $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
+
+        $this->assertNull($json['member']);
+        $this->assertFalse($json['capabilities']['services'], 'the venue takes appointments, but this user cannot book through the portal');
+    }
+
     public function test_the_profile_endpoint_also_self_heals_a_missing_row(): void
     {
         $org = $this->tenant();

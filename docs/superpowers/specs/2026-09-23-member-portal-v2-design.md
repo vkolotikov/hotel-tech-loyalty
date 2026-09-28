@@ -158,13 +158,16 @@ and a 2 px hover lift. Signature element: the member card on Home, which is also
 | `--p-text` / `--p-text-2` | `#17191C` / `#5F646B` | `#F2F2F0` / `#A2A7AE` |
 | `--p-border` | `#E4E1DA` | `#2E333A` |
 | `--p-accent` / `--p-accent-ink` / `--p-accent-deep` | from the venue (§4, accent) | dark variants from the same source |
-| `--p-success` / `--p-warning` / `--p-danger` | `#1F7A4D` / `#8A5C00` / `#B3261E` | `#4CC38A` / `#E5B95C` / `#F28B82` |
+| `--p-success` / `--p-warning` / `--p-danger` | `#1A6B43` / `#8A5C00` / `#B3261E` | `#4CC38A` / `#E5B95C` / `#F28B82` |
+| `--p-scrim` (sheet backdrop, used at 50 %) | `#17191C` | `#000000` |
 | `--p-radius-card` / `--p-radius-control` | 18 px / 12 px | same |
 | `--p-font-display` / `--p-font-body` | industry face / Inter | same |
 
 Body text contrast is ≥ 4.5:1 in both modes (the values above are chosen for that; the plan's screenshot step
 verifies with a contrast check — that pass found the first draft's light `--p-warning`, `#9A6700`, at 4.29:1 on the
-paper and lowered it to `#8A5C00`, 5.07:1). Tailwind gains a `p` colour namespace (`p-bg`, `p-surface`, `p-text`, `p-accent`,
+paper and lowered it to `#8A5C00`, 5.07:1; phase 2's browser pass measured the light `--p-success`, `#1F7A4D`, at
+4.31:1 as text on its own 10 % tint over the paper — the banner/notice/chip pairing — and lowered it to `#1A6B43`,
+5.22:1; `frontend/src/portal/theme/contrast.test.ts` now pins every tone pair at ≥ 4.5:1 in both modes). Tailwind gains a `p` colour namespace (`p-bg`, `p-surface`, `p-text`, `p-accent`,
 …) bound to these variables with `<alpha-value>` support, plus `rounded-p-card` / `rounded-p-control`.
 
 **Accent.** The bootstrap payload carries `venue.accent = {hex, ink, deep, dark_hex, dark_ink, dark_deep}` computed
@@ -283,6 +286,30 @@ Ordered by start ascending for `upcoming`, descending for `past`, 20 per page. T
 ---
 
 ## 6. Phase 2 — service booking with member pricing, coupons, payment
+
+> **Built 2026-09 — decisions recorded while planning and building.** Rulings plan2-1..8 are
+> recorded in the plan's header (`docs/superpowers/plans/2026-09-25-member-portal-v2-phase-2.md`);
+> read them alongside this section — the owner may overturn any of them. Execution surfaced these
+> decisions that changed or sharpened what §6 says below:
+> - The booking window (§6.2/§6.4) refuses with two specific codes, `too_soon` and `too_far_ahead`,
+>   not one generic error.
+> - A slot that was just taken raises a dedicated `SlotTakenException`, not a generic runtime error,
+>   so the portal controller can tell it apart from an unrelated failure.
+> - The payment guard (`PortalPaymentIntentGuard`) binds an intent to one slot and one booking by
+>   its metadata, refuses one that already pays for another booking, releases the hold on every
+>   failed confirm, and never cancels an intent a real booking already carries — and only ever
+>   cancels the calling member's own intent, never a stranger's.
+> - Portal PaymentIntents are created with `allow_redirects: 'never'`; redirect-based payment
+>   methods are off this phase.
+> - Add-on (extra) prices are sent to the portal as numbers; the public widget's own payload is
+>   left as the legacy string form it has always sent.
+> - The offer per-member limit (§6.3) is enforced by the one-claim-per-member design — `member_offers`
+>   unique on `(member_id, offer_id)` — not by counting claims against `per_member_limit`.
+> - Points on completion (§6.6) are awarded by explicit calls from both admin endpoints that can
+>   complete a booking (`updateStatus` and `bulk`), not by a model observer, because `bulk` writes
+>   through the query builder and fires no events.
+> - A unique index on `(organization_id, stripe_payment_intent_id)` is deferred pending a
+>   production data check; `assertUnused()` is today's guard, not a database constraint.
 
 ### 6.1 Flow (member side)
 

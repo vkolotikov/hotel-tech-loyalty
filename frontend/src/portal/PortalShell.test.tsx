@@ -26,6 +26,10 @@ const base: PortalBootstrap = {
   counts: { unread_notifications: 0, upcoming_bookings: 2 },
 }
 
+function withCaps(overrides: Partial<PortalBootstrap['capabilities']>): PortalBootstrap {
+  return { ...base, capabilities: { ...base.capabilities, ...overrides } }
+}
+
 function render(data: PortalBootstrap) {
   const value: PortalContextValue = { data, isLoading: false, isError: false, error: null, refetch: () => {} }
   return renderToStaticMarkup(
@@ -60,8 +64,13 @@ describe('PortalShell', () => {
     expect(render({ ...base, capabilities: { ...base.capabilities, loyalty: false } })).not.toContain('href="/portal/rewards"')
   })
 
-  it('never links to a Book page in this phase', () => {
-    expect(render(base)).not.toContain('href="/portal/book"')
+  it('links to Book when the venue takes appointments and not otherwise', () => {
+    expect(render(withCaps({ services: true }))).toContain('href="/portal/book"')
+    expect(render(withCaps({ services: false }))).not.toContain('href="/portal/book"')
+  })
+
+  it('lays five items out in five columns on phones', () => {
+    expect(render(withCaps({ services: true, loyalty: true }))).toContain('grid-cols-5')
   })
 
   it('badges the bookings tab with the upcoming count', () => {
