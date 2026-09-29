@@ -211,22 +211,16 @@ class OrganizationSetupServiceTest extends TestCase
         );
     }
 
-    public function test_medical_org_gets_no_loyalty_settings_at_all(): void
+    public function test_medical_org_gets_the_operational_loyalty_settings_like_every_industry(): void
     {
-        // Medical has no patient-loyalty programme (decision #5) — the
-        // operational settings would be dead weight and imply a
-        // programme that deliberately does not exist.
+        // Every industry has memberships (owner's decision, 2026-09-29).
         $org = $this->freshBeautyOrg();
         $org->update(['industry' => 'medical']);
 
         $this->service->setupDefaults($org->fresh());
 
-        foreach (['welcome_bonus_points', 'referrer_bonus_points',
-                  'points_expiry_months', 'points_per_currency'] as $key) {
-            $this->assertNull(
-                HotelSetting::where('key', $key)->first(),
-                "Medical org must NOT have loyalty setting '{$key}'.",
-            );
+        foreach (['referrer_bonus_points', 'points_expiry_months', 'points_per_currency'] as $key) {
+            $this->assertNotNull(HotelSetting::where('key', $key)->first(), "Medical org must have loyalty setting '{$key}'.");
         }
     }
 

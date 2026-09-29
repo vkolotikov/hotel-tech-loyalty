@@ -457,6 +457,12 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                   onChange={e => handleChange('booking_max_nights', e.target.value)} className={inputClass} />
               </div>
             </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Free cancellation (hours before arrival)</label>
+              <input type="number" value={getVal('booking_cancel_hours') || '48'} min={0} max={720}
+                onChange={e => handleChange('booking_cancel_hours', e.target.value)} className={inputClass} />
+              <p className="text-[10px] text-gray-500 mt-1">Members can cancel a stay in the portal free of charge until this many hours before check-in. 0 means until check-in.</p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
@@ -466,6 +472,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                 onChange={e => updatePolicies({ ...bookingPolicies, cancellation_policy: e.target.value })}
                 placeholder="e.g. Free cancellation up to 48 hours before check-in…"
                 rows={2} className={inputClass} />
+              <p className="text-[10px] text-gray-500 mt-1">The text members read. The hours above are what the member portal enforces; keep the two in step.</p>
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Payment Terms</label>
@@ -531,6 +538,12 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                 onChange={e => handleChange('services_max_advance_days', e.target.value)}
                 className={inputClass} />
             </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Free cancellation (hours before)</label>
+              <input type="number" value={getVal('services_cancel_hours') || '24'} min={0} max={720}
+                onChange={e => handleChange('services_cancel_hours', e.target.value)} className={inputClass} />
+              <p className="text-[10px] text-gray-500 mt-1">Members can cancel an appointment in the portal free of charge until this many hours before it starts. 0 means until it starts.</p>
+            </div>
             {isOn('services_require_deposit') && (
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Deposit (%)</label>
@@ -547,6 +560,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
               onChange={e => handleChange('services_cancellation_policy', e.target.value)}
               placeholder="e.g. Free cancellation up to 4 hours before appointment. Late cancellations forfeit the deposit."
               rows={2} className={inputClass} />
+            <p className="text-[10px] text-gray-500 mt-1">The text members read. The hours above are what the member portal enforces; keep the two in step.</p>
           </div>
 
           <div className="flex flex-wrap items-center gap-6 pt-3 mt-3 border-t border-white/[0.04]">

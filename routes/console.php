@@ -128,6 +128,24 @@ Schedule::command('bookings:capture-pending-pis')
     ->everyTenMinutes()
     ->withoutOverlapping(15);
 
+// Points for members' stays that ended. A stay has no "completed" moment of
+// its own, so this looks once a day for member stays whose departure date
+// has passed (in the venue's own time zone) and awards them once.
+Schedule::command('bookings:award-stay-points')
+    ->dailyAt('04:15')
+    ->withoutOverlapping(30);
+
+// Card holds the member portal took for a booking that was never written
+// (the browser closed between authorisation and confirm). No row carries
+// them, so the capture job cannot see them; this releases one once its
+// card was actually authorised more than 45 minutes ago (by default),
+// instead of leaving it on the member's card for a week. The overlap lock
+// outlasts the interval (45 > 30 minutes, like the capture job's 15 > 10), so
+// a slow run is never joined by the next tick.
+Schedule::command('bookings:release-orphan-portal-holds')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping(45);
+
 // Engagement Hub daily summary email. Hourly cron — the command itself
 // gates on each org's local 8am (so a Tokyo org and a New York org both
 // get their summary at 8am local) and dedupes via

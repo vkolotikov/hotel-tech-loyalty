@@ -3,6 +3,7 @@
 namespace App\Services\Booking;
 
 use App\Models\BookingRoom;
+use App\Models\HotelSetting;
 use App\Models\Service;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -52,5 +53,25 @@ final class BookingCapability
             ->where('organization_id', $orgId)
             ->where('is_active', true)
             ->exists();
+    }
+
+    /**
+     * Rooms to sell AND a PMS to write the stay to. With the Smoobu
+     * integration switched off the engine books against a mock and the
+     * mirror it writes is hidden from staff and from the member
+     * (IntegrationDataScope), so nothing is offered online. The switch is
+     * read for the named organisation — a public request has no bound tenant.
+     */
+    public function staysBookableOnline(int $orgId): bool
+    {
+        if (!$this->staysBookable($orgId)) {
+            return false;
+        }
+        $switch = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'smoobu_enabled')
+            ->value('value');
+
+        return $switch === null || filter_var($switch, FILTER_VALIDATE_BOOLEAN);
     }
 }

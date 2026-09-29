@@ -392,7 +392,7 @@ class ServiceBookingController extends Controller
 
         try {
             return DB::transaction(function () use ($data, $service, $scheduler, $request, $lockKey) {
-                DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+                \App\Support\AdvisoryLock::within($lockKey);
 
                 // Re-check conflicts inside the lock — authoritative.
                 $reservation = $scheduler->reserveSlot(

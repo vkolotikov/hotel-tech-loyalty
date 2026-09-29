@@ -75,6 +75,22 @@ export function paymentLabel(
   return t(`portal.bookings.payment_status.${status}`, fallback)
 }
 
+/**
+ * The payment row of a booking's sheet. A stay paid at the venue is stored `open` where an
+ * appointment is `unpaid`; both read "Pay at the venue". Once a booking with nothing paid is
+ * cancelled there is no payment to speak of, so the row is dropped (null). Money that did move
+ * (paid, refunded, a card hold) is always shown.
+ */
+// eslint-disable-next-line react-refresh/only-export-components
+export function bookingPaymentLabel(
+  b: Pick<PortalBooking, 'status' | 'payment_status' | 'paid_online'>,
+  t: (key: string, defaultValue: string) => string,
+): string | null {
+  const unpaid = b.payment_status === 'unpaid' || (b.payment_status === 'open' && !b.paid_online)
+  if (unpaid && b.status === 'cancelled') return null
+  return paymentLabel(unpaid ? 'unpaid' : b.payment_status, t)
+}
+
 export function BookingRow({ booking: b, onOpen }: { booking: PortalBooking; onOpen: () => void }) {
   const { t } = useTranslation()
   const Icon = b.kind === 'stay' ? BedDouble : CalendarDays

@@ -45,6 +45,22 @@
  * avoid duplicating with their child "Reservations" → "Appointments"
  * / "Table reservations" item labels. The group header reads
  * industry-neutral "Bookings" while the items underneath flex.
+ *
+ * **No two items of one group share a label.** "Services" is the list of
+ * service BOOKINGS (/service-bookings); "Rooms & Services" is the catalogue
+ * (/booking-rooms). Relabelling both with the industry's word for a
+ * service gave a clinic two items called "Procedures". The bookings list
+ * says "… bookings". `Layout.navLabels.test.ts` guards every industry.
+ *
+ * **No item shares its own group's label either.** Medical's GROUP
+ * "Members & Loyalty" and its first ITEM "Members" both read "Patients"
+ * (fix round 1, 2026-09-28) — fixed by relabelling the group "Patient
+ * Membership". `Layout.navLabels.test.ts` checks this for every
+ * industry + group. Four industries still have this collision on
+ * purpose/unreviewed (legal, real_estate, education → group word same as
+ * "Members"; restaurant → "Regulars" reads as both, per that map's own
+ * comment) — the test records this explicitly rather than silently
+ * passing; the owner decides whether to rename them.
  */
 import { useMemo } from 'react'
 import { useAuthStore } from '../stores/authStore'
@@ -80,7 +96,7 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
     // Nav items
     'Members':           'Clients',
     'Reservations':      'Appointments',
-    'Services':          'Treatments',
+    'Services':          'Treatment bookings',
     'Rooms & Services':  'Treatments',
     'Masters':           'Stylists',
     'Extras':            'Add-ons',
@@ -95,15 +111,20 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
     'Hotel Loyalty':     'Salon Loyalty',
   },
   medical: {
-    'Members & Loyalty': 'Patients',
+    // GROUP stays "Patient Membership" — not "Patients" — because the
+    // group's first item "Members" already reads "Patients"; the group
+    // header and its own top item can't share a word (fix round 1,
+    // 2026-09-28).
+    'Members & Loyalty': 'Patient Membership',
     'CRM & Marketing':   'Patient CRM',
     'Members':           'Patients',
     'Reservations':      'Appointments',
-    'Services':          'Procedures',
+    'Services':          'Procedure bookings',
     'Rooms & Services':  'Procedures',
     'Masters':           'Practitioners',
     'Properties':        'Clinics',
     'Hotel Info':        'Practice Info',
+    'Loyalty Program':   'Patient Programme',
     'Booking Engine':    'Appointment Engine',
     'Member App':        'Patient App',
     'Team & Roles':      'Practitioners & Roles',
@@ -160,7 +181,7 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
     'Members & Loyalty': 'Students',
     'Members':           'Students',
     'Reservations':      'Lessons',
-    'Services':          'Courses',
+    'Services':          'Course bookings',
     'Rooms & Services':  'Courses',
     'Masters':           'Teachers',
     'Properties':        'Campuses',
@@ -180,6 +201,7 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
   other: {
     'Hotel Info':        'Business Info',
     'Hotel Loyalty':     'Loyalty',
+    'Services':          'Service bookings',
     'Rooms & Services':  'Services',
     'Masters':           'Staff',
     'Properties':        'Locations',

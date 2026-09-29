@@ -5,7 +5,7 @@ import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset } from '../hooks/useTheme'
 import { useVocabulary } from '../lib/vocabulary'
-import { useIndustryHiddenSettingsTabs } from '../lib/industryGating'
+import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -941,13 +941,25 @@ export function Settings() {
   // restaurant. Tab `id` stays canonical — `?tab=general` deep-links
   // keep working on every industry.
   const vocab = useVocabulary()
-  // Phase 4 — per-industry Settings tab gating. Medical hides
-  // 'loyalty' + 'mobile_app' + 'booking'. Beauty + restaurant hide
-  // 'booking' (Phase 7 ships the Appointment Engine settings parity).
-  // Hotel gets an empty list. Keyed on tab `id` (not label) so the
-  // Phase 3 vocabulary relabel can't accidentally drift this list out
-  // of sync.
+  // Phase 4 — per-industry Settings tab gating. 'booking' and 'loyalty'
+  // are shown for every industry today (owner's decision, 2026-09-29):
+  // Booking holds the service rules, cancellation hours and online
+  // payment every industry needs, and every industry runs a membership
+  // programme. Medical, legal, real_estate and education hide
+  // 'mobile_app' (no member mobile app). Keyed on tab `id` (not label)
+  // so the Phase 3 vocabulary relabel can't accidentally drift this
+  // list out of sync.
   const industryHiddenTabs = useIndustryHiddenSettingsTabs()
+  // Fix round 1 (2026-09-28) — Settings → Booking is now shown for every
+  // industry, but its hotel wording ("Booking Engine" / "Rates, currency,
+  // payment, Smoobu sync") describes rooms + PMS sync only a hotel has.
+  // Pure function, not vocab(): desc isn't wired through vocab today, and
+  // this only ever applies to the one tab.
+  const bookingTabCopy = useMemo(() => bookingTabCopyFor(user?.industry), [user?.industry])
+  // Only override for a KNOWN non-hotel industry — hotel's own resolution
+  // (vocab ?? i18n) is left completely untouched, so its rendered label +
+  // description cannot regress, whatever they resolve to today.
+  const useNeutralBookingCopy = Boolean(user?.industry) && user?.industry !== 'hotel'
   // Active tab persists to the URL via ?tab= so refreshes + deep links
   // land on the same place. 'home' = the grid index (default).
   const [searchParams, setSearchParams] = useSearchParams()
@@ -2789,10 +2801,14 @@ export function Settings() {
 
                       <div className="relative mt-auto">
                         <h3 className="text-sm sm:text-base font-bold text-white leading-tight">
-                          {vocab(tile.label) ?? t(`settings.tabs.${tile.id}`, tile.label)}
+                          {tile.id === 'booking' && useNeutralBookingCopy
+                            ? bookingTabCopy.label
+                            : (vocab(tile.label) ?? t(`settings.tabs.${tile.id}`, tile.label))}
                         </h3>
                         <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">
-                          {t(`settings.descs.${tile.id}`, tile.desc)}
+                          {tile.id === 'booking' && useNeutralBookingCopy
+                            ? bookingTabCopy.desc
+                            : t(`settings.descs.${tile.id}`, tile.desc)}
                         </p>
                       </div>
                     </button>
@@ -2811,7 +2827,9 @@ export function Settings() {
         // beauty, "Practice Info" for medical, "Venue Info" for
         // restaurant). The tab `id` ('general') stays canonical so
         // `?tab=general` deep-links keep working on every industry.
-        const label = vocab(tab.label) ?? t(`settings.tabs.${tab.id}`, tab.label)
+        const label = tab.id === 'booking' && useNeutralBookingCopy
+          ? bookingTabCopy.label
+          : (vocab(tab.label) ?? t(`settings.tabs.${tab.id}`, tab.label))
         return (
           <div className="space-y-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">

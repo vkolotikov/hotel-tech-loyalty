@@ -117,7 +117,7 @@ New services:
 | `App\Services\Portal\PortalBootstrap` | builds the bootstrap payload: venue identity, capabilities, accent tokens (via `App\Support\Accent`), policies, member summary, counts |
 | `App\Services\Booking\BookingCapability` | `appointmentsBookable(orgId, brandId?)` and `staysBookable(orgId)`; `PageContent::appointmentsBookable()` delegates to it (one source of truth) |
 | `App\Services\Booking\MemberPricing` | wraps `DiscountService` for bookings: scope (`services`/`stays`), the explicit-coupon rule (§6.2), the consume/release of a coupon, and the persisted discount columns |
-| `App\Services\Booking\MemberBookingQuery` | the member's bookings across `service_bookings` and `booking_mirror` as one DTO list (§5.3) |
+| `App\Services\Portal\MemberBookingQuery` | the member's bookings across `service_bookings` and `booking_mirror` as one DTO list (§5.3) |
 | `App\Services\Booking\ServiceBookingCancellation` | policy check, status change, refund or PaymentIntent cancel, emails, coupon release (phase 3) |
 | `App\Services\Loyalty\BookingPointsService` | awards points when a booking completes (§6.6) |
 | `GuestMemberLinkService::ensureGuestForMember()` | the inverse of the existing `ensureMemberForGuest()`; every member booking carries `guest_id` |
@@ -447,6 +447,47 @@ this phase; the route comment records why.
 ---
 
 ## 7. Phase 3 — stays and self-service cancellation
+
+> **Built 2026-10, with these departures** (plan `docs/superpowers/plans/2026-09-29-member-portal-v2-phase-3.md`,
+> rulings plan3-1 … plan3-21 — the ruling numbers recorded while planning and executing this phase, in the plan's
+> own header and in its progress ledger; decision #5 "no patient loyalty programme" reversed by the owner): single
+> rooms only, combinations deferred (portal-9, this spec's own §11 ruling that a combo stay's discount is split pro
+> rata across its rooms, not built — moot while combinations are not sold); the stays payment intent stayed in the
+> portal controller, keyed on a hold that names its member (`portal_hold_token`), and `paymentIntentForHold()` was
+> not extracted; a hold is its own idempotency key; a released hold stores `payment_status = cancelled`, a refund
+> `refunded`; stays are gated on capability and the Smoobu switch, not on the hotel industry; `MemberBookingQuery`
+> lives in `App\Services\Portal`. Also built, after this note was first written: an appointment's stored
+> `start_at`/`end_at` are the venue's wall clock, not UTC, however the scheduler's shared `+00:00` suffix reads —
+> `App\Services\Portal\AppointmentClock` is the one place the portal turns one into a true instant (on the way
+> out) or takes one back from the client (on the way in), so every value the scheduler, a PaymentIntent or a
+> stored row sees is still byte for byte what the public widget would have used. No unique index was added on
+> `service_bookings(organization_id, stripe_payment_intent_id)`: it would also change what the PUBLIC services
+> confirm stores and answers for a repeated payment reference, which the owner's ruling forbids touching in this
+> phase; the portal's own protection against reusing a payment is `PortalPaymentIntentGuard::assertUnused()`
+> under the `pi:` lock, not a database constraint — a ready migration for the index waits in
+> `.superpowers/sdd/2026-09-29-member-portal-v2-phase-3/held-back/` for the owner's decision. Cancellation
+> converges (finishes with no further Stripe call) when a booking's money is already back in full but the
+> booking itself was never marked cancelled — the shape a failure between the refund and the last write leaves
+> behind, healed by the member simply cancelling again — but a booking staff already cancelled AND refunded
+> converges too, since that member action is unavailable: it answers `already_cancelled` instead. For a stay,
+> telling those two apart needs its own marker (`booking.member_cancel_started`, an audit row committed right
+> before the refund is asked for) because the PMS sync relabels a refunded stay's status to `cancelled` within
+> seconds of the refund's own PMS cancellation either way.
+>
+> **The public stay confirm's failure rescue was narrowed, with the owner's permission of 2026-09-29 (an
+> exception to the ruling that the public booking widget does not change).** When the public `booking/confirm`
+> fails after a card was authorised, its rescue used to cancel or refund whatever payment id it was handed —
+> including a payment a booking already carried, since the endpoint needs nothing but the venue's widget token.
+> It now gives back only a payment that carries this request's own hold token in its metadata (`hold_token`,
+> which the stay widget writes) and that no booking carries; anything else is refused and audited
+> (`booking.confirm.pi_rescue_refused`, with a reason). An honest guest's own payment is rescued as before; the
+> public confirm's requests, responses and error text are unchanged.
+>
+> **The portal's time zone is the one the venue set in Settings, not a column nobody writes.**
+> `PortalBootstrap::timezone()` reads Settings → General → Timezone (`hotel_settings.hotel_timezone`) first and
+> `organizations.timezone` second, taking a value only when it names a zone (a location name such as
+> `Europe/Riga`, or a name of UTC); abbreviations such as `EET` and offsets such as `+03:00` are ignored. The
+> first source that names a zone other than UTC wins; a venue left at `UTC` stays on UTC.
 
 ### 7.1 Stay booking (hotels)
 

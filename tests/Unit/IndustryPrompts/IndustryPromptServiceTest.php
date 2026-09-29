@@ -20,9 +20,9 @@ use PHPUnit\Framework\TestCase;
  *       (legal/real_estate/education/fitness)
  *     - hotel-default fallthrough for null + unknown
  *
- *   Medical decision #5 invariant: hasLoyalty=false on the
- *   medical profile (no loyalty program at all per the locked
- *   product decision).
+ *   Every industry has memberships (the owner's ruling of
+ *   2026-09-29): hasLoyalty=true on every industry profile,
+ *   medical included.
  *
  *   adminGuardrails distinct from guardrails on medical (Phase 7
  *   reviewer fix: staff need clinical-context access; full
@@ -101,28 +101,30 @@ class IndustryPromptServiceTest extends TestCase
         );
     }
 
-    /* ─── THE medical decision: hasLoyalty=false ─── */
+    /* ─── Every industry has memberships (owner's decision, 2026-09-29) ─── */
 
-    public function test_medical_has_loyalty_is_false_per_product_decision(): void
+    public function test_every_industry_has_loyalty(): void
     {
-        // CRITICAL product decision #5 (per CLAUDE.md):
-        // medical has NO loyalty program at all. No tiers, no
-        // points, no member-app loyalty tab. LoyaltyPresetService
-        // gets a `medical = no-op` branch keyed on this flag.
-        $profile = $this->service->for('medical');
-
-        $this->assertFalse($profile->hasLoyalty,
-            'CRITICAL: medical MUST have hasLoyalty=false (product decision #5).');
+        // Every industry has memberships (the owner's ruling of
+        // 2026-09-29), medical included.
+        foreach (['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'other'] as $industry) {
+            $this->assertTrue($this->service->for($industry)->hasLoyalty, "{$industry} MUST have hasLoyalty=true.");
+        }
     }
 
-    public function test_all_other_industries_have_loyalty_true(): void
+    public function test_the_medical_card_is_a_patient_card(): void
     {
-        // Counterpoint: every non-medical industry HAS loyalty.
-        foreach (['hotel', 'beauty', 'restaurant', 'legal', 'real_estate', 'education', 'fitness'] as $industry) {
-            $profile = $this->service->for($industry);
-            $this->assertTrue($profile->hasLoyalty,
-                "{$industry} MUST have hasLoyalty=true.");
-        }
+        $profile = $this->service->for('medical');
+        $this->assertSame('Patient Card', $profile->passLabel);
+        $this->assertSame('Clinic membership card', $profile->passDescription);
+    }
+
+    public function test_the_medical_safety_rules_are_untouched_by_the_membership(): void
+    {
+        $profile = $this->service->for('medical');
+        $this->assertStringContainsString('NEVER diagnose', $profile->guardrails);
+        $this->assertStringContainsString('NEVER recommend, dose, or advise on medication', $profile->guardrails);
+        $this->assertNotSame('', $profile->adminGuardrails);
     }
 
     /* ─── Fallback behavior ─── */

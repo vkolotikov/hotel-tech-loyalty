@@ -366,10 +366,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('offers/{id}/claim',[OfferController::class, 'claim']);
             Route::get('bookings',          [BookingController::class, 'index']);
             Route::get('bookings/{id}',     [BookingController::class, 'show']);
-            // Member-initiated reservation — guest_id auto-resolved from the
-            // authenticated LoyaltyMember; status defaults to Pending so
-            // staff confirms before it's a counted booking.
-            Route::post('reservations',     [\App\Http\Controllers\Api\V1\Member\MemberReservationController::class, 'store']);
+            // POST member/reservations retired 2026-10: the portal books stays through member/portal/stays/* — one write path per booking kind, not two.
             Route::get('referral',              [ReferralController::class, 'index']);
             // Self-serve redemption catalog.
             Route::get('rewards',                  [\App\Http\Controllers\Api\V1\Member\RewardController::class, 'index']);
@@ -410,6 +407,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('bookings/{kind}/{id}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'show'])
                 ->whereIn('kind', ['service', 'stay'])
                 ->whereNumber('id');
+            Route::post('bookings/{kind}/{id}/cancel', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'cancel'])
+                ->whereIn('kind', ['service', 'stay'])
+                ->whereNumber('id')
+                ->middleware('throttle:20,1');
             Route::post('coupons/resolve', [\App\Http\Controllers\Api\V1\Member\Portal\PortalCouponController::class, 'resolve'])
                 ->middleware('throttle:portal-coupon');
             Route::get('services', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'index']);
@@ -419,6 +420,13 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('services/payment-intent', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'paymentIntent'])
                 ->middleware('throttle:30,1');
             Route::post('services/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'confirm'])
+                ->middleware('throttle:30,1');
+            Route::get('stays', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'index']);
+            Route::get('stays/availability', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'availability']);
+            Route::post('stays/quote', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'quote']);
+            Route::post('stays/payment-intent', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'paymentIntent'])
+                ->middleware('throttle:30,1');
+            Route::post('stays/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'confirm'])
                 ->middleware('throttle:30,1');
         });
 

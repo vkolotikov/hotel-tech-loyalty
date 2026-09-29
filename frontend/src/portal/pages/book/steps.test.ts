@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Catalogue, Quote } from '../../lib/types'
-import { afterConfirmError, afterQuoteError, bookReducer, canLeavePay, focusTargetFor, initialState, newPayVisit, nextStep, visibleDay, type BookState } from './steps'
+import { afterConfirmError, afterQuoteError, bookReducer, canLeavePay, focusTargetFor, initialState, newPayVisit, nextStep, refreshAfterCouponResolved, visibleDay, type BookState } from './steps'
 
 const base: Catalogue = {
   categories: [],
@@ -58,24 +58,29 @@ describe('afterConfirmError', () => {
     }
   })
 
-  it('sends the member back to Review, without touching the slot, for every other SERVER-CODED error (fix round 3, minor B)', () => {
-    // Every code the server can answer with, except idempotency_conflict, now means the hold (if there
-    // ever was one) is released — including not_found/no_membership/payment_required, which used to say
-    // "stay and retry" and leave the member on a locked strip retrying an already-cancelled intent, and a
-    // code this decision has never seen before ('something_new'), which must not default to "stay" either.
+  it('sends the member back to Review, without touching the slot, for every other SERVER-CODED error', () => {
+    // Every code the server can answer with, except idempotency_conflict/payment_check_failed/no_membership
+    // (their own test below), means the hold (if there ever was one) is released — including
+    // not_found/payment_required, which must not answer "stay and retry" and leave the member on a locked
+    // strip retrying an already-cancelled intent, and a code this decision has never seen before
+    // ('something_new'), which must not default to "stay" either.
     for (const code of [
       'payment_mismatch', 'extra_lead_time', 'coupon_used', 'coupon_expired', 'coupon_wrong_tier', 'coupon_no_capacity', 'coupon_untyped', 'coupon_not_found',
-      'confirm_failed', 'not_found', 'no_membership', 'payment_required', 'something_new',
+      'confirm_failed', 'not_found', 'payment_required', 'something_new',
     ]) {
       expect(afterConfirmError(code)).toEqual({ to: 'review', releasesHold: true, clearStart: false })
     }
   })
 
-  it('stays on Pay, with no hold released, only for a network error or a key already used by a different request', () => {
+  it('stays on Pay, with no hold released, only for a network error, a key already used by a different request, a payment check that could not be run, or a confirm the server refuses to act on for this member at all', () => {
     // idempotency_conflict: a DIFFERENT request already used this key — THIS attempt's own intent, if one
     // was ever held, is untouched. No code at all: a network error never reached the server's release
-    // logic in the first place. These are the ONLY two cases that stay.
-    for (const code of ['idempotency_conflict', null]) {
+    // logic in the first place. payment_check_failed (the server's own code for: Stripe could not be
+    // reached to check the payment): the server released nothing either — the member's own authorisation,
+    // if there is one, is intact, and the same confirm is safe to resend. no_membership: there is no
+    // member id yet to verify ownership against, so the server never had anything of THIS member's to
+    // release — it must not be read as a release either.
+    for (const code of ['idempotency_conflict', 'payment_check_failed', 'no_membership', null]) {
       expect(afterConfirmError(code)).toEqual({ to: null, releasesHold: false, clearStart: false })
     }
   })
@@ -99,7 +104,7 @@ describe('newPayVisit', () => {
 })
 
 describe('canLeavePay', () => {
-  it('is false the moment the member presses Pay, even before Stripe has answered (fix round 2, finding M3)', () => {
+  it('is false the moment the member presses Pay, even before Stripe has answered', () => {
     expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: null, paid: false, held: true, noCard: false })).toBe(false)
   })
 
@@ -122,8 +127,8 @@ describe('bookReducer', () => {
   const onReview: BookState = { ...initialState, step: 'review', serviceId: 11, masterId: 5, startAt: '2026-10-05T09:00:00Z' }
   const visit = newPayVisit((() => { let n = 0; return () => `v-${n++}` })())
 
-  // Final review, Important 1: Review's Continue used to call onChange({ notes }) and then onContinue(quote),
-  // both spreading the same render's `state` — the second overwrote the first and the notes were lost.
+  // Review's Continue must apply notes and quote in a single dispatch, not two handlers that each spread
+  // the same render's `state` — the second would overwrite the first and drop the notes.
   it('patch notes then continue to pay keeps the notes', () => {
     let s = bookReducer(onReview, { type: 'patchReview', patch: { notes: 'Please knock twice' } })
     s = bookReducer(s, { type: 'continueToPay', notes: 'Please knock twice', quote, visit })
@@ -213,8 +218,8 @@ describe('bookReducer', () => {
 })
 
 describe('focusTargetFor', () => {
-  // Final review, Minor 11: after a step change focus used to drop to <body>, so a screen reader heard
-  // nothing about the new step.
+  // Focus must land on the new step's heading, never fall through to <body>, where a screen reader
+  // would hear nothing about the new step.
   it("moves focus to the new step's heading", () => {
     for (const step of ['service', 'staff', 'when', 'review', 'pay'] as const) {
       expect(focusTargetFor(step, false)).toEqual({ kind: 'heading', step })
@@ -230,8 +235,8 @@ describe('focusTargetFor', () => {
 describe('visibleDay', () => {
   const week = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11']
 
-  // Task 21 browser pass: paging the strip to the next week kept the old day selected off-screen, and the
-  // slot list below went on showing that day's times under a strip of different dates.
+  // The chosen day must not scroll off the strip while its times stay listed underneath a page of
+  // different dates; paging to the next week moves the selection to a bookable day on screen.
   it('moves to the first bookable day of the week on screen when the chosen day is not in it', () => {
     expect(visibleDay('2026-09-28', week, new Set(['2026-10-06', '2026-10-08']))).toBe('2026-10-06')
   })
@@ -242,5 +247,17 @@ describe('visibleDay', () => {
 
   it('shows no day (and so no times) when nothing on screen is bookable or the calendar has not answered yet', () => {
     expect(visibleDay('2026-09-28', week, new Set())).toBeNull()
+  })
+})
+
+// A typed offer code creates the member's claim on the server; the matching coupon list must be
+// fetched again afterwards, or the panel keeps saying "No coupons yet" right above "… applied", and an
+// outbid code leaves a lone "Remove" with nothing to say what it removes.
+describe('refreshAfterCouponResolved', () => {
+  it('fetches the claimed offers again after an offer code, so the new claim shows as a chip', () => {
+    expect(refreshAfterCouponResolved({ kind: 'offer' })).toEqual([['portal-offers']])
+  })
+  it('fetches the reward codes again after a reward code', () => {
+    expect(refreshAfterCouponResolved({ kind: 'reward' })).toEqual([['portal-redemptions']])
   })
 })

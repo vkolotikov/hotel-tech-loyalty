@@ -46,7 +46,7 @@ describe('vocabularyFor — per-industry lookup', () => {
     const vocab = vocabularyFor('beauty')
     expect(vocab('Members')).toBe('Clients')
     expect(vocab('Reservations')).toBe('Appointments')
-    expect(vocab('Services')).toBe('Treatments')
+    expect(vocab('Services')).toBe('Treatment bookings')
     expect(vocab('Properties')).toBe('Salons')
   })
 
@@ -62,9 +62,10 @@ describe('vocabularyFor — per-industry lookup', () => {
     const vocab = vocabularyFor('medical')
     expect(vocab('Members')).toBe('Patients')
     expect(vocab('Reservations')).toBe('Appointments')
-    expect(vocab('Services')).toBe('Procedures')
+    expect(vocab('Services')).toBe('Procedure bookings')
     expect(vocab('Properties')).toBe('Clinics')
     expect(vocab('Masters')).toBe('Practitioners')
+    expect(vocab('Rooms & Services')).toBe('Procedures')
   })
 
   it('restaurant relabels for the dining domain (Regulars/Tables/etc.)', () => {

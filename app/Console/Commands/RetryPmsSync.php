@@ -8,6 +8,7 @@ use App\Models\BookingMirror;
 use App\Services\IntegrationStatus;
 use App\Services\SmoobuClient;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -81,6 +82,17 @@ class RetryPmsSync extends Command
                 // Bind tenant context so SmoobuClient picks up the right key.
                 app()->instance('current_organization_id', (int) $mirror->organization_id);
                 app()->forgetInstance('current_brand_id');
+
+                // The chunk was read before this row's turn: the member may
+                // have cancelled it since. Only a member's cancellation sets
+                // cancelled_at — then no reservation is created and nothing is
+                // written. Every other row (a public booking, even one whose
+                // status says cancelled) is retried normally, unaffected by
+                // this check.
+                if ($this->cancelledByMember($mirror->id)) {
+                    Log::info('PMS retry skipped a booking cancelled by the member', ['mirror_id' => $mirror->id]);
+                    continue;
+                }
 
                 try {
                     // priceStatus (docs-compliant) + price-paid (legacy
@@ -227,7 +239,9 @@ class RetryPmsSync extends Command
                     // Smoobu accepted — write back the real reservation_id
                     // (the placeholder LOCAL-* id stays as a redirect via
                     // booking_reference, but reservation_id becomes canonical).
-                    $mirror->update([
+                    // Unless the member cancelled while Smoobu was being
+                    // asked: that cancellation is never undone.
+                    $written = $this->writeUnlessMemberCancelled($mirror, [
                         'reservation_id'           => (string) ($result['id'] ?? $mirror->reservation_id),
                         'booking_reference'        => $result['reference-id'] ?? $mirror->booking_reference,
                         'internal_status'          => 'confirmed',
@@ -236,6 +250,10 @@ class RetryPmsSync extends Command
                         'pms_sync_last_attempt_at' => now(),
                         'pms_sync_last_error'      => null,
                     ]);
+                    if (!$written) {
+                        $this->undoReservation($smoobu, $mirror, $result);
+                        continue;
+                    }
                     $successCount++;
 
                     AuditLog::create([
@@ -249,12 +267,16 @@ class RetryPmsSync extends Command
                     $attempts = $mirror->pms_sync_attempts + 1;
                     $reachedCap = $attempts >= self::MAX_ATTEMPTS;
 
-                    $mirror->update([
+                    $written = $this->writeUnlessMemberCancelled($mirror, [
                         'pms_sync_attempts'        => $attempts,
                         'pms_sync_last_attempt_at' => now(),
                         'pms_sync_last_error'      => mb_substr($e->getMessage(), 0, 500),
                         'internal_status'          => $reachedCap ? 'pms_sync_failed' : 'pending_pms_sync',
                     ]);
+                    if (!$written) {
+                        // The member cancelled while Smoobu was being asked: nothing to retry.
+                        continue;
+                    }
 
                     Log::warning('PMS retry attempt failed', [
                         'mirror_id' => $mirror->id,
@@ -308,6 +330,68 @@ class RetryPmsSync extends Command
         $this->info("Retry sweep complete: {$successCount} recovered · {$failCount} will retry · {$finalFailCount} flagged for manual review");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Whether the member cancelled this booking in the portal — the only
+     * thing that sets `cancelled_at`, and the only thing this command
+     * checks. A status or state that says cancelled is NOT looked at: a
+     * booking without a member cancellation is retried normally.
+     */
+    private function cancelledByMember(int $mirrorId): bool
+    {
+        return BookingMirror::withoutGlobalScopes()->whereKey($mirrorId)->whereNotNull('cancelled_at')->exists();
+    }
+
+    /**
+     * Writes the chunk's own model with the given columns, refused only
+     * when the member's cancellation set `cancelled_at` meanwhile —
+     * decided under the row's own lock, the only lock taken (nothing else
+     * is held). For a row whose `cancelled_at` is null this behaves as a
+     * plain unconditional update. Returns whether it wrote.
+     */
+    private function writeUnlessMemberCancelled(BookingMirror $mirror, array $columns): bool
+    {
+        return (bool) DB::transaction(function () use ($mirror, $columns) {
+            $cancelledAt = BookingMirror::withoutGlobalScopes()->whereKey($mirror->id)->lockForUpdate()->value('cancelled_at');
+            if ($cancelledAt !== null) {
+                return false;
+            }
+            $mirror->update($columns);
+
+            return true;
+        });
+    }
+
+    /**
+     * The member cancelled the booking while Smoobu was creating its reservation:
+     * cancel that new reservation again (the cancellation itself could not —
+     * the row still named its LOCAL- placeholder), best effort, and leave a
+     * row an operator can act on when that fails too.
+     */
+    private function undoReservation(SmoobuClient $smoobu, BookingMirror $mirror, array $result): void
+    {
+        $id = (string) ($result['id'] ?? '');
+        Log::warning('PMS retry created a reservation for a booking the member cancelled meanwhile', ['mirror_id' => $mirror->id, 'reservation' => $id]);
+        if ($id === '') {
+            return;
+        }
+        try {
+            $smoobu->cancelReservation($id);
+        } catch (\Throwable $e) {
+            try {
+                AuditLog::create([
+                    'organization_id' => $mirror->organization_id,
+                    'action'          => 'booking.pms.cancel_failed',
+                    'subject_type'    => 'booking_mirror',
+                    'subject_id'      => $mirror->id,
+                    'new_values'      => ['reservation_id' => $id, 'error' => mb_substr($e->getMessage(), 0, 500), 'source' => 'retry_pms_sync'],
+                    'description'     => "Booking #{$mirror->id} was cancelled by the member while the PMS retry created reservation {$id} — cancel it in Smoobu",
+                ]);
+            } catch (\Throwable) {
+                // best effort
+            }
+        }
     }
 
     private function firstName(?string $full): string

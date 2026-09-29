@@ -288,6 +288,16 @@ class BookingPublicController extends Controller
             return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
         }
 
+        // A member's hold was priced and written by the portal's own quote
+        // (discount, coupon selection, member id). Paying it here would
+        // charge Stripe at the member's price without the portal's own
+        // payment-intent checks ever running and without consuming the
+        // coupon — answer exactly like an unknown hold, and make no Stripe
+        // call at all.
+        if (!empty($hold->payload_json['member_id'] ?? null)) {
+            return response()->json(['error' => 'Hold expired or not found. Please start over.'], 400);
+        }
+
         // Extend the hold so a guest sitting on the Stripe Elements payment
         // screen doesn't lose their cart at the 10-min mark.
         $hold->update(['expires_at' => now()->addMinutes(15)]);
@@ -838,6 +848,40 @@ class BookingPublicController extends Controller
      *   - PI canceled / processing / null → no-op (nothing to rescue).
      *   - Any Stripe error during rescue → audit-log + Log::error so ops can
      *     manually clean up.
+     *
+     * Only this request's own payment is given back: an intent whose
+     * metadata `hold_token` is this request's hold token (what
+     * paymentIntent() writes for the hold), that no booking carries. The
+     * endpoint needs nothing but the venue's widget token, so the id it
+     * names may be anybody's — a payment link, an invoice or the venue's
+     * shop are payments in the same Stripe account. Everything else is
+     * refused — `booking.confirm.pi_rescue_refused` with a `reason`, the
+     * same response to the caller:
+     *   - a stay or an appointment carries the intent (`carried_by_booking`),
+     *     read in the database before Stripe is asked anything;
+     *   - Stripe cannot read an id that came from the request body
+     *     (`unreadable`); only the hold's own cached id, stamped by
+     *     paymentIntent() for this hold, is still cancelled unread;
+     *   - its metadata does not name this hold — see rescueRefusalReason().
+     *
+     * Order of work: the refusals above take no lock. Only when it is about
+     * to cancel or refund does the rescue open a transaction, lock the
+     * request's hold row (when the hold exists for this organisation), take
+     * the intent's `pi:` advisory lock, read "carried" again and then call
+     * Stripe — the codebase's lock order, booking/hold row first, `pi:`
+     * second; it takes no room lock and changes nothing on the hold, so the
+     * guest can retry with the same hold. A public confirm holds that hold
+     * row from its in-lock re-check to its commit, so a rescue arriving while
+     * the same hold is being confirmed waits and then finds the booking
+     * carried; a member-portal confirm holds `pi:` itself. A public confirm
+     * that has passed its payment check but not yet locked the hold row is
+     * not waited for. The audit row is written after the transaction has
+     * ended, so a Stripe call that happened is recorded even if the commit
+     * fails. The rescue runs inside `catch` blocks and never throws: when the
+     * checks themselves fail (the database is unreachable), the payment is
+     * left alone and one Log::error names it — an authorisation that lapses
+     * at Stripe costs nobody money; a payment returned for a booking that
+     * stands costs the venue the stay.
      */
     private function rescuePaymentIntentOnConfirmFailure(
         ?string $intentId,
@@ -853,6 +897,7 @@ class BookingPublicController extends Controller
         // Fall back to the hold's cached intent id if the request didn't
         // carry one (early validation failures, ValidationException paths
         // that ran before the widget could attach the id).
+        $idFromHold = false;
         if (!$intentId && $holdToken) {
             try {
                 $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
@@ -865,6 +910,7 @@ class BookingPublicController extends Controller
                 if ($hold) {
                     $payload = $hold->payload_json ?? [];
                     $intentId = $payload['stripe_payment_intent_id'] ?? null;
+                    $idFromHold = (bool) $intentId;
                 }
             } catch (\Throwable $lookupErr) {
                 // Don't let the rescue path crash on a DB blip.
@@ -886,35 +932,102 @@ class BookingPublicController extends Controller
 
         $orgId = app()->bound('current_organization_id') ? (int) app('current_organization_id') : null;
 
+        // The outcome to record, [action, extra], set by the decision and
+        // written below once any transaction has ended. $sent is set once a
+        // cancel or refund is about to be sent, so the error line says
+        // whether the payment was left alone.
+        $outcome = null;
+        $sent = false;
+        try {
+            $this->rescueOwnPaymentIntent($stripe, $intentId, $idFromHold, $holdToken, $orgId, $outcome, $sent);
+        } catch (\Throwable $checkErr) {
+            \Illuminate\Support\Facades\Log::error('Booking confirm PI rescue: pi_rescue_checks_failed', [
+                'payment_intent_id'  => $intentId,
+                'organization_id'    => $orgId,
+                'confirm_context'    => $context,
+                'payment_left_alone' => !$sent,
+                'error'              => $checkErr->getMessage(),
+            ]);
+        }
+
+        if ($outcome !== null) {
+            $this->logPiRescueOutcome($orgId, $outcome[0], $intentId, $context, $original, $outcome[1]);
+        }
+    }
+
+    /**
+     * The rescue's decision, and its Stripe call when it acts. Sets $outcome
+     * to the audit action and the fields to record with it; the caller
+     * writes it. Refusals are decided without any lock; a cancel or refund
+     * runs through rescueUnderLocks().
+     *
+     * @param array{0: string, 1: array}|null $outcome
+     */
+    private function rescueOwnPaymentIntent(
+        StripeService $stripe,
+        string $intentId,
+        bool $idFromHold,
+        ?string $holdToken,
+        ?int $orgId,
+        ?array &$outcome,
+        bool &$sent,
+    ): void {
+        // A booking relies on this payment: it is that booking's money,
+        // whatever this request names.
+        if ($this->rescueIntentIsCarried($intentId, $orgId)) {
+            $outcome = ['pi_rescue_refused', ['reason' => 'carried_by_booking']];
+            return;
+        }
+
         // Re-fetch the PI to see its current status. The earlier retrieve
         // in confirm() may have thrown (that's how we got into this catch),
         // so we can't trust any cached state.
         try {
             $intent = $stripe->retrievePaymentIntent($intentId);
         } catch (\Throwable $retrieveErr) {
-            // Can't even read the PI — attempt a cancel anyway as best
+            // An id from the request body that cannot be read is left alone:
+            // nothing shows it is this request's payment.
+            if (!$idFromHold) {
+                $outcome = ['pi_rescue_refused', [
+                    'reason'         => 'unreadable',
+                    'retrieve_error' => $retrieveErr->getMessage(),
+                ]];
+                return;
+            }
+
+            // The hold's own cached id was stamped by paymentIntent() for
+            // this hold. Can't read it — attempt a cancel anyway as best
             // effort, since cancel is a no-op when the PI is already in
             // a terminal state. If that also fails, audit-log so ops
             // know there's a possibly-stranded auth at Stripe.
-            try {
-                // Route through StripeService so credential loading +
-                // restricted-key detection stay in one place. Previously
-                // this instantiated StripeClient locally and called
-                // extractSecretKey() — a parallel reader of the encrypted
-                // stripe_secret_key. See AUDIT-2026-06-13.md architecture
-                // finding.
-                $stripe->cancelPaymentIntent($intentId);
-                $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
-                    'note' => 'cancel issued without status check (retrieve failed)',
-                ]);
-                return;
-            } catch (\Throwable $cancelErr) {
-                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
-                    'retrieve_error' => $retrieveErr->getMessage(),
-                    'cancel_error'   => $cancelErr->getMessage(),
-                ]);
-                return;
+            $this->rescueUnderLocks($intentId, $holdToken, $orgId, $outcome, function () use ($stripe, $intentId, $retrieveErr, &$sent) {
+                try {
+                    // Route through StripeService so credential loading +
+                    // restricted-key detection stay in one place.
+                    $sent = true;
+                    $stripe->cancelPaymentIntent($intentId);
+                    return ['pi_cancelled', [
+                        'note' => 'cancel issued without status check (retrieve failed)',
+                    ]];
+                } catch (\Throwable $cancelErr) {
+                    return ['pi_rescue_failed', [
+                        'retrieve_error' => $retrieveErr->getMessage(),
+                        'cancel_error'   => $cancelErr->getMessage(),
+                    ]];
+                }
+            });
+            return;
+        }
+
+        // The payment's own metadata must name this hold.
+        [$reason, $kind] = $this->rescueRefusalReason($intent, $orgId, $holdToken);
+        if ($reason !== null) {
+            $refusal = ['reason' => $reason];
+            if ($kind !== null) {
+                $refusal['kind'] = $kind;
             }
+            $outcome = ['pi_rescue_refused', $refusal];
+            return;
         }
 
         $status = $intent->status ?? null;
@@ -932,18 +1045,21 @@ class BookingPublicController extends Controller
             'requires_confirmation',
             'processing',
         ], true)) {
-            try {
-                // Same path-through-StripeService as above.
-                $stripe->cancelPaymentIntent($intentId);
-                $this->logPiRescueOutcome($orgId, 'pi_cancelled', $intentId, $context, $original, [
-                    'pre_cancel_status' => $status,
-                ]);
-            } catch (\Throwable $cancelErr) {
-                $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
-                    'pre_cancel_status' => $status,
-                    'cancel_error'      => $cancelErr->getMessage(),
-                ]);
-            }
+            $this->rescueUnderLocks($intentId, $holdToken, $orgId, $outcome, function () use ($stripe, $intentId, $status, &$sent) {
+                try {
+                    // Same path-through-StripeService as above.
+                    $sent = true;
+                    $stripe->cancelPaymentIntent($intentId);
+                    return ['pi_cancelled', [
+                        'pre_cancel_status' => $status,
+                    ]];
+                } catch (\Throwable $cancelErr) {
+                    return ['pi_rescue_failed', [
+                        'pre_cancel_status' => $status,
+                        'cancel_error'      => $cancelErr->getMessage(),
+                    ]];
+                }
+            });
             return;
         }
 
@@ -951,52 +1067,163 @@ class BookingPublicController extends Controller
         // StripeService — we can't route through BookingRefundService
         // because no BookingMirror exists (transaction rolled back).
         if ($status === 'succeeded') {
-            try {
-                $refund = $stripe->refund($intentId, null, 'requested_by_customer');
-                $this->logPiRescueOutcome($orgId, 'pi_refunded', $intentId, $context, $original, [
-                    'refund_id' => $refund->id ?? null,
-                    'amount'    => isset($refund->amount) ? $refund->amount / 100 : null,
-                ]);
-            } catch (\Throwable $refundErr) {
-                // Restricted-key permission failure on the auto-refund:
-                // log the dashboard URL so ops can flip the scope AND
-                // manually refund the orphan PI from the Stripe payment
-                // page in the same browser tab. Distinct audit action
-                // ('pi_rescue_restricted_key') so we can dashboard-query
-                // "how many bookings did this footgun cost us this week?"
-                $scope = StripeService::isRestrictedKeyPermissionError($refundErr);
-                if ($scope) {
-                    $dashUrl = "https://dashboard.stripe.com/payments/{$intentId}";
-                    $actionable = StripeService::restrictedKeyMessage(
-                        'auto-refund an orphan captured PaymentIntent',
-                        $scope,
-                        $intentId,
-                    );
-                    \Illuminate\Support\Facades\Log::error(
-                        "Booking confirm — PI rescue refund blocked by restricted key. Dashboard: {$dashUrl}",
-                        ['pi_id' => $intentId, 'scope_missing' => $scope, 'message' => $actionable],
-                    );
-                    $this->logPiRescueOutcome($orgId, 'pi_rescue_restricted_key', $intentId, $context, $original, [
-                        'pre_refund_status' => $status,
-                        'scope_missing'     => $scope,
-                        'actionable'        => $actionable,
-                        'dashboard_url'     => $dashUrl,
-                    ]);
-                } else {
-                    $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+            $this->rescueUnderLocks($intentId, $holdToken, $orgId, $outcome, function () use ($stripe, $intentId, $status, &$sent) {
+                try {
+                    $sent = true;
+                    $refund = $stripe->refund($intentId, null, 'requested_by_customer');
+                    return ['pi_refunded', [
+                        'refund_id' => $refund->id ?? null,
+                        'amount'    => isset($refund->amount) ? $refund->amount / 100 : null,
+                    ]];
+                } catch (\Throwable $refundErr) {
+                    // Restricted-key permission failure on the auto-refund:
+                    // log the dashboard URL so ops can flip the scope AND
+                    // manually refund the orphan PI from the Stripe payment
+                    // page in the same browser tab. Distinct audit action
+                    // ('pi_rescue_restricted_key') so we can dashboard-query
+                    // "how many bookings did this footgun cost us this week?"
+                    $scope = StripeService::isRestrictedKeyPermissionError($refundErr);
+                    if ($scope) {
+                        $dashUrl = "https://dashboard.stripe.com/payments/{$intentId}";
+                        $actionable = StripeService::restrictedKeyMessage(
+                            'auto-refund an orphan captured PaymentIntent',
+                            $scope,
+                            $intentId,
+                        );
+                        \Illuminate\Support\Facades\Log::error(
+                            "Booking confirm — PI rescue refund blocked by restricted key. Dashboard: {$dashUrl}",
+                            ['pi_id' => $intentId, 'scope_missing' => $scope, 'message' => $actionable],
+                        );
+                        return ['pi_rescue_restricted_key', [
+                            'pre_refund_status' => $status,
+                            'scope_missing'     => $scope,
+                            'actionable'        => $actionable,
+                            'dashboard_url'     => $dashUrl,
+                        ]];
+                    }
+
+                    return ['pi_rescue_failed', [
                         'pre_refund_status' => $status,
                         'refund_error'      => $refundErr->getMessage(),
-                    ]);
+                    ]];
                 }
-            }
+            });
             return;
         }
 
         // Unknown / unexpected status — log so ops can investigate.
-        $this->logPiRescueOutcome($orgId, 'pi_rescue_failed', $intentId, $context, $original, [
+        $outcome = ['pi_rescue_failed', [
             'reason' => 'unknown_status',
             'status' => $status,
-        ]);
+        ]];
+    }
+
+    /**
+     * The one place the rescue acts. In a transaction: lock the request's
+     * hold row (when the hold exists for this organisation — a public
+     * confirm of the same hold holds that lock until it commits), take the
+     * intent's `pi:` advisory lock (a member-portal confirm holds it while it
+     * writes its booking), read "carried" again, and only then run $act,
+     * which calls Stripe and returns the outcome to record. The hold row is
+     * read, never changed.
+     *
+     * @param array{0: string, 1: array}|null $outcome
+     * @param callable(): array{0: string, 1: array} $act
+     */
+    private function rescueUnderLocks(string $intentId, ?string $holdToken, ?int $orgId, ?array &$outcome, callable $act): void
+    {
+        \Illuminate\Support\Facades\DB::transaction(function () use ($intentId, $holdToken, $orgId, &$outcome, $act) {
+            if ($orgId && $holdToken) {
+                \App\Models\BookingHold::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->where('hold_token', $holdToken)
+                    ->lockForUpdate()
+                    ->first();
+            }
+            \App\Support\AdvisoryLock::within('pi:' . $intentId);
+
+            if ($this->rescueIntentIsCarried($intentId, $orgId)) {
+                $outcome = ['pi_rescue_refused', ['reason' => 'carried_by_booking']];
+                return;
+            }
+
+            $outcome = $act();
+        });
+    }
+
+    /**
+     * Whether a stay (`booking_mirror`) or an appointment (`service_bookings`)
+     * carries this PaymentIntent — in the bound organisation, or in any
+     * organisation when none is bound. Reads only; locks no booking row.
+     */
+    private function rescueIntentIsCarried(string $intentId, ?int $orgId): bool
+    {
+        foreach ([\App\Models\ServiceBooking::class, \App\Models\BookingMirror::class] as $model) {
+            $query = $model::withoutGlobalScopes()->where('stripe_payment_intent_id', $intentId);
+            if ($orgId) {
+                $query->where('organization_id', $orgId);
+            }
+            if ($query->exists()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Why a readable intent is not this request's own, from its metadata, or
+     * null when it is: the rescue gives back only an intent whose
+     * `hold_token` is this request's hold token. The most telling reason
+     * comes first:
+     *   - `portal_payment`: a member-portal kind (PortalPaymentIntentGuard::PORTAL_KINDS,
+     *     or any `portal_…` kind), or a `portal_hold_token`;
+     *   - `other_kind`: any other `kind` (the widget's stay intents have none);
+     *   - `other_organisation`: an `org_id` that is not the bound organisation
+     *     (any `org_id` when none is bound);
+     *   - `not_widget_payment`: no `hold_token` at all — a payment this
+     *     application's widget did not create;
+     *   - `other_hold`: a `hold_token` that is not this request's (any
+     *     `hold_token` when the request names no hold).
+     * Returns the reason and the metadata `kind` (the one metadata value the
+     * refusal records).
+     *
+     * @return array{0: ?string, 1: ?string}
+     */
+    private function rescueRefusalReason(mixed $intent, ?int $orgId, ?string $holdToken): array
+    {
+        $raw = is_array($intent) ? ($intent['metadata'] ?? null) : ($intent->metadata ?? null);
+        $meta = is_array($raw) ? $raw : (is_object($raw) && method_exists($raw, 'toArray') ? $raw->toArray() : []);
+        // Stripe keeps metadata values as strings; an absent key and an empty value are the same.
+        $mark = fn (string $key): string => is_scalar($meta[$key] ?? null) ? trim((string) $meta[$key]) : '';
+
+        $kind = $mark('kind');
+        $recordedKind = $kind !== '' ? mb_substr($kind, 0, 100) : null;
+
+        if ($kind !== '' && (in_array($kind, \App\Services\Booking\PortalPaymentIntentGuard::PORTAL_KINDS, true) || str_starts_with($kind, 'portal_'))) {
+            return ['portal_payment', $recordedKind];
+        }
+        if ($mark('portal_hold_token') !== '') {
+            return ['portal_payment', $recordedKind];
+        }
+        if ($kind !== '') {
+            return ['other_kind', $recordedKind];
+        }
+
+        $intentOrg = $mark('org_id');
+        if ($intentOrg !== '' && (!$orgId || $intentOrg !== (string) $orgId)) {
+            return ['other_organisation', $recordedKind];
+        }
+
+        $intentHold = $mark('hold_token');
+        if ($intentHold === '') {
+            return ['not_widget_payment', $recordedKind];
+        }
+        if ($holdToken === null || $holdToken === '' || !hash_equals($intentHold, $holdToken)) {
+            return ['other_hold', $recordedKind];
+        }
+
+        return [null, null];
     }
 
     /**
@@ -1553,7 +1780,7 @@ class BookingPublicController extends Controller
             // Refund issued — sync our state. Fires for refunds initiated from
             // the Stripe Dashboard, async settlement reversals, and our own
             // admin refunds (idempotency check below dedupes our own actions).
-            $this->handleChargeRefunded($event->data->object, (int) $orgId);
+            $this->handleChargeRefunded($event->data->object, (int) $orgId, (string) $event->id);
         } elseif ($event->type === 'charge.dispute.created') {
             // Chargeback opened. Stripe holds the funds pending review. We
             // flag the booking so staff see it — do NOT auto-refund yet,
@@ -1680,7 +1907,7 @@ class BookingPublicController extends Controller
         return null;
     }
 
-    private function handleChargeRefunded(\Stripe\Charge $charge, int $orgId): void
+    private function handleChargeRefunded(\Stripe\Charge $charge, int $orgId, ?string $eventId = null): void
     {
         $paymentIntentId = $charge->payment_intent;
         if (!$paymentIntentId) return;
@@ -1695,6 +1922,26 @@ class BookingPublicController extends Controller
             ->where('stripe_payment_intent_id', $paymentIntentId)
             ->first();
         if (!$mirror) {
+            // Not a stay: a service booking's payment, refunded at Stripe.
+            //
+            // The dedup row for this event was already committed by
+            // stripeWebhook() before we got here — see that method. If the
+            // write below throws, a DB failure must not leave the event
+            // marked processed with the refund never recorded: remove the
+            // dedup row so Stripe's retry is processed fresh, then rethrow
+            // so Stripe actually sees a failure and retries.
+            try {
+                if ($this->recordServiceBookingRefund($charge, (string) $paymentIntentId, $orgId)) {
+                    return;
+                }
+            } catch (\Throwable $e) {
+                if ($eventId !== null) {
+                    try {
+                        \App\Models\StripeWebhookEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('event_id', $eventId)->delete();
+                    } catch (\Throwable) { /* best effort */ }
+                }
+                throw $e;
+            }
             \App\Models\AuditLog::create([
                 'organization_id' => $orgId,
                 'action'          => 'stripe.webhook.cross_tenant_attempt',
@@ -1777,6 +2024,116 @@ class BookingPublicController extends Controller
                 'error'     => $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * A refund made at Stripe (the dashboard, a dispute lost) for a payment
+     * a service booking of this organisation carries: the booking records
+     * it. True when such a booking exists — also when this very refund was
+     * already recorded, which a redelivered event is.
+     *
+     * Reads the charge's own cumulative fields (`amount_refunded`,
+     * `amount_captured`/`amount`, `refunded`) rather than `charge.refunds`:
+     * that list is not always present on the event payload (newer Stripe
+     * API versions omit it unless expanded), and even when present Stripe
+     * lists it NEWEST FIRST — `end($refunds)` picked the OLDEST refund,
+     * under-recording every charge refunded more than once. The cumulative
+     * fields are always there and always correct regardless of API
+     * version. `refunds`, when present, is used only to name the newest
+     * refund id for `last_refund_id`.
+     *
+     * NEVER MOVES BACKWARDS: the read-compare-write runs under
+     * `lockForUpdate()` inside a transaction so two deliveries of
+     * overlapping events can't interleave, and writes only when the
+     * event's cumulative `amount_refunded` is GREATER than the stored
+     * `refunded_amount` (or the stored one is null) — equal is a
+     * redelivery, lower is an older event arriving late (Stripe does not
+     * guarantee webhook delivery order); neither writes anything or
+     * audits. `payment_status` additionally never regresses from
+     * 'refunded' back to 'partially_refunded', even if some future event
+     * somehow reported a smaller cumulative amount than a `refunded` row
+     * already has — a second, independent guarantee on top of the amount
+     * check.
+     */
+    private function recordServiceBookingRefund(\Stripe\Charge $charge, string $paymentIntentId, int $orgId): bool
+    {
+        $currency = strtolower((string) ($charge->currency ?? 'eur'));
+        $amountRefundedMinor = (int) ($charge->amount_refunded ?? 0);
+        $capturedMinor = (int) ($charge->amount_captured ?? $charge->amount ?? 0);
+        $isFull = (bool) ($charge->refunded ?? false) || ($capturedMinor > 0 && $amountRefundedMinor >= $capturedMinor);
+        $computedStatus = $isFull ? 'refunded' : 'partially_refunded';
+        $refundedAmount = round($this->centsToMajorUnits($amountRefundedMinor, $currency), 2);
+
+        $refunds = [];
+        try {
+            $refunds = $charge->refunds->data ?? [];
+        } catch (\Throwable) {
+            $refunds = [];
+        }
+        $newestRefundId = null;
+        if (!empty($refunds)) {
+            $newest = null;
+            foreach ($refunds as $r) {
+                $rid = is_object($r) ? ($r->id ?? null) : ($r['id'] ?? null);
+                $created = is_object($r) ? ($r->created ?? null) : ($r['created'] ?? null);
+                if ($newest === null || ($created !== null && ($newest['created'] === null || $created > $newest['created']))) {
+                    $newest = ['id' => $rid, 'created' => $created];
+                }
+            }
+            $newestRefundId = $newest['id'] ?? null;
+        }
+
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($orgId, $paymentIntentId, $refundedAmount, $computedStatus, $newestRefundId) {
+            $booking = \App\Models\ServiceBooking::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('stripe_payment_intent_id', $paymentIntentId)
+                ->lockForUpdate()
+                ->first();
+            if (!$booking) {
+                return false;
+            }
+
+            $stored = $booking->refunded_amount !== null ? round((float) $booking->refunded_amount, 2) : null;
+
+            // Never move backwards: equal (redelivery) or lower (an older
+            // event delivered late) — nothing to do, no audit.
+            if ($stored !== null && $refundedAmount <= $stored + 0.004) {
+                return true;
+            }
+
+            // Status never regresses from refunded back to partially_refunded.
+            $newStatus = ((string) $booking->payment_status === 'refunded') ? 'refunded' : $computedStatus;
+            $refundId = $newestRefundId ?? $booking->last_refund_id;
+            $total = round((float) $booking->total_amount, 2);
+
+            $booking->forceFill([
+                'payment_status'  => $newStatus,
+                'refunded_amount' => $refundedAmount,
+                'refunded_at'     => now(),
+                'last_refund_id'  => $refundId,
+            ])->save();
+
+            \App\Models\AuditLog::create([
+                'organization_id' => $orgId,
+                'action'          => 'service_booking.refunded',
+                'subject_type'    => \App\Models\ServiceBooking::class,
+                'subject_id'      => $booking->id,
+                'new_values'      => ['payment_intent_id' => $paymentIntentId, 'refund_id' => $refundId, 'refunded' => $refundedAmount, 'source' => 'stripe_webhook'],
+                'description'     => "Stripe refunded {$refundedAmount} of {$total} on service booking {$booking->booking_reference}",
+            ]);
+
+            return true;
+        });
+    }
+
+    /**
+     * Stripe amounts here are already in the smallest unit; convert back to
+     * major units for storage — StripeService::fromSmallestUnit(), the
+     * inverse of toSmallestUnit() over the same zero-decimal list.
+     */
+    private function centsToMajorUnits(int $minorAmount, string $currency): float
+    {
+        return StripeService::fromSmallestUnit($minorAmount, $currency);
     }
 
     private function handleChargeDisputeCreated(\Stripe\Dispute $dispute, int $orgId): void

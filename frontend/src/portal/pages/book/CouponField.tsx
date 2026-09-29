@@ -1,12 +1,13 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
+import { refreshAfterCouponResolved } from './steps'
 import { Button } from '../../ui/Button'
 import { Field, INPUT_CLASS } from '../../ui/Field'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
-import type { Claim, CouponRef, Quote, Redemption } from '../../lib/types'
+import type { Claim, CouponRef, Priced, Redemption } from '../../lib/types'
 
 const sameRef = (a: CouponRef | null, b: CouponRef) => !!a && JSON.stringify(a) === JSON.stringify(b)
 
@@ -27,7 +28,7 @@ function CouponChip({ label, active, onToggle }: { label: string; active: boolea
 interface Props {
   value: CouponRef | null
   onChange: (c: CouponRef | null) => void
-  quote: Quote | null
+  quote: Priced | null
   /** The sentence for a `coupon_*` error the *quote itself* answered with (the applied coupon turned out
    *  to be no good) — shown here, next to the coupon the member picked, rather than as a page-level notice. */
   quoteErrorMessage?: string | null
@@ -38,11 +39,15 @@ export function CouponField({ value, onChange, quote, quoteErrorMessage = null }
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [applied, setApplied] = useState<string | null>(null)
+  const qc = useQueryClient()
   const offers = useQuery({ queryKey: ['portal-offers'], queryFn: portalApi.offers })
   const redemptions = useQuery({ queryKey: ['portal-redemptions'], queryFn: portalApi.redemptions })
   const resolve = useMutation({
     mutationFn: (c: string) => portalApi.resolveCoupon(c),
-    onSuccess: r => { setError(null); setApplied(r.label); onChange(r.coupon); setCode('') },
+    onSuccess: r => {
+      setError(null); setApplied(r.label); onChange(r.coupon); setCode('')
+      for (const queryKey of refreshAfterCouponResolved(r)) void qc.invalidateQueries({ queryKey })
+    },
     onError: e => {
       const failedCode = apiErrorCode(e)
       setError(t(bookErrorKey(failedCode), bookErrorFallback(failedCode)))

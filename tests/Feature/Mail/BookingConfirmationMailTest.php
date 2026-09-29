@@ -269,4 +269,35 @@ class BookingConfirmationMailTest extends TestCase
 
         $this->assertSame($extras, $mail->extras);
     }
+
+    public function test_a_member_discount_is_shown_between_the_lines_and_the_total(): void
+    {
+        // roomTotal overridden away from the makeMail() default (450.00,
+        // same as the grossTotal below) so 'EUR 450.00' names only the
+        // Total row; otherwise strpos() finds the room line's identical
+        // text first and the "above the total" assertion below is testing
+        // the wrong row.
+        $html = $this->makeMail(['roomTotal' => 500.00, 'grossTotal' => 450.00, 'discountAmount' => 50.00, 'discountLabel' => 'Gold: 10% off stays'])->render();
+
+        $this->assertStringContainsString('Gold: 10% off stays', $html);
+        $this->assertStringContainsString('−EUR 50.00', $html);
+        $this->assertLessThan(strpos($html, 'EUR 450.00'), strpos($html, 'Gold: 10% off stays'), 'the discount sits above the total');
+    }
+
+    public function test_no_discount_row_without_a_discount(): void
+    {
+        $html = $this->makeMail()->render();
+        $this->assertStringNotContainsString('−EUR', $html);
+    }
+
+    public function test_the_cancellation_policy_the_venue_saved_is_shown(): void
+    {
+        // Settings → Booking saves the text under `cancellation_policy`; the
+        // template also falls back to the legacy `cancellation` key below.
+        $html = $this->makeMail(['policies' => ['cancellation_policy' => 'Free cancellation until 48 hours before arrival.']])->render();
+        $this->assertStringContainsString('Free cancellation until 48 hours before arrival.', $html);
+
+        $legacy = $this->makeMail(['policies' => ['cancellation' => 'Older key still works.']])->render();
+        $this->assertStringContainsString('Older key still works.', $legacy);
+    }
 }

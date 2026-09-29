@@ -235,7 +235,12 @@ opening hours, confirm what the clinic offers, route urgent
 clinical questions to clinical staff.
 GUARD,
             workspaceLabel: 'clinic',
-            hasLoyalty: false,
+            // Every industry has memberships (the owner's ruling of
+            // 2026-09-29). The safety guardrails above are about what the
+            // assistant may SAY and are untouched by it.
+            hasLoyalty: true,
+            passLabel: 'Patient Card',
+            passDescription: 'Clinic membership card',
             // Phase 7 reviewer fix: admin AI serves STAFF, not
             // patients. Staff legitimately need to discuss medical
             // context (look up a patient's records, summarise visits,

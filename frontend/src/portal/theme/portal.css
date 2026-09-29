@@ -19,7 +19,7 @@
   --p-accent: var(--p-accent-l, 47 93 138);
   --p-accent-ink: var(--p-accent-l-ink, 255 255 255);
   --p-accent-deep: var(--p-accent-l-deep, 36 72 107);
-  --p-success: 26 107 67; /* #1A6B43: #1F7A4D measured 4.31:1 on its own tint over the paper (Task 21) */
+  --p-success: 26 107 67; /* #1A6B43: #1F7A4D measured 4.31:1 on its own tint over the paper */
   --p-warning: 138 92 0;
   --p-danger: 179 38 30;
   /* The sheet's backdrop: always a darkening colour (--p-text is light in dark mode). */
@@ -38,8 +38,11 @@
   -webkit-font-smoothing: antialiased;
 }
 
+/* `input[type]` outranks the staff console's `input[type="date"] { color-scheme: dark }` (index.css),
+   which otherwise wins on load order and gives the light portal a dark date picker with a white icon. */
 [data-portal] select,
 [data-portal] input,
+[data-portal] input[type],
 [data-portal] textarea {
   color-scheme: light;
 }

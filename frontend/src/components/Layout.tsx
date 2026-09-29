@@ -224,15 +224,16 @@ export function Layout({ children }: { children: ReactNode }) {
   // switch.
   const vocab = useVocabulary()
   // Industry Platform Plan Phase 4 — per-industry sidebar gating.
-  // Medical hides 'Members & Loyalty' entirely (decision #5 — no
-  // patient loyalty). Beauty + medical hide 'Deals' (B2B sales
-  // pipeline irrelevant to walk-in / clinical practices). Medical +
-  // restaurant hide 'Scan' (no NFC member card scanner). Hides are
-  // UNIONED with the existing org-wide `hidden_nav_groups` (Settings
-  // → Sidebar Menu) and per-staff `allowed_nav_groups` (Settings →
-  // Team). Industry rules ADD to what's hidden — they never undo a
-  // customised hide. Hotel orgs see zero changes (industry hide list
-  // is empty).
+  // Every industry has memberships (owner's decision, 2026-09-29), so
+  // no industry hides 'Members & Loyalty' any more. Beauty + medical
+  // hide 'Deals' (B2B sales pipeline irrelevant to walk-in / clinical
+  // practices). Restaurant hides 'Scan' (no NFC member card scanner);
+  // medical keeps it — a clinic now issues the patient card it scans.
+  // Hides are UNIONED with the existing org-wide `hidden_nav_groups`
+  // (Settings → Sidebar Menu) and per-staff `allowed_nav_groups`
+  // (Settings → Team). Industry rules ADD to what's hidden — they
+  // never undo a customised hide. Hotel orgs see zero changes
+  // (industry hide list is empty).
   const industryHiddenGroups = useIndustryHiddenGroups()
   const industryHiddenItems = useIndustryHiddenItems()
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(SIDEBAR_KEY) === '1')
@@ -539,7 +540,7 @@ export function Layout({ children }: { children: ReactNode }) {
     await logoutAndRedirect()
   }
 
-  // Filter groups in 3 layers, in order:
+  // Filter groups in 4 layers, in order:
   //   1. Per-user whitelist (Settings → Team) — for non-admin staff
   //      with an `allowed_nav_groups` list set, ONLY those groups
   //      are visible. Admin roles (super_admin, manager) skip this
@@ -548,6 +549,7 @@ export function Layout({ children }: { children: ReactNode }) {
   //      be reachable).
   //   2. Org-wide hidden list (Settings → Menu) — applied next.
   //   3. Per-item role + product + feature gates.
+  //   4. the venue's industry (`industryGating.ts`) — never undone by the three above.
   const ALWAYS_VISIBLE = new Set(['Overview', 'System'])
   // Phase 4 — item-level always-visible guard. Mirrors the group-level
   // ALWAYS_VISIBLE protection one layer down: even if a future

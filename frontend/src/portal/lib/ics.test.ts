@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { buildIcs } from './ics'
 import type { PortalBooking } from './types'
 
-const booking: PortalBooking = { kind: 'service', id: 7, reference: 'SVC-ABC12345', title: 'Facial', subtitle: 'with Mara', starts_at: '2026-10-03T07:30:00Z', ends_at: '2026-10-03T08:15:00Z', status: 'confirmed', payment_status: 'unpaid', total: 60, currency: 'EUR', discount: null, can_cancel: false, cancel_deadline: null, notes: null, party_size: 1, guests: null, nights: null }
+const booking: PortalBooking = { kind: 'service', id: 7, reference: 'SVC-ABC12345', title: 'Facial', subtitle: 'with Mara', starts_at: '2026-10-03T07:30:00Z', ends_at: '2026-10-03T08:15:00Z', status: 'confirmed', payment_status: 'unpaid', total: 60, currency: 'EUR', discount: null, can_cancel: false, cancel_deadline: null, notes: null, party_size: 1, guests: null, nights: null, paid_online: false }
 
 describe('buildIcs', () => {
   it('writes a UTC event with the reference as its uid, CRLF ends and folded long lines', () => {
@@ -16,8 +16,8 @@ describe('buildIcs', () => {
     expect(ics).toContain('\r\n ') // a folded continuation
   })
 
-  // Task 21 browser pass: the downloaded file read `DESCRIPTION:Reference SVC-…\\nMarie` — the line break
-  // was escaped twice, so a calendar showed a literal "\n" instead of starting a new line.
+  // The line break must be escaped exactly once (RFC 5545's \n), not twice, or a calendar app shows a
+  // literal "\n" instead of starting a new line.
   it('writes each description line break as a single RFC 5545 \\n escape', () => {
     const ics = buildIcs(booking, { name: 'Numa', timezone: 'Europe/Riga' })
     expect(ics).toContain('DESCRIPTION:Reference SVC-ABC12345\\nwith Mara\r\n')

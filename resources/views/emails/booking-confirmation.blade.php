@@ -166,6 +166,12 @@
                     <td class="val" style="color:rgba(255,255,255,0.7);font-size:12px;">{{ $currency }} {{ number_format($extrasTotal, 2) }}</td>
                 </tr>
             @endif
+            @if(($discountAmount ?? 0) > 0)
+                <tr>
+                    <td class="lbl">{{ $discountLabel ?: 'Member discount' }}</td>
+                    <td class="val">−{{ $currency }} {{ number_format($discountAmount, 2) }}</td>
+                </tr>
+            @endif
         </table>
         <table role="presentation" class="row total-row" cellpadding="0" cellspacing="0" border="0">
             <tr>
@@ -256,9 +262,10 @@
                 <tr><td class="lbl">Address</td><td class="val">{{ $hotelAddress }}</td></tr>
             </table>
         @endif
-        @if(!empty($policies['cancellation']))
+        @php $cancellationPolicy = $policies['cancellation_policy'] ?? $policies['cancellation'] ?? null; @endphp
+        @if(!empty($cancellationPolicy))
             <p style="font-size:12px;color:rgba(255,255,255,0.6);line-height:1.65;margin:14px 0 0;">
-                <strong style="color:rgba(255,255,255,0.82);">Cancellation policy:</strong> {{ $policies['cancellation'] }}
+                <strong style="color:rgba(255,255,255,0.82);">Cancellation policy:</strong> {{ $cancellationPolicy }}
             </p>
         @endif
         <p style="font-size:12px;color:rgba(255,255,255,0.5);line-height:1.65;margin:14px 0 0;">

@@ -24,14 +24,25 @@ describe('portal primitives', () => {
     expect(html).toContain('min-h-11')
   })
 
-  // Task 21 browser pass: `size="sm"` ("Change", "Remove", "Try again", "Add to calendar") measured 36px tall
-  // on a phone. It stays compact under a mouse, but on a touch screen it gets the full 44px target.
+  // `size="sm"` ("Change", "Remove", "Try again", "Add to calendar") stays compact under a mouse, but must
+  // reach the full 44px touch target under a coarse pointer (a phone), where anything smaller is easy to miss.
   it('a small button keeps its compact size under a mouse and a 44px target on touch screens', () => {
     const html = renderToStaticMarkup(<Button size="sm">Change</Button>)
     expect(html).toContain('min-h-9')
     expect(html).toContain('p-tap')
     const css = readFileSync(new URL('../theme/portal.css', import.meta.url), 'utf8').replace(/\s+/g, ' ')
     expect(css).toContain('@media (pointer: coarse) { [data-portal] .p-tap { min-height: 44px; } }')
+  })
+
+  // The staff console's index.css gives `input[type="date"]` (and the
+  // other typed inputs) `color-scheme: dark`, which ties `[data-portal] input` on specificity and can win
+  // on load order — in light mode that would draw a white calendar icon on a white field and open a dark
+  // picker. The portal's light rule must outrank it.
+  it('light mode keeps typed inputs (the date fields) on a light native picker', () => {
+    const admin = readFileSync(new URL('../../index.css', import.meta.url), 'utf8')
+    expect(admin).toContain('input[type="date"]')
+    const css = readFileSync(new URL('../theme/portal.css', import.meta.url), 'utf8').replace(/\s+/g, ' ')
+    expect(css).toContain('[data-portal] input[type], [data-portal] textarea { color-scheme: light; }')
   })
 
   it('a closed sheet renders nothing; an open one is a labelled dialog', () => {

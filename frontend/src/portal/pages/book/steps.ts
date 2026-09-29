@@ -47,7 +47,7 @@ export type BookAction =
 /**
  * Every state transition of the Book flow. `Book.tsx` dispatches these through `useReducer`, so no handler
  * ever builds the next state by spreading a `state` its render closure captured — two handlers called from
- * one click (Review's notes and its Continue, final review Important 1) each apply to the latest state, not
+ * one click (Review's notes and its Continue) each apply to the latest state, not
  * to the same stale copy. Pure, so every transition is unit-tested directly (the frontend tests render to a
  * string and never run a handler).
  *
@@ -101,9 +101,9 @@ export function nextStep(s: BookState, catalogue: Catalogue): Step {
 export type FocusTarget = { kind: 'notice' } | { kind: 'heading'; step: Step }
 
 /**
- * Where keyboard focus goes after the step changes (final review, Minor 11 — it used to drop to `<body>`, so a
- * screen reader heard nothing about the new step): the notice a bounce carried, so its sentence is read first,
- * otherwise the new step's own heading (`data-step-heading`, `tabIndex={-1}`). `Book.tsx`'s effect applies it,
+ * Where keyboard focus goes after the step changes: the notice a bounce carried, so its sentence is read
+ * first, otherwise the new step's own heading (`data-step-heading`, `tabIndex={-1}`) — never left on
+ * `<body>`, where a screen reader would hear nothing about the new step. `Book.tsx`'s effect applies it,
  * skipping the first mount; kept pure because effects never run under the string renderer.
  */
 export function focusTargetFor(step: Step, hasNotice: boolean): FocusTarget {
@@ -112,8 +112,8 @@ export function focusTargetFor(step: Step, hasNotice: boolean): FocusTarget {
 
 /**
  * The day whose times the When step shows: the member's chosen day while it is in the seven on screen,
- * otherwise the first bookable day on screen, otherwise none. Paging the strip used to leave the chosen day
- * off-screen while its times stayed listed under a strip of other dates (Task 21 browser pass).
+ * otherwise the first bookable day on screen, otherwise none — never a day that has scrolled off the strip,
+ * with its times left listed underneath a page of other dates.
  */
 export function visibleDay(selected: string, days: string[], available: Set<string>): string | null {
   if (days.includes(selected)) return selected
@@ -143,10 +143,10 @@ export function afterQuoteError(code: string | null): { patch: ReviewPatch; noti
  * after a network hiccup can resend the exact same intent id without asking the member to pay again, and so
  * `canLeavePay()` can refuse to let them wander off while a card is held against a booking that isn't
  * confirmed yet. `held` is set the instant the member presses Pay — before Stripe has answered at all — so
- * the lock engages before the browser round-trip, not after it (fix round 2, finding M3): `paid` alone
+ * the lock engages before the browser round-trip, not after it: `paid` alone
  * would leave a gap, while `stripe.confirmPayment()` is in flight, where the strip is still clickable.
  * `noCard` remembers that the payment-intent call itself answered "nothing to charge online" (`nothing_to_pay`
- * or `pay_at_venue`), so later renders don't re-request an intent this visit will never need (finding M2).
+ * or `pay_at_venue`), so later renders don't re-request an intent this visit will never need.
  */
 export interface PayVisit {
   nonce: string
@@ -165,8 +165,8 @@ export function newPayVisit(random: () => string): PayVisit {
 
 /** False from the moment the member presses Pay (`held`) through a captured card (`paid`) — the step strip
  *  disables every earlier step's button rather than let the member wander off with an authorised, un-booked
- *  charge sitting on their card with no way back to it (finding I1), or into the gap while Stripe's own
- *  round-trip is still in flight (finding M3). `null` (no visit at all, or not on Pay) is always safe to
+ *  charge sitting on their card with no way back to it, or into the gap while Stripe's own
+ *  round-trip is still in flight. `null` (no visit at all, or not on Pay) is always safe to
  *  leave. */
 export function canLeavePay(visit: PayVisit | null): boolean {
   return !(visit?.held || visit?.paid)
@@ -186,33 +186,45 @@ export interface ConfirmErrorDecision {
 
 /**
  * What a `confirm()` error means for the Pay step. `PortalServiceBookingController::confirm()`'s own
- * `fail()` helper (see the backend) now releases the member's hold on every exit that has learned a
- * `payment_intent_id`, except `no_membership` (there is no member id yet to verify ownership against) and
- * `payment_required` (can't have an intent by definition) — and the server itself answers both of THOSE
- * with a code too, so as far as this decision is concerned every SERVER-CODED error means "the hold, if
- * there ever was one, is gone" (fix round 3, minor B — `not_found` and `no_membership` used to say
- * otherwise, leaving the member retrying an already-cancelled intent on a locked strip). Only two cases are
- * answered in place instead: no code at all (a network error, which never reached the server's release
- * logic in the first place) and `idempotency_conflict` (a DIFFERENT request already used this key, leaving
- * THIS attempt's own intent exactly where it was) — both retry the same confirm, because the card, if one
- * was ever held, is genuinely still held.
+ * `fail()` helper (see the backend) releases the member's hold on every exit that has learned a
+ * `payment_intent_id` — `no_membership` is not one of those exits (there is no member id yet to verify
+ * ownership against, so there was never anything of THIS member's to release) and the server releases
+ * NOTHING for it. `no_membership` must stay out of the generic "releases, back to Review" bucket below:
+ * sending it there would send the member back for a fresh hold — and a fresh payment intent — while an
+ * authorisation from THIS attempt might still be live.
+ *
+ * Four codes are answered in place, all because nothing was released: no code at all (a network error, which
+ * never reached the server's release logic in the first place); `idempotency_conflict` (a DIFFERENT request
+ * already used this key, leaving THIS attempt's own intent exactly where it was); `payment_check_failed`
+ * (the server's own code for: Stripe could not be reached to check the payment, so the server released
+ * nothing and the member's authorisation, if there is one, is exactly where it was); and `no_membership`.
+ * All four retry the same confirm, because the card, if one was ever held, is genuinely still held.
  *
  * `slot_taken`/`too_soon`/`too_far_ahead` mean the booking WINDOW itself no longer holds — back to When,
  * with the stale slot cleared. Every other code — `payment_mismatch`, `extra_lead_time`, any `coupon_*`,
- * `confirm_failed`, `not_found`, `no_membership`, `payment_required`, and any code this decision doesn't
- * otherwise recognise — means the slot itself may still be fine, so it goes back to Review instead, which
- * re-quotes and, on the next Pay-step mount, gets a fresh payment intent.
+ * `confirm_failed`, `not_found`, `payment_required`, and any code this decision doesn't otherwise recognise
+ * — means the slot itself may still be fine, so it goes back to Review instead, which re-quotes and, on the
+ * next Pay-step mount, gets a fresh payment intent.
  *
  * Kept as a pure function, not inlined into an effect, for the same reason as `afterQuoteError`:
  * `PayStep`'s tests render with `renderToStaticMarkup`, which never runs `useEffect` — this is the only way
  * the *decision* the effect applies gets exercised by a test at all.
  */
 export function afterConfirmError(code: string | null): ConfirmErrorDecision {
-  if (code === null || code === 'idempotency_conflict') {
+  if (code === null || code === 'idempotency_conflict' || code === 'payment_check_failed' || code === 'no_membership') {
     return { to: null, releasesHold: false, clearStart: false }
   }
   if (code === 'slot_taken' || code === 'too_soon' || code === 'too_far_ahead') {
     return { to: 'when', releasesHold: true, clearStart: true }
   }
   return { to: 'review', releasesHold: true, clearStart: false }
+}
+
+/**
+ * The coupon lists to fetch again once a typed code resolves (CouponField, both flows). Resolving an
+ * offer code creates the member's claim on the server; until the list is fetched again it cannot show
+ * as a chip, and the panel would still read "No coupons yet".
+ */
+export function refreshAfterCouponResolved(r: { kind: 'offer' | 'reward' }): string[][] {
+  return r.kind === 'offer' ? [['portal-offers']] : [['portal-redemptions']]
 }

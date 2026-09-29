@@ -123,6 +123,19 @@ trait SetsUpMinimalSchema
                 $table->string('payment_status', 32)->nullable();
                 $table->string('stripe_payment_intent_id')->nullable();
                 $table->string('internal_status', 32)->nullable();
+                // Member portal phase 3 (2026_09_30_100000) and the two
+                // columns the portal reads beside them.
+                $table->string('channel_name', 80)->nullable();
+                $table->text('notice')->nullable();
+                $table->unsignedBigInteger('member_id')->nullable();
+                $table->decimal('list_total', 12, 2)->nullable();
+                $table->decimal('discount_amount', 12, 2)->default(0);
+                $table->string('discount_source', 20)->nullable();
+                $table->unsignedBigInteger('discount_source_id')->nullable();
+                $table->string('discount_label', 120)->nullable();
+                $table->timestamp('points_awarded_at')->nullable();
+                $table->timestamp('cancelled_at')->nullable();
+                $table->string('cancellation_reason', 60)->nullable();
                 $table->timestamps();
                 $table->index('organization_id');
                 $table->index(['organization_id', 'stripe_payment_intent_id']);

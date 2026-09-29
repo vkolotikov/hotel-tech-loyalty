@@ -72,6 +72,9 @@ class BookingConfirmationMail extends Mailable
         // restaurant / etc.). Null = legacy call site → falls through
         // to hotel framing.
         public ?string $industry = null,
+        // Member portal: the discount between the lines and the total.
+        public ?float $discountAmount = null,
+        public ?string $discountLabel = null,
     ) {
         // Capture the acting tenant NOW; envelope() runs later in the
         // worker, where no org is bound. See Concerns\SendsAsVenue.

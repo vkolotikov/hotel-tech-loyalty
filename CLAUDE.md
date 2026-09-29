@@ -64,6 +64,63 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Error sentences come from `bookErrorKey()` / `bookErrorFallback()` in `frontend/src/portal/lib/portalApi.ts`;
   never keep a second, local copy of them.
 
+### Member portal — stays and cancellation (phase 3)
+
+- **The public booking widget must not change** (owner's ruling, 2026-09-29): `/api/v1/booking/*` and
+  `/api/v1/services/*` keep their requests, responses, stored columns, prices, Smoobu payload and emails
+  for a booking without a member. The tests named "widget" in `tests/Feature/Booking/BookingEngineConfirmTest.php`
+  pin this; a change that needs one of them edited is a change to the widget, not to be made without asking.
+- A stay has one writer, `BookingEngineService::confirm()`. The portal reaches it through `PortalStayHooks`
+  (`StayConfirmHooks`); it never writes a mirror itself. Three separate things keep the public widget away
+  from a member-priced hold — do not conflate them, and do not "fix" one by copying another: `confirm()`
+  refuses a hold whose payload names a member when no hooks are passed, which protects the public
+  `/booking/confirm`; the public `/booking/payment-intent` has its own check on
+  `$hold->payload_json['member_id']` and answers as an unknown hold; the `payment_intent.succeeded` webhook's
+  orphan recovery never calls `confirm()` at all — it writes a `booking_mirror` row itself and finds the hold
+  by metadata key `hold_token`, which a portal intent's metadata never carries (only `portal_hold_token`), so
+  it simply never sees a portal payment. Never add `hold_token` to a portal intent's metadata.
+- One lock helper, `App\Support\AdvisoryLock`, for every string-keyed advisory lock (`AdvisoryLockOnlyTest`
+  pins it structurally). Order: room/slot advisory lock → `pi:`. A BOOKING row (`booking_mirror`,
+  `service_bookings`, `booking_holds`) is never locked (`lockForUpdate`) while `pi:` is held — it is always
+  locked first: stay confirm takes `room:{org}:{unit}`, then the hold row, then `pi:`; service confirm takes
+  the slot lock (`svc:{service}` / `svcm:{master}`), then `pi:`; `MemberCancellation` takes the booking row,
+  then `pi:`; the capture cron's main sweep takes the booking row(s) of the intent (id order), then `pi:` —
+  its stale-authorisation path takes no lock at all, relying on conditional writes instead;
+  `PortalPaymentIntentGuard` (`release()`, `check()`, `releaseOrphan()`) takes only `pi:` and only reads
+  booking rows, never locks one. This is not a rule that `pi:` is the last lock taken of any kind: rows of
+  OTHER tables may be locked after it, inside the same transaction — a coupon row (`CouponResolver`,
+  consumed in the confirm's hook) and, in `cancelService()`/`cancelStay()`, the points/member rows
+  (`LoyaltyService::reverseTransaction()`) are both locked after `pi:`. The rule for a coder: never take a
+  booking-row lock while `pi:` is already held.
+- Money rules: one PaymentIntent pays for exactly one booking; a cancellation returns the money first and
+  cancels the booking second — a payment that cannot be returned leaves the booking standing (502
+  `refund_failed`), never a booking cancelled with the money still out. PORTAL code must never cancel a
+  PaymentIntent a booking already carries, or one whose metadata names another member or organisation: a
+  failed portal confirm, `PortalPaymentIntentGuard` and the orphan sweeper all check `carried()`/ownership
+  before touching an intent. (The capture job and `MemberCancellation` cancel a carried intent by design,
+  for a booking that is being cancelled; the public stay rescue follows the rule in the next bullet.)
+- The public stay confirm's failure rescue (`BookingPublicController::rescuePaymentIntentOnConfirmFailure()`)
+  acts only on a payment whose metadata carries this request's own `hold_token` and that no booking carries;
+  everything else it refuses and audits (`booking.confirm.pi_rescue_refused`). Never widen it. Every payment
+  this application creates must carry a mark that says whose it is — `hold_token` for the public stay
+  widget, `kind` for the others (`portal_…`, `service_booking`) — so that no failure path can mistake one
+  payment for another. The rest of the public booking flow stays as it is. Details:
+  `docs/member-portal.md` "The public confirm's payment rescue".
+- The portal decides nothing about money on the client: `can_cancel`, `cancel_deadline`, `paid_online`, every
+  total and every cancellation outcome are the server's, read from the booking DTO
+  (`App\Services\Portal\MemberBookingQuery`) or the cancel response, never computed in the frontend.
+- Portal frontend rules apply to the stay and cancellation UI too: only `p-*` classes and the portal `ui/*`
+  primitives, every string translated in all five `portal.<lang>.json` files.
+- Never convert a stored appointment time (it is the venue's wall clock, not UTC, however its `+00:00`
+  suffix reads). Portal code that turns one into an instant or takes one from the client goes through
+  `App\Services\Portal\AppointmentClock`, never a bare `Carbon`/`DateTime` parse. The shared scheduler,
+  the public widget and the admin SPA stay exactly as they are — untouched by this rule.
+- The venue's time zone comes from `PortalBootstrap::timezone()` only; never read `organizations.timezone`
+  or `hotel_timezone` directly in portal code.
+- Runbook: `docs/member-portal.md` (`## Stays (phase 3)`, `## Cancellation (phase 3)`,
+  `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
+  `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
+
 ## Secrets
 
 Never echo credential values. `.env` is local; production settings live in Laravel Cloud.

@@ -4,19 +4,22 @@ namespace App\Console\Commands;
 
 use App\Models\BookingMirror;
 use App\Models\Organization;
+use App\Models\ServiceBooking;
 use App\Services\StripeService;
 use Illuminate\Console\Command;
 
 /**
- * Walk Stripe's recent PaymentIntents for an org and find ones that have
- * NO matching BookingMirror row — those are the "payment held but no
- * booking confirmed" customer cases (the user hit Confirm, Stripe captured
- * the funds, our /confirm endpoint 4xx'd or 5xx'd, and now there's money
- * sitting on a hold/charge with no reservation behind it).
+ * Walk Stripe's recent PaymentIntents for an org and find ones that NO
+ * BookingMirror row and NO ServiceBooking row carries — those are the
+ * "payment held but no booking confirmed" customer cases (the user hit
+ * Confirm, Stripe captured the funds, our /confirm endpoint 4xx'd or
+ * 5xx'd, and now there's money sitting on a hold/charge with no
+ * reservation behind it).
  *
- * Read-only. Safe on prod. Only hits Stripe's list API + a single mirror
- * lookup per PI. The per-PI rescue command (stripe:cancel-pi) is printed
- * as a copy-paste hint so the operator can immediately unblock the guest.
+ * Read-only. Safe on prod. Only hits Stripe's list API + two lookups per
+ * PI (BookingMirror, ServiceBooking). The per-PI rescue command
+ * (stripe:cancel-pi) is printed as a copy-paste hint so the operator can
+ * immediately unblock the guest.
  *
  * Usage:
  *   php artisan diag:orphan-stripe-pis --org=12
@@ -30,7 +33,7 @@ class DiagOrphanStripePis extends Command
                             {--hours=24 : Look back window in hours}
                             {--json : Emit machine-readable JSON}';
 
-    protected $description = 'Find Stripe PaymentIntents with no matching BookingMirror row.';
+    protected $description = 'Find Stripe PaymentIntents that no stay and no service booking carries.';
 
     public function handle(StripeService $stripe): int
     {
@@ -57,56 +60,45 @@ class DiagOrphanStripePis extends Command
             return self::FAILURE;
         }
 
-        // Reflectively reach the underlying \Stripe\StripeClient. The
-        // service only exposes high-level helpers (createPaymentIntent /
-        // refund / retrieve) — we need paymentIntents->list which it
-        // doesn't wrap. Pull the private field via Reflection so we
-        // don't have to widen the service surface for one diagnostic.
+        // The customer's email is a best-effort extra read straight from the
+        // Stripe client; the list itself goes through the service.
         $client = $this->resolveStripeClient($stripe);
-        if (!$client) {
-            $this->error('Could not access the underlying StripeClient.');
-            return self::FAILURE;
-        }
 
         $sinceTs = now()->subHours($hours)->timestamp;
 
-        $this->info(sprintf(
-            'Listing PaymentIntents for org %d (%s) since %s (%dh window)...',
-            $orgId,
-            $org->name,
-            date('c', $sinceTs),
-            $hours,
-        ));
+        // --json's output must be nothing but the JSON document (a machine
+        // reads it), so this progress line is gated on that flag too.
+        if (!$this->option('json')) {
+            $this->info(sprintf(
+                'Listing PaymentIntents for org %d (%s) since %s (%dh window)...',
+                $orgId,
+                $org->name,
+                date('c', $sinceTs),
+                $hours,
+            ));
+        }
 
         $orphans = [];
         $totalScanned = 0;
 
-        // Walk every page Stripe returns. limit=100 is the API max per call.
-        $params = [
-            'created' => ['gte' => $sinceTs],
-            'limit'   => 100,
-        ];
-
         try {
-            $piList = $client->paymentIntents->all($params);
+            $intents = $stripe->listPaymentIntents($sinceTs, now()->timestamp);
         } catch (\Throwable $e) {
             $this->error('Stripe list failed: ' . $e->getMessage());
             return self::FAILURE;
         }
 
-        foreach ($piList->autoPagingIterator() as $pi) {
+        foreach ($intents as $pi) {
             $totalScanned++;
 
             try {
-                $mirror = BookingMirror::withoutGlobalScopes()
-                    ->where('organization_id', $orgId)
-                    ->where('stripe_payment_intent_id', $pi->id)
-                    ->first();
+                $carried = BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $pi->id)->exists()
+                    || ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $pi->id)->exists();
             } catch (\Throwable $e) {
-                $mirror = null;
+                $carried = false;
             }
 
-            if ($mirror) {
+            if ($carried) {
                 continue;
             }
 
@@ -118,7 +110,7 @@ class DiagOrphanStripePis extends Command
                 'currency'      => strtoupper((string) ($pi->currency ?? '')),
                 'created_at'    => $pi->created ? date('c', (int) $pi->created) : null,
                 'metadata'      => $this->safeMetadata($pi),
-                'customer_email' => $this->resolveCustomerEmail($client, $pi),
+                'customer_email' => $client ? $this->resolveCustomerEmail($client, $pi) : (!empty($pi->receipt_email) ? (string) $pi->receipt_email : null),
                 'description'   => (string) ($pi->description ?? ''),
                 'last_payment_error' => isset($pi->last_payment_error)
                     ? (string) ($pi->last_payment_error->message ?? '')
@@ -144,7 +136,7 @@ class DiagOrphanStripePis extends Command
         $this->newLine();
 
         if (empty($orphans)) {
-            $this->info('No orphan PaymentIntents found. Every PI maps to a BookingMirror row.');
+            $this->info('No orphan PaymentIntents found. Every PI is carried by a stay or a service booking.');
             return self::SUCCESS;
         }
 
@@ -153,8 +145,11 @@ class DiagOrphanStripePis extends Command
             $metaSummary = '';
             $orgIdMeta   = $o['metadata']['org_id'] ?? null;
             $brandIdMeta = $o['metadata']['brand_id'] ?? null;
+            if (!empty($o['metadata']['kind'])) {
+                $metaSummary .= $o['metadata']['kind'];
+            }
             if ($orgIdMeta !== null) {
-                $metaSummary .= "org={$orgIdMeta}";
+                $metaSummary .= ($metaSummary ? ' ' : '') . "org={$orgIdMeta}";
             }
             if ($brandIdMeta !== null) {
                 $metaSummary .= ($metaSummary ? ' ' : '') . "brand={$brandIdMeta}";

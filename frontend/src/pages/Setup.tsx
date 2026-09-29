@@ -40,7 +40,7 @@ interface IndustryDef {
 const INDUSTRIES: IndustryDef[] = [
   { key: 'hotel',       label: 'Hotel',                  icon: Building2,     blurb: 'Stay reservations, group sales, F&B, housekeeping.', defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
   { key: 'beauty',      label: 'Beauty / Spa',           icon: Sparkles,      blurb: 'Treatments + service bookings + retail.',           defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
-  { key: 'medical',     label: 'Medical / Healthcare',   icon: Stethoscope,   blurb: 'Patient intake + appointments + records.',          defaultFeatures: ['bookings', 'ai_chat', 'crm', 'operations'] },
+  { key: 'medical',     label: 'Medical / Healthcare',   icon: Stethoscope,   blurb: 'Patient intake + appointments + records.',          defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
   { key: 'legal',       label: 'Legal / Law firm',       icon: Scale,         blurb: 'Matter intake + engagement + close.',               defaultFeatures: ['ai_chat', 'crm', 'operations'] },
   { key: 'real_estate', label: 'Real estate',            icon: Home,          blurb: 'Buyer / seller pipeline + showings.',               defaultFeatures: ['ai_chat', 'crm', 'operations'] },
   { key: 'education',   label: 'Education / Tutoring',   icon: GraduationCap, blurb: 'Inquiry → trial → enrolment.',                      defaultFeatures: ['ai_chat', 'crm', 'operations', 'loyalty'] },

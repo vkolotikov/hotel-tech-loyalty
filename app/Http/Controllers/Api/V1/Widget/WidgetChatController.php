@@ -2614,7 +2614,7 @@ class WidgetChatController extends Controller
 
         try {
             $booking = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $service, $scheduler, $orgId, $lockKey) {
-                \Illuminate\Support\Facades\DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+                \App\Support\AdvisoryLock::within($lockKey);
 
                 $reservation = $scheduler->reserveSlot(
                     $service,

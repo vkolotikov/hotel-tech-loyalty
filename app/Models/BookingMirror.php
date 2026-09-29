@@ -34,6 +34,8 @@ class BookingMirror extends Model
         'source_created_at', 'source_updated_at', 'synced_at', 'lifecycle_counted_at', 'raw_json',
         'pms_sync_attempts', 'pms_sync_last_attempt_at', 'pms_sync_last_error',
         'extras_json',
+        'member_id', 'list_total', 'discount_amount', 'discount_source', 'discount_source_id', 'discount_label',
+        'points_awarded_at', 'cancelled_at', 'cancellation_reason',
     ];
 
     protected $casts = [
@@ -54,6 +56,10 @@ class BookingMirror extends Model
         'pms_sync_last_attempt_at' => 'datetime',
         'raw_json'          => 'array',
         'extras_json'       => 'array',
+        'list_total'        => 'decimal:2',
+        'discount_amount'   => 'decimal:2',
+        'points_awarded_at' => 'datetime',
+        'cancelled_at'      => 'datetime',
     ];
 
     public function guest(): BelongsTo
@@ -69,5 +75,10 @@ class BookingMirror extends Model
     public function notes(): HasMany
     {
         return $this->hasMany(BookingNote::class)->orderByDesc('created_at');
+    }
+
+    public function member(): BelongsTo
+    {
+        return $this->belongsTo(LoyaltyMember::class, 'member_id');
     }
 }

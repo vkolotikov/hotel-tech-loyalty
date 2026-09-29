@@ -17,7 +17,9 @@
  * the services-engine view). Chat / Engagement / Chatbot stay
  * available even for medical; medical safety lives in the AI prompt
  * layer (Phase 7 hard guardrail), not the sidebar. Only items that
- * are genuinely irrelevant to a vertical get hidden here.
+ * are genuinely irrelevant to a vertical get hidden here. Decision #5
+ * (no patient loyalty programme) was reversed by the owner on
+ * 2026-09-29: every industry has memberships.
  *
  * **No identity changes**. The maps are keyed on the canonical
  * English `defaultLabel` for groups + items (matching Layout.tsx
@@ -34,10 +36,11 @@ import { useAuthStore } from '../stores/authStore'
 import type { IndustryId } from './industryHosts'
 
 /**
- * Nav groups (Layout.tsx navGroups[].defaultLabel) hidden by industry
- * default. Admin can override via Settings → Sidebar Menu the same way
- * they always could — union semantics mean the org-wide list keeps
- * adding to what's hidden, never undoes an industry default.
+ * Nav groups (Layout.tsx navGroups[].defaultLabel) hidden for an industry.
+ * These hides are not the admin's to undo: Settings → Sidebar Menu can
+ * hide more, never less (union). That page shows a group hidden here as
+ * "Hidden for your industry" instead of offering a toggle that would do
+ * nothing.
  *
  * Each entry should be a `defaultLabel` from the navGroups array in
  * Layout.tsx, NOT a translated or industry-relabelled version. The
@@ -47,12 +50,8 @@ import type { IndustryId } from './industryHosts'
 const INDUSTRY_HIDDEN_GROUPS: Record<IndustryId, ReadonlyArray<string>> = {
   hotel: [],
   beauty: [],
-  medical: [
-    // Medical has no patient loyalty program (decision #5). The whole
-    // Members & Loyalty group hides — tiers / points / rewards /
-    // campaigns are irrelevant to a clinical practice.
-    'Members & Loyalty',
-  ],
+  // Every industry has memberships (owner's decision, 2026-09-29).
+  medical: [],
   restaurant: [],
   // GTM-deferred industries — no extra hides until product-market fit
   // is validated per industry. Customers can still hide groups via
@@ -81,8 +80,6 @@ const INDUSTRY_HIDDEN_ITEMS: Record<IndustryId, ReadonlyArray<string>> = {
     // Deals = B2B sales pipeline (companies, contracts). A clinic
     // doesn't sell deals; patient inquiries flow through Leads.
     'Deals',
-    // NFC card scanner — clinics don't issue member cards.
-    'Scan',
   ],
   restaurant: [
     // Restaurants typically don't need a separate NFC-card scanner
@@ -94,8 +91,7 @@ const INDUSTRY_HIDDEN_ITEMS: Record<IndustryId, ReadonlyArray<string>> = {
   real_estate: [],
   education: [],
   fitness: [],
-  // Generic business — nothing extra hidden beyond the group-level
-  // booking hide.
+  // Generic business — nothing extra hidden.
   other: [],
 }
 
@@ -108,53 +104,70 @@ const INDUSTRY_HIDDEN_ITEMS: Record<IndustryId, ReadonlyArray<string>> = {
  */
 const INDUSTRY_HIDDEN_SETTINGS_TABS: Record<IndustryId, ReadonlyArray<string>> = {
   hotel: [],
-  beauty: [
-    // Phase 7 ships the Appointment Engine settings parity that
-    // replaces the Smoobu-flavoured Booking Engine tab for non-hotel
-    // industries. Until then the tab is hidden so a beauty admin
-    // doesn't land on a hotel-shaped PMS-sync UI.
-    'booking',
-  ],
+  // Settings → Booking is shown for every industry: it is where a venue
+  // sets its service slot step, lead time, cancellation policy and hours,
+  // and switches online payment on. (It was hidden for non-hotel venues
+  // until dedicated appointment settings shipped; they never did, and the
+  // venues were left with no way to reach any of it.)
+  beauty: [],
   medical: [
-    'loyalty',     // No patient loyalty program — decision #5
-    'mobile_app',  // Member App tab — no patient mobile app in v1
-    'booking',     // Same as beauty — Phase 7 ships the Appointment Engine settings
+    'mobile_app',  // Member App tab — no patient mobile app
   ],
-  restaurant: [
-    'booking',
-  ],
-  // `loyalty` deliberately NOT hidden here any more. The Members &
-  // Loyalty NAV GROUP is visible for these two (see
-  // INDUSTRY_HIDDEN_GROUPS above) and LoyaltyPresetService gives them a
-  // simple two-tier ladder — so hiding the settings tab left them with a
-  // programme they could see but never configure (no expiry policy, no
-  // points-per-currency). Either both go or neither; keeping the
-  // capability is the less destructive choice.
-  legal: ['booking', 'mobile_app'],
-  real_estate: ['booking', 'mobile_app'],
-  education: ['booking', 'mobile_app'],
-  fitness: ['booking'],
-  // A generic business keeps everything visible except the
-  // hotel-shaped PMS booking settings, same as the other service
-  // verticals. Loyalty stays ON — LoyaltyPresetService gives `other`
-  // the simple two-tier ladder, and the two must agree.
-  other: ['booking'],
+  restaurant: [],
+  legal: ['mobile_app'],
+  real_estate: ['mobile_app'],
+  education: ['mobile_app'],
+  fitness: [],
+  other: [],
+}
+
+/**
+ * Settings → Booking tab copy (fix round 1, 2026-09-28). The tab is now
+ * shown for every industry (see INDUSTRY_HIDDEN_SETTINGS_TABS above), but
+ * hotel's wording — "Booking Engine" / "Rates, currency, payment, Smoobu
+ * sync" — describes rooms, rates and the Smoobu PMS sync that only a
+ * hotel has. Every other industry gets neutral service-booking wording.
+ * Hotel's own label + description are unchanged, byte for byte. A session
+ * that doesn't know its industry (legacy auth store, before Phase 1) keeps
+ * the hotel wording too — the same legacy-safety default `vocabularyFor`
+ * uses. Wording only: this never hides, adds or removes a field.
+ */
+export function bookingTabCopyFor(industry: IndustryId | null | undefined): { label: string; desc: string } {
+  if (!industry || industry === 'hotel') {
+    return { label: 'Booking Engine', desc: 'Rates, currency, payment, Smoobu sync' }
+  }
+  return { label: 'Booking', desc: 'Slots, policies, payment' }
+}
+
+/** The canonical group defaultLabels hidden for an industry. Pure: the Settings page and its tests use it too. */
+export function industryHiddenGroupsFor(industry: IndustryId | null | undefined): ReadonlyArray<string> {
+  return (industry ? INDUSTRY_HIDDEN_GROUPS[industry] : []) ?? []
 }
 
 /** Hook — returns the list of canonical group defaultLabels hidden by industry. */
 export function useIndustryHiddenGroups(): ReadonlyArray<string> {
   const industry = useAuthStore(s => s.user?.industry)
-  return useMemo(() => (industry ? INDUSTRY_HIDDEN_GROUPS[industry] : []) ?? [], [industry])
+  return useMemo(() => industryHiddenGroupsFor(industry), [industry])
+}
+
+/** The canonical nav-item defaultLabels hidden for an industry. */
+export function industryHiddenItemsFor(industry: IndustryId | null | undefined): ReadonlyArray<string> {
+  return (industry ? INDUSTRY_HIDDEN_ITEMS[industry] : []) ?? []
+}
+
+/** The Settings tab ids hidden for an industry. */
+export function industryHiddenSettingsTabsFor(industry: IndustryId | null | undefined): ReadonlyArray<string> {
+  return (industry ? INDUSTRY_HIDDEN_SETTINGS_TABS[industry] : []) ?? []
 }
 
 /** Hook — returns the list of canonical nav-item defaultLabels hidden by industry. */
 export function useIndustryHiddenItems(): ReadonlyArray<string> {
   const industry = useAuthStore(s => s.user?.industry)
-  return useMemo(() => (industry ? INDUSTRY_HIDDEN_ITEMS[industry] : []) ?? [], [industry])
+  return useMemo(() => industryHiddenItemsFor(industry), [industry])
 }
 
 /** Hook — returns the list of Settings tab ids hidden by industry. */
 export function useIndustryHiddenSettingsTabs(): ReadonlyArray<string> {
   const industry = useAuthStore(s => s.user?.industry)
-  return useMemo(() => (industry ? INDUSTRY_HIDDEN_SETTINGS_TABS[industry] : []) ?? [], [industry])
+  return useMemo(() => industryHiddenSettingsTabsFor(industry), [industry])
 }

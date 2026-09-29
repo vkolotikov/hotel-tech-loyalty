@@ -297,9 +297,9 @@ class OrganizationSetupService
         // for hotel orgs. Non-hotel orgs skip the Bronze→Diamond tier
         // ladder + room-upgrade benefits + €/points seeds, because
         // those defaults are hotel-specific and the LoyaltyPresetService
-        // will write industry-appropriate ones in Phase 5. Medical
-        // orgs skip loyalty entirely (decision #5). Hotel keeps today's
-        // behaviour for full back-compat.
+        // will write industry-appropriate ones in Phase 5. Every industry
+        // runs a programme (owner's decision, 2026-09-29). Hotel keeps
+        // today's behaviour for full back-compat.
         $resolvedIndustry = $org->resolved_industry;
         $seedLoyalty = ($resolvedIndustry === Organization::DEFAULT_INDUSTRY);
 
@@ -377,7 +377,7 @@ class OrganizationSetupService
         // hotel-only gate left salons and gyms with no birthday bonus, no
         // expiry policy and no points-per-currency, so those crons and
         // earn calculations silently used code defaults the admin had
-        // never seen. Medical stays excluded (no patient loyalty).
+        // never seen. No industry is excluded today.
         // Single source of truth, shared with LoyaltyPresetService, so the
         // settings and the tier ladder can never disagree about whether an
         // industry has a programme at all.

@@ -18,10 +18,9 @@ use Illuminate\Support\Facades\Schema;
  *
  * 'beauty' is used as the organisation's industry because
  * PortalBootstrap::loyaltyOn() requires IndustryPromptService::for($industry)
- * ->hasLoyalty to be true, and 'beauty' is one such industry ('medical' is
- * the industry that deliberately has none — see PortalBootstrap's own
- * comment). The org needs at least one *active* LoyaltyTier for loyaltyOn()
- * to report true at all.
+ * ->hasLoyalty to be true, and every industry is one such industry today
+ * (owner's decision, 2026-09-29 — medical included). The org needs at
+ * least one *active* LoyaltyTier for loyaltyOn() to report true at all.
  *
  * Requires the consumer to also `use SetsUpMinimalSchema,
  * SetsUpServiceBookingSchema` — this trait builds on their

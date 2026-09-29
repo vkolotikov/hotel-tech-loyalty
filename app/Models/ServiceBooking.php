@@ -23,6 +23,7 @@ class ServiceBooking extends Model
         'status', 'payment_status', 'stripe_payment_intent_id',
         'source', 'customer_notes', 'staff_notes',
         'cancelled_at', 'cancellation_reason', 'meta', 'points_awarded_at',
+        'refunded_amount', 'refunded_at', 'last_refund_id',
     ];
 
     protected $casts = [
@@ -36,6 +37,8 @@ class ServiceBooking extends Model
         'list_amount'       => 'decimal:2',
         'discount_amount'   => 'decimal:2',
         'points_awarded_at' => 'datetime',
+        'refunded_amount'   => 'decimal:2',
+        'refunded_at'       => 'datetime',
         'duration_minutes'  => 'integer',
         'party_size'        => 'integer',
     ];

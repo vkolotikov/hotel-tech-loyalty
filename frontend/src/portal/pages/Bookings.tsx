@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays } from 'lucide-react'
-import { portalApi } from '../lib/portalApi'
+import { apiErrorCode, cancelErrorFallback, cancelErrorKey, portalApi } from '../lib/portalApi'
 import { useVocab } from '../lib/vocab'
-import type { BookingKind } from '../lib/types'
+import type { BookingKind, CancelReply, PortalBooking } from '../lib/types'
 import { Tabs } from '../ui/Tabs'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -13,6 +13,7 @@ import { Notice } from '../ui/Notice'
 import { PageSkeleton } from '../ui/Skeleton'
 import { BookingRow } from './BookingRow'
 import { BookingSheet } from './BookingSheet'
+import { cancelledWhileAway, type CancelMutationSnapshot } from './cancelBooking'
 
 /**
  * Upcoming and past, across appointments and stays. The detail is a sheet
@@ -23,6 +24,7 @@ export function Bookings() {
   const { t } = useTranslation()
   const vocab = useVocab()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { kind, id } = useParams<{ kind: BookingKind; id: string }>()
   const [params, setParams] = useSearchParams()
   const scope = params.get('scope') === 'past' ? 'past' : 'upcoming'
@@ -30,7 +32,7 @@ export function Bookings() {
   // Captured once, at mount, from the URL — not read fresh from `params` on every render — so that once
   // the confirmation is shown it stays visible for the rest of this mount even after the effect below drops
   // `?confirmed=1` from the address bar; a reload or Back at that point lands on a URL with no `confirmed`
-  // param at all, so the banner does not come back (see the minor finding from fix round 1).
+  // param at all, so the banner does not come back.
   const [showConfirmedBanner] = useState(() => params.get('confirmed') === '1')
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
@@ -56,6 +58,41 @@ export function Bookings() {
   })
   const confirmedReference = confirmedInList?.reference ?? confirmedBooking.data?.reference ?? null
 
+  // Browser Back while a cancellation is in flight closes
+  // BookingSheet before its own request settles — this app has no navigation blocker (a plain
+  // `<BrowserRouter>`), so the notice CancelPanel would have shown has to be picked up here instead, from
+  // the mutation cache itself (see `cancelledWhileAway` in `cancelBooking.ts`). `watchingSince` (a value
+  // fixed at mount, so a plain ref is fine for it) scopes this to THIS mount of the list, so a stale
+  // mutation from earlier in the session is never re-announced. `shown` is REACT STATE, not a ref: a re-
+  // render caused by something unrelated (the mutation's own invalidations refetching `portal-bookings`,
+  // say) must not make an announced notice vanish on its own — only `markShown` (the notice's own dismiss
+  // button, or `BookingSheet` reporting it showed the result itself while mounted) removes it.
+  const watchingSince = useRef(Date.now()).current
+  const [shown, setShown] = useState<Set<string>>(() => new Set())
+  const markShown = (k: BookingKind, i: number) => setShown(prev => new Set(prev).add(`${k}:${i}`))
+  const cancelMutations = useMutationState({
+    filters: { mutationKey: ['portal-cancel'] },
+    select: (m): CancelMutationSnapshot => {
+      const mutationKey = m.options.mutationKey as [string, BookingKind, number] | undefined
+      return {
+        kind: mutationKey?.[1] ?? 'service',
+        id: mutationKey?.[2] ?? 0,
+        status: m.state.status as 'pending' | 'success' | 'error',
+        submittedAt: m.state.submittedAt,
+        refund: m.state.status === 'success' ? (m.state.data as CancelReply).refund : null,
+        errorCode: m.state.status === 'error' ? apiErrorCode(m.state.error) : null,
+      }
+    },
+  })
+  // Only the booking whose sheet is open right now is excluded — not "any sheet at all" — so a first
+  // booking's cancellation that outlived its own (Back-closed) sheet is still announced while a second,
+  // unrelated booking's sheet happens to be open.
+  const openBooking = kind && id && (kind === 'service' || kind === 'stay') ? { kind, id: Number(id) } : null
+  const awayNotice = cancelledWhileAway(cancelMutations, watchingSince, openBooking, shown)
+  // The booking's own title, read from the cache BookingSheet.tsx's own mutation already wrote (or, for an
+  // error with no booking in its body, whatever the list itself last had cached) — never a fresh fetch here.
+  const awayNoticeBooking = awayNotice ? qc.getQueryData<PortalBooking>(['portal-booking', awayNotice.kind, awayNotice.id]) : undefined
+
   // Drop `?confirmed=1` the moment the banner has something to show — not merely once shown, so a slow
   // resolve of `confirmedReference` doesn't strip the param before it's known there's anything to display.
   useEffect(() => {
@@ -72,6 +109,16 @@ export function Bookings() {
         <Notice tone="success">
           <strong>{t('portal.book.confirmed_title', "You're booked")}</strong>{' '}
           {t('portal.book.confirmed_body', "Reference {{reference}}. We've emailed the details.", { reference: confirmedReference })}
+        </Notice>
+      )}
+      {awayNotice && (
+        <Notice tone={awayNotice.errorCode ? 'danger' : 'success'} onDismiss={() => markShown(awayNotice.kind, awayNotice.id)}>
+          {(() => {
+            const message = awayNotice.errorCode
+              ? t(cancelErrorKey(awayNotice.errorCode), cancelErrorFallback(awayNotice.errorCode))
+              : t('portal.bookings.cancelled_done', 'Your booking is cancelled.')
+            return awayNoticeBooking ? t('portal.bookings.cancelled_elsewhere', '{{title}}: {{message}}', { title: awayNoticeBooking.title, message }) : message
+          })()}
         </Notice>
       )}
       <Tabs
@@ -105,7 +152,7 @@ export function Bookings() {
       )}
 
       {kind && id && (kind === 'service' || kind === 'stay') && (
-        <BookingSheet kind={kind} id={Number(id)} onClose={() => navigate(`/portal/bookings?scope=${scope}`, { replace: true })} />
+        <BookingSheet kind={kind} id={Number(id)} onClose={() => navigate(`/portal/bookings?scope=${scope}`, { replace: true })} onCancelSettled={markShown} />
       )}
     </div>
   )

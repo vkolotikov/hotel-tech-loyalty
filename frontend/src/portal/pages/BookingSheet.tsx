@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { usePortal } from '../PortalProvider'
-import { portalApi } from '../lib/portalApi'
+import { apiErrorBooking, apiErrorCode, portalApi } from '../lib/portalApi'
 import { buildIcs, downloadIcs } from '../lib/ics'
-import type { BookingKind } from '../lib/types'
+import type { BookingKind, CancelReply } from '../lib/types'
 import { Sheet } from '../ui/Sheet'
 import { Button } from '../ui/Button'
 import { Chip } from '../ui/Chip'
@@ -12,7 +12,9 @@ import { DateTime } from '../ui/DateTime'
 import { Money } from '../ui/Money'
 import { Notice } from '../ui/Notice'
 import { Skeleton } from '../ui/Skeleton'
-import { paymentLabel, statusLabel, statusTone } from './BookingRow'
+import { bookingPaymentLabel, statusLabel, statusTone } from './BookingRow'
+import { afterCancelError, cancelOffer } from './cancelBooking'
+import { CancelPanel } from './CancelPanel'
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -23,17 +25,80 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export function BookingSheet({ kind, id, onClose }: { kind: BookingKind; id: number; onClose: () => void }) {
+function policyText(kind: BookingKind, policies: { services_cancellation_policy: string; booking_cancellation_policy: string } | undefined): string | null {
+  const text = kind === 'stay' ? policies?.booking_cancellation_policy : policies?.services_cancellation_policy
+  return text ? text : null
+}
+
+export function BookingSheet({ kind, id, onClose, onCancelSettled }: { kind: BookingKind; id: number; onClose: () => void; onCancelSettled?: (kind: BookingKind, id: number) => void }) {
   const { t } = useTranslation()
   const { data: portal } = usePortal()
   const { data: b, isLoading, isError } = useQuery({ queryKey: ['portal-booking', kind, id], queryFn: () => portalApi.booking(kind, id), retry: false })
 
   const venue = portal?.venue
-  const contact = venue?.contact.phone || venue?.contact.email
-  const payment = b ? paymentLabel(b.payment_status, t) : null
+  const payment = b ? bookingPaymentLabel(b, t) : null
+
+  const qc = useQueryClient()
+  const [stage, setStage] = useState<'idle' | 'asking' | 'done'>('idle')
+  const [result, setResult] = useState<CancelReply['refund'] | null>(null)
+  // `onSuccess`/`onError` below run even after this component unmounts (react-query
+  // ties them to the mutation, not the component — see `cancelledWhileAway`'s own doc comment), but
+  // `onCancelSettled` must fire ONLY while this sheet is actually here to show its own result — otherwise
+  // browser Back (unmount before settle) would still mark the cancellation "shown" and the list would never
+  // get to announce it. A plain boolean ref, flipped in the unmount cleanup, is the only way to tell "still
+  // mounted" apart from "the callback merely still runs" inside those handlers.
+  const mountedRef = useRef(true)
+  useEffect(() => () => { mountedRef.current = false }, [])
+  const cancel = useMutation({
+    // Keyed so `Bookings.tsx` can still find this mutation's own outcome via
+    // `useMutationState` after browser Back has unmounted this sheet mid-flight — see `cancelledWhileAway`
+    // in `cancelBooking.ts` for why that is the only way the list can learn of it at all.
+    mutationKey: ['portal-cancel', kind, id],
+    mutationFn: () => portalApi.cancelBooking(kind, id),
+    onSuccess: r => {
+      setResult(r.refund)
+      setStage('done')
+      // The sheet shows the booking as it is now; the list, the upcoming count and the coupons follow.
+      qc.setQueryData(['portal-booking', kind, id], r.booking)
+      qc.invalidateQueries({ queryKey: ['portal-bookings'] })
+      qc.invalidateQueries({ queryKey: ['portal-bootstrap'] })
+      qc.invalidateQueries({ queryKey: ['portal-offers'] })
+      qc.invalidateQueries({ queryKey: ['portal-redemptions'] })
+      qc.invalidateQueries({ queryKey: ['portal-slots'] })
+      qc.invalidateQueries({ queryKey: ['portal-calendar'] })
+      qc.invalidateQueries({ queryKey: ['portal-stay-availability'] })
+      if (mountedRef.current) onCancelSettled?.(kind, id)
+    },
+    onError: e => {
+      const code = apiErrorCode(e)
+      // cancel_failed's 500 body can carry the booking's true state (a refund may already have gone
+      // through before the failure) — that is truer than anything a refetch could bring back, so it is
+      // written into the cache directly, independent of afterCancelError()'s own closes/refetch decision.
+      // When cancel_failed answers with no booking at all (the failure handler's own re-read came up
+      // empty), the sheet still cannot trust what it already has cached — that is the one code whose
+      // failure can hide a completed money movement — so it refetches this booking and the list instead
+      // of assuming nothing changed.
+      const failedBooking = apiErrorBooking(e)
+      if (failedBooking) {
+        qc.setQueryData(['portal-booking', kind, id], failedBooking)
+      } else if (code === 'cancel_failed') {
+        qc.invalidateQueries({ queryKey: ['portal-booking', kind, id] })
+        qc.invalidateQueries({ queryKey: ['portal-bookings'] })
+      }
+      // The decision is `afterCancelError()`, a pure function with its own tests.
+      const decision = afterCancelError(code)
+      if (decision.refetch) qc.invalidateQueries({ queryKey: ['portal-booking', kind, id] })
+      if (decision.closes) setStage('idle')
+      if (mountedRef.current) onCancelSettled?.(kind, id)
+    },
+  })
+  const cancelError = cancel.isError ? apiErrorCode(cancel.error) ?? 'unknown' : null
+  // The sheet's own X button, the backdrop and Escape all funnel through this one onClose — a member
+  // cannot dismiss the sheet mid-cancel and lose track of whether the money moved.
+  const guardedClose = () => { if (!cancel.isPending) onClose() }
 
   return (
-    <Sheet open onClose={onClose} title={b?.title ?? t('portal.bookings.title', 'Bookings')}>
+    <Sheet open onClose={guardedClose} title={b?.title ?? t('portal.bookings.title', 'Bookings')}>
       {isLoading && <div className="space-y-2"><Skeleton className="h-5" /><Skeleton className="h-5" /><Skeleton className="h-5" /></div>}
       {isError && <Notice tone="danger">{t('portal.bookings.not_found', 'We could not find that booking.')}</Notice>}
       {b && (
@@ -66,17 +131,24 @@ export function BookingSheet({ kind, id, onClose }: { kind: BookingKind; id: num
               {t('portal.book.add_to_calendar', 'Add to calendar')}
             </Button>
           )}
-          {b.kind === 'service' && portal?.policies.services_cancellation_policy && (
+          {policyText(b.kind, portal?.policies) && (
             <div>
               <p className="text-xs font-semibold text-p-text-2 mb-1">{t('portal.bookings.policy', 'Cancellation policy')}</p>
-              <p className="text-xs text-p-text-2 whitespace-pre-line">{portal.policies.services_cancellation_policy}</p>
+              <p className="text-xs text-p-text-2 whitespace-pre-line">{policyText(b.kind, portal?.policies)}</p>
             </div>
           )}
-          {b.status !== 'cancelled' && b.status !== 'completed' && venue && (
-            <Notice tone="info">
-              {t('portal.bookings.contact_to_change', 'To change or cancel, contact {{venue}}.', { venue: venue.name })}
-              {contact && <> <a className="text-p-accent-deep underline" href={venue.contact.phone ? `tel:${venue.contact.phone}` : `mailto:${venue.contact.email}`}>{contact}</a></>}
-            </Notice>
+          {venue && (
+            <CancelPanel
+              booking={b}
+              venue={venue}
+              offer={cancelOffer(b, new Date())}
+              stage={cancel.isPending ? 'cancelling' : stage}
+              error={stage === 'asking' ? cancelError : null}
+              result={result}
+              onAsk={() => { cancel.reset(); setStage('asking') }}
+              onKeep={() => { cancel.reset(); setStage('idle') }}
+              onConfirm={() => cancel.mutate()}
+            />
           )}
         </div>
       )}

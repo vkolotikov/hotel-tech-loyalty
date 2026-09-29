@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { PortalContext, type PortalContextValue } from '../PortalProvider'
-import { BookingRow, paymentLabel, statusTone } from './BookingRow'
+import { BookingRow, bookingPaymentLabel, paymentLabel, statusTone } from './BookingRow'
 import { Bookings } from './Bookings'
 import type { Paginated, PortalBooking, PortalBootstrap } from '../lib/types'
 
@@ -30,14 +30,14 @@ const data = {
   venue: { timezone: 'Europe/Riga', name: 'Numa', industry: 'beauty', currency: 'EUR', logo_url: null, contact: { email: null, phone: null },
     accent: { hex: '#b04a6e', ink: '#ffffff', deep: '#8e3b58', dark_hex: '#e38ab0', dark_ink: '#1a0b12', dark_deep: '#f0b4cd' }, display_face: 'cormorant' },
   capabilities: { loyalty: true, services: true, stays: false, chat: true, payments: { services: false, stays: false, publishable_key: null } },
-  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '' },
+  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '', booking_cancellation_policy: '', check_in_time: '15:00', check_out_time: '11:00' },
   member: null, counts: { unread_notifications: 0, upcoming_bookings: 1 },
 } as PortalBootstrap
 
 const service: PortalBooking = {
   kind: 'service', id: 7, reference: 'SVC-ABC12345', title: 'Facial', subtitle: 'Mara', starts_at: '2026-10-03T07:30:00Z', ends_at: '2026-10-03T08:15:00Z',
   status: 'confirmed', payment_status: 'unpaid', total: 60, currency: 'EUR', discount: null, can_cancel: false, cancel_deadline: null,
-  notes: null, party_size: 1, guests: null, nights: null,
+  notes: null, party_size: 1, guests: null, nights: null, paid_online: false,
 }
 const stay: PortalBooking = { ...service, kind: 'stay', id: 9, reference: 'BK-1', title: 'Sea view', subtitle: null, starts_at: '2026-10-10', ends_at: '2026-10-12', total: 240, status: 'cancelled', guests: 2, nights: 2 }
 
@@ -70,6 +70,20 @@ describe('BookingRow', () => {
     const { t } = useTranslation()
     expect(paymentLabel('disputed', t)).toBe('Payment under review')
     expect(paymentLabel('weird', t)).toBeNull()
+  })
+  // A stay paid at the venue is stored `open` in payment_status (an appointment's equivalent is
+  // `unpaid`) — both must read "Pay at the venue", and neither once the booking is cancelled, since
+  // nothing was or will be paid.
+  it('names a stay paid at the venue like an appointment, and drops the row once an unpaid booking is cancelled', () => {
+    const { t } = useTranslation()
+    const openStay = { ...stay, status: 'confirmed', payment_status: 'open', paid_online: false }
+    expect(bookingPaymentLabel(openStay, t)).toBe('Pay at the venue')
+    expect(bookingPaymentLabel(service, t)).toBe('Pay at the venue')
+    expect(bookingPaymentLabel({ ...openStay, status: 'cancelled' }, t)).toBeNull()
+    expect(bookingPaymentLabel({ ...service, status: 'cancelled' }, t)).toBeNull()
+    // Money that moved is still shown on a cancelled booking.
+    expect(bookingPaymentLabel({ ...openStay, status: 'cancelled', payment_status: 'refunded', paid_online: true }, t)).toBe('Refunded')
+    expect(bookingPaymentLabel({ ...openStay, payment_status: 'paid', paid_online: true }, t)).toBe('Paid')
   })
 })
 

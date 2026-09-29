@@ -6,8 +6,8 @@ import { PortalContext, type PortalContextValue } from '../../PortalProvider'
 import type { Catalogue, PortalBootstrap } from '../../lib/types'
 
 /**
- * Fixtures and a render helper shared by every Book-flow test file (this
- * task's book.test.tsx and the review/pay tests that follow it). `vi.mock`
+ * Fixtures and a render helper shared by every Book-flow test file
+ * (book.test.tsx and the review/pay tests that follow it). `vi.mock`
  * is hoisted per test FILE, so the mocks themselves cannot live here — each
  * test file declares its own `vi.mock('react-i18next', ...)` and
  * `vi.mock('../../lib/portalApi', ...)` lines and imports only these three
@@ -45,7 +45,7 @@ export const base: PortalBootstrap = {
     display_face: 'cormorant',
   },
   capabilities: { loyalty: true, services: true, stays: false, chat: false, payments: { services: false, stays: false, publishable_key: null } },
-  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '' },
+  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '', booking_cancellation_policy: '', check_in_time: '15:00', check_out_time: '11:00' },
   member: null,
   counts: { unread_notifications: 0, upcoming_bookings: 0 },
 }

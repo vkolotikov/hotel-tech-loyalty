@@ -16,7 +16,7 @@ const MOBILE_COLS: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4'
 /**
  * The member's frame: venue name up top, a thumb-reachable bar on phones,
  * tabs from `sm`. Destinations follow what the venue can do — no Rewards
- * for a clinic, no Book for a venue that doesn't take appointments — so
+ * for a clinic, no Book for a venue that sells neither appointments nor stays — so
  * nothing points at a page that would be empty.
  */
 export function PortalShell({ children }: { children: ReactNode }) {
@@ -26,7 +26,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
 
   const items = [
     { to: '/portal', label: t('portal.nav.home', 'Home'), icon: Home, end: true, show: true, badge: 0 },
-    { to: '/portal/book', label: t('portal.nav.book', 'Book'), icon: CalendarPlus, end: false, show: !!data?.capabilities.services, badge: 0 },
+    { to: '/portal/book', label: t('portal.nav.book', 'Book'), icon: CalendarPlus, end: false, show: !!data?.capabilities.services || !!data?.capabilities.stays, badge: 0 },
     { to: '/portal/rewards', label: t('portal.nav.rewards', 'Rewards'), icon: Gift, end: false, show: !!data?.capabilities.loyalty, badge: 0 },
     { to: '/portal/bookings', label: t('portal.nav.bookings', 'Bookings'), icon: CalendarDays, end: false, show: true, badge: data?.counts.upcoming_bookings ?? 0 },
     { to: '/portal/profile', label: t('portal.nav.profile', 'Profile'), icon: User, end: false, show: true, badge: 0 },

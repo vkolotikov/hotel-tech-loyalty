@@ -25,8 +25,10 @@ namespace App\Services\IndustryPrompts;
  *   - workspaceLabel ─→ what to call the business in admin AI
  *                  ("hotel" / "salon" / "clinic" / "restaurant" /
  *                  "workspace")
- *   - hasLoyalty ─→ false for medical (decision #5). Loyalty-only
- *                  AI prompts short-circuit when this is false.
+ *   - hasLoyalty ─→ true for every industry — the owner's ruling of
+ *                  2026-09-29 that every industry has memberships.
+ *                  The flag stays for a future industry that may
+ *                  need to short-circuit loyalty-only AI prompts.
  */
 final class IndustryPromptProfile
 {
@@ -50,11 +52,11 @@ final class IndustryPromptProfile
          */
         public readonly string $adminGuardrails = '',
         /**
-         * Phase 8 — wallet pass headline (Apple `description` /
-         * `logoText`, Google `accountName`). "Loyalty Card" for
-         * hotel; "Client Card" / "Regular Card" / etc. for the others.
-         * Medical is never reached (hasLoyalty=false gates wallet
-         * endpoints) so its passLabel is just a defensive default.
+         * Wallet pass headline (Apple `description` / `logoText`,
+         * Google `accountName`). "Loyalty Card" for hotel; "Client
+         * Card" / "Patient Card" / etc. for the others. Every industry
+         * has memberships (the owner's ruling of 2026-09-29), so every
+         * profile's passLabel is reachable.
          */
         public readonly string $passLabel = 'Loyalty Card',
         /**

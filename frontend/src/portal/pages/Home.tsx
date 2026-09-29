@@ -30,6 +30,11 @@ export function Home() {
   if (!data) return null
   const { member, capabilities, venue } = data
   const next = upcoming?.data[0]
+  const canBook = capabilities.services || capabilities.stays
+  // A venue that sells only stays says so; every other venue keeps its own noun ("Book appointment").
+  const bookLabel = capabilities.stays && !capabilities.services
+    ? t('portal.stay.cta_home', 'Book a stay')
+    : t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })
 
   return (
     <div className="space-y-5">
@@ -57,9 +62,9 @@ export function Home() {
         ) : upcomingLoaded ? (
           <div className="space-y-3">
             <EmptyState icon={<CalendarDays size={18} aria-hidden />} title={t('portal.home.no_upcoming', 'Nothing booked yet.')} />
-            {capabilities.services && (
+            {canBook && (
               <Link to="/portal/book" className="flex items-center justify-center gap-2 bg-p-accent text-p-accent-ink rounded-p-control min-h-[44px] px-4 text-sm font-semibold p-lift">
-                <CalendarPlus size={16} aria-hidden /> {t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })}
+                <CalendarPlus size={16} aria-hidden /> {bookLabel}
               </Link>
             )}
           </div>
@@ -68,9 +73,9 @@ export function Home() {
         ) : null}
       </section>
 
-      {next && capabilities.services && (
+      {next && canBook && (
         <Link to="/portal/book" className="flex items-center justify-center gap-2 bg-p-surface border border-p-border text-p-text rounded-p-control min-h-[44px] px-4 text-sm font-semibold p-lift">
-          <CalendarPlus size={16} aria-hidden /> {t('portal.book.cta_home', 'Book {{noun}}', { noun: vocab('booking') })}
+          <CalendarPlus size={16} aria-hidden /> {bookLabel}
         </Link>
       )}
 

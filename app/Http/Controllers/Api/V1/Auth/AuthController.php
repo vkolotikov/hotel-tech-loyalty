@@ -656,11 +656,7 @@ class AuthController extends Controller
                     //     zero members (a hotel admin's hand-tuned bonus
                     //     never silently flips to a different industry's
                     //     default)
-                    //   - medical short-circuits to no loyalty reshape
-                    //     (decision #5)
-                    ($industry === 'medical'
-                        ? 'Loyalty: medical industry has no loyalty program (existing tiers / benefits / welcome bonus stay; no new ones added)'
-                        : 'Loyalty tiers + benefits will be added by name (existing tiers + benefits preserved); welcome bonus reseeded ONLY for orgs without members'),
+                    'Loyalty tiers + benefits will be added by name (existing tiers + benefits preserved); welcome bonus reseeded ONLY for orgs without members',
                     'Chatbot identity blurb will be re-seeded for ' . $industry . ' (custom assistant_name stays)',
                     'Existing customer / member / reservation / booking data is NOT deleted',
                 ],
@@ -677,13 +673,13 @@ class AuthController extends Controller
 
                 app(\App\Services\IndustryPresetService::class)->apply($industry);
                 app(\App\Services\PlannerPresetService::class)->apply($industry);
-                // Phase 5 — Loyalty preset now resolves the canonical
-                // industry id (medical → no-op; hospitality →
-                // restaurant; legal / real_estate / education →
-                // simple_two_tier; hotel → hotel_classic) so the
-                // industry switcher writes industry-appropriate tiers +
-                // benefits + welcome bonus instead of stranding the org
-                // on the previous industry's loyalty config.
+                // Loyalty preset resolves the canonical industry id
+                // (medical → its own `medical` preset; hospitality →
+                // restaurant; legal → professional_services; real_estate,
+                // education → their own presets; hotel → hotel_classic) so
+                // the industry switcher writes industry-appropriate tiers +
+                // benefits + welcome bonus instead of stranding the org on
+                // the previous industry's loyalty config.
                 $loyaltySummary = app(\App\Services\LoyaltyPresetService::class)->apply($industry, $org->id);
 
                 // Re-theme to match. setupDefaults uses firstOrCreate, so
@@ -1183,11 +1179,9 @@ class AuthController extends Controller
         // industry ids via internal ALIASES:
         //   - hotel       → hotel_classic
         //   - hospitality → restaurant
-        //   - legal / real_estate / education → simple_two_tier
-        //   - medical     → SHORT-CIRCUITS to a no-op that stamps
-        //     `members_preset='medical'` without writing tiers /
-        //     benefits / welcome bonus (decision #5: no patient
-        //     loyalty program).
+        //   - legal → professional_services; real_estate, education →
+        //     their own presets
+        //   - medical → its own `medical` preset
         //
         // First-signup orgs hit `totalMembers === 0` → clean-replace
         // path → tiers, benefits, and welcome_bonus_points all written

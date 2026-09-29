@@ -110,13 +110,12 @@ class LoyaltyPresetService
      * concern for the industry-platform dispatcher only.
      */
     /**
-     * Industries that get NO loyalty programme at all.
-     *
-     * Must stay in step with INDUSTRY_HIDDEN_GROUPS in
-     * frontend/src/lib/industryGating.ts: an industry whose Members &
-     * Loyalty nav group is hidden must not have tiers provisioned behind
-     * it, and vice versa. Today that is medical alone (decision #5 — no
-     * patient loyalty programme).
+     * Industries that get NO loyalty programme at all. Empty since
+     * 2026-09-29: the owner decided every industry has memberships, medical
+     * included. The constant stays because OrganizationSetupService reads
+     * it, and because an industry added later may need it; whatever is
+     * listed here must also be hidden in
+     * frontend/src/lib/industryGating.ts, and the other way round.
      */
     /**
      * Which preset we would choose for the current organisation.
@@ -147,7 +146,7 @@ class LoyaltyPresetService
         return isset(self::PRESETS[$key]) ? $key : null;
     }
 
-    public const NO_PROGRAMME_INDUSTRIES = ['medical'];
+    public const NO_PROGRAMME_INDUSTRIES = [];
 
     private const ALIASES = [
         'hotel'       => 'hotel_classic',
@@ -262,15 +261,8 @@ class LoyaltyPresetService
      */
     public function apply(string $key, int $organizationId): array
     {
-        // Industries with no membership programme (decision #5 for
-        // medical; legal + real_estate joined them because
-        // industryGating hides their Members & Loyalty group).
-        //
-        // Stamp `members_preset` so the picker renders the dismissed
-        // state, but write NOTHING to LoyaltyTier / BenefitDefinition /
-        // HotelSetting. Their customers are CRM records, not loyalty
-        // members, so a ladder here is invisible dead configuration —
-        // plus an expiry policy and birthday cron with nothing to act on.
+        // An industry with no programme (none today — see
+        // NO_PROGRAMME_INDUSTRIES): stamp the picker, write nothing else.
         if (in_array($key, self::NO_PROGRAMME_INDUSTRIES, true)) {
             CrmSetting::updateOrCreate(
                 ['key' => 'members_preset'],
@@ -467,6 +459,18 @@ class LoyaltyPresetService
                     );
                     $summary[$settingKey] = $value;
                 }
+
+                // A preset may start with points for bookings switched off
+                // (a clinic: inducements for medical services are regulated
+                // in several countries). Only ever written on a clean
+                // replace, so a venue's own choice is never overwritten.
+                if (array_key_exists('points_on_bookings', $preset)) {
+                    HotelSetting::withoutGlobalScopes()->updateOrCreate(
+                        ['organization_id' => $organizationId, 'key' => 'points_on_bookings'],
+                        ['value' => $preset['points_on_bookings'] ? 'true' : 'false', 'type' => 'boolean', 'group' => 'loyalty', 'label' => 'Points on Bookings'],
+                    );
+                    $summary['points_on_bookings'] = (bool) $preset['points_on_bookings'];
+                }
             } else {
                 $summary['welcome_bonus_preserved'] = true;
             }
@@ -491,8 +495,8 @@ class LoyaltyPresetService
     }
 
     /**
-     * Six starter membership programs covering the most common
-     * verticals. Tier shapes differ on purpose:
+     * Starter membership programmes, one or more per industry. Tier shapes
+     * differ on purpose:
      *
      *  - hotel_classic / hotel_lite — points-based, classic loyalty
      *  - beauty — visit-frequency-driven
@@ -647,6 +651,34 @@ class LoyaltyPresetService
                 ['name' => 'PT Sessions',      'code' => 'pt_sessions',      'description' => 'Complimentary personal-training sessions per month', 'category' => 'service'],
                 ['name' => 'Guest Pass',       'code' => 'guest_pass',       'description' => 'Bring a guest for free',               'category' => 'service'],
                 ['name' => 'Retail Discount',  'code' => 'retail_discount',  'description' => 'Discount on apparel + supplements',   'category' => 'retail'],
+            ],
+        ],
+
+        'medical' => [
+            'label'         => 'Clinic — Patient membership',
+            'description'   => 'Patient to Care Plus. A membership for regular patients: priority booking and the member prices you choose. Points for bookings start switched off.',
+            'icon'          => 'stethoscope',
+            'welcome_bonus' => 50,
+            'points_per_currency' => 1,
+            'points_expiry_months' => 24,
+            'referrer_bonus' => 100,
+            'referee_bonus' => 50,
+            'points_on_bookings' => false,
+            // No perk here is written as "NN% off …": such a perk becomes an
+            // automatic discount on every booking (typeParseablePerks), and
+            // what a clinic discounts is the clinic's decision.
+            'tiers' => [
+                ['name' => 'Patient',   'min_points' => 0,    'earn_rate' => 1.0, 'color_hex' => '#7dd3fc', 'perks' => ['Online booking', 'Appointment reminders']],
+                ['name' => 'Care Plus', 'min_points' => 1000, 'earn_rate' => 1.0, 'color_hex' => '#0284c7', 'perks' => ['Priority appointment slots', 'Annual check-up reminder']],
+            ],
+            'rewards' => [
+                ['name' => 'Priority Appointment',  'points_cost' => 300,  'category' => 'service', 'description' => 'The next available slot, held for you.'],
+                ['name' => 'Extended Consultation', 'points_cost' => 1200, 'category' => 'service', 'description' => 'Extra time with your practitioner at your next visit.'],
+            ],
+            'benefits' => [
+                ['name' => 'Priority Booking',      'code' => 'priority_booking',      'description' => 'Priority access to appointments',        'category' => 'service'],
+                ['name' => 'Appointment Reminders', 'code' => 'appointment_reminders', 'description' => 'Reminders before every appointment',     'category' => 'service'],
+                ['name' => 'Check-up Reminder',     'code' => 'checkup_reminder',      'description' => 'A yearly reminder to book your check-up', 'category' => 'service'],
             ],
         ],
 

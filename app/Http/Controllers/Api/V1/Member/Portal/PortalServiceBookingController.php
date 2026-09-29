@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api\V1\Member\Portal;
 use App\Http\Controllers\Controller;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
-use App\Models\Organization;
 use App\Models\Service;
 use App\Models\ServiceBooking;
 use App\Models\ServiceBookingExtra;
@@ -19,6 +18,7 @@ use App\Services\Booking\ExtraLeadTimeException;
 use App\Services\Booking\MemberPricing;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\PaymentMismatch;
+use App\Services\Booking\PaymentUnverifiable;
 use App\Services\Booking\PortalBookingNotifier;
 use App\Services\Booking\PortalPaymentIntentGuard;
 use App\Services\Booking\ServiceCatalogue;
@@ -26,6 +26,7 @@ use App\Services\Booking\ServiceQuoteBuilder;
 use App\Services\Booking\SlotTakenException;
 use App\Services\GuestMemberLinkService;
 use App\Services\MemberProvisioner;
+use App\Services\Portal\AppointmentClock;
 use App\Services\Portal\MemberBookingQuery;
 use App\Services\Portal\PortalBootstrap;
 use App\Services\ServiceSchedulingService;
@@ -35,6 +36,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -52,6 +54,15 @@ class PortalServiceBookingController extends Controller
         'extras.*.id' => 'required_with:extras|integer', 'extras.*.quantity' => 'nullable|integer|min:1|max:10',
         'coupon' => 'nullable|array', 'coupon.member_offer_id' => 'nullable|integer', 'coupon.redemption_id' => 'nullable|integer',
     ];
+
+    /**
+     * The lead value that switches ServiceSchedulingService::availableSlots()'s
+     * own lead filter off for any requested day: it keeps every slot whose
+     * digits, read as UTC, are no earlier than now minus two days — further
+     * back than any venue's UTC offset (−12:00 … +14:00) can move a slot the
+     * portal would keep. availability() then filters on true instants.
+     */
+    private const SCHEDULER_LEAD_OFF = -2 * 24 * 60;
 
     public function __construct(
         private readonly ServiceCatalogue $catalogue,
@@ -133,8 +144,32 @@ class PortalServiceBookingController extends Controller
         if (CarbonImmutable::parse($data['date'])->toDateString() > $today->addDays($this->maxAdvanceDays())->toDateString()) {
             return response()->json(['error' => 'too_far_ahead', 'message' => 'That date is beyond the booking window.'], 422);
         }
-        $slots = $this->scheduler->availableSlots($service, $data['date'], $data['master_id'] ?? null, (int) HotelSetting::getValue('services_slot_step', 15), (int) HotelSetting::getValue('services_lead_minutes', 60));
-        return response()->json(['slots' => $slots]);
+        // The scheduler's own lead filter compares the slot's wall-clock digits
+        // with the true "now" (it reads them as UTC). It is shared with the
+        // widget and stays as it is; the portal switches it off through its own
+        // parameter and applies the lead time to true instants below.
+        $slots = $this->scheduler->availableSlots($service, $data['date'], $data['master_id'] ?? null, (int) HotelSetting::getValue('services_slot_step', 15), self::SCHEDULER_LEAD_OFF);
+        $zone = AppointmentClock::zoneFor((int) app('current_organization_id'));
+        $earliest = CarbonImmutable::now()->addMinutes((int) HotelSetting::getValue('services_lead_minutes', 60));
+        $last = $today->addDays($this->maxAdvanceDays())->endOfDay();
+
+        $offered = [];
+        foreach ($slots as $slot) {
+            if (!AppointmentClock::existsLocally($slot['start'], $zone)) {
+                continue; // the hour a daylight-saving change skips never happens at the venue
+            }
+            $start = AppointmentClock::toInstant($slot['start'], $zone);
+            // Inclusive at now + lead, like the scheduler's own rule and buildQuote()'s too_soon.
+            if ($start->lessThan($earliest) || $start->greaterThan($last)) {
+                continue;
+            }
+            // Only start/end change: time_label, duration_minutes, masters stay the scheduler's.
+            $slot['start'] = AppointmentClock::iso($slot['start'], $zone);
+            $slot['end'] = AppointmentClock::iso($slot['end'], $zone);
+            $offered[] = $slot;
+        }
+
+        return response()->json(['slots' => $offered]);
     }
 
     /**
@@ -145,7 +180,7 @@ class PortalServiceBookingController extends Controller
      */
     public function quote(Request $request, ServiceQuoteBuilder $builder): JsonResponse
     {
-        $data = $request->validate(self::QUOTE_RULES);
+        $data = $this->storedStart($request->validate(self::QUOTE_RULES));
         if (!$this->provisioner->ensureForUser($request->user())) {
             return response()->json(['error' => 'no_membership', 'message' => 'Your membership is not set up yet.'], 422);
         }
@@ -166,7 +201,7 @@ class PortalServiceBookingController extends Controller
      */
     public function paymentIntent(Request $request, ServiceQuoteBuilder $builder, StripeService $stripe): JsonResponse
     {
-        $data = $request->validate(self::QUOTE_RULES);
+        $data = $this->storedStart($request->validate(self::QUOTE_RULES));
         $member = $this->provisioner->ensureForUser($request->user());
         if (!$member) {
             return response()->json(['error' => 'no_membership', 'message' => 'Your membership is not set up yet.'], 422);
@@ -218,7 +253,7 @@ class PortalServiceBookingController extends Controller
      * chosen coupon on top, then whether this venue can take payment
      * online for the resulting currency right now.
      *
-     * @throws SlotTakenException      the scheduler's own slot is taken
+     * @throws SlotTakenException      the scheduler's own slot is taken, or the start does not exist on the venue's clock
      * @throws BookingWindowException  the time is too soon or too far ahead
      * @throws ExtraLeadTimeException  an extra's lead time cannot be met
      * @throws CouponException         the chosen coupon does not resolve
@@ -234,14 +269,25 @@ class PortalServiceBookingController extends Controller
         // or the advance-booking horizon (only availability() does, for the
         // calendar's own sake) — a request built by hand could otherwise
         // get a 200 quote, and a live PaymentIntent, for a slot the
-        // calendar would never offer.
-        $start = CarbonImmutable::parse($data['start_at']);
+        // calendar would never offer. $data['start_at'] is the stored form
+        // (wall-clock digits, see storedStart()); both checks run on the true
+        // instant those digits name on the venue's clock.
+        $zone = AppointmentClock::zoneFor((int) app('current_organization_id'));
+        // A start the venue's clock never shows (the hour a daylight-saving
+        // change skips) is refused like a slot that is not available — the
+        // code the portal already handles (back to When, time cleared) —
+        // before anything is priced, reserved or paid for. availability()
+        // never offers one; only a hand-built request can ask for it.
+        if (!AppointmentClock::existsLocally($data['start_at'], $zone)) {
+            throw new SlotTakenException('That time does not exist on the venue\'s clock.');
+        }
+        $start = AppointmentClock::toInstant($data['start_at'], $zone);
         $leadMinutes = (int) HotelSetting::getValue('services_lead_minutes', 60);
         if ($start->lessThan(CarbonImmutable::now()->addMinutes($leadMinutes))) {
             throw new BookingWindowException('too_soon', 'That time is too soon to book online.');
         }
-        // "Now" is an instant (the lead check above needs no time zone); the
-        // window's last day ends at midnight in the VENUE's time zone.
+        // "Now" is an instant; the window's last day ends at midnight in the
+        // VENUE's time zone.
         if ($start->greaterThan($this->venueToday()->addDays($this->maxAdvanceDays())->endOfDay())) {
             throw new BookingWindowException('too_far_ahead', 'That date is beyond the booking window.');
         }
@@ -270,12 +316,13 @@ class PortalServiceBookingController extends Controller
     private function quotePayload(array $b): array
     {
         $q = $b['q'];
+        $zone = AppointmentClock::zoneFor((int) app('current_organization_id'));
 
         return [
             'service' => ['id' => $b['service']->id, 'name' => $b['service']->name, 'duration_minutes' => $q['duration_minutes']],
             'master'  => $q['master'] ? ['id' => $q['master']->id, 'name' => $q['master']->name] : null,
-            'start_at' => $q['start']->toIso8601String(),
-            'end_at'   => $q['end']->toIso8601String(),
+            'start_at' => AppointmentClock::iso($q['start'], $zone),
+            'end_at'   => AppointmentClock::iso($q['end'], $zone),
             'duration_minutes' => $q['duration_minutes'],
             'lines' => ['service_price' => $q['service_price'], 'extras' => $q['extras'], 'extras_total' => $q['extras_total']],
         ] + $b['pricing']->toArray() + ['payment' => $b['payment'], 'policy' => $b['policy']];
@@ -292,7 +339,11 @@ class PortalServiceBookingController extends Controller
      */
     public function confirm(Request $request, ServiceQuoteBuilder $builder, GuestMemberLinkService $guests, PortalPaymentIntentGuard $guard): JsonResponse
     {
-        $data = $request->validate(self::QUOTE_RULES + ['payment_intent_id' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:2000']);
+        // The stored form of the start BEFORE the hash below: a retry in either
+        // form (the venue-offset string or an old tab's `+00:00`) hashes the
+        // same, since the `+00:00` form is left as-is — so a key computed
+        // under the old, unnormalised format still replays.
+        $data = $this->storedStart($request->validate(self::QUOTE_RULES + ['payment_intent_id' => 'nullable|string|max:255', 'notes' => 'nullable|string|max:2000']));
         $key = trim((string) $request->header('Idempotency-Key'));
         if (strlen($key) < 8 || strlen($key) > 80) {
             return response()->json(['error' => 'idempotency_key_required', 'message' => 'Send an Idempotency-Key header of 8 to 80 characters.'], 422);
@@ -351,6 +402,9 @@ class PortalServiceBookingController extends Controller
         if ($piId) {
             try {
                 $pi = $guard->verify($piId, $orgId, $memberId, (int) $pre['service']->id, $pre['q']['start'], $pre['pricing']->total);
+            } catch (PaymentUnverifiable) {
+                // Stripe could not be asked: nothing is known about the intent, so nothing is released.
+                return $this->paymentCheckFailed($orgId, $key, $data, $user);
             } catch (PaymentMismatch) {
                 // verify() itself already cancels an owned-but-mismatched intent before throwing (see its
                 // own doc comment) — routing this through fail() would release() a SECOND time and, since
@@ -374,6 +428,11 @@ class PortalServiceBookingController extends Controller
             // must not depend only on the guard being called correctly.
             $this->logFailure($orgId, $key, $data, $user, 'payment_mismatch');
             return response()->json(['error' => 'payment_mismatch', 'message' => 'The payment no longer matches the price. Please pay again.'], 409);
+        } catch (PaymentUnverifiable) {
+            // writeBooking()'s re-check under the pi: lock could not read the
+            // intent. Its transaction rolled back — no booking, no coupon
+            // consumed — and nothing is released.
+            return $this->paymentCheckFailed($orgId, $key, $data, $user);
         } catch (PaymentMismatch) {
             $this->logFailure($orgId, $key, $data, $user, 'payment_mismatch');
             return $this->fail(response()->json(['error' => 'payment_mismatch', 'message' => 'The payment no longer matches the price. Please pay again.'], 409), $piId, $orgId, $memberId, $guard);
@@ -408,6 +467,19 @@ class PortalServiceBookingController extends Controller
             $guard->release($piId, $orgId, $memberId);
         }
         return $response;
+    }
+
+    /**
+     * The payment could not be checked right now (PaymentUnverifiable): a
+     * retryable 503 with a failure row, nothing released, nothing cancelled,
+     * no booking written — the next confirm with the same intent (and key)
+     * can still succeed, since only a `success` row replays.
+     */
+    private function paymentCheckFailed(int $orgId, string $key, array $data, $user): JsonResponse
+    {
+        $this->logFailure($orgId, $key, $data, $user, PaymentUnverifiable::CODE);
+
+        return response()->json(['error' => PaymentUnverifiable::CODE, 'message' => PaymentUnverifiable::MESSAGE], 503);
     }
 
     /**
@@ -463,6 +535,32 @@ class PortalServiceBookingController extends Controller
             // then waits until the first booking is committed and seen here.
             AdvisoryLock::within('pi:' . $piId);
             $guard->assertUnused($piId, $orgId);
+            // A failed retrieve here is not proof the intent is dead, only
+            // that this code cannot currently confirm it is still payable.
+            // This request's own verify() ran BEFORE the lock above was
+            // taken. Between that check and here, a
+            // different request's failed confirm — or the orphan-hold
+            // sweeper (bookings:release-orphan-portal-holds) — could have
+            // cancelled this exact intent; or the fresh retrieve could
+            // simply fail (a Stripe hiccup, say). Re-check it fresh, now
+            // that nothing else can touch it until this transaction ends.
+            // What this code actually does: refuses WITHOUT releasing —
+            // caught locally and answered directly, like replay() above,
+            // rather than left to throw and fall into the amountMatches()
+            // mismatch below and its own throw new PaymentMismatch(), whose
+            // catch in confirm() calls fail() and DOES release. Releasing
+            // an intent this code cannot confirm the state of is not this
+            // method's job; an intent no booking ever carries is the
+            // sweeper's own job. A retrieve that fails outright is
+            // PaymentUnverifiable instead (not caught here): it leaves this
+            // transaction, which rolls back, and confirm() answers 503
+            // payment_check_failed, again without releasing.
+            try {
+                $guard->assertStillPayable($piId);
+            } catch (PaymentMismatch) {
+                $this->logFailure($orgId, $key, $data, $user, 'payment_not_payable');
+                return response()->json(['error' => 'payment_mismatch', 'message' => 'The payment no longer matches the price. Please pay again.'], 409);
+            }
         }
         if ($pi && !$guard->amountMatches($pi, $b['pricing']->total)) {
             throw new PaymentMismatch();
@@ -534,6 +632,21 @@ class PortalServiceBookingController extends Controller
         app(PortalBookingNotifier::class)->notify($booking, $online);
     }
 
+    /**
+     * The client's start in the stored form, right after validation: the
+     * portal sends back the venue-offset string availability() gave it (an
+     * older tab still sends the `+00:00` form); from here on every
+     * consumer — the quote builder, reserveSlot(), the PaymentIntent's
+     * metadata, the guard's sameInstant(), ServiceBooking::create() — gets
+     * exactly the string the public widget would send for the same slot.
+     */
+    private function storedStart(array $data): array
+    {
+        $data['start_at'] = AppointmentClock::fromClient((string) $data['start_at']);
+
+        return $data;
+    }
+
     /** The validated body, key-sorted recursively, for a stable idempotency hash. */
     private function canonical(array $data): array
     {
@@ -555,8 +668,12 @@ class PortalServiceBookingController extends Controller
     /** Same shape as ServicePublicController::logSubmission() — a failed submission is logged, never thrown, so it can't mask the real error. */
     private function logFailure(int $orgId, string $key, array $data, $user, string $error): void
     {
+        // Its own (nested) transaction: called from inside writeBooking()'s
+        // lock transaction too (payment_not_payable), where a failed insert
+        // swallowed below would otherwise abort the enclosing PostgreSQL
+        // transaction. Nested, it is a savepoint that rolls back alone.
         try {
-            ServiceBookingSubmission::create([
+            DB::transaction(fn () => ServiceBookingSubmission::create([
                 'organization_id' => $orgId,
                 'idempotency_key' => $key,
                 'source'          => 'member_portal',
@@ -567,7 +684,7 @@ class PortalServiceBookingController extends Controller
                 // varchar(255) on PostgreSQL: a longer message would make this
                 // insert itself fail (and the catch below would hide that).
                 'error_message'   => mb_substr($error, 0, 255),
-            ]);
+            ]));
         } catch (\Throwable) {
             // submission log must never block the error response
         }
@@ -611,10 +728,7 @@ class PortalServiceBookingController extends Controller
      */
     private function venueToday(): CarbonImmutable
     {
-        $org = Organization::withoutGlobalScopes()->find((int) app('current_organization_id'));
-        $tz = $org ? PortalBootstrap::timezone($org) : config('app.timezone', 'UTC');
-
-        return CarbonImmutable::now($tz)->startOfDay();
+        return PortalBootstrap::venueToday((int) app('current_organization_id'));
     }
 
     private function maxAdvanceDays(): int

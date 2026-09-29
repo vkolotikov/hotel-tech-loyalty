@@ -117,6 +117,10 @@ trait SetsUpServiceBookingSchema
                 $t->unsignedBigInteger('discount_source_id')->nullable();
                 $t->string('discount_label', 120)->nullable();
                 $t->timestamp('points_awarded_at')->nullable();
+                // Phase 3 (2026_09_30_100000).
+                $t->decimal('refunded_amount', 10, 2)->nullable();
+                $t->timestamp('refunded_at')->nullable();
+                $t->string('last_refund_id')->nullable();
                 $t->timestamps();
             });
         }
@@ -158,6 +162,9 @@ trait SetsUpServiceBookingSchema
                 'discount_source_id' => fn (Blueprint $t) => $t->unsignedBigInteger('discount_source_id')->nullable(),
                 'discount_label'     => fn (Blueprint $t) => $t->string('discount_label', 120)->nullable(),
                 'points_awarded_at'  => fn (Blueprint $t) => $t->timestamp('points_awarded_at')->nullable(),
+                'refunded_amount'    => fn (Blueprint $t) => $t->decimal('refunded_amount', 10, 2)->nullable(),
+                'refunded_at'        => fn (Blueprint $t) => $t->timestamp('refunded_at')->nullable(),
+                'last_refund_id'     => fn (Blueprint $t) => $t->string('last_refund_id')->nullable(),
             ]);
         }
 

@@ -230,7 +230,7 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         $this->assertSame(0, $json['counts']['upcoming_bookings']);
     }
 
-    public function test_a_rota_switches_services_on_and_rooms_switch_stays_on_for_hotels_only(): void
+    public function test_a_rota_switches_services_on_and_rooms_switch_stays_on_whatever_the_industry(): void
     {
         $org = $this->tenant();
         ['token' => $token] = $this->member($org);
@@ -242,26 +242,74 @@ class PortalBootstrapTest extends MemberEndpointTestCase
 
         $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
         $this->assertTrue($json['capabilities']['services']);
-        $this->assertTrue($json['capabilities']['stays'], 'hotel with an active room');
+        $this->assertTrue($json['capabilities']['stays'], 'an active room');
 
+        // Booking is gated on capability, not on industry.
         DB::table('organizations')->where('id', $org->id)->update(['industry' => 'beauty']);
         $this->flushHeaders();
         $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
-        $this->assertTrue($json['capabilities']['services']);
-        $this->assertFalse($json['capabilities']['stays'], 'a salon never sells stays, rooms or not');
+        $this->assertTrue($json['capabilities']['stays'], 'a salon that has rooms to sell sells them');
         $this->assertSame('cormorant', $json['venue']['display_face']);
     }
 
-    public function test_a_medical_venue_gets_the_portal_without_loyalty(): void
+    public function test_stays_are_not_offered_while_smoobu_is_switched_off(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token] = $this->member($org);
+        DB::table('booking_rooms')->insert([
+            'organization_id' => $org->id, 'pms_id' => 'r1', 'name' => 'Sea view', 'max_guests' => 2,
+            'base_price' => 120, 'is_active' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $this->setting($org, 'smoobu_enabled', 'false', 'integrations');
+
+        $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
+        $this->assertFalse($json['capabilities']['stays'], 'the engine would write a booking nobody can see');
+    }
+
+    public function test_the_bootstrap_carries_the_stay_policy(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token] = $this->member($org);
+        $this->setting($org, 'booking_policies', json_encode(['check_in_time' => '16:00', 'cancellation_policy' => 'Free until two days before.']), 'booking');
+
+        $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
+        $this->assertSame('Free until two days before.', $json['policies']['booking_cancellation_policy']);
+        $this->assertSame('16:00', $json['policies']['check_in_time']);
+        $this->assertSame('11:00', $json['policies']['check_out_time']);
+    }
+
+    public function test_a_saved_zone_php_only_knows_by_its_non_canonical_alias_still_shows(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token] = $this->member($org);
+        DB::table('organizations')->where('id', $org->id)->update(['timezone' => 'US/Eastern']);
+
+        $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
+        $this->assertSame('US/Eastern', $json['venue']['timezone']);
+    }
+
+    public function test_a_saved_zone_php_does_not_know_falls_back_to_the_apps_zone(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token] = $this->member($org);
+        DB::table('organizations')->where('id', $org->id)->update(['timezone' => 'Mars/Olympus']);
+
+        $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
+        $this->assertSame(config('app.timezone'), $json['venue']['timezone']);
+    }
+
+    public function test_a_medical_venue_gets_the_portal_with_its_membership(): void
     {
         $org = $this->tenant('Forma Dental');
         ['token' => $token] = $this->member($org);
         DB::table('organizations')->where('id', $org->id)->update(['industry' => 'medical']);
+        $this->rota($org);
 
         $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
 
-        $this->assertFalse($json['capabilities']['loyalty']);
-        $this->assertNotNull($json['member'], 'the member still has a name and number to show');
+        $this->assertTrue($json['capabilities']['loyalty']);
+        $this->assertTrue($json['capabilities']['services'], 'a clinic with a rota takes appointments in the portal');
+        $this->assertNotNull($json['member']);
         $this->assertSame('fraunces', $json['venue']['display_face']);
     }
 
@@ -430,5 +478,101 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         ['token' => $tokenNoBirthday] = $this->member($org);
         $json = $this->withToken($tokenNoBirthday)->getJson(self::ENDPOINT)->assertOk()->json();
         $this->assertNull($json['member']['user']['date_of_birth']);
+    }
+
+    /** The venue's two zone sources: Settings → General → Timezone (`hotel_timezone`) and `organizations.timezone`. */
+    private function zones(Organization $org, ?string $setting, ?string $column): void
+    {
+        if ($column !== null) {
+            DB::table('organizations')->where('id', $org->id)->update(['timezone' => $column]);
+        }
+        if ($setting !== null) {
+            DB::table('hotel_settings')->updateOrInsert(
+                ['organization_id' => $org->id, 'key' => 'hotel_timezone'],
+                ['value' => $setting, 'type' => 'string', 'group' => 'general', 'created_at' => now(), 'updated_at' => now()],
+            );
+            HotelSetting::flushCacheFor($org->id);
+        }
+    }
+
+    /**
+     * Settings before the organisation's column; the first real zone other
+     * than UTC wins; an explicit UTC beats the application's zone; the
+     * application's zone only when neither source is a zone at all. The
+     * application's zone is set to Tokyo here so it cannot pass for UTC.
+     */
+    public static function zoneSources(): array
+    {
+        return [
+            '1 the setting names a zone, the column is UTC'        => ['Europe/Riga', 'UTC', 'Europe/Riga'],
+            '2 the setting is the default UTC, the column a zone'  => ['UTC', 'Europe/Berlin', 'Europe/Berlin'],
+            '3 both name a zone: the setting wins'                 => ['Europe/Riga', 'Europe/Berlin', 'Europe/Riga'],
+            '4 the setting is garbage, the column a zone'          => ['Mars/Olympus', 'Europe/Riga', 'Europe/Riga'],
+            '5 both garbage: the application zone'                 => ['Mars/Olympus', 'Mars/Olympus', 'Asia/Tokyo'],
+            '6 both UTC'                                           => ['UTC', 'UTC', 'UTC'],
+            '7 a legacy name in the setting'                       => ['US/Eastern', 'UTC', 'US/Eastern'],
+            'no setting row, the column a zone'                    => [null, 'Europe/Riga', 'Europe/Riga'],
+            'no setting row, the column UTC'                       => [null, 'UTC', 'UTC'],
+            // Only a NAMED zone with a location counts: an abbreviation or an
+            // offset is a fixed offset without daylight saving, so it falls
+            // through like garbage.
+            'an abbreviation in the setting, the column UTC'       => ['EET', 'UTC', 'UTC'],
+            'an offset in the setting, the column UTC'             => ['+03:00', 'UTC', 'UTC'],
+            'an abbreviation in the setting, the column a zone'    => ['EET', 'Europe/Riga', 'Europe/Riga'],
+            'an abbreviation in the column, the setting UTC'       => ['UTC', 'CET', 'UTC'],
+            'abbreviations in both: the application zone'          => ['PST', 'Z', 'Asia/Tokyo'],
+            // Another name for UTC is UTC: it does not beat a real zone, and the answer is the plain `UTC`.
+            'Etc/UTC in the setting, the column a zone'            => ['Etc/UTC', 'Europe/Riga', 'Europe/Riga'],
+            'Etc/UTC in the setting, the column UTC'               => ['Etc/UTC', 'UTC', 'UTC'],
+            'lower-case utc in the setting, the column UTC'        => ['utc', 'UTC', 'UTC'],
+            'Zulu in the setting, the column garbage'              => ['Zulu', 'Mars/Olympus', 'UTC'],
+            'GMT in the column, the setting garbage'               => ['Mars/Olympus', 'GMT', 'UTC'],
+            'spaces around the setting'                            => [' Europe/Riga ', 'UTC', 'Europe/Riga'],
+            'a legacy name in the setting, the column a zone'      => ['US/Eastern', 'Europe/Riga', 'US/Eastern'],
+        ];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('zoneSources')]
+    public function test_the_venue_zone_comes_from_settings_first_then_the_organisation(?string $setting, string $column, string $expected): void
+    {
+        config(['app.timezone' => 'Asia/Tokyo']);
+        $org = $this->tenant();
+        $this->zones($org, $setting, $column);
+        ['token' => $token] = $this->member($org);
+
+        $this->assertSame($expected, $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('venue.timezone'));
+    }
+
+    /**
+     * 8. The commands that iterate organisations ask for one that is not the
+     * bound tenant: its own setting is read, once per request.
+     */
+    public function test_venue_today_reads_the_setting_of_the_organisation_asked_for(): void
+    {
+        $riga = $this->tenant('Riga');
+        $auckland = $this->tenant('Auckland');
+        $this->zones($riga, 'Europe/Riga', 'UTC');
+        $this->zones($auckland, 'Pacific/Auckland', 'UTC');
+        $this->travelTo(\Carbon\CarbonImmutable::parse('2026-10-01 20:00:00', 'UTC')); // 23:00 on 1 October in Riga, 09:00 on 2 October in Auckland
+        app()->instance('current_organization_id', $riga->id);
+        $this->app->forgetScopedInstances();
+
+        $settingReads = 0;
+        DB::listen(function ($q) use (&$settingReads) {
+            if (str_contains($q->sql, 'hotel_settings')) {
+                $settingReads++;
+            }
+        });
+
+        foreach ([1, 2, 3] as $_) {
+            $today = \App\Services\Portal\PortalBootstrap::venueToday($auckland->id);
+            $this->assertSame('2026-10-02 00:00:00', $today->format('Y-m-d H:i:s'));
+            $this->assertSame('Pacific/Auckland', $today->getTimezone()->getName());
+        }
+        $this->assertSame(1, $settingReads, "one read of the other organisation's setting, however often it is asked");
+
+        $today = \App\Services\Portal\PortalBootstrap::venueToday($riga->id);
+        $this->assertSame('2026-10-01 00:00:00', $today->format('Y-m-d H:i:s'));
+        $this->assertSame('Europe/Riga', $today->getTimezone()->getName());
     }
 }

@@ -436,6 +436,88 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
         $this->assertSame('pi_ok', $first->stripe_payment_intent_id);
     }
 
+    /**
+     * Between this request's own verify() (before any lock) and the moment
+     * writeBooking() takes the pi: lock, a DIFFERENT request's failed
+     * confirm — or the orphan-hold sweeper — could have cancelled this
+     * exact intent. Re-checked fresh under the lock (assertStillPayable());
+     * refused without a second cancel attempt on an intent that is already
+     * dead, and without consuming the coupon.
+     */
+    public function test_a_payment_cancelled_between_verify_and_the_locked_recheck_is_refused_without_a_second_cancel(): void
+    {
+        $this->tenPercent();
+        $stripe = $this->stripe();
+        $claim = $this->claim(20);
+        // Discounted total is 40.00 EUR = 4000 — both retrieves must carry
+        // that amount so the FIRST (verify(), pre-lock) call passes every
+        // check; only the SECOND (assertStillPayable(), under the lock)
+        // reports the intent gone.
+        $good = $this->pi(['amount' => 4000]);
+        $cancelled = $this->pi(['amount' => 4000, 'status' => 'canceled']);
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_ok')->andReturn($good, $cancelled);
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->confirm($this->body(['payment_intent_id' => 'pi_ok', 'coupon' => ['member_offer_id' => $claim->id]]))
+            ->assertStatus(409)->assertJsonPath('error', 'payment_mismatch');
+
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+        $this->assertNull(MemberOffer::findOrFail($claim->id)->used_at, 'the coupon was never consumed — nothing after assertStillPayable() ran');
+        // This in-lock refusal writes the same failed submission row its
+        // neighbouring in-lock refusals do — the direct return bypasses
+        // confirm()'s own catch(PaymentMismatch), which is where
+        // logFailure() is normally called from.
+        $row = \App\Models\ServiceBookingSubmission::withoutGlobalScopes()->where('outcome', 'failed')->firstOrFail();
+        $this->assertSame('payment_not_payable', $row->error_message);
+    }
+
+    /**
+     * The contract with the frontend: a Stripe retrieve that FAILS — at the
+     * first verify() or at the re-check under the pi: lock — answers 503
+     * payment_check_failed with a failure row; nothing is released, no
+     * booking written, the coupon untouched; the next confirm with the same
+     * intent and key books.
+     */
+    public function test_a_payment_that_cannot_be_checked_at_verify_answers_503_and_a_retry_books(): void
+    {
+        $this->paymentCheckFailsOnCall(1);
+    }
+
+    public function test_a_payment_that_cannot_be_rechecked_under_the_lock_answers_503_and_a_retry_books(): void
+    {
+        $this->paymentCheckFailsOnCall(2);
+    }
+
+    /** Retrieve call 1 is verify() (before any lock), call 2 is writeBooking()'s assertStillPayable() under the pi: lock. */
+    private function paymentCheckFailsOnCall(int $failingCall): void
+    {
+        $this->tenPercent();
+        $stripe = $this->stripe();
+        $claim = $this->claim(20);
+        $calls = 0;
+        $good = $this->pi(['amount' => 4000]);
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_ok')->andReturnUsing(function () use (&$calls, $good, $failingCall) {
+            if (++$calls === $failingCall) {
+                throw new \RuntimeException('Stripe timed out');
+            }
+            return $good;
+        });
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $body = $this->body(['payment_intent_id' => 'pi_ok', 'coupon' => ['member_offer_id' => $claim->id]]);
+
+        $this->confirm($body)->assertStatus(503)
+            ->assertExactJson(['error' => 'payment_check_failed', 'message' => 'We could not check your payment just now. No new payment was made. Please try to confirm once more.']);
+        $this->assertSame($failingCall, $calls);
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+        $this->assertNull(MemberOffer::findOrFail($claim->id)->used_at);
+        $row = \App\Models\ServiceBookingSubmission::withoutGlobalScopes()->where('outcome', 'failed')->sole();
+        $this->assertSame('payment_check_failed', $row->error_message);
+
+        $this->confirm($body)->assertStatus(201)->assertJsonPath('replayed', false);
+        $this->assertSame('pi_ok', ServiceBooking::withoutGlobalScopes()->sole()->stripe_payment_intent_id);
+        $this->assertNotNull(MemberOffer::findOrFail($claim->id)->used_at);
+    }
+
     public function test_an_intent_made_for_another_service_is_refused(): void
     {
         $other = Service::withoutGlobalScopes()->create([
@@ -679,5 +761,204 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
     public function test_the_old_member_service_booking_endpoint_is_gone(): void
     {
         $this->withToken($this->token)->postJson('/api/v1/member/service-bookings', $this->body())->assertStatus(404);
+    }
+
+    // ─── Appointment times are the venue's wall clock ──────────────────────
+
+    /**
+     * The venue's zone, set before any request (AppointmentClock memoises it
+     * for the container's scoped lifetime), and the clock frozen at $utc.
+     * setUp's master works 09:00–17:00 every day on the venue's clock.
+     */
+    private function venueIn(string $zone, string $utc): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('organizations', 'timezone')) {
+            \Illuminate\Support\Facades\Schema::table('organizations', fn ($t) => $t->string('timezone', 64)->nullable());
+        }
+        \Illuminate\Support\Facades\DB::table('organizations')->where('id', $this->org->id)->update(['timezone' => $zone]);
+        $this->travelTo(\Carbon\CarbonImmutable::parse($utc, 'UTC'));
+    }
+
+    /** The digits the row holds, straight from the column. */
+    private function storedStart(): string
+    {
+        return (string) \Illuminate\Support\Facades\DB::table('service_bookings')->value('start_at');
+    }
+
+    /** The scheduler's own spelling of a slot (and so the public widget's): the digits in the app zone. */
+    private function schedulerForm(string $digits): string
+    {
+        return \Carbon\CarbonImmutable::parse($digits)->toIso8601String();
+    }
+
+    /** What the public widget stores for the same slot (POST /api/v1/services/confirm with the scheduler's string). */
+    private function widgetStoredStart(string $digits): string
+    {
+        $this->org->update(['widget_token' => 'wt-task25-' . uniqid()]);
+        $this->flushHeaders();
+        $this->withHeader('Idempotency-Key', 'widget-task25-' . uniqid())->postJson('/api/v1/services/confirm?org=' . $this->org->fresh()->widget_token, [
+            'service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'start_at' => $this->schedulerForm($digits),
+            'party_size' => 1, 'customer_name' => 'Walk In', 'customer_email' => 'walkin@example.test',
+        ])->assertSuccessful();
+        app()->forgetInstance('current_organization_id');
+        $row = \Illuminate\Support\Facades\DB::table('service_bookings')->where('customer_email', 'walkin@example.test')->first();
+        \Illuminate\Support\Facades\DB::table('service_bookings')->where('id', $row->id)->delete();
+        return (string) $row->start_at;
+    }
+
+    /**
+     * 03:30 on 2026-03-29 never happens in Riga (the clocks go from 03:00
+     * to 04:00). A hand-built request for it is refused as an unavailable
+     * slot at quote, payment-intent and confirm — before the scheduler
+     * reserves anything, before any PaymentIntent, no booking.
+     */
+    public function test_a_start_the_venues_clock_skips_is_refused_before_anything_is_reserved(): void
+    {
+        $this->venueIn('Europe/Riga', '2026-03-28 08:00:00');
+        $builder = Mockery::mock(ServiceQuoteBuilder::class);
+        $builder->shouldNotReceive('build');
+        $this->app->instance(ServiceQuoteBuilder::class, $builder);
+        $stripe = $this->stripe();
+        $stripe->shouldNotReceive('createPaymentIntent');
+        $body = $this->body(['start_at' => '2026-03-29T03:30:00+02:00']);
+
+        $this->withToken($this->token)->postJson('/api/v1/member/portal/services/quote', $body)->assertStatus(409)->assertJsonPath('error', 'slot_taken');
+        $this->withToken($this->token)->postJson('/api/v1/member/portal/services/payment-intent', $body)->assertStatus(409)->assertJsonPath('error', 'slot_taken');
+        $this->confirm($body, 'dst-gap-key-0001')->assertStatus(409)->assertJsonPath('error', 'slot_taken');
+
+        $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    /**
+     * A new tab sends the venue-offset string it was given; an older tab
+     * still sends the `+00:00` one. Both store 14:00 — the digits the
+     * public widget stores for the same slot — and answer with the venue's
+     * offset. The other form with the same key is the idempotent replay;
+     * with another key it is a taken slot. Never a second booking.
+     */
+    public function test_either_form_of_a_riga_slot_stores_the_widgets_digits_and_books_once(): void
+    {
+        $this->venueIn('Europe/Riga', '2026-10-01 06:00:00'); // 09:00 in Riga
+        $widget = $this->widgetStoredStart('2026-10-02 14:00:00');
+        $this->flushHeaders();
+
+        $new = $this->confirm($this->body(['start_at' => '2026-10-02T14:00:00+03:00']), 'riga-key-0001')->assertStatus(201);
+        $new->assertJsonPath('booking.starts_at', '2026-10-02T14:00:00+03:00')->assertJsonPath('booking.ends_at', '2026-10-02T14:45:00+03:00');
+        $this->assertSame($widget, $this->storedStart(), 'the portal stores exactly what the widget stores');
+        $this->assertStringStartsWith('2026-10-02 14:00:00', $this->storedStart());
+
+        $this->flushHeaders();
+        $replay = $this->confirm($this->body(['start_at' => '2026-10-02T14:00:00+00:00']), 'riga-key-0001')->assertOk();
+        $this->assertTrue($replay->json('replayed'));
+        $this->assertSame($new->json('booking.id'), $replay->json('booking.id'));
+
+        $this->flushHeaders();
+        $this->confirm($this->body(['start_at' => '2026-10-02T14:00:00+00:00']), 'riga-key-0002')->assertStatus(409)->assertJsonPath('error', 'slot_taken');
+        $this->assertSame(1, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    public function test_an_old_tab_books_the_same_riga_slot(): void
+    {
+        $this->venueIn('Europe/Riga', '2026-10-01 06:00:00');
+
+        $this->withToken($this->token)->postJson('/api/v1/member/portal/services/quote', $this->body(['start_at' => '2026-10-02T14:00:00+00:00']))
+            ->assertOk()->assertJsonPath('start_at', '2026-10-02T14:00:00+03:00')->assertJsonPath('end_at', '2026-10-02T14:45:00+03:00');
+        $this->flushHeaders();
+        $this->confirm($this->body(['start_at' => '2026-10-02T14:00:00+00:00']))->assertStatus(201)->assertJsonPath('booking.starts_at', '2026-10-02T14:00:00+03:00');
+        $this->assertStringStartsWith('2026-10-02 14:00:00', $this->storedStart());
+        $this->assertSame('2026-10-02T14:00:00+00:00', \App\Models\ServiceBookingSubmission::withoutGlobalScopes()->where('outcome', 'success')->first()->request_payload['start_at'], 'the stored form enters the submission row');
+    }
+
+    /**
+     * A booking confirmed under the old, unnormalised format stored the
+     * hash of the raw body, whose start was the scheduler's `+00:00`
+     * string. fromClient() returns that string unchanged, so the same
+     * request still replays it.
+     */
+    public function test_a_booking_confirmed_before_this_change_still_replays(): void
+    {
+        $this->venueIn('Europe/Riga', '2026-10-01 06:00:00');
+        $body = $this->body(['start_at' => '2026-10-02T14:00:00+00:00']);
+        $booking = ServiceBooking::create(['organization_id' => $this->org->id, 'service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'member_id' => $this->member->id, 'customer_name' => 'App Member', 'customer_email' => $this->member->user->email, 'start_at' => '2026-10-02 14:00:00', 'end_at' => '2026-10-02 14:45:00', 'duration_minutes' => 45, 'service_price' => 60, 'total_amount' => 60, 'currency' => 'EUR', 'status' => 'confirmed', 'payment_status' => 'unpaid', 'source' => 'member_portal']);
+        $old = $body;
+        ksort($old); // the controller's canonical(): key-sorted, the raw validated body
+        \App\Models\ServiceBookingSubmission::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'idempotency_key' => 'pre-task25-key', 'source' => 'member_portal', 'outcome' => 'success',
+            'service_booking_id' => $booking->id, 'customer_email' => $this->member->user->email, 'customer_name' => 'App Member',
+            'request_payload' => $body + ['_hash' => hash('sha256', json_encode($old))], 'response_payload' => [],
+        ]);
+
+        $res = $this->confirm($body, 'pre-task25-key')->assertOk();
+        $this->assertTrue($res->json('replayed'));
+        $this->assertSame($booking->id, $res->json('booking.id'));
+        $this->assertSame('2026-10-02T14:00:00+03:00', $res->json('booking.starts_at'));
+        $this->assertSame(1, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    /**
+     * too_soon is decided on the true instant. At 11:00 in Riga (08:00 UTC)
+     * a 10:00 Riga start has passed, though "10:00 UTC" would be two hours
+     * ahead; in New York (-04:00) at 08:00 (12:00 UTC) a 10:00 start is two
+     * hours ahead, though "10:00 UTC" has passed.
+     */
+    public function test_too_soon_is_decided_on_the_venues_clock(): void
+    {
+        $this->setting('services_lead_minutes', '60');
+        $this->venueIn('Europe/Riga', '2026-10-01 08:00:00');
+        foreach (['2026-10-01T10:00:00+00:00', '2026-10-01T10:00:00+03:00'] as $start) {
+            $this->flushHeaders();
+            $this->withToken($this->token)->postJson('/api/v1/member/portal/services/quote', $this->body(['start_at' => $start]))
+                ->assertStatus(422)->assertJsonPath('error', 'too_soon');
+        }
+    }
+
+    public function test_west_of_utc_a_later_morning_slot_is_not_too_soon(): void
+    {
+        $this->setting('services_lead_minutes', '60');
+        $this->venueIn('America/New_York', '2026-10-01 12:00:00');
+        foreach (['2026-10-01T10:00:00+00:00', '2026-10-01T10:00:00-04:00'] as $start) {
+            $this->flushHeaders();
+            $this->withToken($this->token)->postJson('/api/v1/member/portal/services/quote', $this->body(['start_at' => $start]))
+                ->assertOk()->assertJsonPath('start_at', '2026-10-01T10:00:00-04:00');
+        }
+        $this->flushHeaders();
+        $this->withToken($this->token)->postJson('/api/v1/member/portal/services/quote', $this->body(['start_at' => '2026-10-01T08:30:00-04:00']))
+            ->assertStatus(422)->assertJsonPath('error', 'too_soon');
+    }
+
+    public static function clientForms(): array
+    {
+        return ['the venue offset (a new tab)' => ['2026-10-02T14:00:00+03:00'], 'plus zero (an old tab)' => ['2026-10-02T14:00:00+00:00']];
+    }
+
+    /**
+     * The PaymentIntent's metadata carries the scheduler's own `+00:00`
+     * string, byte for byte the same regardless of which form the client
+     * sent, and the intent verifies at confirm whichever form the client
+     * sends back.
+     */
+    #[\PHPUnit\Framework\Attributes\DataProvider('clientForms')]
+    public function test_a_payment_intent_for_a_riga_slot_verifies_whichever_form_comes_back(string $confirmForm): void
+    {
+        $this->venueIn('Europe/Riga', '2026-10-01 06:00:00');
+        $stripe = $this->stripe();
+        $meta = null;
+        $stripe->shouldReceive('createPaymentIntent')->once()->withArgs(function (float $amount, string $desc, array $m) use (&$meta) {
+            $meta = $m;
+            return true;
+        })->andReturn(['client_secret' => 'pi_riga_secret', 'payment_intent_id' => 'pi_riga']);
+
+        $this->withToken($this->token)->postJson('/api/v1/member/portal/services/payment-intent', $this->body(['start_at' => '2026-10-02T14:00:00+03:00']))->assertOk();
+        $this->assertSame($this->schedulerForm('2026-10-02 14:00:00'), $meta['start_at']);
+        $this->assertSame('2026-10-02T14:00:00+00:00', $meta['start_at']);
+
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_riga')->andReturn(PaymentIntent::constructFrom([
+            'id' => 'pi_riga', 'status' => 'requires_capture', 'amount' => 6000, 'currency' => 'eur', 'metadata' => $meta,
+        ]));
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $this->flushHeaders();
+        $this->confirm($this->body(['start_at' => $confirmForm, 'payment_intent_id' => 'pi_riga']))->assertStatus(201)
+            ->assertJsonPath('booking.payment_status', 'authorized')->assertJsonPath('booking.starts_at', '2026-10-02T14:00:00+03:00');
+        $this->assertStringStartsWith('2026-10-02 14:00:00', $this->storedStart());
     }
 }

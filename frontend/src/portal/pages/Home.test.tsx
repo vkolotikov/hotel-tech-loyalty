@@ -33,14 +33,14 @@ const base: PortalBootstrap = {
   venue: { name: 'Numa', logo_url: null, industry: 'beauty', currency: 'EUR', timezone: 'Europe/Riga', contact: { email: 'hi@numa.test', phone: null },
     accent: { hex: '#b04a6e', ink: '#ffffff', deep: '#8e3b58', dark_hex: '#e38ab0', dark_ink: '#1a0b12', dark_deep: '#f0b4cd' }, display_face: 'cormorant' },
   capabilities: { loyalty: true, services: true, stays: false, chat: true, payments: { services: false, stays: false, publishable_key: null } },
-  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '' },
+  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '', booking_cancellation_policy: '', check_in_time: '15:00', check_out_time: '11:00' },
   member, counts: { unread_notifications: 0, upcoming_bookings: 0 },
 }
 
 const booking: PortalBooking = {
   kind: 'service', id: 7, reference: 'SVC-ABC12345', title: 'Facial', subtitle: null, starts_at: '2026-10-03T07:30:00Z', ends_at: '2026-10-03T08:15:00Z',
   status: 'pending', payment_status: 'unpaid', total: 60, currency: 'EUR', discount: null, can_cancel: false, cancel_deadline: null,
-  notes: null, party_size: 1, guests: null, nights: null,
+  notes: null, party_size: 1, guests: null, nights: null, paid_online: false,
 }
 
 /** A client that already holds the upcoming-bookings answer, as if the query had landed. */
@@ -88,6 +88,17 @@ describe('Home', () => {
 
   it('invites the member to book when nothing is booked', () => {
     expect(render(base, clientWith([]))).toContain('href="/portal/book"')
+  })
+
+  it('offers to book a stay at a venue that only sells stays', () => {
+    const html = render({ ...base, capabilities: { ...base.capabilities, services: false, stays: true } }, clientWith([]))
+    expect(html).toContain('href="/portal/book"')
+    expect(html).toContain('Book a stay')
+  })
+
+  it('offers nothing to book at a venue that sells neither', () => {
+    const html = render({ ...base, capabilities: { ...base.capabilities, services: false, stays: false } }, clientWith([]))
+    expect(html).not.toContain('href="/portal/book"')
   })
 
   it('labels the next booking the way the bookings list does', () => {

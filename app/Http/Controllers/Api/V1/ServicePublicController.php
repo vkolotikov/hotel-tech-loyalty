@@ -349,7 +349,7 @@ class ServicePublicController extends Controller
 
         try {
             $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source) {
-                DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+                \App\Support\AdvisoryLock::within($lockKey);
 
                 // Re-run the conflict check inside the lock — definitive source of truth.
                 $reservation = $scheduler->reserveSlot(

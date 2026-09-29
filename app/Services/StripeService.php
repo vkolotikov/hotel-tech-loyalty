@@ -130,9 +130,15 @@ class StripeService
     }
 
     /**
-     * Retrieve a PaymentIntent to check its status.
+     * Retrieve a PaymentIntent to check its status. $expand is passed
+     * through to Stripe's own `expand` param (e.g. `['latest_charge']` to
+     * read when the card was actually authorised, not just when the
+     * intent object was created). A caller that reads the charge passes
+     * `['latest_charge']` (PortalPaymentIntentGuard::releaseOrphan(),
+     * ServiceBookingRefund::giveBack()); a caller that omits it gets exactly
+     * the request it always did.
      */
-    public function retrievePaymentIntent(string $paymentIntentId): \Stripe\PaymentIntent
+    public function retrievePaymentIntent(string $paymentIntentId, array $expand = []): \Stripe\PaymentIntent
     {
         $this->boot();
 
@@ -140,7 +146,7 @@ class StripeService
             throw new \RuntimeException('Stripe is not configured for this organization.');
         }
 
-        return $this->client->paymentIntents->retrieve($paymentIntentId);
+        return $this->client->paymentIntents->retrieve($paymentIntentId, $expand ? ['expand' => $expand] : null);
     }
 
     /**
@@ -200,6 +206,26 @@ class StripeService
     }
 
     /**
+     * Every PaymentIntent of this organisation's Stripe account created in
+     * the window (unix timestamps, inclusive), across all pages. For the
+     * two jobs that look for payments the database does not know about.
+     *
+     * @return iterable<\Stripe\PaymentIntent>
+     */
+    public function listPaymentIntents(int $createdFrom, int $createdTo): iterable
+    {
+        $this->boot();
+
+        if (!$this->client) {
+            throw new \RuntimeException('Stripe is not configured for this organization.');
+        }
+
+        return $this->client->paymentIntents
+            ->all(['created' => ['gte' => $createdFrom, 'lte' => $createdTo], 'limit' => 100])
+            ->autoPagingIterator();
+    }
+
+    /**
      * Verify a Stripe webhook signature.
      */
     public function constructWebhookEvent(string $payload, string $sigHeader): \Stripe\Event
@@ -253,12 +279,28 @@ class StripeService
     public function toSmallestUnit(float $amount, ?string $currency = null): int
     {
         $currency ??= $this->currency();
-        $zeroDecimal = ['bif','clp','djf','gnf','jpy','kmf','krw','mga','pyg','rwf','ugx','vnd','vuv','xaf','xof','xpf'];
-        if (in_array(strtolower($currency), $zeroDecimal, true)) {
+        if (in_array(strtolower($currency), self::ZERO_DECIMAL, true)) {
             return (int) round($amount);
         }
         return (int) round($amount * 100);
     }
+
+    /**
+     * The inverse of toSmallestUnit(): a Stripe amount (smallest unit) in
+     * major units, for the given currency, by the same zero-decimal list.
+     * Static because it reads nothing of the organisation — the currency is
+     * always the amount's own.
+     */
+    public static function fromSmallestUnit(int $amount, string $currency): float
+    {
+        if (in_array(strtolower($currency), self::ZERO_DECIMAL, true)) {
+            return (float) $amount;
+        }
+        return round($amount / 100, 2);
+    }
+
+    /** Stripe's zero-decimal currencies: the one list both conversions use. */
+    private const ZERO_DECIMAL = ['bif','clp','djf','gnf','jpy','kmf','krw','mga','pyg','rwf','ugx','vnd','vuv','xaf','xof','xpf'];
 
     /**
      * Refund a payment. Defaults to a full refund. Pass $amount in major

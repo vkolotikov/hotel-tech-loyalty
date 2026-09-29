@@ -18,7 +18,10 @@ use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
+use App\Services\Booking\StayConfirmHooks;
+use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 
@@ -228,7 +231,7 @@ class BookingEngineService
         ];
     }
 
-    public function confirm(array $data, ?string $idempotencyKey = null, ?string $requestId = null, ?string $ip = null): array
+    public function confirm(array $data, ?string $idempotencyKey = null, ?string $requestId = null, ?string $ip = null, ?StayConfirmHooks $hooks = null): array
     {
         $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
 
@@ -283,6 +286,19 @@ class BookingEngineService
             throw new \RuntimeException('Hold expired or not found');
         }
 
+        // A member's hold is priced and written by the portal's own quote —
+        // discount, coupon, member id all live in its payload. Only the
+        // portal's own confirm attaches hooks (they run the coupon
+        // consumption and the portal's checks); a caller with no hooks is
+        // the public widget path (or the payment webhook's orphan
+        // recovery, which never reaches here). Refuse exactly like an
+        // unknown/expired hold — the member's own hold is left untouched,
+        // so they can still finish it in the portal.
+        if ($hooks === null && !empty($hold->payload_json['member_id'] ?? null)) {
+            $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey);
+            throw new \RuntimeException('Hold expired or not found');
+        }
+
         $payload = $hold->payload_json;
         $guest   = $data['guest'] ?? [];
 
@@ -306,7 +322,15 @@ class BookingEngineService
         }
 
         // Try to link or create a CRM guest (outside the lock — idempotent by email).
-        $guestId = $this->linkOrCreateGuest($guest, $orgId);
+        // A caller that already knows the guest (the member portal links the
+        // member's own CRM guest) names it — but only when that guest really
+        // exists in THIS organisation; a stale or foreign id falls back to
+        // the normal by-email lookup rather than silently linking someone
+        // else's guest row.
+        $namedGuestId = isset($data['guest_id']) ? (int) $data['guest_id'] : null;
+        $guestId = ($namedGuestId && Guest::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($namedGuestId)->exists())
+            ? $namedGuestId
+            : $this->linkOrCreateGuest($guest, $orgId);
 
         // Serialize concurrent confirms for the same room+org using a PG advisory
         // transaction lock. Two guests holding overlapping dates on the same room
@@ -317,9 +341,9 @@ class BookingEngineService
 
         try {
         [$mirror, $result, $internalStatus, $pmsResult] = DB::transaction(function () use (
-            $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey
+            $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey, $hooks
         ) {
-            DB::statement('SELECT pg_advisory_xact_lock(hashtext(?))', [$lockKey]);
+            AdvisoryLock::within($lockKey);
 
             // Re-check idempotency INSIDE the lock so two requests with the
             // same key that both missed the pre-check (race window between
@@ -516,6 +540,9 @@ class BookingEngineService
                 throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
             }
 
+            // The caller's last word before the PMS is asked (see StayConfirmHooks).
+            $hooks?->beforeReservation($payload);
+
             // ── Create reservation in Smoobu ────────────────────────
             // Field names follow Smoobu's documented Channel Manager
             // API contract (camelCase throughout — note `channelId`,
@@ -586,7 +613,9 @@ class BookingEngineService
                 $assistantSections = [];
 
                 // Source + payment block.
-                $sourceLines = ['Booked via: Website / Direct widget'];
+                $fromPortal = ($payload['channel_name'] ?? null) === 'Member portal';
+                $sourceLines = [$fromPortal ? 'Booked via: Member portal' : 'Booked via: Website / Direct widget'];
+                $discount = round((float) ($payload['discount'] ?? 0), 2);
                 $paymentMethod = $data['payment_method'] ?? null;
                 $paymentIntentId = $data['payment_intent_id'] ?? null;
                 if ($paymentIntentId) {
@@ -669,6 +698,13 @@ class BookingEngineService
                         );
                     }
                 }
+                if ($discount > 0) {
+                    $breakdownLines[] = sprintf(
+                        '%s: -€%s',
+                        (string) ($payload['discount_label'] ?? 'Member discount'),
+                        number_format($discount, 2, '.', '')
+                    );
+                }
                 $breakdownLines[] = '─────────────';
                 $breakdownLines[] = 'Total: €' . number_format($grossTotal, 2, '.', '');
                 $assistantSections[] = implode("\n", $breakdownLines);
@@ -690,7 +726,9 @@ class BookingEngineService
                         $nights,
                         $nights === 1 ? '' : 's',
                     ),
-                    'amount'       => round($roomTotal, 2),
+                    // A member discount comes off the accommodation line, so
+                    // Smoobu's own sum of the elements equals `price`.
+                    'amount'       => round($roomTotal - $discount, 2),
                     'quantity'     => $nights,
                     'currencyCode' => 'EUR',
                     'sortOrder'    => 1,
@@ -758,6 +796,11 @@ class BookingEngineService
                     // accounts default to blocked-channel without it.
                     'type'          => 'reservation',
                 ];
+                // A discount larger than the accommodation line cannot be shown
+                // as a base price; the top-level `price` stays the truth.
+                if ($discount > round($roomTotal, 2)) {
+                    unset($smoobuPayload['priceElements']);
+                }
                 // Only add channelId when we resolved a non-zero one.
                 // array_filter doesn't strip integer 0, so we'd
                 // otherwise send `channelId: 0` → Blocked Channel.
@@ -887,7 +930,7 @@ class BookingEngineService
                 'booking_state'     => 'confirmed',
                 'apartment_id'      => $payload['unit_id'],
                 'apartment_name'    => $payload['unit_name'],
-                'channel_name'      => 'Website',
+                'channel_name'      => $payload['channel_name'] ?? 'Website',
                 'guest_id'          => $guestId,
                 'guest_name'        => trim(($guest['first_name'] ?? '') . ' ' . ($guest['last_name'] ?? '')),
                 'guest_email'       => $guest['email'] ?? null,
@@ -908,13 +951,15 @@ class BookingEngineService
                 // need to re-walk the booking_extras catalog (which can
                 // be renamed / repriced / soft-deleted at any time).
                 'extras_json'       => $extrasSnapshot,
-            ]);
+            ] + $this->memberColumns($payload, $data));
 
             // Persist line-item breakdown so admin booking detail can show the
             // accommodation row plus every extra the guest selected. Keeping
             // this inside the transaction means the mirror and its line items
             // commit atomically.
             $this->persistPriceElements($mirror, $payload, $orgId);
+
+            $hooks?->afterMirror($mirror, $payload);
 
             return [$mirror, $result, $internalStatus, $pmsResult];
         });
@@ -1462,29 +1507,74 @@ class BookingEngineService
         $existingHadStripe = false;
         $existingPriceTotal = null;
         $existingHadBreakdown = false;
+        $existingPricePaid = null;
+        $existingNotice = null;
         if (!empty($data['id'])) {
             // `id` is needed alongside the snapshot fields so the existsHadBreakdown
             // lookup below can use the relational booking_price_elements table.
             // Note: there is no `price_breakdown` column on booking_mirror — the
             // breakdown lives in the relational `booking_price_elements` table.
-            // An earlier draft selected a `price_breakdown` jsonb column on
-            // this row that never made it to prod; including it here broke
-            // every reservation upsert with 42703 undefined-column.
             $existing = BookingMirror::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
                 ->where('reservation_id', $clip((string) $data['id'], 30))
-                ->first(['id', 'channel_name', 'stripe_payment_intent_id', 'price_total']);
+                ->first(['id', 'channel_name', 'stripe_payment_intent_id', 'price_total', 'price_paid', 'notice', 'member_id', 'guest_id', 'payment_status', 'internal_status', 'booking_state', 'cancelled_at']);
             if ($existing) {
                 $existingChannel      = $existing->channel_name;
                 $existingHadStripe    = !empty($existing->stripe_payment_intent_id);
                 $existingPriceTotal   = $existing->price_total !== null ? (float) $existing->price_total : null;
                 $existingHadBreakdown = $existing->priceElements()->exists();
+                $existingPricePaid    = $existing->price_paid !== null ? (float) $existing->price_paid : null;
+                $existingNotice       = $existing->notice;
             }
         }
         $smoobuChannel = $clip($strOrNull($channel['name'] ?? null), 80);
-        $resolvedChannel = ($existingChannel === 'Website' || $existingHadStripe)
-            ? 'Website'
-            : $smoobuChannel;
+        // A booking we wrote keeps our own channel name: "Website" for the
+        // widget (also recognised by its Stripe intent), "Member portal" for
+        // the portal. Anything else is Smoobu's to name.
+        $resolvedChannel = match (true) {
+            $existingChannel === 'Member portal'                  => 'Member portal',
+            $existingChannel === 'Website' || $existingHadStripe  => 'Website',
+            default                                               => $smoobuChannel,
+        };
+
+        // What the sync must not overwrite on a mirror we wrote ourselves.
+        $byMember = $existing && !empty($existing->member_id);
+        // The member's own guest link: an email lookup can come back empty
+        // (the guest row carries another address) and must not unlink them.
+        if ($byMember && $existing->guest_id) {
+            $guestId = (int) $existing->guest_id;
+        }
+        // Money states Smoobu knows nothing about: a refund, a dispute, a
+        // released hold, an authorisation the capture job has yet to take,
+        // and an authorisation whose capture window expired. This is
+        // deliberately NOT limited to member bookings — a widget stay whose
+        // first capture attempt failed (payment_status stays 'authorized')
+        // must stay that way too, so the capture cron can still find and
+        // retry it even after a sync where Smoobu reports the room paid.
+        // And a member's online payment is never reopened by Smoobu's flag.
+        // When the status is pinned, the paid amount is pinned with it —
+        // otherwise a kept 'paid' status could end up with price_paid=0
+        // (Smoobu's own flag) and show a bogus balance due.
+        $current = $existing ? (string) $existing->payment_status : '';
+        if (in_array($current, ['refunded', 'partially_refunded', 'disputed', 'cancelled', 'canceled', 'authorized', 'capture_expired'], true)
+            || ($byMember && $current === 'paid' && $paymentStatus !== PaymentStatus::Paid->value)) {
+            $paymentStatus = $current;
+            $pricePaid = $existingPricePaid ?? $pricePaid;
+        }
+        // A member's own notice (the special-requests text stamped at
+        // confirm) is never blanked by an empty Smoobu notice; a real
+        // Smoobu-side notice still wins, as it always has.
+        $notice = $strOrNull($data['notice'] ?? null);
+        if ($byMember && !$notice && $existingNotice) {
+            $notice = $existingNotice;
+        }
+        // A cancellation made here (cancelled_at is ours; Smoobu's own
+        // cancellations arrive as type "cancellation") stays a cancellation
+        // even when the PMS-side cancel failed and Smoobu still lists it.
+        if ($existing && $existing->cancelled_at !== null) {
+            $internalStatus = 'cancelled';
+            $bookingState = 'cancelled';
+        }
 
         $mirror = BookingMirror::updateOrCreate(
             ['organization_id' => $orgId, 'reservation_id' => $clip((string) $data['id'], 30)],
@@ -1507,7 +1597,7 @@ class BookingEngineService
                 'departure_date'     => $departureDate,
                 'check_in_time'      => $timeOrNull($data['check-in'] ?? null),
                 'check_out_time'     => $timeOrNull($data['check-out'] ?? null),
-                'notice'             => $strOrNull($data['notice'] ?? null),
+                'notice'             => $notice,
                 'guest_app_url'      => $strOrNull($data['guest-app-url'] ?? null),
                 'price_total'        => $priceTotal,
                 'price_paid'         => $pricePaid,
@@ -2109,6 +2199,8 @@ class BookingEngineService
                 industry: $orgId
                     ? \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
                     : null,
+                discountAmount: round((float) ($payload['discount'] ?? 0), 2) > 0 ? round((float) $payload['discount'], 2) : null,
+                discountLabel: $payload['discount_label'] ?? null,
             ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Booking confirmation email failed', [
@@ -2145,7 +2237,7 @@ class BookingEngineService
                     grossTotal:       (float) ($payload['gross_total'] ?? 0),
                     currency:         $payload['currency'] ?? 'EUR',
                     extras:           $extrasBreakdown,
-                    specialRequests:  $payload['special_requests'] ?? null,
+                    specialRequests:  $this->venueNote($payload, $mirror),
                     paymentStatus:    $paymentStatus,
                     paymentMethod:    $paymentMethod,
                     paymentReference: $paymentReference,
@@ -2173,43 +2265,76 @@ class BookingEngineService
         //    flag is stamped here on first send AND backfilled from
         //    users.email_verified_at, so a returning guest who's already
         //    onboarded never receives a duplicate "set your password" email.
-        try {
-            $member = LoyaltyMember::withoutGlobalScopes()
-                ->where('organization_id', $orgId)
-                ->whereHas('user', fn($q) => $q->where('email', $email))
-                ->with(['user', 'tier'])
-                ->first();
+        //
+        //    A booking made in the member portal was made by someone who is
+        //    already signed in: they need no "set your password" mail.
+        if (empty($payload['member_id'])) {
+            try {
+                $member = LoyaltyMember::withoutGlobalScopes()
+                    ->where('organization_id', $orgId)
+                    ->whereHas('user', fn($q) => $q->where('email', $email))
+                    ->with(['user', 'tier'])
+                    ->first();
 
-            if ($member && $member->welcomed_at === null) {
-                // Generate a verification code so the guest can set their password
-                $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+                if ($member && $member->welcomed_at === null) {
+                    // Generate a verification code so the guest can set their password
+                    $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
-                EmailVerificationCode::create([
-                    'email'      => $email,
-                    'code'       => $code,
-                    'expires_at' => now()->addHours(48),
+                    EmailVerificationCode::create([
+                        'email'      => $email,
+                        'code'       => $code,
+                        'expires_at' => now()->addHours(48),
+                    ]);
+
+                    Mail::to($email)->queue(new BookingMembershipMail(
+                        guestName: $guestName,
+                        hotelName: $hotelName,
+                        memberNumber: $member->member_number,
+                        tierName: $member->tier?->name ?? 'Bronze',
+                        email: $email,
+                        code: $code,
+                        supportEmail: $supportEmail,
+                    ));
+
+                    // Stamp the welcome so subsequent bookings / service bookings
+                    // skip this email — the user gets one chance to onboard, not
+                    // a fresh nag every time they transact.
+                    $member->forceFill(['welcomed_at' => now()])->save();
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('Booking membership email failed', [
+                    'email' => $email, 'error' => $e->getMessage(),
                 ]);
-
-                Mail::to($email)->queue(new BookingMembershipMail(
-                    guestName: $guestName,
-                    hotelName: $hotelName,
-                    memberNumber: $member->member_number,
-                    tierName: $member->tier?->name ?? 'Bronze',
-                    email: $email,
-                    code: $code,
-                    supportEmail: $supportEmail,
-                ));
-
-                // Stamp the welcome so subsequent bookings / service bookings
-                // skip this email — the user gets one chance to onboard, not
-                // a fresh nag every time they transact.
-                $member->forceFill(['welcomed_at' => now()])->save();
             }
-        } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::warning('Booking membership email failed', [
-                'email' => $email, 'error' => $e->getMessage(),
-            ]);
         }
+    }
+
+    /**
+     * What the venue's notification says under "special requests": for a
+     * member-portal booking, where it came from and the discount (the
+     * notification has no field of its own for either), then the guest's
+     * own words. A booking without a member gets exactly what it got before
+     * the portal existed: the hold payload's special requests, untouched (no
+     * fallback to the mirror's notice, no '' → null).
+     */
+    private function venueNote(array $payload, ?BookingMirror $mirror): ?string
+    {
+        if (empty($payload['member_id'])) {
+            return $payload['special_requests'] ?? null;
+        }
+
+        $own = $payload['special_requests'] ?? $mirror?->notice;
+
+        $parts = ['Member portal'];
+        $discount = round((float) ($payload['discount'] ?? 0), 2);
+        if ($discount > 0) {
+            $parts[] = sprintf('Discount: -%s %s (%s)', number_format($discount, 2), $payload['currency'] ?? 'EUR', $payload['discount_label'] ?? 'member discount');
+        }
+        if ($own) {
+            $parts[] = $own;
+        }
+
+        return implode(' — ', $parts);
     }
 
     private function resolveHotelName(?int $orgId): string
@@ -2265,6 +2390,29 @@ class BookingEngineService
     }
 
     /**
+     * The member and their discount, from a hold the member portal quoted
+     * (App\Services\Booking\StayQuoteService). A hold without a member —
+     * every widget hold — adds nothing, so the widget's mirror is what it
+     * always was.
+     */
+    private function memberColumns(array $payload, array $data): array
+    {
+        if (empty($payload['member_id'])) {
+            return [];
+        }
+
+        return [
+            'member_id'          => (int) $payload['member_id'],
+            'list_total'         => $payload['list_total'] ?? $payload['gross_total'],
+            'discount_amount'    => round((float) ($payload['discount'] ?? 0), 2),
+            'discount_source'    => $payload['discount_source'] ?? null,
+            'discount_source_id' => $payload['discount_source_id'] ?? null,
+            'discount_label'     => isset($payload['discount_label']) ? mb_substr((string) $payload['discount_label'], 0, 120) : null,
+            'notice'             => trim((string) ($data['special_requests'] ?? '')) ?: null,
+        ];
+    }
+
+    /**
      * Write a BookingPriceElement row for the room and one per selected extra
      * so the admin booking detail page can render the full price breakdown.
      */
@@ -2295,10 +2443,8 @@ class BookingEngineService
         // Extras: re-resolve names + per-unit amounts from the saved settings
         // so the admin sees the same labels the customer picked.
         $extras    = $payload['extras'] ?? [];
-        if (empty($extras)) return;
-
         $adults    = (int) ($payload['adults'] ?? 1);
-        $allExtras = collect($this->loadExtrasConfig());
+        $allExtras = empty($extras) ? collect() : collect($this->loadExtrasConfig());
 
         foreach ($extras as $item) {
             $extraId = $item['id'] ?? null;
@@ -2319,6 +2465,21 @@ class BookingEngineService
                 'name'             => $def['name'] ?? ($def['label'] ?? 'Extra'),
                 'amount'           => round($unitPrice, 2),
                 'quantity'         => $qty,
+                'currency_code'    => $currency,
+                'sort_order'       => $sortOrder++,
+            ]);
+        }
+
+        $discount = round((float) ($payload['discount'] ?? 0), 2);
+        if ($discount > 0) {
+            BookingPriceElement::create([
+                'organization_id'  => $orgId,
+                'booking_mirror_id'=> $mirror->id,
+                'reservation_id'   => $reservationId,
+                'element_type'     => 'discount',
+                'name'             => mb_substr((string) ($payload['discount_label'] ?? 'Member discount'), 0, 180),
+                'amount'           => -$discount,
+                'quantity'         => 1,
                 'currency_code'    => $currency,
                 'sort_order'       => $sortOrder++,
             ]);
@@ -2420,15 +2581,20 @@ class BookingEngineService
         }
     }
 
-    private function calcExtras(array $extras, int $adults): float
+    /**
+     * The selected extras as priced lines — the one arithmetic every total
+     * is built from. `line_total` is left unrounded, exactly as calcExtras()
+     * has always summed it, so the total below is bit-for-bit what it was.
+     *
+     * @return list<array{id: string, name: string, unit_price: float, quantity: int, line_total: float}>
+     */
+    public function extrasLines(array $extras, int $adults): array
     {
         // Single source of truth — loadExtrasConfig() prefers the
         // booking_extras DB table (what the widget shows) over the legacy
-        // JSON setting. Previously this method read JSON only, so
-        // DB-table extras silently summed to 0 and the gross_total /
-        // Stripe amount dropped to room-only.
+        // JSON setting.
         $allExtras = collect($this->loadExtrasConfig());
-        $total     = 0.0;
+        $lines     = [];
 
         foreach ($extras as $item) {
             $extraId = (string) ($item['id'] ?? '');
@@ -2440,11 +2606,30 @@ class BookingEngineService
 
             $price = (float) ($def['price'] ?? 0);
             $type  = $def['price_type'] ?? $def['type'] ?? 'per_stay';
-            if ($type === 'per_guest') {
-                $total += $price * $adults * $qty;
-            } else {
-                $total += $price * $qty;
-            }
+            $unit  = $type === 'per_guest' ? $price * $adults : $price;
+
+            $lines[] = [
+                'id'         => $extraId,
+                // A legacy row's stored `name` could be non-scalar (an
+                // array from a bad import); (string) casting an array only
+                // warns in PHP, but the test harness turns that warning
+                // into a failure — guard it so a bad name can't fail a
+                // quote that would otherwise succeed in production.
+                'name'       => is_scalar($def['name'] ?? null) ? (string) $def['name'] : 'Extra',
+                'unit_price' => $unit,
+                'quantity'   => (int) $qty,
+                'line_total' => $unit * $qty,
+            ];
+        }
+
+        return $lines;
+    }
+
+    private function calcExtras(array $extras, int $adults): float
+    {
+        $total = 0.0;
+        foreach ($this->extrasLines($extras, $adults) as $line) {
+            $total += $line['line_total'];
         }
 
         return $total;
@@ -2606,6 +2791,16 @@ class BookingEngineService
      */
     private function fetchAndStorePriceBreakdown(BookingMirror $mirror): void
     {
+        // A member stay's line items (accommodation + the negative discount
+        // row) are what persistPriceElements() wrote from the hold; Smoobu's
+        // own price-elements call knows nothing about the member's discount
+        // and would delete-and-replace them with just its own accommodation
+        // line. For a member booking the rows we wrote ourselves are the
+        // truth — never call Smoobu here. Covers both the post-commit call
+        // in confirm() and the periodic call from upsertBookingFromData().
+        if (!empty($mirror->member_id)) {
+            return;
+        }
         if (!$mirror->reservation_id || str_starts_with($mirror->reservation_id, 'LOCAL-')) {
             return;
         }

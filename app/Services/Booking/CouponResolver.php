@@ -150,6 +150,23 @@ final class CouponResolver
         $red->forceFill(['status' => RewardRedemption::STATUS_FULFILLED, 'fulfilled_at' => now(), 'notes' => "Applied to {$reference}"])->save();
     }
 
+    /**
+     * Moves a coupon this request consumed from a provisional reference to
+     * the booking's own. A stay is booked at the PMS inside the same
+     * transaction that consumes the coupon, and its reference is the PMS's
+     * to give — so the coupon is consumed first (a refusal then costs
+     * nothing) under a reference made from the hold, and renamed here once
+     * the booking exists. Touches nothing that does not carry $from.
+     */
+    public function rereference(array $candidate, string $from, string $to): void
+    {
+        if ($candidate['source'] === 'offer') {
+            MemberOffer::whereKey($candidate['source_id'])->where('used_reference', $from)->update(['used_reference' => mb_substr($to, 0, 60)]);
+            return;
+        }
+        RewardRedemption::whereKey($candidate['source_id'])->where('notes', "Applied to {$from}")->update(['notes' => "Applied to {$to}"]);
+    }
+
     private function offerCandidate(LoyaltyMember $member, int $memberOfferId, BookingScope $scope): array
     {
         $claim = MemberOffer::with('offer')->whereKey($memberOfferId)->first();

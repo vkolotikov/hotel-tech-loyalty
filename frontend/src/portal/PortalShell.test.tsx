@@ -21,7 +21,7 @@ const base: PortalBootstrap = {
     display_face: 'cormorant',
   },
   capabilities: { loyalty: true, services: true, stays: false, chat: true, payments: { services: false, stays: false, publishable_key: null } },
-  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '' },
+  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '', booking_cancellation_policy: '', check_in_time: '15:00', check_out_time: '11:00' },
   member: null,
   counts: { unread_notifications: 0, upcoming_bookings: 2 },
 }
@@ -64,9 +64,16 @@ describe('PortalShell', () => {
     expect(render({ ...base, capabilities: { ...base.capabilities, loyalty: false } })).not.toContain('href="/portal/rewards"')
   })
 
-  it('links to Book when the venue takes appointments and not otherwise', () => {
-    expect(render(withCaps({ services: true }))).toContain('href="/portal/book"')
-    expect(render(withCaps({ services: false }))).not.toContain('href="/portal/book"')
+  it('links to Book when the venue takes appointments or sells stays, and not otherwise', () => {
+    expect(render(withCaps({ services: true, stays: false }))).toContain('href="/portal/book"')
+    expect(render(withCaps({ services: false, stays: true }))).toContain('href="/portal/book"')
+    expect(render(withCaps({ services: false, stays: false }))).not.toContain('href="/portal/book"')
+  })
+
+  it('never shows more than one Book item', () => {
+    const html = render(withCaps({ services: true, stays: true }))
+    expect(html.match(/href="\/portal\/book"/g)?.length).toBe(2) // the tab bar and the phone bar
+    expect(html).toContain('grid-cols-5')
   })
 
   it('lays five items out in five columns on phones', () => {

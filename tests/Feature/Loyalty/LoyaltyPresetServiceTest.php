@@ -33,10 +33,10 @@ use Tests\TestCase;
  *      stamp uses the RAW key so listPresets highlights the user's
  *      actual choice.
  *
- *   2. medical short-circuit: decision #5 says no patient loyalty
- *      program. apply('medical') stamps members_preset='medical'
- *      but writes NO tier/benefit/welcome_bonus rows. Returns
- *      noop=true.
+ *   2. Every industry has memberships (the owner's ruling of 2026-09-29).
+ *      apply('medical') writes a Patient → Care Plus programme like any
+ *      other industry's preset; NO_PROGRAMME_INDUSTRIES is empty today
+ *      but the noop path stays for a future industry that needs it.
  *
  *   3. Tier-wipe SAFETY (data-integrity invariant):
  *      - Clean-replace ONLY when zero member rows exist for the org
@@ -212,30 +212,81 @@ class LoyaltyPresetServiceTest extends TestCase
         }
     }
 
-    public function test_apply_medical_short_circuits_with_noop_summary(): void
+    /* ─── medical: a programme like every other industry ────────────────── */
+
+    public function test_apply_medical_writes_a_patient_programme(): void
     {
-        // Decision #5: no patient loyalty program. Stamp the picker
-        // key but write NOTHING else.
         $summary = $this->service->apply('medical', $this->orgId);
 
-        $this->assertSame(0, $summary['tiers_set']);
-        $this->assertSame(0, $summary['tiers_added']);
-        $this->assertSame(0, $summary['benefits_added']);
-        $this->assertTrue($summary['noop'] ?? false);
+        $this->assertArrayNotHasKey('noop', $summary);
+        $this->assertTrue($summary['replaced']);
+        $this->assertSame(['Patient', 'Care Plus'], LoyaltyTier::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->orderBy('min_points')->pluck('name')->all());
+        $this->assertGreaterThan(0, BenefitDefinition::withoutGlobalScopes()->where('organization_id', $this->orgId)->count());
+        $this->assertSame('medical', CrmSetting::where('key', 'members_preset')->first()->value);
+    }
 
-        // Verify no tiers / benefits / welcome bonus written.
-        $this->assertSame(0, LoyaltyTier::withoutGlobalScopes()
-            ->where('organization_id', $this->orgId)->count());
-        $this->assertSame(0, BenefitDefinition::withoutGlobalScopes()
-            ->where('organization_id', $this->orgId)->count());
+    public function test_a_clinics_programme_starts_without_points_for_bookings(): void
+    {
+        $this->service->apply('medical', $this->orgId);
+
+        $this->assertSame('false', HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'points_on_bookings')->value('value'));
+
+        // No other preset switches them off.
+        $other = OrganizationFactory::new()->create();
+        app()->instance('current_organization_id', $other->id);
+        $this->service->apply('beauty', $other->id);
         $this->assertNull(HotelSetting::withoutGlobalScopes()
-            ->where('organization_id', $this->orgId)
-            ->where('key', 'welcome_bonus_points')
-            ->first());
+            ->where('organization_id', $other->id)->where('key', 'points_on_bookings')->first());
+    }
 
-        // But the picker stamp IS set so the UI shows "Currently: medical".
-        $stamp = CrmSetting::where('key', 'members_preset')->first();
-        $this->assertSame('medical', $stamp->value);
+    public function test_a_clinic_that_already_has_members_keeps_its_own_choice_about_points(): void
+    {
+        $tier = LoyaltyTierFactory::new()->create(['organization_id' => $this->orgId, 'name' => 'Bronze']);
+        LoyaltyMember::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'user_id' => 1, 'tier_id' => $tier->id, 'member_number' => 'HL-1']);
+
+        $summary = $this->service->apply('medical', $this->orgId);
+
+        $this->assertFalse($summary['replaced']);
+        $this->assertNull(HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $this->orgId)->where('key', 'points_on_bookings')->first());
+        $this->assertContains('Bronze', LoyaltyTier::withoutGlobalScopes()->where('organization_id', $this->orgId)->pluck('name')->all());
+    }
+
+    public function test_no_medical_perk_is_an_automatic_discount(): void
+    {
+        foreach (LoyaltyPresetService::PRESETS['medical']['tiers'] as $tier) {
+            foreach ($tier['perks'] as $perk) {
+                $this->assertNull(\App\Console\Commands\TypeBenefits::parse($perk), "'{$perk}' would discount every booking");
+            }
+        }
+    }
+
+    public function test_medical_is_recommended_its_own_preset(): void
+    {
+        \App\Models\Organization::withoutGlobalScopes()->where('id', $this->orgId)->update(['industry' => 'medical']);
+
+        $this->assertSame('medical', collect($this->service->listPresets()['presets'])->firstWhere('recommended', true)['key'] ?? null);
+    }
+
+    public function test_no_industry_is_left_without_a_programme(): void
+    {
+        $this->assertSame([], LoyaltyPresetService::NO_PROGRAMME_INDUSTRIES);
+        foreach (\App\Models\Organization::INDUSTRIES as $industry) {
+            $key = is_string($industry) ? $industry : (string) key([$industry]);
+            // Rebind current_organization_id per iteration: BelongsToOrganization
+            // forces organization_id from the bound tenant on create(), so without
+            // this every industry's benefits would be force-written onto the
+            // single org left bound by setUp() and collide on shared benefit
+            // codes (e.g. 'priority_booking'), same as the sibling test above.
+            app()->forgetInstance('current_organization_id');
+            $org = OrganizationFactory::new()->create();
+            app()->instance('current_organization_id', $org->id);
+            $summary = $this->service->apply($key, $org->id);
+            $this->assertArrayNotHasKey('noop', $summary, $key);
+            $this->assertGreaterThan(0, $summary['tiers_set'], $key);
+        }
     }
 
     public function test_clean_replace_path_with_zero_members_replaces_tiers_atomically(): void
@@ -458,15 +509,6 @@ class LoyaltyPresetServiceTest extends TestCase
             ->value('points_cost'));
     }
 
-    public function test_medical_gets_no_rewards_because_it_gets_no_programme(): void
-    {
-        $summary = $this->service->apply('medical', $this->orgId);
-
-        $this->assertTrue($summary['noop'] ?? false);
-        $this->assertSame(0, \App\Models\Reward::withoutGlobalScopes()
-            ->where('organization_id', $this->orgId)->count());
-    }
-
     /* ─── expanded preset range + economics ─────────────────────────────── */
 
     public function test_every_preset_carries_its_own_point_economics(): void
@@ -506,15 +548,6 @@ class LoyaltyPresetServiceTest extends TestCase
             ->firstWhere('recommended', true);
 
         $this->assertSame('fitness', $recommended['key'] ?? null);
-    }
-
-    public function test_medical_is_recommended_nothing_because_it_gets_no_programme(): void
-    {
-        \App\Models\Organization::withoutGlobalScopes()
-            ->where('id', $this->orgId)->update(['industry' => 'medical']);
-
-        $this->assertNull(collect($this->service->listPresets()['presets'])
-            ->firstWhere('recommended', true));
     }
 
     /* ─── referrals + the member-facing preview ─────────────────────────── */

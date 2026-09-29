@@ -23,6 +23,10 @@ export interface PortalPolicies {
   services_cancel_hours: number
   booking_cancel_hours: number
   services_cancellation_policy: string
+  booking_cancellation_policy: string
+  /** The venue's check-in and check-out times, "HH:MM", in the venue's own time zone. */
+  check_in_time: string
+  check_out_time: string
 }
 
 export interface Tier { id: number; name: string; color_hex?: string | null }
@@ -92,6 +96,10 @@ export interface PortalBooking {
   party_size: number | null
   guests: number | null
   nights: number | null
+  /** Whether there is a real Stripe PaymentIntent behind this booking — not merely whether
+   *  `payment_status` says "paid". Staff can mark a booking paid for cash or a bank transfer with no
+   *  online payment at all, and `moneyPromise()` must never promise a card refund for that money. */
+  paid_online: boolean
 }
 
 export interface Paginated<T> { data: T[]; meta: { scope: string; page: number; per_page: number; total: number } }
@@ -164,9 +172,9 @@ export interface LaravelPage<T> { data: T[]; current_page: number; last_page: nu
 // These mirror the server's actual JSON key-for-key (read from
 // ServiceCatalogue::build(), PortalServiceBookingController's own
 // quotePayload()/paymentIntent(), PricingResult::toArray(),
-// CouponResolver::resolveCode() and DiscountService::quoteForBooking()),
-// not the brief's own draft, which under-listed a few fields the server
-// actually sends and left a couple of string fields wider than the values
+// CouponResolver::resolveCode() and DiscountService::quoteForBooking()) —
+// not a hand-written guess, which would under-list a few fields the server
+// actually sends and leave some string fields wider than the values
 // the server can produce.
 
 export interface CatalogueCategory { id: number; name: string; slug: string; description: string | null; icon: string | null; image: string | null; color: string | null }
@@ -231,3 +239,77 @@ export interface ResolvedCoupon { kind: 'offer' | 'reward'; coupon: CouponRef; l
 export interface ConfirmBody extends QuoteBody { payment_intent_id?: string | null; notes?: string | null }
 
 export interface PaymentIntentReply { client_secret: string; payment_intent_id: string; amount: number; currency: string }
+
+// ─── Stay booking (the stay flow) ───────────────────────────────────────────
+//
+// These mirror the server's JSON key for key: StayCatalogue::build(),
+// PortalStayBookingController::availability() and StayQuoteService::payload().
+// A room's id is a string (the PMS id when the room has one).
+
+export interface StayRoom {
+  id: string; name: string; description: string | null; short_description: string | null
+  max_guests: number; bedrooms: number; bed_type: string | null; size: string | null
+  image: string | null; gallery: string[]; amenities: string[]; tags: string[]; base_price: number
+}
+
+export interface StayExtra {
+  id: string; name: string; description: string | null; price: number; price_type: string
+  lead_time_hours: number; image: string | null; icon: string | null; category: string | null
+}
+
+export interface StayPolicies { check_in_time: string; check_out_time: string; cancellation_policy: string | null; payment_terms: string | null; cancel_hours: number }
+
+export interface StayRules { currency: string; min_nights: number; max_nights: number }
+
+export interface StayCatalogue {
+  rooms: StayRoom[]
+  extras: StayExtra[]
+  policies: StayPolicies
+  rules: StayRules
+  pricing: { automatic: { label: string; type: string; value: number } | null }
+  payment: Quote['payment']
+}
+
+export interface AvailableRoom {
+  id: string; name: string; short_description: string | null; max_guests: number; bedrooms: number
+  bed_type: string | null; size: string | null; image: string | null; gallery: string[]; amenities: string[]
+  price_per_night: number; total_price: number; member_total: number; currency: string; min_stay: number
+}
+
+export interface StayAvailability { rooms: AvailableRoom[]; nights: number; party_too_large: boolean }
+
+export interface StayQuoteBody {
+  unit_id: string; check_in: string; check_out: string; adults: number; children: number
+  extras?: { id: string; quantity?: number }[]; coupon?: CouponRef | null
+}
+
+export interface StayQuoteLine { id: string; name: string; unit_price: number; quantity: number; line_total: number }
+
+export interface StayQuote {
+  hold_token: string
+  expires_at: string | null
+  room: { id: string; name: string }
+  check_in: string
+  check_out: string
+  nights: number
+  adults: number
+  children: number
+  lines: { room_total: number; price_per_night: number; extras: StayQuoteLine[]; extras_total: number }
+  list_amount: number
+  discount: Quote['discount']
+  coupon: Quote['coupon']
+  total_amount: number
+  currency: string
+  payment: Quote['payment']
+  policy: { cancellation_policy: string | null; cancel_hours: number; check_in_time: string; check_out_time: string }
+}
+
+export interface StayConfirmBody { hold_token: string; payment_intent_id?: string | null; special_requests?: string | null }
+
+/** Anything that carries a coupon verdict — a service quote or a stay quote. */
+export interface Priced { coupon: Quote['coupon'] }
+
+export interface CancelReply {
+  booking: PortalBooking
+  refund: { outcome: 'none' | 'released' | 'refunded'; amount: number; currency: string; coupon_released: boolean; points_reversed: number }
+}

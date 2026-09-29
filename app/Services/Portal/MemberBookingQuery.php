@@ -7,6 +7,9 @@ use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\ServiceBooking;
+use App\Services\Booking\MemberCancellation;
+use App\Services\Booking\PortalPaymentIntentGuard;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 
@@ -14,7 +17,8 @@ use Illuminate\Support\Collection;
  * The member's bookings as one list, whatever table they came from.
  *
  * A booking belongs to the member when, inside the member's organisation,
- * it names their member_id, or a guest linked to them, or simply their
+ * it names their member_id (service_bookings.member_id or
+ * booking_mirror.member_id), or a guest linked to them, or simply their
  * email. The email rule is what gives a member the history the widget and
  * the app's WebView wrote before anything linked a member at all — but it
  * only applies once the member has PROVEN that email, not merely typed it:
@@ -75,10 +79,14 @@ final class MemberBookingQuery
         $stays = $this->stays($member)->get()
             ->map(fn (BookingMirror $m) => self::stayDto($m));
 
-        $rows = $services->concat($stays)->filter(function (array $dto) use ($upcoming) {
+        // An appointment's ends_at carries the venue's offset (serviceDto()),
+        // so strtotime() reads the true instant; a stay's is a plain date.
+        // "Now" from Carbon (the same clock as time() outside tests).
+        $now = CarbonImmutable::now()->getTimestamp();
+        $rows = $services->concat($stays)->filter(function (array $dto) use ($upcoming, $now) {
             $ends = $dto['ends_at'] ?? $dto['starts_at'];
             $live = !in_array($dto['status'], ['cancelled', 'no_show', 'completed'], true)
-                && $ends !== null && strtotime($ends) >= time();
+                && $ends !== null && strtotime($ends) >= $now;
             return $upcoming ? $live : !$live;
         });
 
@@ -97,11 +105,11 @@ final class MemberBookingQuery
 
     private function stays(LoyaltyMember $member): Builder
     {
-        // No member_id column until phase 3; keep TenantScope (the request
-        // has bound the tenant) and the Smoobu scope, and name the org too.
+        // Keep TenantScope (the request has bound the tenant) and the Smoobu
+        // scope, and name the org too.
         return $this->owned(
             BookingMirror::query()->where('booking_mirror.organization_id', $member->organization_id),
-            $member, null, 'guest_id', 'guest_email',
+            $member, 'member_id', 'guest_id', 'guest_email',
         );
     }
 
@@ -140,7 +148,13 @@ final class MemberBookingQuery
 
     public static function serviceDto(ServiceBooking $b): array
     {
+        $policy = MemberCancellation::policyFor($b);
         $status = in_array($b->status, self::SERVICE_DEAD, true) ? 'cancelled' : $b->status;
+        // The stored digits are the venue's wall clock: sent as true instants
+        // with the venue's offset (never `Z`), so the client's date and time
+        // are the venue's and all() splits upcoming/past on the real moment.
+        // zoneFor() is memoised per organisation: one read for a whole list.
+        $zone = AppointmentClock::zoneFor((int) $b->organization_id);
 
         return [
             'kind'            => 'service',
@@ -148,27 +162,31 @@ final class MemberBookingQuery
             'reference'       => $b->booking_reference,
             'title'           => $b->service?->name ?? 'Service',
             'subtitle'        => $b->master?->name,
-            'starts_at'       => $b->start_at?->toIso8601String(),
-            'ends_at'         => $b->end_at?->toIso8601String(),
+            'starts_at'       => $b->start_at ? AppointmentClock::iso($b->start_at, $zone) : null,
+            'ends_at'         => $b->end_at ? AppointmentClock::iso($b->end_at, $zone) : null,
             'status'          => $status,
-            'payment_status'  => $b->payment_status,
+            'payment_status'  => self::payment($b->payment_status),
             'total'           => (float) $b->total_amount,
             'currency'        => strtoupper((string) ($b->currency ?: 'EUR')),
             'discount'        => (float) $b->discount_amount > 0 ? ['amount' => round((float) $b->discount_amount, 2), 'label' => $b->discount_label ?: 'Member discount'] : null,
-            'can_cancel'      => false,
-            'cancel_deadline' => null,
+            'can_cancel'      => $policy['can_cancel'],
+            'cancel_deadline' => $policy['deadline']?->toIso8601String(),
             'notes'           => $b->customer_notes,
             'party_size'      => $b->party_size !== null ? (int) $b->party_size : null,
             'guests'          => null,
             'nights'          => null,
+            // service_bookings has no payment_method column to check.
+            'paid_online'     => self::hasRealIntent($b->stripe_payment_intent_id, null),
         ];
     }
 
     public static function stayDto(BookingMirror $m): array
     {
+        $policy = MemberCancellation::policyFor($m);
         $internal = (string) $m->internal_status;
         $status = match (true) {
-            in_array($internal, self::STAY_DEAD, true) => 'cancelled',
+            // BookingRefundService marks a cancelled stay on booking_state.
+            in_array($internal, self::STAY_DEAD, true), (string) $m->booking_state === 'cancelled' => 'cancelled',
             $internal === 'checked-out'               => 'completed',
             $internal === 'checked-in'                => 'in_progress',
             default                                   => 'confirmed',
@@ -185,16 +203,31 @@ final class MemberBookingQuery
             'starts_at'       => $m->arrival_date?->toDateString(),
             'ends_at'         => $m->departure_date?->toDateString(),
             'status'          => $status,
-            'payment_status'  => $m->payment_status instanceof \BackedEnum ? $m->payment_status->value : (string) $m->payment_status,
+            'payment_status'  => self::payment($m->payment_status instanceof \BackedEnum ? $m->payment_status->value : $m->payment_status),
             'total'           => (float) $m->price_total,
             'currency'        => strtoupper((string) HotelSetting::getValue('booking_currency', 'EUR')),
-            'discount'        => null,
-            'can_cancel'      => false,
-            'cancel_deadline' => null,
-            'notes'           => null,
+            'discount'        => (float) $m->discount_amount > 0 ? ['amount' => round((float) $m->discount_amount, 2), 'label' => $m->discount_label ?: 'Member discount'] : null,
+            'can_cancel'      => $policy['can_cancel'],
+            'cancel_deadline' => $policy['deadline']?->toIso8601String(),
+            'notes'           => $m->member_id ? ($m->notice ?: null) : null,
             'party_size'      => null,
             'guests'          => $guests,
             'nights'          => $nights,
+            'paid_online'     => self::hasRealIntent($m->stripe_payment_intent_id, $m->payment_method),
         ];
+    }
+
+    /** One spelling for the portal: the capture job can write Stripe's own `canceled`. */
+    private static function payment(mixed $status): ?string
+    {
+        $status = $status === null ? null : (string) $status;
+
+        return $status === 'canceled' ? 'cancelled' : $status;
+    }
+
+    /** `paid_online`: the one "real payment intent" rule, PortalPaymentIntentGuard::isRealIntent(). */
+    private static function hasRealIntent(mixed $intentId, mixed $paymentMethod): bool
+    {
+        return PortalPaymentIntentGuard::isRealIntent($intentId, $paymentMethod);
     }
 }

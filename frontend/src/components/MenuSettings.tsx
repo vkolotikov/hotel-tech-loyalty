@@ -4,9 +4,11 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Bot, Users, BedDouble, FileText, ClipboardList, LayoutDashboard, Settings as SettingsIcon,
-  Eye, EyeOff, Save, Info, Zap, ArrowRight, Globe,
+  Eye, EyeOff, Save, Info, Zap, ArrowRight, Globe, Lock,
 } from 'lucide-react'
 import { useVocabulary } from '../lib/vocabulary'
+import { useIndustryHiddenGroups } from '../lib/industryGating'
+import { groupVisibility, visibleGroupCount } from '../lib/menuVisibility'
 
 /**
  * Settings → Menu. Lets admins hide / show the optional left-sidebar
@@ -14,7 +16,7 @@ import { useVocabulary } from '../lib/vocabulary'
  * feature this platform happens to ship.
  *
  * Storage: `crm_settings.hidden_nav_groups` as a JSON array of group
- * labels (matching the `NavGroup.label` strings in Layout.tsx).
+ * labels (matching the `NavGroup.defaultLabel` strings in Layout.tsx).
  * Layout reads the same key via `useSettings()` and filters them out
  * during `visibleGroups` composition.
  *
@@ -65,6 +67,10 @@ export function MenuSettings() {
   // Admin sees both labels so they understand what they're toggling.
   const vocab = useVocabulary()
 
+  // What the venue's industry has already hidden. This page cannot change it, so it says so
+  // instead of showing "Visible" next to a group nobody can find in the sidebar.
+  const industryHidden = useIndustryHiddenGroups()
+
   const { data: rawSettings } = useQuery<Record<string, any>>({
     queryKey: ['crm-settings'],
     queryFn: () => api.get('/v1/admin/crm-settings').then(r => r.data),
@@ -101,7 +107,7 @@ export function MenuSettings() {
   }
 
   const dirty = JSON.stringify([...hidden].sort()) !== JSON.stringify([...saved].sort())
-  const visibleCount = TOGGLEABLE.length - hidden.length + LOCKED.length
+  const visibleCount = visibleGroupCount(TOGGLEABLE.map(g => g.label), LOCKED.length, hidden, industryHidden)
 
   return (
     <div className="space-y-4">
@@ -115,7 +121,8 @@ export function MenuSettings() {
             <p className="text-xs text-gray-500 mt-0.5 max-w-2xl leading-snug">
               Hide menu groups your team does not need. Hidden groups are dropped from the left sidebar for
               every user in the org — pages remain reachable by URL if anyone bookmarks them. Overview + System
-              always stay visible so this page itself can never be hidden.
+              always stay visible so this page itself can never be hidden. Some groups are switched off for a
+              type of business; those are marked below and cannot be switched on here.
             </p>
             <p className="text-[11px] text-blue-200 mt-2 font-semibold">
               Currently showing: {visibleCount} of {TOGGLEABLE.length + LOCKED.length} groups
@@ -133,16 +140,11 @@ export function MenuSettings() {
 
         <div className="space-y-1.5">
           {TOGGLEABLE.map(g => {
-            const isHidden = hidden.includes(g.label)
+            const state = groupVisibility(g.label, hidden, industryHidden)
+            const isHidden = state !== 'visible'
             const Icon = g.icon
-            return (
-              <button
-                key={g.label}
-                onClick={() => toggle(g.label)}
-                className={'w-full flex items-center gap-3 p-2.5 rounded-lg border text-left transition-colors ' +
-                  (isHidden
-                    ? 'bg-dark-bg/50 border-dark-border opacity-50 hover:opacity-80'
-                    : 'bg-dark-bg border-dark-border hover:border-' + g.accent)}>
+            const row = (
+              <>
                 <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
                   style={{ backgroundColor: g.accent + '25', color: g.accent }}>
                   <Icon size={15} />
@@ -160,12 +162,34 @@ export function MenuSettings() {
                       </span>
                     )}
                   </div>
-                  <div className="text-[11px] text-gray-500 line-clamp-1">{g.description}</div>
+                  <div className="text-[11px] text-gray-500 line-clamp-1">
+                    {state === 'industry' ? 'Switched off for your type of business. It cannot be switched on from this page.' : g.description}
+                  </div>
                 </div>
                 <div className={'flex items-center gap-1.5 text-[11px] font-bold px-2 py-1 rounded-md ' +
-                  (isHidden ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400')}>
-                  {isHidden ? <><EyeOff size={11} /> Hidden</> : <><Eye size={11} /> Visible</>}
+                  (state === 'industry' ? 'bg-gray-500/10 text-gray-400' : isHidden ? 'bg-red-500/10 text-red-400' : 'bg-emerald-500/10 text-emerald-400')}>
+                  {state === 'industry' ? <><Lock size={11} /> Hidden for your industry</>
+                    : isHidden ? <><EyeOff size={11} /> Hidden</> : <><Eye size={11} /> Visible</>}
                 </div>
+              </>
+            )
+            // A group the industry hides is a fact, not a switch: a row, not a button.
+            return state === 'industry' ? (
+              <div key={g.label} data-group={g.label} data-visibility="industry"
+                className="w-full flex items-center gap-3 p-2.5 rounded-lg border text-left bg-dark-bg/50 border-dark-border opacity-60">
+                {row}
+              </div>
+            ) : (
+              <button
+                key={g.label}
+                data-group={g.label}
+                data-visibility={state}
+                onClick={() => toggle(g.label)}
+                className={'w-full flex items-center gap-3 p-2.5 rounded-lg border text-left transition-colors ' +
+                  (isHidden
+                    ? 'bg-dark-bg/50 border-dark-border opacity-50 hover:opacity-80'
+                    : 'bg-dark-bg border-dark-border hover:border-' + g.accent)}>
+                {row}
               </button>
             )
           })}

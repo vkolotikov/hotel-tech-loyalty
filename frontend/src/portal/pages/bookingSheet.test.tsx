@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { PortalContext, type PortalContextValue } from '../PortalProvider'
 import { BookingSheet } from './BookingSheet'
-import type { PortalBooking, PortalBootstrap } from '../lib/types'
+import type { BookingKind, PortalBooking, PortalBootstrap } from '../lib/types'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -17,29 +17,39 @@ vi.mock('react-i18next', () => ({
     i18n: { language: 'en' },
   }),
 }))
-// The booking is always seeded straight into the query cache (see `render` below); the real call stays
+// The booking is always seeded straight into the query cache (see `render` below); the real calls stay
 // never-resolving so a test that forgets to seed fails on a missing assertion, not a stray network call.
-vi.mock('../lib/portalApi', () => ({ portalApi: { booking: () => new Promise(() => {}) } }))
+vi.mock('../lib/portalApi', async () => {
+  const actual = await vi.importActual<typeof import('../lib/portalApi')>('../lib/portalApi')
+  const never = () => new Promise(() => {})
+  return { ...actual, portalApi: { ...actual.portalApi, booking: never, cancelBooking: never } }
+})
 
 const data: PortalBootstrap = {
   venue: { name: 'Numa', logo_url: null, industry: 'beauty', currency: 'EUR', timezone: 'Europe/Riga', contact: { email: null, phone: null },
     accent: { hex: '#b04a6e', ink: '#ffffff', deep: '#8e3b58', dark_hex: '#e38ab0', dark_ink: '#1a0b12', dark_deep: '#f0b4cd' }, display_face: 'cormorant' },
   capabilities: { loyalty: true, services: true, stays: false, chat: false, payments: { services: false, stays: false, publishable_key: null } },
-  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '' },
+  policies: { services_cancel_hours: 24, booking_cancel_hours: 48, services_cancellation_policy: '', booking_cancellation_policy: '', check_in_time: '15:00', check_out_time: '11:00' },
   member: null, counts: { unread_notifications: 0, upcoming_bookings: 1 },
 }
 
 const booking: PortalBooking = {
   kind: 'service', id: 7, reference: 'SVC-ABC12345', title: 'Facial', subtitle: 'Mara', starts_at: '2026-10-03T07:30:00Z', ends_at: '2026-10-03T08:15:00Z',
-  status: 'confirmed', payment_status: 'paid', total: 60, currency: 'EUR', discount: null, can_cancel: true, cancel_deadline: null,
-  notes: null, party_size: 1, guests: null, nights: null,
+  status: 'confirmed', payment_status: 'paid', total: 60, currency: 'EUR', discount: null, can_cancel: true, cancel_deadline: '2026-10-02T07:30:00Z',
+  notes: null, party_size: 1, guests: null, nights: null, paid_online: true,
 }
 
-function render(client: QueryClient) {
-  const value: PortalContextValue = { data, isLoading: false, isError: false, error: null, refetch: () => {} }
+const stayBooking: PortalBooking = {
+  ...booking, kind: 'stay', id: 9, reference: 'BK-STAY1234', title: 'Sea view', subtitle: null,
+  starts_at: '2026-10-10', ends_at: '2026-10-12', party_size: null, guests: 2, nights: 2,
+}
+
+function render(client: QueryClient, bootstrap: PortalBootstrap = data, kind: BookingKind = 'service') {
+  const value: PortalContextValue = { data: bootstrap, isLoading: false, isError: false, error: null, refetch: () => {} }
+  const id = kind === 'stay' ? 9 : 7
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
-      <MemoryRouter><PortalContext.Provider value={value}><BookingSheet kind="service" id={7} onClose={() => {}} /></PortalContext.Provider></MemoryRouter>
+      <MemoryRouter><PortalContext.Provider value={value}><BookingSheet kind={kind} id={id} onClose={() => {}} /></PortalContext.Provider></MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -57,10 +67,44 @@ describe('BookingSheet', () => {
     expect(html).not.toContain('Add to calendar')
   })
 
-  it('does not offer it for a cancelled booking (minor finding, fix round 1)', () => {
+  it('does not offer it for a cancelled booking', () => {
     const client = new QueryClient()
     client.setQueryData(['portal-booking', 'service', 7], { ...booking, status: 'cancelled' })
     const html = render(client)
     expect(html).not.toContain('Add to calendar')
+  })
+
+  it('offers cancellation for a booking the server says can be cancelled', () => {
+    const client = new QueryClient()
+    client.setQueryData(['portal-booking', 'service', 7], booking)
+    const html = render(client)
+    expect(html).toContain('Cancel booking')
+    expect(html).not.toContain('To change or cancel, contact')
+  })
+
+  it('points to the venue instead when it cannot', () => {
+    const client = new QueryClient()
+    client.setQueryData(['portal-booking', 'service', 7], { ...booking, can_cancel: false, cancel_deadline: null })
+    const html = render(client)
+    expect(html).not.toContain('Cancel booking')
+    expect(html).toContain('To change or cancel, contact Numa.')
+  })
+
+  it('shows the services\' own policy for an appointment, not the stay\'s', () => {
+    const client = new QueryClient()
+    client.setQueryData(['portal-booking', 'service', 7], booking)
+    const html = render(client, { ...data, policies: { ...data.policies, services_cancellation_policy: 'Appointments: a day ahead.', booking_cancellation_policy: 'Stays: two days ahead.' } })
+    expect(html).toContain('Appointments: a day ahead.')
+    expect(html).not.toContain('Stays: two days ahead.')
+  })
+
+  // The test above only ever renders kind="service", so it never exercises the
+  // booking_cancellation_policy branch — this one does.
+  it('shows the stay\'s own cancellation policy for a stay booking, not the services\' one', () => {
+    const client = new QueryClient()
+    client.setQueryData(['portal-booking', 'stay', 9], stayBooking)
+    const html = render(client, { ...data, policies: { ...data.policies, services_cancellation_policy: 'Appointments: a day ahead.', booking_cancellation_policy: 'Stays: two days ahead.' } }, 'stay')
+    expect(html).toContain('Stays: two days ahead.')
+    expect(html).not.toContain('Appointments: a day ahead.')
   })
 })
