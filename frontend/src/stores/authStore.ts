@@ -35,6 +35,12 @@ interface User {
    * choice should be silently configured, never prompted.
    */
   industry_explicit?: boolean
+  /**
+   * Opt-in workspaces switched on for the user's organisation. Absent for
+   * every organisation that has none. `landing` sends a staff user to the
+   * workspace right after signing in (see appointments/lib/landing.ts).
+   */
+  workspaces?: { appointments?: { landing?: boolean } }
 }
 
 interface Staff {

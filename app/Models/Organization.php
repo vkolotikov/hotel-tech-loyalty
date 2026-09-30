@@ -256,6 +256,58 @@ class Organization extends Model
         return in_array($this->subscription_status, ['ACTIVE', 'TRIALING'], true);
     }
 
+    // ─── Workspaces ────────────────────────────────────────────
+    // Opt-in product experiences beside the full admin; the appointments
+    // workspace is the first. The switch lives under settings.workspaces —
+    // a column no tenant endpoint and no billing sync writes — so only an
+    // operator can turn one on (`php artisan workspace:appointments`).
+    // Absent means off.
+
+    /** @return array{enabled: bool, landing: bool} */
+    public function workspace(string $name): array
+    {
+        $row = (array) data_get($this->settings ?? [], "workspaces.{$name}", []);
+        $enabled = (bool) ($row['enabled'] ?? false);
+
+        return [
+            'enabled' => $enabled,
+            // Landing means nothing while the workspace is off.
+            'landing' => $enabled && (bool) ($row['landing'] ?? false),
+        ];
+    }
+
+    public function workspaceEnabled(string $name): bool
+    {
+        return $this->workspace($name)['enabled'];
+    }
+
+    public function setWorkspace(string $name, bool $enabled, bool $landing = false): void
+    {
+        $settings = $this->settings ?? [];
+        data_set($settings, "workspaces.{$name}", ['enabled' => $enabled, 'landing' => $enabled && $landing]);
+        $this->forceFill(['settings' => $settings])->save();
+    }
+
+    /**
+     * What a staff user's sign-in answer carries: the enabled workspaces
+     * only, and null when there are none — so the answer of every
+     * organisation that never opted in is unchanged.
+     *
+     * @return array<string, array{landing: bool}>|null
+     */
+    public function workspacesPayload(): ?array
+    {
+        $out = [];
+        foreach (array_keys((array) data_get($this->settings ?? [], 'workspaces', [])) as $name) {
+            $workspace = $this->workspace((string) $name);
+            if ($workspace['enabled']) {
+                $out[(string) $name] = ['landing' => $workspace['landing']];
+            }
+        }
+
+        return $out ?: null;
+    }
+
     // ─── Industry resolution ───────────────────────────────────
     // Reads in fallback order so the platform behaves correctly for
     // every org regardless of which Phase shipped first. Industry

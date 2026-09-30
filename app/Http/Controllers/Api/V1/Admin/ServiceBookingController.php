@@ -248,7 +248,8 @@ class ServiceBookingController extends Controller
         if ($rows->isEmpty()) return response()->json(['updated' => 0, 'message' => 'No matching bookings.']);
 
         $updated = 0;
-        DB::transaction(function () use ($rows, $validated, &$updated) {
+        $patches = [];
+        DB::transaction(function () use ($rows, $validated, &$updated, &$patches) {
             foreach ($rows as $b) {
                 $patch = match ($validated['action']) {
                     'cancel'        => ['status' => 'cancelled', 'cancelled_at' => now()],
@@ -258,17 +259,33 @@ class ServiceBookingController extends Controller
                     'mark_status'   => ['status' => $validated['value'] ?? $b->status],
                 };
                 ServiceBooking::where('id', $b->id)->lockForUpdate()->update($patch);
+                $patches[$b->id] = $patch;
                 $updated++;
             }
         });
 
+        // After the transaction, as before: an audit failure must never fail
+        // the bulk action. One row per booking (so each booking's history is
+        // complete) and the summary row, all with the actor.
         try {
-            AuditLog::create([
-                'organization_id' => app()->bound('current_organization_id') ? app('current_organization_id') : null,
-                'user_id'         => $request->user()?->id,
-                'action'          => "service_booking.bulk.{$validated['action']}",
-                'description'     => "Bulk {$validated['action']}: {$updated} service bookings",
-            ]);
+            foreach ($rows as $b) {
+                AuditLog::record(
+                    "service_booking.bulk.{$validated['action']}",
+                    $b,
+                    array_intersect_key($patches[$b->id] ?? [], ['status' => true, 'payment_status' => true]),
+                    ['status' => (string) $b->status, 'payment_status' => (string) $b->payment_status],
+                    $request->user(),
+                    "Bulk {$validated['action']}: {$b->booking_reference}",
+                );
+            }
+            AuditLog::record(
+                "service_booking.bulk.{$validated['action']}",
+                null,
+                ['ids' => $rows->pluck('id')->all(), 'updated' => $updated],
+                [],
+                $request->user(),
+                "Bulk {$validated['action']}: {$updated} service bookings",
+            );
         } catch (\Throwable) {}
 
         // Award loyalty points for whichever rows this bulk action just
@@ -460,12 +477,20 @@ class ServiceBookingController extends Controller
                 ]);
             }
 
-            AuditLog::create([
-                'organization_id' => $orgId,
-                'user_id'         => $request->user()?->id,
-                'action'          => 'service_booking.created',
-                'description'     => "Created service booking {$booking->booking_reference} for {$booking->customer_name}",
-            ]);
+            // AuditLog::record(), not ::create(): `user_id` is not a column,
+            // so the actor was silently dropped and the row named no booking.
+            AuditLog::record(
+                'service_booking.created',
+                $booking,
+                [
+                    'status'            => (string) $booking->status,
+                    'start_at'          => $booking->start_at?->format('Y-m-d H:i:s'),
+                    'service_master_id' => $booking->service_master_id,
+                ],
+                [],
+                $request->user(),
+                "Created service booking {$booking->booking_reference} for {$booking->customer_name}",
+            );
 
             return response()->json($booking->fresh(['service', 'master', 'extras']), 201);
             });
@@ -506,14 +531,17 @@ class ServiceBookingController extends Controller
                 $data['staff_notes'] = $existing.($existing !== '' ? "\n\n" : '').$note;
             }
 
+            $before = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
             $booking->update(array_filter($data, fn ($v) => $v !== null));
 
-            AuditLog::create([
-                'organization_id' => app('current_organization_id'),
-                'user_id'         => $request->user()?->id,
-                'action'          => 'service_booking.updated',
-                'description'     => "Updated booking {$booking->booking_reference}",
-            ]);
+            AuditLog::record(
+                'service_booking.updated',
+                $booking,
+                ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status],
+                $before,
+                $request->user(),
+                "Updated booking {$booking->booking_reference}",
+            );
 
             return $booking;
         });
@@ -532,7 +560,20 @@ class ServiceBookingController extends Controller
     public function destroy(int $id): JsonResponse
     {
         $booking = ServiceBooking::findOrFail($id);
+        $before = ['status' => (string) $booking->status];
         $booking->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+        try {
+            AuditLog::record(
+                'service_booking.cancelled',
+                $booking,
+                ['status' => 'cancelled'],
+                $before,
+                request()->user(),
+                "Cancelled booking {$booking->booking_reference}",
+            );
+        } catch (\Throwable) {}
+
         return response()->json(['message' => 'Booking cancelled']);
     }
 

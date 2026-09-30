@@ -62,6 +62,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'feature'            => \App\Http\Middleware\RequireFeature::class,
             'staff.can'          => \App\Http\Middleware\RequireStaffCapability::class,
             'member.only'        => \App\Http\Middleware\MemberOnly::class,
+            'workspace'          => \App\Http\Middleware\RequireWorkspace::class,
             'landing.security'   => \App\Http\Middleware\LandingPageSecurity::class,
         ]);
 

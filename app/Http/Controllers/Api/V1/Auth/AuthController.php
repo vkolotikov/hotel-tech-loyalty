@@ -299,6 +299,14 @@ class AuthController extends Controller
         $userArray['has_loyalty'] = app(\App\Services\IndustryPrompts\IndustryPromptService::class)
             ->for($industry)->hasLoyalty;
 
+        // Opt-in workspaces (the appointments workspace). Present only for a
+        // staff user whose organisation has one switched on, so every other
+        // sign-in answer is byte for byte what it was.
+        if ($user->isStaff() && $user->organization_id
+            && ($workspaces = \App\Models\Organization::find($user->organization_id)?->workspacesPayload())) {
+            $userArray['workspaces'] = $workspaces;
+        }
+
         $response = ['token' => $token, 'user' => $userArray];
 
         if ($user->isMember()) {
@@ -521,6 +529,11 @@ class AuthController extends Controller
                 ->for($industry)->hasLoyalty,
         ];
 
+        // Same rule as login(): only staff, only when a workspace is on.
+        if ($user->isStaff() && $user->organization_id
+            && ($workspaces = \App\Models\Organization::find($user->organization_id)?->workspacesPayload())) {
+            $data['workspaces'] = $workspaces;
+        }
         return response()->json($data);
     }
 

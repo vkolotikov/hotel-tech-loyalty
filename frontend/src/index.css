@@ -1,4 +1,5 @@
 @import './portal/theme/portal.css';
+@import './appointments/theme/appointments.css';
 
 @tailwind base;
 @tailwind components;

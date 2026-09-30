@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { queryClient } from './lib/queryClient'
@@ -28,6 +28,9 @@ import { Setup } from './pages/Setup'
 const PortalRoutes = lazy(() => import('./portal/PortalApp').then(m => ({ default: m.PortalApp })))
 const PortalJoin   = lazy(() => import('./portal/pages/Join').then(m => ({ default: m.Join })))
 const PortalClaim  = lazy(() => import('./portal/pages/Claim').then(m => ({ default: m.Claim })))
+// Appointments workspace. One lazy chunk, its own shell; an organisation
+// that has not opted in never downloads it (the server refuses its API).
+const AppointmentsRoutes = lazy(() => import('./appointments/AppointmentsApp').then(m => ({ default: m.AppointmentsApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -118,6 +121,9 @@ function ThemeLoader() {
 function AuthedFloatingAiChat() {
   const { token, user } = useAuthStore()
   const { hasFeature } = useSubscription()
+  const { pathname } = useLocation()
+  // The workspace is a focused product: the full admin's copilot stays out.
+  if (pathname.startsWith('/appointments')) return null
   if (!token) return null
   // Never in the member portal. This is the staff CRM copilot with 35+
   // admin tools behind it; a loyalty member has no business seeing the
@@ -251,6 +257,9 @@ export default function App() {
 
           {/* Member portal — same login, different app. */}
           <Route path="/portal/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><PortalRoutes /></Suspense></ChunkErrorBoundary>} />
+
+          {/* Appointments workspace — same login, a second staff shell. */}
+          <Route path="/appointments/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AppointmentsRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />

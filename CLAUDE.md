@@ -128,6 +128,23 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
   `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
 
+## Appointments-workspace code rules
+
+- `frontend/src/appointments/` uses only `a-*` tokens and only `/v1/admin/appointments/…`; every string is
+  `t('appointments.…')` in all five locales. Read `docs/appointments-workspace.md` before touching it.
+- Appointment times are the venue's wall clock (`YYYY-MM-DDTHH:mm`, no offset). Never pass one to `new Date()`;
+  use `frontend/src/appointments/lib/wallClock.ts` and, on the server, `App\Services\Appointments\VenueClock`.
+- The workspace computes no availability, price, points or consequence of its own: slots come from
+  `ServiceSchedulingService`, points from `BookingPointsService`, and what an action will do from
+  `AppointmentActions`. A new rule goes into the shared service, not into a workspace controller or component.
+- Every write takes the revision the client saw and answers `409 stale` on a mismatch; create takes an
+  `Idempotency-Key`. Panel decisions live in pure functions (`panel/panelState.ts`, `panel/consequences.ts`)
+  because the frontend tests render to a string.
+- The workspace is opt-in: `php artisan workspace:appointments <org> --on`. Anything added to it stays behind
+  `workspace:appointments`; a change that reaches organisations without the flag needs the owner's say-so.
+- Local checks that capture mail need `LOG_LEVEL=debug` beside `MAIL_MAILER=log`: the local log level hides the
+  log mailer's output, and an empty log then proves nothing.
+
 ## Secrets
 
 Never echo credential values. `.env` is local; production settings live in Laravel Cloud.

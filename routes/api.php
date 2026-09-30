@@ -1282,6 +1282,24 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::patch('service-bookings/{id}/status',  [ServiceBookingController::class, 'updateStatus']);
             Route::delete('service-bookings/{id}',        [ServiceBookingController::class, 'destroy']);
 
+            // ─── Appointments workspace (opt-in per organisation) ───────────
+            // A calendar-first shell over the same service bookings, clients
+            // and loyalty records. `workspace:appointments` answers 403 until
+            // an operator switches the organisation on
+            // (`php artisan workspace:appointments <id> --on`).
+            Route::prefix('appointments')->middleware('workspace:appointments')->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController::class, 'show']);
+                Route::get('calendar',  [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'calendar']);
+                Route::get('slots',     [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'slots']);
+                Route::get('clients',      [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'index']);
+                Route::post('clients',     [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'store']);
+                Route::get('clients/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'show'])->whereNumber('id');
+                Route::post('bookings', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'store']);
+                Route::get('bookings/{id}',   [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'show'])->whereNumber('id');
+                Route::patch('bookings/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'update'])->whereNumber('id');
+                Route::post('bookings/{id}/actions', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'action'])->whereNumber('id');
+            });
+
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
             Route::get('audit-logs/actions',              [AuditLogController::class, 'actions']);

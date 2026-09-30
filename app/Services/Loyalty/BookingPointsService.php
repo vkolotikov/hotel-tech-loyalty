@@ -101,6 +101,55 @@ final class BookingPointsService
     }
 
     /**
+     * What completing this appointment would award, and when nothing, why.
+     * Read-only: the appointments workspace prints it before staff press
+     * Complete. The predicates are awardForServiceBooking()'s own, in the
+     * order a person would want the reason given — minus the booking's
+     * status, since the question is "if it were completed now".
+     *
+     * @return array{points: int, reason: ?string}
+     */
+    public function previewForServiceBooking(ServiceBooking $booking): array
+    {
+        $orgId = (int) $booking->organization_id;
+        $none = fn (string $reason): array => ['points' => 0, 'reason' => $reason];
+
+        if ($booking->points_awarded_at !== null) {
+            return $none('already_awarded');
+        }
+        if (!$booking->member_id) {
+            return $none('not_a_member');
+        }
+        if ($booking->payment_status === 'refunded') {
+            return $none('refunded');
+        }
+        if ((float) $booking->total_amount <= 0) {
+            return $none('zero_amount');
+        }
+        if (!PortalBootstrap::loyaltyOn($orgId)) {
+            return $none('programme_off');
+        }
+        if (!$this->pointsOnBookingsEnabled($orgId)) {
+            return $none('points_on_bookings_off');
+        }
+
+        return $this->underBookingOrg($orgId, function () use ($booking, $orgId, $none) {
+            $member = LoyaltyMember::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->whereKey($booking->member_id)
+                ->with('tier')
+                ->first();
+            if (!$member) {
+                return $none('not_a_member');
+            }
+
+            $points = $this->loyalty->pointsForSpend($member, (float) $booking->total_amount);
+
+            return $points > 0 ? ['points' => $points, 'reason' => null] : $none('zero_amount');
+        });
+    }
+
+    /**
      * Whether awardForStay() would award this stay now — the one rule both
      * the real run and `bookings:award-stay-points --dry-run` read, so the
      * dry run lists exactly what would be awarded: a member's stay not yet
@@ -204,7 +253,7 @@ final class BookingPointsService
         return $status === PaymentStatus::Open->value && (string) $mirror->payment_method === 'pay_at_venue';
     }
 
-    private function pointsOnBookingsEnabled(int $orgId): bool
+    public function pointsOnBookingsEnabled(int $orgId): bool
     {
         $raw = HotelSetting::withoutGlobalScopes()
             ->where('organization_id', $orgId)

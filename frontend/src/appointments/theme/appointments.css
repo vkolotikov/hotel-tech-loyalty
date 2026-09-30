@@ -1,0 +1,119 @@
+/*
+ * Appointments workspace tokens. Every rule is scoped under
+ * [data-appointments], so nothing here can restyle the full admin, and
+ * every colour is an `R G B` triplet so Tailwind's `<alpha-value>` works
+ * (`bg-a-accent/10` is the soft tint).
+ *
+ * A light working canvas, white panels, a deep navy rail. One accent
+ * (teal-blue) for primary actions and selection. Status tones are their own
+ * set and are never the accent; each is drawn with an icon and a word.
+ * theme/contrast.test.ts pins every text pair at 4.5:1.
+ */
+[data-appointments] {
+  --a-canvas: 245 246 248;
+  --a-surface: 255 255 255;
+  --a-surface-2: 238 240 244;
+  --a-text: 22 27 38;
+  --a-text-2: 84 93 109;
+  --a-border: 223 227 234;
+
+  --a-side: 17 24 39;
+  --a-side-2: 31 41 58;
+  --a-side-text: 226 232 240;
+  --a-side-text-2: 160 174 192;
+
+  --a-accent: 13 110 122;
+  --a-accent-ink: 255 255 255;
+  --a-accent-deep: 9 84 94;
+  --a-danger: 176 36 36;
+
+  --a-st-pending: 138 80 0;
+  --a-st-confirmed: 18 100 58;
+  --a-st-progress: 79 58 176;
+  --a-st-completed: 44 70 108;
+  --a-st-cancelled: 88 95 107;
+  --a-st-noshow: 166 38 58;
+
+  color-scheme: light;
+  background-color: rgb(var(--a-canvas));
+  color: rgb(var(--a-text));
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The full admin gives headings the organisation's "mood" typeface and
+   form controls a dark colour scheme, both globally (index.css). Neither
+   belongs in this workspace. */
+[data-appointments] h1,
+[data-appointments] h2,
+[data-appointments] h3,
+[data-appointments] h4 {
+  font-family: inherit;
+}
+
+[data-appointments] select,
+[data-appointments] input,
+[data-appointments] input[type],
+[data-appointments] textarea {
+  color-scheme: light;
+}
+
+[data-appointments] ::-webkit-scrollbar-track {
+  background: rgb(var(--a-surface-2));
+}
+
+[data-appointments] ::-webkit-scrollbar-thumb {
+  background: rgb(var(--a-border));
+}
+
+/* Focus is always visible: the accent on light surfaces, the rail's own text
+   colour on the dark rail — and only there: the panel and the month are
+   asides too, and white. */
+[data-appointments] :focus-visible {
+  outline: 2px solid rgb(var(--a-accent));
+  outline-offset: 2px;
+}
+
+[data-appointments] [data-rail] :focus-visible {
+  outline-color: rgb(var(--a-side-text));
+}
+
+/* Places focus is only ever sent to by the workspace (a panel's heading, the
+   page after a link) are not controls and draw no ring. */
+[data-appointments] [tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+/* Time off on the calendar: hatched, so it reads as blocked without relying on a colour. */
+[data-appointments] .a-hatch {
+  background-image: repeating-linear-gradient(135deg, rgb(var(--a-text-2) / 0.16) 0 6px, transparent 6px 12px);
+}
+
+/* A card in a narrow column (many people in a day, or a week) has no room
+   for its time and the status word side by side. The time stays; the word
+   is taken out of sight — not out of the page, so it is still read out as
+   part of the card — and the status icon and the card's tone remain. */
+[data-appointments] [data-density] {
+  container-type: inline-size;
+}
+
+@container (max-width: 170px) {
+  [data-appointments] [data-density] [data-status-word] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-appointments] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

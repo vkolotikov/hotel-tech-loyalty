@@ -7,6 +7,8 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceMaster;
 use App\Models\ServiceMasterSchedule;
 use App\Models\ServiceMasterTimeOff;
+use App\Support\AdvisoryLock;
+use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Collection;
@@ -70,6 +72,7 @@ class ServiceSchedulingService
         ?int $masterId = null,
         ?int $stepMinutes = null,
         int $leadMinutes = 60,
+        ?int $ignoreBookingId = null,
     ): array {
         $step = $stepMinutes ?: $this->defaultSlotStep();
         $day = CarbonImmutable::parse($date)->startOfDay();
@@ -86,10 +89,13 @@ class ServiceSchedulingService
             $windows = $this->workingWindowsForDate($master, $day);
             if (empty($windows)) continue;
 
-            // Pre-load conflicting bookings for this master on this day
+            // Pre-load conflicting bookings for this master on this day.
+            // $ignoreBookingId is the appointment being moved: its own row
+            // must not make its own time look taken.
             $existing = ServiceBooking::where('service_master_id', $master->id)
                 ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
                 ->whereDate('start_at', $day->toDateString())
+                ->when($ignoreBookingId, fn ($q) => $q->where('id', '!=', $ignoreBookingId))
                 ->orderBy('start_at')
                 ->get(['start_at', 'end_at']);
 
@@ -166,11 +172,14 @@ class ServiceSchedulingService
     /**
      * Throws if the requested slot is no longer available (used during confirm).
      * If masterId is null, picks the first master that can take it.
+     * $ignoreBookingId is the appointment being moved, so it does not
+     * conflict with itself.
      */
-    public function reserveSlot(Service $service, ?int $masterId, string $startAt): array
+    public function reserveSlot(Service $service, ?int $masterId, string $startAt, ?int $ignoreBookingId = null): array
     {
         $start = CarbonImmutable::parse($startAt);
         $masters = $this->mastersForService($service, $masterId);
+        $this->lockCandidates($masters);
 
         foreach ($masters as $master) {
             $effDuration = $this->effectiveDuration($service, $master);
@@ -190,6 +199,7 @@ class ServiceSchedulingService
                 ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
                 ->where('start_at', '<', $end)
                 ->where('end_at', '>', $start)
+                ->when($ignoreBookingId, fn ($q) => $q->where('id', '!=', $ignoreBookingId))
                 ->exists();
 
             if (!$conflict) {
@@ -204,6 +214,19 @@ class ServiceSchedulingService
         }
 
         throw new \RuntimeException('This time slot is no longer available. Please choose another.');
+    }
+
+    /**
+     * A master's working windows on a date — the weekly schedule with time
+     * off already taken out. The appointments calendar shades its columns
+     * with this, so what staff see as "working" is what reserveSlot() will
+     * accept.
+     *
+     * @return array<int, array{start: CarbonImmutable, end: CarbonImmutable}>
+     */
+    public function workingWindows(ServiceMaster $master, CarbonImmutable $date): array
+    {
+        return $this->workingWindowsForDate($master, $date->startOfDay());
     }
 
     // ─── Internals ────────────────────────────────────────────────────────────
@@ -287,5 +310,33 @@ class ServiceSchedulingService
             }
         }
         return $out;
+    }
+
+    /**
+     * Serialise this claim against every other claim on the same people.
+     *
+     * Callers lock `svcm:{master}` when the client named a master and
+     * `svc:{service}` when it did not; those two keys do not exclude each
+     * other, so an "any master" confirm and a named confirm could both pass
+     * the conflict check for the same person and time and both insert. Taking
+     * each candidate's own `svcm:` lock here closes that: a named confirm
+     * re-takes the lock it already holds, an "any" confirm waits for it.
+     *
+     * Ascending id order, whatever order the candidates are checked in, so
+     * two "any" confirms for different services that share people always
+     * take the locks in one order and cannot deadlock.
+     *
+     * Only inside a transaction — that is a claim. A quote runs outside one
+     * and must not queue behind writers.
+     */
+    private function lockCandidates(Collection $masters): void
+    {
+        if (DB::transactionLevel() === 0) {
+            return;
+        }
+
+        foreach ($masters->pluck('id')->sort()->values() as $id) {
+            AdvisoryLock::within("svcm:{$id}");
+        }
     }
 }

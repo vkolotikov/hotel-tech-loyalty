@@ -11,6 +11,7 @@ import { SUPPORTED_LANGUAGES, type LangCode } from '../i18n'
 import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES, featureLabel, featureDetail, planTagline } from '../lib/planFeatures'
 import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
 import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
+import { landingPath } from '../appointments/lib/landing'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -420,7 +421,7 @@ export function Login() {
         localStorage.setItem('auth_token', saasToken)
         api.defaults.headers.common['Authorization'] = 'Bearer ' + saasToken
         setAuth(saasToken, body, body.staff)
-        navigate(body?.user_type === 'member' ? '/portal' : redirectTo, { replace: true })
+        navigate(landingPath(body, redirectTo), { replace: true })
       })
       .catch((err) => {
         setError(err?.message || 'Could not complete single sign-on. Please try signing in below.')
@@ -461,7 +462,7 @@ export function Login() {
       // Members and staff share one sign-in but land in different apps.
       // Before the portal existed, a member who signed in here was bounced
       // straight back by ProtectedRoute's staff-only check.
-      navigate(data.user?.user_type === 'member' ? '/portal' : '/', { replace: true })
+      navigate(landingPath(data.user, '/'), { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
     } finally {

@@ -42,9 +42,10 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'pages/LandingPages.tsx'),
   path.join(SRC_DIR, 'pages/Reviews.tsx'),
   path.join(SRC_DIR, 'portal'),
+  path.join(SRC_DIR, 'appointments'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'portal.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'portal.', 'appointments.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
@@ -83,7 +84,11 @@ function readLocale(locale: string): unknown {
   // (src/portal/i18n/index.ts); resolve `portal.*` keys the same way.
   const portalFile = path.join(SRC_DIR, 'portal/i18n', `portal.${locale}.json`)
   const portal = fs.existsSync(portalFile) ? JSON.parse(fs.readFileSync(portalFile, 'utf8')) : {}
-  return { ...common, portal }
+  // The appointments workspace registers its bundle under `appointments`
+  // the same way (src/appointments/i18n/index.ts).
+  const appointmentsFile = path.join(SRC_DIR, 'appointments/i18n', `appointments.${locale}.json`)
+  const appointments = fs.existsSync(appointmentsFile) ? JSON.parse(fs.readFileSync(appointmentsFile, 'utf8')) : {}
+  return { ...common, portal, appointments }
 }
 
 describe('locale completeness — landing pages + reviews', () => {
