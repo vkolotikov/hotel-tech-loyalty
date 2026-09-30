@@ -4,6 +4,7 @@ namespace Tests\Feature\Appointments;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\Concerns\SetsUpAppointmentsSchema;
 use Tests\TestCase;
@@ -32,6 +33,26 @@ class SignInWorkspacesTest extends TestCase
         $this->setUpAppointments(enabled: false);
 
         $this->assertArrayNotHasKey('workspaces', $this->me($this->staff)->json());
+    }
+
+    public function test_the_key_costs_no_extra_read_of_the_organisation(): void
+    {
+        // Sign-in and /auth/me run for every user of every organisation: the
+        // workspace key reuses the organisation the answer already loaded.
+        $this->setUpAppointments();
+        $this->org->setWorkspace('appointments', true, landing: true);
+
+        $reads = function (callable $request): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $request();
+            $log = DB::getQueryLog();
+            DB::disableQueryLog();
+
+            return collect($log)->filter(fn (array $q) => preg_match('/from "organizations" where "organizations"\."id" = \?/', $q['query']))->count();
+        };
+
+        $this->assertSame(1, $reads(fn () => $this->me($this->staff)->assertJsonPath('workspaces.appointments.landing', true)));
     }
 
     public function test_a_member_never_gets_the_key(): void

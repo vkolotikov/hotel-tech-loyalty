@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Tests\Concerns\SetsUpAppointmentsSchema;
 use Tests\TestCase;
@@ -61,6 +62,20 @@ class WorkspaceGateTest extends TestCase
 
         $this->getJson($this->api('bootstrap'))->assertStatus(401);
         $this->actingAs($memberUser, 'sanctum')->getJson($this->api('bootstrap'))->assertStatus(403);
+    }
+
+    public function test_the_bootstrap_reports_the_role_the_user_has_in_this_organisation(): void
+    {
+        // A staff row for the same user in another organisation, older than
+        // this organisation's own: the role shown must be this one's.
+        $this->setUpAppointments();
+        $other = $this->otherOrganization();
+        $own = DB::table('staff')->where('user_id', $this->staff->id)->where('organization_id', $this->org->id)->first();
+        DB::table('staff')->where('id', $own->id)->delete();
+        DB::table('staff')->insert(['organization_id' => $other->id, 'user_id' => $this->staff->id, 'role' => 'staff', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('staff')->insert(['organization_id' => $this->org->id, 'user_id' => $this->staff->id, 'role' => 'manager', 'is_active' => true, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->asStaff()->getJson($this->api('bootstrap'))->assertOk()->assertJsonPath('staff.role', 'manager');
     }
 
     public function test_another_organisations_flag_does_not_open_this_one(): void

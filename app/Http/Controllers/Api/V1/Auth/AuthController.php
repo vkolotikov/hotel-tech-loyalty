@@ -286,6 +286,7 @@ class AuthController extends Controller
         // via the JSON serialization picking up the appended array.
         $industry = \App\Models\Organization::DEFAULT_INDUSTRY;
         $industryExplicit = false;
+        $org = null;
         if ($user->organization_id) {
             $org = \App\Models\Organization::find($user->organization_id);
             if ($org) {
@@ -301,9 +302,9 @@ class AuthController extends Controller
 
         // Opt-in workspaces (the appointments workspace). Present only for a
         // staff user whose organisation has one switched on, so every other
-        // sign-in answer is byte for byte what it was.
-        if ($user->isStaff() && $user->organization_id
-            && ($workspaces = \App\Models\Organization::find($user->organization_id)?->workspacesPayload())) {
+        // sign-in answer is byte for byte what it was. The organisation is
+        // the one read above for the industry: no second query.
+        if ($user->isStaff() && ($workspaces = $org?->workspacesPayload())) {
             $userArray['workspaces'] = $workspaces;
         }
 
@@ -495,6 +496,7 @@ class AuthController extends Controller
         // BelongsToOrganization itself, so no global scope to bypass.
         $industry = \App\Models\Organization::DEFAULT_INDUSTRY;
         $industryExplicit = false;
+        $org = null;
         if ($user->organization_id) {
             $org = \App\Models\Organization::find($user->organization_id);
             if ($org) {
@@ -529,9 +531,9 @@ class AuthController extends Controller
                 ->for($industry)->hasLoyalty,
         ];
 
-        // Same rule as login(): only staff, only when a workspace is on.
-        if ($user->isStaff() && $user->organization_id
-            && ($workspaces = \App\Models\Organization::find($user->organization_id)?->workspacesPayload())) {
+        // Same rule as login(): only staff, only when a workspace is on, from
+        // the organisation already read above.
+        if ($user->isStaff() && ($workspaces = $org?->workspacesPayload())) {
             $data['workspaces'] = $workspaces;
         }
         return response()->json($data);

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Appointments;
 
 use App\Services\Appointments\AppointmentActions;
+use App\Services\Loyalty\BookingPointsService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -148,6 +149,29 @@ class AppointmentActionsTest extends TestCase
             $this->assertSame('none', $row['consequences']['message']);
         }
         $this->assertNull($walkIn['cancel']['consequences']['points']);
+    }
+
+    public function test_the_points_preview_is_worked_out_once_per_appointment(): void
+    {
+        // The panel refreshes an appointment every 30 seconds; its action
+        // list must cost one preview, not one per action that mentions points.
+        $booking = $this->seedBooking(['status' => 'completed', 'member_id' => $this->member->id])->fresh();
+        $count = function (callable $work): int {
+            DB::flushQueryLog();
+            DB::enableQueryLog();
+            $work();
+            $n = count(DB::getQueryLog());
+            DB::disableQueryLog();
+
+            return $n;
+        };
+
+        $one = $count(fn () => app(BookingPointsService::class)->previewForServiceBooking($booking));
+        $all = $count(fn () => app(AppointmentActions::class)->for($booking));
+
+        // At most one preview's worth (a setting read may already be cached by the first).
+        $this->assertGreaterThan(0, $one);
+        $this->assertLessThanOrEqual($one, $all);
     }
 
     public function test_award_points_appears_only_when_a_completed_visits_award_is_still_due(): void

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOSED, canSave, draftBody, emptyDraft, panelReducer, type PanelState } from './panelState'
+import { CLOSED, canSave, detailPollMs, draftBody, emptyDraft, panelReducer, type PanelState } from './panelState'
 import type { ClientSummary } from '../lib/types'
 
 const sophie: ClientSummary = { id: 5, name: 'Sophie Williams', phone: '+44 7700 900123', email: null, member: null }
@@ -108,5 +108,25 @@ describe('canSave / draftBody', () => {
     const body = draftBody({ ...emptyDraft('2026-10-06'), time: '10:00', masterId: 1, serviceId: 3, client: sophie, source: 'walk_in', staffNotes: '  Firm pressure ' })
     expect(body).toEqual({ client_id: 5, service_id: 3, master_id: 1, start: '2026-10-06T10:00', source: 'walk_in', staff_notes: 'Firm pressure' })
     expect(draftBody({ ...emptyDraft('2026-10-06'), time: '10:00', masterId: 1, serviceId: 3, client: sophie })).not.toHaveProperty('staff_notes')
+  })
+})
+
+describe('detailPollMs', () => {
+  const view = (patch: Partial<Extract<PanelState, { mode: 'view' }>> = {}): PanelState =>
+    ({ mode: 'view', id: 7, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, ...patch })
+
+  it('refreshes an open appointment every 30 seconds while it is only being looked at', () => {
+    expect(detailPollMs(view())).toBe(30_000)
+  })
+
+  it('holds still while the operator moves it, confirms an action or waits for a save — a change by someone else then meets the revision check', () => {
+    expect(detailPollMs(view({ sub: 'move' }))).toBe(false)
+    expect(detailPollMs(view({ sub: 'confirm', action: 'cancel' }))).toBe(false)
+    expect(detailPollMs(view({ saving: true }))).toBe(false)
+  })
+
+  it('has nothing to refresh when no appointment is open', () => {
+    expect(detailPollMs(CLOSED)).toBe(false)
+    expect(detailPollMs(open())).toBe(false)
   })
 })

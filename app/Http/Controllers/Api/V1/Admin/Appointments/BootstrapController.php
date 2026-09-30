@@ -26,7 +26,8 @@ class BootstrapController extends Controller
         $org = $request->attributes->get('workspace_org');
         $orgId = (int) $org->id;
         $user = $request->user();
-        $staff = Staff::withoutGlobalScopes()->where('user_id', $user->id)->first();
+        // Tenant-scoped: a user with staff rows in two organisations reports this one's role.
+        $staff = Staff::where('user_id', $user->id)->first();
         $brandId = app()->bound('current_brand_id') ? app('current_brand_id') : null;
         $brand = $brandId ? Brand::find($brandId) : null;
 

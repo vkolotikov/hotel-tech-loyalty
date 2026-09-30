@@ -16,6 +16,7 @@
     "search": "Buscar clientes",
     "new_appointment": "Nueva cita",
     "switched_off": "El espacio de citas se ha desactivado para su organización. Sus reservas no han cambiado y siguen en la administración completa.",
+    "subscription_required": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Un administrador puede restablecer el acceso en «Facturación» de la administración completa.",
     "open_full_admin": "Abrir la administración completa",
     "timezone_missing": "La zona horaria del local no está definida, por lo que «ahora» y «hoy» siguen el UTC. Defínala en la administración completa, en Ajustes → General → Zona horaria (por ejemplo, Europe/London).",
     "not_bookable": "Todavía no se puede reservar nada: añada en la administración completa un servicio, un miembro del equipo que lo realice y su horario de trabajo."

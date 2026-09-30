@@ -16,6 +16,7 @@
     "search": "Rechercher un client",
     "new_appointment": "Nouveau rendez-vous",
     "switched_off": "L'espace de rendez-vous a été désactivé pour votre organisation. Vos réservations sont inchangées et restent dans l'administration complète.",
+    "subscription_required": "L'abonnement de votre organisation n'est pas actif : l'espace ne peut pas s'ouvrir. Vos réservations sont inchangées. Un administrateur peut rétablir l'accès dans « Facturation » de l'administration complète.",
     "open_full_admin": "Ouvrir l'administration complète",
     "timezone_missing": "Le fuseau horaire de l'établissement n'est pas défini : « maintenant » et « aujourd'hui » suivent donc l'UTC. Définissez-le dans l'administration complète, sous Paramètres → Général → Fuseau horaire (par exemple Europe/London).",
     "not_bookable": "Rien ne peut encore être réservé : ajoutez dans l'administration complète un service, un membre de l'équipe qui le réalise et ses horaires de travail."

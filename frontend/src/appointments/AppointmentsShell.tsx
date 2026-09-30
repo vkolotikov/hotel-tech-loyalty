@@ -34,7 +34,11 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
     if (document.activeElement === document.body) main.current?.focus()
   }, [pathname])
 
-  const switchedOff = isError && failureOf(error).code === 'workspace_disabled'
+  const refusal = isError ? failureOf(error).code : ''
+  const switchedOff = refusal === 'workspace_disabled'
+  // The organisation's subscription is not active: nothing here can load, before or after the page was open.
+  const lapsed = refusal === 'subscription_required'
+  const stopped = switchedOff || lapsed
   // An organisation that never had the workspace: the route is not for them.
   if (switchedOff && !data) return <Navigate to="/" replace />
 
@@ -136,25 +140,29 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
           </details>
         </header>
 
-        {switchedOff && (
+        {stopped && (
           <div className="p-6 max-w-xl space-y-3">
-            <Notice tone="warning">{t('appointments.shell.switched_off', 'The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.')}</Notice>
+            <Notice tone="warning">
+              {lapsed
+                ? t('appointments.shell.subscription_required', 'Your organisation\'s subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.')
+                : t('appointments.shell.switched_off', 'The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.')}
+            </Notice>
             <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
               {t('appointments.shell.open_full_admin', 'Open the full admin')}
             </Link>
           </div>
         )}
 
-        {!switchedOff && isLoading && <p className="p-6 text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
+        {!stopped && isLoading && <p className="p-6 text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
 
-        {!switchedOff && isError && !data && (
+        {!stopped && isError && !data && (
           <div className="p-6 max-w-xl space-y-3">
             <Notice tone="danger">{t('appointments.common.error', 'Something went wrong. Please try again.')}</Notice>
             <Button variant="secondary" onClick={refetch}>{t('appointments.common.retry', 'Try again')}</Button>
           </div>
         )}
 
-        {!switchedOff && data && (
+        {!stopped && data && (
           <>
             {!data.venue.timezone_named && (
               <div className="px-4 pt-3">

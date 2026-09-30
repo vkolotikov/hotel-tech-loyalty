@@ -14,9 +14,10 @@ const offListeners = new Set<() => void>()
 
 /**
  * Be told when any call is refused because the organisation's workspace was
- * switched off while this window was open. The provider answers by asking
- * for the bootstrap again, whose own refusal puts the shell's "switched off"
- * notice and the way back to the full admin on screen. Returns the unsubscribe.
+ * switched off, or its subscription lapsed, while this window was open. The
+ * provider answers by asking for the bootstrap again, whose own refusal puts
+ * the shell's notice and the way back to the full admin on screen. Returns
+ * the unsubscribe.
  */
 export function onWorkspaceOff(listener: () => void): () => void {
   offListeners.add(listener)
@@ -26,7 +27,8 @@ export function onWorkspaceOff(listener: () => void): () => void {
 /** Every call but the bootstrap goes through here; the failure is passed on untouched. */
 function watched<T>(request: Promise<{ data: T }>): Promise<T> {
   return request.then(r => r.data, (error: unknown) => {
-    if (failureOf(error).code === 'workspace_disabled') offListeners.forEach(listener => listener())
+    const code = failureOf(error).code
+    if (code === 'workspace_disabled' || code === 'subscription_required') offListeners.forEach(listener => listener())
     throw error
   })
 }

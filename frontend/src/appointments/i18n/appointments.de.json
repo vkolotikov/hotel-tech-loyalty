@@ -16,6 +16,7 @@
     "search": "Kunden suchen",
     "new_appointment": "Neuer Termin",
     "switched_off": "Der Termin-Arbeitsbereich wurde für Ihre Organisation abgeschaltet. Ihre Buchungen sind unverändert und bleiben in der vollständigen Verwaltung.",
+    "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Ein Administrator kann den Zugang unter „Abrechnung“ in der vollständigen Verwaltung wiederherstellen.",
     "open_full_admin": "Vollständige Verwaltung öffnen",
     "timezone_missing": "Die Zeitzone des Betriebs ist nicht festgelegt, daher richten sich „jetzt“ und „heute“ nach UTC. Legen Sie sie in der vollständigen Verwaltung unter Einstellungen → Allgemein → Zeitzone fest (zum Beispiel Europe/London).",
     "not_bookable": "Es kann noch nichts gebucht werden: Legen Sie in der vollständigen Verwaltung eine Leistung, ein Teammitglied, das sie ausführt, und dessen Arbeitszeiten an."

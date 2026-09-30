@@ -11,7 +11,7 @@ import { SUPPORTED_LANGUAGES, type LangCode } from '../i18n'
 import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES, featureLabel, featureDetail, planTagline } from '../lib/planFeatures'
 import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
 import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
-import { landingPath } from '../appointments/lib/landing'
+import { landingPath, safeRedirect } from '../appointments/lib/landing'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -406,10 +406,7 @@ export function Login() {
 
     // Only honour local paths so an open-redirect via `?redirect=https://evil`
     // isn't possible.
-    const rawRedirect = searchParams.get('redirect') || '/'
-    const redirectTo = rawRedirect.startsWith('/') && !rawRedirect.startsWith('//')
-      ? rawRedirect
-      : '/'
+    const redirectTo = safeRedirect(searchParams.get('redirect'))
 
     const base = (api.defaults.baseURL || '').replace(/\/$/, '')
     fetch(base + '/v1/auth/me', {
@@ -461,8 +458,9 @@ export function Login() {
       setAuth(data.token, data.user, data.staff)
       // Members and staff share one sign-in but land in different apps.
       // Before the portal existed, a member who signed in here was bounced
-      // straight back by ProtectedRoute's staff-only check.
-      navigate(landingPath(data.user, '/'), { replace: true })
+      // straight back by ProtectedRoute's staff-only check. A local
+      // `?redirect=` (the appointments workspace sends one) is honoured.
+      navigate(landingPath(data.user, safeRedirect(searchParams.get('redirect'))), { replace: true })
     } catch (err: any) {
       setError(err.response?.data?.message || 'Invalid credentials. Please try again.')
     } finally {

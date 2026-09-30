@@ -10,6 +10,12 @@ use PHPUnit\Framework\TestCase;
  * claims for different services that share people would otherwise be able
  * to deadlock). Structural, because the suite's sqlite connection never
  * issues the lock statement.
+ *
+ * This reads the source text of the method, so it also fails on a rename or
+ * a reformat of the lock call — change the test with it. What it cannot see
+ * is behaviour: that was proven on PostgreSQL by the race probe of the
+ * appointments plan (Task 21), including a control run with the lock line
+ * removed, which double-booked one team member.
  */
 class SchedulerCandidateLockTest extends TestCase
 {

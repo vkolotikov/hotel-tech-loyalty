@@ -16,6 +16,7 @@
     "search": "Search clients",
     "new_appointment": "New appointment",
     "switched_off": "The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.",
+    "subscription_required": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.",
     "open_full_admin": "Open the full admin",
     "timezone_missing": "The venue's time zone is not set, so \"now\" and \"today\" follow UTC. Set it in the full admin under Settings → General → Timezone (for example Europe/London).",
     "not_bookable": "Nothing can be booked yet: add a service, a team member who performs it, and their working hours in the full admin."

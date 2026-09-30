@@ -52,6 +52,17 @@ export function emptyDraft(date: DateKey): CreateDraft {
 
 const viewOf = (id: number): PanelState => ({ mode: 'view', id, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null })
 
+/**
+ * How often an open appointment is fetched again. Only while it is being
+ * looked at: during a move, a confirmation or a save the panel keeps the
+ * version the operator is acting on, so a change by someone else meets the
+ * server's revision check ("changed by someone else") instead of slipping
+ * silently into the form.
+ */
+export function detailPollMs(state: PanelState): number | false {
+  return state.mode === 'view' && state.sub === 'summary' && !state.saving ? 30_000 : false
+}
+
 /** A fresh Idempotency-Key. One per draft: see the `edit` event. */
 export function newKey(): string {
   return crypto.randomUUID()

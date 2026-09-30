@@ -39,7 +39,8 @@ export function CalendarPage() {
 
   const [prefs, setPrefs] = useState<Prefs>(loadPrefs)
   const [now, setNow] = useState(() => venueNow(zone))
-  const [date, setDate] = useState<DateKey>(() => venueNow(zone).date)
+  // The day to open on is the server's answer: a computer whose clock is off opens on the venue's today all the same.
+  const [date, setDate] = useState<DateKey>(() => boot.venue.today)
   const [panel, dispatch] = useReducer(panelReducer, CLOSED)
   const selectedId = panel.mode === 'view' ? panel.id : null
   const [params, setParams] = useSearchParams()

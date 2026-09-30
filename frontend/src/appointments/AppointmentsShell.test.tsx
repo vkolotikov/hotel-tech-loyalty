@@ -116,6 +116,22 @@ describe('AppointmentsShell', () => {
     expect(html).toBe('')
   })
 
+  it('says the subscription is not active, and where it is put right, instead of "something went wrong"', () => {
+    const lapsed = { response: { status: 403, data: { error: 'subscription_required', message: 'Your subscription was canceled. Please reactivate to restore access.' } } }
+
+    const first = render({ data: undefined, isError: true, error: lapsed })
+    expect(first).toContain('subscription is not active')
+    expect(first).toContain('Billing')
+    expect(first).toContain('href="/"')
+    expect(first).not.toContain('Something went wrong')
+    expect(first).not.toContain('Try again')
+
+    // Lapsed while the workspace was open: the page gives way to the same notice.
+    const open = render({ isError: true, error: lapsed })
+    expect(open).toContain('subscription is not active')
+    expect(open).not.toContain('page body')
+  })
+
   it('shows a retry, not the page, when bootstrap fails for another reason', () => {
     const html = render({ data: undefined, isError: true, error: { response: { status: 500, data: {} } } })
     expect(html).toContain('Try again')

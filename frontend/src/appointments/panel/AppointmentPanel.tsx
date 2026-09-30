@@ -11,7 +11,7 @@ import { AppointmentView } from './AppointmentView'
 import { MoveForm } from './MoveForm'
 import { NEEDS_CONFIRM } from './consequences'
 import { CreateForm } from './CreateForm'
-import { draftBody, newKey, type PanelEvent, type PanelState } from './panelState'
+import { detailPollMs, draftBody, newKey, type PanelEvent, type PanelState } from './panelState'
 
 interface Props {
   state: PanelState
@@ -86,7 +86,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     queryKey: ['appointments', 'booking', id],
     queryFn: () => appointmentsApi.booking(id!),
     enabled: id !== null,
-    refetchInterval: 30_000,
+    refetchInterval: detailPollMs(state),
+    refetchOnWindowFocus: state.mode === 'view' && state.sub === 'summary',
   })
   const booking = detail.data?.booking
 

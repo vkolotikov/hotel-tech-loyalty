@@ -55,7 +55,13 @@ final class AppointmentActions
         return str_starts_with($intent, 'pi_') && !str_starts_with($intent, 'pi_mock_');
     }
 
-    public function allowed(ServiceBooking $b, string $action): bool
+    /**
+     * `$preview` is the points preview when the caller already has it (for()
+     * works it out once for every action that needs it); null works it out.
+     *
+     * @param array{points: int, reason: ?string}|null $preview
+     */
+    public function allowed(ServiceBooking $b, string $action, ?array $preview = null): bool
     {
         if ($action === 'move') {
             return in_array((string) $b->status, self::MOVABLE, true);
@@ -68,7 +74,7 @@ final class AppointmentActions
             // Only where no payment of any kind is recorded against the booking.
             'mark_paid_at_venue' => (string) $b->payment_status === 'unpaid' && empty($b->stripe_payment_intent_id),
             // Only when the award did not happen and one is due.
-            'award_points'       => $this->points->previewForServiceBooking($b)['points'] > 0,
+            'award_points'       => ($preview ?? $this->points->previewForServiceBooking($b))['points'] > 0,
             default              => true,
         };
     }
@@ -76,16 +82,22 @@ final class AppointmentActions
     /** @return list<array{key: string, allowed: bool, consequences: array<string, mixed>}> */
     public function for(ServiceBooking $b): array
     {
+        // One preview for the whole list: the panel asks for it every 30 seconds.
+        $preview = $this->points->previewForServiceBooking($b);
+
         $out = [];
         foreach ([...array_keys(self::FROM), 'move'] as $action) {
-            $out[] = ['key' => $action, 'allowed' => $this->allowed($b, $action), 'consequences' => $this->consequences($b, $action)];
+            $out[] = ['key' => $action, 'allowed' => $this->allowed($b, $action, $preview), 'consequences' => $this->consequences($b, $action, $preview)];
         }
 
         return $out;
     }
 
-    /** @return array{payment: string, points: ?array{points: int, reason: ?string}, coupon: string, message: string} */
-    public function consequences(ServiceBooking $b, string $action): array
+    /**
+     * @param array{points: int, reason: ?string}|null $preview as allowed()
+     * @return array{payment: string, points: ?array{points: int, reason: ?string}, coupon: string, message: string}
+     */
+    public function consequences(ServiceBooking $b, string $action, ?array $preview = null): array
     {
         $card = self::carriesCardPayment($b);
         $held = $card && in_array((string) $b->payment_status, ['authorized', 'pending'], true);
@@ -100,7 +112,7 @@ final class AppointmentActions
                 'mark_paid_at_venue' => 'marked_only',
                 default              => 'none',
             },
-            'points'  => in_array($action, ['complete', 'award_points'], true) ? $this->points->previewForServiceBooking($b) : null,
+            'points'  => in_array($action, ['complete', 'award_points'], true) ? ($preview ?? $this->points->previewForServiceBooking($b)) : null,
             'coupon'  => $action === 'cancel' && in_array((string) $b->discount_source, ['offer', 'reward'], true) ? 'not_returned' : 'none',
             'message' => 'none',
         ];

@@ -42,6 +42,16 @@ describe('onWorkspaceOff', () => {
     expect(heard).toHaveBeenCalledTimes(3)
   })
 
+  it('also tells the listener when the organisation\'s subscription has lapsed', async () => {
+    const heard = vi.fn()
+    const stop = onWorkspaceOff(heard)
+    http.get.mockRejectedValue({ response: { status: 403, data: { error: 'subscription_required', message: 'Your subscription was canceled.' } } })
+
+    await expect(appointmentsApi.calendar('2026-10-06', '2026-10-06')).rejects.toBeTruthy()
+    expect(heard).toHaveBeenCalledTimes(1)
+    stop()
+  })
+
   it('stays quiet for any other refusal and for a success', async () => {
     const heard = vi.fn()
     const stop = onWorkspaceOff(heard)
