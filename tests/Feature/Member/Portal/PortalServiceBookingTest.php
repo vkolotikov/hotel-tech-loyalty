@@ -14,6 +14,7 @@ use App\Models\ServiceExtra;
 use App\Models\ServiceMaster;
 use App\Models\SpecialOffer;
 use App\Models\TierBenefit;
+use App\Services\Booking\PortalPaymentIntentGuard;
 use App\Services\Booking\ServiceQuoteBuilder;
 use App\Services\Booking\SlotTakenException;
 use App\Services\StripeService;
@@ -434,6 +435,75 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
         $first = ServiceBooking::withoutGlobalScopes()->first();
         $this->assertSame('authorized', $first->payment_status);
         $this->assertSame('pi_ok', $first->stripe_payment_intent_id);
+    }
+
+    /**
+     * The public services confirm takes no `pi:` lock, so a public booking can
+     * take this payment after assertUnused() looked. The insert then violates
+     * the database's unique index on the payment reference, and the answer is
+     * the one for a payment a booking already carries: 409 payment_mismatch,
+     * nothing released. Driven by a guard whose assertUnused() looked before
+     * the other booking was written.
+     */
+    public function test_a_payment_the_database_finds_already_used_is_refused_and_never_released(): void
+    {
+        $stripe = $this->stripe();
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_ok')->andReturn($this->pi());
+        $guard = new class(app(StripeService::class)) extends PortalPaymentIntentGuard {
+            public array $released = [];
+
+            public function assertUnused(string $piId, int $orgId): void
+            {
+            }
+
+            public function release(?string $piId, int $orgId, int $memberId): void
+            {
+                $this->released[] = $piId;
+            }
+        };
+        $this->app->instance(PortalPaymentIntentGuard::class, $guard);
+        \Illuminate\Support\Facades\DB::table('service_bookings')->insert([
+            'organization_id' => $this->org->id, 'booking_reference' => 'SVC-PUBLIC01', 'service_id' => $this->service->id,
+            'service_master_id' => $this->master->id, 'customer_name' => 'Widget Guest', 'customer_email' => 'widget@example.test',
+            'start_at' => now()->setTime(14, 0), 'end_at' => now()->setTime(14, 45), 'duration_minutes' => 45,
+            'status' => 'confirmed', 'payment_status' => 'authorized', 'stripe_payment_intent_id' => 'pi_ok',
+            'source' => 'widget', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+
+        $this->confirm($this->body(['payment_intent_id' => 'pi_ok']))
+            ->assertStatus(409)
+            ->assertExactJson(['error' => 'payment_mismatch', 'message' => 'The payment no longer matches the price. Please pay again.']);
+
+        $this->assertSame([], $guard->released, 'nothing released');
+        $this->assertSame(['SVC-PUBLIC01'], ServiceBooking::withoutGlobalScopes()->pluck('booking_reference')->all());
+        $row = \App\Models\ServiceBookingSubmission::withoutGlobalScopes()->where('outcome', 'failed')->sole();
+        $this->assertSame('payment_mismatch', $row->error_message);
+    }
+
+    /**
+     * A unique violation that is not the payment rule (here a clash on
+     * booking_reference, forced by handing the insert a reference another
+     * booking holds) keeps the answer any other failure gets: 500
+     * confirm_failed, and the member's own hold is released.
+     */
+    public function test_another_unique_violation_is_answered_like_any_other_failure(): void
+    {
+        $stripe = $this->stripe();
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_ok')->andReturn($this->pi());
+        $stripe->shouldReceive('cancelPaymentIntent')->with('pi_ok', 'abandoned')->once();
+        \Illuminate\Support\Facades\DB::table('service_bookings')->insert([
+            'organization_id' => $this->org->id, 'booking_reference' => 'SVC-TAKEN001', 'service_id' => $this->service->id,
+            'service_master_id' => $this->master->id, 'customer_name' => 'Widget Guest', 'customer_email' => 'widget@example.test',
+            'start_at' => now()->setTime(14, 0), 'end_at' => now()->setTime(14, 45), 'duration_minutes' => 45,
+            'status' => 'confirmed', 'payment_status' => 'unpaid', 'source' => 'widget', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        ServiceBooking::creating(fn (ServiceBooking $b) => $b->booking_reference = 'SVC-TAKEN001');
+
+        $this->confirm($this->body(['payment_intent_id' => 'pi_ok']))
+            ->assertStatus(500)->assertJsonPath('error', 'confirm_failed');
+
+        $this->assertSame(['SVC-TAKEN001'], ServiceBooking::withoutGlobalScopes()->pluck('booking_reference')->all());
     }
 
     /**

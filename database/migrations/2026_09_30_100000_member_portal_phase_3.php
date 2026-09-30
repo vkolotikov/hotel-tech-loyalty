@@ -10,11 +10,10 @@ use Illuminate\Support\Facades\Schema;
  * guarded so the migration can run on a database that already carries part
  * of it, and it never fails on data it did not expect.
  *
- * No unique index on service_bookings' payment reference here: it would
- * change what the public services confirm stores and answers for a second
- * booking on the same payment. The portal's own protection is
- * PortalPaymentIntentGuard::assertUnused() under the `pi:` lock; the index
- * waits for the owner's decision as a separate migration.
+ * No unique index on service_bookings' payment reference here: that index is
+ * created by the migration 2026_10_01_100000_service_bookings_unique_payment.
+ * The portal's own protection is PortalPaymentIntentGuard::assertUnused()
+ * under the `pi:` lock.
  */
 return new class extends Migration
 {

@@ -154,6 +154,7 @@ trait SetsUpStayBookingSchema
                 $t->index('organization_id');
             });
         }
+        $this->addServiceBookingPaymentRule();
 
         if (!Schema::hasTable('booking_extras')) {
             Schema::create('booking_extras', function (Blueprint $t) {

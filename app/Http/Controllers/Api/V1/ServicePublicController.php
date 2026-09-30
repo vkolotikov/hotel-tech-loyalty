@@ -11,10 +11,12 @@ use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
 use App\Models\Organization;
 use App\Services\Booking\ExtraLeadTimeException;
+use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\ServiceCatalogue;
 use App\Services\Booking\ServiceQuoteBuilder;
 use App\Services\ServiceSchedulingService;
 use App\Services\StripeService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -398,6 +400,15 @@ class ServicePublicController extends Controller
                     }
                 }
 
+                // One payment pays for one booking: a payment a booking of
+                // this organisation already carries is refused before the
+                // insert, a mock id (`pi_mock_`) as much as a real one.
+                $paymentIntentId = (string) ($data['payment_intent_id'] ?? '');
+                if ($paymentIntentId !== ''
+                    && ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $paymentIntentId)->exists()) {
+                    throw new PaymentAlreadyUsed();
+                }
+
                 $booking = ServiceBooking::create([
                     'organization_id'   => $orgId,
                     'service_id'        => $service->id,
@@ -434,6 +445,20 @@ class ServicePublicController extends Controller
 
                 return $booking;
             });
+        } catch (PaymentAlreadyUsed) {
+            return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
+        } catch (UniqueConstraintViolationException $e) {
+            // Two confirms naming the same payment at the same moment both pass
+            // the check above; the unique index on service_bookings
+            // (organization_id, stripe_payment_intent_id) refuses the second
+            // insert. Only that rule is answered in plain words; any other
+            // unique violation (a key or a booking_reference) keeps the answer
+            // every RuntimeException gets below.
+            if ($this->paymentRuleBroken($e, $orgId, $data)) {
+                return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
+            }
+            $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
+            return response()->json(['error' => $e->getMessage()], 409);
         } catch (\RuntimeException $e) {
             // reserveSlot threw — the requested slot was taken by a concurrent
             // confirm while we were waiting for the advisory lock.
@@ -486,6 +511,40 @@ class ServicePublicController extends Controller
         }
 
         return response()->json($payload, 201);
+    }
+
+    /**
+     * A payment that already pays for a booking of this organisation: 409 in
+     * one plain sentence, logged as a failed submission. Nothing is
+     * cancelled, refunded or captured — the payment belongs to the booking
+     * that carries it.
+     */
+    private function paymentAlreadyUsed(?int $orgId, ?string $idempotency, array $data): JsonResponse
+    {
+        $this->logSubmission($orgId, $idempotency, $data, null, 'failed', 'payment already used');
+
+        return response()->json(['error' => 'This payment has already been used for a booking.'], 409);
+    }
+
+    /**
+     * Whether a unique violation raised by the booking insert is the
+     * one-payment rule: the framework names the violated columns (from
+     * PostgreSQL's key detail, from sqlite's constraint message) and they
+     * include the payment column, or — read after the rollback — a booking of
+     * this organisation now carries the request's payment.
+     */
+    private function paymentRuleBroken(UniqueConstraintViolationException $e, ?int $orgId, array $data): bool
+    {
+        $paymentIntentId = (string) ($data['payment_intent_id'] ?? '');
+        if ($paymentIntentId === '') {
+            return false;
+        }
+
+        return in_array('stripe_payment_intent_id', $e->columns, true)
+            || ServiceBooking::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('stripe_payment_intent_id', $paymentIntentId)
+                ->exists();
     }
 
     /**

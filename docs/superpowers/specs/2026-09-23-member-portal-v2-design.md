@@ -308,8 +308,9 @@ Ordered by start ascending for `upcoming`, descending for `past`, 20 per page. T
 > - Points on completion (§6.6) are awarded by explicit calls from both admin endpoints that can
 >   complete a booking (`updateStatus` and `bulk`), not by a model observer, because `bulk` writes
 >   through the query builder and fires no events.
-> - A unique index on `(organization_id, stripe_payment_intent_id)` is deferred pending a
->   production data check; `assertUnused()` is today's guard, not a database constraint.
+> - A unique index on `(organization_id, stripe_payment_intent_id)` was deferred at this phase pending a
+>   production data check; `assertUnused()` was then the only guard. Phase 3 added the index (see the
+>   note at the start of §7).
 
 ### 6.1 Flow (member side)
 
@@ -460,16 +461,11 @@ this phase; the route comment records why.
 > `start_at`/`end_at` are the venue's wall clock, not UTC, however the scheduler's shared `+00:00` suffix reads —
 > `App\Services\Portal\AppointmentClock` is the one place the portal turns one into a true instant (on the way
 > out) or takes one back from the client (on the way in), so every value the scheduler, a PaymentIntent or a
-> stored row sees is still byte for byte what the public widget would have used. No unique index was added on
-> `service_bookings(organization_id, stripe_payment_intent_id)`: it would also change what the PUBLIC services
-> confirm stores and answers for a repeated payment reference, which the owner's ruling forbids touching in this
-> phase; the portal's own protection against reusing a payment is `PortalPaymentIntentGuard::assertUnused()`
-> under the `pi:` lock, not a database constraint — a ready migration for the index waits in
-> `.superpowers/sdd/2026-09-29-member-portal-v2-phase-3/held-back/` for the owner's decision. Cancellation
+> stored row sees is still byte for byte what the public widget would have used. Cancellation
 > converges (finishes with no further Stripe call) when a booking's money is already back in full but the
 > booking itself was never marked cancelled — the shape a failure between the refund and the last write leaves
 > behind, healed by the member simply cancelling again — but a booking staff already cancelled AND refunded
-> converges too, since that member action is unavailable: it answers `already_cancelled` instead. For a stay,
+> does not converge: it answers `already_cancelled`, since that cancellation is not the member's to stamp. For a stay,
 > telling those two apart needs its own marker (`booking.member_cancel_started`, an audit row committed right
 > before the refund is asked for) because the PMS sync relabels a refunded stay's status to `cancelled` within
 > seconds of the refund's own PMS cancellation either way.
@@ -488,6 +484,20 @@ this phase; the route comment records why.
 > `organizations.timezone` second, taking a value only when it names a zone (a location name such as
 > `Europe/Riga`, or a name of UTC); abbreviations such as `EET` and offsets such as `+03:00` are ignored. The
 > first source that names a zone other than UTC wins; a venue left at `UTC` stays on UTC.
+>
+> **One payment pays for one service booking, as a database rule.** Within one organisation a payment intent id
+> appears on at most one row of `service_bookings`: a partial unique index, `service_bookings_org_pi_unique`, on
+> `(organization_id, stripe_payment_intent_id)` where the id is neither NULL nor the empty string, created by the
+> migration `2026_10_01_100000_service_bookings_unique_payment`. The migration never fails a deploy on data it did
+> not expect: if an organisation already has a repeated payment id it creates nothing, edits nothing and logs a
+> warning (`service_bookings_unique_payment: …`), because which booking keeps a payment reference is a person's
+> decision. The portal's service confirm checks first (`PortalPaymentIntentGuard::assertUnused()` under the `pi:`
+> lock) and answers a payment the index refuses with 409 `payment_mismatch`, releasing nothing. The public
+> services confirm, which the rule now also binds, checks before its insert and answers a payment a booking
+> already carries with HTTP 409 and "This payment has already been used for a booking." — also for two requests
+> at the same moment (the index refuses the second insert) and for a mock payment id; nothing is cancelled,
+> refunded or captured for the refused request, and every other error keeps the answer it had. A retry with the
+> same `Idempotency-Key` is still answered by the replay, which runs before the check.
 
 ### 7.1 Stay booking (hotels)
 

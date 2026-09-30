@@ -106,6 +106,13 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   widget, `kind` for the others (`portal_…`, `service_booking`) — so that no failure path can mistake one
   payment for another. The rest of the public booking flow stays as it is. Details:
   `docs/member-portal.md` "The public confirm's payment rescue".
+- One payment pays for one service booking, and the database says so last: the partial unique index
+  `service_bookings_org_pi_unique` is the last line of defence, the application checks first
+  (`PortalPaymentIntentGuard::assertUnused()` in the portal, the pre-check before the insert in the public
+  services confirm). Answer a unique violation by the rule that was broken (the violated columns, or a
+  re-read for the payment), never by "any unique violation".
+- Every artisan command written in documentation starts with `php artisan` and uses a placeholder that
+  cannot be mistaken for a value (`--org=<organisation id>`, never `--org=N`); an operator types it as written.
 - The portal decides nothing about money on the client: `can_cancel`, `cancel_deadline`, `paid_online`, every
   total and every cancellation outcome are the server's, read from the booking DTO
   (`App\Services\Portal\MemberBookingQuery`) or the cancel response, never computed in the frontend.

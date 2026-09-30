@@ -386,6 +386,19 @@ trait SetsUpMinimalSchema
                 $table->index('organization_id');
             });
         }
+        $this->addServiceBookingPaymentRule();
+    }
+
+    /**
+     * One payment pays for one service booking: the partial unique index
+     * production carries, created by running its own migration
+     * (2026_10_01_100000_service_bookings_unique_payment) so every sqlite
+     * `service_bookings` table holds the same rule. Safe to call again: the
+     * migration skips an index that is already there.
+     */
+    protected function addServiceBookingPaymentRule(): void
+    {
+        (require base_path('database/migrations/2026_10_01_100000_service_bookings_unique_payment.php'))->up();
     }
 
     /**

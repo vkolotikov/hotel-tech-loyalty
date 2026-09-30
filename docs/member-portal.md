@@ -53,15 +53,15 @@ refuses every API call silently. Set it as a process environment variable on the
 editing the shared `.env`.
 
 The local `.env` may point `MAIL_MAILER` at a real remote SMTP transport (a shared setting). Never edit
-`.env` for a local pass: run every process (server, `artisan tinker`, commands) with `MAIL_MAILER=log
+`.env` for a local pass: run every process (server, `php artisan tinker`, commands) with `MAIL_MAILER=log
 QUEUE_CONNECTION=sync LOG_LEVEL=debug` in the process's own environment instead — `LOG_LEVEL=notice` (a
 level above `debug`) makes the log mailer write nothing, so `LOG_LEVEL=debug` is not optional if you need
 to read a mail afterwards. `QUEUE_CONNECTION=sync` also keeps a test mail out of the shared `jobs` table,
 where another checkout's own worker could send it with its own transport.
 
-`bookings:release-orphan-portal-holds --dry-run` and `bookings:capture-pending-pis --dry-run` still call
+`php artisan bookings:release-orphan-portal-holds --dry-run` and `php artisan bookings:capture-pending-pis --dry-run` still call
 Stripe's list/retrieve API even in dry run, for every Stripe-enabled venue in the shared local database —
-always pass `--org=<id>` locally so a run only touches the venue you mean.
+always pass `--org=<organisation id>` locally so a run only touches the venue you mean.
 
 Under the Vite dev server the display faces do not load: `/landing/fonts/*.woff2` is served by Laravel
 (`public/landing/fonts`), not by Vite, so titles fall back to the next face in the stack. To judge type in a
@@ -70,7 +70,7 @@ on the Laravel host.
 
 ## Checks
 
-- Backend: `artisan test tests/Feature/Member/` (portal tests live in `tests/Feature/Member/Portal/`),
+- Backend: `php artisan test tests/Feature/Member/` (with the PHP 8.4 binary named in `CLAUDE.md`; portal tests live in `tests/Feature/Member/Portal/`),
   plus `tests/Feature/Booking/BookingCapabilityTest.php`, `tests/Feature/Pwa/`, `tests/Feature/Mail/`.
 - Frontend: `cd frontend && npx tsc -b && npx vitest run` (3 `plannerMeta` failures are pre-existing).
 - Eyes first: screenshots at 390 and 1440, light and dark, against spec §4's quality bar.
@@ -118,7 +118,7 @@ Spec: `docs/superpowers/specs/2026-09-23-member-portal-v2-design.md` §6. Backen
 | `pay_at_venue` | 409 | the quote's payment mode is not `online` (`payment-intent` only) | the Pay step skips Stripe |
 | `nothing_to_pay` | 409 | the discounted total is 0 | same as `pay_at_venue` |
 | `payment_unavailable` | 503 | Stripe threw while creating the intent | member is asked to retry |
-| `payment_mismatch` | 409 | the PaymentIntent's org/member/service/slot/amount/status do not match at `verify()`, it already pays for another booking, or the mode no longer needs it | the hold is released unless a booking already carries the intent; back to Review |
+| `payment_mismatch` | 409 | the PaymentIntent's org/member/service/slot/amount/status do not match at `verify()`, it already pays for another booking (`assertUnused()`, or the unique index refusing the insert — then nothing is released), or the mode no longer needs it | the hold is released unless a booking already carries the intent; back to Review |
 | `payment_mismatch` (re-check) | 409 | `writeBooking()`'s own re-read of the intent, under the `pi:` lock right before the row is written, finds it no longer payable (cancelled by a concurrent confirm, or reached by the sweeper) | logs a `ServiceBookingSubmission` failure row (`error_message = payment_not_payable`); the intent is **not** released — this code cannot prove it is dead, only that it cannot confirm it is still payable; back to Review |
 | `payment_check_failed` | 503 | the Stripe retrieve itself failed (threw, or returned nothing) at `verify()` or at the re-check under the `pi:` lock (`PaymentUnverifiable`, not a mismatch) | logs a failure row (`error_message = payment_check_failed`); nothing released, cancelled or written, coupon untouched; the member confirms again with the same intent |
 | `idempotency_key_required` | 422 | the `Idempotency-Key` header is missing or the wrong length | rejected before anything runs |
@@ -192,7 +192,7 @@ longer offered; an appointment moves to "past" at its real end; both cancellatio
 appointment's: start minus `services_cancel_hours`; a stay's: check-in time minus `booking_cancel_hours`) are
 computed on the venue's clock, so for a Riga venue a deadline that was computed as 15:00 UTC is now 15:00
 Riga, three hours earlier as an instant in summer; the calendar file a member downloads carries the real
-instant; the day `bookings:award-stay-points` judges a stay's departure on is the venue's own. What does not
+instant; the day `php artisan bookings:award-stay-points` judges a stay's departure on is the venue's own. What does not
 change is what the member reads: an appointment's digits are shown as they are stored, because the client
 formats the true instant in the venue's zone. A portal tab that is already open when the zone changes shows
 shifted times until its startup call (`GET member/portal`) is fetched again — a reload does it. At a venue
@@ -233,8 +233,51 @@ redirect method would strand the member. The `Idempotency-Key` header (8–80 ch
 the canonically-sorted request body; a replay of the same key and body returns the stored booking
 DTO, a replay with a different body answers `idempotency_conflict`; the lookup runs again inside
 the lock, so a same-key request that waited there replays the first booking rather than answering
-`slot_taken`. Capture is left to the existing `bookings:capture-pending-pis` job, same as widget
+`slot_taken`. Capture is left to the existing `php artisan bookings:capture-pending-pis` job, same as widget
 bookings — which skips a service booking still `pending` and never captures a cancelled one (below).
+
+### One payment, one service booking
+
+**The rule.** Within one organisation a payment intent id appears on at most one row of `service_bookings`.
+The database holds it as a partial unique index, `service_bookings_org_pi_unique`, on
+`service_bookings (organization_id, stripe_payment_intent_id)` where `stripe_payment_intent_id IS NOT NULL AND
+stripe_payment_intent_id <> ''` — a booking with no payment (NULL or the empty string) is exempt, and the same
+id in another organisation is another organisation's own. It binds every writer of the column: the member
+portal's service confirm and the public services confirm (`POST /api/v1/services/confirm`). The other writers
+of `service_bookings` (the chat widget's booking, the admin screens, the capture job, cancellation and refund)
+write no payment id or only read it. Stays are not covered: a stay's payment id lives in `booking_mirror`.
+
+**The migration.** `2026_10_01_100000_service_bookings_unique_payment` creates the index and nothing else. It
+is guarded and never fails a deploy on data it did not expect: with no `service_bookings` table or no payment
+column it returns; with the index already there it returns; if an organisation already has the same payment id
+on two or more bookings, it creates nothing, edits nothing and writes one warning to the application log,
+`service_bookings_unique_payment: service_bookings holds repeated payment references; the unique index was not
+created`, naming up to 20 organisations (`organizations`) and the number of repeated (organisation, payment)
+pairs it found, at most 20 (`count`); if the `CREATE` itself fails (say a repeat is written between the scan and
+the statement) it is rolled back to its own savepoint and a warning `service_bookings_unique_payment: creating
+the unique index failed; the unique index was not created` carries the database error. In every one of those
+cases the migration is recorded as run and the deploy goes on. Empty-string payment ids never stop it, and it
+never edits one. `down()` drops the index when it exists. See "After a deploy" for how to tell whether the
+index exists and what to do when it does not.
+
+**What a caller gets.**
+
+- The public services confirm answers a payment that a booking of the organisation already carries with
+  HTTP 409 and `{"error": "This payment has already been used for a booking."}`. It looks first, inside the
+  booking transaction after the slot is reserved and right before the insert, and the index answers the same
+  for two requests at the same moment (it refuses the second insert; the controller answers a unique violation
+  in these words only when the request carries a payment id and either the violated columns include
+  `stripe_payment_intent_id` or a booking of the organisation now carries that id). The rule holds for a mock
+  payment id (`pi_mock_…`) as much as for a real one. Nothing is cancelled, refunded or captured for the
+  refused request, no mail is sent, and the failed submission is logged with the reason `payment already used`.
+  Any OTHER unique violation (a booking reference, say) keeps the endpoint's general answer.
+- The member portal's service confirm answers the same case 409 `payment_mismatch` ("The payment no longer
+  matches the price. Please pay again."), releasing nothing: the payment belongs to the booking that carries
+  it. Any other unique violation there stays a 500 `confirm_failed` with the hold released.
+- An honest retry with the same `Idempotency-Key` is answered by the replay as before (the replay runs before
+  the payment check), with the booking that was made and `replayed: true`.
+- When something else fails first (a taken slot, an extra's lead time, a payment that is not completed, Stripe
+  not answering), the request gets that answer: the check sits right before the insert.
 
 ### Payments an operator must handle by hand
 
@@ -244,7 +287,7 @@ payment was already captured, for both kinds:
 
 - **Refunding a captured booking staff cancelled after capture.** Nothing refunds automatically. When
   a service booking is `cancelled` or `no_show`, or a stay's `booking_state`/`internal_status` is
-  `cancelled`, but its PaymentIntent already `succeeded`, the capture job (`bookings:capture-pending-pis`)
+  `cancelled`, but its PaymentIntent already `succeeded`, the capture job (`php artisan bookings:capture-pending-pis`)
   leaves the row as it is and writes one `AuditLog` row — `service_booking.capture.needs_refund`
   (subject `service_booking`, the booking id) or `booking.capture.needs_refund` (subject
   `booking_mirror`, the mirror id). Decide whether a refund is due under the venue's cancellation
@@ -254,12 +297,12 @@ payment was already captured, for both kinds:
   A stay's group of rooms (one PaymentIntent for several rows) is decided once per intent, not once
   per row.
 - **A card hold left by a browser that closed between authorisation and confirm.** No booking row
-  carries the intent, so the capture job cannot see it. `bookings:release-orphan-portal-holds` runs
+  carries the intent, so the capture job cannot see it. `php artisan bookings:release-orphan-portal-holds` runs
   every thirty minutes and releases one from 45 minutes after the card was actually authorised
   (default; `--minutes` floored at 20) — age is measured from the authorisation itself (the latest
   charge's own time), not from when the intent was created, and an intent still `requires_capture`
   whose charge cannot be read back from Stripe is never released (it fails closed rather than guess).
-  A release writes `portal.hold.orphan_released`. `diag:orphan-stripe-pis --org=N [--hours=24] [--json]`
+  A release writes `portal.hold.orphan_released`. `php artisan diag:orphan-stripe-pis --org=<organisation id> [--hours=24] [--json]`
   lists every payment no booking carries, for a manual look.
 - **A refund made in the Stripe dashboard for a service booking's payment.** The `charge.refunded`
   webhook records it on the booking from the charge's own cumulative `amount_refunded` (never from a
@@ -296,16 +339,16 @@ through the query builder and fires no model events. Idempotent on the booking's
 completion still stamps `points_awarded_at` so it is never retried. Refunded or zero-amount
 bookings award nothing.
 
-### Admin fields and `loyalty:type-benefits`
+### Admin fields and `php artisan loyalty:type-benefits`
 
 Tiers → assign benefit gains `value_type` / `value_amount` / `applies_to` (`TierBenefit`); the
 Offers form gains `code`, `tier_ids`, `per_member_limit` and `applies_to` (`SpecialOffer`, types
 `discount` and `fixed_amount`); the Rewards form gains `discount_type` / `discount_value` /
-`applies_to` (`Reward`). `loyalty:type-benefits {--org=} {--all} {--apply}`
+`applies_to` (`Reward`). `php artisan loyalty:type-benefits [--org=<organisation id>] [--all] [--apply]`
 (`App\Console\Commands\TypeBenefits`) parses existing prose values of the exact forms `NN% off …`
 and `<currency>NN off …` into these typed fields; dry run by default (prints the plan as a table,
-for one organisation with `--org=<id>` or for all without it), only `--apply` writes, and `--apply`
-refuses to run without `--org=<id>` unless `--all` is given (a write across every organisation must
+for one organisation with `--org=<organisation id>` or for all without it), only `--apply` writes, and `--apply`
+refuses to run without `--org=<organisation id>` unless `--all` is given (a write across every organisation must
 be asked for by name).
 
 ### Tests
@@ -412,7 +455,7 @@ and after the hold row itself is locked (`lockForUpdate`), before Smoobu is aske
 (always the last lock, never held while taking a row or slot lock), re-checks the payment under it
 (`assertStillPayable()`) and consumes the coupon; `afterMirror()` runs after the mirror is written and
 gives the coupon the stay's own reference, `BM:{mirror id}` (`PortalStayHooks::couponReference()`) —
-not `booking_reference`, which the PMS sync and `bookings:retry-pms-sync` can rewrite. `MemberCancellation` and the capture cron follow the same
+not `booking_reference`, which the PMS sync and `php artisan bookings:retry-pms-sync` can rewrite. `MemberCancellation` and the capture cron follow the same
 rule (their own row lock first, `pi:` last) — see `CLAUDE.md`. A refusal before the PMS is asked costs
 nothing; a Smoobu rejection rolls the coupon back. On replay
 (an already-consumed hold), a second authorised PaymentIntent this request supplied is released;
@@ -425,14 +468,14 @@ checks the organisation, the member, the hold and the amount (`PortalPaymentInte
 then re-checks the intent is still payable under the `pi:` lock right before the coupon is consumed
 and the PMS is asked (`assertStillPayable()`) — a different request's failed confirm may have
 cancelled it in between. The card is held at confirm (`payment_status = authorized`) and captured by
-`bookings:capture-pending-pis` within ten minutes. A stay paid at the venue stores
+`php artisan bookings:capture-pending-pis` within ten minutes. A stay paid at the venue stores
 `payment_status = open`, `payment_method = pay_at_venue`.
 
 **The Smoobu sync** keeps what the portal wrote: the channel name, the member's guest link, a
 payment status of `refunded`, `partially_refunded`, `disputed`, `cancelled` or `authorized`, a
 member's online payment that Smoobu reports as unpaid, and a cancellation made here.
 
-**Points** for a stay are awarded by `bookings:award-stay-points` (daily, 04:15) the day after
+**Points** for a stay are awarded by `php artisan bookings:award-stay-points` (daily, 04:15) the day after
 departure, once, on the venue's own "today". Earned when `payment_status` is `paid`, or `open` with
 `payment_method = pay_at_venue` (the venue collects at the desk); every other status
 (`authorized`, `pending`, `capture_expired`, `invoice_waiting`, `channel_managed`) earns nothing and
@@ -550,7 +593,7 @@ or the redemption's note). A claim marked used at the counter, or by a later boo
 stay's coupon is found by `BM:{mirror id}`, and — for a stay booked before that reference existed — by
 its booking reference; an appointment's by its booking reference.
 
-**`bookings:retry-pms-sync` never undoes a member's cancellation**: before asking Smoobu it checks
+**`php artisan bookings:retry-pms-sync` never undoes a member's cancellation**: before asking Smoobu it checks
 `cancelled_at` (only a member's cancellation sets it) and skips such a row; its write (success or
 failure) is refused only when `cancelled_at` was set meanwhile, and a reservation Smoobu created during
 that call is cancelled again (`booking.pms.cancel_failed` audit row if that fails too). Every other row —
@@ -561,7 +604,7 @@ coupon_released, points_reversed}}`. `outcome` is `none`, `released` or `refunde
 `cancel_failed` (an unexpected exception, possibly after money already moved) may carry a `booking`
 key too — the booking re-read so the portal shows what actually happened, not a stale view.
 
-**Staff-side cancellation is unchanged**: it sets the status and nothing else. `bookings:capture-pending-pis`
+**Staff-side cancellation is unchanged**: it sets the status and nothing else. `php artisan bookings:capture-pending-pis`
 releases the open hold of any cancelled booking, appointment or stay, and flags a payment already
 taken (`…capture.needs_refund`) for a person to refund — see "Payments an operator must handle by
 hand" above.
@@ -662,15 +705,15 @@ The checks run in that order: `carried_by_booking`, then `unreadable`, then the 
   database that would hold it is what failed. `payment_left_alone` is `false` only when a cancel or refund
   had already been sent and something failed afterwards (a commit failure); the outcome row is then written
   as well.
-- `diag:recent-confirm-failures --org=N` lists every `booking.confirm.*` row of the last hours, refusals
+- `php artisan diag:recent-confirm-failures --org=<organisation id>` lists every `booking.confirm.*` row of the last hours, refusals
   included, next to the confirm's own `booking.confirm.failed` row.
 
 **Releasing by hand a payment the rescue left alone.** The intent id and the stage are in the audit row (or
 the log line). First check that no booking carries it (`service_bookings.stripe_payment_intent_id`,
-`booking_mirror.stripe_payment_intent_id`); `diag:orphan-stripe-pis --org=N` lists the payments no booking
+`booking_mirror.stripe_payment_intent_id`); `php artisan diag:orphan-stripe-pis --org=<organisation id>` lists the payments no booking
 carries. Then open it in the Stripe dashboard: an uncaptured (`requires_capture`) authorisation can be
 cancelled there, or left, when it lapses at Stripe on its own after about seven days.
-`stripe:cancel-pi {intent_id} --org-id=N [--reason=…] [--refund-if-captured]` cancels an authorised payment
+`php artisan stripe:cancel-pi <payment intent id> --org-id=<organisation id> [--reason="<text>"] [--refund-if-captured]` cancels an authorised payment
 from the command line (and refunds a captured one only with `--refund-if-captured`); it does not check
 whether a booking carries the payment. A captured payment is never refunded automatically after a refusal.
 
@@ -701,23 +744,66 @@ calls, audit rows and log lines. Five things differ:
 
 ## After a deploy
 
-- Run the migration once: `2026_09_30_100000_member_portal_phase_3` (additive, guarded, reversible;
-  adds `booking_mirror.member_id` + the discount/points/cancellation columns, an index on
-  `booking_mirror(organization_id, member_id)`, and `service_bookings`' refund columns — columns and
-  that one index, nothing else). It adds NO unique index on `service_bookings`' payment reference: that index would
-  also bind the public services confirm, so it is held back for the owner's decision as a separate
-  migration (`.superpowers/sdd/2026-09-29-member-portal-v2-phase-3/held-back/`). The portal's own
-  protection is `PortalPaymentIntentGuard::assertUnused()` under the `pi:` lock in both portal confirms.
+- The deploy runs the pending migrations (Laravel Cloud runs `php artisan migrate --force`, see `CLAUDE.md`).
+  This phase has two, both additive, guarded and reversible:
+  - `2026_09_30_100000_member_portal_phase_3` adds `booking_mirror.member_id` + the
+    discount/points/cancellation columns, an index on `booking_mirror(organization_id, member_id)`, and
+    `service_bookings`' refund columns — columns and that one index, nothing else.
+  - `2026_10_01_100000_service_bookings_unique_payment` creates the index `service_bookings_org_pi_unique`
+    (see "One payment, one service booking"), or, when it finds a payment id repeated within one
+    organisation, creates nothing and writes a warning to the log. Either way it is recorded as run.
+- **Check that the one-payment index exists.** Each step below is a command to type exactly as written; a
+  placeholder in angle brackets is something to replace, brackets included.
+  1. `php artisan migrate:status` lists `2026_10_01_100000_service_bookings_unique_payment` as `Ran`. This
+     does NOT prove the index exists: a migration that skipped the index is recorded as `Ran` too.
+  2. `php artisan db:table service_bookings` prints the table's indexes. The line
+     `service_bookings_org_pi_unique  organization_id, stripe_payment_intent_id` (with `unique` among its
+     attributes) must be there. If it is, nothing more is needed.
+  3. Search the application log (the hosting panel's log view; on a local checkout
+     `storage/logs/laravel.log`) for `service_bookings_unique_payment`. Either warning named in "One payment,
+     one service booking" means the index was not created. A warning is logged only when `LOG_LEVEL` is
+     `debug`, `info`, `notice` or `warning` (at `error` or above it is dropped), so an empty search proves
+     nothing on its own: step 2 decides.
+  4. **If the index is missing because of repeated payment ids**, list them with this read-only query in
+     the database's own SQL console (it changes nothing):
+
+     ```sql
+     SELECT b.organization_id, b.stripe_payment_intent_id, b.id AS booking_id, b.booking_reference,
+            b.status, b.payment_status
+     FROM service_bookings b
+     JOIN (
+         SELECT organization_id, stripe_payment_intent_id
+         FROM service_bookings
+         WHERE stripe_payment_intent_id IS NOT NULL AND stripe_payment_intent_id <> ''
+         GROUP BY organization_id, stripe_payment_intent_id
+         HAVING COUNT(*) > 1
+     ) d ON d.organization_id = b.organization_id AND d.stripe_payment_intent_id = b.stripe_payment_intent_id
+     ORDER BY b.organization_id, b.stripe_payment_intent_id, b.id;
+     ```
+
+     A person has to decide, for each payment id listed, which one booking keeps it: the capture job and a
+     refund find a booking by that id, and a payment can be captured or refunded once. Take a database backup,
+     then correct the payment reference of the other bookings of that payment by hand (they cannot keep the
+     same id). Then create the index by running the migration's `up()` again. It is safe to run again: it
+     returns at once if the index exists, scans again, and creates the index only if no repeat is left:
+
+     `php artisan tinker --execute="(require database_path('migrations/2026_10_01_100000_service_bookings_unique_payment.php'))->up();"`
+
+     It prints nothing when it succeeds. Run `php artisan db:table service_bookings` again (step 2) to see the
+     index, and search the log again (step 3) for a new warning.
+  While the index is missing, the applications' own checks still refuse a reused payment (the portal's
+  `assertUnused()` under the `pi:` lock and the public services confirm's check before its insert); only the
+  same-moment race of two public confirms is then not closed.
 - Scheduled commands that must be running (`routes/console.php`):
 
   | Command | Schedule | What it does |
   |---|---|---|
-  | `bookings:capture-pending-pis` | every 10 min | captures authorised PaymentIntents; releases or flags cancelled bookings' holds/captures |
-  | `bookings:award-stay-points` | daily, 04:15 in the scheduler's zone (the application zone, `UTC`) | awards loyalty points for stays that have departed; each stay is judged on its own venue's "today" |
-  | `bookings:release-orphan-portal-holds` | every 30 min | releases a card held for a portal booking that was never written |
-  | `bookings:sync-pms` | every 5 min | pulls Smoobu bookings (unchanged by this phase, but stays depend on it) |
-  | `bookings:retry-pms-sync` | every 5 min | pushes local-only bookings Smoobu missed |
-  | `bookings:prune-holds` | daily, 03:45 | deletes expired `booking_holds` rows |
+  | `php artisan bookings:capture-pending-pis` | every 10 min | captures authorised PaymentIntents; releases or flags cancelled bookings' holds/captures |
+  | `php artisan bookings:award-stay-points` | daily, 04:15 in the scheduler's zone (the application zone, `UTC`) | awards loyalty points for stays that have departed; each stay is judged on its own venue's "today" |
+  | `php artisan bookings:release-orphan-portal-holds` | every 30 min | releases a card held for a portal booking that was never written |
+  | `php artisan bookings:sync-pms` | every 5 min | pulls Smoobu bookings (unchanged by this phase, but stays depend on it) |
+  | `php artisan bookings:retry-pms-sync` | every 5 min | pushes local-only bookings Smoobu missed |
+  | `php artisan bookings:prune-holds` | daily, 03:45 | deletes expired `booking_holds` rows |
 
 - Settings to check in the hosting panel:
   - **Which cache store production uses** (the `CACHE_DRIVER`/`CACHE_STORE` environment setting;
@@ -743,11 +829,25 @@ calls, audit rows and log lines. Five things differ:
     are counted in UTC.
 - From this deploy on, every industry's starter preset has `hasLoyalty = true` (medical included) — a
   brand-new signup always gets a membership programme. An **existing** venue created before its industry
-  had one, or whose tiers were otherwise never set up, still has none: `loyalty:provision-programme
-  --org=<id> --apply` (or `--all`) gives it the starter programme of its industry — see "Known limits".
+  had one, or whose tiers were otherwise never set up, still has none. Two ways to give it the starter
+  programme of its industry:
+  1. By command, in two steps, each typed exactly as written apart from the placeholder:
+     - `php artisan loyalty:provision-programme --all` writes nothing. It prints one line for every venue
+       that has no programme (`would give org <id> (<name>) the '<industry>' programme`, the id first) and
+       "N venue(s) would be given a programme. Run with --apply to write." A venue that has any tier row,
+       even an inactive one, is left out (a venue whose tiers are all inactive is reported as "has a paused
+       programme — skipped").
+     - `php artisan loyalty:provision-programme --org=<organisation id> --apply` writes the programme for
+       the one venue whose id you copied from the first step. (`php artisan loyalty:provision-programme
+       --all --apply` does every listed venue at once.) It enrols nobody and emails nobody.
+  2. In the admin: the Members page opens on a setup wizard (pick a starter preset, choose whether to add
+     sample members, review and apply) for any venue whose Members setup has not been completed or skipped
+     — the marker `members_onboarding_completed_at` in its CRM settings, which applying a preset, the
+     command above and skipping the wizard all write. A venue with no programme and no marker sees the wizard
+     the next time someone opens its Members page; one that skipped it does not, and needs the command.
 - Two hand checks worth doing once, on the first real card booking after the deploy:
   - **Book a stay with a real card.** Right after confirm: the PaymentIntent is `requires_capture`; once
-    `bookings:capture-pending-pis` next runs, it is `succeeded` and the mirror is `paid`. The coupon's
+    `php artisan bookings:capture-pending-pis` next runs, it is `succeeded` and the mirror is `paid`. The coupon's
     `used_reference` (if one was used) is still `BM:{mirror id}` after the first Smoobu sync runs — it must
     not have been overwritten or cleared. The price Smoobu shows for the reservation equals what the
     card was actually charged.
@@ -761,14 +861,15 @@ calls, audit rows and log lines. Five things differ:
 | Symptom | Where to look | What is safe to do |
 |---|---|---|
 | A booking shows cancelled but the guest says they were charged | `AuditLog` for `booking.capture.needs_refund` / `service_booking.capture.needs_refund` (subject = the booking); `booking.member_cancelled` / `service_booking.member_cancelled` for a member's own cancellation, which already returned the money — check `refund.outcome` in that row first | If a `needs_refund` audit row exists and no refund audit follows it, refund from the Stripe dashboard using the intent id in the audit row |
-| A member says they paid but the booking never appeared | `diag:orphan-stripe-pis --org=N` (read-only) lists Stripe PaymentIntents no booking carries | If found and old enough, `bookings:release-orphan-portal-holds --org=N --dry-run` (then without `--dry-run`) releases it; or cancel by hand in the Stripe dashboard using the metadata (`org_id`, `member_id`, `kind`) |
-| A capture cron run looks like it skipped bookings | Run `bookings:capture-pending-pis --dry-run [--org=N]` and read the printed per-row lines and the final tally (`captured`/`already_captured`/`expired`/`skipped`/`failed`/`released`/`needs_refund`) | Nothing is written by `--dry-run`; re-run without it once the report looks right |
-| Points look wrong on a stay | `bookings:award-stay-points --dry-run [--org=N]` lists what would be awarded; a stay only earns once `payment_status` is `paid` (or `open` + `pay_at_venue`) | Nothing to do if the stay's payment has not settled yet — it is picked up on a later run, inside 60 days of departure |
+| A member says they paid but the booking never appeared | `php artisan diag:orphan-stripe-pis --org=<organisation id>` (read-only) lists Stripe PaymentIntents no booking carries | If found and old enough, `php artisan bookings:release-orphan-portal-holds --org=<organisation id> --dry-run` (then without `--dry-run`) releases it; or cancel by hand in the Stripe dashboard using the metadata (`org_id`, `member_id`, `kind`) |
+| A capture cron run looks like it skipped bookings | Run `php artisan bookings:capture-pending-pis --dry-run [--org=<organisation id>]` and read the printed per-row lines and the final tally (`captured`/`already_captured`/`expired`/`skipped`/`failed`/`released`/`needs_refund`) | Nothing is written by `--dry-run`; re-run without it once the report looks right |
+| Points look wrong on a stay | `php artisan bookings:award-stay-points --dry-run [--org=<organisation id>]` lists what would be awarded; a stay only earns once `payment_status` is `paid` (or `open` + `pay_at_venue`) | Nothing to do if the stay's payment has not settled yet — it is picked up on a later run, inside 60 days of departure |
 | A cancel returned `refund_failed` or `cancel_failed` | The booking was left as it was (a genuine `refund_failed`) or may have partially applied (`cancel_failed`, a 500) — re-fetch the booking (`GET member/portal/bookings/{kind}/{id}`) and check `payment_status`/`can_cancel` before assuming nothing happened | Ask the member to retry the cancel; a stay's retry converges (money already back is recognised, no second Stripe call) |
 | Two refund/cancel mails or audit rows for the same booking | Check which cache store production uses (see "After a deploy") — a per-instance store lets two instances both pass a non-blocking lock at once | Confirm in Stripe that only one refund exists; if so this is the known duplicate-notification risk, not a double refund |
-| An authorisation still sits on a member's card and `bookings:release-orphan-portal-holds --dry-run` does not list it | The sweeper fails closed: it never releases an intent whose authorisation time it cannot read back from Stripe (see "Known limits") | Look at the payment intent directly in the Stripe dashboard; an uncaptured authorisation lapses at Stripe on its own after about seven days, and the venue can cancel it there sooner |
-| A service confirm answered `payment_mismatch` and the member's card shows the charge still held | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_not_payable` (written by `writeBooking()`'s own re-check) — this re-check never releases the intent itself | Nothing further needed if a booking now carries the intent (check `service_bookings.stripe_payment_intent_id`); otherwise it is an orphan and the sweeper or `diag:orphan-stripe-pis` handles it as above |
-| A guest says their card shows a pending amount after a failed public booking | Audit rows `booking.confirm.pi_rescue_refused`, `booking.confirm.pi_rescue_failed` or `booking.confirm.pi_rescue_restricted_key` for that payment intent (`diag:recent-confirm-failures --org=N` lists every `booking.confirm.*` row); with none of them, the log line `Booking confirm PI rescue: pi_rescue_checks_failed`. The row's `reason` and `confirm_context.stage` say why the rescue left it alone (see "The public confirm's payment rescue") | If the reason is `carried_by_booking`, do nothing: a booking has that payment and the capture job captures it. For any other reason, first check that no booking carries the intent (`service_bookings.stripe_payment_intent_id`, `booking_mirror.stripe_payment_intent_id`), then open it in the Stripe dashboard by the id in the row: cancel an authorised (`requires_capture`) one, or let it lapse at Stripe on its own after about seven days; refund a captured (`succeeded`) one only if it is the guest's payment for this failed booking |
+| An authorisation still sits on a member's card and `php artisan bookings:release-orphan-portal-holds --dry-run` does not list it | The sweeper fails closed: it never releases an intent whose authorisation time it cannot read back from Stripe (see "Known limits") | Look at the payment intent directly in the Stripe dashboard; an uncaptured authorisation lapses at Stripe on its own after about seven days, and the venue can cancel it there sooner |
+| A service confirm answered `payment_mismatch` and the member's card shows the charge still held | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment_not_payable` (written by `writeBooking()`'s own re-check) — this re-check never releases the intent itself | Nothing further needed if a booking now carries the intent (check `service_bookings.stripe_payment_intent_id`); otherwise it is an orphan and the sweeper or `php artisan diag:orphan-stripe-pis` handles it as above |
+| A guest of the public services widget was told "This payment has already been used for a booking." | A `ServiceBookingSubmission` row with `outcome = failed`, `error_message = payment already used`, and the request's `customer_email`; the booking that carries the payment: `service_bookings.stripe_payment_intent_id` | Nothing to undo: the refused request created no booking and touched no payment. If the guest has no booking, find the one that carries the payment (a retry, or the same payment used twice) and tell them it stands |
+| A guest says their card shows a pending amount after a failed public booking | Audit rows `booking.confirm.pi_rescue_refused`, `booking.confirm.pi_rescue_failed` or `booking.confirm.pi_rescue_restricted_key` for that payment intent (`php artisan diag:recent-confirm-failures --org=<organisation id>` lists every `booking.confirm.*` row); with none of them, the log line `Booking confirm PI rescue: pi_rescue_checks_failed`. The row's `reason` and `confirm_context.stage` say why the rescue left it alone (see "The public confirm's payment rescue") | If the reason is `carried_by_booking`, do nothing: a booking has that payment and the capture job captures it. For any other reason, first check that no booking carries the intent (`service_bookings.stripe_payment_intent_id`, `booking_mirror.stripe_payment_intent_id`), then open it in the Stripe dashboard by the id in the row: cancel an authorised (`requires_capture`) one, or let it lapse at Stripe on its own after about seven days; refund a captured (`succeeded`) one only if it is the guest's payment for this failed booking |
 
 ## Known limits
 
@@ -787,7 +888,17 @@ calls, audit rows and log lines. Five things differ:
   payment under its own lock, and the engine is unchanged.
 - **The public services confirm accepts any authorised payment of the account.**
   `ServicePublicController::confirm()` checks only that the payment named in the request is `succeeded` or
-  `requires_capture`; it does not check its amount, its owner or its metadata.
+  `requires_capture`; it does not check its amount, its service or whose it is (its metadata). The one-payment
+  rule covers `service_bookings` only, so a payment that a STAY already carries (`booking_mirror`) is still
+  accepted there.
+- **A retry of a public services booking without the `Idempotency-Key` is refused, not replayed.** With "any
+  staff member" chosen and another master free, the retry passes the slot check, meets the one-payment rule
+  and is answered 409 "This payment has already been used for a booking."; the first booking stands, and
+  the retry is not given the existing booking back (only a request with the same `Idempotency-Key` is).
+- **The public services confirm's general answer for other database errors carries the error's text.** A unique
+  violation the one-payment rule does not explain is answered 409 with the exception's own message; any other
+  failure is answered 500 "Failed to create booking: …" with its message. Only the payment rule has a plain
+  sentence.
 - **Nothing alerts on a rescue refusal.** A refusal is an audit row and a warning line, with no realtime
   event and no mail; it is found by looking (see "When money looks wrong").
 - **A stays or services `payment-intent` call mints a brand-new PaymentIntent every time**, without
@@ -815,7 +926,7 @@ calls, audit rows and log lines. Five things differ:
 - **Two day boundaries do not follow the venue's zone.** A stay moves from upcoming to past at 00:00 UTC
   on its departure date: `MemberBookingQuery` reads the departure date as midnight in the application's zone
   and compares it with the current time, so it happens neither at check-out nor on the venue's clock. And
-  `bookings:award-stay-points` runs at 04:15 in the scheduler's zone (the application zone, `UTC`); it
+  `php artisan bookings:award-stay-points` runs at 04:15 in the scheduler's zone (the application zone, `UTC`); it
   judges each stay's departure on its own venue's "today", so a stay is awarded on the first run after its
   venue's day of departure has ended.
 - **Only a portal-booked stay earns points.** `BookingPointsService::awardForStay()` requires
@@ -865,9 +976,9 @@ calls, audit rows and log lines. Five things differ:
 - A venue with **no membership programme at all** (no `LoyaltyTier` row) has no portal booking for
   either kind — `capabilities.services`/`capabilities.stays` are false and a caller has no
   `LoyaltyMember` row to provision against. Every industry, including medical, now gets a starter
-  programme on signup; for an existing venue created before its industry had one, or whose tiers
-  were never set up, run `loyalty:provision-programme --org=<id> --apply` (or `--all`) — it reports
-  by default and only writes with `--apply`, and it never touches a venue that already has any tier
-  row, even an inactive (paused) one.
+  programme on signup; an existing venue created before its industry had one, or whose tiers were never set
+  up, is given one in the two ways "After a deploy" describes (the command in two steps, or the Members
+  wizard in the admin). The command reports by default and only writes with `--apply`, and it never touches
+  a venue that already has any tier row, even an inactive (paused) one.
 - An old mobile app build that still calls `POST member/reservations` gets 404 — that endpoint is
   retired; the app books stays through the widget WebView instead.

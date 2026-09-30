@@ -34,6 +34,7 @@ use App\Services\StripeService;
 use App\Support\AdvisoryLock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -417,7 +418,7 @@ class PortalServiceBookingController extends Controller
         $masterId = $data['master_id'] ?? null;
         $lockKey = $masterId ? "svcm:{$masterId}" : "svc:{$data['service_id']}";
         try {
-            $booking = AdvisoryLock::transaction($lockKey, fn () => $this->writeBooking(
+            $booking = $this->lockedWrite($lockKey, $piId, $orgId, fn () => $this->writeBooking(
                 $request, $data, $builder, $member, $guests, $guard, $pi, $piId, $online, $user, $orgId, $key, $hash,
             ));
         } catch (PaymentAlreadyUsed) {
@@ -505,6 +506,33 @@ class PortalServiceBookingController extends Controller
         }
         $booking = ServiceBooking::withoutGlobalScopes()->find($prior->service_booking_id);
         return response()->json(['booking' => $booking ? MemberBookingQuery::serviceDto($booking) : null, 'replayed' => true]);
+    }
+
+    /**
+     * writeBooking() under the slot lock (AdvisoryLock::transaction()). The
+     * database holds the rule assertUnused() checks — a payment intent on at
+     * most one service booking of an organisation (unique index
+     * service_bookings_org_pi_unique) — and the public services confirm takes
+     * no `pi:` lock, so a public booking can take this payment after
+     * assertUnused() looked; the insert then violates the index. The
+     * transaction has rolled back by the time the violation reaches here:
+     * when a service booking of this organisation now carries the payment, it
+     * is PaymentAlreadyUsed (409 payment_mismatch, never released). Any other
+     * unique violation goes on unchanged to confirm()'s own catch.
+     */
+    private function lockedWrite(string $lockKey, ?string $piId, int $orgId, callable $write): ServiceBooking|JsonResponse
+    {
+        try {
+            return AdvisoryLock::transaction($lockKey, $write);
+        } catch (UniqueConstraintViolationException $e) {
+            if ($piId !== null && $piId !== '' && ServiceBooking::withoutGlobalScopes()
+                ->where('organization_id', $orgId)
+                ->where('stripe_payment_intent_id', $piId)
+                ->exists()) {
+                throw new PaymentAlreadyUsed('The payment already pays for a booking.', 0, $e);
+            }
+            throw $e;
+        }
     }
 
     /**

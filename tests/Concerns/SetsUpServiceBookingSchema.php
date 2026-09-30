@@ -166,6 +166,7 @@ trait SetsUpServiceBookingSchema
                 'refunded_at'        => fn (Blueprint $t) => $t->timestamp('refunded_at')->nullable(),
                 'last_refund_id'     => fn (Blueprint $t) => $t->string('last_refund_id')->nullable(),
             ]);
+            $this->addServiceBookingPaymentRule();
         }
 
         if (!Schema::hasTable('service_booking_extras')) {
