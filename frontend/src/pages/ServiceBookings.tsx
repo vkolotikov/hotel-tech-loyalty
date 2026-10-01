@@ -12,6 +12,7 @@ import { ViewToggle } from '../components/ViewToggle'
 import { OpenInAppointments } from '../components/OpenInAppointments'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
+import { formatWallDateTime, formatWallTime } from '../lib/venueTime'
 import { ServiceBookingPricing } from '../components/admin/ServiceBookingPricing'
 
 interface ServiceBooking {
@@ -293,7 +294,7 @@ export default function ServiceBookings() {
                 className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-white/[0.02] transition-colors text-sm text-left">
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="text-emerald-300 font-bold tabular-nums">
-                    {new Date(b.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {formatWallTime(b.start_at)}
                   </span>
                   <span className="text-white font-semibold truncate">{b.customer_name}</span>
                   <span className="text-gray-500 text-xs truncate">
@@ -454,7 +455,7 @@ export default function ServiceBookings() {
                     <div className="text-white">{b.customer_name}</div>
                     <div className="text-xs text-gray-500">{b.customer_email}</div>
                   </td>
-                  <td className="p-4 text-gray-300">{new Date(b.start_at).toLocaleString()}</td>
+                  <td className="p-4 text-gray-300">{formatWallDateTime(b.start_at)}</td>
                   <td className="p-4">
                     <div className="font-bold text-white">{money(b.total_amount, b.currency)}</div>
                     <ServiceBookingPricing row={b} />
@@ -586,8 +587,9 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
 
         <div className="space-y-1 mb-6">
           <p className="text-xs text-gray-500">Schedule</p>
-          <p className="text-white font-medium">{new Date(booking.start_at).toLocaleString()}</p>
-          <p className="text-xs text-gray-400">→ {new Date(booking.end_at).toLocaleTimeString()} ({booking.duration_minutes} min)</p>
+          {/* The venue's own clock, as sent: the browser's zone must not move it. */}
+          <p className="text-white font-medium">{formatWallDateTime(booking.start_at)}</p>
+          <p className="text-xs text-gray-400">→ {formatWallTime(booking.end_at)} ({booking.duration_minutes} min)</p>
         </div>
 
         {detail?.extras && detail.extras.length > 0 && (

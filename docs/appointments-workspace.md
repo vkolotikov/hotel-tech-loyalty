@@ -88,7 +88,9 @@ marked as held whose payment Stripe had in fact already taken. A booking already
 - One points worker. Only `BookingPointsService::awardForServiceBooking()` awards; the panel's "Completing awards
   N points" is `previewForServiceBooking()`, the same predicates (`tests/Feature/Appointments/PointsPreviewTest.php`).
 - Times are the venue's wall clock, sent and received as `YYYY-MM-DDTHH:mm`. The frontend never builds a `Date`
-  from one (`frontend/src/appointments/lib/wallClock.ts`).
+  from one (`frontend/src/appointments/lib/wallClock.ts`). The full admin's service-booking list, its calendar,
+  the unified `/calendar` and the dashboard read the same times through `frontend/src/lib/venueTime.ts`
+  (page tests `*.venueTime.test.tsx` run with the clock set to Riga).
 - A retry with the same `Idempotency-Key` and body answers with the first booking; a save against an older
   `revision` answers `409 stale` with the current appointment.
 - `frontend/src/appointments/` uses only `a-*` tokens and only `/v1/admin/appointments/…`

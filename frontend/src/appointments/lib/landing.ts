@@ -13,6 +13,15 @@ export function showsAppointmentsLink(user: LandingUser | null | undefined): boo
   return user?.user_type !== 'member' && user?.workspaces?.appointments?.has_services === true
 }
 
+/**
+ * Where a sign-in that ran out sends the user: back to the same workspace
+ * page after signing in again; every other page keeps the plain sign-in it
+ * always had.
+ */
+export function loginPathAfterExpiry(pathname: string, search: string): string {
+  return /^\/appointments(\/|$)/.test(pathname) ? loginPath({ pathname, search }) : '/login'
+}
+
 /** "Full admin" from the workspace opens the same tool there. */
 export function fullAdminPathFor(pathname: string): string {
   if (/^\/appointments\/?$/.test(pathname)) return '/service-bookings/calendar'

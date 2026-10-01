@@ -15,6 +15,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { money } from '../lib/money'
+import { formatWallTime } from '../lib/venueTime'
 import { useVocabulary } from '../lib/vocabulary'
 
 /**
@@ -339,7 +340,7 @@ export function Dashboard() {
                   initialColor: '#9a7ef0',
                   primary: s.guest_name || s.customer_name || 'Guest',
                   secondary: [
-                    s.start_at ? new Date(s.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null,
+                    s.start_at ? formatWallTime(s.start_at) : null,
                     s.service_name,
                     s.master_name && t('dashboard.schedule.with', { name: s.master_name, defaultValue: 'with {{name}}' }),
                   ].filter(Boolean).join(' · '),

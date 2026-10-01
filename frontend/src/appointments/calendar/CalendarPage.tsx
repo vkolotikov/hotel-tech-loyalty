@@ -113,7 +113,7 @@ export function CalendarPage() {
       <section className="flex-1 min-w-0 flex flex-col">
         <h1 className="sr-only">{t('appointments.nav.calendar', 'Calendar')}</h1>
         <Toolbar
-          view={view} viewLocked={narrow} date={date} locale={locale}
+          view={view} viewLocked={narrow} panelOpen={panel.mode !== 'closed'} date={date} locale={locale}
           masters={masters} masterId={masterId} showCancelled={prefs.showCancelled}
           updatedAt={updatedAt} refreshing={query.isFetching}
           onView={(v) => setPrefs({ ...prefs, view: v })}

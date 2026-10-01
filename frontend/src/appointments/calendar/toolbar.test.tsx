@@ -20,12 +20,12 @@ const masters: CalendarMaster[] = [
   { id: 2, name: 'James', title: null, avatar: null, days: {} },
 ]
 
-function toolbar(view: View, masterId: number | null, extra: { viewLocked?: boolean } = {}) {
+function toolbar(view: View, masterId: number | null, extra: { viewLocked?: boolean; panelOpen?: boolean } = {}) {
   const noop = () => {}
   return renderToStaticMarkup(
     <AppointmentsContext.Provider value={{ data: undefined, isLoading: false, isError: false, error: null, refetch: noop }}>
       <Toolbar
-        view={view} viewLocked={extra.viewLocked ?? false} date="2026-10-06" locale="en-GB"
+        view={view} viewLocked={extra.viewLocked ?? false} panelOpen={extra.panelOpen ?? false} date="2026-10-06" locale="en-GB"
         masters={masters} masterId={masterId} showCancelled={false} updatedAt={615} refreshing={false}
         onView={noop} onDate={noop} onPrev={noop} onNext={noop} onToday={noop} onMaster={noop} onShowCancelled={noop} onRefresh={noop}
       />
@@ -54,6 +54,12 @@ describe('Toolbar', () => {
     const html = toolbar('day', null)
     const group = html.slice(html.indexOf('role="group"') - 120, html.indexOf('role="group"') + 40)
     expect(group).not.toContain('overflow-hidden')
+  })
+
+  it('keeps clear of the open appointment panel on a wide screen, so Refresh stays in view', () => {
+    const root = (html: string) => html.slice(0, html.indexOf('>'))
+    expect(root(toolbar('day', null, { panelOpen: true }))).toContain('lg:pr-[456px]')
+    expect(root(toolbar('day', null))).not.toContain('pr-[456px]')
   })
 
   it('has no view switch on a narrow screen, where the list is the only view', () => {

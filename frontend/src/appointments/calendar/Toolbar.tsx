@@ -9,6 +9,7 @@ import { rangeFor } from './calendarState'
 interface Props {
   view: View
   viewLocked: boolean // narrow screens show the list only
+  panelOpen?: boolean // the appointment panel lies over the right edge
   date: DateKey
   locale: string
   masters: CalendarMaster[]
@@ -42,7 +43,8 @@ export function Toolbar(p: Props) {
   ]
 
   return (
-    <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-a-border bg-a-surface">
+    // With the panel open on a wide screen, the toolbar wraps short of it, so "Updated" and Refresh stay in view.
+    <div className={`flex flex-wrap items-center gap-2 px-4 py-3 border-b border-a-border bg-a-surface ${p.panelOpen ? 'lg:pr-[456px]' : ''}`}>
       <button type="button" onClick={p.onPrev} className={`${field} px-2`} aria-label={t('appointments.calendar.previous', 'Previous')}><ChevronLeft size={16} aria-hidden /></button>
       <button type="button" onClick={p.onNext} className={`${field} px-2`} aria-label={t('appointments.calendar.next', 'Next')}><ChevronRight size={16} aria-hidden /></button>
       <label className="flex items-center gap-2">

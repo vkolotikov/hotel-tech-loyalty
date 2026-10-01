@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { loginPathAfterExpiry } from '../appointments/lib/landing'
 
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
 export const API_BASE = isProduction ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api')
@@ -75,7 +76,10 @@ api.interceptors.response.use(
         // Dynamic import — avoids the api.ts ↔ logout.ts ↔ authStore.ts
         // ↔ queryClient.ts circular-import chain at module-load time.
         // The 401 path is rare and async, so a dynamic import is cheap.
-        import('./logout').then(({ logoutAndRedirect }) => { void logoutAndRedirect() })
+        // From the appointments workspace, signing in again returns to the same page.
+        import('./logout').then(({ logoutAndRedirect }) => {
+          void logoutAndRedirect(loginPathAfterExpiry(window.location.pathname, window.location.search))
+        })
       }
     }
     if (error.response?.status === 403 &&

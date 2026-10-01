@@ -7,6 +7,9 @@ import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { ViewToggle } from '../components/ViewToggle'
 import { OpenInAppointments } from '../components/OpenInAppointments'
+import {
+  addDaysToKey, addMonthsToKey, dayKey, dayNumber, formatDayKey, formatWallTime, monthGridKeys, todayKey, wallDay, wallHour, weekKeys,
+} from '../lib/venueTime'
 
 interface ServiceBookingLite {
   id: number
@@ -34,19 +37,15 @@ const STATUS_STYLES: Record<string, { bg: string; border: string; text: string; 
 }
 const DEFAULT_STYLE = STATUS_STYLES.pending
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-function isoDay(iso: string) {
-  return iso.slice(0, 10)
-}
+// Booking times are the venue's clock (see lib/venueTime.ts): never moved by this computer's zone.
+const fmtTime = (iso: string) => formatWallTime(iso)
+const isoDay = wallDay
 
 type View = 'day' | 'week' | 'month'
 
 export default function ServiceBookingCalendar() {
   const [view, setView] = useState<View>('month')
-  const [cursor, setCursor] = useState<string>(() => new Date().toISOString().slice(0, 10))
+  const [cursor, setCursor] = useState<string>(() => todayKey())
   const month = cursor.slice(0, 7)
   const [statusFilter, setStatusFilter] = useState('')
   const [masterFilter, setMasterFilter] = useState('')
@@ -66,41 +65,15 @@ export default function ServiceBookingCalendar() {
   }, [month])
 
   const nav = (d: number) => {
-    const c = new Date(cursor + 'T00:00:00')
-    if (view === 'day')   c.setDate(c.getDate() + d)
-    if (view === 'week')  c.setDate(c.getDate() + d * 7)
-    if (view === 'month') c.setMonth(c.getMonth() + d)
-    setCursor(c.toISOString().slice(0, 10))
+    if (view === 'day')   setCursor(addDaysToKey(cursor, d))
+    if (view === 'week')  setCursor(addDaysToKey(cursor, d * 7))
+    if (view === 'month') setCursor(addMonthsToKey(cursor, d))
   }
 
   // Build full 6-week grid (Mon-first)
-  const days = useMemo(() => {
-    const first = new Date(year, mon - 1, 1)
-    const last  = new Date(year, mon, 0)
-    const sDow  = first.getDay() === 0 ? 6 : first.getDay() - 1
-    const eDow  = last.getDay() === 0 ? 6 : last.getDay() - 1
-    const result: string[] = []
-    for (let i = -sDow; i <= last.getDate() - 1 + (6 - eDow); i++) {
-      const d = new Date(year, mon - 1, i + 1)
-      result.push(d.toISOString().slice(0, 10))
-    }
-    while (result.length < 42) {
-      const d = new Date(result[result.length - 1])
-      d.setDate(d.getDate() + 1)
-      result.push(d.toISOString().slice(0, 10))
-    }
-    return result.slice(0, 42)
-  }, [year, mon])
+  const days = useMemo(() => monthGridKeys(year, mon), [year, mon])
 
-  const weekDays = useMemo(() => {
-    const c = new Date(cursor + 'T00:00:00')
-    const dow = c.getDay() === 0 ? 6 : c.getDay() - 1
-    const start = new Date(c); start.setDate(c.getDate() - dow)
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(start); d.setDate(start.getDate() + i)
-      return d.toISOString().slice(0, 10)
-    })
-  }, [cursor])
+  const weekDays = useMemo(() => weekKeys(cursor), [cursor])
 
   const masters = useMemo(() => {
     const m = new Map<number, string>()
@@ -134,20 +107,19 @@ export default function ServiceBookingCalendar() {
     return map
   }, [filtered])
 
-  const today = new Date().toISOString().slice(0, 10)
-  const monthLabel = new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
+  const today = todayKey()
+  const monthLabel = formatDayKey(dayKey(year, mon, 1), undefined, { month: 'long', year: 'numeric' })
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
   const viewLabel = useMemo(() => {
     if (view === 'day') {
-      return new Date(cursor + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      return formatDayKey(cursor, undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
     }
     if (view === 'week') {
       const s = weekDays[0], e = weekDays[6]
-      const ds = new Date(s + 'T00:00:00'), de = new Date(e + 'T00:00:00')
-      const sameMonth = ds.getMonth() === de.getMonth()
-      const sFmt = ds.toLocaleDateString(undefined, { day: 'numeric', ...(sameMonth ? {} : { month: 'short' }) })
-      const eFmt = de.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+      const sameMonth = s.slice(0, 7) === e.slice(0, 7)
+      const sFmt = formatDayKey(s, undefined, { day: 'numeric', ...(sameMonth ? {} : { month: 'short' }) })
+      const eFmt = formatDayKey(e, undefined, { day: 'numeric', month: 'short', year: 'numeric' })
       return `${sFmt} – ${eFmt}`
     }
     return monthLabel
@@ -208,7 +180,7 @@ export default function ServiceBookingCalendar() {
           <span className="text-white font-semibold min-w-[200px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
-          <button onClick={() => setCursor(new Date().toISOString().slice(0, 10))}
+          <button onClick={() => setCursor(todayKey())}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
@@ -274,7 +246,7 @@ export default function ServiceBookingCalendar() {
                   }}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
-                      {new Date(d).getDate()}
+                      {dayNumber(d)}
                     </span>
                     {list.length > 0 && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
@@ -313,7 +285,6 @@ export default function ServiceBookingCalendar() {
             {weekDays.map((d, idx) => {
               const isToday = d === today
               const isWe = [5, 6].includes(idx)
-              const dt = new Date(d + 'T00:00:00')
               const list = byDay.get(d) || []
               return (
                 <div key={d} className="border-r border-white/[0.04] last:border-r-0 min-h-[360px]"
@@ -322,9 +293,9 @@ export default function ServiceBookingCalendar() {
                     style={{ background: 'rgba(14,20,18,0.98)' }}>
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
-                        {dt.toLocaleDateString(undefined, { weekday: 'short' })}
+                        {formatDayKey(d, undefined, { weekday: 'short' })}
                       </div>
-                      <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : 'text-white'}`}>{dt.getDate()}</div>
+                      <div className={`text-lg font-bold ${isToday ? 'text-emerald-400' : 'text-white'}`}>{dayNumber(d)}</div>
                     </div>
                     {list.length > 0 && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.06] text-gray-400">
@@ -367,7 +338,7 @@ export default function ServiceBookingCalendar() {
               {/* Hour column + schedule */}
               <div className="grid" style={{ gridTemplateColumns: '70px 1fr' }}>
                 {Array.from({ length: 14 }, (_, i) => i + 7).map(hour => {
-                  const hourBookings = dayBookings.filter(b => new Date(b.start_at).getHours() === hour)
+                  const hourBookings = dayBookings.filter(b => wallHour(b.start_at) === hour)
                   const isCurrentHour = cursor === today && new Date().getHours() === hour
                   return (
                     <div key={hour} className="contents">
@@ -421,7 +392,7 @@ export default function ServiceBookingCalendar() {
             style={{ background: 'linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99))' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-white">{new Date(selectedDay).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+                <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{selectedBookings.length} booking{selectedBookings.length === 1 ? '' : 's'}</p>
               </div>
               <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500">

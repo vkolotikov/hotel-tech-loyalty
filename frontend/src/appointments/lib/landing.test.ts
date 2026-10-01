@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fullAdminPathFor, landingPath, loginPath, safeRedirect, showsAppointmentsLink } from './landing'
+import { fullAdminPathFor, landingPath, loginPath, loginPathAfterExpiry, safeRedirect, showsAppointmentsLink } from './landing'
 
 describe('landingPath', () => {
   it('sends a member to the portal whatever else is set', () => {
@@ -54,6 +54,19 @@ describe('showsAppointmentsLink', () => {
     expect(showsAppointmentsLink({ user_type: 'staff' })).toBe(false)
     expect(showsAppointmentsLink({ user_type: 'member', workspaces: { appointments: { landing: false, has_services: true } } })).toBe(false)
     expect(showsAppointmentsLink(null)).toBe(false)
+  })
+})
+
+describe('loginPathAfterExpiry', () => {
+  it('brings someone whose session ran out in the workspace back to the same page', () => {
+    expect(loginPathAfterExpiry('/appointments/clients/14', '')).toBe('/login?redirect=%2Fappointments%2Fclients%2F14')
+    expect(loginPathAfterExpiry('/appointments', '?date=2026-10-21')).toBe('/login?redirect=%2Fappointments%3Fdate%3D2026-10-21')
+  })
+
+  it('leaves every other page as it was: plain sign-in', () => {
+    expect(loginPathAfterExpiry('/members', '')).toBe('/login')
+    expect(loginPathAfterExpiry('/appointmentsX', '')).toBe('/login')
+    expect(loginPathAfterExpiry('/', '')).toBe('/login')
   })
 })
 

@@ -134,6 +134,8 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   `t('appointments.…')` in all five locales. Read `docs/appointments-workspace.md` before touching it.
 - Appointment times are the venue's wall clock (`YYYY-MM-DDTHH:mm`, no offset). Never pass one to `new Date()`;
   use `frontend/src/appointments/lib/wallClock.ts` and, on the server, `App\Services\Appointments\VenueClock`.
+  The full admin's service-booking screens (list, calendars, dashboard) read the same times through
+  `frontend/src/lib/venueTime.ts`, so both interfaces show one booking at one time.
 - The workspace computes no availability, price, points or consequence of its own: slots come from
   `ServiceSchedulingService`, points from `BookingPointsService`, and what an action will do from
   `AppointmentActions`. A new rule goes into the shared service, not into a workspace controller or component.

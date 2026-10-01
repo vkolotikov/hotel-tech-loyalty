@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ChevronLeft, ChevronRight, BedDouble, Scissors, ClipboardList, X, Clock, User, Users, Calendar, CalendarDays, CalendarRange } from 'lucide-react'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
+import { addDaysToKey, dayNumber, formatDayKey, formatWallTime, monthGridKeys, mondayOfKey, todayKey, wallDay, weekKeys } from '../lib/venueTime'
 
 /* ── source theming ──────────────────────────────────────────────── */
 
@@ -27,21 +28,15 @@ interface CellEvent {
   sortHint: string
 }
 
-function isoDay(iso: string) { return iso.slice(0, 10) }
-function fmtTime(iso: string) { return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+// Service times are the venue's wall clock and stays are calendar dates:
+// read both as written, never through the browser's zone (lib/venueTime).
+const isoDay = wallDay
+const fmtTime = (iso: string) => formatWallTime(iso)
 function fmtShortTime(hhmm: string) {
   if (!hhmm) return ''
   const [h, m] = hhmm.slice(0, 5).split(':').map(Number)
   const suffix = h >= 12 ? 'pm' : 'am'
   return (h % 12 || 12) + (m ? ':' + String(m).padStart(2, '0') : '') + suffix
-}
-function getMonday(d: Date): Date {
-  const date = new Date(d); const day = date.getDay()
-  date.setDate(date.getDate() - day + (day === 0 ? -6 : 1)); return date
-}
-function fmtDate(d: Date): string { return d.toISOString().slice(0, 10) }
-function weekDatesFrom(start: Date): Date[] {
-  return Array.from({ length: 7 }, (_, i) => { const d = new Date(start); d.setDate(d.getDate() + i); return d })
 }
 
 type View = 'month' | 'week' | 'day'
@@ -49,7 +44,7 @@ type View = 'month' | 'week' | 'day'
 export default function CalendarUnified() {
   const [params, setParams] = useSearchParams()
   const [view, setView] = useState<View>('month')
-  const [cursor, setCursor] = useState(() => fmtDate(new Date()))
+  const [cursor, setCursor] = useState(() => todayKey())
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -83,41 +78,19 @@ export default function CalendarUnified() {
       if (m < 1) { m = 12; y-- }
       if (m > 12) { m = 1; y++ }
       setMonth(`${y}-${String(m).padStart(2, '0')}`)
-    } else if (view === 'week') {
-      const newDate = new Date(cursor)
-      newDate.setDate(newDate.getDate() + d * 7)
-      setCursor(fmtDate(newDate))
     } else {
-      const newDate = new Date(cursor)
-      newDate.setDate(newDate.getDate() + d)
-      setCursor(fmtDate(newDate))
+      setCursor(addDaysToKey(cursor, view === 'week' ? d * 7 : d))
     }
   }
 
   const goToday = () => {
-    const n = new Date()
-    setCursor(fmtDate(n))
-    setMonth(`${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`)
+    const today = todayKey()
+    setCursor(today)
+    setMonth(today.slice(0, 7))
   }
 
   // 6-week Mon-first grid
-  const days = useMemo(() => {
-    const first = new Date(year, mon - 1, 1)
-    const last  = new Date(year, mon, 0)
-    const sDow  = first.getDay() === 0 ? 6 : first.getDay() - 1
-    const eDow  = last.getDay() === 0 ? 6 : last.getDay() - 1
-    const result: string[] = []
-    for (let i = -sDow; i <= last.getDate() - 1 + (6 - eDow); i++) {
-      const d = new Date(year, mon - 1, i + 1)
-      result.push(d.toISOString().slice(0, 10))
-    }
-    while (result.length < 42) {
-      const d = new Date(result[result.length - 1])
-      d.setDate(d.getDate() + 1)
-      result.push(d.toISOString().slice(0, 10))
-    }
-    return result.slice(0, 42)
-  }, [year, mon])
+  const days = useMemo(() => monthGridKeys(year, mon), [year, mon])
 
   const rangeFrom = days[0]
   const rangeTo   = days[days.length - 1]
@@ -127,9 +100,8 @@ export default function CalendarUnified() {
     if (view === 'month') {
       return { month }
     } else if (view === 'week') {
-      const weekStart = getMonday(new Date(cursor))
-      const weekDates = weekDatesFrom(weekStart)
-      return { from: fmtDate(weekStart), to: fmtDate(weekDates[6]) }
+      const weekDates = weekKeys(cursor)
+      return { from: weekDates[0], to: weekDates[6] }
     } else {
       return { from: cursor, to: cursor }
     }
@@ -184,9 +156,7 @@ export default function CalendarUnified() {
         const dep = (b.departure_date || '').slice(0, 10)
         if (!arr || !dep) return
         // Each night the guest stays, emit a chip. Skips departure day (checkout).
-        const start = new Date(arr), end = new Date(dep)
-        for (let d = new Date(start); d < end; d.setDate(d.getDate() + 1)) {
-          const key = d.toISOString().slice(0, 10)
+        for (let key = arr; key < dep; key = addDaysToKey(key, 1)) {
           push({
             source: 'room',
             id: String(b.id),
@@ -245,7 +215,7 @@ export default function CalendarUnified() {
     return map
   }, [visible, roomsQ.data, servicesQ.data, tasksQ.data])
 
-  const today = new Date().toISOString().slice(0, 10)
+  const today = todayKey()
   const monthLabel = new Date(year, mon - 1).toLocaleString('default', { month: 'long', year: 'numeric' })
   const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
@@ -289,8 +259,8 @@ export default function CalendarUnified() {
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
             style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[170px] text-center text-sm">
-            {view === 'day' ? new Date(cursor + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) :
-             view === 'week' ? `Week ${new Date(getMonday(new Date(cursor)) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${new Date(fmtDate(weekDatesFrom(getMonday(new Date(cursor)))[6]) + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}` :
+            {view === 'day' ? formatDayKey(cursor, 'en-US', { weekday: 'long', month: 'long', day: 'numeric' }) :
+             view === 'week' ? `Week ${formatDayKey(mondayOfKey(cursor), 'en-US', { month: 'short', day: 'numeric' })} — ${formatDayKey(addDaysToKey(mondayOfKey(cursor), 6), 'en-US', { month: 'short', day: 'numeric' })}` :
              monthLabel}
           </span>
           <button onClick={() => navigate(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
@@ -366,7 +336,7 @@ export default function CalendarUnified() {
                   }}>
                   <div className="flex items-center justify-between mb-1.5">
                     <span className={`text-[11px] font-bold ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>
-                      {new Date(d).getDate()}
+                      {dayNumber(d)}
                     </span>
                     {list.length > 0 && (
                       <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-white/[0.04] text-gray-400">
@@ -400,25 +370,24 @@ export default function CalendarUnified() {
 
       {/* Week view */}
       {view === 'week' && (() => {
-        const weekStart = getMonday(new Date(cursor))
-        const weekDates = weekDatesFrom(weekStart)
+        const weekDates = weekKeys(cursor)
         return (
           <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
             style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
             <div className="grid grid-cols-7 border-b border-white/[0.06]">
               {weekDates.map((d, i) => {
-                const isToday = fmtDate(d) === today
+                const isToday = d === today
                 return (
                   <div key={i} className="py-3 px-2 text-center border-r border-white/[0.04] last:border-r-0">
                     <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">{weekdays[i]}</div>
-                    <div className={`text-sm font-bold mt-1 ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>{d.getDate()}</div>
+                    <div className={`text-sm font-bold mt-1 ${isToday ? 'text-emerald-400' : 'text-gray-400'}`}>{dayNumber(d)}</div>
                   </div>
                 )
               })}
             </div>
             <div className="grid grid-cols-7">
               {weekDates.map((d, i) => {
-                const dateStr = fmtDate(d)
+                const dateStr = d
                 const isToday = dateStr === today
                 const list = byDay.get(dateStr) || []
                 return (
@@ -504,7 +473,7 @@ export default function CalendarUnified() {
             style={{ background: 'linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99))' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-lg font-bold text-white">{new Date(selectedDay).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
+                <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>
                 <p className="text-xs text-gray-500 mt-0.5">{selectedEvents.length} item{selectedEvents.length === 1 ? '' : 's'}</p>
               </div>
               <button onClick={() => setSelectedDay(null)} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500">
