@@ -16,7 +16,7 @@ export interface Bootstrap {
   venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
   staff: { name: string; role: string | null }
   loyalty: { programme_on: boolean; points_on_bookings: boolean }
-  readiness: { services: number; team: number; bookable: boolean }
+  readiness: { services: number; team: number; bookable: boolean; checklist: Checklist }
 }
 
 export interface MemberSummary { id: number; number: string; tier: string | null; points: number }
@@ -105,3 +105,47 @@ export interface CreateBody {
   customer_notes?: string
   staff_notes?: string
 }
+
+export type ChecklistKey = 'timezone' | 'service' | 'performer' | 'hours' | 'online' | 'first_appointment'
+export interface ChecklistStep { key: ChecklistKey; done: boolean; optional: boolean }
+export interface Checklist { steps: ChecklistStep[]; complete: boolean }
+
+/** A person on a service, or a service on a person, with the optional own duration and price. */
+export interface SetupLink { id: number; duration_minutes: number | null; price: number | null }
+export interface SetupService {
+  id: number; name: string; category_id: number | null; duration_minutes: number; buffer_after_minutes: number
+  price: number; currency: string; short_description: string | null; is_active: boolean; performers: SetupLink[]
+}
+export interface SetupCategory { id: number; name: string }
+/** One working window: `HH:MM` times, day_of_week 0 = Sunday (the server's own reading). */
+export interface HoursRow { day_of_week: number; start_time: string; end_time: string; is_active?: boolean }
+export interface TimeOffEntry { id: number; date: DateKey; start_time: string | null; end_time: string | null; reason: string | null }
+export interface SetupTeamMember {
+  id: number; name: string; title: string | null; email: string | null; phone: string | null; user_id: number | null
+  is_active: boolean; services: SetupLink[]; week: HoursRow[]; time_off: TimeOffEntry[]
+}
+export interface StaffAccount { user_id: number; name: string; email: string }
+export interface SetupSettings {
+  timezone: string; timezone_named: boolean; zones: string[]; currency: string
+  lead_minutes: number; slot_step: number; max_advance_days: number; allow_master_choice: boolean
+  points_on_bookings: boolean; programme_on: boolean; booking_link: string | null; embed_snippet: string | null
+  upcoming_appointments: number
+}
+export interface SetupPayload {
+  can_manage: boolean; my_team_member_id: number | null; services: SetupService[]; categories: SetupCategory[]
+  team: SetupTeamMember[]; staff_accounts: StaffAccount[]; settings: SetupSettings; checklist: Checklist
+}
+/** An upcoming appointment a setup change would leave outside the person's hours. */
+export interface Stranded { id: number; start: Wall; end: Wall; client: string; service: string | null; team_member: string | null }
+export interface Impact { affected: Stranded[]; total: number }
+
+export interface ServiceBody {
+  name: string; category_id: number | null; duration_minutes: number; buffer_after_minutes: number; price: number
+  short_description: string | null; is_active: boolean; performers: SetupLink[]
+}
+export interface TeamBody {
+  name: string; title: string | null; email: string | null; phone: string | null; user_id: number | null
+  is_active: boolean; services: SetupLink[]
+}
+export interface TimeOffBody { from: DateKey; to?: DateKey; start_time?: string; end_time?: string; reason?: string }
+export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'>>

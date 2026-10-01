@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
+import { editFirstWindow, scheduleSaveError } from '../lib/scheduleRows'
 import toast from 'react-hot-toast'
 import {
   Plus, Pencil, Trash2, X, Save, RefreshCw, Upload, UserCircle2,
@@ -340,7 +341,7 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
   }
 
   const updateSchedule = (dow: number, field: 'start_time' | 'end_time', value: string) => {
-    setSchedules(schedules.map(s => s.day_of_week === dow ? { ...s, [field]: value } : s))
+    setSchedules(editFirstWindow(schedules, dow, field, value))
   }
 
   const saveSchedules = async () => {
@@ -357,8 +358,8 @@ function ScheduleEditor({ master, onClose }: { master: Master; onClose: () => vo
       toast.success('Schedule saved')
       qc.invalidateQueries({ queryKey: ['service-masters'] })
       qc.invalidateQueries({ queryKey: ['service-master', master.id] })
-    } catch {
-      toast.error('Failed to save schedule')
+    } catch (error) {
+      toast.error(scheduleSaveError(error))
     } finally {
       setSavingSched(false)
     }

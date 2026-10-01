@@ -50,6 +50,16 @@ class CalendarEndpointTest extends TestCase
             ]);
     }
 
+    public function test_a_window_ending_at_midnight_ends_at_24_00_not_00_00(): void
+    {
+        // The scheduler reads 24:00:00 as the next day's 00:00; the grid must still see the end of the day.
+        DB::table('service_master_schedules')->where('service_master_id', $this->master->id)->update(['start_time' => '20:00:00', 'end_time' => '24:00:00']);
+
+        $this->calendar(['from' => '2026-10-06', 'to' => '2026-10-06'])
+            ->assertOk()
+            ->assertJsonPath('masters.0.days.2026-10-06.windows', [['start' => '20:00', 'end' => '24:00']]);
+    }
+
     public function test_appointments_come_as_wall_clock_summaries_in_time_order(): void
     {
         $late = $this->seedBooking(['start_at' => '2026-10-06 15:00:00', 'end_at' => '2026-10-06 15:45:00', 'staff_notes' => 'private']);

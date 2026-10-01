@@ -10,7 +10,8 @@ use Carbon\CarbonImmutable;
 /**
  * The list price of a service booking before any member discount: the
  * scheduler's reservation check (master, duration, price override) plus
- * the extras with their per-person maths and lead-time guard. The widget
+ * the extras with their per-person maths and lead-time guard (on the
+ * venue's clock). The widget
  * and the portal both price through here so they can never disagree.
  *
  * Deliberately not `final`: the portal controller's tests need a
@@ -44,7 +45,9 @@ class ServiceQuoteBuilder
             throw new SlotTakenException($e->getMessage(), 0, $e);
         }
         $start = CarbonImmutable::parse($slot['start']);
-        $lines = $this->extraLines($extras, $partySize, $start);
+        // The extras' notice counts from the venue's now: the stored start is
+        // the venue's wall clock, not UTC (the widget and the portal both pass it).
+        $lines = $this->extraLines($extras, $partySize, VenueNotice::instant($slot['start'], (int) app('current_organization_id')));
         $extrasTotal = round((float) array_sum(array_column($lines, 'line_total')), 2);
         $servicePrice = round((float) $slot['price'], 2);
 

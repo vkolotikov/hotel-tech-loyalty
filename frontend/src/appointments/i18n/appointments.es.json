@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Agenda" },
+  "nav": { "calendar": "Agenda", "setup": "Configuración" },
   "common": {
     "loading": "Cargando…",
     "error": "Algo ha salido mal. Inténtelo de nuevo.",
@@ -17,9 +17,7 @@
     "new_appointment": "Nueva cita",
     "switched_off": "El espacio de citas se ha desactivado para su organización. Sus reservas no han cambiado y siguen en la administración completa.",
     "subscription_required": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Un administrador puede restablecer el acceso en «Facturación» de la administración completa.",
-    "open_full_admin": "Abrir la administración completa",
-    "timezone_missing": "La zona horaria del local no está definida, por lo que «ahora» y «hoy» siguen el UTC. Defínala en la administración completa, en Ajustes → General → Zona horaria (por ejemplo, Europe/London).",
-    "not_bookable": "Todavía no se puede reservar nada: añada en la administración completa un servicio, un miembro del equipo que lo realice y su horario de trabajo."
+    "open_full_admin": "Abrir la administración completa"
   },
   "vocab": {
     "beauty": { "client": "Cliente", "clients": "Clientes", "team_member": "Estilista", "service": "Tratamiento" },
@@ -214,5 +212,134 @@
     "service_not_found": "Este servicio ya no existe.",
     "master_not_found": "Este miembro del equipo ya no existe.",
     "network": "El servidor no responde. Compruebe la conexión e inténtelo de nuevo: nada se reserva dos veces."
+  },
+  "setup": {
+    "title": "Configuración",
+    "load_failed": "No se pudo cargar la configuración. Inténtelo de nuevo.",
+    "read_only": "Solo un propietario o un gerente puede cambiar la configuración. Aquí puede verla y gestionar sus propias ausencias en Equipo.",
+    "save": "Guardar",
+    "add": "Añadir",
+    "remove": "Quitar",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "show_inactive": "Mostrar inactivos",
+    "none_yet": "Aún no hay nada.",
+    "invalid": "Revise lo que ha introducido:",
+    "tabs": {
+      "services": "Servicios",
+      "team": "Equipo",
+      "settings": "Ajustes"
+    },
+    "checklist": {
+      "title": "Listo para recibir reservas",
+      "progress": "{{done}} de {{total}} hechos",
+      "optional": "Opcional",
+      "done": "Hecho",
+      "go": "Ir",
+      "banner": "La configuración no está terminada: {{done}} de {{total}} pasos hechos.",
+      "open": "Continuar la configuración"
+    },
+    "step": {
+      "timezone": "Definir la zona horaria del local",
+      "service": "Añadir un servicio",
+      "performer": "Elegir quién lo realiza",
+      "hours": "Definir su horario semanal",
+      "online": "Compartir el enlace de reserva en línea",
+      "first_appointment": "Reservar la primera cita"
+    },
+    "services": {
+      "search": "Buscar servicios",
+      "new": "Nuevo servicio",
+      "edit": "Editar servicio",
+      "no_category": "Otros",
+      "name": "Nombre",
+      "category": "Categoría",
+      "no_category_option": "Sin categoría",
+      "new_category": "Nueva categoría…",
+      "category_name": "Nombre de la nueva categoría",
+      "duration": "Duración (minutos)",
+      "buffer": "Pausa después (minutos)",
+      "price": "Precio",
+      "short_description": "Descripción breve",
+      "performers": "Quién lo realiza",
+      "own_duration": "Duración propia",
+      "own_price": "Precio propio",
+      "minutes": "{{count}} min",
+      "full_admin": "Las fotos, la galería y la descripción completa se editan en el panel completo.",
+      "full_admin_link": "Abrir en el panel completo"
+    },
+    "team": {
+      "new": "Nuevo miembro del equipo",
+      "edit": "Editar miembro",
+      "profile": "Perfil",
+      "name": "Nombre",
+      "title": "Cargo",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "sign_in": "Inicia sesión como",
+      "no_sign_in": "Sin vincular",
+      "sign_in_hint": "Vincular un inicio de sesión permite a esta persona añadir sus propias ausencias.",
+      "services": "Servicios que realiza",
+      "hours": "Horario semanal",
+      "time_off": "Ausencias",
+      "my_time_off": "Mis ausencias",
+      "not_linked": "Su inicio de sesión aún no está vinculado a un miembro del equipo. Un gerente puede vincularlo en Equipo.",
+      "save_profile": "Guardar perfil",
+      "save_hours": "Guardar horario",
+      "services_count": "Servicios: {{count}}"
+    },
+    "hours": {
+      "off": "Libre",
+      "add_window": "Añadir horario",
+      "from": "Desde",
+      "to": "Hasta",
+      "copy_to_weekdays": "Copiar de lunes a viernes",
+      "problem": {
+        "format": "Escriba las horas como HH:MM, por ejemplo 09:30.",
+        "order": "El final debe ser posterior al inicio.",
+        "overlap": "Estos horarios se solapan.",
+        "too_many": "Como máximo 6 franjas al día."
+      }
+    },
+    "time_off": {
+      "none": "No hay ausencias previstas.",
+      "add": "Añadir ausencia",
+      "from": "Desde",
+      "to": "Hasta",
+      "all_day": "Todo el día",
+      "start": "Inicio",
+      "end": "Fin",
+      "reason": "Motivo"
+    },
+    "settings": {
+      "venue": "Local",
+      "timezone": "Zona horaria",
+      "timezone_note": "Cambiar la zona horaria no mueve las citas: {{count}} citas próximas conservan su hora.",
+      "currency": "Moneda",
+      "currency_note": "Cambiar la moneda solo cambia cómo se muestran los precios; no los convierte.",
+      "currency_confirm": "{{services}} servicios y {{extras}} extras se mostrarán en {{currency}}. Los importes no cambian. ¿Cambiar la moneda?",
+      "online": "Reserva en línea",
+      "lead": "Antelación mínima (minutos)",
+      "step": "Horas de inicio cada",
+      "step_minutes": "{{count}} min",
+      "ahead": "Reservable hasta (días de antelación)",
+      "choose_person": "Los clientes pueden elegir a la persona",
+      "loyalty": "Fidelización",
+      "points": "Dar puntos cuando se completa una cita",
+      "link": "Página de reserva",
+      "snippet": "Código para insertar en la web",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "no_link": "Esta organización aún no tiene enlace de reserva.",
+      "saved": "Guardado."
+    },
+    "conflict": {
+      "title": "Citas afectadas: {{count}}",
+      "intro": "Estas citas quedan fuera de este cambio. Siguen reservadas: muévalas o cancélelas desde el calendario si hace falta. No se avisa a nadie.",
+      "more": "…y {{count}} más.",
+      "save_anyway": "Guardar de todos modos",
+      "back": "Volver",
+      "open": "Abrir"
+    }
   }
 }

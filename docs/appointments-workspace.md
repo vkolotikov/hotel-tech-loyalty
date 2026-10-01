@@ -39,10 +39,47 @@ award made while it was on.
 
 ## What it needs before it is useful
 
-Set up in the full admin (the workspace has no screens for these yet): at least one active service, a team member
-who performs it, that team member's weekly working hours, and the venue's time zone as a **name**
-(Settings → General → Timezone, e.g. `Europe/London`; `UTC`, `EET` or `+03:00` leave the workspace on UTC and it
-says so).
+At least one active service, a team member who performs it, that team member's weekly working hours, and the
+venue's time zone as a **name** (e.g. `Europe/London`; `UTC`, `EET` or `+03:00` leave the workspace on UTC). The
+workspace's **Setup** walks a new venue through exactly these, as a checklist that also shows (optionally) sharing
+the online booking link and the first appointment. Until it is done, the calendar shows one banner leading to Setup.
+The full admin's own screens still edit the same records.
+
+## Setup (Part B, 2026-10-01)
+
+**Who may change what.** Owners and managers (`staff.role` `super_admin` or `manager` in this organisation) change
+services, team, hours, time off and settings. Everyone else sees Setup read-only and may add or remove time off
+only for the team member linked to their own sign-in (Team → Profile → "Signs in as"). The server decides
+(`App\Services\Appointments\Setup\SetupAccess`) and answers `403 not_allowed`; the screens only mirror it.
+
+**Endpoints** (`/v1/admin/appointments/setup/…`, behind the workspace switch): `GET setup` (everything in one read,
+including the checklist), `POST setup/services`, `PATCH setup/services/{id}`, `POST setup/categories`,
+`POST setup/team`, `PATCH setup/team/{id}`, `PUT setup/team/{id}/hours`, `POST` / `DELETE setup/team/{id}/time-off`,
+`PATCH setup/settings`, `POST setup/checklist/link-copied`.
+
+**Warn, list, still allow.** Every save that can leave upcoming appointments outside someone's hours (a new week,
+time off, deactivating a person or a service, taking a service off a person) takes `?dry_run=1`. The workspace asks
+that first and shows the appointments before saving; nothing is moved, cancelled or messaged, and the save answers
+with the same list. `App\Services\Booking\Setup\AppointmentImpact` decides what counts.
+
+**Where each setting lives.** Time zone `hotel_timezone`; currency `services_currency` and
+`organizations.currency`, and every service's and extra's own `currency` (relabelled, never converted; bookings keep
+theirs); notice `services_lead_minutes`; slot step `services_slot_step`; how far ahead `services_max_advance_days`;
+"clients may choose the person" `services_allow_master_choice`; points `points_on_bookings`; the checklist's "link
+shared" mark `appointments_link_copied_at`. The widget, the portal and the full admin read the same keys.
+
+**Never deleted.** The workspace deactivates services and team members; history stays. Photos, gallery, tags and
+the long description stay in the full admin and are never touched by a workspace save.
+
+**Hours.** One rule for both interfaces (`App\Services\Booking\Setup\WeeklyHours`): `HH:MM` from 00:00 to 24:00,
+the end after the start, no overlapping windows in a day, at most six a day, no overnight windows. The full admin's
+team save refuses anything else with a 422. A workspace save writes the whole week and drops rows the full admin
+had switched off (they had no effect). When a venue says "the hours are wrong", read `service_master_schedules`
+(`day_of_week` 0 = Sunday) and `service_master_time_off` (one row per day; no times = all day).
+
+**The widgets' notice.** The public and chat widgets offer today's slots from the venue's own now
+(`App\Services\Booking\VenueNotice`, the portal's method); before, east of UTC they offered times already past. The
+extras' notice counts from the venue's now in `ServiceQuoteBuilder`, which corrects the portal's extras check too.
 
 ## What each action really does
 
@@ -112,17 +149,16 @@ frontend tests render to a string.
 
 ## Where it differs from the full admin's screens
 
-- The workspace shows every time in the **venue's** zone. The full admin's service calendar draws the same stored
-  time in the browser's zone, so on a computer set to another zone the two show different hours for one booking.
-  The stored value is the same; nothing is converted on save.
+- Both interfaces show every appointment time on the **venue's** clock (the full admin's service-booking screens
+  since Part A, `frontend/src/lib/venueTime.ts`). Nothing is converted on save.
 - A booking typed into the full admin with only a name has no client record: the workspace shows it, says it is
   not linked, and client search does not find that person.
 
 ## What this milestone does not do
 
-Services, team, hours, loyalty settings, online-booking controls and insights inside the workspace; onboarding;
-drag to move; reopening a completed visit; staff refunds and a real desk-payment record; any client message or
-reminder for a staff action; member price or coupons at a staff booking; extras; rooms and resources (the engine
+Insights; photos for services and team members (full admin); service extras and category colours and order
+(full admin); drag to move; reopening a completed visit; staff refunds and a real desk-payment record; any client
+message or reminder for a staff action; member price or coupons at a staff booking; rooms and resources (the engine
 has none for services).
 
 ## Before it is sold on its own
@@ -130,7 +166,8 @@ has none for services).
 1. **Server-side lock-down.** An appointments-only organisation can still call the rest of the admin API. It needs
    an allowlist for such organisations and an entitlement in the billing catalogue (a separate repository).
 2. **Roles.** Any staff role reaches settings, team and billing routes; the subscription check is skipped for an
-   organisation's owner.
+   organisation's owner. The workspace's own Setup checks roles on the server, but the full admin's setup endpoints
+   (`/v1/admin/services`, `/v1/admin/service-masters`, Settings) still accept any staff user (Part C).
 3. The list under "What this milestone does not do", as far as the customer needs it.
 
 ## Deploying it
@@ -144,4 +181,10 @@ Merging to `main` is a production deploy; it needs the owner's explicit yes and 
 - the full admin's service-booking audit rows gain their actor and their booking;
 - sign-in and `/auth/me` carry a `workspaces` key (`landing`, `has_services`) for staff of every organisation that
   has the workspace;
-- the full admin's menu item and button into the workspace, where something can be booked.
+- the full admin's menu item and button into the workspace, where something can be booked;
+- (Part B) Setup in the workspace for every organisation's staff, editable by managers;
+- (Part B) the full admin's team save refuses malformed hours (422), and its service and team saves accept only
+  this organisation's service, team member and category ids;
+- (Part B) the full admin's booking settings show a 15-minute slot step when none is stored (display only);
+- (Part B) the public and chat widgets offer today's slots from the venue's own now, and an extra's notice counts
+  from it in the widget and the portal.

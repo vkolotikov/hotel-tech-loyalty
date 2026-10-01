@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Calendar" },
+  "nav": { "calendar": "Calendar", "setup": "Setup" },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
@@ -17,9 +17,7 @@
     "new_appointment": "New appointment",
     "switched_off": "The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.",
     "subscription_required": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.",
-    "open_full_admin": "Open the full admin",
-    "timezone_missing": "The venue's time zone is not set, so \"now\" and \"today\" follow UTC. Set it in the full admin under Settings → General → Timezone (for example Europe/London).",
-    "not_bookable": "Nothing can be booked yet: add a service, a team member who performs it, and their working hours in the full admin."
+    "open_full_admin": "Open the full admin"
   },
   "vocab": {
     "beauty": { "client": "Client", "clients": "Clients", "team_member": "Stylist", "service": "Treatment" },
@@ -214,5 +212,134 @@
     "service_not_found": "This service no longer exists.",
     "master_not_found": "This team member no longer exists.",
     "network": "No answer from the server. Check the connection and try again — nothing is booked twice."
+  },
+  "setup": {
+    "title": "Setup",
+    "load_failed": "Setup could not be loaded. Please try again.",
+    "read_only": "Only an owner or a manager can change setup. You can see it here and manage your own time off under Team.",
+    "save": "Save",
+    "add": "Add",
+    "remove": "Remove",
+    "active": "Active",
+    "inactive": "Inactive",
+    "show_inactive": "Show inactive",
+    "none_yet": "Nothing here yet.",
+    "invalid": "Please check what you entered:",
+    "tabs": {
+      "services": "Services",
+      "team": "Team",
+      "settings": "Settings"
+    },
+    "checklist": {
+      "title": "Get ready to take bookings",
+      "progress": "{{done}} of {{total}} done",
+      "optional": "Optional",
+      "done": "Done",
+      "go": "Go",
+      "banner": "Setup is not finished: {{done}} of {{total}} steps done.",
+      "open": "Continue setup"
+    },
+    "step": {
+      "timezone": "Set the venue's time zone",
+      "service": "Add a service",
+      "performer": "Choose who performs it",
+      "hours": "Set their weekly hours",
+      "online": "Share your online booking link",
+      "first_appointment": "Book the first appointment"
+    },
+    "services": {
+      "search": "Search services",
+      "new": "New service",
+      "edit": "Edit service",
+      "no_category": "Other",
+      "name": "Name",
+      "category": "Category",
+      "no_category_option": "No category",
+      "new_category": "New category…",
+      "category_name": "New category name",
+      "duration": "Duration (minutes)",
+      "buffer": "Break after (minutes)",
+      "price": "Price",
+      "short_description": "Short description",
+      "performers": "Who performs it",
+      "own_duration": "Own minutes",
+      "own_price": "Own price",
+      "minutes": "{{count}} min",
+      "full_admin": "Photos, gallery and the long description are edited in the full admin.",
+      "full_admin_link": "Open in the full admin"
+    },
+    "team": {
+      "new": "New team member",
+      "edit": "Edit team member",
+      "profile": "Profile",
+      "name": "Name",
+      "title": "Title",
+      "email": "Email",
+      "phone": "Phone",
+      "sign_in": "Signs in as",
+      "no_sign_in": "Not linked",
+      "sign_in_hint": "Linking a sign-in lets this person add their own time off.",
+      "services": "Services they perform",
+      "hours": "Weekly hours",
+      "time_off": "Time off",
+      "my_time_off": "My time off",
+      "not_linked": "Your sign-in is not linked to a team member yet. A manager can link it under Team.",
+      "save_profile": "Save profile",
+      "save_hours": "Save hours",
+      "services_count": "Services: {{count}}"
+    },
+    "hours": {
+      "off": "Off",
+      "add_window": "Add hours",
+      "from": "From",
+      "to": "To",
+      "copy_to_weekdays": "Copy to Monday–Friday",
+      "problem": {
+        "format": "Write times as HH:MM, for example 09:30.",
+        "order": "The end must be after the start.",
+        "overlap": "These hours overlap.",
+        "too_many": "At most 6 time ranges a day."
+      }
+    },
+    "time_off": {
+      "none": "No time off planned.",
+      "add": "Add time off",
+      "from": "From",
+      "to": "To",
+      "all_day": "All day",
+      "start": "Starts",
+      "end": "Ends",
+      "reason": "Reason"
+    },
+    "settings": {
+      "venue": "Venue",
+      "timezone": "Time zone",
+      "timezone_note": "Changing the time zone does not move appointments: {{count}} upcoming appointments keep their clock times.",
+      "currency": "Currency",
+      "currency_note": "Changing the currency relabels prices; it never converts them.",
+      "currency_confirm": "{{services}} services and {{extras}} extras will show {{currency}}. The amounts stay the same. Change the currency?",
+      "online": "Online booking",
+      "lead": "Minimum notice (minutes)",
+      "step": "Start times every",
+      "step_minutes": "{{count}} min",
+      "ahead": "Bookable up to (days ahead)",
+      "choose_person": "Clients may choose the person",
+      "loyalty": "Loyalty",
+      "points": "Award points when an appointment is completed",
+      "link": "Booking page",
+      "snippet": "Website embed code",
+      "copy": "Copy",
+      "copied": "Copied",
+      "no_link": "This organisation has no booking link yet.",
+      "saved": "Saved."
+    },
+    "conflict": {
+      "title": "Appointments affected: {{count}}",
+      "intro": "These appointments fall outside this change. They stay booked: move or cancel them from the calendar if needed. Nobody is messaged.",
+      "more": "…and {{count}} more.",
+      "save_anyway": "Save anyway",
+      "back": "Back",
+      "open": "Open"
+    }
   }
 }

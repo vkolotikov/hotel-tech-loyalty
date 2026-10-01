@@ -136,6 +136,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   use `frontend/src/appointments/lib/wallClock.ts` and, on the server, `App\Services\Appointments\VenueClock`.
   The full admin's service-booking screens (list, calendars, dashboard) read the same times through
   `frontend/src/lib/venueTime.ts`, so both interfaces show one booking at one time.
+- Setup saves go through `App\Services\Booking\Setup\*` and the full admin shares `OwnRows` and `WeeklyHours`;
+  a change that can strand appointments supports `?dry_run=1` and is previewed in the workspace (owner decision:
+  warn, list, still allow). Who may act is `App\Services\Appointments\Setup\SetupAccess`, on the server.
 - The workspace computes no availability, price, points or consequence of its own: slots come from
   `ServiceSchedulingService`, points from `BookingPointsService`, and what an action will do from
   `AppointmentActions`. A new rule goes into the shared service, not into a workspace controller or component.

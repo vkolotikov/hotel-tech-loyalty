@@ -23,7 +23,7 @@ const boot: Bootstrap = {
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-06', currency: 'GBP' },
   staff: { name: 'Vitalij K', role: 'manager' },
   loyalty: { programme_on: true, points_on_bookings: true },
-  readiness: { services: 5, team: 4, bookable: true },
+  readiness: { services: 5, team: 4, bookable: true, checklist: { steps: [], complete: true } },
 }
 
 function page() {

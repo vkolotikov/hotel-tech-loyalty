@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Kalender" },
+  "nav": { "calendar": "Kalender", "setup": "Einrichtung" },
   "common": {
     "loading": "Wird geladen…",
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
@@ -17,9 +17,7 @@
     "new_appointment": "Neuer Termin",
     "switched_off": "Der Termin-Arbeitsbereich wurde für Ihre Organisation abgeschaltet. Ihre Buchungen sind unverändert und bleiben in der vollständigen Verwaltung.",
     "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Ein Administrator kann den Zugang unter „Abrechnung“ in der vollständigen Verwaltung wiederherstellen.",
-    "open_full_admin": "Vollständige Verwaltung öffnen",
-    "timezone_missing": "Die Zeitzone des Betriebs ist nicht festgelegt, daher richten sich „jetzt“ und „heute“ nach UTC. Legen Sie sie in der vollständigen Verwaltung unter Einstellungen → Allgemein → Zeitzone fest (zum Beispiel Europe/London).",
-    "not_bookable": "Es kann noch nichts gebucht werden: Legen Sie in der vollständigen Verwaltung eine Leistung, ein Teammitglied, das sie ausführt, und dessen Arbeitszeiten an."
+    "open_full_admin": "Vollständige Verwaltung öffnen"
   },
   "vocab": {
     "beauty": { "client": "Kunde", "clients": "Kunden", "team_member": "Stylist(in)", "service": "Behandlung" },
@@ -214,5 +212,134 @@
     "service_not_found": "Diese Leistung gibt es nicht mehr.",
     "master_not_found": "Dieses Teammitglied gibt es nicht mehr.",
     "network": "Keine Antwort vom Server. Prüfen Sie die Verbindung und versuchen Sie es erneut — es wird nichts doppelt gebucht."
+  },
+  "setup": {
+    "title": "Einrichtung",
+    "load_failed": "Die Einrichtung konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
+    "read_only": "Nur Inhaber oder Manager können die Einrichtung ändern. Hier können Sie sie ansehen und unter Team Ihre eigene Abwesenheit eintragen.",
+    "save": "Speichern",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "show_inactive": "Inaktive anzeigen",
+    "none_yet": "Noch nichts vorhanden.",
+    "invalid": "Bitte prüfen Sie Ihre Eingaben:",
+    "tabs": {
+      "services": "Leistungen",
+      "team": "Team",
+      "settings": "Einstellungen"
+    },
+    "checklist": {
+      "title": "Bereit für Buchungen",
+      "progress": "{{done}} von {{total}} erledigt",
+      "optional": "Optional",
+      "done": "Erledigt",
+      "go": "Los",
+      "banner": "Die Einrichtung ist nicht abgeschlossen: {{done}} von {{total}} Schritten erledigt.",
+      "open": "Einrichtung fortsetzen"
+    },
+    "step": {
+      "timezone": "Zeitzone des Standorts festlegen",
+      "service": "Eine Leistung anlegen",
+      "performer": "Festlegen, wer sie ausführt",
+      "hours": "Wöchentliche Arbeitszeiten festlegen",
+      "online": "Online-Buchungslink teilen",
+      "first_appointment": "Den ersten Termin buchen"
+    },
+    "services": {
+      "search": "Leistungen suchen",
+      "new": "Neue Leistung",
+      "edit": "Leistung bearbeiten",
+      "no_category": "Sonstige",
+      "name": "Name",
+      "category": "Kategorie",
+      "no_category_option": "Keine Kategorie",
+      "new_category": "Neue Kategorie…",
+      "category_name": "Name der neuen Kategorie",
+      "duration": "Dauer (Minuten)",
+      "buffer": "Pause danach (Minuten)",
+      "price": "Preis",
+      "short_description": "Kurzbeschreibung",
+      "performers": "Wer sie ausführt",
+      "own_duration": "Eigene Dauer",
+      "own_price": "Eigener Preis",
+      "minutes": "{{count}} Min.",
+      "full_admin": "Fotos, Galerie und ausführliche Beschreibung werden im vollständigen Admin bearbeitet.",
+      "full_admin_link": "Im vollständigen Admin öffnen"
+    },
+    "team": {
+      "new": "Neues Teammitglied",
+      "edit": "Teammitglied bearbeiten",
+      "profile": "Profil",
+      "name": "Name",
+      "title": "Funktion",
+      "email": "E-Mail",
+      "phone": "Telefon",
+      "sign_in": "Meldet sich an als",
+      "no_sign_in": "Nicht verknüpft",
+      "sign_in_hint": "Mit einer verknüpften Anmeldung kann diese Person ihre Abwesenheit selbst eintragen.",
+      "services": "Ausgeführte Leistungen",
+      "hours": "Wöchentliche Arbeitszeiten",
+      "time_off": "Abwesenheit",
+      "my_time_off": "Meine Abwesenheit",
+      "not_linked": "Ihre Anmeldung ist noch keinem Teammitglied zugeordnet. Ein Manager kann sie unter Team verknüpfen.",
+      "save_profile": "Profil speichern",
+      "save_hours": "Arbeitszeiten speichern",
+      "services_count": "Leistungen: {{count}}"
+    },
+    "hours": {
+      "off": "Frei",
+      "add_window": "Zeiten hinzufügen",
+      "from": "Von",
+      "to": "Bis",
+      "copy_to_weekdays": "Auf Montag–Freitag übertragen",
+      "problem": {
+        "format": "Geben Sie Zeiten als HH:MM ein, zum Beispiel 09:30.",
+        "order": "Das Ende muss nach dem Beginn liegen.",
+        "overlap": "Diese Zeiten überschneiden sich.",
+        "too_many": "Höchstens 6 Zeitfenster pro Tag."
+      }
+    },
+    "time_off": {
+      "none": "Keine Abwesenheit geplant.",
+      "add": "Abwesenheit hinzufügen",
+      "from": "Von",
+      "to": "Bis",
+      "all_day": "Ganztägig",
+      "start": "Beginn",
+      "end": "Ende",
+      "reason": "Grund"
+    },
+    "settings": {
+      "venue": "Standort",
+      "timezone": "Zeitzone",
+      "timezone_note": "Eine andere Zeitzone verschiebt keine Termine: {{count}} anstehende Termine behalten ihre Uhrzeit.",
+      "currency": "Währung",
+      "currency_note": "Eine andere Währung ändert nur die Bezeichnung der Preise, sie rechnet nicht um.",
+      "currency_confirm": "{{services}} Leistungen und {{extras}} Extras werden in {{currency}} angezeigt. Die Beträge bleiben gleich. Währung ändern?",
+      "online": "Online-Buchung",
+      "lead": "Mindestvorlauf (Minuten)",
+      "step": "Startzeiten alle",
+      "step_minutes": "{{count}} Min.",
+      "ahead": "Buchbar bis (Tage im Voraus)",
+      "choose_person": "Kunden dürfen die Person wählen",
+      "loyalty": "Treueprogramm",
+      "points": "Punkte für abgeschlossene Termine vergeben",
+      "link": "Buchungsseite",
+      "snippet": "Einbettungscode für die Website",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "no_link": "Diese Organisation hat noch keinen Buchungslink.",
+      "saved": "Gespeichert."
+    },
+    "conflict": {
+      "title": "Betroffene Termine: {{count}}",
+      "intro": "Diese Termine liegen außerhalb dieser Änderung. Sie bleiben gebucht: Verschieben oder stornieren Sie sie bei Bedarf im Kalender. Niemand wird benachrichtigt.",
+      "more": "…und {{count}} weitere.",
+      "save_anyway": "Trotzdem speichern",
+      "back": "Zurück",
+      "open": "Öffnen"
+    }
   }
 }

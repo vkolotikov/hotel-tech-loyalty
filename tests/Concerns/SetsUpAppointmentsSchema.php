@@ -56,6 +56,12 @@ trait SetsUpAppointmentsSchema
         $this->addColumnsIfMissing('service_masters', [
             'title'      => fn (Blueprint $t) => $t->string('title')->nullable(),
             'sort_order' => fn (Blueprint $t) => $t->integer('sort_order')->default(0),
+            'user_id'    => fn (Blueprint $t) => $t->unsignedBigInteger('user_id')->nullable(),
+            'email'      => fn (Blueprint $t) => $t->string('email')->nullable(),
+            'phone'      => fn (Blueprint $t) => $t->string('phone', 40)->nullable(),
+        ]);
+        $this->addColumnsIfMissing('service_categories', [
+            'slug' => fn (Blueprint $t) => $t->string('slug')->nullable(),
         ]);
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));

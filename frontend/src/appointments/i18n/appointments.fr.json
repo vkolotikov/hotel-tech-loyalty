@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Agenda" },
+  "nav": { "calendar": "Agenda", "setup": "Configuration" },
   "common": {
     "loading": "Chargement…",
     "error": "Une erreur s'est produite. Veuillez réessayer.",
@@ -17,9 +17,7 @@
     "new_appointment": "Nouveau rendez-vous",
     "switched_off": "L'espace de rendez-vous a été désactivé pour votre organisation. Vos réservations sont inchangées et restent dans l'administration complète.",
     "subscription_required": "L'abonnement de votre organisation n'est pas actif : l'espace ne peut pas s'ouvrir. Vos réservations sont inchangées. Un administrateur peut rétablir l'accès dans « Facturation » de l'administration complète.",
-    "open_full_admin": "Ouvrir l'administration complète",
-    "timezone_missing": "Le fuseau horaire de l'établissement n'est pas défini : « maintenant » et « aujourd'hui » suivent donc l'UTC. Définissez-le dans l'administration complète, sous Paramètres → Général → Fuseau horaire (par exemple Europe/London).",
-    "not_bookable": "Rien ne peut encore être réservé : ajoutez dans l'administration complète un service, un membre de l'équipe qui le réalise et ses horaires de travail."
+    "open_full_admin": "Ouvrir l'administration complète"
   },
   "vocab": {
     "beauty": { "client": "Client", "clients": "Clients", "team_member": "Styliste", "service": "Soin" },
@@ -214,5 +212,134 @@
     "service_not_found": "Ce service n'existe plus.",
     "master_not_found": "Ce membre de l'équipe n'existe plus.",
     "network": "Aucune réponse du serveur. Vérifiez la connexion et réessayez — rien n'est réservé deux fois."
+  },
+  "setup": {
+    "title": "Configuration",
+    "load_failed": "La configuration n’a pas pu être chargée. Veuillez réessayer.",
+    "read_only": "Seuls un propriétaire ou un manager peuvent modifier la configuration. Vous pouvez la consulter ici et gérer vos propres absences dans Équipe.",
+    "save": "Enregistrer",
+    "add": "Ajouter",
+    "remove": "Supprimer",
+    "active": "Actif",
+    "inactive": "Inactif",
+    "show_inactive": "Afficher les inactifs",
+    "none_yet": "Rien pour l’instant.",
+    "invalid": "Veuillez vérifier votre saisie :",
+    "tabs": {
+      "services": "Prestations",
+      "team": "Équipe",
+      "settings": "Paramètres"
+    },
+    "checklist": {
+      "title": "Prêt à prendre des rendez-vous",
+      "progress": "{{done}} sur {{total}} terminés",
+      "optional": "Facultatif",
+      "done": "Terminé",
+      "go": "Y aller",
+      "banner": "La configuration n’est pas terminée : {{done}} étapes sur {{total}}.",
+      "open": "Continuer la configuration"
+    },
+    "step": {
+      "timezone": "Définir le fuseau horaire de l’établissement",
+      "service": "Ajouter une prestation",
+      "performer": "Choisir qui la réalise",
+      "hours": "Définir les horaires hebdomadaires",
+      "online": "Partager le lien de réservation en ligne",
+      "first_appointment": "Réserver le premier rendez-vous"
+    },
+    "services": {
+      "search": "Rechercher une prestation",
+      "new": "Nouvelle prestation",
+      "edit": "Modifier la prestation",
+      "no_category": "Autres",
+      "name": "Nom",
+      "category": "Catégorie",
+      "no_category_option": "Sans catégorie",
+      "new_category": "Nouvelle catégorie…",
+      "category_name": "Nom de la nouvelle catégorie",
+      "duration": "Durée (minutes)",
+      "buffer": "Pause après (minutes)",
+      "price": "Prix",
+      "short_description": "Description courte",
+      "performers": "Qui la réalise",
+      "own_duration": "Durée propre",
+      "own_price": "Prix propre",
+      "minutes": "{{count}} min",
+      "full_admin": "Les photos, la galerie et la description complète se modifient dans l’administration complète.",
+      "full_admin_link": "Ouvrir dans l’administration complète"
+    },
+    "team": {
+      "new": "Nouveau membre de l’équipe",
+      "edit": "Modifier le membre",
+      "profile": "Profil",
+      "name": "Nom",
+      "title": "Fonction",
+      "email": "E-mail",
+      "phone": "Téléphone",
+      "sign_in": "Se connecte en tant que",
+      "no_sign_in": "Non associé",
+      "sign_in_hint": "Associer une connexion permet à cette personne d’ajouter elle-même ses absences.",
+      "services": "Prestations réalisées",
+      "hours": "Horaires hebdomadaires",
+      "time_off": "Absences",
+      "my_time_off": "Mes absences",
+      "not_linked": "Votre connexion n’est pas encore associée à un membre de l’équipe. Un manager peut l’associer dans Équipe.",
+      "save_profile": "Enregistrer le profil",
+      "save_hours": "Enregistrer les horaires",
+      "services_count": "Prestations : {{count}}"
+    },
+    "hours": {
+      "off": "Repos",
+      "add_window": "Ajouter des horaires",
+      "from": "De",
+      "to": "À",
+      "copy_to_weekdays": "Copier du lundi au vendredi",
+      "problem": {
+        "format": "Saisissez les heures au format HH:MM, par exemple 09:30.",
+        "order": "La fin doit être après le début.",
+        "overlap": "Ces horaires se chevauchent.",
+        "too_many": "6 plages horaires par jour au maximum."
+      }
+    },
+    "time_off": {
+      "none": "Aucune absence prévue.",
+      "add": "Ajouter une absence",
+      "from": "Du",
+      "to": "Au",
+      "all_day": "Toute la journée",
+      "start": "Début",
+      "end": "Fin",
+      "reason": "Motif"
+    },
+    "settings": {
+      "venue": "Établissement",
+      "timezone": "Fuseau horaire",
+      "timezone_note": "Changer de fuseau horaire ne déplace pas les rendez-vous : {{count}} rendez-vous à venir gardent leur heure.",
+      "currency": "Devise",
+      "currency_note": "Changer de devise renomme les prix sans les convertir.",
+      "currency_confirm": "{{services}} prestations et {{extras}} suppléments seront affichés en {{currency}}. Les montants restent identiques. Changer de devise ?",
+      "online": "Réservation en ligne",
+      "lead": "Délai minimum (minutes)",
+      "step": "Créneaux toutes les",
+      "step_minutes": "{{count}} min",
+      "ahead": "Réservable jusqu’à (jours à l’avance)",
+      "choose_person": "Les clients peuvent choisir la personne",
+      "loyalty": "Fidélité",
+      "points": "Attribuer des points quand un rendez-vous est terminé",
+      "link": "Page de réservation",
+      "snippet": "Code d’intégration pour le site",
+      "copy": "Copier",
+      "copied": "Copié",
+      "no_link": "Cette organisation n’a pas encore de lien de réservation.",
+      "saved": "Enregistré."
+    },
+    "conflict": {
+      "title": "Rendez-vous concernés : {{count}}",
+      "intro": "Ces rendez-vous sortent du cadre de cette modification. Ils restent réservés : déplacez-les ou annulez-les depuis le calendrier si besoin. Personne n’est prévenu.",
+      "more": "…et {{count}} de plus.",
+      "save_anyway": "Enregistrer quand même",
+      "back": "Retour",
+      "open": "Ouvrir"
+    }
   }
 }

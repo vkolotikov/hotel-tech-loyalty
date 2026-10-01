@@ -518,7 +518,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-1"><Clock size={10} /> Slot Step</label>
-              <select value={getVal('services_slot_step') || '30'}
+              <select value={getVal('services_slot_step') || '15'}
                 onChange={e => handleChange('services_slot_step', e.target.value)}
                 className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: 'dark' }}>
                 {[10, 15, 20, 30, 45, 60].map(v =>

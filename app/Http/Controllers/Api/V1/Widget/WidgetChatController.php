@@ -2535,11 +2535,10 @@ class WidgetChatController extends Controller
                     $stepMinutes = (int) (\App\Models\HotelSetting::withoutGlobalScopes()
                         ->where('organization_id', $orgId)->where('key', 'services_slot_step')->value('value') ?: 15);
 
-                    $slots = $scheduler->availableSlots(
-                        $service,
-                        $date,
-                        isset($args['master_id']) ? (int) $args['master_id'] : null,
-                        $stepMinutes,
+                    // The notice counts from the venue's own now (see VenueNotice).
+                    $slots = \App\Services\Booking\VenueNotice::filter(
+                        $scheduler->availableSlots($service, $date, isset($args['master_id']) ? (int) $args['master_id'] : null, $stepMinutes, \App\Services\Booking\VenueNotice::SCHEDULER_LEAD_OFF),
+                        $orgId,
                         $leadMinutes,
                     );
 

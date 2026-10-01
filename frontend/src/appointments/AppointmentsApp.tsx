@@ -7,6 +7,7 @@ import { CalendarPage } from './calendar/CalendarPage'
 import { ClientsPage } from './clients/ClientsPage'
 import { ClientProfile } from './clients/ClientProfile'
 import { loginPath } from './lib/landing'
+import { SetupPage } from './setup/SetupPage'
 
 registerAppointmentsLocales()
 
@@ -30,6 +31,7 @@ export function AppointmentsApp() {
           <Route index element={<CalendarPage />} />
           <Route path="clients" element={<ClientsPage />} />
           <Route path="clients/:id" element={<ClientProfile />} />
+          <Route path="setup" element={<SetupPage />} />
           <Route path="*" element={<Navigate to="/appointments" replace />} />
         </Routes>
       </AppointmentsShell>

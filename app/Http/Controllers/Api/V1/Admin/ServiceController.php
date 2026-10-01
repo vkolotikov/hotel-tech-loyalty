@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Service;
 use App\Models\ServiceMaster;
+use App\Services\Booking\Setup\OwnRows;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class ServiceController extends Controller
         }
 
         $data = $request->validate([
-            'category_id'          => 'nullable|integer|exists:service_categories,id',
+            'category_id'          => ['nullable', 'integer', OwnRows::rule('service_categories')],
             'name'                 => 'required|string|max:200',
             'description'          => 'nullable|string|max:5000',
             'short_description'    => 'nullable|string|max:500',
@@ -63,7 +64,7 @@ class ServiceController extends Controller
             'sort_order'           => 'nullable|integer',
             'is_active'            => 'nullable|boolean',
             'master_ids'           => 'nullable|array',
-            'master_ids.*'         => 'integer|exists:service_masters,id',
+            'master_ids.*'         => ['integer', OwnRows::rule('service_masters')],
             'gallery_files'        => 'nullable|array|max:24',
             'gallery_files.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ], [
@@ -120,7 +121,7 @@ class ServiceController extends Controller
         }
 
         $data = $request->validate([
-            'category_id'          => 'nullable|integer|exists:service_categories,id',
+            'category_id'          => ['nullable', 'integer', OwnRows::rule('service_categories')],
             'name'                 => 'nullable|string|max:200',
             'description'          => 'nullable|string|max:5000',
             'short_description'    => 'nullable|string|max:500',
@@ -135,7 +136,7 @@ class ServiceController extends Controller
             'sort_order'           => 'nullable|integer',
             'is_active'            => 'nullable|boolean',
             'master_ids'           => 'nullable|array',
-            'master_ids.*'         => 'integer|exists:service_masters,id',
+            'master_ids.*'         => ['integer', OwnRows::rule('service_masters')],
             'gallery_files'        => 'nullable|array|max:24',
             'gallery_files.*'      => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5120',
         ], [

@@ -10,6 +10,7 @@ use App\Models\ServiceMaster;
 use App\Models\Staff;
 use App\Services\Appointments\VenueClock;
 use App\Services\Booking\BookingCapability;
+use App\Services\Booking\Setup\SetupChecklist;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Http\JsonResponse;
@@ -20,7 +21,7 @@ class BootstrapController extends Controller
 {
     public const NAME = 'HexaTech Appointments';
 
-    public function show(Request $request, BookingCapability $capability, BookingPointsService $points): JsonResponse
+    public function show(Request $request, BookingCapability $capability, BookingPointsService $points, SetupChecklist $checklist): JsonResponse
     {
         /** @var Organization $org */
         $org = $request->attributes->get('workspace_org');
@@ -47,9 +48,10 @@ class BootstrapController extends Controller
                 'points_on_bookings' => $points->pointsOnBookingsEnabled($orgId),
             ],
             'readiness'    => [
-                'services' => Service::where('is_active', true)->count(),
-                'team'     => ServiceMaster::where('is_active', true)->count(),
-                'bookable' => $capability->appointmentsBookable($orgId, $brandId ? (int) $brandId : null),
+                'services'  => Service::where('is_active', true)->count(),
+                'team'      => ServiceMaster::where('is_active', true)->count(),
+                'bookable'  => $capability->appointmentsBookable($orgId, $brandId ? (int) $brandId : null),
+                'checklist' => $checklist->for($orgId, $brandId ? (int) $brandId : null),
             ],
         ]);
     }

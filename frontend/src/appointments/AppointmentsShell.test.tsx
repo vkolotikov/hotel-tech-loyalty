@@ -24,7 +24,7 @@ const boot: Bootstrap = {
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-06', currency: 'GBP' },
   staff: { name: 'Vitalij K', role: 'manager' },
   loyalty: { programme_on: true, points_on_bookings: true },
-  readiness: { services: 5, team: 4, bookable: true },
+  readiness: { services: 5, team: 4, bookable: true, checklist: { steps: [], complete: true } },
 }
 
 function render(value: Partial<AppointmentsContextValue>, path = '/appointments') {
@@ -59,6 +59,7 @@ describe('AppointmentsShell', () => {
     expect(html).toContain('href="/appointments"')
     expect(html).toContain('href="/appointments/clients"')
     expect(html).toContain('href="/appointments?new=1"')
+    expect(html).toContain('href="/appointments/setup"')
     for (const foreign of ['/leads', '/members', '/engagement', '/chatbot-setup', '/planner', '/marketing', '/analytics']) {
       expect(html).not.toContain(`href="${foreign}"`)
     }
@@ -98,14 +99,22 @@ describe('AppointmentsShell', () => {
     expect(menu).toMatch(/<summary[^>]*aria-label="Menu"/)
   })
 
-  it('says when the venue has no named time zone', () => {
-    expect(render({})).not.toContain('time zone is not set')
-    expect(render({ data: { ...boot, venue: { ...boot.venue, timezone: 'UTC', timezone_named: false } } })).toContain('time zone is not set')
+  it('fits a 390 px phone: the search can shrink and New appointment keeps only its icon below sm', () => {
+    // With Calendar, Clients and Setup in the narrow header, the menu button was pushed off a phone screen.
+    const header = (html: string) => html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+    const html = header(render({}))
+    expect(html).toMatch(/<form role="search"[^>]*class="[^"]*min-w-0/)
+    const newLink = html.match(/<a[^>]*href="\/appointments\?new=1"[^>]*>/)?.[0] ?? html.match(/<a[^>]*aria-label="New appointment"[^>]*>/)?.[0] ?? ''
+    expect(newLink).toContain('href="/appointments?new=1"')
+    expect(newLink).toContain('aria-label="New appointment"')
+    expect(html).toMatch(/<span class="hidden sm:inline">New appointment<\/span>/)
   })
 
-  it('says when nothing can be booked yet', () => {
-    expect(render({})).not.toContain('Nothing can be booked yet')
-    expect(render({ data: { ...boot, readiness: { services: 0, team: 0, bookable: false } } })).toContain('Nothing can be booked yet')
+  it('shows the setup banner while the checklist is unfinished, and not on Setup itself', () => {
+    const unfinished = { ...boot, readiness: { ...boot.readiness, checklist: { steps: [{ key: 'timezone' as const, done: false, optional: false }], complete: false } } }
+    expect(render({})).not.toContain('Setup is not finished')
+    expect(render({ data: unfinished })).toContain('Setup is not finished: 0 of 1 steps done.')
+    expect(render({ data: unfinished }, '/appointments/setup')).not.toContain('Setup is not finished')
   })
 
   it('shows the switched-off notice on a 403 while the workspace was open', () => {

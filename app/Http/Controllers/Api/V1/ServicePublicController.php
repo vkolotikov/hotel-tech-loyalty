@@ -14,6 +14,7 @@ use App\Services\Booking\ExtraLeadTimeException;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\ServiceCatalogue;
 use App\Services\Booking\ServiceQuoteBuilder;
+use App\Services\Booking\VenueNotice;
 use App\Services\ServiceSchedulingService;
 use App\Services\StripeService;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -98,11 +99,11 @@ class ServicePublicController extends Controller
         $leadMinutes = (int) $this->getStringSetting($orgId, 'services_lead_minutes', '60');
         $stepMinutes = (int) $this->getStringSetting($orgId, 'services_slot_step', '15');
 
-        $slots = $scheduler->availableSlots(
-            $service,
-            $data['date'],
-            $data['master_id'] ?? null,
-            $stepMinutes,
+        // The notice counts from the venue's own now (the scheduler's filter
+        // would compare wall-clock digits with the UTC now; see VenueNotice).
+        $slots = VenueNotice::filter(
+            $scheduler->availableSlots($service, $data['date'], $data['master_id'] ?? null, $stepMinutes, VenueNotice::SCHEDULER_LEAD_OFF),
+            (int) $orgId,
             $leadMinutes,
         );
 
@@ -372,7 +373,7 @@ class ServicePublicController extends Controller
                     // Same lead-time guard as quote() — if a guest skipped
                     // quote (or quote was issued earlier than the lead
                     // window now permits) we still refuse to book.
-                    $startTs = $reservation['start']->getTimestamp();
+                    $startTs = VenueNotice::instant($reservation['start'], (int) app('current_organization_id'))->getTimestamp();
                     $hoursUntilStart = max(0, (int) (($startTs - time()) / 3600));
                     foreach ($data['extras'] as $line) {
                         $extra = $extraModels->get($line['id']);

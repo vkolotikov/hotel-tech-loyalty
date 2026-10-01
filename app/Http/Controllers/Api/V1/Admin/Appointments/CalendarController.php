@@ -66,8 +66,12 @@ class CalendarController extends Controller
                 for ($day = $from; $day->lte($to); $day = $day->addDay()) {
                     $key = $day->toDateString();
                     $perDay[$key] = [
+                        // A window ending at 24:00 ends on the next day's 00:00 for the scheduler; the grid needs 24:00.
                         'windows'  => array_map(
-                            fn (array $w) => ['start' => $w['start']->format('H:i'), 'end' => $w['end']->format('H:i')],
+                            fn (array $w) => [
+                                'start' => $w['start']->format('H:i'),
+                                'end'   => $w['end']->toDateString() === $day->toDateString() ? $w['end']->format('H:i') : '24:00',
+                            ],
                             $scheduler->workingWindows($m, $day),
                         ),
                         'time_off' => ($timeOff[$m->id . '|' . $key] ?? collect())->map(fn (ServiceMasterTimeOff $o) => [

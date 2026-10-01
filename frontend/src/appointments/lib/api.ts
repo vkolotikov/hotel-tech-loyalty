@@ -1,6 +1,8 @@
 import { api } from '../../lib/api'
 import type {
-  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, ClientProfile, ClientSummary, CreateBody, DateKey, PointsResult, SlotsPayload, Wall,
+  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientProfile, ClientSummary, CreateBody, DateKey, HoursRow, Impact,
+  PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
+  TeamBody, TimeOffBody, Wall,
 } from './types'
 
 /**
@@ -9,6 +11,9 @@ import type {
  * tokens.test.ts refuses any other API path anywhere in this folder.
  */
 const BASE = '/v1/admin/appointments'
+
+/** `?dry_run=1`: the server answers with the appointments a change would strand and saves nothing. */
+const dryRunParams = (dryRun: boolean) => (dryRun ? { params: { dry_run: 1 } } : undefined)
 
 const offListeners = new Set<() => void>()
 
@@ -62,6 +67,38 @@ export const appointmentsApi = {
 
   act: (id: number, body: { action: ActionKey; revision: string; reason?: string }): Promise<{ booking: AppointmentDetail; points: PointsResult | null }> =>
     watched(api.post(`${BASE}/bookings/${id}/actions`, body)),
+
+  setup: (): Promise<SetupPayload> => watched(api.get(`${BASE}/setup`)),
+
+  linkCopied: (): Promise<{ checklist: Checklist }> => watched(api.post(`${BASE}/setup/checklist/link-copied`)),
+
+  createService: (body: ServiceBody): Promise<{ service: SetupService }> => watched(api.post(`${BASE}/setup/services`, body)),
+
+  updateService: (id: number, body: Partial<ServiceBody>, dryRun = false): Promise<{ service?: SetupService } & Impact> =>
+    watched(api.patch(`${BASE}/setup/services/${id}`, body, dryRunParams(dryRun))),
+
+  createCategory: (name: string): Promise<{ category: SetupCategory }> => watched(api.post(`${BASE}/setup/categories`, { name })),
+
+  createTeamMember: (body: TeamBody): Promise<{ team_member: SetupTeamMember }> => watched(api.post(`${BASE}/setup/team`, body)),
+
+  updateTeamMember: (id: number, body: Partial<TeamBody>, dryRun = false): Promise<{ team_member?: SetupTeamMember } & Impact> =>
+    watched(api.patch(`${BASE}/setup/team/${id}`, body, dryRunParams(dryRun))),
+
+  saveHours: (id: number, week: HoursRow[], dryRun = false): Promise<{ team_member?: SetupTeamMember } & Impact> =>
+    watched(api.put(`${BASE}/setup/team/${id}/hours`, { week }, dryRunParams(dryRun))),
+
+  addTimeOff: (id: number, body: TimeOffBody, dryRun = false): Promise<{ team_member?: SetupTeamMember } & Impact> =>
+    watched(api.post(`${BASE}/setup/team/${id}/time-off`, body, dryRunParams(dryRun))),
+
+  removeTimeOff: (id: number, entryId: number): Promise<{ team_member: SetupTeamMember }> =>
+    watched(api.delete(`${BASE}/setup/team/${id}/time-off/${entryId}`)),
+
+  saveSettings: (body: SettingsBody): Promise<{ settings: SetupSettings; checklist: Checklist }> =>
+    watched(api.patch(`${BASE}/setup/settings`, body)),
+
+  /** How many services and extras a currency change would relabel; nothing is saved. */
+  currencyPreview: (currency: string): Promise<{ services: number; extras: number }> =>
+    watched(api.patch(`${BASE}/setup/settings`, { currency }, dryRunParams(true))),
 }
 
 export interface ApiFailure {
@@ -71,6 +108,8 @@ export interface ApiFailure {
   message: string
   current?: AppointmentDetail
   matches?: ClientSummary[]
+  /** A refused form's messages by field (Laravel's `errors`). */
+  fields?: Record<string, string[]>
 }
 
 /** What went wrong, from an axios error (or anything else that was thrown). Pure: no i18n, no side effects. */
@@ -89,5 +128,6 @@ export function failureOf(error: unknown): ApiFailure {
     message: typeof data.message === 'string' ? data.message : '',
     current: data.current as AppointmentDetail | undefined,
     matches: data.matches as ClientSummary[] | undefined,
+    fields: data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string[]>) : undefined,
   }
 }

@@ -1298,6 +1298,18 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('bookings/{id}',   [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'show'])->whereNumber('id');
                 Route::patch('bookings/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'update'])->whereNumber('id');
                 Route::post('bookings/{id}/actions', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'action'])->whereNumber('id');
+                // Setup: services, team, hours, time off, settings and the checklist (spec 2026-10-01).
+                Route::get('setup', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'show']);
+                Route::post('setup/checklist/link-copied', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'linkCopied']);
+                Route::post('setup/services', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupServiceController::class, 'store']);
+                Route::patch('setup/services/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupServiceController::class, 'update'])->whereNumber('id');
+                Route::post('setup/categories', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupServiceController::class, 'storeCategory']);
+                Route::post('setup/team', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'store']);
+                Route::patch('setup/team/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'update'])->whereNumber('id');
+                Route::put('setup/team/{id}/hours', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'hours'])->whereNumber('id');
+                Route::post('setup/team/{id}/time-off', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'addTimeOff'])->whereNumber('id');
+                Route::delete('setup/team/{id}/time-off/{entryId}', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'removeTimeOff'])->whereNumber('id')->whereNumber('entryId');
+                Route::patch('setup/settings', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupSettingsController::class, 'update']);
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────

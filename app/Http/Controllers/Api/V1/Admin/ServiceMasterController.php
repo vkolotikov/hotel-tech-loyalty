@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\ServiceMaster;
 use App\Models\ServiceMasterSchedule;
 use App\Models\ServiceMasterTimeOff;
+use App\Services\Booking\Setup\OwnRows;
+use App\Services\Booking\Setup\WeeklyHours;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -51,7 +53,7 @@ class ServiceMasterController extends Controller
             'sort_order'    => 'nullable|integer',
             'is_active'     => 'nullable|boolean',
             'service_ids'   => 'nullable|array',
-            'service_ids.*' => 'integer|exists:services,id',
+            'service_ids.*' => ['integer', OwnRows::rule('services')],
             'schedules'     => 'nullable|array',
             'schedules.*.day_of_week' => 'required_with:schedules|integer|min:0|max:6',
             'schedules.*.start_time'  => 'required_with:schedules|string',
@@ -59,7 +61,7 @@ class ServiceMasterController extends Controller
         ]);
 
         $serviceIds = $data['service_ids'] ?? [];
-        $schedules = $data['schedules'] ?? [];
+        $schedules = WeeklyHours::normalise($data['schedules'] ?? []);
         unset($data['avatar'], $data['service_ids'], $data['schedules']);
 
         $data['organization_id'] = app('current_organization_id');
@@ -107,7 +109,7 @@ class ServiceMasterController extends Controller
             'sort_order'    => 'nullable|integer',
             'is_active'     => 'nullable|boolean',
             'service_ids'   => 'nullable|array',
-            'service_ids.*' => 'integer|exists:services,id',
+            'service_ids.*' => ['integer', OwnRows::rule('services')],
             'schedules'     => 'nullable|array',
             'schedules.*.day_of_week' => 'required_with:schedules|integer|min:0|max:6',
             'schedules.*.start_time'  => 'required_with:schedules|string',
@@ -116,6 +118,9 @@ class ServiceMasterController extends Controller
 
         $serviceIds = $data['service_ids'] ?? null;
         $schedules = $data['schedules'] ?? null;
+        if ($schedules !== null) {
+            $schedules = WeeklyHours::normalise($schedules);
+        }
         unset($data['avatar'], $data['service_ids'], $data['schedules']);
 
         if ($request->hasFile('avatar')) {
@@ -178,19 +183,9 @@ class ServiceMasterController extends Controller
         return response()->json(['message' => 'Time-off removed']);
     }
 
+    /** @param list<array{day_of_week:int, start_time:string, end_time:string, is_active:bool}> $schedules normalised by WeeklyHours */
     private function replaceSchedules(ServiceMaster $master, array $schedules): void
     {
-        ServiceMasterSchedule::where('service_master_id', $master->id)->delete();
-        $orgId = app('current_organization_id');
-        foreach ($schedules as $s) {
-            ServiceMasterSchedule::create([
-                'organization_id'   => $orgId,
-                'service_master_id' => $master->id,
-                'day_of_week'       => (int) $s['day_of_week'],
-                'start_time'        => $s['start_time'],
-                'end_time'          => $s['end_time'],
-                'is_active'         => $s['is_active'] ?? true,
-            ]);
-        }
+        WeeklyHours::replace($master, $schedules);
     }
 }

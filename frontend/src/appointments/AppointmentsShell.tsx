@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, LayoutGrid, LogOut, Menu, Plus, Search, Users } from 'lucide-react'
+import { CalendarDays, LayoutGrid, LogOut, Menu, Plus, Search, Settings2, Users } from 'lucide-react'
 import { logoutAndRedirect } from '../lib/logout'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useAppointments } from './AppointmentsProvider'
@@ -10,6 +10,7 @@ import { fullAdminPathFor } from './lib/landing'
 import { useVocab } from './lib/vocab'
 import { Button } from './ui/Button'
 import { Notice } from './ui/Notice'
+import { ChecklistBanner } from './setup/Checklist'
 
 /**
  * The workspace's frame: a calm dark rail with the two daily areas, a top
@@ -46,6 +47,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: '/appointments', end: true, icon: CalendarDays, label: t('appointments.nav.calendar', 'Calendar') },
     { to: '/appointments/clients', end: false, icon: Users, label: vocab('clients') },
+    { to: '/appointments/setup', end: false, icon: Settings2, label: t('appointments.nav.setup', 'Setup') },
   ]
 
   const onSearch = (e: FormEvent) => {
@@ -110,7 +112,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
             <div className="text-sm font-semibold truncate">{data?.organization.name}</div>
             {data?.brand && data.brand.name !== data.organization.name && <div className="text-xs text-a-text-2 truncate">{data.brand.name}</div>}
           </div>
-          <form role="search" onSubmit={onSearch} className="flex-1 max-w-md lg:ml-4">
+          <form role="search" onSubmit={onSearch} className="flex-1 min-w-0 max-w-md lg:ml-4">
             <label className="relative block">
               <span className="sr-only">{t('appointments.shell.search', 'Search clients')}</span>
               <Search size={15} aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-a-text-2" />
@@ -119,9 +121,10 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
                 className="w-full rounded-lg bg-a-surface-2 border border-a-border pl-9 pr-3 py-2 text-sm text-a-text placeholder:text-a-text-2" />
             </label>
           </form>
-          <Link to="/appointments?new=1"
-            className="ml-auto inline-flex items-center gap-2 rounded-lg bg-a-accent text-a-accent-ink hover:bg-a-accent-deep px-3.5 py-2 text-sm font-semibold whitespace-nowrap">
-            <Plus size={16} aria-hidden /> {t('appointments.shell.new_appointment', 'New appointment')}
+          {/* On a phone the header holds three areas, the search and the menu: the button keeps only its icon. */}
+          <Link to="/appointments?new=1" aria-label={t('appointments.shell.new_appointment', 'New appointment')}
+            className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-lg bg-a-accent text-a-accent-ink hover:bg-a-accent-deep px-3 sm:px-3.5 py-2 text-sm font-semibold whitespace-nowrap">
+            <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('appointments.shell.new_appointment', 'New appointment')}</span>
           </Link>
           {/* Below the width of the rail, what the rail's secondary area holds lives here. */}
           <details className="relative lg:hidden">
@@ -167,14 +170,9 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
 
         {!stopped && data && (
           <>
-            {!data.venue.timezone_named && (
+            {!data.readiness.checklist.complete && !pathname.startsWith('/appointments/setup') && (
               <div className="px-4 pt-3">
-                <Notice tone="warning">{t('appointments.shell.timezone_missing', 'The venue\'s time zone is not set, so "now" and "today" follow UTC. Set it in the full admin under Settings → General → Timezone (for example Europe/London).')}</Notice>
-              </div>
-            )}
-            {!data.readiness.bookable && (
-              <div className="px-4 pt-3">
-                <Notice tone="info">{t('appointments.shell.not_bookable', 'Nothing can be booked yet: add a service, a team member who performs it, and their working hours in the full admin.')}</Notice>
+                <ChecklistBanner checklist={data.readiness.checklist} />
               </div>
             )}
             <main ref={main} tabIndex={-1} className="flex-1 min-h-0">{children}</main>
