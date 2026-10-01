@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { landingPath, loginPath, safeRedirect } from './landing'
+import { fullAdminPathFor, landingPath, loginPath, safeRedirect, showsAppointmentsLink } from './landing'
 
 describe('landingPath', () => {
   it('sends a member to the portal whatever else is set', () => {
@@ -41,5 +41,32 @@ describe('safeRedirect', () => {
     expect(safeRedirect('https://evil.example')).toBe('/')
     expect(safeRedirect('//evil.example')).toBe('/')
     expect(safeRedirect('/\\evil.example')).toBe('/') // a backslash is a slash to a browser
+  })
+})
+
+describe('showsAppointmentsLink', () => {
+  it('shows the way into the workspace to staff of an organisation that has it and can book something', () => {
+    expect(showsAppointmentsLink({ user_type: 'staff', workspaces: { appointments: { landing: false, has_services: true } } })).toBe(true)
+  })
+
+  it('hides it where nothing can be booked, where the workspace is switched off, and from members', () => {
+    expect(showsAppointmentsLink({ user_type: 'staff', workspaces: { appointments: { landing: false, has_services: false } } })).toBe(false)
+    expect(showsAppointmentsLink({ user_type: 'staff' })).toBe(false)
+    expect(showsAppointmentsLink({ user_type: 'member', workspaces: { appointments: { landing: false, has_services: true } } })).toBe(false)
+    expect(showsAppointmentsLink(null)).toBe(false)
+  })
+})
+
+describe('fullAdminPathFor', () => {
+  it('opens the same tool in the full admin', () => {
+    expect(fullAdminPathFor('/appointments')).toBe('/service-bookings/calendar')
+    expect(fullAdminPathFor('/appointments/')).toBe('/service-bookings/calendar')
+    expect(fullAdminPathFor('/appointments/clients')).toBe('/leads?tab=customers')
+    expect(fullAdminPathFor('/appointments/clients/14')).toBe('/leads?tab=customers')
+  })
+
+  it('falls back to the dashboard anywhere else', () => {
+    expect(fullAdminPathFor('/appointments/something-new')).toBe('/')
+    expect(fullAdminPathFor('/')).toBe('/')
   })
 })

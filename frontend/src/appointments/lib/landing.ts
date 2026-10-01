@@ -1,13 +1,30 @@
 interface LandingUser {
   user_type?: string
-  workspaces?: { appointments?: { landing?: boolean } }
+  workspaces?: { appointments?: { landing?: boolean; has_services?: boolean } }
+}
+
+/**
+ * Whether the full admin shows its way into HexaTech Appointments (the menu
+ * item and the button on the service-booking pages): staff of an
+ * organisation that has the workspace and at least one active service.
+ * The address itself works for every organisation that has it.
+ */
+export function showsAppointmentsLink(user: LandingUser | null | undefined): boolean {
+  return user?.user_type !== 'member' && user?.workspaces?.appointments?.has_services === true
+}
+
+/** "Full admin" from the workspace opens the same tool there. */
+export function fullAdminPathFor(pathname: string): string {
+  if (/^\/appointments\/?$/.test(pathname)) return '/service-bookings/calendar'
+  if (/^\/appointments\/clients(\/|$)/.test(pathname)) return '/leads?tab=customers'
+  return '/'
 }
 
 /**
  * Where a user goes right after signing in. `fallback` is what the sign-in
  * screen would have used anyway ('/' or an explicit ?redirect=): the
- * workspace is chosen only when nothing else was asked for, so an
- * organisation that never opted in lands exactly where it always did.
+ * workspace is chosen only when nothing else was asked for and the
+ * organisation chose it (`--landing`); everyone else lands where they always did.
  */
 /**
  * A `?redirect=` the sign-in screen may follow: a path on this site, or the

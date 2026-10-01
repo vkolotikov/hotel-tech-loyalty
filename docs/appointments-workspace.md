@@ -4,19 +4,33 @@ A calendar-first staff workspace at `/appointments`, beside the full admin. It i
 records: `service_bookings`, `guests`, `loyalty_members`, the points ledger. Nothing is copied or synchronised.
 Design: `docs/superpowers/specs/2026-09-30-appointments-workspace-design.md`.
 
+## Who has it, and the two ways in
+
+**Every organisation has the workspace**, existing and new, unless an operator switched it off (the owner's
+decision of 2026-10-01; until then it was opt-in). Signing in still opens the full admin. Staff choose which
+interface to use:
+
+- **Into the workspace:** the full admin's menu has **HexaTech Appointments** in the Bookings group, under
+  Services, and the Service bookings list and calendar pages have an **Open in HexaTech Appointments** button.
+  Both show only where the organisation has the workspace and at least one active service; the address
+  `/appointments` itself works for every organisation that has it.
+- **Back to the full admin:** **Full admin** in the workspace opens the same tool there — the calendar opens the
+  Service bookings calendar, Clients opens the customer list, anything else the dashboard.
+
 ## Switching it on and off
 
 Every artisan command below is run as `php artisan …` in the application's environment.
 
 | To | Run |
 |---|---|
-| Switch it on | `php artisan workspace:appointments <org id> --on` |
-| Switch it on and land staff on it after sign-in | `php artisan workspace:appointments <org id> --on --landing` |
-| Switch it off | `php artisan workspace:appointments <org id> --off` |
+| Switch it off for one organisation | `php artisan workspace:appointments <org id> --off` |
+| Switch it back on (the default) | `php artisan workspace:appointments <org id> --on` |
+| Also land that organisation's staff on it after sign-in | `php artisan workspace:appointments <org id> --on --landing` |
 | See one organisation's setting | `php artisan workspace:appointments <org id> --status` |
-| List every organisation that has it on | `php artisan workspace:appointments --list` |
+| List the organisations that differ from the default (off, or landing on the workspace) | `php artisan workspace:appointments --list` |
 
-The switch is `organizations.settings.workspaces.appointments`. No screen and no billing sync writes that column.
+The switch is `organizations.settings.workspaces.appointments`; nothing stored means on, landing on the full
+admin (`Organization::WORKSPACE_DEFAULTS`). No screen and no billing sync writes that column.
 
 **Off means:** the workspace's API answers 403, `/appointments` sends staff back to the full admin, sign-in lands
 on the dashboard. A workspace window that is open at that moment says so on its next refresh or save and offers
@@ -120,10 +134,12 @@ has none for services).
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
-(`docs/landing-page-builder.md` §6). There is no migration. Three changes reach **every** organisation, flag or no
-flag:
+(`docs/landing-page-builder.md` §6). There is no migration. What reaches every organisation:
 
+- the workspace itself, unless the organisation is switched off;
 - `ServiceSchedulingService::reserveSlot()` takes each candidate's lock (no request, price, payload, assignment
   order or email changes);
 - the full admin's service-booking audit rows gain their actor and their booking;
-- sign-in and `/auth/me` carry a `workspaces` key — only for organisations that have one switched on.
+- sign-in and `/auth/me` carry a `workspaces` key (`landing`, `has_services`) for staff of every organisation that
+  has the workspace;
+- the full admin's menu item and button into the workspace, where something can be booked.

@@ -8,11 +8,12 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Route middleware for an opt-in workspace: `workspace:appointments`.
+ * Route middleware for a workspace beside the full admin: `workspace:appointments`.
  *
  * The switch is `organizations.settings.workspaces.<name>.enabled`, set by
- * an operator (`php artisan workspace:appointments`). Off — or absent —
- * answers 403 `workspace_disabled`. It runs after `tenant`, `admin` and
+ * an operator (`php artisan workspace:appointments`); absent means the
+ * workspace's default (Organization::WORKSPACE_DEFAULTS — on for the
+ * appointments workspace). Off answers 403 `workspace_disabled`. It runs after `tenant`, `admin` and
  * `check.subscription`: the organisation is bound, the caller is staff, and
  * the subscription rule is the admin group's own.
  */

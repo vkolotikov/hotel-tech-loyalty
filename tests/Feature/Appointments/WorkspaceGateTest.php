@@ -15,13 +15,26 @@ class WorkspaceGateTest extends TestCase
 {
     use DatabaseTransactions, SetsUpAppointmentsSchema;
 
-    public function test_an_organisation_without_the_flag_is_refused(): void
+    public function test_an_organisation_switched_off_is_refused(): void
     {
         $this->setUpAppointments(enabled: false);
 
         $this->asStaff()->getJson($this->api('bootstrap'))
             ->assertStatus(403)
             ->assertJsonPath('error', 'workspace_disabled');
+    }
+
+    public function test_an_organisation_that_never_set_anything_has_the_workspace(): void
+    {
+        // On for every organisation, existing and new, unless switched off.
+        $this->setUpAppointments();
+        $fresh = $this->otherOrganization();
+        $this->assertNull(data_get($fresh->settings, 'workspaces'));
+
+        $this->actingAs($this->staffUser($fresh), 'sanctum')->getJson($this->api('bootstrap'))
+            ->assertOk()
+            ->assertJsonPath('organization.name', 'Other Studio')
+            ->assertJsonPath('readiness.bookable', false);
     }
 
     public function test_an_enabled_organisation_gets_its_bootstrap(): void
@@ -78,13 +91,14 @@ class WorkspaceGateTest extends TestCase
         $this->asStaff()->getJson($this->api('bootstrap'))->assertOk()->assertJsonPath('staff.role', 'manager');
     }
 
-    public function test_another_organisations_flag_does_not_open_this_one(): void
+    public function test_switching_one_organisation_off_leaves_the_others_on(): void
     {
         $this->setUpAppointments();
         $otherStaff = $this->staffUser($this->otherOrganization());
+        $this->org->setWorkspace('appointments', false);
 
-        $this->actingAs($otherStaff, 'sanctum')->getJson($this->api('bootstrap'))
-            ->assertStatus(403)->assertJsonPath('error', 'workspace_disabled');
+        $this->asStaff()->getJson($this->api('bootstrap'))->assertStatus(403)->assertJsonPath('error', 'workspace_disabled');
+        $this->actingAs($otherStaff, 'sanctum')->getJson($this->api('bootstrap'))->assertOk();
     }
 
     public function test_every_appointments_route_carries_the_gate(): void
@@ -114,15 +128,18 @@ class WorkspaceGateTest extends TestCase
         $this->assertTrue(VenueClock::exists(VenueClock::parse('2026-03-29T04:30'), $this->org->id));
     }
 
-    public function test_the_organisation_helpers_default_to_off(): void
+    public function test_the_workspace_is_on_unless_an_organisation_is_switched_off(): void
     {
-        $this->setUpAppointments(enabled: false);
+        $this->setUpAppointments();
+        $fresh = $this->otherOrganization();
 
-        $this->assertSame(['enabled' => false, 'landing' => false], $this->org->workspace('appointments'));
-        $this->assertNull($this->org->workspacesPayload());
+        // Nothing stored: on, landing on the full admin; no service yet.
+        $this->assertSame(['enabled' => true, 'landing' => false], $fresh->workspace('appointments'));
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => false]], $fresh->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true]], $this->org->fresh()->workspacesPayload());
 
         $this->org->setWorkspace('appointments', true, landing: true);
-        $this->assertSame(['appointments' => ['landing' => true]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => true, 'has_services' => true]], $this->org->fresh()->workspacesPayload());
 
         // Landing means nothing while the workspace is off.
         $this->org->setWorkspace('appointments', false, landing: true);
@@ -130,17 +147,28 @@ class WorkspaceGateTest extends TestCase
         $this->assertNull($this->org->fresh()->workspacesPayload());
     }
 
-    public function test_the_command_switches_reports_and_lists(): void
+    public function test_the_command_switches_reports_and_lists_the_exceptions(): void
     {
-        $this->setUpAppointments(enabled: false);
+        $this->setUpAppointments();
+        $plain = $this->otherOrganization();
+
+        $this->artisan('workspace:appointments', ['--list' => true])
+            ->expectsOutputToContain('Every organization has the appointments workspace on, landing on the full admin.')
+            ->assertSuccessful();
+
+        $this->artisan('workspace:appointments', ['org' => $plain->id, '--status' => true])
+            ->expectsOutputToContain('appointments workspace ON, landing off')
+            ->assertSuccessful();
 
         $this->artisan('workspace:appointments', ['org' => $this->org->id, '--on' => true, '--landing' => true])
             ->expectsOutputToContain('appointments workspace ON, landing on')
             ->assertSuccessful();
         $this->assertSame(['enabled' => true, 'landing' => true], $this->org->fresh()->workspace('appointments'));
 
+        // --list names only the organisations that differ from the default.
         $this->artisan('workspace:appointments', ['--list' => true])
             ->expectsOutputToContain('Lumière Salon')
+            ->doesntExpectOutputToContain('Other Studio')
             ->assertSuccessful();
 
         $this->artisan('workspace:appointments', ['org' => $this->org->id, '--status' => true])
@@ -151,6 +179,16 @@ class WorkspaceGateTest extends TestCase
             ->expectsOutputToContain('appointments workspace off')
             ->assertSuccessful();
         $this->assertFalse($this->org->fresh()->workspaceEnabled('appointments'));
+
+        $this->artisan('workspace:appointments', ['--list' => true])
+            ->expectsOutputToContain('Lumière Salon | off')
+            ->assertSuccessful();
+
+        // Switching it back on without landing returns it to the default: no longer an exception.
+        $this->artisan('workspace:appointments', ['org' => $this->org->id, '--on' => true])->assertSuccessful();
+        $this->artisan('workspace:appointments', ['--list' => true])
+            ->expectsOutputToContain('Every organization has the appointments workspace on, landing on the full admin.')
+            ->assertSuccessful();
 
         $this->artisan('workspace:appointments', ['org' => 999999, '--on' => true])->assertFailed();
         $this->artisan('workspace:appointments', ['org' => $this->org->id, '--on' => true, '--off' => true])->assertFailed();

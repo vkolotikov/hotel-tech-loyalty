@@ -6,7 +6,11 @@ use App\Models\Organization;
 use Illuminate\Console\Command;
 
 /**
- * Switches the appointments workspace on or off for one organisation.
+ * Switches the appointments workspace on or off for one organisation. Every
+ * organisation has it by default (Organization::WORKSPACE_DEFAULTS), signing
+ * in to the full admin; --off takes one out, --on --landing sends its staff
+ * to the workspace after signing in, --list shows the organisations that
+ * differ from the default.
  *
  * Off deletes nothing: the API answers 403, /appointments sends staff back
  * to the full admin and sign-in lands on the dashboard. It does not undo a
@@ -20,7 +24,7 @@ class AppointmentsWorkspace extends Command
                             {--off : Switch the workspace off}
                             {--landing : With --on: staff land on the workspace after signing in}
                             {--status : Show the current setting}
-                            {--list : List every organization that has the workspace on}';
+                            {--list : List the organizations that differ from the default (switched off, or landing on the workspace)}';
 
     protected $description = 'Switch the appointments workspace on or off for an organization.';
 
@@ -28,14 +32,20 @@ class AppointmentsWorkspace extends Command
     {
         if ($this->option('list')) {
             $rows = Organization::query()->orderBy('id')->get()
-                ->filter(fn (Organization $o) => $o->workspaceEnabled('appointments'))
-                ->map(fn (Organization $o) => [$o->id, $o->name, $o->workspace('appointments')['landing'] ? 'on' : 'off'])
+                ->filter(fn (Organization $o) => $o->workspaceIsException('appointments'))
+                ->map(fn (Organization $o) => [
+                    $o->id,
+                    $o->name,
+                    $o->workspaceEnabled('appointments') ? 'on' : 'off',
+                    $o->workspace('appointments')['landing'] ? 'workspace' : 'full admin',
+                ])
                 ->values()->all();
 
             if ($rows === []) {
-                $this->line('No organization has the appointments workspace on.');
+                $this->line('Every organization has the appointments workspace on, landing on the full admin.');
             } else {
-                $this->table(['id', 'name', 'landing'], $rows);
+                $this->line('Every other organization has the appointments workspace on, landing on the full admin.');
+                $this->table(['id', 'name', 'workspace', 'lands on'], $rows);
             }
 
             return self::SUCCESS;

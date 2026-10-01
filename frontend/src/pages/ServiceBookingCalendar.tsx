@@ -6,6 +6,7 @@ import { ChevronLeft, ChevronRight, Clock, User, Scissors, X, List as ListIcon, 
 import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { ViewToggle } from '../components/ViewToggle'
+import { OpenInAppointments } from '../components/OpenInAppointments'
 
 interface ServiceBookingLite {
   id: number
@@ -174,10 +175,13 @@ export default function ServiceBookingCalendar() {
       <DesktopOnlyBanner pageKey="service-booking-calendar" message="The service booking calendar is best viewed on a larger screen. On mobile, tap a day to see its bookings in a list." />
 
       {/* List ↔ Calendar view toggle (mirrors /service-bookings) */}
-      <ViewToggle options={[
-        { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
-        { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
-      ]} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ViewToggle options={[
+          { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+          { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
+        ]} />
+        <OpenInAppointments />
+      </div>
 
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">

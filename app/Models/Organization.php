@@ -257,17 +257,22 @@ class Organization extends Model
     }
 
     // ─── Workspaces ────────────────────────────────────────────
-    // Opt-in product experiences beside the full admin; the appointments
-    // workspace is the first. The switch lives under settings.workspaces —
-    // a column no tenant endpoint and no billing sync writes — so only an
-    // operator can turn one on (`php artisan workspace:appointments`).
-    // Absent means off.
+    // Product experiences beside the full admin; the appointments workspace
+    // is the first. Each has a default for an organisation that never set
+    // anything (WORKSPACE_DEFAULTS): the owner ruled on 2026-10-01 that every
+    // organisation has the appointments workspace, signing in to the full
+    // admin as before, unless an operator switches it off. What an operator
+    // sets lives under settings.workspaces — a column no tenant endpoint and
+    // no billing sync writes (`php artisan workspace:appointments`).
+
+    /** Every workspace there is, and whether an organisation that never set anything has it. */
+    public const WORKSPACE_DEFAULTS = ['appointments' => true];
 
     /** @return array{enabled: bool, landing: bool} */
     public function workspace(string $name): array
     {
         $row = (array) data_get($this->settings ?? [], "workspaces.{$name}", []);
-        $enabled = (bool) ($row['enabled'] ?? false);
+        $enabled = (bool) ($row['enabled'] ?? (self::WORKSPACE_DEFAULTS[$name] ?? false));
 
         return [
             'enabled' => $enabled,
@@ -281,6 +286,12 @@ class Organization extends Model
         return $this->workspace($name)['enabled'];
     }
 
+    /** Whether this organisation's setting differs from the default (switched off, or landing on the workspace). */
+    public function workspaceIsException(string $name): bool
+    {
+        return $this->workspace($name) !== ['enabled' => self::WORKSPACE_DEFAULTS[$name] ?? false, 'landing' => false];
+    }
+
     public function setWorkspace(string $name, bool $enabled, bool $landing = false): void
     {
         $settings = $this->settings ?? [];
@@ -289,19 +300,27 @@ class Organization extends Model
     }
 
     /**
-     * What a staff user's sign-in answer carries: the enabled workspaces
-     * only, and null when there are none — so the answer of every
-     * organisation that never opted in is unchanged.
+     * What a staff user's sign-in answer carries: the enabled workspaces,
+     * null when there are none. For the appointments workspace it also
+     * says whether the venue has an active service — the full admin shows
+     * its way into the workspace only where something can be booked.
      *
-     * @return array<string, array{landing: bool}>|null
+     * @return array<string, array{landing: bool, has_services?: bool}>|null
      */
     public function workspacesPayload(): ?array
     {
         $out = [];
-        foreach (array_keys((array) data_get($this->settings ?? [], 'workspaces', [])) as $name) {
-            $workspace = $this->workspace((string) $name);
-            if ($workspace['enabled']) {
-                $out[(string) $name] = ['landing' => $workspace['landing']];
+        foreach (array_keys(self::WORKSPACE_DEFAULTS) as $name) {
+            $workspace = $this->workspace($name);
+            if (!$workspace['enabled']) {
+                continue;
+            }
+            $out[$name] = ['landing' => $workspace['landing']];
+            if ($name === 'appointments') {
+                $out[$name]['has_services'] = Service::withoutGlobalScopes()
+                    ->where('organization_id', $this->id)
+                    ->where('is_active', true)
+                    ->exists();
             }
         }
 

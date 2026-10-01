@@ -1282,11 +1282,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::patch('service-bookings/{id}/status',  [ServiceBookingController::class, 'updateStatus']);
             Route::delete('service-bookings/{id}',        [ServiceBookingController::class, 'destroy']);
 
-            // ─── Appointments workspace (opt-in per organisation) ───────────
+            // ─── Appointments workspace ─────────────────────────────────────
             // A calendar-first shell over the same service bookings, clients
-            // and loyalty records. `workspace:appointments` answers 403 until
-            // an operator switches the organisation on
-            // (`php artisan workspace:appointments <id> --on`).
+            // and loyalty records. Every organisation has it unless an
+            // operator switched it off (`php artisan workspace:appointments
+            // <id> --off`); `workspace:appointments` then answers 403.
             Route::prefix('appointments')->middleware('workspace:appointments')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController::class, 'show']);
                 Route::get('calendar',  [\App\Http\Controllers\Api\V1\Admin\Appointments\CalendarController::class, 'calendar']);

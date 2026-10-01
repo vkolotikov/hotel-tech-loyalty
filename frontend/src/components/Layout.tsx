@@ -10,7 +10,7 @@ import {
   Briefcase, ClipboardList, Radio, ScrollText,
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
-  UserCog, AlertTriangle, Scissors,
+  UserCog, AlertTriangle, Scissors, CalendarDays,
   Menu, X, MoreHorizontal, Lock, Link2,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
@@ -42,6 +42,7 @@ import { useTranslation } from 'react-i18next'
 import { useVocabulary } from '../lib/vocabulary'
 import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industryGating'
 import { IndustryMismatchBanner } from './IndustryMismatchBanner'
+import { showsAppointmentsLink } from '../appointments/lib/landing'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -63,6 +64,8 @@ interface NavItem {
   product?: string   // required SaaS product slug
   feature?: string   // required SaaS feature key
   altPaths?: string[] // sibling routes that should keep this item highlighted (used for PairTabs siblings)
+  /** The way into a workspace beside the full admin: shown only where `showsAppointmentsLink()` says so. */
+  workspace?: 'appointments'
 }
 
 interface NavGroup {
@@ -145,6 +148,8 @@ export const navGroups: NavGroup[] = [
       // a duplicate of the in-page Timeline view.
       { path: '/bookings',          labelKey: 'nav.items.reservations',    defaultLabel: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
       { path: '/service-bookings',  labelKey: 'nav.items.services',        defaultLabel: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
+      // The same service bookings in the calendar-first workspace, at its own address.
+      { path: '/appointments',      labelKey: 'nav.items.appointments_workspace', defaultLabel: 'HexaTech Appointments', icon: CalendarDays, gate: 'all', product: 'booking', workspace: 'appointments' },
       { path: '/booking-rooms',     labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
       { path: '/service-masters',   labelKey: 'nav.items.masters',         defaultLabel: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
       { path: '/booking-extras',    labelKey: 'nav.items.extras',          defaultLabel: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
@@ -582,6 +587,9 @@ export function Layout({ children }: { children: ReactNode }) {
         .filter(item => {
           if (!canAccess(item.gate, staff)) return false
           if (item.product && !hasProduct(item.product)) return false
+          // The way into the appointments workspace: only where the
+          // organisation has it and has something to book.
+          if (item.workspace === 'appointments' && !showsAppointmentsLink(user)) return false
           // Phase 4 — per-industry item hide (Deals for beauty/medical,
           // Scan for medical/restaurant). Matches canonical English
           // defaultLabel; vocabulary relabel happens AFTER this filter.

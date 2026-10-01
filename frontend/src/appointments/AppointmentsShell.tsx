@@ -6,6 +6,7 @@ import { logoutAndRedirect } from '../lib/logout'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useAppointments } from './AppointmentsProvider'
 import { failureOf } from './lib/api'
+import { fullAdminPathFor } from './lib/landing'
 import { useVocab } from './lib/vocab'
 import { Button } from './ui/Button'
 import { Notice } from './ui/Notice'
@@ -53,6 +54,8 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
     if (term.length >= 2) navigate(`/appointments/clients?search=${encodeURIComponent(term)}`)
   }
 
+  // "Full admin" opens the same tool there (the calendar, the client list); anything else, the dashboard.
+  const fullAdmin = fullAdminPathFor(pathname)
   const signOut = () => { void logoutAndRedirect('/login') }
   const language = (className: string) => (
     <label className="block">
@@ -79,7 +82,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto px-3 pb-4 pt-4 border-t border-a-side-2 space-y-1">
-          <Link to="/" className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
+          <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
             <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
           </Link>
           <div className="px-3 py-2">
@@ -127,7 +130,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
             </summary>
             <div className="absolute right-0 top-full z-40 mt-2 w-56 space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{data?.staff.name}</div>
-              <Link to="/" className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
+              <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
                 <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
               </Link>
               <div className="px-2 py-1">

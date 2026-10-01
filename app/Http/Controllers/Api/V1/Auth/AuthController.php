@@ -300,10 +300,10 @@ class AuthController extends Controller
         $userArray['has_loyalty'] = app(\App\Services\IndustryPrompts\IndustryPromptService::class)
             ->for($industry)->hasLoyalty;
 
-        // Opt-in workspaces (the appointments workspace). Present only for a
-        // staff user whose organisation has one switched on, so every other
-        // sign-in answer is byte for byte what it was. The organisation is
-        // the one read above for the industry: no second query.
+        // Workspaces beside the full admin (the appointments workspace): for
+        // a staff user whose organisation has one — every organisation
+        // unless switched off. The organisation is the one read above for
+        // the industry: no second query.
         if ($user->isStaff() && ($workspaces = $org?->workspacesPayload())) {
             $userArray['workspaces'] = $workspaces;
         }

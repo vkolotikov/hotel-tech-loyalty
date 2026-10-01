@@ -36,11 +36,13 @@ interface User {
    */
   industry_explicit?: boolean
   /**
-   * Opt-in workspaces switched on for the user's organisation. Absent for
-   * every organisation that has none. `landing` sends a staff user to the
-   * workspace right after signing in (see appointments/lib/landing.ts).
+   * Workspaces the user's organisation has (every organisation has the
+   * appointments workspace unless it was switched off). `landing` sends a
+   * staff user to the workspace right after signing in; `has_services`
+   * says whether the full admin shows its way in (see
+   * appointments/lib/landing.ts).
    */
-  workspaces?: { appointments?: { landing?: boolean } }
+  workspaces?: { appointments?: { landing?: boolean; has_services?: boolean } }
 }
 
 interface Staff {

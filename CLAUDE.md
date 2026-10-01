@@ -140,8 +140,10 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
 - Every write takes the revision the client saw and answers `409 stale` on a mismatch; create takes an
   `Idempotency-Key`. Panel decisions live in pure functions (`panel/panelState.ts`, `panel/consequences.ts`)
   because the frontend tests render to a string.
-- The workspace is opt-in: `php artisan workspace:appointments <org> --on`. Anything added to it stays behind
-  `workspace:appointments`; a change that reaches organisations without the flag needs the owner's say-so.
+- Every organisation has the workspace unless switched off (`php artisan workspace:appointments <org> --off`;
+  owner's decision 2026-10-01); sign-in still opens the full admin. Anything added to it stays behind
+  `workspace:appointments`, so `--off` keeps meaning "none of it"; a change to the full admin itself needs the
+  owner's say-so.
 - Local checks that capture mail need `LOG_LEVEL=debug` beside `MAIL_MAILER=log`: the local log level hides the
   log mailer's output, and an empty log then proves nothing.
 

@@ -112,6 +112,8 @@
       "audit_log": "Журнал действий",
       "settings": "Настройки",
       "landing_pages": "Посадочная страница",
+      "appointments_workspace": "HexaTech Appointments",
+      "appointments_workspace_open": "Открыть в HexaTech Appointments",
       "landing_featured_reviews": "Избранные отзывы"
     }
   },

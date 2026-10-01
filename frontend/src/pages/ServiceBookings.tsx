@@ -9,6 +9,7 @@ import {
   Download, Trash2, CheckCheck,
 } from 'lucide-react'
 import { ViewToggle } from '../components/ViewToggle'
+import { OpenInAppointments } from '../components/OpenInAppointments'
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
 import { ServiceBookingPricing } from '../components/admin/ServiceBookingPricing'
@@ -255,10 +256,13 @@ export default function ServiceBookings() {
       {/* List ↔ Calendar view toggle. The standalone "Calendar" button
           in the header is gone — the toggle replaces it and stays
           visible on both surfaces so staff can flip back and forth. */}
-      <ViewToggle options={[
-        { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
-        { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
-      ]} />
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <ViewToggle options={[
+          { to: '/service-bookings',          label: 'List',     icon: <ListIcon size={12} className="-ml-0.5" /> },
+          { to: '/service-bookings/calendar', label: 'Calendar', icon: <CalendarIcon size={12} className="-ml-0.5" /> },
+        ]} />
+        <OpenInAppointments />
+      </div>
 
       {/* Today — the spa/wellness desk shift view. The "Today" tile is
           click-to-expand for the slot-by-slot list; the no-show counter

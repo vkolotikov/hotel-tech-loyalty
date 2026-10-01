@@ -18,17 +18,28 @@ class SignInWorkspacesTest extends TestCase
         return $this->actingAs($user, 'sanctum')->getJson('/api/v1/auth/me')->assertOk();
     }
 
-    public function test_staff_of_an_enabled_organisation_are_told_where_to_land(): void
+    public function test_staff_are_told_the_workspace_is_there_where_to_land_and_whether_the_venue_has_services(): void
     {
         $this->setUpAppointments();
 
-        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false]]);
+        // Never switched on or off: on, landing on the full admin.
+        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => true]]);
 
         $this->org->setWorkspace('appointments', true, landing: true);
         $this->me($this->staff)->assertJsonPath('workspaces.appointments.landing', true);
     }
 
-    public function test_an_organisation_that_never_opted_in_gets_the_answer_it_always_got(): void
+    public function test_a_venue_without_an_active_service_is_told_so(): void
+    {
+        // The full admin shows its way into the workspace only where it can book something.
+        $this->setUpAppointments();
+        $fresh = $this->otherOrganization();
+        $staff = $this->staffUser($fresh);
+
+        $this->me($staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => false]]);
+    }
+
+    public function test_an_organisation_switched_off_gets_no_key(): void
     {
         $this->setUpAppointments(enabled: false);
 

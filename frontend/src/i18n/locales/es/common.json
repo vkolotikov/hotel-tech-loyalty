@@ -112,6 +112,8 @@
       "audit_log": "Registro de auditoría",
       "settings": "Ajustes",
       "landing_pages": "Página de destino",
+      "appointments_workspace": "HexaTech Appointments",
+      "appointments_workspace_open": "Abrir en HexaTech Appointments",
       "landing_featured_reviews": "Reseñas destacadas"
     }
   },

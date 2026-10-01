@@ -64,8 +64,9 @@ trait SetsUpAppointmentsSchema
         $this->org = Organization::findOrFail($fixture['orgId']);
         $this->member = $fixture['member'];
         $this->tier = $fixture['tier'];
-        if ($enabled) {
-            $this->org->setWorkspace('appointments', true);
+        // Every organisation has the workspace unless it was switched off.
+        if (!$enabled) {
+            $this->org->setWorkspace('appointments', false);
         }
         $this->staff = $this->staffUser($this->org);
 

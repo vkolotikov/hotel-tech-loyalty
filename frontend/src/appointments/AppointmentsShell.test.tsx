@@ -68,6 +68,12 @@ describe('AppointmentsShell', () => {
     expect(render({})).toContain('Full admin')
   })
 
+  it('takes "Full admin" to the same tool there: the calendar to the service calendar, clients to the customer list', () => {
+    const fullAdminHref = (html: string) => [...html.matchAll(/<a[^>]*href="([^"]*)"[^>]*>(?:(?!<\/a>).)*Full admin/g)].map(m => m[1])
+    expect(fullAdminHref(render({}, '/appointments'))).toEqual(['/service-bookings/calendar', '/service-bookings/calendar'])
+    expect(fullAdminHref(render({}, '/appointments/clients'))).toEqual(['/leads?tab=customers', '/leads?tab=customers'])
+  })
+
   it('marks the dark rail, and only the rail, for the pale focus ring', () => {
     const html = render({})
     expect((html.match(/data-rail=""/g) ?? []).length).toBe(1)

@@ -28,8 +28,9 @@ import { Setup } from './pages/Setup'
 const PortalRoutes = lazy(() => import('./portal/PortalApp').then(m => ({ default: m.PortalApp })))
 const PortalJoin   = lazy(() => import('./portal/pages/Join').then(m => ({ default: m.Join })))
 const PortalClaim  = lazy(() => import('./portal/pages/Claim').then(m => ({ default: m.Claim })))
-// Appointments workspace. One lazy chunk, its own shell; an organisation
-// that has not opted in never downloads it (the server refuses its API).
+// Appointments workspace. One lazy chunk, its own shell: downloaded only by
+// someone who opens /appointments (the server refuses its API to an
+// organisation that was switched off).
 const AppointmentsRoutes = lazy(() => import('./appointments/AppointmentsApp').then(m => ({ default: m.AppointmentsApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 

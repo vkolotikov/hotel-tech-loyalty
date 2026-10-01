@@ -43,9 +43,10 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'pages/Reviews.tsx'),
   path.join(SRC_DIR, 'portal'),
   path.join(SRC_DIR, 'appointments'),
+  path.join(SRC_DIR, 'components/OpenInAppointments.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'portal.', 'appointments.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
