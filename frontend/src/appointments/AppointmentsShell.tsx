@@ -7,6 +7,7 @@ import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useAppointments } from './AppointmentsProvider'
 import { failureOf } from './lib/api'
 import { fullAdminPathFor } from './lib/landing'
+import { useAppointmentsOnly } from './lib/useAppointmentsOnly'
 import { useVocab } from './lib/vocab'
 import { Button } from './ui/Button'
 import { Notice } from './ui/Notice'
@@ -17,7 +18,7 @@ import { ChecklistBanner } from './setup/Checklist'
  * bar with the organisation, client search and New appointment, and the
  * notices that explain why something is not available. Nothing here links
  * into the full admin except the one "Full admin" entry in the secondary
- * area.
+ * area, and not even that on the Appointments plan, which has no full admin.
  */
 export function AppointmentsShell({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
@@ -25,6 +26,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { data, isLoading, isError, error, refetch } = useAppointments()
+  const appointmentsOnly = useAppointmentsOnly()
   const [search, setSearch] = useState('')
   const main = useRef<HTMLElement>(null)
   const arrived = useRef(false)
@@ -84,9 +86,11 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="mt-auto px-3 pb-4 pt-4 border-t border-a-side-2 space-y-1">
-          <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
-            <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
-          </Link>
+          {!appointmentsOnly && (
+            <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
+              <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
+            </Link>
+          )}
           <div className="px-3 py-2">
             {language('w-full rounded-md bg-a-side-2 text-a-side-text text-sm px-2 py-1.5 border border-a-side-2')}
           </div>
@@ -133,9 +137,11 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
             </summary>
             <div className="absolute right-0 top-full z-40 mt-2 w-56 space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{data?.staff.name}</div>
-              <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
-                <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
-              </Link>
+              {!appointmentsOnly && (
+                <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
+                  <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
+                </Link>
+              )}
               <div className="px-2 py-1">
                 {language('w-full rounded-md border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text')}
               </div>
@@ -150,12 +156,16 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
           <div className="p-6 max-w-xl space-y-3">
             <Notice tone="warning">
               {lapsed
-                ? t('appointments.shell.subscription_required', 'Your organisation\'s subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.')
+                ? (appointmentsOnly
+                  ? t('appointments.shell.subscription_required_plan', 'Your organisation\'s subscription is not active, so the workspace cannot open. Your bookings are unchanged. Contact HexaTech to restore it.')
+                  : t('appointments.shell.subscription_required', 'Your organisation\'s subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.'))
                 : t('appointments.shell.switched_off', 'The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.')}
             </Notice>
-            <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
-              {t('appointments.shell.open_full_admin', 'Open the full admin')}
-            </Link>
+            {!appointmentsOnly && (
+              <Link to="/" className="inline-flex rounded-lg border border-a-border bg-a-surface px-3.5 py-2 text-sm font-semibold text-a-text">
+                {t('appointments.shell.open_full_admin', 'Open the full admin')}
+              </Link>
+            )}
           </div>
         )}
 

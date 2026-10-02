@@ -128,6 +128,7 @@
     "all_brands": "Todas las marcas"
   },
   "auth": {
+    "access_off": "Su acceso a esta organización se ha desactivado. Pida a un propietario o a un responsable que lo vuelva a activar.",
     "login": {
       "title": "Iniciar sesión",
       "subtitle": "Bienvenido de nuevo",

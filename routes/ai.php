@@ -20,6 +20,7 @@ Route::middleware([GuardPluginTransport::class, 'throttle:6000,1,chatgpt-mcp-net
             AuthenticatePluginToken::class,
             'tenant',
             'admin',
+            'admin.access',
             'throttle:chatgpt-user',
             CheckPluginSubscription::class,
         ]);

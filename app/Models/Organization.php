@@ -268,9 +268,17 @@ class Organization extends Model
     /** Every workspace there is, and whether an organisation that never set anything has it. */
     public const WORKSPACE_DEFAULTS = ['appointments' => true];
 
+    /** Products an organisation on the Appointments plan holds (Part C spec §6.1). */
+    public const APPOINTMENTS_PLAN_PRODUCTS = ['appointments', 'booking'];
+
     /** @return array{enabled: bool, landing: bool} */
     public function workspace(string $name): array
     {
+        // The Appointments plan IS the workspace: always on, and where its staff land.
+        if ($name === 'appointments' && $this->appointmentsOnly()) {
+            return ['enabled' => true, 'landing' => true];
+        }
+
         $row = (array) data_get($this->settings ?? [], "workspaces.{$name}", []);
         $enabled = (bool) ($row['enabled'] ?? (self::WORKSPACE_DEFAULTS[$name] ?? false));
 
@@ -286,16 +294,26 @@ class Organization extends Model
         return $this->workspace($name)['enabled'];
     }
 
-    /** Whether this organisation's setting differs from the default (switched off, or landing on the workspace). */
+    /** Whether this organisation's setting differs from the default (off, landing on the workspace, or an appointments-only mark). */
     public function workspaceIsException(string $name): bool
     {
+        if ($name === 'appointments' && $this->appointmentsOnlyMark() !== null) {
+            return true;
+        }
+
         return $this->workspace($name) !== ['enabled' => self::WORKSPACE_DEFAULTS[$name] ?? false, 'landing' => false];
     }
 
     public function setWorkspace(string $name, bool $enabled, bool $landing = false): void
     {
         $settings = $this->settings ?? [];
-        data_set($settings, "workspaces.{$name}", ['enabled' => $enabled, 'landing' => $enabled && $landing]);
+        $row = ['enabled' => $enabled, 'landing' => $enabled && $landing];
+        // The operator's appointments-only mark is not this switch's to drop.
+        $only = data_get($settings, "workspaces.{$name}.only");
+        if (is_bool($only)) {
+            $row['only'] = $only;
+        }
+        data_set($settings, "workspaces.{$name}", $row);
         $this->forceFill(['settings' => $settings])->save();
     }
 
@@ -305,7 +323,7 @@ class Organization extends Model
      * says whether the venue has an active service — the full admin shows
      * its way into the workspace only where something can be booked.
      *
-     * @return array<string, array{landing: bool, has_services?: bool}>|null
+     * @return array<string, array{landing: bool, has_services?: bool, only?: bool}>|null
      */
     public function workspacesPayload(): ?array
     {
@@ -321,10 +339,77 @@ class Organization extends Model
                     ->where('organization_id', $this->id)
                     ->where('is_active', true)
                     ->exists();
+                $out[$name]['only'] = $this->appointmentsOnly();
             }
         }
 
         return $out ?: null;
+    }
+
+    // ─── The Appointments plan (Part C) ────────────────────────
+    // A cheaper plan with only the appointments workspace and the public
+    // booking page: its staff reach nothing else (the `admin.access`
+    // middleware answers 403 not_in_plan), they sign in to the workspace,
+    // and loyalty is off whatever tiers exist.
+
+    /**
+     * Whether this organisation is on the Appointments plan. An operator's
+     * mark decides first (`workspace:appointments --only` / `--not-only`);
+     * otherwise billing's product list: `appointments` and nothing outside
+     * APPOINTMENTS_PLAN_PRODUCTS; when that list is empty (billing could not
+     * be reached, or a legacy organisation), the plan slug.
+     */
+    public function appointmentsOnly(): bool
+    {
+        $mark = $this->appointmentsOnlyMark();
+        if ($mark !== null) {
+            return $mark;
+        }
+
+        $products = (array) ($this->entitled_products ?: []);
+        if ($products !== []) {
+            return in_array('appointments', $products, true)
+                && array_diff($products, self::APPOINTMENTS_PLAN_PRODUCTS) === [];
+        }
+
+        return $this->plan_slug === 'appointments';
+    }
+
+    /** 'operator' when an operator's mark decides, 'plan' when billing makes it appointments-only, null otherwise. */
+    public function appointmentsOnlySource(): ?string
+    {
+        if ($this->appointmentsOnlyMark() !== null) {
+            return 'operator';
+        }
+
+        return $this->appointmentsOnly() ? 'plan' : null;
+    }
+
+    /** For callers that hold only an id: the loyalty switch, guest enrolment, member sign-up, the access map. */
+    public static function isAppointmentsOnly(?int $orgId): bool
+    {
+        return $orgId ? (bool) self::withoutGlobalScopes()->find($orgId)?->appointmentsOnly() : false;
+    }
+
+    /** true or false: an operator decides; null: billing decides again. */
+    public function setAppointmentsOnly(?bool $only): void
+    {
+        $settings = $this->settings ?? [];
+        $row = (array) data_get($settings, 'workspaces.appointments', []);
+        if ($only === null) {
+            unset($row['only']);
+        } else {
+            $row['only'] = $only;
+        }
+        data_set($settings, 'workspaces.appointments', $row);
+        $this->forceFill(['settings' => $settings])->save();
+    }
+
+    private function appointmentsOnlyMark(): ?bool
+    {
+        $mark = data_get($this->settings ?? [], 'workspaces.appointments.only');
+
+        return is_bool($mark) ? $mark : null;
     }
 
     // ─── Industry resolution ───────────────────────────────────

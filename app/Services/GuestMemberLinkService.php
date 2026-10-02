@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Guest;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
+use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -49,6 +50,11 @@ class GuestMemberLinkService
      */
     public function ensureMemberForGuest(Guest $guest): ?LoyaltyMember
     {
+        // The Appointments plan has no programme: a client stays a client (Part C).
+        if (Organization::isAppointmentsOnly((int) $guest->organization_id)) {
+            return null;
+        }
+
         // Already linked? Nothing to do.
         if ($guest->member_id) {
             return LoyaltyMember::find($guest->member_id);

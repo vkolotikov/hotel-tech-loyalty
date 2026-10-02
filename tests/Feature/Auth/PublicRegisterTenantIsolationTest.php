@@ -317,6 +317,27 @@ class PublicRegisterTenantIsolationTest extends TestCase
             'org_token resolved to the wrong brand — the member was bound to the default brand instead of the one their token names.');
     }
 
+    // ─── The Appointments plan has no programme to join (Part C) ──────
+
+    public function test_an_organisation_on_the_appointments_plan_takes_no_member_sign_ups(): void
+    {
+        if (!Schema::hasColumn('organizations', 'entitled_products')) {
+            Schema::table('organizations', fn ($table) => $table->text('entitled_products')->nullable());
+        }
+        $org = $this->tenantWithLoyaltyProgram('Appointments Only Studio');
+        $org->forceFill(['entitled_products' => ['appointments', 'booking']])->save();
+        $email = 'plan_' . uniqid('', true) . '@example.test';
+
+        $this->postJson(self::REGISTER, $this->payload([
+            'email'     => $email,
+            'org_token' => $this->defaultBrandOf($org)->widget_token,
+        ]))
+            ->assertStatus(422)
+            ->assertJsonPath('message', 'Loyalty program is not configured for this hotel yet. Please contact reception.');
+
+        $this->assertFalse(User::withoutGlobalScopes()->where('email', $email)->exists(), 'A refused sign-up wrote a user.');
+    }
+
     // ─── 3. Neither identifier: fail clearly, write nothing ────────────
 
     /**

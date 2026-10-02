@@ -11,6 +11,7 @@ import { ChunkErrorBoundary } from './components/ChunkErrorBoundary'
 import { useTheme } from './hooks/useTheme'
 import { useSubscription } from './hooks/useSubscription'
 import { gateDecision } from './lib/gateDecision'
+import { fullAdminRedirect } from './appointments/lib/landing'
 
 // Eager: Login (entry point) + Dashboard (most visited) + Setup (first-run)
 import { Login } from './pages/Login'
@@ -152,22 +153,25 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   // already-initialised org. Set by the "Re-run setup wizard" button
   // in Settings → Menu. Cleared from the URL after onComplete().
   const forceRerun = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('rerun_setup')
+  // The Appointments plan has no full admin: its staff go to the workspace before anything here asks the server.
+  const toWorkspace = fullAdminRedirect(user)
 
   useEffect(() => {
-    if (!token || user?.user_type !== 'staff') {
-      setSetupDone(true) // members skip setup check
+    if (!token || user?.user_type !== 'staff' || toWorkspace) {
+      setSetupDone(true) // members and appointments-only staff skip the setup check
       return
     }
     if (forceRerun) { setSetupDone(false); return }
     api.get('/v1/admin/setup/status')
       .then(r => setSetupDone(r.data.setup_complete))
       .catch(() => setSetupDone(true)) // fail open
-  }, [token, user, forceRerun])
+  }, [token, user, forceRerun, toWorkspace])
 
   if (!token) return <Navigate to="/login" replace />
   // A member who reaches an admin URL belongs in the portal, not on a
   // page whose every API call will 403.
   if (user?.user_type === 'member') return <Navigate to="/portal" replace />
+  if (toWorkspace) return <Navigate to={toWorkspace} replace />
   if (setupDone === null) return <PageLoader />
   if (!setupDone) return <Setup onComplete={() => {
     // Strip the rerun flag so the wizard doesn't open again on the
@@ -230,8 +234,10 @@ function LazyRoute({ children, gate, product, feature }: { children: React.React
  * chrome to steal pixels from the live data.
  */
 function FullscreenRoute({ children, gate, product, feature }: { children: React.ReactNode; gate?: NavGate; product?: string; feature?: string }) {
-  const { token } = useAuthStore()
+  const { token, user } = useAuthStore()
   if (!token) return <Navigate to="/login" replace />
+  const toWorkspace = fullAdminRedirect(user)
+  if (toWorkspace) return <Navigate to={toWorkspace} replace />
   return (
     <GatedRoute gate={gate} product={product} feature={feature}>
       <ChunkErrorBoundary>

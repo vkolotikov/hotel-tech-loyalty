@@ -5,6 +5,7 @@ import { X } from 'lucide-react'
 import { appointmentsApi, failureOf, type ApiFailure } from '../lib/api'
 import { previewThenSave } from '../lib/preview'
 import type { Impact, ServiceBody, SetupPayload, SetupService, SetupTeamMember } from '../lib/types'
+import { useAppointmentsOnly } from '../lib/useAppointmentsOnly'
 import { useVocab } from '../lib/vocab'
 import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
@@ -88,6 +89,7 @@ const input = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
 export function ServiceEditor({ service, data, onClose, onSaved }: { service: SetupService | null; data: SetupPayload; onClose: () => void; onSaved: () => void }) {
   const { t, i18n } = useTranslation()
   const vocab = useVocab()
+  const appointmentsOnly = useAppointmentsOnly()
   const heading = useRef<HTMLHeadingElement>(null)
   const [draft, setDraft] = useState(() => draftOf(service, data.team))
   const [newCategory, setNewCategory] = useState<string | null>(null)
@@ -194,10 +196,12 @@ export function ServiceEditor({ service, data, onClose, onSaved }: { service: Se
           </fieldset>
         </fieldset>
 
-        <p className="text-xs text-a-text-2">
-          {t('appointments.setup.services.full_admin', 'Photos, gallery and the long description are edited in the full admin.')}{' '}
-          <Link to="/services" className="font-semibold text-a-accent-deep underline">{t('appointments.setup.services.full_admin_link', 'Open in the full admin')}</Link>
-        </p>
+        {!appointmentsOnly && (
+          <p className="text-xs text-a-text-2">
+            {t('appointments.setup.services.full_admin', 'Photos, gallery and the long description are edited in the full admin.')}{' '}
+            <Link to="/services" className="font-semibold text-a-accent-deep underline">{t('appointments.setup.services.full_admin_link', 'Open in the full admin')}</Link>
+          </p>
+        )}
         <FailureNotice failure={failure} />
         {!readOnly && (
           <div className="flex gap-2">

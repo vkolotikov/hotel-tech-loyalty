@@ -94,6 +94,13 @@ class AuthController extends Controller
             app()->instance('current_organization_id', $orgId);
         }
 
+        // The Appointments plan has no programme to join (Part C), whatever tiers exist.
+        if (\App\Models\Organization::isAppointmentsOnly((int) $orgId)) {
+            return response()->json([
+                'message' => 'Loyalty program is not configured for this hotel yet. Please contact reception.',
+            ], 422);
+        }
+
         // Resolve default tier up-front so we can fail cleanly before creating
         // any rows. Previously a missing tier would 500 on a null->id access
         // after the user row was already written, leaving an orphan.
@@ -1911,6 +1918,7 @@ class AuthController extends Controller
             'starter'    => ['crm', 'loyalty'],
             'growth'     => ['crm', 'loyalty', 'booking', 'chat'],
             'enterprise' => ['crm', 'loyalty', 'booking', 'chat'],
+            'appointments' => ['appointments', 'booking'],
             default      => ['crm', 'loyalty'],
         };
     }

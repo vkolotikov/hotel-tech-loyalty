@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fullAdminPathFor, landingPath, loginPath, loginPathAfterExpiry, safeRedirect, showsAppointmentsLink } from './landing'
+import { fullAdminPathFor, fullAdminRedirect, isAppointmentsOnly, landingPath, loginPath, loginPathAfterExpiry, safeRedirect, showsAppointmentsLink, withAppointmentsOnly } from './landing'
 
 describe('landingPath', () => {
   it('sends a member to the portal whatever else is set', () => {
@@ -81,5 +81,33 @@ describe('fullAdminPathFor', () => {
   it('falls back to the dashboard anywhere else', () => {
     expect(fullAdminPathFor('/appointments/something-new')).toBe('/')
     expect(fullAdminPathFor('/')).toBe('/')
+  })
+})
+
+describe('the Appointments plan', () => {
+  const only = { user_type: 'staff', workspaces: { appointments: { landing: true, has_services: true, only: true } } }
+
+  it('lands in the workspace from every other path, and keeps a workspace path it was sent to', () => {
+    expect(landingPath(only, '/')).toBe('/appointments')
+    expect(landingPath(only, '/members')).toBe('/appointments')
+    expect(landingPath(only, safeRedirect('/leads?tab=customers'))).toBe('/appointments')
+    expect(landingPath(only, '/appointmentsx')).toBe('/appointments')
+    expect(landingPath(only, '/appointments/clients/5')).toBe('/appointments/clients/5')
+    expect(landingPath(only, '/appointments?open=12')).toBe('/appointments?open=12')
+  })
+
+  it('sends its staff from the full admin to the workspace, and nobody else', () => {
+    expect(fullAdminRedirect(only)).toBe('/appointments')
+    expect(fullAdminRedirect({ user_type: 'staff', workspaces: { appointments: { landing: true, only: false } } })).toBeNull()
+    expect(fullAdminRedirect({ user_type: 'staff' })).toBeNull()
+    expect(fullAdminRedirect(null)).toBeNull()
+    expect(fullAdminRedirect({ user_type: 'member', workspaces: { appointments: { only: true } } })).toBeNull()
+  })
+
+  it('marks a stored user appointments-only without losing what it knew', () => {
+    const before = { id: 3, user_type: 'staff', workspaces: { appointments: { landing: false, has_services: true } } }
+    expect(withAppointmentsOnly(before)).toEqual({ id: 3, user_type: 'staff', workspaces: { appointments: { landing: true, has_services: true, only: true } } })
+    expect(isAppointmentsOnly(withAppointmentsOnly({ user_type: 'staff' }))).toBe(true)
+    expect(isAppointmentsOnly(before)).toBe(false)
   })
 })

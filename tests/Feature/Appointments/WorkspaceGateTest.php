@@ -135,11 +135,11 @@ class WorkspaceGateTest extends TestCase
 
         // Nothing stored: on, landing on the full admin; no service yet.
         $this->assertSame(['enabled' => true, 'landing' => false], $fresh->workspace('appointments'));
-        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => false]], $fresh->workspacesPayload());
-        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => false, 'only' => false]], $fresh->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true, 'only' => false]], $this->org->fresh()->workspacesPayload());
 
         $this->org->setWorkspace('appointments', true, landing: true);
-        $this->assertSame(['appointments' => ['landing' => true, 'has_services' => true]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => true, 'has_services' => true, 'only' => false]], $this->org->fresh()->workspacesPayload());
 
         // Landing means nothing while the workspace is off.
         $this->org->setWorkspace('appointments', false, landing: true);

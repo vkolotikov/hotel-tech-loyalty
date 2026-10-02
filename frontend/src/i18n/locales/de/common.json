@@ -128,6 +128,7 @@
     "all_brands": "Alle Marken"
   },
   "auth": {
+    "access_off": "Ihr Zugang zu dieser Organisation wurde abgeschaltet. Bitten Sie einen Inhaber oder Manager, ihn wieder einzuschalten.",
     "login": {
       "title": "Anmelden",
       "subtitle": "Willkommen zurück",

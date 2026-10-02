@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { loginPathAfterExpiry } from '../appointments/lib/landing'
+import { loginPathAfterExpiry, withAppointmentsOnly } from '../appointments/lib/landing'
+import { ACCESS_OFF_LOGIN, refusalOf } from './accessOff'
 
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
 export const API_BASE = isProduction ? '/api' : (import.meta.env.VITE_API_URL || 'http://localhost/hotel-tech/apps/loyalty/backend/public/api')
@@ -72,7 +73,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       const url = error.config?.url || ''
       const isBillingCall = url.includes('/billing/') || url.includes('/subscription')
-      if (!isBillingCall) {
+      // The sign-out call itself: a token already revoked answers 401, and that is not a reason to sign out again.
+      const isSignOutCall = url.endsWith('/auth/logout')
+      if (!isBillingCall && !isSignOutCall) {
         // Dynamic import — avoids the api.ts ↔ logout.ts ↔ authStore.ts
         // ↔ queryClient.ts circular-import chain at module-load time.
         // The 401 path is rare and async, so a dynamic import is cheap.
@@ -81,6 +84,19 @@ api.interceptors.response.use(
           void logoutAndRedirect(loginPathAfterExpiry(window.location.pathname, window.location.search))
         })
       }
+    }
+    // Part C. A deactivated account is signed out and told why. A session that signed in before its organisation
+    // moved to the Appointments plan is marked appointments-only and taken to the workspace (never from inside it).
+    const refusal = refusalOf(error)
+    if (refusal === 'staff_inactive') {
+      import('./logout').then(({ logoutAndRedirect }) => { void logoutAndRedirect(ACCESS_OFF_LOGIN) })
+    }
+    if (refusal === 'not_in_plan' && !/^\/appointments(\/|$)/.test(window.location.pathname)) {
+      import('../stores/authStore').then(({ useAuthStore }) => {
+        const { user } = useAuthStore.getState()
+        if (user) useAuthStore.setState({ user: withAppointmentsOnly(user) })
+        window.location.href = `${APP_BASE}/appointments`
+      })
     }
     if (error.response?.status === 403 &&
         error.response?.data?.error === 'subscription_required') {

@@ -14,6 +14,10 @@ vi.mock('react-i18next', () => ({
 }))
 // useVocab() reaches the provider module, which imports onWorkspaceOff from the same file.
 vi.mock('../lib/api', () => ({ appointmentsApi: {}, failureOf: () => ({ status: 0, code: '', message: '' }), onWorkspaceOff: () => () => {} }))
+const auth = vi.hoisted(() => ({ user: null as unknown }))
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: (select?: (s: { user: unknown }) => unknown) => (select ? select({ user: auth.user }) : { user: auth.user }),
+}))
 
 const { ServicesTab, groupServices } = await import('./ServicesTab')
 const { ServiceEditor, bodyOf, draftOf, saveServiceDraft } = await import('./ServiceEditor')
@@ -105,5 +109,17 @@ describe('ServiceEditor', () => {
     const html = render(<ServiceEditor service={data.services[0]} data={{ ...data, can_manage: false }} onClose={() => {}} onSaved={() => {}} />)
     expect(html).toContain('<fieldset disabled=""')
     expect(html).not.toContain('>Save<')
+  })
+
+  it('has no note pointing to the full admin on the Appointments plan', () => {
+    auth.user = { user_type: 'staff', workspaces: { appointments: { only: true } } }
+    try {
+      const html = render(<ServiceEditor service={data.services[0]} data={data} onClose={() => {}} onSaved={() => {}} />)
+      expect(html).not.toContain('href="/services"')
+      expect(html).not.toContain('edited in the full admin')
+      expect(html).toContain('Save')
+    } finally {
+      auth.user = null
+    }
   })
 })

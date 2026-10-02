@@ -25,7 +25,15 @@ import { useAuthStore } from '../stores/authStore'
  * See AUDIT-2026-06-13-ADDENDUM.md frontend finding for the cross-tenant
  * cache leakage + persisted-PII reasoning.
  */
+let signingOut = false
+
 export async function logoutAndRedirect(redirectPath: string = '/login'): Promise<void> {
+  // A page fires its requests together, so several refusals can ask at once
+  // (a deactivated account's `staff_inactive`, then the 401s after the token
+  // is revoked). Sign out once; the first caller's reason is the one the
+  // sign-in screen gives. The page navigates away, so this never resets.
+  if (signingOut) return
+  signingOut = true
   try {
     await api.delete('/v1/auth/logout')
   } catch {

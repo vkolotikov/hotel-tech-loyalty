@@ -36,6 +36,14 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   and staff-capability changes; see `docs/landing-page-builder.md` §8). Do not let it ride a landing
   deploy: build deploy file lists from landing paths, never from `git log origin/main..HEAD`.
 
+## Admin API rules
+
+- Every staff endpoint is decided by `App\Support\AdminAccess\AccessMap` (middleware `admin.access`). A new route
+  under `/v1/admin` needs a map key with its read rule, change rule and product, mirroring the menu's gate for its
+  page; `tests/Feature/AdminAccess/AccessMapTest.php` and `AdminAccessWiringTest.php` fail otherwise.
+- Organisations on the Appointments plan reach only products `appointments` and `account` (runbook:
+  `docs/appointments-workspace.md`).
+
 ## Landing-page code rules
 
 - One source of truth: the server serves the section catalogue; the editor derives from it. No mirrored

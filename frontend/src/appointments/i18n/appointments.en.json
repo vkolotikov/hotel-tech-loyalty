@@ -17,6 +17,7 @@
     "new_appointment": "New appointment",
     "switched_off": "The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.",
     "subscription_required": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.",
+    "subscription_required_plan": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. Contact HexaTech to restore it.",
     "open_full_admin": "Open the full admin"
   },
   "vocab": {

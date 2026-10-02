@@ -17,6 +17,7 @@
     "new_appointment": "Nueva cita",
     "switched_off": "El espacio de citas se ha desactivado para su organización. Sus reservas no han cambiado y siguen en la administración completa.",
     "subscription_required": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Un administrador puede restablecer el acceso en «Facturación» de la administración completa.",
+    "subscription_required_plan": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Póngase en contacto con HexaTech para restablecerlo.",
     "open_full_admin": "Abrir la administración completa"
   },
   "vocab": {

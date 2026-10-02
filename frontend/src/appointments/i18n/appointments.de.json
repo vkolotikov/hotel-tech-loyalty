@@ -17,6 +17,7 @@
     "new_appointment": "Neuer Termin",
     "switched_off": "Der Termin-Arbeitsbereich wurde für Ihre Organisation abgeschaltet. Ihre Buchungen sind unverändert und bleiben in der vollständigen Verwaltung.",
     "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Ein Administrator kann den Zugang unter „Abrechnung“ in der vollständigen Verwaltung wiederherstellen.",
+    "subscription_required_plan": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Wenden Sie sich an HexaTech, um den Zugang wiederherzustellen.",
     "open_full_admin": "Vollständige Verwaltung öffnen"
   },
   "vocab": {

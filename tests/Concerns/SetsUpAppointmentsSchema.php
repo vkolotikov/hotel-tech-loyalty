@@ -44,9 +44,11 @@ trait SetsUpAppointmentsSchema
         $this->setUpServiceBookingSchema();
 
         $this->addColumnsIfMissing('organizations', [
-            'settings' => fn (Blueprint $t) => $t->text('settings')->nullable(),
-            'timezone' => fn (Blueprint $t) => $t->string('timezone', 64)->nullable(),
-            'currency' => fn (Blueprint $t) => $t->string('currency', 10)->nullable(),
+            'settings'          => fn (Blueprint $t) => $t->text('settings')->nullable(),
+            'timezone'          => fn (Blueprint $t) => $t->string('timezone', 64)->nullable(),
+            'currency'          => fn (Blueprint $t) => $t->string('currency', 10)->nullable(),
+            'entitled_products' => fn (Blueprint $t) => $t->text('entitled_products')->nullable(),
+            'plan_slug'         => fn (Blueprint $t) => $t->string('plan_slug', 64)->nullable(),
         ]);
         $this->addColumnsIfMissing('guests', [
             'email_key' => fn (Blueprint $t) => $t->string('email_key')->nullable(),

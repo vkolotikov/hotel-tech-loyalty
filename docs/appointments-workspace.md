@@ -17,6 +17,9 @@ interface to use:
 - **Back to the full admin:** **Full admin** in the workspace opens the same tool there — the calendar opens the
   Service bookings calendar, Clients opens the customer list, anything else the dashboard.
 
+**On the Appointments plan** (Part C) the workspace is all an organisation has: its staff sign in to it, and it has
+no way into the full admin. See "Selling Appointments on its own".
+
 ## Switching it on and off
 
 Every artisan command below is run as `php artisan …` in the application's environment.
@@ -27,7 +30,12 @@ Every artisan command below is run as `php artisan …` in the application's env
 | Switch it back on (the default) | `php artisan workspace:appointments <org id> --on` |
 | Also land that organisation's staff on it after sign-in | `php artisan workspace:appointments <org id> --on --landing` |
 | See one organisation's setting | `php artisan workspace:appointments <org id> --status` |
-| List the organisations that differ from the default (off, or landing on the workspace) | `php artisan workspace:appointments --list` |
+| List the organisations that differ from the default (off, landing on the workspace, or marked) | `php artisan workspace:appointments --list` |
+| Mark one appointments-only (says what stops, asks first) | `php artisan workspace:appointments <org id> --only` |
+| Mark it a full customer whatever billing says | `php artisan workspace:appointments <org id> --not-only` |
+| Let billing decide again | `php artisan workspace:appointments <org id> --plan-decides` |
+
+`--off` is refused while an organisation is appointments-only.
 
 The switch is `organizations.settings.workspaces.appointments`; nothing stored means on, landing on the full
 admin (`Organization::WORKSPACE_DEFAULTS`). No screen and no billing sync writes that column.
@@ -161,19 +169,79 @@ Insights; photos for services and team members (full admin); service extras and 
 message or reminder for a staff action; member price or coupons at a staff booking; rooms and resources (the engine
 has none for services).
 
-## Before it is sold on its own
+## Selling Appointments on its own (Part C, 2026-10-02)
 
-1. **Server-side lock-down.** An appointments-only organisation can still call the rest of the admin API. It needs
-   an allowlist for such organisations and an entitlement in the billing catalogue (a separate repository).
-2. **Roles.** Any staff role reaches settings, team and billing routes; the subscription check is skipped for an
-   organisation's owner. The workspace's own Setup checks roles on the server, but the full admin's setup endpoints
-   (`/v1/admin/services`, `/v1/admin/service-masters`, Settings) still accept any staff user (Part C).
-3. The list under "What this milestone does not do", as far as the customer needs it.
+An organisation on the **Appointments plan** has the workspace and the public booking page, and nothing else:
+
+- its staff sign in straight to the workspace, and every full-admin address sends them back to it;
+- every other admin endpoint answers 403 `not_in_plan`: billing self-service, the industry switch, lead intake
+  with an API token and the ChatGPT / Claude connector included;
+- loyalty is off whatever tiers exist: no member portal, no points, no member pricing, no loyalty card in the
+  workspace; a new client (from the widget or the desk) is not made a member, and member sign-up is refused;
+- the public booking page and the widgets are unchanged.
+
+**Who is on it** (`Organization::appointmentsOnly()`), in this order:
+
+1. an operator's mark (`--only`, `--not-only`);
+2. billing's products: `appointments` and nothing outside `appointments` and `booking`;
+3. when billing sent no products, the plan slug `appointments`.
+
+| To | Run |
+|---|---|
+| Mark an organisation appointments-only (it says what stops and asks first) | `php artisan workspace:appointments <org id> --only` (add `--force` to skip the question) |
+| Mark it a full customer whatever billing says | `php artisan workspace:appointments <org id> --not-only` |
+| Let billing decide again | `php artisan workspace:appointments <org id> --plan-decides` |
+| See who is on it and why | `--status` for one organisation, `--list` for all that differ from the default |
+
+**Billing handover (the owner, in the billing application):**
+
+- a product with slug `appointments`;
+- a plan "Appointments" (slug `appointments`) with products `appointments` and `booking`, and its price, trial and
+  limits;
+- the sign-up page lists the plan as soon as billing does;
+- moving an existing customer onto it closes their full admin and stops their loyalty within 5 minutes, or at once
+  through the entitlement webhook;
+- when billing cannot be reached, the plan's fallback products are `appointments` and `booking`.
+
+**Not on the plan yet:** editing service photos, the gallery and the long description (full admin only); billing
+self-service (plan and payment changes go through HexaTech).
+
+## Admin access map (every organisation)
+
+`App\Support\AdminAccess\AccessMap` says who may call each staff route. Each key is a URI template without
+`api/v1/`, matched on whole segments, and the longest key wins. A key gives:
+
+- a **read** rule (GET, HEAD) and a **change** rule (other methods): `staff`, `manager` (`super_admin` or
+  `manager`), or a capability (`can_view_analytics`, `can_manage_offers`: managers and flagged staff);
+- a **product**: the Appointments plan reaches `appointments` and `account` only.
+
+The middleware `admin.access` runs on every `/v1/admin` route (after `admin`, before `check.subscription`) and on
+billing, the industry switch, lead intake and the connector. A platform admin always passes. The route's own checks
+(`staff.can`, `feature`, `workspace`, `admin:super_admin`, Setup's manager rule) still apply after it.
+
+| `ADMIN_ACCESS_MODE` (Laravel Cloud) | Roles and deactivated accounts | The Appointments plan's lock |
+|---|---|---|
+| unset, or anything but `enforce` (report) | recorded, let through | refused (`not_in_plan`) |
+| `enforce` | refused (`not_allowed`, `staff_inactive`) | refused |
+
+**Before switching to enforce:**
+
+- run `php artisan admin-access:report --days=7` (add `--org=<id>` for one organisation);
+- every "would refuse" line that a real page needs becomes a map fix with its test, shipped first;
+- then set `ADMIN_ACCESS_MODE=enforce` in Laravel Cloud;
+- removing it, or setting `report`, undoes it.
+
+The record (`admin_access_refusals`) keeps who, which organisation, which rule, which method and why, per day, and
+never a request's contents.
+
+**A new admin route** needs a key in `AccessMap::MAP`, mirroring the menu's gate for its page.
+`tests/Feature/AdminAccess/AccessMapTest.php` and `AdminAccessWiringTest.php` fail the build without one.
 
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
-(`docs/landing-page-builder.md` §6). There is no migration. What reaches every organisation:
+(`docs/landing-page-builder.md` §6). Part C adds one additive migration (`admin_access_refusals`). What reaches
+every organisation:
 
 - the workspace itself, unless the organisation is switched off;
 - `ServiceSchedulingService::reserveSlot()` takes each candidate's lock (no request, price, payload, assignment
@@ -187,4 +255,8 @@ Merging to `main` is a production deploy; it needs the owner's explicit yes and 
   this organisation's service, team member and category ids;
 - (Part B) the full admin's booking settings show a 15-minute slot step when none is stored (display only);
 - (Part B) the public and chat widgets offer today's slots from the venue's own now, and an extra's notice counts
-  from it in the widget and the portal.
+  from it in the widget and the portal;
+- (Part C) every `/v1/admin` route, billing, the industry switch, lead intake and the connector run the access
+  map; in report mode (no `ADMIN_ACCESS_MODE`) it refuses only `not_in_plan`;
+- (Part C) sign-in and `/auth/me` carry `workspaces.appointments.only`;
+- (Part C) a deactivated account is signed out on its next refused call once enforced.

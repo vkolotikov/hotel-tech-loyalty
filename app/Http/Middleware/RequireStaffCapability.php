@@ -37,7 +37,7 @@ class RequireStaffCapability
      * property (which would be null, i.e. permanently denied — a very
      * confusing outage).
      */
-    private const CAPABILITIES = [
+    public const CAPABILITIES = [
         'can_award_points',
         'can_redeem_points',
         'can_manage_offers',

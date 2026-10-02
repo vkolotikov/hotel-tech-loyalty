@@ -21,6 +21,10 @@ vi.mock('react-i18next', async () => {
   }
 })
 vi.mock('../lib/api', () => ({ appointmentsApi: {}, failureOf: () => ({ status: 0, code: '', message: '' }), onWorkspaceOff: () => () => {} }))
+// The service editor asks the signed-in user whether the organisation is on the Appointments plan.
+vi.mock('../../stores/authStore', () => ({
+  useAuthStore: (select?: (s: { user: null }) => unknown) => (select ? select({ user: null }) : { user: null }),
+}))
 
 const { SetupView, tabOf } = await import('./SetupPage')
 const { Checklist, ChecklistBanner } = await import('./Checklist')

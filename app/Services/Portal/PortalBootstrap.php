@@ -55,7 +55,8 @@ final class PortalBootstrap
         }
 
         $org = Organization::withoutGlobalScopes()->find($orgId);
-        if (!$org) {
+        // The Appointments plan has no programme, whatever tiers its industry presets seeded (Part C).
+        if (!$org || $org->appointmentsOnly()) {
             return false;
         }
 

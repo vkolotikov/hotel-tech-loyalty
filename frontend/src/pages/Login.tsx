@@ -12,6 +12,7 @@ import { ALL_FEATURES, PLAN_FEATURES, POPULAR_PLAN_SLUG, PLAN_TAGLINES, featureL
 import { detectIndustryFromWindow, type IndustryId } from '../lib/industryHosts'
 import { localisedIndustryCopy, PICKER_INDUSTRIES, type IndustryCopy } from '../lib/industryCopy'
 import { landingPath, safeRedirect } from '../appointments/lib/landing'
+import { AccessOffNotice } from '../components/AccessOffNotice'
 
 /**
  * Industry Platform Plan Phase 2 — registration captures industry at
@@ -898,6 +899,7 @@ export function Login() {
             <InlineLangPicker i18n={i18n} />
           </div>
 
+          {view === 'login' && <AccessOffNotice reason={searchParams.get('reason')} />}
           {error && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-4 text-sm">
               {error}

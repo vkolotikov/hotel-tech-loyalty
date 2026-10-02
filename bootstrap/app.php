@@ -59,6 +59,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant'             => \App\Http\Middleware\TenantMiddleware::class,
             'brand'              => \App\Http\Middleware\BrandMiddleware::class,
             'admin'              => \App\Http\Middleware\AdminMiddleware::class,
+            'admin.access'       => \App\Http\Middleware\AdminAccess::class,
             'feature'            => \App\Http\Middleware\RequireFeature::class,
             'staff.can'          => \App\Http\Middleware\RequireStaffCapability::class,
             'member.only'        => \App\Http\Middleware\MemberOnly::class,

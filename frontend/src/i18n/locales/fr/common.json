@@ -128,6 +128,7 @@
     "all_brands": "Toutes les marques"
   },
   "auth": {
+    "access_off": "Votre accès à cette organisation a été désactivé. Demandez à un propriétaire ou à un responsable de le réactiver.",
     "login": {
       "title": "Connexion",
       "subtitle": "Ravi de vous revoir",

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppointmentsContext, type AppointmentsContextValue } from './AppointmentsProvider'
@@ -16,6 +16,10 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('../lib/logout', () => ({ logoutAndRedirect: vi.fn() }))
 vi.mock('../i18n', () => ({ SUPPORTED_LANGUAGES: [{ code: 'en', label: 'English' }, { code: 'ru', label: 'Русский' }] }))
+const auth = vi.hoisted(() => ({ user: null as unknown }))
+vi.mock('../stores/authStore', () => ({
+  useAuthStore: (select?: (s: { user: unknown }) => unknown) => (select ? select({ user: auth.user }) : { user: auth.user }),
+}))
 
 const boot: Bootstrap = {
   name: 'HexaTech Appointments',
@@ -156,5 +160,32 @@ describe('AppointmentsShell', () => {
   it('keeps the page up when a background refresh fails', () => {
     const html = render({ isError: true, error: { response: { status: 500, data: {} } } })
     expect(html).toContain('page body')
+  })
+})
+
+describe('AppointmentsShell on the Appointments plan', () => {
+  const planUser = { user_type: 'staff', workspaces: { appointments: { landing: true, has_services: true, only: true } } }
+  afterEach(() => { auth.user = null })
+
+  it('has no way into the full admin', () => {
+    auth.user = planUser
+    const html = render({})
+    expect(html).not.toContain('Full admin')
+    expect(html).not.toContain('href="/service-bookings/calendar"')
+    expect(html).toContain('page body')
+  })
+
+  it('says HexaTech puts a lapsed subscription right, with no button to the full admin', () => {
+    auth.user = planUser
+    const html = render({ data: undefined, isError: true, error: refused('subscription_required') })
+    expect(html).toContain('Contact HexaTech to restore it.')
+    expect(html).not.toContain('Billing')
+    expect(html).not.toContain('Open the full admin')
+    expect(html).not.toContain('href="/"')
+  })
+
+  it('leaves a full customer as it was', () => {
+    auth.user = { user_type: 'staff', workspaces: { appointments: { landing: false, has_services: true, only: false } } }
+    expect(render({})).toContain('Full admin')
   })
 })

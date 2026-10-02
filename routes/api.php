@@ -294,7 +294,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
     // Deliberately NOT under saas.auth (which expects a SaaS JWT) or brand
     // (leads are org-scoped, not brand-scoped). 60/min cap is generous for
     // legitimate use, tight enough to bound abuse.
-    Route::middleware(['auth:sanctum', 'tenant', 'throttle:60,1'])
+    Route::middleware(['auth:sanctum', 'tenant', 'admin.access', 'throttle:60,1'])
         ->prefix('integrations')
         ->group(function () {
             Route::post('leads', [\App\Http\Controllers\Api\V1\Integrations\LeadIntakeController::class, 'store']);
@@ -317,11 +317,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // (10/min was too tight — caught real users clicking Subscribe
             // and hitting 429). Outer 120/min group throttle still bounds
             // total session activity.
-            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout'])->middleware('throttle:30,1');
-            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware('throttle:30,1');
-            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware('throttle:30,1');
-            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware('throttle:60,1');
-            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware('throttle:30,1');
+            // admin.access: billing and the industry are for owners and managers (Part C), and not part of the Appointments plan.
+            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout'])->middleware(['throttle:30,1', 'admin.access']);
+            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware(['throttle:30,1', 'admin.access']);
+            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware(['throttle:30,1', 'admin.access']);
+            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware(['throttle:60,1', 'admin.access']);
+            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware(['throttle:30,1', 'admin.access']);
             // Industry Platform Plan Phase 2 — POST /v1/auth/apply-industry
             // re-applies a CRM + Planner preset against the caller's org.
             // Throttled hard (5/min) per token; an admin clicking the
@@ -329,7 +330,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // switcher should never need more than a handful of switches
             // in a short window. The data-safety contract (acknowledge
             // body param) lives in the controller — see applyIndustry().
-            Route::post('apply-industry',     [AuthController::class, 'applyIndustry'])->middleware('throttle:5,1');
+            Route::post('apply-industry',     [AuthController::class, 'applyIndustry'])->middleware(['throttle:5,1', 'admin.access']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
@@ -434,7 +435,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::post('chatbot/message', [ChatbotController::class, 'message']);
 
         // ─── Admin Routes (staff only) ─────────────────────────────────────────
-        Route::prefix('admin')->middleware(['admin', 'check.subscription'])->group(function () {
+        Route::prefix('admin')->middleware(['admin', 'admin.access', 'check.subscription'])->group(function () {
 
             // Organization setup
             Route::get('setup/status',       [SetupController::class, 'status']);
