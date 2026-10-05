@@ -115,7 +115,7 @@ class AppointmentPresenterTest extends TestCase
         $this->assertSame(['customer' => null, 'staff' => 'Prefers firm pressure'], $detail['notes']);
         $this->assertSame('not_paid_online', $detail['payment']['state']);
         $this->assertFalse($detail['payment']['carries_card_payment']);
-        $this->assertCount(8, $detail['actions']);
+        $this->assertCount(7, $detail['actions']); // Part E: mark-paid gone (Take payment lives in money)
         $this->assertSame($this->member->id, $detail['loyalty']['member']['id']);
         $this->assertTrue($detail['loyalty']['points_on_bookings']);
         $this->assertNull($detail['loyalty']['awarded']);

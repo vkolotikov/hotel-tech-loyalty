@@ -108,6 +108,10 @@ trait SetsUpAppointmentsSchema
                 $t->unique(['organization_id', 'email']);
             });
         }
+        // Part E's money ledger comes with setUpServiceBookingSchema() above.
+        // Part E prices members through DiscountService: build its tables (the discount fixture's own builder, run on
+        // a throwaway object so this trait does not take on SeedsDiscountFixture's properties).
+        (new class { use \Tests\Concerns\SeedsDiscountFixture; public function build(): void { $this->setUpDiscountTables(); } })->build();
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 

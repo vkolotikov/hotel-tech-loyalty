@@ -3403,5 +3403,28 @@
     "bulk_cancel_title": "Cancel {{count}} bookings?",
     "go": "Yes",
     "back": "Back"
+  },
+  "desk_money": {
+    "title": "Money",
+    "paid_online": "Paid online by card",
+    "held_online": "Card held online",
+    "paid_desk": "Paid at the desk",
+    "refunded": "Refunded",
+    "owed": "Still owed",
+    "to_refund": "To refund",
+    "legacy": "Marked paid (no amount recorded)",
+    "open": "Take payment / Refund in HexaTech Appointments",
+    "method": {
+      "cash": "Cash",
+      "card_desk": "Card at the desk",
+      "transfer": "Bank transfer",
+      "other": "Other",
+      "online_card": "Card, through Stripe"
+    },
+    "kind": {
+      "payment": "Payment",
+      "refund": "Refund",
+      "correction": "Correction"
+    }
   }
 }

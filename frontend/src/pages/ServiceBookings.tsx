@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { notifyFor, statusTells, useTellClientDefault } from '../lib/clientMessages'
 import { TellClientCheckbox } from '../components/TellClient'
 import { TellClientConfirm } from '../components/TellClientConfirm'
+import { DeskMoney } from '../components/DeskMoney'
 import toast from 'react-hot-toast'
 import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
@@ -515,10 +516,6 @@ export default function ServiceBookings() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 disabled:opacity-50 transition-colors">
             <CheckCheck size={13} /> Mark Complete
           </button>
-          <button onClick={() => runBulk('mark_paid')} disabled={bulkBusy}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors">
-            <CheckCheck size={13} /> Mark Paid
-          </button>
           <button onClick={() => runBulk('mark_no_show')} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 disabled:opacity-50 transition-colors">
             <AlertTriangle size={13} /> No-show
@@ -562,7 +559,6 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
 
   const [savingStatus, setSavingStatus] = useState(false)
   const [status, setStatus] = useState(booking.status)
-  const [paymentStatus, setPaymentStatus] = useState(booking.payment_status)
   const [staffNotes, setStaffNotes] = useState('')
   // Part D: a status change that tells the client (confirmed from pending, or cancelled) shows the box.
   const tellDefault = useTellClientDefault()
@@ -574,7 +570,7 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
     setSavingStatus(true)
     try {
       await api.patch(`/v1/admin/service-bookings/${booking.id}/status`, {
-        status, payment_status: paymentStatus, append_staff_note: staffNotes.trim() || undefined,
+        status, append_staff_note: staffNotes.trim() || undefined,
         notify_client: tells ? notifyFor(booking.customer_email, tell) : undefined,
       })
       setStaffNotes('')
@@ -647,19 +643,11 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
         )}
 
         <div className="space-y-3">
+          {detail?.money && <DeskMoney money={detail.money} bookingId={booking.id} />}
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5">Status</label>
             <select value={status} onChange={e => setStatus(e.target.value)} className={inputCls} style={SELECT_DARK}>
               {STATUS_OPTIONS.filter(o => o.value).map(o => <option key={o.value} value={o.value} style={OPT_DARK}>{o.label}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5">Payment</label>
-            <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)} className={inputCls} style={SELECT_DARK}>
-              <option value="unpaid"   style={OPT_DARK}>Unpaid</option>
-              <option value="paid"     style={OPT_DARK}>Paid</option>
-              <option value="refunded" style={OPT_DARK}>Refunded</option>
-              <option value="failed"   style={OPT_DARK}>Failed</option>
             </select>
           </div>
           <div>

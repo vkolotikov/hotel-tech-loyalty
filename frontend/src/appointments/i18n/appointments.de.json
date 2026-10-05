@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Kalender", "setup": "Einrichtung" },
+  "nav": { "takings": "Kasse", "calendar": "Kalender", "setup": "Einrichtung" },
   "common": {
     "loading": "Wird geladen…",
     "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
@@ -156,7 +156,7 @@
       "hold_will_be_charged": "Der reservierte Kartenbetrag wird in etwa 10 Minuten belastet.",
       "hold_will_be_released": "Die Kartenreservierung wird in etwa 10 Minuten automatisch aufgehoben. Es wird nichts belastet.",
       "hold_expired": "Die Kartenreservierung ist zu alt: Sie ist verfallen oder verfällt in Kürze. Es wird nichts belastet.",
-      "captured_not_refunded": "Die Kartenzahlung wird NICHT automatisch erstattet. Ist eine Erstattung fällig, nehmen Sie sie in Stripe vor.",
+      "captured_not_refunded": "Die Kartenzahlung wird NICHT automatisch erstattet: Nur eine Erstattung durch eine Leitung hier gibt sie zurück.",
       "marked_only": "Am Termin wird „vor Ort bezahlt“ vermerkt. Es wird kein Geld bewegt."
     }
   },
@@ -178,6 +178,8 @@
     "awarded_none": "Für diesen Besuch wurden keine Punkte gutgeschrieben."
   },
   "history": {
+    "refunded": "Erstattet",
+    "payment_taken": "Zahlung angenommen",
     "title": "Verlauf",
     "system": "System",
     "created": "Gebucht",
@@ -198,6 +200,13 @@
     "bulk_mark_status": "Status in der vollständigen Verwaltung geändert (Sammelaktion)"
   },
   "error": {
+    "price_changed": "Der Preis hat sich geändert — prüfen und erneut speichern.",
+    "invalid_amount": "Geben Sie einen Betrag über null ein.",
+    "note_required": "Geben Sie an, wie der Kunde bezahlt hat.",
+    "reason_required": "Geben Sie den Grund der Erstattung an.",
+    "refund_unavailable": "Online-Zahlungen sind hier ausgeschaltet; die Karte kann hier nicht erstattet werden.",
+    "refund_too_large": "So viel kann auf diesem Weg nicht zurück.",
+    "amount_too_large": "Das ist mehr als offen ist.",
     "slot_taken": "Diese Zeit ist nicht frei. Bitte wählen Sie eine andere.",
     "stale": "Dieser Termin wurde von jemand anderem geändert. Die aktuellen Angaben werden angezeigt — prüfen Sie sie und versuchen Sie es erneut.",
     "not_allowed": "Das ist für diesen Termin in seinem aktuellen Zustand nicht möglich.",
@@ -371,5 +380,66 @@
       "hours": "{{count}} Stunden vorher",
       "language": "Sprache, wenn die des Kunden unbekannt ist"
     }
+  },
+  "money": {
+    "title": "Zahlung",
+    "total": "Gesamt",
+    "paid_online": "Online per Karte bezahlt",
+    "held_online": "Betrag auf der Karte reserviert",
+    "paid_desk": "Vor Ort bezahlt",
+    "refunded": "Erstattet",
+    "owed": "Noch offen",
+    "to_refund": "{{amount}} zu erstatten — eine Leitung kann erstatten",
+    "legacy": "Als bezahlt markiert (kein Betrag erfasst)",
+    "take": "Zahlung annehmen",
+    "refund": "Erstatten",
+    "amount": "Betrag",
+    "how": "Wie",
+    "note": "Notiz",
+    "reason": "Grund",
+    "save_payment": "Zahlung erfassen",
+    "save_refund": "{{amount}} erstatten",
+    "max": "Höchstens {{amount}}",
+    "by": "von {{name}}",
+    "cancel_title": "Geld zurück",
+    "cancel_online": "Auf die Karte erstatten (über Stripe)",
+    "cancel_desk": "Vor Ort zurückgeben",
+    "cancel_staff": "{{amount}} wurde bezahlt — eine Leitung kann erstatten.",
+    "method": {
+      "cash": "Bar",
+      "card_desk": "Karte vor Ort",
+      "transfer": "Überweisung",
+      "other": "Sonstiges",
+      "online_card": "Karte, über Stripe"
+    },
+    "corrects": "Versehentlich erfasst — der Kunde schuldet diesen Betrag noch",
+    "kind": {
+      "payment": "Zahlung",
+      "refund": "Erstattung",
+      "correction": "Korrektur"
+    },
+    "price": {
+      "list": "Listenpreis",
+      "discount": "Mitgliederrabatt",
+      "coupon": "Gutschein",
+      "none": "Kein Gutschein",
+      "code": "Code",
+      "apply": "Anwenden",
+      "total": "Gesamt"
+    }
+  },
+  "takings": {
+    "title": "Kasse",
+    "day": "Tag",
+    "method": "Art",
+    "in": "Ein",
+    "out": "Aus",
+    "net": "Saldo",
+    "none": "An diesem Tag wurde kein Geld erfasst.",
+    "online": "Online bezahlt für die Termine dieses Tages: {{amount}}",
+    "time": "Zeit",
+    "client": "Kunde",
+    "reference": "Referenz",
+    "by": "Erfasst von"
   }
 }

@@ -31,9 +31,9 @@ class AppointmentActionsTest extends TestCase
     {
         return [
             'pending'     => ['pending',     ['confirm', 'cancel', 'move']],
-            'confirmed'   => ['confirmed',   ['start', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue', 'move']],
-            'in_progress' => ['in_progress', ['complete', 'cancel', 'mark_paid_at_venue', 'move']],
-            'completed'   => ['completed',   ['mark_paid_at_venue']],
+            'confirmed'   => ['confirmed',   ['start', 'complete', 'no_show', 'cancel', 'move']],
+            'in_progress' => ['in_progress', ['complete', 'cancel', 'move']],
+            'completed'   => ['completed',   []],
             'cancelled'   => ['cancelled',   []],
             'no_show'     => ['no_show',     []],
         ];
@@ -52,18 +52,9 @@ class AppointmentActionsTest extends TestCase
     public function test_the_list_always_names_every_action_in_one_order(): void
     {
         $this->assertSame(
-            ['confirm', 'start', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue', 'award_points', 'move'],
+            ['confirm', 'start', 'complete', 'no_show', 'cancel', 'award_points', 'move'],
             array_column(app(AppointmentActions::class)->for($this->seedBooking()), 'key'),
         );
-    }
-
-    public function test_marking_paid_at_the_venue_is_never_offered_on_a_card_payment(): void
-    {
-        // One intent per booking: the table allows a payment on one booking only.
-        $this->assertFalse($this->actionsFor(['payment_status' => 'authorized', 'stripe_payment_intent_id' => 'pi_123'])['mark_paid_at_venue']['allowed']);
-        $this->assertFalse($this->actionsFor(['payment_status' => 'unpaid', 'stripe_payment_intent_id' => 'pi_124'])['mark_paid_at_venue']['allowed']);
-        $this->assertFalse($this->actionsFor(['payment_status' => 'paid'])['mark_paid_at_venue']['allowed']);
-        $this->assertTrue($this->actionsFor(['payment_status' => 'unpaid'])['mark_paid_at_venue']['allowed']);
     }
 
     public function test_a_held_card_is_charged_on_confirm_and_released_on_cancel_or_no_show(): void
@@ -123,7 +114,6 @@ class AppointmentActionsTest extends TestCase
 
         $this->assertSame('none', $a['cancel']['consequences']['payment']);
         $this->assertSame('none', $a['confirm']['consequences']['payment']);
-        $this->assertSame('marked_only', $a['mark_paid_at_venue']['consequences']['payment']);
         // A mock intent (demo mode) is not a card payment.
         $mock = $this->actionsFor(['payment_status' => 'paid', 'stripe_payment_intent_id' => 'pi_mock_abc']);
         $this->assertSame('none', $mock['cancel']['consequences']['payment']);

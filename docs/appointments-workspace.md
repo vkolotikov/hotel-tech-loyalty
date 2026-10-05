@@ -94,14 +94,15 @@ extras' notice counts from the venue's now in `ServiceQuoteBuilder`, which corre
 | Action | Writes | Does not do |
 |---|---|---|
 | Add a client | A client record (the full admin's Customers). With an email address and an active programme, the client is enrolled as a member by the same hook every other entry point uses. | Send a welcome or any other message. Merge with an existing client (a likely duplicate is shown to choose from). |
-| Book | A confirmed, unpaid service booking linked to the client and, for a member, the member. Emails the client "Booked" when "Tell the client" is ticked (Part D). | Apply a member price or a coupon. |
+| Book | A confirmed, unpaid service booking linked to the client and, for a member, the member, at the member price with the coupon chosen (Part E). Emails the client "Booked" when "Tell the client" is ticked (Part D). | Give a staff discount. Save at a price staff did not see (a changed price answers "check it and save again"). |
 | Move | The time and the team member; the duration follows the new team member's own. Reference, service, price and payment are kept. Emails "New time" when ticked and the time or the person changed. | — |
 | Confirm (a pending request) | Status `confirmed`. Emails "Confirmed" when ticked. | — But the capture job will now charge a held card within about 10 minutes (see "Card holds" below for a hold older than six days). |
 | Arrived | Status `in_progress`. | — |
 | Complete | Status `completed`, then the programme's points for a member, once. | Take a payment. |
 | No-show | Status `no_show`. The capture job releases a held card. | Charge a no-show fee. Refund a captured payment. |
-| Cancel | Status `cancelled`, the time and the reason. The capture job releases a held card. Emails "Cancelled" when ticked (never the staff's reason). | Refund a captured payment — nothing does, and nothing flags it: the refund is made by hand in Stripe. Return a coupon. |
-| Mark paid at venue | The label `payment_status = paid`, only on a booking with no card payment. | Move money. Record an amount or a method. |
+| Cancel | Status `cancelled`, the time and the reason. The capture job releases a held card. Emails "Cancelled" when ticked (never the staff's reason). A manager refunds in the same step (Stripe first; a failed refund leaves the appointment standing). | Refund when a non-manager cancels (the panel says a manager can refund it). Return a coupon. |
+| Take payment | A ledger row (amount, method, who, when); the label follows what is owed. | Take more than is owed, or take while a card is held online. |
+| Refund (managers) | Card through Stripe (exact amount, idempotent) or money back at the desk, with a reason; a full refund takes the visit's points back. Or a correction of a wrong desk entry ("Entered by mistake"): the money is owed again and the points stay. | Refund more than came in that way. Make money owed again with a goodwill refund. |
 | Award points | Runs the points award again for a completed visit whose award did not happen. | Award twice (the ledger key and the stamp on the booking prevent it). |
 
 `completed`, `cancelled` and `no_show` are final in the workspace.
@@ -165,9 +166,8 @@ frontend tests render to a string.
 ## What this milestone does not do
 
 Insights; photos for services and team members (full admin); service extras and category colours and order
-(full admin); drag to move; reopening a completed visit; staff refunds and a real desk-payment record; SMS or any
-channel but email for client messages (Part D); member price or coupons at a staff booking; rooms and resources (the
-engine has none for services).
+(full admin); drag to move; reopening a completed visit; SMS or any channel but email for client messages (Part D);
+rooms and resources (the engine has none for services); no-show and late-cancel fees, tips, receipts.
 
 ## Selling Appointments on its own (Part C, 2026-10-02)
 
@@ -284,6 +284,76 @@ Code: `App\Services\Appointments\Messages\{MessageSettings, MessageRecipient, Me
 `App\Jobs\DeliverClientMessage`, `App\Mail\AppointmentMessageMail` (words in `lang/*/client_messages.php`),
 `appointments:send-reminders`; tests in `tests/Feature/Appointments/Messages/`.
 
+## Money at the desk (Part E, 2026-10-06)
+
+Every appointment shows its **Money**: the price (list, member discount, coupon), what was paid online and at the
+desk, what was given back, what is still owed, and each movement with who and when.
+
+**Methods** at the desk: cash, card at the desk, bank transfer, other (with a note). A card refund made here goes
+through Stripe ("online card").
+
+**Who may do what:**
+
+| | Staff | Managers |
+|---|---|---|
+| Take payment | yes | yes |
+| Refund, alone or while cancelling | no (Cancel says a manager can refund it) | yes, with a reason |
+| Takings | no (no menu item) | yes |
+
+**What is owed** = the total − a card held online − paid online − paid at the desk, never below zero. A refund (money
+given back as goodwill) never makes money owed again. A desk payment entered wrongly — the wrong method or amount — is
+undone with Refund and "Entered by mistake — the client still owes this": that correction re-opens what it covered,
+keeps the visit's points, shows as "Correction" (money out of that method in Takings), and the right payment is then
+taken. Only money entered here can be corrected, never a card refund or a booking marked paid before Part E. A
+cancelled or no-show appointment owes nothing; it shows what can still be given back instead.
+
+**Card bookings paid at the desk.** A booking whose online card hold was released, failed or is older than the capture
+job's six days (`AppointmentActions::HOLD_SWEEP_DAYS`, so nothing will charge it) can be paid at the desk. Its money is
+desk money only: never counted, shown or refunded as a card payment (`AppointmentMoney::cardPaid()`; the booking's
+`meta.paid_at_desk` tells the screens that read the label without the ledger).
+
+**The label** (`payment_status`) follows the money and nobody types it:
+
+- while a card is held online, the label is left to the card (`authorized`/`pending`), and nothing can be taken;
+- nothing paid: `unpaid`; part paid and something still owed: `unpaid`; all paid: `paid`;
+- some of it given back: `partially_refunded`; all of it given back: `refunded`.
+
+A booking "marked paid" before Part E (no card, no ledger row, label `paid`) counts as paid in full at the desk, so it
+can still be refunded at the desk.
+
+**Cancel with refund.** For a manager, Cancel fills in what can be given back, editable. Every line is checked against
+what came in that way before any is made; the desk lines are recorded first and the card refund goes to Stripe last,
+inside the same step. If Stripe refuses, nothing changes and the appointment stays as it was. Each refund's reason is
+the cancellation reason, else "Appointment cancelled".
+
+**Card refunds and Stripe.** The idempotency key is `appt-refund-{booking}-{cents refunded before}-{cents now}`: a
+retry after an answer that never came back (Stripe refunded, the step rolled back) gets the same refund, not a second
+one. A retry of a refund Stripe really declined meets that saved answer for 24 hours; a different amount, or the
+desk, goes through.
+
+**Points.** When everything paid has been given back and the visit had earned points, the points are reversed through
+the programme's own reversal (a `reverse` row pointing at the award).
+
+**Member price and coupons.** A staff booking for a client who is a member of a venue with an active programme gets
+the portal's own member price (`MemberPricing`, the same code), and staff can pick one of the member's coupons or type
+a code. The panel shows the breakdown before saving; the server prices again inside the slot lock and, if the total
+moved, answers `price_changed` with the new figures. The coupon is used in the same transaction as the booking. There
+is no staff discount.
+
+**Takings** (managers, menu "Takings"): one venue day. Money in and out per method and currency, every movement with
+the appointment, the client and who did it; and, for reference, what that day's appointments were paid online by
+card.
+
+**The full admin.** Service bookings' drawer shows Money read-only with a link to the appointment in the workspace.
+Its Payment dropdown and bulk "Mark Paid" are gone; its status endpoint refuses `payment_status` (422) and its bulk
+endpoint no longer knows `mark_paid`.
+
+Code: `App\Services\Appointments\Money\{AppointmentMoney, StaffPricing, TakingsReport}`,
+`App\Models\ServiceBookingPayment`, `Admin\Appointments\{MoneyController, PriceController}`,
+`BookingPointsService::reverseForServiceBooking()`; frontend `frontend/src/appointments/panel/{MoneyBlock,
+TakePaymentForm, RefundForm}.tsx`, `frontend/src/appointments/takings/`, `frontend/src/components/DeskMoney.tsx`;
+tests in `tests/Feature/Appointments/Money/`.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
@@ -312,3 +382,9 @@ every organisation:
   until then;
 - (Part D) the full admin's Service bookings: the row Confirm and bulk Cancel open a small dialog with "Tell the
   client" instead of the browser's confirm; its create, status, delete and bulk answers gain `client_message(s)`.
+- (Part E) one additive migration (`service_booking_payments`); every appointment's revision changes once on
+  deploy, so a panel open at that moment answers "changed by someone else" on its next save;
+- (Part E) the workspace's "Mark paid at venue" becomes Take payment / Refund (managers) and Takings (managers);
+- (Part E) staff bookings for members get the member price, and a member's coupon when staff choose one;
+- (Part E) the full admin loses its Payment dropdown and bulk "Mark Paid", and its status endpoint refuses
+  `payment_status`.

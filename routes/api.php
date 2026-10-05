@@ -1295,10 +1295,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('clients',      [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'index']);
                 Route::post('clients',     [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'store']);
                 Route::get('clients/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\ClientController::class, 'show'])->whereNumber('id');
+                Route::get('clients/{id}/coupons', [\App\Http\Controllers\Api\V1\Admin\Appointments\PriceController::class, 'coupons'])->whereNumber('id');
+                Route::post('clients/{id}/coupons/resolve', [\App\Http\Controllers\Api\V1\Admin\Appointments\PriceController::class, 'resolveCoupon'])->whereNumber('id');
+                Route::get('quote', [\App\Http\Controllers\Api\V1\Admin\Appointments\PriceController::class, 'quote']);
                 Route::post('bookings', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'store']);
                 Route::get('bookings/{id}',   [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'show'])->whereNumber('id');
                 Route::patch('bookings/{id}', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'update'])->whereNumber('id');
                 Route::post('bookings/{id}/actions', [\App\Http\Controllers\Api\V1\Admin\Appointments\BookingController::class, 'action'])->whereNumber('id');
+                Route::post('bookings/{id}/payments', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'payments'])->whereNumber('id');
+                Route::post('bookings/{id}/refunds', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'refunds'])->whereNumber('id');
+                Route::get('takings', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'takings']);
                 // Setup: services, team, hours, time off, settings and the checklist (spec 2026-10-01).
                 Route::get('setup', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'show']);
                 Route::post('setup/checklist/link-copied', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'linkCopied']);

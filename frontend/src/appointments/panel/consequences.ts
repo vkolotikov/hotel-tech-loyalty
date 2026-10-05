@@ -1,7 +1,7 @@
 import type { ActionInfo, ActionKey, PointsPreview } from '../lib/types'
 
 /** Actions that touch money, points or a final status are confirmed first; "arrived" and "award points" are not. */
-export const NEEDS_CONFIRM: ReadonlySet<ActionKey> = new Set<ActionKey>(['confirm', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue'])
+export const NEEDS_CONFIRM: ReadonlySet<ActionKey> = new Set<ActionKey>(['confirm', 'complete', 'no_show', 'cancel'])
 
 export interface Line {
   key: string
@@ -16,8 +16,9 @@ const PAYMENT: Record<string, Omit<Line, 'key'>> = {
   hold_will_be_released: { fallback: 'The card hold is released automatically within about 10 minutes. Nothing is charged.', tone: 'plain' },
   // Older than the capture job's window: nothing charges it and nothing releases it; it lapses at Stripe.
   hold_expired:          { fallback: 'The card hold is too old to charge: it has lapsed or is about to. Nothing will be charged.', tone: 'warning' },
-  // Nothing flags a payment that was already taken: the refund is the venue's own action in Stripe.
-  captured_not_refunded: { fallback: 'The card payment is NOT refunded automatically. If a refund is due, make it in Stripe.', tone: 'warning' },
+  // Nothing flags a payment that was already taken: the refund is a manager's, in this workspace (Part E) —
+  // for a manager cancelling, the refund line sits right under this sentence.
+  captured_not_refunded: { fallback: 'The card payment is NOT refunded automatically: only a manager’s refund here sends it back.', tone: 'warning' },
   marked_only:           { fallback: 'This records "paid at the venue" on the appointment. No money is moved.', tone: 'plain' },
 }
 

@@ -1,4 +1,4 @@
-import type { ActionKey, ClientMessageInfo, ClientSummary, CreateBody, DateKey, PointsResult } from '../lib/types'
+import type { ActionKey, ClientMessageInfo, ClientSummary, CouponRef, CreateBody, DateKey, DeskMethod, PointsResult } from '../lib/types'
 import { makeWall, minutesOf } from '../lib/wallClock'
 
 export type Source = 'admin' | 'phone' | 'walk_in'
@@ -12,7 +12,12 @@ export interface CreateDraft {
   client: ClientSummary | null
   source: Source
   staffNotes: string
+  /** Part E: the member's chosen coupon, or none. */
+  coupon?: CouponRef | null
 }
+
+/** Part E: the money a manager gives back while cancelling, one line per way. */
+export interface CancelRefunds { online: string; desk: string; deskMethod: DeskMethod }
 
 export interface PanelError { code: string; message: string }
 
@@ -22,7 +27,7 @@ export type PanelState =
   | {
       mode: 'view'
       id: number
-      sub: 'summary' | 'move' | 'confirm'
+      sub: 'summary' | 'move' | 'confirm' | 'pay' | 'refund'
       action: ActionKey | null
       reason: string
       saving: boolean
@@ -37,6 +42,8 @@ export type PanelEvent =
   | { type: 'edit'; patch: Partial<CreateDraft>; key: string }
   | { type: 'openView'; id: number }
   | { type: 'startMove' }
+  | { type: 'startPay' }
+  | { type: 'startRefund' }
   | { type: 'askConfirm'; action: ActionKey }
   | { type: 'setReason'; reason: string }
   | { type: 'back' }
@@ -49,7 +56,7 @@ export type PanelEvent =
 export const CLOSED: PanelState = { mode: 'closed' }
 
 export function emptyDraft(date: DateKey): CreateDraft {
-  return { date, time: null, masterId: null, serviceId: null, client: null, source: 'admin', staffNotes: '' }
+  return { date, time: null, masterId: null, serviceId: null, client: null, source: 'admin', staffNotes: '', coupon: null }
 }
 
 const viewOf = (id: number, told: ClientMessageInfo | null = null): PanelState => ({ mode: 'view', id, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, told })
@@ -84,6 +91,7 @@ export function draftBody(draft: CreateDraft): CreateBody | null {
     start: makeWall(draft.date, minutesOf(draft.time)),
     source: draft.source,
     ...(notes ? { staff_notes: notes } : {}),
+    ...(draft.coupon ? { coupon: draft.coupon } : {}),
   }
 }
 
@@ -123,6 +131,10 @@ export function panelReducer(state: PanelState, event: PanelEvent): PanelState {
     switch (event.type) {
       case 'startMove':
         return { ...state, sub: 'move', action: null, error: null, outcome: null, told: null }
+      case 'startPay':
+        return { ...state, sub: 'pay', action: null, error: null, outcome: null, told: null }
+      case 'startRefund':
+        return { ...state, sub: 'refund', action: null, error: null, outcome: null, told: null }
       case 'askConfirm':
         return { ...state, sub: 'confirm', action: event.action, reason: '', error: null, outcome: null, told: null }
       case 'setReason':

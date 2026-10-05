@@ -13,6 +13,7 @@ use App\Services\Appointments\StaffBookingWriter;
 use App\Services\Appointments\VenueClock;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /** Thin: validation here, rules in App\Services\Appointments and the shared scheduler. */
 class BookingController extends Controller
@@ -32,6 +33,10 @@ class BookingController extends Controller
             'source'         => 'nullable|string|in:admin,phone,walk_in',
             'customer_notes' => 'nullable|string|max:2000',
             'staff_notes'    => 'nullable|string|max:2000',
+            'coupon'                 => 'nullable|array',
+            'coupon.member_offer_id' => 'nullable|integer',
+            'coupon.redemption_id'   => 'nullable|integer',
+            'expected_total'         => 'nullable|numeric|min:0|max:100000',
             'notify_client'  => 'nullable|boolean',
         ]);
 
@@ -84,10 +89,13 @@ class BookingController extends Controller
             'revision'      => 'required|string|max:64',
             'reason'        => 'nullable|string|max:500',
             'notify_client' => 'nullable|boolean',
+            'refunds'          => 'nullable|array|max:2',
+            'refunds.*.via'    => ['required', 'string', Rule::in(['online_card', 'cash', 'card_desk', 'transfer', 'other'])],
+            'refunds.*.amount' => 'required|numeric|min:0|max:100000',
         ]);
 
         try {
-            $result = $runner->run($id, $data['action'], $data['revision'], $data['reason'] ?? null, $request->user());
+            $result = $runner->run($id, $data['action'], $data['revision'], $data['reason'] ?? null, $request->user(), $data['refunds'] ?? []);
         } catch (StaleAppointment $e) {
             return $this->stale($e, $presenter);
         }

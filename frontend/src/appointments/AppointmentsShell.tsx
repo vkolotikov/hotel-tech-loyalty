@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, LayoutGrid, LogOut, Menu, Plus, Search, Settings2, Users } from 'lucide-react'
+import { CalendarDays, LayoutGrid, LogOut, Menu, Plus, Search, Settings2, Users, Wallet } from 'lucide-react'
 import { logoutAndRedirect } from '../lib/logout'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useAppointments } from './AppointmentsProvider'
@@ -49,6 +49,7 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   const nav = [
     { to: '/appointments', end: true, icon: CalendarDays, label: t('appointments.nav.calendar', 'Calendar') },
     { to: '/appointments/clients', end: false, icon: Users, label: vocab('clients') },
+    ...(data?.staff.can_manage ? [{ to: '/appointments/takings', end: false, icon: Wallet, label: t('appointments.nav.takings', 'Takings') }] : []),
     { to: '/appointments/setup', end: false, icon: Settings2, label: t('appointments.nav.setup', 'Setup') },
   ]
 

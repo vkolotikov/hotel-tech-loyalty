@@ -10,6 +10,7 @@ use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
 use App\Services\Appointments\Messages\ClientMessenger;
+use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\ServiceSchedulingService;
 use Carbon\Carbon;
@@ -241,7 +242,7 @@ class ServiceBookingController extends Controller
         $validated = $request->validate([
             'ids'    => 'required|array|min:1|max:500',
             'ids.*'  => 'integer',
-            'action' => 'required|string|in:cancel,mark_complete,mark_paid,mark_no_show,mark_status',
+            'action' => 'required|string|in:cancel,mark_complete,mark_no_show,mark_status',
             'value'  => 'nullable|string|max:40',
             'notify_client' => 'nullable|boolean',
         ]);
@@ -256,7 +257,6 @@ class ServiceBookingController extends Controller
                 $patch = match ($validated['action']) {
                     'cancel'        => ['status' => 'cancelled', 'cancelled_at' => now()],
                     'mark_complete' => ['status' => 'completed'],
-                    'mark_paid'     => ['payment_status' => 'paid'],
                     'mark_no_show'  => ['status' => 'no_show'],
                     'mark_status'   => ['status' => $validated['value'] ?? $b->status],
                 };
@@ -414,6 +414,8 @@ class ServiceBookingController extends Controller
             ->orderByDesc('created_at')
             ->limit(20)
             ->get();
+        // Part E: read-only here; money is taken and given back in the workspace.
+        $arr['money'] = AppointmentMoney::summary($booking);
 
         return response()->json($arr);
     }
@@ -548,7 +550,8 @@ class ServiceBookingController extends Controller
     {
         $data = $request->validate([
             'status'              => 'nullable|string|in:pending,confirmed,in_progress,completed,cancelled,no_show',
-            'payment_status'      => 'nullable|string|in:unpaid,paid,refunded,failed',
+            // Part E: the payment label follows the money ledger; nobody types it.
+            'payment_status'      => 'prohibited',
             'cancellation_reason' => 'nullable|string|max:500',
             'staff_notes'         => 'nullable|string|max:2000|prohibits:append_staff_note',
             'append_staff_note'   => 'nullable|string|max:2000|prohibits:staff_notes',

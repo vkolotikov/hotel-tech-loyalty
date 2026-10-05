@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CreateBody, DateKey, HoursRow, Impact,
+  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CouponOption, CouponRef, CreateBody, DateKey, DeskMethod, HoursRow, Impact, PriceQuote, RefundVia, Takings,
   PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
   TeamBody, TimeOffBody, Wall,
 } from './types'
@@ -62,11 +62,27 @@ export const appointmentsApi = {
 
   booking: (id: number): Promise<{ booking: AppointmentDetail }> => watched(api.get(`${BASE}/bookings/${id}`)),
 
+  quote: (p: { client_id: number; service_id: number; master_id: number; start: Wall; coupon?: CouponRef | null }): Promise<PriceQuote> =>
+    watched(api.get(`${BASE}/quote`, { params: { ...p, coupon: p.coupon ?? undefined } })),
+
+  coupons: (clientId: number): Promise<{ coupons: CouponOption[] }> => watched(api.get(`${BASE}/clients/${clientId}/coupons`)),
+
+  resolveCoupon: (clientId: number, code: string): Promise<{ coupon: CouponOption }> =>
+    watched(api.post(`${BASE}/clients/${clientId}/coupons/resolve`, { code })),
+
   move: (id: number, body: { start: Wall; master_id: number; revision: string; notify_client?: boolean }): Promise<{ booking: AppointmentDetail; client_message: ClientMessageInfo | null }> =>
     watched(api.patch(`${BASE}/bookings/${id}`, body)),
 
-  act: (id: number, body: { action: ActionKey; revision: string; reason?: string; notify_client?: boolean }): Promise<{ booking: AppointmentDetail; points: PointsResult | null; client_message: ClientMessageInfo | null }> =>
+  act: (id: number, body: { action: ActionKey; revision: string; reason?: string; notify_client?: boolean; refunds?: { via: RefundVia; amount: number }[] }): Promise<{ booking: AppointmentDetail; points: PointsResult | null; client_message: ClientMessageInfo | null }> =>
     watched(api.post(`${BASE}/bookings/${id}/actions`, body)),
+
+  takePayment: (id: number, body: { amount: number; method: DeskMethod; note?: string; revision: string }): Promise<{ booking: AppointmentDetail }> =>
+    watched(api.post(`${BASE}/bookings/${id}/payments`, body)),
+
+  refund: (id: number, body: { amount: number; via: RefundVia; reason: string; corrects?: boolean; revision: string }): Promise<{ booking: AppointmentDetail }> =>
+    watched(api.post(`${BASE}/bookings/${id}/refunds`, body)),
+
+  takings: (date: DateKey): Promise<Takings> => watched(api.get(`${BASE}/takings`, { params: { date } })),
 
   setup: (): Promise<SetupPayload> => watched(api.get(`${BASE}/setup`)),
 

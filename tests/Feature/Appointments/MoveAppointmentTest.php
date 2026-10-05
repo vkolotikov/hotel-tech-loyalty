@@ -57,7 +57,7 @@ class MoveAppointmentTest extends TestCase
             ->assertJsonPath('booking.id', $booking->id)
             ->assertJsonPath('booking.notes.staff', 'Prefers firm pressure')
             ->assertJsonPath('booking.client.phone', '+44 7700 900123')
-            ->assertJsonCount(8, 'booking.actions');
+            ->assertJsonCount(7, 'booking.actions'); // Part E: mark-paid gone
     }
 
     public function test_another_organisations_appointment_is_not_found(): void

@@ -13,7 +13,7 @@ function open(): Extract<PanelState, { mode: 'create' }> {
 describe('panelReducer — create', () => {
   it('opens with the slot prefilled and everything else empty', () => {
     const state = open()
-    expect(state.draft).toEqual({ date: '2026-10-06', time: '10:00', masterId: 1, serviceId: null, client: null, source: 'admin', staffNotes: '' })
+    expect(state.draft).toEqual({ date: '2026-10-06', time: '10:00', masterId: 1, serviceId: null, client: null, source: 'admin', staffNotes: '', coupon: null })
     expect(state).toMatchObject({ key: 'key-1', saving: false, error: null })
   })
 

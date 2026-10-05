@@ -63,9 +63,9 @@ class ServiceBookingNoteAppendTest extends TestCase
 
         $this->patchJson('/_test/service-bookings/1/status', [
             'append_staff_note' => 'Customer will arrive at 10:00.',
-            'status' => 'confirmed', 'payment_status' => 'paid',
+            'status' => 'confirmed',
         ])->assertOk()->assertJsonPath('staff_notes', $latest."\n\nCustomer will arrive at 10:00.")
-            ->assertJsonPath('status', 'confirmed')->assertJsonPath('payment_status', 'paid');
+            ->assertJsonPath('status', 'confirmed');
         $this->assertDatabaseCount('audit_logs', 1);
     }
 

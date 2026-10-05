@@ -37,7 +37,7 @@ class FullAdminMessagesTest extends TestCase
         $patch($pending, ['status' => 'confirmed'])->assertOk()->assertJsonPath('client_message.kind', 'confirmed');
         $patch($pending, ['status' => 'confirmed'])->assertOk()->assertJsonPath('client_message', null); // already confirmed
         $patch($pending, ['status' => 'in_progress'])->assertOk()->assertJsonPath('client_message', null);
-        $patch($pending, ['payment_status' => 'paid'])->assertOk()->assertJsonPath('client_message', null);
+        $patch($pending, ['staff_notes' => 'Phoned to confirm'])->assertOk()->assertJsonPath('client_message', null);
         $patch($pending, ['status' => 'cancelled'])->assertOk()->assertJsonPath('client_message.kind', 'cancelled');
         $patch($pending, ['status' => 'cancelled'])->assertOk()->assertJsonPath('client_message', null); // already cancelled
     }

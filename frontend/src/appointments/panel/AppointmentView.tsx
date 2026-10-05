@@ -9,6 +9,8 @@ import { StatusMark } from '../ui/StatusMark'
 import { History } from './History'
 import { LoyaltyCard } from './LoyaltyCard'
 import { Messages } from './Messages'
+import { MoneyBlock } from './MoneyBlock'
+import { refundWays } from './moneyLines'
 import { messageLine } from './messageLine'
 import { pointsLine } from './consequences'
 import type { PanelError } from './panelState'
@@ -24,6 +26,10 @@ interface Props {
   /** What the last save told the client (Part D), shown until the next step. */
   told?: ClientMessageInfo | null
   onAction: (action: ActionKey) => void
+  /** Part E: managers may refund; Take payment follows the server's `money.can_take`. */
+  canManage?: boolean
+  onPay?: () => void
+  onRefund?: () => void
 }
 
 /**
@@ -31,7 +37,7 @@ interface Props {
  * three separate statements — and the actions the server allows. The
  * buttons are exactly `booking.actions` with `allowed: true`.
  */
-export function AppointmentView({ booking: b, zone, locale, saving, error, outcome, told = null, onAction }: Props) {
+export function AppointmentView({ booking: b, zone, locale, saving, error, outcome, told = null, onAction, canManage = false, onPay, onRefund }: Props) {
   const { t } = useTranslation()
   const allowed = (key: ActionKey) => b.actions.find(a => a.key === key)?.allowed === true
   const complete = b.actions.find(a => a.key === 'complete')
@@ -43,7 +49,6 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
     ['complete', t('appointments.action.complete', 'Complete'), 'step'],
     ['award_points', t('appointments.action.award_points', 'Award points'), 'step'],
     ['move', t('appointments.action.move', 'Move'), 'secondary'],
-    ['mark_paid_at_venue', t('appointments.action.mark_paid_at_venue', 'Mark paid at venue'), 'secondary'],
     ['no_show', t('appointments.action.no_show', 'No-show'), 'secondary'],
     ['cancel', t('appointments.action.cancel', 'Cancel appointment'), 'danger'],
   ]
@@ -92,6 +97,8 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         {b.client.id === null && <p className="mt-1 text-xs text-a-text-2">{t('appointments.client.unlinked', 'This booking is not linked to a client record.')}</p>}
       </section>
 
+      {b.money && <MoneyBlock money={b.money} locale={locale} zone={zone} />}
+
       <LoyaltyCard card={b.loyalty} preview={complete?.allowed ? complete.consequences.points : null} />
 
       {(b.notes.staff || b.notes.customer) && (
@@ -105,6 +112,8 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         {offered.map(([key, label, kind]) => (
           <Button key={key} type="button" size="sm" variant={key === nextStep ? 'primary' : kind === 'danger' ? 'danger' : 'secondary'} disabled={saving} onClick={() => onAction(key)}>{label}</Button>
         ))}
+        {b.money?.can_take && onPay && <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={onPay}>{t('appointments.money.take', 'Take payment')}</Button>}
+        {canManage && onRefund && b.money && refundWays(b.money).length > 0 && <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={onRefund}>{t('appointments.money.refund', 'Refund')}</Button>}
       </div>
 
       <Messages messages={b.messages ?? []} zone={zone} locale={locale} />

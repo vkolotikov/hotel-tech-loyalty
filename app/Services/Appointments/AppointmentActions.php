@@ -3,6 +3,7 @@
 namespace App\Services\Appointments;
 
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\Loyalty\BookingPointsService;
 
 /**
@@ -30,7 +31,6 @@ final class AppointmentActions
         'complete'           => ['confirmed', 'in_progress'],
         'no_show'            => ['confirmed'],
         'cancel'             => ['pending', 'confirmed', 'in_progress'],
-        'mark_paid_at_venue' => ['confirmed', 'in_progress', 'completed'],
         'award_points'       => ['completed'],
     ];
 
@@ -56,6 +56,12 @@ final class AppointmentActions
         return str_starts_with($intent, 'pi_') && !str_starts_with($intent, 'pi_mock_');
     }
 
+    /** A card hold past the capture job's window: nothing will charge or release it any more. */
+    public static function holdLapsed(ServiceBooking $b): bool
+    {
+        return $b->created_at !== null && $b->created_at->lt(now()->subDays(self::HOLD_SWEEP_DAYS));
+    }
+
     /**
      * `$preview` is the points preview when the caller already has it (for()
      * works it out once for every action that needs it); null works it out.
@@ -72,8 +78,6 @@ final class AppointmentActions
         }
 
         return match ($action) {
-            // Only where no payment of any kind is recorded against the booking.
-            'mark_paid_at_venue' => (string) $b->payment_status === 'unpaid' && empty($b->stripe_payment_intent_id),
             // Only when the award did not happen and one is due.
             'award_points'       => ($preview ?? $this->points->previewForServiceBooking($b))['points'] > 0,
             default              => true,
@@ -102,15 +106,15 @@ final class AppointmentActions
     {
         $card = self::carriesCardPayment($b);
         $held = $card && in_array((string) $b->payment_status, ['authorized', 'pending'], true);
-        $captured = $card && in_array((string) $b->payment_status, ['paid', 'partially_refunded'], true);
+        // Card money Stripe took — never the label of a desk payment (Part E).
+        $captured = AppointmentMoney::cardPaid($b) && in_array((string) $b->payment_status, ['paid', 'partially_refunded'], true);
         // Past the job's window nothing will charge or release the hold.
-        $lapsed = $held && $b->created_at !== null && $b->created_at->lt(now()->subDays(self::HOLD_SWEEP_DAYS));
+        $lapsed = $held && self::holdLapsed($b);
 
         return [
             'payment' => match ($action) {
                 'confirm'            => $held ? ($lapsed ? 'hold_expired' : 'hold_will_be_charged') : 'none',
                 'cancel', 'no_show'  => $held ? ($lapsed ? 'hold_expired' : 'hold_will_be_released') : ($captured ? 'captured_not_refunded' : 'none'),
-                'mark_paid_at_venue' => 'marked_only',
                 default              => 'none',
             },
             'points'  => in_array($action, ['complete', 'award_points'], true) ? ($preview ?? $this->points->previewForServiceBooking($b)) : null,

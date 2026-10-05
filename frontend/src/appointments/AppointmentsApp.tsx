@@ -8,6 +8,7 @@ import { ClientsPage } from './clients/ClientsPage'
 import { ClientProfile } from './clients/ClientProfile'
 import { loginPath } from './lib/landing'
 import { SetupPage } from './setup/SetupPage'
+import { TakingsPage } from './takings/TakingsPage'
 
 registerAppointmentsLocales()
 
@@ -32,6 +33,7 @@ export function AppointmentsApp() {
           <Route path="clients" element={<ClientsPage />} />
           <Route path="clients/:id" element={<ClientProfile />} />
           <Route path="setup" element={<SetupPage />} />
+          <Route path="takings" element={<TakingsPage />} />
           <Route path="*" element={<Navigate to="/appointments" replace />} />
         </Routes>
       </AppointmentsShell>

@@ -200,6 +200,25 @@ trait SetsUpServiceBookingSchema
             });
         }
 
+        // Part E's money ledger, as the 2026_10_06 migration builds it: every
+        // booking detail (workspace and full admin) reads it.
+        if (!Schema::hasTable('service_booking_payments')) {
+            Schema::create('service_booking_payments', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('service_booking_id');
+                $t->string('kind', 8);
+                $t->string('method', 16);
+                $t->decimal('amount', 10, 2);
+                $t->string('currency', 3);
+                $t->string('note', 200)->nullable();
+                $t->boolean('corrects')->default(false);
+                $t->string('stripe_refund_id', 64)->nullable();
+                $t->unsignedBigInteger('actor_user_id')->nullable();
+                $t->timestamps();
+            });
+        }
+
         if (!Schema::hasTable('hotel_settings')) {
             Schema::create('hotel_settings', function (Blueprint $t) {
                 $t->id();

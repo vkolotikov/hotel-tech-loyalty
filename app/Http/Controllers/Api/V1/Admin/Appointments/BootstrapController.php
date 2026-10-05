@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\ServiceMaster;
 use App\Models\Staff;
 use App\Services\Appointments\Messages\MessageSettings;
+use App\Services\Appointments\Setup\SetupAccess;
 use App\Services\Appointments\VenueClock;
 use App\Services\Booking\BookingCapability;
 use App\Services\Booking\Setup\SetupChecklist;
@@ -43,7 +44,7 @@ class BootstrapController extends Controller
                 'today'          => VenueClock::today($orgId),
                 'currency'       => $org->currency ?: 'EUR',
             ],
-            'staff'        => ['name' => (string) $user->name, 'role' => $staff?->role],
+            'staff'        => ['name' => (string) $user->name, 'role' => $staff?->role, 'can_manage' => SetupAccess::canManage($user)],
             'loyalty'      => [
                 'programme_on'       => PortalBootstrap::loyaltyOn($orgId),
                 'points_on_bookings' => $points->pointsOnBookingsEnabled($orgId),

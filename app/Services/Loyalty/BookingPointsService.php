@@ -8,6 +8,7 @@ use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
 use App\Models\ServiceBooking;
+use App\Models\User;
 use App\Services\LoyaltyService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Support\Facades\DB;
@@ -109,6 +110,25 @@ final class BookingPointsService
      *
      * @return array{points: int, reason: ?string}
      */
+    /**
+     * A refunded visit's points go back (Part E: full refunds only, called once
+     * what was paid reaches zero). Every earn transaction of this booking not
+     * yet reversed is reversed through the ledger's own reversal.
+     */
+    public function reverseForServiceBooking(ServiceBooking $booking, ?User $staff = null): int
+    {
+        $total = 0;
+        $txs = PointsTransaction::withoutGlobalScopes()
+            ->where('reference_type', 'service_booking')->where('reference_id', $booking->id)
+            ->where('points', '>', 0)->where('is_reversed', false)->get();
+        foreach ($txs as $tx) {
+            $this->loyalty->reverseTransaction($tx, "Appointment {$booking->booking_reference} refunded", $staff);
+            $total += (int) $tx->points;
+        }
+
+        return $total;
+    }
+
     public function previewForServiceBooking(ServiceBooking $booking): array
     {
         $orgId = (int) $booking->organization_id;

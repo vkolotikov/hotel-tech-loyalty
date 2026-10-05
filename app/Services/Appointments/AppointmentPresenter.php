@@ -7,6 +7,7 @@ use App\Models\ClientMessage;
 use App\Models\ServiceBooking;
 use App\Models\User;
 use App\Services\Appointments\Messages\MessageRecipient;
+use App\Services\Appointments\Money\AppointmentMoney;
 
 /**
  * A service booking as the appointments workspace sees it.
@@ -37,6 +38,8 @@ final class AppointmentPresenter
             (string) $b->payment_status,
             md5((string) $b->staff_notes),
             $b->updated_at?->getTimestamp() ?? 0,
+            // Part E: every payment or refund moves the revision, even within the same second.
+            (int) (((array) ($b->meta ?? []))['money_version'] ?? 0),
         ])), 0, 16);
     }
 
@@ -49,7 +52,8 @@ final class AppointmentPresenter
         return match ((string) $b->payment_status) {
             'unpaid'                => 'not_paid_online',
             'authorized', 'pending' => $card ? 'card_held' : 'not_paid_online',
-            'paid'                  => $card ? 'paid_by_card' : 'marked_paid',
+            // A card booking paid at the desk (its hold released or lapsed) was not paid by card.
+            'paid'                  => AppointmentMoney::cardPaid($b) ? 'paid_by_card' : 'marked_paid',
             'refunded'              => $refunded > 0 ? 'refunded' : 'marked_refunded',
             'partially_refunded'    => 'partially_refunded',
             'failed'                => 'failed',
@@ -120,6 +124,8 @@ final class AppointmentPresenter
             'client_email' => MessageRecipient::for($b),
             'messages'     => ClientMessage::where('service_booking_id', $b->id)->orderByDesc('id')->limit(20)->get()
                 ->map(fn (ClientMessage $m) => $m->toApi())->values()->all(),
+            // Part E: what it costs, what was paid and how, what went back, what is still owed.
+            'money'        => AppointmentMoney::summary($b),
         ]);
     }
 

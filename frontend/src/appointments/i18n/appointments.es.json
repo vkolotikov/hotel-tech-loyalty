@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Agenda", "setup": "Configuración" },
+  "nav": { "takings": "Caja", "calendar": "Agenda", "setup": "Configuración" },
   "common": {
     "loading": "Cargando…",
     "error": "Algo ha salido mal. Inténtelo de nuevo.",
@@ -156,7 +156,7 @@
       "hold_will_be_charged": "El importe retenido en la tarjeta se cobrará en unos 10 minutos.",
       "hold_will_be_released": "La retención de la tarjeta se libera automáticamente en unos 10 minutos. No se cobra nada.",
       "hold_expired": "La retención de la tarjeta es demasiado antigua: ha caducado o está a punto de hacerlo. No se cobrará nada.",
-      "captured_not_refunded": "El pago con tarjeta NO se reembolsa automáticamente. Si corresponde un reembolso, hágalo en Stripe.",
+      "captured_not_refunded": "El pago con tarjeta NO se reembolsa automáticamente: solo lo devuelve un reembolso hecho aquí por un responsable.",
       "marked_only": "Se anota «pagada en el local» en la cita. No se mueve dinero."
     }
   },
@@ -178,6 +178,8 @@
     "awarded_none": "No se concedieron puntos por esta visita."
   },
   "history": {
+    "refunded": "Devuelto",
+    "payment_taken": "Pago cobrado",
     "title": "Historial",
     "system": "Sistema",
     "created": "Reservada",
@@ -198,6 +200,13 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "price_changed": "El precio cambió — revíselo y guarde de nuevo.",
+    "invalid_amount": "Introduzca un importe mayor que cero.",
+    "note_required": "Indique cómo pagó el cliente.",
+    "reason_required": "Indique el motivo de la devolución.",
+    "refund_unavailable": "Los pagos en línea están desactivados aquí; la tarjeta no se puede devolver aquí.",
+    "refund_too_large": "No se puede devolver tanto de esta forma.",
+    "amount_too_large": "Es más de lo pendiente.",
     "slot_taken": "Esa hora no está libre. Elija otra.",
     "stale": "Otra persona ha modificado esta cita. Se muestran los datos actuales: revíselos e inténtelo de nuevo.",
     "not_allowed": "Eso no es posible para esta cita en su estado actual.",
@@ -371,5 +380,66 @@
       "hours": "{{count}} horas antes",
       "language": "Idioma si no se conoce el del cliente"
     }
+  },
+  "money": {
+    "title": "Pago",
+    "total": "Total",
+    "paid_online": "Pagado en línea con tarjeta",
+    "held_online": "Importe retenido en la tarjeta",
+    "paid_desk": "Pagado en el local",
+    "refunded": "Devuelto",
+    "owed": "Pendiente",
+    "to_refund": "{{amount}} por devolver — un responsable puede devolverlo",
+    "legacy": "Marcado como pagado (sin importe registrado)",
+    "take": "Cobrar",
+    "refund": "Devolver",
+    "amount": "Importe",
+    "how": "Cómo",
+    "note": "Nota",
+    "reason": "Motivo",
+    "save_payment": "Registrar pago",
+    "save_refund": "Devolver {{amount}}",
+    "max": "Como máximo {{amount}}",
+    "by": "por {{name}}",
+    "cancel_title": "Devolución",
+    "cancel_online": "Devolver a la tarjeta (con Stripe)",
+    "cancel_desk": "Devolver en el local",
+    "cancel_staff": "Se pagaron {{amount}} — un responsable puede devolverlo.",
+    "method": {
+      "cash": "Efectivo",
+      "card_desk": "Tarjeta en el local",
+      "transfer": "Transferencia",
+      "other": "Otro",
+      "online_card": "Tarjeta, con Stripe"
+    },
+    "corrects": "Registrado por error — el cliente todavía debe este importe",
+    "kind": {
+      "payment": "Pago",
+      "refund": "Devolución",
+      "correction": "Corrección"
+    },
+    "price": {
+      "list": "Precio de lista",
+      "discount": "Descuento de socio",
+      "coupon": "Cupón",
+      "none": "Sin cupón",
+      "code": "Código",
+      "apply": "Aplicar",
+      "total": "Total"
+    }
+  },
+  "takings": {
+    "title": "Caja",
+    "day": "Día",
+    "method": "Medio",
+    "in": "Entradas",
+    "out": "Salidas",
+    "net": "Saldo",
+    "none": "No se registró dinero este día.",
+    "online": "Pagado en línea por las citas del día: {{amount}}",
+    "time": "Hora",
+    "client": "Cliente",
+    "reference": "Referencia",
+    "by": "Registrado por"
   }
 }

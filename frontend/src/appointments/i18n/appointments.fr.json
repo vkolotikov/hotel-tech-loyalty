@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Agenda", "setup": "Configuration" },
+  "nav": { "takings": "Caisse", "calendar": "Agenda", "setup": "Configuration" },
   "common": {
     "loading": "Chargement…",
     "error": "Une erreur s'est produite. Veuillez réessayer.",
@@ -156,7 +156,7 @@
       "hold_will_be_charged": "Le montant autorisé sur la carte sera débité d'ici 10 minutes environ.",
       "hold_will_be_released": "L'autorisation de carte est levée automatiquement d'ici 10 minutes environ. Rien n'est débité.",
       "hold_expired": "L'autorisation de carte est trop ancienne : elle a expiré ou va expirer. Rien ne sera débité.",
-      "captured_not_refunded": "Le paiement par carte n'est PAS remboursé automatiquement. Si un remboursement est dû, effectuez-le dans Stripe.",
+      "captured_not_refunded": "Le paiement par carte n'est PAS remboursé automatiquement : seul un remboursement fait ici par un responsable le rend.",
       "marked_only": "Le rendez-vous est noté « payé sur place ». Aucun argent n'est déplacé."
     }
   },
@@ -178,6 +178,8 @@
     "awarded_none": "Aucun point n'a été crédité pour cette visite."
   },
   "history": {
+    "refunded": "Remboursé",
+    "payment_taken": "Paiement encaissé",
     "title": "Historique",
     "system": "Système",
     "created": "Réservé",
@@ -198,6 +200,13 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "price_changed": "Le prix a changé — vérifiez et enregistrez à nouveau.",
+    "invalid_amount": "Saisissez un montant supérieur à zéro.",
+    "note_required": "Indiquez comment le client a payé.",
+    "reason_required": "Indiquez le motif du remboursement.",
+    "refund_unavailable": "Les paiements en ligne sont désactivés ici ; la carte ne peut pas être remboursée ici.",
+    "refund_too_large": "On ne peut pas rendre autant de cette façon.",
+    "amount_too_large": "C’est plus que le reste à payer.",
     "slot_taken": "Cette heure n'est pas libre. Choisissez-en une autre.",
     "stale": "Ce rendez-vous a été modifié par quelqu'un d'autre. Les informations actuelles sont affichées — vérifiez-les et réessayez.",
     "not_allowed": "Ce n'est pas possible pour ce rendez-vous dans son état actuel.",
@@ -371,5 +380,66 @@
       "hours": "{{count}} heures avant",
       "language": "Langue si celle du client est inconnue"
     }
+  },
+  "money": {
+    "title": "Paiement",
+    "total": "Total",
+    "paid_online": "Payé en ligne par carte",
+    "held_online": "Montant bloqué sur la carte",
+    "paid_desk": "Payé sur place",
+    "refunded": "Remboursé",
+    "owed": "Reste à payer",
+    "to_refund": "{{amount}} à rembourser — un responsable peut rembourser",
+    "legacy": "Marqué payé (aucun montant enregistré)",
+    "take": "Encaisser",
+    "refund": "Rembourser",
+    "amount": "Montant",
+    "how": "Comment",
+    "note": "Note",
+    "reason": "Motif",
+    "save_payment": "Enregistrer le paiement",
+    "save_refund": "Rembourser {{amount}}",
+    "max": "Au plus {{amount}}",
+    "by": "par {{name}}",
+    "cancel_title": "Remboursement",
+    "cancel_online": "Rembourser la carte (via Stripe)",
+    "cancel_desk": "Rendre sur place",
+    "cancel_staff": "{{amount}} a été payé — un responsable peut rembourser.",
+    "method": {
+      "cash": "Espèces",
+      "card_desk": "Carte sur place",
+      "transfer": "Virement",
+      "other": "Autre",
+      "online_card": "Carte, via Stripe"
+    },
+    "corrects": "Saisi par erreur — le client doit encore ce montant",
+    "kind": {
+      "payment": "Paiement",
+      "refund": "Remboursement",
+      "correction": "Correction"
+    },
+    "price": {
+      "list": "Prix catalogue",
+      "discount": "Remise membre",
+      "coupon": "Coupon",
+      "none": "Sans coupon",
+      "code": "Code",
+      "apply": "Appliquer",
+      "total": "Total"
+    }
+  },
+  "takings": {
+    "title": "Caisse",
+    "day": "Jour",
+    "method": "Moyen",
+    "in": "Entrées",
+    "out": "Sorties",
+    "net": "Solde",
+    "none": "Aucun argent enregistré ce jour-là.",
+    "online": "Payé en ligne pour les rendez-vous du jour : {{amount}}",
+    "time": "Heure",
+    "client": "Client",
+    "reference": "Référence",
+    "by": "Enregistré par"
   }
 }

@@ -208,18 +208,6 @@ class AppointmentActionEndpointTest extends TestCase
         $this->assertSame(1, PointsTransaction::where('member_id', $this->member->id)->count());
     }
 
-    public function test_marking_paid_at_the_venue_is_a_label_and_is_refused_on_a_card_payment(): void
-    {
-        $booking = $this->seedBooking();
-        $this->act($booking, 'mark_paid_at_venue')->assertOk()->assertJsonPath('booking.payment.state', 'marked_paid');
-        $this->assertSame('paid', $booking->fresh()->payment_status);
-        $this->assertSame('confirmed', $booking->fresh()->status);
-
-        $held = $this->seedBooking(['payment_status' => 'authorized', 'stripe_payment_intent_id' => 'pi_held_2', 'start_at' => '2026-10-06 12:00:00', 'end_at' => '2026-10-06 12:45:00']);
-        $this->act($held, 'mark_paid_at_venue')->assertStatus(422)->assertJsonPath('error', 'not_allowed');
-        $this->assertSame('authorized', $held->fresh()->payment_status);
-    }
-
     public function test_a_visit_booked_in_the_workspace_for_a_member_earns_on_completion(): void
     {
         $ada = $this->seedMemberClient();

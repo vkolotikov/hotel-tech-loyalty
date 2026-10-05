@@ -10,6 +10,9 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceMaster;
 use App\Models\User;
+use App\Services\Appointments\Money\StaffPricing;
+use App\Services\Booking\CouponException;
+use App\Services\Booking\CouponSelection;
 use App\Services\ServiceSchedulingService;
 use App\Support\AdvisoryLock;
 use Carbon\CarbonImmutable;
@@ -29,12 +32,12 @@ final class StaffBookingWriter
     /** `service_booking_submissions.source` for this entry point. */
     public const SOURCE = 'staff';
 
-    public function __construct(private readonly ServiceSchedulingService $scheduler)
+    public function __construct(private readonly ServiceSchedulingService $scheduler, private readonly StaffPricing $pricing)
     {
     }
 
     /**
-     * @param array{client_id: int, service_id: int, master_id: int, start: string, source?: ?string, customer_notes?: ?string, staff_notes?: ?string} $data
+     * @param array{client_id: int, service_id: int, master_id: int, start: string, source?: ?string, customer_notes?: ?string, staff_notes?: ?string, coupon?: ?array, expected_total?: ?float} $data
      * @return array{booking: ServiceBooking, replayed: bool}
      */
     public function create(array $data, string $key, User $actor): array
@@ -48,6 +51,8 @@ final class StaffBookingWriter
             'source'         => (string) ($data['source'] ?? 'admin'),
             'customer_notes' => (string) ($data['customer_notes'] ?? ''),
             'staff_notes'    => (string) ($data['staff_notes'] ?? ''),
+            'coupon'         => $data['coupon'] ?? null,
+            'expected_total' => isset($data['expected_total']) ? round((float) $data['expected_total'], 2) : null,
         ]));
 
         // A retry of a request that already succeeded must answer with that
@@ -76,6 +81,16 @@ final class StaffBookingWriter
 
                 $slot = $this->scheduler->reserveSlot($service, $master->id, $start->toIso8601String());
 
+                // Part E: the portal's own member price and the member's chosen coupon, checked against what staff saw.
+                try {
+                    $pricing = $this->pricing->price($guest, (float) $slot['price'], $service->currency ?: 'EUR', CouponSelection::fromArray($data['coupon'] ?? null));
+                } catch (CouponException $e) {
+                    throw new AppointmentRefused($e->errorCode, $e->sentence(), 422);
+                }
+                if (isset($data['expected_total']) && abs($pricing->total - (float) $data['expected_total']) > 0.004) {
+                    throw new AppointmentRefused('price_changed', 'The price changed — check it and save again.', 409, ['quote' => $pricing->toArray()]);
+                }
+
                 $booking = ServiceBooking::create([
                     'organization_id'   => $orgId,
                     'service_id'        => $service->id,
@@ -94,13 +109,14 @@ final class StaffBookingWriter
                     'duration_minutes'  => $slot['duration_minutes'],
                     'service_price'     => $slot['price'],
                     'extras_total'      => 0,
-                    'total_amount'      => round((float) $slot['price'], 2),
                     'currency'          => $service->currency ?: 'EUR',
                     'status'            => 'confirmed',
                     'payment_status'    => 'unpaid',
                     'source'            => $data['source'] ?? 'admin',
                     'customer_notes'    => $data['customer_notes'] ?? null,
                     'staff_notes'       => $data['staff_notes'] ?? null,
+                    // list_amount, discount_*, total_amount (Part E)
+                    ...$this->pricing->columns($pricing),
                 ]);
 
                 ServiceBookingSubmission::create([
@@ -113,6 +129,9 @@ final class StaffBookingWriter
                     'customer_name'      => (string) $guest->full_name,
                     'request_payload'    => ['_hash' => $hash, 'actor_id' => $actor->id],
                 ]);
+
+                // The member's coupon is used here, in the same transaction; a replay never reaches this line.
+                $this->pricing->consume($pricing, $booking->booking_reference);
 
                 AuditLog::record(
                     'service_booking.created',
@@ -132,6 +151,8 @@ final class StaffBookingWriter
 
                 return ['booking' => $booking, 'replayed' => false];
             });
+        } catch (AppointmentRefused $e) {
+            throw $e;
         } catch (\PDOException $e) {
             // A database failure is a \RuntimeException too; it must not be
             // reported to staff as "that time is taken".

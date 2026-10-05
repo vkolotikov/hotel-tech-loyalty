@@ -13,11 +13,13 @@ const FAMILIES: Record<string, readonly string[]> = {
   'consequence.payment': ['none', 'hold_will_be_charged', 'hold_will_be_released', 'hold_expired', 'captured_not_refunded', 'marked_only'],
   points_reason: ['not_a_member', 'programme_off', 'points_on_bookings_off', 'already_awarded', 'zero_amount', 'refunded', 'failed'],
   action: ['confirm', 'start', 'complete', 'award_points', 'move', 'mark_paid_at_venue', 'no_show', 'cancel'],
-  history: ['created', 'moved', 'confirm', 'start', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue', 'award_points', 'updated', 'cancelled', 'bulk_cancel', 'bulk_mark_complete', 'bulk_mark_paid', 'bulk_mark_no_show', 'bulk_mark_status'],
-  error: ['slot_taken', 'stale', 'not_allowed', 'master_not_eligible', 'before_today', 'time_does_not_exist', 'invalid_time', 'idempotency_key_reused', 'possible_duplicate', 'workspace_disabled', 'not_found', 'client_not_found', 'service_not_found', 'master_not_found', 'network'],
+  history: ['created', 'moved', 'confirm', 'start', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue', 'award_points', 'updated', 'cancelled', 'bulk_cancel', 'bulk_mark_complete', 'bulk_mark_paid', 'bulk_mark_no_show', 'bulk_mark_status', 'payment_taken', 'refunded'],
+  error: ['amount_too_large', 'refund_too_large', 'refund_unavailable', 'reason_required', 'note_required', 'invalid_amount', 'price_changed', 'slot_taken', 'stale', 'not_allowed', 'master_not_eligible', 'before_today', 'time_does_not_exist', 'invalid_time', 'idempotency_key_reused', 'possible_duplicate', 'workspace_disabled', 'not_found', 'client_not_found', 'service_not_found', 'master_not_found', 'network'],
   'setup.step': ['timezone', 'service', 'performer', 'hours', 'online', 'messages', 'first_appointment'],
   'setup.hours.problem': ['format', 'order', 'overlap', 'too_many'],
   'messages.kind': ['booked', 'moved', 'confirmed', 'cancelled', 'reminder'],
+  'money.method': ['cash', 'card_desk', 'transfer', 'other', 'online_card'],
+  'money.kind': ['payment', 'refund'],
   'messages.reason': ['not_requested', 'no_recipient', 'suppressed', 'stale', 'mail_error'],
 }
 
@@ -62,11 +64,13 @@ describe('appointments bundle', () => {
     }
   })
 
-  it('no translation says a captured payment is flagged for a refund — nothing flags it', () => {
+  it('no translation says a captured payment is flagged for a refund, or sends anyone to Stripe — a manager refunds it here (Part E)', () => {
     const promise: Record<(typeof LOCALES)[number], RegExp> = { en: /flag/i, ru: /помеча/i, de: /vorgemerkt/i, fr: /signalé/i, es: /señalad/i }
+    const manager: Record<(typeof LOCALES)[number], RegExp> = { en: /a manager/, ru: /менеджер/, de: /Leitung/, fr: /responsable/, es: /responsable/ }
     for (const locale of LOCALES) {
       const text = String(at(bundle(locale), 'consequence.payment.captured_not_refunded'))
-      expect(text, locale).toContain('Stripe')
+      expect(text, locale).not.toContain('Stripe')
+      expect(text, locale).toMatch(manager[locale])
       expect(text, locale).not.toMatch(promise[locale])
     }
   })

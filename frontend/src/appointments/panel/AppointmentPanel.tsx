@@ -4,14 +4,17 @@ import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { appointmentsApi, failureOf } from '../lib/api'
 import { useBoot } from '../AppointmentsProvider'
-import type { ActionKey, AppointmentDetail, CalendarMaster, CatalogueService, ClientMessageInfo, DateKey, PointsResult, Wall } from '../lib/types'
+import type { ActionKey, AppointmentDetail, CalendarMaster, CatalogueService, ClientMessageInfo, DateKey, DeskMethod, PointsResult, RefundVia, Wall } from '../lib/types'
 import { Notice } from '../ui/Notice'
 import { ActionConfirm } from './ActionConfirm'
 import { AppointmentView } from './AppointmentView'
 import { MoveForm } from './MoveForm'
+import { RefundForm } from './RefundForm'
+import { TakePaymentForm } from './TakePaymentForm'
 import { NEEDS_CONFIRM } from './consequences'
 import { CreateForm } from './CreateForm'
-import { detailPollMs, draftBody, newKey, type PanelEvent, type PanelState } from './panelState'
+import { detailPollMs, draftBody, newKey, type CancelRefunds, type PanelEvent, type PanelState } from './panelState'
+import { makeWall, minutesOf } from '../lib/wallClock'
 
 interface Props {
   state: PanelState
@@ -62,6 +65,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
   const [tellChoice, setTellChoice] = useState<{ key: string; value: boolean } | null>(null)
   const tell = tellChoice !== null && tellChoice.key === tellKey ? tellChoice.value : staffDefault
   const onTell = (value: boolean) => setTellChoice({ key: tellKey, value })
+  const canManage = boot.staff.can_manage ?? false
 
   const draft = state.mode === 'create' ? state.draft : null
   const slots = useQuery({
@@ -70,13 +74,31 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     enabled: draft !== null && draft.serviceId !== null && draft.masterId !== null,
   })
 
+  // Part E: the server's price for this client (the member price and coupon), and the member's coupons.
+  const quoteParams = draft && draft.client && draft.serviceId !== null && draft.masterId !== null && draft.time !== null
+    ? { client_id: draft.client.id, service_id: draft.serviceId, master_id: draft.masterId, start: makeWall(draft.date, minutesOf(draft.time)), coupon: draft.coupon ?? null }
+    : null
+  const quote = useQuery({ queryKey: ['appointments', 'quote', quoteParams], queryFn: () => appointmentsApi.quote(quoteParams!), enabled: quoteParams !== null, retry: false })
+  const coupons = useQuery({ queryKey: ['appointments', 'coupons', draft?.client?.id ?? null], queryFn: () => appointmentsApi.coupons(draft!.client!.id), enabled: !!draft?.client?.member })
+  const resolveCode = async (code: string) => {
+    if (!draft?.client) return
+    try {
+      const { coupon } = await appointmentsApi.resolveCoupon(draft.client.id, code)
+      void queryClient.invalidateQueries({ queryKey: ['appointments', 'coupons'] })
+      dispatch({ type: 'edit', patch: { coupon: coupon.coupon }, key: newKey() })
+    } catch (e) {
+      const f = failureOf(e)
+      dispatch({ type: 'failed', error: { code: f.code, message: f.message } })
+    }
+  }
+
   const save = async () => {
     if (state.mode !== 'create') return
     const body = draftBody(state.draft)
     if (!body) return
     dispatch({ type: 'saving' })
     try {
-      const { booking, client_message } = await appointmentsApi.createBooking({ ...body, notify_client: tell }, state.key)
+      const { booking, client_message } = await appointmentsApi.createBooking({ ...body, notify_client: tell, ...(quote.data ? { expected_total: quote.data.total_amount } : {}) }, state.key)
       queryClient.setQueryData(['appointments', 'booking', booking.id], { booking })
       void queryClient.invalidateQueries({ queryKey: ['appointments', 'calendar'] })
       dispatch({ type: 'created', id: booking.id, told: client_message })
@@ -84,6 +106,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
       const failure = failureOf(e)
       // The slot was lost: fetch the times that are free now.
       if (failure.code === 'slot_taken') void queryClient.invalidateQueries({ queryKey: ['appointments', 'slots'] })
+      // The price moved since the quote (Part E): show the new one.
+      if (failure.code === 'price_changed') void queryClient.invalidateQueries({ queryKey: ['appointments', 'quote'] })
       dispatch({ type: 'failed', error: { code: failure.code, message: failure.message } })
     }
   }
@@ -97,6 +121,10 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     refetchOnWindowFocus: state.mode === 'view' && state.sub === 'summary',
   })
   const booking = detail.data?.booking
+
+  const refundDefaults = (): CancelRefunds => ({ online: String(booking?.money?.refundable_online ?? 0), desk: String(booking?.money?.refundable_desk ?? 0), deskMethod: 'cash' })
+  const [refundChoice, setRefundChoice] = useState<{ key: string; value: CancelRefunds } | null>(null)
+  const refunds = refundChoice !== null && refundChoice.key === tellKey ? refundChoice.value : refundDefaults()
 
   const settle = (next: AppointmentDetail, outcome: PointsResult | null, told: ClientMessageInfo | null = null) => {
     queryClient.setQueryData(['appointments', 'booking', next.id], { booking: next })
@@ -122,6 +150,10 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
       const asks = action === 'confirm' || action === 'cancel'
       const result = await appointmentsApi.act(booking.id, {
         action, revision: booking.revision, ...(reason?.trim() ? { reason: reason.trim() } : {}), ...(asks ? { notify_client: tell } : {}),
+        ...(action === 'cancel' && canManage ? { refunds: [
+          { via: 'online_card' as const, amount: Number(refunds.online) || 0 },
+          { via: refunds.deskMethod, amount: Number(refunds.desk) || 0 },
+        ].filter(r => r.amount > 0) } : {}),
       })
       settle(result.booking, result.points, result.client_message)
     } catch (e) {
@@ -138,6 +170,18 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     } catch (e) {
       refuse(e)
     }
+  }
+
+  const pay = async (body: { amount: number; method: DeskMethod; note?: string }) => {
+    if (!booking) return
+    dispatch({ type: 'saving' })
+    try { const r = await appointmentsApi.takePayment(booking.id, { ...body, revision: booking.revision }); settle(r.booking, null) } catch (e) { refuse(e) }
+  }
+
+  const giveBack = async (body: { amount: number; via: RefundVia; reason: string; corrects?: boolean }) => {
+    if (!booking) return
+    dispatch({ type: 'saving' })
+    try { const r = await appointmentsApi.refund(booking.id, { ...body, revision: booking.revision }); settle(r.booking, null) } catch (e) { refuse(e) }
   }
 
   const onAction = (action: ActionKey) => {
@@ -169,6 +213,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
             onEdit={(patch) => dispatch({ type: 'edit', patch, key: newKey() })}
             onSave={() => { void save() }}
             tell={tell} onTell={onTell}
+            quote={quote.data} coupons={coupons.data?.coupons ?? []} onResolveCode={resolveCode}
           />
         )}
         {state.mode === 'view' && detail.isLoading && <p className="text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
@@ -176,7 +221,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
 
         {state.mode === 'view' && booking && state.sub === 'summary' && (
           <AppointmentView booking={booking} zone={boot.venue.timezone} locale={i18n.language || 'en'}
-            saving={state.saving} error={state.error} outcome={state.outcome} told={state.told} onAction={onAction} />
+            saving={state.saving} error={state.error} outcome={state.outcome} told={state.told} onAction={onAction}
+            canManage={canManage} onPay={() => dispatch({ type: 'startPay' })} onRefund={() => dispatch({ type: 'startRefund' })} />
         )}
 
         {state.mode === 'view' && booking && state.sub === 'move' && (
@@ -185,10 +231,18 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
             onMove={(start, masterId) => { void move(start, masterId) }} onBack={() => dispatch({ type: 'back' })} />
         )}
 
+        {state.mode === 'view' && booking && state.sub === 'pay' && (
+          <TakePaymentForm booking={booking} saving={state.saving} error={state.error} onSave={(b) => { void pay(b) }} onBack={() => dispatch({ type: 'back' })} />
+        )}
+        {state.mode === 'view' && booking && state.sub === 'refund' && booking.money && (
+          <RefundForm booking={booking} saving={state.saving} error={state.error} onSave={(b) => { void giveBack(b) }} onBack={() => dispatch({ type: 'back' })} />
+        )}
+
         {state.mode === 'view' && booking && state.sub === 'confirm' && state.action !== null && (() => {
           const info = booking.actions.find(a => a.key === state.action)
           return info ? (
             <ActionConfirm booking={booking} action={info} reason={state.reason} saving={state.saving} error={state.error} tell={tell} onTell={onTell}
+              canManage={canManage} refunds={refunds} onRefunds={(value) => setRefundChoice({ key: tellKey, value })}
               onReason={(reason) => dispatch({ type: 'setReason', reason })}
               onConfirm={() => { void act(info.key, state.reason) }} onBack={() => dispatch({ type: 'back' })} />
           ) : null

@@ -7,14 +7,14 @@ export type Status = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'ca
 export type PaymentState =
   | 'not_paid_online' | 'card_held' | 'paid_by_card' | 'marked_paid' | 'refunded'
   | 'marked_refunded' | 'partially_refunded' | 'failed' | 'hold_released' | 'unknown'
-export type ActionKey = 'confirm' | 'start' | 'complete' | 'no_show' | 'cancel' | 'mark_paid_at_venue' | 'award_points' | 'move'
+export type ActionKey = 'confirm' | 'start' | 'complete' | 'no_show' | 'cancel' | 'award_points' | 'move'
 
 export interface Bootstrap {
   name: string
   organization: { id: number; name: string; industry: string }
   brand: { id: number; name: string } | null
   venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
-  staff: { name: string; role: string | null }
+  staff: { name: string; role: string | null; can_manage?: boolean }
   loyalty: { programme_on: boolean; points_on_bookings: boolean }
   readiness: { services: number; team: number; bookable: boolean; checklist: Checklist }
   /** The venue's client-message settings (Part D). Optional for older fixtures; the server always sends it. */
@@ -31,6 +31,36 @@ export interface ClientMessageInfo {
   at: string | null
 }
 export interface MessageSettingsInfo { staff_default: boolean; reminder_hours: number; language: string }
+
+export type CouponRef = { member_offer_id: number } | { redemption_id: number }
+export interface CouponOption { kind: 'offer' | 'reward'; coupon: CouponRef; label: string; value_label?: string }
+/** The price staff are about to book at (Part E): the portal's own member price. */
+export interface PriceQuote {
+  list_amount: number; discount: { amount: number; label: string; source: string } | null
+  coupon: { status?: string; label?: string } | null; total_amount: number; currency: string; member: boolean
+}
+
+export type DeskMethod = 'cash' | 'card_desk' | 'transfer' | 'other'
+export type RefundVia = DeskMethod | 'online_card'
+/** `corrects`: a desk refund undoing a wrong entry — the money is owed again. */
+export interface MoneyMovement { id: number; kind: 'payment' | 'refund'; method: RefundVia; amount: number; currency: string; note: string | null; corrects?: boolean; by: string | null; at: string | null }
+/** The money of an appointment (Part E), worked out by the server. */
+export interface MoneyInfo {
+  total: number; currency: string; held_online: number; paid_online: number; refunded_online: number
+  paid_desk: number; refunded_desk: number; legacy_marked_paid: boolean; owed: number; to_refund: number
+  refundable_online: number; refundable_desk: number; paid_in: number; paid_back: number; can_take: boolean
+  /** What a correction may undo: money entered here (not a label marked paid before Part E). */
+  correctable_desk?: number; corrected_desk?: number
+  movements: MoneyMovement[]
+}
+export interface TakingsRow extends MoneyMovement { reference: string | null; client: string | null }
+/** One day's takings (Part E): totals per currency and method, every movement, and what was paid online. */
+export interface Takings {
+  date: DateKey
+  totals: Record<string, Record<RefundVia, { in: number; out: number }>>
+  rows: TakingsRow[]
+  online: Record<string, number>
+}
 
 export interface MemberSummary { id: number; number: string; tier: string | null; points: number }
 export interface ClientSummary { id: number; name: string; phone: string | null; email: string | null; member: MemberSummary | null }
@@ -92,6 +122,8 @@ export interface AppointmentDetail extends Omit<AppointmentSummary, 'client' | '
   client_email?: string | null
   /** Client messages about this appointment, newest first (Part D). */
   messages?: ClientMessageInfo[]
+  /** The money of this appointment (Part E). */
+  money?: MoneyInfo
 }
 
 export interface MasterDay {
@@ -124,6 +156,9 @@ export interface CreateBody {
   staff_notes?: string
   /** "Tell the client by email"; absent = the venue's setting decides. */
   notify_client?: boolean
+  /** Part E: the member's coupon, and the total staff saw (the server refuses `price_changed` otherwise). */
+  coupon?: CouponRef
+  expected_total?: number
 }
 
 export type ChecklistKey = 'timezone' | 'service' | 'performer' | 'hours' | 'online' | 'messages' | 'first_appointment'

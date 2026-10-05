@@ -1,5 +1,5 @@
 {
-  "nav": { "calendar": "Calendar", "setup": "Setup" },
+  "nav": { "takings": "Takings", "calendar": "Calendar", "setup": "Setup" },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
@@ -156,7 +156,7 @@
       "hold_will_be_charged": "The held card payment will be charged within about 10 minutes.",
       "hold_will_be_released": "The card hold is released automatically within about 10 minutes. Nothing is charged.",
       "hold_expired": "The card hold is too old to charge: it has lapsed or is about to. Nothing will be charged.",
-      "captured_not_refunded": "The card payment is NOT refunded automatically. If a refund is due, make it in Stripe.",
+      "captured_not_refunded": "The card payment is NOT refunded automatically: only a manager’s refund here sends it back.",
       "marked_only": "This records \"paid at the venue\" on the appointment. No money is moved."
     }
   },
@@ -178,6 +178,8 @@
     "awarded_none": "No points were awarded for this visit."
   },
   "history": {
+    "refunded": "Refunded",
+    "payment_taken": "Payment taken",
     "title": "History",
     "system": "System",
     "created": "Booked",
@@ -198,6 +200,13 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "price_changed": "The price changed — check it and save again.",
+    "invalid_amount": "Enter an amount above zero.",
+    "note_required": "Say how the client paid.",
+    "reason_required": "Say why the money goes back.",
+    "refund_unavailable": "Online payments are switched off at this venue, so the card cannot be refunded here.",
+    "refund_too_large": "That is more than can go back this way.",
+    "amount_too_large": "That is more than is owed.",
     "slot_taken": "That time is not free. Choose another.",
     "stale": "This appointment was changed by someone else. The current details are shown — check them and try again.",
     "not_allowed": "That is not possible for this appointment in its current state.",
@@ -371,5 +380,66 @@
       "hours": "{{count}} hours before",
       "language": "Language when the client's is not known"
     }
+  },
+  "money": {
+    "title": "Money",
+    "total": "Total",
+    "paid_online": "Paid online by card",
+    "held_online": "Card held online",
+    "paid_desk": "Paid at the desk",
+    "refunded": "Refunded",
+    "owed": "Still owed",
+    "to_refund": "{{amount}} to refund — a manager can refund it",
+    "legacy": "Marked paid (no amount recorded)",
+    "take": "Take payment",
+    "refund": "Refund",
+    "amount": "Amount",
+    "how": "How",
+    "note": "Note",
+    "reason": "Reason",
+    "save_payment": "Record payment",
+    "save_refund": "Refund {{amount}}",
+    "max": "At most {{amount}}",
+    "by": "by {{name}}",
+    "cancel_title": "Money back",
+    "cancel_online": "Refund the card (through Stripe)",
+    "cancel_desk": "Give back at the desk",
+    "cancel_staff": "{{amount}} was paid — a manager can refund it.",
+    "method": {
+      "cash": "Cash",
+      "card_desk": "Card at the desk",
+      "transfer": "Bank transfer",
+      "other": "Other",
+      "online_card": "Card, through Stripe"
+    },
+    "corrects": "Entered by mistake — the client still owes this",
+    "kind": {
+      "payment": "Payment",
+      "refund": "Refund",
+      "correction": "Correction"
+    },
+    "price": {
+      "list": "List price",
+      "discount": "Member discount",
+      "coupon": "Coupon",
+      "none": "No coupon",
+      "code": "Code",
+      "apply": "Apply",
+      "total": "Total"
+    }
+  },
+  "takings": {
+    "title": "Takings",
+    "day": "Day",
+    "method": "Method",
+    "in": "In",
+    "out": "Out",
+    "net": "Net",
+    "none": "No money was recorded on this day.",
+    "online": "Paid online for this day's appointments: {{amount}}",
+    "time": "Time",
+    "client": "Client",
+    "reference": "Reference",
+    "by": "Recorded by"
   }
 }

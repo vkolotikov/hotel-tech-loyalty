@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { money } from '../../lib/money'
-import type { CalendarMaster, CatalogueService, DateKey, SlotsPayload } from '../lib/types'
+import type { CalendarMaster, CatalogueService, CouponOption, CouponRef, DateKey, PriceQuote, SlotsPayload } from '../lib/types'
 import { timeOf } from '../lib/wallClock'
 import { useVocab } from '../lib/vocab'
 import { Button } from '../ui/Button'
@@ -25,6 +26,10 @@ interface Props {
   /** "Tell the client by email" (Part D). */
   tell: boolean
   onTell: (tell: boolean) => void
+  /** Part E: the server's price for a member, the member's coupons, and a typed code. */
+  quote?: PriceQuote
+  coupons?: CouponOption[]
+  onResolveCode?: (code: string) => Promise<void>
 }
 
 const control = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -93,8 +98,26 @@ export function CreateForm(p: Props) {
         <dl className="rounded-lg bg-a-surface-2 px-3 py-2 text-sm">
           <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.panel.when', 'When')}</dt><dd className="font-semibold text-a-text">{timeOf(slot.start)} – {timeOf(slot.end)}</dd></div>
           <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.panel.duration', 'Duration')}</dt><dd className="text-a-text">{t('appointments.panel.minutes', '{{minutes}} min', { minutes: p.slots.duration_minutes })}</dd></div>
-          <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.panel.price', 'Price')}</dt><dd className="font-semibold text-a-text">{money(p.slots.price, p.slots.currency)}</dd></div>
+          {p.quote ? (
+            <>
+              {p.quote.discount && <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.money.price.list', 'List price')}</dt><dd className="text-a-text">{money(p.quote.list_amount, p.quote.currency)}</dd></div>}
+              {p.quote.discount && <div className="flex justify-between"><dt className="text-a-text-2">{p.quote.discount.label}</dt><dd className="text-a-text">−{money(p.quote.discount.amount, p.quote.currency)}</dd></div>}
+              <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.money.price.total', 'Total')}</dt><dd className="font-semibold text-a-text">{money(p.quote.total_amount, p.quote.currency)}</dd></div>
+            </>
+          ) : (
+            <div className="flex justify-between"><dt className="text-a-text-2">{t('appointments.panel.price', 'Price')}</dt><dd className="font-semibold text-a-text">{money(p.slots.price, p.slots.currency)}</dd></div>
+          )}
         </dl>
+      )}
+
+      {draft.client?.member && p.onResolveCode && (
+        <Field label={t('appointments.money.price.coupon', 'Coupon')}>
+          <select className={control} value={draft.coupon ? JSON.stringify(draft.coupon) : ''} onChange={(e) => p.onEdit({ coupon: e.target.value ? JSON.parse(e.target.value) as CouponRef : null })}>
+            <option value="">{t('appointments.money.price.none', 'No coupon')}</option>
+            {(p.coupons ?? []).map(c => <option key={JSON.stringify(c.coupon)} value={JSON.stringify(c.coupon)}>{c.label}</option>)}
+          </select>
+          <CouponCode onResolve={p.onResolveCode} />
+        </Field>
       )}
 
       <Field label={t('appointments.panel.source', 'Booked')}>
@@ -112,5 +135,17 @@ export function CreateForm(p: Props) {
       {draft.client && <TellClient email={draft.client.email ?? null} checked={p.tell} onChange={p.onTell} />}
       <Button type="submit" full disabled={!ready} loading={p.saving}>{t('appointments.panel.save', 'Save appointment')}</Button>
     </form>
+  )
+}
+
+/** A code the client shows (an offer code or a reward's REW- code), resolved for this member by the server. */
+function CouponCode({ onResolve }: { onResolve: (code: string) => Promise<void> }) {
+  const { t } = useTranslation()
+  const [code, setCode] = useState('')
+  return (
+    <div className="mt-2 flex gap-2">
+      <input className={control} placeholder={t('appointments.money.price.code', 'Code')} value={code} onChange={(e) => setCode(e.target.value)} />
+      <Button type="button" variant="secondary" disabled={code.trim() === ''} onClick={() => { void onResolve(code.trim()).then(() => setCode('')) }}>{t('appointments.money.price.apply', 'Apply')}</Button>
+    </div>
   )
 }

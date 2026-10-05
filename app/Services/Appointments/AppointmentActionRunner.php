@@ -5,6 +5,8 @@ namespace App\Services\Appointments;
 use App\Models\AuditLog;
 use App\Models\ServiceBooking;
 use App\Models\User;
+use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Setup\SetupAccess;
 use App\Services\Loyalty\BookingPointsService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -12,7 +14,7 @@ use Illuminate\Support\Facades\Log;
 /**
  * Runs one staff action on an appointment: under the row lock, against the
  * revision the client saw, through the transition table. It writes the
- * appointment's own status (or, for "paid at venue", the payment label) and
+ * appointment's own status (payments and refunds are AppointmentMoney's) and
  * nothing else — no payment, refund or message is triggered from here. The
  * one side effect, points for a completed visit, is the existing worker's,
  * called once after the transaction commits.
@@ -22,19 +24,30 @@ final class AppointmentActionRunner
     public function __construct(
         private readonly AppointmentActions $actions,
         private readonly BookingPointsService $points,
+        private readonly AppointmentMoney $money,
     ) {
     }
 
-    /** @return array{booking: ServiceBooking, points: ?array{awarded: int, reason: ?string}} */
-    public function run(int $id, string $action, string $revision, ?string $reason, User $actor): array
+    /**
+     * @param list<array{via: string, amount: float|int|string}> $refunds cancel only, managers only (Part E)
+     * @return array{booking: ServiceBooking, points: ?array{awarded: int, reason: ?string}}
+     */
+    public function run(int $id, string $action, string $revision, ?string $reason, User $actor, array $refunds = []): array
     {
         if (!array_key_exists($action, AppointmentActions::FROM)) {
             throw new AppointmentRefused('not_allowed', 'That action is not available.', 422);
         }
+        $refunds = array_values(array_filter($refunds, fn (array $r) => round((float) ($r['amount'] ?? 0), 2) > 0));
+        if ($refunds !== [] && $action !== 'cancel') {
+            throw new AppointmentRefused('not_allowed', 'Money goes back only with a cancellation or a refund.', 422);
+        }
+        if ($refunds !== []) {
+            SetupAccess::requireManager($actor);
+        }
 
         $preview = null;
 
-        $booking = DB::transaction(function () use ($id, $action, $revision, $reason, $actor, &$preview) {
+        $booking = DB::transaction(function () use ($id, $action, $revision, $reason, $actor, $refunds, &$preview) {
             $booking = ServiceBooking::lockForUpdate()->find($id)
                 ?? throw new AppointmentRefused('not_found', 'This appointment no longer exists.', 404);
 
@@ -50,13 +63,23 @@ final class AppointmentActionRunner
             $old = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
             $reason = $reason !== null && trim($reason) !== '' ? mb_substr(trim($reason), 0, 255) : null;
 
+            // Cancel with refund (Part E): the money first, under this same row lock; a refused or failed refund
+            // throws and nothing — not even the cancellation — is kept. Every line is checked before any is made,
+            // and the desk lines go before the card: once Stripe has refunded, nothing after it may refuse.
+            if ($refunds !== []) {
+                AppointmentMoney::assertRefundable($booking, $refunds);
+                usort($refunds, fn (array $a, array $b) => ((string) $a['via'] === 'online_card') <=> ((string) $b['via'] === 'online_card'));
+            }
+            foreach ($refunds as $r) {
+                $this->money->refundInLock($booking, (float) $r['amount'], (string) $r['via'], $reason ?? 'Appointment cancelled', $actor);
+            }
+
             $patch = match ($action) {
                 'confirm'            => ['status' => 'confirmed'],
                 'start'              => ['status' => 'in_progress'],
                 'complete'           => ['status' => 'completed'],
                 'no_show'            => ['status' => 'no_show'],
                 'cancel'             => ['status' => 'cancelled', 'cancelled_at' => now(), 'cancellation_reason' => $reason],
-                'mark_paid_at_venue' => ['payment_status' => 'paid'],
                 'award_points'       => [],
             };
             if ($patch !== []) {
@@ -71,6 +94,10 @@ final class AppointmentActionRunner
 
             return $booking;
         });
+
+        if ($refunds !== []) {
+            $this->money->afterRefunds($booking->fresh(), $actor);
+        }
 
         $points = null;
         if ($preview !== null) {

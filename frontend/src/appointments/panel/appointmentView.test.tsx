@@ -29,7 +29,7 @@ const booking: AppointmentDetail = {
   source: 'phone', notes: { customer: null, staff: 'Prefers quiet' },
   actions: [
     act('confirm', false), act('start', true), act('complete', true, { points: { points: 450, reason: null } }),
-    act('no_show', true), act('cancel', true), act('mark_paid_at_venue', true, { payment: 'marked_only' }),
+    act('no_show', true), act('cancel', true),
     act('award_points', false), act('move', true),
   ],
   loyalty: { member: { id: 9, number: 'HL-9', tier: 'Gold', points: 120 }, benefits: [{ name: 'Priority booking', display: 'Book 30 days ahead', description: null }], points_on_bookings: true, awarded: null },
@@ -64,7 +64,8 @@ describe('AppointmentView', () => {
 
   it('offers only the actions the server allows', () => {
     const html = view()
-    for (const label of ['Arrived', 'Complete', 'No-show', 'Cancel appointment', 'Move', 'Mark paid at venue']) expect(html).toContain(label)
+    for (const label of ['Arrived', 'Complete', 'No-show', 'Cancel appointment', 'Move']) expect(html).toContain(label)
+    expect(html).not.toContain('Mark paid at venue') // Part E: Take payment instead
     expect(html).not.toContain('>Confirm<')
     expect(html).not.toContain('Award points')
   })

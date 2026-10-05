@@ -3359,5 +3359,28 @@
     "bulk_cancel_title": "¿Cancelar {{count}} reservas?",
     "go": "Sí",
     "back": "Volver"
+  },
+  "desk_money": {
+    "title": "Pago",
+    "paid_online": "Pagado en línea con tarjeta",
+    "held_online": "Importe retenido en la tarjeta",
+    "paid_desk": "Pagado en el local",
+    "refunded": "Devuelto",
+    "owed": "Pendiente",
+    "to_refund": "Por devolver",
+    "legacy": "Marcado como pagado (sin importe registrado)",
+    "open": "Cobrar / devolver en HexaTech Appointments",
+    "method": {
+      "cash": "Efectivo",
+      "card_desk": "Tarjeta en el local",
+      "transfer": "Transferencia",
+      "other": "Otro",
+      "online_card": "Tarjeta, con Stripe"
+    },
+    "kind": {
+      "payment": "Pago",
+      "refund": "Devolución",
+      "correction": "Corrección"
+    }
   }
 }

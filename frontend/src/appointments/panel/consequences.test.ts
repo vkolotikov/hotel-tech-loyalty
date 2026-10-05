@@ -28,10 +28,12 @@ describe('consequenceLines', () => {
     expect(keys(action('cancel'))).not.toContain('appointments.consequence.no_message')
   })
 
-  it('promises no refund flag — nothing raises one for a payment already taken; it says where the refund is made', () => {
+  it('promises no refund flag — nothing raises one for a payment already taken; the refund is a manager\'s, here (Part E)', () => {
     const [line] = consequenceLines(action('cancel', { payment: 'captured_not_refunded' }))
     expect(line.fallback).toContain('NOT refunded automatically')
-    expect(line.fallback).toContain('in Stripe')
+    expect(line.fallback).toContain('a manager')
+    // The refund line sits right under this sentence for a manager: it must not send them to Stripe's dashboard.
+    expect(line.fallback).not.toContain('Stripe')
     expect(line.fallback).not.toMatch(/flag/i)
   })
 
@@ -59,12 +61,8 @@ describe('consequenceLines', () => {
     expect(keys(action('complete', { points: { points: 0, reason: 'not_a_member' } }))).toEqual(['appointments.points_reason.not_a_member'])
   })
 
-  it('marking paid at the venue says no money is moved', () => {
-    expect(keys(action('mark_paid_at_venue', { payment: 'marked_only' }))).toEqual(['appointments.consequence.payment.marked_only'])
-  })
-
   it('asks for confirmation exactly where money, points or a final status are involved', () => {
-    expect([...NEEDS_CONFIRM].sort()).toEqual(['cancel', 'complete', 'confirm', 'mark_paid_at_venue', 'no_show'])
+    expect([...NEEDS_CONFIRM].sort()).toEqual(['cancel', 'complete', 'confirm', 'no_show'])
   })
 })
 
