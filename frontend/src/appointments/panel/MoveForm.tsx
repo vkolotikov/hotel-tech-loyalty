@@ -9,6 +9,7 @@ import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
 import type { PanelError } from './panelState'
+import { TellClient } from './TellClient'
 
 interface Props {
   booking: AppointmentDetail
@@ -17,6 +18,9 @@ interface Props {
   today: DateKey
   saving: boolean
   error: PanelError | null
+  /** "Tell the client by email" (Part D). */
+  tell: boolean
+  onTell: (tell: boolean) => void
   onMove: (start: Wall, masterId: number) => void
   onBack: () => void
 }
@@ -29,7 +33,7 @@ const control = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2
  * milestone). The free times already leave this appointment out, so its own
  * slot is offered.
  */
-export function MoveForm({ booking, masters, services, today, saving, error, onMove, onBack }: Props) {
+export function MoveForm({ booking, masters, services, today, saving, error, tell, onTell, onMove, onBack }: Props) {
   const { t } = useTranslation()
   const vocab = useVocab()
   const [date, setDate] = useState<DateKey>(dateOf(booking.start) < today ? today : dateOf(booking.start))
@@ -70,8 +74,8 @@ export function MoveForm({ booking, masters, services, today, saving, error, onM
       {slots.data && slots.data.slots.length === 0 && <Notice tone="info">{t('appointments.panel.no_slots', 'No free time on this day for this service and team member.')}</Notice>}
       {chosen && <p className="text-sm text-a-text">{t('appointments.panel.move_to', 'New time: {{start}} – {{end}}', { start: timeOf(chosen.start), end: timeOf(chosen.end) })}</p>}
 
-      <p className="text-sm text-a-text-2">{t('appointments.consequence.no_message', 'No message is sent to the client.')}</p>
-      {error && <Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
+      <TellClient email={booking.client_email ?? null} checked={tell} onChange={onTell} />
+      {error &&<Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={!chosen} loading={saving}>{t('appointments.panel.save_move', 'Move appointment')}</Button>

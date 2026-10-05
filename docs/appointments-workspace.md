@@ -94,13 +94,13 @@ extras' notice counts from the venue's now in `ServiceQuoteBuilder`, which corre
 | Action | Writes | Does not do |
 |---|---|---|
 | Add a client | A client record (the full admin's Customers). With an email address and an active programme, the client is enrolled as a member by the same hook every other entry point uses. | Send a welcome or any other message. Merge with an existing client (a likely duplicate is shown to choose from). |
-| Book | A confirmed, unpaid service booking linked to the client and, for a member, the member. | Send the client anything. Apply a member price or a coupon. |
-| Move | The time and the team member; the duration follows the new team member's own. Reference, service, price and payment are kept. | Send the client anything. |
-| Confirm (a pending request) | Status `confirmed`. | — But the capture job will now charge a held card within about 10 minutes (see "Card holds" below for a hold older than six days). |
+| Book | A confirmed, unpaid service booking linked to the client and, for a member, the member. Emails the client "Booked" when "Tell the client" is ticked (Part D). | Apply a member price or a coupon. |
+| Move | The time and the team member; the duration follows the new team member's own. Reference, service, price and payment are kept. Emails "New time" when ticked and the time or the person changed. | — |
+| Confirm (a pending request) | Status `confirmed`. Emails "Confirmed" when ticked. | — But the capture job will now charge a held card within about 10 minutes (see "Card holds" below for a hold older than six days). |
 | Arrived | Status `in_progress`. | — |
 | Complete | Status `completed`, then the programme's points for a member, once. | Take a payment. |
 | No-show | Status `no_show`. The capture job releases a held card. | Charge a no-show fee. Refund a captured payment. |
-| Cancel | Status `cancelled`, the time and the reason. The capture job releases a held card. | Refund a captured payment — nothing does, and nothing flags it: the refund is made by hand in Stripe. Return a coupon. Tell the client. |
+| Cancel | Status `cancelled`, the time and the reason. The capture job releases a held card. Emails "Cancelled" when ticked (never the staff's reason). | Refund a captured payment — nothing does, and nothing flags it: the refund is made by hand in Stripe. Return a coupon. |
 | Mark paid at venue | The label `payment_status = paid`, only on a booking with no card payment. | Move money. Record an amount or a method. |
 | Award points | Runs the points award again for a completed visit whose award did not happen. | Award twice (the ledger key and the stamp on the booking prevent it). |
 
@@ -165,9 +165,9 @@ frontend tests render to a string.
 ## What this milestone does not do
 
 Insights; photos for services and team members (full admin); service extras and category colours and order
-(full admin); drag to move; reopening a completed visit; staff refunds and a real desk-payment record; any client
-message or reminder for a staff action; member price or coupons at a staff booking; rooms and resources (the engine
-has none for services).
+(full admin); drag to move; reopening a completed visit; staff refunds and a real desk-payment record; SMS or any
+channel but email for client messages (Part D); member price or coupons at a staff booking; rooms and resources (the
+engine has none for services).
 
 ## Selling Appointments on its own (Part C, 2026-10-02)
 
@@ -237,6 +237,53 @@ never a request's contents.
 **A new admin route** needs a key in `AccessMap::MAP`, mirroring the menu's gate for its page.
 `tests/Feature/AdminAccess/AccessMapTest.php` and `AdminAccessWiringTest.php` fail the build without one.
 
+## Client messages (Part D, 2026-10-05)
+
+Off for every organisation until a manager switches it on in Setup → Settings → Client messages:
+
+| Setting | Values | Default |
+|---|---|---|
+| Email clients about changes staff make | on / off (staff can untick the box each time) | off |
+| Reminder before each visit | off, 2, 24 or 48 hours before | off |
+| Language when the client's is not known | English, Русский, Deutsch, Français, Español | English |
+
+**What is sent:**
+
+| Message | When | Sent by |
+|---|---|---|
+| Booked | staff create an appointment | workspace New appointment; full admin create |
+| Moved | staff change its time or person | workspace Move |
+| Confirmed | staff confirm a pending appointment | workspace Confirm; full admin status change, bulk "mark status" |
+| Cancelled | staff cancel it | workspace Cancel; full admin status change, delete, bulk cancel |
+| Reminder | before every upcoming confirmed or pending appointment | `appointments:send-reminders`, every 5 minutes |
+
+**Who receives it, and in which language:**
+
+- The booking's email, else the client record's email.
+- The member's app language, else the client record's "Language" (a code or a name), else the venue's setting.
+- Dates and times are on the venue's clock. Replies go to the venue.
+
+**What staff see.** Every appointment shows its "Messages": sent, or why not. The reasons:
+
+- staff chose not to tell the client;
+- no email address;
+- the address does not accept our emails (suppression list);
+- the appointment changed before the email left;
+- the email could not be sent (tried once; never retried behind staff's back).
+
+**The reminder:**
+
+- It goes once per appointment time, in the 30 minutes after its moment (start minus the venue's hours).
+- None goes to an appointment booked or moved after that moment, or to a cancelled one.
+- A longer outage skips reminders rather than sending them late.
+
+**Not covered:** the widget's and the portal's own emails stay as they were (English) and are not listed on the
+appointment. A no-show tells nobody.
+
+Code: `App\Services\Appointments\Messages\{MessageSettings, MessageRecipient, MessageLocale, ClientMessenger}`,
+`App\Jobs\DeliverClientMessage`, `App\Mail\AppointmentMessageMail` (words in `lang/*/client_messages.php`),
+`appointments:send-reminders`; tests in `tests/Feature/Appointments/Messages/`.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
@@ -260,3 +307,8 @@ every organisation:
   map; in report mode (no `ADMIN_ACCESS_MODE`) it refuses only `not_in_plan`;
 - (Part C) sign-in and `/auth/me` carry `workspaces.appointments.only`;
 - (Part C) a deactivated account is signed out on its next refused call once enforced.
+- (Part D) one additive migration (`client_messages`) and one scheduled job (`appointments:send-reminders`, every
+  five minutes); client messages are off everywhere until a manager switches them on, so the job sends nothing
+  until then;
+- (Part D) the full admin's Service bookings: the row Confirm and bulk Cancel open a small dialog with "Tell the
+  client" instead of the browser's confirm; its create, status, delete and bulk answers gain `client_message(s)`.

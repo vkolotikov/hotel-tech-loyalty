@@ -126,14 +126,14 @@ describe('AppointmentView', () => {
 
 describe('ActionConfirm', () => {
   const confirm = (action: ActionInfo, reason = '') => renderToStaticMarkup(
-    <ActionConfirm booking={booking} action={action} reason={reason} saving={false} error={null} onReason={() => {}} onConfirm={() => {}} onBack={() => {}} />,
+    <ActionConfirm booking={booking} action={action} reason={reason} saving={false} error={null} tell onTell={() => {}} onReason={() => {}} onConfirm={() => {}} onBack={() => {}} />,
   )
 
   it('states every consequence before the button', () => {
     const html = confirm(act('cancel', true, { payment: 'captured_not_refunded', coupon: 'not_returned' }))
     expect(html).toContain('The card payment is NOT refunded automatically')
     expect(html).toContain('The coupon used on this booking is not returned')
-    expect(html).toContain('No message is sent to the client')
+    expect(html).not.toContain('No message is sent to the client') // a cancellation asks "Tell the client" instead (Part D)
     expect(html).toContain('Reason')
     expect(html.indexOf('NOT refunded')).toBeLessThan(html.indexOf('Cancel appointment</button>'))
   })

@@ -241,6 +241,7 @@
       "open": "Einrichtung fortsetzen"
     },
     "step": {
+      "messages": "Kunden per E-Mail informieren (optional)",
       "timezone": "Zeitzone des Standorts festlegen",
       "service": "Eine Leistung anlegen",
       "performer": "Festlegen, wer sie ausführt",
@@ -341,6 +342,34 @@
       "save_anyway": "Trotzdem speichern",
       "back": "Zurück",
       "open": "Öffnen"
+    }
+  },
+  "messages": {
+    "tell": "Den Kunden per E-Mail informieren ({{email}})",
+    "no_email": "Keine E-Mail-Adresse — der Kunde wird nicht informiert.",
+    "sent": "E-Mail an {{email}} gesendet.",
+    "title": "Nachrichten",
+    "kind": {
+      "booked": "Gebucht",
+      "moved": "Verschoben",
+      "confirmed": "Bestätigt",
+      "cancelled": "Abgesagt",
+      "reminder": "Erinnerung"
+    },
+    "reason": {
+      "not_requested": "Nicht gesendet: Das Team hat sich dagegen entschieden.",
+      "no_recipient": "Nicht gesendet: keine E-Mail-Adresse.",
+      "suppressed": "Nicht gesendet: {{email}} nimmt unsere E-Mails nicht an.",
+      "stale": "Nicht gesendet: Der Termin hat sich vor dem Versand geändert.",
+      "mail_error": "Die E-Mail an {{email}} konnte nicht gesendet werden."
+    },
+    "setup": {
+      "title": "Kundennachrichten",
+      "staff": "Kunden per E-Mail über Änderungen des Teams informieren (lässt sich jedes Mal abwählen)",
+      "reminder": "Erinnerung vor jedem Termin",
+      "off": "Aus",
+      "hours": "{{count}} Stunden vorher",
+      "language": "Sprache, wenn die des Kunden unbekannt ist"
     }
   }
 }

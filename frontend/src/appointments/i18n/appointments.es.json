@@ -241,6 +241,7 @@
       "open": "Continuar la configuración"
     },
     "step": {
+      "messages": "Avisar a los clientes por correo (opcional)",
       "timezone": "Definir la zona horaria del local",
       "service": "Añadir un servicio",
       "performer": "Elegir quién lo realiza",
@@ -341,6 +342,34 @@
       "save_anyway": "Guardar de todos modos",
       "back": "Volver",
       "open": "Abrir"
+    }
+  },
+  "messages": {
+    "tell": "Avisar al cliente por correo ({{email}})",
+    "no_email": "Sin dirección de correo: el cliente no recibirá aviso.",
+    "sent": "Correo enviado a {{email}}.",
+    "title": "Mensajes",
+    "kind": {
+      "booked": "Reservado",
+      "moved": "Cambiado",
+      "confirmed": "Confirmado",
+      "cancelled": "Cancelado",
+      "reminder": "Recordatorio"
+    },
+    "reason": {
+      "not_requested": "No enviado: el equipo decidió no avisar al cliente.",
+      "no_recipient": "No enviado: sin dirección de correo.",
+      "suppressed": "No enviado: {{email}} no acepta nuestros correos.",
+      "stale": "No enviado: la cita cambió antes de enviar el correo.",
+      "mail_error": "No se pudo enviar el correo a {{email}}."
+    },
+    "setup": {
+      "title": "Mensajes a clientes",
+      "staff": "Avisar por correo a los clientes de los cambios del equipo (se puede desmarcar cada vez)",
+      "reminder": "Recordatorio antes de cada visita",
+      "off": "Desactivado",
+      "hours": "{{count}} horas antes",
+      "language": "Idioma si no se conoce el del cliente"
     }
   }
 }

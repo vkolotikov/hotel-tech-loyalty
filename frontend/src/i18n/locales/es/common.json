@@ -3349,5 +3349,15 @@
     "featured_off": "Eliminada de tu página de destino",
     "featured_on_section_off": "Guardado. Activa la sección de reseñas en el editor de tu página de destino para mostrarla.",
     "featured_on_no_page": "Guardado. Aparecerá en cuanto crees tu página de destino."
+  },
+  "tell_client": {
+    "tell": "Avisar al cliente por correo",
+    "tell_many": "Avisar a los clientes por correo",
+    "no_email": "Sin dirección de correo: el cliente no recibirá aviso.",
+    "confirm_title": "¿Confirmar esta reserva?",
+    "cancel_title": "¿Cancelar esta reserva?",
+    "bulk_cancel_title": "¿Cancelar {{count}} reservas?",
+    "go": "Sí",
+    "back": "Volver"
   }
 }

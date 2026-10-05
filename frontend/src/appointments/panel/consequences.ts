@@ -49,7 +49,6 @@ export function pointsLine(points: PointsPreview | null): Line | null {
 export function consequenceLines(action: ActionInfo): Line[] {
   const { payment, points, coupon } = action.consequences
   const lines: Line[] = []
-  const statusChange = action.key === 'confirm' || action.key === 'cancel' || action.key === 'no_show'
 
   if (payment !== 'none' || action.key === 'cancel' || action.key === 'no_show') {
     const entry = PAYMENT[payment] ?? PAYMENT.none
@@ -60,7 +59,8 @@ export function consequenceLines(action: ActionInfo): Line[] {
   if (coupon === 'not_returned') {
     lines.push({ key: 'appointments.consequence.coupon_not_returned', fallback: 'The coupon used on this booking is not returned.', tone: 'warning' })
   }
-  if (statusChange) {
+  // Confirm and cancel ask "Tell the client by email" instead (Part D); a no-show tells nobody.
+  if (action.key === 'no_show') {
     lines.push({ key: 'appointments.consequence.no_message', fallback: 'No message is sent to the client.', tone: 'plain' })
   }
 

@@ -15,8 +15,10 @@ const FAMILIES: Record<string, readonly string[]> = {
   action: ['confirm', 'start', 'complete', 'award_points', 'move', 'mark_paid_at_venue', 'no_show', 'cancel'],
   history: ['created', 'moved', 'confirm', 'start', 'complete', 'no_show', 'cancel', 'mark_paid_at_venue', 'award_points', 'updated', 'cancelled', 'bulk_cancel', 'bulk_mark_complete', 'bulk_mark_paid', 'bulk_mark_no_show', 'bulk_mark_status'],
   error: ['slot_taken', 'stale', 'not_allowed', 'master_not_eligible', 'before_today', 'time_does_not_exist', 'invalid_time', 'idempotency_key_reused', 'possible_duplicate', 'workspace_disabled', 'not_found', 'client_not_found', 'service_not_found', 'master_not_found', 'network'],
-  'setup.step': ['timezone', 'service', 'performer', 'hours', 'online', 'first_appointment'],
+  'setup.step': ['timezone', 'service', 'performer', 'hours', 'online', 'messages', 'first_appointment'],
   'setup.hours.problem': ['format', 'order', 'overlap', 'too_many'],
+  'messages.kind': ['booked', 'moved', 'confirmed', 'cancelled', 'reminder'],
+  'messages.reason': ['not_requested', 'no_recipient', 'suppressed', 'stale', 'mail_error'],
 }
 
 function bundle(locale: string): Record<string, unknown> {

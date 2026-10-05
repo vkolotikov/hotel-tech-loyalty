@@ -9,7 +9,7 @@ export type SetupTab = 'services' | 'team' | 'settings'
 /** Where each step is done: a Setup tab, or the calendar for the first appointment. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const STEP_TARGET: Record<ChecklistKey, SetupTab | 'calendar'> = {
-  timezone: 'settings', service: 'services', performer: 'services', hours: 'team', online: 'settings', first_appointment: 'calendar',
+  timezone: 'settings', service: 'services', performer: 'services', hours: 'team', online: 'settings', messages: 'settings', first_appointment: 'calendar',
 }
 
 const doneCount = (checklist: ChecklistData): number => checklist.steps.filter(s => s.done).length

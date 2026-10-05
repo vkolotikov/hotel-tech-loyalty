@@ -241,6 +241,7 @@
       "open": "Continue setup"
     },
     "step": {
+      "messages": "Tell clients by email (optional)",
       "timezone": "Set the venue's time zone",
       "service": "Add a service",
       "performer": "Choose who performs it",
@@ -341,6 +342,34 @@
       "save_anyway": "Save anyway",
       "back": "Back",
       "open": "Open"
+    }
+  },
+  "messages": {
+    "tell": "Tell the client by email ({{email}})",
+    "no_email": "No email address — the client will not be told.",
+    "sent": "Emailed to {{email}}.",
+    "title": "Messages",
+    "kind": {
+      "booked": "Booked",
+      "moved": "Moved",
+      "confirmed": "Confirmed",
+      "cancelled": "Cancelled",
+      "reminder": "Reminder"
+    },
+    "reason": {
+      "not_requested": "Not sent: staff chose not to tell the client.",
+      "no_recipient": "Not sent: no email address.",
+      "suppressed": "Not sent: {{email}} does not accept our emails.",
+      "stale": "Not sent: the appointment changed before the email left.",
+      "mail_error": "The email to {{email}} could not be sent."
+    },
+    "setup": {
+      "title": "Client messages",
+      "staff": "Email clients about changes staff make (staff can untick it each time)",
+      "reminder": "Reminder before each visit",
+      "off": "Off",
+      "hours": "{{count}} hours before",
+      "language": "Language when the client's is not known"
     }
   }
 }

@@ -17,7 +17,20 @@ export interface Bootstrap {
   staff: { name: string; role: string | null }
   loyalty: { programme_on: boolean; points_on_bookings: boolean }
   readiness: { services: number; team: number; bookable: boolean; checklist: Checklist }
+  /** The venue's client-message settings (Part D). Optional for older fixtures; the server always sends it. */
+  messages?: MessageSettingsInfo
 }
+
+export type MessageKind = 'booked' | 'moved' | 'confirmed' | 'cancelled' | 'reminder'
+/** One client message about an appointment, as the server logged it. `at` is a real instant. */
+export interface ClientMessageInfo {
+  kind: MessageKind
+  status: 'queued' | 'sent' | 'skipped' | 'failed'
+  reason: 'not_requested' | 'no_recipient' | 'suppressed' | 'stale' | 'mail_error' | null
+  recipient: string | null
+  at: string | null
+}
+export interface MessageSettingsInfo { staff_default: boolean; reminder_hours: number; language: string }
 
 export interface MemberSummary { id: number; number: string; tier: string | null; points: number }
 export interface ClientSummary { id: number; name: string; phone: string | null; email: string | null; member: MemberSummary | null }
@@ -44,7 +57,8 @@ export interface Consequences {
   payment: 'none' | 'hold_will_be_charged' | 'hold_will_be_released' | 'hold_expired' | 'captured_not_refunded' | 'marked_only'
   points: PointsPreview | null
   coupon: 'none' | 'not_returned'
-  message: 'none'
+  /** 'ask': the screen offers "Tell the client by email" (confirm, cancel — Part D). */
+  message: 'none' | 'ask'
 }
 export interface ActionInfo { key: ActionKey; allowed: boolean; consequences: Consequences }
 
@@ -74,6 +88,10 @@ export interface AppointmentDetail extends Omit<AppointmentSummary, 'client' | '
   actions: ActionInfo[]
   loyalty: LoyaltyCardData | null
   history: HistoryEntry[]
+  /** The address a client message would use, or null (Part D). */
+  client_email?: string | null
+  /** Client messages about this appointment, newest first (Part D). */
+  messages?: ClientMessageInfo[]
 }
 
 export interface MasterDay {
@@ -104,9 +122,11 @@ export interface CreateBody {
   source?: 'admin' | 'phone' | 'walk_in'
   customer_notes?: string
   staff_notes?: string
+  /** "Tell the client by email"; absent = the venue's setting decides. */
+  notify_client?: boolean
 }
 
-export type ChecklistKey = 'timezone' | 'service' | 'performer' | 'hours' | 'online' | 'first_appointment'
+export type ChecklistKey = 'timezone' | 'service' | 'performer' | 'hours' | 'online' | 'messages' | 'first_appointment'
 export interface ChecklistStep { key: ChecklistKey; done: boolean; optional: boolean }
 export interface Checklist { steps: ChecklistStep[]; complete: boolean }
 
@@ -130,6 +150,8 @@ export interface SetupSettings {
   lead_minutes: number; slot_step: number; max_advance_days: number; allow_master_choice: boolean
   points_on_bookings: boolean; programme_on: boolean; booking_link: string | null; embed_snippet: string | null
   upcoming_appointments: number
+  /** Part D: client messages, all off until a manager switches them on. */
+  client_messages_staff_default: boolean; client_messages_reminder_hours: number; client_messages_language: string
 }
 export interface SetupPayload {
   can_manage: boolean; my_team_member_id: number | null; services: SetupService[]; categories: SetupCategory[]
@@ -148,4 +170,5 @@ export interface TeamBody {
   is_active: boolean; services: SetupLink[]
 }
 export interface TimeOffBody { from: DateKey; to?: DateKey; start_time?: string; end_time?: string; reason?: string }
-export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'>>
+export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'
+  | 'client_messages_staff_default' | 'client_messages_reminder_hours' | 'client_messages_language'>>

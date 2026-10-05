@@ -1,4 +1,4 @@
-import type { ActionKey, ClientSummary, CreateBody, DateKey, PointsResult } from '../lib/types'
+import type { ActionKey, ClientMessageInfo, ClientSummary, CreateBody, DateKey, PointsResult } from '../lib/types'
 import { makeWall, minutesOf } from '../lib/wallClock'
 
 export type Source = 'admin' | 'phone' | 'walk_in'
@@ -28,6 +28,8 @@ export type PanelState =
       saving: boolean
       error: PanelError | null
       outcome: PointsResult | null
+      /** What the last save told the client (Part D), shown once on the summary it returns to. */
+      told: ClientMessageInfo | null
     }
 
 export type PanelEvent =
@@ -40,8 +42,8 @@ export type PanelEvent =
   | { type: 'back' }
   | { type: 'saving' }
   | { type: 'failed'; error: PanelError }
-  | { type: 'created'; id: number }
-  | { type: 'done'; outcome: PointsResult | null }
+  | { type: 'created'; id: number; told?: ClientMessageInfo | null }
+  | { type: 'done'; outcome: PointsResult | null; told?: ClientMessageInfo | null }
   | { type: 'close' }
 
 export const CLOSED: PanelState = { mode: 'closed' }
@@ -50,7 +52,7 @@ export function emptyDraft(date: DateKey): CreateDraft {
   return { date, time: null, masterId: null, serviceId: null, client: null, source: 'admin', staffNotes: '' }
 }
 
-const viewOf = (id: number): PanelState => ({ mode: 'view', id, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null })
+const viewOf = (id: number, told: ClientMessageInfo | null = null): PanelState => ({ mode: 'view', id, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, told })
 
 /**
  * How often an open appointment is fetched again. Only while it is being
@@ -111,7 +113,7 @@ export function panelReducer(state: PanelState, event: PanelEvent): PanelState {
         // Same draft, same key: a retry replays the first attempt if it landed.
         return { ...state, saving: false, error: event.error }
       case 'created':
-        return viewOf(event.id)
+        return viewOf(event.id, event.told ?? null)
       default:
         return state
     }
@@ -120,23 +122,23 @@ export function panelReducer(state: PanelState, event: PanelEvent): PanelState {
   if (state.mode === 'view') {
     switch (event.type) {
       case 'startMove':
-        return { ...state, sub: 'move', action: null, error: null, outcome: null }
+        return { ...state, sub: 'move', action: null, error: null, outcome: null, told: null }
       case 'askConfirm':
-        return { ...state, sub: 'confirm', action: event.action, reason: '', error: null, outcome: null }
+        return { ...state, sub: 'confirm', action: event.action, reason: '', error: null, outcome: null, told: null }
       case 'setReason':
         return { ...state, reason: event.reason }
       case 'back':
-        return { ...state, sub: 'summary', action: null, reason: '', error: null }
+        return { ...state, sub: 'summary', action: null, reason: '', error: null, told: null }
       case 'saving':
         return { ...state, saving: true, error: null }
       case 'failed':
         // Someone else changed it: show the current appointment, not a form
         // built on the old one.
         return event.error.code === 'stale'
-          ? { ...state, sub: 'summary', action: null, reason: '', saving: false, error: event.error }
-          : { ...state, saving: false, error: event.error }
+          ? { ...state, sub: 'summary', action: null, reason: '', saving: false, error: event.error, told: null }
+          : { ...state, saving: false, error: event.error, told: null }
       case 'done':
-        return { ...state, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: event.outcome }
+        return { ...state, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: event.outcome, told: event.told ?? null }
       default:
         return state
     }

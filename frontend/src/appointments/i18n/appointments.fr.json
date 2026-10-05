@@ -241,6 +241,7 @@
       "open": "Continuer la configuration"
     },
     "step": {
+      "messages": "Prévenir les clients par e-mail (facultatif)",
       "timezone": "Définir le fuseau horaire de l’établissement",
       "service": "Ajouter une prestation",
       "performer": "Choisir qui la réalise",
@@ -341,6 +342,34 @@
       "save_anyway": "Enregistrer quand même",
       "back": "Retour",
       "open": "Ouvrir"
+    }
+  },
+  "messages": {
+    "tell": "Prévenir le client par e-mail ({{email}})",
+    "no_email": "Pas d’adresse e-mail — le client ne sera pas prévenu.",
+    "sent": "E-mail envoyé à {{email}}.",
+    "title": "Messages",
+    "kind": {
+      "booked": "Réservé",
+      "moved": "Déplacé",
+      "confirmed": "Confirmé",
+      "cancelled": "Annulé",
+      "reminder": "Rappel"
+    },
+    "reason": {
+      "not_requested": "Non envoyé : l’équipe a choisi de ne pas prévenir le client.",
+      "no_recipient": "Non envoyé : pas d’adresse e-mail.",
+      "suppressed": "Non envoyé : {{email}} n’accepte pas nos e-mails.",
+      "stale": "Non envoyé : le rendez-vous a changé avant l’envoi.",
+      "mail_error": "L’e-mail à {{email}} n’a pas pu être envoyé."
+    },
+    "setup": {
+      "title": "Messages aux clients",
+      "staff": "Prévenir les clients par e-mail des changements faits par l’équipe (décochable à chaque fois)",
+      "reminder": "Rappel avant chaque visite",
+      "off": "Désactivé",
+      "hours": "{{count}} heures avant",
+      "language": "Langue si celle du client est inconnue"
     }
   }
 }

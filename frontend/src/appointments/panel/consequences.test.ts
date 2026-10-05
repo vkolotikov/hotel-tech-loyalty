@@ -8,10 +8,9 @@ const action = (key: ActionKey, c: Partial<ActionInfo['consequences']> = {}): Ac
 const keys = (a: ActionInfo) => consequenceLines(a).map(l => l.key)
 
 describe('consequenceLines', () => {
-  it('a cancellation with a held card says the hold is released and that nobody is told', () => {
+  it('a cancellation with a held card says the hold is released (whether the client is told is asked separately)', () => {
     expect(keys(action('cancel', { payment: 'hold_will_be_released' }))).toEqual([
       'appointments.consequence.payment.hold_will_be_released',
-      'appointments.consequence.no_message',
     ])
   })
 
@@ -20,8 +19,13 @@ describe('consequenceLines', () => {
     expect(lines.map(l => [l.key, l.tone])).toEqual([
       ['appointments.consequence.payment.captured_not_refunded', 'warning'],
       ['appointments.consequence.coupon_not_returned', 'warning'],
-      ['appointments.consequence.no_message', 'plain'],
     ])
+  })
+
+  it('only a no-show still says nobody is told; confirm and cancel ask instead (Part D)', () => {
+    expect(keys(action('no_show'))).toContain('appointments.consequence.no_message')
+    expect(keys(action('confirm'))).not.toContain('appointments.consequence.no_message')
+    expect(keys(action('cancel'))).not.toContain('appointments.consequence.no_message')
   })
 
   it('promises no refund flag — nothing raises one for a payment already taken; it says where the refund is made', () => {
@@ -41,7 +45,7 @@ describe('consequenceLines', () => {
   })
 
   it('a cancellation with no online payment says so plainly', () => {
-    expect(keys(action('cancel'))).toEqual(['appointments.consequence.payment.none', 'appointments.consequence.no_message'])
+    expect(keys(action('cancel'))).toEqual(['appointments.consequence.payment.none'])
   })
 
   it('confirming a request with a held card warns that the card will be charged', () => {

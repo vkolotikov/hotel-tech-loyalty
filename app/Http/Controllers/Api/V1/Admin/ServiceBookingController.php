@@ -9,6 +9,7 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
+use App\Services\Appointments\Messages\ClientMessenger;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\ServiceSchedulingService;
 use Carbon\Carbon;
@@ -242,6 +243,7 @@ class ServiceBookingController extends Controller
             'ids.*'  => 'integer',
             'action' => 'required|string|in:cancel,mark_complete,mark_paid,mark_no_show,mark_status',
             'value'  => 'nullable|string|max:40',
+            'notify_client' => 'nullable|boolean',
         ]);
 
         $rows = ServiceBooking::whereIn('id', $validated['ids'])->get();
@@ -303,10 +305,47 @@ class ServiceBookingController extends Controller
             }
         }
 
+        // Part D: tell each client whose booking this confirmed (from pending) or cancelled. $rows hold each
+        // booking as it was before, so a row that was already cancelled tells nobody.
+        $counts = ['queued' => 0, 'skipped' => 0];
+        $to = match ($validated['action']) {
+            'cancel'      => 'cancelled',
+            'mark_status' => $validated['value'] ?? null,
+            default       => null,
+        };
+        foreach ($rows as $b) {
+            $kind = $to ? self::kindFor((string) $b->status, $to) : null;
+            if ($kind === null) {
+                continue;
+            }
+            $message = app(ClientMessenger::class)->afterStaffAction($b->fresh(), $kind, self::notify($request), $request->user());
+            $counts[in_array($message->status, ['queued', 'sent'], true) ? 'queued' : 'skipped']++;
+        }
+
         return response()->json([
             'updated' => $updated,
             'message' => "{$updated} booking" . ($updated === 1 ? '' : 's') . ' updated.',
+            'client_messages' => $counts,
         ]);
+    }
+
+    /** The request's "tell the client" box; null when the screen did not say (the venue's setting decides). */
+    private static function notify(Request $request): ?bool
+    {
+        return $request->has('notify_client') && $request->input('notify_client') !== null ? $request->boolean('notify_client') : null;
+    }
+
+    /**
+     * Which message a status change sends: confirmed from pending; cancelled from the states the workspace can cancel
+     * (pending, confirmed, in progress) — never about a visit that already ended (no-show, completed); null for the rest.
+     */
+    private static function kindFor(string $from, ?string $to): ?string
+    {
+        return match (true) {
+            $to === 'confirmed' && $from === 'pending'                                        => 'confirmed',
+            $to === 'cancelled' && in_array($from, ['pending', 'confirmed', 'in_progress'], true) => 'cancelled',
+            default                                                                           => null,
+        };
     }
 
     /** POST /v1/admin/service-bookings/export — CSV download. */
@@ -396,6 +435,7 @@ class ServiceBookingController extends Controller
             'extras'            => 'nullable|array',
             'extras.*.id'       => 'required_with:extras|integer|exists:service_extras,id',
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
+            'notify_client'     => 'nullable|boolean',
         ]);
 
         $service = Service::findOrFail($data['service_id']);
@@ -492,7 +532,10 @@ class ServiceBookingController extends Controller
                 "Created service booking {$booking->booking_reference} for {$booking->customer_name}",
             );
 
-            return response()->json($booking->fresh(['service', 'master', 'extras']), 201);
+            // Part D (plan ruling R6): recorded inside this transaction; the delivery is queued after the commit.
+            $message = app(ClientMessenger::class)->afterStaffAction($booking, 'booked', self::notify($request), $request->user());
+
+            return response()->json(array_merge($booking->fresh(['service', 'master', 'extras'])->toArray(), ['client_message' => $message->toApi()]), 201);
             });
         } catch (\RuntimeException $e) {
             // reserveSlot lost the race to a concurrent confirm.
@@ -509,11 +552,14 @@ class ServiceBookingController extends Controller
             'cancellation_reason' => 'nullable|string|max:500',
             'staff_notes'         => 'nullable|string|max:2000|prohibits:append_staff_note',
             'append_staff_note'   => 'nullable|string|max:2000|prohibits:staff_notes',
+            'notify_client'       => 'nullable|boolean',
         ]);
+        $notify = self::notify($request);
+        unset($data['notify_client']);
 
         // Row-lock the booking so two concurrent updates serialize instead of
         // both reading the pre-change state and racing their writes.
-        $booking = DB::transaction(function () use ($id, $data, $request) {
+        [$booking, $fromStatus] = DB::transaction(function () use ($id, $data, $request) {
             $booking = ServiceBooking::lockForUpdate()->findOrFail($id);
 
             if (($data['status'] ?? null) === 'cancelled' && !$booking->cancelled_at) {
@@ -543,7 +589,7 @@ class ServiceBookingController extends Controller
                 "Updated booking {$booking->booking_reference}",
             );
 
-            return $booking;
+            return [$booking, $before['status']];
         });
 
         if (($data['status'] ?? null) === 'completed') {
@@ -554,11 +600,15 @@ class ServiceBookingController extends Controller
             }
         }
 
-        return response()->json($booking->fresh(['service', 'master', 'extras']));
+        $kind = self::kindFor((string) $fromStatus, $data['status'] ?? null);
+        $message = $kind ? app(ClientMessenger::class)->afterStaffAction($booking->fresh(), $kind, $notify, $request->user()) : null;
+
+        return response()->json(array_merge($booking->fresh(['service', 'master', 'extras'])->toArray(), ['client_message' => $message?->toApi()]));
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $request->validate(['notify_client' => 'nullable|boolean']);
         $booking = ServiceBooking::findOrFail($id);
         $before = ['status' => (string) $booking->status];
         $booking->update(['status' => 'cancelled', 'cancelled_at' => now()]);
@@ -574,7 +624,11 @@ class ServiceBookingController extends Controller
             );
         } catch (\Throwable) {}
 
-        return response()->json(['message' => 'Booking cancelled']);
+        $message = self::kindFor($before['status'], 'cancelled')
+            ? app(ClientMessenger::class)->afterStaffAction($booking->fresh(), 'cancelled', self::notify($request), $request->user())
+            : null;
+
+        return response()->json(['message' => 'Booking cancelled', 'client_message' => $message?->toApi()]);
     }
 
     /** GET /v1/admin/service-bookings/availability — for the admin "create booking" form. */

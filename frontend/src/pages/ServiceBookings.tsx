@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
+import { notifyFor, statusTells, useTellClientDefault } from '../lib/clientMessages'
+import { TellClientCheckbox } from '../components/TellClient'
+import { TellClientConfirm } from '../components/TellClientConfirm'
 import toast from 'react-hot-toast'
 import {
   Search, Filter, Calendar as CalendarIcon, RefreshCw, X, Plus,
@@ -109,6 +113,11 @@ export default function ServiceBookings() {
   const [showTodayList, setShowTodayList] = useState(false)
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [bulkBusy, setBulkBusy] = useState(false)
+  // Part D: confirm and cancel ask whether to tell the client, starting from the venue's setting.
+  const { t } = useTranslation()
+  const tellDefault = useTellClientDefault()
+  const [confirming, setConfirming] = useState<ServiceBooking | null>(null)
+  const [bulkCancelling, setBulkCancelling] = useState(false)
 
   // Services + masters for the filter dropdowns. Cached for 5 min — these
   // change rarely and refetching on every filter render is wasted bandwidth.
@@ -188,13 +197,12 @@ export default function ServiceBookings() {
     const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next
   })
 
-  const runBulk = async (action: string, value?: string, confirmMsg?: string) => {
+  const runBulk = async (action: string, value?: string, notifyClient?: boolean) => {
     if (selected.size === 0) return
-    if (confirmMsg && !window.confirm(confirmMsg)) return
     setBulkBusy(true)
     try {
       const { data: res } = await api.post('/v1/admin/service-bookings/bulk', {
-        ids: Array.from(selected), action, value,
+        ids: Array.from(selected), action, value, notify_client: notifyClient,
       })
       toast.success(res.message || 'Updated')
       setSelected(new Set())
@@ -224,8 +232,8 @@ export default function ServiceBookings() {
   }
 
   const updateStatusMut = useMutation({
-    mutationFn: ({ id, status }: { id: number; status: string }) =>
-      api.patch(`/v1/admin/service-bookings/${id}/status`, { status }),
+    mutationFn: ({ id, status, notify }: { id: number; status: string; notify?: boolean }) =>
+      api.patch(`/v1/admin/service-bookings/${id}/status`, { status, notify_client: notify }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['service-bookings'] })
       qc.invalidateQueries({ queryKey: ['service-bookings-dashboard'] })
@@ -472,7 +480,7 @@ export default function ServiceBookings() {
                   </td>
                   <td className="p-4 text-right">
                     {b.status === 'pending' && (
-                      <button onClick={e => { e.stopPropagation(); updateStatusMut.mutate({ id: b.id, status: 'confirmed' }) }}
+                      <button onClick={e => { e.stopPropagation(); setConfirming(b) }}
                         disabled={updateStatusMut.isPending && updateStatusMut.variables?.id === b.id}
                         className="text-xs text-emerald-400 hover:text-emerald-300 font-bold disabled:opacity-40">Confirm</button>
                     )}
@@ -515,7 +523,7 @@ export default function ServiceBookings() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-orange-500/15 text-orange-300 hover:bg-orange-500/25 disabled:opacity-50 transition-colors">
             <AlertTriangle size={13} /> No-show
           </button>
-          <button onClick={() => runBulk('cancel', undefined, `Cancel ${selected.size} booking${selected.size === 1 ? '' : 's'}?`)} disabled={bulkBusy}
+          <button onClick={() => setBulkCancelling(true)} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-red-500/15 text-red-300 hover:bg-red-500/25 disabled:opacity-50 transition-colors">
             <Trash2 size={13} /> Cancel
           </button>
@@ -529,6 +537,17 @@ export default function ServiceBookings() {
             <X size={14} />
           </button>
         </div>
+      )}
+
+      {bulkCancelling && (
+        <TellClientConfirm title={t('tell_client.bulk_cancel_title', 'Cancel {{count}} bookings?', { count: selected.size })} many defaultTell={tellDefault} busy={bulkBusy}
+          onClose={() => setBulkCancelling(false)}
+          onConfirm={(tell) => { setBulkCancelling(false); void runBulk('cancel', undefined, tell) }} />
+      )}
+      {confirming && (
+        <TellClientConfirm title={t('tell_client.confirm_title', 'Confirm this booking?')} email={confirming.customer_email} defaultTell={tellDefault}
+          busy={updateStatusMut.isPending} onClose={() => setConfirming(null)}
+          onConfirm={(tell) => { updateStatusMut.mutate({ id: confirming.id, status: 'confirmed', notify: tell }); setConfirming(null) }} />
       )}
     </div>
   )
@@ -545,12 +564,18 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
   const [status, setStatus] = useState(booking.status)
   const [paymentStatus, setPaymentStatus] = useState(booking.payment_status)
   const [staffNotes, setStaffNotes] = useState('')
+  // Part D: a status change that tells the client (confirmed from pending, or cancelled) shows the box.
+  const tellDefault = useTellClientDefault()
+  const [tellChoice, setTellChoice] = useState<boolean | null>(null)
+  const tell = tellChoice ?? tellDefault
+  const tells = statusTells(booking.status, status)
 
   const save = async () => {
     setSavingStatus(true)
     try {
       await api.patch(`/v1/admin/service-bookings/${booking.id}/status`, {
         status, payment_status: paymentStatus, append_staff_note: staffNotes.trim() || undefined,
+        notify_client: tells ? notifyFor(booking.customer_email, tell) : undefined,
       })
       setStaffNotes('')
       toast.success('Updated')
@@ -641,6 +666,7 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
             <label htmlFor="new-staff-note" className="block text-xs font-semibold text-gray-300 mb-1.5">Add staff note</label>
             <textarea id="new-staff-note" value={staffNotes} onChange={e => setStaffNotes(e.target.value)} maxLength={2000} rows={3} className={inputCls + ' resize-none'} />
           </div>
+          {tells && <TellClientCheckbox email={booking.customer_email} checked={tell} onChange={setTellChoice} />}
           <button onClick={save} disabled={savingStatus}
             className="w-full flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all" style={btnPrimaryStyle}>
             {savingStatus ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save Changes
@@ -672,6 +698,9 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
   const [saving, setSaving] = useState(false)
   const [slots, setSlots] = useState<any[]>([])
   const [slotStart, setSlotStart] = useState('')
+  const tellDefault = useTellClientDefault()
+  const [tellChoice, setTellChoice] = useState<boolean | null>(null)
+  const tell = tellChoice ?? tellDefault
 
   const loadSlots = async () => {
     if (!serviceId || !date) return
@@ -703,6 +732,7 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
         party_size: partySize,
         source: 'admin',
         staff_notes: notes || undefined,
+        notify_client: notifyFor(email, tell),
       })
       toast.success('Booking created')
       onSaved()
@@ -773,6 +803,7 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Email *</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} className={inputCls} />
+              <div className="mt-2"><TellClientCheckbox email={email} checked={tell} onChange={setTellChoice} /></div>
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Phone</label>

@@ -8,6 +8,7 @@ use App\Models\Organization;
 use App\Models\Service;
 use App\Models\ServiceMaster;
 use App\Models\Staff;
+use App\Services\Appointments\Messages\MessageSettings;
 use App\Services\Appointments\VenueClock;
 use App\Services\Booking\BookingCapability;
 use App\Services\Booking\Setup\SetupChecklist;
@@ -47,6 +48,7 @@ class BootstrapController extends Controller
                 'programme_on'       => PortalBootstrap::loyaltyOn($orgId),
                 'points_on_bookings' => $points->pointsOnBookingsEnabled($orgId),
             ],
+            'messages'     => MessageSettings::read($orgId),
             'readiness'    => [
                 'services'  => Service::where('is_active', true)->count(),
                 'team'      => ServiceMaster::where('is_active', true)->count(),

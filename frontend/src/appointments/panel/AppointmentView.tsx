@@ -1,13 +1,15 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { money } from '../../lib/money'
-import type { ActionKey, AppointmentDetail, PointsResult } from '../lib/types'
+import type { ActionKey, AppointmentDetail, ClientMessageInfo, PointsResult } from '../lib/types'
 import { dateOf, formatDate, timeOf } from '../lib/wallClock'
 import { Button } from '../ui/Button'
 import { Notice } from '../ui/Notice'
 import { StatusMark } from '../ui/StatusMark'
 import { History } from './History'
 import { LoyaltyCard } from './LoyaltyCard'
+import { Messages } from './Messages'
+import { messageLine } from './messageLine'
 import { pointsLine } from './consequences'
 import type { PanelError } from './panelState'
 
@@ -19,6 +21,8 @@ interface Props {
   error: PanelError | null
   /** What the last completion did with points, shown until the next action. */
   outcome: PointsResult | null
+  /** What the last save told the client (Part D), shown until the next step. */
+  told?: ClientMessageInfo | null
   onAction: (action: ActionKey) => void
 }
 
@@ -27,7 +31,7 @@ interface Props {
  * three separate statements — and the actions the server allows. The
  * buttons are exactly `booking.actions` with `allowed: true`.
  */
-export function AppointmentView({ booking: b, zone, locale, saving, error, outcome, onAction }: Props) {
+export function AppointmentView({ booking: b, zone, locale, saving, error, outcome, told = null, onAction }: Props) {
   const { t } = useTranslation()
   const allowed = (key: ActionKey) => b.actions.find(a => a.key === key)?.allowed === true
   const complete = b.actions.find(a => a.key === 'complete')
@@ -50,11 +54,13 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         ? { text: t('appointments.loyalty.awarded', '{{points}} points awarded for this visit.', { points: outcome.awarded }), tone: 'success' as const }
         : (() => { const line = pointsLine({ points: 0, reason: outcome.reason }); return { text: line ? t(line.key, line.fallback) : '', tone: outcome.reason === 'failed' ? 'warning' as const : 'info' as const } })())
     : null
+  const toldLine = told ? messageLine(told) : null
 
   return (
     <div className="space-y-4">
       {error && <Notice tone={error.code === 'stale' ? 'warning' : 'danger'}>{t(`appointments.error.${error.code}`, error.message)}</Notice>}
       {outcomeLine && outcomeLine.text && <Notice tone={outcomeLine.tone}>{outcomeLine.text}</Notice>}
+      {toldLine && <Notice tone={toldLine.tone}>{t(toldLine.key, toldLine.fallback, toldLine.vars)}</Notice>}
 
       <section>
         <div className="flex items-start justify-between gap-3">
@@ -101,6 +107,7 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         ))}
       </div>
 
+      <Messages messages={b.messages ?? []} zone={zone} locale={locale} />
       <History entries={b.history} zone={zone} locale={locale} />
     </div>
   )

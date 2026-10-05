@@ -6,6 +6,7 @@ import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
 import { consequenceLines } from './consequences'
 import type { PanelError } from './panelState'
+import { TellClient } from './TellClient'
 
 interface Props {
   booking: AppointmentDetail
@@ -13,6 +14,9 @@ interface Props {
   reason: string
   saving: boolean
   error: PanelError | null
+  /** "Tell the client by email" — asked on confirm and cancel only (Part D). */
+  tell: boolean
+  onTell: (tell: boolean) => void
   onReason: (reason: string) => void
   onConfirm: () => void
   onBack: () => void
@@ -27,7 +31,7 @@ const TITLE: Partial<Record<ActionKey, [string, string]>> = {
 }
 
 /** What this action will really do, stated before the button that does it. */
-export function ActionConfirm({ booking, action, reason, saving, error, onReason, onConfirm, onBack }: Props) {
+export function ActionConfirm({ booking, action, reason, saving, error, tell, onTell, onReason, onConfirm, onBack }: Props) {
   const { t } = useTranslation()
   const [key, fallback] = TITLE[action.key] ?? ['appointments.action.confirm', 'Confirm']
   const label = t(key, fallback)
@@ -56,7 +60,9 @@ export function ActionConfirm({ booking, action, reason, saving, error, onReason
         </Field>
       )}
 
-      {error && <Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
+      {(action.key === 'confirm' || action.key === 'cancel') && <TellClient email={booking.client_email ?? null} checked={tell} onChange={onTell} />}
+
+      {error &&<Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant={destructive ? 'danger' : 'primary'} loading={saving} onClick={onConfirm}>{label}</Button>

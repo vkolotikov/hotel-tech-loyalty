@@ -19,6 +19,7 @@ const settings: SetupSettings = {
   timezone: 'Europe/Riga', timezone_named: true, zones: ['Europe/London', 'Europe/Riga'], currency: 'EUR',
   lead_minutes: 60, slot_step: 15, max_advance_days: 60, allow_master_choice: true, points_on_bookings: true, programme_on: true,
   booking_link: 'https://app.example.test/services/tok', embed_snippet: '<div id="hoteltech-services"></div>', upcoming_appointments: 12,
+  client_messages_staff_default: false, client_messages_reminder_hours: 0, client_messages_language: 'en',
 }
 const data = { can_manage: true, settings } as SetupPayload
 
@@ -53,5 +54,24 @@ describe('SettingsTab', () => {
     const html = renderToStaticMarkup(<SettingsTab data={{ ...data, can_manage: false }} refresh={() => {}} />)
     expect(html).toContain('<fieldset disabled=""')
     expect(html).not.toContain('>Save<')
+  })
+})
+
+describe('client messages in Setup', () => {
+  it('offers the three settings to a manager, as stored', () => {
+    const stored = { ...settings, client_messages_staff_default: true, client_messages_reminder_hours: 24, client_messages_language: 'ru' }
+    const html = renderToStaticMarkup(<SettingsTab data={{ ...data, settings: stored }} refresh={() => {}} />)
+    expect(html).toContain('Client messages')
+    expect(html).toContain('Email clients about changes staff make')
+    expect(html).toMatch(/<option value="24" selected="">24 hours before<\/option>/)
+    expect(html).toMatch(/<option value="ru" selected="">Русский<\/option>/)
+    expect(html).toContain('<option value="0">Off</option>')
+  })
+
+  it('sends only what changed', () => {
+    const draft = { ...settingsDraftOf(settings), client_messages_reminder_hours: 2 }
+    expect(changedSettings(draft, settings)).toEqual({ client_messages_reminder_hours: 2 })
+    expect(changedSettings({ ...settingsDraftOf(settings), client_messages_staff_default: true, client_messages_language: 'de' }, settings))
+      .toEqual({ client_messages_staff_default: true, client_messages_language: 'de' })
   })
 })

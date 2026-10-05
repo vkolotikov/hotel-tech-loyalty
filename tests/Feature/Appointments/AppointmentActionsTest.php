@@ -137,7 +137,7 @@ class AppointmentActionsTest extends TestCase
         $this->assertSame('none', $this->actionsFor([])['cancel']['consequences']['coupon']);
     }
 
-    public function test_complete_carries_the_points_preview_and_nothing_sends_a_message(): void
+    public function test_complete_carries_the_points_preview_and_only_confirm_and_cancel_ask_about_a_message(): void
     {
         $member = $this->actionsFor(['member_id' => $this->member->id, 'total_amount' => 60]);
         $this->assertSame(['points' => 900, 'reason' => null], $member['complete']['consequences']['points']); // floor(60 * 10 * 1.5)
@@ -145,8 +145,9 @@ class AppointmentActionsTest extends TestCase
         $walkIn = $this->actionsFor([]);
         $this->assertSame(['points' => 0, 'reason' => 'not_a_member'], $walkIn['complete']['consequences']['points']);
 
-        foreach ($walkIn as $row) {
-            $this->assertSame('none', $row['consequences']['message']);
+        // Part D: confirm and cancel offer "Tell the client by email"; nothing else sends a message.
+        foreach ($walkIn as $key => $row) {
+            $this->assertSame(in_array($key, ['confirm', 'cancel'], true) ? 'ask' : 'none', $row['consequences']['message'], (string) $key);
         }
         $this->assertNull($walkIn['cancel']['consequences']['points']);
     }

@@ -146,6 +146,12 @@ Schedule::command('bookings:release-orphan-portal-holds')
     ->everyThirtyMinutes()
     ->withoutOverlapping(45);
 
+// Part D: the client's reminder before each visit, at each venue's chosen
+// time (off until a manager switches it on in Setup).
+Schedule::command('appointments:send-reminders')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(10);
+
 // Engagement Hub daily summary email. Hourly cron — the command itself
 // gates on each org's local 8am (so a Tokyo org and a New York org both
 // get their summary at 8am local) and dedupes via

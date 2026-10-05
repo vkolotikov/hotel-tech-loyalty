@@ -50,7 +50,7 @@ describe('panelReducer — create', () => {
 
   it('a saved appointment opens in the panel', () => {
     const state = panelReducer(panelReducer(open(), { type: 'saving' }), { type: 'created', id: 42 })
-    expect(state).toEqual({ mode: 'view', id: 42, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null })
+    expect(state).toEqual({ mode: 'view', id: 42, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, told: null })
   })
 
   it('ignores edits and saves when it is not creating', () => {
@@ -113,7 +113,7 @@ describe('canSave / draftBody', () => {
 
 describe('detailPollMs', () => {
   const view = (patch: Partial<Extract<PanelState, { mode: 'view' }>> = {}): PanelState =>
-    ({ mode: 'view', id: 7, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, ...patch })
+    ({ mode: 'view', id: 7, sub: 'summary', action: null, reason: '', saving: false, error: null, outcome: null, told: null, ...patch })
 
   it('refreshes an open appointment every 30 seconds while it is only being looked at', () => {
     expect(detailPollMs(view())).toBe(30_000)

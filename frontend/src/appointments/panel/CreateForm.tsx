@@ -8,6 +8,7 @@ import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
 import { ClientPicker } from './ClientPicker'
 import { canSave, type CreateDraft, type PanelError, type Source } from './panelState'
+import { TellClient } from './TellClient'
 
 interface Props {
   draft: CreateDraft
@@ -21,6 +22,9 @@ interface Props {
   error: PanelError | null
   onEdit: (patch: Partial<CreateDraft>) => void
   onSave: () => void
+  /** "Tell the client by email" (Part D). */
+  tell: boolean
+  onTell: (tell: boolean) => void
 }
 
 const control = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -105,8 +109,8 @@ export function CreateForm(p: Props) {
 
       {p.error && <Notice tone="danger">{t(`appointments.error.${p.error.code}`, p.error.message)}</Notice>}
 
+      {draft.client && <TellClient email={draft.client.email ?? null} checked={p.tell} onChange={p.onTell} />}
       <Button type="submit" full disabled={!ready} loading={p.saving}>{t('appointments.panel.save', 'Save appointment')}</Button>
-      <p className="text-xs text-a-text-2">{t('appointments.consequence.no_message', 'No message is sent to the client.')}</p>
     </form>
   )
 }

@@ -31,7 +31,7 @@ class SetupChecklistTest extends TestCase
     public function test_the_fixture_venue_has_everything_but_a_named_zone_and_a_first_appointment(): void
     {
         $this->assertSame([
-            'timezone' => false, 'service' => true, 'performer' => true, 'hours' => true, 'online' => false, 'first_appointment' => false, 'complete' => false,
+            'timezone' => false, 'service' => true, 'performer' => true, 'hours' => true, 'online' => false, 'messages' => false, 'first_appointment' => false, 'complete' => false,
         ], $this->done());
     }
 

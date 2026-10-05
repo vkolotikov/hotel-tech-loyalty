@@ -3,8 +3,10 @@
 namespace App\Services\Appointments;
 
 use App\Models\AuditLog;
+use App\Models\ClientMessage;
 use App\Models\ServiceBooking;
 use App\Models\User;
+use App\Services\Appointments\Messages\MessageRecipient;
 
 /**
  * A service booking as the appointments workspace sees it.
@@ -114,6 +116,10 @@ final class AppointmentPresenter
             'actions' => $this->actions->for($b),
             'loyalty' => $this->loyalty->forBooking($b),
             'history' => $this->history($b),
+            // Part D: the address a client message would use, and every message about this appointment.
+            'client_email' => MessageRecipient::for($b),
+            'messages'     => ClientMessage::where('service_booking_id', $b->id)->orderByDesc('id')->limit(20)->get()
+                ->map(fn (ClientMessage $m) => $m->toApi())->values()->all(),
         ]);
     }
 

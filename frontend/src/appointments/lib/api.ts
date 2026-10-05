@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientProfile, ClientSummary, CreateBody, DateKey, HoursRow, Impact,
+  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CreateBody, DateKey, HoursRow, Impact,
   PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
   TeamBody, TimeOffBody, Wall,
 } from './types'
@@ -57,15 +57,15 @@ export const appointmentsApi = {
   client: (id: number): Promise<ClientProfile> => watched(api.get(`${BASE}/clients/${id}`)),
 
   /** `key` is the draft's Idempotency-Key: the same key and body answer with the first booking. */
-  createBooking: (body: CreateBody, key: string): Promise<{ booking: AppointmentDetail; replayed: boolean }> =>
+  createBooking: (body: CreateBody, key: string): Promise<{ booking: AppointmentDetail; replayed: boolean; client_message: ClientMessageInfo | null }> =>
     watched(api.post(`${BASE}/bookings`, body, { headers: { 'Idempotency-Key': key } })),
 
   booking: (id: number): Promise<{ booking: AppointmentDetail }> => watched(api.get(`${BASE}/bookings/${id}`)),
 
-  move: (id: number, body: { start: Wall; master_id: number; revision: string }): Promise<{ booking: AppointmentDetail }> =>
+  move: (id: number, body: { start: Wall; master_id: number; revision: string; notify_client?: boolean }): Promise<{ booking: AppointmentDetail; client_message: ClientMessageInfo | null }> =>
     watched(api.patch(`${BASE}/bookings/${id}`, body)),
 
-  act: (id: number, body: { action: ActionKey; revision: string; reason?: string }): Promise<{ booking: AppointmentDetail; points: PointsResult | null }> =>
+  act: (id: number, body: { action: ActionKey; revision: string; reason?: string; notify_client?: boolean }): Promise<{ booking: AppointmentDetail; points: PointsResult | null; client_message: ClientMessageInfo | null }> =>
     watched(api.post(`${BASE}/bookings/${id}/actions`, body)),
 
   setup: (): Promise<SetupPayload> => watched(api.get(`${BASE}/setup`)),

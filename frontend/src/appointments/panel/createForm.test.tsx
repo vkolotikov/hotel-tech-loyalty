@@ -38,7 +38,7 @@ function render(draft: Partial<CreateDraft>, extra: { slots?: SlotsPayload; erro
       <CreateForm
         draft={{ ...emptyDraft('2026-10-06'), ...draft }} masters={masters} services={services}
         slots={extra.slots} slotsLoading={false} today="2026-10-06" saving={false} error={extra.error ?? null}
-        onEdit={() => {}} onSave={() => {}}
+        onEdit={() => {}} onSave={() => {}} tell onTell={() => {}}
       />
     </QueryClientProvider>,
   )
@@ -78,10 +78,16 @@ describe('CreateForm', () => {
     expect(render({ masterId: 1, serviceId: 3, time: '10:00' }, { slots })).toMatch(SAVE_DISABLED)
   })
 
-  it('says when the day has no free time, and that no message is sent', () => {
+  it('says when the day has no free time, and that a client without an email will not be told', () => {
     const html = render({ masterId: 1, serviceId: 3, client: sophie }, { slots: { ...slots, slots: [] } })
     expect(html).toContain('No free time on this day')
-    expect(html).toContain('No message is sent to the client')
+    expect(html).toContain('No email address — the client will not be told.')
+    expect(html).not.toContain('No message is sent to the client')
+  })
+
+  it('offers "Tell the client" once a client with an email is chosen, and nothing before', () => {
+    expect(render({ masterId: 1, serviceId: 3, client: { ...sophie, email: 'sophie@example.test' } }, { slots })).toContain('Tell the client by email (sophie@example.test)')
+    expect(render({ masterId: 1, serviceId: 3 }, { slots })).not.toContain('Tell the client')
   })
 
   it('shows a refusal in words', () => {

@@ -18,7 +18,8 @@ use App\Services\Loyalty\BookingPointsService;
  *  - nothing refunds a captured payment on a staff cancellation, and
  *    nothing flags it either: the job never visits a booking already `paid`;
  *  - nothing returns a coupon on a staff cancellation;
- *  - no staff action sends the client a message.
+ *  - confirm and cancel may email the client (Part D: the staff's "Tell the
+ *    client" box, else the venue's setting); no other staff action does.
  */
 final class AppointmentActions
 {
@@ -114,7 +115,8 @@ final class AppointmentActions
             },
             'points'  => in_array($action, ['complete', 'award_points'], true) ? ($preview ?? $this->points->previewForServiceBooking($b)) : null,
             'coupon'  => $action === 'cancel' && in_array((string) $b->discount_source, ['offer', 'reward'], true) ? 'not_returned' : 'none',
-            'message' => 'none',
+            // "ask": the screen offers "Tell the client by email" (Part D).
+            'message' => in_array($action, ['confirm', 'cancel'], true) ? 'ask' : 'none',
         ];
     }
 }

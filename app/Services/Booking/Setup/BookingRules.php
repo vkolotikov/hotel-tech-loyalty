@@ -8,6 +8,7 @@ use App\Models\Service;
 use App\Models\ServiceBooking;
 use App\Models\ServiceExtra;
 use App\Scopes\BrandScope;
+use App\Services\Appointments\Messages\MessageSettings;
 use App\Services\Appointments\VenueClock;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\Portal\PortalBootstrap;
@@ -37,6 +38,9 @@ final class BookingRules
             'max_advance_days'    => 'sometimes|integer|min:1|max:365',
             'allow_master_choice' => 'sometimes|boolean',
             'points_on_bookings'  => 'sometimes|boolean',
+            'client_messages_staff_default'  => 'sometimes|boolean',
+            'client_messages_reminder_hours' => ['sometimes', 'integer', Rule::in(MessageSettings::REMINDER_CHOICES)],
+            'client_messages_language'       => ['sometimes', 'string', Rule::in(MessageSettings::LANGUAGES)],
         ];
     }
 
@@ -53,6 +57,7 @@ final class BookingRules
     {
         $orgId = (int) $org->id;
         $token = (string) ($org->widget_token ?? '');
+        $messages = MessageSettings::read($orgId);
 
         return [
             'timezone'              => VenueClock::zone($orgId),
@@ -71,6 +76,9 @@ final class BookingRules
                 ->whereIn('status', ['pending', 'confirmed', 'in_progress'])
                 ->where('start_at', '>=', VenueClock::now($orgId)->format('Y-m-d H:i:s'))
                 ->count(),
+            'client_messages_staff_default'  => $messages['staff_default'],
+            'client_messages_reminder_hours' => $messages['reminder_hours'],
+            'client_messages_language'       => $messages['language'],
         ];
     }
 
@@ -144,6 +152,15 @@ final class BookingRules
             }
             if (array_key_exists('points_on_bookings', $data)) {
                 self::put($orgId, 'points_on_bookings', $data['points_on_bookings'] ? 'true' : 'false', 'boolean', 'loyalty', 'Points on Bookings');
+            }
+            if (array_key_exists('client_messages_staff_default', $data)) {
+                self::put($orgId, MessageSettings::STAFF_DEFAULT, $data['client_messages_staff_default'] ? 'true' : 'false', 'boolean', 'booking', 'Email clients about staff changes');
+            }
+            if (array_key_exists('client_messages_reminder_hours', $data)) {
+                self::put($orgId, MessageSettings::REMINDER_HOURS, (string) (int) $data['client_messages_reminder_hours'], 'integer', 'booking', 'Client reminder (hours before)');
+            }
+            if (array_key_exists('client_messages_language', $data)) {
+                self::put($orgId, MessageSettings::LANGUAGE, (string) $data['client_messages_language'], 'string', 'booking', 'Client message language');
             }
         });
 

@@ -3393,5 +3393,15 @@
     "featured_off": "Removed from your landing page",
     "featured_on_section_off": "Saved. Switch the Reviews section on in your landing page editor to show it.",
     "featured_on_no_page": "Saved. It will appear once you build your landing page."
+  },
+  "tell_client": {
+    "tell": "Tell the client by email",
+    "tell_many": "Tell the clients by email",
+    "no_email": "No email address — the client will not be told.",
+    "confirm_title": "Confirm this booking?",
+    "cancel_title": "Cancel this booking?",
+    "bulk_cancel_title": "Cancel {{count}} bookings?",
+    "go": "Yes",
+    "back": "Back"
   }
 }

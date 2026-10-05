@@ -10,8 +10,11 @@ use App\Models\Service;
 use App\Models\ServiceBooking;
 use App\Models\ServiceMaster;
 use App\Models\User;
+use App\Services\Booking\Setup\BookingRules;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Everything an appointments-workspace test needs: the tables (built from
@@ -49,11 +52,15 @@ trait SetsUpAppointmentsSchema
             'currency'          => fn (Blueprint $t) => $t->string('currency', 10)->nullable(),
             'entitled_products' => fn (Blueprint $t) => $t->text('entitled_products')->nullable(),
             'plan_slug'         => fn (Blueprint $t) => $t->string('plan_slug', 64)->nullable(),
+            'email'             => fn (Blueprint $t) => $t->string('email')->nullable(),
+            'phone'             => fn (Blueprint $t) => $t->string('phone', 40)->nullable(),
+            'address'           => fn (Blueprint $t) => $t->string('address')->nullable(),
         ]);
         $this->addColumnsIfMissing('guests', [
             'email_key' => fn (Blueprint $t) => $t->string('email_key')->nullable(),
             'phone_key' => fn (Blueprint $t) => $t->string('phone_key')->nullable(),
             'mobile'    => fn (Blueprint $t) => $t->string('mobile')->nullable(),
+            'preferred_language' => fn (Blueprint $t) => $t->string('preferred_language', 30)->nullable(),
         ]);
         $this->addColumnsIfMissing('service_masters', [
             'title'      => fn (Blueprint $t) => $t->string('title')->nullable(),
@@ -65,6 +72,42 @@ trait SetsUpAppointmentsSchema
         $this->addColumnsIfMissing('service_categories', [
             'slug' => fn (Blueprint $t) => $t->string('slug')->nullable(),
         ]);
+
+        // Part D's message log, as the 2026_10_05 migration builds it.
+        if (!Schema::hasTable('client_messages')) {
+            Schema::create('client_messages', function (Blueprint $t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('service_booking_id');
+                $t->string('kind', 16);
+                $t->string('channel', 16)->default('email');
+                $t->string('recipient', 320)->nullable();
+                $t->string('locale', 5)->default('en');
+                $t->string('status', 16);
+                $t->string('reason', 32)->nullable();
+                $t->timestamp('for_start_at')->nullable();
+                $t->timestamp('previous_start_at')->nullable();
+                $t->unsignedBigInteger('actor_user_id')->nullable();
+                $t->timestamp('sent_at')->nullable();
+                $t->timestamps();
+            });
+            DB::statement("CREATE UNIQUE INDEX client_messages_one_reminder ON client_messages (service_booking_id, for_start_at) WHERE kind = 'reminder'");
+        }
+        // The suppression list the sender checks, as tests/Feature/Mail builds it.
+        if (!Schema::hasTable('email_suppressions')) {
+            Schema::create('email_suppressions', function (Blueprint $t) {
+                $t->id();
+                $t->unsignedBigInteger('organization_id')->nullable()->index();
+                $t->string('email', 191);
+                $t->string('reason', 32);
+                $t->string('source', 32)->default('manual');
+                $t->text('detail')->nullable();
+                $t->unsignedSmallInteger('failure_count')->default(1);
+                $t->timestamp('last_failed_at')->nullable();
+                $t->timestamps();
+                $t->unique(['organization_id', 'email']);
+            });
+        }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 
@@ -132,6 +175,16 @@ trait SetsUpAppointmentsSchema
             'payment_status'    => 'unpaid',
             'source'            => 'admin',
         ], $attrs));
+    }
+
+    /** Part D's three venue settings, written the way Setup writes them. */
+    protected function setClientMessages(bool $staffDefault, int $reminderHours = 0, string $language = 'en'): void
+    {
+        app(BookingRules::class)->write($this->org, [
+            'client_messages_staff_default'  => $staffDefault,
+            'client_messages_reminder_hours' => $reminderHours,
+            'client_messages_language'       => $language,
+        ]);
     }
 
     protected function asStaff(): static

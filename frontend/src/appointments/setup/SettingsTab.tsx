@@ -12,9 +12,14 @@ import { FailureNotice } from './FailureNotice'
 export const SLOT_STEPS = [5, 10, 15, 20, 30, 45, 60]
 const CURRENCIES = ['EUR', 'GBP', 'USD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'BGN', 'UAH', 'TRY', 'AED', 'ILS', 'CAD', 'AUD', 'NZD', 'JPY', 'SGD', 'HKD', 'ZAR', 'INR']
 
+const REMINDER_HOURS = [0, 2, 24, 48]
+// Each language in its own name: whoever reads the list reads their own.
+const MESSAGE_LANGUAGES: [string, string][] = [['en', 'English'], ['ru', 'Русский'], ['de', 'Deutsch'], ['fr', 'Français'], ['es', 'Español']]
+
 export interface SettingsDraft {
   timezone: string; currency: string; lead_minutes: string; slot_step: number; max_advance_days: string
   allow_master_choice: boolean; points_on_bookings: boolean
+  client_messages_staff_default: boolean; client_messages_reminder_hours: number; client_messages_language: string
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -22,6 +27,8 @@ export function settingsDraftOf(s: SetupSettings): SettingsDraft {
   return {
     timezone: s.timezone, currency: s.currency, lead_minutes: String(s.lead_minutes), slot_step: s.slot_step,
     max_advance_days: String(s.max_advance_days), allow_master_choice: s.allow_master_choice, points_on_bookings: s.points_on_bookings,
+    client_messages_staff_default: s.client_messages_staff_default, client_messages_reminder_hours: s.client_messages_reminder_hours,
+    client_messages_language: s.client_messages_language,
   }
 }
 
@@ -36,6 +43,9 @@ export function changedSettings(draft: SettingsDraft, s: SetupSettings): Setting
   if (Number(draft.max_advance_days) !== s.max_advance_days) body.max_advance_days = Number(draft.max_advance_days)
   if (draft.allow_master_choice !== s.allow_master_choice) body.allow_master_choice = draft.allow_master_choice
   if (draft.points_on_bookings !== s.points_on_bookings) body.points_on_bookings = draft.points_on_bookings
+  if (draft.client_messages_staff_default !== s.client_messages_staff_default) body.client_messages_staff_default = draft.client_messages_staff_default
+  if (draft.client_messages_reminder_hours !== s.client_messages_reminder_hours) body.client_messages_reminder_hours = draft.client_messages_reminder_hours
+  if (draft.client_messages_language !== s.client_messages_language) body.client_messages_language = draft.client_messages_language
   return body
 }
 
@@ -142,6 +152,26 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
               </label>
             </section>
           )}
+
+          <section aria-labelledby="settings-messages" className="space-y-3">
+            <h2 id="settings-messages" className="text-sm font-semibold text-a-text">{t('appointments.messages.setup.title', 'Client messages')}</h2>
+            <label className="flex items-center gap-2 text-sm text-a-text">
+              <input type="checkbox" checked={draft.client_messages_staff_default} onChange={(e) => set({ client_messages_staff_default: e.target.checked })} />
+              {t('appointments.messages.setup.staff', 'Email clients about changes staff make (staff can untick it each time)')}
+            </label>
+            <Field label={t('appointments.messages.setup.reminder', 'Reminder before each visit')}>
+              <select className={input} value={draft.client_messages_reminder_hours} onChange={(e) => set({ client_messages_reminder_hours: Number(e.target.value) })}>
+                {REMINDER_HOURS.map(h => (
+                  <option key={h} value={h}>{h === 0 ? t('appointments.messages.setup.off', 'Off') : t('appointments.messages.setup.hours', '{{count}} hours before', { count: h })}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label={t('appointments.messages.setup.language', "Language when the client's is not known")}>
+              <select className={input} value={draft.client_messages_language} onChange={(e) => set({ client_messages_language: e.target.value })}>
+                {MESSAGE_LANGUAGES.map(([code, name]) => <option key={code} value={code}>{name}</option>)}
+              </select>
+            </Field>
+          </section>
         </fieldset>
 
         {pending && (

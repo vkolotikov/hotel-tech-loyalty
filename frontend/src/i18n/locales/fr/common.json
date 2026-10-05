@@ -3349,5 +3349,15 @@
     "featured_off": "Retiré de votre page de destination",
     "featured_on_section_off": "Enregistré. Activez la section Avis dans l’éditeur de votre page de destination pour l’afficher.",
     "featured_on_no_page": "Enregistré. Il apparaîtra une fois votre page de destination créée."
+  },
+  "tell_client": {
+    "tell": "Prévenir le client par e-mail",
+    "tell_many": "Prévenir les clients par e-mail",
+    "no_email": "Pas d’adresse e-mail — le client ne sera pas prévenu.",
+    "confirm_title": "Confirmer cette réservation ?",
+    "cancel_title": "Annuler cette réservation ?",
+    "bulk_cancel_title": "Annuler {{count}} réservations ?",
+    "go": "Oui",
+    "back": "Retour"
   }
 }
