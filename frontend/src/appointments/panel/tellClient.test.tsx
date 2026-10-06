@@ -57,7 +57,8 @@ describe('Messages', () => {
 
 describe('ActionConfirm', () => {
   const booking = { client: { name: 'Sophie', email: 'sophie@example.test' }, client_email: 'sophie@example.test', start: '2026-10-06T10:00', end: '2026-10-06T10:45' } as unknown as AppointmentDetail
-  const action = (key: ActionKey): ActionInfo => ({ key, allowed: true, consequences: { payment: 'none', points: null, coupon: 'none', message: 'none' } })
+  // As the server sends them: confirm and cancel ask about the client (Part F R8 — the box follows `message`).
+  const action = (key: ActionKey): ActionInfo => ({ key, allowed: true, consequences: { payment: 'none', points: null, coupon: 'none', message: key === 'confirm' || key === 'cancel' ? 'ask' : 'none' } })
   const render = (key: ActionKey) => renderToStaticMarkup(
     <ActionConfirm booking={booking} action={action(key)} reason="" saving={false} error={null} tell onTell={() => {}} onReason={() => {}} onConfirm={() => {}} onBack={() => {}} />,
   )

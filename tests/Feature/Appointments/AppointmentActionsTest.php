@@ -33,9 +33,9 @@ class AppointmentActionsTest extends TestCase
             'pending'     => ['pending',     ['confirm', 'cancel', 'move']],
             'confirmed'   => ['confirmed',   ['start', 'complete', 'no_show', 'cancel', 'move']],
             'in_progress' => ['in_progress', ['complete', 'cancel', 'move']],
-            'completed'   => ['completed',   []],
-            'cancelled'   => ['cancelled',   []],
-            'no_show'     => ['no_show',     []],
+            'completed'   => ['completed',   ['reopen']],
+            'cancelled'   => ['cancelled',   ['reopen']],
+            'no_show'     => ['no_show',     ['reopen']],
         ];
     }
 
@@ -52,7 +52,7 @@ class AppointmentActionsTest extends TestCase
     public function test_the_list_always_names_every_action_in_one_order(): void
     {
         $this->assertSame(
-            ['confirm', 'start', 'complete', 'no_show', 'cancel', 'award_points', 'move'],
+            ['confirm', 'start', 'complete', 'no_show', 'cancel', 'award_points', 'reopen', 'move'],
             array_column(app(AppointmentActions::class)->for($this->seedBooking()), 'key'),
         );
     }

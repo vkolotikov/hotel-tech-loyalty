@@ -73,6 +73,7 @@ class ServiceSchedulingService
         ?int $stepMinutes = null,
         int $leadMinutes = 60,
         ?int $ignoreBookingId = null,
+        ?int $lengthMinutes = null,
     ): array {
         $step = $stepMinutes ?: $this->defaultSlotStep();
         $day = CarbonImmutable::parse($date)->startOfDay();
@@ -85,7 +86,8 @@ class ServiceSchedulingService
         $slotMap = []; // key: start-iso → ['start','end','duration_minutes','masters' => [ids...]]
 
         foreach ($masters as $master) {
-            $effDuration = $this->effectiveDuration($service, $master);
+            // Part F: a length staff set for one booking replaces the person's normal one.
+            $effDuration = $lengthMinutes ?? $this->effectiveDuration($service, $master);
             $windows = $this->workingWindowsForDate($master, $day);
             if (empty($windows)) continue;
 
@@ -174,15 +176,16 @@ class ServiceSchedulingService
      * If masterId is null, picks the first master that can take it.
      * $ignoreBookingId is the appointment being moved, so it does not
      * conflict with itself.
+     * $lengthMinutes (Part F) is a length staff set for this one booking; the price never follows it.
      */
-    public function reserveSlot(Service $service, ?int $masterId, string $startAt, ?int $ignoreBookingId = null): array
+    public function reserveSlot(Service $service, ?int $masterId, string $startAt, ?int $ignoreBookingId = null, ?int $lengthMinutes = null): array
     {
         $start = CarbonImmutable::parse($startAt);
         $masters = $this->mastersForService($service, $masterId);
         $this->lockCandidates($masters);
 
         foreach ($masters as $master) {
-            $effDuration = $this->effectiveDuration($service, $master);
+            $effDuration = $lengthMinutes ?? $this->effectiveDuration($service, $master);
             $end = $start->copy()->addMinutes($effDuration);
 
             $windows = $this->workingWindowsForDate($master, $start->startOfDay());

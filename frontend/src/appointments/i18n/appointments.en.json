@@ -45,6 +45,20 @@
     "unknown": "Payment state not known"
   },
   "calendar": {
+    "keys_hint": "Use the arrow keys to move between times and people; Enter opens or books.",
+    "drag": {
+      "move_title": "Move {{client}} to {{when}} with {{name}}?",
+      "resize_title": "Make it {{from}}–{{to}}?",
+      "save": "Save",
+      "cancel": "Cancel",
+      "loading": "Loading…",
+      "reason": {
+        "outside_hours": "Outside {{name}}'s hours",
+        "overlap": "Overlaps {{client}}'s appointment",
+        "not_eligible": "{{name}} doesn't do {{service}}",
+        "past_day": "That day has passed"
+      }
+    },
     "no_team": "No team members to show. Add team members and their working hours in the full admin.",
     "blocked": "Blocked",
     "book_at": "Book {{name}} at {{time}}",
@@ -112,6 +126,14 @@
     "not_found": "This client no longer exists."
   },
   "panel": {
+    "length": "Length",
+    "length_normal": "Normal length",
+    "length_normal_minutes": "Normal length ({{minutes}} min)",
+    "length_set": "Length set by staff",
+    "length_min": "{{m}} min",
+    "length_h": "{{h}} h",
+    "length_h_min": "{{h}} h {{m}} min",
+    "reopen_staff": "A manager can reopen it.",
     "title": "Appointment",
     "new_title": "New appointment",
     "date": "Date",
@@ -138,6 +160,7 @@
     "load_failed": "This appointment could not be loaded."
   },
   "action": {
+    "reopen": "Reopen",
     "confirm": "Confirm",
     "start": "Arrived",
     "complete": "Complete",
@@ -148,6 +171,7 @@
     "cancel": "Cancel appointment"
   },
   "consequence": {
+    "reopen": "The visit goes back to Confirmed at its own time. Points already earned stay.",
     "no_message": "No message is sent to the client.",
     "points_will_award": "Completing awards {{points}} points.",
     "coupon_not_returned": "The coupon used on this booking is not returned.",
@@ -178,6 +202,7 @@
     "awarded_none": "No points were awarded for this visit."
   },
   "history": {
+    "reopen": "Reopened",
     "refunded": "Refunded",
     "payment_taken": "Payment taken",
     "title": "History",
@@ -200,6 +225,9 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "invalid_length": "Choose a length between 15 minutes and 8 hours, in 15-minute steps.",
+    "money_returned": "Money was given back for this visit — book it again instead.",
+    "coupon_returned": "The coupon used on this visit was given back to the member — book it again instead.",
     "price_changed": "The price changed — check it and save again.",
     "invalid_amount": "Enter an amount above zero.",
     "note_required": "Say how the client paid.",

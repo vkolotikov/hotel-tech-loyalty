@@ -35,6 +35,12 @@ function grid(appointments: AppointmentSummary[], today = '2026-10-06') {
 }
 
 describe('TimeGrid', () => {
+  it('is one tab stop: exactly one slot or card is reachable by Tab, and the keys are explained (Part F)', () => {
+    const html = grid([appt(7, '2026-10-06T09:00', '2026-10-06T10:00')])
+    expect(html.match(/data-stop="[^"]+"[^>]*tabindex="0"|tabindex="0"[^>]*data-stop="[^"]+"/g)).toHaveLength(1)
+    expect(html).toContain('id="calendar-keys-hint"')
+  })
+
   it('heads each column with the person and draws the appointment as time, client, service and a worded status', () => {
     const html = grid([appt(7, '2026-10-06T09:00', '2026-10-06T10:00')])
     expect(html).toContain('Emma')

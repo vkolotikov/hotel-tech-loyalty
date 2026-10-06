@@ -36,4 +36,21 @@ final class CouponRelease
 
         return false;
     }
+
+    /**
+     * Whether the coupon is still marked used by THIS booking — the same row
+     * release() would give back. A booking cancelled in the portal had its
+     * coupon given back, so reopening it would use the coupon twice (Part F).
+     */
+    public function stillUsedBy(string $source, int $sourceId, string $reference): bool
+    {
+        return match ($source) {
+            'offer'  => MemberOffer::whereKey($sourceId)->where('used_reference', $reference)->exists(),
+            'reward' => RewardRedemption::whereKey($sourceId)
+                ->where('status', RewardRedemption::STATUS_FULFILLED)
+                ->where('notes', "Applied to {$reference}")
+                ->exists(),
+            default  => true,
+        };
+    }
 }

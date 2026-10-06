@@ -95,7 +95,9 @@ extras' notice counts from the venue's now in `ServiceQuoteBuilder`, which corre
 |---|---|---|
 | Add a client | A client record (the full admin's Customers). With an email address and an active programme, the client is enrolled as a member by the same hook every other entry point uses. | Send a welcome or any other message. Merge with an existing client (a likely duplicate is shown to choose from). |
 | Book | A confirmed, unpaid service booking linked to the client and, for a member, the member, at the member price with the coupon chosen (Part E). Emails the client "Booked" when "Tell the client" is ticked (Part D). | Give a staff discount. Save at a price staff did not see (a changed price answers "check it and save again"). |
-| Move | The time and the team member; the duration follows the new team member's own. Reference, service, price and payment are kept. Emails "New time" when ticked and the time or the person changed. | — |
+| Move | The time and the team member; the duration follows the new team member's own, unless staff set a length (kept). Reference, service, price and payment are kept. Emails "New time" when ticked and the time or the person changed. Also by dragging the card (a confirm first) and with a Length (Part F). | — |
+| Length (drag the bottom edge, or the Move form's Length) | The booking's own length, 15 minutes to 8 hours in 15-minute steps, kept by later moves until changed or set back to normal. The price never changes; the client is not emailed. | Stretch past the person's working hours or into the next appointment. |
+| Reopen (managers) | Status `confirmed` again, from completed, no-show or cancelled, when no money and no coupon went back and its time is free; points earned stay (never twice); a reopened cancellation still ahead can email "Confirmed". | Reopen after a refund or a portal cancellation that gave the coupon back (book again instead). Check working hours or "a day that has passed". |
 | Confirm (a pending request) | Status `confirmed`. Emails "Confirmed" when ticked. | — But the capture job will now charge a held card within about 10 minutes (see "Card holds" below for a hold older than six days). |
 | Arrived | Status `in_progress`. | — |
 | Complete | Status `completed`, then the programme's points for a member, once. | Take a payment. |
@@ -117,10 +119,11 @@ marked as held whose payment Stripe had in fact already taken. A booking already
 
 ## Putting a mistake right
 
-- **Cancelled or marked no-show by mistake:** in the full admin, open the booking under Service bookings and set its
-  status back. Check the time is still free first — the full admin's status change does not re-check the slot.
-- **Completed by mistake:** the points are reversed in the full admin (the member's page → points history → reverse).
-  The booking stays stamped as awarded, so completing it again does not award twice.
+- **Cancelled, marked no-show or completed by mistake:** a manager uses Reopen in the workspace (Part F); it checks
+  the time is still free and refuses a visit whose money or coupon went back. The full admin's status change still
+  works, without those checks.
+- **Completed by mistake, and the points should go:** the points are reversed in the full admin (the member's page →
+  points history → reverse). The booking stays stamped as awarded, so completing it again does not award twice.
 - **Booked for the wrong client:** cancel it and book again. A booking's client is not editable.
 - Every workspace action leaves an audit row with the staff user and the booking (Audit log, actions
   `service_booking.*`).
@@ -152,9 +155,9 @@ marked as held whose payment Stripe had in fact already taken. A booking already
 A pass by hand and with Lighthouse on 2026-09-30 (target WCAG 2.2 AA, **no conformance claimed**): keyboard-only
 booking, moving and cancelling; visible focus on the rail, the grid, the panel and the month; names and roles;
 1440, 1280, 1024 and 200 % zoom. Lighthouse accessibility was 100 on the calendar, the calendar with the panel
-open, and the client search. Known limits: the grid and the month have one tab stop per slot and per day (no
-arrow-key movement) — the List view is the short way round; focus handling has no automated test, because the
-frontend tests render to a string.
+open, and the client search. Known limits: the month has one tab stop per day — the List view is the short way
+round; since Part F the grid is one tab stop with arrow keys (`calendar/gridFocus.ts`); focus handling has no
+automated test beyond the focus rules themselves, because the frontend tests render to a string.
 
 ## Where it differs from the full admin's screens
 
@@ -166,8 +169,9 @@ frontend tests render to a string.
 ## What this milestone does not do
 
 Insights; photos for services and team members (full admin); service extras and category colours and order
-(full admin); drag to move; reopening a completed visit; SMS or any channel but email for client messages (Part D);
-rooms and resources (the engine has none for services); no-show and late-cancel fees, tips, receipts.
+(full admin); SMS or any channel but email for client messages (Part D); rooms and resources (the engine has none for
+services; a later part); no-show and late-cancel fees, tips, receipts; drag to create an appointment, Undo after a
+saved drag, a length that changes the price, stretching past working hours (Part F).
 
 ## Selling Appointments on its own (Part C, 2026-10-02)
 
@@ -354,6 +358,48 @@ Code: `App\Services\Appointments\Money\{AppointmentMoney, StaffPricing, TakingsR
 TakePaymentForm, RefundForm}.tsx`, `frontend/src/appointments/takings/`, `frontend/src/components/DeskMoney.tsx`;
 tests in `tests/Feature/Appointments/Money/`.
 
+## Calendar power (Part F, 2026-10-05)
+
+**Drag to move.** A pending, confirmed or arrived card is dragged to another time, or to another person (day view) or
+day (week view). A mouse or pen drag starts after a few pixels (a click still opens the panel); on a tablet a still
+press of 400 ms starts it, so a swipe still scrolls. The card snaps to 15 minutes, the calendar scrolls near its
+edges, and Escape puts it back. While dragging, the preview says the new place ("Thu 14:30–15:15 · Anna") or, in the
+danger colour, why it will not do: outside the person's hours or on time off, over another live appointment, a person
+who does not do the service, a day that has passed. A release there, or at the card's own place, sends nothing.
+Otherwise a small box asks "Move Sophie to Thu 14:30 with Anna?" with "Tell the client" (the venue's default) and
+Save / Cancel; Save sends the ordinary move request with the card's revision, so a change made meanwhile answers
+"Someone else changed this appointment". The box belongs to the day and person it was dropped on: going to another
+date or view while it is open closes it, so Save never means a place nobody chose. The grid is drawn from 1024 px up;
+below that the calendar is the List view and the Move form is the way to move. Touch drag was checked with Chrome's
+touch emulation only — check it on a real iPad (Safari) before relying on it.
+
+**Length.** A card's bottom edge (pointer devices) stretches or shortens the visit in 15-minute steps, 15 minutes to 8
+hours; the box asks "Make it 10:00–11:30?" and tells nobody (the start does not change). The Move form's Length field
+does the same by click or keyboard, and at phone width. The length is the booking's own from then on
+(`meta.length_minutes`): later moves keep it, even to another person, until it is changed or set back to "Normal
+length". The move request takes `length` or `normal_length`, and the free-times call takes `length` (so the Move form
+offers only starts where it fits); anything outside the rule is 422 `invalid_length`. The price never changes. The
+scheduler's `reserveSlot()` and `availableSlots()` take an optional last `$lengthMinutes` that only the workspace
+passes.
+
+**Reopen (managers).** A completed, no-show or cancelled visit goes back to confirmed under the person's `svcm:` lock,
+unless money went back for it (422 `money_returned` — book it again), the coupon it used went back to the member
+(422 `coupon_returned` — a portal cancellation gives it back; a staff one does not), or a live appointment now
+overlaps its time (409 `slot_taken`). Working hours and "a day that has passed" are not checked. The cancellation
+time and reason are cleared (the audit row `service_booking.reopen` keeps them); points earned stay and are never
+awarded twice; a live card hold is charged by the capture job, as on Confirm, and the confirm says so. A reopened
+cancellation that is still ahead can email "Confirmed"; one already past tells nobody. Staff see "A manager can
+reopen it."
+
+**Arrow keys.** The grid is one tab stop. Up/Down move between the free half hours and appointments of a column,
+Left/Right to the same time in the next column that has any, Home/End to the column's first and last; Enter opens
+or books. The keys never move an appointment.
+
+Code: `frontend/src/appointments/calendar/{dragMath, useCardDrag, DragPreview, DropConfirm, focusDialog, gridFocus}`,
+`frontend/src/appointments/panel/lengths.ts`, `StaffBookingWriter::lengthOrRefuse()`, `AppointmentActionRunner`
+(reopen); tests `tests/Feature/Appointments/{SchedulerLengthTest, MoveLengthTest, ReopenTest}.php` and the calendar
+and panel tests.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
@@ -388,3 +434,5 @@ every organisation:
 - (Part E) staff bookings for members get the member price, and a member's coupon when staff choose one;
 - (Part E) the full admin loses its Payment dropdown and bulk "Mark Paid", and its status endpoint refuses
   `payment_status`.
+- (Part F) no migration and no new setting; the scheduler's optional length nobody else passes; every
+  organisation's workspace gains drag, length and reopen on deploy; a booking's `meta` may carry `length_minutes`.

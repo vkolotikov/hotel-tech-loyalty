@@ -116,6 +116,8 @@ final class AppointmentPresenter
                 'currency'       => $b->currency ?: 'EUR',
             ],
             'source'  => (string) $b->source,
+            // Part F: the booking keeps a length staff set (resize or the Move form's Length).
+            'length_set_by_staff' => isset(((array) ($b->meta ?? []))['length_minutes']),
             'notes'   => ['customer' => $b->customer_notes ?: null, 'staff' => $b->staff_notes ?: null],
             'actions' => $this->actions->for($b),
             'loyalty' => $this->loyalty->forBooking($b),

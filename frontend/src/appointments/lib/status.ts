@@ -34,6 +34,10 @@ export const TONE_CLASS: Record<Tone, { text: string; tint: string; bar: string 
  */
 export const coversSlot = (status: Status): boolean => status !== 'cancelled' && status !== 'no_show'
 
+/** The statuses the scheduler counts as taking a person's time — and the ones staff may move (Part F). */
+export const LIVE: Status[] = ['pending', 'confirmed', 'in_progress']
+export const isLive = (status: Status): boolean => LIVE.includes(status)
+
 const LATE_AFTER_MIN = 15
 
 interface Marked { status: Status; start: Wall }

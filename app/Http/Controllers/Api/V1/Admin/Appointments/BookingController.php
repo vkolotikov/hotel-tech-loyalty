@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Appointments;
 use App\Http\Controllers\Controller;
 use App\Models\ServiceBooking;
 use App\Services\Appointments\AppointmentActionRunner;
+use App\Services\Appointments\AppointmentActions;
 use App\Services\Appointments\AppointmentPresenter;
 use App\Services\Appointments\AppointmentRefused;
 use App\Services\Appointments\Messages\ClientMessenger;
@@ -65,11 +66,14 @@ class BookingController extends Controller
             'master_id'     => 'required|integer',
             'revision'      => 'required|string|max:64',
             'notify_client' => 'nullable|boolean',
+            // Part F: the booking's length from now on, or back to the person's normal one.
+            'length'        => 'nullable|integer',
+            'normal_length' => 'nullable|boolean',
         ]);
 
         $before = ServiceBooking::find($id);
         try {
-            $booking = $writer->move($id, $data['start'], (int) $data['master_id'], $data['revision'], $request->user());
+            $booking = $writer->move($id, $data['start'], (int) $data['master_id'], $data['revision'], $request->user(), isset($data['length']) ? (int) $data['length'] : null, $request->boolean('normal_length'));
         } catch (StaleAppointment $e) {
             return $this->stale($e, $presenter);
         }
@@ -82,7 +86,7 @@ class BookingController extends Controller
         return response()->json(['booking' => $presenter->detail($booking->fresh()), 'client_message' => $message?->toApi()]);
     }
 
-    public function action(Request $request, int $id, AppointmentActionRunner $runner, AppointmentPresenter $presenter, ClientMessenger $messenger): JsonResponse
+    public function action(Request $request, int $id, AppointmentActionRunner $runner, AppointmentPresenter $presenter, ClientMessenger $messenger, AppointmentActions $actions): JsonResponse
     {
         $data = $request->validate([
             'action'        => 'required|string|max:40',
@@ -94,13 +98,22 @@ class BookingController extends Controller
             'refunds.*.amount' => 'required|numeric|min:0|max:100000',
         ]);
 
+        // Part F: reopening a cancelled visit still ahead may tell the client it is confirmed again (R6) — the
+        // same rule the panel's consequence shows, read before the run changes the status.
+        $before = $data['action'] === 'reopen' ? ServiceBooking::find($id) : null;
+        $reopenAsks = $before !== null && $actions->consequences($before, 'reopen')['message'] === 'ask';
         try {
             $result = $runner->run($id, $data['action'], $data['revision'], $data['reason'] ?? null, $request->user(), $data['refunds'] ?? []);
         } catch (StaleAppointment $e) {
             return $this->stale($e, $presenter);
         }
 
-        $kind = ['confirm' => 'confirmed', 'cancel' => 'cancelled'][$data['action']] ?? null;
+        $kind = match (true) {
+            $data['action'] === 'confirm' => 'confirmed',
+            $data['action'] === 'cancel' => 'cancelled',
+            $data['action'] === 'reopen' && $reopenAsks => 'confirmed',
+            default => null,
+        };
         $message = $kind ? $messenger->afterStaffAction($result['booking'], $kind, self::notify($request), $request->user()) : null;
 
         return response()->json(['booking' => $presenter->detail($result['booking']), 'points' => $result['points'], 'client_message' => $message?->toApi()]);

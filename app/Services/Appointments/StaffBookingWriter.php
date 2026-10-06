@@ -32,6 +32,11 @@ final class StaffBookingWriter
     /** `service_booking_submissions.source` for this entry point. */
     public const SOURCE = 'staff';
 
+    /** A length staff set for one booking (Part F): 15 minutes to 8 hours, in 15-minute steps. */
+    public const LENGTH_MIN = 15;
+    public const LENGTH_MAX = 480;
+    public const LENGTH_STEP = 15;
+
     public function __construct(private readonly ServiceSchedulingService $scheduler, private readonly StaffPricing $pricing)
     {
     }
@@ -169,10 +174,14 @@ final class StaffBookingWriter
      * conflict check.
      *
      * Lock order: the target person's `svcm:` lock, then the booking row.
+     *
+     * $length (Part F) becomes the booking's own length (meta.length_minutes) and later moves keep it;
+     * $normalLength forgets it, so the new person's normal length applies again.
      */
-    public function move(int $id, string $wall, int $masterId, string $revision, User $actor): ServiceBooking
+    public function move(int $id, string $wall, int $masterId, string $revision, User $actor, ?int $length = null, bool $normalLength = false): ServiceBooking
     {
         $orgId = (int) app('current_organization_id');
+        $length = self::lengthOrRefuse($length, $normalLength);
 
         // The booking first, outside the lock, only to answer 404 before
         // anything else can refuse; everything is read again under the lock.
@@ -184,7 +193,7 @@ final class StaffBookingWriter
         $start = $this->startOrRefuse($wall, $orgId);
 
         try {
-            return AdvisoryLock::transaction("svcm:{$master->id}", function () use ($id, $master, $start, $revision, $actor) {
+            return AdvisoryLock::transaction("svcm:{$master->id}", function () use ($id, $master, $start, $revision, $actor, $length, $normalLength) {
                 $booking = ServiceBooking::lockForUpdate()->find($id)
                     ?? throw new AppointmentRefused('not_found', 'This appointment no longer exists.', 404);
 
@@ -198,19 +207,32 @@ final class StaffBookingWriter
                     ?? throw new AppointmentRefused('service_not_found', 'This appointment\'s service no longer exists.', 422);
                 $this->assertPerforms($master, $service);
 
-                $slot = $this->scheduler->reserveSlot($service, $master->id, $start->toIso8601String(), $booking->id);
+                // Part F: a length staff set stays with the booking until changed or forgotten.
+                $meta = (array) ($booking->meta ?? []);
+                $kept = isset($meta['length_minutes']) ? (int) $meta['length_minutes'] : null;
+                $use = $normalLength ? null : ($length ?? $kept);
+
+                $slot = $this->scheduler->reserveSlot($service, $master->id, $start->toIso8601String(), $booking->id, $use);
 
                 $old = [
                     'start'     => VenueClock::wall($booking->start_at),
                     'end'       => VenueClock::wall($booking->end_at),
                     'master_id' => (int) $booking->service_master_id,
+                    'length'    => (int) $booking->duration_minutes,
                 ];
+
+                if ($normalLength) {
+                    unset($meta['length_minutes']);
+                } elseif ($length !== null) {
+                    $meta['length_minutes'] = $length;
+                }
 
                 $booking->update([
                     'start_at'          => $slot['start'],
                     'end_at'            => $slot['end'],
                     'duration_minutes'  => $slot['duration_minutes'],
                     'service_master_id' => $slot['master']->id,
+                    'meta'              => $meta === [] ? null : $meta,
                 ]);
 
                 AuditLog::record(
@@ -220,10 +242,11 @@ final class StaffBookingWriter
                         'start'     => VenueClock::wall($booking->start_at),
                         'end'       => VenueClock::wall($booking->end_at),
                         'master_id' => (int) $booking->service_master_id,
+                        'length'    => (int) $booking->duration_minutes,
                     ],
                     $old,
                     $actor,
-                    "Moved appointment {$booking->booking_reference} to " . VenueClock::wall($booking->start_at) . " with {$master->name}",
+                    "Moved appointment {$booking->booking_reference} to " . VenueClock::wall($booking->start_at) . " with {$master->name} ({$booking->duration_minutes} min)",
                 );
 
                 return $booking;
@@ -233,6 +256,19 @@ final class StaffBookingWriter
         } catch (\RuntimeException) {
             throw new AppointmentRefused('slot_taken', "That time is not free for {$master->name}. Choose another.", 409);
         }
+    }
+
+    /** A staff-set length, or null for none. A length out of the rules, or one sent with `normal_length`, is refused. */
+    public static function lengthOrRefuse(?int $length, bool $normal = false): ?int
+    {
+        if ($length === null) {
+            return null;
+        }
+        if ($normal || $length < self::LENGTH_MIN || $length > self::LENGTH_MAX || $length % self::LENGTH_STEP !== 0) {
+            throw new AppointmentRefused('invalid_length', 'Choose a length between 15 minutes and 8 hours, in 15-minute steps.', 422);
+        }
+
+        return $length;
     }
 
     /** `YYYY-MM-DDTHH:mm`, a time the venue's clock has, on the venue's today or later. */

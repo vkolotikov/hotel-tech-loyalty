@@ -1,7 +1,7 @@
 import type { ActionInfo, ActionKey, PointsPreview } from '../lib/types'
 
 /** Actions that touch money, points or a final status are confirmed first; "arrived" and "award points" are not. */
-export const NEEDS_CONFIRM: ReadonlySet<ActionKey> = new Set<ActionKey>(['confirm', 'complete', 'no_show', 'cancel'])
+export const NEEDS_CONFIRM: ReadonlySet<ActionKey> = new Set<ActionKey>(['confirm', 'complete', 'no_show', 'cancel', 'reopen'])
 
 export interface Line {
   key: string
@@ -60,8 +60,12 @@ export function consequenceLines(action: ActionInfo): Line[] {
   if (coupon === 'not_returned') {
     lines.push({ key: 'appointments.consequence.coupon_not_returned', fallback: 'The coupon used on this booking is not returned.', tone: 'warning' })
   }
-  // Confirm and cancel ask "Tell the client by email" instead (Part D); a no-show tells nobody.
-  if (action.key === 'no_show') {
+  if (action.key === 'reopen') {
+    lines.push({ key: 'appointments.consequence.reopen', fallback: 'The visit goes back to Confirmed at its own time. Points already earned stay.', tone: 'plain' })
+  }
+  // A no-show tells nobody, and so does a reopen the server does not ask about (a completed or no-show
+  // visit, or a cancellation already past); the others ask (Part D, R8).
+  if (action.key === 'no_show' || (action.key === 'reopen' && action.consequences.message === 'none')) {
     lines.push({ key: 'appointments.consequence.no_message', fallback: 'No message is sent to the client.', tone: 'plain' })
   }
 

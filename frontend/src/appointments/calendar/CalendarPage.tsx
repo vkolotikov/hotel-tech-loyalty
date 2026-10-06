@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi } from '../lib/api'
 import { loadPrefs, savePrefs, type Prefs, type View } from '../lib/prefs'
-import type { DateKey } from '../lib/types'
+import type { AppointmentSummary, DateKey } from '../lib/types'
 import { hhmm, isDateKey, venueNow } from '../lib/wallClock'
 import { AppointmentPanel } from '../panel/AppointmentPanel'
 import { CLOSED, newKey, panelReducer } from '../panel/panelState'
 import { Notice } from '../ui/Notice'
 import { DayOverview } from './DayOverview'
+import type { DropTarget } from './DropConfirm'
 import { ListView } from './ListView'
 import { MiniMonth } from './MiniMonth'
 import { TimeGrid } from './TimeGrid'
@@ -100,6 +101,20 @@ export function CalendarPage() {
     placeholderData: keepPreviousData,
   })
 
+  const queryClient = useQueryClient()
+  // Part F: a drop saves through the same move call as the Move form, with the card's revision (R4).
+  const dropAppointment = async (appointment: AppointmentSummary, to: DropTarget) => {
+    try {
+      await appointmentsApi.move(appointment.id, {
+        start: to.start, master_id: to.masterId, revision: appointment.revision, notify_client: to.notify,
+        ...(to.length !== null ? { length: to.length } : {}),
+      })
+    } finally {
+      void queryClient.invalidateQueries({ queryKey: ['appointments', 'calendar'] })
+      void queryClient.invalidateQueries({ queryKey: ['appointments', 'booking', appointment.id] })
+    }
+  }
+
   const masters = query.data?.masters ?? []
   const appointments = useMemo(() => query.data?.appointments ?? [], [query.data])
   // The week view shows one person; with no one chosen that is the first, and the filter says so.
@@ -132,7 +147,7 @@ export function CalendarPage() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 overflow-auto">
+        <div className="flex-1 min-h-0 overflow-auto" data-calendar-scroll="">
           {query.isLoading && <p className="p-6 text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
           {!query.isLoading && view !== 'list' && (
             <TimeGrid
@@ -140,6 +155,8 @@ export function CalendarPage() {
               appointments={shown} now={now} today={now.date} selectedId={selectedId}
               onSlot={(masterId, slotDate, minutes) => dispatch({ type: 'openCreate', key: newKey(), draft: { date: slotDate, time: hhmm(minutes), masterId } })}
               onOpen={(id) => dispatch({ type: 'openView', id })}
+              services={query.data?.services ?? []} locale={locale}
+              tellDefault={boot.messages?.staff_default ?? false} onDrop={dropAppointment}
             />
           )}
           {!query.isLoading && view === 'list' && (

@@ -8,6 +8,7 @@ import { useVocab } from '../lib/vocab'
 import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
+import { lengthBody, lengthChoices, lengthLabel, type LengthChoice } from './lengths'
 import type { PanelError } from './panelState'
 import { TellClient } from './TellClient'
 
@@ -21,17 +22,18 @@ interface Props {
   /** "Tell the client by email" (Part D). */
   tell: boolean
   onTell: (tell: boolean) => void
-  onMove: (start: Wall, masterId: number) => void
+  onMove: (start: Wall, masterId: number, length: { length?: number; normal_length?: boolean }) => void
   onBack: () => void
 }
 
 const control = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
 /**
- * Move by choosing a day, a person and one of the server's free times —
- * the ordinary-edit way to reschedule (there is no drag in this
- * milestone). The free times already leave this appointment out, so its own
- * slot is offered.
+ * Move by choosing a day, a person, a length and one of the server's free
+ * times — the click-only way to reschedule and to change the length (Part
+ * F's drag does the same through the same request). The free times already
+ * leave this appointment out, so its own slot is offered, and they fit the
+ * chosen length.
  */
 export function MoveForm({ booking, masters, services, today, saving, error, tell, onTell, onMove, onBack }: Props) {
   const { t } = useTranslation()
@@ -39,19 +41,22 @@ export function MoveForm({ booking, masters, services, today, saving, error, tel
   const [date, setDate] = useState<DateKey>(dateOf(booking.start) < today ? today : dateOf(booking.start))
   const [masterId, setMasterId] = useState<number | null>(booking.master?.id ?? null)
   const [start, setStart] = useState<Wall | ''>('')
+  // Part F: the length the moved appointment will have; it starts at the staff-set length, if any.
+  const [length, setLength] = useState<LengthChoice>(booking.length_set_by_staff ? booking.duration_minutes : 'normal')
+  const lengthParam = length === 'normal' ? undefined : length
 
   const service = services.find(s => s.id === booking.service?.id) ?? null
   const eligible = masters.filter(m => service === null || service.master_ids.includes(m.id))
 
   const slots = useQuery({
-    queryKey: ['appointments', 'slots', booking.service?.id ?? null, masterId, date, booking.id],
-    queryFn: () => appointmentsApi.slots(booking.service!.id, masterId!, date, booking.id),
+    queryKey: ['appointments', 'slots', booking.service?.id ?? null, masterId, date, booking.id, lengthParam],
+    queryFn: () => appointmentsApi.slots(booking.service!.id, masterId!, date, booking.id, lengthParam),
     enabled: booking.service !== null && masterId !== null,
   })
   const chosen = slots.data?.slots.find(s => s.start === start) ?? null
 
   return (
-    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (chosen && masterId !== null && !saving) onMove(chosen.start, masterId) }}>
+    <form className="space-y-4" onSubmit={(e) => { e.preventDefault(); if (chosen && masterId !== null && !saving) onMove(chosen.start, masterId, lengthBody(length, booking.length_set_by_staff ?? false)) }}>
       <div>
         <div className="text-base font-semibold text-a-text">{t('appointments.action.move', 'Move')}</div>
         <div className="text-sm text-a-text-2">{booking.client.name} · {timeOf(booking.start)} – {timeOf(booking.end)}</div>
@@ -63,6 +68,14 @@ export function MoveForm({ booking, masters, services, today, saving, error, tel
       <Field label={vocab('team_member')}>
         <select className={control} value={masterId ?? ''} onChange={(e) => { setMasterId(e.target.value ? Number(e.target.value) : null); setStart('') }}>
           {eligible.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
+      </Field>
+      <Field label={t('appointments.panel.length', 'Length')}>
+        <select className={control} value={String(length)} onChange={(e) => { setLength(e.target.value === 'normal' ? 'normal' : Number(e.target.value)); setStart('') }}>
+          <option value="normal">{slots.data
+            ? t('appointments.panel.length_normal_minutes', 'Normal length ({{minutes}} min)', { minutes: slots.data.duration_minutes })
+            : t('appointments.panel.length_normal', 'Normal length')}</option>
+          {lengthChoices().map(n => { const l = lengthLabel(n); return <option key={n} value={n}>{t(l.key, l.fallback, l.vars)}</option> })}
         </select>
       </Field>
       <Field label={t('appointments.panel.time', 'Time')}>

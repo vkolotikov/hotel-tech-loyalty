@@ -33,6 +33,7 @@ const TITLE: Partial<Record<ActionKey, [string, string]>> = {
   complete:           ['appointments.action.complete', 'Complete'],
   no_show:            ['appointments.action.no_show', 'No-show'],
   cancel:             ['appointments.action.cancel', 'Cancel appointment'],
+  reopen:             ['appointments.action.reopen', 'Reopen'],
 }
 
 /** What this action will really do, stated before the button that does it. */
@@ -92,7 +93,8 @@ export function ActionConfirm({ booking, action, reason, saving, error, tell, on
         )
       )}
 
-      {(action.key === 'confirm' || action.key === 'cancel') && <TellClient email={booking.client_email ?? null} checked={tell} onChange={onTell} />}
+      {/* The server says which actions may tell the client (R8): confirm, cancel, and reopening a cancellation. */}
+      {action.consequences.message === 'ask' && <TellClient email={booking.client_email ?? null} checked={tell} onChange={onTell} />}
 
       {error &&<Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
 

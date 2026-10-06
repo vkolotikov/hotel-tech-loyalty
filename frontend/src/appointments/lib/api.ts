@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  ActionKey, AppointmentDetail, Bootstrap, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CouponOption, CouponRef, CreateBody, DateKey, DeskMethod, HoursRow, Impact, PriceQuote, RefundVia, Takings,
+  ActionKey, AppointmentDetail, Bootstrap, MoveBody, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CouponOption, CouponRef, CreateBody, DateKey, DeskMethod, HoursRow, Impact, PriceQuote, RefundVia, Takings,
   PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
   TeamBody, TimeOffBody, Wall,
 } from './types'
@@ -45,8 +45,9 @@ export const appointmentsApi = {
   calendar: (from: DateKey, to: DateKey, opts: { masterId?: number | null; includeCancelled?: boolean; windows?: boolean } = {}): Promise<CalendarPayload> =>
     watched(api.get(`${BASE}/calendar`, { params: { from, to, master_id: opts.masterId ?? undefined, include_cancelled: opts.includeCancelled ? 1 : 0, windows: opts.windows === false ? 0 : 1 } })),
 
-  slots: (serviceId: number, masterId: number, date: DateKey, ignore?: number): Promise<SlotsPayload> =>
-    watched(api.get(`${BASE}/slots`, { params: { service_id: serviceId, master_id: masterId, date, ignore } })),
+  /** `length` (Part F): only the starts where a length staff set fits. */
+  slots: (serviceId: number, masterId: number, date: DateKey, ignore?: number, length?: number): Promise<SlotsPayload> =>
+    watched(api.get(`${BASE}/slots`, { params: { service_id: serviceId, master_id: masterId, date, ignore, length } })),
 
   searchClients: (search: string): Promise<{ clients: ClientSummary[] }> =>
     watched(api.get(`${BASE}/clients`, { params: { search } })),
@@ -70,7 +71,7 @@ export const appointmentsApi = {
   resolveCoupon: (clientId: number, code: string): Promise<{ coupon: CouponOption }> =>
     watched(api.post(`${BASE}/clients/${clientId}/coupons/resolve`, { code })),
 
-  move: (id: number, body: { start: Wall; master_id: number; revision: string; notify_client?: boolean }): Promise<{ booking: AppointmentDetail; client_message: ClientMessageInfo | null }> =>
+  move: (id: number, body: MoveBody): Promise<{ booking: AppointmentDetail; client_message: ClientMessageInfo | null }> =>
     watched(api.patch(`${BASE}/bookings/${id}`, body)),
 
   act: (id: number, body: { action: ActionKey; revision: string; reason?: string; notify_client?: boolean; refunds?: { via: RefundVia; amount: number }[] }): Promise<{ booking: AppointmentDetail; points: PointsResult | null; client_message: ClientMessageInfo | null }> =>

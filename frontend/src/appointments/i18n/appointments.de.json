@@ -45,6 +45,20 @@
     "unknown": "Zahlungsstatus unbekannt"
   },
   "calendar": {
+    "keys_hint": "Mit den Pfeiltasten zwischen Zeiten und Personen wechseln; Enter öffnet oder bucht.",
+    "drag": {
+      "move_title": "{{client}} auf {{when}} bei {{name}} verschieben?",
+      "resize_title": "Auf {{from}}–{{to}} ändern?",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "loading": "Wird geladen…",
+      "reason": {
+        "outside_hours": "Außerhalb der Zeiten von {{name}}",
+        "overlap": "Überschneidet sich mit dem Termin von {{client}}",
+        "not_eligible": "{{name}} bietet {{service}} nicht an",
+        "past_day": "Dieser Tag ist vorbei"
+      }
+    },
     "no_team": "Keine Teammitglieder vorhanden. Legen Sie Teammitglieder und deren Arbeitszeiten in der vollständigen Verwaltung an.",
     "blocked": "Blockiert",
     "book_at": "{{name}} um {{time}} buchen",
@@ -112,6 +126,14 @@
     "not_found": "Diesen Kunden gibt es nicht mehr."
   },
   "panel": {
+    "length": "Dauer",
+    "length_normal": "Normale Dauer",
+    "length_normal_minutes": "Normale Dauer ({{minutes}} Min.)",
+    "length_set": "Dauer vom Team festgelegt",
+    "length_min": "{{m}} Min.",
+    "length_h": "{{h}} Std.",
+    "length_h_min": "{{h}} Std. {{m}} Min.",
+    "reopen_staff": "Eine Leitung kann ihn wieder öffnen.",
     "title": "Termin",
     "new_title": "Neuer Termin",
     "date": "Datum",
@@ -138,6 +160,7 @@
     "load_failed": "Dieser Termin konnte nicht geladen werden."
   },
   "action": {
+    "reopen": "Wieder öffnen",
     "confirm": "Bestätigen",
     "start": "Eingetroffen",
     "complete": "Abschließen",
@@ -148,6 +171,7 @@
     "cancel": "Termin stornieren"
   },
   "consequence": {
+    "reopen": "Der Termin wird zu seiner Zeit wieder bestätigt. Bereits vergebene Punkte bleiben.",
     "no_message": "Der Kunde erhält keine Nachricht.",
     "points_will_award": "Beim Abschließen werden {{points}} Punkte gutgeschrieben.",
     "coupon_not_returned": "Der bei dieser Buchung eingelöste Gutschein wird nicht zurückgegeben.",
@@ -178,6 +202,7 @@
     "awarded_none": "Für diesen Besuch wurden keine Punkte gutgeschrieben."
   },
   "history": {
+    "reopen": "Wieder geöffnet",
     "refunded": "Erstattet",
     "payment_taken": "Zahlung angenommen",
     "title": "Verlauf",
@@ -200,6 +225,9 @@
     "bulk_mark_status": "Status in der vollständigen Verwaltung geändert (Sammelaktion)"
   },
   "error": {
+    "invalid_length": "Wählen Sie eine Dauer zwischen 15 Minuten und 8 Stunden, in 15-Minuten-Schritten.",
+    "money_returned": "Für diesen Termin wurde Geld zurückgegeben — buchen Sie ihn neu.",
+    "coupon_returned": "Der Gutschein dieses Termins wurde dem Mitglied zurückgegeben — buchen Sie ihn neu.",
     "price_changed": "Der Preis hat sich geändert — prüfen und erneut speichern.",
     "invalid_amount": "Geben Sie einen Betrag über null ein.",
     "note_required": "Geben Sie an, wie der Kunde bezahlt hat.",

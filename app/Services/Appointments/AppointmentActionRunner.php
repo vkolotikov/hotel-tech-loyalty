@@ -7,7 +7,9 @@ use App\Models\ServiceBooking;
 use App\Models\User;
 use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\Appointments\Setup\SetupAccess;
+use App\Services\Booking\CouponRelease;
 use App\Services\Loyalty\BookingPointsService;
+use App\Support\AdvisoryLock;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -25,6 +27,7 @@ final class AppointmentActionRunner
         private readonly AppointmentActions $actions,
         private readonly BookingPointsService $points,
         private readonly AppointmentMoney $money,
+        private readonly CouponRelease $coupons,
     ) {
     }
 
@@ -41,13 +44,14 @@ final class AppointmentActionRunner
         if ($refunds !== [] && $action !== 'cancel') {
             throw new AppointmentRefused('not_allowed', 'Money goes back only with a cancellation or a refund.', 422);
         }
-        if ($refunds !== []) {
+        // Refunds (Part E) and reopening (Part F) are managers' only.
+        if ($refunds !== [] || $action === 'reopen') {
             SetupAccess::requireManager($actor);
         }
 
         $preview = null;
 
-        $booking = DB::transaction(function () use ($id, $action, $revision, $reason, $actor, $refunds, &$preview) {
+        $work = function () use ($id, $action, $revision, $reason, $actor, $refunds, &$preview) {
             $booking = ServiceBooking::lockForUpdate()->find($id)
                 ?? throw new AppointmentRefused('not_found', 'This appointment no longer exists.', 404);
 
@@ -56,11 +60,19 @@ final class AppointmentActionRunner
             if (!$this->actions->allowed($booking, $action)) {
                 throw new AppointmentRefused('not_allowed', "This appointment is {$booking->status}; that action is not available.", 422);
             }
+            if ($action === 'reopen') {
+                $this->assertReopenable($booking);
+            }
             if (in_array($action, ['complete', 'award_points'], true)) {
                 $preview = $this->points->previewForServiceBooking($booking);
             }
 
             $old = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
+            if ($action === 'reopen') {
+                // What reopening clears, kept in the audit row.
+                $old['cancelled_at'] = $booking->cancelled_at?->toIso8601String();
+                $old['cancellation_reason'] = $booking->cancellation_reason;
+            }
             $reason = $reason !== null && trim($reason) !== '' ? mb_substr(trim($reason), 0, 255) : null;
 
             // Cancel with refund (Part E): the money first, under this same row lock; a refused or failed refund
@@ -80,6 +92,7 @@ final class AppointmentActionRunner
                 'complete'           => ['status' => 'completed'],
                 'no_show'            => ['status' => 'no_show'],
                 'cancel'             => ['status' => 'cancelled', 'cancelled_at' => now(), 'cancellation_reason' => $reason],
+                'reopen'             => ['status' => 'confirmed', 'cancelled_at' => null, 'cancellation_reason' => null],
                 'award_points'       => [],
             };
             if ($patch !== []) {
@@ -93,7 +106,12 @@ final class AppointmentActionRunner
             AuditLog::record("service_booking.{$action}", $booking, $new, $old, $actor, "Appointment {$booking->booking_reference}: {$action}");
 
             return $booking;
-        });
+        };
+
+        // Reopen checks the person's own time: their `svcm:` lock first, then the row — StaffBookingWriter's order.
+        $booking = $action === 'reopen'
+            ? AdvisoryLock::transaction('svcm:' . (int) ServiceBooking::whereKey($id)->value('service_master_id'), $work)
+            : DB::transaction($work);
 
         if ($refunds !== []) {
             $this->money->afterRefunds($booking->fresh(), $actor);
@@ -127,5 +145,34 @@ final class AppointmentActionRunner
         }
 
         return ['booking' => $booking->fresh(), 'points' => $points];
+    }
+
+    /**
+     * Part F: a visit closed by mistake goes back only when no money went
+     * back for it (the money summary would no longer tell the truth) and its
+     * own time is still free of live appointments. Working hours and "a day
+     * that has passed" are not checked: reopening restores a record.
+     */
+    private function assertReopenable(ServiceBooking $b): void
+    {
+        if (AppointmentMoney::summary($b)['paid_back'] > 0) {
+            throw new AppointmentRefused('money_returned', 'Money was given back for this visit — book it again instead.', 422);
+        }
+        // A portal cancellation gives the member's coupon back (CouponRelease); reopening would use it twice.
+        if (in_array((string) $b->discount_source, ['offer', 'reward'], true) && $b->discount_source_id
+            && !$this->coupons->stillUsedBy((string) $b->discount_source, (int) $b->discount_source_id, (string) $b->booking_reference)) {
+            throw new AppointmentRefused('coupon_returned', 'The coupon used on this visit was given back to the member — book it again instead.', 422);
+        }
+
+        // MOVABLE is the scheduler's own set of statuses that take a person's time.
+        $clash = ServiceBooking::where('service_master_id', $b->service_master_id)
+            ->whereIn('status', AppointmentActions::MOVABLE)
+            ->where('id', '!=', $b->id)
+            ->where('start_at', '<', $b->end_at)
+            ->where('end_at', '>', $b->start_at)
+            ->exists();
+        if ($clash) {
+            throw new AppointmentRefused('slot_taken', 'That time is taken now — book the client again at another time.', 409);
+        }
     }
 }

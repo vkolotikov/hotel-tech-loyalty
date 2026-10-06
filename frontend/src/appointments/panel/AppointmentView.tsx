@@ -48,11 +48,13 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
     ['start', t('appointments.action.start', 'Arrived'), 'step'],
     ['complete', t('appointments.action.complete', 'Complete'), 'step'],
     ['award_points', t('appointments.action.award_points', 'Award points'), 'step'],
+    ['reopen', t('appointments.action.reopen', 'Reopen'), 'secondary'],
     ['move', t('appointments.action.move', 'Move'), 'secondary'],
     ['no_show', t('appointments.action.no_show', 'No-show'), 'secondary'],
     ['cancel', t('appointments.action.cancel', 'Cancel appointment'), 'danger'],
   ]
-  const offered = labels.filter(([key]) => allowed(key))
+  // Part F: Reopen is a manager's; everyone else is told who can.
+  const offered = labels.filter(([key]) => allowed(key) && (key !== 'reopen' || canManage))
   const nextStep = offered.find(([, , kind]) => kind === 'step')?.[0] ?? null
   const outcomeLine = outcome
     ? (outcome.awarded > 0
@@ -76,7 +78,8 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
           <StatusMark status={b.status} />
         </div>
         <dl className="mt-3 space-y-1.5 text-sm">
-          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.when', 'When')}</dt><dd className="font-semibold text-a-text text-right">{formatDate(dateOf(b.start), locale)} · {timeOf(b.start)} – {timeOf(b.end)}</dd></div>
+          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.when', 'When')}</dt><dd className="font-semibold text-a-text text-right">{formatDate(dateOf(b.start), locale)} · {timeOf(b.start)} – {timeOf(b.end)}
+            {b.length_set_by_staff && <span className="block text-xs font-normal text-a-text-2">{t('appointments.panel.length_set', 'Length set by staff')}</span>}</dd></div>
           <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.price', 'Price')}</dt><dd className="text-a-text text-right">
             <span className="font-semibold">{money(b.price.total, b.price.currency)}</span>
             {b.price.discount_label && <span className="text-a-text-2"> · {b.price.discount_label}</span>}
@@ -115,6 +118,7 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         {b.money?.can_take && onPay && <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={onPay}>{t('appointments.money.take', 'Take payment')}</Button>}
         {canManage && onRefund && b.money && refundWays(b.money).length > 0 && <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={onRefund}>{t('appointments.money.refund', 'Refund')}</Button>}
       </div>
+      {allowed('reopen') && !canManage && <p className="text-sm text-a-text-2">{t('appointments.panel.reopen_staff', 'A manager can reopen it.')}</p>}
 
       <Messages messages={b.messages ?? []} zone={zone} locale={locale} />
       <History entries={b.history} zone={zone} locale={locale} />

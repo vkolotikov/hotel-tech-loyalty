@@ -9,6 +9,7 @@ use App\Models\ServiceMaster;
 use App\Models\ServiceMasterTimeOff;
 use App\Services\Appointments\AppointmentPresenter;
 use App\Services\Appointments\AppointmentRefused;
+use App\Services\Appointments\StaffBookingWriter;
 use App\Services\Appointments\VenueClock;
 use App\Services\ServiceSchedulingService;
 use Carbon\CarbonImmutable;
@@ -131,12 +132,15 @@ class CalendarController extends Controller
             'master_id'  => 'required|integer',
             'date'       => 'required|date_format:Y-m-d',
             'ignore'     => 'nullable|integer',
+            // Part F: the free starts for a length staff set (the Move form's Length).
+            'length'     => 'nullable|integer',
         ]);
 
         $service = Service::where('is_active', true)->find($data['service_id'])
             ?? throw new AppointmentRefused('service_not_found', 'This service no longer exists.', 404);
         $master = ServiceMaster::where('is_active', true)->find($data['master_id'])
             ?? throw new AppointmentRefused('master_not_found', 'This team member no longer exists.', 404);
+        $length = StaffBookingWriter::lengthOrRefuse(isset($data['length']) ? (int) $data['length'] : null);
 
         $orgId = (int) app('current_organization_id');
         $today = VenueClock::today($orgId);
@@ -152,7 +156,7 @@ class CalendarController extends Controller
 
             $slots = array_map(
                 fn (array $s) => ['start' => VenueClock::wall($s['start']), 'end' => VenueClock::wall($s['end']), 'label' => $s['time_label']],
-                $scheduler->availableSlots($service, $data['date'], $master->id, null, $lead, $data['ignore'] ?? null),
+                $scheduler->availableSlots($service, $data['date'], $master->id, null, $lead, $data['ignore'] ?? null, $length),
             );
         }
 

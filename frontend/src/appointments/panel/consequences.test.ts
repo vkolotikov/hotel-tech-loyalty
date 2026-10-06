@@ -62,7 +62,7 @@ describe('consequenceLines', () => {
   })
 
   it('asks for confirmation exactly where money, points or a final status are involved', () => {
-    expect([...NEEDS_CONFIRM].sort()).toEqual(['cancel', 'complete', 'confirm', 'no_show'])
+    expect([...NEEDS_CONFIRM].sort()).toEqual(['cancel', 'complete', 'confirm', 'no_show', 'reopen'])
   })
 })
 

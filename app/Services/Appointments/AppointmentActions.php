@@ -32,6 +32,8 @@ final class AppointmentActions
         'no_show'            => ['confirmed'],
         'cancel'             => ['pending', 'confirmed', 'in_progress'],
         'award_points'       => ['completed'],
+        // Part F: a visit closed by mistake goes back to confirmed (managers; the runner checks its time and its money).
+        'reopen'             => ['completed', 'no_show', 'cancelled'],
     ];
 
     /** Statuses an appointment can be moved in. `completed`, `cancelled` and `no_show` are final here. */
@@ -113,14 +115,22 @@ final class AppointmentActions
 
         return [
             'payment' => match ($action) {
-                'confirm'            => $held ? ($lapsed ? 'hold_expired' : 'hold_will_be_charged') : 'none',
+                // A reopened visit is confirmed again: a live hold is charged, as on Confirm (Part F).
+                'confirm', 'reopen'  => $held ? ($lapsed ? 'hold_expired' : 'hold_will_be_charged') : 'none',
                 'cancel', 'no_show'  => $held ? ($lapsed ? 'hold_expired' : 'hold_will_be_released') : ($captured ? 'captured_not_refunded' : 'none'),
                 default              => 'none',
             },
             'points'  => in_array($action, ['complete', 'award_points'], true) ? ($preview ?? $this->points->previewForServiceBooking($b)) : null,
             'coupon'  => $action === 'cancel' && in_array((string) $b->discount_source, ['offer', 'reward'], true) ? 'not_returned' : 'none',
-            // "ask": the screen offers "Tell the client by email" (Part D).
-            'message' => in_array($action, ['confirm', 'cancel'], true) ? 'ask' : 'none',
+            // "ask": the screen offers "Tell the client by email" (Part D); a reopened cancellation that is still
+            // ahead is confirmed again — a "Confirmed" email about a visit already over would only confuse.
+            'message' => in_array($action, ['confirm', 'cancel'], true) || ($action === 'reopen' && (string) $b->status === 'cancelled' && self::stillAhead($b)) ? 'ask' : 'none',
         ];
+    }
+
+    /** The appointment starts after the venue's now. */
+    public static function stillAhead(ServiceBooking $b): bool
+    {
+        return (string) VenueClock::wall($b->start_at) > VenueClock::now((int) $b->organization_id)->format('Y-m-d\TH:i');
     }
 }

@@ -147,7 +147,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     if (!booking) return
     dispatch({ type: 'saving' })
     try {
-      const asks = action === 'confirm' || action === 'cancel'
+      // The server says which actions may tell the client (R8).
+      const asks = booking.actions.find(a => a.key === action)?.consequences.message === 'ask'
       const result = await appointmentsApi.act(booking.id, {
         action, revision: booking.revision, ...(reason?.trim() ? { reason: reason.trim() } : {}), ...(asks ? { notify_client: tell } : {}),
         ...(action === 'cancel' && canManage ? { refunds: [
@@ -161,11 +162,11 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
     }
   }
 
-  const move = async (start: Wall, masterId: number) => {
+  const move = async (start: Wall, masterId: number, length: { length?: number; normal_length?: boolean }) => {
     if (!booking) return
     dispatch({ type: 'saving' })
     try {
-      const result = await appointmentsApi.move(booking.id, { start, master_id: masterId, revision: booking.revision, notify_client: tell })
+      const result = await appointmentsApi.move(booking.id, { start, master_id: masterId, revision: booking.revision, notify_client: tell, ...length })
       settle(result.booking, null, result.client_message)
     } catch (e) {
       refuse(e)
@@ -228,7 +229,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
         {state.mode === 'view' && booking && state.sub === 'move' && (
           <MoveForm booking={booking} masters={masters} services={services} today={today}
             saving={state.saving} error={state.error} tell={tell} onTell={onTell}
-            onMove={(start, masterId) => { void move(start, masterId) }} onBack={() => dispatch({ type: 'back' })} />
+            onMove={(start, masterId, length) => { void move(start, masterId, length) }} onBack={() => dispatch({ type: 'back' })} />
         )}
 
         {state.mode === 'view' && booking && state.sub === 'pay' && (

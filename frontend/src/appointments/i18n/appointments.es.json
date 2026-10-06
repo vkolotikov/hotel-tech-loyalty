@@ -45,6 +45,20 @@
     "unknown": "Estado del pago desconocido"
   },
   "calendar": {
+    "keys_hint": "Las flechas pasan entre horas y personas; Intro abre o reserva.",
+    "drag": {
+      "move_title": "¿Mover a {{client}} al {{when}} con {{name}}?",
+      "resize_title": "¿Dejarla en {{from}}–{{to}}?",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "loading": "Cargando…",
+      "reason": {
+        "outside_hours": "Fuera del horario de {{name}}",
+        "overlap": "Se solapa con la cita de {{client}}",
+        "not_eligible": "{{name}} no hace {{service}}",
+        "past_day": "Ese día ya pasó"
+      }
+    },
     "no_team": "No hay miembros del equipo que mostrar. Añada los miembros del equipo y su horario en la administración completa.",
     "blocked": "Bloqueado",
     "book_at": "Reservar a {{name}} a las {{time}}",
@@ -112,6 +126,14 @@
     "not_found": "Este cliente ya no existe."
   },
   "panel": {
+    "length": "Duración",
+    "length_normal": "Duración normal",
+    "length_normal_minutes": "Duración normal ({{minutes}} min)",
+    "length_set": "Duración fijada por el equipo",
+    "length_min": "{{m}} min",
+    "length_h": "{{h}} h",
+    "length_h_min": "{{h}} h {{m}} min",
+    "reopen_staff": "Un responsable puede reabrirla.",
     "title": "Cita",
     "new_title": "Nueva cita",
     "date": "Fecha",
@@ -138,6 +160,7 @@
     "load_failed": "No se ha podido cargar esta cita."
   },
   "action": {
+    "reopen": "Reabrir",
     "confirm": "Confirmar",
     "start": "Ha llegado",
     "complete": "Completar",
@@ -148,6 +171,7 @@
     "cancel": "Cancelar cita"
   },
   "consequence": {
+    "reopen": "La cita vuelve a quedar confirmada a su hora. Los puntos ya ganados se mantienen.",
     "no_message": "No se envía ningún mensaje al cliente.",
     "points_will_award": "Al completarla se conceden {{points}} puntos.",
     "coupon_not_returned": "El cupón usado en esta reserva no se devuelve.",
@@ -178,6 +202,7 @@
     "awarded_none": "No se concedieron puntos por esta visita."
   },
   "history": {
+    "reopen": "Reabierta",
     "refunded": "Devuelto",
     "payment_taken": "Pago cobrado",
     "title": "Historial",
@@ -200,6 +225,9 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "invalid_length": "Elija una duración de 15 minutos a 8 horas, en pasos de 15 minutos.",
+    "money_returned": "Se devolvió dinero por esta cita — resérvela de nuevo.",
+    "coupon_returned": "El cupón usado en esta cita se devolvió al miembro — resérvela de nuevo.",
     "price_changed": "El precio cambió — revíselo y guarde de nuevo.",
     "invalid_amount": "Introduzca un importe mayor que cero.",
     "note_required": "Indique cómo pagó el cliente.",

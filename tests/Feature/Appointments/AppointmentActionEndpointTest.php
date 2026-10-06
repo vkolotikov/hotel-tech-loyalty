@@ -72,6 +72,7 @@ class AppointmentActionEndpointTest extends TestCase
             'confirm what is confirmed'  => ['confirmed', 'confirm'],
             'an action that is not one'  => ['confirmed', 'refund'],
             'move is not an action here' => ['confirmed', 'move'],
+            'reopen a confirmed visit'   => ['confirmed', 'reopen'],
         ];
     }
 

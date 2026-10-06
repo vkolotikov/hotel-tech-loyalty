@@ -7,7 +7,7 @@ export type Status = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'ca
 export type PaymentState =
   | 'not_paid_online' | 'card_held' | 'paid_by_card' | 'marked_paid' | 'refunded'
   | 'marked_refunded' | 'partially_refunded' | 'failed' | 'hold_released' | 'unknown'
-export type ActionKey = 'confirm' | 'start' | 'complete' | 'no_show' | 'cancel' | 'award_points' | 'move'
+export type ActionKey = 'confirm' | 'start' | 'complete' | 'no_show' | 'cancel' | 'award_points' | 'reopen' | 'move'
 
 export interface Bootstrap {
   name: string
@@ -124,7 +124,12 @@ export interface AppointmentDetail extends Omit<AppointmentSummary, 'client' | '
   messages?: ClientMessageInfo[]
   /** The money of this appointment (Part E). */
   money?: MoneyInfo
+  /** Part F: the booking keeps a length staff set. */
+  length_set_by_staff?: boolean
 }
+
+/** The move request (Part F: `length` sets the booking's own length, `normal_length` forgets it; neither keeps it). */
+export interface MoveBody { start: Wall; master_id: number; revision: string; notify_client?: boolean; length?: number; normal_length?: boolean }
 
 export interface MasterDay {
   /** Working windows, 'HH:mm', time off already taken out. */

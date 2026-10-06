@@ -45,6 +45,20 @@
     "unknown": "État du paiement inconnu"
   },
   "calendar": {
+    "keys_hint": "Les flèches passent d'un horaire et d'une personne à l'autre ; Entrée ouvre ou réserve.",
+    "drag": {
+      "move_title": "Déplacer {{client}} au {{when}} avec {{name}} ?",
+      "resize_title": "Passer à {{from}}–{{to}} ?",
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "loading": "Chargement…",
+      "reason": {
+        "outside_hours": "Hors des horaires de {{name}}",
+        "overlap": "Chevauche le rendez-vous de {{client}}",
+        "not_eligible": "{{name}} ne fait pas {{service}}",
+        "past_day": "Ce jour est passé"
+      }
+    },
     "no_team": "Aucun membre de l'équipe à afficher. Ajoutez les membres de l'équipe et leurs horaires dans l'administration complète.",
     "blocked": "Bloqué",
     "book_at": "Réserver {{name}} à {{time}}",
@@ -112,6 +126,14 @@
     "not_found": "Ce client n'existe plus."
   },
   "panel": {
+    "length": "Durée",
+    "length_normal": "Durée normale",
+    "length_normal_minutes": "Durée normale ({{minutes}} min)",
+    "length_set": "Durée fixée par l'équipe",
+    "length_min": "{{m}} min",
+    "length_h": "{{h}} h",
+    "length_h_min": "{{h}} h {{m}} min",
+    "reopen_staff": "Un responsable peut le rouvrir.",
     "title": "Rendez-vous",
     "new_title": "Nouveau rendez-vous",
     "date": "Date",
@@ -138,6 +160,7 @@
     "load_failed": "Ce rendez-vous n'a pas pu être chargé."
   },
   "action": {
+    "reopen": "Rouvrir",
     "confirm": "Confirmer",
     "start": "Arrivé",
     "complete": "Terminer",
@@ -148,6 +171,7 @@
     "cancel": "Annuler le rendez-vous"
   },
   "consequence": {
+    "reopen": "Le rendez-vous redevient confirmé à son horaire. Les points déjà gagnés restent.",
     "no_message": "Aucun message n'est envoyé au client.",
     "points_will_award": "{{points}} points seront crédités à la fin du rendez-vous.",
     "coupon_not_returned": "Le coupon utilisé pour cette réservation n'est pas restitué.",
@@ -178,6 +202,7 @@
     "awarded_none": "Aucun point n'a été crédité pour cette visite."
   },
   "history": {
+    "reopen": "Rouvert",
     "refunded": "Remboursé",
     "payment_taken": "Paiement encaissé",
     "title": "Historique",
@@ -200,6 +225,9 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "invalid_length": "Choisissez une durée entre 15 minutes et 8 heures, par pas de 15 minutes.",
+    "money_returned": "De l'argent a été rendu pour ce rendez-vous — réservez-le à nouveau.",
+    "coupon_returned": "Le bon utilisé pour ce rendez-vous a été rendu au membre — réservez-le à nouveau.",
     "price_changed": "Le prix a changé — vérifiez et enregistrez à nouveau.",
     "invalid_amount": "Saisissez un montant supérieur à zéro.",
     "note_required": "Indiquez comment le client a payé.",
