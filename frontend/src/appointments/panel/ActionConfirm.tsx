@@ -96,7 +96,10 @@ export function ActionConfirm({ booking, action, reason, saving, error, tell, on
       {/* The server says which actions may tell the client (R8): confirm, cancel, and reopening a cancellation. */}
       {action.consequences.message === 'ask' && <TellClient email={booking.client_email ?? null} checked={tell} onChange={onTell} />}
 
-      {error &&<Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>}
+      {/* Reopen has no time to choose: a taken time means booking the client again (polish F4). */}
+      {error && <Notice tone="danger">{action.key === 'reopen' && error.code === 'slot_taken'
+        ? t('appointments.error.reopen_slot_taken', 'That time is taken now — book the client again at another time.')
+        : t(`appointments.error.${error.code}`, error.message)}</Notice>}
 
       <div className="flex flex-wrap gap-2">
         <Button type="button" variant={destructive ? 'danger' : 'primary'} loading={saving} onClick={onConfirm}>{label}</Button>

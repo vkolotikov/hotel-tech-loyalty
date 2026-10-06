@@ -83,6 +83,20 @@ class MoveLengthTest extends TestCase
             ->assertJsonPath('booking.end', '2026-10-06T15:30');
     }
 
+    public function test_a_length_only_change_moves_the_revision_so_an_open_panel_is_stale(): void
+    {
+        // Spec §10 (Part F); the clock is frozen, so only the visit's own fields can move the revision.
+        $booking = $this->seedBooking();
+        $seen = AppointmentPresenter::revision($booking->fresh());
+
+        $this->move($booking, ['length' => 90])->assertOk();
+
+        $this->assertNotSame($seen, AppointmentPresenter::revision($booking->fresh()));
+        $this->asStaff()->patchJson($this->api("bookings/{$booking->id}"), [
+            'start' => '2026-10-06T10:00', 'master_id' => $this->master->id, 'revision' => $seen, 'length' => 60,
+        ])->assertStatus(409)->assertJsonPath('error', 'stale');
+    }
+
     public function test_normal_length_forgets_the_staff_length(): void
     {
         $booking = $this->seedBooking();

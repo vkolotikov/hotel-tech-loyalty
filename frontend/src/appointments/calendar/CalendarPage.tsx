@@ -12,6 +12,7 @@ import { CLOSED, newKey, panelReducer } from '../panel/panelState'
 import { Notice } from '../ui/Notice'
 import { DayOverview } from './DayOverview'
 import type { DropTarget } from './DropConfirm'
+import { saveDrop } from './saveDrop'
 import { ListView } from './ListView'
 import { MiniMonth } from './MiniMonth'
 import { TimeGrid } from './TimeGrid'
@@ -103,17 +104,17 @@ export function CalendarPage() {
 
   const queryClient = useQueryClient()
   // Part F: a drop saves through the same move call as the Move form, with the card's revision (R4).
-  const dropAppointment = async (appointment: AppointmentSummary, to: DropTarget) => {
-    try {
-      await appointmentsApi.move(appointment.id, {
-        start: to.start, master_id: to.masterId, revision: appointment.revision, notify_client: to.notify,
-        ...(to.length !== null ? { length: to.length } : {}),
-      })
-    } finally {
-      void queryClient.invalidateQueries({ queryKey: ['appointments', 'calendar'] })
-      void queryClient.invalidateQueries({ queryKey: ['appointments', 'booking', appointment.id] })
-    }
-  }
+  // The drop dialog closes only once the calendar is fetched again, on the card at its new place (polish F6).
+  const dropAppointment = (appointment: AppointmentSummary, to: DropTarget) => saveDrop({
+    move: () => appointmentsApi.move(appointment.id, {
+      start: to.start, master_id: to.masterId, revision: appointment.revision, notify_client: to.notify,
+      ...(to.length !== null ? { length: to.length } : {}),
+    }),
+    refetch: () => Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['appointments', 'calendar'] }),
+      queryClient.invalidateQueries({ queryKey: ['appointments', 'booking', appointment.id] }),
+    ]),
+  })
 
   const masters = query.data?.masters ?? []
   const appointments = useMemo(() => query.data?.appointments ?? [], [query.data])

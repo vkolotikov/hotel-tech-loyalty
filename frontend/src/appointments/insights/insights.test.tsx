@@ -13,7 +13,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const { InsightsView, InsightsError } = await import('./InsightsPage')
+const { InsightsView, InsightsError, PeriodPicker } = await import('./InsightsPage')
 
 const empty: InsightsFigures = {
   groups: { done: 0, no_show: 0, unmarked: 0, late_cancel: 0, early_cancel: 0, ahead: 0 },
@@ -74,6 +74,24 @@ describe('Insights', () => {
       .toContain('Out of 108 bookings due · 9 not marked yet (mark them Completed or No-show) · 14 cancelled in time · 31 booked ahead')
   })
 
+  it('heads the tables Service and Person, not one Name for both (polish G6)', () => {
+    const html = renderToStaticMarkup(<InsightsView data={week} locale="en" />)
+    expect(html).toContain('>Service</th>')
+    expect(html).toContain('>Person</th>')
+    expect(html).not.toContain('>Name</th>')
+  })
+
+  it('shows the picks as the address says, and a form holding the chosen dates (polish G1)', () => {
+    const thisWeek = renderToStaticMarkup(<PeriodPicker range={{ from: '2026-10-05', to: '2026-10-11' }} today="2026-10-07" onGo={() => {}} />)
+    expect(thisWeek).toMatch(/<button[^>]*aria-pressed="true"[^>]*>This week</)
+    expect(thisWeek).toMatch(/<button[^>]*aria-pressed="false"[^>]*>Choose dates</)
+    expect(thisWeek).not.toContain('type="date"')
+    const chosen = renderToStaticMarkup(<PeriodPicker range={{ from: '2026-09-20', to: '2026-10-10' }} today="2026-10-07" onGo={() => {}} />)
+    expect(chosen).toMatch(/<button[^>]*aria-pressed="true"[^>]*>Choose dates</)
+    expect(chosen).toContain('value="2026-09-20"')
+    expect(chosen).toContain('value="2026-10-10"')
+  })
+
   it('lists rows by service and by person, with removed and unassigned rows named', () => {
     const html = renderToStaticMarkup(<InsightsView data={week} locale="en" />)
     expect(html).toContain('By service')
@@ -91,7 +109,7 @@ describe('Insights', () => {
   it('reads — when nothing is due', () => {
     const ahead: Insights = { ...week, current: { ...empty, groups: { ...empty.groups, ahead: 5 }, sources: { online: 5, desk: 0, other: 0 } } }
     const html = renderToStaticMarkup(<InsightsView data={ahead} locale="en" />)
-    expect(html).toContain('—')
+    expect(html.match(/\(—\)/g)).toHaveLength(3) // polish G3: done, no-show and late shares; the sources line's "—" no longer passes for it
     expect(html).not.toContain('NaN')
     expect(html).not.toContain('(0%)') // a rate with nothing due is "—", never 0% (the sources line's 100% is right)
   })

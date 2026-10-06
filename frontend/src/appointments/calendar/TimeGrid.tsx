@@ -120,7 +120,8 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
         ))}
       </div>
 
-      <div className="flex" ref={gridRef} onKeyDown={onKeyDown} aria-describedby="calendar-keys-hint">
+      {/* The hint is read on the one stop that takes the focus (polish F8): a div that cannot be focused never reads it. */}
+      <div className="flex" ref={gridRef} onKeyDown={onKeyDown}>
         <p id="calendar-keys-hint" className="sr-only">{t('appointments.calendar.keys_hint', 'Use the arrow keys to move between times and people; Enter opens or books.')}</p>
         <div className="relative w-14 shrink-0" style={{ height }} aria-hidden>
           {hours.map(h => (
@@ -155,6 +156,7 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
               {free.map(m => (
                 <button key={m} type="button" onClick={() => onSlot(col.master.id, col.date, m)}
                   data-stop={`slot:${i}:${m}`} tabIndex={current?.key === `slot:${i}:${m}` ? 0 : -1}
+                  aria-describedby={current?.key === `slot:${i}:${m}` ? 'calendar-keys-hint' : undefined}
                   onFocus={() => setActiveKey(`slot:${i}:${m}`)}
                   aria-label={t('appointments.calendar.book_at', 'Book {{name}} at {{time}}', { name: col.master.name, time: hhmm(m) })}
                   className="group absolute inset-x-0 rounded text-left text-xs text-a-accent-deep hover:bg-a-accent/10 focus-visible:bg-a-accent/10"
@@ -171,6 +173,7 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
                     onOpen={(id) => { if (!consumeClick()) onOpen(id) }}
                     draggable={movable} lifted={drag?.origin.appt.id === p.item.id}
                     stopKey={`appt:${p.item.id}`} tabIndex={current?.key === `appt:${p.item.id}` ? 0 : -1} onFocusStop={setActiveKey}
+                    describedBy={current?.key === `appt:${p.item.id}` ? 'calendar-keys-hint' : undefined}
                     onDragStart={movable ? (e, kind) => begin(e, kind, { appt: p.item, colIndex: i, start: wallMinutes(p.item.start), length: p.item.duration_minutes }) : undefined} />
                 )
               })}

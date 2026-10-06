@@ -112,6 +112,47 @@ describe('the full admin menu', () => {
   })
 })
 
+describe('the full admin top bar', () => {
+  // The owner asked for a button on every page (2026-10-06): the sidebar item sits inside a group and is easy to miss.
+  it('offers HexaTech Appointments on every page, beside the brand switcher, for a venue that can book', () => {
+    const html = sidebar(ON)
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+    expect(header).toMatch(/<a[^>]*href="\/appointments"[^>]*data-topbar-appointments=""|<a[^>]*data-topbar-appointments=""[^>]*href="\/appointments"/)
+    expect(header).toContain('HexaTech Appointments')
+  })
+
+  it('has no such button where the workspace has nothing to book or is switched off', () => {
+    for (const off of [{ appointments: { landing: false, has_services: false } }, undefined]) {
+      expect(sidebar(off)).not.toContain('data-topbar-appointments')
+    }
+  })
+
+  // Polish review: the button must follow the menu's own rules, not only "the venue has services".
+  it('is not there for a staff member whose manager limited their menu to other groups', () => {
+    const before = auth.state.staff
+    auth.state.staff = { ...before, role: 'staff', allowed_nav_groups: ['Loyalty'] as unknown as null }
+    try {
+      const html = sidebar(ON)
+      expect(html).not.toContain('href="/appointments"')
+      expect(html).not.toContain('data-topbar-appointments')
+    } finally {
+      auth.state.staff = before
+    }
+  })
+
+  it('is not there for an organisation without the booking product', () => {
+    const before = subscription.products
+    subscription.products = ['crm', 'chat', 'loyalty']
+    try {
+      const html = sidebar(ON)
+      expect(html).not.toContain('href="/appointments"')
+      expect(html).not.toContain('data-topbar-appointments')
+    } finally {
+      subscription.products = before
+    }
+  })
+})
+
 describe('OpenInAppointments', () => {
   it('opens the workspace from the service-booking pages', () => {
     const html = button(ON)

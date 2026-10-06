@@ -9,6 +9,7 @@ import type { PanelError } from '../panel/panelState'
 import { Button } from '../ui/Button'
 import { Notice } from '../ui/Notice'
 import type { GridColumn } from './calendarState'
+import { claimEscape, dropNotify, lengthNote } from './dropDialog'
 import { focusDialog } from './focusDialog'
 import type { DragState } from './useCardDrag'
 
@@ -18,7 +19,9 @@ export interface DropTarget { start: Wall; masterId: number; length: number | nu
 interface Props {
   title: string
   /** The "Tell the client" box (Part D) for a move; null for a resize, whose start does not change. */
-  tell: { email: string | null; checked: boolean; loading: boolean } | null
+  tell: { email: string | null; checked: boolean; loading: boolean; failed?: boolean } | null
+  /** One more thing the drop changes, said plainly (the length it takes on another person). */
+  note?: string | null
   onTell: (checked: boolean) => void
   saving: boolean
   error: PanelError | null
@@ -27,7 +30,7 @@ interface Props {
 }
 
 /** The small dialog a drop opens: what will change, the client box, Save and Cancel. Escape cancels. */
-export function DropConfirm({ title, tell, onTell, saving, error, onSave, onCancel }: Props) {
+export function DropConfirm({ title, tell, note = null, onTell, saving, error, onSave, onCancel }: Props) {
   const { t } = useTranslation()
   const box = useRef<HTMLDivElement>(null)
 
@@ -36,21 +39,31 @@ export function DropConfirm({ title, tell, onTell, saving, error, onSave, onCanc
     return box.current ? focusDialog(box.current, before) : undefined
   }, [])
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel() }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [onCancel])
+    // Heard before the panel (capture) and claimed, so an open panel stays; a save in flight is not cancelled.
+    const onKey = (e: KeyboardEvent) => claimEscape(e, onCancel, saving)
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [onCancel, saving])
+  const stale = error?.code === 'stale'
 
   return (
     <div ref={box} role="dialog" tabIndex={-1} aria-modal="false" aria-label={title} className="w-72 space-y-3 rounded-lg border border-a-border bg-a-surface p-3 text-left shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-a-accent">
       <p className="text-sm font-semibold text-a-text">{title}</p>
+      {note && <p className="text-sm text-a-text-2">{note}</p>}
       {tell && (tell.loading
         ? <p className="text-sm text-a-text-2" role="status">{t('appointments.calendar.drag.loading', 'Loading…')}</p>
-        : <TellClient email={tell.email} checked={tell.checked} onChange={onTell} />)}
-      {error && <Notice tone={error.code === 'stale' ? 'warning' : 'danger'}>{t(`appointments.error.${error.code}`, error.message)}</Notice>}
+        : tell.failed
+          ? <p className="text-sm text-a-text-2">{t('appointments.calendar.drag.details_failed', "The client's details could not be loaded, so they will not be told.")}</p>
+          : <TellClient email={tell.email} checked={tell.checked} onChange={onTell} />)}
+      {/* Someone changed it first: the calendar behind already shows it as it is, and Save would send the old version again. */}
+      {error && (stale
+        ? <Notice tone="warning">{t('appointments.calendar.drag.stale', 'Someone changed this appointment meanwhile. The calendar now shows it as it is.')}</Notice>
+        : <Notice tone="danger">{t(`appointments.error.${error.code}`, error.message)}</Notice>)}
       <div className="flex flex-wrap gap-2">
-        <Button type="button" size="sm" loading={saving} disabled={tell?.loading} onClick={onSave}>{t('appointments.calendar.drag.save', 'Save')}</Button>
-        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={onCancel}>{t('appointments.calendar.drag.cancel', 'Cancel')}</Button>
+        {!stale && <Button type="button" size="sm" loading={saving} disabled={tell?.loading} onClick={onSave}>{t('appointments.calendar.drag.save', 'Save')}</Button>}
+        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={onCancel}>
+          {stale ? t('appointments.common.close', 'Close') : t('appointments.calendar.drag.cancel', 'Cancel')}
+        </Button>
       </div>
     </div>
   )
@@ -91,7 +104,10 @@ export function PendingDrop({ top, drag, column, locale, tellDefault, onDrop, on
     setError(null)
     try {
       // R7: a resize never asks to tell the client.
-      await onDrop(origin.appt, { start: makeWall(column.date, place.start), masterId: column.master.id, length: moving ? null : place.length, notify: moving && tell })
+      await onDrop(origin.appt, {
+        start: makeWall(column.date, place.start), masterId: column.master.id, length: moving ? null : place.length,
+        notify: dropNotify({ moving, tell, detailsFailed: detail.isError }),
+      })
       onDone()
     } catch (e) {
       const failure = failureOf(e)
@@ -103,7 +119,10 @@ export function PendingDrop({ top, drag, column, locale, tellDefault, onDrop, on
   return (
     <div className="absolute left-1 z-40" style={{ top }}>
       <DropConfirm title={title}
-        tell={moving ? { email: detail.data?.booking.client_email ?? null, checked: tell, loading: detail.isLoading } : null}
+        tell={moving ? { email: detail.data?.booking.client_email ?? null, checked: tell, loading: detail.isLoading, failed: detail.isError } : null}
+        note={lengthNote({ moving, from: origin.appt.master?.id, to: column.master.id, lengthSetByStaff: detail.data?.booking.length_set_by_staff })
+          ? t('appointments.calendar.drag.length_note', "The length becomes {{name}}'s normal length for this service.", { name: column.master.name })
+          : null}
         onTell={setTell} saving={saving} error={error} onSave={() => { void save() }} onCancel={onDone} />
     </div>
   )

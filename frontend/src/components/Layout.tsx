@@ -980,6 +980,21 @@ export function Layout({ children }: { children: ReactNode }) {
           </div>
           <div className="flex-1" />
 
+          {/* The way into HexaTech Appointments from every page (owner, 2026-10-06): shown exactly when its menu item
+              is — the menu's whole rule (a manager's per-person limits, hidden groups, the product, the industry). */}
+          {visibleGroups.some(g => g.items.some(i => i.workspace === 'appointments')) && (
+            <Link
+              to="/appointments"
+              data-topbar-appointments=""
+              title={t('nav.items.appointments_workspace', 'HexaTech Appointments')}
+              className="flex items-center gap-1.5 rounded-lg border border-dark-border px-2.5 py-1.5 text-xs font-medium text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors"
+            >
+              <CalendarDays size={16} aria-hidden />
+              <span className="hidden sm:inline">{t('nav.items.appointments_workspace', 'HexaTech Appointments')}</span>
+              <span className="sr-only sm:hidden">{t('nav.items.appointments_workspace', 'HexaTech Appointments')}</span>
+            </Link>
+          )}
+
           {/* Brand switcher — auto-hides when org has only one brand */}
           <BrandSwitcher />
 

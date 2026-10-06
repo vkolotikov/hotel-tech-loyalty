@@ -18,7 +18,8 @@ const { DropConfirm } = await import('./DropConfirm')
 const { focusDialog } = await import('./focusDialog')
 const { columnsFor } = await import('./calendarState')
 const { releasedDrop, installTouchGuard } = await import('./useCardDrag')
-const { pinnedColumnIndex } = await import('./dragMath')
+const { pinnedColumnIndex, samePlace } = await import('./dragMath')
+const { claimEscape, panelClosesOn, dropNotify, lengthNote } = await import('./dropDialog')
 
 const emma: CalendarMaster = { id: 1, name: 'Emma', title: null, avatar: null, days: { '2026-10-06': { windows: [{ start: '09:00', end: '17:00' }], time_off: [] } } }
 const appt = (id: number, start: string, end: string, status: Status): AppointmentSummary => ({
@@ -121,5 +122,74 @@ describe('the drop dialog and the focus', () => {
     const html = renderToStaticMarkup(<DropConfirm title="Move Sophie?" tell={{ email: null, checked: true, loading: true }}
       onTell={() => {}} saving={false} error={null} onSave={() => {}} onCancel={() => {}} />)
     expect(html).toMatch(/<div[^>]*role="dialog"[^>]*tabindex="-1"/)
+  })
+})
+
+const keyEvent = (key: string) => ({ key, defaultPrevented: false, preventDefault() { this.defaultPrevented = true } })
+const drop = (props: Partial<Parameters<typeof DropConfirm>[0]>) => renderToStaticMarkup(
+  <DropConfirm title="Move Sophie?" tell={null} onTell={() => {}} saving={false} error={null} onSave={() => {}} onCancel={() => {}} {...props} />,
+)
+
+describe('polish: the drag and the drop dialog', () => {
+  it('claims Escape so an open panel stays, and never cancels a save in flight (F1)', () => {
+    const calls: string[] = []
+    const e = keyEvent('Escape')
+    claimEscape(e, () => calls.push('cancel'))
+    expect(e.defaultPrevented).toBe(true)
+    expect(calls).toEqual(['cancel'])
+    expect(panelClosesOn(e)).toBe(false)
+    const busy = keyEvent('Escape')
+    claimEscape(busy, () => calls.push('cancel'), true)
+    expect(busy.defaultPrevented).toBe(true)
+    expect(calls).toEqual(['cancel'])
+    const other = keyEvent('Enter')
+    claimEscape(other, () => calls.push('enter'))
+    expect(other.defaultPrevented).toBe(false)
+    expect(panelClosesOn(keyEvent('Escape'))).toBe(true)
+  })
+
+  it('after someone else changed it, says what happened and offers only Close (F2)', () => {
+    const html = drop({ error: { code: 'stale', message: 'Someone else changed this appointment. The current details are shown.' } })
+    expect(html).toContain('Someone changed this appointment meanwhile. The calendar now shows it as it is.')
+    expect(html).not.toContain('The current details are shown')
+    expect(html).not.toContain('Save</button>')
+    expect(html).toContain('Close</button>')
+  })
+
+  it('redraws only when the snapped place changes (F5)', () => {
+    const a = { colIndex: 1, start: 600, length: 45, why: null }
+    const other = appt(9, '2026-10-06T10:00', '2026-10-06T10:45', 'confirmed')
+    expect(samePlace(a, { ...a })).toBe(true)
+    expect(samePlace(a, { ...a, start: 615 })).toBe(false)
+    expect(samePlace(a, { ...a, colIndex: 2 })).toBe(false)
+    expect(samePlace(a, { ...a, why: { reason: 'overlap' } })).toBe(false)
+    expect(samePlace({ ...a, why: { reason: 'overlap', other } }, { ...a, why: { reason: 'overlap', other: { ...other, id: 10 } } })).toBe(false)
+    expect(samePlace({ ...a, why: { reason: 'overlap', other } }, { ...a, why: { reason: 'overlap', other } })).toBe(true)
+  })
+
+  it('says the length becomes the new person’s own when staff never set one (F7)', () => {
+    expect(lengthNote({ moving: true, from: 1, to: 2, lengthSetByStaff: false })).toBe(true)
+    expect(lengthNote({ moving: true, from: 1, to: 2, lengthSetByStaff: true })).toBe(false)
+    expect(lengthNote({ moving: true, from: 1, to: 1, lengthSetByStaff: false })).toBe(false)
+    expect(lengthNote({ moving: false, from: 1, to: 2, lengthSetByStaff: false })).toBe(false)
+    expect(lengthNote({ moving: true, from: 1, to: 2, lengthSetByStaff: undefined })).toBe(false) // details not loaded yet
+    expect(drop({ note: "The length becomes Anna's normal length for this service." })).toContain('The length becomes Anna&#x27;s normal length for this service.') // React escapes the apostrophe
+  })
+
+  it('reads the arrow-key hint on the stop that takes the focus, not on the grid (F8)', () => {
+    const html = grid([appt(1, '2026-10-06T10:00', '2026-10-06T10:45', 'confirmed')], async () => {})
+    expect(html).not.toMatch(/<div class="flex"[^>]*aria-describedby/)
+    const stop = html.match(/<[a-z]+[^>]*tabindex="0"[^>]*>/)?.[0] ?? ''
+    expect(stop).toContain('aria-describedby="calendar-keys-hint"')
+  })
+
+  it('tells nobody, and says so, when the client’s details did not load (F9)', () => {
+    const html = drop({ tell: { email: null, checked: true, loading: false, failed: true } })
+    expect(html).toContain('The client&#x27;s details could not be loaded, so they will not be told.') // React escapes the apostrophe
+    expect(html).not.toContain('type="checkbox"')
+    expect(dropNotify({ moving: true, tell: true, detailsFailed: true })).toBe(false)
+    expect(dropNotify({ moving: true, tell: true, detailsFailed: false })).toBe(true)
+    expect(dropNotify({ moving: true, tell: false, detailsFailed: false })).toBe(false)
+    expect(dropNotify({ moving: false, tell: true, detailsFailed: false })).toBe(false)
   })
 })

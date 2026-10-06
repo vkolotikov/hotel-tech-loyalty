@@ -47,6 +47,9 @@
   "calendar": {
     "keys_hint": "Les flèches passent d'un horaire et d'une personne à l'autre ; Entrée ouvre ou réserve.",
     "drag": {
+      "stale": "Quelqu'un a modifié ce rendez-vous entre-temps. L'agenda l'affiche maintenant tel qu'il est.",
+      "details_failed": "Les coordonnées du client n'ont pas pu être chargées : il ne sera pas prévenu.",
+      "length_note": "La durée devient la durée habituelle de {{name}} pour cette prestation.",
       "move_title": "Déplacer {{client}} au {{when}} avec {{name}} ?",
       "resize_title": "Passer à {{from}}–{{to}} ?",
       "save": "Enregistrer",
@@ -225,6 +228,7 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "reopen_slot_taken": "Ce créneau est désormais pris — réservez à nouveau le client à un autre moment.",
     "invalid_period": "Choisissez une période d'un an maximum.",
     "invalid_length": "Choisissez une durée entre 15 minutes et 8 heures, par pas de 15 minutes.",
     "money_returned": "De l'argent a été rendu pour ce rendez-vous — réservez-le à nouveau.",
@@ -490,6 +494,8 @@
     "by_service": "Par prestation",
     "by_person": "Par personne",
     "col": {
+      "service": "Prestation",
+      "person": "Personne",
       "name": "Nom",
       "due": "Dues",
       "done": "Effectués",

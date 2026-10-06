@@ -90,6 +90,15 @@ export function onRelease(
   return place.colIndex === from.colIndex && place.start === from.start && place.length === from.length ? 'none' : 'confirm'
 }
 
+/** The same snapped place and the same verdict: nothing to redraw (polish F5). */
+export function samePlace(
+  a: { colIndex: number; start: number; length: number; why: Why | null },
+  b: { colIndex: number; start: number; length: number; why: Why | null },
+): boolean {
+  return a.colIndex === b.colIndex && a.start === b.start && a.length === b.length
+    && a.why?.reason === b.why?.reason && a.why?.other?.id === b.why?.other?.id
+}
+
 /**
  * Where a drop waiting for its Save sits now: the column with the same day
  * and person, wherever the row has put it; -1 once the calendar no longer

@@ -47,6 +47,9 @@
   "calendar": {
     "keys_hint": "Mit den Pfeiltasten zwischen Zeiten und Personen wechseln; Enter öffnet oder bucht.",
     "drag": {
+      "stale": "Jemand hat diesen Termin inzwischen geändert. Der Kalender zeigt ihn jetzt so, wie er ist.",
+      "details_failed": "Die Daten des Kunden konnten nicht geladen werden, daher wird er nicht benachrichtigt.",
+      "length_note": "Die Dauer wird zur normalen Dauer von {{name}} für diese Leistung.",
       "move_title": "{{client}} auf {{when}} bei {{name}} verschieben?",
       "resize_title": "Auf {{from}}–{{to}} ändern?",
       "save": "Speichern",
@@ -225,6 +228,7 @@
     "bulk_mark_status": "Status in der vollständigen Verwaltung geändert (Sammelaktion)"
   },
   "error": {
+    "reopen_slot_taken": "Diese Zeit ist inzwischen belegt — buchen Sie den Kunden zu einer anderen Zeit neu.",
     "invalid_period": "Wählen Sie einen Zeitraum von höchstens einem Jahr.",
     "invalid_length": "Wählen Sie eine Dauer zwischen 15 Minuten und 8 Stunden, in 15-Minuten-Schritten.",
     "money_returned": "Für diesen Termin wurde Geld zurückgegeben — buchen Sie ihn neu.",
@@ -490,6 +494,8 @@
     "by_service": "Nach Leistung",
     "by_person": "Nach Person",
     "col": {
+      "service": "Leistung",
+      "person": "Person",
       "name": "Name",
       "due": "Fällig",
       "done": "Erledigt",

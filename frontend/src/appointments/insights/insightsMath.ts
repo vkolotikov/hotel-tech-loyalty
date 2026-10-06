@@ -93,3 +93,6 @@ export function formatPeriod(range: Range, locale: string): string {
 }
 
 export const needsDeskNote = (from: DateKey, since: DateKey): boolean => from < since
+
+/** Chosen dates can be shown once both are filled in (polish G2); the server judges the rest. */
+export const canShow = (range: Range): boolean => isDateKey(range.from) && isDateKey(range.to)

@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type RefObject } from 'react'
 import type { AppointmentSummary } from '../lib/types'
 import type { GridColumn } from './calendarState'
+import { claimEscape } from './dropDialog'
 import {
   LONG_PRESS_MS, TOUCH_SLOP_PX, columnAt, edgeScroll, isDragClick, movedStart, onRelease, pointerStartsDrag, rawMinuteAt,
-  resizedLength, touchStartsDrag, type Why,
+  resizedLength, samePlace, touchStartsDrag, type Why,
 } from './dragMath'
 
 export type DragKind = 'move' | 'resize'
@@ -103,8 +104,13 @@ export function useCardDrag({ gridRef, startMin, columns, check }: Options) {
       const length = kind === 'resize' ? resizedLength(origin.start, minute) : origin.length
       return { colIndex, start, length, why: colIndex < 0 ? null : check(colIndex, start, length, origin.appt.id) }
     }
+    let shown = false
     const show = () => {
-      place = placeAt()
+      const next = placeAt()
+      // The pointer moves every pixel; the snapped place every 15 minutes: redraw only then (polish F5).
+      if (shown && samePlace(next, place)) return
+      shown = true
+      place = next
       setDrag({ kind, origin, place, phase: 'dragging' })
     }
     const tick = () => {
@@ -123,7 +129,7 @@ export function useCardDrag({ gridRef, startMin, columns, check }: Options) {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onCancel)
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onKey, true)
       touchState.current = 'idle'
       if (!active) return
       dragEndedAt.current = performance.now()
@@ -147,7 +153,8 @@ export function useCardDrag({ gridRef, startMin, columns, check }: Options) {
     }
     const onUp = (ev: PointerEvent) => { if (ev.pointerId === pointerId) finish(true) }
     const onCancel = (ev: PointerEvent) => { if (ev.pointerId === pointerId) finish(false) }
-    const onKey = (ev: KeyboardEvent) => { if (ev.key === 'Escape' && active) { ev.preventDefault(); finish(false) } }
+    // Heard before the panel (capture) and claimed while dragging, so an open panel stays (polish F1).
+    const onKey = (ev: KeyboardEvent) => { if (active) claimEscape(ev, () => finish(false)) }
     const timer = touch
       ? window.setTimeout(() => {
           if (touchStartsDrag(performance.now() - t0, Math.hypot(x - x0, y - y0))) {
@@ -161,7 +168,7 @@ export function useCardDrag({ gridRef, startMin, columns, check }: Options) {
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerup', onUp)
     window.addEventListener('pointercancel', onCancel)
-    window.addEventListener('keydown', onKey)
+    window.addEventListener('keydown', onKey, true)
   }, [gridRef, startMin, check])
 
   /** True for the click that ends a drag (that click must not open the panel); false for any later click. */

@@ -22,6 +22,8 @@ interface Props {
   /** Part F: its key among the grid's stops, and whether it is the grid's one tab stop. */
   stopKey?: string
   tabIndex?: number
+  /** The grid's arrow-key hint, on the card that takes the focus. */
+  describedBy?: string
   onFocusStop?: (key: string) => void
 }
 
@@ -31,7 +33,7 @@ interface Props {
  * is shown depends on the card's height, so a short appointment loses its
  * service line rather than having a line cut in half.
  */
-export function AppointmentCard({ placed, selected, gutter, onOpen, draggable = false, lifted = false, onDragStart, stopKey, tabIndex, onFocusStop }: Props) {
+export function AppointmentCard({ placed, selected, gutter, onOpen, draggable = false, lifted = false, onDragStart, stopKey, tabIndex, describedBy, onFocusStop }: Props) {
   const { item, top, height, lane, lanes } = placed
   const tone = TONE_CLASS[STATUS_TONE[item.status]]
   const density = cardDensity(height)
@@ -48,6 +50,7 @@ export function AppointmentCard({ placed, selected, gutter, onOpen, draggable = 
       data-drag={draggable ? 'move' : undefined}
       data-stop={stopKey}
       tabIndex={tabIndex}
+      aria-describedby={describedBy}
       onFocus={stopKey && onFocusStop ? () => onFocusStop(stopKey) : undefined}
       style={{ top, height, left: `calc(${(lane / lanes) * 100}% + 2px)`, width: `calc(${100 / lanes}% - ${4 + (gutter ? GUTTER_PX : 0)}px)`, WebkitTouchCallout: draggable ? 'none' : undefined }}
       className={`absolute z-10 overflow-hidden rounded-md border-l-[3px] px-2 text-left ${density === 'full' || density === 'two' ? 'py-1' : 'py-0.5'} ${tone.bar} ${tone.tint} ${selected ? 'ring-2 ring-a-accent' : ''} ${draggable ? 'select-none touch-manipulation cursor-grab' : ''} ${lifted ? 'outline-dashed outline-2 outline-a-accent' : ''}`}

@@ -47,6 +47,9 @@
   "calendar": {
     "keys_hint": "Las flechas pasan entre horas y personas; Intro abre o reserva.",
     "drag": {
+      "stale": "Alguien cambió esta cita mientras tanto. El calendario la muestra ahora tal como está.",
+      "details_failed": "No se pudieron cargar los datos del cliente, así que no se le avisará.",
+      "length_note": "La duración pasa a ser la duración habitual de {{name}} para este servicio.",
       "move_title": "¿Mover a {{client}} al {{when}} con {{name}}?",
       "resize_title": "¿Dejarla en {{from}}–{{to}}?",
       "save": "Guardar",
@@ -225,6 +228,7 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "reopen_slot_taken": "Esa hora ya está ocupada: vuelva a reservar al cliente en otro momento.",
     "invalid_period": "Elija un periodo de hasta un año.",
     "invalid_length": "Elija una duración de 15 minutos a 8 horas, en pasos de 15 minutos.",
     "money_returned": "Se devolvió dinero por esta cita — resérvela de nuevo.",
@@ -490,6 +494,8 @@
     "by_service": "Por servicio",
     "by_person": "Por persona",
     "col": {
+      "service": "Servicio",
+      "person": "Persona",
       "name": "Nombre",
       "due": "Debidas",
       "done": "Realizadas",

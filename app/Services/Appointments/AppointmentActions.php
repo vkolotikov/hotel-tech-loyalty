@@ -94,7 +94,12 @@ final class AppointmentActions
 
         $out = [];
         foreach ([...array_keys(self::FROM), 'move'] as $action) {
-            $out[] = ['key' => $action, 'allowed' => $this->allowed($b, $action, $preview), 'consequences' => $this->consequences($b, $action, $preview)];
+            $allowed = $this->allowed($b, $action, $preview);
+            // Reopen is not offered once money went back (polish F3): the runner would refuse it after the confirm.
+            if ($action === 'reopen' && $allowed && AppointmentMoney::moneyWentBack($b)) {
+                $allowed = false;
+            }
+            $out[] = ['key' => $action, 'allowed' => $allowed, 'consequences' => $this->consequences($b, $action, $preview)];
         }
 
         return $out;

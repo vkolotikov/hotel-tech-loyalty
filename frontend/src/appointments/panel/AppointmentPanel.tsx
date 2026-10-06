@@ -15,6 +15,7 @@ import { NEEDS_CONFIRM } from './consequences'
 import { CreateForm } from './CreateForm'
 import { detailPollMs, draftBody, newKey, type CancelRefunds, type PanelEvent, type PanelState } from './panelState'
 import { makeWall, minutesOf } from '../lib/wallClock'
+import { panelClosesOn } from '../calendar/dropDialog'
 
 interface Props {
   state: PanelState
@@ -40,7 +41,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
   useEffect(() => {
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null
     heading.current?.focus()
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') dispatch({ type: 'close' }) }
+    // An Escape a drag or the drop dialog claimed is theirs (polish F1).
+    const onKey = (e: KeyboardEvent) => { if (panelClosesOn(e)) dispatch({ type: 'close' }) }
     window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('keydown', onKey)

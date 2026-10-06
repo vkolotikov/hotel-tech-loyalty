@@ -155,7 +155,7 @@ final class AppointmentActionRunner
      */
     private function assertReopenable(ServiceBooking $b): void
     {
-        if (AppointmentMoney::summary($b)['paid_back'] > 0) {
+        if (AppointmentMoney::moneyWentBack($b)) {
             throw new AppointmentRefused('money_returned', 'Money was given back for this visit — book it again instead.', 422);
         }
         // A portal cancellation gives the member's coupon back (CouponRelease); reopening would use it twice.

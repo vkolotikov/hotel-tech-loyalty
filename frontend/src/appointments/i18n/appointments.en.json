@@ -47,6 +47,9 @@
   "calendar": {
     "keys_hint": "Use the arrow keys to move between times and people; Enter opens or books.",
     "drag": {
+      "stale": "Someone changed this appointment meanwhile. The calendar now shows it as it is.",
+      "details_failed": "The client's details could not be loaded, so they will not be told.",
+      "length_note": "The length becomes {{name}}'s normal length for this service.",
       "move_title": "Move {{client}} to {{when}} with {{name}}?",
       "resize_title": "Make it {{from}}–{{to}}?",
       "save": "Save",
@@ -225,6 +228,7 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "reopen_slot_taken": "That time is taken now — book the client again at another time.",
     "invalid_period": "Choose a period of up to a year.",
     "invalid_length": "Choose a length between 15 minutes and 8 hours, in 15-minute steps.",
     "money_returned": "Money was given back for this visit — book it again instead.",
@@ -490,6 +494,8 @@
     "by_service": "By service",
     "by_person": "By person",
     "col": {
+      "service": "Service",
+      "person": "Person",
       "name": "Name",
       "due": "Due",
       "done": "Done",

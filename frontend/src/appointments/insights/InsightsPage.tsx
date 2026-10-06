@@ -11,7 +11,7 @@ import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
 import {
-  ARROW, PICKS, TONE_CLASS, average, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare,
+  ARROW, PICKS, TONE_CLASS, average, canShow, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare,
   pickOf, pointsChange, rangeFor, rangeFromSearch, share, toneOf, type Change, type Metric, type Range,
 } from './insightsMath'
 
@@ -27,42 +27,62 @@ export function InsightsPage() {
   const boot = useBoot()
   const [search, setSearch] = useSearchParams()
   const range = rangeFromSearch(search, boot.venue.today)
-  const pick = pickOf(range, boot.venue.today)
-  const [choosing, setChoosing] = useState(pick === 'custom')
-  const [draft, setDraft] = useState<Range>(range)
   const q = useQuery({ queryKey: ['appointments', 'insights', range.from, range.to], queryFn: () => appointmentsApi.insights(range.from, range.to) })
-  const go = (r: Range) => { setDraft(r); setSearch({ from: r.from, to: r.to }) }
-  const input = 'rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
       <h1 className="text-xl font-semibold text-a-text">{t('appointments.insights.title', 'Insights')}</h1>
-      <div className="flex flex-wrap gap-2" role="group" aria-label={t('appointments.insights.title', 'Insights')}>
-        {PICKS.map(p => (
-          <Button key={p} type="button" size="sm" variant={pick === p && !choosing ? 'primary' : 'ghost'} aria-pressed={pick === p && !choosing}
-            onClick={() => { setChoosing(false); go(rangeFor(p, boot.venue.today)) }}>
-            {t(`appointments.insights.pick.${p}`, PICK_FALLBACK[p])}
-          </Button>
-        ))}
-        <Button type="button" size="sm" variant={choosing || pick === 'custom' ? 'primary' : 'ghost'} aria-pressed={choosing || pick === 'custom'} onClick={() => setChoosing(true)}>
-          {t('appointments.insights.pick.custom', PICK_FALLBACK.custom)}
-        </Button>
-      </div>
-      {choosing && (
-        <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); go(draft) }}>
-          <Field label={t('appointments.insights.from', 'From')}>
-            <input type="date" className={input} value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value as DateKey })} />
-          </Field>
-          <Field label={t('appointments.insights.to', 'To')}>
-            <input type="date" className={input} value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value as DateKey })} />
-          </Field>
-          <Button type="submit" size="sm">{t('appointments.insights.show', 'Show')}</Button>
-        </form>
-      )}
+      <PeriodPicker range={range} today={boot.venue.today} onGo={(r) => setSearch({ from: r.from, to: r.to })} />
       {q.isLoading && <p className="text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
       {q.isError && <InsightsError error={q.error} />}
       {q.data && <InsightsView data={q.data} locale={i18n.language || 'en'} />}
     </div>
+  )
+}
+
+/** The period picks and the chosen-dates form, starting from the period in the address. */
+export function PeriodPicker({ range, today, onGo }: { range: Range; today: DateKey; onGo: (r: Range) => void }) {
+  const { t } = useTranslation()
+  const pick = pickOf(range, today)
+  const rangeKey = `${range.from}|${range.to}`
+  const [seen, setSeen] = useState(rangeKey)
+  const [choosing, setChoosing] = useState(pick === 'custom')
+  const [draft, setDraft] = useState<Range>(range)
+  // The address changed (a pick, Show, Back, the menu): start again from it (polish G1). Reset here rather than by
+  // remounting, so the button just pressed keeps the keyboard focus (polish review).
+  if (seen !== rangeKey) {
+    setSeen(rangeKey)
+    setChoosing(pick === 'custom')
+    setDraft(range)
+  }
+  const input = 'rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
+
+  return (
+    <>
+      <div className="flex flex-wrap gap-2" role="group" aria-label={t('appointments.insights.title', 'Insights')}>
+        {PICKS.map(p => (
+          <Button key={p} type="button" size="sm" variant={pick === p && !choosing ? 'primary' : 'ghost'} aria-pressed={pick === p && !choosing}
+            onClick={() => { setChoosing(false); onGo(rangeFor(p, today)) }}>
+            {t(`appointments.insights.pick.${p}`, PICK_FALLBACK[p])}
+          </Button>
+        ))}
+        <Button type="button" size="sm" variant={choosing ? 'primary' : 'ghost'} aria-pressed={choosing} onClick={() => setChoosing(true)}>
+          {t('appointments.insights.pick.custom', PICK_FALLBACK.custom)}
+        </Button>
+      </div>
+      {choosing && (
+        <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); if (canShow(draft)) onGo(draft) }}>
+          <Field label={t('appointments.insights.from', 'From')}>
+            <input type="date" required className={input} value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value as DateKey })} />
+          </Field>
+          <Field label={t('appointments.insights.to', 'To')}>
+            <input type="date" required className={input} value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value as DateKey })} />
+          </Field>
+          {/* Both dates first: an empty one used to fall back to This week without a word (polish G2). */}
+          <Button type="submit" size="sm" disabled={!canShow(draft)}>{t('appointments.insights.show', 'Show')}</Button>
+        </form>
+      )}
+    </>
   )
 }
 
@@ -155,8 +175,8 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
             <p className="text-sm text-a-text-2">{t('appointments.insights.out_of', 'Out of {{due}} bookings due · {{unmarked}} not marked yet (mark them Completed or No-show) · {{early}} cancelled in time · {{ahead}} booked ahead', {
               due: now.due, unmarked: now.groups.unmarked, early: now.groups.early_cancel, ahead: now.groups.ahead,
             })}</p>
-            <Breakdown title={t('appointments.insights.by_service', 'By service')} rows={now.by_service} locale={locale} />
-            <Breakdown title={t('appointments.insights.by_person', 'By person')} rows={now.by_person} locale={locale} />
+            <Breakdown title={t('appointments.insights.by_service', 'By service')} heading={t('appointments.insights.col.service', 'Service')} rows={now.by_service} locale={locale} />
+            <Breakdown title={t('appointments.insights.by_person', 'By person')} heading={t('appointments.insights.col.person', 'Person')} rows={now.by_person} locale={locale} />
             <section className="space-y-1">
               <h2 className="text-base font-semibold text-a-text">{t('appointments.insights.sources_title', 'Where bookings come from')}</h2>
               <p className="text-sm text-a-text">{t('appointments.insights.sources', 'Online {{online}} · At the desk {{desk}} · Other {{other}} — booked online: {{share}}', {
@@ -178,7 +198,7 @@ function Tile({ title, children }: { title: string; children: ReactNode }) {
   )
 }
 
-function Breakdown({ title, rows, locale }: { title: string; rows: InsightsRow[]; locale: string }) {
+function Breakdown({ title, heading, rows, locale }: { title: string; heading: string; rows: InsightsRow[]; locale: string }) {
   const { t } = useTranslation()
   if (rows.length === 0) return null
   const name = (r: InsightsRow) => r.id === null
@@ -193,7 +213,7 @@ function Breakdown({ title, rows, locale }: { title: string; rows: InsightsRow[]
         <table className="w-full min-w-[560px] text-sm">
           <thead>
             <tr className="text-left text-a-text-2">
-              <th className="py-1 font-medium">{t('appointments.insights.col.name', 'Name')}</th>
+              <th className="py-1 font-medium">{heading}</th>
               <th className="text-right font-medium">{t('appointments.insights.col.due', 'Due')}</th>
               <th className="text-right font-medium">{t('appointments.insights.col.done', 'Done')}</th>
               <th className="text-right font-medium">{t('appointments.insights.col.no_show', 'No-shows')}</th>

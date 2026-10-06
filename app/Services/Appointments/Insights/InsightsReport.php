@@ -9,7 +9,6 @@ use App\Models\ServiceBookingPayment;
 use App\Models\ServiceMaster;
 use App\Scopes\BrandScope;
 use App\Services\Appointments\Money\AppointmentMoney;
-use App\Services\Appointments\VenueClock;
 use App\Services\Portal\AppointmentClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
@@ -51,7 +50,8 @@ final class InsightsReport
         return [
             'period'            => $period->toApi(),
             'previous'          => $previous->toApi(),
-            'now'               => VenueClock::now($orgId)->format('Y-m-d\TH:i'),
+            // The moment the groups were worked out with, on the venue's clock (polish G5).
+            'now'               => $now->setTimezone($zone)->format('Y-m-d\TH:i'),
             'cancel_hours'      => $hours,
             'desk_ledger_since' => self::DESK_LEDGER_SINCE,
             'current'           => self::finish($current, $services, $people),
@@ -191,8 +191,9 @@ final class InsightsReport
             $r['name'] = $r['id'] === null ? null : ($names[$r['id']] ?? null);
             $kept[] = $r;
         }
-        usort($kept, fn (array $x, array $y) => [($y['value_done'][$main] ?? 0), $y['due'], (string) $x['name']]
-            <=> [($x['value_done'][$main] ?? 0), $x['due'], (string) $y['name']]);
+        // No main currency when nothing was done: a null array offset is deprecated in PHP 8.5 (polish G4).
+        $value = fn (array $r) => $main === null ? 0 : ($r['value_done'][$main] ?? 0);
+        usort($kept, fn (array $x, array $y) => [$value($y), $y['due'], (string) $x['name']] <=> [$value($x), $x['due'], (string) $y['name']]);
 
         return array_map(function (array $r) {
             ksort($r['value_done']);

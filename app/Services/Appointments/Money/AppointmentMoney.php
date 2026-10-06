@@ -233,6 +233,17 @@ final class AppointmentMoney
     }
 
     /**
+     * Money went back for this visit: a refund recorded here or through Stripe,
+     * or a "refunded" label marked before Part E with nothing recorded behind it
+     * (polish F10). Reopen refuses such a visit: book it again instead.
+     */
+    public static function moneyWentBack(ServiceBooking $b): bool
+    {
+        return in_array((string) $b->payment_status, ['refunded', 'partially_refunded'], true)
+            || self::summary($b)['paid_back'] > 0;
+    }
+
+    /**
      * Card money Stripe took for this booking. Never when the desk ledger has
      * payments: a payment is only taken while nothing came in online, so a
      * `paid` label beside desk payments is the ledger's own (settle() keeps

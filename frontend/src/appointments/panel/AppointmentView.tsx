@@ -15,6 +15,9 @@ import { messageLine } from './messageLine'
 import { pointsLine } from './consequences'
 import type { PanelError } from './panelState'
 
+/** The statuses reopen starts from (AppointmentActions::FROM['reopen']). */
+const CLOSED: readonly string[] = ['completed', 'no_show', 'cancelled']
+
 interface Props {
   booking: AppointmentDetail
   zone: string
@@ -119,6 +122,10 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         {canManage && onRefund && b.money && refundWays(b.money).length > 0 && <Button type="button" size="sm" variant="secondary" disabled={saving} onClick={onRefund}>{t('appointments.money.refund', 'Refund')}</Button>}
       </div>
       {allowed('reopen') && !canManage && <p className="text-sm text-a-text-2">{t('appointments.panel.reopen_staff', 'A manager can reopen it.')}</p>}
+      {/* A closed visit the server does not offer to reopen had money given back (polish F3): say so, to everyone. */}
+      {CLOSED.includes(b.status) && b.actions.some(a => a.key === 'reopen' && !a.allowed) && (
+        <p className="text-sm text-a-text-2">{t('appointments.error.money_returned', 'Money was given back for this visit — book it again instead.')}</p>
+      )}
 
       <Messages messages={b.messages ?? []} zone={zone} locale={locale} />
       <History entries={b.history} zone={zone} locale={locale} />

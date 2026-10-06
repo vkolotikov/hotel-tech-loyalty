@@ -43,6 +43,25 @@ describe('Reopen', () => {
     expect(view(false)).toContain('A manager can reopen it.')
   })
 
+  it('says money went back instead of offering Reopen once it did', () => {
+    // Polish F3: the server no longer offers reopen for such a visit; the panel says why, to everyone.
+    const refunded = { ...booking, actions: [act('reopen', false), act('move', false)] } as unknown as AppointmentDetail
+    for (const canManage of [true, false]) {
+      const html = renderToStaticMarkup(<AppointmentView booking={refunded} zone="Europe/London" locale="en-GB" saving={false} error={null} outcome={null} onAction={() => {}} canManage={canManage} />)
+      expect(html).not.toContain('>Reopen<')
+      expect(html).not.toContain('A manager can reopen it.')
+      expect(html).toContain('Money was given back for this visit — book it again instead.')
+    }
+  })
+
+  it('says to book the client again when the time was taken since, never "choose another"', () => {
+    // Polish F4: the workspace's slot_taken words offer a choice this dialog does not have.
+    const html = renderToStaticMarkup(<ActionConfirm booking={booking} action={act('reopen', true)} reason="" saving={false}
+      error={{ code: 'slot_taken', message: 'That time is not free. Choose another.' }} tell onTell={() => {}} onReason={() => {}} onConfirm={() => {}} onBack={() => {}} />)
+    expect(html).toContain('That time is taken now — book the client again at another time.')
+    expect(html).not.toContain('Choose another')
+  })
+
   it('is confirmed first, says what it does, and asks about the client only for a cancellation', () => {
     expect(NEEDS_CONFIRM.has('reopen')).toBe(true)
     const asks = confirm(act('reopen', true, { message: 'ask' }))

@@ -297,6 +297,18 @@ class InsightsTest extends TestCase
         $this->assertLessThan(6 * 1024 * 1024, $grew, sprintf('counting 4,000 appointments held %.1f MB at its peak', $grew / 1048576));
     }
 
+    public function test_now_in_the_answer_is_the_moment_the_figures_were_counted_at(): void
+    {
+        // Polish G5: `now` came from the clock, not from the moment the groups were worked out with. A venue not on
+        // UTC (polish review): 09:30 UTC is 12:30 in Riga, and the answer is on the venue's clock.
+        $this->setZone('Europe/Riga');
+        $this->at('2026-10-05 08:00:00', ['status' => 'confirmed']);
+        $report = InsightsReport::for($this->org->id, InsightsPeriod::fromInput('2026-10-05', '2026-10-05'), CarbonImmutable::parse('2026-10-05 09:30:00', 'UTC'));
+
+        $this->assertSame('2026-10-05T12:30', $report['now']);
+        $this->assertSame(1, $report['current']['groups']['unmarked']); // 08:00 in Riga had passed by 12:30 there
+    }
+
     public function test_a_year_answers_in_a_fixed_number_of_queries(): void
     {
         $rows = [];

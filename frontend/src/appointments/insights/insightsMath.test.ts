@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import {
-  average, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare, pickOf, pointsChange,
+  average, canShow, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare, pickOf, pointsChange,
   rangeFor, rangeFromSearch, share, toneOf,
 } from './insightsMath'
+
+describe('chosen dates', () => {
+  it('can be shown only with both dates filled in (polish G2)', () => {
+    expect(canShow({ from: '2026-09-20', to: '2026-10-10' })).toBe(true)
+    expect(canShow({ from: '', to: '2026-10-10' })).toBe(false)
+    expect(canShow({ from: '2026-09-20', to: '' })).toBe(false)
+  })
+})
 
 describe('period picks on the venue calendar', () => {
   it('works out each pick from a Monday, a Sunday, the 31st and New Year’s Day', () => {
