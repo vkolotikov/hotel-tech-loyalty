@@ -1305,6 +1305,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('bookings/{id}/payments', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'payments'])->whereNumber('id');
                 Route::post('bookings/{id}/refunds', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'refunds'])->whereNumber('id');
                 Route::get('takings', [\App\Http\Controllers\Api\V1\Admin\Appointments\MoneyController::class, 'takings']);
+                // Insights: how the venue is doing over a period (spec 2026-10-06).
+                Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Appointments\InsightsController::class, 'show']);
                 // Setup: services, team, hours, time off, settings and the checklist (spec 2026-10-01).
                 Route::get('setup', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'show']);
                 Route::post('setup/checklist/link-copied', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupController::class, 'linkCopied']);

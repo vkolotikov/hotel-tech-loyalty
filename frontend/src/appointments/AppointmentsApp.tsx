@@ -6,6 +6,7 @@ import { AppointmentsShell } from './AppointmentsShell'
 import { CalendarPage } from './calendar/CalendarPage'
 import { ClientsPage } from './clients/ClientsPage'
 import { ClientProfile } from './clients/ClientProfile'
+import { InsightsPage } from './insights/InsightsPage'
 import { loginPath } from './lib/landing'
 import { SetupPage } from './setup/SetupPage'
 import { TakingsPage } from './takings/TakingsPage'
@@ -34,6 +35,7 @@ export function AppointmentsApp() {
           <Route path="clients/:id" element={<ClientProfile />} />
           <Route path="setup" element={<SetupPage />} />
           <Route path="takings" element={<TakingsPage />} />
+          <Route path="insights" element={<InsightsPage />} />
           <Route path="*" element={<Navigate to="/appointments" replace />} />
         </Routes>
       </AppointmentsShell>

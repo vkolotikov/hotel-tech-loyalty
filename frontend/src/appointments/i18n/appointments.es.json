@@ -1,5 +1,5 @@
 {
-  "nav": { "takings": "Caja", "calendar": "Agenda", "setup": "Configuración" },
+  "nav": { "insights": "Estadísticas", "takings": "Caja", "calendar": "Agenda", "setup": "Configuración" },
   "common": {
     "loading": "Cargando…",
     "error": "Algo ha salido mal. Inténtelo de nuevo.",
@@ -225,6 +225,7 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "invalid_period": "Elija un periodo de hasta un año.",
     "invalid_length": "Elija una duración de 15 minutos a 8 horas, en pasos de 15 minutos.",
     "money_returned": "Se devolvió dinero por esta cita — resérvela de nuevo.",
     "coupon_returned": "El cupón usado en esta cita se devolvió al miembro — resérvela de nuevo.",
@@ -455,6 +456,52 @@
       "apply": "Aplicar",
       "total": "Total"
     }
+  },
+  "insights": {
+    "managers_only": "Las estadísticas son solo para propietarios y gerentes.",
+    "title": "Estadísticas",
+    "pick": {
+      "this_week": "Esta semana",
+      "last_week": "Semana pasada",
+      "this_month": "Este mes",
+      "last_month": "Mes pasado",
+      "custom": "Elegir fechas"
+    },
+    "from": "Desde",
+    "to": "Hasta",
+    "show": "Mostrar",
+    "period_line": "{{period}} · comparado con {{previous}} · tardía = cancelada con menos de {{hours}} h",
+    "money_note": "«Cobrado» cuenta el dinero de estas citas, se pagara cuando se pagara; la caja muestra el dinero por el día en que se movió.",
+    "desk_note": "Los pagos en el local antes del {{date}} no se registraban aquí: lo cobrado puede ser menor, y lo pendiente mayor, de lo que fue en realidad.",
+    "tile": {
+      "done": "Citas realizadas",
+      "no_show": "No se presentaron",
+      "late_cancel": "Cancelaciones tardías",
+      "value_done": "Valor de las citas realizadas",
+      "average": "Media por cita",
+      "taken": "Cobrado",
+      "owed_done": "Pendiente de cobro"
+    },
+    "change_count": "{{arrow}} {{delta}} frente a {{before}}",
+    "change_points": "{{arrow}} {{delta}} pts",
+    "change_money": "{{arrow}} {{delta}}",
+    "no_change": "Sin cambios",
+    "out_of": "De {{due}} reservas debidas · {{unmarked}} sin marcar (márquelas como «Completada» o «No se presentó») · {{early}} canceladas a tiempo · {{ahead}} por venir",
+    "by_service": "Por servicio",
+    "by_person": "Por persona",
+    "col": {
+      "name": "Nombre",
+      "due": "Debidas",
+      "done": "Realizadas",
+      "no_show": "No se presentaron",
+      "late_cancel": "Cancelaciones tardías",
+      "value_done": "Valor"
+    },
+    "no_one": "Sin asignar",
+    "removed": "(eliminado)",
+    "sources_title": "De dónde vienen las reservas",
+    "sources": "En línea {{online}} · En el local {{desk}} · Otro {{other}} — reservado en línea: {{share}}",
+    "empty": "No hay citas en este periodo."
   },
   "takings": {
     "title": "Caja",

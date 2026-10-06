@@ -1,5 +1,5 @@
 {
-  "nav": { "takings": "Caisse", "calendar": "Agenda", "setup": "Configuration" },
+  "nav": { "insights": "Statistiques", "takings": "Caisse", "calendar": "Agenda", "setup": "Configuration" },
   "common": {
     "loading": "Chargement…",
     "error": "Une erreur s'est produite. Veuillez réessayer.",
@@ -225,6 +225,7 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "invalid_period": "Choisissez une période d'un an maximum.",
     "invalid_length": "Choisissez une durée entre 15 minutes et 8 heures, par pas de 15 minutes.",
     "money_returned": "De l'argent a été rendu pour ce rendez-vous — réservez-le à nouveau.",
     "coupon_returned": "Le bon utilisé pour ce rendez-vous a été rendu au membre — réservez-le à nouveau.",
@@ -455,6 +456,52 @@
       "apply": "Appliquer",
       "total": "Total"
     }
+  },
+  "insights": {
+    "managers_only": "Les statistiques sont réservées aux propriétaires et aux responsables.",
+    "title": "Statistiques",
+    "pick": {
+      "this_week": "Cette semaine",
+      "last_week": "Semaine dernière",
+      "this_month": "Ce mois-ci",
+      "last_month": "Mois dernier",
+      "custom": "Choisir les dates"
+    },
+    "from": "Du",
+    "to": "Au",
+    "show": "Afficher",
+    "period_line": "{{period}} · comparé à {{previous}} · tardive = annulée moins de {{hours}} h avant",
+    "money_note": "« Encaissé » compte l'argent de ces rendez-vous, quelle que soit la date du paiement ; la caisse montre l'argent par jour de mouvement.",
+    "desk_note": "Les paiements sur place avant le {{date}} n'étaient pas enregistrés ici : l'encaissé peut être plus bas, et le reste dû plus élevé, qu'en réalité.",
+    "tile": {
+      "done": "Rendez-vous effectués",
+      "no_show": "Absences",
+      "late_cancel": "Annulations tardives",
+      "value_done": "Valeur des rendez-vous effectués",
+      "average": "Moyenne par rendez-vous",
+      "taken": "Encaissé",
+      "owed_done": "Reste dû"
+    },
+    "change_count": "{{arrow}} {{delta}} contre {{before}}",
+    "change_points": "{{arrow}} {{delta}} pts",
+    "change_money": "{{arrow}} {{delta}}",
+    "no_change": "Inchangé",
+    "out_of": "Sur {{due}} réservations dues · {{unmarked}} pas encore marquées (marquez-les « Terminé » ou « Absent ») · {{early}} annulées à temps · {{ahead}} à venir",
+    "by_service": "Par prestation",
+    "by_person": "Par personne",
+    "col": {
+      "name": "Nom",
+      "due": "Dues",
+      "done": "Effectués",
+      "no_show": "Absences",
+      "late_cancel": "Annulations tardives",
+      "value_done": "Valeur"
+    },
+    "no_one": "Personne n'est assigné",
+    "removed": "(supprimé)",
+    "sources_title": "Provenance des réservations",
+    "sources": "En ligne {{online}} · Sur place {{desk}} · Autre {{other}} — réservé en ligne : {{share}}",
+    "empty": "Aucun rendez-vous sur cette période."
   },
   "takings": {
     "title": "Caisse",

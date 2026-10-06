@@ -73,6 +73,11 @@ describe('AppointmentsShell', () => {
     expect(render({})).toContain('Full admin')
   })
 
+  it('offers Insights to managers only', () => {
+    expect(render({ data: { ...boot, staff: { ...boot.staff, can_manage: true } } })).toContain('href="/appointments/insights"')
+    expect(render({})).not.toContain('href="/appointments/insights"')
+  })
+
   it('takes "Full admin" to the same tool there: the calendar to the service calendar, clients to the customer list', () => {
     const fullAdminHref = (html: string) => [...html.matchAll(/<a[^>]*href="([^"]*)"[^>]*>(?:(?!<\/a>).)*Full admin/g)].map(m => m[1])
     expect(fullAdminHref(render({}, '/appointments'))).toEqual(['/service-bookings/calendar', '/service-bookings/calendar'])

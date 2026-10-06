@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  ActionKey, AppointmentDetail, Bootstrap, MoveBody, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CouponOption, CouponRef, CreateBody, DateKey, DeskMethod, HoursRow, Impact, PriceQuote, RefundVia, Takings,
+  ActionKey, AppointmentDetail, Bootstrap, MoveBody, CalendarPayload, Checklist, ClientMessageInfo, ClientProfile, ClientSummary, CouponOption, CouponRef, CreateBody, DateKey, DeskMethod, HoursRow, Impact, Insights, PriceQuote, RefundVia, Takings,
   PointsResult, ServiceBody, SettingsBody, SetupCategory, SetupPayload, SetupService, SetupSettings, SetupTeamMember, SlotsPayload,
   TeamBody, TimeOffBody, Wall,
 } from './types'
@@ -84,6 +84,7 @@ export const appointmentsApi = {
     watched(api.post(`${BASE}/bookings/${id}/refunds`, body)),
 
   takings: (date: DateKey): Promise<Takings> => watched(api.get(`${BASE}/takings`, { params: { date } })),
+  insights: (from: DateKey, to: DateKey): Promise<Insights> => watched(api.get(`${BASE}/insights`, { params: { from, to } })),
 
   setup: (): Promise<SetupPayload> => watched(api.get(`${BASE}/setup`)),
 

@@ -229,7 +229,7 @@ final class AppointmentMoney
         $rows = ServiceBookingPayment::withoutGlobalScopes()->with('actor')
             ->where('service_booking_id', $b->id)->orderByDesc('id')->get();
 
-        return self::figures($b, $rows);
+        return self::amountsFrom($b, $rows) + ['movements' => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi())->values()->all()];
     }
 
     /**
@@ -267,8 +267,15 @@ final class AppointmentMoney
         };
     }
 
-    /** @param Collection<int, ServiceBookingPayment> $rows */
-    private static function figures(ServiceBooking $b, Collection $rows): array
+    /**
+     * summary()'s money figures from ledger rows already loaded, without the
+     * movements list: Insights adds up a year of appointments and must not
+     * load each row's actor (Part G).
+     *
+     * @param Collection<int, ServiceBookingPayment> $rows
+     * @return array<string, mixed>
+     */
+    public static function amountsFrom(ServiceBooking $b, Collection $rows): array
     {
         $total = round((float) $b->total_amount, 2);
         $card = AppointmentActions::carriesCardPayment($b);
@@ -314,7 +321,6 @@ final class AppointmentMoney
             'paid_in'            => $paidIn,
             'paid_back'          => $paidBack,
             'can_take'           => $owed > 0 && in_array((string) $b->status, self::TAKE_FROM, true),
-            'movements'          => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi())->values()->all(),
         ];
     }
 }

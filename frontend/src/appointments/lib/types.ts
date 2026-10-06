@@ -62,6 +62,40 @@ export interface Takings {
   online: Record<string, number>
 }
 
+/** Part G: the six groups an appointment falls into, by what it is now (spec §4.2). */
+export type InsightsGroup = 'done' | 'no_show' | 'unmarked' | 'late_cancel' | 'early_cancel' | 'ahead'
+export interface InsightsMoney { done: number; value_done: number; taken: number; owed_done: number }
+/** A row by service or by person. `id: null` is "No one assigned"; `name: null` with an id is a removed record. */
+export interface InsightsRow {
+  id: number | null
+  name: string | null
+  due: number
+  done: number
+  no_show: number
+  late_cancel: number
+  value_done: Record<string, number>
+}
+export interface InsightsFigures {
+  groups: Record<InsightsGroup, number>
+  /** Done + no-show + not marked yet + cancelled late: every rate is out of this. */
+  due: number
+  money: Record<string, InsightsMoney>
+  main_currency: string | null
+  by_service: InsightsRow[]
+  by_person: InsightsRow[]
+  sources: { online: number; desk: number; other: number }
+}
+export interface InsightsSpan { from: DateKey; to: DateKey; days: number }
+export interface Insights {
+  period: InsightsSpan
+  previous: InsightsSpan
+  now: Wall
+  cancel_hours: number
+  desk_ledger_since: DateKey
+  current: InsightsFigures
+  before: InsightsFigures
+}
+
 export interface MemberSummary { id: number; number: string; tier: string | null; points: number }
 export interface ClientSummary { id: number; name: string; phone: string | null; email: string | null; member: MemberSummary | null }
 

@@ -168,10 +168,50 @@ automated test beyond the focus rules themselves, because the frontend tests ren
 
 ## What this milestone does not do
 
-Insights; photos for services and team members (full admin); service extras and category colours and order
+Photos for services and team members (full admin); service extras and category colours and order
 (full admin); SMS or any channel but email for client messages (Part D); rooms and resources (the engine has none for
 services; a later part); no-show and late-cancel fees, tips, receipts; drag to create an appointment, Undo after a
 saved drag, a length that changes the price, stretching past working hours (Part F).
+
+## Insights (Part G, 2026-10-06)
+
+Managers (and owners) see **Insights** beside Takings: how the venue did over This week, Last week, This month, Last
+month or chosen dates (up to a year), next to the period before. That is the month before for a calendar month, and
+the same number of days before for anything else. The period is in the address, so it can be bookmarked or sent.
+Staff do not see the item, and the server answers them 403 `not_allowed`.
+
+Every appointment whose start falls on one of the period's venue days is in exactly one group, by what it is now:
+
+| Group | Rule |
+|---|---|
+| Done | Completed |
+| No-show | No-show |
+| Not marked yet | still awaiting, confirmed or in progress after its start |
+| Cancelled late | cancelled after the free-cancellation deadline: start − Settings "Free cancellation window for appointments", default 24 h, counted in real hours; the member portal's deadline |
+| Cancelled in time | cancelled before that deadline, or with no time recorded |
+| Booked ahead | still to come |
+
+- **Bookings due** = done + no-show + not marked yet + cancelled late. Every rate is out of bookings due, so the four
+  add up to 100%; "—" when nothing was due.
+- **Money** is per currency, by Part E's own rules for each appointment (the panel's money):
+  - value of visits done (after discounts) and the average per visit;
+  - money taken for the period's visits whenever paid (Takings shows money by the day it moved);
+  - still owed for visits done.
+- **Before 5 Oct 2026** desk payments were not recorded: the screen says so for periods starting earlier.
+- **Rows by service and by person:** "No one assigned" holds appointments with no team member; a deleted record shows
+  "(removed)".
+- **Where bookings come from:**
+  - at the desk = staff, phone, walk-in;
+  - online = every other source (booking page and its tags, member portal, chat);
+  - other = none recorded.
+- **Scope:** the whole organisation, every brand, as on Takings.
+- **Nothing is cached:** a period of a year is a fixed handful of queries.
+
+Endpoint: `GET /v1/admin/appointments/insights?from=YYYY-MM-DD&to=YYYY-MM-DD` (422 `invalid_period` beyond 366 days
+or From after To). Code: `App\Services\Appointments\Insights\{VisitGroup, InsightsPeriod, InsightsReport}`,
+`AppointmentMoney::amountsFrom()`, `frontend/src/appointments/insights/`. Tests: `tests/Unit/Appointments/{VisitGroupTest,
+InsightsPeriodTest}.php`, `tests/Feature/Appointments/InsightsTest.php`, `insightsMath.test.ts`, `insights.test.tsx`.
+No migration.
 
 ## Selling Appointments on its own (Part C, 2026-10-02)
 

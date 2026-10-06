@@ -1,5 +1,5 @@
 {
-  "nav": { "takings": "Takings", "calendar": "Calendar", "setup": "Setup" },
+  "nav": { "insights": "Insights", "takings": "Takings", "calendar": "Calendar", "setup": "Setup" },
   "common": {
     "loading": "Loading…",
     "error": "Something went wrong. Please try again.",
@@ -225,6 +225,7 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "invalid_period": "Choose a period of up to a year.",
     "invalid_length": "Choose a length between 15 minutes and 8 hours, in 15-minute steps.",
     "money_returned": "Money was given back for this visit — book it again instead.",
     "coupon_returned": "The coupon used on this visit was given back to the member — book it again instead.",
@@ -455,6 +456,52 @@
       "apply": "Apply",
       "total": "Total"
     }
+  },
+  "insights": {
+    "managers_only": "Insights are for owners and managers.",
+    "title": "Insights",
+    "pick": {
+      "this_week": "This week",
+      "last_week": "Last week",
+      "this_month": "This month",
+      "last_month": "Last month",
+      "custom": "Choose dates"
+    },
+    "from": "From",
+    "to": "To",
+    "show": "Show",
+    "period_line": "{{period}} · compared with {{previous}} · late = cancelled inside {{hours}} h",
+    "money_note": "Money taken counts the money for these visits whenever it was paid; Takings shows money by the day it moved.",
+    "desk_note": "Desk payments before {{date}} were not recorded here: money taken may be lower, and still owed higher, than it really was.",
+    "tile": {
+      "done": "Visits done",
+      "no_show": "No-shows",
+      "late_cancel": "Late cancellations",
+      "value_done": "Value of visits done",
+      "average": "Average per visit",
+      "taken": "Money taken",
+      "owed_done": "Still owed"
+    },
+    "change_count": "{{arrow}} {{delta}} vs {{before}}",
+    "change_points": "{{arrow}} {{delta}} pts",
+    "change_money": "{{arrow}} {{delta}}",
+    "no_change": "No change",
+    "out_of": "Out of {{due}} bookings due · {{unmarked}} not marked yet (mark them Completed or No-show) · {{early}} cancelled in time · {{ahead}} booked ahead",
+    "by_service": "By service",
+    "by_person": "By person",
+    "col": {
+      "name": "Name",
+      "due": "Due",
+      "done": "Done",
+      "no_show": "No-shows",
+      "late_cancel": "Late cancellations",
+      "value_done": "Value"
+    },
+    "no_one": "No one assigned",
+    "removed": "(removed)",
+    "sources_title": "Where bookings come from",
+    "sources": "Online {{online}} · At the desk {{desk}} · Other {{other}} — booked online: {{share}}",
+    "empty": "No appointments in this period."
   },
   "takings": {
     "title": "Takings",
