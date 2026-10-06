@@ -45,13 +45,15 @@ describe('safeRedirect', () => {
 })
 
 describe('showsAppointmentsLink', () => {
-  it('shows the way into the workspace to staff of an organisation that has it and can book something', () => {
+  it('shows the way into the workspace to staff of every organisation that has it', () => {
     expect(showsAppointmentsLink({ user_type: 'staff', workspaces: { appointments: { landing: false, has_services: true } } })).toBe(true)
+    // Owner, 2026-10-06: also with no services yet — the workspace's Setup is where the first one is added.
+    expect(showsAppointmentsLink({ user_type: 'staff', workspaces: { appointments: { landing: false, has_services: false } } })).toBe(true)
   })
 
-  it('hides it where nothing can be booked, where the workspace is switched off, and from members', () => {
-    expect(showsAppointmentsLink({ user_type: 'staff', workspaces: { appointments: { landing: false, has_services: false } } })).toBe(false)
+  it('hides it where the workspace is switched off, and from members', () => {
     expect(showsAppointmentsLink({ user_type: 'staff' })).toBe(false)
+    expect(showsAppointmentsLink({ user_type: 'staff', workspaces: {} })).toBe(false)
     expect(showsAppointmentsLink({ user_type: 'member', workspaces: { appointments: { landing: false, has_services: true } } })).toBe(false)
     expect(showsAppointmentsLink(null)).toBe(false)
   })

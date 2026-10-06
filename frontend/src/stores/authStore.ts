@@ -39,9 +39,9 @@ interface User {
    * Workspaces the user's organisation has (every organisation has the
    * appointments workspace unless it was switched off). `landing` sends a
    * staff user to the workspace right after signing in; `has_services`
-   * says whether the full admin shows its way in (see
-   * appointments/lib/landing.ts). `only` marks an organisation on the
-   * Appointments plan: no full admin (Part C).
+   * says whether it has an active service (the full admin shows its way in
+   * either way since 2026-10-06; see appointments/lib/landing.ts). `only`
+   * marks an organisation on the Appointments plan: no full admin (Part C).
    */
   workspaces?: { appointments?: { landing?: boolean; has_services?: boolean; only?: boolean } }
 }

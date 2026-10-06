@@ -106,8 +106,11 @@ describe('the full admin menu', () => {
     expect(html.indexOf('href="/appointments"')).toBeLessThan(html.indexOf('href="/booking-rooms"'))
   })
 
-  it('leaves it out where nothing can be booked, and where the workspace is switched off', () => {
-    expect(sidebar({ appointments: { landing: false, has_services: false } })).not.toContain('href="/appointments"')
+  it('lists it for a venue with no services yet (owner, 2026-10-06: Setup is where the first one is added)', () => {
+    expect(sidebar({ appointments: { landing: false, has_services: false } })).toContain('href="/appointments"')
+  })
+
+  it('leaves it out where the workspace is switched off', () => {
     expect(sidebar(undefined)).not.toContain('href="/appointments"')
   })
 })
@@ -121,10 +124,9 @@ describe('the full admin top bar', () => {
     expect(header).toContain('HexaTech Appointments')
   })
 
-  it('has no such button where the workspace has nothing to book or is switched off', () => {
-    for (const off of [{ appointments: { landing: false, has_services: false } }, undefined]) {
-      expect(sidebar(off)).not.toContain('data-topbar-appointments')
-    }
+  it('offers it to a venue with no services yet, and not where the workspace is switched off', () => {
+    expect(sidebar({ appointments: { landing: false, has_services: false } })).toContain('data-topbar-appointments')
+    expect(sidebar(undefined)).not.toContain('data-topbar-appointments')
   })
 
   // Polish review: the button must follow the menu's own rules, not only "the venue has services".
@@ -160,8 +162,8 @@ describe('OpenInAppointments', () => {
     expect(html).toContain('Open in HexaTech Appointments')
   })
 
-  it('is not there when the workspace is not', () => {
-    expect(button({ appointments: { landing: false, has_services: false } })).toBe('')
+  it('is there with no services yet, and not when the workspace is not', () => {
+    expect(button({ appointments: { landing: false, has_services: false } })).toContain('href="/appointments"')
     expect(button(undefined)).toBe('')
   })
 })

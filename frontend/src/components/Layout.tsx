@@ -587,8 +587,8 @@ export function Layout({ children }: { children: ReactNode }) {
         .filter(item => {
           if (!canAccess(item.gate, staff)) return false
           if (item.product && !hasProduct(item.product)) return false
-          // The way into the appointments workspace: only where the
-          // organisation has it and has something to book.
+          // The way into the appointments workspace: wherever the
+          // organisation has it, services or not (owner, 2026-10-06).
           if (item.workspace === 'appointments' && !showsAppointmentsLink(user)) return false
           // Phase 4 — per-industry item hide (Deals for beauty/medical,
           // Scan for medical/restaurant). Matches canonical English

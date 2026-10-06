@@ -7,12 +7,13 @@ const WORKSPACE_PATH = /^\/appointments(\/|\?|$)/
 
 /**
  * Whether the full admin shows its way into HexaTech Appointments (the menu
- * item and the button on the service-booking pages): staff of an
- * organisation that has the workspace and at least one active service.
- * The address itself works for every organisation that has it.
+ * item, the top-bar button and the button on the service-booking pages):
+ * staff of every organisation that has the workspace, with or without
+ * services yet — the workspace's Setup is where the first one is added
+ * (owner, 2026-10-06). The menu's own rules still apply on top.
  */
 export function showsAppointmentsLink(user: LandingUser | null | undefined): boolean {
-  return user?.user_type !== 'member' && user?.workspaces?.appointments?.has_services === true
+  return user?.user_type !== 'member' && user?.workspaces?.appointments != null
 }
 
 /**
