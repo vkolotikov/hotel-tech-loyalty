@@ -1,0 +1,1 @@
+import{j as e}from"./vendor-query-DluS4M_Y.js";import{a3 as s}from"./index-C_If5Rem.js";function m({children:r,className:o,padding:a=!0}){return e.jsx("div",{className:s("bg-dark-surface rounded-xl border border-dark-border",a&&"p-6",o),children:r})}export{m as C};
