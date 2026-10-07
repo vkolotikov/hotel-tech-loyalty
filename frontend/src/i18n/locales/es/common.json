@@ -3013,6 +3013,18 @@
         "2": "CRM de socios con asistencia y fidelización"
       }
     },
+    "services": {
+      "hero": "Una plataforma. Más proyectos. Relaciones con clientes más sólidas.",
+      "heroSub": "Para agencias, estudios y fabricantes a medida que gestionan consultas, presupuestos y proyectos de clientes en un solo espacio.",
+      "orgLabel": "Nombre de la empresa",
+      "planTagline": "Para agencias + estudios en crecimiento",
+      "workspaceNoun": "espacio de trabajo para empresas de servicios",
+      "heroBullets": {
+        "0": "El asistente de IA califica consultas + agenda llamadas de descubrimiento",
+        "1": "Pipeline de proyectos: del brief a la propuesta y al cierre",
+        "2": "CRM de clientes con historial de proyectos, seguimientos y recompensas por referidos"
+      }
+    },
     "education": {
       "hero": "Una plataforma. Más matrículas. Mejor seguimiento del alumno.",
       "heroSub": "Para centros educativos y profesores particulares que gestionan clases, comunicación con alumnos y sesiones recurrentes desde un único espacio de trabajo.",
@@ -3109,6 +3121,7 @@
       "industry_name_real_estate": "Inmobiliaria",
       "industry_name_education": "Educación / Clases",
       "industry_name_fitness": "Fitness / Bienestar",
+      "industry_name_services": "Servicios / Agencia",
       "industry_name_other": "Otra cosa",
       "services_count": "{{count}} {{label}} para mostrar",
       "details_kicker": "Tus datos",

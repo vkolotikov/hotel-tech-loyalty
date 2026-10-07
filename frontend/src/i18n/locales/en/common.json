@@ -3057,6 +3057,18 @@
         "2": "Member CRM with attendance and loyalty"
       }
     },
+    "services": {
+      "hero": "One platform. More projects. Stronger client relationships.",
+      "heroSub": "For agencies, studios and made-to-order businesses managing enquiries, quotes and client projects in one workspace.",
+      "orgLabel": "Company name",
+      "planTagline": "For growing agencies + studios",
+      "workspaceNoun": "company workspace",
+      "heroBullets": {
+        "0": "AI assistant qualifies enquiries + books discovery calls",
+        "1": "Project pipeline from brief to proposal to won",
+        "2": "Client CRM with project history, follow-ups and referral rewards"
+      }
+    },
     "education": {
       "hero": "One platform. More enrolments. Stronger student journeys.",
       "heroSub": "For schools and tutors managing lessons, student communication and recurring sessions in one workspace.",
@@ -3153,6 +3165,7 @@
       "industry_name_real_estate": "Real estate",
       "industry_name_education": "Education / Tutoring",
       "industry_name_fitness": "Fitness / Wellness",
+      "industry_name_services": "Services / Agency",
       "industry_name_other": "Something else",
       "services_count": "{{count}} {{label}} ready to show",
       "details_kicker": "Your details",

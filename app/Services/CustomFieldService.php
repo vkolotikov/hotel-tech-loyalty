@@ -308,6 +308,20 @@ class CustomFieldService
                 ['key' => 'preferred_time',     'label' => 'Preferred time',     'type' => 'select',     'config' => ['options' => ['Early morning', 'Morning', 'Lunch', 'Afternoon', 'Evening']]],
             ],
         ],
+        'services' => [
+            'guest' => [
+                ['key' => 'job_title',          'label' => 'Job title',          'type' => 'text'],
+                ['key' => 'decision_maker',     'label' => 'Decision maker',     'type' => 'checkbox',   'help_text' => 'Signs off budgets and proposals.'],
+                ['key' => 'preferred_contact',  'label' => 'Preferred contact',  'type' => 'select',     'config' => ['options' => ['Email', 'Phone', 'WhatsApp', 'Video call']]],
+            ],
+            'inquiry' => [
+                ['key' => 'project_type',       'label' => 'Project type',       'type' => 'multiselect','config' => ['options' => ['Brand identity', 'Graphic design', 'Website', 'Web development', 'Custom production', 'Print / packaging', 'Ongoing retainer', 'Other']]],
+                ['key' => 'budget_range',       'label' => 'Budget range',       'type' => 'select',     'config' => ['options' => ['Under 1k', '1k–5k', '5k–15k', '15k–50k', '50k+', 'Not sure yet']]],
+                ['key' => 'project_deadline',   'label' => 'Deadline',           'type' => 'date',       'help_text' => 'Launch, event or delivery date the client is working to.'],
+                ['key' => 'order_quantity',     'label' => 'Quantity',           'type' => 'number',     'help_text' => 'Units for production orders (cards, prints, packaging).'],
+                ['key' => 'brief_link',         'label' => 'Brief / files link', 'type' => 'url',      'help_text' => 'Link to the brief, references or shared folder.'],
+            ],
+        ],
         'restaurant' => [
             'guest' => [
                 ['key' => 'dietary',            'label' => 'Dietary preferences','type' => 'multiselect','config' => ['options' => ['Vegetarian', 'Vegan', 'Gluten-free', 'Lactose-free', 'Halal', 'Kosher', 'Pescatarian', 'Nut-free']]],

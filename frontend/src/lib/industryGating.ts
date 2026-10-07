@@ -60,6 +60,7 @@ const INDUSTRY_HIDDEN_GROUPS: Record<IndustryId, ReadonlyArray<string>> = {
   real_estate: [],
   education: [],
   fitness: [],
+  services: [],
   other: [],
 }
 
@@ -91,6 +92,8 @@ const INDUSTRY_HIDDEN_ITEMS: Record<IndustryId, ReadonlyArray<string>> = {
   real_estate: [],
   education: [],
   fitness: [],
+  // B2B services keep Deals — they sell them. Nothing extra hidden.
+  services: [],
   // Generic business — nothing extra hidden.
   other: [],
 }
@@ -118,6 +121,7 @@ const INDUSTRY_HIDDEN_SETTINGS_TABS: Record<IndustryId, ReadonlyArray<string>> =
   real_estate: ['mobile_app'],
   education: ['mobile_app'],
   fitness: [],
+  services: [],
   other: [],
 }
 

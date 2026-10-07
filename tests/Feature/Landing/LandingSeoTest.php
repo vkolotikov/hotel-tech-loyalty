@@ -536,6 +536,7 @@ class LandingSeoTest extends TestCase
             'real_estate maps to RealEstateAgent'   => ['real_estate', 'RealEstateAgent'],
             'education maps to EducationalOrganization' => ['education', 'EducationalOrganization'],
             'fitness maps to ExerciseGym'           => ['fitness', 'ExerciseGym'],
+            'services maps to ProfessionalService'  => ['services', 'ProfessionalService'],
             'other maps to the generic LocalBusiness, deliberately' => ['other', 'LocalBusiness'],
         ];
     }

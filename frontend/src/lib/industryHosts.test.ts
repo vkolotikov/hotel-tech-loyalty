@@ -145,7 +145,7 @@ describe('INDUSTRY_PRIMARY_DOMAIN reverse map', () => {
     // share the umbrella host. Otherwise sign-up branding code
     // crashes on industries it can't reverse-map.
     const industries = ['hotel', 'beauty', 'medical', 'restaurant',
-                        'legal', 'real_estate', 'education', 'fitness'] as const
+                        'legal', 'real_estate', 'education', 'fitness', 'services'] as const
     for (const id of industries) {
       expect(INDUSTRY_PRIMARY_DOMAIN[id]).toBeTruthy()
       expect(INDUSTRY_PRIMARY_DOMAIN[id].length).toBeGreaterThan(0)
@@ -161,6 +161,7 @@ describe('INDUSTRY_PRIMARY_DOMAIN reverse map', () => {
     expect(INDUSTRY_PRIMARY_DOMAIN.real_estate).toBe('app.hexa-tech.uk')
     expect(INDUSTRY_PRIMARY_DOMAIN.education).toBe('app.hexa-tech.uk')
     expect(INDUSTRY_PRIMARY_DOMAIN.fitness).toBe('app.hexa-tech.uk')
+    expect(INDUSTRY_PRIMARY_DOMAIN.services).toBe('app.hexa-tech.uk')
   })
 
   it('round-trips: each primary domain detects back to its industry', () => {

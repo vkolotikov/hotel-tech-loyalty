@@ -177,6 +177,15 @@ class WelcomeTrialMailTest extends TestCase
         $this->assertStringNotContainsString('HotelTechAI', $env->subject);
     }
 
+    public function test_envelope_subject_services_uses_HexaTech(): void
+    {
+        $mail = $this->makeMail(['industry' => 'services']);
+        $env = $mail->envelope();
+
+        $this->assertStringContainsString('HexaTech', $env->subject);
+        $this->assertStringNotContainsString('HotelTechAI', $env->subject);
+    }
+
     /* ─── Fallbacks ─────────────────────────────────────── */
 
     public function test_envelope_subject_null_industry_falls_through_to_HotelTechAI(): void

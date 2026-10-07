@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home,
-  GraduationCap, Dumbbell, Utensils, Briefcase,
+  GraduationCap, Dumbbell, Utensils, Briefcase, Handshake,
   CheckCircle2, X, Star, Zap, Info,
 } from 'lucide-react'
 
@@ -33,6 +33,7 @@ const PRESET_ICONS: Record<string, any> = {
   'dumbbell':       Dumbbell,
   'utensils':       Utensils,
   'briefcase':      Briefcase,
+  'handshake':      Handshake,
 }
 
 interface PresetMeta {

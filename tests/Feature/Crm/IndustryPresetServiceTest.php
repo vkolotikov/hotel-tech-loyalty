@@ -93,7 +93,8 @@ class IndustryPresetServiceTest extends TestCase
         // preset here would let a host detect the industry but
         // the picker would show "Unknown" for that key.
         $expected = ['hotel', 'beauty', 'medical', 'legal',
-                     'real_estate', 'education', 'fitness', 'restaurant'];
+                     'real_estate', 'education', 'fitness', 'restaurant',
+                     'services'];
         $actual = array_keys(IndustryPresetService::PRESETS);
 
         foreach ($expected as $key) {
@@ -108,8 +109,8 @@ class IndustryPresetServiceTest extends TestCase
 
         $this->assertArrayHasKey('presets', $out);
         $this->assertArrayHasKey('current', $out);
-        $this->assertCount(9, $out['presets'],
-            'listPresets must return one entry per preset (9 industries).');
+        $this->assertCount(10, $out['presets'],
+            'listPresets must return one entry per preset (10 industries).');
 
         foreach ($out['presets'] as $p) {
             // Each preset entry must carry the picker fields.
@@ -181,6 +182,33 @@ class IndustryPresetServiceTest extends TestCase
         foreach ($reasons as $r) {
             $this->assertTrue((bool) $r->is_active);
         }
+    }
+
+    public function test_apply_services_seeds_a_client_project_pipeline(): void
+    {
+        // Agencies, studios and made-to-order production sell projects:
+        // enquiry → discovery → brief → proposal → negotiation → won/lost.
+        $summary = $this->service->apply('services');
+
+        $pipeline = Pipeline::where('is_default', true)->first();
+        $this->assertSame('Projects', $pipeline->name);
+
+        $stages = PipelineStage::where('pipeline_id', $pipeline->id)
+            ->orderBy('sort_order')->get(['name', 'kind']);
+        $this->assertSame(
+            ['New enquiry', 'Discovery call', 'Brief received', 'Proposal sent', 'Negotiation', 'Won', 'Lost'],
+            $stages->pluck('name')->all(),
+        );
+        $this->assertSame('won', $stages->firstWhere('name', 'Won')->kind);
+        $this->assertSame('lost', $stages->firstWhere('name', 'Lost')->kind);
+
+        $this->assertContains('Went with another supplier', InquiryLostReason::pluck('label')->all());
+
+        // Project-shaped intake fields, not another industry's.
+        $this->assertGreaterThan(0, $summary['fields_added']);
+        $this->assertTrue(CustomField::where('entity', 'inquiry')->where('key', 'project_type')->exists());
+        $this->assertTrue(CustomField::where('entity', 'inquiry')->where('key', 'budget_range')->exists());
+        $this->assertFalse(CustomField::where('key', 'matter_type')->exists());
     }
 
     public function test_apply_stamps_industry_preset_setting_and_layout_keys(): void

@@ -161,6 +161,7 @@ class VoicePromptBuilder
                 'real_estate' => 'Agency',
                 'education'   => 'School',
                 'fitness'     => 'Studio',
+                'services'    => 'Company',
                 default       => 'Workspace',
             }) . ' Platform';
         $staffNoun = match ($industry) {
@@ -171,6 +172,7 @@ class VoicePromptBuilder
             'real_estate' => 'agency staff member',
             'education'   => 'school staff member',
             'fitness'     => 'studio staff member',
+            'services'    => 'company staff member',
             default       => 'hotel staff member',
         };
 

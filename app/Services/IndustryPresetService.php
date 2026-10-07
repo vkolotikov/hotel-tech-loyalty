@@ -865,6 +865,55 @@ class IndustryPresetService
             'custom_fields_key'  => 'fitness',
         ],
 
+        /*
+         * Client-project businesses: agencies, design studios, web
+         * development, made-to-order production. They sell quoted
+         * projects to companies, often across borders, so the pipeline
+         * runs brief → proposal → negotiation and the Companies pages keep
+         * the contract / rate / billing columns a B2B account needs.
+         */
+        'services' => [
+            'label'       => 'Services / Agency',
+            'description' => 'Enquiry → discovery → brief → proposal → won. Project type, budget, deadline and quantity fields.',
+            'icon'        => 'handshake',
+            'pipeline'    => [
+                'name'        => 'Projects',
+                'description' => 'Client project lifecycle, from first enquiry to signed proposal.',
+                'stages'      => [
+                    ['name' => 'New enquiry',    'kind' => 'open', 'color' => '#3b82f6', 'default_win_probability' => 10],
+                    ['name' => 'Discovery call', 'kind' => 'open', 'color' => '#6366f1', 'default_win_probability' => 25],
+                    ['name' => 'Brief received', 'kind' => 'open', 'color' => '#a855f7', 'default_win_probability' => 40],
+                    ['name' => 'Proposal sent',  'kind' => 'open', 'color' => '#f59e0b', 'default_win_probability' => 60],
+                    ['name' => 'Negotiation',    'kind' => 'open', 'color' => '#fb923c', 'default_win_probability' => 80],
+                    ['name' => 'Won',            'kind' => 'won',  'color' => '#22c55e', 'default_win_probability' => 100],
+                    ['name' => 'Lost',           'kind' => 'lost', 'color' => '#ef4444', 'default_win_probability' => 0],
+                ],
+            ],
+            'lost_reasons' => [
+                'Price', 'Timing', 'Went with another supplier',
+                'Budget / scope mismatch', 'No response', 'Not a fit', 'Other',
+            ],
+            // Service layout, but with the country column on: agencies and
+            // custom producers routinely quote clients abroad.
+            'layout' => [
+                'form'   => self::SERVICE_LAYOUT['form'],
+                'list'   => ['country' => true] + self::SERVICE_LAYOUT['list'],
+                'detail' => self::SERVICE_LAYOUT['detail'],
+            ],
+            'customer_layout'    => [
+                'list'   => ['country' => true] + self::SERVICE_CUSTOMER_LAYOUT['list'],
+                'detail' => self::SERVICE_CUSTOMER_LAYOUT['detail'],
+            ],
+            'corporate_layout'   => [
+                'list'   => self::FULL_CORPORATE_LAYOUT['list'],
+                'detail' => ['recent_reservations' => false] + self::FULL_CORPORATE_LAYOUT['detail'],
+            ],
+            'deal_layout'        => self::FULL_DEAL_LAYOUT,
+            'member_layout'      => self::FULL_MEMBER_LAYOUT,
+            'task_layout'        => self::FULL_TASK_LAYOUT,
+            'custom_fields_key'  => 'services',
+        ],
+
         'restaurant' => [
             'label'       => 'Restaurant',
             'description' => 'Reservation requests, dietary preferences, occasion fields. Service-only form.',

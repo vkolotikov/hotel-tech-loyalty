@@ -222,12 +222,13 @@ describe('locale completeness — wizard industry names (dynamic t() keys, hand-
     'landing_pages.wizard.industry_name_real_estate',
     'landing_pages.wizard.industry_name_education',
     'landing_pages.wizard.industry_name_fitness',
+    'landing_pages.wizard.industry_name_services',
     'landing_pages.wizard.industry_name_other',
   ]
 
-  // The same canary as the two describes above: nine industries, no fewer.
-  it('names exactly nine industries', () => {
-    expect(INDUSTRY_NAME_KEYS.length).toBe(9)
+  // The same canary as the two describes above: ten industries, no fewer.
+  it('names exactly ten industries', () => {
+    expect(INDUSTRY_NAME_KEYS.length).toBe(10)
   })
 
   for (const locale of LOCALES) {

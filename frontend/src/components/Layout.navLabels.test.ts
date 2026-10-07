@@ -3,7 +3,7 @@ import { navGroups } from './Layout'
 import { vocabularyFor } from '../lib/vocabulary'
 import type { IndustryId } from '../lib/industryHosts'
 
-const INDUSTRIES: IndustryId[] = ['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'other']
+const INDUSTRIES: IndustryId[] = ['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'services', 'other']
 
 /**
  * Two sidebar items with the same name are one item nobody can tell apart. The vocabulary relabels items

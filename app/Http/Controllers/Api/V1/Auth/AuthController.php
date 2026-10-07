@@ -697,7 +697,7 @@ class AuthController extends Controller
                 app(\App\Services\PlannerPresetService::class)->apply($industry);
                 // Loyalty preset resolves the canonical industry id
                 // (medical → its own `medical` preset; hospitality →
-                // restaurant; legal → professional_services; real_estate,
+                // restaurant; legal, services → professional_services; real_estate,
                 // education → their own presets; hotel → hotel_classic) so
                 // the industry switcher writes industry-appropriate tiers +
                 // benefits + welcome bonus instead of stranding the org on
@@ -1201,7 +1201,7 @@ class AuthController extends Controller
         // industry ids via internal ALIASES:
         //   - hotel       → hotel_classic
         //   - hospitality → restaurant
-        //   - legal → professional_services; real_estate, education →
+        //   - legal, services → professional_services; real_estate, education →
         //     their own presets
         //   - medical → its own `medical` preset
         //

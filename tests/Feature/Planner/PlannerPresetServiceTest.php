@@ -66,7 +66,8 @@ class PlannerPresetServiceTest extends TestCase
         // Picker auto-discovers presets via self::PRESETS — a missing
         // entry here means an industry that has CRM but no planner.
         $expected = ['hotel', 'beauty', 'medical', 'legal',
-                     'real_estate', 'education', 'fitness', 'restaurant'];
+                     'real_estate', 'education', 'fitness', 'restaurant',
+                     'services'];
         $actual = array_keys(PlannerPresetService::PRESETS);
 
         foreach ($expected as $key) {
@@ -81,7 +82,7 @@ class PlannerPresetServiceTest extends TestCase
 
         $this->assertArrayHasKey('presets', $out);
         $this->assertArrayHasKey('current', $out);
-        $this->assertCount(9, $out['presets']);
+        $this->assertCount(10, $out['presets']);
 
         foreach ($out['presets'] as $p) {
             $this->assertArrayHasKey('key', $p);
@@ -130,6 +131,23 @@ class PlannerPresetServiceTest extends TestCase
         $this->assertIsArray($decoded);
         $this->assertGreaterThan(0, count($decoded));
         $this->assertSame(count($decoded), $summary['groups_set']);
+    }
+
+    public function test_apply_services_sets_client_project_groups(): void
+    {
+        $summary = $this->service->apply('services');
+
+        $this->assertSame(
+            ['Sales', 'Projects', 'Design & Development', 'Production', 'Admin'],
+            json_decode(CrmSetting::where('key', 'planner_groups')->first()->value, true),
+        );
+        $this->assertGreaterThan(0, $summary['templates_added']);
+
+        // Every template files into one of the preset's own groups.
+        $groupNames = PlannerPresetService::PRESETS['services']['groups'];
+        foreach (PlannerPresetService::PRESETS['services']['templates'] as $t) {
+            $this->assertContains($t['task_group'], $groupNames, $t['name']);
+        }
     }
 
     public function test_apply_seeds_template_library(): void

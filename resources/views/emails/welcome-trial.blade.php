@@ -27,6 +27,7 @@
             'real_estate' => 'Your all-in-one agency & client platform is ready',
             'education'   => 'Your all-in-one school & student platform is ready',
             'fitness'     => 'Your all-in-one studio & member platform is ready',
+            'services'    => 'Your all-in-one client & project platform is ready',
             default       => 'Your all-in-one hospitality platform is ready',
         };
         // Reviewer fix (false-promise copy): pre-fix beauty said
@@ -44,6 +45,7 @@
             'real_estate' => ['title' => 'Set Up Viewings',          'desc' => 'Configure viewing slots, agent assignments, and listing details'],
             'education'   => ['title' => 'Set Up Your Courses',      'desc' => 'Configure classes, schedules, and enrolment details'],
             'fitness'     => ['title' => 'Set Up Your Classes',      'desc' => 'Configure classes, schedules, and capacity'],
+            'services'    => ['title' => 'Set Up Consultations',     'desc' => 'Configure discovery calls, services, and project intake questions'],
             default       => ['title' => 'Connect Your PMS',         'desc' => 'Link Smoobu or your preferred property management system'],
         };
         $importStep = match ($industry) {
@@ -54,6 +56,7 @@
             'real_estate' => ['title' => 'Import Your Clients',   'desc' => 'Build your client database and listing pipeline'],
             'education'   => ['title' => 'Import Your Students',  'desc' => 'Build your student database and launch your loyalty program'],
             'fitness'     => ['title' => 'Import Your Members',   'desc' => 'Build your member database and launch your loyalty program'],
+            'services'    => ['title' => 'Import Your Clients',   'desc' => 'Build your client database and project pipeline'],
             default       => ['title' => 'Import Your Guests',    'desc' => 'Build your guest database and launch your loyalty program'],
         };
         $engagementWord = match ($industry) {
@@ -64,6 +67,7 @@
             'real_estate' => 'client engagement',
             'education'   => 'student engagement',
             'fitness'     => 'member engagement',
+            'services'    => 'client engagement',
             default       => 'guest engagement',
         };
     @endphp

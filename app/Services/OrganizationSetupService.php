@@ -246,6 +246,7 @@ class OrganizationSetupService
             'education'   => '#7c6fd8', // indigo
             'legal'       => '#8a99b5', // steel
             'real_estate' => '#3fae8a', // emerald
+            'services'    => '#2a9db5', // studio teal
             'other'       => '#4c6ef5', // neutral indigo
             default       => '#c9a84c', // hotel gold
         };
@@ -265,6 +266,7 @@ class OrganizationSetupService
             'education'   => ['name' => 'Course Feedback',      'intro' => 'Thank you for learning with us. Your feedback helps us improve.'],
             'legal'       => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
             'real_estate' => ['name' => 'Service Feedback',     'intro' => 'Thank you for working with us. Your feedback helps us improve.'],
+            'services'    => ['name' => 'Project Feedback',     'intro' => 'Thank you for working with us on your project. Your feedback helps us improve.'],
             'other'       => ['name' => 'Customer Feedback',    'intro' => 'Thank you for choosing us. Your feedback helps us improve.'],
             default       => ['name' => 'Stay Feedback',        'intro' => 'We hope you enjoyed your stay. Your feedback helps us improve.'],
         };
@@ -280,6 +282,7 @@ class OrganizationSetupService
             'education'   => "You are the AI assistant for {$orgName}, an education provider. Help visitors with course info, schedules, and enrolment. Encouraging, clear tone.",
             'fitness'     => "You are the AI assistant for {$orgName}, a fitness studio. Help visitors with classes, memberships, and trial bookings. Energetic, motivating tone.",
             'restaurant'  => "You are the AI assistant for {$orgName}, a restaurant. Help visitors with reservations, menu, and special events. Hospitable, food-loving tone.",
+            'services'    => "You are the AI assistant for {$orgName}, a services company. Help visitors understand what we do and book a discovery call. Professional, helpful tone. Never promise a final price, deadline or quantity — the team quotes every project from a brief.",
             default       => "You are the AI assistant for {$orgName}. Help visitors with bookings, info, and inquiries. Professional, welcoming tone.",
         };
     }

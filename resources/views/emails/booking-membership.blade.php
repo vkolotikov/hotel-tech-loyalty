@@ -21,13 +21,13 @@
         // Hotel verbatim back-compat.
         $industry = $industry ?? 'hotel';
         $visitNoun = match ($industry) {
-            'beauty', 'medical', 'restaurant' => 'visit',
-            default                            => 'stay',
+            'beauty', 'medical', 'restaurant', 'services' => 'visit',
+            default                                        => 'stay',
         };
         $endUserNoun = match ($industry) {
-            'beauty', 'medical', 'legal', 'real_estate' => 'Client',
-            'restaurant'                                => 'Diner',
-            default                                     => 'Guest',
+            'beauty', 'medical', 'legal', 'real_estate', 'services' => 'Client',
+            'restaurant'                                            => 'Diner',
+            default                                                 => 'Guest',
         };
     @endphp
     <p>Dear {{ $guestName ?: $endUserNoun }},</p>

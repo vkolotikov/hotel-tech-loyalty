@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
-  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
+  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase, Handshake,
   CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
   Users, ChevronUp, ChevronDown, Clock,
 } from 'lucide-react'
@@ -42,6 +42,7 @@ const PRESET_ICONS: Record<string, any> = {
   'dumbbell':       Dumbbell,
   'utensils':       Utensils,
   'briefcase':      Briefcase,
+  'handshake':      Handshake,
 }
 
 /**

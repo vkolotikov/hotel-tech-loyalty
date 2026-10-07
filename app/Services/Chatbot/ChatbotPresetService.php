@@ -131,6 +131,18 @@ class ChatbotPresetService
                 'required'    => false,
             ],
         ],
+        'services' => [
+            'portfolio_url' => [
+                'label'       => 'Portfolio / case studies link',
+                'placeholder' => 'https://yourstudio.com/work',
+                'required'    => false,
+            ],
+            'turnaround' => [
+                'label'       => 'Typical turnaround',
+                'placeholder' => 'Most projects take 2–6 weeks from an agreed brief',
+                'required'    => false,
+            ],
+        ],
     ];
 
     /**
@@ -147,6 +159,7 @@ class ChatbotPresetService
             'real_estate' => $this->realEstate(),
             'education'   => $this->education(),
             'fitness'     => $this->fitness(),
+            'services'    => $this->services(),
             'other'       => $this->other(),
             default       => $this->hotel(),
         };
@@ -503,6 +516,40 @@ class ChatbotPresetService
                     'answer'   => '{{trial}}',
                     'keywords' => ['trial', 'free', 'first', 'try', 'taster', 'drop-in', 'guest'],
                     'needs'    => ['trial'],
+                ],
+            ]),
+        );
+    }
+
+    private function services(): ChatbotPreset
+    {
+        return new ChatbotPreset(
+            industry: 'services',
+            assistantName: 'Project Assistant',
+            tone: 'professional',
+            salesStyle: 'consultative',
+            goal: 'Answer questions about our services and help prospective clients book a discovery call.',
+            coreRules: array_merge($this->baseRules(), [
+                'Never commit to a final price, deadline or production quantity — every project is quoted from a brief.',
+                'Do not promise design, technical or production outcomes the team has not confirmed.',
+            ]),
+            escalationPolicy: 'Pricing, deadlines and project specifics go to the team. Collect the enquirer’s name, email, company and a line about the project, and tell them someone will be in touch.',
+            fallbackMessage: 'That one is best answered by the team. If you leave your name, email and a line about your project, we will get back to you.',
+            welcomeTitle: 'Tell us about your project',
+            welcomeSubtitle: 'Ask about our services, or book a discovery call.',
+            suggestions: ['How do I get a quote?', 'What services do you offer?', 'How long does a project take?'],
+            starterFaq: array_merge($this->baseFaq('book a discovery call'), [
+                [
+                    'question' => 'Can I see examples of your work?',
+                    'answer'   => 'You can see our recent work here: {{portfolio_url}}',
+                    'keywords' => ['portfolio', 'examples', 'work', 'case studies', 'previous projects'],
+                    'needs'    => ['portfolio_url'],
+                ],
+                [
+                    'question' => 'How long does a project usually take?',
+                    'answer'   => '{{turnaround}}',
+                    'keywords' => ['how long', 'turnaround', 'timeline', 'lead time', 'delivery'],
+                    'needs'    => ['turnaround'],
                 ],
             ]),
         );

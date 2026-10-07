@@ -212,6 +212,30 @@ class LoyaltyPresetServiceTest extends TestCase
         }
     }
 
+    public function test_services_gets_the_professional_services_ladder(): void
+    {
+        // Agencies and made-to-order businesses bill large, infrequent
+        // projects and grow by referral — the same shape the professional
+        // services ladder was built for.
+        $this->service->apply('services', $this->orgId);
+
+        $this->assertSame(
+            ['Client', 'Preferred', 'Partner'],
+            LoyaltyTier::withoutGlobalScopes()
+                ->where('organization_id', $this->orgId)
+                ->orderBy('min_points')
+                ->pluck('name')
+                ->all(),
+        );
+    }
+
+    public function test_services_is_recommended_the_professional_services_preset(): void
+    {
+        \App\Models\Organization::withoutGlobalScopes()->where('id', $this->orgId)->update(['industry' => 'services']);
+
+        $this->assertSame('professional_services', collect($this->service->listPresets()['presets'])->firstWhere('recommended', true)['key'] ?? null);
+    }
+
     /* ─── medical: a programme like every other industry ────────────────── */
 
     public function test_apply_medical_writes_a_patient_programme(): void

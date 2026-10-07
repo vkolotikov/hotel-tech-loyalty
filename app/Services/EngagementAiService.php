@@ -184,6 +184,7 @@ class EngagementAiService
             'medical'    => 'patient coordinator',
             'restaurant' => 'restaurant host',
             'legal'      => 'firm client coordinator',
+            'services'   => 'client project coordinator',
             default      => 'hotel agent',
         };
 

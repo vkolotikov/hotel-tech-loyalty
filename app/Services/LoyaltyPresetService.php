@@ -155,6 +155,9 @@ class LoyaltyPresetService
         // perks, rewards and point economics of their own — a law firm and a
         // language school were being handed identical programmes.
         'legal'       => 'professional_services',
+        // Agencies and made-to-order producers bill large, infrequent
+        // projects and grow by referral — the same shape as a law firm.
+        'services'    => 'professional_services',
         'real_estate' => 'real_estate',
         'education'   => 'education',
         // A generic business can absolutely run a simple loyalty scheme —

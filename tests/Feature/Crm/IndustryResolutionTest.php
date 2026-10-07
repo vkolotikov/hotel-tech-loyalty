@@ -118,6 +118,8 @@ class IndustryResolutionTest extends TestCase
         $this->assertSame(
             ['hotel', 'beauty', 'medical', 'restaurant',
              'legal', 'real_estate', 'education', 'fitness',
+             // 'services' — agencies, studios, made-to-order production.
+             'services',
              // 'other' — the generic "my business isn't listed" option.
              // Adding it here is the deliberate confirmation this test
              // asks for: every downstream preset, KPI, vocabulary and

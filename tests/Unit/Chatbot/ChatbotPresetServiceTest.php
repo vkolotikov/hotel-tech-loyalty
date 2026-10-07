@@ -176,6 +176,8 @@ class ChatbotPresetServiceTest extends TestCase
         $this->assertArrayHasKey('check_in', $this->presets->factsFor('hotel'));
         $this->assertArrayHasKey('menu_url', $this->presets->factsFor('restaurant'));
         $this->assertArrayHasKey('trial', $this->presets->factsFor('fitness'));
+        $this->assertArrayHasKey('portfolio_url', $this->presets->factsFor('services'));
+        $this->assertArrayHasKey('turnaround', $this->presets->factsFor('services'));
 
         // Universal facts survive the merge.
         $this->assertArrayHasKey('hours', $this->presets->factsFor('fitness'));

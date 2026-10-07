@@ -3,7 +3,7 @@ import { bookingTabCopyFor, industryHiddenGroupsFor, industryHiddenItemsFor, ind
 import { vocabularyFor } from './vocabulary'
 import type { IndustryId } from './industryHosts'
 
-const INDUSTRIES: IndustryId[] = ['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'other']
+const INDUSTRIES: IndustryId[] = ['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'services', 'other']
 
 describe('every industry has memberships (owner\'s decision, 2026-09-29)', () => {
   it('no industry hides the Members & Loyalty group', () => {

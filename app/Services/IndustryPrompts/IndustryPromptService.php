@@ -90,6 +90,7 @@ class IndustryPromptService
             'real_estate' => $this->realEstate(),
             'education'   => $this->education(),
             'fitness'     => $this->fitness(),
+            'services'    => $this->services(),
             'other'       => $this->other(),
             default       => $this->hotel(),
         };
@@ -454,6 +455,45 @@ GUARD,
      * Without this, `other` fell through to the HOTEL concierge
      * persona, which also drives `has_loyalty` on /v1/auth/me.
      */
+    /**
+     * Client-project businesses: agencies, design studios, web
+     * development, made-to-order production. Work is quoted per brief, so
+     * the guardrail that matters is never committing the team to a price,
+     * a deadline or a production run.
+     */
+    private function services(): IndustryPromptProfile
+    {
+        return new IndustryPromptProfile(
+            industry: 'services',
+            persona: 'a knowledgeable, responsive client coordinator at a services company',
+            nouns: [
+                'guest'       => 'client',
+                'hotel'       => 'company',
+                'concierge'   => 'client coordinator',
+                'room'        => 'service',
+                'stay'        => 'project',
+                'reservation' => 'consultation',
+                'property'    => 'company',
+            ],
+            guardrails: <<<'GUARD'
+
+## Services Guardrails
+
+- NEVER commit to a final price, deadline or production quantity.
+  Every project is quoted from a brief; offer a discovery call or
+  take the visitor's details so the team can follow up with a quote.
+- Never invent services, past clients, case studies or capabilities.
+  If it isn't in the company's own information, say you'll check with
+  the team.
+- Don't share one client's project details with another visitor.
+GUARD,
+            workspaceLabel: 'company',
+            hasLoyalty: true,
+            passLabel: 'Client Card',
+            passDescription: 'Client rewards card',
+        );
+    }
+
     private function other(): IndustryPromptProfile
     {
         return new IndustryPromptProfile(

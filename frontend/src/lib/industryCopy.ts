@@ -195,6 +195,21 @@ export const INDUSTRY_COPY: Partial<Record<IndustryId, IndustryCopy>> = {
     planTagline: 'For growing studios + gyms',
     workspaceNoun: 'studio workspace',
   },
+  services: {
+    brand: 'Services Workspace',
+    hero: 'One platform. More projects. Stronger client relationships.',
+    heroSub: 'For agencies, studios and made-to-order businesses managing enquiries, quotes and client projects in one workspace.',
+    heroBullets: [
+      'AI assistant qualifies enquiries + books discovery calls',
+      'Project pipeline from brief to proposal to won',
+      'Client CRM with project history, follow-ups and referral rewards',
+    ],
+    tabTitle: 'Services Workspace — Sign in',
+    orgLabel: 'Company name',
+    orgPlaceholder: 'e.g. Northlight Studio',
+    planTagline: 'For growing agencies + studios',
+    workspaceNoun: 'company workspace',
+  },
 }
 
 /**
@@ -255,8 +270,8 @@ export function localisedIndustryCopy(
 /**
  * Industries that get rendered as cards on the umbrella picker.
  *
- * All eight ship now. The four late additions (fitness / education /
- * legal / real_estate) run under the umbrella HexaTech brand rather
+ * All ship now. The five late additions (fitness / education / legal /
+ * real_estate / services) run under the umbrella HexaTech brand rather
  * than a dedicated sub-brand domain — their INDUSTRY_COPY entries are
  * complete, every backend preset (CRM pipeline, planner, custom
  * fields, loyalty ladder, chat identity, KPI tiles, vocabulary,
@@ -266,7 +281,7 @@ export function localisedIndustryCopy(
  */
 export const PICKER_INDUSTRIES: ReadonlyArray<IndustryId> = [
   'hotel', 'beauty', 'medical', 'restaurant',
-  'fitness', 'education', 'legal', 'real_estate',
+  'fitness', 'education', 'legal', 'real_estate', 'services',
   // Always last: the escape hatch for anyone whose business isn't one of
   // the verticals. It provisions a real generic workspace (neutral
   // pipeline, planner, simple loyalty ladder) rather than silently

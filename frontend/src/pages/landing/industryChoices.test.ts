@@ -86,16 +86,16 @@ describe('verticalFor', () => {
 
 describe('industryName', () => {
   it('names every id the platform ships', () => {
-    // The nine of Organization::INDUSTRIES. Spelled out rather than
+    // The ten of Organization::INDUSTRIES. Spelled out rather than
     // iterated over INDUSTRY_NAMES itself, so a name deleted from the map
     // fails here instead of quietly shrinking the expectation with it.
     for (const id of [
       'hotel', 'beauty', 'medical', 'restaurant',
-      'legal', 'real_estate', 'education', 'fitness', 'other',
+      'legal', 'real_estate', 'education', 'fitness', 'services', 'other',
     ]) {
       expect(INDUSTRY_NAMES[id], `no English name authored for '${id}'`).toBeTruthy()
     }
-    expect(Object.keys(INDUSTRY_NAMES)).toHaveLength(9)
+    expect(Object.keys(INDUSTRY_NAMES)).toHaveLength(10)
   })
 
   it('never shows a customer a raw snake_case id', () => {

@@ -258,6 +258,25 @@ class PlannerPresetService
             ],
         ],
 
+        'services' => [
+            'label'       => 'Services / Agency',
+            'description' => 'Enquiry → proposal → delivery. Sales follow-ups, project milestones, design + dev work, production runs.',
+            'icon'        => 'handshake',
+            'groups'      => ['Sales', 'Projects', 'Design & Development', 'Production', 'Admin'],
+            'templates'   => [
+                ['name' => 'Discovery call',          'title' => 'Discovery call with new enquiry',  'category' => 'Sales',                'task_group' => 'Sales',                'priority' => 'High',   'duration_minutes' => 30],
+                ['name' => 'Send proposal',           'title' => 'Prepare + send proposal / quote',  'category' => 'Sales',                'task_group' => 'Sales',                'priority' => 'High',   'duration_minutes' => 60],
+                ['name' => 'Proposal follow-up',      'title' => 'Follow up on an open proposal',    'category' => 'Sales',                'task_group' => 'Sales',                'priority' => 'Medium', 'duration_minutes' => 15],
+                ['name' => 'Project kickoff',         'title' => 'Kickoff call + confirm the brief', 'category' => 'Projects',             'task_group' => 'Projects',             'priority' => 'High',   'duration_minutes' => 45],
+                ['name' => 'Client review',           'title' => 'Present work for client review',   'category' => 'Projects',             'task_group' => 'Projects',             'priority' => 'Medium', 'duration_minutes' => 30],
+                ['name' => 'Design round',            'title' => 'Design round / revisions',         'category' => 'Design & Development', 'task_group' => 'Design & Development', 'priority' => 'Medium', 'duration_minutes' => 120],
+                ['name' => 'Build + QA',              'title' => 'Build, test + deploy',             'category' => 'Design & Development', 'task_group' => 'Design & Development', 'priority' => 'Medium', 'duration_minutes' => 120],
+                ['name' => 'Proof approval',          'title' => 'Get the client to approve the production proof', 'category' => 'Production', 'task_group' => 'Production', 'priority' => 'High', 'duration_minutes' => 15],
+                ['name' => 'Production check',        'title' => 'Check the production run + quality','category' => 'Production',          'task_group' => 'Production',           'priority' => 'High',   'duration_minutes' => 30],
+                ['name' => 'Send invoice',            'title' => 'Issue the project invoice',        'category' => 'Admin',                'task_group' => 'Admin',                'priority' => 'Medium', 'duration_minutes' => 15],
+            ],
+        ],
+
         'restaurant' => [
             'label'       => 'Restaurant',
             'description' => 'Service-day rhythm. Open, prep, lunch, transition, dinner, close.',

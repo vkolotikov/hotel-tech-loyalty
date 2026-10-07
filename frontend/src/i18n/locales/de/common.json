@@ -3013,6 +3013,18 @@
         "2": "Mitglieder-CRM mit Anwesenheit und Treueprogramm"
       }
     },
+    "services": {
+      "hero": "Eine Plattform. Mehr Projekte. Stärkere Kundenbeziehungen.",
+      "heroSub": "Für Agenturen, Studios und Auftragsfertiger, die Anfragen, Angebote und Kundenprojekte in einem Arbeitsbereich verwalten.",
+      "orgLabel": "Firmenname",
+      "planTagline": "Für wachsende Agenturen + Studios",
+      "workspaceNoun": "Unternehmens-Arbeitsbereich",
+      "heroBullets": {
+        "0": "KI-Assistent qualifiziert Anfragen + bucht Erstgespräche",
+        "1": "Projekt-Pipeline vom Briefing über das Angebot bis zum Auftrag",
+        "2": "Kunden-CRM mit Projekthistorie, Follow-ups und Empfehlungsprämien"
+      }
+    },
     "education": {
       "hero": "Eine Plattform. Mehr Anmeldungen. Bessere Lernbegleitung.",
       "heroSub": "Für Schulen und Nachhilfelehrer, die Unterricht, Kommunikation mit Schülern und wiederkehrende Termine in einem Arbeitsbereich verwalten.",
@@ -3109,6 +3121,7 @@
       "industry_name_real_estate": "Immobilien",
       "industry_name_education": "Bildung / Nachhilfe",
       "industry_name_fitness": "Fitness / Wellness",
+      "industry_name_services": "Dienstleistungen / Agentur",
       "industry_name_other": "Etwas anderes",
       "services_count": "{{count}} {{label}} bereit zur Anzeige",
       "details_kicker": "Ihre Angaben",

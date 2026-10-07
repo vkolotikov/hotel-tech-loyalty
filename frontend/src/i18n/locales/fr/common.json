@@ -3013,6 +3013,18 @@
         "2": "CRM adhérents : présence et fidélité"
       }
     },
+    "services": {
+      "hero": "Une plateforme. Plus de projets. Des relations clients plus solides.",
+      "heroSub": "Pour les agences, studios et fabricants sur mesure qui gèrent demandes, devis et projets clients dans un seul espace.",
+      "orgLabel": "Nom de la société",
+      "planTagline": "Pour les agences + studios en croissance",
+      "workspaceNoun": "espace professionnel",
+      "heroBullets": {
+        "0": "L'assistant IA qualifie les demandes + planifie les appels découverte",
+        "1": "Pipeline de projets, du brief à la proposition jusqu'à la signature",
+        "2": "CRM clients avec historique des projets, relances et récompenses de parrainage"
+      }
+    },
     "education": {
       "hero": "Une plateforme. Plus d'inscriptions. Un meilleur suivi des élèves.",
       "heroSub": "Pour les écoles et les enseignants qui gèrent cours, communication avec les élèves et séances récurrentes dans un seul espace de travail.",
@@ -3109,6 +3121,7 @@
       "industry_name_real_estate": "Immobilier",
       "industry_name_education": "Éducation / Cours particuliers",
       "industry_name_fitness": "Fitness / Bien-être",
+      "industry_name_services": "Services / Agence",
       "industry_name_other": "Autre chose",
       "services_count": "{{count}} {{label}} à afficher",
       "details_kicker": "Vos informations",

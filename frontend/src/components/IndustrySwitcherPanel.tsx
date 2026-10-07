@@ -29,7 +29,7 @@
  * Suppression rule: re-clicking the current industry is a no-op.
  */
 import { useEffect, useMemo, useState } from 'react'
-import { Building2, Sparkles, Stethoscope, Utensils, Scale, Home, GraduationCap, Dumbbell, Check, Loader2, AlertTriangle } from 'lucide-react'
+import { Building2, Sparkles, Stethoscope, Utensils, Scale, Home, GraduationCap, Dumbbell, Handshake, Check, Loader2, AlertTriangle } from 'lucide-react'
 import { api } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { industryCopyFor } from '../lib/industryCopy'
@@ -46,7 +46,7 @@ interface ApplyResponse {
   error?: string
 }
 
-// Canonical 8 industries — 4 GTM + 4 settings-only. Order matches
+// Canonical industries — 4 GTM + 5 settings-only. Order matches
 // the marketing site's industry picker so admins recognise the
 // layout from the umbrella signup flow.
 const INDUSTRIES: { id: IndustryId; icon: typeof Building2; description: string; gtm: boolean }[] = [
@@ -58,6 +58,7 @@ const INDUSTRIES: { id: IndustryId; icon: typeof Building2; description: string;
   { id: 'real_estate', icon: Home,          description: 'Real-estate agencies, viewings', gtm: false },
   { id: 'education',   icon: GraduationCap, description: 'Schools, tutors, training providers', gtm: false },
   { id: 'fitness',     icon: Dumbbell,      description: 'Fitness studios, gyms, classes', gtm: false },
+  { id: 'services',    icon: Handshake,     description: 'Agencies, studios, custom production, B2B services', gtm: false },
 ]
 
 export function IndustrySwitcherPanel() {

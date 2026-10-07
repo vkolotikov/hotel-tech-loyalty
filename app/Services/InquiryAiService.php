@@ -208,6 +208,7 @@ class InquiryAiService
             'restaurant'  => 'restaurant reservations agent',
             'legal'       => 'firm intake coordinator',
             'real_estate' => 'estate-agency coordinator',
+            'services'    => 'client project coordinator',
             default       => 'hotel sales agent',
         };
         $detailsNoun = match ($industry) {

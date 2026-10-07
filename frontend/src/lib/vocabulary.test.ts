@@ -105,6 +105,17 @@ describe('vocabularyFor — per-industry lookup', () => {
     expect(education('Reservations')).toBe('Lessons')
   })
 
+  it('services speaks of clients, consultations and specialists', () => {
+    const vocab = vocabularyFor('services')
+    expect(vocab('Members')).toBe('Clients')
+    expect(vocab('Reservations')).toBe('Consultations')
+    expect(vocab('Rooms & Services')).toBe('Services')
+    expect(vocab('Masters')).toBe('Specialists')
+    expect(vocab('Hotel Info')).toBe('Business Info')
+    // Deals stay canonical — a B2B services business sells deals.
+    expect(vocab('Deals')).toBeNull()
+  })
+
   it('returns null on labels not in the industry map (fallback to i18n)', () => {
     // Critical fallback: a label without a specific override must
     // return null so the consumer's `vocab(x) ?? t(...)` chain

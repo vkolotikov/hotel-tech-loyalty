@@ -104,6 +104,7 @@ class LoyaltyDigestService
             'real_estate' => 'agency',
             'education'   => 'school',
             'fitness'     => 'studio',
+            'services'    => 'company',
             default       => 'hotel',
         };
 

@@ -18,9 +18,10 @@ class Organization extends Model
      *   medical     → MedTechAI      (med.hexa-tech.uk)
      *   restaurant  → HospitalityTech (hospitality.hexa-tech.uk)
      *
-     * Four additional preset families available via Settings → Industry
+     * Five additional preset families available via Settings → Industry
      * (no dedicated sub-brand domain, no per-industry KPI / email / mobile
-     * polish in the first plan wave): legal, real_estate, education, fitness.
+     * polish in the first plan wave): legal, real_estate, education, fitness,
+     * services (agencies, studios, made-to-order production, B2B services).
      *
      * Used by validation (registration + apply-industry endpoints), by the
      * sub-domain detector's reverse map sanity-check, and by adversarial
@@ -29,6 +30,7 @@ class Organization extends Model
     public const INDUSTRIES = [
         'hotel', 'beauty', 'medical', 'restaurant',
         'legal', 'real_estate', 'education', 'fitness',
+        'services',
         // "My business isn't listed" — a real, fully-provisioned generic
         // workspace rather than a silent fallback to hotel.
         'other',

@@ -1,5 +1,5 @@
 import {
-  Building2, Dumbbell, GraduationCap, Home, Scale, Sparkles, Stethoscope, Store, Utensils,
+  Building2, Dumbbell, GraduationCap, Handshake, Home, Scale, Sparkles, Stethoscope, Store, Utensils,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -27,6 +27,7 @@ export const INDUSTRY_ICONS: Record<string, LucideIcon> = {
   real_estate: Home,
   education: GraduationCap,
   fitness: Dumbbell,
+  services: Handshake,
 }
 
 export function industryIcon(id: string): LucideIcon {

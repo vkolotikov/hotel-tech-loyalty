@@ -982,9 +982,9 @@ class LandingOnboardingTest extends TestCase
         $this->assertSame('hotel', $industries['hotel']['vertical']);
         // The MedTech kits (2026-09-21) gave medical one.
         $this->assertSame('medical', $industries['medical']['vertical']);
-        // The four with no kits of their own, named so that shipping one
+        // The five with no kits of their own, named so that shipping one
         // for them has to come past this list.
-        foreach (['education', 'legal', 'real_estate', 'other'] as $id) {
+        foreach (['education', 'legal', 'real_estate', 'services', 'other'] as $id) {
             $this->assertNull($industries[$id]['vertical'], "Industry {$id} claims a trade no kit was drawn for.");
         }
 
@@ -1227,7 +1227,7 @@ class LandingOnboardingTest extends TestCase
             $rows->filter(fn (array $row) => ($row['offerable'] ?? null) === true)->keys()->values()->all(),
         );
 
-        foreach (['legal', 'real_estate', 'education', 'other'] as $id) {
+        foreach (['legal', 'real_estate', 'education', 'services', 'other'] as $id) {
             $this->assertArrayHasKey($id, $rows->all(), "'{$id}' left the wire; a page filed under it would have no name.");
             $this->assertFalse($rows[$id]['offerable'] ?? null, "'{$id}' is on offer.");
         }

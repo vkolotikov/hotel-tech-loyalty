@@ -103,6 +103,7 @@ class CrmAiService
             'real_estate' => 'real-estate agency CRM',
             'education'   => 'education provider CRM',
             'fitness'     => 'fitness studio CRM',
+            'services'    => 'agency / services company CRM',
             default       => 'hotel CRM',
         };
         $endUserNoun = match ($industry) {
@@ -113,6 +114,7 @@ class CrmAiService
             'real_estate' => 'client',
             'education'   => 'student',
             'fitness'     => 'member',
+            'services'    => 'client',
             default       => 'guest',
         };
 
@@ -192,6 +194,7 @@ class CrmAiService
             'real_estate' => 'agency client program',
             'education'   => 'school student program',
             'fitness'     => 'studio member program',
+            'services'    => 'company client program',
             default       => 'hotel loyalty program',
         };
 
@@ -342,6 +345,7 @@ class CrmAiService
             'real_estate' => 'real-estate agency CRM',
             'education'   => 'education provider CRM',
             'fitness'     => 'fitness studio CRM',
+            'services'    => 'agency / services company CRM',
             default       => 'hospitality CRM',
         };
         $endUserNoun = match ($industry) {
@@ -352,6 +356,7 @@ class CrmAiService
             'real_estate' => 'client',
             'education'   => 'student',
             'fitness'     => 'member',
+            'services'    => 'client',
             default       => 'guest',
         };
         $orgNoun = match ($industry) {
@@ -362,6 +367,7 @@ class CrmAiService
             'real_estate' => 'agency',
             'education'   => 'school',
             'fitness'     => 'studio',
+            'services'    => 'company',
             default       => 'hotel',
         };
         $distinctionClause = $industry === 'hotel'
@@ -433,6 +439,7 @@ class CrmAiService
             'restaurant'  => 'restaurant CRM',
             'legal'       => 'law firm CRM',
             'real_estate' => 'real-estate agency CRM',
+            'services'    => 'agency / services company CRM',
             default       => 'hotel CRM',
         };
 

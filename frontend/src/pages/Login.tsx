@@ -52,6 +52,7 @@ const INDUSTRY_ICONS: Record<IndustryId, string> = {
   real_estate: '🏘️',
   education: '🎓',
   fitness: '🏋️',
+  services: '🤝',
   other: '🏢',
 }
 
@@ -170,8 +171,8 @@ function BrandMark({ onClick, compact = false, brand = 'HexaTech', monogram = 'H
  * Restaurant is 'HX' (HospitalityTech) to disambiguate from
  * hotel's 'HT' — when the BRAND_LOGO_URL image fails to load, both
  * brands would otherwise show the same two-letter monogram and
- * destroy the per-sub-brand visual distinction. The four GTM-
- * deferred industries (legal / real_estate / education / fitness)
+ * destroy the per-sub-brand visual distinction. The GTM-deferred
+ * industries (legal / real_estate / education / fitness / services)
  * also use 'HX' since they fall back to the umbrella brand. */
 const INDUSTRY_MONOGRAM: Record<IndustryId, string> = {
   hotel: 'HT',
@@ -182,6 +183,7 @@ const INDUSTRY_MONOGRAM: Record<IndustryId, string> = {
   real_estate: 'HX',
   education: 'HX',
   fitness: 'HX',
+  services: 'HX',
   other: 'HX',
 }
 

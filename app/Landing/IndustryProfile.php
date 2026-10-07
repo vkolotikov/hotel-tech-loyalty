@@ -78,6 +78,7 @@ final class IndustryProfile
         'real_estate' => 'RealEstateAgent',
         'education'   => 'EducationalOrganization',
         'fitness'     => 'ExerciseGym',
+        'services'    => 'ProfessionalService',
         'other'       => 'LocalBusiness',
     ];
 
@@ -270,6 +271,22 @@ final class IndustryProfile
                     'reviews'  => 'Member words',
                     'booking'  => 'Save your spot',
                     'contact'  => 'Find the gym',
+                ],
+                'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
+            ],
+            'services' => [
+                'servicesLabel' => 'Services',
+                'peopleLabel'   => 'Our team',
+                'primaryCta'    => 'Start a project',
+                // White on it measures 5.7:1, clear of Accent's 4.5:1 floor.
+                'accent'        => '#1F6F86',
+                'kickers'       => [
+                    'services' => 'What we make',
+                    'about'    => 'The studio',
+                    'team'     => 'Who you work with',
+                    'reviews'  => 'Client words',
+                    'booking'  => 'Book a discovery call',
+                    'contact'  => 'Start a conversation',
                 ],
                 'defaultSections' => ['hero', 'services', 'about', 'team', 'reviews', 'contact'],
             ],

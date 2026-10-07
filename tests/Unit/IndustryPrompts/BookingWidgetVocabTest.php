@@ -141,7 +141,7 @@ class BookingWidgetVocabTest extends TestCase
         // to assert the OPPOSITE — that they fell through to hotel
         // defaults — which was the correct contract only while they
         // were Settings-only.
-        foreach (['legal', 'real_estate', 'fitness', 'education'] as $industry) {
+        foreach (['legal', 'real_estate', 'fitness', 'education', 'services'] as $industry) {
             $vocab = BookingWidgetVocab::for($industry);
 
             $this->assertNotSame('Find Your Perfect Stay', $vocab['search_title'],
@@ -169,6 +169,13 @@ class BookingWidgetVocabTest extends TestCase
         $this->assertSame('Book a Lesson', $education['search_title']);
         $this->assertSame('Students', $education['adults']);
         $this->assertSame('Choose your teacher', $education['svc_provider_title']);
+    }
+
+    public function test_services_books_consultations(): void
+    {
+        $services = BookingWidgetVocab::for('services');
+        $this->assertSame('Book a Consultation', $services['search_title']);
+        $this->assertSame('Choose your specialist', $services['svc_provider_title']);
     }
 
     public function test_completely_unknown_industry_string_falls_through(): void
@@ -287,7 +294,7 @@ class BookingWidgetVocabTest extends TestCase
      */
     public function test_the_services_step_bar_speaks_the_industrys_nouns_never_the_data_models(): void
     {
-        $industries = ['hotel', 'beauty', 'medical', 'restaurant', 'fitness', 'education', 'legal', 'real_estate', 'other', 'unknown_industry'];
+        $industries = ['hotel', 'beauty', 'medical', 'restaurant', 'fitness', 'education', 'legal', 'real_estate', 'services', 'other', 'unknown_industry'];
 
         foreach ($industries as $industry) {
             $vocab = BookingWidgetVocab::for($industry);

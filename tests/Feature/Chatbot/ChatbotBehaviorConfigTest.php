@@ -192,6 +192,15 @@ class ChatbotBehaviorConfigTest extends TestCase
         $this->assertStringContainsString('fitness studio', $identity);
     }
 
+    public function test_default_identity_services_books_discovery_calls_without_quoting(): void
+    {
+        $identity = OrganizationSetupService::defaultIdentityFor('services', 'Northlight Studio');
+
+        $this->assertStringContainsString('Northlight Studio', $identity);
+        $this->assertStringContainsString('discovery call', $identity);
+        $this->assertStringContainsString('Never promise a final price', $identity);
+    }
+
     public function test_default_identity_restaurant_mentions_restaurant(): void
     {
         $identity = OrganizationSetupService::defaultIdentityFor('restaurant', 'Trattoria Sole');

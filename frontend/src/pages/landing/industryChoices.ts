@@ -117,11 +117,11 @@ export type IndustryCard = {
 /**
  * English display names, keyed by `Organization::INDUSTRIES` id.
  *
- * Copied from `pages/Setup.tsx`'s own nine-industry picker rather than
+ * Copied from `pages/Setup.tsx`'s own industry picker rather than
  * invented, so the same business reads the same word in the setup wizard,
  * the Settings industry switcher and here. These are the i18n DEFAULTS —
  * `landing_pages.wizard.industry_name_<id>` is what actually renders (see
- * `localeCompleteness.test.ts`, which pins all nine keys in all five
+ * `localeCompleteness.test.ts`, which pins every one of these keys in all five
  * locales the same way it pins the design panel's palette names).
  */
 export const INDUSTRY_NAMES: Record<string, string> = {
@@ -133,6 +133,7 @@ export const INDUSTRY_NAMES: Record<string, string> = {
   real_estate: 'Real estate',
   education: 'Education / Tutoring',
   fitness: 'Fitness / Wellness',
+  services: 'Services / Agency',
   other: 'Something else',
 }
 

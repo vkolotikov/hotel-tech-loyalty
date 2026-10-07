@@ -107,7 +107,7 @@ class IndustryPromptServiceTest extends TestCase
     {
         // Every industry has memberships (the owner's ruling of
         // 2026-09-29), medical included.
-        foreach (['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'other'] as $industry) {
+        foreach (['hotel', 'beauty', 'medical', 'restaurant', 'legal', 'real_estate', 'education', 'fitness', 'services', 'other'] as $industry) {
             $this->assertTrue($this->service->for($industry)->hasLoyalty, "{$industry} MUST have hasLoyalty=true.");
         }
     }
@@ -155,11 +155,23 @@ class IndustryPromptServiceTest extends TestCase
         // legal / real_estate / education / fitness today have
         // lighter-weight profiles. Each MUST be its own profile
         // (NOT silently collapse to hotel).
-        foreach (['legal', 'real_estate', 'education', 'fitness'] as $industry) {
+        foreach (['legal', 'real_estate', 'education', 'fitness', 'services'] as $industry) {
             $profile = $this->service->for($industry);
             $this->assertSame($industry, $profile->industry,
                 "{$industry} MUST return its own profile (not collapse to hotel).");
         }
+    }
+
+    public function test_services_speaks_of_clients_and_never_commits_a_final_price(): void
+    {
+        $profile = $this->service->for('services');
+
+        $this->assertSame('client', $profile->nouns['guest']);
+        $this->assertSame('consultation', $profile->nouns['reservation']);
+        $this->assertSame('company', $profile->workspaceLabel);
+        // Agency and made-to-order work is quoted per brief; the assistant
+        // must not promise a price, a deadline or a production run.
+        $this->assertStringContainsString('NEVER commit to a final price', $profile->guardrails);
     }
 
     /* ─── adminGuardrails distinct on medical (Phase 7 reviewer fix) ─── */
@@ -286,7 +298,7 @@ class IndustryPromptServiceTest extends TestCase
     public function test_for_always_returns_industry_prompt_profile_instance(): void
     {
         foreach (['hotel', 'beauty', 'medical', 'restaurant',
-                  'legal', 'real_estate', 'education', 'fitness'] as $industry) {
+                  'legal', 'real_estate', 'education', 'fitness', 'services'] as $industry) {
             $this->assertInstanceOf(
                 IndustryPromptProfile::class,
                 $this->service->for($industry),

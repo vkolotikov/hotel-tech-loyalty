@@ -66,6 +66,7 @@
                         'real_estate'       => 'Viewing page · no contact',
                         'education'         => 'Enrolment page · no contact',
                         'fitness'           => 'Class page · no contact',
+                        'services'          => 'Consultation page · no contact',
                         default             => 'Booking-page · no contact',
                     };
                   @endphp

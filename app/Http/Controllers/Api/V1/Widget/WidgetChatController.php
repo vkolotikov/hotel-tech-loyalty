@@ -2963,6 +2963,8 @@ class WidgetChatController extends Controller
             $finalReminders[] = "MEDICAL SAFETY (per Industry Guardrails above): NEVER diagnose, NEVER recommend medication, NEVER give treatment advice. Refer emergencies to local emergency services. Appointments + clinic info only.";
         } elseif ($industry === 'legal') {
             $finalReminders[] = "LEGAL SAFETY (per Industry Guardrails above): NEVER give legal advice. Refer all legal questions to a consultation with an attorney.";
+        } elseif ($industry === 'services') {
+            $finalReminders[] = "QUOTES (per Industry Guardrails above): NEVER commit to a final price, deadline or production quantity. Offer a discovery call or take the visitor's details so the team can quote from a brief.";
         }
         if ($config && !empty($config->fallback_message)) {
             $finalReminders[] = "If you genuinely cannot answer and no context above fits, reply exactly: \"{$config->fallback_message}\"";

@@ -54,6 +54,7 @@ describe('industryCopyFor — lookup with hotel fallback', () => {
     expect(industryCopyFor('real_estate').brand).toBe('Real Estate Workspace')
     expect(industryCopyFor('education').brand).toBe('Education Workspace')
     expect(industryCopyFor('fitness').brand).toBe('Fitness Workspace')
+    expect(industryCopyFor('services').brand).toBe('Services Workspace')
   })
 
   it('returns hotel copy for genuinely unknown industry ids', () => {
@@ -66,7 +67,7 @@ describe('industryCopyFor — lookup with hotel fallback', () => {
 
   it('never returns null or undefined — every call yields a usable IndustryCopy', () => {
     const inputs = ['hotel', 'beauty', 'medical', 'restaurant',
-                    'legal', 'real_estate', 'education', 'fitness',
+                    'legal', 'real_estate', 'education', 'fitness', 'services',
                     null, undefined,
                     'completely-unknown-industry' as any] as const
     for (const input of inputs) {
@@ -121,15 +122,20 @@ describe('INDUSTRY_COPY content invariants', () => {
 })
 
 describe('PICKER_INDUSTRIES — umbrella signup card list', () => {
-  it('ships all 9 industries including the generic option', () => {
+  it('ships all 10 industries including the generic option', () => {
     // Decision #7 (four GTM-shipped industries only) was revisited:
-    // fitness / education / legal / real_estate now ship on the picker
-    // under umbrella branding. Every backend preset for them exists and
-    // trial provisioning was verified end to end before this list grew.
+    // fitness / education / legal / real_estate / services now ship on
+    // the picker under umbrella branding. Every backend preset for them
+    // exists and trial provisioning was verified end to end before this
+    // list grew.
     expect([...PICKER_INDUSTRIES].sort()).toEqual(
       ['beauty', 'education', 'fitness', 'hotel', 'legal', 'medical',
-       'other', 'real_estate', 'restaurant'].sort(),
+       'other', 'real_estate', 'restaurant', 'services'].sort(),
     )
+  })
+
+  it('keeps the generic option last', () => {
+    expect(PICKER_INDUSTRIES[PICKER_INDUSTRIES.length - 1]).toBe('other')
   })
 
   it('every PICKER_INDUSTRIES entry has full INDUSTRY_COPY', () => {

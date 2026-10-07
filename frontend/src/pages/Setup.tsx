@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
 import {
-  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase,
+  Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase, Handshake,
   Bot, Users, BedDouble, FileText, ClipboardList,
   ArrowRight, ArrowLeft, Check, Zap, Database, Star,
 } from 'lucide-react'
@@ -46,6 +46,7 @@ const INDUSTRIES: IndustryDef[] = [
   { key: 'education',   label: 'Education / Tutoring',   icon: GraduationCap, blurb: 'Inquiry → trial → enrolment.',                      defaultFeatures: ['ai_chat', 'crm', 'operations', 'loyalty'] },
   { key: 'fitness',     label: 'Fitness / Wellness',     icon: Dumbbell,      blurb: 'Trial → membership + class bookings.',              defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
   { key: 'restaurant',  label: 'Restaurant',             icon: Utensils,      blurb: 'Reservations + service workflow.',                  defaultFeatures: ['bookings', 'ai_chat', 'crm', 'operations'] },
+  { key: 'services',    label: 'Services / Agency',      icon: Handshake,     blurb: 'Enquiry → brief → proposal → won project.',         defaultFeatures: ['bookings', 'loyalty', 'ai_chat', 'crm', 'operations'] },
   { key: 'other',       label: 'Something else',         icon: Briefcase,     blurb: 'A neutral pipeline for any other business.',        defaultFeatures: ['ai_chat', 'crm', 'operations', 'loyalty'] },
 ]
 

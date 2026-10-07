@@ -149,6 +149,7 @@ class OpenAiService
             'real_estate' => 'agency client retention manager',
             'education'   => 'school enrolment manager',
             'fitness'     => 'studio member retention manager',
+            'services'    => 'client account manager',
             default       => 'hotel loyalty program manager',
         };
 
@@ -198,6 +199,7 @@ Return JSON only with keys: title, description, type (discount/bonus_points/upgr
             'restaurant'  => 'restaurant loyalty diner',
             'medical'     => 'returning patient',
             'fitness'     => 'studio member',
+            'services'    => 'returning client',
             'education'   => 'student member',
             default       => 'hotel loyalty member',
         };
@@ -253,6 +255,7 @@ Return JSON only with: score (float 0-1), reason (string), recommendation (strin
             'real_estate' => 'agency client retention analyst',
             'education'   => 'school enrolment analyst',
             'fitness'     => 'studio member retention analyst',
+            'services'    => 'client retention analyst',
             default       => 'hotel loyalty program analyst',
         };
 
@@ -329,6 +332,7 @@ Review: {$text}";
             'medical'     => 'clinic receptionist',
             'restaurant'  => 'restaurant host',
             'fitness'     => 'studio receptionist',
+            'services'    => 'client coordinator',
             default       => 'hotel receptionist',
         };
         $visitNoun = match ($industry) {

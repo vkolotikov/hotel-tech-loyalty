@@ -148,6 +148,7 @@ class CustomFieldController extends Controller
                     'education'   => 'Education / Tutoring',
                     'fitness'     => 'Fitness / Wellness',
                     'restaurant'  => 'Restaurant',
+                    'services'    => 'Services / Agency',
                     default       => ucwords(str_replace('_', ' ', $key)),
                 },
                 'icon'        => match ($key) {
@@ -158,6 +159,7 @@ class CustomFieldController extends Controller
                     'education'   => 'graduation-cap',
                     'fitness'     => 'dumbbell',
                     'restaurant'  => 'utensils',
+                    'services'    => 'handshake',
                     default       => 'briefcase',
                 },
                 'description' => match ($key) {
@@ -168,6 +170,7 @@ class CustomFieldController extends Controller
                     'education'   => 'Date of birth, parent contact, prior education, program interest, start term, study format.',
                     'fitness'     => 'Fitness goal, experience level, injuries, preferred trainer, membership tier, service interest.',
                     'restaurant'  => 'Dietary preferences, allergies, favourite table, occasion, party size, seating preference.',
+                    'services'    => 'Job title, decision maker, project type, budget range, deadline, quantity, brief link.',
                     default       => '',
                 },
                 'field_count' => $count,

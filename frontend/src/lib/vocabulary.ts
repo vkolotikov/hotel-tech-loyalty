@@ -222,6 +222,27 @@ const VOCABULARY: Record<IndustryId, Record<string, string>> = {
     'Team & Roles':      'Trainers & Roles',
     'Hotel Loyalty':     'Member Rewards',
   },
+  // Client-project businesses (agencies, studios, made-to-order
+  // production). GROUP "Members & Loyalty" reads "Clients & Loyalty" so it
+  // doesn't share its top item's word; GROUP "Bookings" stays canonical
+  // above "Consultations". 'Deals' is deliberately NOT relabelled or
+  // hidden — B2B services sell deals.
+  services: {
+    'Members & Loyalty': 'Clients & Loyalty',
+    'CRM & Marketing':   'Client CRM',
+    'Members':           'Clients',
+    'Reservations':      'Consultations',
+    'Services':          'Service bookings',
+    'Rooms & Services':  'Services',
+    'Masters':           'Specialists',
+    'Properties':        'Locations',
+    'Hotel Info':        'Business Info',
+    'Loyalty Program':   'Client Rewards',
+    'Booking Engine':    'Consultation Booking',
+    'Member App':        'Client App',
+    'Team & Roles':      'Specialists & Roles',
+    'Hotel Loyalty':     'Client Rewards',
+  },
 }
 
 /**

@@ -126,6 +126,7 @@ class EngagementDailySummaryService
             'real_estate' => 'agency',
             'education'   => 'school',
             'fitness'     => 'studio',
+            'services'    => 'company',
             default       => 'hotel',
         };
 
