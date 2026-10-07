@@ -7,6 +7,7 @@ use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Booking\MemberCancellation;
 use App\Services\Booking\PortalPaymentIntentGuard;
 use Carbon\CarbonImmutable;
@@ -177,6 +178,8 @@ final class MemberBookingQuery
             'nights'          => null,
             // service_bookings has no payment_method column to check.
             'paid_online'     => self::hasRealIntent($b->stripe_payment_intent_id, null),
+            // Part H: a deposit charged on the booking page — the rest is paid at the venue.
+            'deposit'         => ($d = Deposits::of($b)) !== null ? ['amount' => $d['amount']] : null,
         ];
     }
 

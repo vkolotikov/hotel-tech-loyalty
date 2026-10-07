@@ -672,9 +672,10 @@ class PublicConfirmRescueGuardTest extends TestCase
         $this->assertSameAnswer($missing, $blind);
     }
 
-    /** 13. A mock intent never touched Stripe: nothing to give back. */
+    /** 13. A mock intent never touched Stripe: nothing to give back. (Mock intents exist only in test mode.) */
     public function test_a_mock_intent_is_left_alone_as_before(): void
     {
+        $this->testMode();
         $hold = $this->hold();
         $this->roomTaken();
 
@@ -683,6 +684,30 @@ class PublicConfirmRescueGuardTest extends TestCase
         $res->assertStatus(400)->assertExactJson(['error' => self::ROOM_TAKEN]);
         $this->assertSame([], $this->calls);
         $this->assertSame(0, AuditLog::withoutGlobalScopes()->where('action', 'like', 'booking.confirm.pi_%')->count());
+    }
+
+    /** 13b. A `pi_mock_…` id counts only while the venue's test mode is on; with it off it is a made-up payment (2026-10-07). */
+    public function test_a_mock_intent_with_test_mode_off_is_refused_and_nothing_is_booked(): void
+    {
+        $hold = $this->hold();
+
+        $res = $this->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_mock_forged']);
+
+        $res->assertStatus(400)->assertExactJson(['error' => 'Payment has not been completed.']);
+        $this->assertSame([], $this->calls);
+        $this->assertSame(0, BookingMirror::withoutGlobalScopes()->count());
+    }
+
+    /** The venue's booking test mode switched on (the setting the full admin writes). */
+    private function testMode(): void
+    {
+        $row = new \App\Models\HotelSetting();
+        $row->organization_id = $this->org->id;
+        $row->key = 'booking_mock_mode';
+        $row->value = 'true';
+        $row->group = 'booking';
+        $row->save();
+        \App\Models\HotelSetting::flushCacheFor($this->org->id);
     }
 
     // ─── Order of work, and the checks themselves failing ────────────

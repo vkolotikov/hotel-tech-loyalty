@@ -178,6 +178,7 @@
     "deposit": {
       "goes_back": "The deposit ({{amount}}) goes back to the client’s card.",
       "kept_late": "The venue keeps the deposit ({{amount}}): cancelled less than {{hours}} h before the visit.",
+      "kept_started": "The venue keeps the deposit ({{amount}}): cancelled after the visit started.",
       "kept": "The venue keeps the deposit ({{amount}})."
     },
     "reopen": "The visit goes back to Confirmed at its own time. Points already earned stay.",
@@ -268,6 +269,7 @@
     "deposits": {
       "title": "Deposits for online bookings",
       "intro": "Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.",
+      "intro_start": "Clients booking on your booking page pay part of the price by card. Cancelled before the visit starts, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.",
       "on": "Ask for a deposit",
       "percent": "Deposit (% of the price)",
       "reason": {

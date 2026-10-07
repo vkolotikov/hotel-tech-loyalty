@@ -83,7 +83,7 @@ class AppointmentMessageMail extends Mailable
             'rows'      => $rows,
             'closing'   => $t($kind === 'cancelled' ? 'book_again' : 'questions'),
             // Part H §6.3: what a cancellation did to the booking-page deposit.
-            'deposit'   => $kind === 'cancelled' ? self::depositLine($b, $t) : null,
+            'deposit'   => $kind === 'cancelled' ? self::depositLine($b, $t, $locale) : null,
             'venue'     => ['name' => $venue, 'address' => $org?->address ?: null, 'phone' => $org?->phone ?: null, 'email' => $org?->email ?: null],
             'hotelName' => $venue,
         ];
@@ -94,21 +94,42 @@ class AppointmentMessageMail extends Mailable
      * goodwill after a late cancellation) is "being refunded"; otherwise the window decides: in time the deposit goes
      * back (a hold released, or a refund still to make), late it is kept. Null for a booking without a deposit.
      */
-    private static function depositLine(ServiceBooking $b, \Closure $t): ?string
+    private static function depositLine(ServiceBooking $b, \Closure $t, string $locale): ?string
     {
         $d = Deposits::of($b);
         if ($d === null) {
             return null;
         }
-        $money = fn (float $amount) => strtoupper((string) ($b->currency ?: 'EUR')) . ' ' . number_format($amount, 2);
+        $currency = strtoupper((string) ($b->currency ?: 'EUR'));
+        $money = fn (float $amount) => self::moneyText($amount, $currency, $locale);
         $back = AppointmentMoney::summary($b)['refunded_online'];
         if ($back > 0) {
             return $t('deposit.refunded', ['amount' => $money($back)]);
         }
+        if (Deposits::inTime($b, $b->cancelled_at ?? now())) {
+            return $t('deposit.refunded', ['amount' => $money($d['amount'])]);
+        }
 
-        return Deposits::inTime($b, $b->cancelled_at ?? now())
-            ? $t('deposit.refunded', ['amount' => $money($d['amount'])])
+        // No hours agreed: the deadline was the start itself.
+        return $d['cancel_hours'] === 0
+            ? $t('deposit.kept_after_start', ['amount' => $money($d['amount'])])
             : $t('deposit.kept', ['amount' => $money($d['amount']), 'hours' => $d['cancel_hours']]);
+    }
+
+    /**
+     * The amount the way the client's language writes money: "€12.00", "12,00 €". Where ext-intl is missing
+     * (the app does not require it, see App\Landing\Money) it stays "EUR 12.00".
+     */
+    public static function moneyText(float $amount, string $currency, string $locale): string
+    {
+        if (class_exists(\NumberFormatter::class)) {
+            $text = (new \NumberFormatter($locale, \NumberFormatter::CURRENCY))->formatCurrency($amount, $currency);
+            if (is_string($text) && $text !== '') {
+                return $text;
+            }
+        }
+
+        return $currency . ' ' . number_format($amount, 2);
     }
 
     /** "Tuesday 6 October 2026, 10:00": the venue's own clock, in the words of the language. */

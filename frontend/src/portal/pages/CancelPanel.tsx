@@ -97,6 +97,7 @@ export function CancelPanel({ booking: b, venue, offer, stage, error, result, on
       <div className="text-sm text-p-text-2 space-y-1">
         {promise === 'refund' && <p>{t('portal.bookings.cancel_refund', 'We will refund {{amount}} to the card you paid with.', { amount: money(b.total, b.currency) })}</p>}
         {promise === 'release' && <p>{t('portal.bookings.cancel_release', 'The hold on your card will be released. Nothing is charged.')}</p>}
+        {promise === 'deposit' && b.deposit && <p>{t('portal.bookings.cancel_deposit', 'We will refund your deposit of {{amount}} to the card you paid with.', { amount: money(b.deposit.amount, b.currency) })}</p>}
         {promise === 'venue' && <p>{t('portal.bookings.cancel_money_venue', 'This booking was paid at {{venue}}. They will arrange any refund with you.', { venue: venue.name })}</p>}
         {promise === 'nothing' && <p>{t('portal.bookings.cancel_nothing', 'Nothing has been charged for this booking.')}</p>}
       </div>

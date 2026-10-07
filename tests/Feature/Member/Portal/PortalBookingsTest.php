@@ -445,6 +445,27 @@ class PortalBookingsTest extends MemberEndpointTestCase
         $this->assertFalse($this->withToken($token)->getJson(self::LIST . "/service/{$mockIntent}")->assertOk()->json('paid_online'), 'a mock intent is not an online payment');
     }
 
+    /**
+     * Part H (2026-10-07): a booking made on the booking page with a deposit tells the portal its deposit, so a
+     * member is not told "Pay at the venue" or "Nothing has been charged" about money that was charged.
+     */
+    public function test_a_deposit_booking_names_its_deposit(): void
+    {
+        // The minimal schema this class builds has no `meta`; production's service_bookings has.
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('service_bookings', 'meta')) {
+            \Illuminate\Support\Facades\Schema::table('service_bookings', fn ($t) => $t->json('meta')->nullable());
+        }
+        $org = $this->tenant();
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $deposit = $this->serviceBooking($org, ['member_id' => $member->id, 'payment_status' => 'unpaid', 'stripe_payment_intent_id' => 'pi_dep_real1',
+            'meta' => json_encode(['deposit' => ['amount' => 12, 'percent' => 20, 'cancel_hours' => 24]])]);
+        $plain = $this->serviceBooking($org, ['member_id' => $member->id, 'payment_status' => 'unpaid', 'stripe_payment_intent_id' => null]);
+
+        $this->assertEquals(['amount' => 12], $this->withToken($token)->getJson(self::LIST . "/service/{$deposit}")->assertOk()->json('deposit'));
+        $this->flushHeaders();
+        $this->assertNull($this->withToken($token)->getJson(self::LIST . "/service/{$plain}")->assertOk()->json('deposit'));
+    }
+
     /** Same rule for a stay, which can also carry a mock payment_method on an intent id that merely looks real. */
     public function test_paid_online_for_a_stay_also_checks_the_payment_method(): void
     {

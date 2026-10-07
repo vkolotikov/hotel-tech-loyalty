@@ -85,6 +85,44 @@ class FullAdminDepositCancelTest extends TestCase
         $this->assertSame('cancelled', $plain->fresh()->status);
     }
 
+    // 2026-10-07: the workspace refuses to reopen a visit whose money went back (spec §6.4); the full admin's status
+    // change and bulk status change now refuse it too. A kept deposit's cancellation can still be reopened.
+    public function test_the_full_admin_cannot_reopen_a_cancellation_whose_money_went_back(): void
+    {
+        $refunded = $this->takenDeposit(['status' => 'cancelled', 'cancelled_at' => now(), 'refunded_amount' => 12]);
+        $kept = $this->takenDeposit(['status' => 'cancelled', 'cancelled_at' => '2026-10-05 12:00:00', 'start_at' => '2026-10-06 12:00:00', 'end_at' => '2026-10-06 12:45:00']);
+
+        $this->asStaff()->patchJson("/api/v1/admin/service-bookings/{$refunded->id}/status", ['status' => 'confirmed'])
+            ->assertStatus(422)->assertJsonPath('error', 'money_returned');
+        $this->assertSame('cancelled', $refunded->fresh()->status);
+
+        $this->asStaff()->patchJson("/api/v1/admin/service-bookings/{$kept->id}/status", ['status' => 'confirmed'])->assertOk();
+        $this->assertSame('confirmed', $kept->fresh()->status);
+    }
+
+    public function test_a_bulk_status_change_leaves_a_cancellation_whose_money_went_back(): void
+    {
+        $refunded = $this->takenDeposit(['status' => 'cancelled', 'cancelled_at' => now(), 'refunded_amount' => 12]);
+        $plain = $this->seedBooking(['status' => 'cancelled', 'cancelled_at' => now(), 'start_at' => '2026-10-06 14:00:00', 'end_at' => '2026-10-06 14:45:00']);
+
+        $this->asStaff()->postJson('/api/v1/admin/service-bookings/bulk', ['ids' => [$refunded->id, $plain->id], 'action' => 'mark_status', 'value' => 'confirmed'])
+            ->assertOk()->assertJsonPath('updated', 1)->assertJsonPath('failed', [$refunded->booking_reference]);
+        $this->assertSame(['cancelled', 'confirmed'], [$refunded->fresh()->status, $plain->fresh()->status]);
+    }
+
+    // 2026-10-07: an unexpected error on one deposit booking (not a refusal) used to answer 500 after the others were
+    // already cancelled; it now leaves that one booking as it was, like a refusal, and the rest go ahead.
+    public function test_a_bulk_cancel_survives_an_unexpected_error_on_one_deposit_booking(): void
+    {
+        $broken = $this->takenDeposit();
+        $plain = $this->seedBooking(['start_at' => '2026-10-06 14:00:00', 'end_at' => '2026-10-06 14:45:00']);
+        $this->stripe->shouldReceive('isEnabled')->andThrow(new \RuntimeException('stripe client blew up'));
+
+        $this->asStaff()->postJson('/api/v1/admin/service-bookings/bulk', ['ids' => [$broken->id, $plain->id], 'action' => 'cancel'])
+            ->assertOk()->assertJsonPath('updated', 1)->assertJsonPath('failed', [$broken->booking_reference]);
+        $this->assertSame(['confirmed', 'cancelled'], [$broken->fresh()->status, $plain->fresh()->status]);
+    }
+
     public function test_a_bulk_status_change_to_cancelled_follows_the_rule(): void
     {
         $b = $this->takenDeposit();

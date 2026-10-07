@@ -77,10 +77,11 @@ const subscription: SubscriptionData = {
   billingAvailable: true,
 }
 
-function sidebar(workspaces: Workspaces): string {
+function sidebar(workspaces: Workspaces, me?: { workspaces?: Workspaces }): string {
   auth.state.user.workspaces = workspaces
   const qc = new QueryClient()
   qc.setQueryData(['subscription-status'], subscription)
+  if (me) qc.setQueryData(['auth-me'], me)
   return renderToStaticMarkup(
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/']}>
@@ -140,6 +141,18 @@ describe('the full admin top bar', () => {
     } finally {
       auth.state.staff = before
     }
+  })
+
+  // Owner, 2026-10-07: "I still don't see it". A session signed in before the workspace existed keeps the user it
+  // signed in with; the full admin follows the server's answer now (/v1/auth/me), not the stored one.
+  it('follows the fresh /auth/me answer over a session signed in before the workspace existed', () => {
+    const html = sidebar(undefined, { workspaces: { appointments: { landing: false, has_services: false } } })
+    expect(html).toContain('data-topbar-appointments')
+    expect(html).toContain('href="/appointments"')
+  })
+
+  it('hides it once the server says the workspace is switched off, whatever the stored session says', () => {
+    expect(sidebar(ON, {})).not.toContain('data-topbar-appointments')
   })
 
   it('is not there for an organisation without the booking product', () => {

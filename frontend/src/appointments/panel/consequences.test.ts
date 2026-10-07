@@ -46,6 +46,16 @@ describe('consequenceLines', () => {
     }
   })
 
+  // 2026-10-07: with no hours agreed the deadline is the start itself — "less than 0 h before" said nothing.
+  it('a deposit kept with no hours agreed says the visit was cancelled after its start', () => {
+    const late = (cancel_hours: number) => consequenceLines(action('cancel', { deposit: { code: 'kept_late', amount: 12, currency: 'EUR', cancel_hours } }))[0]
+    expect(late(24)).toMatchObject({ key: 'appointments.consequence.deposit.kept_late', vars: { hours: 24 } })
+    const started = late(0)
+    expect(started.key).toBe('appointments.consequence.deposit.kept_started')
+    expect(started.fallback).toContain('after the visit')
+    expect(started.fallback).not.toContain('{{hours}}')
+  })
+
   it('a cancellation with no online payment says so plainly', () => {
     expect(keys(action('cancel'))).toEqual(['appointments.consequence.payment.none'])
   })

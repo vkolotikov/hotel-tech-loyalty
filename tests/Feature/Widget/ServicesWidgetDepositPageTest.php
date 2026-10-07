@@ -62,6 +62,17 @@ class ServicesWidgetDepositPageTest extends TestCase
         $this->assertStringContainsString('(dep.intent && dep.intent.deposit) || q.deposit', $html);
     }
 
+    // 2026-10-07: one Stripe.js instance for the page (Stripe asks for one); every visit to the step used to make another.
+    public function test_every_visit_to_the_step_reuses_one_stripe_instance(): void
+    {
+        $html = $this->page(['deposit' => true]);
+
+        $this->assertSame(1, preg_match('/function startDeposit\(\) \{(.*?)\n  \}\n/s', $html, $start), 'startDeposit is in the page');
+        $this->assertStringNotContainsString('window.Stripe(', $start[1]);
+        $this->assertStringContainsString('dep.stripe = stripeJs()', $start[1]);
+        $this->assertSame(1, substr_count($html, 'window.Stripe('), 'Stripe.js is started in one place');
+    }
+
     public function test_the_routes_turn_the_step_on_only_where_deposits_are_on(): void
     {
         $url = '/services-widget?org=' . $this->org->id;

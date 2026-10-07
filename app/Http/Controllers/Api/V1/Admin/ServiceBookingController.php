@@ -270,11 +270,24 @@ class ServiceBookingController extends Controller
                 $updated++;
             } catch (AppointmentRefused) {
                 $failed[$b->id] = (string) $b->booking_reference;
+            } catch (\Throwable $e) {
+                // Anything else on this one booking leaves it as it was, like a refusal: the others are already done.
+                Log::warning('service_booking.bulk_deposit_cancel_failed', ['id' => $b->id, 'error' => $e->getMessage()]);
+                $failed[$b->id] = (string) $b->booking_reference;
             }
         }
-        DB::transaction(function () use ($rows, $validated, $alone, &$updated, &$patches) {
+        // The workspace's reopen rule: a closed visit whose money went back is left as it is, and named.
+        $notReopened = [];
+        if ($validated['action'] === 'mark_status') {
             foreach ($rows as $b) {
-                if (in_array($b->id, $alone, true)) {
+                if (self::reopensRefunded($b, $validated['value'] ?? null)) {
+                    $notReopened[$b->id] = (string) $b->booking_reference;
+                }
+            }
+        }
+        DB::transaction(function () use ($rows, $validated, $alone, $notReopened, &$updated, &$patches) {
+            foreach ($rows as $b) {
+                if (in_array($b->id, $alone, true) || isset($notReopened[$b->id])) {
                     continue;
                 }
                 $patch = match ($validated['action']) {
@@ -289,7 +302,7 @@ class ServiceBookingController extends Controller
             }
         });
         // A booking left as it was is neither audited nor messaged below.
-        $rows = $rows->reject(fn (ServiceBooking $b) => isset($failed[$b->id]))->values();
+        $rows = $rows->reject(fn (ServiceBooking $b) => isset($failed[$b->id]) || isset($notReopened[$b->id]))->values();
 
         // After the transaction, as before: an audit failure must never fail
         // the bulk action. One row per booking (so each booking's history is
@@ -351,12 +364,24 @@ class ServiceBookingController extends Controller
         if ($failed !== []) {
             $message .= ' Not cancelled — the deposit could not be refunded just now: ' . implode(', ', $failed) . '. Try again.';
         }
+        if ($notReopened !== []) {
+            $message .= ' Not reopened — money was given back for: ' . implode(', ', $notReopened) . '. Book them again instead.';
+        }
+        $left = array_values($failed + $notReopened);
 
         return response()->json([
             'updated' => $updated,
             'message' => $message,
             'client_messages' => $counts,
-        ] + ($failed !== [] ? ['failed' => array_values($failed)] : []));
+        ] + ($left !== [] ? ['failed' => $left] : []));
+    }
+
+    /** Opening a closed visit (cancelled, no-show, completed) again while money went back for it (the workspace's rule). */
+    private static function reopensRefunded(ServiceBooking $b, ?string $to): bool
+    {
+        return in_array($to, DepositRule::OPEN, true)
+            && in_array((string) $b->status, ['cancelled', 'no_show', 'completed'], true)
+            && AppointmentMoney::moneyWentBack($b);
     }
 
     /** The request's "tell the client" box; null when the screen did not say (the venue's setting decides). */
@@ -611,6 +636,11 @@ class ServiceBookingController extends Controller
             }
 
             $before = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
+            // The workspace's reopen rule (Part F, spec H §6.4): a closed visit whose money went back is not opened
+            // again by a status change either — book it again instead.
+            if (self::reopensRefunded($booking, $data['status'] ?? null)) {
+                throw new AppointmentRefused('money_returned', 'Money was given back for this visit — book it again instead.', 422);
+            }
             // Part H: a booking-page deposit follows its window — refunded now when cancelled in time, kept when late.
             // A refund Stripe refuses throws (422 deposit_refund_failed) and nothing is saved.
             if (($data['status'] ?? null) === 'cancelled' && DepositRule::applies($booking)) {

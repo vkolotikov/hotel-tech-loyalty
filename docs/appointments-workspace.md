@@ -12,8 +12,9 @@ interface to use:
 
 - **Into the workspace:** the full admin's menu has **HexaTech Appointments** in the Bookings group, under
   Services, and the Service bookings list and calendar pages have an **Open in HexaTech Appointments** button.
-  Both show only where the organisation has the workspace and at least one active service; the address
-  `/appointments` itself works for every organisation that has it.
+  Both show wherever the organisation has the workspace, with or without services yet; the address
+  `/appointments` itself works for every organisation that has it. They follow the server, not the session: the
+  full admin reads `/v1/auth/me` when it loads (2026-10-07), so a sign-in older than the workspace shows them too.
 - **Back to the full admin:** **Full admin** in the workspace opens the same tool there — the calendar opens the
   Service bookings calendar, Clients opens the customer list, anything else the dashboard.
 
@@ -457,8 +458,10 @@ switches them off and on again as usual.
 **What the client does.** After their details, the page asks for "a deposit of €12.00 now (20% of €60.00)" with
 Stripe's card fields, then "Pay €12.00 and book". The card is held, the booking saved under the scheduler's lock, and
 the deposit charged at once. A refused card books nothing; a time taken meanwhile releases the hold ("Your card was
-not charged"). Free services and deposits under 0.50 skip the step. The confirmation screen and email say until when
-a cancellation gives the deposit back (the venue's clock).
+not charged"). Free services and deposits below Stripe's minimum charge in the venue's currency skip the step
+(`Deposits::MINIMUMS`: 0.50 in euros or dollars, 0.30 in pounds, 3 in Swedish or Norwegian kronor, 15 in Czech
+koruna…). The confirmation screen and email say until when a cancellation gives the deposit back (the venue's clock).
+A page opened before deposits were switched on asks the client to reload it.
 
 **What staff see.** The deposit is a ledger payment ("Card, through Stripe", note "Deposit"): Paid online €12.00 ·
 Still owed €48.00; Take payment asks for the rest; Takings and Insights count it once. The row says "Deposit paid";
@@ -472,9 +475,14 @@ goodwill (Refund, or the cancel sheet's card line, which starts at 0). In time, 
 cancel sheet can add to the deposit but never take from it (one Stripe refund of at least the deposit); late, it is
 goodwill as typed. With online payments switched off at the venue, an in-time cancel still goes ahead and the
 deposit shows as "to refund" for a manager to give back another way. The client's cancellation email (Part D) says
-what happened to the money. A member who cancels such a booking from the member portal gets the window the booking
-was made with. A booking page refuses a made-up test-mode payment and a deposit that no longer applies, and checks
-the client's details before the card is held.
+what happened to the money, the amount written the way the client's language writes it (where the server has PHP's
+intl extension; "EUR 12.00" otherwise), and "after it was due to start" when no hours were agreed. A member who
+cancels such a booking from the member portal gets the window the booking was made with; the portal shows "Deposit
+paid, the rest at the venue" and promises the deposit back. A deposit refunded in the member portal or in the Stripe
+dashboard gets its ledger row too, so Takings shows it going out (once, however often Stripe repeats the webhook).
+Neither the workspace nor the full admin (status change or bulk) reopens a visit whose money went back: book it
+again. Both public booking pages refuse a made-up test-mode payment (`pi_mock_…`) unless the venue is in test mode,
+refuse a deposit that no longer applies, and check the client's details before the card is held.
 
 **Behind the scenes.** The capture job finishes a deposit charge that confirm() missed (as a deposit, never "paid"),
 releases the hold of a booking cancelled in time, and charges and keeps one cancelled late or a no-show. The orphan

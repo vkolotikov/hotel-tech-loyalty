@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -43,6 +43,16 @@ const stayBooking: PortalBooking = {
   ...booking, kind: 'stay', id: 9, reference: 'BK-STAY1234', title: 'Sea view', subtitle: null,
   starts_at: '2026-10-10', ends_at: '2026-10-12', party_size: null, guests: 2, nights: 2,
 }
+
+// The fixtures are dated early October 2026 and the sheet compares the cancel deadline with the clock: the clock is
+// pinned before that deadline (the cancellation test began failing on its own once 2 October 2026 had passed).
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-01T09:00:00Z'))
+})
+afterAll(() => {
+  vi.useRealTimers()
+})
 
 function render(client: QueryClient, bootstrap: PortalBootstrap = data, kind: BookingKind = 'service') {
   const value: PortalContextValue = { data: bootstrap, isLoading: false, isError: false, error: null, refetch: () => {} }

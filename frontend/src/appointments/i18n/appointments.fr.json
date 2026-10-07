@@ -178,6 +178,7 @@
     "deposit": {
       "goes_back": "L’acompte ({{amount}}) est remboursé sur la carte du client.",
       "kept_late": "L’établissement garde l’acompte ({{amount}}) : annulé moins de {{hours}} h avant la visite.",
+      "kept_started": "L’établissement garde l’acompte ({{amount}}) : annulé après le début de la visite.",
       "kept": "L’établissement garde l’acompte ({{amount}})."
     },
     "reopen": "Le rendez-vous redevient confirmé à son horaire. Les points déjà gagnés restent.",
@@ -268,6 +269,7 @@
     "deposits": {
       "title": "Acomptes pour les réservations en ligne",
       "intro": "Les clients qui réservent sur votre page paient une partie du prix par carte. Annulée au moins {{hours}} heures avant, elle est remboursée automatiquement ; annulée plus tard, ou en cas d’absence, l’établissement la garde. Le reste se paie sur place.",
+      "intro_start": "Les clients qui réservent sur votre page de réservation paient une partie du prix par carte. Annulée avant le début de la visite, elle est remboursée automatiquement ; annulée plus tard, ou en cas d’absence, l’établissement la garde. Le reste se paie sur place.",
       "on": "Demander un acompte",
       "percent": "Acompte (% du prix)",
       "reason": {

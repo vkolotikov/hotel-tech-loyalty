@@ -60,6 +60,21 @@ describe('cancelOffer', () => {
   })
 })
 
+describe('moneyPromise with a booking-page deposit (Part H, 2026-10-07)', () => {
+  it('promises the deposit back, never "nothing has been charged"', () => {
+    const deposit = { ...booking, payment_status: 'unpaid', paid_online: true, deposit: { amount: 12 } }
+    expect(moneyPromise(deposit)).toBe('deposit')
+    expect(moneyPromise({ ...deposit, payment_status: 'authorized' })).toBe('release')
+  })
+
+  // Final review (2026-10-07): with the rest taken at the desk the label is `paid`, but cancelling refunds the
+  // deposit to the card, never the whole price.
+  it('promises only the deposit back once the rest was paid at the desk', () => {
+    const paid = { ...booking, payment_status: 'paid', paid_online: true, deposit: { amount: 12 } }
+    expect(moneyPromise(paid)).toBe('deposit')
+  })
+})
+
 describe('moneyPromise', () => {
   it('promises a refund for a payment taken online, and a release for a card held online', () => {
     expect(moneyPromise({ ...booking, payment_status: 'paid', paid_online: true })).toBe('refund')

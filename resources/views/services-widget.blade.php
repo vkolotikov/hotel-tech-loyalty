@@ -1221,6 +1221,13 @@ img{max-width:100%;display:block}
   }
   var dep = emptyDeposit()
 
+  // One Stripe.js instance for the page (Stripe asks for one); each visit to the step reuses it.
+  var stripeInstance = null
+  function stripeJs() {
+    if (!stripeInstance) stripeInstance = window.Stripe(state.config.stripe_publishable_key)
+    return stripeInstance
+  }
+
   function depositDue() {
     return !!(state.quote && state.quote.deposit && state.config && state.config.stripe_publishable_key)
   }
@@ -1278,7 +1285,7 @@ img{max-width:100%;display:block}
         return
       }
       dep.intent = res.body
-      dep.stripe = window.Stripe(state.config.stripe_publishable_key)
+      dep.stripe = stripeJs()
       dep.elements = dep.stripe.elements({ clientSecret: res.body.client_secret })
       dep.element = dep.elements.create('payment')
       render()

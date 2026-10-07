@@ -214,6 +214,35 @@ class DepositCancelTest extends TestCase
         $this->assertSame('2026-10-05T10:00:00+00:00', CancellationPolicy::forService($b)['deadline']->utc()->toIso8601String());
     }
 
+    // 2026-10-07: a deposit refunded outside the workspace — the member portal's cancel, the Stripe dashboard — gets its
+    // ledger row too, so Takings shows the money going out as it showed it coming in.
+    public function test_a_deposit_refunded_in_the_member_portal_is_in_the_takings(): void
+    {
+        $b = $this->takenDeposit();
+        $this->stripe->shouldReceive('retrievePaymentIntent')->andReturn($this->depositIntent($b->stripe_payment_intent_id, 12.0, [], 'succeeded'));
+        $this->stripe->shouldReceive('refund')->once()->andReturn(Refund::constructFrom(['id' => 're_portal', 'amount' => 1200, 'status' => 'succeeded']));
+
+        app(\App\Services\Booking\MemberCancellation::class)->cancelService($this->org->id, $b->id);
+
+        $this->assertSame(['in' => 12.0, 'out' => 12.0], \App\Services\Appointments\Money\TakingsReport::for($this->org->id, '2026-10-05')['totals']['EUR']['online_card']);
+        $this->assertSame('re_portal', ServiceBookingPayment::where('kind', 'refund')->sole()->stripe_refund_id);
+    }
+
+    public function test_a_deposit_refunded_in_the_stripe_dashboard_is_in_the_takings_once(): void
+    {
+        $b = $this->takenDeposit();
+        $charge = \Stripe\Charge::constructFrom(['id' => 'ch_1', 'currency' => 'eur', 'amount' => 1200, 'amount_captured' => 1200, 'amount_refunded' => 1200, 'refunded' => true,
+            'refunds' => ['object' => 'list', 'data' => [['id' => 're_dash', 'created' => now()->timestamp]]]]);
+        $controller = app(\App\Http\Controllers\Api\V1\BookingPublicController::class);
+        $record = new \ReflectionMethod($controller, 'recordServiceBookingRefund');
+
+        $record->invoke($controller, $charge, $b->stripe_payment_intent_id, $this->org->id);
+        $record->invoke($controller, $charge, $b->stripe_payment_intent_id, $this->org->id); // delivered again
+
+        $this->assertSame(['in' => 12.0, 'out' => 12.0], \App\Services\Appointments\Money\TakingsReport::for($this->org->id, '2026-10-05')['totals']['EUR']['online_card']);
+        $this->assertSame('re_dash', ServiceBookingPayment::where('kind', 'refund')->sole()->stripe_refund_id);
+    }
+
     public function test_the_member_portal_names_the_deposit_it_releases(): void
     {
         $b = $this->seedDepositBooking();

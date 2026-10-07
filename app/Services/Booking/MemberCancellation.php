@@ -7,6 +7,7 @@ use App\Models\BookingMirror;
 use App\Models\HotelSetting;
 use App\Models\PointsTransaction;
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\BookingRefundService;
 use App\Services\LoyaltyService;
 use App\Services\SmoobuClient;
@@ -151,6 +152,9 @@ final class MemberCancellation
                     'cancelled_at'        => now(),
                     'cancellation_reason' => self::REASON,
                 ] + $money['columns'])->save();
+                if ($money['money'] === 'refunded') {
+                    app(AppointmentMoney::class)->recordOutsideCardRefund($b, $b->last_refund_id, 'Refunded in the member portal');
+                }
 
                 return new CancellationOutcome(
                     kind: 'service',

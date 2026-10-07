@@ -156,7 +156,9 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
 
           <section aria-labelledby="settings-deposits" className="space-y-3">
             <h2 id="settings-deposits" className="text-sm font-semibold text-a-text">{t('appointments.setup.deposits.title', 'Deposits for online bookings')}</h2>
-            <p className="text-sm text-a-text-2">{t('appointments.setup.deposits.intro', 'Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.', { hours: s.cancel_hours })}</p>
+            <p className="text-sm text-a-text-2">{s.cancel_hours === 0
+              ? t('appointments.setup.deposits.intro_start', 'Clients booking on your booking page pay part of the price by card. Cancelled before the visit starts, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.')
+              : t('appointments.setup.deposits.intro', 'Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.', { hours: s.cancel_hours })}</p>
             {!s.deposits_available && s.deposits_reason && (
               <Notice tone="info">{t(`appointments.setup.deposits.reason.${s.deposits_reason}`, DEPOSIT_REASON[s.deposits_reason])}</Notice>
             )}

@@ -178,6 +178,7 @@
     "deposit": {
       "goes_back": "El depósito ({{amount}}) vuelve a la tarjeta del cliente.",
       "kept_late": "El local se queda el depósito ({{amount}}): cancelada con menos de {{hours}} h de antelación.",
+      "kept_started": "El local se queda el depósito ({{amount}}): cancelada después de empezar la cita.",
       "kept": "El local se queda el depósito ({{amount}})."
     },
     "reopen": "La cita vuelve a quedar confirmada a su hora. Los puntos ya ganados se mantienen.",
@@ -268,6 +269,7 @@
     "deposits": {
       "title": "Depósitos en las reservas en línea",
       "intro": "Quien reserva en su página paga parte del precio con tarjeta. Si cancela con al menos {{hours}} horas de antelación, se le devuelve automáticamente; si cancela más tarde o no se presenta, el local se lo queda. El resto se paga en el local.",
+      "intro_start": "Quien reserva en su página de reservas paga parte del precio con tarjeta. Si cancela antes de que empiece la cita, se devuelve automáticamente; si cancela más tarde o no se presenta, se lo queda el local. El resto se paga en el local.",
       "on": "Pedir un depósito",
       "percent": "Depósito (% del precio)",
       "reason": {

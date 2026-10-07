@@ -100,6 +100,8 @@ export interface PortalBooking {
    *  `payment_status` says "paid". Staff can mark a booking paid for cash or a bank transfer with no
    *  online payment at all, and `moneyPromise()` must never promise a card refund for that money. */
   paid_online: boolean
+  /** Part H: a deposit charged on the venue's booking page (the rest is paid at the venue); null otherwise. */
+  deposit?: { amount: number } | null
 }
 
 export interface Paginated<T> { data: T[]; meta: { scope: string; page: number; per_page: number; total: number } }

@@ -76,6 +76,12 @@ interface AuthState {
   user: User | null
   staff: Staff | null
   setAuth: (token: string, user: User, staff?: Staff) => void
+  /**
+   * The same signed-in user, brought up to date with GET /v1/auth/me: the
+   * organisation's workspaces can change after sign-in (a new workspace, the
+   * Appointments plan). Ignored for another user; never touches the token.
+   */
+  refreshUser: (fresh: Partial<User> | null | undefined) => void
   logout: () => void
   isAdmin: () => boolean
 }
@@ -101,6 +107,11 @@ export const useAuthStore = create<AuthState>()(
         localStorage.setItem('auth_token', token)
         set({ token, user, staff })
         applyServerLanguage(user.language ?? null)
+      },
+      refreshUser: (fresh) => {
+        const { user } = get()
+        if (!user || !fresh || fresh.id !== user.id) return
+        set({ user: { ...user, workspaces: fresh.workspaces } })
       },
       logout: () => {
         // Same reasoning — wipe cached data on the way out so a shared

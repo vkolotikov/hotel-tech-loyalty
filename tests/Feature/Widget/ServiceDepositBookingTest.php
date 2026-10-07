@@ -93,8 +93,11 @@ class ServiceDepositBookingTest extends TestCase
 
     public function test_a_booking_without_its_deposit_is_refused(): void
     {
-        $this->confirm()->assertStatus(422)->assertJsonPath('code', 'deposit_required');
+        $res = $this->confirm()->assertStatus(422)->assertJsonPath('code', 'deposit_required');
         $this->assertSame(0, ServiceBooking::count());
+        // 2026-10-07: a page opened before deposits were switched on has no card step until it is reloaded;
+        // "try again" alone sent the client round the same refusal.
+        $this->assertStringContainsString('reload the page', $res->json('error'));
     }
 
     public function test_a_held_deposit_books_and_is_charged_and_recorded(): void
@@ -179,7 +182,8 @@ class ServiceDepositBookingTest extends TestCase
     {
         $this->stripe->shouldNotReceive('retrievePaymentIntent');
 
-        $this->confirm(['payment_intent_id' => 'pi_mock_forged'])->assertStatus(422)->assertJsonPath('code', 'deposit_required');
+        // Refused before the deposit check now: a mock id counts only in the venue's test mode (2026-10-07).
+        $this->confirm(['payment_intent_id' => 'pi_mock_forged'])->assertStatus(400);
         $this->assertSame(0, ServiceBooking::count());
     }
 

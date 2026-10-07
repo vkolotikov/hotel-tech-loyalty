@@ -93,6 +93,13 @@ describe('deposits', () => {
     expect(html).toContain('at least 24 hours before')
   })
 
+  // 2026-10-07: with no hours set the window is the start itself — "at least 0 hours before" said nothing.
+  it('says "before the visit starts" when no hours are set', () => {
+    const html = renderToStaticMarkup(<SettingsTab data={{ ...data, settings: { ...settings, cancel_hours: 0 } }} refresh={() => {}} />)
+    expect(html).toContain('Cancelled before the visit starts')
+    expect(html).not.toContain('0 hours')
+  })
+
   it('keeps the switch off and says why when Stripe cannot take deposits', () => {
     const off = { ...settings, deposits_available: false, deposits_reason: 'currency_mismatch' as const }
     const html = renderToStaticMarkup(<SettingsTab data={{ ...data, settings: off }} refresh={() => {}} />)

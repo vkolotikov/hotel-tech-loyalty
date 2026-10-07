@@ -29,7 +29,7 @@ return [
     'label'      => ['service' => 'Servicio', 'when' => 'Cuándo', 'previously' => 'Antes', 'with' => 'Con', 'reference' => 'Referencia'],
     'questions'  => '¿Preguntas? Responda a este correo.',
     'book_again' => 'Para reservar de nuevo, responda a este correo.',
-    'deposit' => ['refunded' => 'Le devolvemos a su tarjeta el depósito de :amount.', 'kept' => 'El depósito de :amount no se devuelve, ya que la cita se canceló con menos de :hours horas de antelación.'],
+    'deposit' => ['refunded' => 'Le devolvemos a su tarjeta el depósito de :amount.', 'kept' => 'El depósito de :amount no se devuelve, ya que la cita se canceló con menos de :hours horas de antelación.', 'kept_after_start' => 'El depósito de :amount no se devuelve, ya que la cita se canceló después de su hora de inicio.'],
     'when'        => ':date, :time',
     'date_format' => 'l j \d\e F \d\e Y',
 ];

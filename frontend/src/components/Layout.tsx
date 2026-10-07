@@ -437,6 +437,22 @@ export function Layout({ children }: { children: ReactNode }) {
     enabled: allowRender,
   })
 
+  // The user as the server knows it now (/v1/auth/me). A session signed in before the appointments workspace existed
+  // — or before the organisation's plan changed — still carries the user it signed in with, and nothing else ever
+  // refreshes it (owner, 2026-10-07: "I still don't see it"). The way into HexaTech Appointments follows this answer,
+  // and the stored user is brought up to date with it for every other screen.
+  const { data: freshMe } = useQuery({
+    queryKey: ['auth-me'],
+    queryFn: () => api.get('/v1/auth/me').then(r => r.data),
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    enabled: !!user && user.user_type !== 'member',
+  })
+  useEffect(() => {
+    if (freshMe) useAuthStore.getState().refreshUser(freshMe)
+  }, [freshMe])
+  const liveUser = freshMe && user ? { ...user, workspaces: freshMe.workspaces } : user
+
   // Sidebar unread badge for chat inbox: total unread visitor messages across
   // all open conversations. Polled every 15s. Gated on allowRender so it
   // doesn't fire during LOADING (would 403 for EXPIRED-trial users before
@@ -589,7 +605,7 @@ export function Layout({ children }: { children: ReactNode }) {
           if (item.product && !hasProduct(item.product)) return false
           // The way into the appointments workspace: wherever the
           // organisation has it, services or not (owner, 2026-10-06).
-          if (item.workspace === 'appointments' && !showsAppointmentsLink(user)) return false
+          if (item.workspace === 'appointments' && !showsAppointmentsLink(liveUser)) return false
           // Phase 4 — per-industry item hide (Deals for beauty/medical,
           // Scan for medical/restaurant). Matches canonical English
           // defaultLabel; vocabulary relabel happens AFTER this filter.

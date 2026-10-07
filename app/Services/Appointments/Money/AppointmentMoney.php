@@ -232,6 +232,33 @@ final class AppointmentMoney
     }
 
     /**
+     * A deposit refunded outside the workspace — the member portal's cancel,
+     * or in the Stripe dashboard (the charge.refunded webhook) — gets its
+     * ledger row too, so Takings shows the money going out as it showed it
+     * coming in. Called inside the caller's transaction once the booking's
+     * refunded_amount is saved; only what the ledger lacks is recorded, so a
+     * webhook delivered twice, or one after a refund made here, adds nothing.
+     */
+    public function recordOutsideCardRefund(ServiceBooking $b, ?string $refundId, string $note): void
+    {
+        if (Deposits::of($b) === null) {
+            return;
+        }
+        $recorded = (float) ServiceBookingPayment::withoutGlobalScopes()->where('service_booking_id', $b->id)
+            ->where('kind', 'refund')->where('method', 'online_card')->sum('amount');
+        $missing = round((float) ($b->refunded_amount ?? 0) - $recorded, 2);
+        if ($missing <= 0.004) {
+            return;
+        }
+        $currency = strtoupper((string) ($b->currency ?: 'EUR'));
+        ServiceBookingPayment::create([
+            'organization_id' => $b->organization_id, 'service_booking_id' => $b->id, 'kind' => 'refund', 'method' => 'online_card',
+            'amount' => $missing, 'currency' => $currency, 'note' => $note, 'stripe_refund_id' => $refundId ?: null,
+        ]);
+        $this->settle($b, null, 'service_booking.refund_recorded', ['amount' => $missing, 'method' => 'online_card', 'reason' => $note], "refund of {$missing} {$currency} ({$note})");
+    }
+
+    /**
      * After a movement: the label from the new figures (never while a card is
      * held online), the booking's money version bumped so every open screen's
      * revision moves — even within the same second, where updated_at alone

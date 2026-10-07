@@ -43,8 +43,11 @@ export function cancelOffer(b: PortalBooking, now: Date): 'offer' | 'ended' | 'c
  * to act on) is the gate for both card outcomes; money recorded as paid but not online falls to `'venue'`
  * instead, which says only that the venue will sort it out — never an amount, never a card.
  */
-export function moneyPromise(b: PortalBooking): 'refund' | 'release' | 'venue' | 'nothing' {
+export function moneyPromise(b: PortalBooking): 'refund' | 'release' | 'venue' | 'nothing' | 'deposit' {
   if (b.total <= 0) return 'nothing'
+  // Part H: a deposit charged on the booking page goes back to the card — only the deposit, also once the rest was
+  // paid at the desk (`paid`): cancelling refunds the deposit's own payment, and the desk money is the venue's to return.
+  if (b.deposit && b.paid_online && (b.payment_status === 'unpaid' || b.payment_status === 'paid')) return 'deposit'
   if (b.payment_status === 'paid') return b.paid_online ? 'refund' : 'venue'
   if (b.payment_status === 'authorized') return b.paid_online ? 'release' : 'nothing'
   return 'nothing'

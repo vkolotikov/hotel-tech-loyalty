@@ -489,8 +489,9 @@ class BookingPublicController extends Controller
                 // without contacting Stripe and stamp the booking as paid via
                 // the mock channel so admins can spot it later.
                 if (str_starts_with($validated['payment_intent_id'], 'pi_mock_')) {
-                    $validated['payment_method'] = 'mock';
-                    $validated['payment_status'] = 'paid';
+                    // ...but only while the venue's test mode is on (the branch above). With it off, a `pi_mock_` id
+                    // is a made-up one and never a paid booking (2026-10-07); nothing reached Stripe, nothing to rescue.
+                    throw new \RuntimeException('Payment has not been completed.');
                 } else {
                     $stripe = app(StripeService::class);
                     if ($stripe->isEnabled()) {
@@ -2112,6 +2113,8 @@ class BookingPublicController extends Controller
                 'refunded_at'     => now(),
                 'last_refund_id'  => $refundId,
             ])->save();
+            // A deposit's refund made in the Stripe dashboard reaches Takings too (2026-10-07).
+            app(\App\Services\Appointments\Money\AppointmentMoney::class)->recordOutsideCardRefund($booking, $newestRefundId, 'Refunded in Stripe');
 
             \App\Models\AuditLog::create([
                 'organization_id' => $orgId,

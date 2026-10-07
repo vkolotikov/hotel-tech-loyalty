@@ -85,6 +85,22 @@ describe('BookingRow', () => {
     expect(bookingPaymentLabel({ ...openStay, status: 'cancelled', payment_status: 'refunded', paid_online: true }, t)).toBe('Refunded')
     expect(bookingPaymentLabel({ ...openStay, payment_status: 'paid', paid_online: true }, t)).toBe('Paid')
   })
+
+  // Part H (2026-10-07): a booking-page deposit booking is `unpaid` with a deposit charged — never "Pay at the venue".
+  it('names a paid deposit, not "Pay at the venue"', () => {
+    const { t } = useTranslation()
+    const deposit = { ...service, payment_status: 'unpaid', paid_online: true, deposit: { amount: 12 } }
+    expect(bookingPaymentLabel(deposit, t)).toBe('Deposit paid, the rest at the venue')
+  })
+
+  // Final review (2026-10-07): a cancelled or missed visit whose deposit the venue kept owes nothing more —
+  // "the rest at the venue" would tell the client they still do.
+  it('a kept deposit on a closed visit is only "Deposit paid"', () => {
+    const { t } = useTranslation()
+    const deposit = { ...service, payment_status: 'unpaid', paid_online: true, deposit: { amount: 12 } }
+    expect(bookingPaymentLabel({ ...deposit, status: 'cancelled' }, t)).toBe('Deposit paid')
+    expect(bookingPaymentLabel({ ...deposit, status: 'no_show' }, t)).toBe('Deposit paid')
+  })
 })
 
 /** Routed like the real app (`bookings/:kind/:id` mounts the same `<Bookings>`, not a separate detail

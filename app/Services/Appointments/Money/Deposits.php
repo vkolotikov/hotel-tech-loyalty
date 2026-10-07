@@ -28,8 +28,22 @@ final class Deposits
     /** The metadata `source` of a deposit's payment intent: the booking page. */
     public const SOURCE = 'services_widget';
 
-    /** Stripe's smallest charge, near enough in every currency the venues use (spec §4.2). */
+    /** Stripe's smallest charge where the currency is not listed below (spec §4.2). */
     public const MINIMUM = 0.50;
+
+    /**
+     * Stripe's own minimum charge per currency (its "minimum and maximum charge
+     * amounts" table); below it the card step would fail and the client could
+     * not book at all, so no deposit is asked. Currencies the venues can pick
+     * that Stripe does not list (UAH, TRY, ILS, ZAR: "about USD 0.50") get a
+     * floor safely above that.
+     */
+    public const MINIMUMS = [
+        'USD' => 0.50, 'EUR' => 0.50, 'GBP' => 0.30, 'CHF' => 0.50, 'SEK' => 3.00, 'NOK' => 3.00, 'DKK' => 2.50,
+        'PLN' => 2.00, 'CZK' => 15.00, 'HUF' => 175.00, 'RON' => 2.00, 'BGN' => 1.00, 'AED' => 2.00, 'CAD' => 0.50,
+        'AUD' => 0.50, 'NZD' => 0.50, 'JPY' => 50, 'SGD' => 0.50, 'HKD' => 4.00, 'INR' => 0.50, 'MXN' => 10.00,
+        'UAH' => 25.00, 'TRY' => 20.00, 'ILS' => 2.00, 'ZAR' => 10.00,
+    ];
 
     /** What Setup proposes when deposits are first switched on (spec §4.1). */
     public const PROPOSED_PERCENT = 20;
@@ -48,13 +62,13 @@ final class Deposits
         'currency_mismatch' => 'Stripe takes payments in another currency than your prices.',
     ];
 
-    /** Percent of the price, to the cent; null for a free booking or one below Stripe's minimum. */
-    public static function amountFor(float $total, int $percent): ?float
+    /** Percent of the price, to the cent; null for a free booking or one below Stripe's minimum in that currency. */
+    public static function amountFor(float $total, int $percent, string $currency = 'EUR'): ?float
     {
         $total = round($total, 2);
         $amount = round($total * max(1, min(100, $percent)) / 100, 2);
 
-        return $total > 0 && $amount >= self::MINIMUM ? $amount : null;
+        return $total > 0 && $amount >= (self::MINIMUMS[strtoupper($currency)] ?? self::MINIMUM) ? $amount : null;
     }
 
     /** Ticked, and switched on in Setup at least once (SINCE). */
@@ -121,7 +135,7 @@ final class Deposits
             return null;
         }
         $percent = self::percent();
-        $amount = self::amountFor($total, $percent);
+        $amount = self::amountFor($total, $percent, $currency);
 
         return $amount === null ? null : [
             'amount' => $amount, 'percent' => $percent, 'cancel_hours' => self::cancelHours(), 'currency' => strtoupper($currency),
@@ -197,7 +211,8 @@ final class Deposits
     public static function assertPays(mixed $intent, array $deposit, int $orgId, int $serviceId, \DateTimeInterface|string $start): void
     {
         if ($intent === null) {
-            throw new DepositRefused('deposit_required', 'A deposit is needed to book this time. Please try again.');
+            // The page was opened before deposits were switched on: it has no card step until it is reloaded.
+            throw new DepositRefused('deposit_required', 'A deposit is now needed to book this time. Please reload the page and book again.');
         }
         $meta = self::metadataOf($intent);
         $pays = ($meta['kind'] ?? null) === self::KIND

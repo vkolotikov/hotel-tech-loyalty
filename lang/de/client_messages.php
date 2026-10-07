@@ -29,7 +29,7 @@ return [
     'label'      => ['service' => 'Leistung', 'when' => 'Wann', 'previously' => 'Vorher', 'with' => 'Bei', 'reference' => 'Referenz'],
     'questions'  => 'Fragen? Antworten Sie einfach auf diese E-Mail.',
     'book_again' => 'Um neu zu buchen, antworten Sie einfach auf diese E-Mail.',
-    'deposit' => ['refunded' => 'Ihre Anzahlung von :amount wird auf Ihre Karte zurückerstattet.', 'kept' => 'Die Anzahlung von :amount wird einbehalten, da weniger als :hours Stunden vorher storniert wurde.'],
+    'deposit' => ['refunded' => 'Ihre Anzahlung von :amount wird auf Ihre Karte zurückerstattet.', 'kept' => 'Die Anzahlung von :amount wird einbehalten, da weniger als :hours Stunden vorher storniert wurde.', 'kept_after_start' => 'Die Anzahlung von :amount wird einbehalten, da erst nach dem geplanten Beginn storniert wurde.'],
     'when'        => ':date, :time',
     'date_format' => 'l, j. F Y',
 ];

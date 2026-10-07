@@ -83,9 +83,16 @@ export function paymentLabel(
  */
 // eslint-disable-next-line react-refresh/only-export-components
 export function bookingPaymentLabel(
-  b: Pick<PortalBooking, 'status' | 'payment_status' | 'paid_online'>,
+  b: Pick<PortalBooking, 'status' | 'payment_status' | 'paid_online' | 'deposit'>,
   t: (key: string, defaultValue: string) => string,
 ): string | null {
+  // Part H: a booking-page deposit booking stays `unpaid` with its deposit charged — never "Pay at the venue".
+  if (b.deposit && b.paid_online && b.payment_status === 'unpaid') {
+    // A cancelled or missed visit whose deposit the venue kept owes nothing more.
+    return b.status === 'cancelled' || b.status === 'no_show'
+      ? t('portal.bookings.payment_status.deposit_only', 'Deposit paid')
+      : t('portal.bookings.payment_status.deposit_paid', 'Deposit paid, the rest at the venue')
+  }
   const unpaid = b.payment_status === 'unpaid' || (b.payment_status === 'open' && !b.paid_online)
   if (unpaid && b.status === 'cancelled') return null
   return paymentLabel(unpaid ? 'unpaid' : b.payment_status, t)

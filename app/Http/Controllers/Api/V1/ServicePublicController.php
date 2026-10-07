@@ -361,8 +361,9 @@ class ServicePublicController extends Controller
             // Mock prefix in case a stale frontend hit /payment-intent while
             // mock mode was on — trust the prefix, skip Stripe verification.
             if (str_starts_with($data['payment_intent_id'], 'pi_mock_')) {
-                $paymentStatus = 'paid';
-                $isMockBooking = true;
+                // A test-mode payment counts only while the venue's test mode is on (that branch is above); with it
+                // off, a `pi_mock_` id is a made-up one and never a paid booking (2026-10-07).
+                return response()->json(['error' => 'Payment has not been completed.'], 400);
             } else {
                 $stripe = app(StripeService::class);
                 if ($stripe->isEnabled()) {

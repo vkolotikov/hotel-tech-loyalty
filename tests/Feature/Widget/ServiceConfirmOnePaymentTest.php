@@ -3,6 +3,7 @@
 namespace Tests\Feature\Widget;
 
 use App\Mail\ServiceBookingConfirmationMail;
+use App\Models\HotelSetting;
 use App\Models\Organization;
 use App\Models\Service;
 use App\Models\ServiceBooking;
@@ -272,6 +273,8 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
         $stripe->shouldNotReceive('capturePaymentIntent');
         $stripe->shouldNotReceive('cancelPaymentIntent');
         $this->app->instance(StripeService::class, $stripe);
+        // Mock payments exist only while the venue's test mode is on (2026-10-07: with it off they are refused).
+        $this->testMode();
 
         $this->confirm('10:00', ['payment_intent_id' => 'pi_mock_aaaa'])->assertStatus(201)->assertJsonMissingPath('payment_capture_pending');
         $this->confirm('12:00', ['payment_intent_id' => 'pi_mock_bbbb'])->assertStatus(201);
@@ -286,6 +289,32 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
     public static function withAndWithoutTheIndex(): array
     {
         return ['with the index' => [true], 'without the index' => [false]];
+    }
+
+    /** The venue's booking test mode switched on (the setting the full admin writes). */
+    private function testMode(): void
+    {
+        $row = new HotelSetting();
+        $row->organization_id = $this->org->id;
+        $row->key = 'booking_mock_mode';
+        $row->value = 'true';
+        $row->group = 'booking';
+        $row->save();
+        HotelSetting::flushCacheFor($this->org->id);
+    }
+
+    // Owner 2026-10-07 ("fix all these small issues"): a `pi_mock_…` id counts only while the venue's test mode is on;
+    // with it off it is a made-up payment and never a paid booking.
+    public function test_a_mock_payment_with_test_mode_off_is_refused_and_nothing_is_booked(): void
+    {
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldNotReceive('retrievePaymentIntent');
+        $this->app->instance(StripeService::class, $stripe);
+
+        $this->confirm('10:00', ['payment_intent_id' => 'pi_mock_forged'])
+            ->assertStatus(400)->assertExactJson(['error' => 'Payment has not been completed.']);
+        $this->assertSame(0, $this->rows()->count());
     }
 
     /**

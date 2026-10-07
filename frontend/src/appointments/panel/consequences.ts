@@ -29,6 +29,8 @@ const DEPOSIT: Record<DepositConsequence['code'], Omit<Line, 'key' | 'vars'>> = 
   kept_late: { fallback: 'The venue keeps the deposit ({{amount}}): cancelled less than {{hours}} h before the visit.', tone: 'warning' },
   kept:      { fallback: 'The venue keeps the deposit ({{amount}}).', tone: 'warning' },
 }
+// No hours agreed: the deadline was the start itself.
+const KEPT_STARTED: Omit<Line, 'key' | 'vars'> = { fallback: 'The venue keeps the deposit ({{amount}}): cancelled after the visit started.', tone: 'warning' }
 
 const REASON: Record<string, string> = {
   not_a_member:           'No points: this client is not a member.',
@@ -60,7 +62,10 @@ export function consequenceLines(action: ActionInfo): Line[] {
   const lines: Line[] = []
 
   if (deposit) {
-    lines.push({ key: `appointments.consequence.deposit.${deposit.code}`, ...DEPOSIT[deposit.code], vars: { amount: money(deposit.amount, deposit.currency), hours: deposit.cancel_hours } })
+    const vars = { amount: money(deposit.amount, deposit.currency), hours: deposit.cancel_hours }
+    lines.push(deposit.code === 'kept_late' && deposit.cancel_hours === 0
+      ? { key: 'appointments.consequence.deposit.kept_started', ...KEPT_STARTED, vars }
+      : { key: `appointments.consequence.deposit.${deposit.code}`, ...DEPOSIT[deposit.code], vars })
   } else if (payment !== 'none' || action.key === 'cancel' || action.key === 'no_show') {
     const entry = PAYMENT[payment] ?? PAYMENT.none
     lines.push({ key: `appointments.consequence.payment.${payment in PAYMENT ? payment : 'none'}`, ...entry })

@@ -41,6 +41,19 @@ class DepositTermsTest extends TestCase
         $this->assertSame(0.5, Deposits::amountFor(2.5, 20));
     }
 
+    // 2026-10-07: Stripe's smallest charge differs by currency; below it the card step would fail and the client
+    // could not book at all — no deposit is asked instead.
+    public function test_the_minimum_is_stripes_own_for_the_currency(): void
+    {
+        $this->assertNull(Deposits::amountFor(10, 20, 'SEK'));        // 2.00 < 3.00
+        $this->assertSame(4.0, Deposits::amountFor(20, 20, 'SEK'));
+        $this->assertNull(Deposits::amountFor(800, 20, 'HUF'));       // 160 < 175
+        $this->assertNull(Deposits::amountFor(50, 20, 'CZK'));        // 10 < 15
+        $this->assertSame(0.4, Deposits::amountFor(2, 20, 'GBP'));    // 0.40 ≥ 0.30
+        $this->assertNull(Deposits::amountFor(2, 20, 'EUR'));         // 0.40 < 0.50
+        $this->assertNull(Deposits::amountFor(40, 1, 'JPY'));         // 0 < 50
+    }
+
     public function test_terms_need_the_switch_stripe_and_stripes_currency(): void
     {
         $stripe = $this->stripeForDeposits();

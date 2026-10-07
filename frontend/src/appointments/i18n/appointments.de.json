@@ -178,6 +178,7 @@
     "deposit": {
       "goes_back": "Die Anzahlung ({{amount}}) geht auf die Karte des Kunden zurück.",
       "kept_late": "Die Anzahlung ({{amount}}) bleibt beim Betrieb: weniger als {{hours}} Std. vor dem Termin storniert.",
+      "kept_started": "Die Anzahlung ({{amount}}) bleibt beim Betrieb: nach Beginn des Termins storniert.",
       "kept": "Die Anzahlung ({{amount}}) bleibt beim Betrieb."
     },
     "reopen": "Der Termin wird zu seiner Zeit wieder bestätigt. Bereits vergebene Punkte bleiben.",
@@ -268,6 +269,7 @@
     "deposits": {
       "title": "Anzahlung bei Online-Buchungen",
       "intro": "Wer über Ihre Buchungsseite bucht, zahlt einen Teil des Preises per Karte. Bei Stornierung mindestens {{hours}} Stunden vorher geht er automatisch zurück; bei späterer Stornierung oder Nichterscheinen behält ihn der Betrieb. Den Rest zahlt der Kunde vor Ort.",
+      "intro_start": "Wer über Ihre Buchungsseite bucht, zahlt einen Teil des Preises per Karte. Bei Stornierung vor Beginn des Termins wird er automatisch erstattet; bei späterer Stornierung oder Nichterscheinen bleibt er beim Betrieb. Der Rest wird vor Ort bezahlt.",
       "on": "Anzahlung verlangen",
       "percent": "Anzahlung (% vom Preis)",
       "reason": {
