@@ -79,7 +79,8 @@ interface AuthState {
   /**
    * The same signed-in user, brought up to date with GET /v1/auth/me: the
    * organisation's workspaces can change after sign-in (a new workspace, the
-   * Appointments plan). Ignored for another user; never touches the token.
+   * Appointments plan), and so can its industry (Settings → Industry). Ignored
+   * for another user; never touches the token.
    */
   refreshUser: (fresh: Partial<User> | null | undefined) => void
   logout: () => void
@@ -111,7 +112,16 @@ export const useAuthStore = create<AuthState>()(
       refreshUser: (fresh) => {
         const { user } = get()
         if (!user || !fresh || fresh.id !== user.id) return
-        set({ user: { ...user, workspaces: fresh.workspaces } })
+        set({
+          user: {
+            ...user,
+            workspaces: fresh.workspaces,
+            // Only when the answer carries them: an older response without
+            // the fields must not wipe the industry the session signed in with.
+            ...(fresh.industry !== undefined ? { industry: fresh.industry } : {}),
+            ...(fresh.industry_explicit !== undefined ? { industry_explicit: fresh.industry_explicit } : {}),
+          },
+        })
       },
       logout: () => {
         // Same reasoning — wipe cached data on the way out so a shared
