@@ -906,7 +906,14 @@ class WidgetChatController extends Controller
         $industry = \App\Models\Organization::withoutGlobalScopes()->find($orgId)?->resolved_industry
             ?? \App\Models\Organization::DEFAULT_INDUSTRY;
 
-        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name, $request->input('lang'), $bookingContextStr, $bookingWidgetUrl, $industry);
+        // Part H: a venue taking deposits books services on its booking page, where the deposit is paid. Read only where
+        // deposits are switched on, and never at the cost of the chat itself.
+        $depositsOnline = false;
+        try {
+            $depositsOnline = \App\Services\Appointments\Money\Deposits::switchedOn()
+                && \App\Services\Appointments\Money\Deposits::onlineNow(\App\Services\Booking\Setup\BookingRules::currency());
+        } catch (\Throwable) {}
+        $systemPrompt = $this->buildWidgetSystemPrompt($behaviorConfig, $knowledgeContext, $config->company_name, $request->input('lang'), $bookingContextStr, $bookingWidgetUrl, $industry, $depositsOnline);
 
         $contextMessages = array_slice(
             array_map(fn($m) => ['role' => $m['role'], 'content' => $m['content']], $messages),
@@ -2606,6 +2613,16 @@ class WidgetChatController extends Controller
             return response()->json(['error' => 'Service not found'], 404);
         }
 
+        // Part H §4.4: a venue that asks for a deposit takes it on its booking page; the chat sends the visitor there
+        // instead of booking without it (decided on the service's list price, before a time is reserved).
+        if (\App\Services\Appointments\Money\Deposits::termsFor((float) $service->price, (string) ($service->currency ?: 'EUR')) !== null) {
+            return response()->json([
+                'error'       => 'deposit_required',
+                'message'     => 'This venue asks for a deposit when you book online. Please finish your booking on the booking page.',
+                'booking_url' => \App\Services\Appointments\Money\Deposits::bookingPageUrl($orgId, (int) $service->id, isset($data['service_master_id']) ? (int) $data['service_master_id'] : null),
+            ], 422);
+        }
+
         $scheduler = app(\App\Services\ServiceSchedulingService::class);
         $lockKey = !empty($data['service_master_id'])
             ? "svcm:{$data['service_master_id']}"
@@ -2663,7 +2680,7 @@ class WidgetChatController extends Controller
         ], 201);
     }
 
-    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null, string $bookingContext = '', string $bookingWidgetUrl = '', string $industry = 'hotel'): string
+    private function buildWidgetSystemPrompt(?ChatbotBehaviorConfig $config, string $knowledgeContext, string $companyName, ?string $userLang = null, string $bookingContext = '', string $bookingWidgetUrl = '', string $industry = 'hotel', bool $depositsOnline = false): string
     {
         // System prompt is laid out in strict sections so the model attends
         // reliably to each concern. Ordering matters: identity → industry
@@ -2886,6 +2903,9 @@ class WidgetChatController extends Controller
         $parts[] = "- `service_master_id` must come from the slot's master_ids (pick the first if the visitor didn't specify). Use `master_name` from list_services.";
         $parts[] = "- Never embed the block before you have ALL required fields. If anything is missing, ask instead.";
         $parts[] = "- Emit at most ONE BOOKING_CONFIRM per reply. Briefly summarise the booking in words above the block.";
+        if ($depositsOnline) {
+            $parts[] = "- This venue asks for a deposit when a service is booked online. The BOOKING_CONFIRM card then opens the venue's booking page, where the visitor pays the deposit and finishes the booking. Say so in one short sentence above the block, and never claim the booking is made.";
+        }
 
         // ── 7. Booking context ──
         // Phase 7 — Room Sales Instructions block + ROOM_CARD format

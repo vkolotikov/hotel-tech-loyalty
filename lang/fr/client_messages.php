@@ -29,6 +29,7 @@ return [
     'label'      => ['service' => 'Prestation', 'when' => 'Quand', 'previously' => 'Auparavant', 'with' => 'Avec', 'reference' => 'Référence'],
     'questions'  => 'Des questions ? Répondez simplement à cet e-mail.',
     'book_again' => 'Pour réserver à nouveau, répondez simplement à cet e-mail.',
+    'deposit' => ['refunded' => 'Votre acompte de :amount est remboursé sur votre carte.', 'kept' => 'L’acompte de :amount est conservé, l’annulation ayant eu lieu moins de :hours heures avant.'],
     'when'        => ':date, :time',
     'date_format' => 'l j F Y',
 ];

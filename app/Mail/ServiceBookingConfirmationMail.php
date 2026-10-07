@@ -51,6 +51,10 @@ class ServiceBookingConfirmationMail extends Mailable
         public ?float $discountAmount = null,
         public ?string $discountLabel = null,
         public ?string $paymentStatus = null,
+        // Part H: the deposit paid on the booking page, and until when a
+        // cancellation gives it back (the venue's clock). Null otherwise.
+        public ?float $depositAmount = null,
+        public ?string $depositRefundUntil = null,
     ) {
         // Capture the acting tenant NOW; envelope() runs later in the
         // worker, where no org is bound. See Concerns\SendsAsVenue.

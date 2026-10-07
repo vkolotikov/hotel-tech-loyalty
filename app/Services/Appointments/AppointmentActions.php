@@ -4,6 +4,8 @@ namespace App\Services\Appointments;
 
 use App\Models\ServiceBooking;
 use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\DepositRule;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Loyalty\BookingPointsService;
 
 /**
@@ -17,7 +19,9 @@ use App\Services\Loyalty\BookingPointsService;
  *    the booking was made. An older hold is visited by nothing: it is
  *    neither charged nor released, and lapses at Stripe on its own;
  *  - nothing refunds a captured payment on a staff cancellation, and
- *    nothing flags it either: the job never visits a booking already `paid`;
+ *    nothing flags it either: the job never visits a booking already `paid` —
+ *    except a booking-page deposit, which goes back on a cancellation in
+ *    time (Part H, DepositRule);
  *  - nothing returns a coupon on a staff cancellation;
  *  - confirm and cancel may email the client (Part D: the staff's "Tell the
  *    client" box, else the venue's setting); no other staff action does.
@@ -107,7 +111,7 @@ final class AppointmentActions
 
     /**
      * @param array{points: int, reason: ?string}|null $preview as allowed()
-     * @return array{payment: string, points: ?array{points: int, reason: ?string}, coupon: string, message: string}
+     * @return array{payment: string, points: ?array{points: int, reason: ?string}, coupon: string, message: string, deposit: ?array{code: string, amount: float, currency: string, cancel_hours: int}}
      */
     public function consequences(ServiceBooking $b, string $action, ?array $preview = null): array
     {
@@ -130,6 +134,34 @@ final class AppointmentActions
             // "ask": the screen offers "Tell the client by email" (Part D); a reopened cancellation that is still
             // ahead is confirmed again — a "Confirmed" email about a visit already over would only confuse.
             'message' => in_array($action, ['confirm', 'cancel'], true) || ($action === 'reopen' && (string) $b->status === 'cancelled' && self::stillAhead($b)) ? 'ask' : 'none',
+            // Part H: what a cancel or a no-show does to a booking-page deposit; null for every other booking.
+            'deposit' => self::depositFor($b, $action),
+        ];
+    }
+
+    /**
+     * Part H §6.2: `goes_back` (cancelled in time: refunded now, or the hold
+     * released), `kept_late`, or `kept` (a no-show), with the amount at
+     * stake; null when the booking has no deposit left to decide about.
+     *
+     * @return array{code: string, amount: float, currency: string, cancel_hours: int}|null
+     */
+    private static function depositFor(ServiceBooking $b, string $action): ?array
+    {
+        if (!in_array($action, ['cancel', 'no_show'], true) || !DepositRule::applies($b)) {
+            return null;
+        }
+        $s = AppointmentMoney::summary($b);
+        $amount = $s['held_online'] > 0 ? $s['held_online'] : $s['refundable_online'];
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return [
+            'code'         => $action === 'no_show' ? 'kept' : (Deposits::inTime($b, now()) ? 'goes_back' : 'kept_late'),
+            'amount'       => round($amount, 2),
+            'currency'     => $s['currency'],
+            'cancel_hours' => Deposits::of($b)['cancel_hours'],
         ];
     }
 

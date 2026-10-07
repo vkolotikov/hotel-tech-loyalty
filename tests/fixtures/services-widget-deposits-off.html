@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="{{ $lang }}">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="{{ \App\Support\CssColor::safe($color) }}">
+<meta name="theme-color" content="#2d6a4f">
 <title>Book a Service</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
-  --primary: {{ \App\Support\CssColor::safe($color) }};
+  --primary: #2d6a4f;
   --primary-hover: color-mix(in srgb, var(--primary) 85%, #000);
   --primary-light: color-mix(in srgb, var(--primary) 12%, transparent);
   --bg: #faf8f5;
@@ -336,23 +336,23 @@ img{max-width:100%;display:block}
 
   // ─── Config (from Blade) ──────────────────────────────────────────
   var CFG = {
-    orgToken: @json($orgId),
-    apiBase: @json($apiBase),
-    lang: @json($lang),
-    initialColor: @json($color ? \App\Support\CssColor::safe($color) : ''),
-    presetCategory: @json(request('category', '')),
-    presetService: @json(request('service', '')),
+    orgToken: "tok_fixture",
+    apiBase: "https:\/\/app.test\/api",
+    lang: "en",
+    initialColor: "#2d6a4f",
+    presetCategory: "",
+    presetService: "",
     // Template fidelity phase 6.2 — a landing page's "Book with <name>"
     // link lands here with the practitioner already chosen. Numeric id of
     // a master in this org's config; anything else is ignored below.
-    presetMaster: @json(request('master', '')),
+    presetMaster: "",
     // Prefill from query params — used when the widget is loaded inside
     // the member mobile app's WebView, so the guest doesn't have to retype
     // their name/email/phone. All three are optional.
-    prefillName:  @json(request('prefill_name',  '')),
-    prefillEmail: @json(request('prefill_email', '')),
-    prefillPhone: @json(request('prefill_phone', '')),
-    source:       @json(request('source', 'widget')),
+    prefillName:  "",
+    prefillEmail: "",
+    prefillPhone: "",
+    source:       "widget",
   }
 
   /* Industry Platform Plan Phase 9.x — per-industry vocabulary for the
@@ -363,27 +363,8 @@ img{max-width:100%;display:block}
      see the existing universal copy verbatim (back-compat); beauty /
      medical / restaurant get bespoke labels on the service / provider /
      details steps, the step bar and the summary card. */
-  {{-- @json() cannot take an inline array literal: its explode(',') options
-       parsing truncates the array at compile time ("Unclosed '[' does not
-       match ')'"). Build the default in a PHP variable first, then @json it.
-       This default is the view's own last resort for a caller that passes
-       no $vocab at all; keep its keys in step with BookingWidgetVocab's
-       hotel defaults, which every route now actually sends. --}}
-  @php
-  $vocabDefault = [
-    'svc_service_title'  => 'Select a service',
-    'svc_service_sub'    => "Choose the treatment or appointment you'd like to book.",
-    'svc_provider_title' => 'Choose your provider',
-    'svc_provider_sub'   => 'Pick a specific professional for your appointment.',
-    'svc_details_title'  => 'Your details',
-    'svc_details_sub'    => "We'll send confirmation to the email you provide.",
-    'svc_steps'          => ['Service', 'Provider', 'Date', 'Time', 'Extras', 'Confirm'],
-    'svc_provider_label' => 'Provider',
-    'svc_any_provider'   => 'Any available',
-    'svc_no_providers'   => 'No providers configured for this service yet.',
-  ];
-  @endphp
-  var VOCAB = @json($vocab ?? $vocabDefault);
+  
+    var VOCAB = {"steps_no_pay":["Date \u0026 Time","Treatments","Add-ons","Details \u0026 Confirm"],"steps_pay":["Date \u0026 Time","Treatments","Add-ons","Client Details","Payment"],"search_title":"Book Your Treatment","search_sub":"Pick your date and party size to see available treatments","extras_title":"Enhance Your Visit","details_title":"Client Details","check_in":"Date","check_out":"End","adults":"Clients","children":"Children","select_date":"Select date","search_button":"Search Treatments","searching":"Searching\u2026","continue":"Continue","continue_payment":"Continue to Payment","svc_service_title":"Select your treatment","svc_service_sub":"Choose the treatment you\u0027d like to book.","svc_provider_title":"Choose your stylist or therapist","svc_provider_sub":"Pick the practitioner you would like for your visit.","svc_details_title":"Client details","svc_details_sub":"We\u0027ll send confirmation to the email you provide.","svc_steps":["Treatment","Therapist","Date","Time","Extras","Confirm"],"svc_provider_label":"Therapist","svc_any_provider":"Any available therapist","svc_no_providers":"No therapist offers this treatment yet."};
 
   // ─── State ────────────────────────────────────────────────────────
   var state = {
@@ -773,9 +754,6 @@ img{max-width:100%;display:block}
       case 5: html += renderStep5Extras(); break
       case 6: html += renderStep6Confirm(); break
       case 7: html += renderStep7Confirm(); break
-@if ($deposit ?? false)
-      case 8: html += renderDepositStep(); break
-@endif
     }
     html += '</div>'
     if (state.step !== 7 && state.step !== 1) html += '<div>' + renderSummary() + '</div>'
@@ -783,9 +761,6 @@ img{max-width:100%;display:block}
 
     app.innerHTML = html
     bindEvents()
-@if ($deposit ?? false)
-    if (state.step === 8) mountDeposit()
-@endif
     postHeight()
   }
 
@@ -821,9 +796,6 @@ img{max-width:100%;display:block}
     // arriving from a page that said "Therapists" read it here.
     var steps = VOCAB.svc_steps
     var current = state.step === 7 ? 6 : state.step
-@if ($deposit ?? false)
-    if (state.step === 8) current = 6
-@endif
     var h = '<div class="stepper">'
     steps.forEach(function (label, i) {
       var idx = i + 1
@@ -1068,11 +1040,7 @@ img{max-width:100%;display:block}
     var backTarget = getExtrasForService().length > 0 ? 5 : 4
     h += '<div class="btn-row"><button class="btn btn-outline" data-act="back" data-to="' + backTarget + '">Back</button>'
     h += '<button class="btn btn-primary" data-act="submit"' + (state.submitting ? ' disabled' : '') + '>'
-@if ($deposit ?? false)
-    h += (state.submitting ? 'Booking…' : (depositDue() ? 'Continue to deposit' : 'Confirm booking')) + '</button></div>'
-@else
     h += (state.submitting ? 'Booking…' : 'Confirm booking') + '</button></div>'
-@endif
     if (state.config.cancellation_policy) {
       h += '<p style="font-size:11px;color:var(--text-secondary);margin-top:12px;text-align:center">' + escapeHtml(state.config.cancellation_policy) + '</p>'
     }
@@ -1096,9 +1064,6 @@ img{max-width:100%;display:block}
     h += '<div class="confirm-sub">Thanks ' + escapeHtml(booking.customer_name || '') + '! We\'ve booked your appointment and sent a confirmation to ' + escapeHtml(booking.customer_email || '') + '.</div>'
     if (startLabel) h += '<div style="margin-bottom:14px;font-size:15px"><strong>' + escapeHtml(startLabel) + '</strong></div>'
     if (ref) h += '<div class="confirm-ref">' + escapeHtml(ref) + '</div>'
-@if ($deposit ?? false)
-    if (b.deposit) h += '<div class="confirm-sub">Deposit paid: ' + escapeHtml(fmtMoney(b.deposit.amount, b.deposit.currency)) + '.' + (b.deposit.refund_until ? ' Cancel by ' + escapeHtml(b.deposit.refund_until) + ' for a full refund of your deposit.' : '') + '</div>'
-@endif
     h += '<div style="margin-top:28px"><button class="btn btn-outline" style="width:auto;padding:10px 22px" data-act="again">Book another service</button></div>'
     h += '</div>'
     return h
@@ -1148,9 +1113,6 @@ img{max-width:100%;display:block}
         h += '<div class="summary-row"><span class="lbl">' + escapeHtml(e.name) + ' ×' + e.quantity + '</span><span class="val">' + fmtMoney(e.line_total, q.currency) + '</span></div>'
       })
       h += '<div class="summary-total"><span>Total</span><span class="val">' + fmtMoney(q.total_amount, q.currency) + '</span></div>'
-@if ($deposit ?? false)
-      if (q.deposit) h += '<div class="summary-row"><span class="lbl">Deposit now</span><span class="val">' + fmtMoney(q.deposit.amount, q.currency) + '</span></div>'
-@endif
     } else if (!state.startAt) {
       h += '<div class="summary-total"><span>From</span><span class="val">' + fmtMoney(svc.price, svc.currency) + '</span></div>'
     }
@@ -1179,9 +1141,6 @@ img{max-width:100%;display:block}
   }
 
   function handle(act, el, e) {
-@if ($deposit ?? false)
-    if (handleDeposit(act)) return
-@endif
     if (act === 'cat') { selectCategory(el.getAttribute('data-id') ? Number(el.getAttribute('data-id')) : null); return }
     if (act === 'svc') { selectService(Number(el.getAttribute('data-id'))); return }
     if (act === 'mst') { state.masterId = el.getAttribute('data-id') ? Number(el.getAttribute('data-id')) : null; render(); return }
@@ -1209,210 +1168,6 @@ img{max-width:100%;display:block}
     }
   }
 
-@if ($deposit ?? false)
-  // ─── Deposit (Part H) ─────────────────────────────────────────────
-  // In the page only for a venue that switched deposits on. The server
-  // works the amount out (quote.deposit); this step asks for the deposit's
-  // payment intent, shows Stripe's own card fields (the Payment Element)
-  // and books once the card is authorised. confirm() charges the deposit
-  // right after saving the booking, or releases it when the time was taken.
-  function emptyDeposit() {
-    return { stripe: null, elements: null, element: null, intent: null, loading: false, paying: false, error: null }
-  }
-  var dep = emptyDeposit()
-
-  function depositDue() {
-    return !!(state.quote && state.quote.deposit && state.config && state.config.stripe_publishable_key)
-  }
-
-  function loadStripe() {
-    if (window.Stripe) return Promise.resolve(window.Stripe)
-    return new Promise(function (resolve, reject) {
-      var s = document.createElement('script')
-      s.src = 'https://js.stripe.com/v3/'
-      s.onload = function () { window.Stripe ? resolve(window.Stripe) : reject(new Error('stripe')) }
-      s.onerror = function () { reject(new Error('stripe')) }
-      document.head.appendChild(s)
-    })
-  }
-
-  // The client's details go with the intent too: a mistyped email is answered before a card is held.
-  function depositBody() {
-    var svc = getService()
-    return {
-      service_id: svc.id,
-      service_master_id: state.masterId || undefined,
-      start_at: state.startAt,
-      party_size: state.partySize,
-      extras: state.extras,
-      customer_name: state.customer.name,
-      customer_email: state.customer.email,
-      customer_phone: state.customer.phone,
-      customer_notes: state.customer.notes,
-    }
-  }
-
-  // What the server says went wrong: its own sentence, or the first field it refused.
-  function depositProblem(body, fallback) {
-    return (body && (body.error || body.message)) || fallback
-  }
-
-  // Every visit to this step asks for a new intent: the time or the extras
-  // may have changed since the last one, and confirm() refuses an intent
-  // made for another time or amount.
-  function startDeposit() {
-    if (!state.customer.name || !state.customer.email) {
-      alert('Please enter your name and email.')
-      return
-    }
-    dep = emptyDeposit()
-    dep.loading = true
-    state.step = 8
-    render()
-    Promise.all([loadStripe(), post('/v1/services/payment-intent', depositBody())]).then(function (r) {
-      var res = r[1]
-      dep.loading = false
-      if (!res.ok || !res.body || !res.body.client_secret || !res.body.deposit) {
-        dep.error = depositProblem(res.body, 'The deposit could not be prepared. Please try again.')
-        render()
-        return
-      }
-      dep.intent = res.body
-      dep.stripe = window.Stripe(state.config.stripe_publishable_key)
-      dep.elements = dep.stripe.elements({ clientSecret: res.body.client_secret })
-      dep.element = dep.elements.create('payment')
-      render()
-    }, function () {
-      dep.loading = false
-      dep.error = 'The card form could not be loaded. Check your connection and try again.'
-      render()
-    })
-  }
-
-  // render() rebuilds the page: Stripe's card fields go back into the new box.
-  function mountDeposit() {
-    var box = document.getElementById('deposit-card')
-    if (!box || !dep.element) return
-    try { dep.element.unmount() } catch (e) {}
-    dep.element.mount(box)
-  }
-
-  // The button and the message change in place: a render() here would rebuild the page under Stripe's card fields
-  // (remounting them) just as confirmPayment() reads them.
-  function paintDeposit() {
-    var pay = document.querySelector('[data-act="pay"]')
-    var back = document.querySelector('[data-act="deposit-back"]')
-    var err = document.getElementById('deposit-error')
-    if (pay) { pay.disabled = dep.paying; pay.textContent = dep.paying ? 'Paying…' : payLabel() }
-    if (back) back.disabled = dep.paying
-    if (err) { err.textContent = dep.error || ''; err.hidden = !dep.error }
-  }
-
-  function payDeposit() {
-    if (!dep.stripe || !dep.elements || dep.paying) return
-    dep.paying = true
-    dep.error = null
-    paintDeposit()
-    dep.stripe.confirmPayment({
-      elements: dep.elements,
-      redirect: 'if_required',
-      confirmParams: {
-        return_url: location.href,
-        payment_method_data: { billing_details: { name: state.customer.name, email: state.customer.email } },
-      },
-    }).then(function (result) {
-      if (result.error) {
-        dep.paying = false
-        dep.error = result.error.message || 'Your card was not accepted.'
-        paintDeposit()
-        return
-      }
-      bookWithDeposit(dep.intent.payment_intent_id)
-    }, function () {
-      dep.paying = false
-      dep.error = 'The card could not be checked. Please try again.'
-      paintDeposit()
-    })
-  }
-
-  function bookWithDeposit(intentId) {
-    var body = depositBody()
-    body.customer_name = state.customer.name
-    body.customer_email = state.customer.email
-    body.customer_phone = state.customer.phone
-    body.customer_notes = state.customer.notes
-    body.payment_intent_id = intentId
-    body.source = state.source
-    post('/v1/services/confirm', body, { 'Idempotency-Key': state.idempotencyKey }).then(function (res) {
-      dep.paying = false
-      if (res.ok) {
-        state.booking = res.body
-        state.step = 7
-        render()
-        return
-      }
-      var message = depositProblem(res.body, 'Booking failed. Please try again.')
-      if (res.body && res.body.code === 'slot_taken') {
-        // The server released the deposit: nothing was charged. Choose another time.
-        alert(message)
-        dep = emptyDeposit()
-        state.idempotencyKey = uuid()
-        selectDate(state.date)
-        return
-      }
-      // Any other refusal may have spent the intent: the step starts again.
-      dep = emptyDeposit()
-      dep.error = message
-      render()
-    }, function () {
-      dep.paying = false
-      dep.error = 'No answer from the server. If you are not booked, the hold on your card is released within the hour.'
-      render()
-    })
-  }
-
-  // The amount on the button is the one the intent holds (a quote can be older).
-  function payLabel() {
-    var q = state.quote || {}
-    var d = (dep.intent && dep.intent.deposit) || q.deposit || {}
-    return 'Pay ' + fmtMoney(d.amount, q.currency) + ' and book'
-  }
-
-  function renderDepositStep() {
-    var q = state.quote || {}
-    var d = (dep.intent && dep.intent.deposit) || q.deposit || {}
-    var h = '<div class="card">'
-    h += '<h2 class="card-title">Deposit</h2>'
-    if (Number(d.amount) >= Number(q.total_amount)) {
-      h += '<p class="card-sub">Pay <strong>' + escapeHtml(fmtMoney(d.amount, q.currency)) + '</strong> now to book.</p>'
-    } else {
-      h += '<p class="card-sub">Pay a deposit of <strong>' + escapeHtml(fmtMoney(d.amount, q.currency)) + '</strong> now (' + escapeHtml(String(d.percent)) + '% of ' + escapeHtml(fmtMoney(q.total_amount, q.currency)) + '). You pay the rest at the venue.</p>'
-    }
-    h += '<p class="card-sub">' + (Number(d.cancel_hours) > 0
-      ? 'Cancel at least ' + escapeHtml(String(d.cancel_hours)) + ' hours before for a full refund of your deposit; after that, or if you don\'t come, the venue keeps it.'
-      : 'Cancel before your visit for a full refund of your deposit; if you don\'t come, the venue keeps it.') + '</p>'
-    if (dep.loading) h += '<div class="loading"><div class="spinner"></div><div>Preparing the card form…</div></div>'
-    h += '<div id="deposit-card" class="field"></div>'
-    h += '<div id="deposit-error" class="error-box" role="alert"' + (dep.error ? '' : ' hidden') + '>' + escapeHtml(dep.error || '') + '</div>'
-    h += '<div class="btn-row"><button class="btn btn-outline" data-act="deposit-back"' + (dep.paying ? ' disabled' : '') + '>Back</button>'
-    if (dep.element) {
-      h += '<button class="btn btn-primary" data-act="pay"' + (dep.paying ? ' disabled' : '') + '>' + escapeHtml(dep.paying ? 'Paying…' : payLabel()) + '</button>'
-    } else if (!dep.loading) {
-      h += '<button class="btn btn-primary" data-act="deposit-retry">Try again</button>'
-    }
-    h += '</div></div>'
-    return h
-  }
-
-  function handleDeposit(act) {
-    if (act === 'submit' && depositDue()) { startDeposit(); return true }
-    if (act === 'pay') { payDeposit(); return true }
-    if (act === 'deposit-retry') { startDeposit(); return true }
-    if (act === 'deposit-back') { dep = emptyDeposit(); state.step = 6; render(); return true }
-    if (act === 'again') dep = emptyDeposit()
-    return false
-  }
-@endif
   // ─── Go ───────────────────────────────────────────────────────────
   loadConfig()
 })()

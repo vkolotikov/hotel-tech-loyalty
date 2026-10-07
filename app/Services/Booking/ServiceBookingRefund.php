@@ -3,6 +3,7 @@
 namespace App\Services\Booking;
 
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\StripeService;
 use Illuminate\Support\Facades\Log;
 
@@ -42,7 +43,8 @@ final class ServiceBookingRefund
             throw new CancellationException('refund_unavailable', 'Online payments are switched off at this venue, so the payment cannot be returned here. Please contact the venue.', 409);
         }
 
-        $amount = round((float) $b->total_amount, 2);
+        // A booking-page deposit booking's card carries the deposit, not the whole price (Part H).
+        $amount = round((float) (Deposits::of($b)['amount'] ?? $b->total_amount), 2);
         try {
             // With its latest charge expanded, so alreadyRefunded() can see a
             // refund made from the dashboard before asking Stripe for another.

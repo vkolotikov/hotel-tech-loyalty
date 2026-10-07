@@ -9,8 +9,10 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
+use App\Services\Appointments\AppointmentRefused;
 use App\Services\Appointments\Messages\ClientMessenger;
 use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\DepositRule;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\ServiceSchedulingService;
 use Carbon\Carbon;
@@ -252,8 +254,29 @@ class ServiceBookingController extends Controller
 
         $updated = 0;
         $patches = [];
-        DB::transaction(function () use ($rows, $validated, &$updated, &$patches) {
+        // Part H: a booking with a booking-page deposit is cancelled on its own, its refund first (DepositRule). One whose
+        // refund Stripe refuses stays as it was, and the others go ahead.
+        $cancels = $validated['action'] === 'cancel' || ($validated['action'] === 'mark_status' && ($validated['value'] ?? null) === 'cancelled');
+        $alone = $cancels ? $rows->filter(fn (ServiceBooking $b) => DepositRule::applies($b))->pluck('id')->all() : [];
+        $failed = [];
+        foreach ($rows->whereIn('id', $alone) as $b) {
+            try {
+                DB::transaction(function () use ($b, $request) {
+                    $locked = ServiceBooking::lockForUpdate()->findOrFail($b->id);
+                    app(DepositRule::class)->onCancel($locked, $request->user());
+                    $locked->update(['status' => 'cancelled', 'cancelled_at' => $locked->cancelled_at ?? now()]);
+                });
+                $patches[$b->id] = ['status' => 'cancelled'];
+                $updated++;
+            } catch (AppointmentRefused) {
+                $failed[$b->id] = (string) $b->booking_reference;
+            }
+        }
+        DB::transaction(function () use ($rows, $validated, $alone, &$updated, &$patches) {
             foreach ($rows as $b) {
+                if (in_array($b->id, $alone, true)) {
+                    continue;
+                }
                 $patch = match ($validated['action']) {
                     'cancel'        => ['status' => 'cancelled', 'cancelled_at' => now()],
                     'mark_complete' => ['status' => 'completed'],
@@ -265,6 +288,8 @@ class ServiceBookingController extends Controller
                 $updated++;
             }
         });
+        // A booking left as it was is neither audited nor messaged below.
+        $rows = $rows->reject(fn (ServiceBooking $b) => isset($failed[$b->id]))->values();
 
         // After the transaction, as before: an audit failure must never fail
         // the bulk action. One row per booking (so each booking's history is
@@ -322,11 +347,16 @@ class ServiceBookingController extends Controller
             $counts[in_array($message->status, ['queued', 'sent'], true) ? 'queued' : 'skipped']++;
         }
 
+        $message = "{$updated} booking" . ($updated === 1 ? '' : 's') . ' updated.';
+        if ($failed !== []) {
+            $message .= ' Not cancelled — the deposit could not be refunded just now: ' . implode(', ', $failed) . '. Try again.';
+        }
+
         return response()->json([
             'updated' => $updated,
-            'message' => "{$updated} booking" . ($updated === 1 ? '' : 's') . ' updated.',
+            'message' => $message,
             'client_messages' => $counts,
-        ]);
+        ] + ($failed !== [] ? ['failed' => array_values($failed)] : []));
     }
 
     /** The request's "tell the client" box; null when the screen did not say (the venue's setting decides). */
@@ -581,6 +611,11 @@ class ServiceBookingController extends Controller
             }
 
             $before = ['status' => (string) $booking->status, 'payment_status' => (string) $booking->payment_status];
+            // Part H: a booking-page deposit follows its window — refunded now when cancelled in time, kept when late.
+            // A refund Stripe refuses throws (422 deposit_refund_failed) and nothing is saved.
+            if (($data['status'] ?? null) === 'cancelled' && DepositRule::applies($booking)) {
+                app(DepositRule::class)->onCancel($booking, $request->user());
+            }
             $booking->update(array_filter($data, fn ($v) => $v !== null));
 
             AuditLog::record(
@@ -612,9 +647,17 @@ class ServiceBookingController extends Controller
     public function destroy(Request $request, int $id): JsonResponse
     {
         $request->validate(['notify_client' => 'nullable|boolean']);
-        $booking = ServiceBooking::findOrFail($id);
-        $before = ['status' => (string) $booking->status];
-        $booking->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+        // Under the row lock, so a deposit's refund (Part H) and the cancellation are one step.
+        [$booking, $before] = DB::transaction(function () use ($id, $request) {
+            $booking = ServiceBooking::lockForUpdate()->findOrFail($id);
+            $before = ['status' => (string) $booking->status];
+            if (DepositRule::applies($booking)) {
+                app(DepositRule::class)->onCancel($booking, $request->user());
+            }
+            $booking->update(['status' => 'cancelled', 'cancelled_at' => now()]);
+
+            return [$booking, $before];
+        });
 
         try {
             AuditLog::record(

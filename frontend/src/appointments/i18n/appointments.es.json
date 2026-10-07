@@ -33,6 +33,7 @@
     "no_show": "No se presentó"
   },
   "payment": {
+    "deposit_paid": "Depósito pagado",
     "not_paid_online": "No pagada en línea",
     "card_held": "Tarjeta retenida, sin cargo",
     "paid_by_card": "Pagada con tarjeta",
@@ -174,6 +175,11 @@
     "cancel": "Cancelar cita"
   },
   "consequence": {
+    "deposit": {
+      "goes_back": "El depósito ({{amount}}) vuelve a la tarjeta del cliente.",
+      "kept_late": "El local se queda el depósito ({{amount}}): cancelada con menos de {{hours}} h de antelación.",
+      "kept": "El local se queda el depósito ({{amount}})."
+    },
     "reopen": "La cita vuelve a quedar confirmada a su hora. Los puntos ya ganados se mantienen.",
     "no_message": "No se envía ningún mensaje al cliente.",
     "points_will_award": "Al completarla se conceden {{points}} puntos.",
@@ -228,6 +234,8 @@
     "bulk_mark_status": "Estado cambiado en la administración completa (acción masiva)"
   },
   "error": {
+    "deposit_refund_failed": "No se ha podido devolver el depósito ahora mismo. Inténtelo de nuevo.",
+    "deposits_unavailable": "Los depósitos necesitan pagos en línea con Stripe en la moneda del local.",
     "reopen_slot_taken": "Esa hora ya está ocupada: vuelva a reservar al cliente en otro momento.",
     "invalid_period": "Elija un periodo de hasta un año.",
     "invalid_length": "Elija una duración de 15 minutos a 8 horas, en pasos de 15 minutos.",
@@ -257,6 +265,17 @@
     "network": "El servidor no responde. Compruebe la conexión e inténtelo de nuevo: nada se reserva dos veces."
   },
   "setup": {
+    "deposits": {
+      "title": "Depósitos en las reservas en línea",
+      "intro": "Quien reserva en su página paga parte del precio con tarjeta. Si cancela con al menos {{hours}} horas de antelación, se le devuelve automáticamente; si cancela más tarde o no se presenta, el local se lo queda. El resto se paga en el local.",
+      "on": "Pedir un depósito",
+      "percent": "Depósito (% del precio)",
+      "reason": {
+        "payments_off": "Active los pagos en línea con sus claves de Stripe en la administración completa (Ajustes → Reservas) para cobrar depósitos.",
+        "mock_mode": "Las reservas están en modo de prueba (administración completa, Ajustes → Reservas): los depósitos necesitan pagos reales.",
+        "currency_mismatch": "Stripe cobra en una moneda distinta de la de sus precios. Haga que coincidan para cobrar depósitos."
+      }
+    },
     "title": "Configuración",
     "load_failed": "No se pudo cargar la configuración. Inténtelo de nuevo.",
     "read_only": "Solo un propietario o un gerente puede cambiar la configuración. Aquí puede verla y gestionar sus propias ausencias en Equipo.",

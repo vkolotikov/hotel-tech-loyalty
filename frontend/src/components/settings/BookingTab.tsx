@@ -547,7 +547,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             {isOn('services_require_deposit') && (
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Deposit (%)</label>
-                <input type="number" value={getVal('services_deposit_percent') || '100'} min={5} max={100}
+                <input type="number" value={getVal('services_deposit_percent') || '100'} min={1} max={100}
                   onChange={e => handleChange('services_deposit_percent', e.target.value)}
                   className={inputClass} />
               </div>

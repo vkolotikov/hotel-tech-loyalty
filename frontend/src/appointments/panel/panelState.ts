@@ -1,4 +1,4 @@
-import type { ActionKey, ClientMessageInfo, ClientSummary, CouponRef, CreateBody, DateKey, DeskMethod, PointsResult } from '../lib/types'
+import type { ActionKey, ClientMessageInfo, ClientSummary, CouponRef, CreateBody, DateKey, DeskMethod, MoneyInfo, PointsResult } from '../lib/types'
 import { makeWall, minutesOf } from '../lib/wallClock'
 
 export type Source = 'admin' | 'phone' | 'walk_in'
@@ -18,6 +18,11 @@ export interface CreateDraft {
 
 /** Part E: the money a manager gives back while cancelling, one line per way. */
 export interface CancelRefunds { online: string; desk: string; deskMethod: DeskMethod }
+
+/** The cancel sheet's refund lines to start from (Part E). A booking-page deposit starts at nothing: its own rule decides (Part H). */
+export function refundDefaultsFor(money: MoneyInfo | null | undefined): CancelRefunds {
+  return { online: money?.deposit ? '0' : String(money?.refundable_online ?? 0), desk: String(money?.refundable_desk ?? 0), deskMethod: 'cash' }
+}
 
 export interface PanelError { code: string; message: string }
 

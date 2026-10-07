@@ -33,6 +33,7 @@
     "no_show": "Nicht erschienen"
   },
   "payment": {
+    "deposit_paid": "Anzahlung bezahlt",
     "not_paid_online": "Nicht online bezahlt",
     "card_held": "Karte reserviert, nicht belastet",
     "paid_by_card": "Mit Karte bezahlt",
@@ -174,6 +175,11 @@
     "cancel": "Termin stornieren"
   },
   "consequence": {
+    "deposit": {
+      "goes_back": "Die Anzahlung ({{amount}}) geht auf die Karte des Kunden zurück.",
+      "kept_late": "Die Anzahlung ({{amount}}) bleibt beim Betrieb: weniger als {{hours}} Std. vor dem Termin storniert.",
+      "kept": "Die Anzahlung ({{amount}}) bleibt beim Betrieb."
+    },
     "reopen": "Der Termin wird zu seiner Zeit wieder bestätigt. Bereits vergebene Punkte bleiben.",
     "no_message": "Der Kunde erhält keine Nachricht.",
     "points_will_award": "Beim Abschließen werden {{points}} Punkte gutgeschrieben.",
@@ -228,6 +234,8 @@
     "bulk_mark_status": "Status in der vollständigen Verwaltung geändert (Sammelaktion)"
   },
   "error": {
+    "deposit_refund_failed": "Die Anzahlung konnte gerade nicht erstattet werden. Bitte erneut versuchen.",
+    "deposits_unavailable": "Anzahlungen brauchen Online-Zahlungen über Stripe in der Währung des Betriebs.",
     "reopen_slot_taken": "Diese Zeit ist inzwischen belegt — buchen Sie den Kunden zu einer anderen Zeit neu.",
     "invalid_period": "Wählen Sie einen Zeitraum von höchstens einem Jahr.",
     "invalid_length": "Wählen Sie eine Dauer zwischen 15 Minuten und 8 Stunden, in 15-Minuten-Schritten.",
@@ -257,6 +265,17 @@
     "network": "Keine Antwort vom Server. Prüfen Sie die Verbindung und versuchen Sie es erneut — es wird nichts doppelt gebucht."
   },
   "setup": {
+    "deposits": {
+      "title": "Anzahlung bei Online-Buchungen",
+      "intro": "Wer über Ihre Buchungsseite bucht, zahlt einen Teil des Preises per Karte. Bei Stornierung mindestens {{hours}} Stunden vorher geht er automatisch zurück; bei späterer Stornierung oder Nichterscheinen behält ihn der Betrieb. Den Rest zahlt der Kunde vor Ort.",
+      "on": "Anzahlung verlangen",
+      "percent": "Anzahlung (% vom Preis)",
+      "reason": {
+        "payments_off": "Schalten Sie im vollen Admin (Einstellungen → Buchung) Online-Zahlungen mit Ihren Stripe-Schlüsseln ein, um Anzahlungen zu nehmen.",
+        "mock_mode": "Buchungen sind im Testmodus (voller Admin, Einstellungen → Buchung): Anzahlungen brauchen echte Zahlungen.",
+        "currency_mismatch": "Stripe nimmt Zahlungen in einer anderen Währung an als Ihre Preise. Gleichen Sie sie an, um Anzahlungen zu nehmen."
+      }
+    },
     "title": "Einrichtung",
     "load_failed": "Die Einrichtung konnte nicht geladen werden. Bitte versuchen Sie es erneut.",
     "read_only": "Nur Inhaber oder Manager können die Einrichtung ändern. Hier können Sie sie ansehen und unter Team Ihre eigene Abwesenheit eintragen.",

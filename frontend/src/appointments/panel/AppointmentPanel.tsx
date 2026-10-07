@@ -13,7 +13,7 @@ import { RefundForm } from './RefundForm'
 import { TakePaymentForm } from './TakePaymentForm'
 import { NEEDS_CONFIRM } from './consequences'
 import { CreateForm } from './CreateForm'
-import { detailPollMs, draftBody, newKey, type CancelRefunds, type PanelEvent, type PanelState } from './panelState'
+import { detailPollMs, draftBody, newKey, refundDefaultsFor, type CancelRefunds, type PanelEvent, type PanelState } from './panelState'
 import { makeWall, minutesOf } from '../lib/wallClock'
 import { panelClosesOn } from '../calendar/dropDialog'
 
@@ -124,7 +124,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
   })
   const booking = detail.data?.booking
 
-  const refundDefaults = (): CancelRefunds => ({ online: String(booking?.money?.refundable_online ?? 0), desk: String(booking?.money?.refundable_desk ?? 0), deskMethod: 'cash' })
+  const refundDefaults = (): CancelRefunds => refundDefaultsFor(booking?.money)
   const [refundChoice, setRefundChoice] = useState<{ key: string; value: CancelRefunds } | null>(null)
   const refunds = refundChoice !== null && refundChoice.key === tellKey ? refundChoice.value : refundDefaults()
 

@@ -6,6 +6,8 @@ use App\Models\AuditLog;
 use App\Models\ServiceBooking;
 use App\Models\User;
 use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\DepositRule;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Appointments\Setup\SetupAccess;
 use App\Services\Booking\CouponRelease;
 use App\Services\Loyalty\BookingPointsService;
@@ -16,8 +18,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Runs one staff action on an appointment: under the row lock, against the
  * revision the client saw, through the transition table. It writes the
- * appointment's own status (payments and refunds are AppointmentMoney's) and
- * nothing else — no payment, refund or message is triggered from here. The
+ * appointment's own status (payments and refunds are AppointmentMoney's); the
+ * one refund it starts is a booking-page deposit's on a cancellation in time
+ * (Part H, DepositRule). No payment or message is triggered from here. The
  * one side effect, points for a completed visit, is the existing worker's,
  * called once after the transaction commits.
  */
@@ -28,6 +31,7 @@ final class AppointmentActionRunner
         private readonly BookingPointsService $points,
         private readonly AppointmentMoney $money,
         private readonly CouponRelease $coupons,
+        private readonly DepositRule $deposits,
     ) {
     }
 
@@ -50,8 +54,9 @@ final class AppointmentActionRunner
         }
 
         $preview = null;
+        $depositBack = false;
 
-        $work = function () use ($id, $action, $revision, $reason, $actor, $refunds, &$preview) {
+        $work = function () use ($id, $action, $revision, $reason, $actor, $refunds, &$preview, &$depositBack) {
             $booking = ServiceBooking::lockForUpdate()->find($id)
                 ?? throw new AppointmentRefused('not_found', 'This appointment no longer exists.', 404);
 
@@ -75,6 +80,17 @@ final class AppointmentActionRunner
             }
             $reason = $reason !== null && trim($reason) !== '' ? mb_substr(trim($reason), 0, 255) : null;
 
+            // Part H §6.1: in time, a booking-page deposit goes back whole whoever cancels — a manager's card line can
+            // add to it, never take from it, and it stays one Stripe refund.
+            if ($action === 'cancel' && DepositRule::applies($booking) && Deposits::inTime($booking, now())) {
+                $floor = min(AppointmentMoney::summary($booking)['refundable_online'], Deposits::of($booking)['amount']);
+                foreach ($refunds as $i => $r) {
+                    if ((string) $r['via'] === 'online_card') {
+                        $refunds[$i]['amount'] = max(round((float) $r['amount'], 2), $floor);
+                    }
+                }
+            }
+
             // Cancel with refund (Part E): the money first, under this same row lock; a refused or failed refund
             // throws and nothing — not even the cancellation — is kept. Every line is checked before any is made,
             // and the desk lines go before the card: once Stripe has refunded, nothing after it may refuse.
@@ -84,6 +100,11 @@ final class AppointmentActionRunner
             }
             foreach ($refunds as $r) {
                 $this->money->refundInLock($booking, (float) $r['amount'], (string) $r['via'], $reason ?? 'Appointment cancelled', $actor);
+            }
+            // Part H: a booking-page deposit follows its window — refunded now when cancelled in time, kept when late —
+            // unless a manager named a card refund on this cancellation: that refund is then the decision.
+            if ($action === 'cancel' && !in_array('online_card', array_map(fn (array $r) => (string) $r['via'], $refunds), true)) {
+                $depositBack = $this->deposits->onCancel($booking, $actor) === 'refunded';
             }
 
             $patch = match ($action) {
@@ -113,7 +134,7 @@ final class AppointmentActionRunner
             ? AdvisoryLock::transaction('svcm:' . (int) ServiceBooking::whereKey($id)->value('service_master_id'), $work)
             : DB::transaction($work);
 
-        if ($refunds !== []) {
+        if ($refunds !== [] || $depositBack) {
             $this->money->afterRefunds($booking->fresh(), $actor);
         }
 

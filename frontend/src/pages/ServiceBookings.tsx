@@ -205,7 +205,9 @@ export default function ServiceBookings() {
       const { data: res } = await api.post('/v1/admin/service-bookings/bulk', {
         ids: Array.from(selected), action, value, notify_client: notifyClient,
       })
-      toast.success(res.message || 'Updated')
+      // Part H: a booking whose deposit refund Stripe refused stays as it was; the server's message names it.
+      if (res.failed?.length) toast.error(res.message)
+      else toast.success(res.message || 'Updated')
       setSelected(new Set())
       qc.invalidateQueries({ queryKey: ['service-bookings'] })
       qc.invalidateQueries({ queryKey: ['service-bookings-today'] })

@@ -33,6 +33,7 @@
     "no_show": "No-show"
   },
   "payment": {
+    "deposit_paid": "Deposit paid",
     "not_paid_online": "Not paid online",
     "card_held": "Card held, not charged",
     "paid_by_card": "Paid by card",
@@ -174,6 +175,11 @@
     "cancel": "Cancel appointment"
   },
   "consequence": {
+    "deposit": {
+      "goes_back": "The deposit ({{amount}}) goes back to the client’s card.",
+      "kept_late": "The venue keeps the deposit ({{amount}}): cancelled less than {{hours}} h before the visit.",
+      "kept": "The venue keeps the deposit ({{amount}})."
+    },
     "reopen": "The visit goes back to Confirmed at its own time. Points already earned stay.",
     "no_message": "No message is sent to the client.",
     "points_will_award": "Completing awards {{points}} points.",
@@ -228,6 +234,8 @@
     "bulk_mark_status": "Status changed in the full admin (bulk)"
   },
   "error": {
+    "deposit_refund_failed": "The deposit could not be refunded just now. Try again.",
+    "deposits_unavailable": "Deposits need online payments through Stripe in the venue’s currency.",
     "reopen_slot_taken": "That time is taken now — book the client again at another time.",
     "invalid_period": "Choose a period of up to a year.",
     "invalid_length": "Choose a length between 15 minutes and 8 hours, in 15-minute steps.",
@@ -257,6 +265,17 @@
     "network": "No answer from the server. Check the connection and try again — nothing is booked twice."
   },
   "setup": {
+    "deposits": {
+      "title": "Deposits for online bookings",
+      "intro": "Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.",
+      "on": "Ask for a deposit",
+      "percent": "Deposit (% of the price)",
+      "reason": {
+        "payments_off": "Switch on online payments with your Stripe keys in the full admin (Settings → Booking) to take deposits.",
+        "mock_mode": "Bookings are in test mode in the full admin (Settings → Booking): deposits need real payments.",
+        "currency_mismatch": "Stripe takes payments in another currency than your prices. Make them the same to take deposits."
+      }
+    },
     "title": "Setup",
     "load_failed": "Setup could not be loaded. Please try again.",
     "read_only": "Only an owner or a manager can change setup. You can see it here and manage your own time off under Team.",

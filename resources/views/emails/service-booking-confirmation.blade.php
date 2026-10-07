@@ -97,6 +97,17 @@
         @elseif ($paymentStatus === 'unpaid')
             <p style="font-size:12px;color:rgba(255,255,255,0.62);margin:12px 0 0;">Pay at the venue.</p>
         @endif
+        @if (!empty($depositAmount))
+            <p style="font-size:12px;color:rgba(255,255,255,0.62);margin:12px 0 0;">
+                Deposit paid: {{ $currency }} {{ number_format($depositAmount, 2) }}.
+                @if ($depositAmount < $grossTotal)
+                    You pay the rest at the venue.
+                @endif
+                @if (!empty($depositRefundUntil))
+                    Cancel by {{ $depositRefundUntil }} for a full refund of your deposit; after that, or if you don't come, the venue keeps it.
+                @endif
+            </p>
+        @endif
     </div>
 
     @if(!empty($cancellationPolicy))

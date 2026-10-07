@@ -30,6 +30,7 @@ return [
     'label'      => ['service' => 'Service', 'when' => 'When', 'previously' => 'Previously', 'with' => 'With', 'reference' => 'Reference'],
     'questions'  => 'Questions? Just reply to this email.',
     'book_again' => 'To book again, just reply to this email.',
+    'deposit' => ['refunded' => 'Your deposit of :amount is being refunded to your card.', 'kept' => 'The deposit of :amount is kept, as the visit was cancelled less than :hours hours before.'],
     'when'        => ':date, :time',
     'date_format' => 'l j F Y',
 ];

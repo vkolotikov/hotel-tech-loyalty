@@ -112,7 +112,7 @@ class ReleaseOrphanPortalHolds extends Command
         $meta = $this->metadata($pi);
 
         return (string) ($pi->status ?? '') === 'requires_capture'
-            && in_array($meta['kind'] ?? null, PortalPaymentIntentGuard::PORTAL_KINDS, true)
+            && in_array($meta['kind'] ?? null, PortalPaymentIntentGuard::ORPHAN_KINDS, true)
             && (int) ($meta['org_id'] ?? 0) === $orgId
             && (int) ($pi->created ?? PHP_INT_MAX) <= $cutoff;
     }

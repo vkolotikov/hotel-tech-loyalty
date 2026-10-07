@@ -42,6 +42,8 @@ export function ActionConfirm({ booking, action, reason, saving, error, tell, on
   const [key, fallback] = TITLE[action.key] ?? ['appointments.action.confirm', 'Confirm']
   const label = t(key, fallback)
   const destructive = action.key === 'cancel' || action.key === 'no_show'
+  // Part H: a booking-page deposit follows its own rule (the line above); staff are told only of the rest a manager can refund.
+  const staffDue = booking.money ? (action.consequences.deposit ? 0 : booking.money.refundable_online) + booking.money.refundable_desk : 0
 
   return (
     <div className="space-y-4">
@@ -89,7 +91,7 @@ export function ActionConfirm({ booking, action, reason, saving, error, tell, on
             )}
           </fieldset>
         ) : (
-          <p className="text-sm text-a-text">{t('appointments.money.cancel_staff', '{{amount}} was paid — a manager can refund it.', { amount: fmt(booking.money.refundable_online + booking.money.refundable_desk, booking.money.currency) })}</p>
+          staffDue > 0 && <p className="text-sm text-a-text">{t('appointments.money.cancel_staff', '{{amount}} was paid — a manager can refund it.', { amount: fmt(staffDue, booking.money.currency) })}</p>
         )
       )}
 

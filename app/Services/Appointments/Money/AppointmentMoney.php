@@ -201,19 +201,52 @@ final class AppointmentMoney
     }
 
     /**
+     * The booking page's deposit, charged at Stripe (Part H §5.1): one ledger
+     * row — payment, online_card, "Deposit" — and the label from the money,
+     * never `paid` for a part. Safe to call twice (confirm() and the capture
+     * job both may): the second call finds the row and does nothing.
+     */
+    public function recordDeposit(ServiceBooking $b, ?User $actor = null): void
+    {
+        $deposit = Deposits::of($b);
+        if ($deposit === null) {
+            return;
+        }
+
+        DB::transaction(function () use ($b, $deposit, $actor) {
+            $locked = ServiceBooking::withoutGlobalScopes()->lockForUpdate()->find($b->id);
+            if (!$locked || ServiceBookingPayment::withoutGlobalScopes()->where('service_booking_id', $locked->id)
+                    ->where('kind', 'payment')->where('method', 'online_card')->exists()) {
+                return;
+            }
+            $currency = strtoupper((string) ($locked->currency ?: 'EUR'));
+            ServiceBookingPayment::create([
+                'organization_id' => $locked->organization_id, 'service_booking_id' => $locked->id, 'kind' => 'payment',
+                'method' => 'online_card', 'amount' => $deposit['amount'], 'currency' => $currency, 'note' => 'Deposit',
+                'actor_user_id' => $actor?->id,
+            ]);
+            // The card is charged: what came in is the ledger's now, and the label follows it.
+            $locked->payment_status = 'unpaid';
+            $this->settle($locked, $actor, 'service_booking.deposit_taken', ['amount' => $deposit['amount']], "deposit of {$deposit['amount']} {$currency}");
+        });
+    }
+
+    /**
      * After a movement: the label from the new figures (never while a card is
      * held online), the booking's money version bumped so every open screen's
      * revision moves — even within the same second, where updated_at alone
      * would not — and the audit row with the actor.
      */
-    private function settle(ServiceBooking $b, User $actor, string $action, array $new, string $summary): void
+    private function settle(ServiceBooking $b, ?User $actor, string $action, array $new, string $summary): void
     {
-        $old = ['payment_status' => (string) $b->payment_status];
+        // The label as it was stored: recordDeposit() moves it off "authorized" in memory just before.
+        $old = ['payment_status' => (string) $b->getOriginal('payment_status')];
         $meta = (array) ($b->meta ?? []);
         $meta['money_version'] = (int) ($meta['money_version'] ?? 0) + 1;
         // For screens that read the label without the ledger (cardPaid()): this booking's money came in at the desk.
+        // A deposit paid on the booking page (online_card) is card money, not the desk's (Part H).
         $meta['paid_at_desk'] = ServiceBookingPayment::withoutGlobalScopes()
-            ->where('service_booking_id', $b->id)->where('kind', 'payment')->exists();
+            ->where('service_booking_id', $b->id)->where('kind', 'payment')->whereIn('method', ServiceBookingPayment::DESK_METHODS)->exists();
         $patch = ['meta' => $meta];
         $status = self::statusFor(self::summary($b));
         if ($status !== null && $status !== (string) $b->payment_status) {
@@ -229,7 +262,10 @@ final class AppointmentMoney
         $rows = ServiceBookingPayment::withoutGlobalScopes()->with('actor')
             ->where('service_booking_id', $b->id)->orderByDesc('id')->get();
 
-        return self::amountsFrom($b, $rows) + ['movements' => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi())->values()->all()];
+        return self::amountsFrom($b, $rows) + [
+            'deposit'   => Deposits::forStaff($b),
+            'movements' => $rows->map(fn (ServiceBookingPayment $r) => $r->toApi())->values()->all(),
+        ];
     }
 
     /**
@@ -265,6 +301,13 @@ final class AppointmentMoney
             && !AppointmentActions::holdLapsed($b);
     }
 
+    /** Part H: a closed deposit booking whose deposit is the venue's — a no-show, or cancelled after its deadline. */
+    private static function depositKept(ServiceBooking $b): bool
+    {
+        return (string) $b->status === 'no_show'
+            || ((string) $b->status === 'cancelled' && !Deposits::inTime($b, $b->cancelled_at ?? now()));
+    }
+
     /** The label after a movement; null while a card is held online (the capture job owns that label). */
     public static function statusFor(array $s): ?string
     {
@@ -274,6 +317,8 @@ final class AppointmentMoney
             $s['paid_back'] >= $s['paid_in'] - 0.004 => 'refunded',
             $s['paid_back'] > 0                     => 'partially_refunded',
             $s['owed'] > 0                          => 'unpaid',
+            // Part H §5.3: a deposit never makes the booking paid, even once nothing more is owed (cancelled, no-show).
+            !empty($s['part_paid'])                 => 'unpaid',
             default                                 => 'paid',
         };
     }
@@ -291,16 +336,21 @@ final class AppointmentMoney
         $total = round((float) $b->total_amount, 2);
         $card = AppointmentActions::carriesCardPayment($b);
         $label = (string) $b->payment_status;
+        $deposit = Deposits::of($b);
         $payments = $rows->where('kind', 'payment');
+        // Part H: a deposit paid on the booking page is card money the ledger records (online_card), not the desk's.
+        $online = $payments->where('method', 'online_card');
+        $desk = $payments->where('method', '!=', 'online_card');
         $deskRefunds = $rows->where('kind', 'refund')->where('method', '!=', 'online_card');
         $corrections = $deskRefunds->filter(fn (ServiceBookingPayment $r) => (bool) $r->corrects);
 
-        $held = self::cardHeld($b) ? $total : 0.0;
-        $paidOnline = self::cardPaid($b, $payments->isNotEmpty()) ? $total : 0.0;
+        // A deposit booking holds (or took) its deposit, never the whole price.
+        $held = self::cardHeld($b) ? ($deposit['amount'] ?? $total) : 0.0;
+        $paidOnline = round(($deposit === null && self::cardPaid($b, $desk->isNotEmpty()) ? $total : 0.0) + (float) $online->sum('amount'), 2);
         $refundedOnline = $card ? round((float) ($b->refunded_amount ?? 0), 2) : 0.0;
         $corrected = round((float) $corrections->sum('amount'), 2);
         // A corrected entry was never paid: it leaves the desk money, not the refunds.
-        $paidDesk = max(0.0, round((float) $payments->sum('amount') - $corrected, 2));
+        $paidDesk = max(0.0, round((float) $desk->sum('amount') - $corrected, 2));
         $refundedDesk = round((float) $deskRefunds->sum('amount') - $corrected, 2);
         // Marked paid before Part E (R2): a label with no money recorded behind it.
         $legacy = !$card && $payments->isEmpty()
@@ -323,7 +373,9 @@ final class AppointmentMoney
             'refunded_desk'      => $refundedDesk,
             'legacy_marked_paid' => $legacy,
             'owed'               => $owed,
-            'to_refund'          => $closed ? max(0.0, round($paidIn - $paidBack, 2)) : 0.0,
+            // A kept deposit is the venue's (Part H): a no-show's, or a cancellation's after the deadline — its card money is
+            // not "to refund". One cancelled in time and not given back (Stripe off) is.
+            'to_refund'          => $closed ? max(0.0, round($paidIn - $paidBack - ($deposit !== null && self::depositKept($b) ? max(0.0, $paidOnline - $refundedOnline) : 0.0), 2)) : 0.0,
             'refundable_online'  => $paidOnline > 0 ? max(0.0, round($paidOnline - $refundedOnline, 2)) : 0.0,
             'refundable_desk'    => max(0.0, round($paidDesk + $legacyPaid - $refundedDesk, 2)),
             // Only what was entered here can have been entered wrongly (not a label marked paid before Part E).
@@ -331,6 +383,8 @@ final class AppointmentMoney
             'corrected_desk'     => $corrected,
             'paid_in'            => $paidIn,
             'paid_back'          => $paidBack,
+            // A booking-page deposit booking with less in than its price (Part H): its label stays unpaid.
+            'part_paid'          => $deposit !== null && $paidIn < $total - 0.004,
             'can_take'           => $owed > 0 && in_array((string) $b->status, self::TAKE_FROM, true),
         ];
     }

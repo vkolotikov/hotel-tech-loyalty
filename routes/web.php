@@ -276,9 +276,11 @@ Route::get('/services-widget', function (\Illuminate\Http\Request $request) {
 
     $industry = $org?->resolved_industry ?: \App\Models\Organization::DEFAULT_INDUSTRY;
     $vocab    = \App\Services\IndustryPrompts\BookingWidgetVocab::for($industry);
+    // Part H: the deposit step is in the page only where deposits are switched on; every other page is as before.
+    $deposit = $org ? \App\Services\Appointments\Money\Deposits::pageOn((int) $org->id) : false;
 
     return response()
-        ->view('services-widget', compact('orgId', 'lang', 'color', 'apiBase', 'industry', 'vocab'))
+        ->view('services-widget', compact('orgId', 'lang', 'color', 'apiBase', 'industry', 'vocab', 'deposit'))
         ->header('X-Frame-Options', 'ALLOWALL')
         ->header('Content-Security-Policy', "frame-ancestors *");
 });
@@ -328,6 +330,7 @@ Route::get('/services/{token}', function (string $token) {
             'standalone' => true,
             'industry' => $industry,
             'vocab'    => $vocab,
+            'deposit'  => \App\Services\Appointments\Money\Deposits::pageOn((int) $org->id),
         ])
         ->header('X-Frame-Options', 'ALLOWALL')
         ->header('Content-Security-Policy', "frame-ancestors *");

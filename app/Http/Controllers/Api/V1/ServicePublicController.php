@@ -10,6 +10,9 @@ use App\Models\ServiceBookingExtra;
 use App\Models\ServiceBookingSubmission;
 use App\Models\ServiceExtra;
 use App\Models\Organization;
+use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\DepositRefused;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Booking\ExtraLeadTimeException;
 use App\Services\Booking\PaymentAlreadyUsed;
 use App\Services\Booking\ServiceCatalogue;
@@ -159,6 +162,8 @@ class ServicePublicController extends Controller
             return response()->json(['error' => $e->getMessage()], 409);
         }
 
+        $deposit = Deposits::termsFor((float) $q['list_total'], (string) $q['currency']);
+
         return response()->json([
             'service' => [
                 'id'    => $service->id,
@@ -177,7 +182,8 @@ class ServicePublicController extends Controller
             'extras_total'     => $q['extras_total'],
             'total_amount'     => $q['list_total'],
             'currency'         => $q['currency'],
-        ]);
+        // Part H: what the booking page asks for now, at a venue that takes deposits.
+        ] + ($deposit !== null ? ['deposit' => $deposit] : []));
     }
 
     /** POST /v1/services/payment-intent */
@@ -193,6 +199,12 @@ class ServicePublicController extends Controller
             'extras'            => 'nullable|array',
             'extras.*.id'       => 'required_with:extras|integer',
             'extras.*.quantity' => 'nullable|integer|min:1|max:50',
+            // Part H: the deposit step sends the client's details first, so a mistyped email is answered before a card
+            // is held — with confirm()'s own rules.
+            'customer_name'     => 'sometimes|required|string|max:200',
+            'customer_email'    => 'sometimes|required|email|max:255',
+            'customer_phone'    => 'sometimes|nullable|string|max:40',
+            'customer_notes'    => 'sometimes|nullable|string|max:2000',
         ]);
 
         // Mock mode short-circuit — return a fake intent so a stale widget
@@ -231,6 +243,30 @@ class ServicePublicController extends Controller
         }
 
         $orgId = app('current_organization_id');
+
+        // Part H: at a venue that takes deposits the intent is for the deposit only — the server's figure, held on
+        // the card (manual capture, no redirect methods) until confirm() saves the booking and charges it.
+        $deposit = Deposits::termsFor((float) $total, (string) ($service->currency ?: 'EUR'));
+        if ($deposit !== null) {
+            try {
+                $intent = $stripe->createPaymentIntent(
+                    $deposit['amount'],
+                    "Deposit: {$service->name}",
+                    [
+                        'org_id'     => (string) $orgId,
+                        'service_id' => (string) $service->id,
+                        'start_at'   => $reservation['start']->toIso8601String(),
+                        'kind'       => Deposits::KIND,
+                        'source'     => Deposits::SOURCE,
+                    ],
+                    ['allow_redirects' => 'never'],
+                );
+
+                return response()->json($intent + ['deposit' => $deposit]);
+            } catch (\Throwable $e) {
+                return response()->json(['error' => 'Failed to create payment: ' . $e->getMessage()], 500);
+            }
+        }
 
         try {
             $intent = $stripe->createPaymentIntent(
@@ -317,6 +353,7 @@ class ServicePublicController extends Controller
         $isMockBooking = ($mockMode === true || $mockMode === 'true');
 
         // If a payment_intent_id is provided, verify it
+        $intent = null; // Part H: kept for the deposit check in the lock
         $paymentStatus = 'unpaid';
         if ($isMockBooking) {
             $paymentStatus = 'paid';
@@ -351,7 +388,7 @@ class ServicePublicController extends Controller
             : "svc:{$service->id}";
 
         try {
-            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source) {
+            $booking = DB::transaction(function () use ($data, $service, $scheduler, $orgId, $paymentStatus, $lockKey, $source, $intent) {
                 \App\Support\AdvisoryLock::within($lockKey);
 
                 // Re-run the conflict check inside the lock — definitive source of truth.
@@ -410,6 +447,18 @@ class ServicePublicController extends Controller
                     throw new PaymentAlreadyUsed();
                 }
 
+                // Part H: a venue that takes deposits needs this booking's own deposit, held on the card, before the
+                // booking is saved — worked out here from the price in the lock, never taken from the page. Only the
+                // venue's real test mode skips it (termsFor() knows it); a made-up `pi_mock_` id does not.
+                $deposit = Deposits::termsFor(round($servicePrice + $extrasTotal, 2), (string) ($service->currency ?: 'EUR'));
+                if ($deposit !== null) {
+                    Deposits::assertPays($intent, $deposit, (int) $orgId, (int) $service->id, $reservation['start']);
+                } elseif ($intent !== null && (Deposits::metadataOf($intent)['kind'] ?? null) === Deposits::KIND) {
+                    // A deposit pays only a booking that takes one: switched off or repriced since the card form, it must
+                    // not pass for the whole price.
+                    throw new DepositRefused('deposit_mismatch', 'The deposit does not match this booking. Your card was not charged; please try again.');
+                }
+
                 $booking = ServiceBooking::create([
                     'organization_id'   => $orgId,
                     'service_id'        => $service->id,
@@ -430,7 +479,7 @@ class ServicePublicController extends Controller
                     'stripe_payment_intent_id' => $data['payment_intent_id'] ?? null,
                     'source'            => $source,
                     'customer_notes'    => $data['customer_notes'] ?? null,
-                ]);
+                ] + ($deposit !== null ? ['meta' => ['deposit' => ['amount' => $deposit['amount'], 'percent' => $deposit['percent'], 'cancel_hours' => $deposit['cancel_hours']]]] : []));
 
                 foreach ($extraRows as $row) {
                     ServiceBookingExtra::create([
@@ -446,6 +495,12 @@ class ServicePublicController extends Controller
 
                 return $booking;
             });
+        } catch (DepositRefused $e) {
+            if ($e->reason === 'deposit_mismatch') {
+                $this->releaseDeposit($intent, $orgId);
+            }
+            $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->reason);
+            return response()->json(['error' => $e->getMessage(), 'code' => $e->reason], 422);
         } catch (PaymentAlreadyUsed) {
             return $this->paymentAlreadyUsed($orgId, $idempotency, $data);
         } catch (UniqueConstraintViolationException $e) {
@@ -462,10 +517,13 @@ class ServicePublicController extends Controller
             return response()->json(['error' => $e->getMessage()], 409);
         } catch (\RuntimeException $e) {
             // reserveSlot threw — the requested slot was taken by a concurrent
-            // confirm while we were waiting for the advisory lock.
+            // confirm while we were waiting for the advisory lock. A deposit held
+            // for it goes back at once (Part H).
+            $released = $this->releaseDeposit($intent, $orgId);
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 409);
+            return response()->json(['error' => $e->getMessage() . ($released ? ' Your card was not charged.' : '')] + ($released ? ['code' => 'slot_taken'] : []), 409);
         } catch (\Throwable $e) {
+            $this->releaseDeposit($intent, $orgId);
             $this->logSubmission($orgId, $idempotency, $data, null, 'failed', $e->getMessage());
             return response()->json(['error' => 'Failed to create booking: ' . $e->getMessage()], 500);
         }
@@ -483,6 +541,11 @@ class ServicePublicController extends Controller
             $booking,
             $isMockBooking,
         );
+
+        // Part H: the deposit's ledger row moved the label; what is emailed and answered is the booking as it is now.
+        if (Deposits::of($booking) !== null) {
+            $booking->refresh();
+        }
 
         // ── Transactional emails ───────────────────────────────────────────
         // 1) Service confirmation goes to every booking, no questions asked.
@@ -509,6 +572,9 @@ class ServicePublicController extends Controller
         ];
         if ($captureFlag !== null) {
             $payload['payment_capture_pending'] = $captureFlag;
+        }
+        if (($deposit = Deposits::forClient($booking)) !== null) {
+            $payload['deposit'] = $deposit;
         }
 
         return response()->json($payload, 201);
@@ -546,6 +612,35 @@ class ServicePublicController extends Controller
                 ->where('organization_id', $orgId)
                 ->where('stripe_payment_intent_id', $paymentIntentId)
                 ->exists();
+    }
+
+    /**
+     * Part H: a deposit held for a booking that was not saved goes back at
+     * once (the orphan release would do it within the hour). Only this
+     * venue's own deposit intent, only while it is still just held, and
+     * never one a booking already carries.
+     */
+    private function releaseDeposit(mixed $intent, ?int $orgId): bool
+    {
+        if ($intent === null || !$orgId) {
+            return false;
+        }
+        $meta = Deposits::metadataOf($intent);
+        $id = (string) ($intent->id ?? '');
+        if ($id === '' || ($meta['kind'] ?? null) !== Deposits::KIND || (int) ($meta['org_id'] ?? 0) !== $orgId
+            || (string) ($intent->status ?? '') !== 'requires_capture'
+            || ServiceBooking::withoutGlobalScopes()->where('organization_id', $orgId)->where('stripe_payment_intent_id', $id)->exists()) {
+            return false;
+        }
+        try {
+            app(StripeService::class)->cancelPaymentIntent($id, 'abandoned');
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('service_deposit.release_failed', ['pi' => $id, 'error' => $e->getMessage()]);
+
+            return false;
+        }
     }
 
     /**
@@ -592,7 +687,9 @@ class ServicePublicController extends Controller
             // Legacy auto-capture PI — already captured. Flip the
             // booking to paid if it's still authorized.
             try {
-                if (in_array($booking->payment_status, ['authorized', 'pending', null, ''], true)) {
+                if (Deposits::of($booking) !== null) {
+                    app(AppointmentMoney::class)->recordDeposit($booking);
+                } elseif (in_array($booking->payment_status, ['authorized', 'pending', null, ''], true)) {
                     $booking->update(['payment_status' => 'paid']);
                 }
             } catch (\Throwable) {}
@@ -620,7 +717,12 @@ class ServicePublicController extends Controller
         try {
             $stripe->capturePaymentIntent($intentId);
             try {
-                $booking->update(['payment_status' => 'paid']);
+                if (Deposits::of($booking) !== null) {
+                    // Part H: a deposit is part of the price — a ledger payment, never the whole booking marked paid.
+                    app(AppointmentMoney::class)->recordDeposit($booking);
+                } else {
+                    $booking->update(['payment_status' => 'paid']);
+                }
             } catch (\Throwable) {}
             return false;
         } catch (\Throwable $e) {
@@ -732,6 +834,8 @@ class ServicePublicController extends Controller
                         ? \App\Models\Organization::withoutGlobalScopes()
                             ->find($booking->organization_id)?->resolved_industry
                         : null,
+                    depositAmount: Deposits::of($booking)['amount'] ?? null,
+                    depositRefundUntil: Deposits::untilText($booking),
                 ));
         } catch (\Throwable $e) {
             \Log::warning('Service booking confirmation email failed', [

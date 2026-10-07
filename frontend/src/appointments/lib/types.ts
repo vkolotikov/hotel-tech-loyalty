@@ -6,7 +6,7 @@ export type DateKey = string
 export type Status = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
 export type PaymentState =
   | 'not_paid_online' | 'card_held' | 'paid_by_card' | 'marked_paid' | 'refunded'
-  | 'marked_refunded' | 'partially_refunded' | 'failed' | 'hold_released' | 'unknown'
+  | 'marked_refunded' | 'partially_refunded' | 'failed' | 'hold_released' | 'unknown' | 'deposit_paid'
 export type ActionKey = 'confirm' | 'start' | 'complete' | 'no_show' | 'cancel' | 'award_points' | 'reopen' | 'move'
 
 export interface Bootstrap {
@@ -51,6 +51,8 @@ export interface MoneyInfo {
   refundable_online: number; refundable_desk: number; paid_in: number; paid_back: number; can_take: boolean
   /** What a correction may undo: money entered here (not a label marked paid before Part E). */
   correctable_desk?: number; corrected_desk?: number
+  /** Part H: the booking-page deposit's terms; null for every other booking. */
+  deposit?: DepositTerms | null
   movements: MoneyMovement[]
 }
 export interface TakingsRow extends MoneyMovement { reference: string | null; client: string | null }
@@ -117,12 +119,19 @@ export interface AppointmentSummary {
 export interface PointsPreview { points: number; reason: string | null }
 export interface PointsResult { awarded: number; reason: string | null }
 
+/** Part H: what a cancel or a no-show does to a booking-page deposit, worked out by the server. */
+export interface DepositConsequence { code: 'goes_back' | 'kept_late' | 'kept'; amount: number; currency: string; cancel_hours: number }
+/** Part H: a booking's deposit terms, as agreed at booking. `refund_until` is a real instant. */
+export interface DepositTerms { amount: number; percent: number; cancel_hours: number; refund_until: string | null }
+
 export interface Consequences {
   payment: 'none' | 'hold_will_be_charged' | 'hold_will_be_released' | 'hold_expired' | 'captured_not_refunded' | 'marked_only'
   points: PointsPreview | null
   coupon: 'none' | 'not_returned'
   /** 'ask': the screen offers "Tell the client by email" (confirm, cancel — Part D). */
   message: 'none' | 'ask'
+  /** Part H: absent or null for every booking without a deposit. */
+  deposit?: DepositConsequence | null
 }
 export interface ActionInfo { key: ActionKey; allowed: boolean; consequences: Consequences }
 
@@ -226,6 +235,9 @@ export interface SetupSettings {
   upcoming_appointments: number
   /** Part D: client messages, all off until a manager switches them on. */
   client_messages_staff_default: boolean; client_messages_reminder_hours: number; client_messages_language: string
+  /** Part H: deposits for online bookings — the full admin's own settings; available only with Stripe in the venue's currency. */
+  deposits_on: boolean; deposit_percent: number; deposits_available: boolean
+  deposits_reason: 'payments_off' | 'mock_mode' | 'currency_mismatch' | null; cancel_hours: number
 }
 export interface SetupPayload {
   can_manage: boolean; my_team_member_id: number | null; services: SetupService[]; categories: SetupCategory[]
@@ -245,4 +257,4 @@ export interface TeamBody {
 }
 export interface TimeOffBody { from: DateKey; to?: DateKey; start_time?: string; end_time?: string; reason?: string }
 export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'
-  | 'client_messages_staff_default' | 'client_messages_reminder_hours' | 'client_messages_language'>>
+  | 'client_messages_staff_default' | 'client_messages_reminder_hours' | 'client_messages_language' | 'deposits_on' | 'deposit_percent'>>

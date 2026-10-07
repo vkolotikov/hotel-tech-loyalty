@@ -9,6 +9,7 @@ use App\Models\ServiceBooking;
 use App\Models\ServiceExtra;
 use App\Scopes\BrandScope;
 use App\Services\Appointments\Messages\MessageSettings;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Appointments\VenueClock;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\Portal\PortalBootstrap;
@@ -41,6 +42,8 @@ final class BookingRules
             'client_messages_staff_default'  => 'sometimes|boolean',
             'client_messages_reminder_hours' => ['sometimes', 'integer', Rule::in(MessageSettings::REMINDER_CHOICES)],
             'client_messages_language'       => ['sometimes', 'string', Rule::in(MessageSettings::LANGUAGES)],
+            'deposits_on'     => 'sometimes|boolean',
+            'deposit_percent' => 'sometimes|integer|min:1|max:100',
         ];
     }
 
@@ -58,12 +61,16 @@ final class BookingRules
         $orgId = (int) $org->id;
         $token = (string) ($org->widget_token ?? '');
         $messages = MessageSettings::read($orgId);
+        $currency = self::currency();
+        $depositsOn = Deposits::switchedOn();
+        $percent = Deposits::percent();
+        $reason = Deposits::unavailableReason($currency);
 
         return [
             'timezone'              => VenueClock::zone($orgId),
             'timezone_named'        => VenueClock::isNamed($orgId),
             'zones'                 => self::zones(),
-            'currency'              => self::currency(),
+            'currency'              => $currency,
             'lead_minutes'          => (int) HotelSetting::getValue('services_lead_minutes', 60),
             'slot_step'             => (int) HotelSetting::getValue('services_slot_step', 15),
             'max_advance_days'      => (int) HotelSetting::getValue('services_max_advance_days', 60),
@@ -79,6 +86,12 @@ final class BookingRules
             'client_messages_staff_default'  => $messages['staff_default'],
             'client_messages_reminder_hours' => $messages['reminder_hours'],
             'client_messages_language'       => $messages['language'],
+            // Part H: the full admin's own deposit settings. Its untouched default is 100%; Setup proposes 20%.
+            'deposits_on'        => $depositsOn,
+            'deposit_percent'    => !$depositsOn && $percent === 100 ? Deposits::PROPOSED_PERCENT : $percent,
+            'deposits_available' => $reason === null,
+            'deposits_reason'    => $reason,
+            'cancel_hours'       => Deposits::cancelHours(),
         ];
     }
 
@@ -161,6 +174,16 @@ final class BookingRules
             }
             if (array_key_exists('client_messages_language', $data)) {
                 self::put($orgId, MessageSettings::LANGUAGE, (string) $data['client_messages_language'], 'string', 'booking', 'Client message language');
+            }
+            if (array_key_exists('deposits_on', $data)) {
+                self::put($orgId, 'services_require_deposit', $data['deposits_on'] ? 'true' : 'false', 'boolean', 'booking', 'Require Deposit');
+                // Switched on here, by a manager who saw what it does: the old full-admin tick alone never was (Deposits::SINCE).
+                if ($data['deposits_on']) {
+                    self::put($orgId, Deposits::SINCE, now()->toIso8601String(), 'string', 'booking', 'Deposits switched on in Setup');
+                }
+            }
+            if (array_key_exists('deposit_percent', $data)) {
+                self::put($orgId, 'services_deposit_percent', (string) (int) $data['deposit_percent'], 'integer', 'booking', 'Deposit Percent');
             }
         });
 

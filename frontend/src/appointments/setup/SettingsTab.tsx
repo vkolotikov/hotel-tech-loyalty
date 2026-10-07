@@ -15,11 +15,18 @@ const CURRENCIES = ['EUR', 'GBP', 'USD', 'CHF', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK
 const REMINDER_HOURS = [0, 2, 24, 48]
 // Each language in its own name: whoever reads the list reads their own.
 const MESSAGE_LANGUAGES: [string, string][] = [['en', 'English'], ['ru', 'Русский'], ['de', 'Deutsch'], ['fr', 'Français'], ['es', 'Español']]
+// Part H: why Stripe cannot take deposits yet (the server's `deposits_reason`).
+const DEPOSIT_REASON: Record<string, string> = {
+  payments_off: 'Switch on online payments with your Stripe keys in the full admin (Settings → Booking) to take deposits.',
+  mock_mode: 'Bookings are in test mode in the full admin (Settings → Booking): deposits need real payments.',
+  currency_mismatch: 'Stripe takes payments in another currency than your prices. Make them the same to take deposits.',
+}
 
 export interface SettingsDraft {
   timezone: string; currency: string; lead_minutes: string; slot_step: number; max_advance_days: string
   allow_master_choice: boolean; points_on_bookings: boolean
   client_messages_staff_default: boolean; client_messages_reminder_hours: number; client_messages_language: string
+  deposits_on: boolean; deposit_percent: string
 }
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -29,6 +36,7 @@ export function settingsDraftOf(s: SetupSettings): SettingsDraft {
     max_advance_days: String(s.max_advance_days), allow_master_choice: s.allow_master_choice, points_on_bookings: s.points_on_bookings,
     client_messages_staff_default: s.client_messages_staff_default, client_messages_reminder_hours: s.client_messages_reminder_hours,
     client_messages_language: s.client_messages_language,
+    deposits_on: s.deposits_on, deposit_percent: String(s.deposit_percent),
   }
 }
 
@@ -46,6 +54,9 @@ export function changedSettings(draft: SettingsDraft, s: SetupSettings): Setting
   if (draft.client_messages_staff_default !== s.client_messages_staff_default) body.client_messages_staff_default = draft.client_messages_staff_default
   if (draft.client_messages_reminder_hours !== s.client_messages_reminder_hours) body.client_messages_reminder_hours = draft.client_messages_reminder_hours
   if (draft.client_messages_language !== s.client_messages_language) body.client_messages_language = draft.client_messages_language
+  if (draft.deposits_on !== s.deposits_on) body.deposits_on = draft.deposits_on
+  // Switching on sends the percent too: what Setup proposes (20%) is not stored yet.
+  if (draft.deposits_on && (!s.deposits_on || Number(draft.deposit_percent) !== s.deposit_percent)) body.deposit_percent = Number(draft.deposit_percent)
   return body
 }
 
@@ -141,6 +152,23 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
               <input type="checkbox" checked={draft.allow_master_choice} onChange={(e) => set({ allow_master_choice: e.target.checked })} />
               {t('appointments.setup.settings.choose_person', 'Clients may choose the person')}
             </label>
+          </section>
+
+          <section aria-labelledby="settings-deposits" className="space-y-3">
+            <h2 id="settings-deposits" className="text-sm font-semibold text-a-text">{t('appointments.setup.deposits.title', 'Deposits for online bookings')}</h2>
+            <p className="text-sm text-a-text-2">{t('appointments.setup.deposits.intro', 'Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.', { hours: s.cancel_hours })}</p>
+            {!s.deposits_available && s.deposits_reason && (
+              <Notice tone="info">{t(`appointments.setup.deposits.reason.${s.deposits_reason}`, DEPOSIT_REASON[s.deposits_reason])}</Notice>
+            )}
+            <label className="flex items-center gap-2 text-sm text-a-text">
+              <input type="checkbox" checked={draft.deposits_on} disabled={!s.deposits_available && !s.deposits_on} onChange={(e) => set({ deposits_on: e.target.checked })} />
+              {t('appointments.setup.deposits.on', 'Ask for a deposit')}
+            </label>
+            {draft.deposits_on && (
+              <Field label={t('appointments.setup.deposits.percent', 'Deposit (% of the price)')}>
+                <input type="number" min={1} max={100} value={draft.deposit_percent} onChange={(e) => set({ deposit_percent: e.target.value })} className={input} />
+              </Field>
+            )}
           </section>
 
           {s.programme_on && (

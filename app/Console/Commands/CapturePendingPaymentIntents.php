@@ -6,6 +6,8 @@ use App\Console\Commands\Concerns\ReleasesScheduleLock;
 use App\Models\AuditLog;
 use App\Models\BookingMirror;
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\StripeService;
 use App\Support\AdvisoryLock;
 use Illuminate\Console\Command;
@@ -768,6 +770,12 @@ class CapturePendingPaymentIntents extends Command
         }
         $status = (string) ($intent->status ?? '');
 
+        // Part H: a booking-page deposit is charged and recorded as a ledger payment (never `paid` for a part). A
+        // booking cancelled in time has its hold released; one cancelled late, or a no-show, has it charged and kept.
+        if (Deposits::of($fresh) !== null && in_array($status, ['requires_capture', 'succeeded'], true)) {
+            return $this->decideDeposit($stripe, $fresh, $piId, $status, $observedPaymentStatus, $dryRun, $audits, $fallback);
+        }
+
         // A booking cancelled (or marked no-show) inside the capture window
         // must not be charged: release a hold that is still open, and flag
         // — never touch — one whose payment was already taken (a refund is
@@ -838,6 +846,44 @@ class CapturePendingPaymentIntents extends Command
         }
 
         return $this->tally(['skipped' => 1]);
+    }
+
+    /** Part H §5.4: a deposit whose charge confirm() did not finish. */
+    private function decideDeposit(StripeService $stripe, ServiceBooking $fresh, string $piId, string $status, string $observedPaymentStatus, bool $dryRun, array &$audits, array &$fallback): array
+    {
+        $cancelledInTime = (string) $fresh->status === 'cancelled' && Deposits::inTime($fresh, $fresh->cancelled_at ?? now());
+        if ($status === 'requires_capture' && $cancelledInTime) {
+            return $this->releaseCancelledServiceBooking($stripe, $fresh, $piId, $observedPaymentStatus, $dryRun, $audits);
+        }
+        $outcome = $status === 'requires_capture' ? 'captured' : 'already_captured';
+        if ($dryRun) {
+            $this->line("[dry-run] would charge and record the deposit of service booking #{$fresh->id} (PI {$piId})");
+            return $this->tally([$outcome => 1]);
+        }
+        if ($status === 'requires_capture') {
+            try {
+                $stripe->capturePaymentIntent($piId);
+            } catch (\Throwable $e) {
+                Log::error('Capture cron (service) — deposit capture failed', ['service_booking_id' => $fresh->id, 'pi_id' => $piId, 'error' => $e->getMessage()]);
+                return $this->tally(['failed' => 1]);
+            }
+            $fallback['tally'] = $this->tally(['captured' => 1]);
+            $audits[] = [
+                'org' => $fresh->organization_id, 'action' => 'service_booking.capture.recovered', 'pi' => $piId,
+                'extra' => ['service_booking_id' => $fresh->id, 'deposit' => true],
+                'description' => "Charged the deposit PI {$piId} via cron after sync capture missed",
+            ];
+        }
+        $this->guarded(
+            fn () => app(AppointmentMoney::class)->recordDeposit($fresh),
+            'Capture cron (service) — deposit record failed', ['service_booking_id' => $fresh->id],
+        );
+        if ($status === 'succeeded' && $cancelledInTime) {
+            // Charged before the in-time cancellation could release it: a manager's refund gives it back (Part E).
+            return $this->flagServiceBookingForRefund($fresh, $piId, false, $audits);
+        }
+
+        return $this->tally([$outcome => 1]);
     }
 
     /** A cancelled / no-show service booking whose card is still only held: cancel the hold instead of capturing it. */

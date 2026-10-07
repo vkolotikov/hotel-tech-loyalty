@@ -20,6 +20,7 @@ const settings: SetupSettings = {
   lead_minutes: 60, slot_step: 15, max_advance_days: 60, allow_master_choice: true, points_on_bookings: true, programme_on: true,
   booking_link: 'https://app.example.test/services/tok', embed_snippet: '<div id="hoteltech-services"></div>', upcoming_appointments: 12,
   client_messages_staff_default: false, client_messages_reminder_hours: 0, client_messages_language: 'en',
+  deposits_on: false, deposit_percent: 20, deposits_available: true, deposits_reason: null, cancel_hours: 24,
 }
 const data = { can_manage: true, settings } as SetupPayload
 
@@ -73,5 +74,29 @@ describe('client messages in Setup', () => {
     expect(changedSettings(draft, settings)).toEqual({ client_messages_reminder_hours: 2 })
     expect(changedSettings({ ...settingsDraftOf(settings), client_messages_staff_default: true, client_messages_language: 'de' }, settings))
       .toEqual({ client_messages_staff_default: true, client_messages_language: 'de' })
+  })
+})
+
+describe('deposits', () => {
+  it('switching on sends the proposed percent with it, and only what changed after that', () => {
+    const draft = settingsDraftOf(settings)
+    expect(changedSettings({ ...draft, deposits_on: true }, settings)).toEqual({ deposits_on: true, deposit_percent: 20 })
+    const on = { ...settings, deposits_on: true, deposit_percent: 25 }
+    expect(changedSettings(settingsDraftOf(on), on)).toEqual({})
+    expect(changedSettings({ ...settingsDraftOf(on), deposit_percent: '30' }, on)).toEqual({ deposit_percent: 30 })
+    expect(changedSettings({ ...settingsDraftOf(on), deposits_on: false }, on)).toEqual({ deposits_on: false })
+  })
+
+  it('shows the switch and the venue\'s window', () => {
+    const html = renderToStaticMarkup(<SettingsTab data={data} refresh={() => {}} />)
+    expect(html).toContain('Deposits for online bookings')
+    expect(html).toContain('at least 24 hours before')
+  })
+
+  it('keeps the switch off and says why when Stripe cannot take deposits', () => {
+    const off = { ...settings, deposits_available: false, deposits_reason: 'currency_mismatch' as const }
+    const html = renderToStaticMarkup(<SettingsTab data={{ ...data, settings: off }} refresh={() => {}} />)
+    expect(html).toContain('another currency')
+    expect(html).toMatch(/disabled=""\/>Ask for a deposit/)
   })
 })

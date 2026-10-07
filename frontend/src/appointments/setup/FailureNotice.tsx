@@ -9,6 +9,7 @@ export function FailureNotice({ failure }: { failure: ApiFailure | null }) {
   const messages = Object.values(failure.fields ?? {}).flat()
 
   if (failure.code === 'not_allowed') return <Notice tone="danger">{failure.message || t('appointments.error.not_allowed')}</Notice>
+  if (failure.code === 'deposits_unavailable') return <Notice tone="danger">{t('appointments.error.deposits_unavailable', failure.message)}</Notice>
   if (messages.length > 0) {
     return (
       <Notice tone="danger">

@@ -33,6 +33,7 @@
     "no_show": "Absent"
   },
   "payment": {
+    "deposit_paid": "Acompte payé",
     "not_paid_online": "Non payé en ligne",
     "card_held": "Carte autorisée, non débitée",
     "paid_by_card": "Payé par carte",
@@ -174,6 +175,11 @@
     "cancel": "Annuler le rendez-vous"
   },
   "consequence": {
+    "deposit": {
+      "goes_back": "L’acompte ({{amount}}) est remboursé sur la carte du client.",
+      "kept_late": "L’établissement garde l’acompte ({{amount}}) : annulé moins de {{hours}} h avant la visite.",
+      "kept": "L’établissement garde l’acompte ({{amount}})."
+    },
     "reopen": "Le rendez-vous redevient confirmé à son horaire. Les points déjà gagnés restent.",
     "no_message": "Aucun message n'est envoyé au client.",
     "points_will_award": "{{points}} points seront crédités à la fin du rendez-vous.",
@@ -228,6 +234,8 @@
     "bulk_mark_status": "Statut modifié dans l'administration complète (action groupée)"
   },
   "error": {
+    "deposit_refund_failed": "L’acompte n’a pas pu être remboursé pour l’instant. Réessayez.",
+    "deposits_unavailable": "Les acomptes demandent les paiements en ligne via Stripe dans la devise de l’établissement.",
     "reopen_slot_taken": "Ce créneau est désormais pris — réservez à nouveau le client à un autre moment.",
     "invalid_period": "Choisissez une période d'un an maximum.",
     "invalid_length": "Choisissez une durée entre 15 minutes et 8 heures, par pas de 15 minutes.",
@@ -257,6 +265,17 @@
     "network": "Aucune réponse du serveur. Vérifiez la connexion et réessayez — rien n'est réservé deux fois."
   },
   "setup": {
+    "deposits": {
+      "title": "Acomptes pour les réservations en ligne",
+      "intro": "Les clients qui réservent sur votre page paient une partie du prix par carte. Annulée au moins {{hours}} heures avant, elle est remboursée automatiquement ; annulée plus tard, ou en cas d’absence, l’établissement la garde. Le reste se paie sur place.",
+      "on": "Demander un acompte",
+      "percent": "Acompte (% du prix)",
+      "reason": {
+        "payments_off": "Activez les paiements en ligne avec vos clés Stripe dans l’administration complète (Paramètres → Réservation) pour prendre des acomptes.",
+        "mock_mode": "Les réservations sont en mode test (administration complète, Paramètres → Réservation) : les acomptes demandent de vrais paiements.",
+        "currency_mismatch": "Stripe encaisse dans une autre devise que vos prix. Alignez-les pour prendre des acomptes."
+      }
+    },
     "title": "Configuration",
     "load_failed": "La configuration n’a pas pu être chargée. Veuillez réessayer.",
     "read_only": "Seuls un propriétaire ou un manager peuvent modifier la configuration. Vous pouvez la consulter ici et gérer vos propres absences dans Équipe.",

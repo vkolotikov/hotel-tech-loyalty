@@ -8,6 +8,7 @@ use App\Models\ServiceBooking;
 use App\Models\User;
 use App\Services\Appointments\Messages\MessageRecipient;
 use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\Deposits;
 
 /**
  * A service booking as the appointments workspace sees it.
@@ -50,7 +51,8 @@ final class AppointmentPresenter
         $refunded = (float) ($b->refunded_amount ?? 0);
 
         return match ((string) $b->payment_status) {
-            'unpaid'                => 'not_paid_online',
+            // Part H: a booking-page deposit came in and the rest is due at the venue.
+            'unpaid'                => $card && Deposits::of($b) !== null ? 'deposit_paid' : 'not_paid_online',
             'authorized', 'pending' => $card ? 'card_held' : 'not_paid_online',
             // A card booking paid at the desk (its hold released or lapsed) was not paid by card.
             'paid'                  => AppointmentMoney::cardPaid($b) ? 'paid_by_card' : 'marked_paid',

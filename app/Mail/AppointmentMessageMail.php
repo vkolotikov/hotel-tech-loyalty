@@ -5,6 +5,8 @@ namespace App\Mail;
 use App\Models\ClientMessage;
 use App\Models\Organization;
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\AppointmentMoney;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Bus\Queueable;
@@ -80,9 +82,33 @@ class AppointmentMessageMail extends Mailable
             'intro'     => $t("intro.{$words}", ['venue' => $venue]),
             'rows'      => $rows,
             'closing'   => $t($kind === 'cancelled' ? 'book_again' : 'questions'),
+            // Part H §6.3: what a cancellation did to the booking-page deposit.
+            'deposit'   => $kind === 'cancelled' ? self::depositLine($b, $t) : null,
             'venue'     => ['name' => $venue, 'address' => $org?->address ?: null, 'phone' => $org?->phone ?: null, 'email' => $org?->email ?: null],
             'hotelName' => $venue,
         ];
+    }
+
+    /**
+     * Part H: what the money says, as the message is sent — card money given back (a refund in time, or a manager's
+     * goodwill after a late cancellation) is "being refunded"; otherwise the window decides: in time the deposit goes
+     * back (a hold released, or a refund still to make), late it is kept. Null for a booking without a deposit.
+     */
+    private static function depositLine(ServiceBooking $b, \Closure $t): ?string
+    {
+        $d = Deposits::of($b);
+        if ($d === null) {
+            return null;
+        }
+        $money = fn (float $amount) => strtoupper((string) ($b->currency ?: 'EUR')) . ' ' . number_format($amount, 2);
+        $back = AppointmentMoney::summary($b)['refunded_online'];
+        if ($back > 0) {
+            return $t('deposit.refunded', ['amount' => $money($back)]);
+        }
+
+        return Deposits::inTime($b, $b->cancelled_at ?? now())
+            ? $t('deposit.refunded', ['amount' => $money($d['amount'])])
+            : $t('deposit.kept', ['amount' => $money($d['amount']), 'hours' => $d['cancel_hours']]);
     }
 
     /** "Tuesday 6 October 2026, 10:00": the venue's own clock, in the words of the language. */

@@ -41,8 +41,8 @@ final class TakingsReport
             ->where('start_at', '>=', $from->format('Y-m-d') . ' 00:00:00')
             ->where('start_at', '<', $to->format('Y-m-d') . ' 00:00:00')
             ->whereIn('payment_status', ['paid', 'partially_refunded', 'refunded'])->get()
-            // Card money Stripe took: a card booking paid at the desk is in the ledger rows above instead.
-            ->filter(fn (ServiceBooking $b) => AppointmentMoney::cardPaid($b));
+            // Card money Stripe took: a card booking paid at the desk, or a booking-page deposit, is in the ledger rows above instead.
+            ->filter(fn (ServiceBooking $b) => AppointmentMoney::cardPaid($b) && Deposits::of($b) === null);
         foreach ($paid as $b) {
             $cur = strtoupper((string) ($b->currency ?: 'EUR'));
             $online[$cur] = round(($online[$cur] ?? 0) + (float) $b->total_amount, 2);

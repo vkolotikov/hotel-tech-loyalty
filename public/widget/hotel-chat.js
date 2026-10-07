@@ -1696,6 +1696,19 @@
               card.classList.add('error');
               var msg = (res.body && (res.body.message || res.body.error)) || 'Could not complete booking.';
               if (statusEl) { statusEl.style.display = 'block'; statusEl.textContent = msg; }
+              // Part H: a venue that takes deposits books on its booking page — offer the page, not "Try again".
+              if (res.body && res.body.booking_url && statusEl) {
+                var link = document.createElement('a');
+                link.href = res.body.booking_url;
+                link.target = '_blank';
+                link.rel = 'noopener';
+                link.textContent = 'Open the booking page';
+                link.style.cssText = 'display:block;margin-top:6px;color:inherit;text-decoration:underline;font-weight:600';
+                statusEl.appendChild(link);
+                if (goBtn) goBtn.style.display = 'none';
+                if (cancelBtn) cancelBtn.disabled = false;
+                return;
+              }
               if (goBtn) { goBtn.disabled = false; goBtn.textContent = 'Try again'; }
               if (cancelBtn) cancelBtn.disabled = false;
               card.classList.remove('done');

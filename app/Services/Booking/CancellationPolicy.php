@@ -5,6 +5,7 @@ namespace App\Services\Booking;
 use App\Models\BookingMirror;
 use App\Models\HotelSetting;
 use App\Models\ServiceBooking;
+use App\Services\Appointments\Money\Deposits;
 use App\Services\Portal\AppointmentClock;
 use App\Services\Portal\PortalBootstrap;
 use Carbon\CarbonImmutable;
@@ -45,7 +46,8 @@ final class CancellationPolicy
             return self::no(self::NOT_CANCELLABLE);
         }
 
-        $hours = max(0, (int) HotelSetting::getValue('services_cancel_hours', 24));
+        // A booking-page deposit booking keeps the window it was made on (Part H §5.2).
+        $hours = Deposits::of($b)['cancel_hours'] ?? max(0, (int) HotelSetting::getValue('services_cancel_hours', 24));
         // start_at holds the venue's wall-clock digits: the true start is
         // those digits on the venue's clock, and "started" / the deadline are
         // measured from that moment.

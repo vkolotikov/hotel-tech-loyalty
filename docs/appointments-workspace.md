@@ -440,6 +440,53 @@ Code: `frontend/src/appointments/calendar/{dragMath, useCardDrag, DragPreview, D
 (reopen); tests `tests/Feature/Appointments/{SchedulerLengthTest, MoveLengthTest, ReopenTest}.php` and the calendar
 and panel tests.
 
+## Deposits for online bookings (Part H, 2026-10-06)
+
+A venue can ask clients who book on its **online booking page** for a card deposit. Member-portal and staff bookings
+are unchanged.
+
+**Switching it on.** Workspace → Setup → "Deposits for online bookings": a switch and a percent (1–100; 20% is
+proposed). It writes the full admin's own settings (`services_require_deposit`, `services_deposit_percent`), so
+Settings → Booking shows the same values. It switches on only when Stripe is connected
+(`booking_payment_enabled` and a secret key), test mode is off, and Stripe's currency is the venue's; otherwise
+Setup says which is missing. The window is the full admin's `services_cancel_hours` (default 24). The full admin's
+old "require deposit" tick did nothing before Part H, so on its own it still does nothing: deposits start only once a
+manager switches them on in Setup (which also stamps `services_deposits_since`). After that the full admin's tick
+switches them off and on again as usual.
+
+**What the client does.** After their details, the page asks for "a deposit of €12.00 now (20% of €60.00)" with
+Stripe's card fields, then "Pay €12.00 and book". The card is held, the booking saved under the scheduler's lock, and
+the deposit charged at once. A refused card books nothing; a time taken meanwhile releases the hold ("Your card was
+not charged"). Free services and deposits under 0.50 skip the step. The confirmation screen and email say until when
+a cancellation gives the deposit back (the venue's clock).
+
+**What staff see.** The deposit is a ledger payment ("Card, through Stripe", note "Deposit"): Paid online €12.00 ·
+Still owed €48.00; Take payment asks for the rest; Takings and Insights count it once. The row says "Deposit paid";
+the label stays unpaid until the rest is paid, also after a late cancellation or a no-show.
+
+**Cancelling.** At or before the deadline (the visit's current start minus the hours agreed at booking), the deposit
+goes back to the card automatically, whoever cancels: workspace, full admin status change, delete or bulk cancel.
+If Stripe refuses, nothing is cancelled (`deposit_refund_failed`); a bulk cancel goes ahead for the others and names
+the booking it left. After the deadline, or on a no-show, the venue keeps it; a manager can still refund it as
+goodwill (Refund, or the cancel sheet's card line, which starts at 0). In time, a card amount a manager types on the
+cancel sheet can add to the deposit but never take from it (one Stripe refund of at least the deposit); late, it is
+goodwill as typed. With online payments switched off at the venue, an in-time cancel still goes ahead and the
+deposit shows as "to refund" for a manager to give back another way. The client's cancellation email (Part D) says
+what happened to the money. A member who cancels such a booking from the member portal gets the window the booking
+was made with. A booking page refuses a made-up test-mode payment and a deposit that no longer applies, and checks
+the client's details before the card is held.
+
+**Behind the scenes.** The capture job finishes a deposit charge that confirm() missed (as a deposit, never "paid"),
+releases the hold of a booking cancelled in time, and charges and keeps one cancelled late or a no-show. The orphan
+release cancels deposit holds that never became a booking after 45 minutes. At a deposit venue, the chat's booking
+card opens the booking page instead of booking.
+
+**Switching it off** stops new deposits; bookings already made keep their terms. No migration. The booking page of a
+venue without deposits is byte for byte as before (`tests/Feature/Widget/ServicesWidgetDepositPageTest.php`).
+
+**Owner's first live check:** switch deposits on at your venue, make a small real booking on the booking page, cancel
+it in time from the workspace, and see the refund arrive on the card.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe

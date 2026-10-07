@@ -1,4 +1,5 @@
-import type { ActionInfo, ActionKey, PointsPreview } from '../lib/types'
+import { money } from '../../lib/money'
+import type { ActionInfo, ActionKey, DepositConsequence, PointsPreview } from '../lib/types'
 
 /** Actions that touch money, points or a final status are confirmed first; "arrived" and "award points" are not. */
 export const NEEDS_CONFIRM: ReadonlySet<ActionKey> = new Set<ActionKey>(['confirm', 'complete', 'no_show', 'cancel', 'reopen'])
@@ -20,6 +21,13 @@ const PAYMENT: Record<string, Omit<Line, 'key'>> = {
   // for a manager cancelling, the refund line sits right under this sentence.
   captured_not_refunded: { fallback: 'The card payment is NOT refunded automatically: only a manager’s refund here sends it back.', tone: 'warning' },
   marked_only:           { fallback: 'This records "paid at the venue" on the appointment. No money is moved.', tone: 'plain' },
+}
+
+// Part H: a booking-page deposit's own line, in place of the payment line.
+const DEPOSIT: Record<DepositConsequence['code'], Omit<Line, 'key' | 'vars'>> = {
+  goes_back: { fallback: 'The deposit ({{amount}}) goes back to the client’s card.', tone: 'plain' },
+  kept_late: { fallback: 'The venue keeps the deposit ({{amount}}): cancelled less than {{hours}} h before the visit.', tone: 'warning' },
+  kept:      { fallback: 'The venue keeps the deposit ({{amount}}).', tone: 'warning' },
 }
 
 const REASON: Record<string, string> = {
@@ -48,10 +56,12 @@ export function pointsLine(points: PointsPreview | null): Line | null {
  * told. The codes are the server's; nothing here decides an outcome.
  */
 export function consequenceLines(action: ActionInfo): Line[] {
-  const { payment, points, coupon } = action.consequences
+  const { payment, points, coupon, deposit } = action.consequences
   const lines: Line[] = []
 
-  if (payment !== 'none' || action.key === 'cancel' || action.key === 'no_show') {
+  if (deposit) {
+    lines.push({ key: `appointments.consequence.deposit.${deposit.code}`, ...DEPOSIT[deposit.code], vars: { amount: money(deposit.amount, deposit.currency), hours: deposit.cancel_hours } })
+  } else if (payment !== 'none' || action.key === 'cancel' || action.key === 'no_show') {
     const entry = PAYMENT[payment] ?? PAYMENT.none
     lines.push({ key: `appointments.consequence.payment.${payment in PAYMENT ? payment : 'none'}`, ...entry })
   }

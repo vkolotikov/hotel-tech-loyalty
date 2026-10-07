@@ -259,6 +259,9 @@ class PortalPaymentIntentGuard
      */
     public const PORTAL_KINDS = ['portal_service_booking', 'portal_stay_booking'];
 
+    /** Holds the orphan release may cancel: the portal's, and the booking page's deposits (Part H §5.5). */
+    public const ORPHAN_KINDS = [...self::PORTAL_KINDS, \App\Services\Appointments\Money\Deposits::KIND];
+
     /**
      * The sweeper's own release: a card the portal authorised for a
      * booking that was never written, found from Stripe's own PaymentIntent
@@ -307,7 +310,7 @@ class PortalPaymentIntentGuard
             }
 
             $meta = $this->metadata($pi);
-            if (!in_array($meta['kind'] ?? null, self::PORTAL_KINDS, true)) {
+            if (!in_array($meta['kind'] ?? null, self::ORPHAN_KINDS, true)) {
                 return false;
             }
             if ((int) ($meta['org_id'] ?? 0) !== $orgId) {

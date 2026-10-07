@@ -15,6 +15,9 @@
             <tr><td class="lbl">{{ $row['label'] }}</td><td class="val">{{ $row['value'] }}</td></tr>
         </table>
     @endforeach
+    @if (!empty($deposit))
+        <p>{{ $deposit }}</p>
+    @endif
     <p>{{ $closing }}</p>
 @endsection
 
