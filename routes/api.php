@@ -141,7 +141,7 @@ Route::prefix('v1')->group(function () {
         // programme's main acquisition path: 20 people joining at an event
         // is normal traffic, not abuse.
         Route::post('register',    [AuthController::class, 'register']);
-        Route::post('login',       [AuthController::class, 'login'])->middleware('throttle:8,1');
+        Route::post('login',       [AuthController::class, 'login'])->middleware('throttle:8,1,login');
         // Org CREATION — the expensive verb. Each call provisions a
         // property, tier ladder, pipeline, planner, chat widget and a
         // welcome email, so it gets a dedicated bucket rather than sharing
@@ -155,10 +155,10 @@ Route::prefix('v1')->group(function () {
         Route::post('trial',       [AuthController::class, 'startTrial'])->middleware('throttle:12,1,trial');
         Route::post('send-code',        [AuthController::class, 'sendVerificationCode']);
         Route::post('verify-code',      [AuthController::class, 'verifyCode']);
-        Route::post('forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1');
-        Route::post('reset-password',   [AuthController::class, 'resetPassword'])->middleware('throttle:5,1');
+        Route::post('forgot-password',  [AuthController::class, 'forgotPassword'])->middleware('throttle:5,1,forgot-password');
+        Route::post('reset-password',   [AuthController::class, 'resetPassword'])->middleware('throttle:5,1,reset-password');
         Route::post('activate',         [AuthController::class, 'activateAccount']);
-        Route::post('claim',            [AuthController::class, 'claimAccount'])->middleware('throttle:8,1');
+        Route::post('claim',            [AuthController::class, 'claimAccount'])->middleware('throttle:8,1,claim');
     });
 
     // Public: fetch available plans from SaaS
@@ -189,8 +189,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         // legit guests. 30/min per IP — wide enough for a fumbled human
         // checkout (validation retries, back-nav, reloads), still narrow
         // enough to blunt abuse.
-        Route::post('payment-intent', [BookingPublicController::class, 'paymentIntent'])->middleware('throttle:30,1');
-        Route::post('confirm',        [BookingPublicController::class, 'confirm'])->middleware('throttle:30,1');
+        Route::post('payment-intent', [BookingPublicController::class, 'paymentIntent'])->middleware('throttle:30,1,booking-payment-intent');
+        Route::post('confirm',        [BookingPublicController::class, 'confirm'])->middleware('throttle:30,1,booking-confirm');
         Route::get('calendar-prices',       [BookingPublicController::class, 'calendarPrices']);
         Route::post('webhooks/stripe',      [BookingPublicController::class, 'stripeWebhook']);
         Route::post('webhooks/smoobu',      [BookingPublicController::class, 'webhook']);
@@ -212,16 +212,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
         Route::get('calendar',        [ServicePublicController::class, 'calendar']);
         Route::post('quote',          [ServicePublicController::class, 'quote']);
         // Same money-moving throttle as the booking widget (30/min).
-        Route::post('payment-intent', [ServicePublicController::class, 'paymentIntent'])->middleware('throttle:30,1');
-        Route::post('confirm',        [ServicePublicController::class, 'confirm'])->middleware('throttle:30,1');
+        Route::post('payment-intent', [ServicePublicController::class, 'paymentIntent'])->middleware('throttle:30,1,services-payment-intent');
+        Route::post('confirm',        [ServicePublicController::class, 'confirm'])->middleware('throttle:30,1,services-confirm');
     });
 
     // ─── Public Review API ─────────────────────────────────────────────────────
     Route::prefix('public/reviews')->middleware('throttle:60,1')->group(function () {
         Route::get('token/{token}',           [ReviewPublicController::class, 'byToken']);
         Route::get('form/{id}',               [ReviewPublicController::class, 'byFormKey']);
-        Route::post('token/{token}',          [ReviewPublicController::class, 'submitByToken'])->middleware('throttle:10,1');
-        Route::post('form/{id}',              [ReviewPublicController::class, 'submitByFormKey'])->middleware('throttle:10,1');
+        Route::post('token/{token}',          [ReviewPublicController::class, 'submitByToken'])->middleware('throttle:10,1,review-token');
+        Route::post('form/{id}',              [ReviewPublicController::class, 'submitByFormKey'])->middleware('throttle:10,1,review-form');
         Route::post('{submissionId}/redirected', [ReviewPublicController::class, 'markRedirected']);
         // Kiosk assignment resolution + heartbeat (device polls every 60s).
         Route::get('device/{deviceKey}',      [ReviewPublicController::class, 'deviceResolve']);
@@ -318,11 +318,11 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // and hitting 429). Outer 120/min group throttle still bounds
             // total session activity.
             // admin.access: billing and the industry are for owners and managers (Part C), and not part of the Appointments plan.
-            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout'])->middleware(['throttle:30,1', 'admin.access']);
-            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware(['throttle:30,1', 'admin.access']);
-            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware(['throttle:30,1', 'admin.access']);
-            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware(['throttle:60,1', 'admin.access']);
-            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware(['throttle:30,1', 'admin.access']);
+            Route::post('billing/checkout',    [AuthController::class, 'billingCheckout'])->middleware(['throttle:30,1,billing-checkout', 'admin.access']);
+            Route::post('billing/activate',    [AuthController::class, 'billingActivate'])->middleware(['throttle:30,1,billing-activate', 'admin.access']);
+            Route::post('billing/portal',      [AuthController::class, 'billingPortal'])->middleware(['throttle:30,1,billing-portal', 'admin.access']);
+            Route::post('billing/refresh',     [AuthController::class, 'billingRefresh'])->middleware(['throttle:60,1,billing-refresh', 'admin.access']);
+            Route::post('billing/start-trial', [AuthController::class, 'billingStartTrial'])->middleware(['throttle:30,1,billing-start-trial', 'admin.access']);
             // Industry Platform Plan Phase 2 — POST /v1/auth/apply-industry
             // re-applies a CRM + Planner preset against the caller's org.
             // Throttled hard (5/min) per token; an admin clicking the
@@ -330,7 +330,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // switcher should never need more than a handful of switches
             // in a short window. The data-safety contract (acknowledge
             // body param) lives in the controller — see applyIndustry().
-            Route::post('apply-industry',     [AuthController::class, 'applyIndustry'])->middleware(['throttle:5,1', 'admin.access']);
+            Route::post('apply-industry',     [AuthController::class, 'applyIndustry'])->middleware(['throttle:5,1,apply-industry', 'admin.access']);
         });
 
         // ─── Member Routes ─────────────────────────────────────────────────────
@@ -411,7 +411,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::post('bookings/{kind}/{id}/cancel', [\App\Http\Controllers\Api\V1\Member\Portal\PortalBookingController::class, 'cancel'])
                 ->whereIn('kind', ['service', 'stay'])
                 ->whereNumber('id')
-                ->middleware('throttle:20,1');
+                ->middleware('throttle:20,1,portal-cancel');
             Route::post('coupons/resolve', [\App\Http\Controllers\Api\V1\Member\Portal\PortalCouponController::class, 'resolve'])
                 ->middleware('throttle:portal-coupon');
             Route::get('services', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'index']);
@@ -419,16 +419,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::get('services/availability', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'availability']);
             Route::post('services/quote', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'quote']);
             Route::post('services/payment-intent', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'paymentIntent'])
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:30,1,portal-services-payment-intent');
             Route::post('services/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalServiceBookingController::class, 'confirm'])
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:30,1,portal-services-confirm');
             Route::get('stays', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'index']);
             Route::get('stays/availability', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'availability']);
             Route::post('stays/quote', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'quote']);
             Route::post('stays/payment-intent', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'paymentIntent'])
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:30,1,portal-stays-payment-intent');
             Route::post('stays/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'confirm'])
-                ->middleware('throttle:30,1');
+                ->middleware('throttle:30,1,portal-stays-confirm');
         });
 
         // ─── AI Chatbot ────────────────────────────────────────────────────────
@@ -448,7 +448,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // length disclosure. Tightly throttled because the probes hit the
             // upstream SaaS API on every call.
             Route::get('diag/billing', [DiagController::class, 'billing'])
-                ->middleware(['admin:super_admin', 'throttle:5,1']);
+                ->middleware(['admin:super_admin', 'throttle:5,1,diag-billing']);
 
             // ─── Brands (multi-brand portfolio) ────────────────────────────────
             // Phase 1 of the multi-brand rollout. Single-brand orgs keep one
