@@ -147,7 +147,7 @@ export function EarnRateEvents() {
               <input type="number" step="0.1" min={1} max={10}
                 value={form.multiplier} onChange={e => setForm(f => ({ ...f, multiplier: e.target.value }))}
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
-              <p className="text-[10px] text-[#636366] mt-1">{t('boostEvents.form.multiplier_hint', '2.0 = double, 1.5 = +50%, etc.')}</p>
+              <p className="text-[10px] text-t-muted mt-1">{t('boostEvents.form.multiplier_hint', '2.0 = double, 1.5 = +50%, etc.')}</p>
             </div>
           </div>
 
@@ -174,7 +174,7 @@ export function EarnRateEvents() {
           </div>
 
           <div className="mb-3">
-            <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.days', 'Days of week')} <span className="text-[#636366]">{t('boostEvents.form.days_hint', '(optional — empty = every day)')}</span></label>
+            <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.days', 'Days of week')} <span className="text-t-muted">{t('boostEvents.form.days_hint', '(optional — empty = every day)')}</span></label>
             <div className="flex gap-1">
               {DAYS.map(d => (
                 <button key={d.value} type="button"
@@ -182,7 +182,7 @@ export function EarnRateEvents() {
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
                     form.days_of_week.includes(d.value)
                       ? 'bg-primary-600 text-white border-primary-600'
-                      : 'bg-dark-bg text-[#a0a0a0] border-dark-border hover:text-white'
+                      : 'bg-dark-bg text-t-soft border-dark-border hover:text-white'
                   }`}>{d.label}</button>
               ))}
             </div>
@@ -190,17 +190,17 @@ export function EarnRateEvents() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.limit_tiers', 'Limit to tiers')} <span className="text-[#636366]">{t('boostEvents.form.optional', '(optional)')}</span></label>
+              <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.limit_tiers', 'Limit to tiers')} <span className="text-t-muted">{t('boostEvents.form.optional', '(optional)')}</span></label>
               <select multiple
                 value={form.tier_ids.map(String)}
                 onChange={e => setForm(f => ({ ...f, tier_ids: Array.from(e.target.selectedOptions).map(o => Number(o.value)) }))}
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white h-24">
                 {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
-              <p className="text-[10px] text-[#636366] mt-1">{t('boostEvents.form.tiers_hint', 'Hold ctrl/cmd to select multiple. Empty = all tiers.')}</p>
+              <p className="text-[10px] text-t-muted mt-1">{t('boostEvents.form.tiers_hint', 'Hold ctrl/cmd to select multiple. Empty = all tiers.')}</p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.limit_property', 'Limit to property')} <span className="text-[#636366]">{t('boostEvents.form.optional', '(optional)')}</span></label>
+              <label className="block text-xs font-medium text-t-secondary mb-1">{t('boostEvents.form.limit_property', 'Limit to property')} <span className="text-t-muted">{t('boostEvents.form.optional', '(optional)')}</span></label>
               <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))}
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
                 <option value="">{t('boostEvents.form.all_properties', 'All properties')}</option>
@@ -209,13 +209,13 @@ export function EarnRateEvents() {
             </div>
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-[#a0a0a0] mb-4">
+          <label className="flex items-center gap-2 text-sm text-t-soft mb-4">
             <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
             {t('boostEvents.form.active', 'Active (event will apply during its window)')}
           </label>
 
           <div className="flex justify-end gap-2 pt-3 border-t border-dark-border">
-            <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('common.cancel', 'Cancel')}</button>
+            <button onClick={resetForm} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('common.cancel', 'Cancel')}</button>
             <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending || !form.name.trim() || !form.starts_at || !form.ends_at}
@@ -233,14 +233,14 @@ export function EarnRateEvents() {
             <h2 className="text-base font-semibold text-white mb-3 capitalize flex items-center gap-2">
               {bucket === 'active' ? <Zap size={16} className="text-emerald-400" /> : <Calendar size={16} className="text-t-secondary" />}
               {t(`boostEvents.buckets.${bucket}`, bucket)}
-              <span className="text-xs text-[#636366] font-normal">({rows.length})</span>
+              <span className="text-xs text-t-muted font-normal">({rows.length})</span>
             </h2>
             {isError ? (
               <QueryError onRetry={() => refetch()} />
             ) : isLoading ? (
-              <p className="text-center text-[#636366] py-6 text-sm">{t('common.loading', 'Loading…')}</p>
+              <p className="text-center text-t-muted py-6 text-sm">{t('common.loading', 'Loading…')}</p>
             ) : rows.length === 0 ? (
-              <p className="text-center text-[#636366] py-6 text-sm">
+              <p className="text-center text-t-muted py-6 text-sm">
                 {bucket === 'active' ? t('boostEvents.empty.active', 'No active boosts right now.') :
                  bucket === 'upcoming' ? t('boostEvents.empty.upcoming', 'Nothing scheduled.') :
                  t('boostEvents.empty.past', 'No past events yet.')}
@@ -248,11 +248,11 @@ export function EarnRateEvents() {
             ) : (
               <div className="space-y-2">
                 {rows.map(e => (
-                  <div key={e.id} className="flex items-center gap-3 p-3 bg-[#1a1a1a] border border-dark-border rounded-lg">
+                  <div key={e.id} className="flex items-center gap-3 p-3 bg-panel-dim border border-dark-border rounded-lg">
                     <div className="text-2xl font-bold text-primary-400 min-w-[60px]">{Number(e.multiplier).toFixed(1)}x</div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white font-medium truncate">{e.name}</div>
-                      <div className="text-[11px] text-[#a0a0a0]">
+                      <div className="text-[11px] text-t-soft">
                         {format(new Date(e.starts_at), 'MMM d, HH:mm')} → {format(new Date(e.ends_at), 'MMM d, HH:mm')}
                         {Array.isArray(e.days_of_week) && e.days_of_week.length > 0 && (
                           <> · {(e.days_of_week as number[]).map(d => DAYS[d]?.label).join(' / ')}</>
@@ -263,7 +263,7 @@ export function EarnRateEvents() {
                       </div>
                     </div>
                     <div className="flex gap-1">
-                      <button onClick={() => startEdit(e)} className="p-1.5 rounded hover:bg-dark-surface3 text-[#a0a0a0]" title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}><Pencil size={13} /></button>
+                      <button onClick={() => startEdit(e)} className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft" title={t('common.edit', 'Edit')} aria-label={t('common.edit', 'Edit')}><Pencil size={13} /></button>
                       <button onClick={() => confirm(t('boostEvents.delete_confirm', { name: e.name, defaultValue: 'Delete "{{name}}"?' })) && deleteMutation.mutate(e.id)}
                         className="p-1.5 rounded hover:bg-dark-surface3 text-red-400" title={t('common.delete', 'Delete')} aria-label={t('common.delete', 'Delete')}><Trash2 size={13} /></button>
                     </div>

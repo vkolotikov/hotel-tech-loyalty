@@ -30,7 +30,7 @@ export function ViewToggle({ options }: { options: ViewOption[] }) {
 
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl w-fit"
-      style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
       {options.map(opt => {
         const active = matched?.to === opt.to
         return (

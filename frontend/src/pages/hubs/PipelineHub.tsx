@@ -64,7 +64,7 @@ const SECTIONS: Section[] = [
   },
 ]
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 export function PipelineHub() {
   // URL-driven via ?tab=<id>. 'home' (default) = grid index.

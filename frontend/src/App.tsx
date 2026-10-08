@@ -272,7 +272,9 @@ export default function App() {
           <Route path="/forgot-password" element={<Login />} />
           <Route path="/reset-password" element={<Login />} />
           <Route path="/activate" element={<Activate />} />
-          <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          {/* LazyRoute like every other admin page: the same wrapper type keeps
+              ProtectedRoute and the Layout mounted across Dashboard navigation. */}
+          <Route path="/" element={<LazyRoute><Dashboard /></LazyRoute>} />
           <Route path="/scan" element={<LazyRoute><Scan /></LazyRoute>} />
           {/* ── Members & Loyalty: 4 consolidated hubs ─────────────────
               Each hub is a tab container. Legacy URLs (/tiers, /offers,

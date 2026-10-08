@@ -3,7 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
-import { applyThemeToDom, persistThemeSnapshot, readCachedPreset } from '../hooks/useTheme'
+import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
+import { StylePicker } from '../components/settings/StylePicker'
+import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
 import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
 import {
@@ -242,7 +244,7 @@ const PRESETS: Record<string, ThemePreset> = {
   },
 }
 
-const DEFAULT_PRESET = 'Gold Luxury'
+const DEFAULT_PRESET = 'Royal Blue'
 
 /* ════════════════════════════════════════════════════════════════════════
    Preset card system — completely different design language per mood.
@@ -878,7 +880,7 @@ const TABS: Tab[] = [
   // IndustryMismatchBanner suppresses itself on /settings?tab=industry
   // to avoid two competing CTAs for the same action.
   { id: 'industry',      label: 'Industry',           icon: Briefcase,     desc: 'Switch the workspace industry (hotel / beauty / medical / restaurant / …)', custom: true },
-  { id: 'branding',      label: 'Branding & Theme',   icon: Palette,       desc: 'Colors, logo, theme presets',               groups: ['appearance'],   custom: true },
+  { id: 'branding',      label: 'Branding & Theme',   icon: Palette,       desc: 'Style, palette, colours, logo',             groups: ['appearance'],   custom: true },
   { id: 'loyalty',       label: 'Loyalty Program',    icon: Star,          desc: 'Points, tiers, rewards rules',              groups: ['points'],       custom: true, product: 'loyalty' },
   { id: 'notifications', label: 'Notifications',      icon: Bell,          desc: 'Push and email notification config',        groups: ['notifications'], feature: 'push_notifications' },
   { id: 'integrations',  label: 'Integrations & API', icon: Zap,           desc: 'PMS, payments, messaging, developer tokens', groups: ['integrations'], custom: true },
@@ -1082,6 +1084,16 @@ export function Settings() {
     return ''
   }
 
+  // The admin style shown as active in Settings → Branding → Style. Starts
+  // from what is painted, follows the saved setting once it loads, and
+  // switches the moment a card is clicked (applyStyle / undo).
+  const [activeStyle, setActiveStyle] = useState<ThemeStyle>(() =>
+    readThemeStyle(document.documentElement.getAttribute('data-style')))
+  const savedStyle = getVal('theme_style')
+  useEffect(() => {
+    if (savedStyle) setActiveStyle(readThemeStyle(savedStyle))
+  }, [savedStyle])
+
   const handleChange = (key: string, value: string) => {
     setEditedSettings(prev => ({ ...prev, [key]: value }))
   }
@@ -1112,6 +1124,9 @@ export function Settings() {
     fromPresetName: string | null
     toPresetName: string
     fromMood: string | null
+    // Set when the change being undone was a style switch: undo then
+    // restores this style and leaves the palette alone.
+    fromStyle: ThemeStyle | null
     expiresAt: number
   } | null>(null)
 
@@ -1141,6 +1156,7 @@ export function Settings() {
       fromPresetName: previousPreset,
       toPresetName: name,
       fromMood: previousMood,
+      fromStyle: null,
       expiresAt: Date.now() + 15_000,
     })
 
@@ -1172,11 +1188,50 @@ export function Settings() {
   }
 
   /**
-   * Revert to the colour palette that was active before the most
-   * recent applyPreset() call. Same instant-apply + persist flow.
+   * Switch the admin style (Glass / Classic) for the whole organisation.
+   * Same order as a preset: instant DOM apply, local cache, then the server
+   * save. Only theme_style is saved; the palette is untouched.
+   */
+  const switchStyle = (style: ThemeStyle) => {
+    // The saved palette; blank keys are left out so the defaults fill them.
+    const colors: Record<string, string> = {}
+    for (const k of COLOR_KEYS) {
+      const v = getVal(k)
+      if (v) colors[k] = v
+    }
+    setActiveStyle(style)
+    applyThemeToDom(colors, undefined, style)
+    persistThemeSnapshot(colors, detectActivePreset(), getVal('theme_mood') || null, style)
+    saveMutation.mutate(styleSettings(style))
+  }
+
+  /** A click on a Style card: remember the current style for Undo, then switch. */
+  const applyStyle = (next: ThemeStyle) => {
+    if (next === activeStyle) return
+    setUndoSnapshot({
+      colors: {},
+      fromPresetName: detectActivePreset(),
+      toPresetName: STYLE_NAMES[next],
+      fromMood: null,
+      fromStyle: activeStyle,
+      expiresAt: Date.now() + 15_000,
+    })
+    switchStyle(next)
+  }
+
+  /**
+   * Revert the most recent preset or style change. Same instant-apply +
+   * persist flow.
    */
   const undoPreset = () => {
     if (!undoSnapshot) return
+    if (undoSnapshot.fromStyle) {
+      const previous = undoSnapshot.fromStyle
+      switchStyle(previous)
+      setUndoSnapshot(null)
+      toast.success(`Back to ${STYLE_NAMES[previous]}`)
+      return
+    }
     const { colors, fromPresetName, fromMood } = undoSnapshot
     // Restore previous colors AND mood — so the body font + heading
     // font + corner radius scale revert with the palette, not just the
@@ -1301,7 +1356,7 @@ export function Settings() {
   /* ── Shared UI ───────────────────────────────────────────────────────── */
 
   const cardClass = 'rounded-2xl border border-white/[0.06] p-6'
-  const cardStyle = { background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }
+  const cardStyle = { background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }
   const inputClass = 'w-full bg-[#0f1c18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
   const btnPrimary = 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all'
 
@@ -1462,7 +1517,7 @@ export function Settings() {
 
   const renderBranding = () => {
     const activePreset = detectActivePreset()
-    const previewPrimary = getVal('primary_color') || '#c9a84c'
+    const previewPrimary = getVal('primary_color') || '#3b82f6'
     const previewBg = getVal('background_color') || '#0d0d0d'
     const previewSurface = getVal('surface_color') || '#161616'
     const previewText = getVal('text_color') || '#ffffff'
@@ -1512,11 +1567,32 @@ export function Settings() {
           </div>
         </div>
 
+        {/* Style */}
+        <div className={cardClass} style={cardStyle}>
+          <div className="flex items-start justify-between mb-1 gap-3">
+            <h3 className="text-sm font-bold text-white flex items-center gap-2">
+              <Layers size={15} className="text-emerald-400" /> Style
+            </h3>
+            {undoSnapshot?.fromStyle && (
+              <button
+                onClick={undoPreset}
+                className="text-[11px] font-medium text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5"
+                title={`Back to ${STYLE_NAMES[undoSnapshot.fromStyle]}`}
+              >
+                <Undo2 size={11} />
+                Undo "{undoSnapshot.toPresetName}"
+              </button>
+            )}
+          </div>
+          <p className="text-xs text-gray-500 mb-4">The look of the whole admin, for everyone in your organisation. Glass is the default; Classic is the original dark admin.</p>
+          <StylePicker value={activeStyle} brand={previewPrimary} onPick={applyStyle} />
+        </div>
+
         {/* Theme Presets */}
         <div className={cardClass} style={cardStyle}>
           <div className="flex items-start justify-between mb-1 gap-3">
             <h3 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
-              <Palette size={15} className="text-emerald-400" /> Theme Presets
+              <Palette size={15} className="text-emerald-400" /> Palette
               {activePreset && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
                   {activePreset} active
@@ -1524,7 +1600,7 @@ export function Settings() {
               )}
             </h3>
             <div className="flex items-center gap-2 flex-shrink-0">
-              {undoSnapshot && (
+              {undoSnapshot && !undoSnapshot.fromStyle && (
                 <button
                   onClick={undoPreset}
                   className="text-[11px] font-medium text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/15 border border-amber-400/30 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5"
@@ -1557,6 +1633,7 @@ export function Settings() {
               />
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-4">In Glass a palette sets the brand colour. Its surfaces, text colours, fonts and corners apply in Classic.</p>
         </div>
 
         {/* Color Settings */}
@@ -1564,7 +1641,7 @@ export function Settings() {
           <h3 className="text-sm font-bold text-white mb-2 flex items-center gap-2">
             <Palette size={15} className="text-emerald-400" /> Brand Colors
           </h3>
-          {groupSettings('appearance').map(renderSettingRow)}
+          {withoutThemeMeta(groupSettings('appearance')).map(renderSettingRow)}
         </div>
 
         {/* Live Preview */}
@@ -1995,7 +2072,7 @@ export function Settings() {
             { label: 'Qualification',      value: qualModel.charAt(0).toUpperCase() + qualModel.slice(1), sub: 'tier assessment model', color: '#74c895' },
           ].map(stat => (
             <div key={stat.label} className="rounded-xl p-3 border border-white/[0.04]"
-              style={{ background: 'rgba(15,28,24,0.5)' }}>
+              style={{ background: 'var(--legacy-well-50)' }}>
               <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{stat.label}</p>
               <p className="text-xl font-bold mt-0.5" style={{ color: stat.color }}>{stat.value}</p>
               <p className="text-[10px] text-gray-600 mt-0.5">{stat.sub}</p>
@@ -2066,7 +2143,7 @@ export function Settings() {
           {managePages.map(page => (
             <Link key={page.to} to={page.to}
               className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
-              style={{ background: 'rgba(15,28,24,0.5)' }}>
+              style={{ background: 'var(--legacy-well-50)' }}>
               <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: page.accent + '18', color: page.accent }}>
                 {page.icon}
@@ -2185,9 +2262,9 @@ export function Settings() {
           style={{
             background: result
               ? result.success
-                ? 'linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%)'
-                : 'linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%)'
-              : 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))',
+                ? 'var(--legacy-success-gradient)'
+                : 'var(--legacy-alert-gradient)'
+              : 'var(--legacy-card-gradient)',
             boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
           }}>
           <button onClick={() => isComingSoon ? null : toggleSection(section.id)}
@@ -2591,7 +2668,7 @@ export function Settings() {
             ].map(link => (
               <a key={link.label} href={link.url} target="_blank" rel="noopener noreferrer"
                 className="flex items-start gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
-                style={{ background: 'rgba(15,28,24,0.5)' }}>
+                style={{ background: 'var(--legacy-well-50)' }}>
                 <div className="text-emerald-400 mt-0.5">{link.icon}</div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors flex items-center gap-1.5">

@@ -75,7 +75,7 @@ export function CannedReplies() {
   }
 
   if (isLoading) {
-    return <div className="text-center text-[#636366] py-12">{t('canned_replies.loading', 'Loading...')}</div>
+    return <div className="text-center text-t-muted py-12">{t('canned_replies.loading', 'Loading...')}</div>
   }
 
   return (
@@ -103,7 +103,7 @@ export function CannedReplies() {
       </div>
 
       {items.length === 0 ? (
-        <div className="text-center text-[#636366] py-12 border border-dashed border-dark-border rounded-lg">
+        <div className="text-center text-t-muted py-12 border border-dashed border-dark-border rounded-lg">
           {t('canned_replies.empty', 'No canned replies yet. Click "Add" to create one.')}
         </div>
       ) : (
@@ -127,7 +127,7 @@ export function CannedReplies() {
                     onChange={e => update(i, { label: e.target.value })}
                     maxLength={80}
                     placeholder={t('canned_replies.label_placeholder', 'Label (e.g. Greeting)')}
-                    className="w-full px-3 py-2 text-sm bg-dark-bg border border-dark-border rounded text-white placeholder-[#636366] focus:border-primary-500 outline-none"
+                    className="w-full px-3 py-2 text-sm bg-dark-bg border border-dark-border rounded text-white placeholder-t-muted focus:border-primary-500 outline-none"
                   />
                   <textarea
                     value={it.text}
@@ -135,9 +135,9 @@ export function CannedReplies() {
                     maxLength={2000}
                     rows={3}
                     placeholder={t('canned_replies.text_placeholder', 'Reply text — what gets inserted into the message box')}
-                    className="w-full px-3 py-2 text-sm bg-dark-bg border border-dark-border rounded text-white placeholder-[#636366] focus:border-primary-500 outline-none resize-y"
+                    className="w-full px-3 py-2 text-sm bg-dark-bg border border-dark-border rounded text-white placeholder-t-muted focus:border-primary-500 outline-none resize-y"
                   />
-                  <div className="text-xs text-[#636366] text-right">{it.text.length} / 2000</div>
+                  <div className="text-xs text-t-muted text-right">{it.text.length} / 2000</div>
                 </div>
                 <button
                   onClick={() => remove(i)}

@@ -1,0 +1,264 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Glass, the admin's default style.
+   Spec: docs/superpowers/specs/2026-10-08-admin-glass-style-design.md
+
+   The token values (surfaces, text, radius, type) are generated into the
+   stylesheet by the Tailwind plugin in tailwind.config.js, from
+   src/theme/glassTokens.ts. This file holds the component rules: the
+   backdrop, the floating sidebar and header, blur where content passes
+   underneath, the card highlight, the old inline surfaces, the fallbacks.
+
+   Every selector starts with :root[data-style="glass"][data-shell="admin"]:
+   Glass applies only while the admin Layout is mounted. glassCss.test.ts
+   enforces it.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Glass's faces, self-hosted (the OFL files the landing kits ship, copied
+   into ./fonts so Vite bundles them same-origin). Glass-only family names:
+   nothing outside Glass asks for them, so Classic, the login page, the member
+   portal and Appointments never download them and keep their own fonts.
+   Weight ranges are the files' own wght axes. Unicode ranges as in
+   public/landing/ember_table.css and orbit_city.css. */
+@font-face {
+  font-family: 'HX Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-var-cyrillic.woff2') format('woff2');
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+  font-family: 'HX Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-var-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'HX Inter';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'HX Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('./fonts/space-grotesk-var-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'HX Space Grotesk';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('./fonts/space-grotesk-var.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* The backdrop: ink with three glows from the brand colour (theme/glass.ts
+   glowsFor). Fallbacks are Royal blue's glows, for the frame before the
+   theme loads. The ink stops must stay no lighter than GLASS_INK. */
+:root[data-style="glass"][data-shell="admin"] .hx-shell {
+  background-color: #0B1120;
+  background-image:
+    radial-gradient(70rem 46rem at 0% 0%, rgb(var(--glass-glow-1, 59 130 246) / var(--glass-glow-alpha-1, 0.18)), transparent 70%),
+    radial-gradient(56rem 40rem at 100% 0%, rgb(var(--glass-glow-2, 113 59 246) / var(--glass-glow-alpha-2, 0.16)), transparent 70%),
+    radial-gradient(64rem 44rem at 50% 100%, rgb(var(--glass-glow-3, 37 155 110) / var(--glass-glow-alpha-3, 0.14)), transparent 70%),
+    linear-gradient(160deg, #0B1120 0%, #0D1426 55%, #0A0F1C 100%);
+  color: rgb(243 246 251);
+}
+
+/* Sidebar and header: glass with real blur. */
+:root[data-style="glass"][data-shell="admin"] .hx-sidebar,
+:root[data-style="glass"][data-shell="admin"] .hx-header {
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
+@media (min-width: 1024px) {
+  /* The sidebar floats 12px from the window edges; the header is a bar
+     along the top of the content column. */
+  :root[data-style="glass"][data-shell="admin"] .hx-sidebar {
+    margin: 12px 0 12px 12px;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 20px;
+  }
+  :root[data-style="glass"][data-shell="admin"] .hx-header {
+    margin: 12px 12px 0;
+    border: 1px solid rgb(255 255 255 / 0.14);
+    border-radius: 16px;
+  }
+}
+
+@media (max-width: 1023px) {
+  /* Phones and tablets: the drawer and the bottom navigation sit over
+     page content, so they are darker glass. */
+  :root[data-style="glass"][data-shell="admin"] .hx-sidebar,
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav {
+    background: rgb(14 20 34 / 0.85);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+  }
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav {
+    border-top-color: rgb(255 255 255 / 0.14);
+  }
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav > a,
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav > button {
+    color: rgb(195 204 217);
+  }
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav > a.active,
+  :root[data-style="glass"][data-shell="admin"] .mobile-bottom-nav > button.active {
+    color: rgb(var(--tc-primary-400, var(--color-primary-400, 88 149 247)));
+  }
+}
+
+/* Cards: a hairline top highlight and a soft shadow make the translucent
+   panels read as sheets of glass. No blur: the backdrop under them is
+   already soft. Tailwind's ring variables stay in the shadow, so focus
+   rings keep working. */
+:root[data-style="glass"][data-shell="admin"] :is(.bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim).border:not(.absolute, .fixed, .sticky, .hx-sidebar, input, textarea, select, button) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    inset 0 1px 0 rgb(255 255 255 / 0.08),
+    0 12px 32px -12px rgb(0 0 0 / 0.45);
+}
+
+/* Menus, popovers, sticky headers, modals and drawers: page content passes
+   under them, so they are darker glass with real blur. Some popovers are
+   placed with an inline `position: fixed` (ColumnTogglePopover). */
+:root[data-style="glass"][data-shell="admin"] :is(.absolute, .fixed, .sticky, [style*="position: fixed"]):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+:root[data-style="glass"][data-shell="admin"] :is(.shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+:root[data-style="glass"][data-shell="admin"] .fixed.inset-0 > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well) {
+  background-color: rgb(14 20 34 / 0.78);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
+/* An overlay inside another blurred surface (the sidebar, the header, the
+   bottom navigation, a blurred modal scrim, a modal panel or another
+   overlay) can't blur what is behind it: those surfaces are backdrop
+   roots, so the page would ghost through. Such overlays are near-opaque
+   instead, and so is the panel sitting directly in a blurred scrim. */
+:root[data-style="glass"][data-shell="admin"] :is(
+  .hx-sidebar,
+  .hx-header,
+  .mobile-bottom-nav,
+  .fixed.inset-0[class*="backdrop-blur"],
+  :is(.absolute, .fixed, .sticky, [style*="position: fixed"], .shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well),
+  .fixed.inset-0 > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well)
+) :is(.absolute, .fixed, .sticky, [style*="position: fixed"], .shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well),
+:root[data-style="glass"][data-shell="admin"] .fixed.inset-0[class*="backdrop-blur"] > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well) {
+  background-color: rgb(14 20 34 / 0.96);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* backdrop-filter makes the header a stacking context. Lift it above the
+   page's sticky bars (z-10 to z-30) so its own popovers stay on top; the
+   z-40 drawer backdrop and z-50 modals still cover it. */
+:root[data-style="glass"][data-shell="admin"] .hx-header {
+  position: relative;
+  z-index: 35;
+}
+
+/* Page titles and big numbers in the display face. */
+:root[data-style="glass"][data-shell="admin"] :is(.text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl) {
+  font-family: var(--theme-font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Scrollbars without the old solid grey track. */
+:root[data-style="glass"][data-shell="admin"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root[data-style="glass"][data-shell="admin"] ::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 0.18);
+}
+
+/* The old dark-green inline surfaces (legacySurfaces.css), as glass. */
+:root[data-style="glass"][data-shell="admin"] {
+  --legacy-panel-60: rgb(255 255 255 / 0.07);
+  --legacy-panel-50: rgb(255 255 255 / 0.06);
+  --legacy-panel-raised: rgb(255 255 255 / 0.12);
+  --legacy-well-60: rgb(5 8 15 / 0.45);
+  --legacy-well-50: rgb(5 8 15 / 0.4);
+  --legacy-well-40: rgb(5 8 15 / 0.32);
+  --legacy-well-dark: rgb(5 8 15 / 0.55);
+  --legacy-card: rgb(255 255 255 / 0.07);
+  --legacy-card-deep: rgb(14 20 34 / 0.92);
+  --legacy-card-gradient: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+  --legacy-card-gradient-diagonal: linear-gradient(135deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+  --legacy-card-gradient-deep: linear-gradient(180deg, rgb(14 20 34 / 0.92), rgb(10 15 28 / 0.94));
+  --legacy-hero-gradient: linear-gradient(135deg, rgb(255 255 255 / 0.09), rgb(255 255 255 / 0.05));
+  --legacy-hero-gradient-soft: linear-gradient(135deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0.03));
+  --legacy-tile-gradient: linear-gradient(180deg, rgb(255 255 255 / 0.08), rgb(255 255 255 / 0.05));
+  --legacy-success-gradient: linear-gradient(180deg, rgb(52 211 153 / 0.12), rgb(52 211 153 / 0.05));
+  --legacy-alert-gradient: linear-gradient(180deg, rgb(251 113 133 / 0.12), rgb(251 113 133 / 0.05));
+}
+
+/* Old inline surfaces used as overlays: a card tint is far too thin over
+   page content. Modal panels and day drawers sit directly in a scrim
+   (usually a blurred one, a backdrop root), so they take the near-opaque
+   ink; floating bulk-action bars take the overlay glass. */
+:root[data-style="glass"][data-shell="admin"] .fixed.inset-0 > [style*="--legacy-"] {
+  --legacy-card: rgb(14 20 34 / 0.96);
+  --legacy-card-gradient: linear-gradient(180deg, rgb(14 20 34 / 0.96), rgb(10 15 28 / 0.97));
+  --legacy-card-gradient-deep: linear-gradient(180deg, rgb(14 20 34 / 0.96), rgb(10 15 28 / 0.97));
+  --legacy-hero-gradient: linear-gradient(135deg, rgb(14 20 34 / 0.96), rgb(10 15 28 / 0.97));
+}
+:root[data-style="glass"][data-shell="admin"] .fixed[style*="--legacy-"] {
+  --legacy-card: rgb(14 20 34 / 0.78);
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+}
+
+/* Text in the page ink (text-dark-bg: dark text and icons on brand and
+   status fills) stays solid; only the surface use of dark-bg is
+   translucent. */
+:root[data-style="glass"][data-shell="admin"] .text-dark-bg {
+  --alpha-dark-bg: 1;
+}
+
+/* Reduced transparency, and browsers without backdrop-filter: solid
+   panels and no blur. The solid surface tokens come from the Tailwind
+   plugin (glassSolidVariables). These selectors match the ones above with
+   equal specificity, so coming later in the file is what makes them win. */
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-style="glass"][data-shell="admin"] .hx-shell {
+    background-image: none;
+  }
+  :root[data-style="glass"][data-shell="admin"] :is(.hx-sidebar, .hx-header, .mobile-bottom-nav),
+  :root[data-style="glass"][data-shell="admin"] :is(.absolute, .fixed, .sticky, [style*="position: fixed"], .shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+  :root[data-style="glass"][data-shell="admin"] .fixed.inset-0 > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well),
+  :root[data-style="glass"][data-shell="admin"] .fixed.inset-0[class*="backdrop-blur"] > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well) {
+    background: #1A2233;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root[data-style="glass"][data-shell="admin"] .fixed[style*="--legacy-"] {
+    --legacy-card: #1A2233;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-style="glass"][data-shell="admin"] .hx-shell {
+    background-image: none;
+  }
+  :root[data-style="glass"][data-shell="admin"] :is(.hx-sidebar, .hx-header, .mobile-bottom-nav),
+  :root[data-style="glass"][data-shell="admin"] :is(.absolute, .fixed, .sticky, [style*="position: fixed"], .shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+  :root[data-style="glass"][data-shell="admin"] .fixed.inset-0 > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well),
+  :root[data-style="glass"][data-shell="admin"] .fixed.inset-0[class*="backdrop-blur"] > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well) {
+    background: #1A2233;
+  }
+  :root[data-style="glass"][data-shell="admin"] .fixed[style*="--legacy-"] {
+    --legacy-card: #1A2233;
+  }
+}

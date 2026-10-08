@@ -135,7 +135,7 @@ export function Reservations() {
   const clearFilters = () => { setStatus(''); setPropertyId(''); setRoomType(''); setMealPlan(''); setPaymentStatus(''); setBookingChannel(''); setCheckInFrom(''); setCheckInTo(''); setPage(1) }
   const calcNights = (ci: string, co: string) => { if (!ci || !co) return '—'; const n = Math.round((new Date(co).getTime() - new Date(ci).getTime()) / 86400000); return n > 0 ? n : '—' }
 
-  const inp = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
 
   return (
     <div className="space-y-5">
@@ -191,8 +191,8 @@ export function Reservations() {
       <div className="space-y-2">
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('reservations.search_placeholder', 'Search confirmation no, guest name, company...')} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('reservations.search_placeholder', 'Search confirmation no, guest name, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> {t('reservations.filters_button', 'Filters')} {hasFilters ? '●' : ''}
@@ -232,7 +232,7 @@ export function Reservations() {
               <span className="text-xs text-t-secondary">{t('reservations.filters.to', 'To')}</span>
               <input type="date" value={checkInTo} onChange={e => { setCheckInTo(e.target.value); setPage(1) }} className="bg-dark-surface border border-dark-border rounded-lg px-2 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
-            {hasFilters && <button onClick={clearFilters} className="text-xs text-[#636366] hover:text-white px-2">{t('reservations.filters.clear', 'Clear')}</button>}
+            {hasFilters && <button onClick={clearFilters} className="text-xs text-t-muted hover:text-white px-2">{t('reservations.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -256,8 +256,8 @@ export function Reservations() {
             </tr>
           </thead>
           <tbody>
-            {isLoading && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">{t('reservations.table.loading', 'Loading...')}</td></tr>}
-            {!isLoading && reservations.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-[#636366]">{t('reservations.table.no_reservations', 'No reservations found')}</td></tr>}
+            {isLoading && <tr><td colSpan={11} className="px-4 py-8 text-center text-t-muted">{t('reservations.table.loading', 'Loading...')}</td></tr>}
+            {!isLoading && reservations.length === 0 && <tr><td colSpan={11} className="px-4 py-8 text-center text-t-muted">{t('reservations.table.no_reservations', 'No reservations found')}</td></tr>}
             {reservations.map((r: any) => (
               <tr key={r.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors">
                 <td className="px-4 py-3 text-primary-400 font-medium text-xs">{r.confirmation_no ?? '—'}</td>
@@ -276,7 +276,7 @@ export function Reservations() {
                     )}
                     <BrandBadge brandId={r.brand_id} />
                   </div>
-                  <div className="text-xs text-[#636366]">{r.guest?.company ?? ''}</div>
+                  <div className="text-xs text-t-muted">{r.guest?.company ?? ''}</div>
                   {(r.guest?.email || r.guest?.phone) && (
                     <div className="text-[11px] text-gray-500 mt-0.5 space-x-1.5">
                       {r.guest?.email && <span>{r.guest.email}</span>}
@@ -284,11 +284,11 @@ export function Reservations() {
                     </div>
                   )}
                 </td>
-                <td className="px-4 py-3 text-[#a0a0a0] text-xs">{r.property?.name ?? '—'}</td>
+                <td className="px-4 py-3 text-t-soft text-xs">{r.property?.name ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-300 text-xs">{r.check_in ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-300 text-xs">{r.check_out ?? '—'}</td>
-                <td className="px-4 py-3 text-[#a0a0a0] text-xs">{calcNights(r.check_in, r.check_out)}</td>
-                <td className="px-4 py-3 text-[#a0a0a0] text-xs">{r.room_type ?? '—'}{r.room_number ? ` #${r.room_number}` : ''}</td>
+                <td className="px-4 py-3 text-t-soft text-xs">{calcNights(r.check_in, r.check_out)}</td>
+                <td className="px-4 py-3 text-t-soft text-xs">{r.room_type ?? '—'}{r.room_number ? ` #${r.room_number}` : ''}</td>
                 <td className="px-4 py-3 text-gray-300 text-xs font-medium">{r.total_amount != null ? `${settings.currency_symbol}${Number(r.total_amount).toLocaleString()}` : '—'}</td>
                 <td className="px-4 py-3">
                   <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium whitespace-nowrap ${PAYMENT_COLORS[r.payment_status] ?? 'bg-gray-500/20 text-t-secondary'}`}>
@@ -311,7 +311,7 @@ export function Reservations() {
                     )}
                     {r.status === 'Checked In' && (
                       <button onClick={() => checkOutMutation.mutate(r.id)} disabled={checkOutMutation.isPending}
-                        className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-500/10 text-[#a0a0a0] hover:bg-gray-500/20 transition-colors disabled:opacity-50"
+                        className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-gray-500/10 text-t-soft hover:bg-gray-500/20 transition-colors disabled:opacity-50"
                         title={t('reservations.row_actions.check_out_title', 'Check Out')}>
                         <LogOut size={12} /> {t('reservations.row_actions.check_out_short', 'Out')}
                       </button>
@@ -329,8 +329,8 @@ export function Reservations() {
         <div className="flex items-center justify-between text-sm">
           <span className="text-t-secondary">{t('reservations.table.page_of', { current: meta.current_page, last: meta.last_page, defaultValue: 'Page {{current}} of {{last}}' })}</span>
           <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
-            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
+            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
           </div>
         </div>
       )}
@@ -358,63 +358,63 @@ export function Reservations() {
             }} className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.guest_id', 'Guest ID')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.guest_id', 'Guest ID')}</label>
                   <input type="number" value={form.guest_id} onChange={e => setForm(f => ({ ...f, guest_id: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.property_req', 'Property *')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.property_req', 'Property *')}</label>
                   <select required value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))} className={inp}>
                     <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.booking_channel', 'Booking Channel')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.booking_channel', 'Booking Channel')}</label>
                   <select value={form.booking_channel} onChange={e => setForm(f => ({ ...f, booking_channel: e.target.value }))} className={inp}>
                     <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.booking_channels.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.check_in_req', 'Check-in *')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.check_in_req', 'Check-in *')}</label>
                   <input required type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.check_out_req', 'Check-out *')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.check_out_req', 'Check-out *')}</label>
                   <input required type="date" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.rooms', 'Rooms')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.rooms', 'Rooms')}</label>
                   <input type="number" min="1" value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.room_type', 'Room Type')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.room_type', 'Room Type')}</label>
                   <select value={form.room_type} onChange={e => setForm(f => ({ ...f, room_type: e.target.value }))} className={inp}>
                     <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.room_types.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.room_number', 'Room Number')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.room_number', 'Room Number')}</label>
                   <input value={form.room_number} onChange={e => setForm(f => ({ ...f, room_number: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.rate_per_night', { symbol: settings.currency_symbol, defaultValue: 'Rate/Night ({{symbol}})' })}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.rate_per_night', { symbol: settings.currency_symbol, defaultValue: 'Rate/Night ({{symbol}})' })}</label>
                   <input type="number" step="0.01" value={form.rate_per_night} onChange={e => setForm(f => ({ ...f, rate_per_night: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.total_label', { symbol: settings.currency_symbol, defaultValue: 'Total ({{symbol}})' })} {autoTotal && !form.total_amount ? t('reservations.create.total_auto', { value: autoTotal, defaultValue: 'auto: {{value}}' }) : ''}</label>
-                  <input type="number" step="0.01" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))} placeholder={autoTotal || ''} className={`${inp} placeholder-[#636366]`} />
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.total_label', { symbol: settings.currency_symbol, defaultValue: 'Total ({{symbol}})' })} {autoTotal && !form.total_amount ? t('reservations.create.total_auto', { value: autoTotal, defaultValue: 'auto: {{value}}' }) : ''}</label>
+                  <input type="number" step="0.01" value={form.total_amount} onChange={e => setForm(f => ({ ...f, total_amount: e.target.value }))} placeholder={autoTotal || ''} className={`${inp} placeholder-t-muted`} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.meal_plan', 'Meal Plan')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.meal_plan', 'Meal Plan')}</label>
                   <select value={form.meal_plan} onChange={e => setForm(f => ({ ...f, meal_plan: e.target.value }))} className={inp}>
                     <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.meal_plans.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.payment_method', 'Payment Method')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('reservations.create.payment_method', 'Payment Method')}</label>
                   <select value={form.payment_method} onChange={e => setForm(f => ({ ...f, payment_method: e.target.value }))} className={inp}>
                     <option value="">{t('reservations.create.select_placeholder', '-- Select --')}</option>
                     {settings.payment_methods.map(s => <option key={s}>{s}</option>)}
@@ -422,15 +422,15 @@ export function Reservations() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.special_requests', 'Special Requests')}</label>
+                <label className="block text-xs text-t-soft mb-1">{t('reservations.create.special_requests', 'Special Requests')}</label>
                 <textarea value={form.special_requests} onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">{t('reservations.create.notes', 'Notes')}</label>
+                <label className="block text-xs text-t-soft mb-1">{t('reservations.create.notes', 'Notes')}</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('reservations.create.cancel', 'Cancel')}</button>
+                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('reservations.create.cancel', 'Cancel')}</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createMutation.isPending ? t('reservations.create.saving', 'Saving...') : t('reservations.create.create', 'Create')}
                 </button>

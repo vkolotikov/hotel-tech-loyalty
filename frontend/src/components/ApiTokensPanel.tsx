@@ -75,7 +75,7 @@ export function ApiTokensPanel() {
 
   return (
     <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-      style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+      style={{ background: 'var(--legacy-card-gradient)' }}>
       <div className="px-5 py-3.5 flex items-center gap-3 border-b border-white/[0.04]">
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-amber-500/[0.12]">
           <Key size={15} className="text-amber-400" />

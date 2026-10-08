@@ -235,7 +235,7 @@ export function MemberDetail() {
     onError: (e: any) => toast.error(e.response?.data?.message || 'Insufficient points'),
   })
 
-  if (isLoading) return <div className="flex items-center justify-center h-64 text-[#636366]">Loading...</div>
+  if (isLoading) return <div className="flex items-center justify-center h-64 text-t-muted">Loading...</div>
 
   const member = data?.member
   const user = member?.user
@@ -260,7 +260,7 @@ export function MemberDetail() {
         <div className="p-5 md:p-6 flex flex-col gap-5">
           <div className="flex items-start gap-3 md:gap-4">
             <button onClick={() => navigate('/members')} className="p-2 hover:bg-dark-surface2 rounded-lg transition-colors flex-shrink-0 mt-1">
-              <ArrowLeft size={18} className="text-[#a0a0a0]" />
+              <ArrowLeft size={18} className="text-t-soft" />
             </button>
             {user?.avatar_url ? (
               <img
@@ -277,7 +277,7 @@ export function MemberDetail() {
               <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl md:text-2xl font-bold text-white truncate">{user?.name}</h1>
                 {tier && <TierBadge tier={tier.name} color={tier.color_hex} />}
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${member?.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-red-500/15 text-red-400'}`}>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ${member?.is_active ? 'bg-success/15 text-success' : 'bg-red-500/15 text-red-400'}`}>
                   {member?.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                 </span>
               </div>
@@ -305,7 +305,7 @@ export function MemberDetail() {
                 <div className="relative" ref={kebabRef}>
                   <button
                     onClick={() => setKebabOpen(v => !v)}
-                    className="p-2 rounded-lg bg-dark-surface2 hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white transition-colors"
+                    className="p-2 rounded-lg bg-dark-surface2 hover:bg-dark-surface3 text-t-soft hover:text-white transition-colors"
                     title={t('memberDetail.more_actions', 'More actions')}
                   >
                     <MoreHorizontal size={16} />
@@ -426,17 +426,17 @@ export function MemberDetail() {
                 </div>
                 <div className="divide-y divide-dark-border">
                   {(data?.recent_transactions ?? []).length === 0 ? (
-                    <p className="text-center text-[#636366] py-8 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
+                    <p className="text-center text-t-muted py-8 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
                   ) : (data?.recent_transactions ?? []).slice(0, 5).map((tx: any) => (
                     <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
-                      <div className={`text-sm font-bold tabular-nums w-16 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
+                      <div className={`text-sm font-bold tabular-nums w-16 ${tx.points > 0 ? 'text-success' : 'text-danger'}`}>
                         {tx.points > 0 ? '+' : ''}{tx.points.toLocaleString()}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-white truncate">{tx.description}</p>
-                        <p className="text-xs text-[#636366]">{new Date(tx.created_at).toLocaleDateString()}</p>
+                        <p className="text-xs text-t-muted">{new Date(tx.created_at).toLocaleDateString()}</p>
                       </div>
-                      <div className="text-xs text-[#636366] text-right tabular-nums">
+                      <div className="text-xs text-t-muted text-right tabular-nums">
                         <p>{tx.balance_after?.toLocaleString()} pts</p>
                       </div>
                     </div>
@@ -469,7 +469,7 @@ export function MemberDetail() {
                 {aiData.upsell_suggestion && (
                   <div>
                     <p className="text-xs text-primary-400 font-semibold mb-1">{t('memberDetail.ai.upsell_script', 'Upsell Script')}</p>
-                    <p className="text-sm text-[#a0a0a0] italic">"{aiData.upsell_suggestion}"</p>
+                    <p className="text-sm text-t-soft italic">"{aiData.upsell_suggestion}"</p>
                   </div>
                 )}
               </div>
@@ -510,7 +510,7 @@ export function MemberDetail() {
                   placeholder={t('memberDetail.adjust.points_placeholder', 'Points')}
                   value={pointsForm.points}
                   onChange={e => setPointsForm(f => ({ ...f, points: e.target.value }))}
-                  className={`w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-xl font-bold text-center tabular-nums focus:outline-none focus:ring-2 mb-2 ${
+                  className={`w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-xl font-bold text-center tabular-nums focus:outline-none focus:ring-2 mb-2 ${
                     pointsMode === 'award' ? 'text-emerald-400 focus:ring-emerald-500' : 'text-red-400 focus:ring-red-500'
                   }`}
                 />
@@ -519,7 +519,7 @@ export function MemberDetail() {
                     <button
                       key={n}
                       onClick={() => setPointsForm(f => ({ ...f, points: String(n) }))}
-                      className="px-2.5 py-1 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white transition-colors"
+                      className="px-2.5 py-1 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-t-soft hover:text-white transition-colors"
                     >
                       {pointsMode === 'award' ? '+' : '−'}{n}
                     </button>
@@ -532,7 +532,7 @@ export function MemberDetail() {
                     : t('memberDetail.adjust.reason_redeem', 'Reason (e.g. Room upgrade)')}
                   value={pointsForm.description}
                   onChange={e => setPointsForm(f => ({ ...f, description: e.target.value }))}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted mb-3 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <button
                   onClick={() => (pointsMode === 'award' ? awardMutation : redeemMutation).mutate()}
@@ -560,17 +560,17 @@ export function MemberDetail() {
           </div>
           <div className="divide-y divide-dark-border">
             {(data?.recent_transactions ?? []).length === 0 ? (
-              <p className="text-center text-[#636366] py-10 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
+              <p className="text-center text-t-muted py-10 text-sm">{t('memberDetail.no_transactions', 'No transactions yet')}</p>
             ) : (data?.recent_transactions ?? []).map((tx: any) => (
               <div key={tx.id} className="flex items-center gap-4 px-5 py-3">
-                <div className={`text-sm font-bold tabular-nums w-20 ${tx.points > 0 ? 'text-[#32d74b]' : 'text-[#ff375f]'}`}>
+                <div className={`text-sm font-bold tabular-nums w-20 ${tx.points > 0 ? 'text-success' : 'text-danger'}`}>
                   {tx.points > 0 ? '+' : ''}{tx.points.toLocaleString()}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm text-white truncate">{tx.description}</p>
-                  <p className="text-xs text-[#636366]">{new Date(tx.created_at).toLocaleString()}</p>
+                  <p className="text-xs text-t-muted">{new Date(tx.created_at).toLocaleString()}</p>
                 </div>
-                <div className="text-xs text-[#636366] text-right tabular-nums">
+                <div className="text-xs text-t-muted text-right tabular-nums">
                   <p>{tx.balance_after?.toLocaleString()} pts</p>
                   {tx.type && <p className="text-[10px] uppercase">{tx.type}</p>}
                 </div>
@@ -633,8 +633,8 @@ export function MemberDetail() {
                 {[
                   { label: 'Total Stays',  value: linkedGuest.total_stays ?? 0, color: 'text-blue-400' },
                   { label: 'Total Nights', value: linkedGuest.total_nights ?? 0, color: 'text-purple-400' },
-                  { label: 'CRM Revenue',  value: `$${Number(linkedGuest.total_revenue ?? 0).toLocaleString()}`, color: 'text-[#32d74b]' },
-                  { label: 'Last Stay',    value: linkedGuest.last_stay_date ? new Date(linkedGuest.last_stay_date).toLocaleDateString() : '—', color: 'text-[#a0a0a0]' },
+                  { label: 'CRM Revenue',  value: `$${Number(linkedGuest.total_revenue ?? 0).toLocaleString()}`, color: 'text-success' },
+                  { label: 'Last Stay',    value: linkedGuest.last_stay_date ? new Date(linkedGuest.last_stay_date).toLocaleDateString() : '—', color: 'text-t-soft' },
                 ].map(s => (
                   <div key={s.label} className="text-center">
                     <p className="text-xs text-t-secondary">{s.label}</p>
@@ -708,7 +708,7 @@ export function MemberDetail() {
                 <div>
                   <h3 className="text-[10px] font-bold uppercase tracking-wider text-t-secondary mb-2 flex items-center gap-1.5"><StickyNote size={11} /> Notes</h3>
                   <div className="bg-dark-surface2 rounded-lg px-3 py-2">
-                    <p className="text-xs text-[#a0a0a0] whitespace-pre-wrap">{linkedGuest.notes}</p>
+                    <p className="text-xs text-t-soft whitespace-pre-wrap">{linkedGuest.notes}</p>
                   </div>
                 </div>
               )}
@@ -740,10 +740,10 @@ export function MemberDetail() {
                       >
                         <div>
                           <span className="text-white font-medium">{r.property?.name ?? 'Property'}</span>
-                          <span className="text-[#636366] ml-2">{r.room_type}</span>
+                          <span className="text-t-muted ml-2">{r.room_type}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-[#a0a0a0]">{r.check_in} → {r.check_out}</span>
+                          <span className="text-t-soft">{r.check_in} → {r.check_out}</span>
                           <span className={`ml-2 px-1.5 py-0.5 rounded text-[10px] font-medium ${
                             r.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
                             r.status === 'checked_in' ? 'bg-blue-500/20 text-blue-400' :
@@ -773,7 +773,7 @@ export function MemberDetail() {
                           <span className="text-white font-medium truncate block">{inq.subject || inq.inquiry_type}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          {inq.estimated_value && <span className="text-[#32d74b]">${Number(inq.estimated_value).toLocaleString()}</span>}
+                          {inq.estimated_value && <span className="text-success">${Number(inq.estimated_value).toLocaleString()}</span>}
                           <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                             inq.status === 'won' ? 'bg-green-500/20 text-green-400' :
                             inq.status === 'lost' ? 'bg-red-500/20 text-red-400' :
@@ -831,28 +831,28 @@ export function MemberDetail() {
                       <Camera size={20} className="text-white" />
                     </div>
                   </div>
-                  <span className="text-xs text-[#636366]">Click to change photo</span>
+                  <span className="text-xs text-t-muted">Click to change photo</span>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Name</label>
-                    <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Email</label>
-                    <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Phone</label>
-                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+1 234 567 8900" />
+                    <input type="tel" value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="+1 234 567 8900" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Nationality</label>
-                    <input type="text" value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                    <input type="text" value={editForm.nationality} onChange={e => setEditForm(f => ({ ...f, nationality: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Language</label>
-                    <input type="text" value={editForm.language} onChange={e => setEditForm(f => ({ ...f, language: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="en" />
+                    <input type="text" value={editForm.language} onChange={e => setEditForm(f => ({ ...f, language: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" placeholder="en" />
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Date of Birth</label>
@@ -860,29 +860,29 @@ export function MemberDetail() {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-t-secondary mb-1">Tier</label>
-                    <select value={editForm.tier_id} onChange={e => setEditForm(f => ({ ...f, tier_id: e.target.value }))} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                    <select value={editForm.tier_id} onChange={e => setEditForm(f => ({ ...f, tier_id: e.target.value }))} className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                       {(tiersData?.tiers ?? []).map((t: any) => (
                         <option key={t.id} value={t.id}>{t.name}</option>
                       ))}
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-t-secondary mb-1">Hold this tier until <span className="text-[#636366]">(optional)</span></label>
+                    <label className="block text-xs font-medium text-t-secondary mb-1">Hold this tier until <span className="text-t-muted">(optional)</span></label>
                     <input
                       type="date"
                       value={editForm.tier_override_until}
                       onChange={e => setEditForm(f => ({ ...f, tier_override_until: e.target.value }))}
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                     />
                   </div>
                 </div>
-                <p className="text-[11px] text-[#636366]">Tier hold stops the automatic tier sweep from downgrading them before this date. Leave empty for normal tier rules.</p>
-                <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer pt-1">
+                <p className="text-[11px] text-t-muted">Tier hold stops the automatic tier sweep from downgrading them before this date. Leave empty for normal tier rules.</p>
+                <label className="flex items-center gap-2 text-sm text-t-soft cursor-pointer pt-1">
                   <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm(f => ({ ...f, is_active: e.target.checked }))} />
                   Active Member
                 </label>
                 <div className="flex gap-2 pt-3 border-t border-dark-border">
-                  <button onClick={() => setEditing(false)} className="flex-1 flex items-center justify-center gap-1.5 border border-dark-border text-[#a0a0a0] py-2 rounded-lg text-sm font-medium hover:bg-dark-surface2 transition-colors">
+                  <button onClick={() => setEditing(false)} className="flex-1 flex items-center justify-center gap-1.5 border border-dark-border text-t-soft py-2 rounded-lg text-sm font-medium hover:bg-dark-surface2 transition-colors">
                     <X size={14} /> Cancel
                   </button>
                   <button onClick={handleSaveEdit} disabled={!editForm.name || !editForm.email || updateMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 bg-primary-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors">
@@ -898,8 +898,8 @@ export function MemberDetail() {
                 <div className="flex justify-between"><dt className="text-t-secondary">Language</dt><dd className="text-white">{user?.language || '—'}</dd></div>
                 <div className="flex justify-between"><dt className="text-t-secondary">Date of Birth</dt><dd className="text-white">{user?.date_of_birth ? new Date(user.date_of_birth).toLocaleDateString() : '—'}</dd></div>
                 <div className="flex justify-between"><dt className="text-t-secondary">Joined</dt><dd className="text-white">{member?.joined_at ? new Date(member.joined_at).toLocaleDateString() : '—'}</dd></div>
-                <div className="flex justify-between"><dt className="text-t-secondary">Status</dt><dd className={member?.is_active ? 'text-[#32d74b] font-medium' : 'text-[#ff375f] font-medium'}>{member?.is_active ? 'Active' : 'Inactive'}</dd></div>
-                <div className="flex justify-between"><dt className="text-t-secondary">NFC Card</dt><dd className={member?.nfc_uid ? 'text-[#32d74b] font-medium' : 'text-[#636366]'}>{member?.nfc_uid ? 'Active' : 'None'}</dd></div>
+                <div className="flex justify-between"><dt className="text-t-secondary">Status</dt><dd className={member?.is_active ? 'text-success font-medium' : 'text-danger font-medium'}>{member?.is_active ? 'Active' : 'Inactive'}</dd></div>
+                <div className="flex justify-between"><dt className="text-t-secondary">NFC Card</dt><dd className={member?.nfc_uid ? 'text-success font-medium' : 'text-t-muted'}>{member?.nfc_uid ? 'Active' : 'None'}</dd></div>
                 <div className="flex justify-between"><dt className="text-t-secondary">Member #</dt><dd className="text-white font-mono">{member?.member_number}</dd></div>
               </dl>
             )}

@@ -1,0 +1,26 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Inline backgrounds left from an older dark-green theme (the Booking
+   screens, Settings cards, a few panels). Inline styles can't be themed,
+   so each old value is a named variable: here it is the exact old colour,
+   so Classic renders as before, and glass.css gives Glass its own values.
+   Part 2 of the styles work retires these.
+   ════════════════════════════════════════════════════════════════════════ */
+:root {
+  --legacy-panel-60: rgba(22,40,35,0.6);
+  --legacy-panel-50: rgba(22,40,35,0.5);
+  --legacy-panel-raised: rgba(34,51,45,0.6);
+  --legacy-well-60: rgba(15,28,24,0.6);
+  --legacy-well-50: rgba(15,28,24,0.5);
+  --legacy-well-40: rgba(15,28,24,0.4);
+  --legacy-well-dark: rgba(14,18,16,0.6);
+  --legacy-card: rgba(18,24,22,0.96);
+  --legacy-card-deep: rgba(14,20,18,0.98);
+  --legacy-card-gradient: linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98));
+  --legacy-card-gradient-diagonal: linear-gradient(135deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98));
+  --legacy-card-gradient-deep: linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99));
+  --legacy-hero-gradient: linear-gradient(135deg, rgba(15,28,24,0.95), rgba(10,18,16,0.98));
+  --legacy-hero-gradient-soft: linear-gradient(135deg, rgba(15,28,24,0.5), rgba(10,18,16,0.6));
+  --legacy-tile-gradient: linear-gradient(180deg, rgba(22,35,30,0.96), rgba(19,33,29,0.98));
+  --legacy-success-gradient: linear-gradient(180deg, rgba(18,28,22,0.96), rgba(14,22,18,0.98)), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 40%);
+  --legacy-alert-gradient: linear-gradient(180deg, rgba(28,18,18,0.96), rgba(22,14,14,0.98)), radial-gradient(circle at 100% 0, rgba(228,132,111,0.06), transparent 40%);
+}

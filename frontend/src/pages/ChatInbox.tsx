@@ -360,7 +360,7 @@ export function ChatInbox() {
         )}
       </div>
 
-      <div className="flex flex-1 min-h-0 gap-0 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(14,18,16,0.6)' }}>
+      <div className="flex flex-1 min-h-0 gap-0 rounded-xl border border-white/[0.06] overflow-hidden" style={{ background: 'var(--legacy-well-dark)' }}>
 
         {/* ═══ LEFT: Conversation List ═══
              Mobile (<md): full-width, hidden as soon as a conversation is opened.

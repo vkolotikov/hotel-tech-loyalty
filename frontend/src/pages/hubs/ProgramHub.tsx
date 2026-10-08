@@ -7,7 +7,7 @@ const Tiers           = lazy(() => import('../Tiers').then(m => ({ default: m.Ti
 const Benefits        = lazy(() => import('../Benefits').then(m => ({ default: m.Benefits })))
 const EarnRateEvents  = lazy(() => import('../EarnRateEvents').then(m => ({ default: m.EarnRateEvents })))
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 export function ProgramHub() {
   const { t } = useTranslation()

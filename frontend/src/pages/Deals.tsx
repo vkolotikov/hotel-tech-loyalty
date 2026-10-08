@@ -896,23 +896,23 @@ export function Deals() {
             </span>
             <div className="flex items-center gap-1">
               <button disabled={page === 1} onClick={() => setPage(p => Math.max(1, p - 1))}
-                className="p-1.5 rounded-md border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40">
+                className="p-1.5 rounded-md border border-dark-border text-t-soft hover:text-white disabled:opacity-40">
                 <ChevronLeft size={14} />
               </button>
               {Array.from({ length: Math.min(data.last_page, 5) }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)}
-                  className={`w-8 h-8 rounded-md text-xs font-semibold ${n === page ? 'bg-primary-600 text-white' : 'text-[#a0a0a0] hover:text-white hover:bg-dark-surface2'}`}>
+                  className={`w-8 h-8 rounded-md text-xs font-semibold ${n === page ? 'bg-primary-600 text-white' : 'text-t-soft hover:text-white hover:bg-dark-surface2'}`}>
                   {n}
                 </button>
               ))}
               {data.last_page > 5 && <span className="text-gray-600 px-1">…</span>}
               {data.last_page > 5 && (
-                <button onClick={() => setPage(data.last_page)} className="w-8 h-8 rounded-md text-xs font-semibold text-[#a0a0a0] hover:text-white hover:bg-dark-surface2">
+                <button onClick={() => setPage(data.last_page)} className="w-8 h-8 rounded-md text-xs font-semibold text-t-soft hover:text-white hover:bg-dark-surface2">
                   {data.last_page}
                 </button>
               )}
               <button disabled={page >= (data.last_page ?? 1)} onClick={() => setPage(p => p + 1)}
-                className="p-1.5 rounded-md border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40">
+                className="p-1.5 rounded-md border border-dark-border text-t-soft hover:text-white disabled:opacity-40">
                 <ChevronRight size={14} />
               </button>
             </div>

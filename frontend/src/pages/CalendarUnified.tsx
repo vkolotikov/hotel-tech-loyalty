@@ -257,16 +257,16 @@ export default function CalendarUnified() {
             ))}
           </div>
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[170px] text-center text-sm">
             {view === 'day' ? formatDayKey(cursor, 'en-US', { weekday: 'long', month: 'long', day: 'numeric' }) :
              view === 'week' ? `Week ${formatDayKey(mondayOfKey(cursor), 'en-US', { month: 'short', day: 'numeric' })} — ${formatDayKey(addDaysToKey(mondayOfKey(cursor), 6), 'en-US', { month: 'short', day: 'numeric' })}` :
              monthLabel}
           </span>
           <button onClick={() => navigate(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
           <button onClick={goToday} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
 
@@ -307,7 +307,7 @@ export default function CalendarUnified() {
       {/* Month grid */}
       {view === 'month' && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          style={{ background: 'var(--legacy-card-gradient)' }}>
           {/* Weekday axis */}
           <div className="grid grid-cols-7 border-b border-white/[0.06]">
             {weekdays.map(w => (
@@ -373,7 +373,7 @@ export default function CalendarUnified() {
         const weekDates = weekKeys(cursor)
         return (
           <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-            style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+            style={{ background: 'var(--legacy-card-gradient)' }}>
             <div className="grid grid-cols-7 border-b border-white/[0.06]">
               {weekDates.map((d, i) => {
                 const isToday = d === today
@@ -424,7 +424,7 @@ export default function CalendarUnified() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
               <div className="lg:col-span-2 space-y-3">
                 <div className="rounded-xl border border-white/[0.06] p-4"
-                  style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+                  style={{ background: 'var(--legacy-card-gradient)' }}>
                   <h2 className="font-semibold text-white mb-2">{dayEvents.length} item{dayEvents.length !== 1 ? 's' : ''}</h2>
                   <div className="space-y-2">
                     {dayEvents.length === 0 ? (
@@ -470,7 +470,7 @@ export default function CalendarUnified() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
           <div onClick={e => e.stopPropagation()}
             className="w-full max-w-md h-full overflow-y-auto border-l border-white/[0.08] p-6"
-            style={{ background: 'linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99))' }}>
+            style={{ background: 'var(--legacy-card-gradient-deep)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>

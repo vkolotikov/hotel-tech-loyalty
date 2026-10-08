@@ -28,7 +28,7 @@ const PRICE_TYPES = [
 ]
 
 const card = 'rounded-2xl border border-white/[0.06] p-5'
-const cardBg = { background: 'linear-gradient(135deg, rgba(15,28,24,0.5), rgba(10,18,16,0.6))', backdropFilter: 'blur(20px)' }
+const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#fff' }
 
@@ -168,7 +168,7 @@ function ExtraForm({ extra, onClose, onSaved }: { extra: Extra | null; onClose: 
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[10vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] p-6" style={{ background: 'linear-gradient(135deg, rgba(15,28,24,0.95), rgba(10,18,16,0.98))' }}>
+      <div className="w-full max-w-lg rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{extra ? 'Edit Extra' : 'Add Service Extra'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>

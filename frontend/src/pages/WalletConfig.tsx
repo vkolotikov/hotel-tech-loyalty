@@ -95,7 +95,7 @@ export function WalletConfig() {
   const uploadGoogleSA = uploadMutation('/v1/admin/wallet-config/google-service-account', 'Google service account')
 
   const FileInput = ({ label, mutation, accept }: { label: string; mutation: any; accept: string }) => (
-    <label className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-[#a0a0a0] hover:text-white text-xs px-3 py-2 rounded-lg cursor-pointer w-fit">
+    <label className="flex items-center gap-2 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-3 py-2 rounded-lg cursor-pointer w-fit">
       {mutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
       <span>{label}</span>
       <input type="file" accept={accept} className="hidden" onChange={(e) => {
@@ -124,7 +124,7 @@ export function WalletConfig() {
       </div>
 
       {isLoading ? (
-        <p className="text-center text-[#636366] py-8 text-sm">Loading…</p>
+        <p className="text-center text-t-muted py-8 text-sm">Loading…</p>
       ) : (
         <>
           {/* Apple */}
@@ -165,7 +165,7 @@ export function WalletConfig() {
                 <CertStatus ok={!!config?.apple_wwdr_uploaded} label="WWDR cert" />
                 <FileInput label="Upload WWDR .pem" accept=".pem,.cer,application/x-x509-ca-cert" mutation={uploadWwdr} />
               </div>
-              <p className="text-[11px] text-[#636366] mt-2 flex items-start gap-1.5">
+              <p className="text-[11px] text-t-muted mt-2 flex items-start gap-1.5">
                 <Info size={11} className="mt-0.5 flex-shrink-0" />
                 <span>
                   Need WWDR? Download from <a href="https://www.apple.com/certificateauthority/" target="_blank" rel="noreferrer" className="text-primary-400 hover:underline">apple.com/certificateauthority</a>.
@@ -192,7 +192,7 @@ export function WalletConfig() {
                 <CertStatus ok={!!config?.google_service_account_uploaded} label="Service account JSON" />
                 <FileInput label="Upload .json" accept=".json,application/json" mutation={uploadGoogleSA} />
               </div>
-              <p className="text-[11px] text-[#636366] mt-2 flex items-start gap-1.5">
+              <p className="text-[11px] text-t-muted mt-2 flex items-start gap-1.5">
                 <Info size={11} className="mt-0.5 flex-shrink-0" />
                 <span>
                   Open the <a href="https://pay.google.com/business/console/" target="_blank" rel="noreferrer" className="text-primary-400 hover:underline">Google Pay & Wallet Console</a>,
@@ -227,20 +227,20 @@ function ReadyTile({ label, ready, hint }: { label: string; ready: boolean; hint
   return (
     <div className={`rounded-xl p-4 border ${ready ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-dark-border bg-dark-surface'}`}>
       <div className="flex items-center gap-2 mb-1">
-        {ready ? <CheckCircle2 size={16} className="text-emerald-400" /> : <XCircle size={16} className="text-[#636366]" />}
+        {ready ? <CheckCircle2 size={16} className="text-emerald-400" /> : <XCircle size={16} className="text-t-muted" />}
         <span className="text-sm font-semibold text-white">{label}</span>
-        <span className={`text-[11px] px-2 py-0.5 rounded-full ${ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-dark-surface3 text-[#a0a0a0]'}`}>
+        <span className={`text-[11px] px-2 py-0.5 rounded-full ${ready ? 'bg-emerald-500/15 text-emerald-300' : 'bg-dark-surface3 text-t-soft'}`}>
           {ready ? 'Ready' : 'Not configured'}
         </span>
       </div>
-      <p className="text-[11px] text-[#636366]">{hint}</p>
+      <p className="text-[11px] text-t-muted">{hint}</p>
     </div>
   )
 }
 
 function CertStatus({ ok, label }: { ok: boolean; label: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 text-xs ${ok ? 'text-emerald-400' : 'text-[#636366]'}`}>
+    <span className={`inline-flex items-center gap-1 text-xs ${ok ? 'text-emerald-400' : 'text-t-muted'}`}>
       {ok ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
       <span>{label} — {ok ? 'uploaded' : 'missing'}</span>
     </span>
@@ -255,7 +255,7 @@ function Field({ label, hint, value, onChange, type = 'text' }: {
       <label className="block text-xs font-medium text-t-secondary mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)}
         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
-      {hint && <p className="text-[10px] text-[#636366] mt-1">{hint}</p>}
+      {hint && <p className="text-[10px] text-t-muted mt-1">{hint}</p>}
     </div>
   )
 }

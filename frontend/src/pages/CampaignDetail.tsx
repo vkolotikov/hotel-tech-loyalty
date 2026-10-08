@@ -68,7 +68,7 @@ export function CampaignDetail() {
   }, [data, tab, search])
 
   if (isLoading || !data) {
-    return <div className="p-8 text-[#a0a0a0]">Loading…</div>
+    return <div className="p-8 text-t-soft">Loading…</div>
   }
 
   const c = data.campaign
@@ -77,7 +77,7 @@ export function CampaignDetail() {
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       <button
         onClick={() => navigate('/notifications')}
-        className="flex items-center gap-2 text-[#a0a0a0] hover:text-white text-sm mb-4"
+        className="flex items-center gap-2 text-t-soft hover:text-white text-sm mb-4"
       >
         <ArrowLeft size={16} /> Back to campaigns
       </button>
@@ -86,9 +86,9 @@ export function CampaignDetail() {
         <div>
           <h1 className="text-2xl font-bold text-white">{c.name}</h1>
           <div className="flex flex-wrap gap-2 mt-2 text-xs">
-            <span className="px-2 py-0.5 rounded bg-dark-surface2 text-[#a0a0a0] border border-dark-border">{c.channel}</span>
+            <span className="px-2 py-0.5 rounded bg-dark-surface2 text-t-soft border border-dark-border">{c.channel}</span>
             <span className="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">{c.status}</span>
-            {c.sent_at && <span className="text-[#a0a0a0]">sent {new Date(c.sent_at).toLocaleString()}</span>}
+            {c.sent_at && <span className="text-t-soft">sent {new Date(c.sent_at).toLocaleString()}</span>}
           </div>
         </div>
       </div>
@@ -106,7 +106,7 @@ export function CampaignDetail() {
         <div className="bg-dark-surface border border-dark-border rounded-xl p-5 mb-6">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-bold text-white uppercase tracking-wider">Opens over time</h3>
-            <span className="text-xs text-[#a0a0a0]">Bucketed per hour</span>
+            <span className="text-xs text-t-soft">Bucketed per hour</span>
           </div>
           <div style={{ width: '100%', height: 200 }}>
             <ResponsiveContainer>
@@ -125,12 +125,12 @@ export function CampaignDetail() {
       {/* Recipients */}
       <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
         <div className="p-4 border-b border-dark-border flex flex-wrap gap-2 items-center justify-between">
-          <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-xs">
+          <div className="flex gap-1 bg-panel p-1 rounded-lg text-xs">
             {(['all', 'opened', 'unopened', 'failed'] as const).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-1.5 rounded-md font-semibold capitalize transition-colors ${tab === t ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-md font-semibold capitalize transition-colors ${tab === t ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}
               >
                 {t}
               </button>
@@ -142,14 +142,14 @@ export function CampaignDetail() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search name, email, tier"
-              className="bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
+              className="bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-1.5 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500 w-64"
             />
           </div>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#151515] text-[#a0a0a0] text-xs uppercase tracking-wider">
+            <thead className="bg-[#151515] text-t-soft text-xs uppercase tracking-wider">
               <tr>
                 <th className="text-left p-3 font-semibold">Recipient</th>
                 <th className="text-left p-3 font-semibold">Channel</th>
@@ -166,7 +166,7 @@ export function CampaignDetail() {
                 <tr key={r.id} className="border-t border-dark-border hover:bg-[#151515]">
                   <td className="p-3">
                     <div className="text-white font-medium">{r.member?.name ?? '—'}</div>
-                    <div className="text-[#a0a0a0] text-xs">{r.email ?? r.member?.email ?? '—'}{r.member?.tier ? ` · ${r.member.tier}` : ''}</div>
+                    <div className="text-t-soft text-xs">{r.email ?? r.member?.email ?? '—'}{r.member?.tier ? ` · ${r.member.tier}` : ''}</div>
                   </td>
                   <td className="p-3">
                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold ${r.channel === 'email' ? 'bg-blue-500/15 text-blue-300' : 'bg-purple-500/15 text-purple-300'}`}>
@@ -180,17 +180,17 @@ export function CampaignDetail() {
                       <span className="inline-flex items-center gap-1 text-red-300 text-xs" title={r.error ?? ''}><XCircle size={12} /> Failed</span>
                     )}
                   </td>
-                  <td className="p-3 text-[#a0a0a0] text-xs">{r.sent_at ? new Date(r.sent_at).toLocaleString() : '—'}</td>
+                  <td className="p-3 text-t-soft text-xs">{r.sent_at ? new Date(r.sent_at).toLocaleString() : '—'}</td>
                   <td className="p-3 text-xs">
                     {r.opened_at ? (
                       <div>
                         <div className="text-emerald-300">{new Date(r.opened_at).toLocaleString()}</div>
-                        {r.open_count > 1 && <div className="text-[#a0a0a0]">{r.open_count}× opens</div>}
+                        {r.open_count > 1 && <div className="text-t-soft">{r.open_count}× opens</div>}
                       </div>
                     ) : r.channel === 'push' ? (
                       <span className="text-[#666]">—</span>
                     ) : (
-                      <span className="text-[#a0a0a0]">Not yet</span>
+                      <span className="text-t-soft">Not yet</span>
                     )}
                   </td>
                 </tr>
@@ -206,9 +206,9 @@ export function CampaignDetail() {
 function StatCard({ icon, label, value, sub }: { icon: React.ReactNode; label: string; value: React.ReactNode; sub?: string }) {
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-      <div className="flex items-center gap-2 text-[#a0a0a0] text-xs uppercase tracking-wider mb-2">{icon} {label}</div>
+      <div className="flex items-center gap-2 text-t-soft text-xs uppercase tracking-wider mb-2">{icon} {label}</div>
       <div className="text-2xl font-bold text-white">{value}</div>
-      {sub && <div className="text-xs text-[#a0a0a0] mt-1">{sub}</div>}
+      {sub && <div className="text-xs text-t-soft mt-1">{sub}</div>}
     </div>
   )
 }

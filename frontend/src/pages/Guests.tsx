@@ -127,7 +127,7 @@ export function Guests() {
     return updated
   }
 
-  const sel = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const sel = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
   const inp = sel
   const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
 
@@ -158,8 +158,8 @@ export function Guests() {
       <div className="space-y-2">
         <div className="flex gap-3">
           <div className="relative flex-1 max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('guests.search_placeholder', 'Search name, email, phone, company...')} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('guests.search_placeholder', 'Search name, email, phone, company...')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           <button onClick={() => setShowFilters(f => !f)} className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-colors ${hasFilters ? 'border-primary-500 text-primary-400' : 'border-dark-border text-t-secondary hover:text-white'}`}>
             <Filter size={14} /> {t('guests.filters_button', 'Filters')} {hasFilters ? '●' : ''}
@@ -191,7 +191,7 @@ export function Guests() {
               <option value="Repeat">{t('guests.lifecycle.Repeat', 'Repeat')}</option>
               <option value="Inactive">{t('guests.lifecycle.Inactive', 'Inactive')}</option>
             </select>
-            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setSource(''); setLifecycle(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('guests.filters.clear', 'Clear')}</button>}
+            {hasFilters && <button onClick={() => { setCountryFilter(''); setGuestType(''); setVipLevel(''); setSource(''); setLifecycle(''); setPage(1) }} className="text-xs text-t-muted hover:text-white px-2">{t('guests.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -220,15 +220,15 @@ export function Guests() {
               </tr>
             </thead>
             <tbody>
-              {isLoading && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">{t('guests.table.loading', 'Loading...')}</td></tr>}
-              {!isLoading && guests.length === 0 && <tr><td colSpan={15} className="px-4 py-8 text-center text-[#636366]">{t('guests.table.no_guests', 'No guests found')}</td></tr>}
+              {isLoading && <tr><td colSpan={15} className="px-4 py-8 text-center text-t-muted">{t('guests.table.loading', 'Loading...')}</td></tr>}
+              {!isLoading && guests.length === 0 && <tr><td colSpan={15} className="px-4 py-8 text-center text-t-muted">{t('guests.table.no_guests', 'No guests found')}</td></tr>}
               {guests.map((g: any) => (
                 <tr key={g.id} className="border-b border-dark-border/50 hover:bg-dark-surface2 transition-colors cursor-pointer" onClick={() => navigate(`/guests/${g.id}`)}>
                   <td className="px-4 py-3 font-medium text-white">{g.full_name}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.email ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.phone ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.company ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.nationality ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-xs">{g.email ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-xs">{g.phone ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-xs">{g.company ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-xs">{g.nationality ?? '—'}</td>
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${VIP_COLORS[g.vip_level] ?? VIP_COLORS.Standard}`}>
                       {g.vip_level ?? t('guests.vip_standard', 'Standard')}
@@ -240,7 +240,7 @@ export function Guests() {
                         <Link2 size={10} /> {g.loyalty_tier}
                       </span>
                     ) : (
-                      <span className="text-[#636366] text-xs">—</span>
+                      <span className="text-t-muted text-xs">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -249,7 +249,7 @@ export function Guests() {
                         {g.lead_source}
                       </span>
                     ) : (
-                      <span className="text-[#636366] text-xs">—</span>
+                      <span className="text-t-muted text-xs">—</span>
                     )}
                   </td>
                   <td className="px-4 py-3">
@@ -258,17 +258,17 @@ export function Guests() {
                         {g.lifecycle_status}
                       </span>
                     ) : (
-                      <span className="text-[#636366] text-xs">—</span>
+                      <span className="text-t-muted text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-xs">{g.guest_type ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] text-center">{g.total_stays ?? 0}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0]">{g.total_revenue ? `${settings.currency_symbol}${Number(g.total_revenue).toLocaleString()}` : '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-xs">{g.guest_type ?? '—'}</td>
+                  <td className="px-4 py-3 text-t-soft text-center">{g.total_stays ?? 0}</td>
+                  <td className="px-4 py-3 text-t-soft">{g.total_revenue ? `${settings.currency_symbol}${Number(g.total_revenue).toLocaleString()}` : '—'}</td>
                   <td className="px-4 py-3 text-t-secondary text-xs">{g.last_stay ?? '—'}</td>
                   <td className="px-4 py-3 text-t-secondary text-xs">{g.created_at?.slice(0, 10)}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <button onClick={e => { e.stopPropagation(); if (confirm(t('guests.toasts.delete_confirm', 'Delete this guest?'))) deleteMutation.mutate(g.id) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-[#636366] hover:text-red-400 transition-colors">
+                      <button onClick={e => { e.stopPropagation(); if (confirm(t('guests.toasts.delete_confirm', 'Delete this guest?'))) deleteMutation.mutate(g.id) }} className="p-1.5 rounded-lg hover:bg-red-500/10 text-t-muted hover:text-red-400 transition-colors">
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -285,8 +285,8 @@ export function Guests() {
         <div className="flex items-center justify-between text-sm">
           <span className="text-t-secondary">{t('guests.table.page_of', { current: meta.current_page, last: meta.last_page, defaultValue: 'Page {{current}} of {{last}}' })}</span>
           <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
-            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
+            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
           </div>
         </div>
       )}
@@ -299,71 +299,71 @@ export function Guests() {
             <form onSubmit={e => { e.preventDefault(); createMutation.mutate(form) }} className="space-y-3">
               <div className="grid grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.salutation', 'Salutation')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.salutation', 'Salutation')}</label>
                   <select value={form.salutation} onChange={e => setForm(f => ({ ...f, salutation: e.target.value }))} className={sel}>
                     <option value="">{t('guests.create.salutation_none', '--')}</option>
                     {settings.salutations.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.first_name', 'First Name *')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.first_name', 'First Name *')}</label>
                   <input required value={form.first_name} onChange={e => setForm(f => updateFullName(f, 'first_name', e.target.value))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.last_name', 'Last Name *')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.last_name', 'Last Name *')}</label>
                   <input required value={form.last_name} onChange={e => setForm(f => updateFullName(f, 'last_name', e.target.value))} className={inp} />
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.full_name', 'Full Name')}</label>
+                <label className="block text-xs text-t-soft mb-1">{t('guests.create.full_name', 'Full Name')}</label>
                 <input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} className={inp} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.email', 'Email')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.email', 'Email')}</label>
                   <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.phone', 'Phone')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.phone', 'Phone')}</label>
                   <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.mobile', 'Mobile')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.mobile', 'Mobile')}</label>
                   <input value={form.mobile} onChange={e => setForm(f => ({ ...f, mobile: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.company', 'Company')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.company', 'Company')}</label>
                   <input value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.nationality', 'Nationality')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.nationality', 'Nationality')}</label>
                   <select value={form.nationality} onChange={e => setForm(f => ({ ...f, nationality: e.target.value }))} className={sel}>
                     <option value="">{t('guests.create.select_placeholder', '-- Select --')}</option>
                     {settings.countries.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.country', 'Country')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.country', 'Country')}</label>
                   <select value={form.country} onChange={e => setForm(f => ({ ...f, country: e.target.value }))} className={sel}>
                     <option value="">{t('guests.create.select_placeholder', '-- Select --')}</option>
                     {settings.countries.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.guest_type', 'Guest Type')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.guest_type', 'Guest Type')}</label>
                   <select value={form.guest_type} onChange={e => setForm(f => ({ ...f, guest_type: e.target.value }))} className={sel}>
                     <option value="">{t('guests.create.select_placeholder', '-- Select --')}</option>
                     {settings.guest_types.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.vip_level', 'VIP Level')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.vip_level', 'VIP Level')}</label>
                   <select value={form.vip_level} onChange={e => setForm(f => ({ ...f, vip_level: e.target.value }))} className={sel}>
                     {settings.vip_levels.map(s => <option key={s}>{s}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.lead_source', 'Lead Source')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.create.lead_source', 'Lead Source')}</label>
                   <select value={form.lead_source} onChange={e => setForm(f => ({ ...f, lead_source: e.target.value }))} className={sel}>
                     <option value="">{t('guests.create.none_placeholder', '-- None --')}</option>
                     {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
@@ -371,7 +371,7 @@ export function Guests() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.create.notes', 'Notes')}</label>
+                <label className="block text-xs text-t-soft mb-1">{t('guests.create.notes', 'Notes')}</label>
                 <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
               </div>
               <CustomFieldsForm
@@ -381,7 +381,7 @@ export function Guests() {
                 inputClassName={inp}
               />
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('guests.create.cancel', 'Cancel')}</button>
+                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('guests.create.cancel', 'Cancel')}</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createMutation.isPending ? t('guests.create.saving', 'Saving...') : t('guests.create.create', 'Create')}
                 </button>
@@ -410,10 +410,10 @@ export function Guests() {
                   onChange={e => setCaptureText(e.target.value)}
                   rows={8}
                   placeholder={t('guests.capture.placeholder', 'Paste the email or message here...')}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                 />
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('guests.capture.cancel', 'Cancel')}</button>
+                  <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('guests.capture.cancel', 'Cancel')}</button>
                   <button
                     onClick={async () => {
                       if (!captureText.trim()) return
@@ -454,29 +454,29 @@ export function Guests() {
                     { key: 'source', label: t('guests.capture.fields.source', 'Source'), type: 'text' },
                   ].map(({ key, label, type }) => (
                     <div key={key}>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                      <label className="block text-xs text-t-soft mb-1">{label}</label>
                       <input
                         type={type}
                         value={captureResult[key] ?? ''}
                         onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                       />
                     </div>
                   ))}
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('guests.capture.notes', 'Notes')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('guests.capture.notes', 'Notes')}</label>
                   <textarea
                     value={captureResult.notes ?? ''}
                     onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))}
                     rows={3}
-                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                   />
                 </div>
                 <div className="flex justify-between pt-1">
-                  <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">{t('guests.capture.back', 'Back')}</button>
+                  <button onClick={() => setCaptureResult(null)} className="text-sm text-t-muted hover:text-white">{t('guests.capture.back', 'Back')}</button>
                   <div className="flex gap-3">
-                    <button onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('guests.capture.cancel', 'Cancel')}</button>
+                    <button onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('guests.capture.cancel', 'Cancel')}</button>
                     <button
                       onClick={async () => {
                         const r = captureResult

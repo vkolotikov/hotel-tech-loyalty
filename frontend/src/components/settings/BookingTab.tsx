@@ -157,7 +157,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         ) : (
           <>
             {/* Tabs */}
-            <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1 mb-4 w-fit" style={{ background: 'rgba(15,28,24,0.6)' }}>
+            <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1 mb-4 w-fit" style={{ background: 'var(--legacy-well-60)' }}>
               {[
                 { id: 'rooms' as const,    label: 'Rooms',    icon: <Building2 size={12} /> },
                 { id: 'services' as const, label: 'Services', icon: <Scissors size={12} /> },
@@ -219,7 +219,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
           </h3>
           {/* Per-widget tab. Each widget keeps its own settings — pick one,
               edit it, the other stays untouched. */}
-          <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'rgba(15,28,24,0.6)' }}>
+          <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
             {[
               { id: 'rooms' as const,    label: 'Rooms',    icon: <Building2 size={12} /> },
               { id: 'services' as const, label: 'Services', icon: <Scissors size={12} /> },
@@ -240,7 +240,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
             {/* Theme */}
             <div className="flex items-center justify-between py-2 border-b border-white/[0.04]">
               <label className="block text-sm font-medium text-white">Theme</label>
-              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'rgba(15,28,24,0.6)' }}>
+              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
                 <button onClick={() => handleChange(sk('theme'), 'light')}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${widgetTheme === 'light' ? 'bg-white/[0.1] text-white' : 'text-gray-500 hover:text-gray-300'}`}>
                   <Sun size={12} /> Light
@@ -314,7 +314,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
               <label className="block text-sm font-medium text-white flex items-center gap-1.5">
                 <Square size={13} className="text-gray-500" /> Button Style
               </label>
-              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'rgba(15,28,24,0.6)' }}>
+              <div className="flex items-center gap-1 rounded-xl border border-white/[0.08] p-1" style={{ background: 'var(--legacy-well-60)' }}>
                 {[
                   { id: 'filled',  label: 'Filled' },
                   { id: 'outline', label: 'Outline' },
@@ -422,7 +422,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         <p className="text-xs text-gray-500 mb-5">Stay limits, cancellation terms and payment behavior for both widgets.</p>
 
         {/* Rooms sub-group */}
-        <div className="rounded-xl border border-white/[0.06] p-4 mb-4" style={{ background: 'rgba(15,28,24,0.4)' }}>
+        <div className="rounded-xl border border-white/[0.06] p-4 mb-4" style={{ background: 'var(--legacy-well-40)' }}>
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
             <Building2 size={12} className="text-blue-400" /> Room Bookings
           </p>
@@ -510,7 +510,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
         </div>
 
         {/* Services sub-group */}
-        <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'rgba(15,28,24,0.4)' }}>
+        <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: 'var(--legacy-well-40)' }}>
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3 flex items-center gap-1.5">
             <Scissors size={12} className="text-emerald-400" /> Service Bookings
           </p>

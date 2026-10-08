@@ -233,12 +233,12 @@ export function EmailTemplates() {
       </div>
 
       {isLoading ? (
-        <div className="text-center py-12 text-[#636366]">Loading templates...</div>
+        <div className="text-center py-12 text-t-muted">Loading templates...</div>
       ) : templates.length === 0 ? (
         <div className="bg-dark-surface rounded-xl border border-dark-border p-12 text-center">
           <div className="text-4xl mb-3">&#9993;</div>
           <p className="text-t-secondary font-medium">No email templates yet</p>
-          <p className="text-sm text-[#636366] mt-1">Pick a luxury preset and start your first campaign in minutes</p>
+          <p className="text-sm text-t-muted mt-1">Pick a luxury preset and start your first campaign in minutes</p>
           <button
             onClick={openCreate}
             className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700"
@@ -250,7 +250,7 @@ export function EmailTemplates() {
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {templates.map(t => (
             <div key={t.id} className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden group">
-              <div className="h-32 bg-[#1a1a1a] overflow-hidden relative">
+              <div className="h-32 bg-panel-dim overflow-hidden relative">
                 <iframe
                   srcDoc={t.html_body}
                   title={t.name}
@@ -265,11 +265,11 @@ export function EmailTemplates() {
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div>
                     <h3 className="font-semibold text-white text-sm">{t.name}</h3>
-                    <p className="text-xs text-[#636366] truncate mt-0.5">{t.subject}</p>
+                    <p className="text-xs text-t-muted truncate mt-0.5">{t.subject}</p>
                   </div>
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold ${
                     t.is_active
-                      ? 'bg-[#32d74b]/15 text-[#32d74b]'
+                      ? 'bg-success/15 text-success'
                       : 'bg-dark-surface3 text-t-secondary'
                   }`}>
                     {t.is_active ? 'Active' : 'Inactive'}
@@ -281,7 +281,7 @@ export function EmailTemplates() {
                     {t.category}
                   </span>
                   {(t.merge_tags ?? []).length > 0 && (
-                    <span className="text-[10px] text-[#636366]">
+                    <span className="text-[10px] text-t-muted">
                       {t.merge_tags.length} tag{t.merge_tags.length !== 1 ? 's' : ''}
                     </span>
                   )}
@@ -302,7 +302,7 @@ export function EmailTemplates() {
                   </button>
                   <button
                     onClick={() => { if (confirm('Delete this template?')) deleteMutation.mutate(t.id) }}
-                    className="text-xs font-semibold text-[#ff375f] hover:text-[#ff6680] bg-[#ff375f]/10 hover:bg-[#ff375f]/20 rounded-lg py-1.5 px-3 transition-colors"
+                    className="text-xs font-semibold text-danger hover:text-[#ff6680] bg-danger/10 hover:bg-danger/20 rounded-lg py-1.5 px-3 transition-colors"
                   >
                     Delete
                   </button>
@@ -321,7 +321,7 @@ export function EmailTemplates() {
                 <h2 className="text-lg font-bold text-white">
                   {editing ? 'Edit Template' : 'New Email Template'}
                 </h2>
-                <p className="text-xs text-[#636366] mt-0.5">Luxury presets · visual builder · live preview</p>
+                <p className="text-xs text-t-muted mt-0.5">Luxury presets · visual builder · live preview</p>
               </div>
               <div className="flex items-center gap-1 bg-dark-surface2 rounded-lg p-1 border border-dark-border">
                 {(['gallery', 'design', 'html'] as Mode[]).map(m => (
@@ -336,36 +336,36 @@ export function EmailTemplates() {
                   </button>
                 ))}
               </div>
-              <button onClick={closeEditor} className="text-[#636366] hover:text-white text-xl leading-none px-2">&times;</button>
+              <button onClick={closeEditor} className="text-t-muted hover:text-white text-xl leading-none px-2">&times;</button>
             </div>
 
             <div className="px-5 py-4 border-b border-dark-border grid grid-cols-1 md:grid-cols-3 gap-3">
               <div>
-                <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Template Name</label>
+                <label className="block text-[11px] font-semibold text-t-soft mb-1 uppercase tracking-wide">Template Name</label>
                 <input
                   type="text"
                   value={meta.name}
                   onChange={e => setMeta(m => ({ ...m, name: e.target.value }))}
                   placeholder="e.g. Monthly Newsletter"
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Subject Line</label>
+                <label className="block text-[11px] font-semibold text-t-soft mb-1 uppercase tracking-wide">Subject Line</label>
                 <input
                   type="text"
                   value={meta.subject}
                   onChange={e => setMeta(m => ({ ...m, subject: e.target.value }))}
                   placeholder="{{first_name}}, a message from {{hotel_name}}"
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
               <div>
-                <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">Category</label>
+                <label className="block text-[11px] font-semibold text-t-soft mb-1 uppercase tracking-wide">Category</label>
                 <select
                   value={meta.category}
                   onChange={e => setMeta(m => ({ ...m, category: e.target.value }))}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
                   {CATEGORIES.map(c => (
                     <option key={c.value} value={c.value}>{c.label}</option>
@@ -401,13 +401,13 @@ export function EmailTemplates() {
                           <span className="inline-block w-3 h-3 rounded-full" style={{ background: p.accentSwatch }} />
                           <h3 className="font-semibold text-white text-sm">{p.name}</h3>
                         </div>
-                        <p className="text-xs text-[#a0a0a0]">{p.tagline}</p>
-                        <p className="text-[10px] text-[#636366] mt-2 uppercase tracking-wide">{p.category}</p>
+                        <p className="text-xs text-t-soft">{p.tagline}</p>
+                        <p className="text-[10px] text-t-muted mt-2 uppercase tracking-wide">{p.category}</p>
                       </div>
                     </button>
                   ))}
                 </div>
-                <p className="text-xs text-[#636366] mt-4 text-center">
+                <p className="text-xs text-t-muted mt-4 text-center">
                   Pick a preset to continue in Design mode, or go straight to Advanced HTML.
                 </p>
               </div>
@@ -429,8 +429,8 @@ export function EmailTemplates() {
                   {mode === 'html' && (
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-2 uppercase tracking-wide">
-                          Merge Tags <span className="font-normal text-[#636366] normal-case tracking-normal">— click to insert</span>
+                        <label className="block text-[11px] font-semibold text-t-soft mb-2 uppercase tracking-wide">
+                          Merge Tags <span className="font-normal text-t-muted normal-case tracking-normal">— click to insert</span>
                         </label>
                         <div className="flex flex-wrap gap-1.5">
                           {Object.entries(mergeTags).map(([tag, desc]) => (
@@ -447,7 +447,7 @@ export function EmailTemplates() {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">HTML Body</label>
+                        <label className="block text-[11px] font-semibold text-t-soft mb-1 uppercase tracking-wide">HTML Body</label>
                         <textarea
                           ref={htmlRef}
                           value={rawHtml}
@@ -456,7 +456,7 @@ export function EmailTemplates() {
                           spellCheck={false}
                           className="w-full bg-[#0b0b0b] border border-dark-border rounded-lg px-3 py-2 text-xs text-[#e0e0e0] font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y leading-relaxed"
                         />
-                        <p className="text-[11px] text-[#636366] mt-2">
+                        <p className="text-[11px] text-t-muted mt-2">
                           Editing raw HTML disconnects the visual builder for this template. Switch back to Design to regenerate from scratch.
                         </p>
                       </div>
@@ -466,8 +466,8 @@ export function EmailTemplates() {
 
                 <div className="p-5">
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-[11px] font-semibold text-[#a0a0a0] uppercase tracking-wide">Live Preview</label>
-                    <span className="text-[10px] text-[#636366]">Merge tags shown as-is</span>
+                    <label className="block text-[11px] font-semibold text-t-soft uppercase tracking-wide">Live Preview</label>
+                    <span className="text-[10px] text-t-muted">Merge tags shown as-is</span>
                   </div>
                   <div className="bg-white rounded-lg overflow-hidden border border-dark-border" style={{ height: 'calc(70vh - 40px)' }}>
                     <iframe
@@ -484,7 +484,7 @@ export function EmailTemplates() {
             <div className="p-5 border-t border-dark-border flex gap-3">
               <button
                 onClick={closeEditor}
-                className="flex-1 border border-dark-border text-[#a0a0a0] py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+                className="flex-1 border border-dark-border text-t-soft py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
               >
                 Cancel
               </button>
@@ -506,9 +506,9 @@ export function EmailTemplates() {
             <div className="p-5 border-b border-dark-border flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-bold text-white">Email Preview</h2>
-                <p className="text-xs text-[#636366] mt-0.5">Subject: {previewSubject}</p>
+                <p className="text-xs text-t-muted mt-0.5">Subject: {previewSubject}</p>
               </div>
-              <button onClick={() => setShowPreview(false)} className="text-[#636366] hover:text-white text-lg">&times;</button>
+              <button onClick={() => setShowPreview(false)} className="text-t-muted hover:text-white text-lg">&times;</button>
             </div>
             <div className="flex-1 overflow-auto bg-white">
               <iframe
@@ -547,21 +547,21 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
         <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">Brand</h3>
         <div className="grid grid-cols-1 gap-3">
           <div>
-            <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1">Logo Text / Hotel Name</label>
+            <label className="block text-[11px] font-semibold text-t-soft mb-1">Logo Text / Hotel Name</label>
             <input
               type="text"
               value={content.logoText}
               onChange={e => setField('logoText', e.target.value)}
-              className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1">Preheader <span className="text-[#636366] font-normal">(inbox preview text)</span></label>
+            <label className="block text-[11px] font-semibold text-t-soft mb-1">Preheader <span className="text-t-muted font-normal">(inbox preview text)</span></label>
             <input
               type="text"
               value={content.preheader ?? ''}
               onChange={e => setField('preheader', e.target.value)}
-              className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -571,7 +571,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
             <SwatchInput label="Header Text" value={content.palette.headerText} onChange={v => setPalette('headerText', v)} />
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1">Typeface</label>
+            <label className="block text-[11px] font-semibold text-t-soft mb-1">Typeface</label>
             <div className="flex gap-2">
               {(['sans', 'serif', 'mixed'] as const).map(f => (
                 <button
@@ -594,7 +594,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
       <section>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-bold text-white uppercase tracking-wider">Content Blocks</h3>
-          <span className="text-[10px] text-[#636366]">{content.blocks.length} block{content.blocks.length !== 1 ? 's' : ''}</span>
+          <span className="text-[10px] text-t-muted">{content.blocks.length} block{content.blocks.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="space-y-2">
           {content.blocks.map((b, i) => (
@@ -608,13 +608,13 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
             />
           ))}
           {content.blocks.length === 0 && (
-            <div className="text-xs text-[#636366] text-center py-6 border border-dashed border-dark-border rounded-lg">
+            <div className="text-xs text-t-muted text-center py-6 border border-dashed border-dark-border rounded-lg">
               No blocks yet — add one below.
             </div>
           )}
         </div>
         <div className="mt-3">
-          <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-2 uppercase tracking-wide">Add Block</label>
+          <label className="block text-[11px] font-semibold text-t-soft mb-2 uppercase tracking-wide">Add Block</label>
           <div className="flex flex-wrap gap-1.5">
             {BLOCK_LIBRARY.map(b => (
               <button
@@ -635,7 +635,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
           value={content.footerText}
           onChange={e => setField('footerText', e.target.value)}
           rows={2}
-          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </section>
     </div>
@@ -645,8 +645,8 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
 function SwatchInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold text-[#a0a0a0] mb-1">{label}</label>
-      <div className="flex items-center gap-2 bg-[#1e1e1e] border border-dark-border rounded-lg pr-2">
+      <label className="block text-[11px] font-semibold text-t-soft mb-1">{label}</label>
+      <div className="flex items-center gap-2 bg-panel border border-dark-border rounded-lg pr-2">
         <input
           type="color"
           value={value}
@@ -691,7 +691,7 @@ function BlockEditor({ block, onChange, onUp, onDown, onRemove }: BlockEditorPro
 }
 
 function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Partial<Block>) => void }) {
-  const cls = 'w-full bg-[#111] border border-dark-border rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-500'
+  const cls = 'w-full bg-well border border-dark-border rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:ring-1 focus:ring-primary-500'
 
   switch (block.type) {
     case 'heading':
@@ -712,7 +712,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                 className={`px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                   (block.align ?? 'left') === a
                     ? 'bg-primary-600 text-white'
-                    : 'bg-[#111] text-t-secondary border border-dark-border'
+                    : 'bg-well text-t-secondary border border-dark-border'
                 }`}
               >
                 {a}
@@ -815,7 +815,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
               className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                 (block.size ?? 'md') === s
                   ? 'bg-primary-600 text-white'
-                  : 'bg-[#111] text-t-secondary border border-dark-border'
+                  : 'bg-well text-t-secondary border border-dark-border'
               }`}
             >
               {s}
@@ -824,7 +824,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
         </div>
       )
     case 'divider':
-      return <div className="text-[11px] text-[#636366] italic">Thin horizontal line in divider color</div>
+      return <div className="text-[11px] text-t-muted italic">Thin horizontal line in divider color</div>
     case 'hero':
       return (
         <div className="space-y-2">
@@ -857,7 +857,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                 className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                   (block.overlay ?? 'dark') === o
                     ? 'bg-primary-600 text-white'
-                    : 'bg-[#111] text-t-secondary border border-dark-border'
+                    : 'bg-well text-t-secondary border border-dark-border'
                 }`}
               >
                 {o}
@@ -964,7 +964,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                   const items = block.items.filter((_, i) => i !== idx)
                   onChange({ items } as Partial<Block>)
                 }}
-                className="w-6 h-6 rounded text-xs text-[#ff6680] hover:bg-[#ff375f]/15"
+                className="w-6 h-6 rounded text-xs text-[#ff6680] hover:bg-danger/15"
                 title="Remove"
               >
                 &times;
@@ -995,7 +995,7 @@ function IconBtn({ children, onClick, disabled, title, danger }: { children: Rea
         disabled
           ? 'text-[#444] cursor-not-allowed'
           : danger
-            ? 'text-[#ff6680] hover:bg-[#ff375f]/15'
+            ? 'text-[#ff6680] hover:bg-danger/15'
             : 'text-t-secondary hover:text-white hover:bg-dark-surface3'
       }`}
     >

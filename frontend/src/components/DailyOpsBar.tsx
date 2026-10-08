@@ -35,7 +35,7 @@ const TONES: Record<Tone, { bg: string; text: string; ring: string }> = {
 export function DailyOpsBar({ title, tiles, hint }: { title?: string; tiles: Tile[]; hint?: string }) {
   return (
     <div className="rounded-2xl border border-white/[0.06] p-4"
-      style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+      style={{ background: 'var(--legacy-card-gradient)' }}>
       {(title || hint) && (
         <div className="flex items-baseline justify-between mb-3">
           {title && <h3 className="text-xs font-bold uppercase tracking-wider text-gray-400">{title}</h3>}

@@ -43,7 +43,7 @@ const TILES: TileDef[] = [
   { key: 'high_value',      label: 'High value',       desc: 'Premium deals — don\'t let them slip',              icon: Star,           accent: '#34d399', countOf: (k) => k?.high_value?.count ?? null },
 ]
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 const tint = (hex: string, alpha: number) => {
   const h = hex.replace('#', '')

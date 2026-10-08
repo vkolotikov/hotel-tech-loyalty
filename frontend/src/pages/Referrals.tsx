@@ -61,7 +61,7 @@ export function Referrals() {
           <div className="flex items-center gap-2 mb-3">
             <Trophy size={16} className="text-[#c9a84c]" />
             <h2 className="text-sm font-semibold text-white">{t('referrals.top_referrers.title', 'Top referrers')}</h2>
-            <span className="text-[11px] text-[#636366]">{t('referrals.top_referrers.all_time', 'all-time')}</span>
+            <span className="text-[11px] text-t-muted">{t('referrals.top_referrers.all_time', 'all-time')}</span>
           </div>
           <div className="space-y-1">
             {stats.top_referrers.map((row: any, i: number) => {
@@ -73,14 +73,14 @@ export function Referrals() {
                   to={`/members/${m.id}`}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-dark-surface2 transition-colors"
                 >
-                  <div className="w-6 text-center text-xs text-[#636366]">{i + 1}</div>
+                  <div className="w-6 text-center text-xs text-t-muted">{i + 1}</div>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm text-white truncate">{m.user?.name || '—'}</div>
-                    <div className="text-[11px] text-[#636366] truncate">#{m.member_number} · code {m.referral_code}</div>
+                    <div className="text-[11px] text-t-muted truncate">#{m.member_number} · code {m.referral_code}</div>
                   </div>
                   <div className="text-right">
                     <div className="text-sm font-semibold text-white">{Number(row.count).toLocaleString()}</div>
-                    <div className="text-[11px] text-[#636366]">{Number(row.points).toLocaleString()} pts</div>
+                    <div className="text-[11px] text-t-muted">{Number(row.points).toLocaleString()} pts</div>
                   </div>
                 </Link>
               )
@@ -92,19 +92,19 @@ export function Referrals() {
       <Card>
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
             <input
               type="text"
               placeholder={t('referrals.search_placeholder', 'Search referrer or referee by name / email…')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-              className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select
             value={status}
             onChange={(e) => { setStatus(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
           >
             <option value="">{t('referrals.all_status', 'All status')}</option>
             <option value="rewarded">{t('referrals.statuses.rewarded', 'Rewarded')}</option>
@@ -138,7 +138,7 @@ export function Referrals() {
                 ))
               ) : (data?.data ?? []).length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-12 text-center text-[#636366]">
+                  <td colSpan={6} className="py-12 text-center text-t-muted">
                     {debouncedSearch ? t('referrals.empty_search', 'No referrals match this search.') : t('referrals.empty_default', 'No referrals yet. Share the referral code from any member detail page to start.')}
                   </td>
                 </tr>
@@ -149,17 +149,17 @@ export function Referrals() {
                       {r.referrer ? (
                         <Link to={`/members/${r.referrer.id}`} className="hover:text-primary-300">
                           <div className="text-white text-sm">{r.referrer.user?.name || '—'}</div>
-                          <div className="text-[11px] text-[#636366]">#{r.referrer.member_number}</div>
+                          <div className="text-[11px] text-t-muted">#{r.referrer.member_number}</div>
                         </Link>
-                      ) : <span className="text-[#636366]">—</span>}
+                      ) : <span className="text-t-muted">—</span>}
                     </td>
                     <td className="py-3">
                       {r.referee ? (
                         <Link to={`/members/${r.referee.id}`} className="hover:text-primary-300">
                           <div className="text-white text-sm">{r.referee.user?.name || '—'}</div>
-                          <div className="text-[11px] text-[#636366]">#{r.referee.member_number}</div>
+                          <div className="text-[11px] text-t-muted">#{r.referee.member_number}</div>
                         </Link>
-                      ) : <span className="text-[#636366]">—</span>}
+                      ) : <span className="text-t-muted">—</span>}
                     </td>
                     <td className="py-3">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${statusClass(r.status)}`}>
@@ -185,12 +185,12 @@ export function Referrals() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2"
               >{t('referrals.previous', 'Previous')}</button>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page >= (data.last_page ?? 1)}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2"
               >{t('referrals.next', 'Next')}</button>
             </div>
           </div>
@@ -213,8 +213,8 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
 }
 
 function statusClass(status: string): string {
-  if (status === 'rewarded') return 'bg-[#32d74b]/15 text-[#32d74b]'
+  if (status === 'rewarded') return 'bg-success/15 text-success'
   if (status === 'qualified') return 'bg-[#5ac8fa]/15 text-[#5ac8fa]'
   if (status === 'pending') return 'bg-[#f59e0b]/15 text-[#f59e0b]'
-  return 'bg-dark-surface3 text-[#636366]'
+  return 'bg-dark-surface3 text-t-muted'
 }

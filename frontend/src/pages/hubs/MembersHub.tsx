@@ -7,7 +7,7 @@ const Members         = lazy(() => import('../Members').then(m => ({ default: m.
 const MemberDuplicates = lazy(() => import('../MemberDuplicates').then(m => ({ default: m.MemberDuplicates })))
 const Segments        = lazy(() => import('../Segments').then(m => ({ default: m.Segments })))
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 export function MembersHub() {
   return (

@@ -109,7 +109,7 @@ const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-5
 // dark-surface is the 525-occurrence house default (Appendix A §7.4).
 const card = 'bg-dark-surface border border-dark-border rounded-xl p-5'
 const label = 'block text-xs text-t-secondary mb-1.5'
-const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:border-primary-500 outline-none'
+const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
 
 /**
  * The full wizard: say what you do, check your details, make it yours,

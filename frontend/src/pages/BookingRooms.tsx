@@ -57,7 +57,7 @@ const BED_TYPES = ['Single', 'Double', 'Twin', 'King', 'Queen', 'Suite', 'Bunk']
 
 /* ── Styles ──────────────────────────────────────────────────────── */
 const card = 'rounded-2xl border border-white/[0.06] p-5'
-const cardBg = { background: 'linear-gradient(135deg, rgba(15,28,24,0.5), rgba(10,18,16,0.6))', backdropFilter: 'blur(20px)' }
+const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const btnPrimary = 'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#fff' }
 
@@ -359,7 +359,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-2xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'linear-gradient(135deg, rgba(15,28,24,0.95), rgba(10,18,16,0.98))' }}>
+      <div className="w-full max-w-2xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">{room ? 'Edit Room' : 'Add Room'}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><X size={18} /></button>

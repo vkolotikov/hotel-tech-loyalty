@@ -7,7 +7,7 @@ const Rewards    = lazy(() => import('../Rewards').then(m => ({ default: m.Rewar
 const Offers     = lazy(() => import('../Offers').then(m => ({ default: m.Offers })))
 const Referrals  = lazy(() => import('../Referrals').then(m => ({ default: m.Referrals })))
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 export function RewardsHub() {
   const { t } = useTranslation()

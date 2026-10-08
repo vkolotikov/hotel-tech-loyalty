@@ -163,7 +163,7 @@ const shadeColor = (hex: string, pct: number) => {
 const card = 'bg-dark-card border border-dark-border rounded-xl p-5 space-y-4'
 const cardTitle = 'text-sm font-semibold text-white flex items-center gap-2'
 const label = 'block text-xs text-t-secondary mb-1'
-const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:border-primary-500 outline-none'
+const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
 const btnSec = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-dark-bg border border-dark-border text-t-secondary rounded-lg hover:text-white'
 
 export function ChatbotWidget() {

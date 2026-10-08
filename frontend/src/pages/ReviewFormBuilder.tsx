@@ -310,7 +310,7 @@ export function ReviewFormBuilder() {
       {/* Header */}
       <button
         onClick={() => navigate('/reviews')}
-        className="flex items-center gap-2 text-[#a0a0a0] hover:text-white text-sm mb-5 transition-colors"
+        className="flex items-center gap-2 text-t-soft hover:text-white text-sm mb-5 transition-colors"
       >
         <ArrowLeft size={16} /> Back to reviews
       </button>
@@ -324,7 +324,7 @@ export function ReviewFormBuilder() {
             placeholder="Form name"
           />
           <div className="flex items-center gap-2 mt-2">
-            <span className="px-2 py-0.5 rounded-md bg-[#1e1e1e] text-[#a0a0a0] text-[10px] uppercase tracking-wider font-semibold">
+            <span className="px-2 py-0.5 rounded-md bg-panel text-t-soft text-[10px] uppercase tracking-wider font-semibold">
               {form.type}
             </span>
             {form.is_default && (
@@ -345,7 +345,7 @@ export function ReviewFormBuilder() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2.5 rounded-xl border transition-colors ${showSettings ? 'bg-primary-500/15 border-primary-500/40 text-primary-400' : 'border-dark-border text-[#a0a0a0] hover:text-white hover:bg-dark-surface2'}`}
+            className={`p-2.5 rounded-xl border transition-colors ${showSettings ? 'bg-primary-500/15 border-primary-500/40 text-primary-400' : 'border-dark-border text-t-soft hover:text-white hover:bg-dark-surface2'}`}
             title="Form settings"
           >
             <Settings2 size={18} />
@@ -359,18 +359,18 @@ export function ReviewFormBuilder() {
         <input
           readOnly
           value={publicUrl}
-          className="flex-1 bg-transparent text-xs text-[#a0a0a0] font-mono focus:outline-none min-w-0"
+          className="flex-1 bg-transparent text-xs text-t-soft font-mono focus:outline-none min-w-0"
         />
         <button
           onClick={() => { navigator.clipboard.writeText(publicUrl); toast.success('Copied') }}
-          className="text-[#a0a0a0] hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
           title="Copy URL"
         >
           <Copy size={14} />
         </button>
         <button
           onClick={() => confirm('Rotating invalidates every existing shared link. Continue?') && rotateKeyMut.mutate()}
-          className="text-[#a0a0a0] hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
+          className="text-t-soft hover:text-white p-1.5 rounded-lg hover:bg-white/[0.04] transition-colors"
           title="Rotate embed key"
         >
           <RefreshCw size={14} />
@@ -378,10 +378,10 @@ export function ReviewFormBuilder() {
       </div>
 
       {/* Build / Design / Analytics switcher */}
-      <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit mb-6">
+      <div className="flex gap-1 bg-panel p-1 rounded-lg text-sm w-fit mb-6">
         {(['build', 'design', 'analytics'] as const).map(v => (
           <button key={v} onClick={() => setView(v)}
-            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}>
+            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}>
             {v === 'build' ? 'Questions' : v}
           </button>
         ))}
@@ -514,7 +514,7 @@ export function ReviewFormBuilder() {
                   questions.forEach((_, i) => { next[i] = !allExpanded })
                   setExpanded(next)
                 }}
-                className="text-[#a0a0a0] hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors flex items-center gap-1.5"
+                className="text-t-soft hover:text-white text-xs px-2 py-1.5 rounded-lg hover:bg-white/[0.04] transition-colors flex items-center gap-1.5"
               >
                 {questions.every((_, i) => expanded[i]) ? <EyeOff size={12} /> : <Eye size={12} />}
                 {questions.every((_, i) => expanded[i]) ? 'Collapse all' : 'Expand all'}
@@ -785,7 +785,7 @@ export function ReviewFormBuilder() {
 
           {/* Save questions bar */}
           {questions.length > 0 && (
-            <div className="fixed bottom-0 left-0 right-0 bg-[#111]/95 backdrop-blur-sm border-t border-dark-border px-6 py-4 flex items-center justify-between z-40">
+            <div className="fixed bottom-0 left-0 right-0 bg-well/95 backdrop-blur-sm border-t border-dark-border px-6 py-4 flex items-center justify-between z-40">
               <div className="text-xs text-[#888]">
                 {questions.length} question{questions.length !== 1 ? 's' : ''}
                 {hasConditions && <span className="ml-2 text-purple-400">with conditional logic</span>}
@@ -808,7 +808,7 @@ export function ReviewFormBuilder() {
 
 /* ──────────────────────── Shared helpers ──────────────────────── */
 
-const inputCls = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444] transition-shadow'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444] transition-shadow'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -825,7 +825,7 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
       <button
         type="button"
         onClick={() => onChange(!checked)}
-        className={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-primary-500' : 'bg-[#333]'}`}
+        className={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-primary-500' : 'bg-panel-raised'}`}
       >
         <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${checked ? 'left-[19px]' : 'left-[3px]'}`} />
       </button>
@@ -886,7 +886,7 @@ function EmojiEditor({ emojis, labels, onChange }: {
       <div className="flex flex-wrap gap-1.5 mb-2.5">
         {EMOJI_PRESETS.map(p => (
           <button key={p.name} onClick={() => onChange([...p.emojis], [...p.labels])}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[#1e1e1e] border border-dark-border text-[11px] font-medium text-[#bbb] hover:text-white hover:border-primary-500/40 transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-panel border border-dark-border text-[11px] font-medium text-[#bbb] hover:text-white hover:border-primary-500/40 transition-colors">
             <span className="leading-none">{p.emojis.join('')}</span> {p.name}
           </button>
         ))}
@@ -1051,7 +1051,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: 11 - lo }, (_, ix) => lo + ix).map(n => (
           <button key={n} onClick={() => pick(String(n))}
-            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${isOn(String(n)) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#999] hover:text-white'}`}>
+            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${isOn(String(n)) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#999] hover:text-white'}`}>
             {n}
           </button>
         ))}
@@ -1064,7 +1064,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex gap-1.5">
         {[['true', 'Yes'], ['false', 'No']].map(([v, lbl]) => (
           <button key={v} onClick={() => pick(v)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOn(v) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#999] hover:text-white'}`}>
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOn(v) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#999] hover:text-white'}`}>
             {lbl}
           </button>
         ))}
@@ -1081,7 +1081,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex flex-wrap gap-1.5">
         {opts.map((c, ci) => (
           <button key={ci} onClick={() => pick(c)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${isOn(c) ? 'bg-purple-500 text-white' : 'bg-[#1e1e1e] border border-dark-border text-[#bbb] hover:text-white'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${isOn(c) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#bbb] hover:text-white'}`}>
             {parent.kind === 'emoji' && emojis[ci] && <span className="text-sm leading-none">{emojis[ci]}</span>}
             {c}
           </button>
@@ -1118,17 +1118,17 @@ function KindExample({ kind }: { kind: Kind }) {
         </div>
       )
     case 'scale':
-      return <div className="flex gap-[2px]">{Array.from({ length: 10 }, (_, n) => <span key={n} className={`w-2.5 h-2.5 rounded-[2px] ${n < 6 ? 'bg-violet-400/70' : 'bg-[#333]'}`} />)}</div>
+      return <div className="flex gap-[2px]">{Array.from({ length: 10 }, (_, n) => <span key={n} className={`w-2.5 h-2.5 rounded-[2px] ${n < 6 ? 'bg-violet-400/70' : 'bg-panel-raised'}`} />)}</div>
     case 'single_choice':
-      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-orange-400/40" /><div className="h-[7px] w-3/5 rounded bg-[#333]" /></div>
+      return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-orange-400/40" /><div className="h-[7px] w-3/5 rounded bg-panel-raised" /></div>
     case 'multi_choice':
       return <div className="space-y-[3px]"><div className="h-[7px] w-4/5 rounded bg-pink-400/40" /><div className="h-[7px] w-2/3 rounded bg-pink-400/40" /></div>
     case 'boolean':
       return <div className="flex gap-1 text-[12px] leading-none">👍 👎</div>
     case 'text':
-      return <div className="h-[8px] w-full rounded bg-[#333]" />
+      return <div className="h-[8px] w-full rounded bg-panel-raised" />
     case 'textarea':
-      return <div className="space-y-[3px]"><div className="h-[7px] w-full rounded bg-[#333]" /><div className="h-[7px] w-2/3 rounded bg-[#333]" /></div>
+      return <div className="space-y-[3px]"><div className="h-[7px] w-full rounded bg-panel-raised" /><div className="h-[7px] w-2/3 rounded bg-panel-raised" /></div>
   }
 }
 
@@ -1154,7 +1154,7 @@ function QuestionPreview({ q }: { q: Question }) {
       {q.kind === 'scale' && (
         <div className="flex gap-1">
           {Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className={`w-7 h-7 rounded text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-[#1e1e1e] text-[#555]'}`}>
+            <div key={i} className={`w-7 h-7 rounded text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-panel text-[#555]'}`}>
               {i + 1}
             </div>
           ))}
@@ -1170,15 +1170,15 @@ function QuestionPreview({ q }: { q: Question }) {
         </div>
       )}
       {q.kind === 'text' && (
-        <div className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555]">Short answer...</div>
+        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555]">Short answer...</div>
       )}
       {q.kind === 'textarea' && (
-        <div className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555] h-16">Long answer...</div>
+        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555] h-16">Long answer...</div>
       )}
       {q.kind === 'boolean' && (
         <div className="flex gap-2">
           <div className="px-4 py-1.5 rounded-lg bg-primary-500/15 text-primary-300 text-xs font-medium">Yes</div>
-          <div className="px-4 py-1.5 rounded-lg bg-[#1e1e1e] text-[#555] text-xs">No</div>
+          <div className="px-4 py-1.5 rounded-lg bg-panel text-[#555] text-xs">No</div>
         </div>
       )}
       {(q.kind === 'single_choice' || q.kind === 'multi_choice') && (

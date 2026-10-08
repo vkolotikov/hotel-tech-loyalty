@@ -88,7 +88,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
       <div onClick={e => e.stopPropagation()}
         className="w-full max-w-lg rounded-2xl border border-white/[0.08] overflow-hidden"
-        style={{ background: 'linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99))' }}>
+        style={{ background: 'var(--legacy-card-gradient-deep)' }}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.06]">
           <div>
             <h2 className="text-base font-bold text-white">New Direct Booking</h2>

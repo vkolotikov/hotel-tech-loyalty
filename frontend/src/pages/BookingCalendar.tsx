@@ -226,7 +226,7 @@ export function BookingCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {([
               { v: 'day', icon: CalendarDays, label: 'Day' },
               { v: 'week', icon: Calendar, label: 'Week' },
@@ -240,12 +240,12 @@ export function BookingCalendar() {
             ))}
           </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[240px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
           <button onClick={() => goToday()} className="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors rounded-xl"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
 
@@ -328,7 +328,7 @@ export function BookingCalendar() {
               else if (booking) { status = 'Occupied'; statusColor = 'teal'; statusEmoji = '🛏' }
               return (
                 <div key={uid} className="rounded-xl border border-white/[0.06] p-4 transition-all hover:border-white/[0.1]"
-                  style={{ background: 'linear-gradient(135deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', borderLeftWidth: '4px', borderLeftColor: vis.accent }}>
+                  style={{ background: 'var(--legacy-card-gradient-diagonal)', borderLeftWidth: '4px', borderLeftColor: vis.accent }}>
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: vis.accent }}>
@@ -387,10 +387,10 @@ export function BookingCalendar() {
       {/* Timeline */}
       {view !== 'day' && (
       <div className="rounded-2xl border border-white/[0.06] overflow-x-auto"
-        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
+        style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div style={{ minWidth: colCount * 40 + 260 }}>
           {/* Day axis */}
-          <div className="flex border-b border-white/[0.06] sticky top-0 z-10" style={{ background: 'rgba(14,20,18,0.98)' }}>
+          <div className="flex border-b border-white/[0.06] sticky top-0 z-10" style={{ background: 'var(--legacy-card-deep)' }}>
             <div className="w-[260px] flex-shrink-0 p-3 text-[10px] text-gray-500 font-bold uppercase tracking-wider border-r border-white/[0.06]">Unit</div>
             <div className="flex-1 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
               {days.map(d => {

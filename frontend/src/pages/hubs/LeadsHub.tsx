@@ -63,7 +63,7 @@ const TILES: TileDef[] = [
   { key: 'lead-forms', label: 'Lead forms',        desc: 'Embeddable forms — the front door for leads',   icon: FilePlus2, accent: '#a78bfa' },
 ]
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 const tint = (hex: string, alpha: number) => {
   const h = hex.replace('#', '')

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { clsx } from 'clsx'
@@ -350,6 +350,15 @@ export function Layout({ children }: { children: ReactNode }) {
     },
   })
 
+  // The admin styles (Glass) apply only inside the signed-in admin: mark
+  // <html> while this shell is mounted, before the first paint. The login
+  // page, member portal and Appointments share <html> and stay unmarked.
+  useLayoutEffect(() => {
+    const root = document.documentElement
+    root.setAttribute('data-shell', 'admin')
+    return () => root.removeAttribute('data-shell')
+  }, [])
+
   // Track viewport — below 1024px the sidebar becomes an off-canvas drawer
   // and a bottom nav is shown. Desktop behavior is untouched.
   useEffect(() => {
@@ -680,7 +689,7 @@ export function Layout({ children }: { children: ReactNode }) {
     .filter(group => group.items.length > 0)
 
   return (
-    <div className="flex h-screen bg-dark-bg">
+    <div className="hx-shell flex h-screen bg-dark-bg">
       {/* Global Cmd+K search lives in <GlobalSearch /> further down.
           Was previously duplicated with a <MemberQuickSearch /> here;
           both listened for Cmd+K simultaneously and the lower-z backdrop
@@ -700,7 +709,7 @@ export function Layout({ children }: { children: ReactNode }) {
 
       {/* Sidebar */}
       <aside className={clsx(
-        'mobile-drawer flex flex-col bg-dark-surface text-white flex-shrink-0 border-r border-dark-border',
+        'hx-sidebar mobile-drawer flex flex-col bg-dark-surface text-white flex-shrink-0 border-r border-dark-border',
         // Mobile: fixed off-canvas drawer, wide w-72
         'fixed inset-y-0 left-0 z-50 w-72 transform',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
@@ -956,7 +965,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   <p className="text-xs font-medium truncate">{user?.name}</p>
                   {roleName && <span className="text-[9px] px-1 py-0.5 rounded bg-primary-500/20 text-primary-400 font-medium flex-shrink-0">{roleName}</span>}
                 </div>
-                <p className="text-[10px] text-[#636366] truncate">{user?.email}</p>
+                <p className="text-[10px] text-t-muted truncate">{user?.email}</p>
               </div>
             </div>
           )}
@@ -977,7 +986,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {/* Main */}
       <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Top bar */}
-        <header className="bg-dark-surface border-b border-dark-border px-4 lg:px-6 h-14 flex items-center gap-3 lg:gap-4">
+        <header className="hx-header bg-dark-surface border-b border-dark-border px-4 lg:px-6 h-14 flex items-center gap-3 lg:gap-4">
           {/* Mobile hamburger */}
           <button
             onClick={() => setMobileOpen(true)}
@@ -1038,11 +1047,11 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="absolute right-0 top-10 w-80 bg-dark-surface border border-dark-border rounded-xl shadow-2xl z-50 overflow-hidden">
                 <div className="px-4 py-3 border-b border-dark-border flex items-center justify-between">
                   <h3 className="text-sm font-semibold text-white">Live Activity</h3>
-                  <span className="text-[10px] text-[#636366]">{events.length} events</span>
+                  <span className="text-[10px] text-t-muted">{events.length} events</span>
                 </div>
                 <div className="max-h-80 overflow-y-auto divide-y divide-dark-border/50">
                   {events.length === 0 ? (
-                    <p className="text-center text-[#636366] text-xs py-8">No recent events</p>
+                    <p className="text-center text-t-muted text-xs py-8">No recent events</p>
                   ) : events.map((evt, i) => (
                     <div key={i} className="px-4 py-2.5 hover:bg-dark-surface2 transition-colors">
                       <div className="flex items-start gap-2">
@@ -1053,7 +1062,7 @@ export function Layout({ children }: { children: ReactNode }) {
                           <p className="text-xs font-medium text-white truncate">{evt.title}</p>
                           {evt.body && <p className="text-[11px] text-t-secondary truncate">{evt.body}</p>}
                         </div>
-                        <span className="text-[10px] text-[#636366] flex-shrink-0 whitespace-nowrap">
+                        <span className="text-[10px] text-t-muted flex-shrink-0 whitespace-nowrap">
                           {new Date(evt.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>

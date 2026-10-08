@@ -66,7 +66,7 @@ const STEPS = [
 const kicker = 'text-[11px] font-mono uppercase tracking-[0.14em] text-primary-500'
 const card   = 'bg-dark-card border border-dark-border rounded-xl p-5'
 const label  = 'block text-xs text-t-secondary mb-1.5'
-const input  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none transition-colors'
+const input  = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:border-primary-500 focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none transition-colors'
 
 export function ChatbotWizard({ onDone }: { onDone: () => void }) {
   const qc = useQueryClient()

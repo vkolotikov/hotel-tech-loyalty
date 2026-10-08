@@ -169,7 +169,7 @@ export function Properties() {
 
           {/* Image Upload */}
           <div>
-            <label className="block text-sm font-medium text-[#a0a0a0] mb-2">Property Image</label>
+            <label className="block text-sm font-medium text-t-soft mb-2">Property Image</label>
             <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             {imagePreview ? (
               <div className="relative group">
@@ -180,14 +180,14 @@ export function Properties() {
                     Change
                   </button>
                   <button type="button" onClick={clearImage}
-                    className="bg-[#ff375f]/20 text-[#ff375f] px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-[#ff375f]/30 transition-colors">
+                    className="bg-danger/20 text-danger px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-danger/30 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
             ) : (
               <button type="button" onClick={() => fileInputRef.current?.click()}
-                className="w-full bg-dark-bg border border-dashed border-dark-border2 rounded-xl px-4 py-8 text-sm text-[#636366] hover:border-primary-500 hover:text-primary-400 transition-colors flex flex-col items-center justify-center gap-2">
+                className="w-full bg-dark-bg border border-dashed border-dark-border2 rounded-xl px-4 py-8 text-sm text-t-muted hover:border-primary-500 hover:text-primary-400 transition-colors flex flex-col items-center justify-center gap-2">
                 <Upload size={24} />
                 <span>Click to upload property image</span>
                 <span className="text-xs">JPG, PNG up to 5MB</span>
@@ -250,7 +250,7 @@ export function Properties() {
                 <div className="flex items-center gap-3">
                   <span className="text-xs text-t-secondary">{p.outlets_count} outlets</span>
                   <button onClick={(e) => { e.stopPropagation(); startEdit(p) }} className="text-t-secondary hover:text-white p-1" title="Edit"><Pencil size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); handleDelete(p) }} className="text-t-secondary hover:text-[#ff375f] p-1" title="Delete" disabled={deleteMutation.isPending}><Trash2 size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); handleDelete(p) }} className="text-t-secondary hover:text-danger p-1" title="Delete" disabled={deleteMutation.isPending}><Trash2 size={14} /></button>
                 </div>
               </div>
 

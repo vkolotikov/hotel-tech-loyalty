@@ -1,6 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 import { api } from '../lib/api'
+import { SHADES, hexToRgb, isHex, shadeScale, toTriplet } from '../theme/colour'
+import { brandGlassVariables } from '../theme/glass'
 
 interface ThemeColors {
   primary_color: string
@@ -21,10 +23,13 @@ interface ThemeColors {
   // radius scale). Empty / missing = neutral default (Inter, standard
   // radii).
   theme_mood?: string
+  // Persisted via hotel_settings.theme_style: 'glass' or 'classic'.
+  // Missing means Glass, the admin's default style since 2026-10.
+  theme_style?: string
 }
 
 const DEFAULTS: ThemeColors = {
-  primary_color: '#c9a84c',
+  primary_color: '#3b82f6',
   secondary_color: '#1e1e1e',
   accent_color: '#32d74b',
   background_color: '#0d0d0d',
@@ -39,43 +44,48 @@ const DEFAULTS: ThemeColors = {
   dark_mode_enabled: 'true',
 }
 
-function hexToRgb(hex: string): string {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-  return `${r} ${g} ${b}`
+const PALETTE_KEYS = [
+  'primary_color', 'secondary_color', 'accent_color', 'background_color', 'surface_color', 'text_color',
+  'text_secondary_color', 'border_color', 'error_color', 'warning_color', 'info_color',
+] as const
+
+/** The admin styles. Clean light joins in part 2. */
+export const THEME_STYLES = ['glass', 'classic'] as const
+export type ThemeStyle = (typeof THEME_STYLES)[number]
+export const DEFAULT_STYLE: ThemeStyle = 'glass'
+
+/** Only an explicit 'classic' is Classic; anything else (missing, empty, unknown) is Glass. */
+export function readThemeStyle(raw: unknown): ThemeStyle {
+  return raw === 'classic' ? 'classic' : DEFAULT_STYLE
 }
 
-function generateShades(hex: string) {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.slice(0, 2), 16)
-  const g = parseInt(h.slice(2, 4), 16)
-  const b = parseInt(h.slice(4, 6), 16)
-
-  const lighten = (c: number, pct: number) => Math.min(255, Math.round(c + (255 - c) * pct))
-  const darken = (c: number, pct: number) => Math.max(0, Math.round(c * (1 - pct)))
-
-  return {
-    50: `${lighten(r, 0.9)} ${lighten(g, 0.9)} ${lighten(b, 0.9)}`,
-    100: `${lighten(r, 0.8)} ${lighten(g, 0.8)} ${lighten(b, 0.8)}`,
-    200: `${lighten(r, 0.6)} ${lighten(g, 0.6)} ${lighten(b, 0.6)}`,
-    300: `${lighten(r, 0.35)} ${lighten(g, 0.35)} ${lighten(b, 0.35)}`,
-    400: `${lighten(r, 0.15)} ${lighten(g, 0.15)} ${lighten(b, 0.15)}`,
-    500: `${r} ${g} ${b}`,
-    600: `${darken(r, 0.12)} ${darken(g, 0.12)} ${darken(b, 0.12)}`,
-    700: `${darken(r, 0.25)} ${darken(g, 0.25)} ${darken(b, 0.25)}`,
-    800: `${darken(r, 0.35)} ${darken(g, 0.35)} ${darken(b, 0.35)}`,
-    900: `${darken(r, 0.45)} ${darken(g, 0.45)} ${darken(b, 0.45)}`,
+/** What applyThemeToDom paints: <html> and <body>, or a stand-in in tests. */
+export interface ThemeTarget {
+  root: {
+    style: { setProperty(name: string, value: string): void }
+    setAttribute(name: string, value: string): void
+    removeAttribute(name: string): void
+    getAttribute(name: string): string | null
   }
+  body: { style: { backgroundColor: string; color: string } }
 }
+
+const pageTarget = (): ThemeTarget => ({ root: document.documentElement, body: document.body })
+
+/** The palette over the defaults. A blank or malformed colour keeps its default. */
+export function paletteWithDefaults(colors: Partial<ThemeColors>): ThemeColors {
+  const merged: ThemeColors = { ...DEFAULTS, ...colors }
+  for (const key of PALETTE_KEYS) {
+    if (!isHex(merged[key])) merged[key] = DEFAULTS[key]
+  }
+  return merged
+}
+
+const rgb = (hex: string) => toTriplet(hexToRgb(hex))
 
 function surfaceShade(hex: string, amount: number): string {
-  const h = hex.replace('#', '')
-  const r = Math.min(255, parseInt(h.slice(0, 2), 16) + amount)
-  const g = Math.min(255, parseInt(h.slice(2, 4), 16) + amount)
-  const b = Math.min(255, parseInt(h.slice(4, 6), 16) + amount)
-  return `${r} ${g} ${b}`
+  const [r, g, b] = hexToRgb(hex)
+  return `${Math.min(255, r + amount)} ${Math.min(255, g + amount)} ${Math.min(255, b + amount)}`
 }
 
 /**
@@ -94,28 +104,33 @@ function surfaceShade(hex: string, amount: number): string {
  * 2026-06-13: "cards are different, but after selection, admin do not
  * change style, only colour". Empty/null mood removes the attribute so
  * the default (Inter, neutral corners) renders.
+ *
+ * The optional `style` writes `data-style` ('glass' | 'classic'); left
+ * out, the current style stays. The palette variables are written in
+ * every style, plus the Glass extras (lifted brand text, glow colours,
+ * text on brand fills). Glass's own values live in the stylesheet, scoped
+ * to the signed-in admin (theme/glassTokens.ts), and are read before the
+ * palette by the Tailwind tokens, so no variable is ever removed and the
+ * pages outside the admin keep the palette exactly as before.
  */
-export function applyThemeToDom(colors: Partial<ThemeColors>, mood?: string | null): void {
-  const merged: ThemeColors = { ...DEFAULTS, ...colors } as ThemeColors
-  const root = document.documentElement
+export function applyThemeToDom(
+  colors: Partial<ThemeColors>,
+  mood?: string | null,
+  style?: ThemeStyle,
+  target: ThemeTarget = pageTarget(),
+): void {
+  const merged = paletteWithDefaults(colors)
+  const { root, body } = target
+  const set = (name: string, value: string) => root.style.setProperty(name, value)
 
-  const shades = generateShades(merged.primary_color)
-  root.style.setProperty('--color-primary-50',  shades[50])
-  root.style.setProperty('--color-primary-100', shades[100])
-  root.style.setProperty('--color-primary-200', shades[200])
-  root.style.setProperty('--color-primary-300', shades[300])
-  root.style.setProperty('--color-primary-400', shades[400])
-  root.style.setProperty('--color-primary-500', shades[500])
-  root.style.setProperty('--color-primary-600', shades[600])
-  root.style.setProperty('--color-primary-700', shades[700])
-  root.style.setProperty('--color-primary-800', shades[800])
-  root.style.setProperty('--color-primary-900', shades[900])
+  const shades = shadeScale(merged.primary_color)
+  for (const shade of SHADES) set(`--color-primary-${shade}`, shades[shade])
 
-  root.style.setProperty('--color-dark-bg',       hexToRgb(merged.background_color))
-  root.style.setProperty('--color-dark-surface',  hexToRgb(merged.surface_color))
-  root.style.setProperty('--color-dark-surface2', surfaceShade(merged.surface_color, 8))
-  root.style.setProperty('--color-dark-surface3', surfaceShade(merged.surface_color, 16))
-  root.style.setProperty('--color-dark-surface4', surfaceShade(merged.surface_color, 24))
+  set('--color-dark-bg',       rgb(merged.background_color))
+  set('--color-dark-surface',  rgb(merged.surface_color))
+  set('--color-dark-surface2', surfaceShade(merged.surface_color, 8))
+  set('--color-dark-surface3', surfaceShade(merged.surface_color, 16))
+  set('--color-dark-surface4', surfaceShade(merged.surface_color, 24))
   // dark-card and dark-hover back 29 class names across the chatbot,
   // analytics and canned-reply screens, but nothing ever assigned them, so
   // they stayed on the neutral Tailwind fallback while every surface around
@@ -123,32 +138,37 @@ export function applyThemeToDom(colors: Partial<ThemeColors>, mood?: string | nu
   // flat grey and read as a second, foreign design language. Their defaults
   // match surface2/surface3 exactly, which is the relationship they were
   // built to have, so derive them the same way.
-  root.style.setProperty('--color-dark-card',     surfaceShade(merged.surface_color, 8))
-  root.style.setProperty('--color-dark-hover',    surfaceShade(merged.surface_color, 16))
-  root.style.setProperty('--color-dark-border',   hexToRgb(merged.border_color))
-  root.style.setProperty('--color-dark-border2',  surfaceShade(merged.border_color, 12))
+  set('--color-dark-card',     surfaceShade(merged.surface_color, 8))
+  set('--color-dark-hover',    surfaceShade(merged.surface_color, 16))
+  set('--color-dark-border',   rgb(merged.border_color))
+  set('--color-dark-border2',  surfaceShade(merged.border_color, 12))
 
-  root.style.setProperty('--color-text-primary',   hexToRgb(merged.text_color))
-  root.style.setProperty('--color-text-secondary', hexToRgb(merged.text_secondary_color))
+  set('--color-text-primary',   rgb(merged.text_color))
+  set('--color-text-secondary', rgb(merged.text_secondary_color))
 
-  root.style.setProperty('--color-accent',  hexToRgb(merged.accent_color))
-  root.style.setProperty('--color-error',   hexToRgb(merged.error_color))
-  root.style.setProperty('--color-warning', hexToRgb(merged.warning_color))
-  root.style.setProperty('--color-info',    hexToRgb(merged.info_color))
+  set('--color-accent',  rgb(merged.accent_color))
+  set('--color-error',   rgb(merged.error_color))
+  set('--color-warning', rgb(merged.warning_color))
+  set('--color-info',    rgb(merged.info_color))
 
-  document.body.style.backgroundColor = merged.background_color
-  document.body.style.color = merged.text_color
+  for (const [name, value] of Object.entries(brandGlassVariables(merged.primary_color))) set(name, value)
+
+  body.style.backgroundColor = merged.background_color
+  body.style.color = merged.text_color
 
   // Mood propagation. CSS in index.css reads :root[data-mood="X"] and
   // forks --theme-font-body / --theme-font-display / --theme-radius-*
   // so EVERY surface in the admin (sidebars, tables, cards, buttons,
   // headings, etc.) shifts to the picked mood's vocabulary on next
-  // paint. Without this the admin only changes color.
+  // paint. Without this the admin only changes color. Glass ignores the
+  // mood: index.css excludes its mood rules from the Glass admin.
   if (mood && typeof mood === 'string') {
     root.setAttribute('data-mood', mood)
   } else if (mood === null) {
     root.removeAttribute('data-mood')
   }
+
+  root.setAttribute('data-style', style ?? readThemeStyle(root.getAttribute('data-style')))
 }
 
 export type { ThemeColors }
@@ -156,7 +176,7 @@ export type { ThemeColors }
 /**
  * Cache key for the last-known-good theme snapshot in localStorage.
  *
- * Why: without this, every page reload paints Gold Luxury defaults for
+ * Why: without this, every page reload paints the default palette for
  * the first ~200 ms while the /v1/theme query resolves -- the user sees
  * their carefully-picked Royal Blue / Emerald / etc. flash to default
  * and back. On a slow connection (or briefly offline), the API call
@@ -167,10 +187,12 @@ export type { ThemeColors }
 const THEME_CACHE_KEY = 'loyalty-admin-theme-v1'
 const PRESET_CACHE_KEY = 'loyalty-admin-theme-preset-v1'
 
-interface CachedTheme {
+export interface CachedTheme {
   colors: Partial<ThemeColors>
   preset?: string | null
   mood?: string | null
+  // Missing in snapshots written before the styles shipped: read as Glass.
+  style?: ThemeStyle | null
   savedAt: number
 }
 
@@ -178,7 +200,7 @@ interface CachedTheme {
  * Read the cached theme synchronously. Returns null on any parse error
  * or when the cache is missing.
  */
-function readCachedTheme(): CachedTheme | null {
+export function readCachedTheme(): CachedTheme | null {
   try {
     const raw = localStorage.getItem(THEME_CACHE_KEY)
     if (!raw) return null
@@ -193,15 +215,18 @@ function readCachedTheme(): CachedTheme | null {
 /**
  * Persist the current theme + active preset name to localStorage so the
  * next page load can paint it instantly. Best-effort -- private mode /
- * quota exceeded just skip silently.
+ * quota exceeded just skip silently. A null `style` keeps the cached
+ * one, so a preset change never resets the style.
  */
 export function persistThemeSnapshot(
   colors: Partial<ThemeColors>,
   preset: string | null = null,
   mood: string | null = null,
+  style: ThemeStyle | null = null,
 ): void {
   try {
-    const payload: CachedTheme = { colors, preset, mood, savedAt: Date.now() }
+    const keptStyle = style ?? readCachedTheme()?.style ?? null
+    const payload: CachedTheme = { colors, preset, mood, style: keptStyle, savedAt: Date.now() }
     localStorage.setItem(THEME_CACHE_KEY, JSON.stringify(payload))
     if (preset) localStorage.setItem(PRESET_CACHE_KEY, preset)
   } catch {
@@ -222,15 +247,70 @@ export function readCachedPreset(): string | null {
   }
 }
 
+/** The theme query's placeholder: the cached palette, mood and style. */
+export function placeholderFromSnapshot(snap: CachedTheme | null): ThemeColors | undefined {
+  if (!snap?.colors) return undefined
+  return {
+    ...DEFAULTS,
+    ...snap.colors,
+    ...(snap.mood ? { theme_mood: snap.mood } : {}),
+    theme_style: readThemeStyle(snap.style),
+  }
+}
+
+/**
+ * Paint before React mounts: the cached theme, or with no cache just the
+ * default style, so the first frame of the admin is already Glass.
+ */
+export function paintCachedTheme(snap: CachedTheme | null, target: ThemeTarget = pageTarget()): void {
+  if (snap?.colors) {
+    applyThemeToDom(snap.colors, snap.mood ?? null, readThemeStyle(snap.style), target)
+  } else {
+    target.root.setAttribute('data-style', DEFAULT_STYLE)
+  }
+}
+
+/** A server answer with a style but no palette: switch the style only. */
+export function applyStyleOnly(style: ThemeStyle, target: ThemeTarget = pageTarget()): void {
+  target.root.setAttribute('data-style', style)
+  const snap = readCachedTheme()
+  persistThemeSnapshot(snap?.colors ?? {}, snap?.preset ?? null, snap?.mood ?? null, style)
+}
+
+/**
+ * What a theme answer asks the DOM to do. A palette (the colours parse)
+ * is applied in full with its style, missing style meaning Glass. An
+ * answer with only theme_style switches the style. Anything else, an
+ * empty answer included, changes nothing: the cached paint stays.
+ */
+export type ThemeUpdate =
+  | { kind: 'full'; mood: string | null; style: ThemeStyle }
+  | { kind: 'style'; style: ThemeStyle }
+  | null
+
+export function themeUpdateFor(data: unknown): ThemeUpdate {
+  if (!data || typeof data !== 'object') return null
+  const answer = data as Partial<ThemeColors>
+  const style = typeof answer.theme_style === 'string' ? readThemeStyle(answer.theme_style) : null
+  const paletteLooksValid =
+    typeof answer.primary_color === 'string' && answer.primary_color.startsWith('#') &&
+    typeof answer.background_color === 'string' && answer.background_color.startsWith('#')
+  if (paletteLooksValid) {
+    const mood = typeof answer.theme_mood === 'string' ? answer.theme_mood : null
+    return { kind: 'full', mood, style: style ?? DEFAULT_STYLE }
+  }
+  return style ? { kind: 'style', style } : null
+}
+
 // Paint the cached theme to the DOM as early as possible -- this runs
 // at module-evaluation time, before React mounts. Eliminates the
 // default-palette flash on every reload. Also applies the cached
 // mood so the per-mood body/heading font cascade lands in the FIRST
 // paint, not after hydration (otherwise the user sees a flash of
-// Inter then a swap to Cormorant/Space Grotesk/IBM Plex/etc).
-const _earlySnapshot = typeof window !== 'undefined' ? readCachedTheme() : null
-if (_earlySnapshot?.colors) {
-  applyThemeToDom(_earlySnapshot.colors, _earlySnapshot.mood ?? null)
+// Inter then a swap to Cormorant/Space Grotesk/IBM Plex/etc), and the
+// cached style, so a Classic organisation never flashes Glass.
+if (typeof window !== 'undefined') {
+  paintCachedTheme(readCachedTheme())
 }
 
 export function useTheme() {
@@ -259,26 +339,17 @@ export function useTheme() {
     staleTime: 60_000,
     refetchOnWindowFocus: false,
     // Hydrate from the localStorage snapshot so React's initial render
-    // already has the user's saved palette -- no Gold-Luxury-then-flip
-    // visual jolt.
-    placeholderData: () => {
-      const snap = readCachedTheme()
-      return snap?.colors ? ({ ...DEFAULTS, ...snap.colors } as ThemeColors) : undefined
-    },
+    // already has the user's saved palette and style -- no
+    // default-then-flip visual jolt.
+    placeholderData: () => placeholderFromSnapshot(readCachedTheme()),
   })
 
-  // CRITICAL: only validate against `data` (server response). If it's
-  // empty/missing, we DO NOT want to fall back to DEFAULTS-spread theme
-  // — that's what was wiping the user's selection. The DOM is already
-  // painted with the cached snapshot from module-load + placeholderData;
-  // we only need to UPDATE the DOM when a real fresh theme arrives.
-  const dataLooksValid =
-    data &&
-    typeof data === 'object' &&
-    typeof (data as any).primary_color === 'string' &&
-    (data as any).primary_color.startsWith('#') &&
-    typeof (data as any).background_color === 'string' &&
-    (data as any).background_color.startsWith('#')
+  // CRITICAL: only act on `data` (server response) when it carries a real
+  // palette or an explicit style. An empty answer must NOT fall back to
+  // DEFAULTS-spread theme — that's what was wiping the user's selection.
+  // The DOM is already painted with the cached snapshot from module-load
+  // + placeholderData; we only UPDATE it when a real answer arrives.
+  const update = themeUpdateFor(data)
 
   const theme = { ...DEFAULTS, ...data }
 
@@ -286,26 +357,24 @@ export function useTheme() {
     // ROOT-CAUSE FIX (2026-06-13): previously this effect ran
     // applyThemeToDom(theme) on EVERY render — including when `data`
     // came back as an empty object. With theme spread over DEFAULTS, an
-    // empty `data` resolves to the gold-luxury defaults, and the DOM
-    // got REPAINTED to defaults on every fetch. Customer-visible
-    // symptom: 'refresh shows the new theme for a second then reverts'.
-    //
-    // Now we only touch the DOM (and localStorage) when the server gave
-    // us a real, parseable theme. The initial paint from the
-    // module-load `_earlySnapshot` + the useQuery placeholderData
-    // covers the page-load case. The DOM stays on the cached colors
-    // until a valid server response replaces them.
-    if (dataLooksValid) {
-      const serverMood = typeof (data as any)?.theme_mood === 'string' ? (data as any).theme_mood : null
-      applyThemeToDom(theme, serverMood)
-      persistThemeSnapshot(data, readCachedPreset(), serverMood)
+    // empty `data` resolves to the defaults, and the DOM got REPAINTED to
+    // defaults on every fetch. Customer-visible symptom: 'refresh shows
+    // the new theme for a second then reverts'. themeUpdateFor() keeps
+    // that rule: an empty answer changes nothing.
+    if (update?.kind === 'full') {
+      applyThemeToDom(theme, update.mood, update.style)
+      persistThemeSnapshot(data as Partial<ThemeColors>, readCachedPreset(), update.mood, update.style)
+    } else if (update?.kind === 'style') {
+      applyStyleOnly(update.style)
     }
   }, [
     theme.primary_color, theme.background_color, theme.surface_color,
     theme.border_color, theme.text_color, theme.text_secondary_color,
     theme.accent_color, theme.error_color, theme.warning_color, theme.info_color,
     data,
-    dataLooksValid,
+    update?.kind,
+    update?.style,
+    update?.kind === 'full' ? update.mood : null,
   ])
 
   return theme

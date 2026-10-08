@@ -8,7 +8,7 @@ import { HubTabs } from '../../components/HubTabs'
 
 const EmailCampaigns = lazy(() => import('../EmailCampaigns').then(m => ({ default: m.EmailCampaigns })))
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 /**
  * Read-only history of every member-broadcast that touched any
@@ -43,11 +43,11 @@ function PushHistory() {
   return (
     <Card>
       {isLoading ? (
-        <p className="text-center text-[#636366] py-8 text-sm">Loading history…</p>
+        <p className="text-center text-t-muted py-8 text-sm">Loading history…</p>
       ) : rows.length === 0 ? (
         <div className="text-center py-12">
-          <History size={32} className="mx-auto text-[#636366] mb-3" />
-          <p className="text-[#636366] text-sm">
+          <History size={32} className="mx-auto text-t-muted mb-3" />
+          <p className="text-t-muted text-sm">
             No broadcasts sent yet. Once you send a push from Members or a campaign from the Email tab,
             they'll appear here.
           </p>
@@ -83,7 +83,7 @@ function PushHistory() {
                       <div className="text-white text-sm">{meta.title || meta.name || r.description || '—'}</div>
                     </td>
                     <td className="py-2.5 text-right">
-                      <span className="inline-flex items-center gap-1 text-[#a0a0a0]">
+                      <span className="inline-flex items-center gap-1 text-t-soft">
                         <UsersIcon size={11} />
                         {Number(recipients).toLocaleString()}
                       </span>

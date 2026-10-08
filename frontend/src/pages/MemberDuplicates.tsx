@@ -100,7 +100,7 @@ export function MemberDuplicates() {
       </div>
 
       {isLoading ? (
-        <div className="text-center text-[#636366] py-12">{t('members.duplicates.searching', 'Searching for duplicates...')}</div>
+        <div className="text-center text-t-muted py-12">{t('members.duplicates.searching', 'Searching for duplicates...')}</div>
       ) : isError ? (
         <div className="text-center py-16 bg-dark-surface border border-red-500/25 rounded-xl">
           <AlertCircle size={32} className="mx-auto mb-3 text-red-400/70" />
@@ -110,7 +110,7 @@ export function MemberDuplicates() {
           </button>
         </div>
       ) : pairs.length === 0 ? (
-        <div className="text-center text-[#636366] py-16 bg-dark-surface border border-dark-border rounded-xl">
+        <div className="text-center text-t-muted py-16 bg-dark-surface border border-dark-border rounded-xl">
           <Users size={32} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">{t('members.duplicates.none', 'No duplicate members found.')}</p>
         </div>
@@ -122,7 +122,7 @@ export function MemberDuplicates() {
               <div key={i} className="bg-dark-surface border border-dark-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${tag.color}`}>{tag.label}</span>
-                  <span className="text-xs text-[#636366]">
+                  <span className="text-xs text-t-muted">
                     {pair.reason === 'shared_email' && pair.winner.email}
                     {pair.reason === 'shared_phone' && pair.winner.phone}
                   </span>
@@ -184,13 +184,13 @@ export function MemberDuplicates() {
                 onChange={e => setReason(e.target.value)}
                 rows={2}
                 placeholder={t('members.duplicates.reason_placeholder', 'e.g. Same person — used different email at front desk')}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 mb-4"
               />
 
               <div className="flex justify-end gap-2">
                 <button
                   onClick={() => setPendingPair(null)}
-                  className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white"
+                  className="px-4 py-2 text-sm text-t-soft hover:text-white"
                   disabled={mergeMutation.isPending}
                 >
                   {t('common.cancel', 'Cancel')}
@@ -215,20 +215,20 @@ function MemberCard({ member, role, joinedLabel, lastActiveLabel }: { member: Me
   return (
     <div className="bg-dark-surface2 border border-dark-border rounded-lg p-3">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-[#636366]">{role}</span>
-        <Link to={`/members/${member.id}`} target="_blank" rel="noreferrer" className="text-[#636366] hover:text-primary-400">
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-t-muted">{role}</span>
+        <Link to={`/members/${member.id}`} target="_blank" rel="noreferrer" className="text-t-muted hover:text-primary-400">
           <ExternalLink size={12} />
         </Link>
       </div>
       <div className="text-sm font-semibold text-white">{member.name}</div>
-      <div className="text-[11px] text-[#636366] mb-2">{member.member_number}</div>
-      {member.email && <div className="text-xs text-[#a0a0a0] flex items-center gap-1.5"><Mail size={10}/> {member.email}</div>}
-      {member.phone && <div className="text-xs text-[#a0a0a0] flex items-center gap-1.5"><Phone size={10}/> {member.phone}</div>}
+      <div className="text-[11px] text-t-muted mb-2">{member.member_number}</div>
+      {member.email && <div className="text-xs text-t-soft flex items-center gap-1.5"><Mail size={10}/> {member.email}</div>}
+      {member.phone && <div className="text-xs text-t-soft flex items-center gap-1.5"><Phone size={10}/> {member.phone}</div>}
       <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-dark-border text-[11px]">
-        <div><span className="text-[#636366]">Lifetime</span> <span className="text-white font-medium">{member.lifetime_points.toLocaleString()}</span></div>
-        <div><span className="text-[#636366]">Current</span> <span className="text-white font-medium">{member.current_points.toLocaleString()}</span></div>
+        <div><span className="text-t-muted">Lifetime</span> <span className="text-white font-medium">{member.lifetime_points.toLocaleString()}</span></div>
+        <div><span className="text-t-muted">Current</span> <span className="text-white font-medium">{member.current_points.toLocaleString()}</span></div>
       </div>
-      <div className="text-[10px] text-[#636366] mt-1">
+      <div className="text-[10px] text-t-muted mt-1">
         {joinedLabel} {new Date(member.created_at).toLocaleDateString()}
         {member.last_activity_at && ` · ${lastActiveLabel} ${new Date(member.last_activity_at).toLocaleDateString()}`}
       </div>

@@ -321,21 +321,21 @@ export function Members() {
         {/* Search row + sort */}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
             <input
               type="text"
               placeholder={t('members.search_placeholder', 'Search by name, email, or member number…')}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setUrlParam('page', undefined) }}
-              className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="relative">
-            <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366] pointer-events-none" />
+            <ArrowUpDown size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted pointer-events-none" />
             <select
               value={sortBy}
               onChange={(e) => setUrlParam('sort_by', e.target.value === 'recent' ? undefined : e.target.value)}
-              className="appearance-none bg-[#1e1e1e] border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="appearance-none bg-panel border border-dark-border rounded-lg pl-8 pr-8 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
               <option value="recent">{t('members.sort.recent', 'Recently joined')}</option>
               <option value="points">{t('members.sort.points', 'Points high → low')}</option>
@@ -403,7 +403,7 @@ export function Members() {
         <div className="md:hidden space-y-2">
           {isLoading ? (
             Array(6).fill(0).map((_, i) => (
-              <div key={i} className="bg-[#1a1a1a] border border-dark-border rounded-xl p-3 animate-pulse">
+              <div key={i} className="bg-panel-dim border border-dark-border rounded-xl p-3 animate-pulse">
                 <div className="h-4 bg-dark-surface2 rounded w-32 mb-2" />
                 <div className="h-3 bg-dark-surface2 rounded w-24" />
               </div>
@@ -411,7 +411,7 @@ export function Members() {
           ) : isError ? (
             <QueryError onRetry={() => refetch()} />
           ) : (data as any)?.data?.length === 0 ? (
-            <p className="text-center text-[#636366] py-8 text-sm">
+            <p className="text-center text-t-muted py-8 text-sm">
               {t('members.empty.no_members', 'No members yet.')} {search && t('members.empty.try_different_search', 'Try a different search term.')}
             </p>
           ) : (
@@ -419,7 +419,7 @@ export function Members() {
               <div
                 key={m.id}
                 onClick={() => navigate(`/members/${m.id}`)}
-                className="bg-[#1a1a1a] border border-dark-border rounded-xl p-3 active:bg-dark-surface2 transition-colors"
+                className="bg-panel-dim border border-dark-border rounded-xl p-3 active:bg-dark-surface2 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   {m.user?.avatar_url ? (
@@ -435,9 +435,9 @@ export function Members() {
                   )}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-white truncate">{m.user?.name}</p>
-                    <p className="text-xs text-[#636366] truncate">{m.user?.email}</p>
+                    <p className="text-xs text-t-muted truncate">{m.user?.email}</p>
                   </div>
-                  <ChevronRight size={16} className="text-[#636366] flex-shrink-0" />
+                  <ChevronRight size={16} className="text-t-muted flex-shrink-0" />
                 </div>
                 {(memberFields.list.tier || memberFields.list.points || memberFields.list.status) && (
                   <div className="flex items-center gap-2 mt-3 flex-wrap">
@@ -446,7 +446,7 @@ export function Members() {
                       <span className="text-xs font-semibold text-white">{m.current_points?.toLocaleString()} pts</span>
                     )}
                     {memberFields.list.status && (
-                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
+                      <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-medium ml-auto ${m.is_active ? 'bg-success/15 text-success' : 'bg-dark-surface3 text-t-muted'}`}>
                         {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                       </span>
                     )}
@@ -494,7 +494,7 @@ export function Members() {
                 <tr><td colSpan={visibleMemberCols} className="py-6"><QueryError onRetry={() => refetch()} /></td></tr>
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleMemberCols} className="py-12 text-center text-[#636366]">
+                  <td colSpan={visibleMemberCols} className="py-12 text-center text-t-muted">
                     No members yet. {search && 'Try a different search term.'}
                   </td>
                 </tr>
@@ -521,12 +521,12 @@ export function Members() {
                         )}
                         <div>
                           <p className="font-medium text-white">{m.user?.name}</p>
-                          <p className="text-xs text-[#636366]">{m.user?.email}</p>
+                          <p className="text-xs text-t-muted">{m.user?.email}</p>
                         </div>
                       </div>
                     </td>
                     {memberFields.list.phone && (
-                      <td className="py-3 text-xs text-[#a0a0a0]">{m.user?.phone || m.guests?.[0]?.phone || m.guests?.[0]?.mobile || '—'}</td>
+                      <td className="py-3 text-xs text-t-soft">{m.user?.phone || m.guests?.[0]?.phone || m.guests?.[0]?.mobile || '—'}</td>
                     )}
                     {memberFields.list.source && (
                       <td className="py-3 text-xs">
@@ -534,7 +534,7 @@ export function Members() {
                           <span className="inline-flex px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-medium">
                             {m.guests[0].lead_source}
                           </span>
-                        ) : <span className="text-[#636366]">—</span>}
+                        ) : <span className="text-t-muted">—</span>}
                       </td>
                     )}
                     {memberFields.list.tier && (
@@ -548,7 +548,7 @@ export function Members() {
                     )}
                     {memberFields.list.status && (
                       <td className="py-3">
-                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-[#32d74b]/15 text-[#32d74b]' : 'bg-dark-surface3 text-[#636366]'}`}>
+                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${m.is_active ? 'bg-success/15 text-success' : 'bg-dark-surface3 text-t-muted'}`}>
                           {m.is_active ? t('members.filters.active', 'Active') : t('members.filters.inactive', 'Inactive')}
                         </span>
                       </td>
@@ -592,14 +592,14 @@ export function Members() {
               <button
                 onClick={() => setUrlParam('page', String(Math.max(1, page - 1)), false)}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setUrlParam('page', String(page + 1), false)}
                 disabled={page >= ((data as any).last_page ?? 1)}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Next
               </button>
@@ -614,7 +614,7 @@ export function Members() {
           <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-6 border-b border-dark-border">
               <h2 className="text-lg font-bold text-white">Add New Member</h2>
-              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white">
+              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} aria-label={t('common.close', 'Close')} className="text-t-muted hover:text-white">
                 <X size={20} />
               </button>
             </div>
@@ -634,37 +634,37 @@ export function Members() {
                 <div className="p-6 space-y-4">
                   <div className="grid grid-cols-1 gap-4">
                     <div>
-                      <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Full Name *</label>
+                      <label className="block text-sm font-semibold text-t-soft mb-1">Full Name *</label>
                       <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="John Smith"
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Email Address *</label>
+                      <label className="block text-sm font-semibold text-t-soft mb-1">Email Address *</label>
                       <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@example.com"
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
-                    <div className="rounded-lg border border-primary-500/30 bg-primary-500/5 px-3 py-2.5 text-xs text-[#a0a0a0]">
+                    <div className="rounded-lg border border-primary-500/30 bg-primary-500/5 px-3 py-2.5 text-xs text-t-soft">
                       <span className="font-semibold text-primary-400">Password:</span> the member will receive a welcome email with a 6-digit code to set their own password. No password needed from you.
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Phone <span className="font-normal text-[#636366]">(optional)</span></label>
+                      <label className="block text-sm font-semibold text-t-soft mb-1">Phone <span className="font-normal text-t-muted">(optional)</span></label>
                       <input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="+1 234 567 8900"
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
-                      <label className="block text-sm font-semibold text-[#a0a0a0] mb-1">Starting Tier <span className="font-normal text-[#636366]">(optional, default Bronze)</span></label>
+                      <label className="block text-sm font-semibold text-t-soft mb-1">Starting Tier <span className="font-normal text-t-muted">(optional, default Bronze)</span></label>
                       <select value={form.tier_id} onChange={e => setForm(f => ({ ...f, tier_id: e.target.value }))}
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                         <option value="">Default tier</option>
                         {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                       </select>
                     </div>
                   </div>
-                  <p className="text-xs text-[#636366]">Member will receive 500 welcome bonus points automatically.</p>
+                  <p className="text-xs text-t-muted">Member will receive 500 welcome bonus points automatically.</p>
                 </div>
                 <div className="flex gap-3 p-6 border-t border-dark-border">
                   <button onClick={() => setShowCreate(false)}
-                    className="flex-1 border border-dark-border text-[#a0a0a0] py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
+                    className="flex-1 border border-dark-border text-t-soft py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
                   <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.email || createMutation.isPending}
                     className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     {createMutation.isPending ? 'Creating...' : 'Create Member'}
@@ -678,9 +678,9 @@ export function Members() {
                     <p className="text-xs text-t-secondary">Paste an email, registration form, business card text, or any message. AI will extract member details automatically.</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder="e.g. Hi, I'd like to sign up for the loyalty program. My name is Sarah Johnson, email sarah.j@acme.com, phone +971 50 123 4567. I'm a British national and I travel frequently for business..."
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                     <div className="flex justify-end gap-3">
-                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                       <button
                         onClick={async () => {
                           if (!captureText.trim()) return
@@ -717,15 +717,15 @@ export function Members() {
                         { key: 'language', label: 'Language', type: 'text' },
                       ].map(({ key, label, type }) => (
                         <div key={key}>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                          <label className="block text-xs text-t-soft mb-1">{label}</label>
                           <input type={type} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                            className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                         </div>
                       ))}
                       <div>
-                        <label className="block text-xs text-[#a0a0a0] mb-1">Starting Tier</label>
+                        <label className="block text-xs text-t-soft mb-1">Starting Tier</label>
                         <select value={tiers.find(t => t.name === captureResult.tier)?.id ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, tier_id: e.target.value, tier: tiers.find(t => t.id === Number(e.target.value))?.name ?? '' }))}
-                          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
+                          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
                           <option value="">Default tier</option>
                           {tiers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
@@ -733,14 +733,14 @@ export function Members() {
                     </div>
                     {captureResult.notes && (
                       <div>
-                        <label className="block text-xs text-[#a0a0a0] mb-1">AI Notes</label>
-                        <p className="text-xs text-t-secondary bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2">{captureResult.notes}</p>
+                        <label className="block text-xs text-t-soft mb-1">AI Notes</label>
+                        <p className="text-xs text-t-secondary bg-panel border border-dark-border rounded-lg px-3 py-2">{captureResult.notes}</p>
                       </div>
                     )}
                     <div className="flex justify-between pt-1">
-                      <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">Back</button>
+                      <button onClick={() => setCaptureResult(null)} className="text-sm text-t-muted hover:text-white">Back</button>
                       <div className="flex gap-3">
-                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                         <button
                           onClick={async () => {
                             const r = captureResult
@@ -813,7 +813,7 @@ export function Members() {
                   <p className="text-[11px] text-t-secondary truncate">to {quickAward.name}</p>
                 </div>
               </div>
-              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} aria-label={t('common.close', 'Close')} className="text-t-muted hover:text-white"><X size={18} /></button>
             </div>
             <div className="p-5 space-y-3">
               <input
@@ -822,14 +822,14 @@ export function Members() {
                 placeholder="100"
                 value={quickAwardPts}
                 onChange={e => setQuickAwardPts(e.target.value)}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2.5 text-2xl font-bold text-emerald-400 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2.5 text-2xl font-bold text-emerald-400 text-center focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <div className="flex flex-wrap gap-1.5">
                 {[100, 250, 500, 1000].map(n => (
                   <button
                     key={n}
                     onClick={() => setQuickAwardPts(String(n))}
-                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white transition-colors"
+                    className="px-2.5 py-1 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-t-soft hover:text-white transition-colors"
                   >
                     +{n}
                   </button>
@@ -840,11 +840,11 @@ export function Members() {
                 placeholder="Reason (e.g. Staff courtesy)"
                 value={quickAwardReason}
                 onChange={e => setQuickAwardReason(e.target.value)}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div className="flex justify-end gap-2 p-4 border-t border-dark-border">
-              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button onClick={() => { setQuickAward(null); setQuickAwardPts(''); setQuickAwardReason('') }} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">Cancel</button>
               <button
                 onClick={() => quickAwardMutation.mutate()}
                 disabled={!quickAwardPts || quickAwardMutation.isPending}
@@ -864,15 +864,15 @@ export function Members() {
           <div className="bg-dark-surface rounded-2xl border border-dark-border w-full max-w-md">
             <div className="flex items-center justify-between p-5 border-b border-dark-border">
               <h2 className="text-base font-bold text-white">Send to {selectedIds.size} members</h2>
-              <button onClick={() => setShowBulkMessage(false)} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
+              <button onClick={() => setShowBulkMessage(false)} aria-label={t('common.close', 'Close')} className="text-t-muted hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Category</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">Category</label>
                 <select
                   value={bulkMsg.category}
                   onChange={e => setBulkMsg(m => ({ ...m, category: e.target.value as any }))}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
                 >
                   <option value="transactional">Transactional (always delivered)</option>
                   <option value="offers">Offers</option>
@@ -880,28 +880,28 @@ export function Members() {
                   <option value="tier">Tier</option>
                   <option value="stays">Stays</option>
                 </select>
-                <p className="text-[11px] text-[#636366] mt-1">Members who opted out of this category will be skipped (transactional ignores opt-outs).</p>
+                <p className="text-[11px] text-t-muted mt-1">Members who opted out of this category will be skipped (transactional ignores opt-outs).</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Title</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">Title</label>
                 <input
                   type="text"
                   value={bulkMsg.title}
                   onChange={e => setBulkMsg(m => ({ ...m, title: e.target.value }))}
                   maxLength={120}
                   placeholder="A surprise for our Gold members"
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted"
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">Message</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">Message</label>
                 <textarea
                   value={bulkMsg.body}
                   onChange={e => setBulkMsg(m => ({ ...m, body: e.target.value }))}
                   maxLength={500}
                   rows={4}
                   placeholder="Double points this weekend on every stay."
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted"
                 />
               </div>
               <label className="flex items-center gap-2 text-sm text-[#e0e0e0] cursor-pointer">
@@ -914,7 +914,7 @@ export function Members() {
               </label>
             </div>
             <div className="flex justify-end gap-2 p-5 border-t border-dark-border">
-              <button onClick={() => setShowBulkMessage(false)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+              <button onClick={() => setShowBulkMessage(false)} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">Cancel</button>
               <button
                 onClick={() => bulkMessageMutation.mutate()}
                 disabled={bulkMessageMutation.isPending || !bulkMsg.title.trim() || !bulkMsg.body.trim()}

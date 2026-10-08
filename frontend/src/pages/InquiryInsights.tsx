@@ -49,7 +49,7 @@ export function InquiryInsights() {
   // No data yet — quiet placeholder.
   if (!today) {
     return (
-      <div className="text-center text-[#636366] py-12 text-sm">
+      <div className="text-center text-t-muted py-12 text-sm">
         {t('inquiries.insights.loading', 'Loading insights…')}
       </div>
     )
@@ -87,7 +87,7 @@ export function InquiryInsights() {
 
       {/* Inline focus pane when a TODAY tile is active. */}
       {dailyFocus && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               {dailyFocus === 'overdue' ? t('inquiries.today.focus.overdue', 'Overdue Tasks')
@@ -126,7 +126,7 @@ export function InquiryInsights() {
                     <ContactActions email={inq.guest?.email} phone={inq.guest?.phone} compact />
                     {inq.next_task_type && !inq.next_task_completed && dailyFocus !== 'new_leads' && (
                       <button onClick={() => completeMutation.mutate(inq.id)} title={t('inquiries.table.mark_task_done', 'Mark task done')}
-                        className="p-1 rounded-lg hover:bg-green-500/10 text-[#636366] hover:text-green-400 transition-colors">
+                        className="p-1 rounded-lg hover:bg-green-500/10 text-t-muted hover:text-green-400 transition-colors">
                         <CheckCircle2 size={13} />
                       </button>
                     )}

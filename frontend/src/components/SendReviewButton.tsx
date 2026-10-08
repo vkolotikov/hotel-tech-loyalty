@@ -68,19 +68,19 @@ export function SendReviewButton({ target, className, label = 'Request review' }
           <div className="bg-dark-surface border border-dark-border rounded-xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-white">Request a review</h3>
-              <button onClick={() => setOpen(false)} className="text-[#a0a0a0] hover:text-white"><X size={18} /></button>
+              <button onClick={() => setOpen(false)} className="text-t-soft hover:text-white"><X size={18} /></button>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider mb-2">Form</label>
+                <label className="block text-xs font-semibold text-t-soft uppercase tracking-wider mb-2">Form</label>
                 {forms.length === 0 ? (
-                  <div className="text-sm text-[#a0a0a0]">No active forms available.</div>
+                  <div className="text-sm text-t-soft">No active forms available.</div>
                 ) : (
                   <select
                     value={selected ?? ''}
                     onChange={e => setFormId(Number(e.target.value))}
-                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     {forms.map(f => (
                       <option key={f.id} value={f.id}>
@@ -92,12 +92,12 @@ export function SendReviewButton({ target, className, label = 'Request review' }
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider mb-2">Subject (optional)</label>
+                <label className="block text-xs font-semibold text-t-soft uppercase tracking-wider mb-2">Subject (optional)</label>
                 <input
                   value={subject}
                   onChange={e => setSubject(e.target.value)}
                   placeholder="How was your stay?"
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
               </div>
 

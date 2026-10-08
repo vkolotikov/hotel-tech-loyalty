@@ -118,7 +118,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
       <button
         type="button"
         onClick={() => { if (!open) calcPosition(); setOpen(!open) }}
-        className="w-full flex items-center gap-2 bg-[#1e1e1e] border border-[#2e2e50] rounded-lg px-3 py-2 text-sm text-left hover:border-[#6366f1]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366f1]/40"
+        className="w-full flex items-center gap-2 bg-panel border border-[#2e2e50] rounded-lg px-3 py-2 text-sm text-left hover:border-[#6366f1]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366f1]/40"
       >
         <Calendar size={15} className="text-[#6366f1] flex-shrink-0" />
         <span className={displayValue ? 'text-white flex-1' : 'text-[#4b5563] flex-1'}>{displayValue || placeholder}</span>

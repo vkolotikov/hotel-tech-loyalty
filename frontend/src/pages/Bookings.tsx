@@ -96,7 +96,7 @@ function DonutChart({ data }: { data: { label: string; key: string; count: numbe
     <div className="flex items-center gap-8">
       <div className="relative flex-shrink-0">
         <svg width={172} height={172} viewBox="0 0 172 172">
-          <circle cx={86} cy={86} r={radius} fill="none" stroke="rgba(34,51,45,0.6)" strokeWidth={stroke} />
+          <circle cx={86} cy={86} r={radius} fill="none" style={{ stroke: 'var(--legacy-panel-raised)' }} strokeWidth={stroke} />
           {data.map((d, i) => {
             const pct = d.count / total, dash = pct * circumference, cur = offset
             offset += dash
@@ -139,7 +139,7 @@ function BarChart({ data }: { data: { label: string; count: number }[] }) {
 
   return (
     <div>
-      <div className="rounded-xl p-2.5 mb-3" style={{ background: 'rgba(22,40,35,0.5)', border: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className="rounded-xl p-2.5 mb-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
         <span className="text-[11px] text-gray-400">
           {hovered !== null && data[hovered] ? <>{data[hovered].label}: <span className="text-white font-semibold">{data[hovered].count} arrivals</span></> : 'Hover for details'}
         </span>
@@ -186,7 +186,7 @@ function HorizontalBars({ data }: { data: { unit_name: string; revenue: number; 
               {money(d.revenue)} · {d.bookings} bookings · {d.avg_nights}n
             </span>
           </div>
-          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(34,51,45,0.6)' }}>
+          <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'var(--legacy-panel-raised)' }}>
             <div className="h-full rounded-full transition-all duration-500"
               style={{
                 width: `${(d.revenue / maxRev) * 100}%`,
@@ -215,7 +215,7 @@ function ChannelList({ data }: { data: { label: string; count: number }[] }) {
           <div className="w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white/10" style={{ background: CHART_COLORS[i % CHART_COLORS.length] }} />
           <span className="text-xs text-gray-400 flex-1 truncate">{d.label}</span>
           <span className="text-xs text-white font-semibold tabular-nums">{d.count}</span>
-          <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: 'rgba(34,51,45,0.6)' }}>
+          <div className="w-24 h-2 rounded-full overflow-hidden" style={{ background: 'var(--legacy-panel-raised)' }}>
             <div className="h-full rounded-full" style={{
               width: `${(d.count / total) * 100}%`,
               background: `linear-gradient(90deg, ${CHART_COLORS[i % CHART_COLORS.length]}aa, ${CHART_COLORS[i % CHART_COLORS.length]})`,
@@ -372,7 +372,7 @@ export function Bookings() {
     balance_due:     { icon: Clock,         color: 'text-orange-400',  bg: 'bg-orange-500/10' },
   }
 
-  const selectClass = 'bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
+  const selectClass = 'bg-panel border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
   // Native <option> defaults to OS-light styling; force dark so the open
   // dropdown matches the rest of the admin and the text stays readable.
   const selectStyle = { colorScheme: 'dark' as const }
@@ -489,7 +489,7 @@ export function Bookings() {
           are short (≤25 each) and reception wants them at a glance. */}
       {today && dailyFocus && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'rgba(18,24,22,0.96)' }}>
+          style={{ background: 'var(--legacy-card)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
               {dailyFocus === 'arrivals' ? t('bookings.today.arrivals', 'Arrivals Today')
@@ -561,7 +561,7 @@ export function Bookings() {
           </select>
         )}
         {dashboard?.scope && (
-          <span className="text-xs text-[#636366] ml-auto">{dashboard.scope.label}: {dashboard.scope.from} — {dashboard.scope.to}</span>
+          <span className="text-xs text-t-muted ml-auto">{dashboard.scope.label}: {dashboard.scope.from} — {dashboard.scope.to}</span>
         )}
       </div>
 
@@ -574,7 +574,7 @@ export function Bookings() {
             return (
               <div key={kpi.key} className="bg-dark-surface rounded-xl border border-dark-border p-4 hover:border-white/10 transition-colors">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] text-[#636366] font-semibold uppercase tracking-wider truncate">{kpi.label}</span>
+                  <span className="text-[10px] text-t-muted font-semibold uppercase tracking-wider truncate">{kpi.label}</span>
                   <div className={`p-1.5 rounded-lg ${meta.bg}`}>
                     <Icon size={12} className={meta.color} />
                   </div>
@@ -591,28 +591,28 @@ export function Bookings() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {(a!.paymentMix?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.payment_mix', 'Payment Mix')}</h3>
+              <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold mb-5">{t('bookings.charts.payment_mix', 'Payment Mix')}</h3>
               <DonutChart data={a!.paymentMix || []} />
             </Card>
           )}
           {(a!.arrivalPace?.total ?? 0) > 0 && (
             <Card className="p-6">
               <div className="flex items-center justify-between mb-5">
-                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">{t('bookings.charts.arrival_pace', 'Arrival Pace')}</h3>
-                <span className="text-xs text-[#636366] tabular-nums">{t('bookings.charts.arrival_pace_total', { count: a!.arrivalPace?.total ?? 0, defaultValue: '{{count}} total' })}</span>
+                <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold">{t('bookings.charts.arrival_pace', 'Arrival Pace')}</h3>
+                <span className="text-xs text-t-muted tabular-nums">{t('bookings.charts.arrival_pace_total', { count: a!.arrivalPace?.total ?? 0, defaultValue: '{{count}} total' })}</span>
               </div>
               <BarChart data={a!.arrivalPace?.days || []} />
             </Card>
           )}
           {(a!.unitPerformance?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.unit_performance', 'Unit Performance')}</h3>
+              <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold mb-5">{t('bookings.charts.unit_performance', 'Unit Performance')}</h3>
               <HorizontalBars data={a!.unitPerformance || []} />
             </Card>
           )}
           {(a!.channelMix?.length ?? 0) > 0 && (
             <Card className="p-6">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-5">{t('bookings.charts.channel_mix', 'Channel Mix')}</h3>
+              <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold mb-5">{t('bookings.charts.channel_mix', 'Channel Mix')}</h3>
               <ChannelList data={a!.channelMix || []} />
             </Card>
           )}
@@ -625,7 +625,7 @@ export function Bookings() {
           {/* Upcoming Arrivals — enriched row with channel + money. */}
           {(dashboard.arrivals?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.upcoming_arrivals', 'Upcoming Arrivals')}</h3>
+              <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold mb-4">{t('bookings.panels.upcoming_arrivals', 'Upcoming Arrivals')}</h3>
               <div className="space-y-2">
                 {dashboard.arrivals.map((a: any) => {
                   const total = Number(a.price_total ?? 0)
@@ -633,7 +633,7 @@ export function Bookings() {
                   const balance = Math.max(0, total - paid)
                   return (
                     <Link key={a.id} to={`/bookings/${a.id}`}
-                      className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
+                      className="flex items-center justify-between rounded-lg p-3 bg-panel border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-sm font-semibold text-white truncate">{a.guest_name || 'Unknown'}</span>
@@ -643,7 +643,7 @@ export function Bookings() {
                             </span>
                           )}
                         </div>
-                        <div className="text-xs text-[#636366] mt-0.5 flex items-center gap-2 flex-wrap">
+                        <div className="text-xs text-t-muted mt-0.5 flex items-center gap-2 flex-wrap">
                           <span className="truncate">{a.apartment_name || '—'}</span>
                           <span>· {a.adults}A{a.children > 0 ? ` ${a.children}C` : ''}</span>
                           <span>· {fmtDateShort(a.arrival_date)} → {fmtDateShort(a.departure_date)}</span>
@@ -653,8 +653,8 @@ export function Bookings() {
                         {total > 0 && (
                           <div className="text-xs tabular-nums">
                             <span className="text-emerald-400 font-semibold">{money(paid)}</span>
-                            <span className="text-[#636366]"> / </span>
-                            <span className={balance > 0 ? 'text-red-400' : 'text-[#636366]'}>{money(total)}</span>
+                            <span className="text-t-muted"> / </span>
+                            <span className={balance > 0 ? 'text-red-400' : 'text-t-muted'}>{money(total)}</span>
                           </div>
                         )}
                         {a.payment_status && (
@@ -673,14 +673,14 @@ export function Bookings() {
           {/* Recent Unpaid */}
           {(dashboard.recentUnpaidBookings?.length > 0) && (
             <Card className="p-5">
-              <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold mb-4">{t('bookings.panels.recent_unpaid', 'Recent Unpaid')}</h3>
+              <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold mb-4">{t('bookings.panels.recent_unpaid', 'Recent Unpaid')}</h3>
               <div className="space-y-2">
                 {dashboard.recentUnpaidBookings.map((b: any) => (
                   <Link key={b.id} to={`/bookings/${b.id}`}
-                    className="flex items-center justify-between rounded-lg p-3 bg-[#1e1e1e] border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
+                    className="flex items-center justify-between rounded-lg p-3 bg-panel border border-dark-border hover:border-white/10 hover:bg-dark-surface2 transition-colors">
                     <div className="min-w-0">
                       <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
-                      <div className="text-xs text-[#636366]">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
+                      <div className="text-xs text-t-muted">{b.apartment_name || '—'} · {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}</div>
                     </div>
                     <div className="text-right flex-shrink-0 ml-3 tabular-nums">
                       <div className="text-xs text-emerald-400 font-semibold">{money(b.price_paid || 0)}</div>
@@ -700,7 +700,7 @@ export function Bookings() {
           {dashboard.syncHealth && (
             <Card className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xs uppercase tracking-wider text-[#636366] font-bold">{t('bookings.panels.sync_health', 'Sync Health')}</h3>
+                <h3 className="text-xs uppercase tracking-wider text-t-muted font-bold">{t('bookings.panels.sync_health', 'Sync Health')}</h3>
                 <span className={`flex items-center gap-1.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${dashboard.syncHealth.pmsEnabled
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
                   : 'bg-amber-500/15 text-amber-400 border border-amber-500/20'}`}>
@@ -739,7 +739,7 @@ export function Bookings() {
           <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">{t('bookings.tabs.arrivals_title', 'Upcoming Arrivals')}</h3>
-              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.tabs.arrivals_sub', 'Next 7 days · sorted by arrival date')}</p>
+              <p className="text-xs text-t-muted mt-0.5">{t('bookings.tabs.arrivals_sub', 'Next 7 days · sorted by arrival date')}</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
               {t('bookings.tabs.arrivals_count', { count: dashboard?.arrivals?.length ?? 0, defaultValue: '{{count}} arrivals' })}
@@ -747,7 +747,7 @@ export function Bookings() {
           </div>
           <div className="divide-y divide-dark-border">
             {(dashboard?.arrivals?.length ?? 0) === 0 ? (
-              <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.tabs.arrivals_empty', 'No arrivals scheduled in the next 7 days.')}</div>
+              <div className="p-12 text-center text-sm text-t-muted">{t('bookings.tabs.arrivals_empty', 'No arrivals scheduled in the next 7 days.')}</div>
             ) : dashboard.arrivals.map((a: any) => (
               <CompactBookingRow key={a.id} b={a} t={t} variant="arrival" />
             ))}
@@ -765,7 +765,7 @@ export function Bookings() {
           <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">{t('bookings.panels.website_reservations', 'Website Reservations')}</h3>
-              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
+              <p className="text-xs text-t-muted mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
               {t('bookings.panels.website_count_total', { count: data?.total ?? 0, defaultValue: '{{count}} total' })}
@@ -776,10 +776,10 @@ export function Bookings() {
               UX consistent across tabs. */}
           <div className="px-5 py-3 border-b border-dark-border">
             <div className="relative max-w-md">
-              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
               <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
                 placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
-                className="w-full pl-9 pr-3 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
             </div>
           </div>
 
@@ -787,7 +787,7 @@ export function Bookings() {
             {isLoading ? (
               <div className="p-12 text-center"><div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
             ) : bookings.length === 0 ? (
-              <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.panels.website_empty', 'No website bookings yet. Share your booking widget URL to start collecting direct reservations.')}</div>
+              <div className="p-12 text-center text-sm text-t-muted">{t('bookings.panels.website_empty', 'No website bookings yet. Share your booking widget URL to start collecting direct reservations.')}</div>
             ) : bookings.map((b: any) => (
               <CompactBookingRow key={b.id} b={b} t={t} variant="website" />
             ))}
@@ -795,14 +795,14 @@ export function Bookings() {
 
           {lastPage > 1 && (
             <div className="flex items-center justify-between p-4 border-t border-dark-border">
-              <span className="text-xs text-[#636366]">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
+              <span className="text-xs text-t-muted">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
               <div className="flex gap-1">
                 <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                  className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                  className="p-2 rounded-lg bg-panel border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                   <ChevronLeft size={14} />
                 </button>
                 <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                  className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                  className="p-2 rounded-lg bg-panel border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                   <ChevronRight size={14} />
                 </button>
               </div>
@@ -818,7 +818,7 @@ export function Bookings() {
           <div className="px-5 py-4 border-b border-dark-border flex items-center justify-between">
             <div>
               <h3 className="text-sm font-bold text-white">{t('bookings.panels.website_reservations', 'Website Reservations')}</h3>
-              <p className="text-xs text-[#636366] mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
+              <p className="text-xs text-t-muted mt-0.5">{t('bookings.panels.website_reservations_sub', 'Direct bookings via your booking widget')}</p>
             </div>
             <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30">
               {t('bookings.panels.website_count', { count: dashboard.websiteBookings.length, defaultValue: '{{count}} recent' })}
@@ -828,14 +828,14 @@ export function Bookings() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-dark-border">
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.guest', 'Guest')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.unit', 'Unit')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.stay', 'Stay')}</th>
-                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.total', 'Total')}</th>
-                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.paid', 'Paid')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.payment', 'Payment')}</th>
-                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]">{t('bookings.table.booked', 'Booked')}</th>
-                  <th className="text-center p-3 text-[10px] uppercase tracking-wider font-medium text-[#636366]"></th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.guest', 'Guest')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.unit', 'Unit')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.stay', 'Stay')}</th>
+                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.total', 'Total')}</th>
+                  <th className="text-right p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.paid', 'Paid')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.payment', 'Payment')}</th>
+                  <th className="text-left p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted">{t('bookings.table.booked', 'Booked')}</th>
+                  <th className="text-center p-3 text-[10px] uppercase tracking-wider font-medium text-t-muted"></th>
                 </tr>
               </thead>
               <tbody>
@@ -846,15 +846,15 @@ export function Bookings() {
                     <tr key={b.id} className="border-b border-dark-border/60 hover:bg-dark-surface2/40 transition-colors">
                       <td className="p-3">
                         <div className="text-sm text-white font-medium truncate max-w-[180px]">{b.guest_name || '—'}</div>
-                        {b.guest_email && <div className="text-[11px] text-[#636366] truncate max-w-[180px]">{b.guest_email}</div>}
+                        {b.guest_email && <div className="text-[11px] text-t-muted truncate max-w-[180px]">{b.guest_email}</div>}
                       </td>
-                      <td className="p-3 text-xs text-[#a0a0a0] truncate max-w-[180px]">{b.apartment_name || '—'}</td>
-                      <td className="p-3 text-xs text-[#a0a0a0] whitespace-nowrap">
+                      <td className="p-3 text-xs text-t-soft truncate max-w-[180px]">{b.apartment_name || '—'}</td>
+                      <td className="p-3 text-xs text-t-soft whitespace-nowrap">
                         {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
-                        {(b.adults != null) && <span className="text-[#636366]"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span>}
+                        {(b.adults != null) && <span className="text-t-muted"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span>}
                       </td>
                       <td className="p-3 text-right text-sm text-white font-semibold tabular-nums">{money(total)}</td>
-                      <td className={`p-3 text-right text-sm tabular-nums ${paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-[#a0a0a0]'}`}>{money(paid)}</td>
+                      <td className={`p-3 text-right text-sm tabular-nums ${paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-t-soft'}`}>{money(paid)}</td>
                       <td className="p-3">
                         {b.payment_status && (
                           <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400 border border-gray-500/20'}`}>
@@ -862,7 +862,7 @@ export function Bookings() {
                           </span>
                         )}
                       </td>
-                      <td className="p-3 text-xs text-[#636366] whitespace-nowrap">{b.source_created_at ? new Date(b.source_created_at).toLocaleDateString() : '—'}</td>
+                      <td className="p-3 text-xs text-t-muted whitespace-nowrap">{b.source_created_at ? new Date(b.source_created_at).toLocaleDateString() : '—'}</td>
                       <td className="p-3 text-center">
                         <Link to={`/bookings/${b.id}`} className="inline-flex items-center gap-1 text-xs text-primary-400 hover:text-primary-300">
                           <Eye size={12} />
@@ -898,15 +898,15 @@ export function Bookings() {
       <Card className="p-4 space-y-3">
         {/* Search */}
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
           <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
             placeholder={t('bookings.filters.search_placeholder', 'Search guest, email, reference…')}
-            className="w-full pl-9 pr-4 py-2.5 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            className="w-full pl-9 pr-4 py-2.5 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
 
         {/* Status pill row */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[9px] uppercase tracking-wider font-bold text-[#636366] pr-1">{t('bookings.filters.status_label', 'Status')}</span>
+          <span className="text-[9px] uppercase tracking-wider font-bold text-t-muted pr-1">{t('bookings.filters.status_label', 'Status')}</span>
           {([
             { v: '',            label: t('bookings.filters.all_statuses',    'All'),         tone: 'gray' },
             { v: 'new',         label: t('bookings.filters.status.new',         'New'),         tone: 'blue' },
@@ -920,7 +920,7 @@ export function Bookings() {
             return (
               <button key={p.v || 'all'} onClick={() => { setStatus(p.v); setPage(1) }}
                 className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
-                  active ? `${STATUS_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40'}` : 'bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white'
+                  active ? `${STATUS_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40'}` : 'bg-panel border border-dark-border text-t-secondary hover:text-white'
                 }`}>{p.label}</button>
             )
           })}
@@ -929,7 +929,7 @@ export function Bookings() {
         {/* Payment pill row — hidden on Unpaid tab (already filtered). */}
         {tab !== 'unpaid' && (
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[9px] uppercase tracking-wider font-bold text-[#636366] pr-1">{t('bookings.filters.payment_label', 'Payment')}</span>
+            <span className="text-[9px] uppercase tracking-wider font-bold text-t-muted pr-1">{t('bookings.filters.payment_label', 'Payment')}</span>
             {([
               { v: '',                  label: t('bookings.filters.all_payments', 'All') },
               { v: 'paid',              label: t('bookings.filters.payment.paid',              'Paid') },
@@ -942,7 +942,7 @@ export function Bookings() {
               return (
                 <button key={p.v || 'all'} onClick={() => { setPaymentStatus(p.v); setPage(1) }}
                   className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${
-                    active ? (PAY_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40') : 'bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white'
+                    active ? (PAY_PILL[p.v] || 'bg-primary-500/20 text-primary-300 border border-primary-500/40') : 'bg-panel border border-dark-border text-t-secondary hover:text-white'
                   }`}>{p.label}</button>
               )
             })}
@@ -958,7 +958,7 @@ export function Bookings() {
         <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-[#636366] font-bold bg-[#1a1a1a]">
+              <tr className="border-b border-dark-border text-[10px] uppercase tracking-wider text-t-muted font-bold bg-panel-dim">
                 <th className="text-left p-4">{t('bookings.table.guest', 'Guest')}</th>
                 <th className="text-left p-4">{t('bookings.table.unit', 'Unit')}</th>
                 <th className="text-left p-4">{t('bookings.table.stay', 'Stay')}</th>
@@ -971,11 +971,11 @@ export function Bookings() {
             </thead>
             <tbody>
               {isLoading ? (
-                <tr><td colSpan={8} className="p-12 text-center text-[#636366]">
+                <tr><td colSpan={8} className="p-12 text-center text-t-muted">
                   <div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" />
                 </td></tr>
               ) : bookings.length === 0 ? (
-                <tr><td colSpan={8} className="p-12 text-center text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</td></tr>
+                <tr><td colSpan={8} className="p-12 text-center text-t-muted">{t('bookings.table.no_results', 'No bookings found.')}</td></tr>
               ) : bookings.map((b: any) => (
                 <ReservationRow key={b.id} b={b} t={t} refetch={refetch} />
               ))}
@@ -989,7 +989,7 @@ export function Bookings() {
           {isLoading ? (
             <div className="p-12 text-center"><div className="w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
           ) : bookings.length === 0 ? (
-            <div className="p-12 text-center text-sm text-[#636366]">{t('bookings.table.no_results', 'No bookings found.')}</div>
+            <div className="p-12 text-center text-sm text-t-muted">{t('bookings.table.no_results', 'No bookings found.')}</div>
           ) : bookings.map((b: any) => (
             <ReservationCard key={b.id} b={b} t={t} refetch={refetch} />
           ))}
@@ -997,14 +997,14 @@ export function Bookings() {
 
         {lastPage > 1 && (
           <div className="flex items-center justify-between p-4 border-t border-dark-border">
-            <span className="text-xs text-[#636366]">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
+            <span className="text-xs text-t-muted">{t('bookings.pagination', { page, total: lastPage, count: data?.total ?? 0, defaultValue: 'Page {{page}} of {{total}} · {{count}} total' })}</span>
             <div className="flex gap-1">
               <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
-                className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                className="p-2 rounded-lg bg-panel border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                 <ChevronLeft size={14} />
               </button>
               <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
-                className="p-2 rounded-lg bg-[#1e1e1e] border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
+                className="p-2 rounded-lg bg-panel border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2 disabled:opacity-30 transition-colors">
                 <ChevronRight size={14} />
               </button>
             </div>
@@ -1075,10 +1075,10 @@ function ReservationCard({ b, t, refetch }: {
       <div className="flex items-start justify-between gap-3 mb-2">
         <div className="min-w-0 flex-1">
           <div className="text-sm font-semibold text-white truncate">{b.guest_name || '—'}</div>
-          {b.guest_email && <div className="text-[11px] text-[#636366] truncate">{b.guest_email}</div>}
+          {b.guest_email && <div className="text-[11px] text-t-muted truncate">{b.guest_email}</div>}
         </div>
         <Link to={`/bookings/${b.id}`}
-          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white transition-colors flex-shrink-0">
+          className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white transition-colors flex-shrink-0">
           <Eye size={14} />
         </Link>
       </div>
@@ -1090,12 +1090,12 @@ function ReservationCard({ b, t, refetch }: {
             {b.channel_name}
           </span>
         )}
-        {b.apartment_name && <span className="text-[11px] text-[#a0a0a0] truncate max-w-[140px]">{b.apartment_name}</span>}
+        {b.apartment_name && <span className="text-[11px] text-t-soft truncate max-w-[140px]">{b.apartment_name}</span>}
       </div>
       <div className="text-[11px] text-[#9a9a9a] mb-2.5 tabular-nums">
-        {fmtDateShort(b.arrival_date)} <span className="text-[#636366]">→</span> {fmtDateShort(b.departure_date)}
-        {nights ? <span className="text-[#636366]"> · {nights}n</span> : null}
-        {b.adults != null ? <span className="text-[#636366]"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span> : null}
+        {fmtDateShort(b.arrival_date)} <span className="text-t-muted">→</span> {fmtDateShort(b.departure_date)}
+        {nights ? <span className="text-t-muted"> · {nights}n</span> : null}
+        {b.adults != null ? <span className="text-t-muted"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span> : null}
       </div>
 
       {/* Money + progress bar */}
@@ -1103,8 +1103,8 @@ function ReservationCard({ b, t, refetch }: {
         <div className="flex items-baseline justify-between text-xs tabular-nums">
           <span>
             <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
-            <span className="text-[#636366]"> / </span>
-            <span className="text-[#a0a0a0]">{money(total)}</span>
+            <span className="text-t-muted"> / </span>
+            <span className="text-t-soft">{money(total)}</span>
           </span>
           {balance > 0 ? (
             <span className="text-[10px] text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
@@ -1226,18 +1226,18 @@ function ReservationRow({ b, t, refetch }: {
       {/* Guest */}
       <td className="p-4">
         <div className="text-sm text-white font-medium truncate max-w-[200px]">{b.guest_name || '—'}</div>
-        {b.guest_email && <div className="text-[11px] text-[#636366] truncate max-w-[200px]">{b.guest_email}</div>}
+        {b.guest_email && <div className="text-[11px] text-t-muted truncate max-w-[200px]">{b.guest_email}</div>}
       </td>
 
       {/* Unit */}
-      <td className="p-4 text-xs text-[#a0a0a0] truncate max-w-[160px]">{b.apartment_name || '—'}</td>
+      <td className="p-4 text-xs text-t-soft truncate max-w-[160px]">{b.apartment_name || '—'}</td>
 
       {/* Stay (combined arrival → departure + nights + pax) */}
       <td className="p-4 text-xs whitespace-nowrap">
         <div className="text-[#e0e0e0] tabular-nums">
-          {fmtDateShort(b.arrival_date)} <span className="text-[#636366]">→</span> {fmtDateShort(b.departure_date)}
+          {fmtDateShort(b.arrival_date)} <span className="text-t-muted">→</span> {fmtDateShort(b.departure_date)}
         </div>
-        <div className="text-[10px] text-[#636366] mt-0.5">
+        <div className="text-[10px] text-t-muted mt-0.5">
           {nights ? `${nights}n` : ''}
           {b.adults != null ? ` · ${b.adults}A${b.children > 0 ? ` ${b.children}C` : ''}` : ''}
         </div>
@@ -1250,7 +1250,7 @@ function ReservationRow({ b, t, refetch }: {
           {balance > 0
             ? <span className="text-red-400 font-semibold">{money(balance)} {t('bookings.row.due', 'due')}</span>
             : total > 0 ? <span className="text-emerald-400/80 font-semibold">{t('bookings.row.settled', 'Settled')}</span>
-                        : <span className="text-[#636366]">—</span>}
+                        : <span className="text-t-muted">—</span>}
         </div>
       </td>
 
@@ -1260,7 +1260,7 @@ function ReservationRow({ b, t, refetch }: {
           <span className={`inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border whitespace-nowrap ${channelTone}`}>
             {b.channel_name}
           </span>
-        ) : <span className="text-[#636366] text-xs">—</span>}
+        ) : <span className="text-t-muted text-xs">—</span>}
       </td>
 
       {/* Status — inline-editable dropdown */}
@@ -1327,7 +1327,7 @@ function ReservationRow({ b, t, refetch }: {
       {/* View */}
       <td className="p-4 text-center">
         <Link to={`/bookings/${b.id}`}
-          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white transition-colors">
+          className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white transition-colors">
           <Eye size={13} />
         </Link>
       </td>
@@ -1393,18 +1393,18 @@ function CompactBookingRow({
             </span>
           )}
         </div>
-        <div className="text-[11px] text-[#a0a0a0] mt-0.5 flex items-center gap-2 flex-wrap">
+        <div className="text-[11px] text-t-soft mt-0.5 flex items-center gap-2 flex-wrap">
           {b.guest_email && (
             <span className="inline-flex items-center gap-1 truncate max-w-[180px]">
-              <Mail size={10} className="text-[#636366]" />{b.guest_email}
+              <Mail size={10} className="text-t-muted" />{b.guest_email}
             </span>
           )}
           {b.guest_phone && (
             <span className="inline-flex items-center gap-1">
-              <Phone size={10} className="text-[#636366]" />{b.guest_phone}
+              <Phone size={10} className="text-t-muted" />{b.guest_phone}
             </span>
           )}
-          {b.apartment_name && <span className="text-[#636366]">· {b.apartment_name}</span>}
+          {b.apartment_name && <span className="text-t-muted">· {b.apartment_name}</span>}
         </div>
       </div>
 
@@ -1413,7 +1413,7 @@ function CompactBookingRow({
         <div className="text-xs text-[#e0e0e0] tabular-nums whitespace-nowrap">
           {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
         </div>
-        <div className="text-[10px] text-[#636366]">
+        <div className="text-[10px] text-t-muted">
           {nights ? `${nights}n` : ''}
           {b.adults != null ? ` · ${b.adults}A${b.children > 0 ? ` ${b.children}C` : ''}` : ''}
         </div>
@@ -1423,8 +1423,8 @@ function CompactBookingRow({
       <div className="text-right flex-shrink-0 min-w-[150px]">
         <div className="text-xs tabular-nums whitespace-nowrap">
           <span className={paid >= total && total > 0 ? 'text-emerald-400 font-semibold' : 'text-white font-semibold'}>{money(paid)}</span>
-          <span className="text-[#636366]"> / </span>
-          <span className="text-[#a0a0a0]">{money(total)}</span>
+          <span className="text-t-muted"> / </span>
+          <span className="text-t-soft">{money(total)}</span>
         </div>
         <div className="h-1 mt-1.5 bg-white/[0.04] rounded-full overflow-hidden">
           <div className={`h-full ${barTone} transition-all`} style={{ width: `${paidPct}%` }} />
@@ -1443,7 +1443,7 @@ function CompactBookingRow({
 
       {/* View */}
       <div className="flex-shrink-0">
-        <span className="p-1.5 rounded-lg bg-white/[0.04] text-[#a0a0a0] hover:bg-white/[0.08] hover:text-white inline-flex">
+        <span className="p-1.5 rounded-lg bg-white/[0.04] text-t-soft hover:bg-white/[0.08] hover:text-white inline-flex">
           <Eye size={13} />
         </span>
       </div>

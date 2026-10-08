@@ -216,13 +216,13 @@ export function Segments() {
                 </select>
               </div>
               <button onClick={addFilter}
-                className="flex items-center gap-1 bg-dark-surface2 border border-dark-border text-[#a0a0a0] hover:text-white text-xs px-2 py-1 rounded">
+                className="flex items-center gap-1 bg-dark-surface2 border border-dark-border text-t-soft hover:text-white text-xs px-2 py-1 rounded">
                 <Plus size={12} /> {t('segments.form.add_filter', 'Add filter')}
               </button>
             </div>
 
             {form.definition.filters.length === 0 ? (
-              <p className="text-xs text-[#636366] py-4 text-center">
+              <p className="text-xs text-t-muted py-4 text-center">
                 {t('segments.form.no_filters', 'No filters yet. Click "Add filter" to start. An empty segment matches every active member.')}
               </p>
             ) : (
@@ -243,11 +243,11 @@ export function Segments() {
 
           {/* Preview result */}
           {previewResult && (
-            <div className="rounded-lg border border-dark-border bg-[#1a1a1a] p-3 mb-4">
+            <div className="rounded-lg border border-dark-border bg-panel-dim p-3 mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Users size={14} className="text-primary-400" />
                 <span className="text-sm text-white font-semibold">{t('segments.preview_result.matching', { count: previewResult.count.toLocaleString(), defaultValue: '{{count}} matching members' })}</span>
-                <span className="text-[11px] text-[#636366]">{t('segments.preview_result.shown', { count: previewResult.sample.length, defaultValue: '· first {{count}} shown' })}</span>
+                <span className="text-[11px] text-t-muted">{t('segments.preview_result.shown', { count: previewResult.sample.length, defaultValue: '· first {{count}} shown' })}</span>
               </div>
               {previewResult.sample.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5 text-xs">
@@ -260,7 +260,7 @@ export function Segments() {
                           {m.tier}
                         </span>
                       )}
-                      <span className="text-[#636366] ml-auto">{(m.current_points ?? 0).toLocaleString()} pts</span>
+                      <span className="text-t-muted ml-auto">{(m.current_points ?? 0).toLocaleString()} pts</span>
                     </div>
                   ))}
                 </div>
@@ -277,7 +277,7 @@ export function Segments() {
               {t('segments.form.preview', 'Preview')}
             </button>
             <div className="flex gap-2">
-              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('segments.form.cancel', 'Cancel')}</button>
+              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('segments.form.cancel', 'Cancel')}</button>
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !form.name.trim()}
@@ -292,11 +292,11 @@ export function Segments() {
       {/* Segments list */}
       <Card>
         {isLoading ? (
-          <p className="text-center text-[#636366] py-8 text-sm">{t('segments.list.loading', 'Loading…')}</p>
+          <p className="text-center text-t-muted py-8 text-sm">{t('segments.list.loading', 'Loading…')}</p>
         ) : isError ? (
           <QueryError onRetry={() => refetch()} />
         ) : segments.length === 0 ? (
-          <p className="text-center text-[#636366] py-8 text-sm">
+          <p className="text-center text-t-muted py-8 text-sm">
             {t('segments.list.empty', 'No saved segments yet. Click "New segment" to create your first.')}
           </p>
         ) : (
@@ -319,9 +319,9 @@ export function Segments() {
                   <tr key={s.id} className="hover:bg-dark-surface2">
                     <td className="py-3">
                       <div className="text-white font-medium">{s.name}</div>
-                      {s.description && <div className="text-[11px] text-[#636366] mt-0.5">{s.description}</div>}
+                      {s.description && <div className="text-[11px] text-t-muted mt-0.5">{s.description}</div>}
                     </td>
-                    <td className="py-3 text-xs text-[#a0a0a0]">
+                    <td className="py-3 text-xs text-t-soft">
                       {t('segments.list.filters_count', { count: filterCount, operator: s.definition?.operator ?? 'AND' })}
                     </td>
                     <td className="py-3 text-right font-semibold text-white">
@@ -330,14 +330,14 @@ export function Segments() {
                     <td className="py-3 text-xs text-t-secondary">
                       {s.last_sent_at ? format(new Date(s.last_sent_at), 'MMM d, HH:mm') : t('segments.list.never', 'Never')}
                     </td>
-                    <td className="py-3 text-right text-xs text-[#a0a0a0]">{s.total_sent_count.toLocaleString()}</td>
+                    <td className="py-3 text-right text-xs text-t-soft">{s.total_sent_count.toLocaleString()}</td>
                     <td className="py-3">
                       <div className="flex gap-1 justify-end">
                         <button onClick={() => { setSendingSegment(s); setSendForm({ title: '', body: '', send_email: false, category: 'transactional' }) }}
                           className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-2.5 py-1 rounded">
                           <Send size={12} /> {t('segments.list.send', 'Send')}
                         </button>
-                        <button onClick={() => startEdit(s)} className="p-1.5 rounded hover:bg-dark-surface3 text-[#a0a0a0]" title={t('segments.list.edit_title', 'Edit')}><Pencil size={13} /></button>
+                        <button onClick={() => startEdit(s)} className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft" title={t('segments.list.edit_title', 'Edit')}><Pencil size={13} /></button>
                         <button onClick={() => confirm(t('segments.list.delete_confirm', { name: s.name, defaultValue: 'Delete segment "{{name}}"?' })) && deleteMutation.mutate(s.id)}
                           className="p-1.5 rounded hover:bg-dark-surface3 text-red-400" title={t('segments.list.delete_title', 'Delete')}><Trash2 size={13} /></button>
                       </div>
@@ -361,21 +361,21 @@ export function Segments() {
                   <Sparkles size={16} className="text-primary-400" />
                   {t('segments.send.title', { name: sendingSegment.name, defaultValue: 'Send to "{{name}}"' })}
                 </h2>
-                <p className="text-[11px] text-[#636366] mt-0.5">
+                <p className="text-[11px] text-t-muted mt-0.5">
                   {sendingSegment.member_count_cached != null
                     ? t('segments.send.audience', { count: sendingSegment.member_count_cached.toLocaleString(), defaultValue: 'Audience: ~{{count}} members' })
                     : t('segments.send.audience_unknown', 'Audience: ~? members')}
                 </p>
               </div>
-              <button onClick={() => setSendingSegment(null)} aria-label={t('common.close', 'Close')} className="text-[#636366] hover:text-white"><X size={20} /></button>
+              <button onClick={() => setSendingSegment(null)} aria-label={t('common.close', 'Close')} className="text-t-muted hover:text-white"><X size={20} /></button>
             </div>
             <div className="p-5 space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">{t('segments.send.category', 'Category')}</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">{t('segments.send.category', 'Category')}</label>
                 <select
                   value={sendForm.category}
                   onChange={e => setSendForm(s => ({ ...s, category: e.target.value as any }))}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white"
                 >
                   <option value="transactional">{t('segments.send.categories.transactional', 'Transactional (always delivered)')}</option>
                   <option value="offers">{t('segments.send.categories.offers', 'Offers')}</option>
@@ -383,19 +383,19 @@ export function Segments() {
                   <option value="tier">{t('segments.send.categories.tier', 'Tier')}</option>
                   <option value="stays">{t('segments.send.categories.stays', 'Stays')}</option>
                 </select>
-                <p className="text-[11px] text-[#636366] mt-1">{t('segments.send.category_hint', 'Members opted-out of this category will be skipped (transactional ignores opt-outs).')}</p>
+                <p className="text-[11px] text-t-muted mt-1">{t('segments.send.category_hint', 'Members opted-out of this category will be skipped (transactional ignores opt-outs).')}</p>
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">{t('segments.send.campaign_title', 'Title')}</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">{t('segments.send.campaign_title', 'Title')}</label>
                 <input value={sendForm.title} onChange={e => setSendForm(s => ({ ...s, title: e.target.value }))}
                   maxLength={120} placeholder={t('segments.send.title_placeholder', 'A surprise for our Gold members')}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-[#a0a0a0] mb-1">{t('segments.send.message', 'Message')}</label>
+                <label className="block text-xs font-semibold text-t-soft mb-1">{t('segments.send.message', 'Message')}</label>
                 <textarea value={sendForm.body} onChange={e => setSendForm(s => ({ ...s, body: e.target.value }))}
                   maxLength={500} rows={4} placeholder={t('segments.send.message_placeholder', 'Double points this weekend on every stay.')}
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
               </div>
               <label className="flex items-center gap-2 text-sm text-[#e0e0e0] cursor-pointer">
                 <input type="checkbox" checked={sendForm.send_email} onChange={e => setSendForm(s => ({ ...s, send_email: e.target.checked }))} />
@@ -403,7 +403,7 @@ export function Segments() {
               </label>
             </div>
             <div className="flex justify-end gap-2 p-5 border-t border-dark-border">
-              <button onClick={() => setSendingSegment(null)} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('segments.send.cancel', 'Cancel')}</button>
+              <button onClick={() => setSendingSegment(null)} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('segments.send.cancel', 'Cancel')}</button>
               <button
                 onClick={() => sendMutation.mutate()}
                 disabled={sendMutation.isPending || !sendForm.title.trim() || !sendForm.body.trim()}
@@ -426,7 +426,7 @@ function FilterRowEditor({
   const needsValue = !['any', 'none'].includes(row.op)
 
   return (
-    <div className="flex flex-wrap items-center gap-2 bg-[#1a1a1a] border border-dark-border rounded-lg p-2">
+    <div className="flex flex-wrap items-center gap-2 bg-panel-dim border border-dark-border rounded-lg p-2">
       <select value={row.type} onChange={e => onChange({ type: e.target.value })}
         className="bg-dark-bg border border-dark-border rounded px-2 py-1 text-xs text-white">
         {FILTER_TYPES.map(ft => <option key={ft.value} value={ft.value}>{t(`segments.filter_types.${ft.value}`, ft.label)}</option>)}
@@ -458,7 +458,7 @@ function FilterRowEditor({
         />
       ) : null}
       <button onClick={onRemove}
-        className="ml-auto text-[#636366] hover:text-red-400">
+        className="ml-auto text-t-muted hover:text-red-400">
         <X size={14} />
       </button>
     </div>

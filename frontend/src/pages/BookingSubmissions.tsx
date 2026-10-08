@@ -36,7 +36,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
 
       {/* Filters */}
       <div className="rounded-2xl p-4 border border-white/[0.06]"
-        style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
+        style={{ background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }}>
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
@@ -59,14 +59,14 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
           <div className="text-center py-12"><div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto" /></div>
         ) : items.length === 0 ? (
           <div className="text-center text-gray-600 py-12 rounded-2xl border border-white/[0.06]"
-            style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+            style={{ background: 'var(--legacy-card-gradient)' }}>
             No submissions yet.
           </div>
         ) : items.map((s: any) => (
           <div key={s.id}
             className="rounded-2xl p-4 transition-all hover:-translate-y-px"
             style={{
-              background: `linear-gradient(180deg, rgba(22,35,30,0.96), rgba(19,33,29,0.98)), radial-gradient(circle at 100% 0, ${s.outcome === 'success' ? 'rgba(116,200,149,0.06)' : 'rgba(228,132,111,0.06)'}, transparent 35%)`,
+              background: `var(--legacy-tile-gradient), radial-gradient(circle at 100% 0, ${s.outcome === 'success' ? 'rgba(116,200,149,0.06)' : 'rgba(228,132,111,0.06)'}, transparent 35%)`,
               border: '1px solid rgba(255,255,255,0.05)',
               boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
             }}>
@@ -123,10 +123,10 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
           <div className="flex gap-1">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={14} /></button>
             <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={14} /></button>
           </div>
         </div>
       )}

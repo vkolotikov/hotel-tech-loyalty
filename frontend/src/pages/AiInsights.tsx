@@ -77,7 +77,7 @@ export function AiInsights() {
             <p className="text-sm text-t-secondary flex items-center gap-1.5">
               Powered by
               <span className="text-[10px] font-semibold bg-green-500/10 text-green-400 px-1.5 py-0.5 rounded-full border border-green-500/20">GPT-4o</span>
-              <span className="text-[#636366]">+</span>
+              <span className="text-t-muted">+</span>
               <span className="text-[10px] font-semibold bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-full border border-blue-500/20">Claude</span>
             </p>
           </div>
@@ -127,7 +127,7 @@ export function AiInsights() {
             </div>
             <div>
               <h3 className="font-semibold text-white text-sm">Weekly Performance Report</h3>
-              <p className="text-[11px] text-[#636366]">AI-generated analysis of your loyalty program</p>
+              <p className="text-[11px] text-t-muted">AI-generated analysis of your loyalty program</p>
             </div>
           </div>
           <button
@@ -144,7 +144,7 @@ export function AiInsights() {
             {overview.insight}
           </div>
         ) : (
-          <div className="text-center py-10 text-[#636366]">
+          <div className="text-center py-10 text-t-muted">
             <div className="w-16 h-16 mx-auto mb-3 rounded-2xl bg-dark-surface2 flex items-center justify-center border border-dark-border">
               <Sparkles size={28} className="opacity-30" />
             </div>
@@ -162,18 +162,18 @@ export function AiInsights() {
           </div>
           <div>
             <h3 className="font-semibold text-white text-sm">Member AI Analysis</h3>
-            <p className="text-[11px] text-[#636366]">Churn prediction, personalized offers, and upsell scripts</p>
+            <p className="text-[11px] text-t-muted">Churn prediction, personalized offers, and upsell scripts</p>
           </div>
         </div>
 
         <div className="relative mb-4">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
           <input
             type="text"
             placeholder="Search member by name or email…"
             value={memberSearch}
             onChange={(e) => setMemberSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 bg-dark-surface border border-dark-border rounded-xl text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
+            className="w-full pl-9 pr-4 py-2.5 bg-dark-surface border border-dark-border rounded-xl text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500"
           />
         </div>
 
@@ -188,7 +188,7 @@ export function AiInsights() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-white">{m.user?.name}</p>
-                    <p className="text-xs text-[#636366]">{m.member_number} · {m.current_points?.toLocaleString()} pts</p>
+                    <p className="text-xs text-t-muted">{m.member_number} · {m.current_points?.toLocaleString()} pts</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -244,7 +244,7 @@ export function AiInsights() {
                 {memberInsights.personalized_offer ? (
                   <div className="space-y-2">
                     <p className="font-semibold text-white text-sm">{memberInsights.personalized_offer.title}</p>
-                    <p className="text-xs text-[#a0a0a0] leading-relaxed">{memberInsights.personalized_offer.description}</p>
+                    <p className="text-xs text-t-soft leading-relaxed">{memberInsights.personalized_offer.description}</p>
                     <div className="flex items-center gap-2 pt-1">
                       <span className="text-[10px] bg-green-500/10 text-green-400 px-2 py-0.5 rounded-full border border-green-500/20 font-medium">
                         {memberInsights.personalized_offer.type}
@@ -256,7 +256,7 @@ export function AiInsights() {
                       )}
                     </div>
                   </div>
-                ) : <p className="text-xs text-[#636366]">No suggestion available</p>}
+                ) : <p className="text-xs text-t-muted">No suggestion available</p>}
               </div>
 
               {/* Upsell Script */}

@@ -509,7 +509,7 @@ export function Inquiries() {
 
   const showMice = MICE_TYPES.includes(form.inquiry_type)
   const filterSel = 'bg-dark-surface border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
-  const inp = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
+  const inp = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500'
 
   return (
     <div className="space-y-3">
@@ -541,7 +541,7 @@ export function Inquiries() {
           Leads / Active Deals / Closed so staff can focus on one bucket
           without composing a multi-status filter manually. */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex p-1 rounded-2xl gap-0.5" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="inline-flex p-1 rounded-2xl gap-0.5" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {([
             { v: 'all',    label: 'All',          tone: 'from-gray-500 to-gray-600' },
             { v: 'leads',  label: 'Leads',        tone: 'from-blue-500 to-indigo-500' },
@@ -555,7 +555,7 @@ export function Inquiries() {
             </button>
           ))}
         </div>
-        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {([
             { v: 'list', icon: ListIcon, label: 'List' },
             { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
@@ -602,8 +602,8 @@ export function Inquiries() {
       <div className="space-y-2">
         <div className="flex gap-3 flex-wrap">
           <div className="relative flex-1 max-w-sm">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
-            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('inquiries.filters.search_placeholder', 'Search guest, company…')} className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
+            <input value={search} onChange={e => { setSearch(e.target.value); setPage(1) }} placeholder={t('inquiries.filters.search_placeholder', 'Search guest, company…')} className="w-full bg-panel border border-dark-border rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </div>
           {view === 'list' && (
             <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }} className={filterSel}>
@@ -705,7 +705,7 @@ export function Inquiries() {
               <option value="yes">{t('inquiries.filters.with_phone', 'With phone / mobile')}</option>
               <option value="no">{t('inquiries.filters.without_phone', 'Without phone / mobile')}</option>
             </select>
-            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setCountry(''); setHasPhone(''); setPage(1) }} className="text-xs text-[#636366] hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
+            {hasFilters && <button onClick={() => { setStatus(''); setPriority(''); setInquiryType(''); setPropertyId(''); setAssignedTo(''); setSource(''); setTaskDue(''); setCountry(''); setHasPhone(''); setPage(1) }} className="text-xs text-t-muted hover:text-white px-2">{t('inquiries.filters.clear', 'Clear')}</button>}
           </div>
         )}
       </div>
@@ -1260,9 +1260,9 @@ export function Inquiries() {
                   if (dragging !== null) statusMutation.mutate({ id: dragging, status: col })
                 }}
                 className={`flex-shrink-0 w-[280px] rounded-2xl border flex flex-col transition-all ${isDropTarget ? 'border-primary-400/40 ring-1 ring-primary-400/20' : 'border-white/[0.06]'}`}
-                style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+                style={{ background: 'var(--legacy-card-gradient)' }}>
                 <div className="px-3 py-2.5 border-b border-white/[0.06] sticky top-0 z-10"
-                  style={{ background: 'rgba(14,20,18,0.98)' }}>
+                  style={{ background: 'var(--legacy-card-deep)' }}>
                   <div className="flex items-center justify-between gap-2">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider truncate ${stageColor ? 'border' : (STATUS_COLORS[col] ?? 'bg-gray-500/20 text-t-secondary')}`}
@@ -1415,8 +1415,8 @@ export function Inquiries() {
         <div className="flex items-center justify-between text-sm">
           <span className="text-t-secondary">Page {meta.current_page} of {meta.last_page}</span>
           <div className="flex gap-2">
-            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
-            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-[#a0a0a0] hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
+            <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronLeft size={15} /></button>
+            <button disabled={page === meta.last_page} onClick={() => setPage(p => p + 1)} className="p-1.5 rounded-lg border border-dark-border text-t-soft hover:text-white disabled:opacity-40"><ChevronRight size={15} /></button>
           </div>
         </div>
       )}
@@ -1467,7 +1467,7 @@ export function Inquiries() {
               <div className="grid grid-cols-2 gap-3">
                 <GuestPicker value={form.guest_id} onChange={v => setForm(f => ({ ...f, guest_id: v }))} className={inp} />
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Property *</label>
+                  <label className="block text-xs text-t-soft mb-1">Property *</label>
                   <select value={form.property_id} onChange={e => setForm(f => ({ ...f, property_id: e.target.value }))} className={inp} required>
                     <option value="">-- Select --</option>
                     {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -1475,25 +1475,25 @@ export function Inquiries() {
                 </div>
                 {fieldCfg.form.check_in && (
                   <div>
-                    <label className="block text-xs text-[#a0a0a0] mb-1">Check-in</label>
+                    <label className="block text-xs text-t-soft mb-1">Check-in</label>
                     <input type="date" value={form.check_in} onChange={e => setForm(f => ({ ...f, check_in: e.target.value }))} className={inp} />
                   </div>
                 )}
                 {fieldCfg.form.check_out && (
                   <div>
-                    <label className="block text-xs text-[#a0a0a0] mb-1">Check-out</label>
+                    <label className="block text-xs text-t-soft mb-1">Check-out</label>
                     <input type="date" value={form.check_out} onChange={e => setForm(f => ({ ...f, check_out: e.target.value }))} className={inp} />
                   </div>
                 )}
                 {fieldCfg.form.num_rooms && (
                   <div>
-                    <label className="block text-xs text-[#a0a0a0] mb-1">Rooms</label>
+                    <label className="block text-xs text-t-soft mb-1">Rooms</label>
                     <input type="number" min={1} value={form.num_rooms} onChange={e => setForm(f => ({ ...f, num_rooms: e.target.value }))} className={inp} />
                   </div>
                 )}
                 {fieldCfg.form.inquiry_type && (
                   <div>
-                    <label className="block text-xs text-[#a0a0a0] mb-1">Inquiry Type</label>
+                    <label className="block text-xs text-t-soft mb-1">Inquiry Type</label>
                     <select value={form.inquiry_type} onChange={e => setForm(f => ({ ...f, inquiry_type: e.target.value }))} className={inp}>
                       <option value="">-- Select --</option>
                       {settings.inquiry_types.map(t => <option key={t}>{t}</option>)}
@@ -1521,7 +1521,7 @@ export function Inquiries() {
                     <div className="grid grid-cols-2 gap-3 mt-3">
                       {fieldCfg.form.source && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Source</label>
+                          <label className="block text-xs text-t-soft mb-1">Source</label>
                           <select value={form.source} onChange={e => setForm(f => ({ ...f, source: e.target.value }))} className={inp}>
                             <option value="">-- None --</option>
                             {settings.lead_sources.map(s => <option key={s}>{s}</option>)}
@@ -1530,7 +1530,7 @@ export function Inquiries() {
                       )}
                       {fieldCfg.form.room_type && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Room Type</label>
+                          <label className="block text-xs text-t-soft mb-1">Room Type</label>
                           <select value={form.room_type_requested} onChange={e => setForm(f => ({ ...f, room_type_requested: e.target.value }))} className={inp}>
                             <option value="">-- Select --</option>
                             {settings.room_types.map(t => <option key={t}>{t}</option>)}
@@ -1539,19 +1539,19 @@ export function Inquiries() {
                       )}
                       {fieldCfg.form.rate_offered && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Rate ({settings.currency_symbol})</label>
+                          <label className="block text-xs text-t-soft mb-1">Rate ({settings.currency_symbol})</label>
                           <input type="number" step="0.01" value={form.rate_offered} onChange={e => setForm(f => ({ ...f, rate_offered: e.target.value }))} className={inp} />
                         </div>
                       )}
                       {fieldCfg.form.total_value && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Total Value ({settings.currency_symbol})</label>
+                          <label className="block text-xs text-t-soft mb-1">Total Value ({settings.currency_symbol})</label>
                           <input type="number" step="0.01" value={form.total_value} onChange={e => setForm(f => ({ ...f, total_value: e.target.value }))} className={inp} />
                         </div>
                       )}
                       {fieldCfg.form.status && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Status</label>
+                          <label className="block text-xs text-t-soft mb-1">Status</label>
                           <select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value }))} className={inp}>
                             {settings.inquiry_statuses.map(s => <option key={s}>{s}</option>)}
                           </select>
@@ -1559,7 +1559,7 @@ export function Inquiries() {
                       )}
                       {fieldCfg.form.priority && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Priority</label>
+                          <label className="block text-xs text-t-soft mb-1">Priority</label>
                           <select value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value }))} className={inp}>
                             {settings.priorities.map(p => <option key={p}>{p}</option>)}
                           </select>
@@ -1567,7 +1567,7 @@ export function Inquiries() {
                       )}
                       {fieldCfg.form.assigned_to && (
                         <div>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">Assigned To</label>
+                          <label className="block text-xs text-t-soft mb-1">Assigned To</label>
                           <select value={form.assigned_to} onChange={e => setForm(f => ({ ...f, assigned_to: e.target.value }))} className={inp}>
                             <option value="">-- None --</option>
                             {settings.lead_owners.map(o => <option key={o}>{o}</option>)}
@@ -1584,26 +1584,26 @@ export function Inquiries() {
                   <p className="text-xs font-medium text-purple-400">Event / MICE Details</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Event Name</label>
+                      <label className="block text-xs text-t-soft mb-1">Event Name</label>
                       <input value={form.event_name} onChange={e => setForm(f => ({ ...f, event_name: e.target.value }))} className={inp} />
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Expected Pax</label>
+                      <label className="block text-xs text-t-soft mb-1">Expected Pax</label>
                       <input type="number" value={form.event_pax} onChange={e => setForm(f => ({ ...f, event_pax: e.target.value }))} className={inp} />
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Function Space</label>
+                      <label className="block text-xs text-t-soft mb-1">Function Space</label>
                       <select value={form.function_space} onChange={e => setForm(f => ({ ...f, function_space: e.target.value }))} className={inp}>
                         <option value="">-- Select --</option>
                         {settings.function_spaces.map(s => <option key={s}>{s}</option>)}
                       </select>
                     </div>
                     <div className="flex items-end gap-4 pb-2">
-                      <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm text-t-soft cursor-pointer">
                         <input type="checkbox" checked={form.catering_required as boolean} onChange={e => setForm(f => ({ ...f, catering_required: e.target.checked }))} className="accent-primary-500" />
                         Catering
                       </label>
-                      <label className="flex items-center gap-2 text-sm text-[#a0a0a0] cursor-pointer">
+                      <label className="flex items-center gap-2 text-sm text-t-soft cursor-pointer">
                         <input type="checkbox" checked={form.av_required as boolean} onChange={e => setForm(f => ({ ...f, av_required: e.target.checked }))} className="accent-primary-500" />
                         AV Equipment
                       </label>
@@ -1614,13 +1614,13 @@ export function Inquiries() {
 
               {fieldCfg.form.special_requests && (
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Special Requests</label>
+                  <label className="block text-xs text-t-soft mb-1">Special Requests</label>
                   <textarea value={form.special_requests} onChange={e => setForm(f => ({ ...f, special_requests: e.target.value }))} rows={2} className={`${inp} resize-none`} />
                 </div>
               )}
               {fieldCfg.form.notes && (
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                  <label className="block text-xs text-t-soft mb-1">Notes</label>
                   <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} rows={2} className={`${inp} resize-none`} />
                 </div>
               )}
@@ -1636,7 +1636,7 @@ export function Inquiries() {
               />
 
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                 <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createMutation.isPending ? 'Saving...' : 'Create'}
                 </button>
@@ -1656,7 +1656,7 @@ export function Inquiries() {
             <p className="text-xs text-t-secondary mb-4">Track the next thing to do on this inquiry — call, follow-up email, send proposal, etc.</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Task Type</label>
+                <label className="block text-xs text-t-soft mb-1">Task Type</label>
                 <select value={taskFor.type} onChange={e => setTaskFor(t => t && { ...t, type: e.target.value })} className={inp}>
                   <option value="">-- None --</option>
                   <option value="Call">Call</option>
@@ -1670,11 +1670,11 @@ export function Inquiries() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Due Date</label>
+                <label className="block text-xs text-t-soft mb-1">Due Date</label>
                 <input type="date" value={taskFor.due} onChange={e => setTaskFor(t => t && { ...t, due: e.target.value })} className={inp} style={{ colorScheme: 'dark' }} />
               </div>
               <div>
-                <label className="block text-xs text-[#a0a0a0] mb-1">Notes</label>
+                <label className="block text-xs text-t-soft mb-1">Notes</label>
                 <textarea rows={3} value={taskFor.notes} onChange={e => setTaskFor(t => t && { ...t, notes: e.target.value })}
                   placeholder="What needs to happen, any context staff should know"
                   className={`${inp} resize-none`} />
@@ -1687,7 +1687,7 @@ export function Inquiries() {
                 Clear task
               </button>
               <div className="flex gap-2">
-                <button onClick={() => setTaskFor(null)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                <button onClick={() => setTaskFor(null)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                 <button onClick={() => taskFor && taskMutation.mutate({ id: taskFor.id, type: taskFor.type || null, due: taskFor.due || null, notes: taskFor.notes || null })}
                   disabled={taskMutation.isPending || !taskFor.type}
                   className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
@@ -1807,7 +1807,7 @@ export function Inquiries() {
           auto-creates a reservation when status flips to Confirmed. */}
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur flex-wrap"
-          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+          style={{ background: 'var(--legacy-card)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => runBulk('mark_won')} disabled={bulkBusy}
@@ -1893,10 +1893,10 @@ export function Inquiries() {
                   onChange={e => setCaptureText(e.target.value)}
                   rows={8}
                   placeholder="Paste the email or message here..."
-                  className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                  className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                 />
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                  <button type="button" onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                   <button
                     onClick={async () => {
                       if (!captureText.trim()) return
@@ -1932,7 +1932,7 @@ export function Inquiries() {
                       { key: 'country', label: 'Country', type: 'text' },
                     ].map(({ key, label, type }) => (
                       <div key={key}>
-                        <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                        <label className="block text-xs text-t-soft mb-1">{label}</label>
                         <input type={type} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))} className={inp} />
                       </div>
                     ))}
@@ -1950,12 +1950,12 @@ export function Inquiries() {
                       { key: 'source', label: 'Source', type: 'text' },
                     ].map(({ key, label, type }) => (
                       <div key={key}>
-                        <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                        <label className="block text-xs text-t-soft mb-1">{label}</label>
                         <input type={type} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))} className={inp} />
                       </div>
                     ))}
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">Property</label>
+                      <label className="block text-xs text-t-soft mb-1">Property</label>
                       <select value={captureResult.property_id ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, property_id: e.target.value }))} className={inp}>
                         <option value="">-- Select --</option>
                         {properties.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -1964,13 +1964,13 @@ export function Inquiries() {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">Special Requests / Notes</label>
+                  <label className="block text-xs text-t-soft mb-1">Special Requests / Notes</label>
                   <textarea value={captureResult.notes ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))} rows={3} className={`${inp} resize-none`} />
                 </div>
                 <div className="flex justify-between pt-1">
-                  <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">Back</button>
+                  <button onClick={() => setCaptureResult(null)} className="text-sm text-t-muted hover:text-white">Back</button>
                   <div className="flex gap-3">
-                    <button onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">Cancel</button>
+                    <button onClick={() => setShowCapture(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                     <button
                       disabled={captureCreating}
                       onClick={async () => {
@@ -2206,11 +2206,11 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
 
   return (
     <div className="relative">
-      <label className="block text-xs text-[#a0a0a0] mb-1">Guest *</label>
+      <label className="block text-xs text-t-soft mb-1">Guest *</label>
       {value && selected ? (
         <div className="flex items-center gap-2">
           <span className={`${className} flex-1 truncate`}>{selected.full_name}{selected.email ? ` (${selected.email})` : ''}</span>
-          <button type="button" onClick={() => { onChange(''); setSearch('') }} className="text-xs text-[#636366] hover:text-white px-2 py-1">Clear</button>
+          <button type="button" onClick={() => { onChange(''); setSearch('') }} className="text-xs text-t-muted hover:text-white px-2 py-1">Clear</button>
         </div>
       ) : (
         <input
@@ -2232,7 +2232,7 @@ function GuestPicker({ value, onChange, className }: { value: string; onChange: 
               className="w-full text-left px-3 py-2 text-sm text-white hover:bg-dark-surface2 transition-colors"
             >
               <span className="font-medium">{g.full_name}</span>
-              {g.email && <span className="text-xs text-[#636366] ml-2">{g.email}</span>}
+              {g.email && <span className="text-xs text-t-muted ml-2">{g.email}</span>}
             </button>
           ))}
           {/* Always offer the "create new" option at the bottom of the
@@ -2350,7 +2350,7 @@ function HeaderMenu({
         <MoreHorizontal size={16} />
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-dark-border bg-[#1a1a1a] shadow-2xl py-1.5 z-30">
+        <div className="absolute right-0 top-full mt-1.5 w-56 rounded-xl border border-dark-border bg-panel-dim shadow-2xl py-1.5 z-30">
           <button
             onClick={() => { onToggleFocus(); setOpen(false) }}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-t-secondary hover:bg-white/[0.04] hover:text-white transition-colors"

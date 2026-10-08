@@ -21,18 +21,18 @@ export interface BenefitValue { value: string; value_type: ValueType; value_amou
 export function BenefitValueFields({ value, onChange }: { value: BenefitValue; onChange: (v: BenefitValue) => void }) {
   const { t } = useTranslation()
   const numeric = value.value_type === 'percent_discount' || value.value_type === 'fixed_amount' || value.value_type === 'points_multiplier'
-  const cls = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white'
+  const cls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white'
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <label className="block text-sm text-[#a0a0a0]">{t('tiers.value_type', 'Value type')}
+      <label className="block text-sm text-t-soft">{t('tiers.value_type', 'Value type')}
         <select className={cls} value={value.value_type} onChange={e => onChange({ ...value, value_type: e.target.value as ValueType })}>
           {VALUE_TYPES.map(v => <option key={v} value={v}>{t(`tiers.types.${v}`, v)}</option>)}
         </select>
       </label>
-      {numeric && <label className="block text-sm text-[#a0a0a0]">{t('tiers.value_amount', 'Amount')}
+      {numeric && <label className="block text-sm text-t-soft">{t('tiers.value_amount', 'Amount')}
         <input className={cls} type="number" min={0} step="0.01" value={value.value_amount} onChange={e => onChange({ ...value, value_amount: e.target.value })} />
       </label>}
-      <label className="block text-sm text-[#a0a0a0]">{t('tiers.applies_to', 'Applies to')}
+      <label className="block text-sm text-t-soft">{t('tiers.applies_to', 'Applies to')}
         <select className={cls} value={value.applies_to} onChange={e => onChange({ ...value, applies_to: e.target.value as Scope })}>
           {SCOPES.map(s => <option key={s} value={s}>{t(`tiers.applies.${s}`, s)}</option>)}
         </select>

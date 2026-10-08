@@ -166,7 +166,7 @@ export default function ServiceBookingCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
             {(['day', 'week', 'month'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
@@ -176,13 +176,13 @@ export default function ServiceBookingCalendar() {
             ))}
           </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[200px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
           <button onClick={() => setCursor(todayKey())}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'rgba(22,40,35,0.6)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
         </div>
       </div>
 
@@ -219,7 +219,7 @@ export default function ServiceBookingCalendar() {
 
       {view === 'month' && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          style={{ background: 'var(--legacy-card-gradient)' }}>
           <div className="grid grid-cols-7 border-b border-white/[0.06]">
             {weekdays.map(w => (
               <div key={w} className="py-2 text-center text-[10px] font-bold uppercase tracking-wider text-gray-500 border-r border-white/[0.04] last:border-r-0">
@@ -280,7 +280,7 @@ export default function ServiceBookingCalendar() {
 
       {view === 'week' && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          style={{ background: 'var(--legacy-card-gradient)' }}>
           <div className="grid grid-cols-7">
             {weekDays.map((d, idx) => {
               const isToday = d === today
@@ -290,7 +290,7 @@ export default function ServiceBookingCalendar() {
                 <div key={d} className="border-r border-white/[0.04] last:border-r-0 min-h-[360px]"
                   style={{ background: isToday ? 'rgba(116,200,149,0.04)' : isWe ? 'rgba(217,143,69,0.02)' : 'transparent' }}>
                   <div className="px-3 py-2 border-b border-white/[0.04] flex items-center justify-between sticky top-0 z-[1]"
-                    style={{ background: 'rgba(14,20,18,0.98)' }}>
+                    style={{ background: 'var(--legacy-card-deep)' }}>
                     <div>
                       <div className="text-[10px] font-bold uppercase tracking-wider text-gray-500">
                         {formatDayKey(d, undefined, { weekday: 'short' })}
@@ -327,7 +327,7 @@ export default function ServiceBookingCalendar() {
 
       {view === 'day' && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'linear-gradient(180deg, rgba(18,24,22,0.96), rgba(14,20,18,0.98))' }}>
+          style={{ background: 'var(--legacy-card-gradient)' }}>
           {dayBookings.length === 0 ? (
             <div className="p-16 text-center">
               <div className="text-gray-600 text-sm mb-1">No bookings scheduled</div>
@@ -389,7 +389,7 @@ export default function ServiceBookingCalendar() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-end" onClick={() => setSelectedDay(null)}>
           <div onClick={e => e.stopPropagation()}
             className="w-full max-w-md h-full overflow-y-auto border-l border-white/[0.08] p-6"
-            style={{ background: 'linear-gradient(180deg, rgba(15,28,24,0.98), rgba(10,18,16,0.99))' }}>
+            style={{ background: 'var(--legacy-card-gradient-deep)' }}>
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h2 className="text-lg font-bold text-white">{formatDayKey(selectedDay, undefined, { weekday: 'long', day: 'numeric', month: 'long' })}</h2>

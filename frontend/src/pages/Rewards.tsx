@@ -220,7 +220,7 @@ export function Rewards() {
                       className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.terms', 'Terms')} <span className="text-[#636366]">{t('rewards.form.terms_optional', '(optional)')}</span></label>
+                    <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.terms', 'Terms')} <span className="text-t-muted">{t('rewards.form.terms_optional', '(optional)')}</span></label>
                     <textarea value={form.terms} onChange={e => setForm(f => ({ ...f, terms: e.target.value }))} rows={2}
                       placeholder={t('rewards.form.terms_placeholder', 'Subject to availability. Cannot be combined with other offers…')}
                       className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-xs text-white" />
@@ -231,14 +231,14 @@ export function Rewards() {
                       <input type="number" min={0} value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))}
                         placeholder="∞"
                         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
-                      <p className="text-[10px] text-[#636366] mt-1">{t('rewards.form.stock_hint', 'Empty = unlimited')}</p>
+                      <p className="text-[10px] text-t-muted mt-1">{t('rewards.form.stock_hint', 'Empty = unlimited')}</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.per_member_limit', 'Per-member limit')}</label>
                       <input type="number" min={1} value={form.per_member_limit} onChange={e => setForm(f => ({ ...f, per_member_limit: e.target.value }))}
                         placeholder="∞"
                         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
-                      <p className="text-[10px] text-[#636366] mt-1">{t('rewards.form.stock_hint', 'Empty = unlimited')}</p>
+                      <p className="text-[10px] text-t-muted mt-1">{t('rewards.form.stock_hint', 'Empty = unlimited')}</p>
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-t-secondary mb-1">{t('rewards.form.expires', 'Expires')}</label>
@@ -273,7 +273,7 @@ export function Rewards() {
                       </select>
                     </div>
                   </div>
-                  <label className="flex items-center gap-2 text-sm text-[#a0a0a0]">
+                  <label className="flex items-center gap-2 text-sm text-t-soft">
                     <input type="checkbox" checked={form.is_active} onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
                     {t('rewards.form.active_visible', 'Active (visible to members)')}
                   </label>
@@ -284,15 +284,15 @@ export function Rewards() {
                     {imagePreview ? (
                       <img src={imagePreview} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <ImageIcon size={36} className="text-[#636366]" />
+                      <ImageIcon size={36} className="text-t-muted" />
                     )}
                   </div>
-                  <input type="file" accept="image/*" onChange={onImage} className="mt-2 text-xs text-[#a0a0a0]" />
+                  <input type="file" accept="image/*" onChange={onImage} className="mt-2 text-xs text-t-soft" />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 mt-4 pt-4 border-t border-dark-border">
-                <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('rewards.form.cancel', 'Cancel')}</button>
+                <button onClick={resetForm} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('rewards.form.cancel', 'Cancel')}</button>
                 <button
                   onClick={() => saveMutation.mutate()}
                   disabled={saveMutation.isPending || !form.name.trim() || !form.points_cost}
@@ -305,10 +305,10 @@ export function Rewards() {
 
           <Card>
             <div className="relative mb-4">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
               <input value={search} onChange={e => setSearch(e.target.value)}
                 placeholder={t('rewards.catalog.search_placeholder', 'Search rewards by name or category…')}
-                className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366]" />
+                className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted" />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -319,30 +319,30 @@ export function Rewards() {
                   <div key={i} className="h-48 bg-dark-surface2 rounded-xl animate-pulse" />
                 ))
               ) : rewards.length === 0 ? (
-                <div className="col-span-full py-12 text-center text-[#636366] text-sm">
+                <div className="col-span-full py-12 text-center text-t-muted text-sm">
                   {t('rewards.catalog.empty', 'No rewards yet. Click "Add Reward" to seed the catalog.')}
                 </div>
               ) : rewards.map(r => (
-                <div key={r.id} className={`bg-[#1a1a1a] border rounded-xl overflow-hidden ${r.is_active ? 'border-dark-border' : 'border-dark-border opacity-60'}`}>
+                <div key={r.id} className={`bg-panel-dim border rounded-xl overflow-hidden ${r.is_active ? 'border-dark-border' : 'border-dark-border opacity-60'}`}>
                   <div className="aspect-[16/10] bg-[#0f0f0f] flex items-center justify-center">
                     {r.image_url ? (
                       <img src={resolveImage(r.image_url)!} alt={r.name} className="w-full h-full object-cover" />
                     ) : (
-                      <Gift size={36} className="text-[#636366]" />
+                      <Gift size={36} className="text-t-muted" />
                     )}
                   </div>
                   <div className="p-3 space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <div className="text-sm font-semibold text-white truncate">{r.name}</div>
-                        {r.category && <div className="text-[11px] text-[#636366]">{r.category}</div>}
+                        {r.category && <div className="text-[11px] text-t-muted">{r.category}</div>}
                       </div>
                       <div className="text-right">
                         <div className="text-sm font-bold text-primary-400">{r.points_cost.toLocaleString()}</div>
-                        <div className="text-[10px] text-[#636366]">pts</div>
+                        <div className="text-[10px] text-t-muted">pts</div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-[#636366]">
+                    <div className="flex items-center gap-2 text-[10px] text-t-muted">
                       <span>{t('rewards.catalog.stock_label', { value: r.stock === null ? t('rewards.catalog.stock_unlimited', '∞') : r.stock, defaultValue: 'Stock: {{value}}' })}</span>
                       <span>·</span>
                       <span>{t('rewards.catalog.claimed', { fulfilled: r.fulfilled_count, total: r.redemption_count, defaultValue: '{{fulfilled}}/{{total}} claimed' })}</span>
@@ -355,12 +355,12 @@ export function Rewards() {
                     </div>
                     <div className="flex items-center justify-between pt-1">
                       <button onClick={() => toggleMutation.mutate(r.id)}
-                        className="text-[11px] text-[#a0a0a0] hover:text-white flex items-center gap-1">
+                        className="text-[11px] text-t-soft hover:text-white flex items-center gap-1">
                         {r.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
                         {r.is_active ? t('rewards.catalog.active', 'Active') : t('rewards.catalog.hidden', 'Hidden')}
                       </button>
                       <div className="flex gap-1">
-                        <button onClick={() => startEdit(r)} className="p-1.5 rounded hover:bg-dark-surface2 text-[#a0a0a0]" title={t('rewards.catalog.edit_title', 'Edit')}><Pencil size={13} /></button>
+                        <button onClick={() => startEdit(r)} className="p-1.5 rounded hover:bg-dark-surface2 text-t-soft" title={t('rewards.catalog.edit_title', 'Edit')}><Pencil size={13} /></button>
                         <button onClick={() => confirm(t('rewards.catalog.delete_confirm', { name: r.name, defaultValue: 'Delete "{{name}}"?' })) && deleteMutation.mutate(r.id)}
                           className="p-1.5 rounded hover:bg-dark-surface2 text-red-400" title={t('rewards.catalog.delete_title', 'Delete')}><Trash2 size={13} /></button>
                       </div>
@@ -377,13 +377,13 @@ export function Rewards() {
         <Card>
           <div className="flex flex-col sm:flex-row gap-3 mb-4">
             <div className="relative flex-1">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
               <input value={redSearch} onChange={e => setRedSearch(e.target.value)}
                 placeholder={t('rewards.redemptions.search_placeholder', 'Search by code, member name or email…')}
-                className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366]" />
+                className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted" />
             </div>
             <select value={redStatus} onChange={e => setRedStatus(e.target.value)}
-              className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
+              className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white">
               <option value="">{t('rewards.redemptions.all_status', 'All status')}</option>
               <option value="pending">{t('rewards.redemptions.pending', 'Pending')}</option>
               <option value="fulfilled">{t('rewards.redemptions.fulfilled', 'Fulfilled')}</option>
@@ -406,7 +406,7 @@ export function Rewards() {
               </thead>
               <tbody className="divide-y divide-dark-border">
                 {(redemptionsData?.data ?? []).length === 0 ? (
-                  <tr><td colSpan={7} className="py-12 text-center text-[#636366]">{t('rewards.redemptions.empty', 'No redemptions yet.')}</td></tr>
+                  <tr><td colSpan={7} className="py-12 text-center text-t-muted">{t('rewards.redemptions.empty', 'No redemptions yet.')}</td></tr>
                 ) : (redemptionsData.data as any[]).map(r => (
                   <tr key={r.id} className="hover:bg-dark-surface2">
                     <td className="py-2 font-mono text-xs text-primary-300">{r.code}</td>
@@ -414,20 +414,20 @@ export function Rewards() {
                       {r.member ? (
                         <Link to={`/members/${r.member.id}`} className="hover:text-primary-300">
                           <div className="text-white text-sm">{r.member.user?.name}</div>
-                          <div className="text-[11px] text-[#636366]">{r.member.user?.email}</div>
+                          <div className="text-[11px] text-t-muted">{r.member.user?.email}</div>
                         </Link>
-                      ) : <span className="text-[#636366]">—</span>}
+                      ) : <span className="text-t-muted">—</span>}
                     </td>
                     <td className="py-2">
                       <div className="text-white text-sm">{r.reward?.name ?? '—'}</div>
-                      {r.reward?.category && <div className="text-[11px] text-[#636366]">{r.reward.category}</div>}
+                      {r.reward?.category && <div className="text-[11px] text-t-muted">{r.reward.category}</div>}
                     </td>
                     <td className="py-2 text-right text-white font-semibold">{r.points_spent.toLocaleString()}</td>
                     <td className="py-2">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                        r.status === 'fulfilled' ? 'bg-[#32d74b]/15 text-[#32d74b]' :
+                        r.status === 'fulfilled' ? 'bg-success/15 text-success' :
                         r.status === 'pending'   ? 'bg-[#f59e0b]/15 text-[#f59e0b]' :
-                                                   'bg-dark-surface3 text-[#636366]'
+                                                   'bg-dark-surface3 text-t-muted'
                       }`}>{t(`rewards.redemptions.statuses.${r.status}`, { defaultValue: String(r.status ?? '') })}</span>
                     </td>
                     <td className="py-2 text-xs text-t-secondary">{format(new Date(r.created_at), 'MMM d, HH:mm')}</td>

@@ -25,7 +25,7 @@ const PRESETS: { key: string; label: string; from: string; to: string }[] = [
   { key: 'midnight', label: 'Midnight', from: '#0f172a', to: '#334155' },
 ]
 
-const inputCls = 'w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444]'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444]'
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -69,7 +69,7 @@ function ColorField({ label, value, onChange }: { label: string; value: string; 
             className="absolute inset-0 opacity-0 cursor-pointer" />
         </label>
         <input value={value} onChange={e => onChange(e.target.value)} spellCheck={false}
-          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-2.5 py-2 text-xs font-mono text-white" />
+          className="w-full bg-panel border border-dark-border rounded-lg px-2.5 py-2 text-xs font-mono text-white" />
       </div>
     </L>
   )
@@ -134,7 +134,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
             ].map(o => (
               <button key={o.key}
                 onClick={() => setTheme({ layout: o.key })}
-                className={`text-left p-4 rounded-xl border transition-colors ${(theme.layout ?? 'classic') === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-[#1a1a1a] hover:border-primary-500/40'}`}>
+                className={`text-left p-4 rounded-xl border transition-colors ${(theme.layout ?? 'classic') === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel-dim hover:border-primary-500/40'}`}>
                 <div className="text-sm font-semibold text-white mb-1">{o.title}</div>
                 <div className="text-[11px] text-[#888] leading-relaxed">{o.desc}</div>
               </button>
@@ -152,14 +152,14 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
                 onClick={() => setTheme({ style: p.key })}
                 className={`w-20 rounded-xl overflow-hidden border-2 transition-all ${(theme.style ?? 'ocean') === p.key ? 'border-primary-400 scale-105' : 'border-transparent opacity-80 hover:opacity-100'}`}>
                 <div className="h-12" style={{ background: `linear-gradient(140deg, ${p.from}, ${p.to})` }} />
-                <div className="text-[10px] font-semibold text-[#a0a0a0] py-1 bg-[#1a1a1a]">{p.label}</div>
+                <div className="text-[10px] font-semibold text-t-soft py-1 bg-panel-dim">{p.label}</div>
               </button>
             ))}
             <button
               onClick={() => setTheme({ style: 'custom' })}
               className={`w-20 rounded-xl overflow-hidden border-2 transition-all ${theme.style === 'custom' ? 'border-primary-400 scale-105' : 'border-transparent opacity-80 hover:opacity-100'}`}>
               <div className="h-12" style={{ background: `linear-gradient(140deg, ${theme.bg_from ?? '#334155'}, ${theme.bg_to ?? '#64748b'})` }} />
-              <div className="text-[10px] font-semibold text-[#a0a0a0] py-1 bg-[#1a1a1a]">Custom</div>
+              <div className="text-[10px] font-semibold text-t-soft py-1 bg-panel-dim">Custom</div>
             </button>
           </div>
 
@@ -289,7 +289,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
 
   const maxDay = useMemo(() => Math.max(1, ...(data?.series ?? []).map(s => Math.max(s.views, s.submissions))), [data])
 
-  if (isLoading) return <div className="text-center text-[#636366] py-14 text-sm">Crunching numbers…</div>
+  if (isLoading) return <div className="text-center text-t-muted py-14 text-sm">Crunching numbers…</div>
   if (isError || !data) return (
     <div className="text-center py-14 text-sm text-red-300">
       Could not load analytics. <button onClick={() => refetch()} className="text-primary-400 font-semibold ml-1">Retry</button>
@@ -299,7 +299,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
   const t = data.totals
   const kpi = (label: string, value: string, sub?: string) => (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-      <div className="text-[#a0a0a0] text-[10px] uppercase tracking-wider mb-1.5">{label}</div>
+      <div className="text-t-soft text-[10px] uppercase tracking-wider mb-1.5">{label}</div>
       <div className="text-xl font-bold text-white">{value}</div>
       {sub && <div className="text-[10px] text-[#666] mt-0.5">{sub}</div>}
     </div>
@@ -309,10 +309,10 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
     <div className="space-y-4 mb-6">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-white flex items-center gap-2"><BarChart3 size={14} className="text-primary-400" /> Last {data.days} days</h3>
-        <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg">
+        <div className="flex gap-1 bg-panel p-1 rounded-lg">
           {[7, 30, 90].map(d => (
             <button key={d} onClick={() => setDays(d)}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold ${days === d ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}>{d}d</button>
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold ${days === d ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}>{d}d</button>
           ))}
         </div>
       </div>
@@ -329,7 +329,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
         <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">Responses over time</div>
         {data.series.length === 0 ? (
-          <p className="text-xs text-[#636366] py-4 text-center">No activity in this window yet.</p>
+          <p className="text-xs text-t-muted py-4 text-center">No activity in this window yet.</p>
         ) : (
           <div className="flex items-end gap-[3px] h-24">
             {data.series.map(s => (
@@ -351,20 +351,20 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
         <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">By channel</div>
           {Object.keys(data.channels).length === 0
-            ? <p className="text-xs text-[#636366]">No responses yet.</p>
+            ? <p className="text-xs text-t-muted">No responses yet.</p>
             : Object.entries(data.channels).map(([ch, n]) => (
               <div key={ch} className="flex items-center justify-between py-1.5 text-sm">
-                <span className="text-[#a0a0a0] capitalize">{ch}</span><span className="text-white font-semibold">{n}</span>
+                <span className="text-t-soft capitalize">{ch}</span><span className="text-white font-semibold">{n}</span>
               </div>
             ))}
         </div>
         <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
           <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">By kiosk device</div>
           {data.devices.length === 0
-            ? <p className="text-xs text-[#636366]">No kiosk responses yet.</p>
+            ? <p className="text-xs text-t-muted">No kiosk responses yet.</p>
             : data.devices.map(d => (
               <div key={d.name} className="flex items-center justify-between py-1.5 text-sm">
-                <span className="text-[#a0a0a0]">{d.name}</span><span className="text-white font-semibold">{d.count}</span>
+                <span className="text-t-soft">{d.name}</span><span className="text-white font-semibold">{d.count}</span>
               </div>
             ))}
         </div>
@@ -385,7 +385,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
               <div className="space-y-1.5">
                 {Object.entries(q.distribution).map(([k, n]) => (
                   <div key={k} className="flex items-center gap-2 text-xs">
-                    <span className="w-24 truncate text-[#a0a0a0]" title={k}>{k}</span>
+                    <span className="w-24 truncate text-t-soft" title={k}>{k}</span>
                     <div className="flex-1 h-4 bg-white/[0.04] rounded overflow-hidden">
                       <div className="h-full bg-primary-500/70 rounded" style={{ width: `${(n / total) * 100}%` }} />
                     </div>
@@ -396,13 +396,13 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
             )}
             {q.latest && (
               q.latest.length === 0
-                ? <p className="text-xs text-[#636366]">No text answers yet.</p>
+                ? <p className="text-xs text-t-muted">No text answers yet.</p>
                 : <ul className="space-y-1.5">{q.latest.map((txt, i) => (
                     <li key={i} className="text-xs text-[#c0c0c0] bg-white/[0.03] border border-dark-border rounded-lg px-3 py-2">“{txt}”</li>
                   ))}</ul>
             )}
             {q.distribution && total === 0 && !q.latest && (
-              <p className="text-xs text-[#636366]">No answers yet.</p>
+              <p className="text-xs text-t-muted">No answers yet.</p>
             )}
           </div>
         )
@@ -443,7 +443,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
           { key: 'slideup', title: 'Slide-up',        desc: 'Corner card, opens after a delay' },
         ] as const).map(o => (
           <button key={o.key} onClick={() => setMode(o.key)}
-            className={`text-left p-3 rounded-xl border transition-colors ${mode === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-[#1a1a1a] hover:border-primary-500/40'}`}>
+            className={`text-left p-3 rounded-xl border transition-colors ${mode === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel-dim hover:border-primary-500/40'}`}>
             <div className="text-xs font-semibold text-white">{o.title}</div>
             <div className="text-[10px] text-[#888] mt-0.5 leading-snug">{o.desc}</div>
           </button>
@@ -476,7 +476,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
             <Copy size={11} /> Copy
           </button>
         </div>
-        <pre className="bg-[#111] border border-dark-border rounded-lg p-3 text-[10.5px] text-[#9ae6b4] overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
+        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-[#9ae6b4] overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
         <p className="text-[10px] text-[#666] mt-2 leading-relaxed">
           Auto-open modes remember each visitor: after they submit, the survey stays away for 90 days;
           after they dismiss it, 7 days. The floating button is always available until they submit.
@@ -491,7 +491,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
             <Copy size={11} /> Copy
           </button>
         </div>
-        <pre className="bg-[#111] border border-dark-border rounded-lg p-3 text-[10.5px] text-[#93c5fd] overflow-x-auto whitespace-pre-wrap break-all">{iframeSnippet}</pre>
+        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-[#93c5fd] overflow-x-auto whitespace-pre-wrap break-all">{iframeSnippet}</pre>
       </div>
     </div>
   )

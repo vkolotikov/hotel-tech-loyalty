@@ -468,7 +468,7 @@ export function EmailCampaigns() {
                     placeholder="<h1>Hi {{member.name}}</h1><p>We've prepared a special offer just for you…</p>"
                     className="w-full font-mono text-xs bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
-                  <p className="text-[10px] text-[#636366] mt-1">{t('emailCampaigns.form.code_hint', 'Plain HTML. Inline styles render best across email clients.')}</p>
+                  <p className="text-[10px] text-t-muted mt-1">{t('emailCampaigns.form.code_hint', 'Plain HTML. Inline styles render best across email clients.')}</p>
                   <div className="flex flex-wrap gap-1 mt-2">
                     <span className="text-[10px] text-t-secondary mr-1 self-center">{t('emailCampaigns.form.insert_at_cursor', 'Insert at cursor:')}</span>
                     {Object.keys(PREVIEW_VARIABLES).map(token => (
@@ -486,7 +486,7 @@ export function EmailCampaigns() {
               )}
 
               <div>
-                <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.plain_text_fallback', 'Plain text fallback')} <span className="text-[#636366]">{t('emailCampaigns.form.plain_text_optional', '(optional)')}</span></label>
+                <label className="block text-xs font-medium text-t-secondary mb-1">{t('emailCampaigns.form.plain_text_fallback', 'Plain text fallback')} <span className="text-t-muted">{t('emailCampaigns.form.plain_text_optional', '(optional)')}</span></label>
                 <textarea value={form.body_text} onChange={e => setForm(f => ({ ...f, body_text: e.target.value }))}
                   rows={3}
                   placeholder={t('emailCampaigns.form.plain_text_placeholder', "Plain-text version for clients that can't render HTML")}
@@ -530,7 +530,7 @@ export function EmailCampaigns() {
                 : t('emailCampaigns.form.save_test_hint', 'Save the draft, then send a test to yourself before broadcasting.')}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-[#a0a0a0] hover:text-white">{t('emailCampaigns.form.cancel', 'Cancel')}</button>
+              <button onClick={resetForm} className="px-3 py-1.5 text-sm text-t-soft hover:text-white">{t('emailCampaigns.form.cancel', 'Cancel')}</button>
               {editId && (
                 <button
                   onClick={() => testMutation.mutate(editId)}
@@ -588,11 +588,11 @@ export function EmailCampaigns() {
 
       <div className="bg-dark-surface rounded-xl border border-dark-border overflow-hidden">
         {isLoading ? (
-          <p className="text-center text-[#636366] py-8 text-sm">{t('emailCampaigns.loading', 'Loading…')}</p>
+          <p className="text-center text-t-muted py-8 text-sm">{t('emailCampaigns.loading', 'Loading…')}</p>
         ) : campaigns.length === 0 ? (
           <div className="text-center py-12">
-            <Mail size={36} className="mx-auto text-[#636366] mb-3" />
-            <p className="text-[#636366] text-sm">
+            <Mail size={36} className="mx-auto text-t-muted mb-3" />
+            <p className="text-t-muted text-sm">
               {statusFilter
                 ? t('emailCampaigns.empty.filtered', { status: statusFilter, defaultValue: 'No {{status}} campaigns. Try a different filter.' })
                 : t('emailCampaigns.empty.default', 'No campaigns yet. Click "New campaign" to draft your first broadcast.')}
@@ -616,16 +616,16 @@ export function EmailCampaigns() {
                   <tr key={c.id} className="hover:bg-dark-surface2 group">
                     <td className="px-5 py-3">
                       <div className="text-white font-medium">{c.name}</div>
-                      <div className="text-[11px] text-[#a0a0a0] truncate max-w-md">{c.subject}</div>
+                      <div className="text-[11px] text-t-soft truncate max-w-md">{c.subject}</div>
                     </td>
-                    <td className="px-5 py-3 text-xs text-[#a0a0a0]">
+                    <td className="px-5 py-3 text-xs text-t-soft">
                       {c.segment?.name
                         ? <span className="inline-flex items-center gap-1"><Users size={11} /> {c.segment.name}</span>
-                        : <span className="text-[#636366]">{t('emailCampaigns.table.unsegmented', '— Unsegmented —')}</span>}
+                        : <span className="text-t-muted">{t('emailCampaigns.table.unsegmented', '— Unsegmented —')}</span>}
                     </td>
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
-                        c.status === 'sent'    ? 'bg-[#32d74b]/15 text-[#32d74b]' :
+                        c.status === 'sent'    ? 'bg-success/15 text-success' :
                         c.status === 'sending' ? 'bg-[#5ac8fa]/15 text-[#5ac8fa]' :
                         c.status === 'failed'  ? 'bg-[#ef4444]/15 text-[#ef4444]' :
                                                  'bg-amber-500/15 text-amber-300'
@@ -671,7 +671,7 @@ export function EmailCampaigns() {
                           <button
                             onClick={() => setOpenMenuFor(openMenuFor === c.id ? null : c.id)}
                             onBlur={() => setTimeout(() => setOpenMenuFor(m => (m === c.id ? null : m)), 150)}
-                            className="p-1.5 rounded hover:bg-dark-surface3 text-[#a0a0a0] hover:text-white"
+                            className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft hover:text-white"
                             title={t('emailCampaigns.table.more_tooltip', 'More')}
                           >
                             <MoreHorizontal size={14} />

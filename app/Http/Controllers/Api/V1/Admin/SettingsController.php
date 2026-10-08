@@ -8,9 +8,13 @@ use App\Models\HotelSetting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
+    /** The admin styles `theme_style` may hold (Settings → Branding → Style). Part 2 adds 'light'. */
+    public const THEME_STYLES = ['glass', 'classic'];
+
     /** Keys that contain secrets — returned masked unless explicitly empty. */
     private const SECRET_KEYS = [
         'ai_openai_api_key', 'ai_anthropic_api_key',
@@ -289,6 +293,17 @@ class SettingsController extends Controller
             'settings.*.value' => 'present',
         ]);
 
+        // theme_style picks the admin's look for the whole organisation. Refuse a
+        // value the SPA can't render before anything in this save is written, so
+        // a bad style never lands half a save.
+        foreach ($validated['settings'] as $item) {
+            if ($item['key'] === 'theme_style' && !in_array($item['value'], self::THEME_STYLES, true)) {
+                throw ValidationException::withMessages([
+                    'theme_style' => 'theme_style must be glass or classic.',
+                ]);
+            }
+        }
+
         // Resolve the bound org once up-front. If we can't, fail hard so
         // the frontend's "Settings saved" toast can't lie about a write
         // that landed nowhere. Before this, a misconfigured middleware
@@ -413,7 +428,7 @@ class SettingsController extends Controller
         $defaults = [
             // Appearance (brand colors) — this is what non-super-admins need
             // for the Branding tab to render editable inputs.
-            ['key' => 'primary_color',        'value' => '#c9a84c', 'type' => 'string',  'group' => 'appearance', 'label' => 'Primary Color'],
+            ['key' => 'primary_color',        'value' => '#3b82f6', 'type' => 'string',  'group' => 'appearance', 'label' => 'Primary Color'],
             ['key' => 'secondary_color',      'value' => '#1e1e1e', 'type' => 'string',  'group' => 'appearance', 'label' => 'Secondary Color'],
             ['key' => 'accent_color',         'value' => '#32d74b', 'type' => 'string',  'group' => 'appearance', 'label' => 'Accent / Success'],
             ['key' => 'background_color',     'value' => '#0d0d0d', 'type' => 'string',  'group' => 'appearance', 'label' => 'Background'],
@@ -581,6 +596,9 @@ class SettingsController extends Controller
         // radius scale. Lives in the appearance group so the /v1/theme
         // endpoint picks it up alongside the per-color values.
         if ($k === 'theme_mood') return 'appearance';
+        // theme_style (2026-10) picks the admin style, Glass or Classic; it
+        // travels with the colours through /v1/theme and /v1/admin/branding/theme.
+        if ($k === 'theme_style') return 'appearance';
         if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';
         if (str_starts_with($k, 'booking_')) return 'booking';
         if (str_starts_with($k, 'mail_')) return 'email';

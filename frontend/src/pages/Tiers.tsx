@@ -224,7 +224,7 @@ export function Tiers() {
         <div className="flex items-center gap-2 mb-3">
           <Calculator size={16} className="text-primary-400" />
           <h2 className="text-sm font-semibold text-white">{t('tiers.preview.title', 'Tier preview calculator')}</h2>
-          <span className="text-[11px] text-[#636366]">{t('tiers.preview.subtitle', '— what tier would a member qualify for?')}</span>
+          <span className="text-[11px] text-t-muted">{t('tiers.preview.subtitle', '— what tier would a member qualify for?')}</span>
         </div>
         <div className="flex flex-wrap items-end gap-3">
           <div>
@@ -299,7 +299,7 @@ export function Tiers() {
                 <span className="text-amber-400">{t('tiers.preview.no_qualifying', 'No qualifying tier')}</span>
               ) : (
                 <>
-                  <span className="text-[#a0a0a0]">{t('tiers.preview.would_qualify', 'Would qualify for:')}</span>
+                  <span className="text-t-soft">{t('tiers.preview.would_qualify', 'Would qualify for:')}</span>
                   <span
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs"
                     style={{ backgroundColor: (previewResult.color || '#666') + '22', color: previewResult.color || '#fff', border: `1px solid ${(previewResult.color || '#666') + '55'}` }}

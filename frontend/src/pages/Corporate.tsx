@@ -101,9 +101,9 @@ export function Corporate() {
       {/* Search & Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[240px]">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
           <input type="text" placeholder={t('corporate.search_placeholder', 'Search company, contact, email...')} value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
-            className="w-full pl-9 pr-3 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+            className="w-full pl-9 pr-3 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
         </div>
         <select value={status} onChange={e => { setStatus(e.target.value); setPage(1) }}
           className="bg-dark-surface border border-dark-border rounded-lg text-sm text-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
@@ -137,13 +137,13 @@ export function Corporate() {
             </thead>
             <tbody className="divide-y divide-dark-border">
               {isLoading ? (
-                <tr><td colSpan={visibleCols} className="text-center py-12 text-[#636366]">{t('corporate.table.loading', 'Loading...')}</td></tr>
+                <tr><td colSpan={visibleCols} className="text-center py-12 text-t-muted">{t('corporate.table.loading', 'Loading...')}</td></tr>
               ) : accounts.length === 0 ? (
-                <tr><td colSpan={visibleCols} className="text-center py-12 text-[#636366]">{t('corporate.table.no_accounts', 'No corporate accounts found')}</td></tr>
+                <tr><td colSpan={visibleCols} className="text-center py-12 text-t-muted">{t('corporate.table.no_accounts', 'No corporate accounts found')}</td></tr>
               ) : accounts.map((a: any) => (
                 <>
                   <tr key={a.id} onClick={() => setExpandedId(expandedId === a.id ? null : a.id)} className="hover:bg-dark-surface2/50 cursor-pointer transition-colors">
-                    <td className="px-3 py-3 text-[#636366]">
+                    <td className="px-3 py-3 text-t-muted">
                       {expandedId === a.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     </td>
                     <td className="px-4 py-3 text-white font-medium">
@@ -162,11 +162,11 @@ export function Corporate() {
                         </Link>
                       </div>
                     </td>
-                    {corpFields.list.industry && <td className="px-4 py-3 text-[#a0a0a0]">{a.industry || '—'}</td>}
+                    {corpFields.list.industry && <td className="px-4 py-3 text-t-soft">{a.industry || '—'}</td>}
                     {corpFields.list.contact_person && <td className="px-4 py-3 text-gray-300">{a.contact_person || '—'}</td>}
                     {corpFields.list.account_manager && <td className="px-4 py-3 text-gray-300">{a.account_manager || '—'}</td>}
                     {corpFields.list.contract && (
-                      <td className="px-4 py-3 text-[#a0a0a0] text-xs whitespace-nowrap">
+                      <td className="px-4 py-3 text-t-soft text-xs whitespace-nowrap">
                         {a.contract_start && a.contract_end ? `${a.contract_start} — ${a.contract_end}` : '—'}
                       </td>
                     )}
@@ -198,8 +198,8 @@ export function Corporate() {
           <div className="flex items-center justify-between px-4 py-3 border-t border-dark-border">
             <span className="text-xs text-t-secondary">{t('corporate.table.page_of', { current: meta.current_page, last: meta.last_page, total: meta.total, defaultValue: 'Page {{current}} of {{last}} ({{total}} results)' })}</span>
             <div className="flex items-center gap-1">
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronLeft size={16} /></button>
-              <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-[#a0a0a0] disabled:opacity-30"><ChevronRight size={16} /></button>
+              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page <= 1} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-t-soft disabled:opacity-30"><ChevronLeft size={16} /></button>
+              <button onClick={() => setPage(p => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="p-1.5 rounded-lg hover:bg-dark-surface2 text-t-soft disabled:opacity-30"><ChevronRight size={16} /></button>
             </div>
           </div>
         )}
@@ -214,7 +214,7 @@ export function Corporate() {
                 <Building2 size={18} className="text-primary-400" />
                 <h2 className="text-lg font-bold text-white">{t('corporate.create.title', 'Add Corporate Account')}</h2>
               </div>
-              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} className="text-[#636366] hover:text-white"><X size={18} /></button>
+              <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText(''); setCreateTab('form') }} className="text-t-muted hover:text-white"><X size={18} /></button>
             </div>
 
             {/* Tabs */}
@@ -249,18 +249,18 @@ export function Corporate() {
                 </div>
                 <Input label={t('corporate.create.billing_address', 'Billing Address')} value={form.billing_address} onChange={v => F('billing_address', v)} />
                 <div>
-                  <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.notes', 'Notes')}</label>
+                  <label className="block text-xs text-t-soft mb-1">{t('corporate.create.notes', 'Notes')}</label>
                   <textarea value={form.notes} onChange={e => F('notes', e.target.value)} rows={3}
-                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                    className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                 </div>
                 <CustomFieldsForm
                   entity="corporate_account"
                   values={form.custom_data}
                   onChange={(next) => setForm(f => ({ ...f, custom_data: next }))}
-                  inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  inputClassName="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
                 <div className="flex justify-end gap-3 pt-2">
-                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white transition-colors">{t('corporate.create.cancel', 'Cancel')}</button>
+                  <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white transition-colors">{t('corporate.create.cancel', 'Cancel')}</button>
                   <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
                     {createMutation.isPending ? t('corporate.create.creating', 'Creating...') : t('corporate.create.create', 'Create Account')}
                   </button>
@@ -273,9 +273,9 @@ export function Corporate() {
                     <p className="text-xs text-t-secondary">{t('corporate.capture.instructions', 'Paste an email, contract excerpt, proposal, or meeting notes. AI will extract corporate account details automatically.')}</p>
                     <textarea value={captureText} onChange={e => setCaptureText(e.target.value)} rows={8}
                       placeholder={t('corporate.capture.placeholder', 'e.g. Following our meeting with Acme Corp…')}
-                      className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                      className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                     <div className="flex justify-end gap-3">
-                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
+                      <button type="button" onClick={() => { setShowCreate(false); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
                       <button
                         onClick={async () => {
                           if (!captureText.trim()) return
@@ -323,26 +323,26 @@ export function Corporate() {
                         { key: 'tax_id', label: t('corporate.create.tax_id', 'Tax ID') },
                       ].map(({ key, label, type }) => (
                         <div key={key}>
-                          <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+                          <label className="block text-xs text-t-soft mb-1">{label}</label>
                           <input type={type || 'text'} value={captureResult[key] ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, [key]: e.target.value }))}
-                            className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                         </div>
                       ))}
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.billing_address', 'Billing Address')}</label>
+                      <label className="block text-xs text-t-soft mb-1">{t('corporate.create.billing_address', 'Billing Address')}</label>
                       <input type="text" value={captureResult.billing_address ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, billing_address: e.target.value }))}
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500" />
                     </div>
                     <div>
-                      <label className="block text-xs text-[#a0a0a0] mb-1">{t('corporate.create.notes', 'Notes')}</label>
+                      <label className="block text-xs text-t-soft mb-1">{t('corporate.create.notes', 'Notes')}</label>
                       <textarea value={captureResult.notes ?? ''} onChange={e => setCaptureResult((r: any) => ({ ...r, notes: e.target.value }))} rows={3}
-                        className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
+                        className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none" />
                     </div>
                     <div className="flex justify-between pt-1">
-                      <button onClick={() => setCaptureResult(null)} className="text-sm text-[#636366] hover:text-white">{t('corporate.capture.back', 'Back')}</button>
+                      <button onClick={() => setCaptureResult(null)} className="text-sm text-t-muted hover:text-white">{t('corporate.capture.back', 'Back')}</button>
                       <div className="flex gap-3">
-                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-[#a0a0a0] hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
+                        <button onClick={() => { setShowCreate(false); setCaptureResult(null); setCaptureText('') }} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('corporate.capture.cancel', 'Cancel')}</button>
                         <button
                           onClick={async () => {
                             const r = captureResult
@@ -463,9 +463,9 @@ function DetailPanel({ account, detail, currencySymbol, fieldCfg }: {
               >
                 <span className="text-gray-300 flex-1 truncate">
                   {i.guest_name ?? t('corporate.detail.inquiry_fallback', { id: i.id, defaultValue: 'Inquiry #{{id}}' })}
-                  {i.inquiry_type && <span className="text-[#636366]"> · {i.inquiry_type}</span>}
+                  {i.inquiry_type && <span className="text-t-muted"> · {i.inquiry_type}</span>}
                 </span>
-                <span className="text-[#636366] mr-3">{i.check_in ?? '—'}</span>
+                <span className="text-t-muted mr-3">{i.check_in ?? '—'}</span>
                 <span className="text-primary-400 mr-3">{fmt(i.total_value)}</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs ${i.status === 'Confirmed' ? 'bg-green-500/20 text-green-400' : i.status === 'Lost' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>{i.status}</span>
               </a>
@@ -481,7 +481,7 @@ function DetailPanel({ account, detail, currencySymbol, fieldCfg }: {
             {detail.recent_reservations.map((r: any) => (
               <div key={r.id} className="flex items-center justify-between bg-dark-surface2 rounded-lg px-3 py-2 text-xs">
                 <span className="text-gray-300">{r.guest_name || r.reference}</span>
-                <span className="text-[#636366]">{r.check_in} — {r.check_out}</span>
+                <span className="text-t-muted">{r.check_in} — {r.check_out}</span>
                 <span className="text-primary-400">{fmt(r.total)}</span>
                 <span className={`px-2 py-0.5 rounded-full text-xs ${r.status === 'Confirmed' ? 'bg-green-500/20 text-green-400' : 'bg-gray-500/20 text-t-secondary'}`}>{r.status}</span>
               </div>
@@ -493,7 +493,7 @@ function DetailPanel({ account, detail, currencySymbol, fieldCfg }: {
         && detail
         && !detail.recent_reservations?.length
         && !detail.recent_inquiries?.length && (
-        <p className="text-xs text-[#636366]">{t('corporate.detail.empty_recent', 'No recent reservations or inquiries for this account.')}</p>
+        <p className="text-xs text-t-muted">{t('corporate.detail.empty_recent', 'No recent reservations or inquiries for this account.')}</p>
       )}
     </div>
   )
@@ -543,9 +543,9 @@ function InfoBlock({ label, value }: { label: string; value: string }) {
 function Input({ label, value, onChange, type = 'text', required }: { label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean }) {
   return (
     <div>
-      <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+      <label className="block text-xs text-t-soft mb-1">{label}</label>
       <input type={type} value={value} onChange={e => onChange(e.target.value)} required={required}
-        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500" />
+        className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500" />
     </div>
   )
 }
@@ -554,7 +554,7 @@ function Select({ label, value, onChange, options }: { label: string; value: str
   const { t } = useTranslation()
   return (
     <div>
-      <label className="block text-xs text-[#a0a0a0] mb-1">{label}</label>
+      <label className="block text-xs text-t-soft mb-1">{label}</label>
       <select value={value} onChange={e => onChange(e.target.value)}
         className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500">
         <option value="">{t('corporate.create.select_placeholder', 'Select...')}</option>

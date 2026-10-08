@@ -94,7 +94,7 @@ const PAYMENT_COLOR: Record<string, string> = {
 }
 
 const card = 'rounded-2xl border border-white/[0.06]'
-const cardBg = { background: 'linear-gradient(135deg, rgba(15,28,24,0.5), rgba(10,18,16,0.6))', backdropFilter: 'blur(20px)' }
+const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
 const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#fff' }
 
@@ -294,7 +294,7 @@ export default function ServiceBookings() {
 
       {todaySnap && showTodayList && (
         <div className="rounded-2xl border border-white/[0.06] overflow-hidden"
-          style={{ background: 'rgba(18,24,22,0.96)' }}>
+          style={{ background: 'var(--legacy-card)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">Today's Schedule</span>
             <button onClick={() => setShowTodayList(false)} className="text-[10px] text-gray-500 hover:text-white">Close</button>
@@ -511,7 +511,7 @@ export default function ServiceBookings() {
 
       {selected.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 border border-white/10 rounded-2xl shadow-2xl p-3 flex items-center gap-2 backdrop-blur"
-          style={{ background: 'rgba(18,24,22,0.96)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+          style={{ background: 'var(--legacy-card)', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
           <span className="px-3 py-1.5 text-xs font-bold text-white tabular-nums">{selected.size} selected</span>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => runBulk('mark_complete')} disabled={bulkBusy}
@@ -735,7 +735,7 @@ function ManualBookingForm({ onClose, onSaved }: { onClose: () => void; onSaved:
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-start justify-center pt-[5vh] overflow-y-auto pb-10">
-      <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'linear-gradient(135deg, rgba(15,28,24,0.95), rgba(10,18,16,0.98))' }}>
+      <div className="w-full max-w-xl rounded-2xl border border-white/[0.08] p-6" style={{ background: 'var(--legacy-hero-gradient)' }}>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-bold text-white">New Booking</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>

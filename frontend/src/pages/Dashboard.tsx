@@ -236,7 +236,7 @@ export function Dashboard() {
 
       {/* ───────────── Needs Attention ───────────── */}
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">{t('dashboard.needs_attention', 'Needs your attention')}</p>
+        <p className="text-[10px] uppercase tracking-wider text-t-muted font-bold mb-2">{t('dashboard.needs_attention', 'Needs your attention')}</p>
         {alerts.length === 0 ? (
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-dark-surface border border-emerald-500/15 text-sm">
             <CheckCircle2 size={16} className="text-emerald-400" />
@@ -254,7 +254,7 @@ export function Dashboard() {
                   <Icon size={15} style={{ color: a.color }} />
                   <span className="text-base font-bold tabular-nums" style={{ color: a.color }}>{a.value}</span>
                   <span className="text-xs text-t-secondary">{a.label}</span>
-                  <ChevronRight size={13} className="text-[#636366] group-hover:text-white transition-colors" />
+                  <ChevronRight size={13} className="text-t-muted group-hover:text-white transition-colors" />
                 </button>
               )
             })}
@@ -273,7 +273,7 @@ export function Dashboard() {
               </div>
               <div>
                 <p className="text-sm font-bold text-white">{t('dashboard.schedule.title', "Today's schedule")}</p>
-                <p className="text-[11px] text-[#636366]">{format(new Date(), 'EEEE · MMMM d')}</p>
+                <p className="text-[11px] text-t-muted">{format(new Date(), 'EEEE · MMMM d')}</p>
               </div>
             </div>
             <span className="text-[11px] font-semibold text-t-secondary">{t('dashboard.schedule.events', { count: totalToday, defaultValue: '{{count}} events' })}</span>
@@ -282,10 +282,10 @@ export function Dashboard() {
           {totalToday === 0 ? (
             <div className="px-5 py-12 text-center">
               <div className="inline-flex w-12 h-12 rounded-full bg-dark-surface2 items-center justify-center mb-3">
-                <Calendar size={20} className="text-[#636366]" />
+                <Calendar size={20} className="text-t-muted" />
               </div>
               <p className="text-sm text-t-secondary">{t('dashboard.schedule.nothing_today', 'Nothing on the books for today.')}</p>
-              <p className="text-[11px] text-[#636366] mt-1">{t('dashboard.schedule.future_hint', 'Future arrivals and services will appear here.')}</p>
+              <p className="text-[11px] text-t-muted mt-1">{t('dashboard.schedule.future_hint', 'Future arrivals and services will appear here.')}</p>
             </div>
           ) : (
             <div className="divide-y divide-dark-border">
@@ -426,7 +426,7 @@ export function Dashboard() {
 
       {/* ───────────── Quick Access (8 nav tiles) ───────────── */}
       <div>
-        <p className="text-[10px] uppercase tracking-wider text-[#636366] font-bold mb-2">{t('dashboard.quick_access', 'Quick access')}</p>
+        <p className="text-[10px] uppercase tracking-wider text-t-muted font-bold mb-2">{t('dashboard.quick_access', 'Quick access')}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
           {[
             { to: '/members',          label: t('dashboard.quick.members',     'Members'),     icon: Users,         color: '#3b82f6' },
@@ -467,7 +467,7 @@ export function Dashboard() {
           </button>
         </div>
         {((recentActivity ?? []).length === 0) ? (
-          <div className="px-5 py-10 text-center text-sm text-[#636366]">{t('dashboard.no_activity', 'No recent activity yet.')}</div>
+          <div className="px-5 py-10 text-center text-sm text-t-muted">{t('dashboard.no_activity', 'No recent activity yet.')}</div>
         ) : (
           <div className="divide-y divide-dark-border">
             {(recentActivity ?? []).slice(0, 8).map((act: any, i: number) => {
@@ -484,9 +484,9 @@ export function Dashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm text-white truncate">{act.title || act.description || '—'}</p>
-                    {act.subtitle && <p className="text-[11px] text-[#636366] truncate">{act.subtitle}</p>}
+                    {act.subtitle && <p className="text-[11px] text-t-muted truncate">{act.subtitle}</p>}
                   </div>
-                  <span className="text-[11px] text-[#636366] tabular-nums whitespace-nowrap">{timeStr}</span>
+                  <span className="text-[11px] text-t-muted tabular-nums whitespace-nowrap">{timeStr}</span>
                 </div>
               )
             })}
@@ -540,7 +540,7 @@ function ScheduleSection({
         )}
       </div>
       {count === 0 ? (
-        <p className="px-5 pb-3 text-[11px] text-[#636366]">{emptyLabel}</p>
+        <p className="px-5 pb-3 text-[11px] text-t-muted">{emptyLabel}</p>
       ) : (
         <div>
           {rows.map(r => (
@@ -552,7 +552,7 @@ function ScheduleSection({
               </div>
               <div className="flex-1 min-w-0 text-left">
                 <p className="text-sm font-medium text-white truncate">{r.primary}</p>
-                {r.secondary && <p className="text-[11px] text-[#636366] truncate">{r.secondary}</p>}
+                {r.secondary && <p className="text-[11px] text-t-muted truncate">{r.secondary}</p>}
               </div>
               {r.meta && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0"
@@ -582,14 +582,14 @@ function KpiTile({
     <button onClick={onClick}
       className="group bg-dark-surface rounded-xl border border-dark-border p-4 text-left hover:border-white/10 transition-colors">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] uppercase tracking-wider font-bold text-[#636366]">{label}</span>
+        <span className="text-[10px] uppercase tracking-wider font-bold text-t-muted">{label}</span>
         <div className="w-7 h-7 rounded-lg flex items-center justify-center"
           style={{ background: accent + '18', color: accent }}>
           <Icon size={13} />
         </div>
       </div>
       <p className="text-xl font-bold text-white tabular-nums leading-tight">{value}</p>
-      {sub && <p className="text-[10px] text-[#636366] mt-1 truncate">{sub}</p>}
+      {sub && <p className="text-[10px] text-t-muted mt-1 truncate">{sub}</p>}
     </button>
   )
 }

@@ -1,12 +1,17 @@
 @import './portal/theme/portal.css';
 @import './appointments/theme/appointments.css';
+@import './theme/legacySurfaces.css';
+@import './theme/glass.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+/* NOTE (2026-10-08): this import has never reached production. It follows
+   the rules above, so the build drops it, and the preset fonts below only
+   render where they happen to be installed. Moving it up would change how
+   Classic looks for every organisation on a preset, so that is left to the
+   owner (Glass spec §12). Glass's own faces are self-hosted in theme/glass.css. */
 /* Display fonts used by Settings → Branding theme presets. Without these
    the per-preset fontFamily fell back to system fonts (mostly Inter on
    Windows) and all 14 preset cards rendered with the SAME typography —
@@ -59,7 +64,7 @@ input[type="week"] {
   --theme-radius-card: 12px;
 }
 
-:root[data-mood="luxury"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] {
   --theme-font-body: 'EB Garamond', Georgia, 'Times New Roman', serif;
   --theme-font-display: 'EB Garamond', Georgia, 'Times New Roman', serif;
   --theme-radius-tight: 2px;
@@ -67,7 +72,7 @@ input[type="week"] {
   --theme-radius-card: 6px;
 }
 
-:root[data-mood="editorial"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] {
   --theme-font-body: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --theme-font-display: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
   --theme-radius-tight: 0;
@@ -75,7 +80,7 @@ input[type="week"] {
   --theme-radius-card: 0;
 }
 
-:root[data-mood="boutique"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="boutique"] {
   --theme-font-body: 'Inter', system-ui, sans-serif;
   --theme-font-display: 'Playfair Display', Georgia, serif;
   --theme-radius-tight: 10px;
@@ -83,7 +88,7 @@ input[type="week"] {
   --theme-radius-card: 24px;
 }
 
-:root[data-mood="creative"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] {
   --theme-font-body: 'Space Grotesk', 'Inter', sans-serif;
   --theme-font-display: 'Space Grotesk', 'Inter', sans-serif;
   --theme-letter-spacing: -0.01em;
@@ -92,7 +97,7 @@ input[type="week"] {
   --theme-radius-card: 6px;
 }
 
-:root[data-mood="energetic"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] {
   --theme-font-body: 'Bricolage Grotesque', 'Inter', sans-serif;
   --theme-font-display: 'Bricolage Grotesque', 'Inter', sans-serif;
   --theme-radius-tight: 10px;
@@ -100,7 +105,7 @@ input[type="week"] {
   --theme-radius-card: 24px;
 }
 
-:root[data-mood="natural"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="natural"] {
   --theme-font-body: 'Inter', system-ui, sans-serif;
   --theme-font-display: 'Lora', Georgia, serif;
   --theme-radius-tight: 8px;
@@ -108,7 +113,7 @@ input[type="week"] {
   --theme-radius-card: 22px;
 }
 
-:root[data-mood="wellness"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="wellness"] {
   --theme-font-body: 'Inter', system-ui, sans-serif;
   --theme-font-display: 'DM Serif Display', Georgia, serif;
   --theme-radius-tight: 8px;
@@ -116,7 +121,7 @@ input[type="week"] {
   --theme-radius-card: 18px;
 }
 
-:root[data-mood="modern"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] {
   --theme-font-body: 'Manrope', 'Inter', sans-serif;
   --theme-font-display: 'Manrope', 'Inter', sans-serif;
   --theme-radius-tight: 6px;
@@ -124,7 +129,7 @@ input[type="week"] {
   --theme-radius-card: 14px;
 }
 
-:root[data-mood="minimal"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] {
   --theme-font-body: 'IBM Plex Sans', 'Inter', sans-serif;
   --theme-font-display: 'IBM Plex Sans', 'Inter', sans-serif;
   --theme-letter-spacing: -0.005em;
@@ -133,7 +138,7 @@ input[type="week"] {
   --theme-radius-card: 8px;
 }
 
-:root[data-mood="corporate"] {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="corporate"] {
   --theme-font-body: 'Inter', system-ui, sans-serif;
   --theme-font-display: 'Inter', system-ui, sans-serif;
   --theme-radius-tight: 4px;
@@ -227,7 +232,7 @@ input, textarea, select, button {
   }
   .mobile-bottom-nav > a.active,
   .mobile-bottom-nav > button.active {
-    color: rgb(var(--color-primary-400, 212 182 92));
+    color: rgb(var(--color-primary-400, 88 149 247));
   }
 
   /* Raise floating things above the bottom nav. */
@@ -279,14 +284,14 @@ input, textarea, select, button {
    neutral letter-spacing — zero change for orgs that never touched
    the theme. ═══════════════════════════════════════════════════════════ */
 
-:root[data-mood] .text-lg,
-:root[data-mood] .text-xl,
-:root[data-mood] .text-2xl,
-:root[data-mood] .text-3xl,
-:root[data-mood] .text-4xl,
-:root[data-mood] .text-5xl,
-:root[data-mood] .text-6xl,
-:root[data-mood] .text-7xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-5xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-6xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood] .text-7xl {
   font-family: var(--theme-font-display);
   letter-spacing: var(--theme-letter-spacing);
 }
@@ -298,87 +303,87 @@ input, textarea, select, button {
    completely differently from neutral (corporate) or bold tracking
    (creative). */
 
-:root[data-mood="luxury"] .text-lg,
-:root[data-mood="luxury"] .text-xl,
-:root[data-mood="luxury"] .text-2xl,
-:root[data-mood="luxury"] .text-3xl,
-:root[data-mood="luxury"] .text-4xl,
-:root[data-mood="luxury"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="luxury"] .text-5xl {
   letter-spacing: 0.005em;
   font-weight: 600;
 }
 
-:root[data-mood="editorial"] .text-lg,
-:root[data-mood="editorial"] .text-xl,
-:root[data-mood="editorial"] .text-2xl,
-:root[data-mood="editorial"] .text-3xl,
-:root[data-mood="editorial"] .text-4xl,
-:root[data-mood="editorial"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="editorial"] .text-5xl {
   letter-spacing: -0.015em;
   font-weight: 700;
   line-height: 1.05;
 }
 
-:root[data-mood="boutique"] .text-2xl,
-:root[data-mood="boutique"] .text-3xl,
-:root[data-mood="boutique"] .text-4xl,
-:root[data-mood="boutique"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="boutique"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="boutique"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="boutique"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="boutique"] .text-5xl {
   font-style: italic;
   letter-spacing: -0.005em;
 }
 
-:root[data-mood="creative"] .text-lg,
-:root[data-mood="creative"] .text-xl,
-:root[data-mood="creative"] .text-2xl,
-:root[data-mood="creative"] .text-3xl,
-:root[data-mood="creative"] .text-4xl,
-:root[data-mood="creative"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="creative"] .text-5xl {
   letter-spacing: -0.025em;
   font-weight: 700;
 }
 
-:root[data-mood="energetic"] .text-lg,
-:root[data-mood="energetic"] .text-xl,
-:root[data-mood="energetic"] .text-2xl,
-:root[data-mood="energetic"] .text-3xl,
-:root[data-mood="energetic"] .text-4xl,
-:root[data-mood="energetic"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="energetic"] .text-5xl {
   letter-spacing: -0.015em;
   font-weight: 700;
 }
 
-:root[data-mood="minimal"] body { font-weight: 300; }
-:root[data-mood="minimal"] .text-lg,
-:root[data-mood="minimal"] .text-xl,
-:root[data-mood="minimal"] .text-2xl,
-:root[data-mood="minimal"] .text-3xl,
-:root[data-mood="minimal"] .text-4xl,
-:root[data-mood="minimal"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] body { font-weight: 300; }
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] .text-5xl {
   letter-spacing: -0.02em;
   font-weight: 300;
 }
 
-:root[data-mood="modern"] .text-lg,
-:root[data-mood="modern"] .text-xl,
-:root[data-mood="modern"] .text-2xl,
-:root[data-mood="modern"] .text-3xl,
-:root[data-mood="modern"] .text-4xl,
-:root[data-mood="modern"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-lg,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="modern"] .text-5xl {
   letter-spacing: -0.015em;
   font-weight: 700;
 }
 
-:root[data-mood="natural"] .text-2xl,
-:root[data-mood="natural"] .text-3xl,
-:root[data-mood="natural"] .text-4xl,
-:root[data-mood="natural"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="natural"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="natural"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="natural"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="natural"] .text-5xl {
   font-style: italic;
 }
 
-:root[data-mood="wellness"] .text-2xl,
-:root[data-mood="wellness"] .text-3xl,
-:root[data-mood="wellness"] .text-4xl,
-:root[data-mood="wellness"] .text-5xl {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="wellness"] .text-2xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="wellness"] .text-3xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="wellness"] .text-4xl,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="wellness"] .text-5xl {
   font-weight: 400;
   letter-spacing: -0.005em;
 }
@@ -386,9 +391,9 @@ input, textarea, select, button {
 /* Per-mood form-control font-weight tweaks so input + buttons match
    the picked mood's body weight (matters most for minimal which uses
    300, defaults to 400 otherwise). */
-:root[data-mood="minimal"] input,
-:root[data-mood="minimal"] textarea,
-:root[data-mood="minimal"] select {
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] input,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] textarea,
+:root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood="minimal"] select {
   font-weight: 300;
 }
 

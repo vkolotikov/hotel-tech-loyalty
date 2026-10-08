@@ -93,7 +93,7 @@ export function InquiryActivityTimeline({ inquiryId }: Props) {
           onChange={e => setBody(e.target.value)}
           placeholder="What happened? (e.g. 'Called guest, will send proposal Tue')"
           rows={2}
-          className="w-full bg-[#1e1e1e] border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500/40"
+          className="w-full bg-panel border border-white/[0.06] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:ring-1 focus:ring-primary-500/40"
           onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit() }}
         />
         <div className="flex items-center justify-between">

@@ -127,7 +127,7 @@ export function PipelineInsights({ currencySymbol }: { currencySymbol: string })
       </div>
 
       {activeCard && (
-        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'rgba(18,24,22,0.96)' }}>
+        <div className="rounded-2xl border border-white/[0.06] overflow-hidden" style={{ background: 'var(--legacy-card)' }}>
           <div className="px-4 py-2 border-b border-white/[0.06] flex items-center justify-between gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-gray-400">{activeCard.label}</span>
             <div className="flex items-center gap-2">

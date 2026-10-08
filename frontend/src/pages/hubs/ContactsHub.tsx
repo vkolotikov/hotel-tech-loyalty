@@ -16,7 +16,7 @@ const Customers          = lazy(() => import('../Customers').then(m => ({ defaul
 const Corporate          = lazy(() => import('../Corporate').then(m => ({ default: m.Corporate })))
 const CustomerDuplicates = lazy(() => import('../CustomerDuplicates').then(m => ({ default: m.CustomerDuplicates })))
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 export function ContactsHub() {
   return (

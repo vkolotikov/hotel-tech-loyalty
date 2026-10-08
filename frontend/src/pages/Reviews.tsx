@@ -86,7 +86,7 @@ export function Reviews() {
       <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-white">Reviews</h1>
-          <p className="text-[#a0a0a0] text-xs md:text-sm mt-1">Collect guest feedback and route happy customers to public review sites.</p>
+          <p className="text-t-soft text-xs md:text-sm mt-1">Collect guest feedback and route happy customers to public review sites.</p>
         </div>
       </div>
 
@@ -94,12 +94,12 @@ export function Reviews() {
 
       {/* Tabs scroll horizontally on small viewports */}
       <div className="overflow-x-auto -mx-1 px-1 mb-4">
-        <div className="flex gap-1 bg-[#1e1e1e] p-1 rounded-lg text-sm w-fit">
+        <div className="flex gap-1 bg-panel p-1 rounded-lg text-sm w-fit">
           {(['submissions', 'invitations', 'forms', 'devices', 'integrations'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 md:px-4 py-1.5 rounded-md font-semibold capitalize transition-colors whitespace-nowrap ${tab === t ? 'bg-primary-500 text-white' : 'text-[#a0a0a0] hover:text-white'}`}
+              className={`px-3 md:px-4 py-1.5 rounded-md font-semibold capitalize transition-colors whitespace-nowrap ${tab === t ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}
             >
               {t}
             </button>
@@ -130,9 +130,9 @@ function StatsRow({ stats }: { stats: Stats }) {
 function StatCard({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-      <div className="text-[#a0a0a0] text-xs uppercase tracking-wider mb-2">{label}</div>
+      <div className="text-t-soft text-xs uppercase tracking-wider mb-2">{label}</div>
       <div className="text-2xl font-bold text-white">{value}</div>
-      <div className="text-xs text-[#a0a0a0] mt-1">{sub}</div>
+      <div className="text-xs text-t-soft mt-1">{sub}</div>
     </div>
   )
 }
@@ -202,7 +202,7 @@ function SubmissionsTab() {
         <select
           value={filter.rating ?? ''}
           onChange={e => setFilter(f => ({ ...f, rating: e.target.value ? Number(e.target.value) : undefined }))}
-          className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white"
+          className="bg-panel border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white"
         >
           <option value="">All ratings</option>
           {[5, 4, 3, 2, 1].map(r => <option key={r} value={r}>{r} stars</option>)}
@@ -210,7 +210,7 @@ function SubmissionsTab() {
         <select
           value={filter.redirected ?? ''}
           onChange={e => setFilter(f => ({ ...f, redirected: (e.target.value || undefined) as any }))}
-          className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white"
+          className="bg-panel border border-dark-border rounded-lg px-3 py-1.5 text-xs text-white"
         >
           <option value="">Any redirect state</option>
           <option value="yes">Redirected externally</option>
@@ -238,7 +238,7 @@ function SubmissionsTab() {
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[#151515] text-[#a0a0a0] text-xs uppercase tracking-wider">
+          <thead className="bg-[#151515] text-t-soft text-xs uppercase tracking-wider">
             <tr>
               <th className="text-left p-3">Who</th>
               <th className="text-left p-3">Form</th>
@@ -256,17 +256,17 @@ function SubmissionsTab() {
             {subs.map(s => (
               <tr key={s.id} onClick={() => navigate(`/reviews/submissions/${s.id}`)} className="border-t border-dark-border hover:bg-[#151515] cursor-pointer">
                 <td className="p-3 text-white">{s.member?.user.name ?? s.guest?.full_name ?? s.anonymous_name ?? 'Anonymous'}</td>
-                <td className="p-3 text-[#a0a0a0] text-xs">{s.form.name}</td>
+                <td className="p-3 text-t-soft text-xs">{s.form.name}</td>
                 <td className="p-3">
                   {s.overall_rating ? <StarDisplay value={s.overall_rating} /> : s.nps_score !== null ? <span className="text-white">NPS {s.nps_score}</span> : <span className="text-[#666]">—</span>}
                 </td>
-                <td className="p-3 text-[#a0a0a0] text-xs max-w-md truncate">{s.comment ?? '—'}</td>
+                <td className="p-3 text-t-soft text-xs max-w-md truncate">{s.comment ?? '—'}</td>
                 <td className="p-3 text-xs">
                   {s.redirected_externally ? (
                     <span className="inline-flex items-center gap-1 text-emerald-300"><ExternalLink size={12} /> {PLATFORM_LABELS[s.external_platform ?? ''] ?? 'External'}</span>
                   ) : <span className="text-[#666]">—</span>}
                 </td>
-                <td className="p-3 text-[#a0a0a0] text-xs">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '—'}</td>
+                <td className="p-3 text-t-soft text-xs">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '—'}</td>
                 <td className="p-3" onClick={e => e.stopPropagation()}>
                   <button
                     type="button"
@@ -356,11 +356,11 @@ function FormsTab() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-white font-semibold">{f.name}</h3>
-                <span className="px-2 py-0.5 rounded bg-[#1e1e1e] text-[#a0a0a0] text-[10px] uppercase tracking-wider">{f.type}</span>
+                <span className="px-2 py-0.5 rounded bg-panel text-t-soft text-[10px] uppercase tracking-wider">{f.type}</span>
                 {f.is_default && <span className="px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 text-[10px] uppercase tracking-wider">Default</span>}
                 {!f.is_active && <span className="px-2 py-0.5 rounded bg-red-500/15 text-red-300 text-[10px] uppercase tracking-wider">Inactive</span>}
               </div>
-              <div className="text-xs text-[#a0a0a0] mt-1">
+              <div className="text-xs text-t-soft mt-1">
                 {f.type === 'custom' ? `${f.questions_count ?? 0} questions` : 'Single rating'} · {f.submissions_count ?? 0} submissions
               </div>
               <div className="flex items-center gap-2 mt-2 text-xs text-[#666]">
@@ -400,7 +400,7 @@ function FormsTab() {
 
       {defaultForm && (
         <div className="mt-4 text-xs text-[#666]">
-          The default form "<span className="text-[#a0a0a0]">{defaultForm.name}</span>" is used for automated post-stay invitations.
+          The default form "<span className="text-t-soft">{defaultForm.name}</span>" is used for automated post-stay invitations.
         </div>
       )}
 
@@ -421,33 +421,33 @@ function CreateFormModal({ onClose, onCreate, pending }: { onClose: () => void; 
         </div>
         <div className="p-5 space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#a0a0a0] uppercase tracking-wider mb-2">Name</label>
+            <label className="block text-xs font-semibold text-t-soft uppercase tracking-wider mb-2">Name</label>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
               placeholder="e.g. Spa Experience"
-              className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setType('basic')}
-              className={`p-3 rounded-lg border text-left transition-colors ${type === 'basic' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-[#1e1e1e]'}`}
+              className={`p-3 rounded-lg border text-left transition-colors ${type === 'basic' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel'}`}
             >
               <div className="font-semibold text-white text-sm">Basic rating</div>
-              <div className="text-xs text-[#a0a0a0] mt-1">Stars + comment, threshold redirect</div>
+              <div className="text-xs text-t-soft mt-1">Stars + comment, threshold redirect</div>
             </button>
             <button
               onClick={() => setType('custom')}
-              className={`p-3 rounded-lg border text-left transition-colors ${type === 'custom' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-[#1e1e1e]'}`}
+              className={`p-3 rounded-lg border text-left transition-colors ${type === 'custom' ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel'}`}
             >
               <div className="font-semibold text-white text-sm">Custom form</div>
-              <div className="text-xs text-[#a0a0a0] mt-1">Multi-question survey</div>
+              <div className="text-xs text-t-soft mt-1">Multi-question survey</div>
             </button>
           </div>
         </div>
         <div className="p-5 border-t border-dark-border flex gap-2 justify-end">
-          <button onClick={onClose} className="border border-dark-border text-[#a0a0a0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
+          <button onClick={onClose} className="border border-dark-border text-t-soft px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
           <button
             onClick={() => name.trim() && onCreate({ name: name.trim(), type })}
             disabled={!name.trim() || pending}
@@ -535,16 +535,16 @@ function DevicesTab() {
           <TabletSmartphone size={15} className="text-primary-400" />
           <h3 className="text-sm font-semibold text-white">Feedback kiosks</h3>
         </div>
-        <p className="text-xs text-[#a0a0a0] leading-relaxed mb-3">
+        <p className="text-xs text-t-soft leading-relaxed mb-3">
           Register each tablet once, open its kiosk link in the tablet's browser (full-screen), and assign a survey.
           Reassigning here repoints the tablet within a minute — no need to touch the device. Surveys render in
           kiosk mode automatically: full-screen, big touch targets, auto-reset between guests.
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
           <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Device name (e.g. Reception iPad)"
-            className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]" />
+            className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted" />
           <input value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="Location (optional)"
-            className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366]" />
+            className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted" />
           <button onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
             className="flex items-center justify-center gap-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
             <Plus size={14} /> Register device
@@ -553,9 +553,9 @@ function DevicesTab() {
       </div>
 
       {isLoading ? (
-        <div className="text-center text-[#636366] py-10 text-sm">Loading devices…</div>
+        <div className="text-center text-t-muted py-10 text-sm">Loading devices…</div>
       ) : devices.length === 0 ? (
-        <div className="text-center text-[#636366] py-14 bg-dark-surface border border-dark-border rounded-xl">
+        <div className="text-center text-t-muted py-14 bg-dark-surface border border-dark-border rounded-xl">
           <TabletSmartphone size={30} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">No kiosks yet. Register your first tablet above.</p>
         </div>
@@ -568,18 +568,18 @@ function DevicesTab() {
                   title={d.is_online ? 'Online — kiosk page open' : 'Offline'} />
                 <div className="min-w-0">
                   <div className="text-sm font-semibold text-white truncate">{d.name}</div>
-                  <div className="text-[11px] text-[#636366] truncate">
+                  <div className="text-[11px] text-t-muted truncate">
                     {d.location || '—'}{d.last_seen_at ? ` · seen ${new Date(d.last_seen_at).toLocaleString()}` : ' · never connected'}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-2 flex-1">
-                <span className="text-[11px] text-[#636366] whitespace-nowrap">Shows survey:</span>
+                <span className="text-[11px] text-t-muted whitespace-nowrap">Shows survey:</span>
                 <select
                   value={d.form_id ?? ''}
                   onChange={e => updateMutation.mutate({ id: d.id, patch: { form_id: e.target.value ? Number(e.target.value) : null } })}
-                  className="flex-1 max-w-xs bg-[#1e1e1e] border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white">
+                  className="flex-1 max-w-xs bg-panel border border-dark-border rounded-lg px-2 py-1.5 text-xs text-white">
                   <option value="">— none assigned —</option>
                   {forms.map(f => <option key={f.id} value={f.id}>{f.name}{f.is_active ? '' : ' (inactive)'}</option>)}
                 </select>
@@ -587,7 +587,7 @@ function DevicesTab() {
 
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button onClick={() => { navigator.clipboard.writeText(kioskUrl(d)); toast.success('Kiosk link copied') }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
                   <Copy size={11} /> Copy link
                 </button>
                 <button
@@ -597,15 +597,15 @@ function DevicesTab() {
                       setQrModal({ name: d.name, url: res.url, qr: res.qr })
                     } catch { toast.error('Could not generate QR') }
                   }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
                   <QrCode size={11} /> QR
                 </button>
                 <a href={kioskUrl(d)} target="_blank" rel="noreferrer"
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
                   <ExternalLink size={11} /> Open
                 </a>
                 <button onClick={() => { if (confirm("Rotate this device's key? The old kiosk link stops working.")) rotateMutation.mutate(d.id) }}
-                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-[#a0a0a0] hover:text-white">
+                  className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-dark-border text-t-soft hover:text-white">
                   <RefreshCw size={11} /> Rotate key
                 </button>
                 <button onClick={() => { if (confirm(`Remove "${d.name}"?`)) deleteMutation.mutate(d.id) }}
@@ -628,12 +628,12 @@ function DevicesTab() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-white">{qrModal.name}</h3>
               <button onClick={() => setQrModal(null)} aria-label="Close"
-                className="text-[#636366] hover:text-white p-1"><X size={16} /></button>
+                className="text-t-muted hover:text-white p-1"><X size={16} /></button>
             </div>
             <div className="bg-white rounded-xl p-4 inline-block">
               <img src={qrModal.qr} alt="Kiosk QR code" className="w-52 h-52" />
             </div>
-            <p className="text-[11px] text-[#a0a0a0] mt-4 leading-relaxed">
+            <p className="text-[11px] text-t-soft mt-4 leading-relaxed">
               On the tablet: open the camera, scan, tap the link, then add the page to the
               home screen / enable kiosk mode so it stays full-screen.
             </p>
@@ -671,7 +671,7 @@ function IntegrationsTab() {
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-[#a0a0a0] mb-2">
+      <p className="text-xs text-t-soft mb-2">
         When a basic-form rating meets the form's threshold, the reviewer is asked if they'd like to share on a public platform.
         Configure your public review URLs here.
       </p>
@@ -696,9 +696,9 @@ function IntegrationRow({ platform, existing, onSave }: { platform: string; exis
         value={url}
         onChange={e => setUrl(e.target.value)}
         placeholder="https://g.page/.../review"
-        className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+        className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
       />
-      <label className="flex items-center gap-2 text-xs text-[#a0a0a0] cursor-pointer">
+      <label className="flex items-center gap-2 text-xs text-t-soft cursor-pointer">
         <input type="checkbox" checked={enabled} onChange={e => setEnabled(e.target.checked)} />
         Enabled
       </label>
@@ -772,7 +772,7 @@ function InvitationsTab() {
         <select
           value={statusFilter}
           onChange={e => setStatusFilter(e.target.value)}
-          className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white"
+          className="bg-panel border border-dark-border rounded-lg px-3 py-1.5 text-sm text-white"
         >
           <option value="">All statuses</option>
           <option value="pending">Pending</option>
@@ -785,7 +785,7 @@ function InvitationsTab() {
 
       <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#151515] text-[#a0a0a0]">
+          <thead className="bg-[#151515] text-t-soft">
             <tr>
               <th className="text-left px-4 py-3 font-semibold">Recipient</th>
               <th className="text-left px-4 py-3 font-semibold">Form</th>
@@ -806,12 +806,12 @@ function InvitationsTab() {
                 <tr key={inv.id} className="border-t border-dark-border">
                   <td className="px-4 py-3">
                     <div className="text-white font-medium">{name}</div>
-                    {email && <div className="text-xs text-[#a0a0a0]">{email}</div>}
+                    {email && <div className="text-xs text-t-soft">{email}</div>}
                   </td>
                   <td className="px-4 py-3 text-[#e5e5e5]">{inv.form?.name ?? '—'}</td>
-                  <td className="px-4 py-3 text-[#a0a0a0] capitalize">{inv.channel}</td>
+                  <td className="px-4 py-3 text-t-soft capitalize">{inv.channel}</td>
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
-                  <td className="px-4 py-3 text-[#a0a0a0]">{inv.sent_at ? new Date(inv.sent_at).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 text-t-soft">{inv.sent_at ? new Date(inv.sent_at).toLocaleString() : '—'}</td>
                   <td className="px-4 py-3">
                     {inv.submission ? (
                       <button
@@ -844,16 +844,16 @@ function FunnelStat({ label, value, sub, tone }: { label: string; value: number;
   }[tone]
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-      <div className="text-xs text-[#a0a0a0] uppercase tracking-wider mb-1">{label}</div>
+      <div className="text-xs text-t-soft uppercase tracking-wider mb-1">{label}</div>
       <div className={`text-2xl font-bold ${color}`}>{value.toLocaleString()}</div>
-      {sub && <div className="text-xs text-[#a0a0a0] mt-0.5">{sub}</div>}
+      {sub && <div className="text-xs text-t-soft mt-0.5">{sub}</div>}
     </div>
   )
 }
 
 function StatusBadge({ status }: { status: Invitation['status'] }) {
   const styles: Record<Invitation['status'], string> = {
-    pending:    'bg-[#1e1e1e] text-[#a0a0a0]',
+    pending:    'bg-panel text-t-soft',
     opened:     'bg-blue-500/15 text-blue-300',
     submitted:  'bg-emerald-500/15 text-emerald-300',
     redirected: 'bg-amber-500/15 text-amber-300',

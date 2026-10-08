@@ -174,9 +174,9 @@ export function Notifications() {
   const statusColor: Record<string, string> = {
     draft: 'bg-dark-surface3 text-t-secondary',
     scheduled: 'bg-[#ffd60a]/15 text-[#ffd60a]',
-    sending: 'bg-[#0a84ff]/15 text-[#0a84ff]',
-    sent: 'bg-[#32d74b]/15 text-[#32d74b]',
-    failed: 'bg-[#ff375f]/15 text-[#ff375f]',
+    sending: 'bg-notice/15 text-notice',
+    sent: 'bg-success/15 text-success',
+    failed: 'bg-danger/15 text-danger',
   }
 
   const campaigns: Campaign[] = data?.campaigns ?? []
@@ -212,11 +212,11 @@ export function Notifications() {
           <h2 className="font-semibold text-white">{t('notifications.recent.title', 'Recent Campaigns')}</h2>
         </div>
         {isLoading ? (
-          <div className="p-12 text-center text-[#636366]">{t('notifications.recent.loading', 'Loading…')}</div>
+          <div className="p-12 text-center text-t-muted">{t('notifications.recent.loading', 'Loading…')}</div>
         ) : campaigns.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-t-secondary font-medium">{t('notifications.recent.no_campaigns', 'No campaigns yet')}</p>
-            <p className="text-sm text-[#636366] mt-1">{t('notifications.recent.no_campaigns_sub', 'Create your first campaign to engage members')}</p>
+            <p className="text-sm text-t-muted mt-1">{t('notifications.recent.no_campaigns_sub', 'Create your first campaign to engage members')}</p>
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -237,13 +237,13 @@ export function Notifications() {
                 <tr key={c.id} onClick={() => navigate(`/notifications/${c.id}`)} className="hover:bg-dark-surface2 transition-colors cursor-pointer">
                   <td className="px-6 py-4">
                     <p className="font-semibold text-white">{c.name}</p>
-                    <p className="text-[#636366] text-xs mt-0.5 truncate max-w-xs">{c.template?.split('\n')[0]}</p>
+                    <p className="text-t-muted text-xs mt-0.5 truncate max-w-xs">{c.template?.split('\n')[0]}</p>
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
                       c.channel === 'both' ? 'bg-[#8b5cf6]/15 text-[#8b5cf6]'
-                      : c.channel === 'email' ? 'bg-[#0a84ff]/15 text-[#0a84ff]'
-                      : 'bg-[#32d74b]/15 text-[#32d74b]'
+                      : c.channel === 'email' ? 'bg-notice/15 text-notice'
+                      : 'bg-success/15 text-success'
                     }`}>
                       {c.channel === 'both' ? t('notifications.table.channel_both', 'PUSH+EMAIL') : (c.channel ?? 'push').toUpperCase()}
                     </span>
@@ -253,12 +253,12 @@ export function Notifications() {
                       {c.status?.toUpperCase()}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-[#a0a0a0]">
+                  <td className="px-6 py-4 text-t-soft">
                     {c.segment_rules?.tiers?.join(', ') || t('notifications.table.all_members', 'All members')}
                   </td>
                   <td className="px-6 py-4 text-right font-medium text-white">{(c.sent_count ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right font-medium text-[#0a84ff]">{(c.email_sent_count ?? 0).toLocaleString()}</td>
-                  <td className="px-6 py-4 text-right font-medium text-[#32d74b]">{(c.opened_count ?? 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-medium text-notice">{(c.email_sent_count ?? 0).toLocaleString()}</td>
+                  <td className="px-6 py-4 text-right font-medium text-success">{(c.opened_count ?? 0).toLocaleString()}</td>
                   <td className="px-6 py-4 text-t-secondary text-xs">
                     {c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}
                   </td>
@@ -276,7 +276,7 @@ export function Notifications() {
             <div className="p-5 border-b border-dark-border">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-bold text-white">{t('notifications.wizard.title_new', 'New Campaign')}</h2>
-                <button onClick={closeWizard} className="text-[#636366] hover:text-white text-xl">&times;</button>
+                <button onClick={closeWizard} className="text-t-muted hover:text-white text-xl">&times;</button>
               </div>
               <Stepper current={step} />
             </div>
@@ -322,7 +322,7 @@ export function Notifications() {
             <div className="p-5 border-t border-dark-border flex gap-3">
               <button
                 onClick={closeWizard}
-                className="border border-dark-border text-[#a0a0a0] px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+                className="border border-dark-border text-t-soft px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
               >
                 {t('notifications.wizard.cancel', 'Cancel')}
               </button>
@@ -363,8 +363,8 @@ export function Notifications() {
 // ----------------------------------------------------------------------
 
 function StatCard({ label, value, tone }: { label: string; value: number | string; tone: 'white' | 'blue' | 'green' | 'violet' }) {
-  const color = tone === 'blue' ? 'text-[#0a84ff]'
-    : tone === 'green' ? 'text-[#32d74b]'
+  const color = tone === 'blue' ? 'text-notice'
+    : tone === 'green' ? 'text-success'
     : tone === 'violet' ? 'text-[#8b5cf6]'
     : 'text-white'
   return (
@@ -390,11 +390,11 @@ function Stepper({ current }: { current: Step }) {
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
             s.n < current ? 'bg-primary-600 text-white'
             : s.n === current ? 'bg-primary-500 text-white ring-4 ring-primary-500/20'
-            : 'bg-dark-surface2 text-[#636366] border border-dark-border'
+            : 'bg-dark-surface2 text-t-muted border border-dark-border'
           }`}>
             {s.n < current ? '✓' : s.n}
           </div>
-          <span className={`text-xs font-semibold ${s.n === current ? 'text-white' : 'text-[#636366]'} hidden md:inline`}>
+          <span className={`text-xs font-semibold ${s.n === current ? 'text-white' : 'text-t-muted'} hidden md:inline`}>
             {s.label}
           </span>
           {i < steps.length - 1 && <div className="flex-1 h-px bg-dark-border" />}
@@ -434,7 +434,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
               }`}
             >
               <div className="text-sm font-bold text-white">{ch.label}</div>
-              <div className="text-xs text-[#a0a0a0] mt-1">{ch.desc}</div>
+              <div className="text-xs text-t-soft mt-1">{ch.desc}</div>
             </button>
           ))}
         </div>
@@ -446,7 +446,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
           {emailTemplates.length === 0 ? (
             <div className="bg-dark-surface2 rounded-xl border border-dark-border p-6 text-center">
               <p className="text-sm text-t-secondary">{t('notifications.wizard.step1.no_templates', 'No email templates yet.')}</p>
-              <p className="text-xs text-[#636366] mt-1">{t('notifications.wizard.step1.no_templates_sub', 'Create one in Email Templates first.')}</p>
+              <p className="text-xs text-t-muted mt-1">{t('notifications.wizard.step1.no_templates_sub', 'Create one in Email Templates first.')}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 max-h-[320px] overflow-y-auto">
@@ -471,7 +471,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
                   </div>
                   <div className="p-3 bg-dark-surface2">
                     <p className="text-xs font-semibold text-white truncate">{t.name}</p>
-                    <p className="text-[10px] text-[#636366] truncate mt-0.5">{t.subject}</p>
+                    <p className="text-[10px] text-t-muted truncate mt-0.5">{t.subject}</p>
                   </div>
                 </button>
               ))}
@@ -488,23 +488,23 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
           <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step1.push_content', 'Push content')}</h3>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.title_label', 'Title')}</label>
+              <label className="block text-xs font-semibold text-t-soft mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.title_label', 'Title')}</label>
               <input
                 type="text"
                 value={form.title}
                 onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
                 placeholder={t('notifications.wizard.step1.title_placeholder', 'e.g. Special offer just for you!')}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.body_label', 'Message body')}</label>
+              <label className="block text-xs font-semibold text-t-soft mb-1 uppercase tracking-wide">{t('notifications.wizard.step1.body_label', 'Message body')}</label>
               <textarea
                 value={form.body}
                 onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
                 placeholder={t('notifications.wizard.step1.body_placeholder', 'Earn double points this weekend…')}
                 rows={3}
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
               />
             </div>
           </div>
@@ -532,7 +532,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
       <div className="space-y-5">
         <div>
           <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step2.filter_tier', 'Filter by tier')}</h3>
-          <p className="text-xs text-[#636366] mb-2">{t('notifications.wizard.step2.tier_help', 'Leave empty to target all tiers')}</p>
+          <p className="text-xs text-t-muted mb-2">{t('notifications.wizard.step2.tier_help', 'Leave empty to target all tiers')}</p>
           <div className="flex flex-wrap gap-2">
             {tiers.map(tier => (
               <button
@@ -554,23 +554,23 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
           <h3 className="text-sm font-bold text-white mb-3 uppercase tracking-wider">{t('notifications.wizard.step2.filter_points', 'Filter by points')}</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-[#a0a0a0] mb-1">{t('notifications.wizard.step2.minimum', 'Minimum')}</label>
+              <label className="block text-xs text-t-soft mb-1">{t('notifications.wizard.step2.minimum', 'Minimum')}</label>
               <input
                 type="number"
                 value={form.points_min}
                 onChange={e => setForm(f => ({ ...f, points_min: e.target.value }))}
                 placeholder="0"
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
             <div>
-              <label className="block text-xs text-[#a0a0a0] mb-1">{t('notifications.wizard.step2.maximum', 'Maximum')}</label>
+              <label className="block text-xs text-t-soft mb-1">{t('notifications.wizard.step2.maximum', 'Maximum')}</label>
               <input
                 type="number"
                 value={form.points_max}
                 onChange={e => setForm(f => ({ ...f, points_max: e.target.value }))}
                 placeholder="∞"
-                className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
             </div>
           </div>
@@ -580,14 +580,14 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
       <div className="bg-dark-surface2 rounded-xl border border-dark-border p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-bold text-white uppercase tracking-wider">{t('notifications.wizard.step2.audience_title', 'Who will receive this')}</h3>
-          {loading && <span className="text-[10px] text-[#636366]">{t('notifications.wizard.step2.updating', 'Updating…')}</span>}
+          {loading && <span className="text-[10px] text-t-muted">{t('notifications.wizard.step2.updating', 'Updating…')}</span>}
         </div>
 
         <div className="text-center py-4 border-b border-dark-border mb-4">
-          <div className={`text-5xl font-bold ${(audience?.reachable ?? 0) > 0 ? 'text-primary-400' : 'text-[#636366]'} leading-none`}>
+          <div className={`text-5xl font-bold ${(audience?.reachable ?? 0) > 0 ? 'text-primary-400' : 'text-t-muted'} leading-none`}>
             {audience?.reachable?.toLocaleString() ?? '—'}
           </div>
-          <div className="text-xs text-[#a0a0a0] mt-2 uppercase tracking-wide">
+          <div className="text-xs text-t-soft mt-2 uppercase tracking-wide">
             {form.channel === 'both'
               ? t('notifications.wizard.step2.reachable_on_push_email', 'Reachable on push or email')
               : t('notifications.wizard.step2.reachable_on', { channel: form.channel, defaultValue: 'Reachable on {{channel}}' })}
@@ -597,29 +597,29 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
         <div className="grid grid-cols-3 gap-2 text-center text-xs mb-4">
           <div>
             <div className="text-lg font-bold text-white">{audience?.total ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.match_filter', 'Match filter')}</div>
+            <div className="text-t-muted mt-0.5">{t('notifications.wizard.step2.match_filter', 'Match filter')}</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-[#32d74b]">{audience?.push_ready ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.push_ready', 'Push-ready')}</div>
+            <div className="text-lg font-bold text-success">{audience?.push_ready ?? 0}</div>
+            <div className="text-t-muted mt-0.5">{t('notifications.wizard.step2.push_ready', 'Push-ready')}</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-[#0a84ff]">{audience?.email_ready ?? 0}</div>
-            <div className="text-[#636366] mt-0.5">{t('notifications.wizard.step2.email_opted', 'Email-opted')}</div>
+            <div className="text-lg font-bold text-notice">{audience?.email_ready ?? 0}</div>
+            <div className="text-t-muted mt-0.5">{t('notifications.wizard.step2.email_opted', 'Email-opted')}</div>
           </div>
         </div>
 
         {(audience?.sample?.length ?? 0) > 0 && (
           <div>
-            <p className="text-[11px] font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">{t('notifications.wizard.step2.sample_recipients', 'Sample recipients')}</p>
+            <p className="text-[11px] font-semibold text-t-soft uppercase tracking-wide mb-2">{t('notifications.wizard.step2.sample_recipients', 'Sample recipients')}</p>
             <div className="space-y-1.5">
               {audience!.sample.map(m => (
                 <div key={m.id} className="flex items-center justify-between text-xs bg-dark-surface rounded-md px-2 py-1.5">
                   <div className="truncate">
                     <span className="text-white font-medium">{m.name}</span>
-                    {m.tier && <span className="text-[#636366] ml-2">· {m.tier}</span>}
+                    {m.tier && <span className="text-t-muted ml-2">· {m.tier}</span>}
                   </div>
-                  <div className="text-[#636366] shrink-0 ml-2">{m.points.toLocaleString()} pts</div>
+                  <div className="text-t-muted shrink-0 ml-2">{m.points.toLocaleString()} pts</div>
                 </div>
               ))}
             </div>
@@ -651,39 +651,39 @@ function Step3Details({ form, setForm, selectedTemplate }: Step3Props) {
   return (
     <div className="max-w-2xl space-y-5">
       <div>
-        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.campaign_name', 'Campaign name')} <span className="text-[#636366] font-normal normal-case tracking-normal">{t('notifications.wizard.step3.campaign_name_hint', '(for your reference)')}</span></label>
+        <label className="block text-xs font-semibold text-t-soft mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.campaign_name', 'Campaign name')} <span className="text-t-muted font-normal normal-case tracking-normal">{t('notifications.wizard.step3.campaign_name_hint', '(for your reference)')}</span></label>
         <input
           type="text"
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
           placeholder={t('notifications.wizard.step3.campaign_name_placeholder', 'e.g. October weekend offer')}
-          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
       </div>
 
       {showEmail && (
         <div>
-          <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.email_subject', 'Email subject line')}</label>
+          <label className="block text-xs font-semibold text-t-soft mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.email_subject', 'Email subject line')}</label>
           <input
             type="text"
             value={form.email_subject}
             onChange={e => setForm(f => ({ ...f, email_subject: e.target.value }))}
             placeholder={selectedTemplate?.subject || t('notifications.wizard.step3.subject_placeholder_fallback', 'Enter subject')}
-            className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
-          <p className="text-[11px] text-[#636366] mt-1">{t('notifications.wizard.step3.subject_default_hint', 'Leave blank to use the template default:')} <span className="text-t-secondary">{selectedTemplate?.subject ?? '—'}</span></p>
+          <p className="text-[11px] text-t-muted mt-1">{t('notifications.wizard.step3.subject_default_hint', 'Leave blank to use the template default:')} <span className="text-t-secondary">{selectedTemplate?.subject ?? '—'}</span></p>
         </div>
       )}
 
       <div>
-        <label className="block text-xs font-semibold text-[#a0a0a0] mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.schedule', 'Schedule')}</label>
+        <label className="block text-xs font-semibold text-t-soft mb-1 uppercase tracking-wide">{t('notifications.wizard.step3.schedule', 'Schedule')}</label>
         <input
           type="datetime-local"
           value={form.scheduled_at}
           onChange={e => setForm(f => ({ ...f, scheduled_at: e.target.value }))}
-          className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
         />
-        <p className="text-[11px] text-[#636366] mt-1">{t('notifications.wizard.step3.schedule_hint', 'Leave blank to send immediately on review.')}</p>
+        <p className="text-[11px] text-t-muted mt-1">{t('notifications.wizard.step3.schedule_hint', 'Leave blank to send immediately on review.')}</p>
       </div>
     </div>
   )
@@ -738,14 +738,14 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
 
         {showEmail && selectedTemplate && (
           <div className="pt-4 border-t border-dark-border">
-            <p className="text-xs font-semibold text-[#a0a0a0] uppercase tracking-wide mb-2">{t('notifications.wizard.step4.send_test_email', 'Send test email')}</p>
+            <p className="text-xs font-semibold text-t-soft uppercase tracking-wide mb-2">{t('notifications.wizard.step4.send_test_email', 'Send test email')}</p>
             <div className="flex gap-2">
               <input
                 type="email"
                 value={form.test_email}
                 onChange={e => setForm(f => ({ ...f, test_email: e.target.value }))}
                 placeholder={t('notifications.wizard.step4.test_placeholder', 'Leave blank to send to yourself')}
-                className="flex-1 bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
               <button
                 onClick={onTestSend}
@@ -785,7 +785,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
                 </div>
               </div>
             </div>
-            <p className="text-[11px] text-[#636366] text-center mt-4">{t('notifications.wizard.step4.push_preview_label', 'Push notification preview')}</p>
+            <p className="text-[11px] text-t-muted text-center mt-4">{t('notifications.wizard.step4.push_preview_label', 'Push notification preview')}</p>
           </div>
         ) : null}
       </div>
@@ -794,10 +794,10 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
 }
 
 function ReviewRow({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' }) {
-  const vColor = tone === 'warn' ? 'text-[#ff9500]' : tone === 'ok' ? 'text-[#32d74b]' : 'text-white'
+  const vColor = tone === 'warn' ? 'text-[#ff9500]' : tone === 'ok' ? 'text-success' : 'text-white'
   return (
     <div className="flex items-start justify-between gap-4 py-1.5 border-b border-dark-border/50">
-      <span className="text-xs text-[#a0a0a0] uppercase tracking-wide shrink-0">{label}</span>
+      <span className="text-xs text-t-soft uppercase tracking-wide shrink-0">{label}</span>
       <span className={`text-sm font-medium ${vColor} text-right break-words`}>{value}</span>
     </div>
   )

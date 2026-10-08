@@ -991,6 +991,7 @@ export default function AiChat() {
     : 'w-[420px] h-[600px]'
 
   return (
+    <>
     <div className={`fixed bottom-5 right-5 ${panelSize} bg-dark-bg border border-dark-border rounded-2xl shadow-2xl shadow-black/50 z-50 flex flex-col overflow-hidden transition-all duration-300`}>
       {/* Header — compact, no title-wrap. Identity stack on the left,
         * Voice CTA + overflow menu + close on the right. */}
@@ -1097,165 +1098,6 @@ export default function AiChat() {
         </div>
       </div>
 
-      {/* Voice Call Overlay — full-viewport, mic-reactive waveform, live
-        * transcript stream, tool-call chips, status pill. */}
-      {voiceCallActive && (
-        <div className="fixed inset-0 z-[60] bg-gradient-to-br from-[#0a0a0c] via-[#0c0c12] to-[#080810] backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
-          {/* Top: live status pill + tool-call chips */}
-          <div className="w-full max-w-2xl flex flex-col items-center gap-3">
-            <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/30 rounded-full px-4 py-1.5 text-primary-300 text-xs font-medium uppercase tracking-wider">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75 animate-ping" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
-              </span>
-              {voiceStatus || 'Connecting…'}
-            </div>
-
-            {voiceToolCalls.length > 0 && (
-              <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
-                {voiceToolCalls.slice(0, 4).map(tc => (
-                  <div
-                    key={tc.callId}
-                    className={[
-                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
-                      tc.status === 'running'
-                        ? 'bg-blue-500/10 border-blue-400/30 text-blue-200'
-                        : tc.status === 'ok'
-                          ? 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
-                          : tc.status === 'declined'
-                            ? 'bg-purple-500/10 border-purple-400/30 text-purple-200'
-                            : 'bg-red-500/10 border-red-400/30 text-red-200',
-                    ].join(' ')}
-                    title={tc.name}
-                  >
-                    {tc.status === 'running' ? (
-                      <Loader2 size={11} className="animate-spin" />
-                    ) : (
-                      <Wrench size={11} />
-                    )}
-                    {humaniseTool(tc.name)}
-                    {tc.durationMs !== undefined && (
-                      <span className="opacity-50">· {Math.round(tc.durationMs)}ms</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Middle: pulsing waveform orb */}
-          <div className="relative flex items-center justify-center my-4">
-            {/* Outer pulse rings reactive to mic input level (0..1) */}
-            <div
-              className="absolute rounded-full border border-primary-400/15"
-              style={{
-                width: 320 + voiceLevel * 80,
-                height: 320 + voiceLevel * 80,
-                transition: 'width 80ms ease-out, height 80ms ease-out',
-              }}
-            />
-            <div
-              className="absolute rounded-full border border-primary-400/25"
-              style={{
-                width: 240 + voiceLevel * 60,
-                height: 240 + voiceLevel * 60,
-                transition: 'width 80ms ease-out, height 80ms ease-out',
-              }}
-            />
-            <div
-              className="absolute rounded-full border-2 border-primary-400/40"
-              style={{
-                width: 180 + voiceLevel * 40,
-                height: 180 + voiceLevel * 40,
-                transition: 'width 80ms ease-out, height 80ms ease-out',
-              }}
-            />
-            {/* Solid core */}
-            <div
-              className="rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-2xl shadow-primary-500/40"
-              style={{
-                width: 140 + voiceLevel * 20,
-                height: 140 + voiceLevel * 20,
-                transition: 'width 60ms ease-out, height 60ms ease-out',
-              }}
-            >
-              <Phone size={56} className="text-dark-bg" strokeWidth={2.4} />
-            </div>
-          </div>
-
-          {/* Bottom-middle: live transcript banner */}
-          <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-end gap-2 pb-6 overflow-hidden">
-            {voiceUserPartial && (
-              <div className="self-end max-w-[80%] bg-primary-600/90 text-dark-bg rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium shadow-lg">
-                {voiceUserPartial}
-              </div>
-            )}
-            {voiceAssistantPartial && (
-              <div className="self-start max-w-[80%] bg-dark-surface/95 text-white border border-dark-border rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-lg">
-                {voiceAssistantPartial}
-              </div>
-            )}
-            {!voiceUserPartial && !voiceAssistantPartial && (
-              <p className="self-center text-[12px] text-[#636366] text-center">
-                Speak naturally — I can search any data, plan your day, change leads, manage members.
-              </p>
-            )}
-          </div>
-
-          {/* Bottom: end-call button */}
-          <button
-            onClick={endVoiceCall}
-            className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-7 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30"
-          >
-            <PhoneOff size={18} /> End Call
-          </button>
-        </div>
-      )}
-
-      {/* Mutation confirmation modal (Ship 7) — sits on top of the voice
-        * overlay. While this is up, the model has paused on the
-        * function_call event and is waiting for our reply. */}
-      {pendingConfirm && (
-        <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-400/20 flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
-                <Zap size={16} className="text-amber-300" />
-              </div>
-              <div>
-                <div className="text-white font-semibold text-sm">Confirm action</div>
-                <div className="text-amber-200/80 text-[11px]">The voice agent wants to make a change.</div>
-              </div>
-            </div>
-            <div className="px-5 py-4 space-y-2">
-              {(() => {
-                const s = summariseConfirmAction(pendingConfirm.name, pendingConfirm.args)
-                return (
-                  <>
-                    <div className="text-[11px] uppercase tracking-wider font-semibold text-[#a0a0a0]">{s.title}</div>
-                    <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{s.body}</div>
-                  </>
-                )
-              })()}
-            </div>
-            <div className="px-5 py-3 bg-dark-bg/40 border-t border-dark-border flex items-center justify-end gap-2">
-              <button
-                onClick={() => pendingConfirm.resolve(false)}
-                className="px-4 py-2 rounded-lg bg-dark-surface border border-dark-border hover:border-red-400/50 text-[#c8c8c8] hover:text-red-300 text-sm font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => pendingConfirm.resolve(true)}
-                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-dark-bg text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/30"
-              >
-                Approve & run
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Messages */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {messages.length === 0 && (
@@ -1356,7 +1198,7 @@ export default function AiChat() {
                   {hasSpeechSynthesis && msg.content && (
                     <button
                       onClick={() => speaking ? stopSpeaking() : speak(msg.content)}
-                      className="absolute -top-1 -right-1 opacity-0 group-hover/msg:opacity-100 p-1 rounded-md bg-dark-surface2 border border-dark-border text-[#636366] hover:text-primary-400 transition-all"
+                      className="absolute -top-1 -right-1 opacity-0 group-hover/msg:opacity-100 p-1 rounded-md bg-dark-surface2 border border-dark-border text-t-muted hover:text-primary-400 transition-all"
                       title={speaking ? 'Stop speaking' : 'Read aloud'}
                     >
                       {speaking ? <VolumeX size={10} /> : <Volume2 size={10} />}
@@ -1421,7 +1263,7 @@ export default function AiChat() {
               className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${
                 listening
                   ? 'bg-red-500 text-white shadow-md shadow-red-500/30 animate-pulse'
-                  : 'bg-dark-surface border border-dark-border text-[#636366] hover:text-primary-400 hover:border-primary-500/30'
+                  : 'bg-dark-surface border border-dark-border text-t-muted hover:text-primary-400 hover:border-primary-500/30'
               } disabled:opacity-40`}
               title={listening ? 'Stop recording' : 'Voice input'}
             >
@@ -1437,7 +1279,7 @@ export default function AiChat() {
             placeholder={listening ? 'Listening…' : 'Ask anything — by text or voice'}
             disabled={loading}
             rows={1}
-            className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
+            className={`flex-1 bg-dark-surface border rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 disabled:opacity-50 resize-none max-h-[100px] ${
               listening ? 'border-red-500/50 ring-1 ring-red-500/30' : 'border-dark-border'
             }`}
             style={{ minHeight: '42px' }}
@@ -1464,5 +1306,170 @@ export default function AiChat() {
         </div>
       </div>
     </div>
+
+    {/* The voice-call overlay and the confirm dialog are siblings of the
+      * panel, not children: Glass blurs the panel, and a backdrop-filter
+      * makes it the containing block for fixed descendants, which would
+      * shrink these full-viewport layers to the panel (fixedInBlur.test.ts). */}
+
+    {/* Voice Call Overlay — full-viewport, mic-reactive waveform, live
+      * transcript stream, tool-call chips, status pill. */}
+    {voiceCallActive && (
+      <div className="fixed inset-0 z-[60] bg-gradient-to-br from-[#0a0a0c] via-[#0c0c12] to-[#080810] backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
+        {/* Top: live status pill + tool-call chips */}
+        <div className="w-full max-w-2xl flex flex-col items-center gap-3">
+          <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/30 rounded-full px-4 py-1.5 text-primary-300 text-xs font-medium uppercase tracking-wider">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full rounded-full bg-primary-400 opacity-75 animate-ping" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-primary-500" />
+            </span>
+            {voiceStatus || 'Connecting…'}
+          </div>
+
+          {voiceToolCalls.length > 0 && (
+            <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-full">
+              {voiceToolCalls.slice(0, 4).map(tc => (
+                <div
+                  key={tc.callId}
+                  className={[
+                    'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors',
+                    tc.status === 'running'
+                      ? 'bg-blue-500/10 border-blue-400/30 text-blue-200'
+                      : tc.status === 'ok'
+                        ? 'bg-emerald-500/10 border-emerald-400/25 text-emerald-200'
+                        : tc.status === 'declined'
+                          ? 'bg-purple-500/10 border-purple-400/30 text-purple-200'
+                          : 'bg-red-500/10 border-red-400/30 text-red-200',
+                  ].join(' ')}
+                  title={tc.name}
+                >
+                  {tc.status === 'running' ? (
+                    <Loader2 size={11} className="animate-spin" />
+                  ) : (
+                    <Wrench size={11} />
+                  )}
+                  {humaniseTool(tc.name)}
+                  {tc.durationMs !== undefined && (
+                    <span className="opacity-50">· {Math.round(tc.durationMs)}ms</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Middle: pulsing waveform orb */}
+        <div className="relative flex items-center justify-center my-4">
+          {/* Outer pulse rings reactive to mic input level (0..1) */}
+          <div
+            className="absolute rounded-full border border-primary-400/15"
+            style={{
+              width: 320 + voiceLevel * 80,
+              height: 320 + voiceLevel * 80,
+              transition: 'width 80ms ease-out, height 80ms ease-out',
+            }}
+          />
+          <div
+            className="absolute rounded-full border border-primary-400/25"
+            style={{
+              width: 240 + voiceLevel * 60,
+              height: 240 + voiceLevel * 60,
+              transition: 'width 80ms ease-out, height 80ms ease-out',
+            }}
+          />
+          <div
+            className="absolute rounded-full border-2 border-primary-400/40"
+            style={{
+              width: 180 + voiceLevel * 40,
+              height: 180 + voiceLevel * 40,
+              transition: 'width 80ms ease-out, height 80ms ease-out',
+            }}
+          />
+          {/* Solid core */}
+          <div
+            className="rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-2xl shadow-primary-500/40"
+            style={{
+              width: 140 + voiceLevel * 20,
+              height: 140 + voiceLevel * 20,
+              transition: 'width 60ms ease-out, height 60ms ease-out',
+            }}
+          >
+            <Phone size={56} className="text-dark-bg" strokeWidth={2.4} />
+          </div>
+        </div>
+
+        {/* Bottom-middle: live transcript banner */}
+        <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-end gap-2 pb-6 overflow-hidden">
+          {voiceUserPartial && (
+            <div className="self-end max-w-[80%] bg-primary-600/90 text-dark-bg rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium shadow-lg">
+              {voiceUserPartial}
+            </div>
+          )}
+          {voiceAssistantPartial && (
+            <div className="self-start max-w-[80%] bg-dark-surface/95 text-white border border-dark-border rounded-2xl rounded-bl-md px-4 py-2.5 text-sm shadow-lg">
+              {voiceAssistantPartial}
+            </div>
+          )}
+          {!voiceUserPartial && !voiceAssistantPartial && (
+            <p className="self-center text-[12px] text-t-muted text-center">
+              Speak naturally — I can search any data, plan your day, change leads, manage members.
+            </p>
+          )}
+        </div>
+
+        {/* Bottom: end-call button */}
+        <button
+          onClick={endVoiceCall}
+          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-7 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30"
+        >
+          <PhoneOff size={18} /> End Call
+        </button>
+      </div>
+    )}
+
+    {/* Mutation confirmation modal (Ship 7) — sits on top of the voice
+      * overlay. While this is up, the model has paused on the
+      * function_call event and is waiting for our reply. */}
+    {pendingConfirm && (
+      <div className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="w-full max-w-md bg-dark-surface border border-dark-border rounded-2xl shadow-2xl overflow-hidden">
+          <div className="px-5 py-4 bg-gradient-to-r from-amber-500/10 to-orange-500/10 border-b border-amber-400/20 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-amber-500/20 border border-amber-400/40 flex items-center justify-center">
+              <Zap size={16} className="text-amber-300" />
+            </div>
+            <div>
+              <div className="text-white font-semibold text-sm">Confirm action</div>
+              <div className="text-amber-200/80 text-[11px]">The voice agent wants to make a change.</div>
+            </div>
+          </div>
+          <div className="px-5 py-4 space-y-2">
+            {(() => {
+              const s = summariseConfirmAction(pendingConfirm.name, pendingConfirm.args)
+              return (
+                <>
+                  <div className="text-[11px] uppercase tracking-wider font-semibold text-t-soft">{s.title}</div>
+                  <div className="text-white text-sm leading-relaxed whitespace-pre-wrap">{s.body}</div>
+                </>
+              )
+            })()}
+          </div>
+          <div className="px-5 py-3 bg-dark-bg/40 border-t border-dark-border flex items-center justify-end gap-2">
+            <button
+              onClick={() => pendingConfirm.resolve(false)}
+              className="px-4 py-2 rounded-lg bg-dark-surface border border-dark-border hover:border-red-400/50 text-[#c8c8c8] hover:text-red-300 text-sm font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => pendingConfirm.resolve(true)}
+              className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-dark-bg text-sm font-semibold transition-colors shadow-lg shadow-emerald-500/30"
+            >
+              Approve & run
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }

@@ -446,7 +446,7 @@ export function Analytics() {
 
       {/* ════════════════ OVERVIEW TAB ════════════════ */}
       {activeTab === 'planner' && canPlanner && (
-        <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+        <Suspense fallback={<div className="text-center text-t-muted py-12">{t('analytics.loading', 'Loading…')}</div>}>
           <PlannerStatsPanel enabled={canPlanner} />
         </Suspense>
       )}
@@ -457,7 +457,7 @@ export function Analytics() {
             {[
               { key: 'total_members', label: t('analytics.kpis.total_members', 'Total Members'),       value: kpis?.total_members?.toLocaleString() ?? '—',                                       icon: <Users size={18} />,       color: 'text-blue-400',   bg: 'bg-blue-500/15',     sparkColor: '#3b82f6', trend: overviewTrends?.members,  isMoney: false },
               { key: 'avg_points',    label: t('analytics.kpis.avg_points_per_member', 'Avg Points / Member'), value: kpis?.avg_points_per_member?.toLocaleString() ?? '—',                          icon: <Award size={18} />,       color: 'text-amber-400',  bg: 'bg-amber-500/15',    sparkColor: '#f59e0b', trend: overviewTrends?.points,   isMoney: false },
-              { key: 'active_stays',  label: t('analytics.kpis.active_stays', 'Active Stays'),         value: kpis?.active_stays ?? '—',                                                         icon: <TrendingUp size={18} />,  color: 'text-[#32d74b]',  bg: 'bg-[#32d74b]/15',    sparkColor: '#22c55e', trend: overviewTrends?.stays,    isMoney: false },
+              { key: 'active_stays',  label: t('analytics.kpis.active_stays', 'Active Stays'),         value: kpis?.active_stays ?? '—',                                                         icon: <TrendingUp size={18} />,  color: 'text-success',  bg: 'bg-success/15',    sparkColor: '#22c55e', trend: overviewTrends?.stays,    isMoney: false },
               { key: 'revenue_month', label: t('analytics.kpis.revenue_month', 'Revenue (Month)'),     value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—',               icon: <DollarSign size={18} />,  color: 'text-purple-400', bg: 'bg-purple-500/15',   sparkColor: '#a855f7', trend: overviewTrends?.revenue,  isMoney: true  },
             ].map(m => {
               const delta = m.trend?.delta_pct
@@ -512,7 +512,7 @@ export function Analytics() {
             const otPct = (onTime + late) > 0 ? Math.round((onTime / (onTime + late)) * 100) : null
             const ops = [
               { key: 'tasks',  label: t('analytics.ops.tasks', 'Tasks this month'), value: tot.toLocaleString(), icon: <ClipboardList size={18} />, color: 'text-blue-400',   bg: 'bg-blue-500/15',   sub: '' },
-              { key: 'rate',   label: t('analytics.ops.completion', 'Completion rate'), value: `${rate}%`, icon: <CheckCircle2 size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15', sub: `${dn} of ${tot} done` },
+              { key: 'rate',   label: t('analytics.ops.completion', 'Completion rate'), value: `${rate}%`, icon: <CheckCircle2 size={18} />, color: 'text-success', bg: 'bg-success/15', sub: `${dn} of ${tot} done` },
               { key: 'hours',  label: t('analytics.ops.hours', 'Hours worked'), value: `${workedH.toFixed(1)}h`, icon: <Clock size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15', sub: 'done tasks' },
               { key: 'ontime', label: t('analytics.ops.on_time', 'On-time'), value: otPct == null ? '—' : `${otPct}%`, icon: <Timer size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15', sub: otPct == null ? 'no tracked completions' : `${onTime} on time · ${late} late` },
             ]
@@ -531,7 +531,7 @@ export function Analytics() {
                       <div className={`inline-flex p-2 rounded-lg ${m.bg} ${m.color} mb-3`}>{m.icon}</div>
                       <p className="text-2xl font-bold text-white">{m.value}</p>
                       <p className="text-xs text-t-secondary mt-0.5">{m.label}</p>
-                      {m.sub && <p className="text-[11px] text-[#636366] mt-0.5">{m.sub}</p>}
+                      {m.sub && <p className="text-[11px] text-t-muted mt-0.5">{m.sub}</p>}
                     </div>
                   ))}
                 </div>
@@ -544,7 +544,7 @@ export function Analytics() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <h3 className="text-base font-semibold text-white">{t('analytics.cards.points_activity', 'Points Activity')}</h3>
-                <p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.points_activity_sub', 'Points earned vs redeemed over time')}</p>
+                <p className="text-xs text-t-muted mt-0.5">{t('analytics.cards.points_activity_sub', 'Points earned vs redeemed over time')}</p>
               </div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
@@ -677,7 +677,7 @@ export function Analytics() {
                 <tbody className="divide-y divide-dark-border">
                   {(overview?.top_members ?? []).map((m: any, i: number) => (
                     <tr key={i} className="hover:bg-dark-surface2 transition-colors">
-                      <td className="py-3 text-[#636366] font-bold">{i + 1}</td>
+                      <td className="py-3 text-t-muted font-bold">{i + 1}</td>
                       <td className="py-3">
                         <div className="flex items-center gap-3">
                           <div className="w-7 h-7 rounded-full bg-primary-500/20 flex items-center justify-center flex-shrink-0">
@@ -685,15 +685,15 @@ export function Analytics() {
                           </div>
                           <div>
                             <p className="font-semibold text-white">{m.name}</p>
-                            <p className="text-xs text-[#636366]">{m.email}</p>
+                            <p className="text-xs text-t-muted">{m.email}</p>
                           </div>
                         </div>
                       </td>
                       <td className="py-3">
-                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-dark-surface3 text-[#a0a0a0]">{m.tier}</span>
+                        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-dark-surface3 text-t-soft">{m.tier}</span>
                       </td>
                       <td className="py-3 font-bold text-white text-right">{m.lifetime_points?.toLocaleString()}</td>
-                      <td className="py-3 text-[#a0a0a0] text-right">{m.current_points?.toLocaleString()}</td>
+                      <td className="py-3 text-t-soft text-right">{m.current_points?.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -909,8 +909,8 @@ export function Analytics() {
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { key: 'issued', label: t('analytics.kpis.issued_this_month', 'Issued This Month'), value: kpis?.points_issued_this_month?.toLocaleString() ?? '—', icon: <ArrowUpRight size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
-              { key: 'redeemed', label: t('analytics.kpis.redeemed_this_month', 'Redeemed This Month'), value: kpis?.points_redeemed_this_month?.toLocaleString() ?? '—', icon: <ArrowDownRight size={18} />, color: 'text-[#ff375f]', bg: 'bg-[#ff375f]/15' },
+              { key: 'issued', label: t('analytics.kpis.issued_this_month', 'Issued This Month'), value: kpis?.points_issued_this_month?.toLocaleString() ?? '—', icon: <ArrowUpRight size={18} />, color: 'text-success', bg: 'bg-success/15' },
+              { key: 'redeemed', label: t('analytics.kpis.redeemed_this_month', 'Redeemed This Month'), value: kpis?.points_redeemed_this_month?.toLocaleString() ?? '—', icon: <ArrowDownRight size={18} />, color: 'text-danger', bg: 'bg-danger/15' },
               { key: 'outstanding', label: t('analytics.kpis.outstanding_points', 'Outstanding Points'), value: kpis?.total_outstanding_points?.toLocaleString() ?? '—', icon: <Target size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
               { key: 'rate', label: t('analytics.kpis.redemption_rate', 'Redemption Rate'), value: `${kpis?.redemption_rate ?? 0}%`, icon: <Zap size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15' },
             ].map(m => (
@@ -924,7 +924,7 @@ export function Analytics() {
 
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.points_flow', 'Points Flow')}</h3><p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.points_flow_sub', 'Earned vs redeemed over time')}</p></div>
+              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.points_flow', 'Points Flow')}</h3><p className="text-xs text-t-muted mt-0.5">{t('analytics.cards.points_flow_sub', 'Earned vs redeemed over time')}</p></div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
@@ -985,7 +985,7 @@ export function Analytics() {
 
           <Card>
             <h3 className="text-base font-semibold text-white mb-2 flex items-center gap-2"><AlertTriangle size={16} className="text-amber-400" /> {t('analytics.cards.points_expiry_forecast', 'Points Expiry Forecast')}</h3>
-            <p className="text-xs text-[#636366] mb-5">{t('analytics.cards.points_expiry_sub', 'Points scheduled to expire in upcoming months')}</p>
+            <p className="text-xs text-t-muted mb-5">{t('analytics.cards.points_expiry_sub', 'Points scheduled to expire in upcoming months')}</p>
             {(expiryForecast ?? []).length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={expiryForecast ?? []}>
@@ -997,7 +997,7 @@ export function Analytics() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <p className="text-[#636366] text-sm py-8 text-center">{t('analytics.cards.no_expiry_data', 'No points expiry data available')}</p>
+              <p className="text-t-muted text-sm py-8 text-center">{t('analytics.cards.no_expiry_data', 'No points expiry data available')}</p>
             )}
           </Card>
 
@@ -1016,7 +1016,7 @@ export function Analytics() {
             </div>
             <div className="bg-dark-surface rounded-xl border border-dark-border p-5">
               <p className="text-xs text-t-secondary mb-1">{t('analytics.kpis.engaged_members_30d', 'Engaged Members (30d)')}</p>
-              <p className="text-2xl font-bold text-[#32d74b]">{(kpis?.engaged_members_30d ?? 0).toLocaleString()}</p>
+              <p className="text-2xl font-bold text-success">{(kpis?.engaged_members_30d ?? 0).toLocaleString()}</p>
             </div>
           </div>
         </>
@@ -1028,7 +1028,7 @@ export function Analytics() {
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
               { key: 'total', label: t('analytics.kpis.total_members', 'Total Members'), value: kpis?.total_members?.toLocaleString() ?? '—', color: 'text-blue-400', bg: 'bg-blue-500/15', icon: <Users size={18} /> },
-              { key: 'active', label: t('analytics.kpis.active_members', 'Active Members'), value: kpis?.active_members?.toLocaleString() ?? '—', color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15', icon: <Activity size={18} /> },
+              { key: 'active', label: t('analytics.kpis.active_members', 'Active Members'), value: kpis?.active_members?.toLocaleString() ?? '—', color: 'text-success', bg: 'bg-success/15', icon: <Activity size={18} /> },
               { key: 'new', label: t('analytics.kpis.new_this_month', 'New This Month'), value: kpis?.new_members_this_month?.toLocaleString() ?? '—', color: 'text-primary-400', bg: 'bg-primary-500/15', icon: <ArrowUpRight size={18} /> },
               { key: 'engaged', label: t('analytics.kpis.engaged_30d', 'Engaged (30d)'), value: kpis?.engaged_members_30d?.toLocaleString() ?? '—', color: 'text-amber-400', bg: 'bg-amber-500/15', icon: <Zap size={18} /> },
             ].map(m => (
@@ -1042,7 +1042,7 @@ export function Analytics() {
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Activity size={16} className="text-[#32d74b]" /> {t('analytics.cards.member_engagement', 'Member Engagement')}</h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Activity size={16} className="text-success" /> {t('analytics.cards.member_engagement', 'Member Engagement')}</h3>
               <div className="flex gap-6 items-center">
                 <ResponsiveContainer width="45%" height={220}>
                   <PieChart>
@@ -1163,20 +1163,20 @@ export function Analytics() {
               </select>
             </div>
             <div className="grid grid-cols-3 gap-3 mb-4">
-              <div className="bg-[#1a1a1a] border border-emerald-500/20 rounded-lg p-3 text-center">
+              <div className="bg-panel-dim border border-emerald-500/20 rounded-lg p-3 text-center">
                 <TrendingUp size={16} className="text-emerald-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{(tierMovement?.upgrades ?? 0).toLocaleString()}</div>
-                <div className="text-[11px] text-[#636366]">{t('analytics.cards.tier_upgrades', 'Upgrades')}</div>
+                <div className="text-[11px] text-t-muted">{t('analytics.cards.tier_upgrades', 'Upgrades')}</div>
               </div>
-              <div className="bg-[#1a1a1a] border border-red-500/20 rounded-lg p-3 text-center">
+              <div className="bg-panel-dim border border-red-500/20 rounded-lg p-3 text-center">
                 <TrendingDown size={16} className="text-red-400 mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{(tierMovement?.downgrades ?? 0).toLocaleString()}</div>
-                <div className="text-[11px] text-[#636366]">{t('analytics.cards.tier_downgrades', 'Downgrades')}</div>
+                <div className="text-[11px] text-t-muted">{t('analytics.cards.tier_downgrades', 'Downgrades')}</div>
               </div>
-              <div className="bg-[#1a1a1a] border border-dark-border rounded-lg p-3 text-center">
-                <MoveRight size={16} className="text-[#a0a0a0] mx-auto mb-1" />
+              <div className="bg-panel-dim border border-dark-border rounded-lg p-3 text-center">
+                <MoveRight size={16} className="text-t-soft mx-auto mb-1" />
                 <div className="text-xl font-bold text-white">{(tierMovement?.lateral ?? 0).toLocaleString()}</div>
-                <div className="text-[11px] text-[#636366]">{t('analytics.cards.tier_lateral', 'No change')}</div>
+                <div className="text-[11px] text-t-muted">{t('analytics.cards.tier_lateral', 'No change')}</div>
               </div>
             </div>
             {(tierMovement?.flows ?? []).length > 0 ? (
@@ -1185,7 +1185,7 @@ export function Analytics() {
                   <div key={i} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-dark-surface2">
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
                       style={{ backgroundColor: (f.from_color || '#666') + '22', color: f.from_color || '#a0a0a0' }}>{f.from}</span>
-                    <ChevronRight size={14} className={f.direction === 'up' ? 'text-emerald-400' : f.direction === 'down' ? 'text-red-400' : 'text-[#636366]'} />
+                    <ChevronRight size={14} className={f.direction === 'up' ? 'text-emerald-400' : f.direction === 'down' ? 'text-red-400' : 'text-t-muted'} />
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
                       style={{ backgroundColor: (f.to_color || '#666') + '22', color: f.to_color || '#a0a0a0' }}>{f.to}</span>
                     <span className="ml-auto text-sm text-white font-semibold">{f.count.toLocaleString()}</span>
@@ -1193,7 +1193,7 @@ export function Analytics() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[#636366] text-center py-6">{t('analytics.cards.tier_no_movement', 'No tier movement in this window.')}</p>
+              <p className="text-sm text-t-muted text-center py-6">{t('analytics.cards.tier_no_movement', 'No tier movement in this window.')}</p>
             )}
           </Card>
 
@@ -1202,7 +1202,7 @@ export function Analytics() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <Activity size={16} className="text-blue-400" /> {t('analytics.cards.cohort_retention', 'Cohort retention')}
-                <span className="text-[11px] text-[#636366] font-normal">{t('analytics.cards.cohort_retention_sub', 'members with a transaction in the month, as % of cohort size')}</span>
+                <span className="text-[11px] text-t-muted font-normal">{t('analytics.cards.cohort_retention_sub', 'members with a transaction in the month, as % of cohort size')}</span>
               </h3>
               <select value={cohortMonths} onChange={e => setCohortMonths(Number(e.target.value))}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-white">
@@ -1224,11 +1224,11 @@ export function Analytics() {
                 </thead>
                 <tbody>
                   {(cohortRetention ?? []).length === 0 ? (
-                    <tr><td colSpan={8} className="py-8 text-center text-[#636366]">{t('analytics.cards.cohort_empty', 'No cohort data yet — members need at least one join-month + one transaction.')}</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-t-muted">{t('analytics.cards.cohort_empty', 'No cohort data yet — members need at least one join-month + one transaction.')}</td></tr>
                   ) : (cohortRetention as any[]).map((c) => (
                     <tr key={c.cohort} className="border-b border-dark-border last:border-b-0">
                       <td className="py-2 text-white font-mono text-xs">{c.cohort}</td>
-                      <td className="py-2 text-center text-[#a0a0a0]">{c.size}</td>
+                      <td className="py-2 text-center text-t-soft">{c.size}</td>
                       {Array.from({ length: 6 }).map((_, i) => {
                         const cell = c.retention?.[i]
                         if (!cell) return <td key={i} className="py-2 text-center text-[#3a3a3a]">—</td>
@@ -1252,7 +1252,7 @@ export function Analytics() {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-base font-semibold text-white flex items-center gap-2">
                 <AlertTriangle size={16} className="text-amber-400" /> {t('analytics.cards.at_risk', 'At-risk members')}
-                <span className="text-[11px] text-[#636366] font-normal">{t('analytics.cards.at_risk_sub', 'previously active, gone quiet')}</span>
+                <span className="text-[11px] text-t-muted font-normal">{t('analytics.cards.at_risk_sub', 'previously active, gone quiet')}</span>
               </h3>
               <select value={atRiskDays} onChange={e => setAtRiskDays(Number(e.target.value))}
                 className="bg-dark-bg border border-dark-border rounded-lg px-2 py-1 text-xs text-white">
@@ -1276,12 +1276,12 @@ export function Analytics() {
                 </thead>
                 <tbody className="divide-y divide-dark-border">
                   {(atRiskMembers ?? []).length === 0 ? (
-                    <tr><td colSpan={6} className="py-8 text-center text-[#636366]">{t('analytics.cards.at_risk_empty', 'Nobody at risk in this window — engagement looks healthy.')}</td></tr>
+                    <tr><td colSpan={6} className="py-8 text-center text-t-muted">{t('analytics.cards.at_risk_empty', 'Nobody at risk in this window — engagement looks healthy.')}</td></tr>
                   ) : (atRiskMembers as any[]).map((m) => (
                     <tr key={m.id} className="hover:bg-dark-surface2">
                       <td className="py-2">
                         <div className="text-white text-sm">{m.name}</div>
-                        <div className="text-[11px] text-[#636366]">{m.email}</div>
+                        <div className="text-[11px] text-t-muted">{m.email}</div>
                       </td>
                       <td className="py-2">
                         {m.tier && (
@@ -1292,9 +1292,9 @@ export function Analytics() {
                         )}
                       </td>
                       <td className="py-2 text-right text-white font-semibold">{m.lifetime_points.toLocaleString()}</td>
-                      <td className="py-2 text-right text-[#a0a0a0]">{m.current_points.toLocaleString()}</td>
+                      <td className="py-2 text-right text-t-soft">{m.current_points.toLocaleString()}</td>
                       <td className="py-2 text-right">
-                        <span className={`text-sm font-semibold ${m.days_since_activity >= 180 ? 'text-red-400' : m.days_since_activity >= 90 ? 'text-amber-400' : 'text-[#a0a0a0]'}`}>
+                        <span className={`text-sm font-semibold ${m.days_since_activity >= 180 ? 'text-red-400' : m.days_since_activity >= 90 ? 'text-amber-400' : 'text-t-soft'}`}>
                           {m.days_since_activity}
                         </span>
                       </td>
@@ -1452,7 +1452,7 @@ export function Analytics() {
 
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { key: 'revenue_month', label: t('analytics.kpis.revenue_month', 'Revenue (Month)'), value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—', icon: <DollarSign size={18} />, color: 'text-[#32d74b]', bg: 'bg-[#32d74b]/15' },
+              { key: 'revenue_month', label: t('analytics.kpis.revenue_month', 'Revenue (Month)'), value: kpis ? `$${Number(kpis.revenue_this_month).toLocaleString()}` : '—', icon: <DollarSign size={18} />, color: 'text-success', bg: 'bg-success/15' },
               { key: 'active_stays', label: t('analytics.kpis.active_stays', 'Active Stays'), value: kpis?.active_stays ?? '—', icon: <Hotel size={18} />, color: 'text-blue-400', bg: 'bg-blue-500/15' },
               { key: 'liability', label: t('analytics.kpis.liability', 'Liability'), value: kpis ? `$${Number(kpis.point_liability_currency).toLocaleString()}` : '—', icon: <AlertTriangle size={18} />, color: 'text-amber-400', bg: 'bg-amber-500/15' },
               { key: 'redemption_rate', label: t('analytics.kpis.redemption_rate', 'Redemption Rate'), value: `${kpis?.redemption_rate ?? 0}%`, icon: <Zap size={18} />, color: 'text-purple-400', bg: 'bg-purple-500/15' },
@@ -1467,7 +1467,7 @@ export function Analytics() {
 
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.booking_trends', 'Booking Trends')}</h3><p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.booking_trends_sub', 'Daily bookings and revenue')}</p></div>
+              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.booking_trends', 'Booking Trends')}</h3><p className="text-xs text-t-muted mt-0.5">{t('analytics.cards.booking_trends_sub', 'Daily bookings and revenue')}</p></div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {BOOKING_RANGES.map(r => (
                   <button key={r.days} onClick={() => setBookingDays(r.days)}
@@ -1493,7 +1493,7 @@ export function Analytics() {
 
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><TrendingUp size={16} className="text-[#32d74b]" /> {t('analytics.cards.monthly_revenue', 'Monthly Revenue Trend')}</h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><TrendingUp size={16} className="text-success" /> {t('analytics.cards.monthly_revenue', 'Monthly Revenue Trend')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <AreaChart data={revenueTrend ?? []}>
                   <defs>
@@ -1549,7 +1549,7 @@ export function Analytics() {
           {/* Venue Utilization + Revenue */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <Card>
-              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><MapPin size={16} className="text-[#32d74b]" /> {t('analytics.cards.venue_utilization', 'Venue Utilization by Type')}</h3>
+              <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><MapPin size={16} className="text-success" /> {t('analytics.cards.venue_utilization', 'Venue Utilization by Type')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={venueUtil ?? []}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
@@ -1578,7 +1578,7 @@ export function Analytics() {
                     <div key={v.venue_type} className="flex items-center gap-2">
                       <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                       <span className="text-xs text-[#e0e0e0] flex-1 capitalize">{v.venue_type}</span>
-                      <span className="text-xs text-[#636366]">${Number(v.revenue).toLocaleString()}</span>
+                      <span className="text-xs text-t-muted">${Number(v.revenue).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -1589,7 +1589,7 @@ export function Analytics() {
           {/* Occupancy Trend */}
           <Card>
             <div className="flex items-center justify-between mb-5">
-              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.occupancy_rate', 'Occupancy Rate')}</h3><p className="text-xs text-[#636366] mt-0.5">{t('analytics.cards.occupancy_rate_sub', 'Property occupancy over time')}</p></div>
+              <div><h3 className="text-base font-semibold text-white">{t('analytics.cards.occupancy_rate', 'Occupancy Rate')}</h3><p className="text-xs text-t-muted mt-0.5">{t('analytics.cards.occupancy_rate_sub', 'Property occupancy over time')}</p></div>
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {CRM_PERIOD_OPTIONS.map(p => (
                   <button key={p.value} onClick={() => setCrmPeriod(p.value)}
@@ -1630,7 +1630,7 @@ export function Analytics() {
                       <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
                       <span className="text-xs text-[#e0e0e0] flex-1">{v.level}</span>
                       <span className="text-xs font-semibold text-white">{v.count}</span>
-                      <span className="text-xs text-[#636366]">${Number(v.revenue).toLocaleString()}</span>
+                      <span className="text-xs text-t-muted">${Number(v.revenue).toLocaleString()}</span>
                     </div>
                   ))}
                 </div>
@@ -1862,7 +1862,7 @@ export function Analytics() {
               rate, lead capture, intent breakdown, top pages, etc.
               Relocated from /chatbot-setup → Analytics tab. */}
           <div className="pt-2 border-t border-dark-border">
-            <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+            <Suspense fallback={<div className="text-center text-t-muted py-12">{t('analytics.loading', 'Loading…')}</div>}>
               <ChatbotAnalytics />
             </Suspense>
           </div>
@@ -2023,7 +2023,7 @@ export function Analytics() {
               breakdown, owner scoreboard, company LTV. Previously the
               standalone /reports page. */}
           <div className="pt-2 border-t border-dark-border">
-            <Suspense fallback={<div className="text-center text-[#636366] py-12">{t('analytics.loading', 'Loading…')}</div>}>
+            <Suspense fallback={<div className="text-center text-t-muted py-12">{t('analytics.loading', 'Loading…')}</div>}>
               <Reports />
             </Suspense>
           </div>

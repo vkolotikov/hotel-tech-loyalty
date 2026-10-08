@@ -44,7 +44,7 @@ const TILES: TileDef[] = [
   { key: 'content-planner', label: 'AI Content Planner', desc: 'Generate and manage social media content with AI', icon: Sparkles, accent: '#8b5cf6' }, // purple
 ]
 
-const fallback = <div className="text-center text-[#636366] py-8 text-sm">Loading…</div>
+const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
 
 const tint = (hex: string, alpha: number) => {
   const h = hex.replace('#', '')

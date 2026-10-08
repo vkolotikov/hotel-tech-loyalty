@@ -6,9 +6,9 @@ import { Card } from '../components/ui/Card'
 import { format } from 'date-fns'
 
 const ACTION_COLORS: Record<string, string> = {
-  member_created: 'bg-[#32d74b]/15 text-[#32d74b]',
-  tier_created: 'bg-[#32d74b]/15 text-[#32d74b]',
-  tier_upgraded: 'bg-[#32d74b]/15 text-[#32d74b]',
+  member_created: 'bg-success/15 text-success',
+  tier_created: 'bg-success/15 text-success',
+  tier_upgraded: 'bg-success/15 text-success',
   member_updated: 'bg-[#3b82f6]/15 text-[#3b82f6]',
   tier_updated: 'bg-[#3b82f6]/15 text-[#3b82f6]',
   setting_updated: 'bg-[#3b82f6]/15 text-[#3b82f6]',
@@ -20,28 +20,28 @@ const ACTION_COLORS: Record<string, string> = {
   nfc_deactivated: 'bg-[#ef4444]/15 text-[#ef4444]',
   logo_uploaded: 'bg-[#8b5cf6]/15 text-[#8b5cf6]',
 }
-const DEFAULT_COLOR = 'bg-dark-surface3 text-[#a0a0a0]'
+const DEFAULT_COLOR = 'bg-dark-surface3 text-t-soft'
 
 function ChangesCell({ oldValues, newValues }: { oldValues: any; newValues: any }) {
   const [expanded, setExpanded] = useState(false)
   const hasOld = oldValues && Object.keys(oldValues).length > 0
   const hasNew = newValues && Object.keys(newValues).length > 0
-  if (!hasOld && !hasNew) return <span className="text-[#636366]">—</span>
+  if (!hasOld && !hasNew) return <span className="text-t-muted">—</span>
 
   const keys = [...new Set([...Object.keys(newValues || {}), ...Object.keys(oldValues || {})])]
   const preview = keys.slice(0, 2).map(k => `${k}: ${newValues?.[k] ?? '—'}`).join(', ')
 
   return (
     <div>
-      <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-[#a0a0a0] hover:text-white">
+      <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1 text-xs text-t-soft hover:text-white">
         <span className="truncate max-w-[200px]">{preview}{keys.length > 2 ? ` +${keys.length - 2}` : ''}</span>
         {expanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
       </button>
       {expanded && (
-        <div className="mt-2 text-[11px] space-y-1 bg-[#1a1a1a] rounded-lg p-2 border border-dark-border">
+        <div className="mt-2 text-[11px] space-y-1 bg-panel-dim rounded-lg p-2 border border-dark-border">
           {keys.map(k => (
             <div key={k} className="flex gap-2">
-              <span className="text-[#636366] min-w-[80px]">{k}:</span>
+              <span className="text-t-muted min-w-[80px]">{k}:</span>
               {hasOld && oldValues[k] !== undefined && (
                 <span className="text-red-400 line-through">{String(oldValues[k])}</span>
               )}
@@ -106,19 +106,19 @@ export function AuditLog() {
         {/* Filters */}
         <div className="flex flex-wrap gap-3 mb-6">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
             <input
               type="text"
               placeholder="Search descriptions..."
               value={search}
               onChange={e => { setSearch(e.target.value); setPage(1) }}
-              className="w-full pl-9 pr-4 py-2 bg-[#1e1e1e] border border-dark-border rounded-lg text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className="w-full pl-9 pr-4 py-2 bg-panel border border-dark-border rounded-lg text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
           <select
             value={action}
             onChange={e => { setAction(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">All Actions</option>
             {(actions ?? []).map((a: string) => (
@@ -128,7 +128,7 @@ export function AuditLog() {
           <select
             value={subjectType}
             onChange={e => { setSubjectType(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
           >
             <option value="">All Entities</option>
             {(subjectTypes ?? []).map((t: { value: string; label: string }) => (
@@ -139,14 +139,14 @@ export function AuditLog() {
             type="date"
             value={dateFrom}
             onChange={e => { setDateFrom(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="From"
           />
           <input
             type="date"
             value={dateTo}
             onChange={e => { setDateTo(e.target.value); setPage(1) }}
-            className="bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="To"
           />
         </div>
@@ -176,14 +176,14 @@ export function AuditLog() {
                 ))
               ) : (data as any)?.data?.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-[#636366]">
+                  <td colSpan={7} className="py-12 text-center text-t-muted">
                     No audit logs found.
                   </td>
                 </tr>
               ) : (
                 ((data as any)?.data ?? []).map((log: any) => (
                   <tr key={log.id} className="hover:bg-dark-surface2 transition-colors">
-                    <td className="py-3 text-xs text-[#a0a0a0] whitespace-nowrap">
+                    <td className="py-3 text-xs text-t-soft whitespace-nowrap">
                       {log.created_at ? format(new Date(log.created_at), 'MMM d, yyyy HH:mm') : '—'}
                     </td>
                     <td className="py-3">
@@ -194,15 +194,15 @@ export function AuditLog() {
                     <td className="py-3">
                       <div className="text-xs">
                         <span className="text-white font-medium">{log.subject_type_label}</span>
-                        {log.subject_id && <span className="text-[#636366] ml-1">#{log.subject_id}</span>}
+                        {log.subject_id && <span className="text-t-muted ml-1">#{log.subject_id}</span>}
                       </div>
                     </td>
-                    <td className="py-3 text-xs text-white">{log.causer_name ?? <span className="text-[#636366]">System</span>}</td>
-                    <td className="py-3 text-xs text-[#a0a0a0] max-w-[200px] truncate">{log.description ?? '—'}</td>
+                    <td className="py-3 text-xs text-white">{log.causer_name ?? <span className="text-t-muted">System</span>}</td>
+                    <td className="py-3 text-xs text-t-soft max-w-[200px] truncate">{log.description ?? '—'}</td>
                     <td className="py-3">
                       <ChangesCell oldValues={log.old_values} newValues={log.new_values} />
                     </td>
-                    <td className="py-3 text-[11px] text-[#636366] font-mono">{log.ip_address ?? '—'}</td>
+                    <td className="py-3 text-[11px] text-t-muted font-mono">{log.ip_address ?? '—'}</td>
                   </tr>
                 ))
               )}
@@ -220,14 +220,14 @@ export function AuditLog() {
               <button
                 onClick={() => setPage(p => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Previous
               </button>
               <button
                 onClick={() => setPage(p => p + 1)}
                 disabled={page >= ((data as any).meta.last_page ?? 1)}
-                className="px-3 py-1.5 text-sm border border-dark-border text-[#a0a0a0] rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
+                className="px-3 py-1.5 text-sm border border-dark-border text-t-soft rounded-lg disabled:opacity-50 hover:bg-dark-surface2 transition-colors"
               >
                 Next
               </button>

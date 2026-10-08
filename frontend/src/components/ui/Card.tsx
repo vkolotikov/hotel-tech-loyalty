@@ -32,12 +32,12 @@ export function StatCard({ title, value, change, icon, color = 'bg-primary-500',
           <p className="text-sm font-medium text-t-secondary">{title}</p>
           <p className="text-2xl font-bold text-white mt-1">{value}</p>
           {change !== undefined && (
-            <p className={clsx('text-sm mt-1', change >= 0 ? 'text-[#32d74b]' : 'text-[#ff375f]')}>
+            <p className={clsx('text-sm mt-1', change >= 0 ? 'text-success' : 'text-danger')}>
               {change >= 0 ? '↑' : '↓'} {Math.abs(change)}% vs last month
             </p>
           )}
           {subtitle && (
-            <p className="text-xs text-[#636366] mt-1">{subtitle}</p>
+            <p className="text-xs text-t-muted mt-1">{subtitle}</p>
           )}
         </div>
         <div className={clsx('p-3 rounded-xl text-white', color)}>

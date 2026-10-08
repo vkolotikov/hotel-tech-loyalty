@@ -93,7 +93,7 @@ export function CustomFieldsForm({
           const hasError = !!fieldErrors?.length
           return (
             <div key={f.id} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
-              <label className="block text-xs text-[#a0a0a0] mb-1">
+              <label className="block text-xs text-t-soft mb-1">
                 {f.label}{f.required && <span className="text-red-400 ml-0.5">*</span>}
               </label>
               <FieldInput
@@ -105,7 +105,7 @@ export function CustomFieldsForm({
               {hasError ? (
                 <p className="text-[10px] text-red-400 mt-0.5 font-semibold leading-snug">{fieldErrors[0]}</p>
               ) : f.help_text ? (
-                <p className="text-[10px] text-[#636366] mt-0.5 leading-snug">{f.help_text}</p>
+                <p className="text-[10px] text-t-muted mt-0.5 leading-snug">{f.help_text}</p>
               ) : null}
             </div>
           )

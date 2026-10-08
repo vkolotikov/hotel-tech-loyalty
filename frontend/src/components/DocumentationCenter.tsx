@@ -220,7 +220,7 @@ export function DocumentationCenter() {
               <button key={i}
                 onClick={() => openArticle(hit.slug, hit.articleIdx)}
                 className="w-full text-left flex items-start gap-3 p-4 rounded-xl border border-white/[0.06] hover:border-current transition-all group"
-                style={{ ['--tw-text-opacity' as any]: 1, background: 'rgba(15,28,24,0.4)' } as any}
+                style={{ ['--tw-text-opacity' as any]: 1, background: 'var(--legacy-well-40)' } as any}
                 onMouseEnter={(e) => { e.currentTarget.style.borderColor = hit.accent }}
                 onMouseLeave={(e) => { e.currentTarget.style.borderColor = '' }}
               >

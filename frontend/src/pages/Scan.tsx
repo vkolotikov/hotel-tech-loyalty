@@ -172,7 +172,7 @@ export function Scan() {
     if (!nfcReader.supported) return null
     const s = nfcReader.status
     const colors: Record<string, string> = {
-      disconnected: 'text-[#636366]',
+      disconnected: 'text-t-muted',
       connecting: 'text-yellow-400',
       waiting: 'text-green-400',
       reading: 'text-blue-400',
@@ -190,7 +190,7 @@ export function Scan() {
       <div className={`flex items-center gap-1.5 text-xs ${colors[s]}`}>
         <Icon size={12} className={s === 'connecting' ? 'animate-spin' : ''} />
         <span>{nfcReader.deviceName ? `${nfcReader.deviceName} — ` : ''}{labels[s]}</span>
-        {nfcReader.lastUid && <span className="font-mono text-[#a0a0a0] ml-1">UID: {nfcReader.lastUid}</span>}
+        {nfcReader.lastUid && <span className="font-mono text-t-soft ml-1">UID: {nfcReader.lastUid}</span>}
       </div>
     )
   }
@@ -205,7 +205,7 @@ export function Scan() {
           <button
             key={m}
             onClick={() => { setMode(m); setMember(null); stopScanning() }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary-600 text-white' : 'bg-dark-surface text-[#a0a0a0] border border-dark-border hover:bg-dark-surface2'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary-600 text-white' : 'bg-dark-surface text-t-soft border border-dark-border hover:bg-dark-surface2'}`}
           >
             {m === 'qr' ? <QrCode size={16} /> : <CreditCard size={16} />}
             {m.toUpperCase()} Scan
@@ -223,7 +223,7 @@ export function Scan() {
                 <video ref={videoRef} className="w-full h-full object-cover" />
                 {!scanning && (
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <QrCode size={48} className="text-[#636366]" />
+                    <QrCode size={48} className="text-t-muted" />
                   </div>
                 )}
                 {scanning && (
@@ -292,9 +292,9 @@ export function Scan() {
 
               {/* Manual / keyboard-emulation fallback */}
               <div className="border-t border-dark-border pt-4 mt-4">
-                <p className="text-xs text-[#636366] mb-2">Manual entry or keyboard-emulation reader:</p>
+                <p className="text-xs text-t-muted mb-2">Manual entry or keyboard-emulation reader:</p>
                 <div className="relative">
-                  <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#636366]" />
+                  <CreditCard size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
                   <input
                     ref={nfcInputRef}
                     type="text"
@@ -302,7 +302,7 @@ export function Scan() {
                     value={nfcUid}
                     onChange={(e) => setNfcUid(e.target.value)}
                     autoFocus
-                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
+                    className="w-full bg-panel border border-dark-border rounded-lg pl-10 pr-4 py-3 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono text-center text-lg tracking-wider"
                     onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
                   />
                 </div>
@@ -326,7 +326,7 @@ export function Scan() {
                   <div>
                     <h3 className="font-bold text-white text-lg">{member.name}</h3>
                     <p className="text-sm text-t-secondary">{member.email}</p>
-                    <p className="text-xs text-[#636366] font-mono">{member.member_number}</p>
+                    <p className="text-xs text-t-muted font-mono">{member.member_number}</p>
                   </div>
                 </div>
                 <TierBadge tier={member.tier?.name} color={member.tier?.color_hex} />
@@ -370,14 +370,14 @@ export function Scan() {
                     placeholder="Points to award"
                     value={pointsInput}
                     onChange={(e) => setPointsInput(e.target.value)}
-                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <input
                     type="text"
                     placeholder="Description (e.g. Room 205 stay)"
                     value={pointsDesc}
                     onChange={(e) => setPointsDesc(e.target.value)}
-                    className="w-full bg-[#1e1e1e] border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-[#636366] focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                   <button onClick={awardPoints} className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
                     Award Points
@@ -392,13 +392,13 @@ export function Scan() {
                 <h4 className="text-sm font-semibold text-[#e0e0e0] mb-2 flex items-center gap-2">
                   <Gift size={14} className="text-primary-400" /> AI Upsell Suggestion
                 </h4>
-                <p className="text-sm text-[#a0a0a0] leading-relaxed italic">"{aiUpsell}"</p>
+                <p className="text-sm text-t-soft leading-relaxed italic">"{aiUpsell}"</p>
               </Card>
             )}
           </div>
         ) : (
           <Card className="flex items-center justify-center">
-            <div className="text-center text-[#636366] py-8">
+            <div className="text-center text-t-muted py-8">
               <QrCode size={48} className="mx-auto mb-3 opacity-30" />
               <p className="text-sm">Scan a QR code or NFC card to see member details</p>
             </div>
