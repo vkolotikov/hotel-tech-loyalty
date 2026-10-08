@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Models\CrmSetting;
+use App\Models\PlannerTask;
 use App\Models\PlannerTemplate;
+use App\Models\Staff;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,10 +18,12 @@ use Illuminate\Support\Facades\DB;
  *      the New Task drawer + side panel)
  *
  * Applying a preset is data-safe:
- *   • planner_groups is a CrmSetting value — overwritten on apply.
- *     Tasks already assigned to a group whose name disappears keep
- *     their `task_group` string (they just stop showing in any group
- *     tab; admin can reassign or re-add the group).
+ *   • planner_groups (a CrmSetting value) keeps every group the org
+ *     already has, icon and colour included, and only adds the
+ *     preset's missing ones. It used to be overwritten, and an
+ *     industry switch hid every task tied to the org's own groups
+ *     (FDS Cards, 2026-10-07). missingGroups() / restoreGroups()
+ *     bring back groups that tasks still name.
  *   • Templates are seeded idempotently — we skip rows whose `name`
  *     already exists for the org so re-applying the preset doesn't
  *     duplicate. Custom templates the admin added stay intact.
@@ -60,7 +64,7 @@ class PlannerPresetService
     /**
      * Apply a planner preset. Returns summary for the toast.
      *
-     * @return array{groups_set:int,templates_added:int,templates_skipped:int}
+     * @return array{groups_set:int,groups_added:int,templates_added:int,templates_skipped:int}
      */
     public function apply(string $key): array
     {
@@ -69,15 +73,21 @@ class PlannerPresetService
             throw new \InvalidArgumentException("Unknown planner preset '{$key}'.");
         }
 
-        $summary = ['groups_set' => 0, 'templates_added' => 0, 'templates_skipped' => 0];
+        $summary = ['groups_set' => 0, 'groups_added' => 0, 'templates_added' => 0, 'templates_skipped' => 0];
 
         DB::transaction(function () use ($preset, $key, &$summary) {
-            // 1. Groups — single CrmSetting key holds the JSON array
-            CrmSetting::updateOrCreate(
-                ['key' => 'planner_groups'],
-                ['value' => json_encode($preset['groups'])],
-            );
-            $summary['groups_set'] = count($preset['groups']);
+            // 1. Groups — the org's own first, untouched; the preset's
+            //    groups it doesn't have yet after them.
+            $groups = $this->currentGroups();
+            $have = array_map(fn ($g) => mb_strtolower(self::groupName($g)), $groups);
+            foreach ($preset['groups'] as $name) {
+                if (!in_array(mb_strtolower($name), $have, true)) {
+                    $groups[] = $name;
+                    $summary['groups_added']++;
+                }
+            }
+            $this->storeGroups($groups);
+            $summary['groups_set'] = count($groups);
 
             // 2. Templates — idempotent by name. Existing rows with the
             //    same `name` are left alone (don't clobber edits an
@@ -117,6 +127,99 @@ class PlannerPresetService
         });
 
         return $summary;
+    }
+
+    /**
+     * Group names something still uses that the list no longer has: the
+     * task list, employee preferences, staff skills and planner tasks, in
+     * that order, first spelling wins, compared case-insensitively.
+     * Templates are left out — an old preset's starter templates name that
+     * preset's groups whether or not the organisation ever used them.
+     *
+     * @return list<string>
+     */
+    public function missingGroups(): array
+    {
+        $named = [];
+        foreach (self::decodeSetting('planner_channels') as $task) {
+            array_push($named, ...array_values((array) ($task['groups'] ?? [])));
+        }
+        foreach (self::decodeSetting('planner_employee_prefs') as $pref) {
+            array_push($named, ...array_values((array) ($pref['groups'] ?? [])));
+        }
+        foreach (Staff::whereNotNull('planner_skills')->pluck('planner_skills') as $skills) {
+            array_push($named, ...array_values((array) $skills));
+        }
+        array_push($named, ...PlannerTask::whereNotNull('task_group')->distinct()->orderBy('task_group')->pluck('task_group')->all());
+
+        $seen = array_map(fn ($g) => mb_strtolower(self::groupName($g)), $this->currentGroups());
+        $missing = [];
+        foreach ($named as $name) {
+            $name = is_string($name) ? trim($name) : '';
+            if ($name === '' || in_array(mb_strtolower($name), $seen, true)) {
+                continue;
+            }
+            $seen[] = mb_strtolower($name);
+            $missing[] = $name;
+        }
+
+        return $missing;
+    }
+
+    /**
+     * Put missing groups back at the front of the list, in missingGroups()
+     * order. $only narrows it to those names; a name that is not actually
+     * missing is ignored. Returns the names restored.
+     *
+     * @param  list<string>|null  $only
+     * @return list<string>
+     */
+    public function restoreGroups(?array $only = null): array
+    {
+        return DB::transaction(function () use ($only) {
+            $restore = $this->missingGroups();
+            if ($only !== null) {
+                $wanted = array_map(fn ($n) => mb_strtolower(trim((string) $n)), $only);
+                $restore = array_values(array_filter($restore, fn ($g) => in_array(mb_strtolower($g), $wanted, true)));
+            }
+            if ($restore !== []) {
+                $this->storeGroups(array_merge($restore, $this->currentGroups()));
+            }
+
+            return $restore;
+        });
+    }
+
+    /** The group list as stored, in order: plain names (legacy) or {name, icon, color} entries. */
+    private function currentGroups(): array
+    {
+        return array_values(array_filter(self::decodeSetting('planner_groups'), fn ($g) => self::groupName($g) !== ''));
+    }
+
+    /** JSON text inside the JSON column — the shape Settings → Planner writes and lib/plannerMeta reads. */
+    private function storeGroups(array $groups): void
+    {
+        CrmSetting::updateOrCreate(['key' => 'planner_groups'], ['value' => json_encode(array_values($groups))]);
+    }
+
+    private static function groupName(mixed $entry): string
+    {
+        if (is_array($entry)) {
+            $entry = $entry['name'] ?? '';
+        }
+
+        return is_string($entry) ? trim($entry) : '';
+    }
+
+    /** A crm_settings value as an array, whether stored as JSON text or decoded already. */
+    private static function decodeSetting(string $key): array
+    {
+        $value = CrmSetting::where('key', $key)->first()?->value;
+        if (is_string($value)) {
+            $value = json_decode($value, true);
+        }
+
+        return is_array($value) ? $value : [];
     }
 
     /**

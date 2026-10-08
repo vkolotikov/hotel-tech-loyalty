@@ -1123,6 +1123,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             // ─── Planner industry presets (groups + templates) ────────────
             Route::get('planner-presets',               [PlannerPresetController::class, 'index']);
             Route::post('planner-presets/apply',        [PlannerPresetController::class, 'apply']);
+            Route::get('planner-presets/missing-groups', [PlannerPresetController::class, 'missingGroups']);
+            Route::post('planner-presets/restore-groups', [PlannerPresetController::class, 'restoreGroups']);
 
             // ─── Loyalty / Membership presets (tiers + benefits) ──────────
             Route::get('loyalty-presets',               [LoyaltyPresetController::class, 'index']);

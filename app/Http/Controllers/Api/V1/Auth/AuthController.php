@@ -668,7 +668,7 @@ class AuthController extends Controller
                     'CRM pipeline + stages will be replaced with the ' . $industry . ' preset (existing inquiries migrate by stage kind — won / lost / open)',
                     'Lost-reason taxonomy will be reseeded (in-use reasons soft-deactivated, never deleted)',
                     'Custom fields will be reseeded (existing custom_data on entities is preserved)',
-                    'Planner task groups + templates will be replaced (admin manual templates are kept)',
+                    'Planner: the ' . $industry . ' task groups + starter templates are added (your own groups, icons, colours and templates stay)',
                     // Phase 5 — loyalty-side reshapes now happen inside
                     // the same transaction. Surface them so the
                     // acknowledge gate is honest:

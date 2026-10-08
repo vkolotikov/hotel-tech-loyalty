@@ -210,13 +210,13 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
 
         <p className="text-sm text-gray-400 mb-4">
           {isCurrent
-            ? <>This is your current preset. Re-applying restores the canonical groups for {preset.label} and tops up any missing starter templates.</>
-            : <>One click reshapes the Planner for <span className="text-white font-semibold">{preset.label}</span>. You can switch back any time — your tasks stay.</>}
+            ? <>This is your current preset. Re-applying adds back any of its groups you removed and tops up any missing starter templates.</>
+            : <>One click adds the <span className="text-white font-semibold">{preset.label}</span> task groups and starter templates to your Planner.</>}
         </p>
 
         <div className="bg-dark-bg border border-dark-border rounded-lg p-3 space-y-2 mb-4">
           <p className="text-[10px] uppercase tracking-wide font-bold text-gray-500 mb-1">What changes</p>
-          <ChangeRow label={`Task groups → ${preset.groups.join(' · ')}`} />
+          <ChangeRow label={`Adds the task groups you don't have yet from: ${preset.groups.join(' · ')}`} />
           <ChangeRow label={`+${preset.template_count} starter templates`} accent />
         </div>
 
@@ -224,10 +224,9 @@ function ConfirmModal({ preset, isCurrent, onCancel, onConfirm, applying }: {
           <div className="flex items-start gap-2">
             <Info size={13} className="text-blue-300 flex-shrink-0 mt-0.5" />
             <div className="text-[11px] text-blue-100/90 leading-relaxed">
-              <p className="font-bold text-blue-200 mb-0.5">Your tasks are safe</p>
-              Tasks already assigned to a group keep their <code>task_group</code> value even if the new
-              preset doesn't list that group. Existing templates with the same name as a starter are
-              skipped (not overwritten).
+              <p className="font-bold text-blue-200 mb-0.5">Your groups and tasks stay</p>
+              Groups you already have keep their place, icon and colour; nothing is removed. Existing
+              templates with the same name as a starter are skipped (not overwritten).
             </div>
           </div>
         </div>
@@ -299,7 +298,11 @@ function GroupsEditor() {
     mutationFn: (next: GroupEntry[]) => api.put('/v1/admin/crm-settings/planner_groups', {
       value: JSON.stringify(next),
     }),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['crm-settings'] }); toast.success('Groups saved') },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['crm-settings'] })
+      qc.invalidateQueries({ queryKey: ['planner-missing-groups'] })
+      toast.success('Groups saved')
+    },
     onError: () => toast.error('Could not save groups'),
   })
 
@@ -346,6 +349,8 @@ function GroupsEditor() {
           <p className="text-[11px] text-gray-500 mt-0.5">The icon-tab row in Schedule / Day / Month views. Click the icon tile to pick a custom icon + color — saves immediately.</p>
         </div>
       </div>
+
+      <MissingGroupsNotice />
 
       <div className="space-y-1.5 mb-3">
         {entries.map((entry, idx) => {
@@ -415,6 +420,83 @@ function GroupsEditor() {
           <Plus size={13} /> Add
         </button>
       </form>
+    </div>
+  )
+}
+
+/**
+ * Groups that tasks, the task list, employee preferences or staff skills
+ * still name but the list no longer has — what an industry switch left
+ * behind before it learned to keep an organisation's own groups
+ * (FDS Cards, 2026-10-07). Every name starts selected; Restore puts the
+ * selected ones back at the top of the list with the default look.
+ */
+function MissingGroupsNotice() {
+  const qc = useQueryClient()
+  const [skipped, setSkipped] = useState<string[]>([])
+  const [dismissed, setDismissed] = useState(false)
+
+  const { data } = useQuery<{ missing: string[] }>({
+    queryKey: ['planner-missing-groups'],
+    queryFn: () => api.get('/v1/admin/planner-presets/missing-groups').then(r => r.data),
+  })
+
+  const restore = useMutation({
+    mutationFn: (groups: string[]) => api.post('/v1/admin/planner-presets/restore-groups', { groups }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['crm-settings'] })
+      qc.invalidateQueries({ queryKey: ['planner-missing-groups'] })
+      setSkipped([])
+      toast.success(res.data?.message ?? 'Groups restored')
+    },
+    onError: () => toast.error('Could not restore groups'),
+  })
+
+  const missing = data?.missing ?? []
+  if (dismissed || missing.length === 0) return null
+  const chosen = missing.filter(name => !skipped.includes(name))
+  const toggle = (name: string) =>
+    setSkipped(s => (s.includes(name) ? s.filter(x => x !== name) : [...s, name]))
+
+  return (
+    <div className="bg-amber-500/[0.06] border border-amber-500/30 rounded-lg p-3 mb-3">
+      <p className="text-xs font-bold text-amber-200">Groups your tasks still use are missing from this list</p>
+      <p className="text-[11px] text-gray-400 mt-0.5">
+        Tasks tied to them don't show under any tab. Restore puts the selected groups back at the top, with the
+        default icon and colour — click a group's tile afterwards to set its own.
+      </p>
+      <div className="flex flex-wrap gap-1.5 mt-2.5">
+        {missing.map(name => {
+          const on = !skipped.includes(name)
+          return (
+            <button
+              key={name}
+              type="button"
+              onClick={() => toggle(name)}
+              aria-pressed={on}
+              className={'px-2 py-1 rounded-md text-xs border transition flex items-center gap-1 '
+                + (on
+                  ? 'bg-amber-500/15 border-amber-500/40 text-amber-100'
+                  : 'bg-dark-bg border-dark-border text-gray-500 line-through')}
+            >
+              {on && <CheckCircle2 size={11} />} {name}
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex items-center gap-2 mt-3">
+        <button
+          type="button"
+          onClick={() => restore.mutate(chosen)}
+          disabled={chosen.length === 0 || restore.isPending}
+          className="bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50"
+        >
+          {restore.isPending ? 'Restoring…' : `Restore ${chosen.length} ${chosen.length === 1 ? 'group' : 'groups'}`}
+        </button>
+        <button type="button" onClick={() => setDismissed(true)} className="px-2 py-1.5 text-xs text-gray-400 hover:text-white">
+          Not now
+        </button>
+      </div>
     </div>
   )
 }
