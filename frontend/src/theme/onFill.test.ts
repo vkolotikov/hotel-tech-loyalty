@@ -32,8 +32,52 @@ const files = adminFiles(SRC)
 
 const HUES = 'red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone'
 const SOLID = new RegExp(
-  `(?<![\\w:/-])(?:bg|from)-(?:(?:${HUES})-(?:500|600|700|800|900)|accent|success|danger|notice|error|warning|info)(?:\\/(?:[4-9]\\d|100))?(?![\\w/-])|(?<![\\w:/-])bg-black(?:\\/(?:[6-9]\\d|100))?(?![\\w/-])`,
+  `(?<![\\w:/-])(?:bg|from)-(?:(?:${HUES})-(?:500|600|700|800|900)|accent|success|danger|notice|error|warning|info)(?:\\/(?:[4-9]\\d|100))?(?![\\w/-])|(?<![\\w:/-])(?:bg|from)-black(?:\\/(?:[6-9]\\d|100))?(?![\\w/-])`,
 )
+/** A translucent black well (not a scrim): grey on paper in Clean light, where coloured text falls under 4.5:1. */
+const BLACK_WELL = /(?<![\w:/-])bg-black\/[1-5]\d(?![\w/-])/
+const COLOURED_TEXT = new RegExp(`(?<![\\w:/[-])text-(?:${HUES})-\\d{3}(?![\\w-])`)
+const SCRIM = /(?<![\w:/-])(?:fixed|absolute) inset-0(?![\w-])|(?<![\w:/-])inset-0 (?:fixed|absolute)(?![\w-])/
+const TEXT_WHITE_ANYWHERE = /(?<![\w:/[-])text-white(?![\w/-])/
+
+/**
+ * Elements that darken an image in place (an `absolute inset-0` layer of
+ * translucent black, such as a photo's hover overlay), with everything they
+ * hold up to their closing tag. Their icons stay white over the darkened
+ * image in every style, so they take text-on-fill. Modal scrims are `fixed`
+ * and hold a panel with its own surface: not matched.
+ */
+function blackOverlays(source: string): string[] {
+  /** The index of the `>` that ends the opening tag at `start` (brace-aware), and whether it is `/>`. */
+  const tagEnd = (start: number): { end: number; selfClosing: boolean } => {
+    let depth = 0
+    for (let i = start; i < source.length; i++) {
+      const ch = source[i]
+      if (ch === '{') depth++
+      else if (ch === '}') depth--
+      else if (ch === '>' && depth === 0) return { end: i, selfClosing: source[i - 1] === '/' }
+    }
+    return { end: source.length, selfClosing: true }
+  }
+  const out: string[] = []
+  for (const m of source.matchAll(/<(\w+)\s+className="([^"]*)"/g)) {
+    const [, tag, cls] = m
+    if (!/(?<![\w:/-])absolute(?![\w-])/.test(cls) || !/(?<![\w:/-])inset-0(?![\w-])/.test(cls) || !/(?<![\w:/-])bg-black\/\d+(?![\w/-])/.test(cls)) continue
+    const open = tagEnd(m.index!)
+    if (open.selfClosing) { out.push(source.slice(m.index, open.end + 1)); continue }
+    let depth = 1
+    let end = source.length
+    const nested = new RegExp(`<${tag}(?![\\w])|</${tag}>`, 'g')
+    nested.lastIndex = open.end + 1
+    for (let t = nested.exec(source); t; t = nested.exec(source)) {
+      if (t[0].startsWith('</')) depth--
+      else if (!tagEnd(t.index).selfClosing) depth++
+      if (depth === 0) { end = t.index + t[0].length; break }
+    }
+    out.push(source.slice(m.index, end))
+  }
+  return out
+}
 const HX_FILL_CLASS = /(?<![\w:/-])(?:bg|from)-hx-([0-9a-f]{6})(?:\/(?:[4-9]\d|100))?(?![\w/-])/
 const TEXT_WHITE = /(?<![\w:/[-])text-white(?![\w/-])/
 const SOLID_BG_WHITE = /(?<![\w:/[-])bg-white(?![\w/-])/
@@ -96,6 +140,47 @@ describe('whites that stay white', () => {
         .map(tag => `${rel(f)}: ${tag.slice(0, 140)}`),
     )
     expect(offenders).toEqual([])
+  })
+
+  it('puts coloured text in wells of bg-hx-000000 (paper in Clean light), not a translucent bg-black', () => {
+    const offenders = files.flatMap(f =>
+      classChunks(fs.readFileSync(f, 'utf8'))
+        .filter(c => BLACK_WELL.test(c) && COLOURED_TEXT.test(c) && !SCRIM.test(c))
+        .map(c => `${rel(f)}: ${c.slice(0, 120)}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('uses text-on-fill inside overlays that darken an image (absolute inset-0 bg-black/…)', () => {
+    const offenders = files.flatMap(f =>
+      blackOverlays(fs.readFileSync(f, 'utf8'))
+        .filter(el => TEXT_WHITE_ANYWHERE.test(el))
+        .map(el => `${rel(f)}: ${el.replace(/\s+/g, ' ').slice(0, 140)}`),
+    )
+    expect(offenders).toEqual([])
+  })
+
+  it('finds an image overlay and what it holds', () => {
+    const src = `<div className="relative group"><img src={x} />
+      <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100">
+        <div className="p-1"><Camera size={20} className="text-white" /></div>
+      </div></div>`
+    expect(blackOverlays(src)).toHaveLength(1)
+    expect(TEXT_WHITE_ANYWHERE.test(blackOverlays(src)[0])).toBe(true)
+    expect(TEXT_WHITE_ANYWHERE.test(blackOverlays(src.replace('text-white', 'text-on-fill'))[0])).toBe(false)
+    // A modal scrim (fixed) is not an image overlay: the panel inside paints its own surface.
+    expect(blackOverlays(`<div className="fixed inset-0 bg-black/60"><div className="bg-dark-surface text-white" /></div>`)).toEqual([])
+  })
+
+  it('detects solid black fills and gradient stops, and coloured text in black wells', () => {
+    expect(SOLID.test("'from-black to-transparent'")).toBe(true)
+    expect(SOLID.test("'from-black/80'")).toBe(true)
+    expect(SOLID.test("'bg-black/70'")).toBe(true)
+    expect(SOLID.test("'bg-black/40'")).toBe(false)
+    const well = "'rounded bg-black/40 text-emerald-300 font-mono'"
+    expect(BLACK_WELL.test(well) && COLOURED_TEXT.test(well) && !SCRIM.test(well)).toBe(true)
+    expect(BLACK_WELL.test("'rounded bg-hx-000000/40 text-emerald-300'")).toBe(false)
+    expect(SCRIM.test("'fixed inset-0 bg-black/50 text-emerald-300'")).toBe(true)
   })
 
   it('has no solid bg-white except foreground whites on the allowlist', () => {

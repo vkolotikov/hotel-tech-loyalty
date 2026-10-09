@@ -299,7 +299,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
                 <span
                   key={s.key}
                   className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium"
-                  style={{ background: s.meta.bg, color: s.meta.color }}
+                  style={{ background: s.meta.bg, color: ink(s.meta.color) }}
                 >
                   {s.meta.label}
                   <span className="font-bold">{s.count}</span>

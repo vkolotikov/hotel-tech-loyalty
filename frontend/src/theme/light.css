@@ -96,6 +96,19 @@
     0 8px 24px rgb(14 26 36 / 0.06);
 }
 
+/* Pale brands (white, #f5f5f5, #fde68a: under 1.5:1 on white) vanish on
+   paper, so solid brand fills (buttons, the selected tab or chip, the Active
+   badge) take a hairline in the deepened brand. The theme code sets
+   data-brand-pale (light.ts isPaleBrand); Tailwind's ring and shadow
+   variables stay in. */
+:root[data-style="light"][data-shell="admin"][data-brand-pale] :is(.bg-primary-400, .bg-primary-500, .bg-primary-600, .bg-primary-700) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    var(--tw-shadow, 0 0 #0000),
+    inset 0 0 0 1px rgb(var(--light-primary-600));
+}
+
 /* Menus, popovers, sticky headers, modals and drawers: opaque paper with a
    deeper shadow, never see-through. */
 :root[data-style="light"][data-shell="admin"] :is(.absolute, .fixed, .sticky, [style*="position: fixed"]):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),

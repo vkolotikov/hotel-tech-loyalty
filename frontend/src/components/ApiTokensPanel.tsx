@@ -108,7 +108,7 @@ export function ApiTokensPanel() {
                 placeholder="e.g. FDS Card Builder"
                 autoFocus
                 maxLength={80}
-                className="flex-1 px-3 py-2 bg-black/40 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white placeholder-gray-600"
+                className="flex-1 px-3 py-2 bg-hx-000000/40 border border-white/10 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 text-sm text-white placeholder-gray-600"
               />
               <button onClick={() => createMutation.mutate(newLabel.trim())}
                 disabled={!newLabel.trim() || createMutation.isPending}
@@ -138,7 +138,7 @@ export function ApiTokensPanel() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <code className="flex-1 px-2.5 py-2 rounded bg-black/40 text-emerald-300 font-mono text-[11px] break-all">
+              <code className="flex-1 px-2.5 py-2 rounded bg-hx-000000/40 text-emerald-300 font-mono text-[11px] break-all">
                 {justCreated.token}
               </code>
               <button onClick={copyToken}
@@ -165,7 +165,7 @@ export function ApiTokensPanel() {
         ) : (
           <div className="space-y-1.5">
             {tokens.map(t => (
-              <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-white/[0.04] bg-black/20">
+              <div key={t.id} className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg border border-white/[0.04] bg-hx-000000/20">
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium text-white truncate">{t.label}</div>
                   <div className="text-[10px] text-gray-500 mt-0.5">

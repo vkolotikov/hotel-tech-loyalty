@@ -21,7 +21,7 @@ import { CustomerDrawer } from '../components/CustomerDrawer'
 import { InquiryDrawer } from '../components/InquiryDrawer'
 import { AddInquiryDrawer } from '../components/AddInquiryDrawer'
 import LeadRow from '../components/LeadRow'
-import { hx, hxWhite, HX_COLOR_SCHEME } from '../theme/hx'
+import { hx, hxWhite, HX_COLOR_SCHEME, useDataInk } from '../theme/hx'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -91,6 +91,7 @@ export function Inquiries() {
   const qc = useQueryClient()
   const settings = useSettings()
   const { t } = useTranslation()
+  const ink = useDataInk()
   // Field-visibility config — admin toggles in Settings → Pipeline Layout
   // pick which Add Inquiry fields and which list columns are shown.
   // useSettings deep-merges with defaults so missing keys are safe.
@@ -1267,7 +1268,7 @@ export function Inquiries() {
                   <div className="flex items-center justify-between gap-2">
                     <span
                       className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider truncate ${stageColor ? 'border' : (STATUS_COLORS[col] ?? 'bg-gray-500/20 text-t-secondary')}`}
-                      style={stageColor ? { background: stageColor + '20', color: stageColor, border: `1px solid ${stageColor}40` } : undefined}
+                      style={stageColor ? { background: stageColor + '20', color: ink(stageColor), border: `1px solid ${stageColor}40` } : undefined}
                     >
                       {col}
                     </span>

@@ -174,4 +174,24 @@ describe('Clean light', () => {
     applyThemeToDom({ primary_color: '#3b82f6' }, null, 'glass', target)
     expect(vars.get('--light-primary-500')).toBe('10 91 223')
   })
+
+  it('marks a brand too close to white as pale, in every style, and clears the mark for a brand that holds', () => {
+    for (const style of ['glass', 'classic', 'light'] as const) {
+      for (const pale of ['#ffffff', '#f5f5f5', '#fde68a']) {
+        const { target, attrs } = fakeTarget()
+        applyThemeToDom({ primary_color: pale }, null, style, target)
+        expect(attrs.has('data-brand-pale'), `${pale} in ${style}`).toBe(true)
+      }
+      for (const solid of ['#3b82f6', '#c9a84c']) {
+        const { target, attrs } = fakeTarget()
+        applyThemeToDom({ primary_color: solid }, null, style, target)
+        expect(attrs.has('data-brand-pale'), `${solid} in ${style}`).toBe(false)
+      }
+    }
+    // A preset switch from a pale brand to a strong one takes the mark away.
+    const { target, attrs } = fakeTarget()
+    applyThemeToDom({ primary_color: '#fde68a' }, null, 'light', target)
+    applyThemeToDom({ primary_color: '#c9a84c' }, null, 'light', target)
+    expect(attrs.has('data-brand-pale')).toBe(false)
+  })
 })

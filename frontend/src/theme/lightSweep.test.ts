@@ -3,7 +3,12 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Screens converted for Clean light (Tasks 8-14 add their files).
+ * The Clean light sweep. EVERY admin source file is scanned (everything
+ * under src/ except portal/, appointments/, theme/, tests and .d.ts), so a
+ * new file is covered the day it is written; EXEMPT_FILES names the few
+ * files that legitimately keep colour literals, each with its reason.
+ * CONVERTED_FILES records the screens Tasks 8-14 and the fix waves converted
+ * by hand (kept for the record and checked for consistency).
  *
  * Rule: the whole file is scanned, not just style blocks. Comments are
  * stripped first (block comments, and `//` comments that start a line or
@@ -16,6 +21,11 @@ import { describe, expect, it } from 'vitest'
  * occurrence in that file (list a value twice to allow two). Data colours
  * are series palettes, brand swatches, status dots and inline black
  * shadows that read on paper as they are.
+ *
+ * A second guard covers colours that arrive through variables (server stage
+ * colours, META maps): a `color:` in an inline style must go through
+ * ink()/dataInk()/hx()/hxWhite()/onColor() (VARIABLE_COLOURS lists the
+ * justified exceptions).
  *
  * Known limit: a `//` preceded by whitespace inside a string literal is
  * treated as a comment. Inside JSX text, a colour literal written in prose
@@ -139,7 +149,26 @@ export const CONVERTED_FILES: string[] = [
   'components/MenuSettings.tsx',
   'components/TeamSettings.tsx',
   'components/PipelinesAdmin.tsx',
+  'pages/InquiryDetail.tsx',
+  'pages/hubs/LeadsHub.tsx',
 ]
+
+/**
+ * Admin files that keep colour literals on purpose. Each needs a reason;
+ * the sweep fails if an entry no longer has a literal (drop it then).
+ */
+export const EXEMPT_FILES: Record<string, string> = {
+  'hooks/useTheme.ts': 'The tenant palette defaults: written to the --color-* variables, never painted as admin text; Clean light reads its own tokens.',
+  'lib/bookingBars.ts': 'Booking bar fill colours (data); the bar text goes through onColor (barTextFor).',
+  'lib/emailBuilder.ts': "E-mail HTML for the recipient's inbox and its iframe preview, not the admin.",
+  'lib/plannerMeta.ts': 'Planner group and channel colours (data) used as fills; chips draw text over them through onColor/ink.',
+  'components/ContentPlanner/lib.ts': 'Content planner platform and status colours (data): fills and tints, text through ink() (VARIABLE_COLOURS guard).',
+  'pages/Login.tsx': 'Renders outside the admin shell (no data-shell="admin"): Clean light never applies.',
+  'pages/Activate.tsx': 'Renders outside the admin shell (no data-shell="admin"): Clean light never applies.',
+  'pages/Setup.tsx': 'Renders instead of the admin Layout before setup is done: Clean light never applies.',
+  'pages/hubs/PipelineHub.tsx': 'Unrouted: nothing imports it, so no user can reach it.',
+}
+
 export const DATA_COLOURS: Record<string, string[]> = {
   'components/Layout.tsx': [
     '#60a5fa', '#a78bfa', '#38bdf8', '#fbbf24', '#ef4444', '#fff',
@@ -325,7 +354,7 @@ export const DATA_COLOURS: Record<string, string[]> = {
     '#6b7280',
   ],
   'components/settings/StylePicker.tsx': [
-    '#0b1120', '#0d1426', '#0a0f1c', '#f3f6fb', '#c3ccd9', '#0d0d0d', '#161616', '#2c2c2c', '#ffffff', '#8e8e93', '#f5f5f7', '#ffffff', '#e5e5ea', '#1d1d1f', '#6e6e73', 'rgb(255 255 255 / 0.08)', 'rgb(255 255 255 / 0.16)', 'rgb(255 255 255 / 0.1)', 'rgb(0 0 0 / 0.06)',
+    '#0b1120', '#0d1426', '#0a0f1c', '#f3f6fb', '#c3ccd9', '#0d0d0d', '#161616', '#2c2c2c', '#ffffff', '#8e8e93', 'rgb(255 255 255 / 0.08)', 'rgb(255 255 255 / 0.16)', 'rgb(255 255 255 / 0.1)', 'rgb(0 0 0 / 0.06)',
   ],
   'components/MenuSettings.tsx': [
     '#a78bfa', '#38bdf8', '#fbbf24', '#34d399', '#f472b6', '#22d3ee',
@@ -336,6 +365,73 @@ export const DATA_COLOURS: Record<string, string[]> = {
   'components/PipelinesAdmin.tsx': [
     '#3b82f6', '#22c55e', '#ef4444', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#ef4444', '#f59e0b', '#eab308', '#22c55e', '#10b981', '#14b8a6', '#22d3ee', '#94a3b8', '#3b82f6',
   ],
+  // Activity, intent and going-cold colours: tints and borders, text through ink().
+  'pages/InquiryDetail.tsx': [
+    '#94a3b8', '#22d3ee', '#a78bfa', '#fbbf24', '#10b981', '#f472b6', '#34d399', '#94a3b8', '#94a3b8', '#22d3ee', '#a78bfa', '#fbbf24', '#94a3b8', '#f87171', '#64748b', '#10b981', '#fbbf24', '#f87171', '#94a3b8',
+  ],
+  // Tile accents: tints and glows, the icon through ink().
+  'pages/hubs/LeadsHub.tsx': [
+    '#c9a84c', '#f472b6', '#22d3ee', '#fb923c', '#a78bfa',
+  ],
+  // Task type colours: the active chip's fill (with text-black, every style).
+  'components/TaskDrawer.tsx': [
+    '#22d3ee', '#a78bfa', '#25d366', '#8b5cf6', '#06b6d4', '#fbbf24', '#f472b6', '#fb923c', '#34d399', '#10b981', '#60a5fa', '#94a3b8', '#9ca3af',
+  ],
+  // The gold avatar gradient (with text-black, every style).
+  'components/CustomerDrawer.tsx': [
+    '#f5d782', '#c9a84c',
+  ],
+  // Credit-usage bar fills.
+  'pages/Corporate.tsx': [
+    '#ef4444', '#f59e0b', '#10b981',
+  ],
+  // Not colours: "Inquiry #123" and "e.g. #7c3aed" in hint text.
+  'components/FieldManagerPanel.tsx': [
+    '#123',
+  ],
+  'components/ContentPlanner/SetupWizard.tsx': [
+    '#7c3aed',
+  ],
+  // The Apple Wallet pass's own colours (form defaults and a hint), not admin colours.
+  'pages/WalletConfig.tsx': [
+    'rgb(13,13,13)', 'rgb(255,255,255)', 'rgb(201,168,76)', 'rgb(13,13,13)', 'rgb(255,255,255)', 'rgb(201,168,76)', 'rgb(13,13,13)',
+  ],
+}
+
+/**
+ * Inline-style `color:` values that are variables and justified as they are,
+ * per file (each listed expression is allowed wherever it appears there).
+ * Everything else must go through ink()/dataInk()/hx()/hxWhite()/onColor().
+ */
+export const VARIABLE_COLOURS: Record<string, { values: string[]; why: string }> = {
+  'pages/Settings.tsx': {
+    why: "Preset, mood-card, live-palette and member-app previews: they show the palette's own colours on its own surfaces, in every admin style.",
+    values: [
+      'c.background_color', 'c.text_color', 'c.text_secondary_color', 'c.accent_color', 'c.primary_color', 'accent', 'k.tone',
+      'previewBg', 'previewText', 'previewText2', 'previewPrimary', 'previewAccent', 'previewError',
+      'text', 'text2', 'bg', 'primary', 'errorCol', 'stat.color',
+    ],
+  },
+  'pages/ChatbotWidget.tsx': {
+    why: "The widget preview draws the public widget's own colours on its own backdrop.",
+    values: ['headerText', 'botBubbleTxt', 'userBubbleTxt', 'primary'],
+  },
+  'components/settings/BookingTab.tsx': {
+    why: "The booking widget preview shows the public widget's own colours.",
+    values: ['widgetTextColor', 'widgetColor'],
+  },
+  'components/Layout.tsx': {
+    why: 'Sidebar section labels read --nav-label-text, which Clean light sets to the deep accent (light.css).',
+    values: ['`var(--nav-label-text, ${tint(0.9)})`'],
+  },
+  'pages/BookingCalendar.tsx': {
+    why: 'barTextFor (lib/bookingBars.ts) is onColor over the bar fill.',
+    values: ['barTextFor(payStatus)'],
+  },
+  'pages/hubs/DealsHub.tsx': {
+    why: "The quiet tile's translucent accent outside Clean light only; light takes ink(accent) in the same expression.",
+    values: ['tint(accent, 0.6)'],
+  },
 }
 
 const SRC = path.resolve(__dirname, '..')
@@ -375,10 +471,209 @@ function literalsIn(file: string): string[] {
   return unconvertedColours(s, DATA_COLOURS[file] ?? [])
 }
 
+/** Every admin source file, relative to src/: not portal/, appointments/ (their own tokens and sweeps) or theme/ (the token sources), no tests. */
+function adminFiles(dir = SRC): string[] {
+  return fs.readdirSync(dir).flatMap(entry => {
+    const full = path.join(dir, entry)
+    const rel = path.relative(SRC, full).split(path.sep).join('/')
+    if (fs.statSync(full).isDirectory()) return ['portal', 'appointments', 'theme'].includes(rel) ? [] : adminFiles(full)
+    return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) && !/\.d\.ts$/.test(entry) ? [rel] : []
+  })
+}
+const ADMIN_FILES = adminFiles()
+const SWEPT_FILES = ADMIN_FILES.filter(f => !(f in EXEMPT_FILES))
+
+/** Split an expression into the values it can yield: the branches of top-level `?:`, `??`, `||`, `&&`, recursing into parentheses. */
+function valueBranches(expr: string): string[] {
+  const e = expr.trim()
+  if (e.startsWith('(') && e.endsWith(')') && balancedSlice(e, 0) === e.length - 1) return valueBranches(e.slice(1, -1))
+  const parts: string[] = []
+  let depth = 0
+  let quote: string | null = null
+  let cur = ''
+  let pendingTernary = 0
+  for (let i = 0; i < e.length; i++) {
+    const ch = e[i]
+    if (quote) { cur += ch; if (ch === quote && e[i - 1] !== '\\') quote = null; continue }
+    if (ch === "'" || ch === '"' || ch === '`') { quote = ch; cur += ch; continue }
+    if ('([{'.includes(ch)) depth++
+    if (')]}'.includes(ch)) depth--
+    if (depth === 0) {
+      const two = e.slice(i, i + 2)
+      if (two === '??' || two === '||' || two === '&&') { parts.push(cur); cur = ''; i++; continue }
+      if (ch === '?' && e[i + 1] !== '.') { cur = ''; pendingTernary++; continue } // the condition is not a value
+      if (ch === ':' && pendingTernary > 0) { parts.push(cur); cur = ''; pendingTernary--; continue }
+    }
+    cur += ch
+  }
+  parts.push(cur)
+  const flat = parts.map(p => p.trim()).filter(Boolean)
+  return flat.length === 1 && flat[0] === e ? flat : flat.flatMap(valueBranches)
+}
+/** Index of the bracket that closes the one at `start`. */
+function balancedSlice(s: string, start: number): number {
+  let depth = 0
+  for (let i = start; i < s.length; i++) {
+    if ('([{'.includes(s[i])) depth++
+    else if (')]}'.includes(s[i]) && --depth === 0) return i
+  }
+  return -1
+}
+
+/** The bodies of inline style objects: style={{…}} and recharts' contentStyle/itemStyle/labelStyle/wrapperStyle={{…}}. */
+function inlineStyleBodies(source: string): string[] {
+  const out: string[] = []
+  for (const m of source.matchAll(/\b(?:style|contentStyle|itemStyle|labelStyle|wrapperStyle)=\{\{/g)) {
+    const open = m.index! + m[0].length - 1
+    const close = balancedSlice(source, open)
+    if (close > open) out.push(source.slice(open + 1, close))
+  }
+  return out
+}
+/** Each top-level `color:` value in a style body, up to its comma. */
+function colourValues(body: string): string[] {
+  const out: string[] = []
+  for (const m of body.matchAll(/(?<![\w-])color\s*:\s*/g)) {
+    let depth = 0
+    let quote: string | null = null
+    let i = m.index! + m[0].length
+    for (; i < body.length; i++) {
+      const ch = body[i]
+      if (quote) { if (ch === quote && body[i - 1] !== '\\') quote = null; continue }
+      if (ch === "'" || ch === '"' || ch === '`') { quote = ch; continue }
+      if ('([{'.includes(ch)) depth++
+      else if (')]}'.includes(ch)) { if (depth === 0) break; depth-- }
+      else if (ch === ',' && depth === 0) break
+    }
+    out.push(body.slice(m.index! + m[0].length, i).trim())
+  }
+  return out
+}
+
+const SAFE_COLOUR = [
+  /^(?:ink|dataInk|dataInkFor|hx|hxWhite|onColor)\(/, // the light-aware helpers
+  /^undefined$/,
+  /^['"](?:inherit|currentColor|transparent)['"]$/,
+  /^(?:CH|chrome|chartChrome|LIGHT_CHART)\.[\w.]+$/, // chart chrome objects: light values in light
+  /^'[^']*'$|^"[^"]*"$|^`[^`$]*`$/, // a literal: the literal sweep above judges it
+]
+
+/** Inline-style colours in `source` that arrive through a variable without a light-aware helper. */
+export function unguardedColours(source: string, allowed: string[] = []): string[] {
+  return inlineStyleBodies(stripComments(source))
+    .flatMap(colourValues)
+    .flatMap(valueBranches)
+    .filter(v => !SAFE_COLOUR.some(r => r.test(v)) && !allowed.includes(v))
+}
+
 describe('Clean light sweep', () => {
-  it.each(CONVERTED_FILES.length ? CONVERTED_FILES : ['(none yet)'])('%s has no unconverted inline colour', file => {
-    if (file === '(none yet)') return
+  it('scans the whole admin source', () => {
+    expect(ADMIN_FILES.length).toBeGreaterThan(150)
+    expect(SWEPT_FILES.length).toBe(ADMIN_FILES.length - Object.keys(EXEMPT_FILES).length)
+  })
+
+  it.each(SWEPT_FILES)('%s has no unconverted inline colour', file => {
     expect(literalsIn(file)).toEqual([])
+  })
+
+  it.each(SWEPT_FILES)('%s draws variable colours as text only through a light-aware helper', file => {
+    const source = fs.readFileSync(path.join(SRC, file), 'utf8')
+    expect(unguardedColours(source, VARIABLE_COLOURS[file]?.values)).toEqual([])
+  })
+
+  it('keeps the exemptions honest: real files, a reason each, still holding literals, never also converted', () => {
+    for (const [file, why] of Object.entries(EXEMPT_FILES)) {
+      expect(ADMIN_FILES, file).toContain(file)
+      expect(why.length, file).toBeGreaterThan(20)
+      expect(unconvertedColours(fs.readFileSync(path.join(SRC, file), 'utf8')).length, `${file} has no literal left: drop it from EXEMPT_FILES`).toBeGreaterThan(0)
+      expect(CONVERTED_FILES, file).not.toContain(file)
+    }
+  })
+
+  it('lists only swept files in CONVERTED_FILES, DATA_COLOURS and VARIABLE_COLOURS', () => {
+    for (const file of [...CONVERTED_FILES, ...Object.keys(DATA_COLOURS), ...Object.keys(VARIABLE_COLOURS)]) {
+      expect(SWEPT_FILES, file).toContain(file)
+    }
+    for (const [file, { why }] of Object.entries(VARIABLE_COLOURS)) expect(why.length, file).toBeGreaterThan(20)
+  })
+})
+
+/** Every JSX opening tag `<name …>` in `source`, brace-aware (arrow functions in props contain '>'). */
+export function jsxTags(source: string, name: string): string[] {
+  const tags: string[] = []
+  for (const m of source.matchAll(new RegExp(`<${name}(?![\\w.])`, 'g'))) {
+    let depth = 0
+    let i = m.index!
+    for (; i < source.length; i++) {
+      const ch = source[i]
+      if (ch === '{') depth++
+      else if (ch === '}') depth--
+      else if (ch === '>' && depth === 0) break
+    }
+    tags.push(source.slice(m.index!, i + 1))
+  }
+  return tags
+}
+
+/** recharts draws legend words, tooltip items and pie labels in the series colour: each chart takes them from lightChartChrome. */
+export function unguardedChartText(source: string): string[] {
+  if (!/from 'recharts'/.test(source)) return []
+  return [
+    ...jsxTags(source, 'Legend').filter(t => !/\bformatter=/.test(t)).map(t => `Legend without formatter: ${t}`),
+    ...jsxTags(source, 'Tooltip').filter(t => !/\b(?:itemStyle|content)=/.test(t)).map(t => `Tooltip without itemStyle: ${t}`),
+    ...jsxTags(source, 'Pie').filter(t => /\blabel=\{\s*\(/.test(t)).map(t => `Pie label function not wrapped in pieLabel: ${t}`),
+  ].map(s => s.replace(/\s+/g, ' ').slice(0, 160))
+}
+
+describe('chart text through the shared lightChartChrome', () => {
+  it.each(SWEPT_FILES.filter(f => /from 'recharts'/.test(fs.readFileSync(path.join(SRC, f), 'utf8'))))('%s', file => {
+    expect(unguardedChartText(fs.readFileSync(path.join(SRC, file), 'utf8'))).toEqual([])
+  })
+
+  it('catches a legend, a tooltip and a pie label left in the series colour', () => {
+    const src = `import { Legend } from 'recharts'
+      <Legend wrapperStyle={{ fontSize: 11 }} />
+      <Tooltip contentStyle={CH.tip} formatter={(v: any) => v > 1 ? 'a' : 'b'} />
+      <Pie data={d} label={(p: any) => p.name} />`
+    expect(unguardedChartText(src).map(s => s.split(':')[0])).toEqual([
+      'Legend without formatter', 'Tooltip without itemStyle', 'Pie label function not wrapped in pieLabel',
+    ])
+    const fixed = `import { Legend } from 'recharts'
+      <Legend formatter={CH.legendText} />
+      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
+      <Pie data={d} label={CH.pieLabel((p: any) => p.name)} labelLine={false} />`
+    expect(unguardedChartText(fixed)).toEqual([])
+  })
+})
+
+describe('variable colour guard detection', () => {
+  it('catches a data colour drawn as text through a variable or a member', () => {
+    expect(unguardedColours(`<span style={{ color: stage.color }} />`)).toEqual(['stage.color'])
+    expect(unguardedColours(`<i style={{ background: c + '20', color: c }} />`)).toEqual(['c'])
+    expect(unguardedColours(`<Tooltip itemStyle={{ color: meta.color }} />`)).toEqual(['meta.color'])
+  })
+
+  it('accepts the light-aware helpers, literals, inherit and chart chrome', () => {
+    const src = `<a style={{ color: ink(stage.color) }} /><b style={{ color: hx('t', '#888') }} />
+      <c style={{ color: onColor(fill), background: fill }} /><d style={{ color: hxWhite(0.6) }} />
+      <e style={{ color: undefined }} /><f style={{ color: 'inherit' }} /><g style={{ color: '#fff' }} />
+      <h contentStyle={{ color: CH.tooltipText }} /><i style={{ color: chrome.tick }} />`
+    expect(unguardedColours(src)).toEqual([])
+  })
+
+  it('judges every branch of a conditional', () => {
+    expect(unguardedColours(`<a style={{ color: light ? ink(c) : c }} />`)).toEqual(['c'])
+    expect(unguardedColours(`<a style={{ color: quiet ? (light ? ink(a) : tint(a, 0.6)) : ink(a) }} />`)).toEqual(['tint(a, 0.6)'])
+    expect(unguardedColours(`<a style={{ color: s.color ?? '#9ca3af' }} />`)).toEqual(['s.color'])
+    expect(unguardedColours(`<a style={{ color: active ? ink(c) : undefined }} />`)).toEqual([])
+  })
+
+  it('reads only the color property, not backgroundColor or borderColor', () => {
+    expect(unguardedColours(`<a style={{ backgroundColor: c, borderColor: c, outlineColor: c }} />`)).toEqual([])
+  })
+
+  it('takes a per-file allowlist', () => {
+    expect(unguardedColours(`<a style={{ color: previewText }} />`, ['previewText'])).toEqual([])
   })
 })
 

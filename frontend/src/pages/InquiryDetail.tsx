@@ -17,6 +17,7 @@ import { InquiryAttachmentsPanel } from '../components/InquiryAttachmentsPanel'
 import { ChatHistoryPanel } from '../components/ChatHistoryPanel'
 import { SendTemplateModal } from '../components/SendTemplateModal'
 import { CustomFieldsForm, CustomFieldsDisplay, useCustomFields, extractCustomFieldErrors } from '../components/CustomFields'
+import { useDataInk } from '../theme/hx'
 
 /**
  * Lead Detail page — `/inquiries/:id`. Three-column layout
@@ -314,6 +315,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
   changing: boolean
 }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const [stageOpen, setStageOpen] = useState(false)
   const stage = inq.pipeline_stage
   const stageColor = stage?.color ?? '#94a3b8'
@@ -392,7 +394,7 @@ function Header({ inq, stages, onBack, onPickStage, onDraftProposal, onSendTempl
               style={{
                 borderColor: stageColor + '60',
                 background: stageColor + '15',
-                color: stageColor,
+                color: ink(stageColor),
               }}
             >
               {stage?.name ?? inq.status}
@@ -666,6 +668,7 @@ function TimelineCol({ activities, onAdd, adding, seed, onSeedConsumed }: {
 
 function ActivityRow({ activity }: { activity: Activity }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const meta = ACTIVITY_TYPES[activity.type] ?? ACTIVITY_TYPES.system
   const Icon = meta.icon
   return (
@@ -674,11 +677,11 @@ function ActivityRow({ activity }: { activity: Activity }) {
         className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
         style={{ background: meta.color + '22', border: `1px solid ${meta.color}55` }}
       >
-        <Icon size={14} style={{ color: meta.color }} />
+        <Icon size={14} style={{ color: ink(meta.color) }} />
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] uppercase tracking-wide font-bold" style={{ color: meta.color }}>
+          <span className="text-[10px] uppercase tracking-wide font-bold" style={{ color: ink(meta.color) }}>
             {meta.label}
           </span>
           {activity.subject && (
@@ -951,6 +954,7 @@ function SmartPanelCol({ inq, tasks, onCompleteTask, fieldCfg }: {
  */
 function SmartPanel({ inq }: { inq: InquiryDetail }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
 
   // Seed React Query with the cached values from the inquiry payload —
@@ -1033,7 +1037,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
           {intent && (
             <span
               className="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide"
-              style={{ background: intent.color + '20', color: intent.color, border: `1px solid ${intent.color}40` }}
+              style={{ background: intent.color + '20', color: ink(intent.color), border: `1px solid ${intent.color}40` }}
             >
               {intent.label}
             </span>
@@ -1041,7 +1045,7 @@ function SmartPanel({ inq }: { inq: InquiryDetail }) {
           {cold && ColdIcon && (
             <span
               className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wide"
-              style={{ background: cold.color + '20', color: cold.color, border: `1px solid ${cold.color}40` }}
+              style={{ background: cold.color + '20', color: ink(cold.color), border: `1px solid ${cold.color}40` }}
             >
               <ColdIcon size={9} />
               {cold.label}
@@ -1117,6 +1121,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
   onSuccess: () => void
 }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [note, setNote] = useState('')
 
@@ -1141,7 +1146,7 @@ function WonModal({ inq, stage, onClose, onSuccess }: {
         <h2 className="text-lg font-bold text-white">{t('inquiryDetail.won.title', 'Mark as Won')}</h2>
       </div>
       <p className="text-sm text-t-secondary mb-4">
-        {t('inquiryDetail.won.move_into', 'Move this lead into')} <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
+        {t('inquiryDetail.won.move_into', 'Move this lead into')} <span className="font-semibold" style={{ color: ink(stage.color) }}>{stage.name}</span>.
         {willCreateReservation && ' ' + t('inquiryDetail.won.creates_reservation', "A draft reservation will be created automatically with the inquiry's dates and pax.")}
         {!willCreateReservation && !inq.reservations?.length && (
           <span className="block mt-1 text-xs text-amber-300">
@@ -1188,6 +1193,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
   onSuccess: () => void
 }) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [reasonId, setReasonId] = useState<number | null>(null)
   const [note, setNote] = useState('')
@@ -1243,7 +1249,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         <h2 className="text-lg font-bold text-white">{t('inquiryDetail.lost.title', 'Mark as Lost')}</h2>
       </div>
       <p className="text-sm text-t-secondary mb-3">
-        {t('inquiryDetail.lost.closing_in', 'Closing this lead in')} <span className="font-semibold" style={{ color: stage.color }}>{stage.name}</span>.
+        {t('inquiryDetail.lost.closing_in', 'Closing this lead in')} <span className="font-semibold" style={{ color: ink(stage.color) }}>{stage.name}</span>.
         {' '}{t('inquiryDetail.lost.pick_reason', 'Pick the reason — it powers the loss-reason breakdown on the funnel report.')}
       </p>
 

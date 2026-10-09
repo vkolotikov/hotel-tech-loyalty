@@ -1758,7 +1758,7 @@ Expected: both FAIL.
 
 - [ ] **Step 3: Implement**
 
-`SettingsController::THEME_STYLES = ['glass', 'classic', 'light'];` (update its comment and the validation message to "glass, classic or light"). In `StylePicker.tsx`: drop `StyleId`, `isAvailable`, the `disabled`/"Coming next" branches and the `StylePreview` component (every card is a choice; `AVAILABLE` becomes all three ids in card order), and update the Clean light blurb if the owner wants other words. In `Settings.tsx`: remove `<StylePreview … />` and its state, and clear any leftover device preview once with `useEffect(() => setStylePreview(null), [])`, so no browser stays stuck previewing. Remove the `StylePreview` tests.
+`SettingsController::THEME_STYLES = ['glass', 'classic', 'light'];` (update its comment and the validation message to "glass, classic or light"). In `StylePicker.tsx`: drop `StyleId`, `isAvailable`, the `disabled`/"Coming next" branches and the `StylePreview` component (every card is a choice; `AVAILABLE` becomes all three ids in card order), and update the Clean light blurb if the owner wants other words. In `Settings.tsx`: remove `<StylePreview … />` and its state, and remove the `StylePreview` tests. Retire the preview in the theme code itself (final review I5): `effectiveStyle()` stops reading the flag (it returns the organisation's style), and the theme code removes `hx-style-preview` from localStorage once when it loads (in `useTheme.ts`, next to the module-load paint), so no browser keeps a stale preview whatever page it opens first. Test: with the flag set in storage, `effectiveStyle('classic')` returns 'classic' and loading the theme module clears the key.
 
 - [ ] **Step 4: Run all tests**
 

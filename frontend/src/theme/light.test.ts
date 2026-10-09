@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { blend, contrast, hexToRgb } from './colour'
-import { brandLightVariables, deepenForLight, lightFillFor, lightTextFor } from './light'
+import { brandLightVariables, deepenForLight, isPaleBrand, lightFillFor, lightTextFor } from './light'
 import { DEEPEN_TARGET, DEEPEN_TINT_ALPHA, LIGHT_CANVAS, LIGHT_SURFACES, LIGHT_TEXT } from './lightTokens'
 import { BRAND_COLOURS } from './__fixtures__/brandColours'
 
@@ -31,6 +31,20 @@ describe('brandLightVariables', () => {
     expect(vars['--light-primary-300']).toBe('10 91 223')
     expect(vars['--light-primary-500']).toBe('10 91 223')
     expect(vars['--light-primary-700']).not.toBe(vars['--light-primary-500'])
+  })
+})
+
+describe('isPaleBrand', () => {
+  it('marks brands under 1.5:1 on white, and the hairline it draws holds 3:1 on white and paper', () => {
+    for (const pale of ['#ffffff', '#f5f5f5', '#fde68a', '#FFF']) {
+      expect(isPaleBrand(pale), pale).toBe(true)
+      const edge = brandLightVariables(pale)['--light-primary-600'].split(' ').map(Number) as [number, number, number]
+      expect(contrast(edge, hexToRgb('#FFFFFF')), `${pale} edge on white`).toBeGreaterThanOrEqual(3)
+      expect(contrast(edge, hexToRgb(LIGHT_CANVAS)), `${pale} edge on paper`).toBeGreaterThanOrEqual(3)
+    }
+    for (const solid of ['#3b82f6', '#c9a84c', '#10b981', '#000000']) expect(isPaleBrand(solid), solid).toBe(false)
+    const paleFixtures = BRAND_COLOURS.filter(isPaleBrand)
+    expect(paleFixtures.length).toBeGreaterThan(0)
   })
 })
 

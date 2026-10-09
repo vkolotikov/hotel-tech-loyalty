@@ -304,6 +304,9 @@ class AuthController extends Controller
         $userArray = $user->toArray();
         $userArray['industry'] = $industry;
         $userArray['industry_explicit'] = $industryExplicit;
+        // HexaTech's own operators (services.saas.platform_admin_emails), not
+        // an organisation's owner: staff role super_admin is every owner's.
+        $userArray['is_platform_admin'] = $user->isPlatformAdmin();
         $userArray['has_loyalty'] = app(\App\Services\IndustryPrompts\IndustryPromptService::class)
             ->for($industry)->hasLoyalty;
 
@@ -528,6 +531,10 @@ class AuthController extends Controller
             // apps/loyalty/INDUSTRY_PLATFORM_PLAN.md.
             'industry'          => $industry,
             'industry_explicit' => $industryExplicit,
+            // HexaTech's own operators (services.saas.platform_admin_emails).
+            // Not the organisation owner: staff role super_admin is every
+            // owner's. The SPA gates operator-only previews on this.
+            'is_platform_admin' => $user->isPlatformAdmin(),
             // Phase 8.x mobile follow-up — derived from the industry
             // profile so the mobile member app can gate the "Add to
             // Apple/Google Wallet" button without probing the

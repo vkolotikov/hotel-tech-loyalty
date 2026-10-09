@@ -41,6 +41,17 @@ describe('refreshUser', () => {
     expect(useAuthStore.getState().user?.industry).toBe('medical')
   })
 
+  it('takes the platform-admin flag when the answer carries it, and keeps it otherwise', () => {
+    useAuthStore.getState().refreshUser({ id: 7, is_platform_admin: true })
+    expect(useAuthStore.getState().user?.is_platform_admin).toBe(true)
+
+    useAuthStore.getState().refreshUser({ id: 7 })
+    expect(useAuthStore.getState().user?.is_platform_admin).toBe(true)
+
+    useAuthStore.getState().refreshUser({ id: 7, is_platform_admin: false })
+    expect(useAuthStore.getState().user?.is_platform_admin).toBe(false)
+  })
+
   it('still brings the workspaces up to date', () => {
     useAuthStore.getState().refreshUser({ id: 7, workspaces: { appointments: { landing: true } } })
 

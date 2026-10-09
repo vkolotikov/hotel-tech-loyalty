@@ -36,6 +36,13 @@ interface User {
    */
   industry_explicit?: boolean
   /**
+   * HexaTech's own operators (the server's platform_admin_emails allowlist).
+   * Not an organisation owner: staff role super_admin is every owner's role.
+   * Sent by sign-in and GET /v1/auth/me; missing in sessions from before
+   * 2026-10-09, which read as false.
+   */
+  is_platform_admin?: boolean
+  /**
    * Workspaces the user's organisation has (every organisation has the
    * appointments workspace unless it was switched off). `landing` sends a
    * staff user to the workspace right after signing in; `has_services`
@@ -120,6 +127,7 @@ export const useAuthStore = create<AuthState>()(
             // the fields must not wipe the industry the session signed in with.
             ...(fresh.industry !== undefined ? { industry: fresh.industry } : {}),
             ...(fresh.industry_explicit !== undefined ? { industry_explicit: fresh.industry_explicit } : {}),
+            ...(fresh.is_platform_admin !== undefined ? { is_platform_admin: fresh.is_platform_admin } : {}),
           },
         })
       },

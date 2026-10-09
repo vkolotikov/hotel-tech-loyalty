@@ -83,6 +83,17 @@ describe('light.css', () => {
     for (const b of body) expect(b).toContain('!important')
   })
 
+  it('outlines solid brand fills for a pale brand, in Clean light only, keeping ring and shadow variables', () => {
+    const rules = rulesWith(lightCss, 'inset 0 0 0 1px rgb(var(--light-primary-600))')
+    expect(rules.length).toBeGreaterThan(0)
+    for (const s of rules) {
+      expect(s.startsWith(`${LIGHT_SCOPE}[data-brand-pale] `), s).toBe(true)
+      for (const shade of [400, 500, 600, 700]) expect(s, `bg-primary-${shade}`).toMatch(new RegExp(`\\.bg-primary-${shade}(?![\\w/-])`))
+    }
+    const body = [...clean(lightCss).matchAll(/([^{};]+)\{([^{}]*)\}/g)].find(m => m[2].includes('--light-primary-600'))![2]
+    for (const v of ['--tw-ring-offset-shadow', '--tw-ring-shadow', '--tw-shadow']) expect(body).toContain(`var(${v}`)
+  })
+
   it('is imported after glass.css', () => {
     expect(indexCss.indexOf("@import './theme/light.css';")).toBeGreaterThan(indexCss.indexOf("@import './theme/glass.css';"))
   })

@@ -8,7 +8,7 @@ import {
   Clock, Hash, GitCompare, PieChart as PieIcon, BarChart3, Download, X,
 } from 'lucide-react'
 import { api } from '../lib/api'
-import { hxWhite, LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
+import { hxWhite, LIGHT_CHART, lightChartChrome, useDataInk, useIsLight } from '../theme/hx'
 import { resolveGroupMeta, parsePlannerGroups, parsePlannerChannels } from '../lib/plannerMeta'
 
 /**
@@ -89,13 +89,19 @@ const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0] // Monday-first display
 export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFrom, statsTo }: Props) {
   const light = useIsLight()
   const ink = useDataInk()
-  // Chart chrome: dark constants for Glass and Classic, LIGHT_CHART in Clean light.
+  // Chart chrome: dark constants for Glass and Classic, LIGHT_CHART in Clean light; tooltip items,
+  // legend words and pie labels from the shared lightChartChrome (series colours are too pale as text on paper).
+  const lc = lightChartChrome(light)
   const CH = light
     ? {
         grid: LIGHT_CHART.grid, tick1: LIGHT_CHART.tick, tick2: LIGHT_CHART.tick, cursor: LIGHT_CHART.cursor, sep: '#FFFFFF',
-        tip: { backgroundColor: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, color: LIGHT_CHART.tooltipText, borderRadius: 8, fontSize: 12 },
+        tip: { ...lc.tooltipStyle, borderRadius: 8, fontSize: 12 },
+        itemStyle: lc.itemStyle, legendText: lc.legendFormatter, pieLabel: lc.pieLabel,
       }
-    : { grid: '#ffffff10', tick1: '#6b7280', tick2: '#9ca3af', cursor: 'rgba(255,255,255,0.05)', sep: '#12121f', tip: TOOLTIP_STYLE }
+    : {
+        grid: '#ffffff10', tick1: '#6b7280', tick2: '#9ca3af', cursor: 'rgba(255,255,255,0.05)', sep: '#12121f', tip: TOOLTIP_STYLE,
+        itemStyle: undefined, legendText: undefined, pieLabel: lc.pieLabel,
+      }
   /* ─── interactive controls (persisted) ─────────────────────────── */
   const [measure, setMeasure] = useLocal<Measure>('planner-stats-measure', 'hours')
   const [compare, setCompare] = useLocal<boolean>('planner-stats-compare', false)
@@ -425,8 +431,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} vertical={false} />
               <XAxis dataKey="date" tick={{ fontSize: 10, fill: CH.tick1 }} />
               <YAxis allowDecimals={isH} tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} />
-              <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} formatter={CH.legendText} />
               {isH && <ReferenceLine y={workHoursPerDay} stroke="#f59e0b" strokeDasharray="5 4" strokeOpacity={0.7}
                 label={{ value: `target ${workHoursPerDay}h`, fill: ink('#f59e0b'), fontSize: 10, position: 'insideTopRight' }} />}
               {isH ? (
@@ -520,11 +526,11 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     <PieChart>
                       <Pie data={d.byType} dataKey="val" nameKey="task_group" innerRadius={58} outerRadius={90} paddingAngle={2}
                         stroke={CH.sep} strokeWidth={2} onClick={(s: any) => drillType(s?.task_group ?? s?.payload?.task_group)}
-                        label={d.byType.length <= 6 ? (p: any) => `${Math.round((p.percent || 0) * 100)}%` : false} labelLine={false}
+                        label={d.byType.length <= 6 ? CH.pieLabel((p: any) => `${Math.round((p.percent || 0) * 100)}%`) : false} labelLine={false}
                         style={{ cursor: 'pointer', fontSize: 11 }}>
                         {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
                       </Pie>
-                      <Tooltip contentStyle={CH.tip} formatter={(v: any, n: any) => [fmtVal(Number(v)), n]} />
+                      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} formatter={(v: any, n: any) => [fmtVal(Number(v)), n]} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex-1 min-w-[180px] space-y-1.5">
@@ -550,8 +556,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
                     <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
                     <YAxis dataKey="task_group" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={110} />
-                    <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
-                    {showDelta && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                    {showDelta && <Legend wrapperStyle={{ fontSize: 11 }} formatter={CH.legendText} />}
                     <Bar dataKey="val" radius={[0, 4, 4, 0]} name={`This period (${measureLabel.toLowerCase()})`} onClick={(data: any) => drillType(data?.task_group ?? data?.payload?.task_group)} style={{ cursor: 'pointer' }}>
                       {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
                       {!showDelta && <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: CH.tick2, fontSize: 11 }} />}
@@ -570,10 +576,10 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
                   <Pie data={d.byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2} stroke={CH.sep} strokeWidth={2}
-                    label={(p: any) => `${Math.round((p.percent || 0) * 100)}%`} labelLine={false} style={{ fontSize: 11 }}>
+                    label={CH.pieLabel((p: any) => `${Math.round((p.percent || 0) * 100)}%`)} labelLine={false} style={{ fontSize: 11 }}>
                     {d.byPriority.map((p: any) => <Cell key={p.key} fill={p.fill} />)}
                   </Pie>
-                  <Tooltip contentStyle={CH.tip} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1.5 mt-2">
@@ -621,7 +627,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
                 <YAxis dataKey="task" type="category" tick={{ fontSize: 10, fill: CH.tick2 }} width={150} />
-                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }}
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }}
                   formatter={(v: any, _n: any, p: any) => [`${fmtVal(Number(v))}${showDelta ? ` · prev ${fmtVal(p?.payload?.prev ?? 0)}` : ''}`, p?.payload?.type]} />
                 <Bar dataKey="val" radius={[0, 4, 4, 0]} name={measureLabel}>
                   {d.byTask.map((r: any, i: number) => <Cell key={i} fill={r.color} />)}
@@ -636,7 +642,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                   <Pie data={d.byTask} dataKey="val" nameKey="task" innerRadius={60} outerRadius={95} paddingAngle={1.5} stroke={CH.sep} strokeWidth={2}>
                     {d.byTask.map((r: any, i: number) => <Cell key={i} fill={r.color} />)}
                   </Pie>
-                  <Tooltip contentStyle={CH.tip} formatter={(v: any, n: any, p: any) => [`${fmtVal(Number(v))} · ${p?.payload?.type}`, n]} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} formatter={(v: any, n: any, p: any) => [`${fmtVal(Number(v))} · ${p?.payload?.type}`, n]} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex-1 min-w-[200px] space-y-1 max-h-[220px] overflow-y-auto pr-1">
@@ -742,8 +748,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
               <YAxis dataKey="employee" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={110} />
-              <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
+              <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+              <Legend wrapperStyle={{ fontSize: 11 }} formatter={CH.legendText} />
               {d.groupsInData.map((g: string, i: number) => (
                 <Bar key={g} dataKey={g} stackId="h" fill={groupColor(g)} radius={i === d.groupsInData.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]} name={g} />
               ))}
@@ -761,8 +767,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={100} />
-                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
-                {showDelta && isH && <Legend wrapperStyle={{ fontSize: 11 }} />}
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                {showDelta && isH && <Legend wrapperStyle={{ fontSize: 11 }} formatter={CH.legendText} />}
                 <Bar dataKey="val" fill="#10b981" radius={[0, 4, 4, 0]} name="This period" />
                 {showDelta && isH && <Bar dataKey="pWorkedH" fill="#4b5563" radius={[0, 4, 4, 0]} name="Previous" />}
               </BarChart>
@@ -776,8 +782,8 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit="h" />
                 <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={100} />
-                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
-                <Legend wrapperStyle={{ fontSize: 11 }} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                <Legend wrapperStyle={{ fontSize: 11 }} formatter={CH.legendText} />
                 <Bar dataKey="plannedH" fill="#6b7280" radius={[0, 4, 4, 0]} name="Planned h" />
                 <Bar dataKey="workedH" fill="#10b981" radius={[0, 4, 4, 0]} name="Worked h" />
               </BarChart>

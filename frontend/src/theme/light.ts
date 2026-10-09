@@ -2,7 +2,9 @@ import {
   SHADES, blend, contrast, hexToRgb, hslToRgb, rgbToHex, rgbToHsl, shadeScale, type RGB,
 } from './colour'
 import { LIGHT_HEX_KEEP, LIGHT_HEX_OVERRIDES } from './hxColours'
-import { DEEPEN_TARGET, DEEPEN_TINT_ALPHA, LIGHT_CANVAS, LIGHT_GREY_TEXT, LIGHT_SURFACES, LIGHT_TEXT } from './lightTokens'
+import {
+  DEEPEN_TARGET, DEEPEN_TINT_ALPHA, LIGHT_CANVAS, LIGHT_GREY_TEXT, LIGHT_SURFACES, LIGHT_TEXT, PALE_BRAND_CONTRAST,
+} from './lightTokens'
 
 const CANVAS = hexToRgb(LIGHT_CANVAS)
 const WHITE: RGB = [255, 255, 255]
@@ -38,6 +40,16 @@ export function brandLightVariables(brandHex: string): Record<string, string> {
   const vars: Record<string, string> = {}
   for (const shade of SHADES) vars[`--light-primary-${shade}`] = shade <= 500 ? scale[500] : scale[shade]
   return vars
+}
+
+/**
+ * A brand too close to white to hold its shape on paper (white, #f5f5f5,
+ * #fde68a: 1.0-1.25:1). The theme code marks <html> with data-brand-pale for
+ * it in every style; only Clean light reads the mark (light.css: a hairline
+ * in the deepened brand around solid brand fills).
+ */
+export function isPaleBrand(brandHex: string): boolean {
+  return contrast(hexToRgb(brandHex), WHITE) < PALE_BRAND_CONTRAST
 }
 
 const norm = (hex: string) => hex.replace('#', '').toLowerCase()

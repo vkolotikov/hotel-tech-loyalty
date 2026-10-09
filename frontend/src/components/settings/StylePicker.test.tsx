@@ -2,6 +2,8 @@ import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { StylePicker, StylePreview } from './StylePicker'
+import { canPreviewStyles } from '../../lib/stylePreview'
+import { LIGHT_SURFACES, LIGHT_TEXT } from '../../theme/lightTokens'
 
 /** The picker's cards, found by their data-style-option. */
 function cards(value: 'glass' | 'classic', onPick = vi.fn()) {
@@ -61,6 +63,14 @@ describe('StylePicker', () => {
     expect(press('glass', 'Enter')).toEqual({ picked: [], focused: [], prevented: false })
   })
 
+  it("draws the Clean light sample in the style's real tokens", () => {
+    const { card } = cards('glass')
+    const html = renderToStaticMarkup(card('light'))
+    for (const colour of [LIGHT_SURFACES['dark-bg'], LIGHT_SURFACES['dark-surface'], LIGHT_SURFACES['dark-border'], LIGHT_TEXT.primary, LIGHT_TEXT.secondary]) {
+      expect(html, colour).toContain(colour)
+    }
+  })
+
   it('cannot pick Clean light yet', () => {
     const { card } = cards('glass')
     expect(card('light').props.disabled).toBe(true)
@@ -69,10 +79,15 @@ describe('StylePicker', () => {
 })
 
 describe('StylePreview', () => {
-  it('offers a device preview of Clean light to super admins only', () => {
-    const asOwner = renderToStaticMarkup(<StylePreview canPreview previewing={false} onToggle={() => {}} />)
-    expect(asOwner).toContain('Preview Clean light on this device')
-    expect(StylePreview({ canPreview: false, previewing: false, onToggle: () => {} })).toBeNull()
+  it('offers a device preview of Clean light to platform admins only', () => {
+    const asPlatformAdmin = renderToStaticMarkup(
+      <StylePreview canPreview={canPreviewStyles({ is_platform_admin: true })} previewing={false} onToggle={() => {}} />,
+    )
+    expect(asPlatformAdmin).toContain('Preview Clean light on this device')
+    // An organisation owner (staff role super_admin) is not a platform admin: no button.
+    const asOrgOwner = StylePreview({ canPreview: canPreviewStyles({ is_platform_admin: false }), previewing: false, onToggle: () => {} })
+    expect(asOrgOwner).toBeNull()
+    expect(StylePreview({ canPreview: canPreviewStyles({}), previewing: false, onToggle: () => {} })).toBeNull()
   })
 
   it('switches the preview on and off', () => {

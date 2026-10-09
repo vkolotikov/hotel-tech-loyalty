@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import { api } from '../lib/api'
 import { SHADES, hexToRgb, isHex, shadeScale, toTriplet } from '../theme/colour'
 import { brandGlassVariables } from '../theme/glass'
-import { brandLightVariables } from '../theme/light'
+import { brandLightVariables, isPaleBrand } from '../theme/light'
 import { effectiveStyle } from '../lib/stylePreview'
 
 interface ThemeColors {
@@ -107,7 +107,7 @@ function surfaceShade(hex: string, amount: number): string {
  * change style, only colour". Empty/null mood removes the attribute so
  * the default (Inter, neutral corners) renders.
  *
- * The optional `style` writes `data-style` ('glass' | 'classic' | 'light'), or this device's preview when a super admin has one on; left
+ * The optional `style` writes `data-style` ('glass' | 'classic' | 'light'), or this device's preview when a platform admin has one on (lib/stylePreview.ts); left
  * out, the current style stays. The palette variables are written in
  * every style, plus the Glass extras (lifted brand text, glow colours,
  * text on brand fills). Glass's own values live in the stylesheet, scoped
@@ -155,6 +155,9 @@ export function applyThemeToDom(
 
   for (const [name, value] of Object.entries(brandGlassVariables(merged.primary_color))) set(name, value)
   for (const [name, value] of Object.entries(brandLightVariables(merged.primary_color))) set(name, value)
+  // A brand too close to white vanishes on paper; Clean light outlines its solid fills (light.css).
+  if (isPaleBrand(merged.primary_color)) root.setAttribute('data-brand-pale', '')
+  else root.removeAttribute('data-brand-pale')
 
   body.style.backgroundColor = merged.background_color
   body.style.color = merged.text_color

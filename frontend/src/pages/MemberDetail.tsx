@@ -828,7 +828,7 @@ export function MemberDetail() {
                       </div>
                     )}
                     <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Camera size={20} className="text-white" />
+                      <Camera size={20} className="text-on-fill" />
                     </div>
                   </div>
                   <span className="text-xs text-t-muted">Click to change photo</span>

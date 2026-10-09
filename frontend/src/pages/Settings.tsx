@@ -4,7 +4,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readCachedTheme, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
-import { StylePicker } from '../components/settings/StylePicker'
+import { StylePicker, StylePreview } from '../components/settings/StylePicker'
+import { canPreviewStyles, readStylePreview, setStylePreview } from '../lib/stylePreview'
 import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
 import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
@@ -1092,6 +1093,14 @@ export function Settings() {
   // from what is painted, follows the saved setting once it loads, and
   // switches the moment a card is clicked (applyStyle / undo).
   const [activeStyle, setActiveStyle] = useState<ThemeStyle>(() => readThemeStyle(readCachedTheme()?.style))
+  // Clean light on this device only, for HexaTech's platform admins (never
+  // an organisation owner); the page reloads in the previewed style.
+  const [previewing, setPreviewing] = useState(() => readStylePreview() === 'light')
+  const togglePreview = (on: boolean) => {
+    setStylePreview(on ? 'light' : null)
+    setPreviewing(on)
+    window.location.reload()
+  }
   const savedStyle = getVal('theme_style')
   useEffect(() => {
     if (savedStyle) setActiveStyle(readThemeStyle(savedStyle))
@@ -1529,7 +1538,7 @@ export function Settings() {
                     className="h-20 max-w-[200px] object-contain rounded-xl border border-white/[0.06] bg-hx-0a1410 p-2" />
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     onClick={() => logoInputRef.current?.click()}>
-                    <Upload size={20} className="text-white" />
+                    <Upload size={20} className="text-on-fill" />
                   </div>
                 </div>
               ) : (
@@ -1572,6 +1581,7 @@ export function Settings() {
           </div>
           <p className="text-xs text-gray-500 mb-4">The look of the whole admin, for everyone in your organisation. Glass is the default; Classic is the original dark admin.</p>
           <StylePicker value={activeStyle} brand={previewPrimary} onPick={applyStyle} />
+          <StylePreview canPreview={canPreviewStyles(user)} previewing={previewing} onToggle={togglePreview} />
         </div>
 
         {/* Theme Presets */}
@@ -2346,7 +2356,7 @@ export function Settings() {
                     </p>
                     {widgetToken ? (
                       <div className="flex items-center gap-2">
-                        <code className="flex-1 px-2 py-1.5 rounded bg-black/30 text-emerald-300 font-mono text-[10px] break-all">
+                        <code className="flex-1 px-2 py-1.5 rounded bg-hx-000000/30 text-emerald-300 font-mono text-[10px] break-all">
                           {webhookUrl}
                         </code>
                         <button onClick={copyUrl}
@@ -2410,7 +2420,7 @@ export function Settings() {
                               setEditedSettings(prev => ({ ...prev, booking_smoobu_channel_id: id }))
                               toast.success(`Channel ID ${id} ready — click Save to apply`)
                             }}
-                            className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left text-[11px] transition-colors ${isConfigured ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-black/30 border border-white/[0.04] hover:border-amber-500/30'}`}>
+                            className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left text-[11px] transition-colors ${isConfigured ? 'bg-emerald-500/15 border border-emerald-500/30' : 'bg-hx-000000/30 border border-white/[0.04] hover:border-amber-500/30'}`}>
                             <div className="flex items-center gap-2 min-w-0">
                               <code className="font-mono text-amber-300 font-semibold">{id}</code>
                               <span className="text-gray-300 truncate">{name}</span>

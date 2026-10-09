@@ -7,7 +7,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import { api } from '../lib/api'
-import { LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
+import { LIGHT_CHART, lightChartChrome, useDataInk, useIsLight } from '../theme/hx'
 import {
   TrendingUp, BarChart3, Funnel, X, Users,
   Building2, Trophy, Clock,
@@ -48,13 +48,14 @@ const STAGE_PALETTE = [
 
 const PIE_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#a855f7', '#94a3b8']
 
-/** Chart chrome: the dark constants for Glass and Classic, LIGHT_CHART in Clean light. */
+/** Chart chrome: the dark constants for Glass and Classic, LIGHT_CHART in Clean light; the tooltip text from the shared lightChartChrome. */
 function chartChrome(light: boolean) {
+  const lc = lightChartChrome(light)
   return light
     ? {
         grid: LIGHT_CHART.grid, tick: LIGHT_CHART.tick,
-        itemStyle: { color: LIGHT_CHART.tooltipText },
-        tip: { background: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, color: LIGHT_CHART.tooltipText, borderRadius: 8, fontSize: 12 },
+        itemStyle: lc.itemStyle,
+        tip: { ...lc.tooltipStyle, borderRadius: 8, fontSize: 12 },
       }
     : {
         grid: '#27272a', tick: '#94a3b8', itemStyle: undefined,

@@ -112,3 +112,6 @@ export const LIGHT_FONTS = {
 /** Brand text is deepened until it reads this ratio on a 10 % brand tint over the canvas. */
 export const DEEPEN_TARGET = 4.8
 export const DEEPEN_TINT_ALPHA = 0.1
+
+/** A brand under this contrast with white is "pale": solid brand fills get a hairline in the deepened brand (light.css). */
+export const PALE_BRAND_CONTRAST = 1.5

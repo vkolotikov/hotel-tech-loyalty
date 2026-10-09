@@ -1,6 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
-import { LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
+import { LIGHT_CHART, lightChartChrome, useDataInk, useIsLight } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 // The deep chatbot analytics view used to live as a tab inside
@@ -39,19 +39,24 @@ const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
 const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 10, color: '#fff' }
 const CHART_LABEL = { color: '#8e8e93' }
 
-/** Chart chrome: this file's dark constants for Glass and Classic, LIGHT_CHART in Clean light. */
+/**
+ * Chart chrome: this file's dark constants for Glass and Classic, LIGHT_CHART
+ * in Clean light. Tooltip items, legend words and pie labels come from the
+ * shared lightChartChrome (series colours are too pale as text on paper).
+ */
 function chartChrome(light: boolean) {
+  const lc = lightChartChrome(light)
   return light
     ? {
         grid: LIGHT_CHART.grid, gridAlt: LIGHT_CHART.grid, tick: LIGHT_CHART.tick, tickDim: LIGHT_CHART.tick, tick2: LIGHT_CHART.tick, label: { color: LIGHT_CHART.tick },
-        tip: { backgroundColor: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, borderRadius: 10, color: LIGHT_CHART.tooltipText },
-        cursor: LIGHT_CHART.cursor, legend: { color: LIGHT_CHART.tooltipText }, itemStyle: { color: LIGHT_CHART.tooltipText },
-        // series colours are too pale for legend text on paper: keep the swatch, ink the words
-        legendText: (v: string) => <span style={{ color: LIGHT_CHART.tooltipText }}>{v}</span>,
+        tip: { ...lc.tooltipStyle, borderRadius: 10 },
+        cursor: LIGHT_CHART.cursor, legend: { color: LIGHT_CHART.tooltipText }, itemStyle: lc.itemStyle,
+        legendText: lc.legendFormatter, pieLabel: lc.pieLabel,
       }
     : {
         grid: '#2c2c2c', gridAlt: '#2e2e50', tick: '#8e8e93', tickDim: '#636366', tick2: '#e5e7eb', label: CHART_LABEL,
         tip: CHART_TOOLTIP, cursor: 'rgba(255,255,255,0.04)', legend: { color: '#fff' }, legendText: undefined, itemStyle: undefined,
+        pieLabel: lc.pieLabel,
       }
 }
 const PIE_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#32d74b', '#636366', '#06b6d4', '#ef4444']
@@ -851,7 +856,7 @@ export function Analytics() {
                     nameKey="name"
                     cx="50%" cy="50%"
                     outerRadius={90}
-                    label={(d: any) => d.value > 0 ? d.name : ''}
+                    label={CH.pieLabel((d: any) => d.value > 0 ? d.name : '')}
                   >
                     {(marketingData?.channels ?? []).filter((c: any) => c.leads > 0).map((c: any, i: number) => (
                       <Cell key={i} fill={channelColor(c.channel)} />
@@ -1782,7 +1787,7 @@ export function Analytics() {
                       <Pie
                         data={channels.map((c: any) => ({ name: c.channel || 'widget', value: c.conversations }))}
                         dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={70}
-                        label={(d: any) => d.name}
+                        label={CH.pieLabel((d: any) => d.name)}
                       >
                         {channels.map((_: any, i: number) => (
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />

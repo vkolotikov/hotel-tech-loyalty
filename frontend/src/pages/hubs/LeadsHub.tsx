@@ -4,6 +4,7 @@ import {
   FileText, Users, Building2, Copy, FilePlus2,
   ArrowLeft, Search,
 } from 'lucide-react'
+import { useDataInk } from '../../theme/hx'
 
 /**
  * "Leads" hub — top of the CRM funnel. Combines pipeline intake +
@@ -168,6 +169,7 @@ export function LeadsHub() {
 function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void; onPreload?: () => void }) {
   const Icon = tile.icon
   const { accent } = tile
+  const ink = useDataInk()
   return (
     <button
       onClick={onClick}
@@ -207,7 +209,7 @@ function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void
             boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
           }}
         >
-          <Icon size={22} style={{ color: accent }} />
+          <Icon size={22} style={{ color: ink(accent) }} />
         </span>
       </div>
 

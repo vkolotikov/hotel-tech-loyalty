@@ -3,6 +3,7 @@ import { Check } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ThemeStyle } from '../../hooks/useTheme'
 import { glowsFor } from '../../theme/glass'
+import { LIGHT_SURFACES, LIGHT_TEXT } from '../../theme/lightTokens'
 
 type StyleId = ThemeStyle | 'light'
 
@@ -26,8 +27,9 @@ const ARROW_STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, Arrow
 
 /**
  * Settings → Branding → Style. One card per style with a small sample of
- * it. The samples use fixed colours (inline, not tokens) so each one shows
- * its own style whichever style the admin is in. Hook-free on purpose.
+ * it. The samples use fixed colours (inline, not CSS variables) so each one
+ * shows its own style whichever style the admin is in; Clean light's come
+ * from its token constants (lightTokens.ts). Hook-free on purpose.
  * Keyboard as a radio group: Tab reaches the checked card, the arrow keys
  * pick the next or previous available style.
  */
@@ -102,11 +104,12 @@ const SAMPLES: Record<StyleId, { canvas: string; card: CSSProperties; ink: strin
     ink: '#ffffff',
     dim: '#8e8e93',
   },
+  // The real Clean light tokens, so the thumbnail matches what the style paints.
   light: {
-    canvas: '#F5F5F7',
-    card: { background: '#FFFFFF', border: '1px solid #E5E5EA', borderRadius: 12, boxShadow: '0 1px 2px rgb(0 0 0 / 0.06)' },
-    ink: '#1D1D1F',
-    dim: '#6E6E73',
+    canvas: LIGHT_SURFACES['dark-bg'],
+    card: { background: LIGHT_SURFACES['dark-surface'], border: `1px solid ${LIGHT_SURFACES['dark-border']}`, borderRadius: 12, boxShadow: '0 1px 2px rgb(0 0 0 / 0.06)' },
+    ink: LIGHT_TEXT.primary,
+    dim: LIGHT_TEXT.secondary,
   },
 }
 
@@ -127,8 +130,9 @@ function StyleSample({ id, brand }: { id: StyleId; brand: string }) {
 }
 
 /**
- * A super admin's device-only preview of Clean light before it opens to
- * every organisation (spec D5). Nothing is saved; the page reloads in the
+ * A platform admin's device-only preview of Clean light before it opens to
+ * every organisation (spec D5; lib/stylePreview.ts canPreviewStyles, never
+ * the org-owner role super_admin). Nothing is saved; the page reloads in the
  * previewed style. Renders nothing for anyone else.
  */
 export function StylePreview({ canPreview, previewing, onToggle }: {

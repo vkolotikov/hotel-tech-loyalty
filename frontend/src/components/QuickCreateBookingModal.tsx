@@ -162,7 +162,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/[0.06] bg-black/20">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/[0.06] bg-hx-000000/20">
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white">Cancel</button>
           <button onClick={() => submit(false)} disabled={create.isPending}
             className="px-4 py-2 rounded-xl text-xs font-bold disabled:opacity-50"
