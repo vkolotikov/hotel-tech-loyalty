@@ -66,7 +66,7 @@ export function ChatbotTestAi() {
                   <Bot size={12} className="text-primary-400" />
                 </div>
               )}
-              <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-xs whitespace-pre-wrap ${m.role === 'user' ? 'bg-primary-600 text-white' : 'bg-dark-surface2 text-white border border-dark-border'}`}>
+              <div className={`max-w-[75%] px-3 py-2 rounded-2xl text-xs whitespace-pre-wrap ${m.role === 'user' ? 'bg-primary-600 text-on-primary' : 'bg-dark-surface2 text-white border border-dark-border'}`}>
                 {m.content}
               </div>
               {m.role === 'user' && (
@@ -91,7 +91,7 @@ export function ChatbotTestAi() {
             className="flex-1 bg-dark-surface2 border border-dark-border rounded-lg px-3 py-2 text-white text-sm"
           />
           <button onClick={handleSend} disabled={!input.trim() || send.isPending}
-            className="bg-primary-600 text-white px-4 rounded-lg hover:bg-primary-700 disabled:opacity-50">
+            className="bg-primary-600 text-on-primary px-4 rounded-lg hover:bg-primary-700 disabled:opacity-50">
             <Send size={14} />
           </button>
         </div>

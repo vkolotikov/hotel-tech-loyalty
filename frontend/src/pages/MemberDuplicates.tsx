@@ -134,7 +134,7 @@ export function MemberDuplicates() {
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={() => { setPendingPair(pair); setSwapped(false); setReason('') }}
-                    className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <ArrowLeftRight size={12} /> {t('members.duplicates.review_merge', 'Review & Merge')}
                   </button>

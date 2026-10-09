@@ -406,7 +406,7 @@ export function Bookings() {
           </button>
           {/* Submission log link moved into the tab row. */}
           <button onClick={handleSync} disabled={syncing}
-            className="flex items-center gap-1.5 bg-primary-600 text-white px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors whitespace-nowrap">
+            className="flex items-center gap-1.5 bg-primary-600 text-on-primary px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors whitespace-nowrap">
             <RefreshCw size={15} className={syncing ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">{syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync_pms', 'Sync PMS')}</span>
             <span className="sm:hidden">{syncing ? t('bookings.actions.syncing', 'Syncing…') : t('bookings.actions.sync', 'Sync')}</span>
@@ -437,7 +437,7 @@ export function Bookings() {
               return (
                 <button key={td.key} onClick={() => { setTab(td.key); setPage(1) }}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-colors ${
-                    active ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
+                    active ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
                   }`}>
                   <span className={active ? '' : td.tone}>{td.icon}</span>
                   {td.label}
@@ -548,7 +548,7 @@ export function Bookings() {
           {(['week', 'month', 'year'] as const).map(p => (
             <button key={p} onClick={() => { setPeriod(p); setPage(1) }}
               className={`px-4 py-1.5 text-xs font-semibold rounded-md transition-colors ${period === p
-                ? 'bg-primary-600 text-white'
+                ? 'bg-primary-600 text-on-primary'
                 : 'text-t-secondary hover:text-white'}`}>
               {t(`bookings.period.${p}`, p.charAt(0).toUpperCase() + p.slice(1))}
             </button>

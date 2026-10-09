@@ -274,7 +274,7 @@ export function MemberImportWizard({ onClose }: Props) {
                 <button
                   onClick={uploadAndPreview}
                   disabled={!file || busy}
-                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg"
                 >
                   {busy ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
                   Check file
@@ -293,7 +293,7 @@ export function MemberImportWizard({ onClose }: Props) {
                 <button
                   onClick={() => batch && runChunks(batch.uuid)}
                   disabled={!batch || !preview || preview.will_create === 0}
-                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+                  className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-40 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg"
                 >
                   <Upload size={14} />
                   {batch && batch.processed > 0
@@ -310,7 +310,7 @@ export function MemberImportWizard({ onClose }: Props) {
             )}
 
             {phase === 'done' && (
-              <button onClick={onClose} className="bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+              <button onClick={onClose} className="bg-primary-600 hover:bg-primary-700 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg">
                 Done
               </button>
             )}
@@ -337,7 +337,7 @@ function Steps({ phase }: { phase: Phase }) {
           <div className="flex items-center gap-2">
             <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center ${
               i < activeIndex ? 'bg-accent/20 text-accent'
-              : i === activeIndex ? 'bg-primary-500 text-white'
+              : i === activeIndex ? 'bg-primary-500 text-on-primary'
               : 'bg-dark-surface3 text-t-secondary'
             }`}>
               {i < activeIndex ? <CheckCircle2 size={12} /> : i + 1}

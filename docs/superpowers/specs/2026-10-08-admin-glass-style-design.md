@@ -225,9 +225,11 @@ text on them, so fills stay as today and only text changes.
   - the `text-primary-*` shades are generated from that lifted colour; `bg-primary-*`, borders and rings keep the
     brand's own shades.
   - Royal blue text becomes `#93BAFA`, gold lifts slightly to `#D7BF7B`, pale yellow already passes and stays.
-- **Text on new brand buttons.** A `--color-on-primary` token (ink `#03050A` or white, whichever passes on the brand
-  colour; the ink is dark enough that one of the two reaches 4.5:1 on any colour) exists for new components such as
-  the Style picker. Existing buttons keep their classes.
+- **Text on brand buttons.** A `--color-on-primary` token (`text-on-primary`) is white while white reads at 3:1 or
+  better on the brand colour, and ink `#03050A` below that (owner's ruling, 2026-10-09: Royal blue keeps white at
+  3.7:1; gold, emerald, cyan, orange, teal and sky get dark text). Every solid brand fill (`bg-primary-400…700`) in
+  the admin uses it instead of `text-white` or `text-black`; `brandFills.test.ts` keeps it that way. On the 600
+  fill most buttons use, every tested brand reads at 3.96:1 or better, and dark text at 5.5:1 or better.
 - **Status colours.** Text uses get light variants: success `#8EF0B6`, warning `#FCD58E`, error `#FFC9D3`, info
   `#C3DEFF` (each ≥ 4.5:1 on its own 12% tint). Fills keep the palette's status colours.
 - **Grey text.** Hard-coded grey text keeps its order (300 lightest … 600 dimmest), but every step passes 4.5:1 on glass:
@@ -443,6 +445,7 @@ Found while rehearsing the plan's code on a copy of main (same day):
 | Glass's two faces are self-hosted under Glass-only names (§5.4). | The old imports never reached production; a Google import at the top of the entry stylesheet would load app-wide (login, portal, Appointments), change Classic's fonts and add a render-blocking third-party request (final review, 2026-10-08). |
 | Royal blue text `#93BAFA`, gold lifted to `#D7BF7B`, on-primary ink `#03050A` (§5.5). | Measured with the final model (15 % brand tint over a 10 % card at the brightest glow). With the first ink, `#0A0F1A`, neither ink nor white reached 4.5:1 on the Services indigo `#4c6ef5`. |
 | Contrast is measured over the lightest backdrop ink (`#0D1426`) on a 10 % card, an 18 % raised surface and a hover row in a card, and brand text is lifted against the 10 % card (§5.5, §9.1). | Text sits on cards, hover rows and raised chips, not only on 7 % panels; measured on 7 % only, brand shade 500 fell to 4.25:1 on a card (task review, 2026-10-08). |
+| Brand-button text is white down to 3:1 on the brand colour, ink below (§5.5; owner, 2026-10-09). | "Whichever reads better" turned Royal blue's buttons dark. The owner kept white where it reads at 3:1, which is under WCAG's 4.5:1 for small text on the lightest brands' 500 fill. |
 | A fresh organisation's seeded palette is Royal blue (`ensureTenantHasDefaultSettings`). | It seeded gold on the first visit to Settings, which would flip a Royal-blue admin to gold. |
 | A theme answer carrying only `theme_style` switches the style (§6.2). | An organisation with a saved Classic style but no saved palette would otherwise open in Glass on every new device. |
 | Body colours stay the palette's (§6.2). | The body is shared with pages outside the admin shell; the shell paints the backdrop. |

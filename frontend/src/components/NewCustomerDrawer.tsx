@@ -192,7 +192,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
             <button
               onClick={() => extract.mutate(text)}
               disabled={!text.trim() || extract.isPending}
-              className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-semibold text-sm disabled:opacity-50"
+              className="w-full inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-primary-500 hover:bg-primary-400 text-on-primary font-semibold text-sm disabled:opacity-50"
             >
               {extract.isPending ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
               Extract with AI
@@ -286,7 +286,7 @@ export function NewCustomerDrawer({ onClose, onCreated }: { onClose: () => void;
             <button
               onClick={() => create.mutate(form)}
               disabled={!canSave}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-semibold text-sm disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-on-primary font-semibold text-sm disabled:opacity-50"
             >
               {create.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               Save customer

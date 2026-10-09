@@ -335,7 +335,7 @@ export function MembersOnboarding({ onComplete }: Props) {
             <button
               onClick={() => setStep(s => Math.min(3, s + 1))}
               disabled={!selectedKey}
-              className="px-5 py-2 bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
+              className="px-5 py-2 bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-lg text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5">
               Continue <ArrowRight size={14} />
             </button>
           ) : (

@@ -170,8 +170,8 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
       {/* ── Header: intro + create + type filter + relevance ── */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-2">
-          <div className="w-9 h-9 rounded-lg bg-gold-500/15 border border-gold-500/30 flex items-center justify-center">
-            <Inbox size={17} className="text-gold-400" />
+          <div className="w-9 h-9 rounded-lg bg-primary-500/15 border border-primary-500/30 flex items-center justify-center">
+            <Inbox size={17} className="text-primary-400" />
           </div>
           <div>
             <h2 className="text-sm font-semibold text-white leading-tight">Open pool</h2>
@@ -185,7 +185,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
             className="bg-dark-surface border border-dark-border rounded-lg pl-8 pr-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-primary-500 w-[180px]" />
         </div>
         <button onClick={() => onNewTask('general')}
-          className="flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors">
+          className="flex items-center gap-1.5 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors">
           <Plus size={16} /> New pool task
         </button>
       </div>
@@ -195,7 +195,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setTypeFilter('')}
             className={'px-3 py-1.5 rounded-full text-xs font-medium border transition ' +
-              (typeFilter === '' ? 'bg-primary-500 text-black border-primary-500' : 'bg-dark-surface text-gray-300 border-dark-border hover:text-white hover:border-white/15')}>
+              (typeFilter === '' ? 'bg-primary-500 text-on-primary border-primary-500' : 'bg-dark-surface text-gray-300 border-dark-border hover:text-white hover:border-white/15')}>
             All types <span className="text-[10px] opacity-70">{pool.length}</span>
           </button>
           {typeTabs.map(tt => {
@@ -329,7 +329,7 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
             <button onClick={onDelete} title="Delete" className="w-6 h-6 rounded bg-white/5 hover:bg-red-500/25 text-gray-400 hover:text-red-300 flex items-center justify-center"><Trash2 size={11} /></button>
           </>
         )}
-        <button onClick={onClaim} title="Claim into my backlog" className="w-6 h-6 rounded bg-gold-500/15 hover:bg-gold-500/30 text-gold-400 flex items-center justify-center"><Hand size={11} /></button>
+        <button onClick={onClaim} title="Claim into my backlog" className="w-6 h-6 rounded bg-primary-500/15 hover:bg-primary-500/30 text-primary-400 flex items-center justify-center"><Hand size={11} /></button>
       </div>
     </div>
   )

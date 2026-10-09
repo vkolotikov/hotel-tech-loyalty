@@ -157,7 +157,7 @@ const DEFAULT_ACCENT = '#6b7280'
 const card = 'bg-dark-surface border border-dark-border rounded-xl p-5'
 const label = 'block text-xs text-t-secondary mb-1.5'
 const input = 'w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:border-primary-500 outline-none'
-const btnPrimary = 'flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-black rounded-lg hover:bg-primary-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+const btnPrimary = 'flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
 // The house "secondary action" button (ChatbotWidget.tsx:166) — reused here
 // for Copy, Change and Unpublish, none of which are the screen's primary
 // action. Unpublish deliberately gets THIS, never a red/danger treatment:

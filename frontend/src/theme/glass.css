@@ -225,11 +225,21 @@
   backdrop-filter: blur(22px) saturate(160%);
 }
 
-/* Text in the page ink (text-dark-bg: dark text and icons on brand and
-   status fills) stays solid; only the surface use of dark-bg is
-   translucent. */
+/* Text in the page ink (text-dark-bg: dark text on status fills; brand
+   fills use text-on-primary) stays solid; only the surface use of dark-bg
+   is translucent. */
 :root[data-style="glass"][data-shell="admin"] .text-dark-bg {
   --alpha-dark-bg: 1;
+}
+
+/* A status dot or badge ringed in the panel colour looks cut out of the
+   panel. Glass panels are see-through, so a ring in their colour vanishes;
+   it takes the opaque stand-in for that surface instead. */
+:root[data-style="glass"][data-shell="admin"] .rounded-full.border-dark-bg {
+  border-color: #0B1120;
+}
+:root[data-style="glass"][data-shell="admin"] .rounded-full.border-dark-surface {
+  border-color: #1A2233;
 }
 
 /* Reduced transparency, and browsers without backdrop-filter: solid

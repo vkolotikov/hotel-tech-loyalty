@@ -381,7 +381,7 @@ export function ReviewFormBuilder() {
       <div className="flex gap-1 bg-panel p-1 rounded-lg text-sm w-fit mb-6">
         {(['build', 'design', 'analytics'] as const).map(v => (
           <button key={v} onClick={() => setView(v)}
-            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}>
+            className={`px-4 py-1.5 rounded-md font-semibold capitalize transition-colors ${view === v ? 'bg-primary-500 text-on-primary' : 'text-t-soft hover:text-white'}`}>
             {v === 'build' ? 'Questions' : v}
           </button>
         ))}
@@ -488,7 +488,7 @@ export function ReviewFormBuilder() {
             <button
               onClick={() => saveFormMut.mutate()}
               disabled={saveFormMut.isPending}
-              className="bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors disabled:opacity-50"
+              className="bg-primary-500 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors disabled:opacity-50"
             >
               <Save size={14} /> {saveFormMut.isPending ? 'Saving...' : 'Save settings'}
             </button>
@@ -793,7 +793,7 @@ export function ReviewFormBuilder() {
               <button
                 onClick={() => saveQuestionsMut.mutate()}
                 disabled={saveQuestionsMut.isPending}
-                className="bg-primary-500 text-white px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors disabled:opacity-50"
+                className="bg-primary-500 text-on-primary px-5 py-2.5 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors disabled:opacity-50"
               >
                 <Save size={14} /> {saveQuestionsMut.isPending ? 'Saving...' : 'Save questions'}
               </button>

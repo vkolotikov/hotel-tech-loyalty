@@ -241,7 +241,7 @@ export default function UpgradeFeatureModal() {
         onClick={e => e.stopPropagation()}
       >
         {/* Gold accent bar at the top */}
-        <div className="h-1 bg-gradient-to-r from-primary-gold/60 via-primary-gold to-primary-gold/60" aria-hidden="true" />
+        <div className="h-1 bg-gradient-to-r from-primary-500/60 via-primary-500 to-primary-500/60" aria-hidden="true" />
 
         <button
           onClick={handleDismiss}
@@ -255,11 +255,11 @@ export default function UpgradeFeatureModal() {
         <div className="p-5 sm:p-7 pr-10 sm:pr-12">
           {/* Header — lock icon + plan badge */}
           <div className="flex items-center gap-3 mb-5">
-            <div className="w-12 h-12 rounded-xl bg-primary-gold/15 border border-primary-gold/30 flex items-center justify-center flex-shrink-0">
-              <Lock size={22} className="text-primary-gold" aria-hidden="true" />
+            <div className="w-12 h-12 rounded-xl bg-primary-500/15 border border-primary-500/30 flex items-center justify-center flex-shrink-0">
+              <Lock size={22} className="text-primary-400" aria-hidden="true" />
             </div>
             <div className="flex flex-col min-w-0">
-              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-gold/15 border border-primary-gold/30 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] text-primary-gold w-fit">
+              <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-primary-500/15 border border-primary-500/30 rounded-full text-[10px] font-bold uppercase tracking-[0.08em] text-primary-400 w-fit">
                 <Sparkles size={10} aria-hidden="true" />
                 {t('upgrade_modal.available_on', 'Available on {{plan}}', { plan: includedLabel })}
               </div>
@@ -294,7 +294,7 @@ export default function UpgradeFeatureModal() {
               ref={upgradeBtnRef}
               onClick={handleUpgrade}
               type="button"
-              className="flex-1 bg-primary-gold hover:bg-primary-gold/90 text-black font-bold py-2.5 rounded-lg transition-colors text-sm shadow-lg shadow-primary-gold/20"
+              className="flex-1 bg-primary-500 hover:bg-primary-500/90 text-on-primary font-bold py-2.5 rounded-lg transition-colors text-sm shadow-lg shadow-primary-500/20"
             >
               {t('upgrade_modal.upgrade_cta', 'Upgrade plan')}
             </button>

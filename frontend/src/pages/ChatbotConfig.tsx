@@ -458,7 +458,7 @@ export function ChatbotConfig() {
               />
               <button
                 onClick={addRule}
-                className="bg-primary-600 text-white px-3 py-2 rounded-lg hover:bg-primary-700 text-sm"
+                className="bg-primary-600 text-on-primary px-3 py-2 rounded-lg hover:bg-primary-700 text-sm"
               >
                 <Plus size={16} />
               </button>
@@ -508,7 +508,7 @@ export function ChatbotConfig() {
             <button
               onClick={handleSaveAll}
               disabled={isSaving}
-              className="flex items-center gap-2 bg-primary-600 text-white px-6 py-2.5 rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-6 py-2.5 rounded-lg hover:bg-primary-700 text-sm font-medium disabled:opacity-50"
             >
               <Save size={16} />
               {isSaving ? t('chatbot_config.saving', 'Saving...') : t('chatbot_config.save_all', 'Save Configuration')}

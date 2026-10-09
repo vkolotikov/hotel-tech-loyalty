@@ -74,7 +74,7 @@ function Seg<T extends string>({ value, onChange, options }: {
       {options.map(([v, label, Icon]) => (
         <button key={v} type="button" onClick={() => onChange(v)}
           className={'px-2.5 py-1 rounded-md text-xs font-medium inline-flex items-center gap-1 transition-colors ' +
-            (value === v ? 'bg-primary-500 text-black' : 'text-gray-400 hover:text-white')}>
+            (value === v ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:text-white')}>
           {Icon ? <Icon size={12} /> : null}{label}
         </button>
       ))}

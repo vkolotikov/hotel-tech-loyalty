@@ -111,7 +111,7 @@ export function SendReviewButton({ target, className, label = 'Request review' }
                 <button
                   onClick={() => sendMut.mutate()}
                   disabled={!selected || sendMut.isPending}
-                  className="bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-600 disabled:opacity-50"
+                  className="bg-primary-500 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-600 disabled:opacity-50"
                 >
                   {sendMut.isPending ? 'Sending…' : 'Send email'}
                 </button>

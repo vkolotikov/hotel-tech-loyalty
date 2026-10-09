@@ -8,6 +8,7 @@ import { StylePicker } from '../components/settings/StylePicker'
 import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
 import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
+import { dropSaved } from '../lib/settingsEdits'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
   Bell, Brain, Cloud, Smartphone, Database, Shield, Calendar,
@@ -1044,7 +1045,7 @@ export function Settings() {
       }
       qc.invalidateQueries({ queryKey: ['admin-settings'] })
       qc.invalidateQueries({ queryKey: ['admin-theme'] })
-      setEditedSettings({})
+      setEditedSettings(prev => dropSaved(prev, sent))
       if (missing.length > 0) {
         toast.error(`Saved partial — ${missing.length} setting${missing.length === 1 ? '' : 's'} didn't persist (${missing.slice(0, 3).join(', ')}). Try again or contact support.`)
       } else {

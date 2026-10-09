@@ -434,7 +434,7 @@ export function Analytics() {
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all flex-1 justify-center whitespace-nowrap ${
               activeTab === tab.id
-                ? 'bg-primary-600 text-white shadow-lg shadow-primary-600/20'
+                ? 'bg-primary-600 text-on-primary shadow-lg shadow-primary-600/20'
                 : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
             }`}
           >
@@ -549,7 +549,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -641,7 +641,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -726,7 +726,7 @@ export function Analytics() {
                 onClick={() => setChannelDays(r.days)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                   channelDays === r.days
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-primary-600 text-on-primary'
                     : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
                 }`}
               >
@@ -928,7 +928,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {POINTS_RANGES.map(r => (
                   <button key={r.days} onClick={() => setPointsDays(r.days)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${pointsDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1116,7 +1116,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {GROWTH_RANGES.map(r => (
                   <button key={r.months} onClick={() => setGrowthMonths(r.months)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${growthMonths === r.months ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1325,7 +1325,7 @@ export function Analytics() {
                 key={r.days}
                 onClick={() => setChannelDays(r.days)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  channelDays === r.days ? 'bg-primary-600 text-white' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
+                  channelDays === r.days ? 'bg-primary-600 text-on-primary' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
                 }`}
               >
                 {r.label}
@@ -1471,7 +1471,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {BOOKING_RANGES.map(r => (
                   <button key={r.days} onClick={() => setBookingDays(r.days)}
-                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-2.5 py-1.5 rounded-md text-xs font-semibold transition-all ${bookingDays === r.days ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.ranges.${r.labelKey}`)}
                   </button>
                 ))}
@@ -1593,7 +1593,7 @@ export function Analytics() {
               <div className="flex gap-1 bg-dark-surface2 rounded-lg p-1">
                 {CRM_PERIOD_OPTIONS.map(p => (
                   <button key={p.value} onClick={() => setCrmPeriod(p.value)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-white shadow-sm' : 'text-t-secondary hover:text-white'}`}>
+                    className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${crmPeriod === p.value ? 'bg-primary-600 text-on-primary shadow-sm' : 'text-t-secondary hover:text-white'}`}>
                     {t(`analytics.periods.${p.labelKey}`)}
                   </button>
                 ))}
@@ -1699,7 +1699,7 @@ export function Analytics() {
                 key={r.days}
                 onClick={() => setChannelDays(r.days)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                  channelDays === r.days ? 'bg-primary-600 text-white' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
+                  channelDays === r.days ? 'bg-primary-600 text-on-primary' : 'bg-dark-surface border border-dark-border text-t-secondary hover:text-white hover:bg-dark-surface2'
                 }`}
               >
                 {r.label}

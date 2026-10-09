@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties, KeyboardEvent } from 'react'
 import { Check } from 'lucide-react'
 import { clsx } from 'clsx'
 import type { ThemeStyle } from '../../hooks/useTheme'
@@ -21,18 +21,32 @@ export const STYLE_OPTIONS: StyleOption[] = [
 
 const isAvailable = (id: StyleId): id is ThemeStyle => id !== 'light'
 
+const AVAILABLE: ThemeStyle[] = STYLE_OPTIONS.map(option => option.id).filter(isAvailable)
+const ARROW_STEPS: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 }
+
 /**
  * Settings → Branding → Style. One card per style with a small sample of
  * it. The samples use fixed colours (inline, not tokens) so each one shows
  * its own style whichever style the admin is in. Hook-free on purpose.
+ * Keyboard as a radio group: Tab reaches the checked card, the arrow keys
+ * pick the next or previous available style.
  */
 export function StylePicker({ value, brand, onPick }: {
   value: ThemeStyle
   brand: string
   onPick: (style: ThemeStyle) => void
 }) {
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const step = ARROW_STEPS[event.key]
+    if (!step) return
+    event.preventDefault()
+    const next = AVAILABLE[(AVAILABLE.indexOf(value) + step + AVAILABLE.length) % AVAILABLE.length]
+    if (next !== value) onPick(next)
+    event.currentTarget.querySelector<HTMLElement>(`[data-style-option="${next}"]`)?.focus()
+  }
+
   return (
-    <div role="radiogroup" aria-label="Admin style" className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div role="radiogroup" aria-label="Admin style" onKeyDown={onKeyDown} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
       {STYLE_OPTIONS.map(option => {
         const id = option.id
         const available = isAvailable(id)
@@ -44,6 +58,7 @@ export function StylePicker({ value, brand, onPick }: {
             role="radio"
             data-style-option={id}
             aria-checked={active}
+            tabIndex={active ? 0 : -1}
             disabled={!available}
             onClick={available ? () => onPick(id) : undefined}
             className={clsx(

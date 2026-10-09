@@ -96,7 +96,7 @@ export function CannedReplies() {
           <button
             onClick={save}
             disabled={!dirty || saveMutation.isPending}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium bg-primary-500 text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
             <Save size={14} /> {saveMutation.isPending ? t('canned_replies.saving', 'Saving...') : t('canned_replies.save', 'Save')}
           </button>
         </div>

@@ -174,7 +174,7 @@ export function Segments() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
           <Plus size={16} /> {t('segments.new', 'New segment')}
         </button>
       </div>
@@ -281,7 +281,7 @@ export function Segments() {
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !form.name.trim()}
-                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg">
                 {saveMutation.isPending ? t('segments.form.saving', 'Saving…') : (editId ? t('segments.form.update', 'Update') : t('segments.form.create', 'Create'))}
               </button>
             </div>
@@ -334,7 +334,7 @@ export function Segments() {
                     <td className="py-3">
                       <div className="flex gap-1 justify-end">
                         <button onClick={() => { setSendingSegment(s); setSendForm({ title: '', body: '', send_email: false, category: 'transactional' }) }}
-                          className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-2.5 py-1 rounded">
+                          className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded">
                           <Send size={12} /> {t('segments.list.send', 'Send')}
                         </button>
                         <button onClick={() => startEdit(s)} className="p-1.5 rounded hover:bg-dark-surface3 text-t-soft" title={t('segments.list.edit_title', 'Edit')}><Pencil size={13} /></button>
@@ -407,7 +407,7 @@ export function Segments() {
               <button
                 onClick={() => sendMutation.mutate()}
                 disabled={sendMutation.isPending || !sendForm.title.trim() || !sendForm.body.trim()}
-                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg">
                 {sendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 {t('segments.send.send_button', 'Send campaign')}
               </button>

@@ -864,11 +864,11 @@ export function Layout({ children }: { children: ReactNode }) {
                         {!displayCollapsed && (
                           <>
                             <span className="truncate flex-1 text-left">{itemLabel}</span>
-                            <Lock size={11} className="flex-shrink-0 text-primary-gold/80" aria-hidden="true" />
+                            <Lock size={11} className="flex-shrink-0 text-primary-400/80" aria-hidden="true" />
                           </>
                         )}
                         {displayCollapsed && (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/80" aria-hidden="true" />
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
                         )}
                       </button>
                     )
@@ -920,9 +920,9 @@ export function Layout({ children }: { children: ReactNode }) {
                       {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}
                       {lapsed && (
                         displayCollapsed ? (
-                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-gold/80" aria-hidden="true" />
+                          <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary-500/80" aria-hidden="true" />
                         ) : (
-                          <Lock size={11} className="flex-shrink-0 text-primary-gold/80" aria-hidden="true" />
+                          <Lock size={11} className="flex-shrink-0 text-primary-400/80" aria-hidden="true" />
                         )
                       )}
                       {badge > 0 && (
@@ -1413,7 +1413,7 @@ function SubscriptionWall() {
             surprised when /billing shows them limited controls. */}
         <Link
           to="/billing"
-          className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-black font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-primary-500 hover:bg-primary-400 text-on-primary font-semibold rounded-lg transition-colors shadow-lg shadow-primary-500/30"
         >
           <CreditCard size={16} />
           Go to Billing

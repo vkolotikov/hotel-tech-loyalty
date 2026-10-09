@@ -176,7 +176,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
               className={
                 'w-[22px] h-[22px] rounded-full grid place-items-center border text-[10px] shrink-0 transition-colors motion-reduce:transition-none ' +
                 (i < step
-                  ? 'bg-primary-500 border-primary-500 text-black'
+                  ? 'bg-primary-500 border-primary-500 text-on-primary'
                   : i === step
                     ? 'bg-dark-bg border-primary-500 text-primary-500'
                     : 'bg-dark-bg border-dark-border text-t-secondary')
@@ -348,7 +348,7 @@ export function ChatbotWizard({ onDone }: { onDone: () => void }) {
           type="button"
           onClick={() => (isLast ? apply.mutate() : setStep(s => s + 1))}
           disabled={apply.isPending}
-          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-black rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-60"
+          className="flex items-center gap-2 px-5 py-2.5 text-sm font-medium bg-primary-500 text-on-primary rounded-lg hover:bg-primary-400 transition-colors focus-visible:ring-2 focus-visible:ring-primary-500/40 outline-none disabled:opacity-60"
         >
           {apply.isPending
             ? <><Loader2 size={15} className="animate-spin" /> Setting up…</>

@@ -282,7 +282,7 @@ export function Visitors() {
                     <button
                       onClick={() => startChat.mutate(selectedVisitor.id)}
                       disabled={startChat.isPending}
-                      className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
+                      className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-on-primary px-4 py-2.5 rounded-lg text-sm font-semibold transition disabled:opacity-50"
                     >
                       <MessageCircle className="w-4 h-4" />
                       {startChat.isPending ? 'Opening...' : 'Start Chat'}

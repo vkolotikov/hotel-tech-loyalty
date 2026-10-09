@@ -233,8 +233,8 @@ export function BookingCalendar() {
               { v: 'month', icon: CalendarRange, label: 'Month' },
             ] as const).map(({ v, icon: Icon, label }) => (
               <button key={v} onClick={() => setView(v)}
-                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-                style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+                className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? '' : 'text-gray-500 hover:text-gray-300'}`}
+                style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', color: '#03050A', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
                 <Icon size={14} /> {label}
               </button>
             ))}

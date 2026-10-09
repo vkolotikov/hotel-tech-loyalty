@@ -260,13 +260,13 @@ export function Venues() {
           </div>
           {activeView === 'bookings' && (
             <button onClick={() => setShowCreateBooking(true)}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-dark-bg font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
               <Plus size={15} /> New Booking
             </button>
           )}
           {activeView === 'venues' && (
             <button onClick={() => setShowCreateVenue(true)}
-              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-dark-bg font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
+              className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm px-4 py-2 rounded-lg transition-colors">
               <Plus size={15} /> Add Venue
             </button>
           )}
@@ -695,7 +695,7 @@ export function Venues() {
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreateBooking(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
                 <button type="submit" disabled={createBookingMut.isPending}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-dark-bg font-semibold text-sm rounded-lg disabled:opacity-50">
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createBookingMut.isPending ? 'Creating...' : 'Create Booking'}
                 </button>
               </div>
@@ -792,7 +792,7 @@ export function Venues() {
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreateVenue(false)} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
                 <button type="submit" disabled={createVenueMut.isPending}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-dark-bg font-semibold text-sm rounded-lg disabled:opacity-50">
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createVenueMut.isPending ? 'Creating...' : 'Create Venue'}
                 </button>
               </div>

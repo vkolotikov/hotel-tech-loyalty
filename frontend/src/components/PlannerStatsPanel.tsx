@@ -102,7 +102,7 @@ export default function PlannerStatsPanel({ enabled = true }: { enabled?: boolea
             <button key={k} type="button" onClick={() => applyStatsRange(k)}
               className={'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
                 (statsRange === k
-                  ? 'bg-primary-500 text-black border-primary-500'
+                  ? 'bg-primary-500 text-on-primary border-primary-500'
                   : 'bg-dark-surface text-gray-400 border-dark-border hover:text-white hover:border-white/15')}>
               {label}
             </button>

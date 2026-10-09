@@ -213,7 +213,7 @@ export function WalletConfig() {
             <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-2 rounded-lg">
+              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-2 rounded-lg">
               {saveMutation.isPending ? 'Saving…' : 'Save configuration'}
             </button>
           </Card>

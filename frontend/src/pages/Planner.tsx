@@ -440,7 +440,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
           ) : templates.length === 0 ? (
             <div className="text-center py-6">
               <p className="text-xs text-gray-500 mb-2">No templates yet — start with our suggestions:</p>
-              <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-white font-medium hover:bg-primary-500">
+              <button onClick={seedSuggested} className="text-xs py-1.5 px-3 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500">
                 + Seed {SUGGESTED_TEMPLATES.length} starter templates
               </button>
             </div>
@@ -528,7 +528,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
           </div>
           <button
             onClick={() => setMode('add')}
-            className="w-full text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500"
+            className="w-full text-xs py-1.5 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500"
           >
             + Add new template
           </button>
@@ -599,7 +599,7 @@ function TemplateForm({ initial, onCancel, onSave, busy }: {
           })
         }}
         disabled={busy || !name.trim() || !title.trim()}
-        className="w-full text-xs py-1.5 rounded bg-primary-600 text-white font-medium hover:bg-primary-500 disabled:opacity-40"
+        className="w-full text-xs py-1.5 rounded bg-primary-600 text-on-primary font-medium hover:bg-primary-500 disabled:opacity-40"
       >
         {busy ? 'Saving…' : initial ? 'Update' : 'Save template'}
       </button>
@@ -628,7 +628,7 @@ function QuickAdd({ date, onCreate }: { date: string; onCreate: (title: string, 
         onKeyDown={e => { if (e.key === 'Escape') setOpen(false) }}
         placeholder="Task title..."
         className="flex-1 bg-dark-surface2 border border-primary-500/50 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-primary-500/50" />
-      <button type="submit" disabled={!title.trim()} className="px-2.5 py-1.5 rounded-lg bg-primary-600 text-white text-xs font-medium disabled:opacity-40 hover:bg-primary-500 transition-colors">Add</button>
+      <button type="submit" disabled={!title.trim()} className="px-2.5 py-1.5 rounded-lg bg-primary-600 text-on-primary text-xs font-medium disabled:opacity-40 hover:bg-primary-500 transition-colors">Add</button>
       <button type="button" onClick={() => setOpen(false)} className="p-1.5 rounded-lg text-gray-600 hover:text-white transition-colors"><X size={14} /></button>
     </form>
   )
@@ -678,7 +678,7 @@ function GroupFilterTabs({ groups, value, onChange, tasks }: {
             className={[
               'flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all border',
               active
-                ? 'bg-primary-500 text-black border-primary-500 shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
+                ? 'bg-primary-500 text-on-primary border-primary-500 shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
                 : 'bg-dark-surface text-gray-300 border-dark-border hover:bg-dark-surface2 hover:border-white/15 hover:text-white',
             ].join(' ')}
           >
@@ -799,7 +799,7 @@ function CollapsibleNote({ value, weekStart, placeholder, label, onSave }: {
         </button>
         <button
           onClick={() => { onSave(draft); setEditing(false) }}
-          className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md"
+          className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-bold rounded-md"
         >
           Save note
         </button>
@@ -1210,14 +1210,14 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                 onClick={() => onViewModeChange('single')}
                 title="One timeline for the selected scope"
                 className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
-                  (renderedMode === 'single' ? 'bg-primary-500 text-black' : 'text-gray-400 hover:text-white')}>
+                  (renderedMode === 'single' ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:text-white')}>
                 <CalendarDays size={10} /> Combined
               </button>
               <button
                 onClick={() => onViewModeChange('team')}
                 title="One column per person — Google Calendar-style team view"
                 className={'flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold transition-colors ' +
-                  (renderedMode === 'team' ? 'bg-primary-500 text-black' : 'text-gray-400 hover:text-white')}>
+                  (renderedMode === 'team' ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:text-white')}>
                 <User size={10} /> By person
               </button>
             </div>
@@ -2208,7 +2208,7 @@ export function Planner() {
           {tab !== 'stats' && tab !== 'team' && tab !== 'pool' && (
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
-              className="md:hidden flex items-center gap-1.5 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
+              className="md:hidden flex items-center gap-1.5 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-3 py-2 rounded-lg transition-colors flex-shrink-0"
             >
               <Plus size={16} /> {t('planner.actions.add', 'Add')}
             </button>
@@ -2252,7 +2252,7 @@ export function Planner() {
                     onClick={() => setTab(tabKey as Tab)}
                     className={'flex items-center gap-1.5 px-3 md:px-4 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all whitespace-nowrap flex-1 sm:flex-initial justify-center ' +
                       (active
-                        ? 'bg-primary-500 text-black shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
+                        ? 'bg-primary-500 text-on-primary shadow-[0_2px_8px_rgba(201,168,76,0.3)]'
                         : 'text-gray-500 hover:text-white hover:bg-dark-surface2')}
                   >
                     <Icon size={14} /> {label}
@@ -2292,7 +2292,7 @@ export function Planner() {
             {/* Desktop-only Add (mobile already has one above) */}
             <button
               onClick={() => openCreate(tab === 'day' ? currentDate : today)}
-              className="hidden md:flex items-center gap-2 text-sm font-medium text-white bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors"
+              className="hidden md:flex items-center gap-2 text-sm font-medium text-on-primary bg-primary-600 hover:bg-primary-500 px-4 py-2 rounded-lg transition-colors"
             >
               <Plus size={16} /> {t('planner.actions.add', 'Add')}
             </button>
@@ -2594,7 +2594,7 @@ export function Planner() {
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <button onClick={() => openCreate(currentDate)}
-                      className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-black font-bold px-3 py-1.5 rounded-lg text-xs transition-colors">
+                      className="inline-flex items-center gap-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary font-bold px-3 py-1.5 rounded-lg text-xs transition-colors">
                       <Plus size={12} /> {t('planner.empty.create_first', 'Create your first task')}
                     </button>
                     <button onClick={() => setShowTemplatePicker(s => !s)}
@@ -2712,7 +2712,7 @@ export function Planner() {
               </div>
               {/* Settings → Team is mounted as a tab inside /settings,
                   not a standalone route. `/team` 404'd in production. */}
-              <a href="/settings?tab=team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-black text-xs font-bold rounded-md flex-shrink-0">
+              <a href="/settings?tab=team" className="px-3 py-1.5 bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-bold rounded-md flex-shrink-0">
                 Add staff
               </a>
             </div>
@@ -2738,7 +2738,7 @@ export function Planner() {
                     <div className={'text-xs font-semibold ' + (isToday ? 'text-primary-400' : 'text-gray-500')}>{DAYS[i]}</div>
                     <div className={'text-sm font-bold mt-0.5 ' + (isToday ? 'text-primary-300' : 'text-white')}>
                       {isToday ? (
-                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-500 text-white">{date.getDate()}</span>
+                        <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-primary-500 text-on-primary">{date.getDate()}</span>
                       ) : (
                         <span>{date.getMonth() + 1}/{date.getDate()}</span>
                       )}
@@ -3143,7 +3143,7 @@ export function Planner() {
                             (isWeekend ? 'border-dark-border/40 bg-dark-surface2/[0.10] hover:bg-dark-surface2/25' : 'border-dark-border/40 bg-dark-surface2/20 hover:bg-dark-surface2/40') + ' hover:border-primary-500/30'))}>
                       {/* header: date · completion · quick-add */}
                       <div className="flex items-center justify-between mb-1">
-                        <span className={'text-xs font-bold flex items-center justify-center ' + (isToday ? 'text-black bg-primary-500 w-6 h-6 rounded-full' : (isWeekend ? 'text-gray-500' : 'text-gray-300'))}>{date.getDate()}</span>
+                        <span className={'text-xs font-bold flex items-center justify-center ' + (isToday ? 'text-on-primary bg-primary-500 w-6 h-6 rounded-full' : (isWeekend ? 'text-gray-500' : 'text-gray-300'))}>{date.getDate()}</span>
                         <div className="flex items-center gap-1">
                           {total > 0 && <span className={'text-[9px] font-semibold tabular-nums ' + (allDone ? 'text-green-400' : 'text-gray-500')}>{done}/{total}</span>}
                           <button onClick={(e) => { e.stopPropagation(); setQuickAddCell(cellId) }}
@@ -3264,7 +3264,7 @@ export function Planner() {
                 <button key={k} type="button" onClick={() => applyStatsRange(k)}
                   className={'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ' +
                     (statsRange === k
-                      ? 'bg-primary-500 text-black border-primary-500'
+                      ? 'bg-primary-500 text-on-primary border-primary-500'
                       : 'bg-dark-surface text-gray-400 border-dark-border hover:text-white hover:border-white/15')}>
                   {label}
                 </button>
@@ -3475,7 +3475,7 @@ export function Planner() {
                 <h2 className="text-lg font-bold text-white">{editTask ? (backlogMode === 'pool' ? 'Edit pool task' : 'Edit task') : backlogMode ? 'New backlog task' : 'New task'}</h2>
                 {backlogMode && (
                   <span className={'text-[10px] font-semibold px-2 py-0.5 rounded-full border ' +
-                    (backlogMode === 'pool' ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'bg-gold-500/15 text-gold-300 border-gold-500/40')}>
+                    (backlogMode === 'pool' ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'bg-primary-500/15 text-primary-300 border-primary-500/40')}>
                     {backlogMode === 'pool'
                       ? 'Open pool' + (poolHorizon === 'week' ? ' · This week' : poolHorizon === 'day' ? ' · By day' : '')
                       : 'Mine'}
@@ -3689,7 +3689,7 @@ export function Planner() {
                     return (
                       <button key={t} type="button" onClick={() => setStartTime(t)}
                         className={'px-1.5 py-1 rounded text-[11px] font-mono tabular-nums transition-colors ' +
-                          (active ? 'bg-primary-500 text-white' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+                          (active ? 'bg-primary-500 text-on-primary' : 'text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
                         {t}
                       </button>
                     )
@@ -3713,7 +3713,7 @@ export function Planner() {
                     return (
                       <button key={d.minutes} type="button" onClick={() => setDuration(d.minutes)}
                         className={'px-3 py-1.5 rounded-md text-xs font-semibold border transition-colors ' +
-                          (active ? 'bg-primary-500 border-primary-500 text-white' : 'border-dark-border text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
+                          (active ? 'bg-primary-500 border-primary-500 text-on-primary' : 'border-dark-border text-gray-400 hover:bg-dark-surface2 hover:text-white')}>
                         {d.label}
                       </button>
                     )
@@ -3814,7 +3814,7 @@ export function Planner() {
               <button onClick={close} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
               <button onClick={handleSubmit}
                 disabled={createMutation.isPending || updateMutation.isPending || !form.title.trim()}
-                className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 transition-colors">
+                className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 transition-colors">
                 {(createMutation.isPending || updateMutation.isPending) ? 'Saving…' : editTask ? 'Update task' : 'Create task'}
               </button>
             </div>

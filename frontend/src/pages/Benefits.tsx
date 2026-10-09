@@ -115,7 +115,7 @@ export function Benefits() {
         <h1 className="text-2xl font-bold text-white">{t('benefits.title', 'Benefits')}</h1>
         <button
           onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
         >
           <Plus size={16} /> {t('benefits.add', 'Add Benefit')}
         </button>
@@ -194,7 +194,7 @@ export function Benefits() {
             {t('benefits.form.requires_active_stay', 'Requires active stay')}
           </label>
           <button type="submit" disabled={saveMutation.isPending}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+            className="bg-primary-600 text-on-primary px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
             {saveMutation.isPending ? t('benefits.form.saving', 'Saving...') : t('benefits.form.save', 'Save')}
           </button>
         </form>

@@ -148,7 +148,7 @@ export function Guests() {
           <button onClick={handleExport} disabled={exporting} className="flex items-center gap-2 bg-dark-surface border border-dark-border hover:border-primary-500 text-t-secondary hover:text-white font-medium text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50">
             <Download size={14} /> {t('guests.actions.export', 'Export')}
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
             <Plus size={15} /> {t('guests.actions.add_guest', 'Add Guest')}
           </button>
         </div>
@@ -382,7 +382,7 @@ export function Guests() {
               />
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">{t('guests.create.cancel', 'Cancel')}</button>
-                <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
+                <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createMutation.isPending ? t('guests.create.saving', 'Saving...') : t('guests.create.create', 'Create')}
                 </button>
               </div>
@@ -501,7 +501,7 @@ export function Guests() {
                           toast.error(e.response?.data?.message || t('guests.toasts.create_failed', 'Failed to create guest'))
                         }
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg transition-colors"
                     >
                       {t('guests.capture.create_guest', 'Create Guest')}
                     </button>

@@ -678,7 +678,7 @@ export function ChatbotWidget() {
           <div className="flex-1 min-w-0 space-y-2">
             <div className="flex gap-2">
               <button type="button" onClick={() => avatarInputRef.current?.click()} disabled={avatarUpload.isPending}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50">
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-primary-500 text-on-primary rounded-lg disabled:opacity-50">
                 <Upload size={12} /> {avatarUpload.isPending ? 'Uploading...' : 'Upload Image'}
               </button>
               {f.assistant_avatar_url && (
@@ -943,7 +943,7 @@ export function ChatbotWidget() {
 
         <div className="flex justify-end pt-3 border-t border-dark-border">
           <button onClick={() => voiceSave.mutate(v)} disabled={!voiceDirty || voiceSave.isPending}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+            className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
             <Save size={14} /> {voiceSave.isPending ? 'Saving...' : 'Save Voice Config'}
           </button>
         </div>
@@ -1057,7 +1057,7 @@ export function ChatbotWidget() {
             <div className="sticky bottom-0 -mx-2 px-2 py-3 bg-dark-bg/95 backdrop-blur border-t border-dark-border flex items-center justify-between">
               <span className="text-xs text-t-secondary">{dirty ? 'Unsaved changes' : 'All changes saved'}</span>
               <button onClick={() => saveMutation.mutate(f)} disabled={!dirty || saveMutation.isPending}
-                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-black rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-primary-500 text-on-primary rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <Save size={14} /> {saveMutation.isPending ? 'Saving...' : 'Save Widget Config'}
               </button>
             </div>

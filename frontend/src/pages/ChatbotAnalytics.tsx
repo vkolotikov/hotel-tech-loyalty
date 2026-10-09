@@ -157,7 +157,7 @@ export function ChatbotAnalytics() {
         <div className="flex gap-1">
           {DATE_RANGES.map(r => (
             <button key={r.days} onClick={() => setDays(r.days)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${days === r.days ? 'bg-primary-600 text-white' : 'bg-dark-hover text-t-secondary hover:text-white'}`}>
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${days === r.days ? 'bg-primary-600 text-on-primary' : 'bg-dark-hover text-t-secondary hover:text-white'}`}>
               {t(`chatbot_analytics.ranges.${r.labelKey}`, r.fallback)}
             </button>
           ))}

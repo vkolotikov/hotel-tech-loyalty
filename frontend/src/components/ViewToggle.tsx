@@ -38,7 +38,7 @@ export function ViewToggle({ options }: { options: ViewOption[] }) {
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-xl transition-all"
             style={active ? {
               background: 'linear-gradient(135deg, #74c895, #5ab4b2)',
-              color: '#fff',
+              color: '#03050A',
               boxShadow: '0 6px 14px rgba(116,200,149,0.2)',
             } : { color: '#8e8e93' }}>
             {opt.icon}{opt.label}

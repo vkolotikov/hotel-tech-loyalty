@@ -292,7 +292,7 @@ export function Members() {
           </button>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
           >
             <Plus size={16} />
             {t('members.actions.add_member', 'Add Member')}
@@ -666,7 +666,7 @@ export function Members() {
                   <button onClick={() => setShowCreate(false)}
                     className="flex-1 border border-dark-border text-t-soft py-2.5 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">Cancel</button>
                   <button onClick={() => createMutation.mutate()} disabled={!form.name || !form.email || createMutation.isPending}
-                    className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                    className="flex-1 bg-primary-600 text-on-primary py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
                     {createMutation.isPending ? 'Creating...' : 'Create Member'}
                   </button>
                 </div>
@@ -763,7 +763,7 @@ export function Members() {
                             }
                           }}
                           disabled={!captureResult.name || !captureResult.email}
-                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
                         >
                           Create Member
                         </button>
@@ -786,7 +786,7 @@ export function Members() {
           <span className="text-sm text-white font-medium">{selectedIds.size} selected</span>
           <button
             onClick={() => setShowBulkMessage(true)}
-            className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-on-primary text-sm font-semibold px-3 py-1.5 rounded-lg transition-colors"
           >
             <Send size={14} /> Send message
           </button>
@@ -918,7 +918,7 @@ export function Members() {
               <button
                 onClick={() => bulkMessageMutation.mutate()}
                 disabled={bulkMessageMutation.isPending || !bulkMsg.title.trim() || !bulkMsg.body.trim()}
-                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+                className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg"
               >
                 {bulkMessageMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                 Send to {selectedIds.size}

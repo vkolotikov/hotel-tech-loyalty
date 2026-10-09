@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { hexToRgb, luminance } from './colour'
-import { GLASS_FONTS, GLASS_INK, GLASS_SCOPE } from './glassTokens'
+import { GLASS_FONTS, GLASS_INK, GLASS_SCOPE, GLASS_SOLID_SURFACES } from './glassTokens'
 
 const glassCss = readFileSync(new URL('./glass.css', import.meta.url), 'utf8')
 const indexCss = readFileSync(new URL('../index.css', import.meta.url), 'utf8')
@@ -107,8 +107,15 @@ describe('glass.css', () => {
     expect(ruleBody(reduced, '.fixed[style*="--legacy-"]')).toMatch(/--legacy-card:\s*#1A2233;[\s\S]*backdrop-filter: none/)
   })
 
-  it('keeps text drawn in the page ink solid (text-dark-bg on brand fills)', () => {
+  it('keeps text drawn in the page ink solid (text-dark-bg on status fills)', () => {
     expect(ruleBody(glassCss, '.text-dark-bg {')).toMatch(/--alpha-dark-bg:\s*1;/)
+  })
+
+  it('gives the ring cut around a status dot an opaque edge, so it shows on see-through panels', () => {
+    for (const surface of ['dark-bg', 'dark-surface'] as const) {
+      const rules = selectorsOfRulesWith(glassCss, `border-color: ${GLASS_SOLID_SURFACES[surface]};`)
+      expect(rules.some(s => s.endsWith(`.rounded-full.border-${surface}`)), `${surface}: ${rules.join('\n')}`).toBe(true)
+    }
   })
 
   it('draws the active sidebar item in its lighter accent text in Glass', () => {

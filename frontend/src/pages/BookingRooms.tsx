@@ -59,7 +59,7 @@ const BED_TYPES = ['Single', 'Double', 'Twin', 'King', 'Queen', 'Suite', 'Bunk']
 const card = 'rounded-2xl border border-white/[0.06] p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const btnPrimary = 'flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold uppercase tracking-wider transition-all'
-const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#fff' }
+const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
 
 export default function BookingRooms() {
   const qc = useQueryClient()
@@ -401,7 +401,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
                       <img src={p.preview} className="h-full w-full object-cover" />
                       {/* Cover badge */}
                       {i === 0 && (
-                        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-primary-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                        <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-md bg-primary-600/90 px-1.5 py-0.5 text-[10px] font-semibold text-on-primary">
                           <Star size={10} /> Cover
                         </span>
                       )}

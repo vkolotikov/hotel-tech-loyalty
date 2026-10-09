@@ -99,7 +99,7 @@ export function Reviews() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-3 md:px-4 py-1.5 rounded-md font-semibold capitalize transition-colors whitespace-nowrap ${tab === t ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}
+              className={`px-3 md:px-4 py-1.5 rounded-md font-semibold capitalize transition-colors whitespace-nowrap ${tab === t ? 'bg-primary-500 text-on-primary' : 'text-t-soft hover:text-white'}`}
             >
               {t}
             </button>
@@ -344,7 +344,7 @@ function FormsTab() {
       <div className="flex justify-end mb-3">
         <button
           onClick={() => setShowCreate(true)}
-          className="bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors"
+          className="bg-primary-500 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 hover:bg-primary-600 transition-colors"
         >
           <Plus size={16} /> New Form
         </button>
@@ -451,7 +451,7 @@ function CreateFormModal({ onClose, onCreate, pending }: { onClose: () => void; 
           <button
             onClick={() => name.trim() && onCreate({ name: name.trim(), type })}
             disabled={!name.trim() || pending}
-            className="bg-primary-500 text-white px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-primary-600 transition-colors"
+            className="bg-primary-500 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold disabled:opacity-50 hover:bg-primary-600 transition-colors"
           >
             {pending ? 'Creating…' : 'Create'}
           </button>
@@ -546,7 +546,7 @@ function DevicesTab() {
           <input value={newLocation} onChange={e => setNewLocation(e.target.value)} placeholder="Location (optional)"
             className="flex-1 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted" />
           <button onClick={() => createMutation.mutate()} disabled={!newName.trim() || createMutation.isPending}
-            className="flex items-center justify-center gap-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-semibold">
+            className="flex items-center justify-center gap-1.5 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold">
             <Plus size={14} /> Register device
           </button>
         </div>
@@ -705,7 +705,7 @@ function IntegrationRow({ platform, existing, onSave }: { platform: string; exis
       <button
         onClick={() => url && onSave({ platform, write_review_url: url, is_enabled: enabled })}
         disabled={!url}
-        className="bg-primary-500 text-white px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 hover:bg-primary-600 transition-colors"
+        className="bg-primary-500 text-on-primary px-3 py-2 rounded-lg text-xs font-semibold disabled:opacity-50 hover:bg-primary-600 transition-colors"
       >
         Save
       </button>

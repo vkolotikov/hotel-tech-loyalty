@@ -211,7 +211,7 @@ export function KnowledgeBase() {
             key={tabDef.key}
             onClick={() => setTab(tabDef.key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-              tab === tabDef.key ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
+              tab === tabDef.key ? 'bg-primary-600 text-on-primary' : 'text-t-secondary hover:text-white'
             }`}
           >
             <tabDef.icon size={16} />
@@ -246,13 +246,13 @@ export function KnowledgeBase() {
             </select>
             <button
               onClick={() => setShowAiGen(v => !v)}
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
               <Sparkles size={16} /> {t('knowledge_base.ai_generate', 'AI Generate')}
             </button>
             <button
               onClick={() => { setShowItemForm(true); setEditItemId(null); setItemForm(emptyItem) }}
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
               <Plus size={16} /> {t('knowledge_base.add_faq', 'Add FAQ')}
             </button>
@@ -300,7 +300,7 @@ export function KnowledgeBase() {
                   <button
                     onClick={() => extractFaqs.mutate()}
                     disabled={extractFaqs.isPending || aiSourceText.trim().length < 50}
-                    className="w-full flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
+                    className="w-full flex items-center justify-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
                   >
                     <Sparkles size={14} /> {extractFaqs.isPending ? t('knowledge_base.ai_gen.generating', 'Generating...') : t('knowledge_base.ai_gen.generate', 'Generate FAQ Drafts')}
                   </button>
@@ -351,7 +351,7 @@ export function KnowledgeBase() {
                     <button
                       onClick={() => importFaqs.mutate()}
                       disabled={importFaqs.isPending || aiPreview.filter(i => i.selected).length === 0}
-                      className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
+                      className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50"
                     >
                       <Save size={14} /> {importFaqs.isPending ? t('knowledge_base.ai_gen.importing', 'Importing...') : t('knowledge_base.ai_gen.import_count', { count: aiPreview.filter(i => i.selected).length, defaultValue: 'Import {{count}} items' })}
                     </button>
@@ -423,7 +423,7 @@ export function KnowledgeBase() {
 
               <div className="flex justify-end gap-2">
                 <button onClick={() => { setShowItemForm(false); setEditItemId(null); setItemForm(emptyItem) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('knowledge_base.item_form.cancel', 'Cancel')}</button>
-                <button onClick={() => saveItem.mutate(itemForm)} disabled={saveItem.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+                <button onClick={() => saveItem.mutate(itemForm)} disabled={saveItem.isPending} className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
                   <Save size={14} /> {saveItem.isPending ? t('knowledge_base.item_form.saving', 'Saving...') : t('knowledge_base.item_form.save', 'Save')}
                 </button>
               </div>
@@ -477,7 +477,7 @@ export function KnowledgeBase() {
           <div className="flex justify-end">
             <button
               onClick={() => { setShowCatForm(true); setEditCatId(null); setCatForm(emptyCategory) }}
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm"
             >
               <Plus size={16} /> {t('knowledge_base.add_category', 'Add Category')}
             </button>
@@ -505,7 +505,7 @@ export function KnowledgeBase() {
               </div>
               <div className="flex justify-end gap-2">
                 <button onClick={() => { setShowCatForm(false); setEditCatId(null) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('knowledge_base.cat_form.cancel', 'Cancel')}</button>
-                <button onClick={() => saveCat.mutate(catForm)} disabled={saveCat.isPending} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+                <button onClick={() => saveCat.mutate(catForm)} disabled={saveCat.isPending} className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
                   <Save size={14} /> {saveCat.isPending ? t('knowledge_base.cat_form.saving', 'Saving...') : t('knowledge_base.cat_form.save', 'Save')}
                 </button>
               </div>
@@ -549,7 +549,7 @@ export function KnowledgeBase() {
           <div className="bg-dark-surface border-2 border-dashed border-dark-border rounded-xl p-8 text-center">
             <Upload size={32} className="mx-auto mb-3 text-dark-border2" />
             <p className="text-sm text-t-secondary mb-3">{t('knowledge_base.documents.upload_hint', "Upload PDF, DOCX, or TXT files to extend the AI's knowledge")}</p>
-            <label className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm cursor-pointer">
+            <label className="inline-flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm cursor-pointer">
               <Upload size={16} />
               {t('knowledge_base.documents.choose_file', 'Choose File')}
               <input

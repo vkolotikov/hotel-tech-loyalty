@@ -53,7 +53,7 @@ interface Service {
 const card = 'rounded-2xl border border-white/[0.06] p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
 const inputCls = 'w-full rounded-xl border border-white/[0.08] bg-white/[0.03] px-3.5 py-2.5 text-sm text-white placeholder-gray-500 outline-none focus:border-primary-500/50 focus:ring-1 focus:ring-primary-500/20 transition-all'
-const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#fff' }
+const btnPrimaryStyle = { background: 'linear-gradient(135deg, var(--color-primary, #74c895), color-mix(in srgb, var(--color-primary, #74c895) 80%, #000))', color: '#03050A' }
 const tabBtn = (active: boolean) => `px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-xl transition-all ${active ? 'bg-white/[0.08] text-white' : 'text-gray-500 hover:text-white'}`
 
 export default function Services() {

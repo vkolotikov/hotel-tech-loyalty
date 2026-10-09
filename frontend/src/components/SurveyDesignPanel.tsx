@@ -237,7 +237,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
         </Section>
 
         <button onClick={() => { onSave(); setTimeout(() => setPreviewNonce(n => n + 1), 700) }} disabled={saving}
-          className="bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg text-sm font-semibold">
+          className="bg-primary-500 hover:bg-primary-600 disabled:opacity-50 text-on-primary px-5 py-2.5 rounded-lg text-sm font-semibold">
           {saving ? 'Saving…' : 'Save design'}
         </button>
       </div>
@@ -312,7 +312,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
         <div className="flex gap-1 bg-panel p-1 rounded-lg">
           {[7, 30, 90].map(d => (
             <button key={d} onClick={() => setDays(d)}
-              className={`px-2.5 py-1 rounded-md text-xs font-semibold ${days === d ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}>{d}d</button>
+              className={`px-2.5 py-1 rounded-md text-xs font-semibold ${days === d ? 'bg-primary-500 text-on-primary' : 'text-t-soft hover:text-white'}`}>{d}d</button>
           ))}
         </div>
       </div>

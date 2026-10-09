@@ -223,7 +223,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           // popover (which opens below the header) inside the strip.
           // The expanded cards row has its own `overflow-x-auto`.
           'hidden md:block relative bg-dark-surface border rounded-xl transition-colors',
-          isDropTarget ? 'border-gold-500 ring-2 ring-gold-500/30' : 'border-dark-border',
+          isDropTarget ? 'border-primary-500 ring-2 ring-primary-500/30' : 'border-dark-border',
         ].join(' ')}
         onDragOver={(e) => {
           // Drop-target highlight + acceptance. Same `sourceDate !== ''`
@@ -255,7 +255,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
             row, not a panel header. */}
         <div className="flex items-center gap-2 px-3 py-2">
           <div className="flex items-center gap-1.5 flex-shrink-0">
-            <Inbox size={14} className="text-gold-400" />
+            <Inbox size={14} className="text-primary-400" />
             <span className="text-xs font-semibold text-white uppercase tracking-wide">Backlog</span>
           </div>
 
@@ -270,7 +270,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
               className={[
                 'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
                 scope === 'mine'
-                  ? 'bg-gold-500 text-black border-gold-500'
+                  ? 'bg-primary-500 text-on-primary border-primary-500'
                   : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
               ].join(' ')}
             >
@@ -284,7 +284,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
               className={[
                 'flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium transition border',
                 scope === 'pool'
-                  ? 'bg-gold-500 text-black border-gold-500'
+                  ? 'bg-primary-500 text-on-primary border-primary-500'
                   : 'bg-white/[0.06] text-gray-200 border-white/15 hover:bg-white/[0.12] hover:border-white/25',
               ].join(' ')}
             >
@@ -303,7 +303,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search…"
-                className="bg-dark-bg border border-white/10 rounded-md pl-6 pr-2 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50 w-[140px]"
+                className="bg-dark-bg border border-white/10 rounded-md pl-6 pr-2 py-1 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50 w-[140px]"
               />
             </div>
           )}
@@ -343,12 +343,12 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                     if (e.key === 'Escape') setShowQuickAdd(false)
                   }}
                   placeholder="Task name…"
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-gold-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-primary-500/50"
                 />
                 <select
                   value={qa.task_group}
                   onChange={(e) => setQa(q => ({ ...q, task_group: e.target.value, task_category: '' }))}
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
                 >
                   <option value="">Category — none</option>
                   {groupNames.map(g => <option key={g} value={g}>{g}</option>)}
@@ -357,7 +357,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                   <select
                     value={qa.task_category}
                     onChange={(e) => setQa(q => ({ ...q, task_category: e.target.value }))}
-                    className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                    className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
                   >
                     <option value="">Task — none</option>
                     {qaTasks.map(tk => <option key={tk.key} value={tk.key}>{tk.label}</option>)}
@@ -366,7 +366,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 <select
                   value={qa.duration}
                   onChange={(e) => setQa(q => ({ ...q, duration: e.target.value }))}
-                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-gold-500/50"
+                  className="w-full bg-dark-bg border border-white/10 rounded-md px-2 py-1.5 text-[11px] text-white focus:outline-none focus:border-primary-500/50"
                 >
                   <option value="">Approx duration — none</option>
                   {[15, 30, 45, 60, 75, 90, 105, 120, 150, 180, 240, 300, 360].map(m => (
@@ -396,7 +396,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 <button
                   onClick={handleQuickAdd}
                   disabled={!qa.title.trim() || createMutation.isPending}
-                  className="w-full px-2 py-1.5 rounded-md bg-gold-500 hover:bg-gold-400 text-black text-[11px] font-bold disabled:opacity-40"
+                  className="w-full px-2 py-1.5 rounded-md bg-primary-500 hover:bg-primary-400 text-on-primary text-[11px] font-bold disabled:opacity-40"
                 >
                   Add to {scope === 'pool' ? 'open pool' : 'my backlog'}
                 </button>
@@ -428,7 +428,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
             {!isLoading && sorted.length === 0 && (
               <div className="text-[11px] text-gray-500 py-2 italic">
                 {search
-                  ? <>No matches for &ldquo;{search}&rdquo;. <button onClick={() => setSearch('')} className="text-gold-400 hover:underline">Clear</button></>
+                  ? <>No matches for &ldquo;{search}&rdquo;. <button onClick={() => setSearch('')} className="text-primary-400 hover:underline">Clear</button></>
                   : scope === 'mine'
                     ? 'No backlog tasks assigned to you. Drag any scheduled task here to unschedule.'
                     : 'Open pool is empty. Drag any scheduled task here to release it, or click "+ New task" to seed one.'
@@ -454,7 +454,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
       {/* ── Mobile floating button + bottom sheet ─────────────────── */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-gold-500 hover:bg-gold-400 text-black shadow-lg flex items-center justify-center"
+        className="md:hidden fixed bottom-20 right-4 z-30 w-14 h-14 rounded-full bg-primary-500 hover:bg-primary-400 text-on-primary shadow-lg flex items-center justify-center"
         title="Backlog"
       >
         <Inbox size={22} />
@@ -470,7 +470,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
           <div className="mt-auto bg-dark-surface rounded-t-2xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between p-3 border-b border-white/5">
               <div className="flex items-center gap-2">
-                <Inbox size={16} className="text-gold-400" />
+                <Inbox size={16} className="text-primary-400" />
                 <span className="text-sm font-semibold text-white">Backlog</span>
               </div>
               <button onClick={() => setMobileOpen(false)} className="w-8 h-8 rounded-md hover:bg-white/5 text-gray-400 flex items-center justify-center">
@@ -482,7 +482,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 onClick={() => setScope('mine')}
                 className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
                   scope === 'mine'
-                    ? 'bg-gold-500 text-black border-gold-500'
+                    ? 'bg-primary-500 text-on-primary border-primary-500'
                     : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
               >
                 <Hand size={12} /> Mine {mineTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'mine' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{mineTasks.length}</span>}
@@ -491,7 +491,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                 onClick={() => setScope('pool')}
                 className={['flex-1 px-2 py-2 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 border',
                   scope === 'pool'
-                    ? 'bg-gold-500 text-black border-gold-500'
+                    ? 'bg-primary-500 text-on-primary border-primary-500'
                     : 'bg-white/[0.06] text-gray-200 border-white/15'].join(' ')}
               >
                 <Users size={12} /> Pool {poolTasks.length > 0 && <span className={['ml-0.5 px-1 rounded text-[10px]', scope === 'pool' ? 'bg-black/20' : 'bg-white/15 text-gray-300'].join(' ')}>{poolTasks.length}</span>}
@@ -523,7 +523,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                         <input type="time" value={mobileTime} onChange={(e) => setMobileTime(e.target.value)} className="bg-dark-bg border border-white/10 rounded px-2 py-1.5 text-xs text-white" />
                       </div>
                       <div className="flex gap-1.5">
-                        <button onClick={() => scheduleMutation.mutate({ id: task.id, task_date: mobileDate, start_time: mobileTime })} disabled={scheduleMutation.isPending} className="flex-1 px-2 py-1.5 rounded bg-gold-500 hover:bg-gold-400 text-black text-xs font-medium disabled:opacity-50">Schedule</button>
+                        <button onClick={() => scheduleMutation.mutate({ id: task.id, task_date: mobileDate, start_time: mobileTime })} disabled={scheduleMutation.isPending} className="flex-1 px-2 py-1.5 rounded bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-medium disabled:opacity-50">Schedule</button>
                         <button onClick={() => setMobileScheduling(null)} className="px-2 py-1.5 rounded bg-white/5 text-gray-400 text-xs">Cancel</button>
                       </div>
                     </div>
@@ -533,7 +533,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
                         <CalendarIcon size={11} /> Schedule
                       </button>
                       {scope === 'pool' && (
-                        <button onClick={() => claimMutation.mutate(task.id)} className="px-3 py-1.5 rounded bg-gold-500/15 text-gold-400 text-xs flex items-center gap-1">
+                        <button onClick={() => claimMutation.mutate(task.id)} className="px-3 py-1.5 rounded bg-primary-500/15 text-primary-400 text-xs flex items-center gap-1">
                           <Hand size={11} /> Claim
                         </button>
                       )}
@@ -590,7 +590,7 @@ function BacklogCardChip({ task, scope, onClaim }: {
         {scope === 'pool' && (
           <button
             onClick={(e) => { e.stopPropagation(); onClaim() }}
-            className="opacity-0 group-hover:opacity-100 transition w-5 h-5 rounded bg-gold-500/15 hover:bg-gold-500/25 text-gold-400 flex items-center justify-center flex-shrink-0"
+            className="opacity-0 group-hover:opacity-100 transition w-5 h-5 rounded bg-primary-500/15 hover:bg-primary-500/25 text-primary-400 flex items-center justify-center flex-shrink-0"
             title="Claim into my bucket"
           >
             <Hand size={9} />

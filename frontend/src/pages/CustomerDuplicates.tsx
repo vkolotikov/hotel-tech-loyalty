@@ -154,7 +154,7 @@ export function CustomerDuplicates() {
                 <div className="flex justify-end mt-3">
                   <button
                     onClick={() => { setPending(pair); setSwapped(false); setReason('') }}
-                    className="flex items-center gap-2 bg-primary-500 hover:bg-primary-400 text-black text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    className="flex items-center gap-2 bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors"
                   >
                     <ArrowLeftRight size={12} /> Review & merge
                   </button>

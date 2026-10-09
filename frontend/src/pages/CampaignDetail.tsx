@@ -130,7 +130,7 @@ export function CampaignDetail() {
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-3 py-1.5 rounded-md font-semibold capitalize transition-colors ${tab === t ? 'bg-primary-500 text-white' : 'text-t-soft hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-md font-semibold capitalize transition-colors ${tab === t ? 'bg-primary-500 text-on-primary' : 'text-t-soft hover:text-white'}`}
               >
                 {t}
               </button>

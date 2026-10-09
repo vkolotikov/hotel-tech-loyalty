@@ -122,7 +122,7 @@ export function Training() {
           <Download size={16} /> {exportData.isPending ? t('training.exporting', 'Exporting...') : t('training.export', 'Export Training Data (JSONL)')}
         </button>
         <button onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Play size={16} /> {t('training.new_job', 'New Training Job')}
         </button>
       </div>
@@ -163,7 +163,7 @@ export function Training() {
             <button
               onClick={() => createJob.mutate({ base_model: baseModel, hyperparameters: { n_epochs: epochs } })}
               disabled={createJob.isPending || (stats?.faq_count || 0) < 10}
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
               <Play size={14} /> {createJob.isPending ? t('training.create_form.creating', 'Creating...') : t('training.create_form.start', 'Start Training')}
             </button>
           </div>

@@ -427,7 +427,7 @@ export function ChatInbox() {
                       </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         {c.unread_count > 0 && (
-                          <span className="bg-primary-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{c.unread_count}</span>
+                          <span className="bg-primary-500 text-on-primary text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{c.unread_count}</span>
                         )}
                         {c.ip_session_count > 1 && (
                           <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded-full">{c.ip_session_count}×</span>
@@ -634,7 +634,7 @@ export function ChatInbox() {
                   <input type="text" value={contactForm.agent_notes || ''} onChange={e => setContactForm((p: any) => ({ ...p, agent_notes: e.target.value }))}
                     className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-primary-500/30" placeholder={t('chat_inbox.contact.notes', 'Internal notes...')} />
                   <button onClick={() => updateContact.mutate(contactForm)} disabled={updateContact.isPending}
-                    className="flex items-center gap-1 bg-primary-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50 flex-shrink-0">
+                    className="flex items-center gap-1 bg-primary-600 text-on-primary px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-primary-700 disabled:opacity-50 flex-shrink-0">
                     <Save size={11} /> {t('chat_inbox.contact.save', 'Save')}
                   </button>
                 </div>
@@ -735,7 +735,7 @@ export function ChatInbox() {
                               )}
                               <div className="flex gap-2">
                                 <button onClick={() => submitFeedback.mutate({ messageId: msg.id, payload: feedbackForm })} disabled={submitFeedback.isPending}
-                                  className="flex-1 bg-primary-600 text-white text-[10px] py-1.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium">
+                                  className="flex-1 bg-primary-600 text-on-primary text-[10px] py-1.5 rounded-lg hover:bg-primary-700 disabled:opacity-50 font-medium">
                                   {submitFeedback.isPending ? t('chat_inbox.messages.feedback_submitting', 'Saving...') : t('chat_inbox.messages.feedback_submit', 'Submit')}
                                 </button>
                                 <button onClick={() => setFeedbackOpen(null)} className="px-3 text-[10px] text-gray-500 hover:text-white">{t('chat_inbox.messages.feedback_cancel', 'Cancel')}</button>
@@ -828,7 +828,7 @@ export function ChatInbox() {
                   )}
                   <button onClick={() => { if (replyText.trim()) sendReply.mutate(replyText.trim()) }}
                     disabled={!replyText.trim() || sendReply.isPending}
-                    className="bg-primary-600 text-white p-2 rounded-xl hover:bg-primary-700 disabled:opacity-30 transition-colors">
+                    className="bg-primary-600 text-on-primary p-2 rounded-xl hover:bg-primary-700 disabled:opacity-30 transition-colors">
                     <Send size={16} />
                   </button>
                 </div>

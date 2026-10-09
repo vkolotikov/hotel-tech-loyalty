@@ -217,7 +217,7 @@ export function Billing() {
               </p>
               <div className="flex flex-wrap gap-2 mt-3">
                 <button onClick={() => { void logoutAndRedirect() }}
-                  className="px-3 py-1.5 rounded-md bg-primary-500 hover:bg-primary-400 text-black text-xs font-semibold">
+                  className="px-3 py-1.5 rounded-md bg-primary-500 hover:bg-primary-400 text-on-primary text-xs font-semibold">
                   Sign out &amp; switch workspace
                 </button>
                 <button onClick={() => setBillingError(null)}
@@ -257,7 +257,7 @@ export function Billing() {
           <button
             onClick={() => handleActivate()}
             disabled={activateLoading}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-on-primary text-sm font-medium rounded-lg transition-colors disabled:opacity-50 shrink-0"
           >
             {activateLoading ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
             Subscribe Now
@@ -372,7 +372,7 @@ export function Billing() {
                   <button
                     onClick={() => handleActivate()}
                     disabled={activateLoading}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-on-primary text-sm font-medium rounded-lg transition-colors disabled:opacity-50"
                   >
                     {activateLoading ? <Loader2 size={14} className="animate-spin" /> : <Zap size={14} />}
                     {status === 'TRIALING' ? 'Subscribe — Add Payment Method' : 'Reactivate Subscription'}
@@ -461,7 +461,7 @@ export function Billing() {
                   </div>
                 )}
                 {!isCurrent && isPopular && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary-500 text-black text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary-500 text-on-primary text-[9px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     Most Popular
                   </div>
                 )}
@@ -501,7 +501,7 @@ export function Billing() {
                     <button
                       onClick={() => handleActivate(plan.slug)}
                       disabled={activateLoading}
-                      className="w-full py-2 rounded-lg text-center text-xs font-medium bg-primary-600 hover:bg-primary-500 text-white transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
+                      className="w-full py-2 rounded-lg text-center text-xs font-medium bg-primary-600 hover:bg-primary-500 text-on-primary transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50"
                     >
                       {activateLoading ? <Loader2 size={12} className="animate-spin" /> : <Zap size={12} />}
                       Subscribe Now
@@ -518,7 +518,7 @@ export function Billing() {
                     className={
                       'w-full py-2 rounded-lg text-center text-xs font-medium transition-colors mt-auto inline-flex items-center justify-center gap-1.5 disabled:opacity-50 ' +
                       (isPopular
-                        ? 'bg-primary-600 hover:bg-primary-500 text-white'
+                        ? 'bg-primary-600 hover:bg-primary-500 text-on-primary'
                         : 'bg-dark-surface3 hover:bg-dark-surface2 text-white border border-dark-border')
                     }
                   >

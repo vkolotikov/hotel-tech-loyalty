@@ -93,7 +93,7 @@ export function Corporate() {
           <h1 className="text-2xl font-bold text-white">{t('corporate.title', 'Corporate Accounts')}</h1>
           <p className="text-sm text-t-secondary mt-0.5">{t('corporate.total_count', { count: meta.total ?? 0, defaultValue: '{{count}} total' })}</p>
         </div>
-        <button onClick={() => { setShowCreate(true); setForm({ ...EMPTY_FORM }) }} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
+        <button onClick={() => { setShowCreate(true); setForm({ ...EMPTY_FORM }) }} className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
           <Plus size={15} /> {t('corporate.add_account', 'Add Account')}
         </button>
       </div>
@@ -261,7 +261,7 @@ export function Corporate() {
                 />
                 <div className="flex justify-end gap-3 pt-2">
                   <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white transition-colors">{t('corporate.create.cancel', 'Cancel')}</button>
-                  <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
+                  <button type="submit" disabled={createMutation.isPending} className="px-5 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg transition-colors disabled:opacity-50">
                     {createMutation.isPending ? t('corporate.create.creating', 'Creating...') : t('corporate.create.create', 'Create Account')}
                   </button>
                 </div>
@@ -375,7 +375,7 @@ export function Corporate() {
                             }
                           }}
                           disabled={!captureResult.company_name}
-                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
+                          className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
                         >
                           {t('corporate.capture.create_account', 'Create Account')}
                         </button>

@@ -295,7 +295,7 @@ export function MemberDetail() {
                 <button
                   onClick={() => refetchAi()}
                   disabled={aiLoading}
-                  className="hidden sm:flex items-center gap-2 bg-primary-600 text-white px-3 py-2 rounded-lg text-xs font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                  className="hidden sm:flex items-center gap-2 bg-primary-600 text-on-primary px-3 py-2 rounded-lg text-xs font-semibold hover:bg-primary-700 disabled:opacity-50 transition-colors"
                 >
                   <Sparkles size={14} />
                   <span className="whitespace-nowrap">{aiLoading ? t('memberDetail.analyzing', 'Analyzing…') : t('memberDetail.ai_analysis', 'AI Analysis')}</span>
@@ -885,7 +885,7 @@ export function MemberDetail() {
                   <button onClick={() => setEditing(false)} className="flex-1 flex items-center justify-center gap-1.5 border border-dark-border text-t-soft py-2 rounded-lg text-sm font-medium hover:bg-dark-surface2 transition-colors">
                     <X size={14} /> Cancel
                   </button>
-                  <button onClick={handleSaveEdit} disabled={!editForm.name || !editForm.email || updateMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 bg-primary-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors">
+                  <button onClick={handleSaveEdit} disabled={!editForm.name || !editForm.email || updateMutation.isPending} className="flex-1 flex items-center justify-center gap-1.5 bg-primary-600 text-on-primary py-2 rounded-lg text-sm font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors">
                     {updateMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
                     {updateMutation.isPending ? 'Saving...' : 'Save'}
                   </button>

@@ -205,7 +205,7 @@ export function Scan() {
           <button
             key={m}
             onClick={() => { setMode(m); setMember(null); stopScanning() }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary-600 text-white' : 'bg-dark-surface text-t-soft border border-dark-border hover:bg-dark-surface2'}`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${mode === m ? 'bg-primary-600 text-on-primary' : 'bg-dark-surface text-t-soft border border-dark-border hover:bg-dark-surface2'}`}
           >
             {m === 'qr' ? <QrCode size={16} /> : <CreditCard size={16} />}
             {m.toUpperCase()} Scan
@@ -232,7 +232,7 @@ export function Scan() {
               </div>
               <div className="flex gap-2">
                 {!scanning ? (
-                  <button onClick={startQrScan} className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                  <button onClick={startQrScan} className="flex-1 bg-primary-600 text-on-primary py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
                     Start Camera
                   </button>
                 ) : (
@@ -306,7 +306,7 @@ export function Scan() {
                     onKeyDown={(e) => e.key === 'Enter' && scanNfc()}
                   />
                 </div>
-                <button onClick={() => scanNfc()} className="w-full mt-2 bg-primary-600 text-white py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
+                <button onClick={() => scanNfc()} className="w-full mt-2 bg-primary-600 text-on-primary py-2.5 rounded-lg font-medium hover:bg-primary-700 transition-colors">
                   Look Up Member
                 </button>
               </div>

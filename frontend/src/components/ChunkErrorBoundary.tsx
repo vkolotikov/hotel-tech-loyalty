@@ -91,7 +91,7 @@ export class ChunkErrorBoundary extends Component<{ children: ReactNode }, State
                 try { sessionStorage.removeItem(SENTINEL_KEY) } catch {}
                 window.location.reload()
               }}
-              className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-5 py-2 text-sm">
+              className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-5 py-2 text-sm">
               Reload
             </button>
           </div>
@@ -108,7 +108,7 @@ export class ChunkErrorBoundary extends Component<{ children: ReactNode }, State
           <p className="text-sm text-gray-500 mb-4">{error.message}</p>
           <button
             onClick={() => window.location.reload()}
-            className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-5 py-2 text-sm">
+            className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-5 py-2 text-sm">
             Reload page
           </button>
         </div>

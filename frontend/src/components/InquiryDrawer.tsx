@@ -418,7 +418,7 @@ export function InquiryDrawer({
                     onClick={() => setTab(x.key)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
                       active
-                        ? 'bg-primary-500 text-black shadow-sm'
+                        ? 'bg-primary-500 text-on-primary shadow-sm'
                         : 'text-t-secondary hover:text-white hover:bg-white/[0.04]'
                     }`}
                   >

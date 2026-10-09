@@ -144,7 +144,7 @@ function MiniCalendar({ currentDate, tasks, onDateChange }: { currentDate: strin
                 !c.inMonth && 'text-gray-700',
                 c.inMonth && !isSelected && !isToday && 'text-gray-300 hover:bg-white/5',
                 isToday && !isSelected && 'text-primary-400 font-bold',
-                isSelected && 'bg-primary-500 text-black font-bold shadow-[0_2px_8px_rgba(201,168,76,0.3)]',
+                isSelected && 'bg-primary-500 text-on-primary font-bold shadow-[0_2px_8px_rgba(201,168,76,0.3)]',
               ].filter(Boolean).join(' ')}
             >
               {c.date.getDate()}

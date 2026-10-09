@@ -228,7 +228,7 @@ export function Dashboard() {
             <Scan size={15} /> {t('dashboard.actions.scan_card', 'Scan Card')}
           </button>
           <button onClick={() => navigate('/notifications')}
-            className="flex items-center justify-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
+            className="flex items-center justify-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
             <Bell size={15} /> {t('dashboard.actions.send_campaign', 'Send Campaign')}
           </button>
         </div>

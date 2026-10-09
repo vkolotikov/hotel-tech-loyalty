@@ -518,7 +518,7 @@ export function Inquiries() {
           Export folded into a ⋯ overflow menu so new users see one clear
           primary action (Add inquiry) instead of four competing buttons. */}
       <div className="flex items-center justify-end gap-2 flex-wrap">
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-white px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm">
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 bg-primary-600 text-on-primary px-3 md:px-4 py-2 rounded-lg text-xs md:text-sm font-semibold hover:bg-primary-700 transition-colors shadow-sm">
           <Plus size={15} /> <span className="hidden sm:inline">{t('inquiries.actions.add', 'Add inquiry')}</span><span className="sm:hidden">{t('inquiries.actions.add_short', 'Add')}</span>
         </button>
         <HeaderMenu
@@ -561,8 +561,8 @@ export function Inquiries() {
             { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
           ] as const).map(({ v, icon: Icon, label }) => (
             <button key={v} onClick={() => setView(v)}
-              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? 'text-white' : 'text-gray-500 hover:text-gray-300'}`}
-              style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
+              className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all flex items-center gap-1.5 ${view === v ? '' : 'text-gray-500 hover:text-gray-300'}`}
+              style={view === v ? { background: 'linear-gradient(135deg, #74c895, #5ab4b2)', color: '#03050A', boxShadow: '0 6px 14px rgba(116,200,149,0.2)' } : {}}>
               <Icon size={12} /> {label}
             </button>
           ))}
@@ -808,7 +808,7 @@ export function Inquiries() {
                       </div>
                       <button
                         onClick={() => setShowCreate(true)}
-                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-primary-500 hover:bg-primary-400 text-dark-bg transition-colors"
+                        className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-primary-500 hover:bg-primary-400 text-on-primary transition-colors"
                       >
                         <Plus size={13} /> {t('inquiries.add_inquiry', 'Add Inquiry')}
                       </button>
@@ -1637,7 +1637,7 @@ export function Inquiries() {
 
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
-                <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
+                <button type="submit" disabled={createMutation.isPending} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg disabled:opacity-50">
                   {createMutation.isPending ? 'Saving...' : 'Create'}
                 </button>
               </div>
@@ -1690,7 +1690,7 @@ export function Inquiries() {
                 <button onClick={() => setTaskFor(null)} className="px-4 py-2 text-sm text-t-soft hover:text-white">Cancel</button>
                 <button onClick={() => taskFor && taskMutation.mutate({ id: taskFor.id, type: taskFor.type || null, due: taskFor.due || null, notes: taskFor.notes || null })}
                   disabled={taskMutation.isPending || !taskFor.type}
-                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50">
+                  className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg disabled:opacity-50">
                   {taskMutation.isPending ? 'Saving…' : 'Save Task'}
                 </button>
               </div>
@@ -2008,7 +2008,7 @@ export function Inquiries() {
                           toast.error(e.response?.data?.message || 'Failed to create records')
                         } finally { setCaptureCreating(false) }
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
+                      className="flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-on-primary font-semibold text-sm rounded-lg transition-colors disabled:opacity-50"
                     >
                       {captureCreating ? <><Loader2 size={14} className="animate-spin" /> Creating...</> : 'Create Guest & Inquiry'}
                     </button>

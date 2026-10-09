@@ -416,7 +416,7 @@ function GroupsEditor() {
           className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}
-          className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
+          className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
           <Plus size={13} /> Add
         </button>
       </form>
@@ -721,7 +721,7 @@ function ChannelsEditor() {
           className="flex-1 bg-dark-bg border border-dark-border rounded-md px-3 py-1.5 text-sm text-white placeholder-gray-600 outline-none focus:border-primary-500"
         />
         <button type="submit" disabled={!adding.trim() || save.isPending}
-          className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
+          className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-sm disabled:opacity-50 flex items-center gap-1.5">
           <Plus size={13} /> Add
         </button>
       </form>
@@ -935,7 +935,7 @@ function TemplatesEditor() {
           <p className="text-[11px] text-gray-500 mt-0.5">Reusable shortcuts shown in the "Use a template" picker inside the New Task drawer.</p>
         </div>
         <button onClick={() => setCreating(true)}
-          className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-3 py-1.5 text-xs flex items-center gap-1.5">
+          className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-xs flex items-center gap-1.5">
           <Plus size={12} /> New template
         </button>
       </div>
@@ -1094,7 +1094,7 @@ function TemplateForm({ initial, onClose }: { initial: Template | null; onClose:
           <div className="flex justify-end gap-2 pt-2 border-t border-dark-border">
             <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-400 hover:text-white">Cancel</button>
             <button type="submit" disabled={save.isPending || !form.name.trim() || !form.title.trim()}
-              className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2">
+              className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2">
               <Save size={13} /> {save.isPending ? 'Saving…' : initial ? 'Update' : 'Create'}
             </button>
           </div>

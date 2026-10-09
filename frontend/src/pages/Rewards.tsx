@@ -171,7 +171,7 @@ export function Rewards() {
         </div>
         {tab === 'catalog' && (
           <button onClick={() => { resetForm(); setShowForm(true) }}
-            className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
+            className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
             <Plus size={16} /> {t('rewards.add', 'Add Reward')}
           </button>
         )}
@@ -296,7 +296,7 @@ export function Rewards() {
                 <button
                   onClick={() => saveMutation.mutate()}
                   disabled={saveMutation.isPending || !form.name.trim() || !form.points_cost}
-                  className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+                  className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg">
                   {saveMutation.isPending ? t('rewards.form.saving', 'Saving…') : (editId ? t('rewards.form.update', 'Update') : t('rewards.form.create', 'Create'))}
                 </button>
               </div>

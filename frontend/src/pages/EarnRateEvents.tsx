@@ -123,7 +123,7 @@ export function EarnRateEvents() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold">
           <Plus size={16} /> {t('boostEvents.new_event', 'New event')}
         </button>
       </div>
@@ -181,7 +181,7 @@ export function EarnRateEvents() {
                   onClick={() => toggleDay(d.value)}
                   className={`px-3 py-1.5 rounded-lg text-xs font-semibold border ${
                     form.days_of_week.includes(d.value)
-                      ? 'bg-primary-600 text-white border-primary-600'
+                      ? 'bg-primary-600 text-on-primary border-primary-600'
                       : 'bg-dark-bg text-t-soft border-dark-border hover:text-white'
                   }`}>{d.label}</button>
               ))}
@@ -219,7 +219,7 @@ export function EarnRateEvents() {
             <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending || !form.name.trim() || !form.starts_at || !form.ends_at}
-              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg">
+              className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg">
               {saveMutation.isPending ? t('common.saving', 'Saving…') : (editId ? t('common.update', 'Update') : t('common.create', 'Create'))}
             </button>
           </div>

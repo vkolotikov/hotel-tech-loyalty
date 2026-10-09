@@ -202,7 +202,7 @@ export function MenuSettings() {
           <button
             onClick={() => save.mutate(hidden)}
             disabled={!dirty || save.isPending}
-            className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2">
+            className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2">
             <Save size={13} /> {save.isPending ? 'Saving…' : 'Save'}
           </button>
         </div>

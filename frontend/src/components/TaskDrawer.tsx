@@ -288,7 +288,7 @@ export function TaskDrawer({ task, defaultInquiryId, onClose, onSaved }: Props) 
                   return (
                     <button key={s} type="button" onClick={() => setSlot(active ? '' : s)}
                       className={`px-1.5 py-1 rounded text-[11px] font-medium transition ${
-                        active ? 'bg-primary-600 text-white' : 'text-t-secondary hover:bg-dark-surface2'
+                        active ? 'bg-primary-600 text-on-primary' : 'text-t-secondary hover:bg-dark-surface2'
                       }`}>
                       {formatSlotLabel(s)}
                     </button>

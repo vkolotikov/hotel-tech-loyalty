@@ -194,7 +194,7 @@ export function Notifications() {
         </div>
         <button
           onClick={openWizard}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+          className="bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
         >
           {t('notifications.new_campaign', '+ New Campaign')}
         </button>
@@ -339,7 +339,7 @@ export function Notifications() {
                 <button
                   onClick={() => setStep((s => (s + 1) as Step)(step))}
                   disabled={!canAdvanceFrom(step)}
-                  className="bg-primary-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="bg-primary-600 text-on-primary px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {t('notifications.wizard.continue', 'Continue')}
                 </button>
@@ -347,7 +347,7 @@ export function Notifications() {
                 <button
                   onClick={() => createMutation.mutate()}
                   disabled={createMutation.isPending || !canAdvanceFrom(3) || (audience?.reachable ?? 0) === 0}
-                  className="bg-primary-600 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="bg-primary-600 text-on-primary px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {createMutation.isPending ? t('notifications.wizard.sending', 'Sending…') : form.scheduled_at ? t('notifications.wizard.schedule_campaign', 'Schedule Campaign') : t('notifications.wizard.send_now', 'Send Now')}
                 </button>
@@ -388,8 +388,8 @@ function Stepper({ current }: { current: Step }) {
       {steps.map((s, i) => (
         <div key={s.n} className="flex items-center gap-2 flex-1">
           <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-            s.n < current ? 'bg-primary-600 text-white'
-            : s.n === current ? 'bg-primary-500 text-white ring-4 ring-primary-500/20'
+            s.n < current ? 'bg-primary-600 text-on-primary'
+            : s.n === current ? 'bg-primary-500 text-on-primary ring-4 ring-primary-500/20'
             : 'bg-dark-surface2 text-t-muted border border-dark-border'
           }`}>
             {s.n < current ? '✓' : s.n}
@@ -540,7 +540,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
                 onClick={() => toggleTier(tier.name)}
                 className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                   form.tier_filter.includes(tier.name)
-                    ? 'bg-primary-600 text-white border-primary-600'
+                    ? 'bg-primary-600 text-on-primary border-primary-600'
                     : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
                 }`}
               >

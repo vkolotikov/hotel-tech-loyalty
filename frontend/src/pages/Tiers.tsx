@@ -213,7 +213,7 @@ export function Tiers() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{t('tiers.title', 'Tiers')}</h1>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Plus size={16} /> {t('tiers.add', 'Add Tier')}
         </button>
       </div>
@@ -288,7 +288,7 @@ export function Tiers() {
           <button
             onClick={runPreview}
             disabled={previewLoading}
-            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+            className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
           >
             <Sparkles size={14} />
             {previewLoading ? t('tiers.preview.calculating', 'Calculating…') : t('tiers.preview.calculate', 'Calculate')}
@@ -380,7 +380,7 @@ export function Tiers() {
           <textarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} placeholder={t('tiers.form.description', 'Description')}
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" rows={2} />
           <button type="submit" disabled={saveMutation.isPending}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+            className="bg-primary-600 text-on-primary px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
             {saveMutation.isPending ? t('tiers.form.saving', 'Saving...') : t('tiers.form.save', 'Save')}
           </button>
         </form>
@@ -479,7 +479,7 @@ export function Tiers() {
                         value_amount: assignForm.value_type === 'text' ? null : (assignForm.value_amount === '' ? null : Number(assignForm.value_amount)),
                         applies_to: assignForm.applies_to,
                       })}
-                      className="self-start bg-primary-600 text-white px-3 py-1.5 rounded text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
+                      className="self-start bg-primary-600 text-on-primary px-3 py-1.5 rounded text-sm hover:bg-primary-700 disabled:opacity-50">{t('tiers.expanded.assign', 'Assign')}</button>
                   </div>
                 </div>
               )}

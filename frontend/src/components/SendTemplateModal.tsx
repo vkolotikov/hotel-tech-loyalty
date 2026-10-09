@@ -195,7 +195,7 @@ export function SendTemplateModal({ defaultTo, memberId, context, onClose, onSen
                 <button
                   onClick={() => sendMutation.mutate()}
                   disabled={!canSend}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-on-primary font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {sendMutation.isPending ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   Send email

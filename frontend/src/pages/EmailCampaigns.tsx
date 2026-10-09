@@ -335,7 +335,7 @@ export function EmailCampaigns() {
         </div>
         <button
           onClick={() => { resetForm(); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm font-semibold shadow-sm">
           <Plus size={16} /> {t('emailCampaigns.new_campaign', 'New campaign')}
         </button>
       </div>
@@ -544,7 +544,7 @@ export function EmailCampaigns() {
               <button
                 onClick={() => saveMutation.mutate()}
                 disabled={saveMutation.isPending || !canSave}
-                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
+                className="bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-on-primary text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5">
                 {saveMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
                 {editId ? t('emailCampaigns.form.update_draft', 'Update draft') : t('emailCampaigns.form.save_draft', 'Save draft')}
               </button>
@@ -654,7 +654,7 @@ export function EmailCampaigns() {
                           <>
                             <button
                               onClick={() => startEdit(c)}
-                              className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-white text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                              className="flex items-center gap-1 bg-primary-600 hover:bg-primary-700 text-on-primary text-xs font-semibold px-2.5 py-1 rounded transition-colors"
                             >
                               <Pencil size={12} /> {t('emailCampaigns.table.edit', 'Edit')}
                             </button>

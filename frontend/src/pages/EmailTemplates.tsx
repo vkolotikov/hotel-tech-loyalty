@@ -226,7 +226,7 @@ export function EmailTemplates() {
         </div>
         <button
           onClick={openCreate}
-          className="bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
+          className="bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors"
         >
           + New Template
         </button>
@@ -241,7 +241,7 @@ export function EmailTemplates() {
           <p className="text-sm text-t-muted mt-1">Pick a luxury preset and start your first campaign in minutes</p>
           <button
             onClick={openCreate}
-            className="mt-4 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700"
+            className="mt-4 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700"
           >
             Create Template
           </button>
@@ -329,7 +329,7 @@ export function EmailTemplates() {
                     key={m}
                     onClick={() => setMode(m)}
                     className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-colors ${
-                      mode === m ? 'bg-primary-600 text-white' : 'text-t-secondary hover:text-white'
+                      mode === m ? 'bg-primary-600 text-on-primary' : 'text-t-secondary hover:text-white'
                     }`}
                   >
                     {m === 'gallery' ? 'Gallery' : m === 'design' ? 'Design' : 'Advanced HTML'}
@@ -491,7 +491,7 @@ export function EmailTemplates() {
               <button
                 onClick={handleSave}
                 disabled={!meta.name || !meta.subject || saveMutation.isPending || (mode === 'gallery' && !editing)}
-                className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="flex-1 bg-primary-600 text-on-primary py-2.5 rounded-lg text-sm font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {saveMutation.isPending ? 'Saving...' : editing ? 'Update Template' : 'Create Template'}
               </button>
@@ -579,7 +579,7 @@ function DesignPane({ content, setContent, updateBlock, moveBlock, removeBlock, 
                   onClick={() => setField('font', f)}
                   className={`flex-1 px-3 py-2 rounded-lg text-xs font-semibold border transition-colors ${
                     content.font === f
-                      ? 'bg-primary-600 text-white border-primary-600'
+                      ? 'bg-primary-600 text-on-primary border-primary-600'
                       : 'bg-dark-surface2 text-t-secondary border-dark-border hover:border-primary-500'
                   }`}
                 >
@@ -711,7 +711,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                 onClick={() => onChange({ align: a } as Partial<Block>)}
                 className={`px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                   (block.align ?? 'left') === a
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-primary-600 text-on-primary'
                     : 'bg-well text-t-secondary border border-dark-border'
                 }`}
               >
@@ -814,7 +814,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
               onClick={() => onChange({ size: s } as Partial<Block>)}
               className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                 (block.size ?? 'md') === s
-                  ? 'bg-primary-600 text-white'
+                  ? 'bg-primary-600 text-on-primary'
                   : 'bg-well text-t-secondary border border-dark-border'
               }`}
             >
@@ -856,7 +856,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                 onClick={() => onChange({ overlay: o } as Partial<Block>)}
                 className={`flex-1 px-2 py-1 rounded text-[10px] font-semibold uppercase tracking-wide ${
                   (block.overlay ?? 'dark') === o
-                    ? 'bg-primary-600 text-white'
+                    ? 'bg-primary-600 text-on-primary'
                     : 'bg-well text-t-secondary border border-dark-border'
                 }`}
               >

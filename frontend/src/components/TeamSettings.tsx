@@ -336,7 +336,7 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
         <div className="text-sm text-white font-semibold">{staff.name} · <span className="text-gray-500 font-normal">{staff.email}</span></div>
         <div className="flex items-center gap-1">
           <button onClick={() => save.mutate()} disabled={save.isPending}
-            className="bg-primary-500 hover:bg-primary-400 text-white font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50 flex items-center gap-1">
+            className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-md px-3 py-1.5 text-xs disabled:opacity-50 flex items-center gap-1">
             <Save size={11} /> {save.isPending ? 'Saving…' : 'Save'}
           </button>
           <button onClick={onCancel} className="p-1.5 rounded text-gray-500 hover:text-white"><X size={13} /></button>

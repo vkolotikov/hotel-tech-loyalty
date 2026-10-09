@@ -392,8 +392,8 @@ export function BookingDetail() {
                 onKeyDown={e => { if (e.key === 'Enter' && noteBody.trim()) addNote.mutate() }}
               />
               <button onClick={() => addNote.mutate()} disabled={!noteBody.trim() || addNote.isPending}
-                className="px-4 py-2.5 rounded-xl text-white disabled:opacity-40 transition-all hover:scale-[1.02]"
-                style={{ background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)' }}>
+                className="px-4 py-2.5 rounded-xl disabled:opacity-40 transition-all hover:scale-[1.02]"
+                style={{ background: 'linear-gradient(135deg, rgb(var(--color-primary-rgb, 116,200,149)), #5ab4b2)', color: '#03050A' }}>
                 <Send size={14} />
               </button>
             </div>

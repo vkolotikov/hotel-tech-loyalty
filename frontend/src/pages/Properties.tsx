@@ -155,7 +155,7 @@ export function Properties() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">{vocab('Properties') ?? 'Properties'}</h1>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyPropertyForm); clearImage() }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Plus size={16} /> Add Property
         </button>
       </div>
@@ -216,7 +216,7 @@ export function Properties() {
           <input value={form.address} onChange={e => setForm({ ...form, address: e.target.value })} placeholder="Full address"
             className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-white text-sm" />
           <button type="submit" disabled={saveMutation.isPending}
-            className="bg-primary-600 text-white px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+            className="bg-primary-600 text-on-primary px-6 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
             {saveMutation.isPending ? 'Saving...' : 'Save'}
           </button>
         </form>
@@ -278,7 +278,7 @@ export function Properties() {
                       <button onClick={() => outletMutation.mutate({
                         ...outletForm,
                         earn_rate_override: outletForm.earn_rate_override ? Number(outletForm.earn_rate_override) : null,
-                      })} className="bg-primary-600 text-white px-3 py-1.5 rounded text-sm hover:bg-primary-700">Add</button>
+                      })} className="bg-primary-600 text-on-primary px-3 py-1.5 rounded text-sm hover:bg-primary-700">Add</button>
                     </div>
                   )}
 

@@ -99,7 +99,7 @@ export function InquiryActivityTimeline({ inquiryId }: Props) {
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-gray-600">Cmd/Ctrl + Enter to submit</span>
           <button type="button" onClick={submit} disabled={addMutation.isPending || !body.trim()}
-            className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 bg-primary-600 hover:bg-primary-700 text-on-primary px-3 py-1.5 rounded-lg text-xs font-semibold disabled:opacity-50 transition-colors">
             <Plus size={12} /> {addMutation.isPending ? 'Logging…' : 'Log'}
           </button>
         </div>

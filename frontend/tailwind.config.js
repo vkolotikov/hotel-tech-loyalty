@@ -92,7 +92,7 @@ export default {
         // Muted text: was #636366 (3.0:1 on a card), now the t-secondary grey (5.4:1).
         't-muted':     'rgb(var(--style-text-muted, 142 142 147) / <alpha-value>)',
         // Text on a brand fill: ink or white, whichever reads (theme/glass.ts onColor).
-        'on-primary':  'rgb(var(--color-on-primary, 3 5 10) / <alpha-value>)',
+        'on-primary':  'rgb(var(--color-on-primary, 255 255 255) / <alpha-value>)',
         accent:        'rgb(var(--color-accent, 50 215 75) / <alpha-value>)',
         error:         'rgb(var(--color-error, 255 55 95) / <alpha-value>)',
         warning:       'rgb(var(--color-warning, 255 214 10) / <alpha-value>)',

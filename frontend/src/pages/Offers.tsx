@@ -42,7 +42,7 @@ export function Offers() {
         <h1 className="text-2xl font-bold text-white">{t('offers.title', 'Special Offers')}</h1>
         <button
           onClick={() => { setEditOffer(null); setShowForm(true) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-medium hover:bg-primary-700 transition-colors"
         >
           <Plus size={16} /> {t('offers.create', 'Create Offer')}
         </button>
@@ -314,7 +314,7 @@ function OfferForm({ offer, onClose }: { offer: any, onClose: () => void }) {
         </div>
         <div className="p-6 border-t border-dark-border flex gap-3">
           <button onClick={onClose} className="flex-1 border border-dark-border text-t-soft py-2.5 rounded-lg text-sm font-medium hover:bg-dark-surface2">{t('offers.form.cancel', 'Cancel')}</button>
-          <button onClick={save} className="flex-1 bg-primary-600 text-white py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700">{t('offers.form.save', 'Save')}</button>
+          <button onClick={save} className="flex-1 bg-primary-600 text-on-primary py-2.5 rounded-lg text-sm font-medium hover:bg-primary-700">{t('offers.form.save', 'Save')}</button>
         </div>
       </div>
     </div>

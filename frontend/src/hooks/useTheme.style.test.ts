@@ -81,7 +81,7 @@ describe('applyThemeToDom', () => {
     expect(vars.get('--color-primary-500')).toBe('59 130 246')
     expect(vars.get('--glass-primary-500')).toBe('147 186 250')
     expect(vars.get('--glass-glow-1')).toBe('59 130 246')
-    expect(vars.get('--color-on-primary')).toBe('3 5 10')
+    expect(vars.get('--color-on-primary')).toBe('255 255 255')
   })
 
   it('defaults to Royal blue, and treats a blank or broken colour as missing', () => {

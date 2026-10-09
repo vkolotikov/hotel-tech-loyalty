@@ -179,10 +179,16 @@ export const LIFT_TINT_ALPHA = 0.15
 export const LIFT_PANEL_ALPHA = GLASS_SURFACES['dark-surface2'].alpha
 
 /**
- * Dark text for light brand fills. Its luminance is under 0.00185, which
- * guarantees that ink or white reaches 4.5:1 on ANY fill: ink passes from
- * fill luminance 0.175 + 4.5 × 0.00185 ≈ 0.1833 up, white below 0.1833.
- * A lighter ink leaves a band of mid colours (the Services indigo #4c6ef5)
- * where neither passes.
+ * Text on brand fills (text-on-primary) is white while white reads at this
+ * ratio on the brand colour, the owner's ruling of 2026-10-09: Royal blue
+ * keeps its white text (3.7:1). That is under WCAG's 4.5:1 for small text on
+ * the brand colour itself; on the 600 fill most buttons use, every tested
+ * brand reaches 3.96:1 or better.
+ */
+export const ON_PRIMARY_WHITE_MIN = 3
+
+/**
+ * Dark text for fills too light for white. Where white is under 3:1 the fill's
+ * luminance is over 0.3, so this ink reads at 6.7:1 or better on it.
  */
 export const ON_PRIMARY_INK = '#03050A'

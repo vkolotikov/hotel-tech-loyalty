@@ -101,7 +101,7 @@ export function PopupRules() {
           </div>
         </div>
         <button onClick={() => { setShowForm(true); setEditId(null); setForm(emptyForm) }}
-          className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
+          className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm">
           <Plus size={16} /> {t('popup_rules.add_rule', 'Add Rule')}
         </button>
       </div>
@@ -215,7 +215,7 @@ export function PopupRules() {
           <div className="flex justify-end gap-2">
             <button onClick={() => { setShowForm(false); setEditId(null); setForm(emptyForm) }} className="px-4 py-2 text-sm text-t-secondary hover:text-white">{t('popup_rules.form.cancel', 'Cancel')}</button>
             <button onClick={() => saveMutation.mutate(form)} disabled={saveMutation.isPending}
-              className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
+              className="flex items-center gap-2 bg-primary-600 text-on-primary px-4 py-2 rounded-lg hover:bg-primary-700 text-sm disabled:opacity-50">
               <Save size={14} /> {saveMutation.isPending ? t('popup_rules.form.saving', 'Saving...') : t('popup_rules.form.save', 'Save')}
             </button>
           </div>

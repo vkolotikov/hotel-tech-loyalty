@@ -213,7 +213,7 @@ export function Deals() {
             <Upload size={14} /> {t('deals.actions.import', 'Import')}
           </button>
           <Link to="/inquiries"
-            className="flex items-center gap-1.5 bg-primary-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
+            className="flex items-center gap-1.5 bg-primary-600 text-on-primary px-4 py-2 rounded-lg text-sm font-semibold hover:bg-primary-700 transition-colors">
             <Plus size={15} /> {t('deals.actions.new_deal', 'New deal')}
           </Link>
         </div>
@@ -243,7 +243,7 @@ export function Deals() {
                 className={[
                   'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-all active:scale-[0.98]',
                   active
-                    ? 'bg-primary-500 text-dark-bg shadow-md shadow-primary-500/25'
+                    ? 'bg-primary-500 text-on-primary shadow-md shadow-primary-500/25'
                     : 'text-gray-300 hover:text-white hover:bg-white/[0.04]',
                 ].join(' ')}
               >
@@ -253,7 +253,7 @@ export function Deals() {
                     className={[
                       'text-[10px] px-1.5 py-0.5 rounded-full font-bold tabular-nums',
                       active
-                        ? 'bg-dark-bg/30 text-dark-bg'
+                        ? 'bg-black/20 text-on-primary'
                         : (p.tone === 'red' ? 'bg-red-500/15 text-red-300 border border-red-500/30'
                           : p.tone === 'emerald' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                           : 'bg-white/[0.06] text-gray-400 border border-white/10'),
@@ -336,7 +336,7 @@ export function Deals() {
                       {filter !== 'all' && (
                         <button
                           onClick={() => setFilter('all')}
-                          className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-primary-500 hover:bg-primary-400 text-dark-bg transition-colors"
+                          className="mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-semibold bg-primary-500 hover:bg-primary-400 text-on-primary transition-colors"
                         >
                           {t('deals.empty.show_all', 'Show all deals')}
                         </button>
@@ -584,7 +584,7 @@ export function Deals() {
                         <Link
                           to={`/inquiries/${d.id}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-primary-500 hover:bg-primary-400 text-dark-bg text-[11px] font-bold px-2.5 py-1 rounded-md"
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity bg-primary-500 hover:bg-primary-400 text-on-primary text-[11px] font-bold px-2.5 py-1 rounded-md"
                         >
                           {t('deals.row.open', 'Open')}
                         </Link>
@@ -901,7 +901,7 @@ export function Deals() {
               </button>
               {Array.from({ length: Math.min(data.last_page, 5) }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)}
-                  className={`w-8 h-8 rounded-md text-xs font-semibold ${n === page ? 'bg-primary-600 text-white' : 'text-t-soft hover:text-white hover:bg-dark-surface2'}`}>
+                  className={`w-8 h-8 rounded-md text-xs font-semibold ${n === page ? 'bg-primary-600 text-on-primary' : 'text-t-soft hover:text-white hover:bg-dark-surface2'}`}>
                   {n}
                 </button>
               ))}

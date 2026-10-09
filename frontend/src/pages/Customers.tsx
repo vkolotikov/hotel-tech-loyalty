@@ -308,7 +308,7 @@ export function Customers() {
           )}
           <button
             onClick={() => setCreatingNew(true)}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-on-primary font-medium text-sm transition-colors"
             title="Add a customer — manually or with AI capture from pasted text"
           >
             <Sparkles size={13} className="opacity-70" />
@@ -990,7 +990,7 @@ function EditDrawer({ guest, onClose, onSave, saving }: EditDrawerProps) {
           <button
             type="submit"
             disabled={saving}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-black font-medium text-sm disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-500 hover:bg-primary-400 text-on-primary font-medium text-sm disabled:opacity-50"
           >
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
             Save

@@ -974,7 +974,7 @@ export default function AiChat() {
           <span className="absolute inset-0 rounded-full border border-primary-400/40 animate-ping opacity-50" />
           {/* Core button */}
           <span className="relative w-14 h-14 rounded-full bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-xl shadow-primary-500/40 group-hover:scale-105 group-active:scale-95 transition-transform">
-            <Sparkles size={24} className="text-dark-bg group-hover:rotate-12 transition-transform" strokeWidth={2.4} />
+            <Sparkles size={24} className="text-on-primary group-hover:rotate-12 transition-transform" strokeWidth={2.4} />
           </span>
           {/* Online indicator */}
           <span className="absolute top-0 right-0 flex items-center justify-center pointer-events-none">
@@ -999,7 +999,7 @@ export default function AiChat() {
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="relative flex-shrink-0">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-400 to-primary-700 flex items-center justify-center shadow-md shadow-primary-500/30">
-              <Sparkles size={16} className="text-dark-bg" strokeWidth={2.4} />
+              <Sparkles size={16} className="text-on-primary" strokeWidth={2.4} />
             </div>
             {/* Tiny "online" pip on the avatar */}
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-dark-surface" />
@@ -1025,7 +1025,7 @@ export default function AiChat() {
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
               voiceCallActive
                 ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30'
-                : 'bg-gradient-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-dark-bg shadow-md shadow-primary-500/30'
+                : 'bg-gradient-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-on-primary shadow-md shadow-primary-500/30'
             }`}
             title={voiceCallActive ? 'End voice call' : 'Start a voice call — speak naturally to plan your day, search any data, take actions'}
           >
@@ -1107,7 +1107,7 @@ export default function AiChat() {
               <div className="relative w-16 h-16 mx-auto">
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary-500/30 to-primary-700/0 blur-xl opacity-80" />
                 <div className="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-primary-400 via-primary-500 to-primary-700 flex items-center justify-center shadow-lg shadow-primary-500/30">
-                  <Sparkles size={28} className="text-dark-bg" strokeWidth={2.4} />
+                  <Sparkles size={28} className="text-on-primary" strokeWidth={2.4} />
                 </div>
               </div>
               <div>
@@ -1128,7 +1128,7 @@ export default function AiChat() {
                 <div className="flex items-center gap-3 p-3.5">
                   <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-primary-500/30">
                     <span className="absolute inset-0 rounded-xl border border-primary-300/40 animate-ping opacity-50" />
-                    <Phone size={20} className="text-dark-bg" strokeWidth={2.4} />
+                    <Phone size={20} className="text-on-primary" strokeWidth={2.4} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-[13px] font-semibold text-white flex items-center gap-1.5">
@@ -1188,7 +1188,7 @@ export default function AiChat() {
             )}
             <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
               msg.role === 'user'
-                ? 'bg-primary-600 text-dark-bg rounded-br-md font-medium'
+                ? 'bg-primary-600 text-on-primary rounded-br-md font-medium'
                 : 'bg-dark-surface text-[#c8c8c8] border border-dark-border rounded-bl-md'
             }`}>
               {msg.role === 'assistant' ? (
@@ -1288,7 +1288,7 @@ export default function AiChat() {
             type="button"
             onClick={() => send()}
             disabled={loading || !input.trim()}
-            className="p-2.5 bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-dark-bg rounded-xl disabled:opacity-40 transition-all flex-shrink-0 shadow-md shadow-primary-500/10 disabled:shadow-none"
+            className="p-2.5 bg-gradient-to-br from-primary-500 to-primary-700 hover:from-primary-400 hover:to-primary-600 text-on-primary rounded-xl disabled:opacity-40 transition-all flex-shrink-0 shadow-md shadow-primary-500/10 disabled:shadow-none"
           >
             <Send size={16} />
           </button>
@@ -1394,14 +1394,14 @@ export default function AiChat() {
               transition: 'width 60ms ease-out, height 60ms ease-out',
             }}
           >
-            <Phone size={56} className="text-dark-bg" strokeWidth={2.4} />
+            <Phone size={56} className="text-on-primary" strokeWidth={2.4} />
           </div>
         </div>
 
         {/* Bottom-middle: live transcript banner */}
         <div className="w-full max-w-3xl flex-1 min-h-0 flex flex-col justify-end gap-2 pb-6 overflow-hidden">
           {voiceUserPartial && (
-            <div className="self-end max-w-[80%] bg-primary-600/90 text-dark-bg rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium shadow-lg">
+            <div className="self-end max-w-[80%] bg-primary-600/90 text-on-primary rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium shadow-lg">
               {voiceUserPartial}
             </div>
           )}

@@ -73,9 +73,9 @@ export default function GraceWindowBanner() {
   }
 
   return (
-    <div className="border-b border-primary-gold/30 bg-primary-gold/10 px-4 py-2.5">
+    <div className="border-b border-primary-500/30 bg-primary-500/10 px-4 py-2.5">
       <div className="max-w-7xl mx-auto flex items-center gap-3 text-[13px]">
-        <AlertCircle size={16} className="text-primary-gold flex-shrink-0" aria-hidden="true" />
+        <AlertCircle size={16} className="text-primary-400 flex-shrink-0" aria-hidden="true" />
         <div className="flex-1 text-t-primary min-w-0">
           <span className="font-medium">Heads up:</span>{' '}
           Email Campaigns, Reviews, Engagement Hub, Wallet config and Chatbot Setup
@@ -83,7 +83,7 @@ export default function GraceWindowBanner() {
           {' '}
           <Link
             to="/billing"
-            className="font-medium text-primary-gold hover:text-primary-gold/80 underline underline-offset-2"
+            className="font-medium text-primary-400 hover:text-primary-300 underline underline-offset-2"
           >
             Upgrade to keep using them →
           </Link>

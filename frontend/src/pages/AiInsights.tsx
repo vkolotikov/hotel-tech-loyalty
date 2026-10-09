@@ -196,7 +196,7 @@ export function AiInsights() {
                   <button
                     onClick={() => getMemberInsights(m.id)}
                     disabled={loadingInsights}
-                    className="flex items-center gap-1.5 text-xs bg-primary-600 hover:bg-primary-700 text-white px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-1.5 text-xs bg-primary-600 hover:bg-primary-700 text-on-primary px-3 py-1.5 rounded-lg disabled:opacity-50 transition-colors"
                   >
                     {loadingInsights && selectedMemberId === m.id ? (
                       <><RefreshCw size={11} className="animate-spin" /> Analyzing…</>

@@ -175,7 +175,7 @@ export function TeamBucketsView({ currentUserId, invalidate }: {
           <button
             onClick={handleQuickAdd}
             disabled={!quickAdd.trim() || createMutation.isPending}
-            className="bg-primary-500 hover:bg-primary-400 text-black font-bold rounded-lg px-3 py-2 text-xs disabled:opacity-40 flex items-center gap-1.5"
+            className="bg-primary-500 hover:bg-primary-400 text-on-primary font-bold rounded-lg px-3 py-2 text-xs disabled:opacity-40 flex items-center gap-1.5"
           >
             <Plus size={13} /> Add to pool
           </button>

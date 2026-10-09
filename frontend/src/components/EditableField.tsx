@@ -358,7 +358,7 @@ export default function EditableField(props: EditableFieldProps) {
             type="button"
             onClick={() => void commit()}
             disabled={saving}
-            className="inline-flex items-center gap-1 rounded-md bg-primary-500 px-2.5 py-1 text-xs font-medium text-black hover:bg-primary-400 disabled:opacity-60"
+            className="inline-flex items-center gap-1 rounded-md bg-primary-500 px-2.5 py-1 text-xs font-medium text-on-primary hover:bg-primary-400 disabled:opacity-60"
           >
             <Check className="h-3.5 w-3.5" />
             {t('editableField.save', { defaultValue: 'Save' })}

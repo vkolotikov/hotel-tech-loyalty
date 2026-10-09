@@ -4,6 +4,7 @@ import {
 } from './colour'
 import {
   GLASS_INK, GLASS_PANEL_ALPHA, GLOWS, GLOW_MAX_LUMINANCE, LIFT_PANEL_ALPHA, LIFT_TARGET, LIFT_TINT_ALPHA, ON_PRIMARY_INK,
+  ON_PRIMARY_WHITE_MIN,
 } from './glassTokens'
 
 const WHITE: RGB = [255, 255, 255]
@@ -49,10 +50,12 @@ export function liftForGlass(brandHex: string): string {
   return rgbToHex(lifted)
 }
 
-/** Dark ink or white, whichever reads better on a fill of `fillHex`. */
+/**
+ * Text on a fill of `fillHex`: white while white reads at ON_PRIMARY_WHITE_MIN
+ * or better, dark ink below that.
+ */
 export function onColor(fillHex: string): string {
-  const fill = hexToRgb(fillHex)
-  return contrast(hexToRgb(ON_PRIMARY_INK), fill) >= contrast(WHITE, fill) ? ON_PRIMARY_INK : '#FFFFFF'
+  return contrast(WHITE, hexToRgb(fillHex)) >= ON_PRIMARY_WHITE_MIN ? '#FFFFFF' : ON_PRIMARY_INK
 }
 
 /**
