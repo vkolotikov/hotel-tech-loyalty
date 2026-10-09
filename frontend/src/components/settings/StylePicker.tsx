@@ -125,3 +125,25 @@ function StyleSample({ id, brand }: { id: StyleId; brand: string }) {
     </div>
   )
 }
+
+/**
+ * A super admin's device-only preview of Clean light before it opens to
+ * every organisation (spec D5). Nothing is saved; the page reloads in the
+ * previewed style. Renders nothing for anyone else.
+ */
+export function StylePreview({ canPreview, previewing, onToggle }: {
+  canPreview: boolean
+  previewing: boolean
+  onToggle: (on: boolean) => void
+}) {
+  if (!canPreview) return null
+  return (
+    <button
+      type="button"
+      onClick={() => onToggle(!previewing)}
+      className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-dark-border px-3 py-1.5 text-xs font-semibold text-t-primary hover:bg-dark-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-400"
+    >
+      {previewing ? 'Stop the preview' : 'Preview Clean light on this device'}
+    </button>
+  )
+}

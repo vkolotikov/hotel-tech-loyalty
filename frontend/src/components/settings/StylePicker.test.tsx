@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import { StylePicker } from './StylePicker'
+import { StylePicker, StylePreview } from './StylePicker'
 
 /** The picker's cards, found by their data-style-option. */
 function cards(value: 'glass' | 'classic', onPick = vi.fn()) {
@@ -65,5 +65,23 @@ describe('StylePicker', () => {
     const { card } = cards('glass')
     expect(card('light').props.disabled).toBe(true)
     expect(card('light').props.onClick).toBeUndefined()
+  })
+})
+
+describe('StylePreview', () => {
+  it('offers a device preview of Clean light to super admins only', () => {
+    const asOwner = renderToStaticMarkup(<StylePreview canPreview previewing={false} onToggle={() => {}} />)
+    expect(asOwner).toContain('Preview Clean light on this device')
+    expect(StylePreview({ canPreview: false, previewing: false, onToggle: () => {} })).toBeNull()
+  })
+
+  it('switches the preview on and off', () => {
+    const onToggle = vi.fn()
+    const off = StylePreview({ canPreview: true, previewing: false, onToggle }) as ReactElement<{ onClick: () => void }>
+    off.props.onClick()
+    const on = StylePreview({ canPreview: true, previewing: true, onToggle }) as ReactElement<{ onClick: () => void }>
+    expect(renderToStaticMarkup(on)).toContain('Stop the preview')
+    on.props.onClick()
+    expect(onToggle.mock.calls).toEqual([[true], [false]])
   })
 })
