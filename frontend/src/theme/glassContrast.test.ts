@@ -1,10 +1,12 @@
+import { readFileSync } from 'node:fs'
 import colors from 'tailwindcss/colors'
 import { describe, expect, it } from 'vitest'
 import { blend, contrast, hexToRgb, shadeScale, type RGB } from './colour'
 import { liftForGlass, worstGlassPanel } from './glass'
 import {
-  COLOURED_TEXT_SHADES, GLASS_GREY_TEXT, GLASS_PANEL_ALPHA, GLASS_RAISED_ALPHA, GLASS_SOLID_SURFACES, GLASS_STATUS_TEXT,
-  GLASS_SURFACES, GLASS_TEXT, GLASS_TEXT_SHIFT, SHIFTED_HUES, type StatusToken,
+  COLOURED_TEXT_SHADES, GLASS_GREY_TEXT, GLASS_NAV_ACCENT_TEXT, GLASS_PANEL_ALPHA, GLASS_RAISED_ALPHA,
+  GLASS_SOLID_SURFACES, GLASS_STATUS_TEXT, GLASS_SURFACES, GLASS_TEXT, GLASS_TEXT_SHIFT, SHIFTED_HUES,
+  type StatusToken,
 } from './glassTokens'
 import { BRAND_COLOURS } from './__fixtures__/brandColours'
 
@@ -78,6 +80,30 @@ describe.each(BRAND_COLOURS)('Glass contrast for brand %s', brand => {
     const lifted = shadeScale(liftForGlass(brand))
     for (const shade of [300, 400, 500] as const) {
       expect(contrast(fromTriplet(lifted[shade]), tint), `primary-${shade}`).toBeGreaterThanOrEqual(FLOOR)
+    }
+  })
+})
+
+describe('Glass sidebar: the active item', () => {
+  // Layout.tsx draws the active nav item in its group's accent (a Tailwind 400
+  // shade, inline) on a 16 % wash of that accent over the 7 % sidebar. In Glass
+  // the text takes GLASS_NAV_ACCENT_TEXT through --nav-active-text.
+  const layout = readFileSync(new URL('../components/Layout.tsx', import.meta.url), 'utf8')
+  const accents = [...layout.matchAll(/accent:\s*'(#[0-9a-fA-F]{6})'/g)].map(m => m[1].toLowerCase())
+
+  it('has a Glass text shade for every group accent, and Layout uses it only through the variable', () => {
+    expect(accents.length).toBeGreaterThan(5)
+    for (const accent of accents) expect(GLASS_NAV_ACCENT_TEXT[accent], accent).toBeDefined()
+    expect(layout).toContain('color: `var(--nav-active-text, ${accent})`')
+    expect(layout).toContain("'--nav-accent-glass': GLASS_NAV_ACCENT_TEXT[accent] ?? accent")
+    expect(layout).toContain('data-nav-active=')
+  })
+
+  it.each(BRAND_COLOURS)('reads at 4.5:1 or better on the active row for brand %s', brand => {
+    const sidebar = worstGlassPanel(brand, GLASS_PANEL_ALPHA)
+    for (const [accent, text] of Object.entries(GLASS_NAV_ACCENT_TEXT)) {
+      const row = blend(rgb(accent), 0.16, sidebar)
+      expect(contrast(rgb(text), row), `${accent} → ${text}`).toBeGreaterThanOrEqual(FLOOR)
     }
   })
 })

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -43,6 +43,7 @@ import { useVocabulary } from '../lib/vocabulary'
 import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industryGating'
 import { IndustryMismatchBanner } from './IndustryMismatchBanner'
 import { showsAppointmentsLink } from '../appointments/lib/landing'
+import { GLASS_NAV_ACCENT_TEXT } from '../theme/glassTokens'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -905,11 +906,15 @@ export function Layout({ children }: { children: ReactNode }) {
                         // whichever of the two reasons produced it.
                         !active && lapsed && 'text-t-secondary/70 hover:text-white hover:bg-white/[0.04]',
                       )}
+                      data-nav-active={active ? '' : undefined}
                       style={active ? {
                         background: tint(0.16),
-                        color: accent,
+                        // Glass shows the text one shade lighter (theme/glass.css
+                        // sets --nav-active-text); Classic keeps the accent.
+                        color: `var(--nav-active-text, ${accent})`,
                         boxShadow: `inset 2px 0 0 ${accent}`,
-                      } : undefined}
+                        '--nav-accent-glass': GLASS_NAV_ACCENT_TEXT[accent] ?? accent,
+                      } as CSSProperties : undefined}
                     >
                       <Icon size={17} className={clsx('flex-shrink-0', lapsed && !active && 'opacity-70')} />
                       {!displayCollapsed && <span className="truncate flex-1">{itemLabel}</span>}

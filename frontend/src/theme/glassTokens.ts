@@ -118,6 +118,23 @@ export const GLASS_TEXT_SHIFT = {
   500: 300,
 } as const satisfies Record<(typeof COLOURED_TEXT_SHADES)[number], 50 | 100 | 200 | 300>
 
+/**
+ * The sidebar draws its active item in the group's accent, a Tailwind 400
+ * shade set inline (Layout.tsx), on a 16 % wash of that accent. In Glass that
+ * text shows one shade lighter, like all coloured text: the 300 shade
+ * (measured at 3.4–5.0:1 as 400s over the brightest glow, 5.0–6.1:1 as 300s).
+ */
+export const GLASS_NAV_ACCENT_TEXT: Record<string, string> = {
+  '#60a5fa': '#93c5fd', // blue
+  '#a78bfa': '#c4b5fd', // violet
+  '#38bdf8': '#7dd3fc', // sky
+  '#fbbf24': '#fcd34d', // amber
+  '#34d399': '#6ee7b7', // emerald
+  '#f472b6': '#f9a8d4', // pink
+  '#22d3ee': '#67e8f9', // cyan
+  '#9ca3af': '#d1d5db', // gray
+}
+
 /** Tailwind's corner scale in Glass. rounded-sm and rounded-full stay. */
 export const GLASS_RADIUS = {
   md: '8px',

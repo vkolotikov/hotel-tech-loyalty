@@ -80,6 +80,13 @@
   backdrop-filter: blur(22px) saturate(160%);
 }
 
+/* The active sidebar item is drawn in its group's accent (inline, a 400
+   shade; Layout.tsx). In Glass it reads one shade lighter, like all coloured
+   text (glassTokens.ts GLASS_NAV_ACCENT_TEXT). */
+:root[data-style="glass"][data-shell="admin"] .hx-sidebar [data-nav-active] {
+  --nav-active-text: var(--nav-accent-glass);
+}
+
 @media (min-width: 1024px) {
   /* The sidebar floats 12px from the window edges; the header is a bar
      along the top of the content column. */

@@ -111,6 +111,11 @@ describe('glass.css', () => {
     expect(ruleBody(glassCss, '.text-dark-bg {')).toMatch(/--alpha-dark-bg:\s*1;/)
   })
 
+  it('draws the active sidebar item in its lighter accent text in Glass', () => {
+    const rules = selectorsOfRulesWith(glassCss, '--nav-active-text: var(--nav-accent-glass)')
+    expect(rules.some(s => s.endsWith('.hx-sidebar [data-nav-active]')), rules.join('\n')).toBe(true)
+  })
+
   it('keeps the header above the page so its own popovers stay on top', () => {
     const lifted = selectorsOfRulesWith(glassCss, 'z-index: 35')
     expect(lifted.some(s => s.endsWith('.hx-header')), lifted.join('\n')).toBe(true)
