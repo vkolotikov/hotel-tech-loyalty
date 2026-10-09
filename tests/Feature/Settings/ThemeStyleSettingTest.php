@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * Settings → Branding → Style saves `theme_style` per organisation: 'glass'
- * (also what no saved value means) or 'classic'. The admin SPA reads it with
+ * (also what no saved value means), 'classic' or 'light'. The admin SPA reads it with
  * the colours from the appearance group through both theme endpoints, so the
  * key must land in `appearance`, and a value the SPA can't render must be
  * refused before anything in the same save is written.
@@ -154,17 +154,30 @@ class ThemeStyleSettingTest extends TestCase
         $this->assertSame('glass', $this->getJson('/api/v1/admin/branding/theme')->json('theme.theme_style'));
     }
 
+    public function test_clean_light_is_saved_and_served_like_the_other_styles(): void
+    {
+        $user = $this->staffUser();
+        Sanctum::actingAs($user);
+        $this->getJson('/api/v1/admin/settings');
+
+        $save = $this->saveStyle('light');
+        $this->assertSame(200, $save->getStatusCode(), $save->getContent());
+        $this->assertSame('light', (string) $save->json('persisted.theme_style'));
+        $this->assertSame('appearance', $this->stored($user->organization_id, 'theme_style')?->group);
+        $this->assertSame('light', $this->getJson('/api/v1/admin/branding/theme')->json('theme.theme_style'));
+        $this->assertSame('light', $this->getJson('/api/v1/theme')->json('theme.theme_style'));
+    }
+
     public function test_an_unknown_style_is_refused_and_nothing_is_saved(): void
     {
         $user = $this->staffUser();
         Sanctum::actingAs($user);
         $this->getJson('/api/v1/admin/settings');
 
-        // 'light' is Part 2's style; until it ships it is as unknown as 'neon'.
-        foreach (['neon', 'GLASS', 'light', ''] as $bad) {
+        foreach (['neon', 'GLASS', 'LIGHT', ''] as $bad) {
             $res = $this->saveStyle($bad);
             $this->assertSame(422, $res->getStatusCode(), "'{$bad}' was accepted: " . $res->getContent());
-            $this->assertSame('theme_style must be glass or classic.', $res->json('errors.theme_style.0'));
+            $this->assertSame('theme_style must be glass, classic or light.', $res->json('errors.theme_style.0'));
         }
 
         $this->assertNull($this->stored($user->organization_id, 'theme_style'));

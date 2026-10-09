@@ -12,8 +12,8 @@ use Illuminate\Validation\ValidationException;
 
 class SettingsController extends Controller
 {
-    /** The admin styles `theme_style` may hold (Settings → Branding → Style). Part 2 adds 'light'. */
-    public const THEME_STYLES = ['glass', 'classic'];
+    /** The admin styles `theme_style` may hold (Settings → Branding → Style). Glass, Classic or Clean light. */
+    public const THEME_STYLES = ['glass', 'classic', 'light'];
 
     /** Keys that contain secrets — returned masked unless explicitly empty. */
     private const SECRET_KEYS = [
@@ -299,7 +299,7 @@ class SettingsController extends Controller
         foreach ($validated['settings'] as $item) {
             if ($item['key'] === 'theme_style' && !in_array($item['value'], self::THEME_STYLES, true)) {
                 throw ValidationException::withMessages([
-                    'theme_style' => 'theme_style must be glass or classic.',
+                    'theme_style' => 'theme_style must be glass, classic or light.',
                 ]);
             }
         }
@@ -596,7 +596,7 @@ class SettingsController extends Controller
         // radius scale. Lives in the appearance group so the /v1/theme
         // endpoint picks it up alongside the per-color values.
         if ($k === 'theme_mood') return 'appearance';
-        // theme_style (2026-10) picks the admin style, Glass or Classic; it
+        // theme_style (2026-10) picks the admin style (Glass, Classic or Clean light); it
         // travels with the colours through /v1/theme and /v1/admin/branding/theme.
         if ($k === 'theme_style') return 'appearance';
         if (in_array($k, ['primary_color','background_color','surface_color','secondary_color','text_color','text_secondary_color','border_color','success_color','error_color','warning_color','info_color','accent_color','company_logo','company_name','brand_font'])) return 'appearance';

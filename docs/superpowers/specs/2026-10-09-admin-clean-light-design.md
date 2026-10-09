@@ -1,6 +1,6 @@
 # Admin style, Part 2: Clean light (design)
 
-Status: draft for the owner's review, 2026-10-09. Builds on `2026-10-08-admin-glass-style-design.md` (Part 1, live).
+Status: released to every organisation, 2026-10-09 (the owner approved it). Builds on `2026-10-08-admin-glass-style-design.md` (Part 1, live).
 
 ## 1. What we are building
 

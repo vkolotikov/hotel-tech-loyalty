@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { SHADES, hexToRgb, isHex, shadeScale, toTriplet } from '../theme/colour'
 import { brandGlassVariables } from '../theme/glass'
 import { brandLightVariables, isPaleBrand } from '../theme/light'
-import { effectiveStyle } from '../lib/stylePreview'
+import { clearStylePreview } from '../lib/stylePreview'
 
 interface ThemeColors {
   primary_color: string
@@ -107,7 +107,7 @@ function surfaceShade(hex: string, amount: number): string {
  * change style, only colour". Empty/null mood removes the attribute so
  * the default (Inter, neutral corners) renders.
  *
- * The optional `style` writes `data-style` ('glass' | 'classic' | 'light'), or this device's preview when a platform admin has one on (lib/stylePreview.ts); left
+ * The optional `style` writes `data-style` ('glass' | 'classic' | 'light'); left
  * out, the current style stays. The palette variables are written in
  * every style, plus the Glass extras (lifted brand text, glow colours,
  * text on brand fills). Glass's own values live in the stylesheet, scoped
@@ -174,7 +174,7 @@ export function applyThemeToDom(
     root.removeAttribute('data-mood')
   }
 
-  root.setAttribute('data-style', effectiveStyle(style ?? readThemeStyle(root.getAttribute('data-style'))))
+  root.setAttribute('data-style', style ?? readThemeStyle(root.getAttribute('data-style')))
 }
 
 export type { ThemeColors }
@@ -272,13 +272,13 @@ export function paintCachedTheme(snap: CachedTheme | null, target: ThemeTarget =
   if (snap?.colors) {
     applyThemeToDom(snap.colors, snap.mood ?? null, readThemeStyle(snap.style), target)
   } else {
-    target.root.setAttribute('data-style', effectiveStyle(DEFAULT_STYLE))
+    target.root.setAttribute('data-style', DEFAULT_STYLE)
   }
 }
 
 /** A server answer with a style but no palette: switch the style only. */
 export function applyStyleOnly(style: ThemeStyle, target: ThemeTarget = pageTarget()): void {
-  target.root.setAttribute('data-style', effectiveStyle(style))
+  target.root.setAttribute('data-style', style)
   const snap = readCachedTheme()
   persistThemeSnapshot(snap?.colors ?? {}, snap?.preset ?? null, snap?.mood ?? null, style)
 }
@@ -316,6 +316,8 @@ export function themeUpdateFor(data: unknown): ThemeUpdate {
 // Inter then a swap to Cormorant/Space Grotesk/IBM Plex/etc), and the
 // cached style, so a Classic organisation never flashes Glass.
 if (typeof window !== 'undefined') {
+  // The pre-release device preview of Clean light is retired: drop its flag so no browser keeps one.
+  clearStylePreview()
   paintCachedTheme(readCachedTheme())
 }
 

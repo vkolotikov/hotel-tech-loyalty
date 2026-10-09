@@ -195,3 +195,31 @@ describe('Clean light', () => {
     expect(attrs.has('data-brand-pale')).toBe(false)
   })
 })
+
+describe('the retired Clean light device preview', () => {
+  // What a platform admin's browser could still hold from before the release.
+  const leaveStalePreview = () => {
+    localStorage.setItem('hx-style-preview', 'light')
+    localStorage.setItem('loyalty-auth', JSON.stringify({ state: { user: { id: 1, is_platform_admin: true } }, version: 1 }))
+  }
+
+  it("paints the organisation's style, Glass or Classic, whatever a stale flag says", () => {
+    leaveStalePreview()
+    for (const style of ['classic', 'glass'] as const) {
+      const { target, attrs } = fakeTarget()
+      applyThemeToDom({}, null, style, target)
+      expect(attrs.get('data-style'), style).toBe(style)
+    }
+  })
+
+  it('ignores a stale flag when switching only the style and when painting the default', () => {
+    leaveStalePreview()
+    const only = fakeTarget('glass')
+    applyStyleOnly('classic', only.target)
+    expect(only.attrs.get('data-style')).toBe('classic')
+
+    const fresh = fakeTarget()
+    paintCachedTheme(null, fresh.target)
+    expect(fresh.attrs.get('data-style')).toBe('glass')
+  })
+})
