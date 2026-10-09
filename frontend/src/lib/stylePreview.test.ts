@@ -14,17 +14,10 @@ function fakeStorage(role: string | null, preview: string | null) {
 }
 
 describe('style preview on this device', () => {
-  it('previews Clean light for a super admin who switched it on', () => {
+  it('is off for everyone, even a super admin with the flag set', () => {
     const s = fakeStorage('super_admin', 'light')
-    expect(readStylePreview(s)).toBe('light')
-    expect(effectiveStyle('glass', s)).toBe('light')
-    expect(effectiveStyle('classic', s)).toBe('light')
-  })
-
-  it('is ignored for anyone else, even with the flag set by hand', () => {
-    expect(readStylePreview(fakeStorage('manager', 'light'))).toBeNull()
-    expect(readStylePreview(fakeStorage(null, 'light'))).toBeNull()
-    expect(effectiveStyle('classic', fakeStorage('manager', 'light'))).toBe('classic')
+    expect(readStylePreview(s)).toBeNull()
+    expect(effectiveStyle('glass', s)).toBe('glass')
   })
 
   it('reads nothing when the flag is off or broken, and never throws', () => {

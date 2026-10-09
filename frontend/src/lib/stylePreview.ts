@@ -11,14 +11,13 @@ export const STYLE_PREVIEW_KEY = 'hx-style-preview'
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
 const browser = (): Store | null => (typeof window !== 'undefined' ? window.localStorage : null)
 
+/**
+ * Disabled until the server reports a platform-admin flag: super_admin is
+ * every organisation owner's role, so it cannot gate an owner-only preview.
+ */
 export function readStylePreview(storage: Store | null = browser()): ThemeStyle | null {
-  try {
-    if (!storage || storage.getItem(STYLE_PREVIEW_KEY) !== 'light') return null
-    const auth = JSON.parse(storage.getItem('loyalty-auth') ?? 'null')
-    return auth?.state?.staff?.role === 'super_admin' ? 'light' : null
-  } catch {
-    return null
-  }
+  void storage
+  return null
 }
 
 export function setStylePreview(style: 'light' | null, storage: Store | null = browser()): void {

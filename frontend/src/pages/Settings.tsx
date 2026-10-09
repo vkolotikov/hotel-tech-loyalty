@@ -4,8 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
 import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readCachedTheme, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
-import { StylePicker, StylePreview } from '../components/settings/StylePicker'
-import { readStylePreview, setStylePreview } from '../lib/stylePreview'
+import { StylePicker } from '../components/settings/StylePicker'
 import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
 import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
@@ -1093,12 +1092,6 @@ export function Settings() {
   // from what is painted, follows the saved setting once it loads, and
   // switches the moment a card is clicked (applyStyle / undo).
   const [activeStyle, setActiveStyle] = useState<ThemeStyle>(() => readThemeStyle(readCachedTheme()?.style))
-  const [previewing, setPreviewing] = useState(() => readStylePreview() === 'light')
-  const togglePreview = (on: boolean) => {
-    setStylePreview(on ? 'light' : null)
-    setPreviewing(on)
-    window.location.reload()
-  }
   const savedStyle = getVal('theme_style')
   useEffect(() => {
     if (savedStyle) setActiveStyle(readThemeStyle(savedStyle))
@@ -1579,7 +1572,6 @@ export function Settings() {
           </div>
           <p className="text-xs text-gray-500 mb-4">The look of the whole admin, for everyone in your organisation. Glass is the default; Classic is the original dark admin.</p>
           <StylePicker value={activeStyle} brand={previewPrimary} onPick={applyStyle} />
-          <StylePreview canPreview={staff?.role === 'super_admin'} previewing={previewing} onToggle={togglePreview} />
         </div>
 
         {/* Theme Presets */}
