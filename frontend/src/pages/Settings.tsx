@@ -23,6 +23,7 @@ import {
 import toast from 'react-hot-toast'
 import { useTranslation } from 'react-i18next'
 import { useSubscription } from '../hooks/useSubscription'
+import { hxWhite, useDataInk } from '../theme/hx'
 import { BookingTab } from '../components/settings/BookingTab'
 import { PipelinesAdmin } from '../components/PipelinesAdmin'
 import { PlannerSettings } from '../components/PlannerSettings'
@@ -265,7 +266,7 @@ const DEFAULT_PRESET = 'Royal Blue'
 
 function hexA(hex: string, alpha: number): string {
   const h = hex.replace('#', '')
-  if (h.length !== 6) return `rgba(255,255,255,${alpha})`
+  if (h.length !== 6) return hxWhite(alpha)
   const r = parseInt(h.slice(0, 2), 16)
   const g = parseInt(h.slice(2, 4), 16)
   const b = parseInt(h.slice(4, 6), 16)
@@ -935,6 +936,7 @@ const TAB_ACCENTS: Record<string, string> = {
 /* ─── Component ─────────────────────────────────────────────────────────── */
 
 export function Settings() {
+  const ink = useDataInk()
   const { user, staff } = useAuthStore()
   const isSuperAdmin = staff?.role === 'super_admin'
   const { hasFeature, hasProduct } = useSubscription()
@@ -1371,7 +1373,7 @@ export function Settings() {
       return (
         <button onClick={() => handleChange(setting.key, isOn ? 'false' : 'true')}
           className={`relative w-12 h-6 rounded-full transition-colors ${isOn ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
-          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${isOn ? 'translate-x-6' : 'translate-x-0.5'}`} />
+          <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${isOn ? 'translate-x-6' : 'translate-x-0.5'}`} />
         </button>
       )
     }
@@ -2058,7 +2060,7 @@ export function Settings() {
             <div key={stat.label} className="rounded-xl p-3 border border-white/[0.04]"
               style={{ background: 'var(--legacy-well-50)' }}>
               <p className="text-[10px] uppercase tracking-wider font-bold text-gray-500">{stat.label}</p>
-              <p className="text-xl font-bold mt-0.5" style={{ color: stat.color }}>{stat.value}</p>
+              <p className="text-xl font-bold mt-0.5" style={{ color: ink(stat.color) }}>{stat.value}</p>
               <p className="text-[10px] text-gray-600 mt-0.5">{stat.sub}</p>
             </div>
           ))}
@@ -2129,7 +2131,7 @@ export function Settings() {
               className="flex items-center gap-3 p-3 rounded-xl border border-white/[0.04] hover:border-emerald-500/20 transition-all hover:-translate-y-px group"
               style={{ background: 'var(--legacy-well-50)' }}>
               <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: page.accent + '18', color: page.accent }}>
+                style={{ background: page.accent + '18', color: ink(page.accent) }}>
                 {page.icon}
               </div>
               <div className="flex-1 min-w-0">
@@ -2154,8 +2156,8 @@ export function Settings() {
                     className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg border hover:-translate-y-px transition-all"
                     style={{ background: color + '12', borderColor: color + '30' }}
                     title={`${tier.member_count} members · ${tier.min_points.toLocaleString()}${tier.max_points ? '–' + tier.max_points.toLocaleString() : '+'} pts`}>
-                    <TierIcon size={14} style={{ color }} />
-                    <span className="text-xs font-semibold" style={{ color }}>{tier.name}</span>
+                    <TierIcon size={14} style={{ color: ink(color) }} />
+                    <span className="text-xs font-semibold" style={{ color: ink(color) }}>{tier.name}</span>
                     <span className="text-[10px] text-gray-500">{tier.earn_rate}x</span>
                   </Link>
                 )
@@ -2255,7 +2257,7 @@ export function Settings() {
             disabled={isComingSoon}
             className={`w-full flex items-center gap-3 px-5 py-3.5 text-left transition-colors ${isComingSoon ? 'cursor-not-allowed' : 'hover:bg-white/[0.02]'}`}>
             <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-              style={{ background: showActive ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+              style={{ background: showActive ? 'rgba(116,200,149,0.12)' : hxWhite(0.04) }}>
               <section.icon size={15} className={showActive ? 'text-emerald-400' : 'text-gray-500'} />
             </div>
             <div className="flex-1 min-w-0">
@@ -2583,7 +2585,7 @@ export function Settings() {
                 <button onClick={() => toggleSection(section.id)}
                   className="w-full flex items-center gap-3 px-6 py-4 text-left hover:bg-white/[0.02] transition-colors">
                   <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : 'rgba(255,255,255,0.04)' }}>
+                    style={{ background: hasAnyValue ? 'rgba(116,200,149,0.12)' : hxWhite(0.04) }}>
                     <section.icon size={16} className={hasAnyValue ? 'text-emerald-400' : 'text-gray-500'} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -2856,7 +2858,7 @@ export function Settings() {
                             boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
                           }}
                         >
-                          <TIcon size={20} style={{ color: accent }} />
+                          <TIcon size={20} style={{ color: ink(accent) }} />
                         </span>
                       </div>
 

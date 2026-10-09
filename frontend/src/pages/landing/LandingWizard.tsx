@@ -677,7 +677,7 @@ export function LandingWizard(props: LandingWizardProps) {
                 >
                   <span
                     aria-hidden
-                    className={'absolute top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform '
+                    className={'absolute left-0 top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform '
                       + (checked ? 'translate-x-4' : 'translate-x-0.5')}
                   />
                 </button>

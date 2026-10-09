@@ -19,6 +19,8 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { resolveImage } from '../../lib/api'
+import { useDataInk, useIsLight } from '../../theme/hx'
+import { onColor } from '../../theme/glass'
 import {
   cp,
   errMsg,
@@ -59,12 +61,13 @@ const inputCls =
 const labelCls = 'mb-1 block text-xs font-medium text-t-secondary'
 const cardCls = 'rounded-lg border border-dark-border bg-dark-surface p-4'
 
-function statusBadge(status: string) {
+function StatusBadge({ status }: { status: string }) {
+  const ink = useDataInk()
   const meta = STATUS_META[status] ?? { label: status, color: '#9ca3af', bg: 'rgba(156,163,175,0.15)' }
   return (
     <span
       className="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium"
-      style={{ color: meta.color, backgroundColor: meta.bg }}
+      style={{ color: ink(meta.color), backgroundColor: meta.bg }}
     >
       {meta.label}
     </span>
@@ -95,6 +98,7 @@ export function PostsView({
   openPostId: number | null
   clearOpenPost: () => void
 }) {
+  const light = useIsLight()
   const queryClient = useQueryClient()
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [statusTab, setStatusTab] = useState('')
@@ -257,7 +261,7 @@ export function PostsView({
                 className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
                   statusTab === key ? 'text-white' : 'bg-dark-surface2 text-t-secondary hover:text-white'
                 }`}
-                style={statusTab === key ? { backgroundColor: meta.color, color: '#0b0b0e' } : undefined}
+                style={statusTab === key ? { backgroundColor: meta.color, color: light ? onColor(meta.color) : '#0b0b0e' } : undefined}
               >
                 {meta.label}
                 {(statusCounts[key] ?? 0) > 0 && ` · ${statusCounts[key]}`}
@@ -327,7 +331,7 @@ export function PostsView({
                     {platformDot(p.platform, 7)}
                     <span>{PLATFORM_META[p.platform]?.label ?? p.platform}</span>
                     {dateOnly(p.scheduled_date) && <span>{dateOnly(p.scheduled_date)}</span>}
-                    <span className="ml-auto">{statusBadge(p.status)}</span>
+                    <span className="ml-auto"><StatusBadge status={p.status} /></span>
                   </div>
                 </button>
               )
@@ -373,6 +377,7 @@ function PostDetail({
   onBack: () => void
   onSelect: (id: number) => void
 }) {
+  const ink = useDataInk()
   const queryClient = useQueryClient()
   const [edits, setEdits] = useState<Partial<Post>>({})
   const [hashtagInput, setHashtagInput] = useState('')
@@ -984,7 +989,7 @@ function PostDetail({
           {quality && typeof quality.overall === 'number' ? (
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold" style={{ color: qualityColor(quality.overall) }}>
+                <span className="text-3xl font-bold" style={{ color: ink(qualityColor(quality.overall)) }}>
                   {quality.overall}
                 </span>
                 <span className="text-xs text-t-secondary">/ 10</span>
@@ -992,7 +997,7 @@ function PostDetail({
                   <span
                     className="ml-auto rounded px-2 py-0.5 text-[11px] font-medium capitalize"
                     style={{
-                      color: quality.verdict === 'good' ? '#34d399' : quality.verdict === 'weak' ? '#f87171' : '#fbbf24',
+                      color: ink(quality.verdict === 'good' ? '#34d399' : quality.verdict === 'weak' ? '#f87171' : '#fbbf24'),
                       backgroundColor:
                         quality.verdict === 'good'
                           ? 'rgba(52,211,153,0.15)'

@@ -1,5 +1,6 @@
 import { useState, lazy, Suspense } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 // The deep chatbot analytics view used to live as a tab inside
@@ -37,6 +38,22 @@ import {
 const TIER_COLORS = ['#CD7F32', '#C0C0C0', '#FFD700', '#6B6B6B', '#00BCD4']
 const CHART_TOOLTIP = { backgroundColor: '#1a1a2e', border: '1px solid #2e2e50', borderRadius: 10, color: '#fff' }
 const CHART_LABEL = { color: '#8e8e93' }
+
+/** Chart chrome: this file's dark constants for Glass and Classic, LIGHT_CHART in Clean light. */
+function chartChrome(light: boolean) {
+  return light
+    ? {
+        grid: LIGHT_CHART.grid, gridAlt: LIGHT_CHART.grid, tick: LIGHT_CHART.tick, tickDim: LIGHT_CHART.tick, tick2: LIGHT_CHART.tick, label: { color: LIGHT_CHART.tick },
+        tip: { backgroundColor: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, borderRadius: 10, color: LIGHT_CHART.tooltipText },
+        cursor: LIGHT_CHART.cursor, legend: { color: LIGHT_CHART.tooltipText }, itemStyle: { color: LIGHT_CHART.tooltipText },
+        // series colours are too pale for legend text on paper: keep the swatch, ink the words
+        legendText: (v: string) => <span style={{ color: LIGHT_CHART.tooltipText }}>{v}</span>,
+      }
+    : {
+        grid: '#2c2c2c', gridAlt: '#2e2e50', tick: '#8e8e93', tickDim: '#636366', tick2: '#e5e7eb', label: CHART_LABEL,
+        tip: CHART_TOOLTIP, cursor: 'rgba(255,255,255,0.04)', legend: { color: '#fff' }, legendText: undefined, itemStyle: undefined,
+      }
+}
 const PIE_COLORS = ['#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#32d74b', '#636366', '#06b6d4', '#ef4444']
 
 const POINTS_RANGES = [
@@ -121,6 +138,9 @@ function SectionCard({ title, icon, children }: { title: string; icon: React.Rea
 
 export function Analytics() {
   const { t } = useTranslation()
+  const light = useIsLight()
+  const ink = useDataInk()
+  const CH = chartChrome(light)
   const [activeTab, setActiveTab] = useState<ActiveTab>('overview')
   const [pointsDays, setPointsDays] = useState(30)
   const [bookingDays, setBookingDays] = useState(30)
@@ -567,11 +587,11 @@ export function Analytics() {
                     <stop offset="95%" stopColor="#32d74b" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5) ?? v} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => Number(v).toLocaleString()} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v?.slice(5) ?? v} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any) => Number(v).toLocaleString()} />
+                <Legend formatter={CH.legendText} />
                 <Area type="monotone" dataKey="earned" stroke="#c9a84c" strokeWidth={2} fill="url(#gEarned)" name={t('analytics.series.earned', 'Earned')} />
                 <Area type="monotone" dataKey="redeemed" stroke="#32d74b" strokeWidth={2} fill="url(#gRedeemed)" name={t('analytics.series.redeemed', 'Redeemed')} />
               </AreaChart>
@@ -590,7 +610,7 @@ export function Analytics() {
                     <Pie data={tierDist} dataKey="count" cx="50%" cy="50%" innerRadius={55} outerRadius={90}>
                       {tierDist.map((_: any, i: number) => <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-2">
@@ -622,10 +642,10 @@ export function Analytics() {
               </h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={revenue ?? []} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <YAxis dataKey="room_type" type="category" tick={{ fontSize: 11, fill: '#8e8e93' }} width={85} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                  <YAxis dataKey="room_type" type="category" tick={{ fontSize: 11, fill: CH.tick }} width={85} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                   <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} name={t('analytics.series.revenue', 'Revenue')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -649,11 +669,11 @@ export function Analytics() {
             </div>
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={memberGrowth ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
+                <Legend formatter={CH.legendText} />
                 <Bar dataKey="new_members" fill="#c9a84c" radius={[4, 4, 0, 0]} name={t('analytics.series.new_members', 'New Members')} opacity={0.8} />
                 <Line type="monotone" dataKey="new_members" stroke="#9a7a30" strokeWidth={2} dot={false} name={t('analytics.series.trend', 'Trend')} />
               </ComposedChart>
@@ -807,11 +827,11 @@ export function Analytics() {
               return (
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={data} barCategoryGap="20%" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                    <XAxis dataKey="label" stroke="#8e8e93" tick={CHART_LABEL} interval={0} />
-                    <YAxis stroke="#8e8e93" tick={CHART_LABEL} />
-                    <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                    <Legend wrapperStyle={{ color: '#fff' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                    <XAxis dataKey="label" stroke={CH.tick} tick={CH.label} interval={0} />
+                    <YAxis stroke={CH.tick} tick={CH.label} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                    <Legend wrapperStyle={CH.legend} formatter={CH.legendText} />
                     <Bar dataKey="visitors" fill="#3b82f6" name="Visitors" radius={[4, 4, 0, 0]} />
                     <Bar dataKey="leads"    fill="#32d74b" name="Leads"    radius={[4, 4, 0, 0]} />
                   </BarChart>
@@ -837,7 +857,7 @@ export function Analytics() {
                       <Cell key={i} fill={channelColor(c.channel)} />
                     ))}
                   </Pie>
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                 </PieChart>
               </ResponsiveContainer>
             </SectionCard>
@@ -940,11 +960,11 @@ export function Analytics() {
                   <linearGradient id="gEarned2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#c9a84c" stopOpacity={0.25} /><stop offset="95%" stopColor="#c9a84c" stopOpacity={0} /></linearGradient>
                   <linearGradient id="gRedeemed2" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5) ?? v} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => Number(v).toLocaleString()} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v?.slice(5) ?? v} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any) => Number(v).toLocaleString()} />
+                <Legend formatter={CH.legendText} />
                 <Area type="monotone" dataKey="earned" stroke="#c9a84c" strokeWidth={2} fill="url(#gEarned2)" name={t('analytics.series.earned', 'Earned')} />
                 <Area type="monotone" dataKey="redeemed" stroke="#32d74b" strokeWidth={2} fill="url(#gRedeemed2)" name={t('analytics.series.redeemed', 'Redeemed')} />
               </AreaChart>
@@ -956,12 +976,12 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Zap size={16} className="text-purple-400" /> {t('analytics.cards.redemption_trend', 'Redemption Rate Trend')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <ComposedChart data={redemptionTrend ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `${v}%`} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
+                  <Legend formatter={CH.legendText} />
                   <Bar yAxisId="left" dataKey="earned" fill="#c9a84c" opacity={0.6} radius={[3, 3, 0, 0]} name={t('analytics.series.earned', 'Earned')} />
                   <Bar yAxisId="left" dataKey="redeemed" fill="#32d74b" opacity={0.6} radius={[3, 3, 0, 0]} name={t('analytics.series.redeemed', 'Redeemed')} />
                   <Line yAxisId="right" type="monotone" dataKey="rate" stroke="#8b5cf6" strokeWidth={2.5} dot={{ r: 3, fill: '#8b5cf6' }} name={t('analytics.series.rate_pct', 'Rate %')} />
@@ -973,10 +993,10 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Target size={16} className="text-amber-400" /> {t('analytics.cards.points_balance_distribution', 'Points Balance Distribution')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={pointsDist ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="range" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                  <XAxis dataKey="range" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis tick={{ fontSize: 11, fill: CH.tick }} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
                   <Bar dataKey="members" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('analytics.series.members', 'Members')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -989,10 +1009,10 @@ export function Analytics() {
             {(expiryForecast ?? []).length > 0 ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={expiryForecast ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [Number(v).toLocaleString(), name === 'points' ? t('analytics.series.points', 'Points') : name]} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : v} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any, name: any) => [Number(v).toLocaleString(), name === 'points' ? t('analytics.series.points', 'Points') : name]} />
                   <Bar dataKey="points" fill="#f59e0b" radius={[4, 4, 0, 0]} name={t('analytics.series.expiring_points', 'Expiring Points')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1049,7 +1069,7 @@ export function Analytics() {
                     <Pie data={engagement ?? []} dataKey="count" nameKey="segment" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
                       {(engagement ?? []).map((e: any, i: number) => <Cell key={i} fill={e.color} />)}
                     </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-3">
@@ -1083,7 +1103,7 @@ export function Analytics() {
                     <Pie data={tierDist} dataKey="count" cx="50%" cy="50%" innerRadius={55} outerRadius={90}>
                       {tierDist.map((_: any, i: number) => <Cell key={i} fill={TIER_COLORS[i % TIER_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-2">
@@ -1124,11 +1144,11 @@ export function Analytics() {
             </div>
             <ResponsiveContainer width="100%" height={260}>
               <ComposedChart data={memberGrowth ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
+                <Legend formatter={CH.legendText} />
                 <Bar dataKey="new_members" fill="#c9a84c" radius={[4, 4, 0, 0]} name={t('analytics.series.new_members', 'New Members')} opacity={0.8} />
                 <Line type="monotone" dataKey="new_members" stroke="#9a7a30" strokeWidth={2} dot={false} name={t('analytics.series.trend', 'Trend')} />
               </ComposedChart>
@@ -1139,10 +1159,10 @@ export function Analytics() {
             <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Target size={16} className="text-blue-400" /> {t('analytics.cards.member_points_distribution', 'Member Points Balance Distribution')}</h3>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={pointsDist ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="range" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="range" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
                 <Bar dataKey="members" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('analytics.series.members', 'Members')} />
               </BarChart>
             </ResponsiveContainer>
@@ -1184,10 +1204,10 @@ export function Analytics() {
                 {(tierMovement?.flows ?? []).slice(0, 8).map((f: any, i: number) => (
                   <div key={i} className="flex items-center gap-3 py-1.5 px-2 rounded-lg hover:bg-dark-surface2">
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: (f.from_color || '#666') + '22', color: f.from_color || '#a0a0a0' }}>{f.from}</span>
+                      style={{ backgroundColor: (f.from_color || '#666') + '22', color: ink(f.from_color || '#a0a0a0') }}>{f.from}</span>
                     <ChevronRight size={14} className={f.direction === 'up' ? 'text-emerald-400' : f.direction === 'down' ? 'text-red-400' : 'text-t-muted'} />
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-semibold"
-                      style={{ backgroundColor: (f.to_color || '#666') + '22', color: f.to_color || '#a0a0a0' }}>{f.to}</span>
+                      style={{ backgroundColor: (f.to_color || '#666') + '22', color: ink(f.to_color || '#a0a0a0') }}>{f.to}</span>
                     <span className="ml-auto text-sm text-white font-semibold">{f.count.toLocaleString()}</span>
                   </div>
                 ))}
@@ -1286,7 +1306,7 @@ export function Analytics() {
                       <td className="py-2">
                         {m.tier && (
                           <span className="inline-block px-2 py-0.5 rounded-full text-[11px] font-semibold"
-                            style={{ backgroundColor: (m.tier_color || '#666') + '22', color: m.tier_color || '#a0a0a0' }}>
+                            style={{ backgroundColor: (m.tier_color || '#666') + '22', color: ink(m.tier_color || '#a0a0a0') }}>
                             {m.tier}
                           </span>
                         )}
@@ -1479,12 +1499,12 @@ export function Analytics() {
             </div>
             <ResponsiveContainer width="100%" height={300}>
               <ComposedChart data={bookingTrends ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => v?.slice(5) ?? v} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any, item: any) => [item?.dataKey === 'revenue' ? `$${Number(v).toLocaleString()}` : v, name]} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => v?.slice(5) ?? v} />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any, name: any, item: any) => [item?.dataKey === 'revenue' ? `$${Number(v).toLocaleString()}` : v, name]} />
+                <Legend formatter={CH.legendText} />
                 <Bar yAxisId="left" dataKey="bookings" fill="#6366f1" radius={[3, 3, 0, 0]} name={t('analytics.series.bookings', 'Bookings')} />
                 <Line yAxisId="right" type="monotone" dataKey="revenue" stroke="#32d74b" strokeWidth={2} dot={false} name={t('analytics.series.revenue', 'Revenue')} />
               </ComposedChart>
@@ -1499,10 +1519,10 @@ export function Analytics() {
                   <defs>
                     <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#32d74b" stopOpacity={0.25} /><stop offset="95%" stopColor="#32d74b" stopOpacity={0} /></linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                   <Area type="monotone" dataKey="revenue" stroke="#32d74b" strokeWidth={2} fill="url(#gRevenue)" name={t('analytics.series.revenue', 'Revenue')} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -1512,10 +1532,10 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Hotel size={16} className="text-purple-400" /> {t('analytics.cards.revenue_by_room_type', 'Revenue by Room Type')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={revenue ?? []} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
-                  <YAxis dataKey="room_type" type="category" tick={{ fontSize: 11, fill: '#8e8e93' }} width={85} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `$${(v/1000).toFixed(0)}k`} />
+                  <YAxis dataKey="room_type" type="category" tick={{ fontSize: 11, fill: CH.tick }} width={85} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                   <Bar dataKey="revenue" fill="#8b5cf6" radius={[0, 4, 4, 0]} name={t('analytics.series.revenue', 'Revenue')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1526,12 +1546,12 @@ export function Analytics() {
             <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Clock size={16} className="text-blue-400" /> {t('analytics.cards.booking_metrics', 'Booking Metrics Over Time')}</h3>
             <ResponsiveContainer width="100%" height={260}>
               <ComposedChart data={bookingMetrics ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `$${v}`} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any, item: any) => [item?.dataKey === 'avg_spend' ? `$${Number(v).toLocaleString()}` : v, name]} />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `$${v}`} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any, name: any, item: any) => [item?.dataKey === 'avg_spend' ? `$${Number(v).toLocaleString()}` : v, name]} />
+                <Legend formatter={CH.legendText} />
                 <Bar yAxisId="left" dataKey="avg_nights" fill="#6366f1" opacity={0.7} radius={[3, 3, 0, 0]} name={t('analytics.series.avg_nights', 'Avg Nights')} />
                 <Line yAxisId="right" type="monotone" dataKey="avg_spend" stroke="#f59e0b" strokeWidth={2.5} dot={{ r: 3, fill: '#f59e0b' }} name={t('analytics.series.avg_spend', 'Avg Spend')} />
                 <Line yAxisId="left" type="monotone" dataKey="bookings" stroke="#32d74b" strokeWidth={2} dot={false} name={t('analytics.series.bookings', 'Bookings')} />
@@ -1552,11 +1572,11 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><MapPin size={16} className="text-success" /> {t('analytics.cards.venue_utilization', 'Venue Utilization by Type')}</h3>
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={venueUtil ?? []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                  <XAxis dataKey="venue_type" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
-                  <Legend />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                  <XAxis dataKey="venue_type" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis tick={{ fontSize: 11, fill: CH.tick }} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
+                  <Legend formatter={CH.legendText} />
                   <Bar dataKey="bookings" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('analytics.series.bookings', 'Bookings')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1570,7 +1590,7 @@ export function Analytics() {
                     <Pie data={venueUtil ?? []} dataKey="revenue" nameKey="venue_type" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
                       {(venueUtil ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-2">
@@ -1601,10 +1621,10 @@ export function Analytics() {
             </div>
             <ResponsiveContainer width="100%" height={280}>
               <ComposedChart data={occupancy ?? []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                <XAxis dataKey="period" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                <YAxis tick={{ fontSize: 11, fill: '#8e8e93' }} tickFormatter={(v) => `${v}%`} />
-                <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} formatter={(v: any, name: any) => [name === 'occupancy_rate' ? `${v}%` : Number(v).toLocaleString(), name === 'occupancy_rate' ? t('analytics.series.occupancy_pct', 'Occupancy %') : name]} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                <XAxis dataKey="period" tick={{ fontSize: 11, fill: CH.tick }} />
+                <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} formatter={(v: any, name: any) => [name === 'occupancy_rate' ? `${v}%` : Number(v).toLocaleString(), name === 'occupancy_rate' ? t('analytics.series.occupancy_pct', 'Occupancy %') : name]} />
                 <Bar dataKey="occupancy_rate" fill="#6366f1" radius={[4, 4, 0, 0]} name={t('analytics.series.occupancy_pct', 'Occupancy %')} opacity={0.7} />
                 <Line type="monotone" dataKey="occupancy_rate" stroke="#c9a84c" strokeWidth={2.5} dot={{ r: 3, fill: '#c9a84c' }} name={t('analytics.series.trend', 'Trend')} />
               </ComposedChart>
@@ -1621,7 +1641,7 @@ export function Analytics() {
                     <Pie data={vipDist ?? []} dataKey="count" nameKey="level" cx="50%" cy="50%" innerRadius={50} outerRadius={85}>
                       {(vipDist ?? []).map((_: any, i: number) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                     </Pie>
-                    <Tooltip contentStyle={CHART_TOOLTIP} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="flex-1 space-y-2">
@@ -1641,10 +1661,10 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Globe size={16} className="text-blue-400" /> {t('analytics.cards.guest_nationalities', 'Guest Nationalities')}</h3>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={(nationality ?? []).slice(0, 10)} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <YAxis dataKey="nationality" type="category" tick={{ fontSize: 11, fill: '#8e8e93' }} width={80} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} labelStyle={CHART_LABEL} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <YAxis dataKey="nationality" type="category" tick={{ fontSize: 11, fill: CH.tick }} width={80} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} labelStyle={CH.label} />
                   <Bar dataKey="count" fill="#06b6d4" radius={[0, 4, 4, 0]} name={t('analytics.series.guests', 'Guests')} />
                 </BarChart>
               </ResponsiveContainer>
@@ -1657,13 +1677,13 @@ export function Analytics() {
               <h3 className="text-base font-semibold text-white mb-5 flex items-center gap-2"><Award size={16} className="text-purple-400" /> {t('analytics.cards.vip_revenue_impact', 'VIP Revenue Impact')}</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <RadarChart data={vipDist ?? []}>
-                  <PolarGrid stroke="#2c2c2c" />
-                  <PolarAngleAxis dataKey="level" tick={{ fontSize: 11, fill: '#8e8e93' }} />
-                  <PolarRadiusAxis tick={{ fontSize: 10, fill: '#636366' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
+                  <PolarGrid stroke={CH.grid} />
+                  <PolarAngleAxis dataKey="level" tick={{ fontSize: 11, fill: CH.tick }} />
+                  <PolarRadiusAxis tick={{ fontSize: 10, fill: CH.tickDim }} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                   <Radar name={t('analytics.series.revenue', 'Revenue')} dataKey="revenue" stroke="#c9a84c" fill="#c9a84c" fillOpacity={0.2} />
                   <Radar name={t('analytics.series.guests', 'Guests')} dataKey="count" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
-                  <Legend />
+                  <Legend formatter={CH.legendText} />
                 </RadarChart>
               </ResponsiveContainer>
             </Card>
@@ -1768,7 +1788,7 @@ export function Analytics() {
                           <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip contentStyle={CHART_TOOLTIP} />
+                      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                     </PieChart>
                   </ResponsiveContainer>
                 )
@@ -1818,10 +1838,10 @@ export function Analytics() {
                 return (
                   <ResponsiveContainer width="100%" height={220}>
                     <BarChart data={data} layout="vertical" margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2c2c2c" />
-                      <XAxis type="number" stroke="#8e8e93" tick={CHART_LABEL} />
-                      <YAxis dataKey="label" type="category" stroke="#8e8e93" tick={CHART_LABEL} width={90} />
-                      <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} />
+                      <XAxis type="number" stroke={CH.tick} tick={CH.label} />
+                      <YAxis dataKey="label" type="category" stroke={CH.tick} tick={CH.label} width={90} />
+                      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
                       <Bar dataKey="conversations" name="Conversations" radius={[0, 4, 4, 0]}>
                         {data.map((r: any, i: number) => (
                           <Cell key={i} fill={channelColor(r.channel)} />
@@ -1946,10 +1966,10 @@ export function Analytics() {
                 {leadsDeep.avg_value_by_source?.length > 0 ? (
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={leadsDeep.avg_value_by_source} layout="vertical" margin={{ top: 4, right: 12, left: 4, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                      <XAxis type="number" tick={{ fontSize: 10, fill: '#8e8e93' }} tickFormatter={v => `$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
-                      <YAxis type="category" dataKey="source" tick={{ fontSize: 10, fill: '#e5e7eb' }} width={90} />
-                      <Tooltip contentStyle={CHART_TOOLTIP} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={CH.gridAlt} />
+                      <XAxis type="number" tick={{ fontSize: 10, fill: CH.tick }} tickFormatter={v => `$${v >= 1000 ? (v/1000).toFixed(0) + 'k' : v}`} />
+                      <YAxis type="category" dataKey="source" tick={{ fontSize: 10, fill: CH.tick2 }} width={90} />
+                      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} formatter={(v: any) => `$${Number(v).toLocaleString()}`} />
                       <Bar dataKey="avg_value" name={t('analytics.leads.avg_value', 'Avg value')} fill="#c9a84c" radius={[0, 4, 4, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -2000,12 +2020,12 @@ export function Analytics() {
                 {leadsDeep.activity_by_owner?.length > 0 ? (
                   <ResponsiveContainer width="100%" height={260}>
                     <BarChart data={leadsDeep.activity_by_owner} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                      <XAxis dataKey="owner" tick={{ fontSize: 10, fill: '#e5e7eb' }}
+                      <CartesianGrid strokeDasharray="3 3" stroke={CH.gridAlt} />
+                      <XAxis dataKey="owner" tick={{ fontSize: 10, fill: CH.tick2 }}
                         interval={0} angle={-20} textAnchor="end" height={60} />
-                      <YAxis tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                      <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                      <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                      <YAxis tick={{ fontSize: 10, fill: CH.tick }} />
+                      <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                      <Legend wrapperStyle={{ fontSize: 11, color: CH.tick }} formatter={CH.legendText} />
                       <Bar dataKey="calls"    name={t('analytics.leads.calls', 'Calls')}       stackId="a" fill="#22c55e" />
                       <Bar dataKey="emails"   name={t('analytics.leads.emails', 'Emails')}     stackId="a" fill="#3b82f6" />
                       <Bar dataKey="meetings" name={t('analytics.leads.meetings', 'Meetings')} stackId="a" fill="#f59e0b" />
@@ -2101,12 +2121,12 @@ export function Analytics() {
                       <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                  <Tooltip contentStyle={CHART_TOOLTIP} />
-                  <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={CH.gridAlt} />
+                  <XAxis dataKey="day" tick={{ fontSize: 10, fill: CH.tick }} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: CH.tick }} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: CH.tick }} />
+                  <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
+                  <Legend wrapperStyle={{ fontSize: 11, color: CH.tick }} formatter={CH.legendText} />
                   <Area yAxisId="left"  type="monotone" dataKey="revenue"   name={t('analytics.deals.revenue', 'Revenue won')} stroke="#10b981" fill="url(#dealRevGrad)" strokeWidth={2} dot={false} />
                   <Line yAxisId="right" type="monotone" dataKey="new_deals" name={t('analytics.deals.new_deals', 'New deals')}   stroke="#f59e0b" strokeWidth={1.5} dot={false} />
                 </ComposedChart>
@@ -2121,8 +2141,8 @@ export function Analytics() {
                 <h3 className="text-sm font-semibold text-white mb-3">{t('analytics.deals.stage_dist', 'Pipeline Value by Stage')}</h3>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={dealsAnalytics.stage_distribution} margin={{ top: 4, right: 4, left: -10, bottom: 0 }} >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#2e2e50" />
-                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: '#8e8e93' }}
+                    <CartesianGrid strokeDasharray="3 3" stroke={CH.gridAlt} />
+                    <XAxis dataKey="stage" tick={{ fontSize: 10, fill: CH.tick }}
                       tickFormatter={s => ({
                         payment_pending: 'Pay',
                         design_needed:   'Prep',
@@ -2131,10 +2151,10 @@ export function Analytics() {
                         ready_to_ship:   'Ready',
                         completed:       'Done',
                       } as any)[s] ?? s} />
-                    <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#8e8e93' }} />
-                    <Tooltip contentStyle={CHART_TOOLTIP} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                    <Legend wrapperStyle={{ fontSize: 11, color: '#8e8e93' }} />
+                    <YAxis yAxisId="left"  tick={{ fontSize: 10, fill: CH.tick }} />
+                    <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: CH.tick }} />
+                    <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} cursor={{ fill: CH.cursor }} />
+                    <Legend wrapperStyle={{ fontSize: 11, color: CH.tick }} formatter={CH.legendText} />
                     <Bar yAxisId="left"  dataKey="count"   name={t('analytics.deals.count', 'Deals')}   fill="#3b82f6" radius={[3, 3, 0, 0]} />
                     <Bar yAxisId="right" dataKey="revenue" name={t('analytics.deals.value', 'Value $')} fill="#10b981" radius={[3, 3, 0, 0]} />
                   </BarChart>
@@ -2153,7 +2173,7 @@ export function Analytics() {
                             <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                           ))}
                         </Pie>
-                        <Tooltip contentStyle={CHART_TOOLTIP} />
+                        <Tooltip contentStyle={CH.tip} itemStyle={CH.itemStyle} />
                       </PieChart>
                     </ResponsiveContainer>
                     <div className="flex-1 space-y-2">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { hx, useDataInk } from '../theme/hx'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -56,6 +57,7 @@ const emptyDef: Definition = { operator: 'AND', filters: [] }
 
 export function Segments() {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
@@ -256,7 +258,7 @@ export function Segments() {
                       <span className="text-white">{m.name}</span>
                       {m.tier && (
                         <span className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold"
-                          style={{ backgroundColor: (m.tier_color || '#666') + '22', color: m.tier_color || '#a0a0a0' }}>
+                          style={{ backgroundColor: (m.tier_color || '#666') + '22', color: m.tier_color ? ink(m.tier_color) : hx('t', '#a0a0a0') }}>
                           {m.tier}
                         </span>
                       )}

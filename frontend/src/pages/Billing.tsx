@@ -427,7 +427,7 @@ export function Billing() {
               onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
               className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-primary-600' : 'bg-dark-surface3')}
             >
-              <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+              <div className={'absolute left-0 top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
             </button>
             <span className={'text-xs font-medium ' + (billingInterval === 'yearly' ? 'text-white' : 'text-t-secondary')}>
               Yearly <span className="text-green-400 text-[10px]">Save ~17%</span>

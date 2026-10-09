@@ -8,6 +8,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { BrandRequired } from '../components/BrandRequired'
+import { hx, useIsLight } from '../theme/hx'
 
 type SubTab = 'appearance' | 'copy' | 'behavior' | 'voice' | 'install'
 
@@ -280,7 +281,7 @@ export function ChatbotWidget() {
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
     <label className="relative inline-flex items-center cursor-pointer">
       <input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} className="sr-only peer" />
-      <div className="w-10 h-5 bg-dark-bg border border-dark-border peer-focus:outline-none rounded-full peer peer-checked:bg-primary-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all" />
+      <div className="w-10 h-5 bg-dark-bg border border-dark-border peer-focus:outline-none rounded-full peer peer-checked:bg-primary-500 peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-on-fill after:rounded-full after:h-4 after:w-4 after:transition-all" />
     </label>
   )
 
@@ -319,8 +320,8 @@ export function ChatbotWidget() {
                 borderTopLeftRadius: isBubble ? 18 : radius,
                 borderTopRightRadius: isBubble ? 18 : radius,
               }}>
-              <div className="w-3 h-3 rounded-full bg-white/40" />
-              <div className="flex-1 h-1.5 rounded-full bg-white/30" />
+              <div className="w-3 h-3 rounded-full" style={{ background: 'rgba(255,255,255,0.4)' }} />
+              <div className="flex-1 h-1.5 rounded-full" style={{ background: 'rgba(255,255,255,0.3)' }} />
             </div>
             <div className="p-2 space-y-1.5">
               <div className="h-2 w-3/4 rounded-full"
@@ -1081,6 +1082,7 @@ export function ChatbotWidget() {
 /* ─── Live Widget Preview ─────────────────────────────────────────────────── */
 
 function WidgetPreview({ cfg }: { cfg: any }) {
+  const light = useIsLight()
   const [open, setOpen] = useState(true)
 
   const primary       = cfg.primary_color || '#c9a84c'
@@ -1146,7 +1148,9 @@ function WidgetPreview({ cfg }: { cfg: any }) {
       <div
         className="relative rounded-xl overflow-hidden border border-dark-border shadow-inner"
         style={{
-          background: 'repeating-linear-gradient(45deg, rgb(var(--color-dark-bg)), rgb(var(--color-dark-bg)) 10px, rgb(var(--color-dark-surface2)) 10px, rgb(var(--color-dark-surface2)) 20px)',
+          background: light
+            ? `repeating-linear-gradient(45deg, ${hx('f', '#0d0d0d')}, ${hx('f', '#0d0d0d')} 10px, ${hx('f', '#1c1c1c')} 10px, ${hx('f', '#1c1c1c')} 20px)`
+            : 'repeating-linear-gradient(45deg, rgb(var(--color-dark-bg)), rgb(var(--color-dark-bg)) 10px, rgb(var(--color-dark-surface2)) 10px, rgb(var(--color-dark-surface2)) 20px)',
           height: 520,
           fontFamily: `'${font}', system-ui, sans-serif`,
         }}

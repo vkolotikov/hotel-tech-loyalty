@@ -19,6 +19,7 @@ import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
 import { formatWallDateTime, formatWallTime } from '../lib/venueTime'
 import { ServiceBookingPricing } from '../components/admin/ServiceBookingPricing'
+import { hxWhite, hx, HX_COLOR_SCHEME } from '../theme/hx'
 
 interface ServiceBooking {
   id: number
@@ -74,8 +75,8 @@ const PAYMENT_OPTIONS = [
 // Style helper for native <select><option> elements — without colorScheme:dark
 // the OS default light background bleeds through and renders the option text
 // invisible against white in the open dropdown.
-const SELECT_DARK = { colorScheme: 'dark' as const }
-const OPT_DARK = { background: '#0f1c18', color: '#fff' }
+const SELECT_DARK = { colorScheme: HX_COLOR_SCHEME }
+const OPT_DARK = { background: hx('f', '#0f1c18'), color: hxWhite() }
 
 const STATUS_COLOR: Record<string, string> = {
   pending:     'bg-yellow-500/15 text-yellow-400',

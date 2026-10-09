@@ -3,6 +3,7 @@ import { X } from 'lucide-react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
+import { HX_COLOR_SCHEME } from '../theme/hx'
 
 interface Props {
   initialDate: string
@@ -119,12 +120,12 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Arrival</label>
               <input value={form.arrival_date} onChange={e => setForm(f => ({ ...f, arrival_date: e.target.value }))} type="date"
-                className={inputCls} style={{ colorScheme: 'dark' }} />
+                className={inputCls} style={{ colorScheme: HX_COLOR_SCHEME }} />
             </div>
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Departure</label>
               <input value={form.departure_date} onChange={e => setForm(f => ({ ...f, departure_date: e.target.value }))} type="date"
-                className={inputCls} style={{ colorScheme: 'dark' }} />
+                className={inputCls} style={{ colorScheme: HX_COLOR_SCHEME }} />
             </div>
           </div>
           <div className="grid grid-cols-3 gap-2">

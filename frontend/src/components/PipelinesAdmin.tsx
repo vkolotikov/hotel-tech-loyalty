@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useDataInk } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -361,6 +362,7 @@ function PipelineRow({ pipeline, expanded, onToggle, onSetDefault, onDelete }: {
 }
 
 function StageRow({ stage }: { stage: PipelineStage }) {
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(stage.name)
@@ -477,7 +479,7 @@ function StageRow({ stage }: { stage: PipelineStage }) {
       <span className="text-sm font-semibold text-white flex-1">{stage.name}</span>
       <span
         className="flex items-center gap-1 text-[10px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded"
-        style={{ color: KIND_META[stage.kind].color, background: KIND_META[stage.kind].color + '15' }}
+        style={{ color: ink(KIND_META[stage.kind].color), background: KIND_META[stage.kind].color + '15' }}
       >
         <KindIcon size={9} />
         {KIND_META[stage.kind].label}

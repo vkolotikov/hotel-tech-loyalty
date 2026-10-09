@@ -8,6 +8,7 @@ import toast from 'react-hot-toast'
 // ViewToggle removed — List / Timeline links live inside the tab bar.
 import { DailyOpsBar } from '../components/DailyOpsBar'
 import { money } from '../lib/money'
+import { hxWhite, hx, HX_COLOR_SCHEME } from '../theme/hx'
 
 /* ── Helpers ─────────────────────────────────────────────────────── */
 
@@ -139,7 +140,7 @@ function BarChart({ data }: { data: { label: string; count: number }[] }) {
 
   return (
     <div>
-      <div className="rounded-xl p-2.5 mb-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+      <div className="rounded-xl p-2.5 mb-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
         <span className="text-[11px] text-gray-400">
           {hovered !== null && data[hovered] ? <>{data[hovered].label}: <span className="text-white font-semibold">{data[hovered].count} arrivals</span></> : 'Hover for details'}
         </span>
@@ -375,8 +376,8 @@ export function Bookings() {
   const selectClass = 'bg-panel border border-dark-border rounded-lg text-sm text-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none cursor-pointer'
   // Native <option> defaults to OS-light styling; force dark so the open
   // dropdown matches the rest of the admin and the text stays readable.
-  const selectStyle = { colorScheme: 'dark' as const }
-  const optStyle    = { background: '#0f1c18', color: '#fff' }
+  const selectStyle = { colorScheme: HX_COLOR_SCHEME }
+  const optStyle    = { background: hx('f', '#0f1c18'), color: hxWhite() }
 
   // Hide analytics section entirely when there is no meaningful data to plot
   const a = dashboard?.analytics
@@ -443,7 +444,7 @@ export function Bookings() {
                   {td.label}
                   {td.count != null && td.count > 0 && (
                     <span className={`inline-flex items-center justify-center min-w-[20px] h-[18px] px-1.5 rounded-full text-[10px] font-bold tabular-nums ${
-                      active ? 'bg-white/20 text-white' : 'bg-dark-surface2 text-t-secondary'
+                      active ? 'bg-on-primary/20 text-on-primary' : 'bg-dark-surface2 text-t-secondary'
                     }`}>{td.count > 999 ? `${Math.round(td.count / 100) / 10}k` : td.count}</span>
                   )}
                 </button>

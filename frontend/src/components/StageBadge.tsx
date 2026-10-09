@@ -14,6 +14,7 @@
 
 import React from 'react'
 import { ChevronDown } from 'lucide-react'
+import { hxWhite, useDataInk } from '../theme/hx'
 
 export interface StageBadgeProps {
   label: string                      // e.g. "Proposal Sent" or legacy "New"
@@ -44,6 +45,7 @@ export default function StageBadge({
   title,
   showCaret = true,
 }: StageBadgeProps) {
+  const ink = useDataInk()
   const tight = size === 'sm'
   const padding = tight ? 'px-1.5 py-[2px] text-[10px]' : 'px-2 py-0.5 text-[11px]'
 
@@ -51,7 +53,7 @@ export default function StageBadge({
   let extraCls = ''
 
   if (stageColor) {
-    const fg = luminance(stageColor) < 0.18 ? '#ffffff' : stageColor
+    const fg = luminance(stageColor) < 0.18 ? hxWhite() : ink(stageColor)
     styleProps.background = stageColor + '20'
     styleProps.color = fg
     styleProps.border = `1px solid ${stageColor}40`

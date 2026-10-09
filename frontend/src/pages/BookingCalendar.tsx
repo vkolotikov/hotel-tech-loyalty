@@ -8,6 +8,8 @@ import { money } from '../lib/money'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { ViewToggle } from '../components/ViewToggle'
 import { QuickCreateBookingModal } from '../components/QuickCreateBookingModal'
+import { hxWhite, hx, useDataInk } from '../theme/hx'
+import { barTextFor } from '../lib/bookingBars'
 
 /* ── Unit visual theming ─────────────────────────────────────────── */
 
@@ -35,14 +37,14 @@ function UnitIcon({ type, size = 14 }: { type: string; size?: number }) {
 
 /* ── Payment bar styling ─────────────────────────────────────────── */
 
-const BAR_STYLE: Record<string, { bg: string; border: string; text: string }> = {
-  paid:            { bg: 'linear-gradient(90deg, #22c55ecc, #16a34acc)', border: 'rgba(34,197,94,0.4)',  text: '#fff' },
-  open:            { bg: 'linear-gradient(90deg, #ef4444cc, #dc2626cc)', border: 'rgba(239,68,68,0.4)',  text: '#fff' },
-  pending:         { bg: 'linear-gradient(90deg, #ef4444cc, #dc2626cc)', border: 'rgba(239,68,68,0.4)',  text: '#fff' },
-  invoice_waiting: { bg: 'linear-gradient(90deg, #f59e0bcc, #d97706cc)', border: 'rgba(245,158,11,0.4)', text: '#1a1a1a' },
-  channel_managed: { bg: 'linear-gradient(90deg, #14b8a6cc, #0d9488cc)', border: 'rgba(20,184,166,0.4)', text: '#fff' },
+const BAR_STYLE: Record<string, { bg: string; border: string }> = {
+  paid:            { bg: 'linear-gradient(90deg, #22c55ecc, #16a34acc)', border: 'rgba(34,197,94,0.4)' },
+  open:            { bg: 'linear-gradient(90deg, #ef4444cc, #dc2626cc)', border: 'rgba(239,68,68,0.4)' },
+  pending:         { bg: 'linear-gradient(90deg, #ef4444cc, #dc2626cc)', border: 'rgba(239,68,68,0.4)' },
+  invoice_waiting: { bg: 'linear-gradient(90deg, #f59e0bcc, #d97706cc)', border: 'rgba(245,158,11,0.4)' },
+  channel_managed: { bg: 'linear-gradient(90deg, #14b8a6cc, #0d9488cc)', border: 'rgba(20,184,166,0.4)' },
 }
-const DEFAULT_BAR = { bg: 'linear-gradient(90deg, #6b7280cc, #4b5563cc)', border: 'rgba(107,114,128,0.4)', text: '#fff' }
+const DEFAULT_BAR = { bg: 'linear-gradient(90deg, #6b7280cc, #4b5563cc)', border: 'rgba(107,114,128,0.4)' }
 
 function shortGuest(name: string) {
   if (!name) return '?'
@@ -53,6 +55,7 @@ function shortGuest(name: string) {
 /* ── Main Component ──────────────────────────────────────────────── */
 
 export function BookingCalendar() {
+  const ink = useDataInk()
   const [month, setMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
@@ -226,7 +229,7 @@ export function BookingCalendar() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
             {([
               { v: 'day', icon: CalendarDays, label: 'Day' },
               { v: 'week', icon: Calendar, label: 'Week' },
@@ -240,12 +243,12 @@ export function BookingCalendar() {
             ))}
           </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[240px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronRight size={16} /></button>
           <button onClick={() => goToday()} className="px-3 py-2 text-xs font-semibold text-gray-500 hover:text-gray-300 transition-colors rounded-xl"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>Today</button>
         </div>
       </div>
 
@@ -268,8 +271,8 @@ export function BookingCalendar() {
             className="px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all"
             style={{
               background: !unitFilter ? 'rgba(116,200,149,0.12)' : 'transparent',
-              borderColor: !unitFilter ? 'rgba(116,200,149,0.3)' : 'rgba(255,255,255,0.06)',
-              color: !unitFilter ? '#74c895' : '#8e8e93',
+              borderColor: !unitFilter ? 'rgba(116,200,149,0.3)' : hxWhite(0.06),
+              color: !unitFilter ? hx('t', '#74c895') : hx('t', '#8e8e93'),
             }}>All Units</button>
           {units.map(u => {
             const vis = unitVisual(u.name)
@@ -279,8 +282,8 @@ export function BookingCalendar() {
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold border transition-all hover:scale-[1.02]"
                 style={{
                   background: active ? vis.soft : 'transparent',
-                  borderColor: active ? `${vis.accent}44` : 'rgba(255,255,255,0.06)',
-                  color: active ? vis.accent : '#8e8e93',
+                  borderColor: active ? `${vis.accent}44` : hxWhite(0.06),
+                  color: active ? ink(vis.accent) : hx('t', '#8e8e93'),
                   boxShadow: active ? `0 4px 12px ${vis.glow}` : 'none',
                 }}>
                 <UnitIcon type={vis.icon} size={11} /> {u.name}
@@ -331,13 +334,13 @@ export function BookingCalendar() {
                   style={{ background: 'var(--legacy-card-gradient-diagonal)', borderLeftWidth: '4px', borderLeftColor: vis.accent }}>
                   <div className="flex items-start gap-3 mb-3">
                     <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                      style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: vis.accent }}>
+                      style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: ink(vis.accent) }}>
                       <UnitIcon type={vis.icon} size={18} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold text-white truncate">{udata.name}</p>
                       <div className="inline-flex items-center gap-1 mt-1 px-2 py-1 rounded-full text-[11px] font-bold"
-                        style={{ background: `rgba(${statusColor === 'emerald' ? '34,197,94' : statusColor === 'amber' ? '245,158,11' : statusColor === 'teal' ? '20,184,166' : '107,114,128'},0.15)`, color: statusColor === 'emerald' ? '#22c55e' : statusColor === 'amber' ? '#f59e0b' : statusColor === 'teal' ? '#14b8a6' : '#8e8e93' }}>
+                        style={{ background: `rgba(${statusColor === 'emerald' ? '34,197,94' : statusColor === 'amber' ? '245,158,11' : statusColor === 'teal' ? '20,184,166' : '107,114,128'},0.15)`, color: statusColor === 'emerald' ? ink('#22c55e') : statusColor === 'amber' ? ink('#f59e0b') : statusColor === 'teal' ? ink('#14b8a6') : hx('t', '#8e8e93') }}>
                         <span>{statusEmoji}</span> {status}
                       </div>
                     </div>
@@ -345,7 +348,7 @@ export function BookingCalendar() {
                   {booking ? (
                     <Link to={`/bookings/${booking.id}`}
                       className="block p-3 rounded-lg border border-white/[0.06] hover:border-white/[0.1] transition-colors"
-                      style={{ background: 'rgba(0,0,0,0.3)' }}>
+                      style={{ background: hx('f', '#000000', 0.3) }}>
                       <div className="text-sm font-bold text-white mb-1">{booking.guest_name || '?'}</div>
                       <div className="text-[11px] text-gray-400 mb-2">
                         {new Date(booking.arrival_date).toLocaleDateString('en-GB', {month:'short',day:'numeric'})} → {new Date(booking.departure_date).toLocaleDateString('en-GB', {month:'short',day:'numeric'})}
@@ -440,7 +443,7 @@ export function BookingCalendar() {
                   <div className="relative z-[1] pl-3">
                     <div className="flex items-center gap-2 mb-1.5">
                       <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: vis.accent }}>
+                        style={{ background: vis.soft, border: `1px solid ${vis.accent}33`, color: ink(vis.accent) }}>
                         <UnitIcon type={vis.icon} size={15} />
                       </div>
                       <span className="text-sm font-bold text-white truncate">{udata.name}</span>
@@ -527,7 +530,7 @@ export function BookingCalendar() {
                             style={{
                               left: `${leftPct}%`, width: `${widthPct}%`,
                               top: PAD + row * (ROW_H + ROW_GAP),
-                              height: ROW_H, background: s.bg, border: `1px solid ${s.border}`, color: s.text,
+                              height: ROW_H, background: s.bg, border: `1px solid ${s.border}`, color: barTextFor(payStatus),
                               boxShadow: `0 4px 10px rgba(0,0,0,0.2)`,
                               opacity: isDragging ? 0.4 : 1,
                             }}

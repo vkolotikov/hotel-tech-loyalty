@@ -450,7 +450,7 @@ export function ChatInbox() {
                 setGroupByVisitor(next)
                 try { localStorage.setItem('chat-inbox-group-by-visitor', next ? '1' : '0') } catch {}
               }} className={`relative w-7 h-3.5 rounded-full transition-colors ${groupByVisitor ? 'bg-primary-600' : 'bg-white/[0.08]'}`}>
-                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-on-fill transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                <span className={`absolute left-0 top-0.5 w-2.5 h-2.5 rounded-full bg-on-fill transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
               </button>
             </label>
           </div>

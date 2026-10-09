@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarDays, ChevronLeft, ChevronRight, Loader, Plus, Sparkles, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useDataInk } from '../../theme/hx'
 import {
   cp,
   errMsg,
@@ -48,6 +49,19 @@ interface QuickCreateState {
   platform: string
   topic: string
   goal: string
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const ink = useDataInk()
+  const meta = STATUS_META[status] ?? { label: status, color: '#9ca3af', bg: 'rgba(156,163,175,0.15)' }
+  return (
+    <span
+      className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium"
+      style={{ color: ink(meta.color), backgroundColor: meta.bg }}
+    >
+      {meta.label}
+    </span>
+  )
 }
 
 export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile; onOpenPost: (id: number) => void }) {
@@ -226,17 +240,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
 
   /* ── Render helpers ── */
 
-  const statusBadge = (status: string) => {
-    const meta = STATUS_META[status] ?? { label: status, color: '#9ca3af', bg: 'rgba(156,163,175,0.15)' }
-    return (
-      <span
-        className="inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium"
-        style={{ color: meta.color, backgroundColor: meta.bg }}
-      >
-        {meta.label}
-      </span>
-    )
-  }
+  const statusBadge = (status: string) => <StatusBadge status={status} />
 
   const platformDot = (platform: string, size = 8) => (
     <span

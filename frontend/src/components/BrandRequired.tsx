@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Briefcase, ChevronRight } from 'lucide-react'
 import { useBrandStore } from '../stores/brandStore'
+import { hxWhite } from '../theme/hx'
 
 /**
  * Wrapper for brand-scoped admin pages (chatbot config, knowledge base,
@@ -54,7 +55,7 @@ export function BrandRequired({
             >
               <div
                 className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
-                style={{ background: b.primary_color ?? 'rgba(255,255,255,0.06)' }}
+                style={{ background: b.primary_color ?? hxWhite(0.06) }}
               >
                 <Briefcase size={13} className="text-white" />
               </div>

@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { hx, hxWhite } from '../theme/hx'
 
 interface ViewOption {
   to: string
@@ -30,7 +31,7 @@ export function ViewToggle({ options }: { options: ViewOption[] }) {
 
   return (
     <div className="flex items-center gap-1 p-1 rounded-2xl w-fit"
-      style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
       {options.map(opt => {
         const active = matched?.to === opt.to
         return (
@@ -40,7 +41,7 @@ export function ViewToggle({ options }: { options: ViewOption[] }) {
               background: 'linear-gradient(135deg, #74c895, #5ab4b2)',
               color: '#03050A',
               boxShadow: '0 6px 14px rgba(116,200,149,0.2)',
-            } : { color: '#8e8e93' }}>
+            } : { color: hx('t', '#8e8e93') }}>
             {opt.icon}{opt.label}
           </Link>
         )

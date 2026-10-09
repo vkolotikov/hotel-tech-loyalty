@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
+import { useDataInk } from '../theme/hx'
 import {
   Building2, Sparkles, Stethoscope, Scale, Home, GraduationCap, Dumbbell, Utensils, Briefcase, Handshake,
   CheckCircle2, X, Star, Zap, Info, Plus, Trash2, Edit2, Save, ListChecks,
@@ -262,6 +263,7 @@ function ChangeRow({ label, accent }: { label: string; accent?: boolean }) {
 interface GroupEntry { name: string; icon?: string; color?: string }
 
 function GroupsEditor() {
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [adding, setAdding] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
@@ -365,7 +367,7 @@ function GroupsEditor() {
                   onClick={() => setPickerOpen(open ? null : idx)}
                   title="Change icon / color"
                   className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
-                  style={{ backgroundColor: color + '25', color }}>
+                  style={{ backgroundColor: color + '25', color: ink(color) }}>
                   <Icon size={14} />
                 </button>
                 {editing ? (
@@ -558,6 +560,7 @@ function IconColorPicker({ selectedIcon, selectedColor, onIcon, onColor, onClose
  * of { key, label, icon, color } objects.
  */
 function ChannelsEditor() {
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [adding, setAdding] = useState('')
   const [editingIdx, setEditingIdx] = useState<number | null>(null)
@@ -648,7 +651,7 @@ function ChannelsEditor() {
                   onClick={() => setPickerOpen(open ? null : idx)}
                   title="Change icon / color"
                   className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 hover:ring-2 hover:ring-primary-500/40 transition"
-                  style={{ backgroundColor: c.color + '25', color: c.color }}>
+                  style={{ backgroundColor: c.color + '25', color: ink(c.color) }}>
                   <Icon size={14} />
                 </button>
                 {editing ? (
@@ -901,6 +904,7 @@ function WorkdayEditor() {
 /* ─────────────────────── Templates editor ─────────────────────── */
 
 function TemplatesEditor() {
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [editing, setEditing] = useState<Template | null>(null)
   const [creating, setCreating] = useState(false)
@@ -954,7 +958,7 @@ function TemplatesEditor() {
                   return (
                     <div key={t.id} className="flex items-center gap-2 bg-dark-bg border border-dark-border rounded-md px-2.5 py-1.5">
                       {Icon && (
-                        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: meta!.color + '25', color: meta!.color }}>
+                        <div className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: meta!.color + '25', color: ink(meta!.color) }}>
                           <Icon size={13} />
                         </div>
                       )}

@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, AlertTriangle, Coins, CheckCircle2, Cpu, Layers } from 'lucide-react'
 import { api } from '../lib/api'
+import { useDataInk } from '../theme/hx'
 
 interface Budget {
   status: 'unlimited' | 'under' | 'warn' | 'over'
@@ -36,6 +37,7 @@ const STATUS_META = {
 } as const
 
 export function AiUsagePanel() {
+  const ink = useDataInk()
   const { data: stats, isLoading } = useQuery<StatsResponse>({
     queryKey: ['ai-usage-stats'],
     queryFn: () => api.get('/v1/admin/ai-usage/stats').then(r => r.data),
@@ -82,10 +84,10 @@ export function AiUsagePanel() {
 
         {/* Status */}
         <div className="rounded-xl border border-white/[0.06] p-4" style={{ background: budgetMeta.bg }}>
-          <div className="flex items-center gap-2 text-xs uppercase tracking-wide" style={{ color: budgetMeta.color }}>
+          <div className="flex items-center gap-2 text-xs uppercase tracking-wide" style={{ color: ink(budgetMeta.color) }}>
             <BudgetIcon size={12} /> Budget status
           </div>
-          <div className="mt-2 text-2xl font-semibold" style={{ color: budgetMeta.color }}>
+          <div className="mt-2 text-2xl font-semibold" style={{ color: ink(budgetMeta.color) }}>
             {budgetMeta.label}
           </div>
           {stats.budget.cap_cents != null && (

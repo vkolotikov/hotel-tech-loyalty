@@ -176,7 +176,7 @@ export function Properties() {
                 <img src={imagePreview} alt="Property" className="w-full h-40 object-cover rounded-xl border border-dark-border" />
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center gap-3">
                   <button type="button" onClick={() => fileInputRef.current?.click()}
-                    className="bg-white/20 text-white px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-white/30 transition-colors">
+                    className="bg-on-fill/20 text-on-fill px-3 py-1.5 rounded-lg text-sm backdrop-blur-sm hover:bg-on-fill/30 transition-colors">
                     Change
                   </button>
                   <button type="button" onClick={clearImage}

@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query'
 import { ArrowLeft, Mail, Bell, Eye, Users, CheckCircle2, XCircle, Search } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 import { api } from '../lib/api'
+import { LIGHT_CHART, useIsLight } from '../theme/hx'
 
 interface Recipient {
   id: number
@@ -40,6 +41,7 @@ interface Detail {
 }
 
 export function CampaignDetail() {
+  const light = useIsLight()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [tab, setTab] = useState<'all' | 'opened' | 'unopened' | 'failed'>('all')
@@ -111,10 +113,10 @@ export function CampaignDetail() {
           <div style={{ width: '100%', height: 200 }}>
             <ResponsiveContainer>
               <BarChart data={data.timeline} margin={{ top: 8, right: 12, left: -18, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#2a2a2a" />
-                <XAxis dataKey="hour" stroke="#666" tick={{ fill: '#a0a0a0', fontSize: 11 }} tickFormatter={v => v.slice(5, 13)} />
-                <YAxis stroke="#666" tick={{ fill: '#a0a0a0', fontSize: 11 }} allowDecimals={false} />
-                <Tooltip contentStyle={{ background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 8 }} labelStyle={{ color: '#fff' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={light ? LIGHT_CHART.grid : '#2a2a2a'} />
+                <XAxis dataKey="hour" stroke="#666" tick={{ fill: light ? LIGHT_CHART.tick : '#a0a0a0', fontSize: 11 }} tickFormatter={v => v.slice(5, 13)} />
+                <YAxis stroke="#666" tick={{ fill: light ? LIGHT_CHART.tick : '#a0a0a0', fontSize: 11 }} allowDecimals={false} />
+                <Tooltip contentStyle={{ background: light ? LIGHT_CHART.tooltipBg : '#1a1a1a', border: `1px solid ${light ? LIGHT_CHART.tooltipBorder : '#2a2a2a'}`, borderRadius: 8 }} labelStyle={{ color: light ? LIGHT_CHART.tooltipText : '#fff' }} cursor={light ? { fill: LIGHT_CHART.cursor } : undefined} />
                 <Bar dataKey="opens" fill="#6366f1" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>

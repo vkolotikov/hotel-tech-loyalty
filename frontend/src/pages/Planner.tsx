@@ -10,6 +10,8 @@ import {
   type GroupMeta,
 } from '../lib/plannerMeta'
 import { useAuthStore } from '../stores/authStore'
+import { useDataInk, useIsLight } from '../theme/hx'
+import { onColor } from '../theme/glass'
 import toast from 'react-hot-toast'
 import {
   ChevronLeft, ChevronRight, Plus, CheckCircle2, Circle, Trash2,
@@ -217,6 +219,7 @@ const TaskRow = memo(({
   const subTotal = task.subtasks?.length ?? 0
   const groupMeta = getGroupMeta(task.task_group)
   const GroupIcon = groupMeta.icon
+  const ink = useDataInk()
 
   return (
     <div draggable onDragStart={onDragStart}
@@ -229,7 +232,7 @@ const TaskRow = memo(({
             : <Circle size={22} className="text-gray-600 hover:text-gray-400" />}
         </button>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: groupMeta.color + '20', color: groupMeta.color }}>
+          style={{ backgroundColor: groupMeta.color + '20', color: ink(groupMeta.color) }}>
           <GroupIcon size={15} />
         </div>
         <div className="flex-1 min-w-0">
@@ -256,7 +259,7 @@ const TaskRow = memo(({
             )}
             {task.task_group && (
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ backgroundColor: groupMeta.color + '20', color: groupMeta.color }}>
+                style={{ backgroundColor: groupMeta.color + '20', color: ink(groupMeta.color) }}>
                 {task.task_group}
               </span>
             )}
@@ -352,6 +355,7 @@ const SUGGESTED_TEMPLATES: Array<Omit<ServerTemplate, 'id' | 'sort_order'>> = [
 
 function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, group?: string, category?: string, duration?: number) => void }) {
   const qc = useQueryClient()
+  const ink = useDataInk()
   const currentDate = fmtDate(new Date())
   const [mode, setMode] = useState<'closed' | 'pick' | 'add' | 'manage'>('closed')
   const [editing, setEditing] = useState<ServerTemplate | null>(null)
@@ -453,7 +457,7 @@ function TaskTemplates({ onCreate }: { onCreate: (title: string, date: string, g
                   <div key={cat}>
                     <div className="flex items-center gap-2 mb-1.5">
                       <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: accent }} />
-                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: accent }}>{cat}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ink(accent) }}>{cat}</span>
                       <span className="text-[10px] text-gray-600 tabular-nums">{tmps.length}</span>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
@@ -820,6 +824,7 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
   onDuplicate: (toDate: string) => void
   onReschedule: (toDate: string) => void
 }) {
+  const ink = useDataInk()
   const [title, setTitle] = useState(task.title || '')
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -886,7 +891,7 @@ function TaskPopover({ task, anchor, onClose, onRename, onTogglePriority, onComp
         </button>
         <button onClick={cyclePriority}
           className="flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-xs font-medium bg-dark-surface2 text-white hover:bg-primary-500/20 transition-colors">
-          <Flag size={13} style={{ color: PRIORITY_COLOR[task.priority] ?? '#6b7280' }} />
+          <Flag size={13} style={{ color: ink(PRIORITY_COLOR[task.priority] ?? '#6b7280') }} />
           {task.priority || 'Normal'}
         </button>
       </div>
@@ -973,6 +978,8 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
   viewMode: 'single' | 'team'
   onViewModeChange: (mode: 'single' | 'team') => void
 }) {
+  const ink = useDataInk()
+  const light = useIsLight()
   const HOUR_START = 6
   const HOUR_END = 22
   // 72px/hour (was 56) — gives a 1-hour chip ~66px of content height,
@@ -1489,7 +1496,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                   {/* Time range — bright color, matches sample's
                       "9:00 – 10:00" header. Drops AM/PM since the
                       column already groups by day. */}
-                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-7 leading-none" style={{ color: meta.color, filter: 'brightness(1.5)' }}>
+                  <span className="text-[10.5px] font-medium tabular-nums flex-shrink-0 pr-7 leading-none" style={{ color: ink(meta.color), filter: light ? 'none' : 'brightness(1.5)' }}>
                     {to12hNoSuffix(startLabel)}{duration ? ` – ${to12hNoSuffix(endLabel)}` : ''}
                   </span>
                   {/* Title — bright white, with right-padding so the
@@ -1525,7 +1532,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                     className="absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full flex-shrink-0"
                     style={{ background: meta.color + 'cc', boxShadow: `0 1px 4px ${meta.color}55` }}
                     title={task.task_group || 'Task'}>
-                    <Icon size={11} className="text-white" />
+                    <Icon size={11} className="text-on-fill" />
                   </span>
                   {/* Secondary badges — stacked under the corner icon
                       only when they exist. Keeps the top-right corner
@@ -1535,12 +1542,12 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                     <div className="absolute top-8 right-2 flex flex-col items-end gap-0.5">
                       {task.priority === 'High' && (
                         <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-red-500/80 flex-shrink-0" title="High priority">
-                          <Flag size={8} className="text-white" />
+                          <Flag size={8} className="text-on-fill" />
                         </span>
                       )}
                       {(task.recurring || task.recurring_parent_id) && (
                         <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-purple-500/80" title="Part of a recurring series">
-                          <Repeat size={8} className="text-white" />
+                          <Repeat size={8} className="text-on-fill" />
                         </span>
                       )}
                       {(() => {
@@ -1550,7 +1557,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
                         return (
                           <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full flex-shrink-0"
                             style={{ background: sm.color }} title={sm.label}>
-                            <SIcon size={8} className="text-white" />
+                            <SIcon size={8} className="text-on-fill" />
                           </span>
                         )
                       })()}
@@ -1606,6 +1613,8 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
 
 export function Planner() {
   const qc = useQueryClient()
+  const ink = useDataInk()
+  const light = useIsLight()
   const { t } = useTranslation()
   const settings = useSettings()
   const { user } = useAuthStore()
@@ -2376,13 +2385,13 @@ export function Planner() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] uppercase tracking-wider font-semibold text-gray-500 truncate">{k.label}</p>
                       <p className="text-2xl font-bold text-white mt-1 leading-none tabular-nums">{k.value}</p>
-                      <p className="text-[10px] text-gray-500 mt-1 truncate" style={k.dim ? {} : { color: k.accent }}>
+                      <p className="text-[10px] text-gray-500 mt-1 truncate" style={k.dim ? {} : { color: ink(k.accent) }}>
                         {k.sublabel}
                       </p>
                     </div>
                     <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
                       style={{ background: k.bg, border: `1px solid ${k.border}` }}>
-                      <KIcon size={16} style={{ color: k.accent }} />
+                      <KIcon size={16} style={{ color: ink(k.accent) }} />
                     </div>
                   </div>
                 </div>
@@ -2542,7 +2551,7 @@ export function Planner() {
                         style={{
                           background: meta.color + '20',
                           border: '1px solid ' + meta.color + '40',
-                          color: meta.color,
+                          color: ink(meta.color),
                           textDecoration: task.completed ? 'line-through' : 'none',
                           opacity: task.completed ? 0.6 : 1,
                         }}>
@@ -2903,12 +2912,12 @@ export function Planner() {
                                         : 'hover:ring-white/20 hover:brightness-125')}>
                                     {(task.start_time || task.end_time) && (
                                       <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : '')}
-                                        style={task.completed ? {} : { color: meta.color }}>
+                                        style={task.completed ? {} : { color: ink(meta.color) }}>
                                         {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
                                       </div>
                                     )}
                                     <div className={'flex items-start gap-1 mt-0.5 min-w-0 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
-                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
+                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
                                       <span className={'text-xs truncate flex-1 min-w-0 ' + (task.completed ? 'line-through' : '')}>
                                         {task.title}
                                       </span>
@@ -3020,12 +3029,12 @@ export function Planner() {
                                       (task.completed ? 'bg-green-500/10 border-green-500' : '')}>
                                     {(task.start_time || task.end_time) && (
                                       <div className={'text-xs font-semibold ' + (task.completed ? 'text-green-400' : '')}
-                                        style={task.completed ? {} : { color: meta.color }}>
+                                        style={task.completed ? {} : { color: ink(meta.color) }}>
                                         {fmtShort(task.start_time)}{task.end_time ? `-${fmtShort(task.end_time)}` : ''}
                                       </div>
                                     )}
                                     <div className={'flex items-start gap-1 mt-0.5 ' + (task.completed ? 'text-gray-600' : 'text-white')}>
-                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: meta.color, opacity: task.completed ? 0.5 : 1 }} />
+                                      <Icon size={10} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color), opacity: task.completed ? 0.5 : 1 }} />
                                       <span className={'text-xs truncate flex-1 ' + (task.completed ? 'line-through' : '')}>{task.title}</span>
                                     </div>
                                   </button>
@@ -3349,10 +3358,10 @@ export function Planner() {
                     <div key={p.task_id}
                       className="flex items-center gap-3 px-3 py-2 rounded-lg border"
                       style={{ borderColor: meta.color + '40', background: meta.color + '10' }}>
-                      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: meta.color, minWidth: 50 }}>
+                      <span className="text-xs font-mono font-bold flex-shrink-0" style={{ color: ink(meta.color), minWidth: 50 }}>
                         {p.start_time}
                       </span>
-                      <Icon size={14} style={{ color: meta.color }} className="flex-shrink-0" />
+                      <Icon size={14} style={{ color: ink(meta.color) }} className="flex-shrink-0" />
                       <span className="flex-1 text-sm text-white truncate">{p.title}</span>
                       <span className="text-[10px] text-gray-400 flex-shrink-0">{p.duration_minutes}m</span>
                       {p.priority === 'High' && (
@@ -3507,7 +3516,7 @@ export function Planner() {
                           (active ? 'text-black'
                             : prefGroups.includes(g) ? 'text-amber-200 border-amber-400/50 bg-amber-400/10 hover:bg-amber-400/15'
                             : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
-                        style={active ? { background: meta.color, borderColor: meta.color } : {}}>
+                        style={active ? { background: meta.color, borderColor: meta.color, ...(light ? { color: onColor(meta.color) } : {}) } : {}}>
                         {prefGroups.includes(g) && <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-amber-400" title={`Fits ${form.employee_name}`} />}
                         <Icon size={14} />
                         {g}
@@ -3536,7 +3545,7 @@ export function Planner() {
                           (active ? 'text-black'
                             : prefTasks.includes(c.key) ? 'text-amber-200 border-amber-400/50 bg-amber-400/10 hover:bg-amber-400/15'
                             : 'text-gray-400 border-dark-border hover:bg-dark-surface2')}
-                        style={active ? { background: c.color, borderColor: c.color } : {}}>
+                        style={active ? { background: c.color, borderColor: c.color, ...(light ? { color: onColor(c.color) } : {}) } : {}}>
                         {prefTasks.includes(c.key) && <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" title={`Fits ${form.employee_name}`} />}
                         <Icon size={13} />
                         {c.label}
@@ -3748,7 +3757,7 @@ export function Planner() {
                 </div>
                 {form.start_time && form.end_time && (
                   <div className="mt-2 text-[11px] text-gray-500 flex items-center gap-1.5">
-                    <activeMeta.icon size={11} style={{ color: activeMeta.color }} />
+                    <activeMeta.icon size={11} style={{ color: ink(activeMeta.color) }} />
                     {fmtShort(form.start_time)} — {fmtShort(form.end_time)}
                   </div>
                 )}

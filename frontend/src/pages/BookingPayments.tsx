@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { Link } from 'react-router-dom'
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react'
 import { money } from '../lib/money'
+import { hx, hxWhite } from '../theme/hx'
 
 const PAY_PILL: Record<string, string> = {
   paid:            'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
@@ -48,7 +49,7 @@ export function BookingPayments() {
     <div className="space-y-7">
       <div>
         <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-          style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Payments</div>
+          style={{ background: 'rgba(116,200,149,0.12)', color: hx('t', '#74c895') }}>Payments</div>
         <h1 className="text-3xl font-bold text-white tracking-tight">Booking Payments</h1>
         <p className="text-sm text-gray-500 mt-1">Payment status and balance tracking for all bookings</p>
       </div>
@@ -94,7 +95,7 @@ export function BookingPayments() {
               className="block rounded-2xl p-4 transition-all hover:-translate-y-px hover:shadow-xl group"
               style={{
                 background: `var(--legacy-tile-gradient), radial-gradient(circle at 100% 0, rgba(116,200,149,0.06), transparent 35%)`,
-                border: '1px solid rgba(255,255,255,0.05)',
+                border: `1px solid ${hxWhite(0.05)}`,
                 boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
               }}>
               <div className="flex items-center gap-4 flex-wrap">
@@ -150,10 +151,10 @@ export function BookingPayments() {
           <div className="flex gap-1">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronLeft size={14} /></button>
             <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronRight size={14} /></button>
           </div>
         </div>
       )}

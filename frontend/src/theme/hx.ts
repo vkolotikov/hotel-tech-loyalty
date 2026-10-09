@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { hexToRgb, toTriplet } from './colour'
+import { hexToRgb, isHex, toTriplet } from './colour'
+import { lightTextFor } from './light'
 
 const six = (hex: string) => {
   const h = hex.replace('#', '').toLowerCase()
@@ -48,4 +49,20 @@ export function useIsLight(): boolean {
     return () => observer.disconnect()
   }, [])
   return light
+}
+
+/**
+ * Text in a data colour (a stage, tag or status colour that comes from the
+ * server or a palette): in Clean light the same rule as every other
+ * hard-coded text colour (lightTextFor: 4.6:1 on white, canvas and hover);
+ * everywhere else it is the colour itself. Fills and tints keep the plain colour.
+ */
+export function dataInkFor(colour: string): string {
+  return isHex(colour) ? lightTextFor(six(colour.trim())) : colour
+}
+
+/** A function that returns a data colour as text: deepened in Clean light, unchanged elsewhere. */
+export function useDataInk(): (colour: string) => string {
+  const light = useIsLight()
+  return light ? dataInkFor : (colour: string) => colour
 }

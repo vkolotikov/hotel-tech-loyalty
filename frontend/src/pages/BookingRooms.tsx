@@ -10,6 +10,7 @@ import {
 import { PairTabs, CATALOG_TABS } from '../components/PairTabs'
 import { money } from '../lib/money'
 import { BrandRequired } from '../components/BrandRequired'
+import { hxWhite, hx, HX_COLOR_SCHEME } from '../theme/hx'
 
 /* ── Types ───────────────────────────────────────────────────────── */
 interface Room {
@@ -405,19 +406,19 @@ function RoomForm({ room, onClose, onSave, saving }: {
                           <Star size={10} /> Cover
                         </span>
                       )}
-                      <span className="absolute right-1.5 top-1.5 rounded bg-black/50 p-0.5 text-white/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="absolute right-1.5 top-1.5 rounded bg-black/50 p-0.5 text-on-fill/70 opacity-0 group-hover:opacity-100 transition-opacity">
                         <GripVertical size={12} />
                       </span>
                       {/* Controls */}
                       <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-0.5">
                           <button type="button" onClick={() => movePhoto(i, i - 1)} disabled={i === 0}
-                            className="rounded p-0.5 text-white/80 hover:text-white disabled:opacity-30" title="Move left">‹</button>
+                            className="rounded p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move left">‹</button>
                           <button type="button" onClick={() => movePhoto(i, i + 1)} disabled={i === photos.length - 1}
-                            className="rounded p-0.5 text-white/80 hover:text-white disabled:opacity-30" title="Move right">›</button>
+                            className="rounded p-0.5 text-on-fill/80 hover:text-on-fill disabled:opacity-30" title="Move right">›</button>
                         </div>
                         <button type="button" onClick={() => removePhoto(p.id)}
-                          className="rounded p-0.5 text-white/80 hover:text-red-400" title="Remove"><Trash2 size={12} /></button>
+                          className="rounded p-0.5 text-on-fill/80 hover:text-red-400" title="Remove"><Trash2 size={12} /></button>
                       </div>
                     </div>
                   ))}
@@ -470,9 +471,9 @@ function RoomForm({ room, onClose, onSave, saving }: {
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-400 mb-1.5">Bed Type</label>
-              <select value={bedType} onChange={e => setBedType(e.target.value)} className={inputCls} style={{ colorScheme: 'dark' }}>
-                <option value="" style={{ background: '#0f1c18', color: '#fff' }}>—</option>
-                {BED_TYPES.map(bt => <option key={bt} value={bt} style={{ background: '#0f1c18', color: '#fff' }}>{bt}</option>)}
+              <select value={bedType} onChange={e => setBedType(e.target.value)} className={inputCls} style={{ colorScheme: HX_COLOR_SCHEME }}>
+                <option value="" style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>—</option>
+                {BED_TYPES.map(bt => <option key={bt} value={bt} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{bt}</option>)}
               </select>
             </div>
             <div>

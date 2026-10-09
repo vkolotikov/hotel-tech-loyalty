@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Bell, Mail, Star, ArrowLeft, Search, Sparkles } from 'lucide-react'
+import { useDataInk } from '../../theme/hx'
 
 /**
  * "Marketing" hub — outbound communication + customer feedback + AI content planning.
@@ -141,6 +142,7 @@ export function MarketingHub() {
 function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void; onPreload?: () => void }) {
   const Icon = tile.icon
   const { accent } = tile
+  const ink = useDataInk()
   return (
     <button
       onClick={onClick}
@@ -177,7 +179,7 @@ function Tile({ tile, onClick, onPreload }: { tile: TileDef; onClick: () => void
             boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
           }}
         >
-          <Icon size={22} style={{ color: accent }} />
+          <Icon size={22} style={{ color: ink(accent) }} />
         </span>
       </div>
 

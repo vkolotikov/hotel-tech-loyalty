@@ -5,6 +5,9 @@ import { Briefcase, Plus, Pencil, Trash2, X, Upload, Check, Star, Globe, Message
 import toast from 'react-hot-toast'
 import { api, resolveImage } from '../lib/api'
 import { useBrandStore, type BrandSummary } from '../stores/brandStore'
+import { hxWhite, useIsLight } from '../theme/hx'
+import { isHex } from '../theme/colour'
+import { onColor } from '../theme/glass'
 
 interface BrandStats {
   inquiries: number
@@ -35,6 +38,7 @@ function BrandStat({ icon: Icon, value, label }: { icon: any; value: number; lab
  * brand makes the BrandSwitcher visible in the top bar.
  */
 export function Brands() {
+  const light = useIsLight()
   const qc = useQueryClient()
   const [params, setParams] = useSearchParams()
   const setStoreBrands = useBrandStore(s => s.setBrands)
@@ -338,9 +342,9 @@ export function Brands() {
                 ) : (
                   <div
                     className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{ background: b.primary_color ?? 'rgba(255,255,255,0.06)' }}
+                    style={{ background: b.primary_color ?? hxWhite(0.06) }}
                   >
-                    <Briefcase size={22} className="text-white" />
+                    <Briefcase size={22} className="text-white" style={light && isHex(b.primary_color) ? { color: onColor(b.primary_color) } : undefined} />
                   </div>
                 )}
 

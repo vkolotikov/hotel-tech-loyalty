@@ -8,6 +8,7 @@ import {
   Clock, Hash, GitCompare, PieChart as PieIcon, BarChart3, Download, X,
 } from 'lucide-react'
 import { api } from '../lib/api'
+import { hxWhite, LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
 import { resolveGroupMeta, parsePlannerGroups, parsePlannerChannels } from '../lib/plannerMeta'
 
 /**
@@ -86,6 +87,15 @@ const DOW_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0] // Monday-first display
 
 export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFrom, statsTo }: Props) {
+  const light = useIsLight()
+  const ink = useDataInk()
+  // Chart chrome: dark constants for Glass and Classic, LIGHT_CHART in Clean light.
+  const CH = light
+    ? {
+        grid: LIGHT_CHART.grid, tick1: LIGHT_CHART.tick, tick2: LIGHT_CHART.tick, cursor: LIGHT_CHART.cursor, sep: '#FFFFFF',
+        tip: { backgroundColor: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, color: LIGHT_CHART.tooltipText, borderRadius: 8, fontSize: 12 },
+      }
+    : { grid: '#ffffff10', tick1: '#6b7280', tick2: '#9ca3af', cursor: 'rgba(255,255,255,0.05)', sep: '#12121f', tip: TOOLTIP_STYLE }
   /* ─── interactive controls (persisted) ─────────────────────────── */
   const [measure, setMeasure] = useLocal<Measure>('planner-stats-measure', 'hours')
   const [compare, setCompare] = useLocal<boolean>('planner-stats-compare', false)
@@ -412,13 +422,13 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                 <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#c9a84c" stopOpacity={0.35} /><stop offset="100%" stopColor="#c9a84c" stopOpacity={0.02} /></linearGradient>
                 <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity={0.45} /><stop offset="100%" stopColor="#10b981" stopOpacity={0.03} /></linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#6b7280' }} />
-              <YAxis allowDecimals={isH} tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 10, fill: CH.tick1 }} />
+              <YAxis allowDecimals={isH} tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} />
+              <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {isH && <ReferenceLine y={workHoursPerDay} stroke="#f59e0b" strokeDasharray="5 4" strokeOpacity={0.7}
-                label={{ value: `target ${workHoursPerDay}h`, fill: '#f59e0b', fontSize: 10, position: 'insideTopRight' }} />}
+                label={{ value: `target ${workHoursPerDay}h`, fill: ink('#f59e0b'), fontSize: 10, position: 'insideTopRight' }} />}
               {isH ? (
                 <Area type="monotone" dataKey="worked" stroke="#10b981" strokeWidth={2} fill="url(#gB)" name="Worked h" />
               ) : (<>
@@ -476,7 +486,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                   <div className="grid grid-cols-4 gap-2">
                     {buckets.map(b => (
                       <div key={b.label} className="text-center">
-                        <div className="tabular-nums font-semibold" style={{ color: b.v > 0 ? b.c : '#4b5563' }}>{b.v}</div>
+                        <div className="tabular-nums font-semibold" style={{ color: ink(b.v > 0 ? b.c : '#4b5563') }}>{b.v}</div>
                         <div className="text-[10px] text-gray-600">{b.label}</div>
                       </div>
                     ))}
@@ -509,12 +519,12 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                   <ResponsiveContainer width={220} height={220}>
                     <PieChart>
                       <Pie data={d.byType} dataKey="val" nameKey="task_group" innerRadius={58} outerRadius={90} paddingAngle={2}
-                        stroke="#12121f" strokeWidth={2} onClick={(s: any) => drillType(s?.task_group ?? s?.payload?.task_group)}
+                        stroke={CH.sep} strokeWidth={2} onClick={(s: any) => drillType(s?.task_group ?? s?.payload?.task_group)}
                         label={d.byType.length <= 6 ? (p: any) => `${Math.round((p.percent || 0) * 100)}%` : false} labelLine={false}
                         style={{ cursor: 'pointer', fontSize: 11 }}>
                         {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
                       </Pie>
-                      <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, n: any) => [fmtVal(Number(v)), n]} />
+                      <Tooltip contentStyle={CH.tip} formatter={(v: any, n: any) => [fmtVal(Number(v)), n]} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex-1 min-w-[180px] space-y-1.5">
@@ -537,14 +547,14 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
               ) : (
                 <ResponsiveContainer width="100%" height={Math.max(240, d.byType.length * 40)}>
                   <BarChart data={d.byType} layout="vertical" margin={{ left: 10, right: 28 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} allowDecimals={isH} />
-                    <YAxis dataKey="task_group" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={110} />
-                    <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                    <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
+                    <YAxis dataKey="task_group" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={110} />
+                    <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
                     {showDelta && <Legend wrapperStyle={{ fontSize: 11 }} />}
                     <Bar dataKey="val" radius={[0, 4, 4, 0]} name={`This period (${measureLabel.toLowerCase()})`} onClick={(data: any) => drillType(data?.task_group ?? data?.payload?.task_group)} style={{ cursor: 'pointer' }}>
                       {d.byType.map((g: any) => <Cell key={g.task_group} fill={g.color} opacity={typeFocus && typeFocus !== g.task_group ? 0.35 : 1} />)}
-                      {!showDelta && <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: '#9ca3af', fontSize: 11 }} />}
+                      {!showDelta && <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: CH.tick2, fontSize: 11 }} />}
                     </Bar>
                     {showDelta && <Bar dataKey="prev" radius={[0, 4, 4, 0]} fill="#4b5563" name="Previous" />}
                   </BarChart>
@@ -559,11 +569,11 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
             <>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
-                  <Pie data={d.byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2} stroke="#12121f" strokeWidth={2}
+                  <Pie data={d.byPriority} dataKey="total" nameKey="priority" innerRadius={45} outerRadius={75} paddingAngle={2} stroke={CH.sep} strokeWidth={2}
                     label={(p: any) => `${Math.round((p.percent || 0) * 100)}%`} labelLine={false} style={{ fontSize: 11 }}>
                     {d.byPriority.map((p: any) => <Cell key={p.key} fill={p.fill} />)}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} />
+                  <Tooltip contentStyle={CH.tip} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-1.5 mt-2">
@@ -608,14 +618,14 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           taskChart === 'bar' ? (
             <ResponsiveContainer width="100%" height={Math.max(220, d.byTask.length * 30)}>
               <BarChart data={d.byTask} layout="vertical" margin={{ left: 10, right: showDelta ? 64 : 40 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} allowDecimals={isH} />
-                <YAxis dataKey="task" type="category" tick={{ fontSize: 10, fill: '#9ca3af' }} width={150} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
+                <YAxis dataKey="task" type="category" tick={{ fontSize: 10, fill: CH.tick2 }} width={150} />
+                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }}
                   formatter={(v: any, _n: any, p: any) => [`${fmtVal(Number(v))}${showDelta ? ` · prev ${fmtVal(p?.payload?.prev ?? 0)}` : ''}`, p?.payload?.type]} />
                 <Bar dataKey="val" radius={[0, 4, 4, 0]} name={measureLabel}>
                   {d.byTask.map((r: any, i: number) => <Cell key={i} fill={r.color} />)}
-                  <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: '#9ca3af', fontSize: 10 }} />
+                  <LabelList dataKey="val" position="right" formatter={(v: any) => fmtVal(Number(v))} style={{ fill: CH.tick2, fontSize: 10 }} />
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -623,10 +633,10 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
             <div className="flex items-center gap-4 flex-wrap">
               <ResponsiveContainer width={240} height={240}>
                 <PieChart>
-                  <Pie data={d.byTask} dataKey="val" nameKey="task" innerRadius={60} outerRadius={95} paddingAngle={1.5} stroke="#12121f" strokeWidth={2}>
+                  <Pie data={d.byTask} dataKey="val" nameKey="task" innerRadius={60} outerRadius={95} paddingAngle={1.5} stroke={CH.sep} strokeWidth={2}>
                     {d.byTask.map((r: any, i: number) => <Cell key={i} fill={r.color} />)}
                   </Pie>
-                  <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(v: any, n: any, p: any) => [`${fmtVal(Number(v))} · ${p?.payload?.type}`, n]} />
+                  <Tooltip contentStyle={CH.tip} formatter={(v: any, n: any, p: any) => [`${fmtVal(Number(v))} · ${p?.payload?.type}`, n]} />
                 </PieChart>
               </ResponsiveContainer>
               <div className="flex-1 min-w-[200px] space-y-1 max-h-[220px] overflow-y-auto pr-1">
@@ -660,7 +670,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     <div className="ml-auto flex items-center gap-3 text-[11px]">
                       <span className="tabular-nums text-gray-400"><span className="text-green-400 font-semibold">{g.completed}</span>/{g.total} done</span>
                       <span className="tabular-nums text-gray-500">{g.workedH}h</span>
-                      <span className="tabular-nums font-semibold" style={{ color: gRate >= 80 ? '#10b981' : gRate >= 40 ? '#f59e0b' : '#6b7280' }}>{gRate}%</span>
+                      <span className="tabular-nums font-semibold" style={{ color: ink(gRate >= 80 ? '#10b981' : gRate >= 40 ? '#f59e0b' : '#6b7280') }}>{gRate}%</span>
                     </div>
                   </div>
                   <div className="mt-2 space-y-1">
@@ -707,7 +717,7 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
                     return (
                       <div key={h} className="flex-1 min-w-[26px] px-0.5">
                         <div className="h-6 rounded" title={v > 0 ? `${DOW_LABELS[dow]} ${h}:00 — ${fmtVal(r1(v))}` : `${DOW_LABELS[dow]} ${h}:00 — none`}
-                          style={{ background: v > 0 ? `rgba(16,185,129,${alpha})` : 'rgba(255,255,255,0.03)' }} />
+                          style={{ background: v > 0 ? `rgba(16,185,129,${alpha})` : hxWhite(0.03) }} />
                       </div>
                     )
                   })}
@@ -729,10 +739,10 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
         {d.typeByEmp.length > 0 && d.groupsInData.length > 0 ? (
           <ResponsiveContainer width="100%" height={Math.max(220, d.typeByEmp.length * 42)}>
             <BarChart data={d.typeByEmp} layout="vertical" margin={{ left: 10, right: 12 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-              <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} allowDecimals={isH} />
-              <YAxis dataKey="employee" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={110} />
-              <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+              <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
+              <YAxis dataKey="employee" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={110} />
+              <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
               <Legend wrapperStyle={{ fontSize: 11 }} />
               {d.groupsInData.map((g: string, i: number) => (
                 <Bar key={g} dataKey={g} stackId="h" fill={groupColor(g)} radius={i === d.groupsInData.length - 1 ? [0, 4, 4, 0] : [0, 0, 0, 0]} name={g} />
@@ -748,10 +758,10 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           {d.hoursByEmployee.length > 0 ? (
             <ResponsiveContainer width="100%" height={Math.max(220, d.hoursByEmployee.length * 40)}>
               <BarChart data={d.hoursByEmployee} layout="vertical" margin={{ left: 10, right: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit={unit} allowDecimals={isH} />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit={unit} allowDecimals={isH} />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={100} />
+                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
                 {showDelta && isH && <Legend wrapperStyle={{ fontSize: 11 }} />}
                 <Bar dataKey="val" fill="#10b981" radius={[0, 4, 4, 0]} name="This period" />
                 {showDelta && isH && <Bar dataKey="pWorkedH" fill="#4b5563" radius={[0, 4, 4, 0]} name="Previous" />}
@@ -763,10 +773,10 @@ export default function PlannerStats({ stats, statsPrev, statsEmployee, statsFro
           {d.hoursByEmployee.length > 0 ? (
             <ResponsiveContainer width="100%" height={Math.max(220, d.hoursByEmployee.length * 40)}>
               <BarChart data={d.hoursByEmployee} layout="vertical" margin={{ left: 10, right: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 11, fill: '#6b7280' }} unit="h" />
-                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: '#9ca3af' }} width={100} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
+                <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 11, fill: CH.tick1 }} unit="h" />
+                <YAxis dataKey="name" type="category" tick={{ fontSize: 11, fill: CH.tick2 }} width={100} />
+                <Tooltip contentStyle={CH.tip} cursor={{ fill: CH.cursor }} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
                 <Bar dataKey="plannedH" fill="#6b7280" radius={[0, 4, 4, 0]} name="Planned h" />
                 <Bar dataKey="workedH" fill="#10b981" radius={[0, 4, 4, 0]} name="Worked h" />

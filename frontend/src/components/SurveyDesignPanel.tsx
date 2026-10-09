@@ -51,7 +51,7 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
     <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       className="flex items-center gap-3 text-left group">
       <span className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary-500' : 'bg-white/[0.09] border border-dark-border'}`}>
-        <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-on-fill shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+        <span className={`absolute left-0 top-[2px] w-[18px] h-[18px] rounded-full bg-on-fill shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
       </span>
       <span className="text-sm text-hx-c8c8cc group-hover:text-white transition-colors">{label}</span>
     </button>

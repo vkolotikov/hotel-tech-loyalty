@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useDataInk } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -59,6 +60,7 @@ export const LOCKED: { label: string; icon: any; reason: string }[] = [
 ]
 
 export function MenuSettings() {
+  const ink = useDataInk()
   const qc = useQueryClient()
   // Phase 3 — render an industry-flexed display label next to the
   // canonical English label. CRITICAL: the saved `hidden_nav_groups`
@@ -146,7 +148,7 @@ export function MenuSettings() {
             const row = (
               <>
                 <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: g.accent + '25', color: g.accent }}>
+                  style={{ backgroundColor: g.accent + '25', color: ink(g.accent) }}>
                   <Icon size={15} />
                 </div>
                 <div className="flex-1 min-w-0">

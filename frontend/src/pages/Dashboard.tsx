@@ -17,6 +17,7 @@ import { api } from '../lib/api'
 import { money } from '../lib/money'
 import { formatWallTime } from '../lib/venueTime'
 import { useVocabulary } from '../lib/vocabulary'
+import { hx } from '../theme/hx'
 
 /**
  * Industry Platform Plan Phase 6 — per-industry KPI tile rendering.
@@ -102,6 +103,20 @@ const VIP_COLORS: Record<string, string> = {
   Platinum: '#9E9E9E',
   Diamond: '#00BCD4',
 }
+
+/**
+ * Text in a data colour: the colour itself everywhere, a deeper shade of it in
+ * Clean light so it reads on paper. Fills and tints keep the plain colour.
+ */
+const INK: Record<string, string> = {
+  '06b6d4': hx('t', '#06b6d4'), '10b981': hx('t', '#10b981'), 'f59e0b': hx('t', '#f59e0b'),
+  'a855f7': hx('t', '#a855f7'), 'f43f5e': hx('t', '#f43f5e'), '3b82f6': hx('t', '#3b82f6'),
+  '94a3b8': hx('t', '#94a3b8'), 'ff375f': hx('t', '#ff375f'), '32d74b': hx('t', '#32d74b'),
+  '9a7ef0': hx('t', '#9a7ef0'), 'ec4899': hx('t', '#ec4899'), 'c9a84c': hx('t', '#c9a84c'),
+  '8e8e93': hx('t', '#8e8e93'), 'c0c0c0': hx('t', '#c0c0c0'), 'ffd700': hx('t', '#ffd700'),
+  '9e9e9e': hx('t', '#9e9e9e'), '00bcd4': hx('t', '#00bcd4'),
+}
+const ink = (c: string) => INK[c.replace('#', '').toLowerCase()] ?? c
 
 const ACTIVITY_ICONS: Record<string, { icon: any; bg: string; color: string }> = {
   inquiry:     { icon: FileText,    bg: 'bg-blue-500/15',     color: 'text-blue-400' },
@@ -251,8 +266,8 @@ export function Dashboard() {
                 <button key={a.key} onClick={() => navigate(a.route)}
                   className="group flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl border transition-all hover:scale-[1.02]"
                   style={{ background: a.color + '14', borderColor: a.color + '44' }}>
-                  <Icon size={15} style={{ color: a.color }} />
-                  <span className="text-base font-bold tabular-nums" style={{ color: a.color }}>{a.value}</span>
+                  <Icon size={15} style={{ color: ink(a.color) }} />
+                  <span className="text-base font-bold tabular-nums" style={{ color: ink(a.color) }}>{a.value}</span>
                   <span className="text-xs text-t-secondary">{a.label}</span>
                   <ChevronRight size={13} className="text-t-muted group-hover:text-white transition-colors" />
                 </button>
@@ -443,7 +458,7 @@ export function Dashboard() {
               <button key={item.to} onClick={() => navigate(item.to)}
                 className="group flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-dark-surface border border-dark-border hover:border-white/15 transition-all hover:scale-[1.02]">
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110"
-                  style={{ background: item.color + '18', color: item.color }}>
+                  style={{ background: item.color + '18', color: ink(item.color) }}>
                   <Icon size={18} />
                 </div>
                 <span className="text-xs font-semibold text-white">{item.label}</span>
@@ -526,10 +541,10 @@ function ScheduleSection({
     <div>
       <div className="flex items-center justify-between px-5 pt-3 pb-1">
         <div className="flex items-center gap-2">
-          <Icon size={13} style={{ color: accent }} />
+          <Icon size={13} style={{ color: ink(accent) }} />
           <span className="text-xs font-bold text-white">{title}</span>
           <span className="text-[10px] px-1.5 py-0.5 rounded-md font-bold tabular-nums"
-            style={{ background: accent + '20', color: accent }}>
+            style={{ background: accent + '20', color: ink(accent) }}>
             {count}
           </span>
         </div>
@@ -547,7 +562,7 @@ function ScheduleSection({
             <button key={r.key} onClick={r.onClick}
               className="w-full flex items-center gap-3 px-5 py-2.5 hover:bg-dark-surface2 transition-colors">
               <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold"
-                style={{ background: r.initialColor + '20', color: r.initialColor }}>
+                style={{ background: r.initialColor + '20', color: ink(r.initialColor) }}>
                 {r.initial.toUpperCase()}
               </div>
               <div className="flex-1 min-w-0 text-left">
@@ -556,7 +571,7 @@ function ScheduleSection({
               </div>
               {r.meta && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0"
-                  style={{ background: r.metaColor + '20', color: r.metaColor }}>
+                  style={{ background: r.metaColor + '20', color: ink(r.metaColor) }}>
                   {r.meta}
                 </span>
               )}
@@ -584,7 +599,7 @@ function KpiTile({
       <div className="flex items-center justify-between mb-2">
         <span className="text-[10px] uppercase tracking-wider font-bold text-t-muted">{label}</span>
         <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{ background: accent + '18', color: accent }}>
+          style={{ background: accent + '18', color: ink(accent) }}>
           <Icon size={13} />
         </div>
       </div>

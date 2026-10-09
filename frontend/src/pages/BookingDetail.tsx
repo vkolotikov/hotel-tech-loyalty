@@ -7,6 +7,7 @@ import { SendReviewButton } from '../components/SendReviewButton'
 import toast from 'react-hot-toast'
 import { ArrowLeft, RefreshCw, Send, User, Calendar, DollarSign, MessageSquare, MapPin, ExternalLink, CheckCircle, XCircle, AlertTriangle, FileText, CreditCard, Undo2, X, Loader2 } from 'lucide-react'
 import { money } from '../lib/money'
+import { hxWhite } from '../theme/hx'
 
 const STATUS_OPTIONS = ['new', 'confirmed', 'follow_up', 'waiting_invoice_payment', 'paid_verified', 'checked-in', 'checked-out', 'issue', 'done', 'cancelled', 'no-show']
 const INVOICE_OPTIONS = ['not_applicable', 'to_issue', 'issued', 'waiting_funds', 'funds_received']
@@ -108,7 +109,7 @@ export function BookingDetail() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4 flex-wrap">
-        <Link to="/bookings" className="p-2.5 rounded-xl text-gray-500 hover:text-white transition-colors" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <Link to="/bookings" className="p-2.5 rounded-xl text-gray-500 hover:text-white transition-colors" style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
           <ArrowLeft size={16} />
         </Link>
         <div className="flex-1 min-w-0">
@@ -123,20 +124,20 @@ export function BookingDetail() {
           {b.guest_app_url && (
             <a href={b.guest_app_url} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
               <ExternalLink size={12} /> {t('bookingDetail.header.payment_page', 'Payment Page')}
             </a>
           )}
           {b.reservation_id && (
             <a href={`https://login.smoobu.com/en/booking/reservations/${b.reservation_id}`} target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-medium text-gray-400 hover:text-white transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
               <ExternalLink size={12} /> {t('bookingDetail.header.smoobu', 'Smoobu')}
             </a>
           )}
           <button onClick={handleSync} disabled={syncing}
             className="flex items-center gap-2 px-3.5 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
             <RefreshCw size={14} className={syncing ? 'animate-spin' : ''} /> {t('bookingDetail.header.refresh', 'Refresh')}
           </button>
           {b.guest_email && (
@@ -203,25 +204,25 @@ export function BookingDetail() {
                   <DollarSign size={12} className="text-amber-400" /> {t('bookingDetail.financial.title', 'Financial Overview')}
                 </h3>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-5">
-                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.total', 'Total')}</div>
                     <div className="text-xl font-bold text-white mt-1 tabular-nums">{money(b.price_total)}</div>
                   </div>
-                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.paid', 'Paid')}</div>
                     <div className="text-xl font-bold text-emerald-400 mt-1 tabular-nums">{money(b.price_paid || 0)}</div>
                   </div>
-                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.balance', 'Balance')}</div>
                     <div className={`text-xl font-bold mt-1 tabular-nums ${balanceDue > 0 ? 'text-red-400' : 'text-emerald-400/50'}`}>
                       {balanceDue > 0 ? money(balanceDue) : t('bookingDetail.financial.settled', 'Settled')}
                     </div>
                   </div>
-                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.deposit', 'Deposit')}</div>
                     <div className="text-sm text-white mt-1">{money(b.deposit_amount)} {b.deposit_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
-                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="rounded-xl p-3" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="text-[10px] text-gray-500 font-medium uppercase">{t('bookingDetail.financial.prepayment', 'Prepayment')}</div>
                     <div className="text-sm text-white mt-1">{money(b.prepayment_amount)} {b.prepayment_paid ? <CheckCircle size={11} className="inline text-emerald-400" /> : ''}</div>
                   </div>
@@ -234,7 +235,7 @@ export function BookingDetail() {
                     in emerald so length-of-stay discounts are immediately
                     visible. */}
                 {Array.isArray(b.price_elements) && b.price_elements.length > 0 && (
-                  <div className="mb-5 rounded-xl overflow-hidden" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="mb-5 rounded-xl overflow-hidden" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="px-4 py-2.5 border-b border-white/[0.04] flex items-center gap-2">
                       <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">
                         {t('bookingDetail.financial.breakdown', 'Price breakdown')}
@@ -265,7 +266,7 @@ export function BookingDetail() {
                 )}
 
                 {b.payment_status && (
-                  <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex items-center gap-3 mb-5 p-3 rounded-xl" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <span className="text-[11px] text-gray-500 font-medium">{t('bookingDetail.financial.payment_status_label', 'Payment Status:')}</span>
                     <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${PAY_PILL[b.payment_status] || 'bg-gray-500/15 text-gray-400'}`}>
                       {formatLabel(b.payment_status)}
@@ -279,7 +280,7 @@ export function BookingDetail() {
                     the mock channel. Gives staff one-click access to the
                     Stripe dashboard + refund button. */}
                 {(b.payment_method === 'stripe' || b.payment_method === 'mock' || b.stripe_payment_intent_id) && (
-                  <div className="mb-5 p-4 rounded-xl" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.06)' }}>
+                  <div className="mb-5 p-4 rounded-xl" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.06)}` }}>
                     <div className="flex items-center justify-between mb-3">
                       <h4 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold flex items-center gap-2">
                         <CreditCard size={12} className={b.payment_method === 'mock' ? 'text-amber-400' : 'text-blue-400'} />
@@ -374,7 +375,7 @@ export function BookingDetail() {
               <h3 className="text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-3 flex items-center gap-2">
                 <AlertTriangle size={12} className="text-amber-400" /> Guest Notice
               </h3>
-              <div className="rounded-xl p-4" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+              <div className="rounded-xl p-4" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                 <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{b.notice}</pre>
               </div>
             </Card>
@@ -400,7 +401,7 @@ export function BookingDetail() {
             {b.notes?.length > 0 ? (
               <div className="space-y-3">
                 {b.notes.map((n: any) => (
-                  <div key={n.id} className="rounded-xl p-4" style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div key={n.id} className="rounded-xl p-4" style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="flex justify-between items-start mb-1.5">
                       <span className="text-xs font-bold text-primary-400">{n.staff?.hotel_name || t('bookingDetail.notes.staff_fallback', 'Staff')}</span>
                       <span className="text-[10px] text-gray-600">{new Date(n.created_at).toLocaleString()}</span>
@@ -421,7 +422,7 @@ export function BookingDetail() {
               <div className="space-y-2">
                 {b.submissions.map((s: any) => (
                   <div key={s.id} className="flex items-center justify-between rounded-xl p-3 transition-all"
-                    style={{ background: 'var(--legacy-panel-50)', border: '1px solid rgba(255,255,255,0.04)' }}>
+                    style={{ background: 'var(--legacy-panel-50)', border: `1px solid ${hxWhite(0.04)}` }}>
                     <div className="flex items-center gap-2.5 min-w-0">
                       {s.outcome === 'success' ? <CheckCircle size={15} className="text-emerald-400 flex-shrink-0" /> : <XCircle size={15} className="text-red-400 flex-shrink-0" />}
                       <div className="min-w-0">

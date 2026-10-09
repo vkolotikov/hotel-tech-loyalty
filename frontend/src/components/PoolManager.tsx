@@ -6,6 +6,8 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
+import { useDataInk, useIsLight } from '../theme/hx'
+import { onColor } from '../theme/glass'
 import { usePlannerMeta, resolveGroupMeta, getIcon } from '../lib/plannerMeta'
 
 type Horizon = 'general' | 'week' | 'day'
@@ -94,6 +96,8 @@ const COLUMNS: Array<{ key: Horizon; title: string; icon: any; accent: string; h
  */
 export function PoolManager({ plannerSkills = null, isManager = false, onNewTask, onEditTask }: Props) {
   const qc = useQueryClient()
+  const ink = useDataInk()
+  const light = useIsLight()
   const { groupNames, customGroupMeta, channels } = usePlannerMeta()
   const channelLabel = useMemo(() => Object.fromEntries(channels.map(c => [c.key, c])), [channels])
 
@@ -205,7 +209,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
               <button key={tt.key} onClick={() => setTypeFilter(active ? '' : tt.key)}
                 className={'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition ' +
                   (active ? 'text-black border-transparent' : 'bg-dark-surface text-gray-300 border-dark-border hover:text-white hover:border-white/15')}
-                style={active ? { background: meta.color } : {}}>
+                style={active ? { background: meta.color, ...(light ? { color: onColor(meta.color) } : {}) } : {}}>
                 <span className="w-2 h-2 rounded-sm" style={{ background: active ? '#00000055' : meta.color }} />
                 {tt.key} <span className="text-[10px] opacity-70">{tt.count}</span>
               </button>
@@ -233,7 +237,7 @@ export function PoolManager({ plannerSkills = null, isManager = false, onNewTask
               <div key={col.key} className="bg-dark-surface/40 border border-dark-border rounded-xl flex flex-col min-h-[200px]">
                 <div className="flex items-center gap-2 px-3 py-2.5 border-b border-dark-border">
                   <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: col.accent + '22', border: `1px solid ${col.accent}44` }}>
-                    <Icon size={13} style={{ color: col.accent }} />
+                    <Icon size={13} style={{ color: ink(col.accent) }} />
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-semibold text-white leading-tight">{col.title}</div>
@@ -284,6 +288,7 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
   onEdit: () => void
   onDelete: () => void
 }) {
+  const ink = useDataInk()
   const u = urgency(task)
   const uCls = u.tone === 'over' ? 'bg-red-500/15 text-red-300 border-red-500/40'
     : u.tone === 'warn' ? 'bg-amber-500/15 text-amber-300 border-amber-500/40'
@@ -300,13 +305,13 @@ function PoolCard({ task, meta, channel, relevant, canManage, onClaim, onEdit, o
           <div className="text-[13px] font-medium text-white leading-snug break-words pr-6">{task.title}</div>
           <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
             {task.task_group && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: meta.color + '22', color: meta.color }}>
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium" style={{ background: meta.color + '22', color: ink(meta.color) }}>
                 <TypeIcon size={10} /> {task.task_group}
               </span>
             )}
             {channel && (
               <span className="inline-flex items-center gap-1 text-[10px] text-gray-400">
-                {ChIcon && <ChIcon size={10} style={{ color: channel.color }} />} {channel.label}
+                {ChIcon && <ChIcon size={10} style={{ color: ink(channel.color) }} />} {channel.label}
               </span>
             )}
             {(task.priority || '').toLowerCase() === 'high' && (

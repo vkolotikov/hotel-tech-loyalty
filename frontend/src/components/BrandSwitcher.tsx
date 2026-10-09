@@ -4,6 +4,7 @@ import { Briefcase, Check, ChevronDown, LayoutGrid, Plus, Settings2 } from 'luci
 import { useBrandStore } from '../stores/brandStore'
 import { useBrandSwitch } from '../hooks/useBrandSwitch'
 import { resolveImage } from '../lib/api'
+import { hxWhite } from '../theme/hx'
 
 /**
  * Top-bar dropdown that lets the admin switch the active brand context.
@@ -67,7 +68,7 @@ export function BrandSwitcher() {
         ) : (
           <div
             className="w-5 h-5 rounded-sm flex items-center justify-center flex-shrink-0"
-            style={{ background: selected?.primary_color ?? 'rgba(255,255,255,0.08)' }}
+            style={{ background: selected?.primary_color ?? hxWhite(0.08) }}
           >
             {selected
               ? <Briefcase size={11} className="text-white" />
@@ -127,7 +128,7 @@ export function BrandSwitcher() {
                 ) : (
                   <div
                     className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0"
-                    style={{ background: b.primary_color ?? 'rgba(255,255,255,0.06)' }}
+                    style={{ background: b.primary_color ?? hxWhite(0.06) }}
                   >
                     <Briefcase size={14} className="text-white" />
                   </div>

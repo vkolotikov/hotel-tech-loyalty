@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { hxWhite, useDataInk } from '../theme/hx'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
@@ -69,6 +70,7 @@ const emptyForm = {
 
 export function Tiers() {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
@@ -302,7 +304,7 @@ export function Tiers() {
                   <span className="text-t-soft">{t('tiers.preview.would_qualify', 'Would qualify for:')}</span>
                   <span
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full font-semibold text-xs"
-                    style={{ backgroundColor: (previewResult.color || '#666') + '22', color: previewResult.color || '#fff', border: `1px solid ${(previewResult.color || '#666') + '55'}` }}
+                    style={{ backgroundColor: (previewResult.color || '#666') + '22', color: previewResult.color ? ink(previewResult.color) : hxWhite(), border: `1px solid ${(previewResult.color || '#666') + '55'}` }}
                   >
                     {previewResult.name}
                   </span>
@@ -403,7 +405,7 @@ export function Tiers() {
                 onClick={() => setExpandedTier(expandedTier === tier.id ? null : tier.id)}>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: tier.color_hex + '20' }}>
-                    <TierIcon size={20} style={{ color: tier.color_hex }} />
+                    <TierIcon size={20} style={{ color: ink(tier.color_hex) }} />
                   </div>
                   <div>
                     <h3 className="text-white font-medium">{tier.name}</h3>
@@ -431,7 +433,7 @@ export function Tiers() {
                     title={tier.is_active !== false ? t('tiers.toggle_off', 'Disable tier (hidden from qualification sweeps)') : t('tiers.toggle_on', 'Enable tier')}
                     className={`relative w-9 h-5 rounded-full transition-colors ${tier.is_active !== false ? 'bg-primary-600' : 'bg-dark-surface3 border border-dark-border'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ${tier.is_active !== false ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    <span className={`absolute left-0 top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ${tier.is_active !== false ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); startEdit(tier) }} aria-label={t('tiers.edit_label', 'Edit tier')} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
                 </div>

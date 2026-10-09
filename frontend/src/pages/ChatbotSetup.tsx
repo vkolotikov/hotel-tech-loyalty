@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { api } from '../lib/api'
 import { ChatbotWizard } from '../components/chatbot/ChatbotWizard'
 import { useTranslation } from 'react-i18next'
+import { useDataInk } from '../theme/hx'
 import {
   Bot, BookOpen, Zap, GraduationCap, MessageCircleQuestion, MessageSquareReply, LayoutTemplate,
   ArrowLeft, Search,
@@ -173,6 +174,7 @@ export function ChatbotSetup() {
 function Tile({ tile, label, desc, onClick }: { tile: TileDef; label: string; desc: string; onClick: () => void }) {
   const Icon = tile.icon
   const { accent } = tile
+  const ink = useDataInk()
   return (
     <button
       onClick={onClick}
@@ -206,7 +208,7 @@ function Tile({ tile, label, desc, onClick }: { tile: TileDef; label: string; de
             boxShadow: `0 0 24px ${tint(accent, 0.20)}`,
           }}
         >
-          <Icon size={20} style={{ color: accent }} />
+          <Icon size={20} style={{ color: ink(accent) }} />
         </span>
       </div>
 

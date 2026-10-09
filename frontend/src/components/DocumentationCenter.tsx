@@ -7,6 +7,7 @@ import {
   Gift, Crown, Layers, ShieldCheck, MessageSquare, ClipboardList, GitBranch,
 } from 'lucide-react'
 import { api } from '../lib/api'
+import { useDataInk } from '../theme/hx'
 
 /**
  * DocumentationCenter — the help-center landing for Settings →
@@ -88,6 +89,7 @@ function formatDocContent(text: string): string {
 type View = 'landing' | 'section' | 'faq'
 
 export function DocumentationCenter() {
+  const ink = useDataInk()
   const { data, isLoading } = useQuery<{ sections: DocSection[]; faq: DocFaq[] }>({
     queryKey: ['admin-documentation'],
     queryFn: () => api.get('/v1/admin/documentation').then(r => r.data),
@@ -226,11 +228,11 @@ export function DocumentationCenter() {
               >
                 <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
                   style={{ background: tint(hit.accent, 0.15), border: `1px solid ${tint(hit.accent, 0.35)}` }}>
-                  <FileText size={13} style={{ color: hit.accent }} />
+                  <FileText size={13} style={{ color: ink(hit.accent) }} />
                 </span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: hit.accent }}>
+                    <span className="text-[10px] uppercase tracking-wider font-bold" style={{ color: ink(hit.accent) }}>
                       {hit.sectionTitle}
                     </span>
                   </div>
@@ -303,12 +305,12 @@ export function DocumentationCenter() {
                       background: `linear-gradient(135deg, ${tint(ac, 0.18)}, ${tint(ac, 0.04)})`,
                       border: `1px solid ${tint(ac, 0.3)}`,
                     }}>
-                    <IconComp size={20} style={{ color: ac }} />
+                    <IconComp size={20} style={{ color: ink(ac) }} />
                   </span>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-sm font-semibold text-white">{section.title}</h3>
                     <p className="text-xs text-t-secondary mt-1 line-clamp-2 leading-relaxed">{section.description}</p>
-                    <p className="text-[10px] uppercase tracking-wider font-bold mt-2" style={{ color: ac }}>
+                    <p className="text-[10px] uppercase tracking-wider font-bold mt-2" style={{ color: ink(ac) }}>
                       {section.articles.length} article{section.articles.length === 1 ? '' : 's'}
                     </p>
                   </div>
@@ -343,7 +345,7 @@ export function DocumentationCenter() {
                         expanded ? 'bg-dark-surface2 text-white' : 'text-t-secondary hover:text-white hover:bg-dark-surface2'
                       }`}
                     >
-                      <IconComp size={13} style={{ color: ac }} />
+                      <IconComp size={13} style={{ color: ink(ac) }} />
                       <span className="flex-1 text-left truncate">{section.title}</span>
                       <span className="text-[9px] text-t-secondary">{section.articles.length}</span>
                     </button>
@@ -379,14 +381,14 @@ export function DocumentationCenter() {
             <div className="flex items-center gap-2 text-xs text-t-secondary mb-3">
               <button onClick={backToLanding} className="hover:text-white transition-colors">Help</button>
               <ChevronRight size={11} />
-              <span style={{ color: accent }} className="font-semibold">{activeSection.title}</span>
+              <span style={{ color: ink(accent) }} className="font-semibold">{activeSection.title}</span>
               <ChevronRight size={11} />
               <span className="text-white truncate">{activeArticle.title}</span>
             </div>
 
             <h1 className="text-2xl font-bold text-white mb-2">{activeArticle.title}</h1>
             <p className="text-xs text-t-secondary mb-6">
-              From <span style={{ color: accent }} className="font-semibold">{activeSection.title}</span>
+              From <span style={{ color: ink(accent) }} className="font-semibold">{activeSection.title}</span>
               {' · '}Article {activeArticleIdx + 1} of {activeSection.articles.length}
             </p>
 
@@ -399,7 +401,7 @@ export function DocumentationCenter() {
                 {activeArticleIdx > 0 ? (
                   <button onClick={() => setActiveArticleIdx(activeArticleIdx - 1)}
                     className="flex items-center gap-2 p-3 rounded-lg border border-dark-border hover:border-current transition-colors text-left"
-                    style={{ color: accent }}
+                    style={{ color: ink(accent) }}
                   >
                     <ArrowLeft size={14} className="flex-shrink-0" />
                     <div className="min-w-0">
@@ -411,7 +413,7 @@ export function DocumentationCenter() {
                 {activeArticleIdx < activeSection.articles.length - 1 ? (
                   <button onClick={() => setActiveArticleIdx(activeArticleIdx + 1)}
                     className="flex items-center gap-2 p-3 rounded-lg border border-dark-border hover:border-current transition-colors text-right justify-end col-start-2"
-                    style={{ color: accent }}
+                    style={{ color: ink(accent) }}
                   >
                     <div className="min-w-0">
                       <p className="text-[10px] uppercase tracking-wider font-bold text-t-secondary">Next</p>

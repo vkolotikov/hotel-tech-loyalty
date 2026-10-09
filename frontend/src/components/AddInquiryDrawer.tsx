@@ -8,6 +8,7 @@ import {
 import { api } from '../lib/api'
 import { CustomFieldsForm, extractCustomFieldErrors } from './CustomFields'
 import toast from 'react-hot-toast'
+import { useDataInk } from '../theme/hx'
 
 /**
  * AddInquiryDrawer — left-side slide drawer for creating a new lead.
@@ -939,6 +940,7 @@ function Section({
   subtitle?: string
   children: ReactNode
 }) {
+  const ink = useDataInk()
   return (
     <section
       className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-4 flex flex-col"
@@ -952,7 +954,7 @@ function Section({
             border: `1px solid ${accent}40`,
           }}
         >
-          <Icon size={15} style={{ color: accent }} />
+          <Icon size={15} style={{ color: ink(accent) }} />
         </span>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-bold text-white leading-tight">{title}</h3>
@@ -975,6 +977,7 @@ function CollapsibleSection({
   onToggle: () => void
   children: ReactNode
 }) {
+  const ink = useDataInk()
   return (
     <section
       className="rounded-2xl border border-white/[0.06] bg-white/[0.015] overflow-hidden"
@@ -992,7 +995,7 @@ function CollapsibleSection({
             border: `1px solid ${accent}40`,
           }}
         >
-          <Icon size={15} style={{ color: accent }} />
+          <Icon size={15} style={{ color: ink(accent) }} />
         </span>
         <div className="flex-1 min-w-0 text-left">
           <h3 className="text-sm font-bold text-white leading-tight">{title}</h3>

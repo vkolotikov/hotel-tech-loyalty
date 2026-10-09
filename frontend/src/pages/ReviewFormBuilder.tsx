@@ -9,6 +9,7 @@ import {
   Settings2, Link2, Zap,
 } from 'lucide-react'
 import { api, API_URL } from '../lib/api'
+import { useDataInk } from '../theme/hx'
 import { SurveyDesignPanel, SurveyAnalyticsPanel } from '../components/SurveyDesignPanel'
 
 type Kind = 'text' | 'textarea' | 'stars' | 'scale' | 'nps' | 'single_choice' | 'multi_choice' | 'boolean' | 'emoji'
@@ -109,6 +110,7 @@ const EMOJI_PRESETS: { name: string; emojis: string[]; labels: string[] }[] = [
 ]
 
 export function ReviewFormBuilder() {
+  const ink = useDataInk()
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -586,7 +588,7 @@ export function ReviewFormBuilder() {
                       className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                       style={{ backgroundColor: meta.color + '18' }}
                     >
-                      <Icon size={16} style={{ color: meta.color }} />
+                      <Icon size={16} style={{ color: ink(meta.color) }} />
                     </div>
 
                     <div className="flex-1 min-w-0">
@@ -770,7 +772,7 @@ export function ReviewFormBuilder() {
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: meta.color + '18' }}>
-                          <Icon size={14} style={{ color: meta.color }} />
+                          <Icon size={14} style={{ color: ink(meta.color) }} />
                         </div>
                         <span className="text-xs text-white font-semibold">{meta.label}</span>
                       </div>

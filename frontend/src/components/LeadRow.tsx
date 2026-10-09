@@ -33,6 +33,7 @@ import FreshnessBadge from './FreshnessBadge'
 import StageBadge from './StageBadge'
 import AiSignalCell from './AiSignalCell'
 import NextActionCell from './NextActionCell'
+import { hx, hxWhite } from '../theme/hx'
 
 export interface SourceBadgeMeta {
   label: string
@@ -129,7 +130,7 @@ function LeadRowImpl(props: LeadRowProps) {
   const avatarStyle: React.CSSProperties = {
     background: `linear-gradient(135deg, ${avatarTint}55, ${avatarTint}15)`,
     border: `1px solid ${avatarTint}40`,
-    color: '#fff',
+    color: hxWhite(),
   }
 
   const initials = initialsOf(inq.guest?.full_name)
@@ -354,7 +355,7 @@ function LeadRowImpl(props: LeadRowProps) {
             data-row-noopen
             className="block text-[9.5px] font-bold uppercase tracking-wider mt-1 opacity-70 hover:opacity-100"
             style={{
-              color: inq.priority === 'High' ? '#fca5a5' : inq.priority === 'Low' ? '#9ca3af' : '#93c5fd',
+              color: inq.priority === 'High' ? hx('t', '#fca5a5') : inq.priority === 'Low' ? hx('t', '#9ca3af') : hx('t', '#93c5fd'),
             }}
             title={t('inquiries.row.cycle_priority', { defaultValue: 'Click to cycle priority' })}
           >

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
+import { hx, hxWhite } from '../theme/hx'
 
 /**
  * Engagement Hub Phase 4 — alerts the agent when a new "hot lead" appears
@@ -86,7 +87,7 @@ function fireHotLeadToast(toastId: string, title: string, body: string, context?
       style={{
         background: 'linear-gradient(135deg, rgba(251,146,60,0.18), rgba(251,146,60,0.08))',
         border: '1px solid rgba(251,146,60,0.45)',
-        color: '#fff',
+        color: hxWhite(),
         borderRadius: 10,
         padding: '12px 14px',
         minWidth: 280,
@@ -104,11 +105,11 @@ function fireHotLeadToast(toastId: string, title: string, body: string, context?
       <span style={{ fontSize: 18, lineHeight: 1 }}>🔥</span>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 700, marginBottom: 2 }}>{title}</div>
-        <div style={{ color: '#f5f5f7' }}>{body}</div>
+        <div style={{ color: hx('t', '#f5f5f7') }}>{body}</div>
         {context && (
-          <div style={{ color: '#a0a0a8', marginTop: 2, fontSize: 11 }}>{context}</div>
+          <div style={{ color: hx('t', '#a0a0a8'), marginTop: 2, fontSize: 11 }}>{context}</div>
         )}
-        <div style={{ color: '#fbbf24', fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+        <div style={{ color: hx('t', '#fbbf24'), fontSize: 11, marginTop: 4, fontWeight: 600 }}>
           Click to view →
         </div>
       </div>
@@ -119,9 +120,9 @@ function fireHotLeadToast(toastId: string, title: string, body: string, context?
         }}
         aria-label="Dismiss"
         style={{
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.10)',
-          color: '#e5e5e7',
+          background: hxWhite(0.06),
+          border: `1px solid ${hxWhite(0.1)}`,
+          color: hx('t', '#e5e5e7'),
           cursor: 'pointer',
           fontSize: 16,
           lineHeight: 1,
@@ -135,8 +136,8 @@ function fireHotLeadToast(toastId: string, title: string, body: string, context?
           flexShrink: 0,
           transition: 'background 150ms',
         }}
-        onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
-        onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+        onMouseEnter={(e) => (e.currentTarget.style.background = hxWhite(0.14))}
+        onMouseLeave={(e) => (e.currentTarget.style.background = hxWhite(0.06))}
       >×</button>
     </div>
   ), { duration: 6000, id: toastId })

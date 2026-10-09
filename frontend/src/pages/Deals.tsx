@@ -14,6 +14,7 @@ import {
 import FreshnessBadge from '../components/FreshnessBadge'
 import { InquiryDrawer } from '../components/InquiryDrawer'
 import { CustomerDrawer } from '../components/CustomerDrawer'
+import { hxWhite, useDataInk } from '../theme/hx'
 
 // 5 active stages + completed terminal. Order matters: drives the
 // progress-bar segmentation on each row.
@@ -48,6 +49,7 @@ type FilterKey = 'all' | 'payment_pending' | 'design_needed' | 'in_production' |
 
 export function Deals() {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const settings = useSettings()
   // Per-org column visibility — admin toggles in Settings → Pipelines → Fields → Deals.
@@ -361,7 +363,7 @@ export function Deals() {
                 const avatarStyle: React.CSSProperties = {
                   background: `linear-gradient(135deg, ${avatarColor}55, ${avatarColor}15)`,
                   border: `1px solid ${avatarColor}40`,
-                  color: '#fff',
+                  color: hxWhite(),
                 }
 
                 return (
@@ -470,7 +472,7 @@ export function Deals() {
                             setOpenPaymentMenu(openPaymentMenu?.id === d.id ? null : { id: d.id, rect })
                           }}
                           className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border hover:brightness-110 transition ${payment?.bg ?? 'bg-white/[0.04]'} ${payment?.text ?? 'text-gray-400'}`}
-                          style={payment ? { borderColor: 'currentColor', borderOpacity: 0.35 } as any : { borderColor: 'rgba(255,255,255,0.1)' }}
+                          style={payment ? { borderColor: 'currentColor', borderOpacity: 0.35 } as any : { borderColor: hxWhite(0.1) }}
                         >
                           {payment?.label ?? t('deals.row.no_payment', 'Set status')}
                           <ChevronDown size={9} className="opacity-70" />
@@ -487,7 +489,7 @@ export function Deals() {
                             setOpenStageMenu(openStageMenu?.id === d.id ? null : { id: d.id, rect })
                           }}
                           className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border hover:brightness-110 transition"
-                          style={{ background: (stage?.color ?? '#666') + '20', color: stage?.color ?? '#a0a0a0', borderColor: (stage?.color ?? '#666') + '50' }}
+                          style={{ background: (stage?.color ?? '#666') + '20', color: ink(stage?.color ?? '#a0a0a0'), borderColor: (stage?.color ?? '#666') + '50' }}
                         >
                           {stage ? <><stage.icon size={9} /> {t(`deals.stages.${stage.key}`, stage.label)}</> : t('deals.row.set_stage', 'Set stage')}
                           <ChevronDown size={9} className="opacity-70" />
@@ -500,7 +502,7 @@ export function Deals() {
                               key={i}
                               className="h-1.5 flex-1 rounded-full transition-all"
                               style={{
-                                background: p.filled ? p.stage.color : 'rgba(255,255,255,0.06)',
+                                background: p.filled ? p.stage.color : hxWhite(0.06),
                                 opacity: p.isCurrent ? 1 : (p.filled ? 0.7 : 1),
                                 boxShadow: p.isCurrent ? `0 0 6px ${p.stage.color}80` : undefined,
                               }}
@@ -793,7 +795,7 @@ export function Deals() {
                                 </div>
                                 <div
                                   className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full font-bold border"
-                                  style={{ background: (stage?.color ?? '#666') + '20', color: stage?.color ?? '#a0a0a0', borderColor: (stage?.color ?? '#666') + '50' }}
+                                  style={{ background: (stage?.color ?? '#666') + '20', color: ink(stage?.color ?? '#a0a0a0'), borderColor: (stage?.color ?? '#666') + '50' }}
                                 >
                                   {stage ? <><stage.icon size={9} /> {t(`deals.stages.${stage.key}`, stage.label)}</> : t('deals.row.set_stage', 'Set stage')}
                                 </div>
@@ -935,7 +937,7 @@ export function Deals() {
               <button key={s.key}
                 onClick={() => { stageMutation.mutate({ id: openStageMenu.id, stage: s.key }); setOpenStageMenu(null) }}
                 className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-dark-surface2"
-                style={{ color: s.color }}>
+                style={{ color: ink(s.color) }}>
                 <Icon size={11} /> {t(`deals.stages.${s.key}`, s.label)}
               </button>
             )

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { hxWhite, useDataInk } from '../../theme/hx'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, CalendarDays, CheckCircle2, Plus, Send, Sparkles } from 'lucide-react'
 import type { PlannerProfile, Pillar, Post, Readiness, Strategy } from './lib'
@@ -25,6 +26,7 @@ function Card({ title, action, children }: { title?: string; action?: ReactNode;
 }
 
 function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; label: string; value: string | number; color: string }) {
+  const ink = useDataInk()
   return (
     <div className="rounded-lg border border-dark-border bg-dark-surface p-4">
       <div className="flex items-center justify-between gap-2">
@@ -32,7 +34,7 @@ function StatCard({ icon: Icon, label, value, color }: { icon: typeof Send; labe
           <p className="text-[11px] uppercase tracking-wide text-t-secondary truncate">{label}</p>
           <p className="text-2xl font-bold text-white mt-1">{value}</p>
         </div>
-        <Icon size={22} style={{ color }} className="opacity-60 shrink-0" />
+        <Icon size={22} style={{ color: ink(color) }} className="opacity-60 shrink-0" />
       </div>
     </div>
   )
@@ -42,6 +44,7 @@ const RING_R = 26
 const RING_C = 2 * Math.PI * RING_R
 
 export function Dashboard({ profile, readiness, onNavigate }: Props) {
+  const ink = useDataInk()
   const { data: postsResp, isLoading: postsLoading } = useQuery({
     queryKey: ['cp-posts', 'dash', profile.id],
     queryFn: () => {
@@ -146,7 +149,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
                 strokeDasharray={`${(readinessPct / 100) * RING_C} ${RING_C}`}
                 transform="rotate(-90 32 32)"
               />
-              <text x="32" y="37" textAnchor="middle" fontSize="14" fontWeight="700" fill="#ffffff">{readinessPct}%</text>
+              <text x="32" y="37" textAnchor="middle" fontSize="14" fontWeight="700" style={{ fill: hxWhite() }}>{readinessPct}%</text>
             </svg>
             <div className="min-w-0">
               <p className="text-[11px] uppercase tracking-wide text-t-secondary">Readiness</p>
@@ -203,7 +206,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
                         title={p.topic ?? p.title ?? undefined}
                       >
                         <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: PLATFORM_META[p.platform]?.color ?? '#9ca3af' }} />
-                        <span className="truncate text-[11px]" style={{ color: STATUS_META[p.status]?.color ?? '#9ca3af' }}>
+                        <span className="truncate text-[11px]" style={{ color: ink(STATUS_META[p.status]?.color ?? '#9ca3af') }}>
                           {p.topic || p.title || 'Untitled'}
                         </span>
                       </div>

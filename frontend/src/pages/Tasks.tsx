@@ -5,6 +5,8 @@ import { useTranslation } from 'react-i18next'
 import { api } from '../lib/api'
 import { useSettings, type TaskFieldConfig } from '../lib/crmSettings'
 import toast from 'react-hot-toast'
+import { useDataInk, useIsLight } from '../theme/hx'
+import { onColor } from '../theme/glass'
 import {
   Plus, Phone, Mail, Calendar as CalendarIcon, FileText,
   CheckCircle2, ChevronRight, Search, Building2, RotateCcw,
@@ -60,6 +62,7 @@ const STATUS_CHIPS: { id: Status; label: string; color: string }[] = [
 ]
 
 export function Tasks() {
+  const light = useIsLight()
   const qc = useQueryClient()
   const { t } = useTranslation()
   // Admin-toggleable visibility for the task card bits — Settings → Pipelines → Fields → Tasks.
@@ -166,7 +169,7 @@ export function Tasks() {
                   ? 'text-black'
                   : 'text-t-secondary hover:text-white border-dark-border hover:bg-dark-surface2'
               }`}
-              style={active ? { background: chip.color, borderColor: chip.color } : {}}
+              style={active ? { background: chip.color, borderColor: chip.color, ...(light ? { color: onColor(chip.color) } : {}) } : {}}
             >
               {t(`tasks.status_chips.${chip.id}`, chip.label)}
             </button>
@@ -250,6 +253,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
   onEdit: () => void
   onDelete: () => void
 }) {
+  const ink = useDataInk()
   const { t } = useTranslation()
   const meta = TASK_TYPES[task.type] ?? TASK_TYPES.custom
   const typeLabel = t(`tasks.types.${task.type}`, meta.label)
@@ -283,7 +287,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
         className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5"
         style={{ background: meta.color + '20', border: `1px solid ${meta.color}40` }}
       >
-        <Icon size={13} style={{ color: meta.color }} />
+        <Icon size={13} style={{ color: ink(meta.color) }} />
       </div>
 
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onEdit}>
@@ -295,7 +299,7 @@ function TaskCard({ task, fieldCfg, onComplete, onReopen, onEdit, onDelete }: {
         )}
         <div className="flex items-center gap-2 mt-1 text-[11px] text-t-secondary flex-wrap">
           {fieldCfg.type_label && (
-            <span className="uppercase tracking-wide font-bold" style={{ color: meta.color }}>
+            <span className="uppercase tracking-wide font-bold" style={{ color: ink(meta.color) }}>
               {typeLabel}
             </span>
           )}

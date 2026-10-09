@@ -12,6 +12,7 @@ import EditableField from './EditableField'
 import DeleteConfirmModal from './DeleteConfirmModal'
 import { ChatHistoryPanel } from './ChatHistoryPanel'
 import { InquiryActivityTimeline } from './InquiryActivityTimeline'
+import { hxWhite, useDataInk } from '../theme/hx'
 
 /**
  * InquiryDrawer — left-side slide panel showing a single lead's full detail
@@ -140,6 +141,7 @@ export function InquiryDrawer({
   onInquiryUpdated, onInquiryDeleted, onRequestCustomerDrawer,
 }: Props) {
   const { t } = useTranslation()
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [tab, setTab] = useState<Tab>('lead')
   const [menuOpen, setMenuOpen] = useState(false)
@@ -294,14 +296,14 @@ export function InquiryDrawer({
             className="relative flex items-start gap-4 p-5 border-b border-dark-border overflow-hidden"
             style={{
               background: stageColor
-                ? `linear-gradient(135deg, ${stageColor}15 0%, transparent 60%), linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)`
-                : 'linear-gradient(180deg, rgba(255,255,255,0.025) 0%, transparent 100%)',
+                ? `linear-gradient(135deg, ${stageColor}15 0%, transparent 60%), linear-gradient(180deg, ${hxWhite(0.025)} 0%, transparent 100%)`
+                : `linear-gradient(180deg, ${hxWhite(0.025)} 0%, transparent 100%)`,
             }}
           >
             {/* decorative top accent line */}
             <div
               className="absolute top-0 left-0 right-0 h-px"
-              style={{ background: stageColor ? `linear-gradient(90deg, transparent, ${stageColor}, transparent)` : 'linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent)' }}
+              style={{ background: stageColor ? `linear-gradient(90deg, transparent, ${stageColor}, transparent)` : `linear-gradient(90deg, transparent, ${hxWhite(0.15)}, transparent)` }}
             />
             <div className="relative flex-shrink-0">
               <div
@@ -327,7 +329,7 @@ export function InquiryDrawer({
                 {statusStr && (
                   <span
                     className={`inline-flex items-center text-[10px] uppercase font-bold px-2.5 py-1 rounded-md border ${statusCls}`}
-                    style={stageColor ? { background: `${stageColor}22`, color: stageColor, borderColor: `${stageColor}55` } : undefined}
+                    style={stageColor ? { background: `${stageColor}22`, color: ink(stageColor), borderColor: `${stageColor}55` } : undefined}
                   >
                     {statusStr}
                   </span>
@@ -805,13 +807,14 @@ export default InquiryDrawer
 /* ───────────────────────── helpers ───────────────────────── */
 
 function Section({ title, icon, accent = '#64748b', children }: { title: string; icon?: React.ReactNode; accent?: string; children: React.ReactNode }) {
+  const ink = useDataInk()
   return (
     <div className="bg-dark-bg/40 border border-dark-border/60 rounded-xl p-4 space-y-3">
       <div className="flex items-center gap-2">
         {icon && (
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: `${accent}1a`, color: accent, border: `1px solid ${accent}33` }}
+            style={{ background: `${accent}1a`, color: ink(accent), border: `1px solid ${accent}33` }}
           >
             {icon}
           </div>

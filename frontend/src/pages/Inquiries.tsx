@@ -21,6 +21,7 @@ import { CustomerDrawer } from '../components/CustomerDrawer'
 import { InquiryDrawer } from '../components/InquiryDrawer'
 import { AddInquiryDrawer } from '../components/AddInquiryDrawer'
 import LeadRow from '../components/LeadRow'
+import { hx, hxWhite, HX_COLOR_SCHEME } from '../theme/hx'
 
 const STATUS_COLORS: Record<string, string> = {
   New: 'bg-blue-500/20 text-blue-400',
@@ -541,7 +542,7 @@ export function Inquiries() {
           Leads / Active Deals / Closed so staff can focus on one bucket
           without composing a multi-status filter manually. */}
       <div className="flex flex-wrap items-center gap-3">
-        <div className="inline-flex p-1 rounded-2xl gap-0.5" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="inline-flex p-1 rounded-2xl gap-0.5" style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
           {([
             { v: 'all',    label: 'All',          tone: 'from-gray-500 to-gray-600' },
             { v: 'leads',  label: 'Leads',        tone: 'from-blue-500 to-indigo-500' },
@@ -555,7 +556,7 @@ export function Inquiries() {
             </button>
           ))}
         </div>
-        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
           {([
             { v: 'list', icon: ListIcon, label: 'List' },
             { v: 'pipeline', icon: LayoutGrid, label: 'Pipeline' },
@@ -1671,7 +1672,7 @@ export function Inquiries() {
               </div>
               <div>
                 <label className="block text-xs text-t-soft mb-1">Due Date</label>
-                <input type="date" value={taskFor.due} onChange={e => setTaskFor(t => t && { ...t, due: e.target.value })} className={inp} style={{ colorScheme: 'dark' }} />
+                <input type="date" value={taskFor.due} onChange={e => setTaskFor(t => t && { ...t, due: e.target.value })} className={inp} style={{ colorScheme: HX_COLOR_SCHEME }} />
               </div>
               <div>
                 <label className="block text-xs text-t-soft mb-1">Notes</label>
@@ -1827,10 +1828,10 @@ export function Inquiries() {
               e.currentTarget.value = ''
             }} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-purple-500/15 text-purple-300 hover:bg-purple-500/25 disabled:opacity-50 transition-colors cursor-pointer"
-            style={{ colorScheme: 'dark' }}
+            style={{ colorScheme: HX_COLOR_SCHEME }}
             defaultValue="">
             <option value="" disabled>{t('inquiries.bulk.set_stage', 'Set stage…')}</option>
-            {settings.inquiry_statuses.map(s => <option key={s} value={s} style={{ background: '#0f1c18', color: '#fff' }}>{s}</option>)}
+            {settings.inquiry_statuses.map(s => <option key={s} value={s} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{s}</option>)}
           </select>
           {/* Owner reassignment via select — submitting fires the bulk
               call. The select intentionally has an empty option so
@@ -1843,11 +1844,11 @@ export function Inquiries() {
               e.currentTarget.value = ''
             }} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-500/15 text-blue-300 hover:bg-blue-500/25 disabled:opacity-50 transition-colors cursor-pointer"
-            style={{ colorScheme: 'dark' }}
+            style={{ colorScheme: HX_COLOR_SCHEME }}
             defaultValue="">
             <option value="" disabled>Assign to…</option>
-            <option value="__clear__" style={{ background: '#0f1c18', color: '#fff' }}>Unassign</option>
-            {settings.lead_owners.map(o => <option key={o} value={o} style={{ background: '#0f1c18', color: '#fff' }}>{o}</option>)}
+            <option value="__clear__" style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>Unassign</option>
+            {settings.lead_owners.map(o => <option key={o} value={o} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{o}</option>)}
           </select>
           <select onChange={e => {
               if (!e.target.value) return
@@ -1855,10 +1856,10 @@ export function Inquiries() {
               e.currentTarget.value = ''
             }} disabled={bulkBusy}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-500/15 text-amber-300 hover:bg-amber-500/25 disabled:opacity-50 transition-colors cursor-pointer"
-            style={{ colorScheme: 'dark' }}
+            style={{ colorScheme: HX_COLOR_SCHEME }}
             defaultValue="">
             <option value="" disabled>Priority…</option>
-            {settings.priorities.map(p => <option key={p} value={p} style={{ background: '#0f1c18', color: '#fff' }}>{p}</option>)}
+            {settings.priorities.map(p => <option key={p} value={p} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{p}</option>)}
           </select>
           <div className="h-5 w-px bg-white/10" />
           <button onClick={() => setBulkDeleteOpen(true)} disabled={bulkBusy}

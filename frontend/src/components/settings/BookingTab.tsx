@@ -4,6 +4,7 @@ import {
   Clock, DollarSign, Zap, CreditCard, Scissors, Building2, Check,
   Type, Square, Code,
 } from 'lucide-react'
+import { hxWhite, hx, HX_COLOR_SCHEME } from '../../theme/hx'
 
 /**
  * Booking tab — unified layout with 3 sections: Embed (tabbed), Appearance,
@@ -70,9 +71,9 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
     <button onClick={() => flashCopy(key, text)}
       className={`${compact ? 'px-2.5 py-1.5' : 'px-3 py-1.5'} rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all flex items-center gap-1`}
       style={{
-        background: copied[key] ? 'rgba(34,197,94,0.15)' : 'rgba(255,255,255,0.06)',
-        color: copied[key] ? '#22c55e' : '#8e8e93',
-        border: copied[key] ? '1px solid rgba(34,197,94,0.2)' : '1px solid rgba(255,255,255,0.08)',
+        background: copied[key] ? 'rgba(34,197,94,0.15)' : hxWhite(0.06),
+        color: copied[key] ? hx('t', '#22c55e') : hx('t', '#8e8e93'),
+        border: copied[key] ? '1px solid rgba(34,197,94,0.2)' : `1px solid ${hxWhite(0.08)}`,
       }}>
       {copied[key] ? <Check size={10} /> : <Copy size={10} />} {copied[key] ? 'Copied' : 'Copy'}
     </button>
@@ -124,7 +125,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
   const Toggle = ({ on, onClick, color = 'emerald' }: { on: boolean; onClick: () => void; color?: 'emerald' | 'amber' }) => (
     <button onClick={onClick}
       className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/[0.1]'}`}>
-      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+      <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
     </button>
   )
 
@@ -171,7 +172,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
 
             {/* Snippet */}
             <div className="relative">
-              <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{embed.snippet}</pre>
+              <pre className="text-xs font-mono border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.snippet}</pre>
               <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-snippet`, embed.snippet)}</div>
             </div>
 
@@ -183,14 +184,14 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                 tags from page content. Use this instead — it always works, but keeps a fixed height.
               </p>
               <div className="relative">
-                <pre className="text-xs font-mono bg-black/40 border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap">{embed.iframe}</pre>
+                <pre className="text-xs font-mono border border-white/[0.06] rounded-xl p-4 overflow-x-auto text-gray-300 whitespace-pre-wrap" style={{ background: hx('f', '#000000', 0.4) }}>{embed.iframe}</pre>
                 <div className="absolute top-3 right-3">{copyBtn(`${activeEmbed}-iframe`, embed.iframe)}</div>
               </div>
             </div>
 
             {/* Direct URL + preview link */}
             <div className="mt-3 flex items-center gap-2">
-              <code className="flex-1 text-xs font-mono bg-black/40 border border-white/[0.06] rounded-lg px-3 py-2 text-gray-300 overflow-x-auto">{embed.direct}</code>
+              <code className="flex-1 text-xs font-mono border border-white/[0.06] rounded-lg px-3 py-2 text-gray-300 overflow-x-auto" style={{ background: hx('f', '#000000', 0.4) }}>{embed.direct}</code>
               {copyBtn(`${activeEmbed}-direct`, embed.direct, true)}
               <a href={embed.preview} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider text-blue-400 hover:bg-blue-500/10 border border-blue-500/20 transition-colors">
@@ -338,9 +339,9 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
                   const opt = FONT_OPTIONS.find(f => f.id === e.target.value)
                   handleChange(sk('font'), opt?.value ?? '')
                 }}
-                className={inputClass + ' w-48 appearance-none cursor-pointer'} style={{ colorScheme: 'dark' }}>
+                className={inputClass + ' w-48 appearance-none cursor-pointer'} style={{ colorScheme: HX_COLOR_SCHEME }}>
                 {FONT_OPTIONS.map(opt => (
-                  <option key={opt.id} value={opt.id} style={{ background: '#0f1c18', color: '#fff' }}>{opt.label}</option>
+                  <option key={opt.id} value={opt.id} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{opt.label}</option>
                 ))}
               </select>
             </div>
@@ -444,8 +445,8 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-1"><DollarSign size={10} /> Currency</label>
               <select value={getVal('booking_currency') || 'EUR'}
                 onChange={e => handleChange('booking_currency', e.target.value)}
-                className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: 'dark' }}>
-                {CURRENCIES.map(c => <option key={c} value={c} style={{ background: '#0f1c18', color: '#fff' }}>{c}</option>)}
+                className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: HX_COLOR_SCHEME }}>
+                {CURRENCIES.map(c => <option key={c} value={c} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{c}</option>)}
               </select>
             </div>
             <div>
@@ -520,9 +521,9 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-1"><Clock size={10} /> Slot Step</label>
               <select value={getVal('services_slot_step') || '15'}
                 onChange={e => handleChange('services_slot_step', e.target.value)}
-                className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: 'dark' }}>
+                className={inputClass + ' appearance-none cursor-pointer'} style={{ colorScheme: HX_COLOR_SCHEME }}>
                 {[10, 15, 20, 30, 45, 60].map(v =>
-                  <option key={v} value={v} style={{ background: '#0f1c18', color: '#fff' }}>{v} min</option>
+                  <option key={v} value={v} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{v} min</option>
                 )}
               </select>
             </div>

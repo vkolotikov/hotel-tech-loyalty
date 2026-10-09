@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import { Search, ChevronLeft, ChevronRight, CheckCircle, XCircle } from 'lucide-react'
 import { money } from '../lib/money'
+import { hx, hxWhite } from '../theme/hx'
 
 export function BookingSubmissions({ embedded = false }: { embedded?: boolean } = {}) {
   const [search, setSearch] = useState('')
@@ -28,7 +29,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
       {!embedded && (
         <div>
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Submissions</div>
+            style={{ background: 'rgba(116,200,149,0.12)', color: hx('t', '#74c895') }}>Submissions</div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Booking Submissions</h1>
           <p className="text-sm text-gray-500 mt-1">Log of all booking attempts — successful and failed</p>
         </div>
@@ -67,7 +68,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
             className="rounded-2xl p-4 transition-all hover:-translate-y-px"
             style={{
               background: `var(--legacy-tile-gradient), radial-gradient(circle at 100% 0, ${s.outcome === 'success' ? 'rgba(116,200,149,0.06)' : 'rgba(228,132,111,0.06)'}, transparent 35%)`,
-              border: '1px solid rgba(255,255,255,0.05)',
+              border: `1px solid ${hxWhite(0.05)}`,
               boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
             }}>
             <div className="flex items-center gap-4 flex-wrap">
@@ -102,7 +103,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
                 )}
               </div>
               {/* Reference */}
-              <div className="text-xs font-medium min-w-[80px] text-right" style={{ color: '#74c895' }}>{s.booking_reference || '—'}</div>
+              <div className="text-xs font-medium min-w-[80px] text-right" style={{ color: hx('t', '#74c895') }}>{s.booking_reference || '—'}</div>
               {/* Time */}
               <div className="text-[10px] text-gray-600 min-w-[100px] text-right">{new Date(s.created_at).toLocaleString()}</div>
               {/* Error */}
@@ -123,10 +124,10 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
           <div className="flex gap-1">
             <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronLeft size={14} /></button>
             <button onClick={() => setPage(p => Math.min(lastPage, p + 1))} disabled={page === lastPage}
               className="p-2 rounded-xl text-gray-500 hover:text-white disabled:opacity-30 transition-colors"
-              style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={14} /></button>
+              style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronRight size={14} /></button>
           </div>
         </div>
       )}

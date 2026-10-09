@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useDataInk } from '../theme/hx'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
@@ -201,9 +202,10 @@ export function Referrals() {
 }
 
 function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent: string }) {
+  const ink = useDataInk()
   return (
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-      <div className="flex items-center gap-2 mb-2" style={{ color: accent }}>
+      <div className="flex items-center gap-2 mb-2" style={{ color: ink(accent) }}>
         {icon}
         <span className="text-[11px] uppercase tracking-wider font-semibold">{label}</span>
       </div>

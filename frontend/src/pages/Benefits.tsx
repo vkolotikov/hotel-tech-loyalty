@@ -255,7 +255,7 @@ export function Benefits() {
                         title={b.is_active ? t('benefits.table.disable_tooltip', 'Click to disable') : t('benefits.table.enable_tooltip', 'Click to enable')}
                       >
                         <span
-                          className={`inline-block h-3.5 w-3.5 transform rounded-full bg-on-fill transition-transform ${
+                          className={`left-0 inline-block h-3.5 w-3.5 transform rounded-full bg-on-fill transition-transform ${
                             b.is_active ? 'translate-x-[18px]' : 'translate-x-[3px]'
                           }`}
                         />

@@ -7,6 +7,7 @@ import {
   PieChart, Pie, Cell,
 } from 'recharts'
 import { api } from '../lib/api'
+import { LIGHT_CHART, useDataInk, useIsLight } from '../theme/hx'
 import {
   TrendingUp, BarChart3, Funnel, X, Users,
   Building2, Trophy, Clock,
@@ -46,6 +47,20 @@ const STAGE_PALETTE = [
 ]
 
 const PIE_PALETTE = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#a855f7', '#94a3b8']
+
+/** Chart chrome: the dark constants for Glass and Classic, LIGHT_CHART in Clean light. */
+function chartChrome(light: boolean) {
+  return light
+    ? {
+        grid: LIGHT_CHART.grid, tick: LIGHT_CHART.tick,
+        itemStyle: { color: LIGHT_CHART.tooltipText },
+        tip: { background: LIGHT_CHART.tooltipBg, border: `1px solid ${LIGHT_CHART.tooltipBorder}`, color: LIGHT_CHART.tooltipText, borderRadius: 8, fontSize: 12 },
+      }
+    : {
+        grid: '#27272a', tick: '#94a3b8', itemStyle: undefined,
+        tip: { background: '#0a0a0a', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 },
+      }
+}
 
 export function Reports() {
   const { t } = useTranslation()
@@ -160,6 +175,7 @@ function FunnelCard({ months }: { months: number }) {
 
 function ForecastCard({ months }: { months: number }) {
   const { t } = useTranslation()
+  const CH = chartChrome(useIsLight())
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-forecast', months],
     queryFn: () => api.get('/v1/admin/reporting/forecast', { params: { months } }).then(r => r.data),
@@ -187,11 +203,11 @@ function ForecastCard({ months }: { months: number }) {
           </div>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={data.buckets} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#94a3b8' }} />
-              <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} tickFormatter={(v) => `€${Math.round(v/1000)}k`} />
+              <CartesianGrid strokeDasharray="3 3" stroke={CH.grid} vertical={false} />
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: CH.tick }} />
+              <YAxis tick={{ fontSize: 11, fill: CH.tick }} tickFormatter={(v) => `€${Math.round(v/1000)}k`} />
               <Tooltip
-                contentStyle={{ background: '#0a0a0a', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
+                contentStyle={CH.tip} itemStyle={CH.itemStyle}
                 formatter={(v: any) => [`€${Math.round(v).toLocaleString()}`, '']}
               />
               <Bar dataKey="gross_value" fill={COLORS.slate} fillOpacity={0.4} name={t('reports.forecast.gross', 'Gross')} />
@@ -208,6 +224,7 @@ function ForecastCard({ months }: { months: number }) {
 
 function LostReasonsCard({ months }: { months: number }) {
   const { t } = useTranslation()
+  const CH = chartChrome(useIsLight())
   const { data, isLoading } = useQuery<any>({
     queryKey: ['reporting-lost-reasons', months],
     queryFn: () => api.get('/v1/admin/reporting/lost-reasons', { params: { months } }).then(r => r.data),
@@ -244,7 +261,7 @@ function LostReasonsCard({ months }: { months: number }) {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#0a0a0a', border: '1px solid #27272a', borderRadius: 8, fontSize: 12 }}
+                  contentStyle={CH.tip} itemStyle={CH.itemStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -368,11 +385,12 @@ function OwnerScoreboardCard({ days, setDays }: { days: number; setDays: (n: num
 }
 
 function Pill({ icon, label, color, muted }: { icon?: React.ReactNode; label: any; color: string; muted?: boolean }) {
+  const ink = useDataInk()
   return (
     <span
       className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold tabular-nums ${muted ? '' : 'border'}`}
       style={{
-        color,
+        color: ink(color),
         background: muted ? 'transparent' : color + '15',
         borderColor: muted ? 'transparent' : color + '30',
       }}

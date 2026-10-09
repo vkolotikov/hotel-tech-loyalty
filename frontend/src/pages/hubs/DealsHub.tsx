@@ -6,6 +6,7 @@ import {
   ArrowLeft, Search, TrendingUp,
 } from 'lucide-react'
 import { api } from '../../lib/api'
+import { hx, hxWhite, useDataInk, useIsLight } from '../../theme/hx'
 
 /**
  * "Deals" hub — won inquiries working through fulfillment.
@@ -220,11 +221,12 @@ function KpiCard({
   hint?: string
 }) {
   const dim = tone === 'dim'
+  const ink = useDataInk()
   return (
     <div
       className="relative overflow-hidden rounded-xl border bg-dark-surface px-4 py-3"
       style={{
-        borderColor: dim ? 'rgba(255,255,255,0.06)' : tint(accent, 0.18),
+        borderColor: dim ? hxWhite(0.06) : tint(accent, 0.18),
       }}
     >
       <span
@@ -243,11 +245,11 @@ function KpiCard({
         <span
           className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
           style={{
-            background: dim ? 'rgba(255,255,255,0.03)' : tint(accent, 0.15),
-            border: `1px solid ${dim ? 'rgba(255,255,255,0.06)' : tint(accent, 0.3)}`,
+            background: dim ? hxWhite(0.03) : tint(accent, 0.15),
+            border: `1px solid ${dim ? hxWhite(0.06) : tint(accent, 0.3)}`,
           }}
         >
-          <Icon size={14} style={{ color: dim ? '#6b7280' : accent }} />
+          <Icon size={14} style={{ color: dim ? hx('t', '#6b7280') : ink(accent) }} />
         </span>
       </div>
     </div>
@@ -263,6 +265,8 @@ function DealTile({
   onClick: () => void
 }) {
   const Icon = tile.icon
+  const light = useIsLight()
+  const ink = useDataInk()
   const { accent } = tile
   return (
     <button
@@ -297,15 +301,15 @@ function DealTile({
             boxShadow: quiet ? 'none' : `0 0 20px ${tint(accent, 0.18)}`,
           }}
         >
-          <Icon size={20} style={{ color: quiet ? tint(accent, 0.6) : accent }} />
+          <Icon size={20} style={{ color: quiet ? (light ? ink(accent) : tint(accent, 0.6)) : ink(accent) }} />
         </span>
         {count != null && (
           <span
             className="text-[11px] tabular-nums font-bold px-2 py-0.5 rounded-md self-start mt-1"
             style={{
-              background: quiet ? 'rgba(255,255,255,0.04)' : tint(accent, 0.18),
-              color: quiet ? '#6b7280' : accent,
-              border: `1px solid ${quiet ? 'rgba(255,255,255,0.06)' : tint(accent, 0.30)}`,
+              background: quiet ? hxWhite(0.04) : tint(accent, 0.18),
+              color: quiet ? hx('t', '#6b7280') : ink(accent),
+              border: `1px solid ${quiet ? hxWhite(0.06) : tint(accent, 0.30)}`,
             }}
           >
             {count}

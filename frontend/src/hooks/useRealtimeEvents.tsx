@@ -3,6 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '../stores/authStore'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
+import { hx, hxWhite } from '../theme/hx'
 
 export interface RealtimeEvent {
   type: string   // arrival, departure, inquiry, points, member, reservation
@@ -124,9 +125,9 @@ export function useRealtimeEvents(enabled: boolean = true) {
           style={{
             background: isHotLead
               ? 'linear-gradient(135deg, rgba(251,146,60,0.18), rgba(251,146,60,0.08))'
-              : '#1c1c1e',
-            color: '#fff',
-            border: isHotLead ? '1px solid rgba(251,146,60,0.5)' : '1px solid #2c2c2e',
+              : hx('f', '#1c1c1e'),
+            color: hxWhite(),
+            border: isHotLead ? '1px solid rgba(251,146,60,0.5)' : `1px solid ${hx('f', '#2c2c2e')}`,
             borderRadius: 10,
             padding: '10px 12px',
             minWidth: 260,
@@ -145,10 +146,10 @@ export function useRealtimeEvents(enabled: boolean = true) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontWeight: 600, marginBottom: 2 }}>{event.title}</div>
             {event.body && (
-              <div style={{ color: '#a0a0a8', whiteSpace: 'pre-wrap' }}>{event.body}</div>
+              <div style={{ color: hx('t', '#a0a0a8'), whiteSpace: 'pre-wrap' }}>{event.body}</div>
             )}
             {actionUrl && (
-              <div style={{ color: '#fbbf24', fontSize: 11, marginTop: 4, fontWeight: 600 }}>
+              <div style={{ color: hx('t', '#fbbf24'), fontSize: 11, marginTop: 4, fontWeight: 600 }}>
                 Click to view →
               </div>
             )}
@@ -164,9 +165,9 @@ export function useRealtimeEvents(enabled: boolean = true) {
             }}
             aria-label="Dismiss"
             style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.10)',
-              color: '#e5e5e7',
+              background: hxWhite(0.06),
+              border: `1px solid ${hxWhite(0.10)}`,
+              color: hx('t', '#e5e5e7'),
               cursor: 'pointer',
               fontSize: 16,
               lineHeight: 1,
@@ -181,8 +182,8 @@ export function useRealtimeEvents(enabled: boolean = true) {
               flexShrink: 0,
               transition: 'background 150ms',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.14)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = hxWhite(0.14))}
+            onMouseLeave={(e) => (e.currentTarget.style.background = hxWhite(0.06))}
           >×</button>
         </div>
       ),

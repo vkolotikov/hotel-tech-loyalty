@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDataInk } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -223,6 +224,7 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
   onResend: () => void
   resendPending?: boolean
 }) {
+  const ink = useDataInk()
   const meta = ROLE_META[staff.role] ?? ROLE_META.staff
   const Icon = meta.icon
   const isPending = !staff.last_login_at
@@ -248,7 +250,7 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
   return (
     <div className={'flex items-center gap-3 p-3 ' + (staff.is_active ? '' : 'opacity-50')}>
       <div className="w-9 h-9 rounded-md flex items-center justify-center flex-shrink-0"
-        style={{ backgroundColor: meta.color + '25', color: meta.color }}>
+        style={{ backgroundColor: meta.color + '25', color: ink(meta.color) }}>
         <Icon size={15} />
       </div>
       <div className="flex-1 min-w-0">
@@ -261,7 +263,7 @@ function ViewRow({ staff, onEdit, onDeactivate, onReactivate, onResend, resendPe
         <div className="text-[11px] text-gray-500 mt-0.5 truncate">{staff.email}</div>
       </div>
       <div className="flex flex-col items-end gap-0.5 text-right">
-        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: meta.color }}>{meta.label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: ink(meta.color) }}>{meta.label}</span>
         <span className="text-[10px] text-gray-600">
           {lastLogin ? `Last login: ${lastLogin}` : inviteExpiry ? inviteExpiry : 'Never logged in'}
         </span>
@@ -305,6 +307,7 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
   onCancel: () => void
   onSaved: () => void
 }) {
+  const ink = useDataInk()
   const settings = useSettings()
   const plannerGroups: string[] = settings.planner_groups ?? []
   const [form, setForm] = useState({
@@ -355,7 +358,7 @@ function EditRow({ staff, availableRoles, availableGroups, onCancel, onSaved }: 
                 <button key={r} onClick={() => setForm(f => ({ ...f, role: r }))}
                   className={'w-full flex items-start gap-2 p-2 rounded-md border text-left transition-colors ' +
                     (active ? 'border-amber-500/60 bg-amber-500/[0.06]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
-                  <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: meta.color }} />
+                  <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color) }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-xs font-bold text-white">{meta.label}</div>
                     <div className="text-[10px] text-gray-500">{meta.desc}</div>
@@ -545,6 +548,7 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
   onClose: () => void
   onInvited: () => void
 }) {
+  const ink = useDataInk()
   const [form, setForm] = useState<{
     name: string
     email: string
@@ -604,7 +608,7 @@ function InviteModal({ availableRoles, availableGroups, onClose, onInvited }: {
                   <button key={r} type="button" onClick={() => setForm(f => ({ ...f, role: r }))}
                     className={'w-full flex items-start gap-2 p-2 rounded-md border text-left transition-colors ' +
                       (active ? 'border-amber-500/60 bg-amber-500/[0.06]' : 'border-dark-border bg-dark-bg hover:bg-dark-surface2')}>
-                    <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: meta.color }} />
+                    <Icon size={14} className="mt-0.5 flex-shrink-0" style={{ color: ink(meta.color) }} />
                     <div className="flex-1 min-w-0">
                       <div className="text-xs font-bold text-white">{meta.label}</div>
                       <div className="text-[10px] text-gray-500">{meta.desc}</div>

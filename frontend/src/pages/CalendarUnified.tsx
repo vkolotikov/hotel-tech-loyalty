@@ -5,6 +5,7 @@ import { api } from '../lib/api'
 import { ChevronLeft, ChevronRight, BedDouble, Scissors, ClipboardList, X, Clock, User, Users, Calendar, CalendarDays, CalendarRange } from 'lucide-react'
 import { DesktopOnlyBanner } from '../components/DesktopOnlyBanner'
 import { addDaysToKey, dayNumber, formatDayKey, formatWallTime, monthGridKeys, mondayOfKey, todayKey, wallDay, weekKeys } from '../lib/venueTime'
+import { hx, hxWhite, useDataInk } from '../theme/hx'
 
 /* ── source theming ──────────────────────────────────────────────── */
 
@@ -42,6 +43,7 @@ function fmtShortTime(hhmm: string) {
 type View = 'month' | 'week' | 'day'
 
 export default function CalendarUnified() {
+  const ink = useDataInk()
   const [params, setParams] = useSearchParams()
   const [view, setView] = useState<View>('month')
   const [cursor, setCursor] = useState(() => todayKey())
@@ -241,7 +243,7 @@ export default function CalendarUnified() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Calendar</div>
+            style={{ background: 'rgba(116,200,149,0.12)', color: hx('t', '#74c895') }}>Calendar</div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Calendar</h1>
           <p className="text-xs text-gray-500 mt-1">
             Unified view of room bookings, service bookings, and planner tasks.
@@ -257,16 +259,16 @@ export default function CalendarUnified() {
             ))}
           </div>
           <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[170px] text-center text-sm">
             {view === 'day' ? formatDayKey(cursor, 'en-US', { weekday: 'long', month: 'long', day: 'numeric' }) :
              view === 'week' ? `Week ${formatDayKey(mondayOfKey(cursor), 'en-US', { month: 'short', day: 'numeric' })} — ${formatDayKey(addDaysToKey(mondayOfKey(cursor), 6), 'en-US', { month: 'short', day: 'numeric' })}` :
              monthLabel}
           </span>
           <button onClick={() => navigate(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronRight size={16} /></button>
           <button onClick={goToday} className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>Today</button>
         </div>
       </div>
 
@@ -281,8 +283,8 @@ export default function CalendarUnified() {
               className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold border transition-all hover:scale-[1.02]"
               style={{
                 background: on ? s.soft : 'transparent',
-                borderColor: on ? s.border : 'rgba(255,255,255,0.06)',
-                color: on ? s.text : '#636366',
+                borderColor: on ? s.border : hxWhite(0.06),
+                color: on ? ink(s.text) : hx('t', '#636366'),
               }}>
               <Icon size={12} />
               {s.label}
@@ -350,7 +352,7 @@ export default function CalendarUnified() {
                       return (
                         <div key={ev.key}
                           className="text-[10px] px-1.5 py-1 rounded-md truncate flex items-center gap-1"
-                          style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}
+                          style={{ background: s.soft, border: `1px solid ${s.border}`, color: ink(s.text) }}
                           title={`${ev.timeLabel ? ev.timeLabel + ' · ' : ''}${ev.label}${ev.sublabel ? ' — ' + ev.sublabel : ''}`}>
                           {ev.timeLabel && <span className="font-bold">{ev.timeLabel}</span>}
                           <span className={`${ev.timeLabel ? 'opacity-85' : 'font-bold'} truncate`}>{ev.label}</span>
@@ -399,7 +401,7 @@ export default function CalendarUnified() {
                         return (
                           <Link key={ev.key} to={ev.href}
                             className="block text-[11px] px-2 py-1.5 rounded-md truncate transition-all hover:opacity-80"
-                            style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}
+                            style={{ background: s.soft, border: `1px solid ${s.border}`, color: ink(s.text) }}
                             title={`${ev.timeLabel ? ev.timeLabel + ' · ' : ''}${ev.label}${ev.sublabel ? ' — ' + ev.sublabel : ''}`}>
                             {ev.timeLabel && <span className="font-bold block">{ev.timeLabel}</span>}
                             <span className="font-bold truncate">{ev.label}</span>
@@ -438,10 +440,10 @@ export default function CalendarUnified() {
                             className="block rounded-lg border border-white/[0.08] p-3 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
                             <div className="flex items-start justify-between mb-2">
                               <div className="flex items-center gap-2">
-                                <Icon size={13} style={{ color: s.accent }} />
+                                <Icon size={13} style={{ color: ink(s.accent) }} />
                                 {ev.timeLabel && <span className="text-xs font-bold text-white">{ev.timeLabel}</span>}
                                 <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                                  style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}>
+                                  style={{ background: s.soft, border: `1px solid ${s.border}`, color: ink(s.text) }}>
                                   {s.label}
                                 </span>
                               </div>
@@ -490,10 +492,10 @@ export default function CalendarUnified() {
                     className="block rounded-xl border border-white/[0.08] p-4 transition-all hover:border-white/[0.16] hover:bg-white/[0.02]">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center gap-2">
-                        <Icon size={14} style={{ color: s.accent }} />
+                        <Icon size={14} style={{ color: ink(s.accent) }} />
                         {ev.timeLabel && <span className="text-sm font-bold text-white">{ev.timeLabel}</span>}
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                          style={{ background: s.soft, border: `1px solid ${s.border}`, color: s.text }}>
+                          style={{ background: s.soft, border: `1px solid ${s.border}`, color: ink(s.text) }}>
                           {s.label}
                         </span>
                       </div>

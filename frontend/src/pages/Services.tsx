@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import { useDataInk } from '../theme/hx'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, resolveImage } from '../lib/api'
 import toast from 'react-hot-toast'
@@ -173,6 +174,7 @@ function ServicesList() {
 }
 
 function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: () => void; onDelete: () => void }) {
+  const ink = useDataInk()
   return (
     <div className={card + ' transition-all hover:border-white/[0.12]'} style={cardBg}>
       <div className="flex gap-4">
@@ -189,7 +191,7 @@ function ServiceCard({ service, onEdit, onDelete }: { service: Service; onEdit: 
               <h3 className="text-sm font-bold text-white truncate">{service.name}</h3>
               {service.category && (
                 <span className="text-[10px] font-medium px-2 py-0.5 rounded-full mt-1 inline-block"
-                  style={{ background: (service.category.color || '#374151') + '33', color: service.category.color || '#9ca3af' }}>
+                  style={{ background: (service.category.color || '#374151') + '33', color: ink(service.category.color || '#9ca3af') }}>
                   {service.category.name}
                 </span>
               )}
@@ -420,6 +422,7 @@ function ServiceForm({
 }
 
 function CategoriesList() {
+  const ink = useDataInk()
   const qc = useQueryClient()
   const [editing, setEditing] = useState<ServiceCategory | null>(null)
   const [showForm, setShowForm] = useState(false)
@@ -462,7 +465,7 @@ function CategoriesList() {
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
                     style={{ background: (c.color || '#374151') + '20' }}>
-                    <FolderTree size={16} style={{ color: c.color || '#9ca3af' }} />
+                    <FolderTree size={16} style={{ color: ink(c.color || '#9ca3af') }} />
                   </div>
                   <div className="min-w-0">
                     <h4 className="text-sm font-bold text-white truncate">{c.name}</h4>

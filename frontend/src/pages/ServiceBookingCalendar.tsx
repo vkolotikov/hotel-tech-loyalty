@@ -10,6 +10,7 @@ import { OpenInAppointments } from '../components/OpenInAppointments'
 import {
   addDaysToKey, addMonthsToKey, dayKey, dayNumber, formatDayKey, formatWallTime, monthGridKeys, todayKey, wallDay, wallHour, weekKeys,
 } from '../lib/venueTime'
+import { hx, hxWhite, useDataInk } from '../theme/hx'
 
 interface ServiceBookingLite {
   id: number
@@ -44,6 +45,7 @@ const isoDay = wallDay
 type View = 'day' | 'week' | 'month'
 
 export default function ServiceBookingCalendar() {
+  const ink = useDataInk()
   const [view, setView] = useState<View>('month')
   const [cursor, setCursor] = useState<string>(() => todayKey())
   const month = cursor.slice(0, 7)
@@ -159,14 +161,14 @@ export default function ServiceBookingCalendar() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider mb-2"
-            style={{ background: 'rgba(116,200,149,0.12)', color: '#74c895' }}>Service Calendar</div>
+            style={{ background: 'rgba(116,200,149,0.12)', color: hx('t', '#74c895') }}>Service Calendar</div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Service Bookings</h1>
           <p className="text-xs text-gray-500 mt-1">
             {dayTotals.bookings} bookings &middot; {money(dayTotals.revenue)} total value this month
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <div className="inline-flex p-1 rounded-2xl" style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>
             {(['day', 'week', 'month'] as const).map(v => (
               <button key={v} onClick={() => setView(v)}
                 className={`px-3 py-1.5 text-xs font-semibold rounded-xl transition-all ${view === v ? '' : 'text-gray-500 hover:text-gray-300'}`}
@@ -176,13 +178,13 @@ export default function ServiceBookingCalendar() {
             ))}
           </div>
           <button onClick={() => nav(-1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronLeft size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronLeft size={16} /></button>
           <span className="text-white font-semibold min-w-[200px] text-center text-sm">{viewLabel}</span>
           <button onClick={() => nav(1)} className="p-2 rounded-xl text-gray-500 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}><ChevronRight size={16} /></button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}><ChevronRight size={16} /></button>
           <button onClick={() => setCursor(todayKey())}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold text-gray-400 hover:text-white transition-colors"
-            style={{ background: 'var(--legacy-panel-60)', border: '1px solid rgba(255,255,255,0.06)' }}>Today</button>
+            style={{ background: 'var(--legacy-panel-60)', border: `1px solid ${hxWhite(0.06)}` }}>Today</button>
         </div>
       </div>
 
@@ -260,7 +262,7 @@ export default function ServiceBookingCalendar() {
                       return (
                         <div key={b.id}
                           className="text-[10px] px-1.5 py-1 rounded-md truncate"
-                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}
+                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: ink(s.text) }}
                           title={`${fmtTime(b.start_at)} ${b.customer_name} — ${b.service?.name || ''}`}>
                           <span className="font-bold">{fmtTime(b.start_at)}</span>
                           <span className="ml-1 opacity-80">{b.customer_name}</span>
@@ -310,7 +312,7 @@ export default function ServiceBookingCalendar() {
                       return (
                         <button key={b.id} onClick={() => setSelectedDay(d)}
                           className="w-full text-left rounded-md px-2 py-1.5 transition-opacity hover:opacity-90"
-                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
+                          style={{ background: s.bg, border: `1px solid ${s.border}`, color: ink(s.text) }}>
                           <div className="text-[10px] font-bold">{fmtTime(b.start_at)}</div>
                           <div className="text-[11px] font-semibold truncate">{b.customer_name}</div>
                           {b.service && <div className="text-[9px] opacity-70 truncate">{b.service.name}</div>}
@@ -353,7 +355,7 @@ export default function ServiceBookingCalendar() {
                           return (
                             <Link key={b.id} to={`/service-bookings?id=${b.id}`}
                               className="block rounded-lg px-3 py-2 transition-all hover:-translate-y-px"
-                              style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text, boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
+                              style={{ background: s.bg, border: `1px solid ${s.border}`, color: ink(s.text), boxShadow: '0 2px 6px rgba(0,0,0,0.1)' }}>
                               <div className="flex items-center justify-between gap-2 mb-0.5">
                                 <div className="flex items-center gap-2">
                                   <Clock size={11} />
@@ -413,7 +415,7 @@ export default function ServiceBookingCalendar() {
                         {b.end_at && <span className="text-xs text-gray-500">— {fmtTime(b.end_at)}</span>}
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                        style={{ background: s.bg, border: `1px solid ${s.border}`, color: s.text }}>
+                        style={{ background: s.bg, border: `1px solid ${s.border}`, color: ink(s.text) }}>
                         {b.status.replace('_', ' ')}
                       </span>
                     </div>

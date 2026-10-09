@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { ChevronLeft, ChevronRight, CheckCircle2, PlayCircle, AlertCircle, Circle, Clock } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
+import { LIGHT_CHART, useIsLight } from '../theme/hx'
 
 type Task = {
   id: number
@@ -162,6 +163,7 @@ function MiniCalendar({ currentDate, tasks, onDateChange }: { currentDate: strin
 /* ───────────────────────── Task summary donut ───────────────────────── */
 
 function TaskSummaryDonut({ tasks }: { tasks: Task[] }) {
+  const light = useIsLight()
   const todayISO = new Date().toISOString().slice(0, 10)
   const total = tasks.length
   const completed = tasks.filter(t => t.completed).length
@@ -180,7 +182,7 @@ function TaskSummaryDonut({ tasks }: { tasks: Task[] }) {
   // total == 0 we render a single gray "ring" instead of an empty
   // chart so the widget doesn't render a confusing blank circle.
   const data = total === 0
-    ? [{ name: 'empty', value: 1, color: '#1f2937' }]
+    ? [{ name: 'empty', value: 1, color: light ? LIGHT_CHART.grid : '#1f2937' }]
     : segments.filter(s => s.value > 0).map(s => ({ name: s.label, value: s.value, color: s.color }))
 
   return (
