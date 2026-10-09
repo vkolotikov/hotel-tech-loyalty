@@ -44,6 +44,7 @@ import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industry
 import { IndustryMismatchBanner } from './IndustryMismatchBanner'
 import { showsAppointmentsLink } from '../appointments/lib/landing'
 import { GLASS_NAV_ACCENT_TEXT } from '../theme/glassTokens'
+import { LIGHT_NAV_ACCENT_TEXT } from '../theme/lightTokens'
 
 // gate: 'all' = everyone, 'admin' = super_admin/manager only, or a staff permission key
 export type NavGate = 'all' | 'admin' | 'can_manage_offers' | 'can_view_analytics'
@@ -773,7 +774,7 @@ export function Layout({ children }: { children: ReactNode }) {
               return `rgba(${r},${g},${b},${a})`
             }
             return (
-              <div key={defaultLabel} className="mb-3 last:mb-1">
+              <div key={defaultLabel} className="mb-3 last:mb-1" data-nav-group="" style={{ '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent } as CSSProperties}>
                 {/* Group header — colored dot + bolder label so the
                     seven sections read as distinct sections at a glance.
                     Collapsed sidebar shows only a thin accent line. */}
@@ -781,7 +782,7 @@ export function Layout({ children }: { children: ReactNode }) {
                   <button
                     onClick={() => toggleGroup(defaultLabel)}
                     className="flex items-center gap-2 w-full px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.08em] hover:bg-white/[0.02] rounded-lg transition-colors group"
-                    style={{ color: tint(0.9) }}
+                    style={{ color: `var(--nav-label-text, ${tint(0.9)})` }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent, boxShadow: `0 0 8px ${tint(0.5)}` }} />
                     <span className="flex-1 text-left">{groupLabel}</span>
@@ -914,6 +915,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         color: `var(--nav-active-text, ${accent})`,
                         boxShadow: `inset 2px 0 0 ${accent}`,
                         '--nav-accent-glass': GLASS_NAV_ACCENT_TEXT[accent] ?? accent,
+                        '--nav-accent-light': LIGHT_NAV_ACCENT_TEXT[accent] ?? accent,
                       } as CSSProperties : undefined}
                     >
                       <Icon size={17} className={clsx('flex-shrink-0', lapsed && !active && 'opacity-70')} />
@@ -929,7 +931,7 @@ export function Layout({ children }: { children: ReactNode }) {
                         displayCollapsed ? (
                           <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
                         ) : (
-                          <span className="ml-auto bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
+                          <span className="ml-auto bg-red-500 text-on-fill text-[10px] font-bold rounded-full min-w-[18px] h-[18px] px-1.5 flex items-center justify-center">
                             {badge > 99 ? '99+' : badge}
                           </span>
                         )
@@ -1042,7 +1044,7 @@ export function Layout({ children }: { children: ReactNode }) {
             >
               <Bell size={18} />
               {unseenCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-white text-[10px] font-bold rounded-full px-1">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-red-500 text-on-fill text-[10px] font-bold rounded-full px-1">
                   {unseenCount > 9 ? '9+' : unseenCount}
                 </span>
               )}
@@ -1187,7 +1189,7 @@ function MobileBottomNav({
           <Inbox size={20} />
           <span>Inbox</span>
           {chatUnread > 0 && (
-            <span className="absolute top-1.5 right-[calc(50%-14px)] bg-red-500 text-white text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
+            <span className="absolute top-1.5 right-[calc(50%-14px)] bg-red-500 text-on-fill text-[9px] font-bold rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center">
               {chatUnread > 9 ? '9+' : chatUnread}
             </span>
           )}

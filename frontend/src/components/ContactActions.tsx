@@ -32,7 +32,7 @@ export function ContactActions({ email, phone, whatsapp, compact = false }: Prop
     items.push({ key: 'call', href: `tel:${phoneDigits}`, label: 'Call', icon: Phone, tone: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/25' })
   }
   if (waDigits) {
-    items.push({ key: 'whatsapp', href: `https://wa.me/${waDigits}`, label: 'WhatsApp', icon: MessageCircle, tone: 'bg-[#25D366]/15 text-[#25D366] border-[#25D366]/25 hover:bg-[#25D366]/25', ext: true })
+    items.push({ key: 'whatsapp', href: `https://wa.me/${waDigits}`, label: 'WhatsApp', icon: MessageCircle, tone: 'bg-hx-25d366/15 text-hx-25d366 border-hx-25d366/25 hover:bg-hx-25d366/25', ext: true })
   }
 
   if (items.length === 0) return null

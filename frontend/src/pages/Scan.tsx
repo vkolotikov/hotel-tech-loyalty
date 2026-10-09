@@ -236,7 +236,7 @@ export function Scan() {
                     Start Camera
                   </button>
                 ) : (
-                  <button onClick={stopScanning} className="flex-1 bg-red-500 text-white py-2.5 rounded-lg font-medium hover:bg-red-600 transition-colors">
+                  <button onClick={stopScanning} className="flex-1 bg-red-500 text-on-fill py-2.5 rounded-lg font-medium hover:bg-red-600 transition-colors">
                     Stop Camera
                   </button>
                 )}
@@ -361,7 +361,7 @@ export function Scan() {
 
               {/* Award Points */}
               <div className="border-t border-dark-border pt-4">
-                <h4 className="text-sm font-semibold text-[#e0e0e0] mb-3 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-hx-e0e0e0 mb-3 flex items-center gap-2">
                   <Award size={14} /> Award Points
                 </h4>
                 <div className="space-y-2">
@@ -379,7 +379,7 @@ export function Scan() {
                     onChange={(e) => setPointsDesc(e.target.value)}
                     className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
-                  <button onClick={awardPoints} className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
+                  <button onClick={awardPoints} className="w-full bg-green-600 text-on-fill py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors">
                     Award Points
                   </button>
                 </div>
@@ -389,7 +389,7 @@ export function Scan() {
             {/* AI Upsell */}
             {aiUpsell && (
               <Card>
-                <h4 className="text-sm font-semibold text-[#e0e0e0] mb-2 flex items-center gap-2">
+                <h4 className="text-sm font-semibold text-hx-e0e0e0 mb-2 flex items-center gap-2">
                   <Gift size={14} className="text-primary-400" /> AI Upsell Suggestion
                 </h4>
                 <p className="text-sm text-t-soft leading-relaxed italic">"{aiUpsell}"</p>

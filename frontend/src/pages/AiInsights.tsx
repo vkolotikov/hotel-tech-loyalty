@@ -140,7 +140,7 @@ export function AiInsights() {
           </button>
         </div>
         {overview?.insight ? (
-          <div className="bg-dark-surface2/50 rounded-xl p-5 text-sm text-[#c8c8c8] leading-relaxed whitespace-pre-wrap border border-dark-border">
+          <div className="bg-dark-surface2/50 rounded-xl p-5 text-sm text-hx-c8c8c8 leading-relaxed whitespace-pre-wrap border border-dark-border">
             {overview.insight}
           </div>
         ) : (
@@ -266,7 +266,7 @@ export function AiInsights() {
                   <h4 className="font-semibold text-white text-sm">Upsell Script</h4>
                 </div>
                 <div className="bg-dark-surface2/50 border border-dark-border rounded-lg p-3">
-                  <p className="text-sm text-[#c8c8c8] italic leading-relaxed">"{memberInsights.upsell_suggestion}"</p>
+                  <p className="text-sm text-hx-c8c8c8 italic leading-relaxed">"{memberInsights.upsell_suggestion}"</p>
                 </div>
                 <p className="text-[10px] text-t-muted mt-2">Ready-to-use script for front desk staff</p>
               </div>

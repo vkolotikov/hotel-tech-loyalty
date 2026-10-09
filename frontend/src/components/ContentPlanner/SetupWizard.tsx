@@ -140,7 +140,7 @@ const STEPS = ['Knowledge', 'Brand DNA', 'Audiences', 'Voice', 'Positioning', 'P
 
 const INPUT = 'w-full rounded-lg border border-dark-border bg-dark-surface2 px-3 py-2 text-sm text-white placeholder-t-secondary outline-none focus:border-violet-500'
 const BTN_SECONDARY = 'rounded-lg border border-dark-border px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-dark-surface2 disabled:opacity-40'
-const BTN_PRIMARY = 'flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-50'
+const BTN_PRIMARY = 'flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-50'
 
 const s = (v: string | null | undefined): string => v ?? ''
 const sl = (v: string[] | null | undefined): string[] => (Array.isArray(v) ? v.filter(x => typeof x === 'string') : [])
@@ -457,7 +457,7 @@ function Segmented({ options, value, onChange }: { options: { value: string; lab
           type="button"
           onClick={() => onChange(o.value)}
           className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
-            value === o.value ? 'bg-violet-600 text-white' : 'text-t-secondary hover:text-white'
+            value === o.value ? 'bg-violet-600 text-on-fill' : 'text-t-secondary hover:text-white'
           }`}
         >
           {o.label}
@@ -496,7 +496,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       onClick={() => onChange(!checked)}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${checked ? 'bg-violet-600' : 'bg-dark-border'}`}
     >
-      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${checked ? 'left-[18px]' : 'left-0.5'}`} />
+      <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-on-fill transition-all ${checked ? 'left-[18px]' : 'left-0.5'}`} />
     </button>
   )
 }
@@ -512,7 +512,7 @@ function ToggleCard({ title, desc, checked, onToggle }: { title: string; desc: s
     >
       <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-medium text-white">{title}</span>
-        <span className={`flex h-4 w-4 items-center justify-center rounded-full border ${checked ? 'border-violet-500 bg-violet-600 text-white' : 'border-dark-border'}`}>
+        <span className={`flex h-4 w-4 items-center justify-center rounded-full border ${checked ? 'border-violet-500 bg-violet-600 text-on-fill' : 'border-dark-border'}`}>
           {checked && <Check size={10} />}
         </span>
       </div>
@@ -533,7 +533,7 @@ function Stepper({ current, onJump }: { current: number; onJump: (i: number) => 
               onClick={() => onJump(i)}
               className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
                 i === current
-                  ? 'border-violet-500 bg-violet-600 text-white'
+                  ? 'border-violet-500 bg-violet-600 text-on-fill'
                   : i < current
                     ? 'border-violet-500/60 bg-violet-600/20 text-violet-300'
                     : 'border-dark-border bg-dark-surface2 text-t-secondary hover:text-white'

@@ -298,7 +298,7 @@ function StarDisplay({ value }: { value: number }) {
   return (
     <div className="flex gap-0.5">
       {[1, 2, 3, 4, 5].map(i => (
-        <Star key={i} size={14} className={i <= value ? 'fill-amber-400 text-amber-400' : 'text-[#444]'} />
+        <Star key={i} size={14} className={i <= value ? 'fill-amber-400 text-amber-400' : 'text-hx-444444'} />
       ))}
     </div>
   )
@@ -630,7 +630,7 @@ function DevicesTab() {
               <button onClick={() => setQrModal(null)} aria-label="Close"
                 className="text-t-muted hover:text-white p-1"><X size={16} /></button>
             </div>
-            <div className="bg-white rounded-xl p-4 inline-block">
+            <div className="bg-on-fill rounded-xl p-4 inline-block">
               <img src={qrModal.qr} alt="Kiosk QR code" className="w-52 h-52" />
             </div>
             <p className="text-[11px] text-t-soft mt-4 leading-relaxed">
@@ -808,7 +808,7 @@ function InvitationsTab() {
                     <div className="text-white font-medium">{name}</div>
                     {email && <div className="text-xs text-t-soft">{email}</div>}
                   </td>
-                  <td className="px-4 py-3 text-[#e5e5e5]">{inv.form?.name ?? '—'}</td>
+                  <td className="px-4 py-3 text-hx-e5e5e5">{inv.form?.name ?? '—'}</td>
                   <td className="px-4 py-3 text-t-soft capitalize">{inv.channel}</td>
                   <td className="px-4 py-3"><StatusBadge status={inv.status} /></td>
                   <td className="px-4 py-3 text-t-soft">{inv.sent_at ? new Date(inv.sent_at).toLocaleString() : '—'}</td>

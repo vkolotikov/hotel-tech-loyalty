@@ -187,7 +187,7 @@ export function PostsView({
             <h2 className="text-sm font-semibold text-white">Posts</h2>
             <button
               onClick={() => setShowCreate(s => !s)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700"
             >
               <Plus size={13} />
               New post
@@ -233,7 +233,7 @@ export function PostsView({
                   createMutation.mutate()
                 }}
                 disabled={createMutation.isPending}
-                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-60"
               >
                 {createMutation.isPending ? <Loader size={13} className="animate-spin" /> : <Plus size={13} />}
                 Create
@@ -245,7 +245,7 @@ export function PostsView({
             <button
               onClick={() => setStatusTab('')}
               className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors ${
-                statusTab === '' ? 'bg-violet-600 text-white' : 'bg-dark-surface2 text-t-secondary hover:text-white'
+                statusTab === '' ? 'bg-violet-600 text-on-fill' : 'bg-dark-surface2 text-t-secondary hover:text-white'
               }`}
             >
               All{allPosts.length > 0 && ` · ${allPosts.length}`}
@@ -561,7 +561,7 @@ function PostDetail({
             <button
               onClick={() => saveMutation.mutate()}
               disabled={saveMutation.isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-60"
             >
               {saveMutation.isPending ? <Loader size={12} className="animate-spin" /> : <Save size={12} />}
               Save
@@ -776,7 +776,7 @@ function PostDetail({
           <button
             onClick={handleGenerateCopy}
             disabled={aiPending}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-2 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-60"
           >
             {generateMutation.isPending ? <Loader size={14} className="animate-spin" /> : <Sparkles size={14} />}
             {generateMutation.isPending ? 'Generating… (30–90s)' : 'Generate copy'}
@@ -831,7 +831,7 @@ function PostDetail({
                   <button
                     onClick={() => applyVariationMutation.mutate(v.copy)}
                     disabled={applyVariationMutation.isPending}
-                    className="inline-flex items-center gap-1 rounded bg-violet-600 px-2 py-1 text-[11px] font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+                    className="inline-flex items-center gap-1 rounded bg-violet-600 px-2 py-1 text-[11px] font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-60"
                   >
                     <Check size={11} />
                     Use this
@@ -916,7 +916,7 @@ function PostDetail({
                     <button
                       onClick={() => imageMutation.mutate()}
                       disabled={aiPending}
-                      className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-violet-700 disabled:opacity-60"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-2.5 py-1.5 text-[11px] font-medium text-on-fill transition-colors hover:bg-violet-700 disabled:opacity-60"
                     >
                       {imageMutation.isPending ? <Loader size={12} className="animate-spin" /> : <Sparkles size={12} />}
                       {imageMutation.isPending ? 'Generating…' : brief.image_url ? 'Regenerate' : 'Generate image'}
@@ -1082,7 +1082,7 @@ function PostDetail({
               <button
                 onClick={() => markPublishedMutation.mutate()}
                 disabled={markPublishedMutation.isPending}
-                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-emerald-700 disabled:opacity-60"
               >
                 {markPublishedMutation.isPending ? <Loader size={12} className="animate-spin" /> : <Check size={12} />}
                 Confirm

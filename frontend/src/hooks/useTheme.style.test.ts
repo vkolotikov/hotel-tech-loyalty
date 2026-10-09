@@ -161,3 +161,17 @@ describe('themeUpdateFor', () => {
     expect(themeUpdateFor({ primary_color: '', background_color: '' })).toBeNull()
   })
 })
+
+describe('Clean light', () => {
+  it('knows Clean light', () => {
+    expect(readThemeStyle('light')).toBe('light')
+    expect(readThemeStyle('classic')).toBe('classic')
+    expect(readThemeStyle('neon')).toBe('glass')
+  })
+
+  it('writes the deepened brand shades for Clean light in every style', () => {
+    const { target, vars } = fakeTarget()
+    applyThemeToDom({ primary_color: '#3b82f6' }, null, 'glass', target)
+    expect(vars.get('--light-primary-500')).toBe('10 91 223')
+  })
+})

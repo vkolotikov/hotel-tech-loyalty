@@ -173,7 +173,7 @@ export function Notifications() {
 
   const statusColor: Record<string, string> = {
     draft: 'bg-dark-surface3 text-t-secondary',
-    scheduled: 'bg-[#ffd60a]/15 text-[#ffd60a]',
+    scheduled: 'bg-hx-ffd60a/15 text-hx-ffd60a',
     sending: 'bg-notice/15 text-notice',
     sent: 'bg-success/15 text-success',
     failed: 'bg-danger/15 text-danger',
@@ -241,7 +241,7 @@ export function Notifications() {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
-                      c.channel === 'both' ? 'bg-[#8b5cf6]/15 text-[#8b5cf6]'
+                      c.channel === 'both' ? 'bg-hx-8b5cf6/15 text-hx-8b5cf6'
                       : c.channel === 'email' ? 'bg-notice/15 text-notice'
                       : 'bg-success/15 text-success'
                     }`}>
@@ -365,7 +365,7 @@ export function Notifications() {
 function StatCard({ label, value, tone }: { label: string; value: number | string; tone: 'white' | 'blue' | 'green' | 'violet' }) {
   const color = tone === 'blue' ? 'text-notice'
     : tone === 'green' ? 'text-success'
-    : tone === 'violet' ? 'text-[#8b5cf6]'
+    : tone === 'violet' ? 'text-hx-8b5cf6'
     : 'text-white'
   return (
     <div className="bg-dark-surface rounded-xl p-5 border border-dark-border">
@@ -460,7 +460,7 @@ function Step1Channel({ form, setForm, emailTemplates, selectedTemplate }: Step1
                       : 'border-dark-border hover:border-primary-500/60'
                   }`}
                 >
-                  <div className="h-28 bg-white overflow-hidden relative">
+                  <div className="h-28 bg-on-fill overflow-hidden relative">
                     <iframe
                       srcDoc={t.html_body}
                       title={t.name}
@@ -627,7 +627,7 @@ function Step2Audience({ form, tiers, audience, loading, toggleTier, setForm }: 
         )}
 
         {(audience?.reachable ?? 0) === 0 && !loading && (
-          <p className="text-xs text-[#ff9500] mt-4 text-center">
+          <p className="text-xs text-hx-ff9500 mt-4 text-center">
             {t('notifications.wizard.step2.no_reachable', 'No reachable members for this segment + channel combination. Adjust filters or channel.')}
           </p>
         )}
@@ -762,7 +762,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
       <div>
         <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-3">{t('notifications.wizard.step4.preview', 'Preview')}</h3>
         {showEmail && selectedTemplate ? (
-          <div className="bg-white rounded-lg border border-dark-border overflow-hidden" style={{ height: 520 }}>
+          <div className="bg-on-fill rounded-lg border border-dark-border overflow-hidden" style={{ height: 520 }}>
             <iframe
               srcDoc={selectedTemplate.html_body}
               title="Email preview"
@@ -772,16 +772,16 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
           </div>
         ) : showPush ? (
           <div className="bg-dark-surface2 border border-dark-border rounded-2xl p-6">
-            <div className="bg-[#0a0a0a] rounded-xl p-4 shadow-xl">
+            <div className="bg-hx-0a0a0a rounded-xl p-4 shadow-xl">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 rounded-lg bg-primary-600 shrink-0" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] text-[#999] uppercase tracking-wide font-semibold">{t('notifications.wizard.step4.your_app', 'Your App')}</p>
+                    <p className="text-[11px] text-hx-999999 uppercase tracking-wide font-semibold">{t('notifications.wizard.step4.your_app', 'Your App')}</p>
                     <p className="text-[10px] text-t-muted">{t('notifications.wizard.step4.now', 'now')}</p>
                   </div>
                   <p className="text-sm font-bold text-white mt-0.5 truncate">{form.title || t('notifications.wizard.step4.push_placeholder_title', 'Push title')}</p>
-                  <p className="text-xs text-[#ccc] mt-0.5 line-clamp-3">{form.body || t('notifications.wizard.step4.push_placeholder_body', 'Push message body preview')}</p>
+                  <p className="text-xs text-hx-cccccc mt-0.5 line-clamp-3">{form.body || t('notifications.wizard.step4.push_placeholder_body', 'Push message body preview')}</p>
                 </div>
               </div>
             </div>
@@ -794,7 +794,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
 }
 
 function ReviewRow({ label, value, tone }: { label: string; value: string; tone?: 'ok' | 'warn' }) {
-  const vColor = tone === 'warn' ? 'text-[#ff9500]' : tone === 'ok' ? 'text-success' : 'text-white'
+  const vColor = tone === 'warn' ? 'text-hx-ff9500' : tone === 'ok' ? 'text-success' : 'text-white'
   return (
     <div className="flex items-start justify-between gap-4 py-1.5 border-b border-dark-border/50">
       <span className="text-xs text-t-soft uppercase tracking-wide shrink-0">{label}</span>

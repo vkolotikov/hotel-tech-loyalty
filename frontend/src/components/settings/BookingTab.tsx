@@ -124,7 +124,7 @@ export function BookingTab({ getVal, handleChange, widgetToken, cardClass, cardS
   const Toggle = ({ on, onClick, color = 'emerald' }: { on: boolean; onClick: () => void; color?: 'emerald' | 'amber' }) => (
     <button onClick={onClick}
       className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${on ? (color === 'amber' ? 'bg-amber-500' : 'bg-emerald-500') : 'bg-white/[0.1]'}`}>
-      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
+      <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${on ? 'translate-x-[22px]' : 'translate-x-0.5'}`} />
     </button>
   )
 

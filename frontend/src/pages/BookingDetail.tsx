@@ -558,7 +558,7 @@ export function BookingDetail() {
                   reason: refundReason || undefined,
                 })}
                 disabled={refundMutation.isPending}
-                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-2"
+                className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-on-fill text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-2"
               >
                 {refundMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Undo2 size={14} />}
                 Refund

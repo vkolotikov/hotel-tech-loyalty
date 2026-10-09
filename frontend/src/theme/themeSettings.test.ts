@@ -18,5 +18,6 @@ describe('styleSettings', () => {
   it('saves the style under theme_style, the key the server validates', () => {
     expect(styleSettings('classic')).toEqual([{ key: 'theme_style', value: 'classic' }])
     expect(STYLE_NAMES.glass).toBe('Glass')
+    expect(STYLE_NAMES.light).toBe('Clean light')
   })
 })

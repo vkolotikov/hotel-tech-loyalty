@@ -500,7 +500,7 @@ function FieldRow({ label, hint, on, onToggle }: {
         </div>
       </div>
       <div className={'w-8 h-4 rounded-full relative transition ' + (on ? 'bg-accent' : 'bg-dark-surface2')}>
-        <div className={'absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ' + (on ? 'left-[18px]' : 'left-0.5')} />
+        <div className={'absolute top-0.5 w-3 h-3 rounded-full bg-on-fill transition-all ' + (on ? 'left-[18px]' : 'left-0.5')} />
       </div>
     </button>
   )

@@ -53,7 +53,7 @@ export function ContentPlanner() {
         <p className="text-xs text-red-200/70 mb-4">Check your connection and try again.</p>
         <button
           onClick={() => refetch()}
-          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-white transition-colors"
+          className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-on-fill transition-colors"
         >
           <RefreshCw size={13} /> Retry
         </button>
@@ -124,7 +124,7 @@ export function ContentPlanner() {
               onClick={() => setTab(t.key)}
               className={`inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? 'bg-violet-600 border-violet-600 text-white'
+                  ? 'bg-violet-600 border-violet-600 text-on-fill'
                   : 'bg-dark-surface border-dark-border text-t-secondary hover:text-white hover:border-dark-border2'
               }`}
             >

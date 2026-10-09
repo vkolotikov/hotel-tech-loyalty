@@ -198,7 +198,7 @@ export function MemberDuplicates() {
                 <button
                   onClick={confirmMerge}
                   disabled={mergeMutation.isPending}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold text-sm rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50"
                 >
                   {mergeMutation.isPending ? t('members.duplicates.merging', 'Merging...') : t('members.duplicates.merge_btn', 'Merge permanently')}
                 </button>

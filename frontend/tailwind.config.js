@@ -1,9 +1,12 @@
 import colors from 'tailwindcss/colors'
 import plugin from 'tailwindcss/plugin'
 import {
-  COLOURED_TEXT_SHADES, GLASS_SCOPE, GREY_HUES, GREY_TEXT_SHADES, SHIFTED_HUES,
+  COLOURED_TEXT_SHADES, GLASS_SCOPE, GREY_HUES, SHIFTED_HUES,
 } from './src/theme/glassTokens.ts'
 import { glassSolidVariables, glassVariables } from './src/theme/glassVariables.ts'
+import { LIGHT_GREY_SHADES, LIGHT_SCOPE } from './src/theme/lightTokens.ts'
+import { lightVariables } from './src/theme/lightVariables.ts'
+import { HX_FILL, HX_TEXT } from './src/theme/hxColours.ts'
 
 /*
  * Admin colour tokens read three layers; the first one that is set wins:
@@ -32,6 +35,9 @@ const fixed = (name, value) =>
 const text = (name, fallback) =>
   `rgb(var(--style-${name}, var(--color-${name}, ${fallback})) / <alpha-value>)`
 
+/** Hard-coded colours as classes: the exact old colour unless Clean light sets --hx-<kind>-<hex>. */
+const hxFamily = (list, kind) => Object.fromEntries(list.map(hex => [hex, `rgb(var(--hx-${kind}-${hex}, ${triplet(hex)}) / <alpha-value>)`]))
+
 /** A colour whose TEXT uses the style can swap, leaving fills alone. */
 const textOnly = (name, fallback) => `rgb(var(--tc-${name}, ${fallback}) / <alpha-value>)`
 
@@ -53,7 +59,7 @@ const textScale = (hues, shades) => Object.fromEntries(
   hues.map(hue => [hue, Object.fromEntries(shades.map(shade => [shade, textOnly(`${hue}-${shade}`, triplet(colors[hue][shade]))]))]),
 )
 const shiftedText = textScale(SHIFTED_HUES, COLOURED_TEXT_SHADES)
-const greyText = textScale(GREY_HUES, GREY_TEXT_SHADES)
+const greyText = textScale(GREY_HUES, LIGHT_GREY_SHADES)
 
 /** @type {import('tailwindcss').Config} */
 export default {
@@ -64,6 +70,12 @@ export default {
         // Fills (bg-, border-, ring-) keep the brand's own shades in every
         // style; text-primary-* is in textColor below.
         primary: primaryFill,
+        // Tailwind's white, routed through --hx-white: white in Glass and
+        // Classic, the ink in Clean light (theme/lightTokens.ts). on-fill is
+        // the white that stays white: text on coloured fills, toggle knobs.
+        white: 'rgb(var(--hx-white, 255 255 255) / <alpha-value>)',
+        'on-fill': 'rgb(255 255 255 / <alpha-value>)',
+        hx: hxFamily(HX_FILL, 'f'),
         dark: {
           bg:       surface('dark-bg', '13 13 13'),
           surface:  surface('dark-surface', '22 22 22'),
@@ -156,8 +168,9 @@ export default {
         notice:  textOnly('notice', '10 132 255'),
         ...shiftedText,
         ...greyText,
+        hx: hxFamily(HX_TEXT, 't'),
       },
-      placeholderColor: greyText,
+      placeholderColor: { ...greyText, hx: hxFamily(HX_TEXT, 't') },
       borderRadius: {
         // Tailwind's own sizes, routed through variables a style can set.
         md:    'var(--radius-md, 0.375rem)',
@@ -188,6 +201,10 @@ export default {
           [GLASS_SCOPE]: glassSolidVariables(),
         },
       })
+    }),
+    // The Clean light variable block, generated from src/theme/lightTokens.ts.
+    plugin(({ addBase }) => {
+      addBase({ [LIGHT_SCOPE]: lightVariables() })
     }),
   ],
 }

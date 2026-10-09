@@ -431,7 +431,7 @@ export function Tiers() {
                     title={tier.is_active !== false ? t('tiers.toggle_off', 'Disable tier (hidden from qualification sweeps)') : t('tiers.toggle_on', 'Enable tier')}
                     className={`relative w-9 h-5 rounded-full transition-colors ${tier.is_active !== false ? 'bg-primary-600' : 'bg-dark-surface3 border border-dark-border'}`}
                   >
-                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ${tier.is_active !== false ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ${tier.is_active !== false ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
                   <button onClick={(e) => { e.stopPropagation(); startEdit(tier) }} aria-label={t('tiers.edit_label', 'Edit tier')} className="text-t-secondary hover:text-white p-1"><Pencil size={14} /></button>
                 </div>

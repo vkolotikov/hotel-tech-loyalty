@@ -211,7 +211,7 @@ export function CustomerDuplicates() {
                 <button
                   onClick={confirm}
                   disabled={mergeMutation.isPending}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50"
                 >
                   {mergeMutation.isPending ? 'Merging…' : 'Merge permanently'}
                 </button>

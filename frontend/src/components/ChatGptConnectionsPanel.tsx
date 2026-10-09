@@ -53,25 +53,25 @@ export function ChatGptConnectionsPanel() {
   const linkingUnavailable = data?.enabled === false || data?.configured === false
 
   return (
-    <section aria-labelledby="chatgpt-connections-heading" className="overflow-hidden rounded-2xl border border-[#dde3e8] bg-[#f4f6f8] text-[#1b2a34]">
-      <div className="flex items-center gap-3 border-b border-[#dde3e8] px-5 py-4">
-        <Link2 size={19} className="shrink-0 text-[#54626e]" aria-hidden="true" />
+    <section aria-labelledby="chatgpt-connections-heading" className="overflow-hidden rounded-2xl border border-hx-dde3e8 bg-hx-f4f6f8 text-hx-1b2a34">
+      <div className="flex items-center gap-3 border-b border-hx-dde3e8 px-5 py-4">
+        <Link2 size={19} className="shrink-0 text-hx-54626e" aria-hidden="true" />
         <h2 id="chatgpt-connections-heading" className="min-w-0 flex-1 text-sm font-semibold">ChatGPT and Codex</h2>
         <button type="button" onClick={() => void refetch()} disabled={isFetching || disconnect.isPending}
           aria-label="Refresh connections" title="Refresh connections"
-          className={`rounded-lg p-2 text-[#54626e] hover:bg-[#eaeef2] disabled:opacity-50 ${focus}`}>
+          className={`rounded-lg p-2 text-hx-54626e hover:bg-hx-eaeef2 disabled:opacity-50 ${focus}`}>
           <RefreshCw size={15} className={isFetching ? 'motion-safe:animate-spin' : ''} aria-hidden="true" />
         </button>
       </div>
       <div className="space-y-4 px-5 py-5 text-sm leading-relaxed">
-        <p className="text-[#54626e]">Manage access you approved for this account. Disconnecting stops future access to your workspace.</p>
+        <p className="text-hx-54626e">Manage access you approved for this account. Disconnecting stops future access to your workspace.</p>
 
         {isLoading ? (
-          <p role="status" className="flex items-center gap-2 text-[#54626e]">
+          <p role="status" className="flex items-center gap-2 text-hx-54626e">
             <Loader2 size={15} className="motion-safe:animate-spin" aria-hidden="true" /> Loading connections…
           </p>
         ) : isError ? (
-          <div role="alert" className="flex items-start gap-2 text-[#9c2f32]">
+          <div role="alert" className="flex items-start gap-2 text-hx-9c2f32">
             <AlertCircle size={17} className="mt-0.5 shrink-0" aria-hidden="true" />
             <div>
               <p>Connections could not be loaded.</p>
@@ -81,45 +81,45 @@ export function ChatGptConnectionsPanel() {
         ) : (
           <>
             {linkingUnavailable && (
-              <p className="rounded-lg border border-[#dde3e8] bg-[#eaeef2] p-3 text-[#54626e]">
+              <p className="rounded-lg border border-hx-dde3e8 bg-hx-eaeef2 p-3 text-hx-54626e">
                 New connections are unavailable for this workspace. You can still disconnect earlier access.
               </p>
             )}
             {connections.length === 0 ? (
               <div className="space-y-1">
                 <p className="font-medium">No connected access</p>
-                {!linkingUnavailable && <p className="text-[#54626e]">To connect, start account linking in ChatGPT or Codex and approve access in Hexa-Tech.</p>}
+                {!linkingUnavailable && <p className="text-hx-54626e">To connect, start account linking in ChatGPT or Codex and approve access in Hexa-Tech.</p>}
               </div>
             ) : (
               <>
-                <ul className="divide-y divide-[#dde3e8]" aria-label="Your approved connections">
+                <ul className="divide-y divide-hx-dde3e8" aria-label="Your approved connections">
                   {connections.map(connection => (
                     <li key={connection.id} className="py-3 first:pt-0">
                       <p className="break-words font-semibold">{connection.name}</p>
                       {connection.created_at && (
-                        <p className="mt-0.5 text-xs text-[#54626e]">Authorized {new Date(connection.created_at).toLocaleString()}</p>
+                        <p className="mt-0.5 text-xs text-hx-54626e">Authorized {new Date(connection.created_at).toLocaleString()}</p>
                       )}
                     </li>
                   ))}
                 </ul>
-                <p className="text-xs text-[#54626e]">Read lead requirements and chatbot conversations, prepare email drafts in ChatGPT, update lead status, and add customer or booking notes within your staff permissions. This connection cannot send email.</p>
+                <p className="text-xs text-hx-54626e">Read lead requirements and chatbot conversations, prepare email drafts in ChatGPT, update lead status, and add customer or booking notes within your staff permissions. This connection cannot send email.</p>
                 {confirmDisconnect ? (
-                  <div className="space-y-3 rounded-xl border border-[#dde3e8] bg-white p-4">
+                  <div className="space-y-3 rounded-xl border border-hx-dde3e8 bg-on-fill p-4">
                     <p className="font-medium">Disconnect all your ChatGPT and Codex access?</p>
-                    <p className="text-xs text-[#54626e]">You can connect again by approving access. Information already shared in your chats remains there.</p>
+                    <p className="text-xs text-hx-54626e">You can connect again by approving access. Information already shared in your chats remains there.</p>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}
-                        className={`inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#9c2f32] px-4 py-2 text-xs font-semibold text-white hover:bg-[#81272a] disabled:opacity-60 ${focus}`}>
+                        className={`inline-flex min-h-10 items-center gap-2 rounded-lg bg-hx-9c2f32 px-4 py-2 text-xs font-semibold text-on-fill hover:bg-hx-81272a disabled:opacity-60 ${focus}`}>
                         {disconnect.isPending && <Loader2 size={14} className="motion-safe:animate-spin" aria-hidden="true" />}
                         {disconnect.isPending ? 'Disconnecting…' : 'Disconnect all'}
                       </button>
                       <button type="button" onClick={() => setConfirmDisconnect(false)} disabled={disconnect.isPending}
-                        className={`min-h-10 rounded-lg px-4 py-2 text-xs font-semibold hover:bg-[#eaeef2] disabled:opacity-60 ${focus}`}>Keep connected</button>
+                        className={`min-h-10 rounded-lg px-4 py-2 text-xs font-semibold hover:bg-hx-eaeef2 disabled:opacity-60 ${focus}`}>Keep connected</button>
                     </div>
                   </div>
                 ) : (
                   <button type="button" onClick={() => setConfirmDisconnect(true)}
-                    className={`inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#bdc7ce] bg-white px-4 py-2 text-xs font-semibold hover:bg-[#eaeef2] ${focus}`}>
+                    className={`inline-flex min-h-10 items-center gap-2 rounded-lg border border-hx-bdc7ce bg-on-fill px-4 py-2 text-xs font-semibold hover:bg-hx-eaeef2 ${focus}`}>
                     <Unplug size={15} aria-hidden="true" /> Disconnect ChatGPT and Codex
                   </button>
                 )}

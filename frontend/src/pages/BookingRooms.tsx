@@ -525,7 +525,7 @@ function RoomForm({ room, onClose, onSave, saving }: {
             </div>
             <button onClick={() => setIsActive(!isActive)}
               className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all ${isActive ? 'translate-x-5.5' : 'translate-x-0.5'}`} style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              <div className={`w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all ${isActive ? 'translate-x-5.5' : 'translate-x-0.5'}`} style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>

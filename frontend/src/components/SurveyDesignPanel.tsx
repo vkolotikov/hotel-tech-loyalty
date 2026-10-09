@@ -25,7 +25,7 @@ const PRESETS: { key: string; label: string; from: string; to: string }[] = [
   { key: 'midnight', label: 'Midnight', from: '#0f172a', to: '#334155' },
 ]
 
-const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444]'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444'
 
 function Section({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -39,7 +39,7 @@ function Section({ title, icon, children }: { title: string; icon?: React.ReactN
 function L({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-1.5">{label}</label>
+      <label className="block text-[11px] font-semibold uppercase tracking-wider text-hx-888888 mb-1.5">{label}</label>
       {children}
     </div>
   )
@@ -51,9 +51,9 @@ function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: 
     <button type="button" role="switch" aria-checked={checked} onClick={() => onChange(!checked)}
       className="flex items-center gap-3 text-left group">
       <span className={`relative w-10 h-[22px] rounded-full transition-colors flex-shrink-0 ${checked ? 'bg-primary-500' : 'bg-white/[0.09] border border-dark-border'}`}>
-        <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
+        <span className={`absolute top-[2px] w-[18px] h-[18px] rounded-full bg-on-fill shadow transition-transform ${checked ? 'translate-x-[20px]' : 'translate-x-[2px]'}`} />
       </span>
-      <span className="text-sm text-[#c8c8cc] group-hover:text-white transition-colors">{label}</span>
+      <span className="text-sm text-hx-c8c8cc group-hover:text-white transition-colors">{label}</span>
     </button>
   )
 }
@@ -136,7 +136,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
                 onClick={() => setTheme({ layout: o.key })}
                 className={`text-left p-4 rounded-xl border transition-colors ${(theme.layout ?? 'classic') === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel-dim hover:border-primary-500/40'}`}>
                 <div className="text-sm font-semibold text-white mb-1">{o.title}</div>
-                <div className="text-[11px] text-[#888] leading-relaxed">{o.desc}</div>
+                <div className="text-[11px] text-hx-888888 leading-relaxed">{o.desc}</div>
               </button>
             ))}
           </div>
@@ -244,13 +244,13 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
 
       {/* Live preview — the REAL public page in a phone frame */}
       <div className="lg:sticky lg:top-6 self-start">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-2 flex items-center justify-between">
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888 mb-2 flex items-center justify-between">
           Live preview
-          <button onClick={() => setPreviewNonce(n => n + 1)} className="flex items-center gap-1 text-[#888] hover:text-white normal-case font-medium">
+          <button onClick={() => setPreviewNonce(n => n + 1)} className="flex items-center gap-1 text-hx-888888 hover:text-white normal-case font-medium">
             <RefreshCw size={11} /> Reload
           </button>
         </div>
-        <div className="rounded-[28px] border-4 border-[#222] bg-black overflow-hidden shadow-2xl" style={{ aspectRatio: '9/16' }}>
+        <div className="rounded-[28px] border-4 border-hx-222222 bg-black overflow-hidden shadow-2xl" style={{ aspectRatio: '9/16' }}>
           <iframe ref={frameRef} key={previewNonce} src={previewUrl} title="Survey preview" className="w-full h-full border-0"
             onLoad={() => {
               try { frameRef.current?.contentWindow?.postMessage({ source: 'hotel-tech-review-admin', config }, '*') } catch {}
@@ -327,7 +327,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
 
       {/* Trend */}
       <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">Responses over time</div>
+        <div className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888 mb-3">Responses over time</div>
         {data.series.length === 0 ? (
           <p className="text-xs text-t-muted py-4 text-center">No activity in this window yet.</p>
         ) : (
@@ -349,7 +349,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
       {/* Channel + device split */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">By channel</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888 mb-3">By channel</div>
           {Object.keys(data.channels).length === 0
             ? <p className="text-xs text-t-muted">No responses yet.</p>
             : Object.entries(data.channels).map(([ch, n]) => (
@@ -359,7 +359,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
             ))}
         </div>
         <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">By kiosk device</div>
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888 mb-3">By kiosk device</div>
           {data.devices.length === 0
             ? <p className="text-xs text-t-muted">No kiosk responses yet.</p>
             : data.devices.map(d => (
@@ -398,7 +398,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
               q.latest.length === 0
                 ? <p className="text-xs text-t-muted">No text answers yet.</p>
                 : <ul className="space-y-1.5">{q.latest.map((txt, i) => (
-                    <li key={i} className="text-xs text-[#c0c0c0] bg-white/[0.03] border border-dark-border rounded-lg px-3 py-2">“{txt}”</li>
+                    <li key={i} className="text-xs text-hx-c0c0c0 bg-white/[0.03] border border-dark-border rounded-lg px-3 py-2">“{txt}”</li>
                   ))}</ul>
             )}
             {q.distribution && total === 0 && !q.latest && (
@@ -445,7 +445,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
           <button key={o.key} onClick={() => setMode(o.key)}
             className={`text-left p-3 rounded-xl border transition-colors ${mode === o.key ? 'border-primary-500 bg-primary-500/10' : 'border-dark-border bg-panel-dim hover:border-primary-500/40'}`}>
             <div className="text-xs font-semibold text-white">{o.title}</div>
-            <div className="text-[10px] text-[#888] mt-0.5 leading-snug">{o.desc}</div>
+            <div className="text-[10px] text-hx-888888 mt-0.5 leading-snug">{o.desc}</div>
           </button>
         ))}
       </div>
@@ -470,13 +470,13 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#888]">Paste before &lt;/body&gt;</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888">Paste before &lt;/body&gt;</span>
           <button onClick={() => { navigator.clipboard.writeText(snippet); toast.success('Snippet copied') }}
             className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 font-semibold">
             <Copy size={11} /> Copy
           </button>
         </div>
-        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-[#9ae6b4] overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
+        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-hx-9ae6b4 overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
         <p className="text-[10px] text-t-muted mt-2 leading-relaxed">
           Auto-open modes remember each visitor: after they submit, the survey stays away for 90 days;
           after they dismiss it, 7 days. The floating button is always available until they submit.
@@ -485,13 +485,13 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
 
       <div>
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-[#888]">Or embed inline (iframe)</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-hx-888888">Or embed inline (iframe)</span>
           <button onClick={() => { navigator.clipboard.writeText(iframeSnippet); toast.success('Iframe snippet copied') }}
             className="flex items-center gap-1 text-[11px] text-primary-400 hover:text-primary-300 font-semibold">
             <Copy size={11} /> Copy
           </button>
         </div>
-        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-[#93c5fd] overflow-x-auto whitespace-pre-wrap break-all">{iframeSnippet}</pre>
+        <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-hx-93c5fd overflow-x-auto whitespace-pre-wrap break-all">{iframeSnippet}</pre>
       </div>
     </div>
   )

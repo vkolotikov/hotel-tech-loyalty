@@ -184,7 +184,7 @@ export default function DeleteConfirmModal({
             type="button"
             onClick={handleConfirm}
             disabled={!canConfirm}
-            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm shadow-red-900/40 transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-600"
+            className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-on-fill shadow-sm shadow-red-900/40 transition hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-500/50 focus:ring-offset-2 focus:ring-offset-dark-surface disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-red-600"
           >
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             {confirmLabel || t('actions.delete', 'Delete')}

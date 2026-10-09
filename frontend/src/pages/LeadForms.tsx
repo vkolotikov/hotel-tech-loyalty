@@ -526,7 +526,7 @@ function FieldRow({ field, isFirst, isLast, onChange, onMoveUp, onMoveDown, onDe
           className={`w-9 h-5 rounded-full p-0.5 flex-shrink-0 transition ${field.enabled ? 'bg-emerald-500/80' : 'bg-dark-surface2'}`}
           title={field.enabled ? 'Disable field' : 'Enable field'}
         >
-          <div className={`w-4 h-4 rounded-full bg-white transition-transform ${field.enabled ? 'translate-x-4' : ''}`} />
+          <div className={`w-4 h-4 rounded-full bg-on-fill transition-transform ${field.enabled ? 'translate-x-4' : ''}`} />
         </button>
 
         <div className="flex-1 min-w-0">

@@ -10,7 +10,7 @@ import { describe, expect, it } from 'vitest'
  * same commit; never raise it.
  */
 const BASELINE = {
-  rawHexClasses: 310,
+  rawHexClasses: 0,
   legacySurfaceColours: 0,
 }
 

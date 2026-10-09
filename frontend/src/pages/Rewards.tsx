@@ -426,7 +426,7 @@ export function Rewards() {
                     <td className="py-2">
                       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                         r.status === 'fulfilled' ? 'bg-success/15 text-success' :
-                        r.status === 'pending'   ? 'bg-[#f59e0b]/15 text-[#f59e0b]' :
+                        r.status === 'pending'   ? 'bg-hx-f59e0b/15 text-hx-f59e0b' :
                                                    'bg-dark-surface3 text-t-muted'
                       }`}>{t(`rewards.redemptions.statuses.${r.status}`, { defaultValue: String(r.status ?? '') })}</span>
                     </td>

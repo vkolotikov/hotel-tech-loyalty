@@ -264,7 +264,7 @@ export function Members() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowImport(true)}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-hx-e0e0e0 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Upload size={16} />
             {t('members.actions.import_csv', 'Import CSV')}
@@ -285,7 +285,7 @@ export function Members() {
               } finally { setExporting(false) }
             }}
             disabled={exporting}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-hx-e0e0e0 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors"
           >
             <Download size={16} />
             {t('members.actions.export', 'Export')}
@@ -697,7 +697,7 @@ export function Members() {
                           } finally { setCaptureLoading(false) }
                         }}
                         disabled={captureLoading || !captureText.trim()}
-                        className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
                       >
                         {captureLoading ? <><Loader2 size={14} className="animate-spin" /> Extracting...</> : <><Sparkles size={14} /> Extract</>}
                       </button>
@@ -848,7 +848,7 @@ export function Members() {
               <button
                 onClick={() => quickAwardMutation.mutate()}
                 disabled={!quickAwardPts || quickAwardMutation.isPending}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg"
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-on-fill text-sm font-semibold px-4 py-1.5 rounded-lg"
               >
                 {quickAwardMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Gift size={14} />}
                 Award
@@ -904,7 +904,7 @@ export function Members() {
                   className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white placeholder-t-muted"
                 />
               </div>
-              <label className="flex items-center gap-2 text-sm text-[#e0e0e0] cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-hx-e0e0e0 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={bulkMsg.send_email}

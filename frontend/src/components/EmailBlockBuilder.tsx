@@ -284,7 +284,7 @@ export function EmailBlockBuilder({ blocks, onChange }: Props) {
               <button
                 key={t}
                 onClick={() => add(t)}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#d0d0d0] hover:text-white border border-dark-border transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-hx-d0d0d0 hover:text-white border border-dark-border transition-colors"
               >
                 <M.icon size={13} /> {M.label}
               </button>

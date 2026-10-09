@@ -450,7 +450,7 @@ export function ChatInbox() {
                 setGroupByVisitor(next)
                 try { localStorage.setItem('chat-inbox-group-by-visitor', next ? '1' : '0') } catch {}
               }} className={`relative w-7 h-3.5 rounded-full transition-colors ${groupByVisitor ? 'bg-primary-600' : 'bg-white/[0.08]'}`}>
-                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-on-fill transition-transform ${groupByVisitor ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
               </button>
             </label>
           </div>
@@ -527,7 +527,7 @@ export function ChatInbox() {
                   {showMoreMenu && (
                     <>
                       <div className="fixed inset-0 z-10" onClick={() => setShowMoreMenu(false)} />
-                      <div className="absolute right-0 top-full mt-1 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[200px] py-1 overflow-hidden">
+                      <div className="absolute right-0 top-full mt-1 z-20 bg-hx-1a1e1c border border-white/[0.08] rounded-xl shadow-2xl min-w-[200px] py-1 overflow-hidden">
                         <button onClick={() => { setShowContactEdit(v => !v); setShowMoreMenu(false) }}
                           className="flex items-center gap-2.5 w-full px-3 py-2 text-xs text-gray-300 hover:bg-white/[0.04] hover:text-white">
                           <Edit3 size={13} /> {t('chat_inbox.more.edit_contact', 'Edit contact info')}
@@ -604,7 +604,7 @@ export function ChatInbox() {
                   <input type="text" value={leadForm.phone} onChange={e => setLeadForm(p => ({ ...p, phone: e.target.value }))}
                     className="flex-1 bg-white/[0.04] border border-white/[0.06] rounded-lg px-2.5 py-1.5 text-white text-xs placeholder:text-gray-600 focus:outline-none focus:border-emerald-500/30" placeholder={t('chat_inbox.lead.phone', 'Phone')} />
                   <button onClick={() => captureLead.mutate(leadForm)} disabled={captureLead.isPending}
-                    className="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 flex-shrink-0">
+                    className="bg-emerald-600 text-on-fill px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50 flex-shrink-0">
                     {captureLead.isPending ? t('chat_inbox.lead.saving', '...') : t('chat_inbox.lead.create', 'Create')}
                   </button>
                 </div>
@@ -770,7 +770,7 @@ export function ChatInbox() {
             {conv.status !== 'archived' && (
               <div className="px-4 py-3 border-t border-white/[0.06] relative">
                 {showEmojiPicker && (
-                  <div className="absolute bottom-full left-4 mb-2 bg-[#1a1e1c] border border-white/[0.08] rounded-xl p-2 shadow-2xl grid grid-cols-10 gap-0.5 z-10">
+                  <div className="absolute bottom-full left-4 mb-2 bg-hx-1a1e1c border border-white/[0.08] rounded-xl p-2 shadow-2xl grid grid-cols-10 gap-0.5 z-10">
                     {EMOJIS.map(e => (
                       <button key={e} type="button" onClick={() => { setReplyText(p => p + e); setShowEmojiPicker(false) }}
                         className="text-base hover:bg-white/[0.06] rounded-lg p-1 transition-colors">{e}</button>
@@ -778,7 +778,7 @@ export function ChatInbox() {
                   </div>
                 )}
                 {showCannedMenu && (
-                  <div className="absolute bottom-full left-16 mb-2 z-20 bg-[#1a1e1c] border border-white/[0.08] rounded-xl shadow-2xl min-w-[260px] max-h-72 overflow-y-auto">
+                  <div className="absolute bottom-full left-16 mb-2 z-20 bg-hx-1a1e1c border border-white/[0.08] rounded-xl shadow-2xl min-w-[260px] max-h-72 overflow-y-auto">
                     {cannedResponses.length === 0 && (
                       <div className="p-3 text-xs text-gray-500">{t('chat_inbox.reply.no_canned', 'No canned responses yet')}</div>
                     )}

@@ -107,7 +107,7 @@ export function MemberPortalLinkCard() {
         )}
       </div>
       <div className="flex flex-col items-center gap-2">
-        <img src={data.qr} alt={t('members.portal.qr_alt', 'QR code for the join link')} className="w-40 h-40 rounded-lg bg-white p-2" />
+        <img src={data.qr} alt={t('members.portal.qr_alt', 'QR code for the join link')} className="w-40 h-40 rounded-lg bg-on-fill p-2" />
         <a href={data.qr} download="member-portal-join.png" className="text-xs text-primary-400 hover:text-primary-300">
           {t('members.portal.download_qr', 'Download QR')}
         </a>

@@ -2796,7 +2796,7 @@ function SectionRow({
                     + (checked ? 'bg-accent border-accent' : 'bg-dark-surface3 border-dark-border')}
                 >
                   <span
-                    className={'absolute top-[2px] w-3.5 h-3.5 rounded-full bg-white transition-transform motion-reduce:transition-none '
+                    className={'absolute top-[2px] w-3.5 h-3.5 rounded-full bg-on-fill transition-transform motion-reduce:transition-none '
                       + (checked ? 'translate-x-[18px]' : 'translate-x-[2px]')}
                   />
                 </span>

@@ -91,7 +91,7 @@ export function JourneyTimeline({ activities = [], inquiries = [], reservations 
       if (type === 'call')     return { Icon: Phone, tone: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25' }
       if (type === 'email')    return { Icon: Mail, tone: 'text-blue-300 bg-blue-500/10 border-blue-500/25' }
       if (type === 'sms')      return { Icon: MessageSquare, tone: 'text-violet-300 bg-violet-500/10 border-violet-500/25' }
-      if (type === 'whatsapp') return { Icon: MessageCircle, tone: 'text-[#25D366] bg-[#25D366]/10 border-[#25D366]/25' }
+      if (type === 'whatsapp') return { Icon: MessageCircle, tone: 'text-hx-25d366 bg-hx-25d366/10 border-hx-25d366/25' }
       if (type === 'note')     return { Icon: StickyNote, tone: 'text-amber-300 bg-amber-500/10 border-amber-500/25' }
       return { Icon: ActivityIcon, tone: 'text-gray-300 bg-gray-500/10 border-gray-500/25' }
     }

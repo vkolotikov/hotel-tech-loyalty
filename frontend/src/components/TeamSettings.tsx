@@ -531,7 +531,7 @@ function Toggle({ label, value, onChange }: { label: string; value: boolean; onC
       className="w-full flex items-center justify-between px-2 py-1.5 rounded hover:bg-dark-surface2">
       <span className="text-xs text-gray-300">{label}</span>
       <span className={'w-9 h-5 rounded-full relative transition-colors ' + (value ? 'bg-emerald-500' : 'bg-dark-surface2')}>
-        <span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (value ? 'translate-x-4' : '')} />
+        <span className={'absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (value ? 'translate-x-4' : '')} />
       </span>
     </button>
   )

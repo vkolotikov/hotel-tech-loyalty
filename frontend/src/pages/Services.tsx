@@ -357,7 +357,7 @@ function ServiceForm({
                 <span className="text-xs text-gray-400">Show as “From …”</span>
                 <button type="button" onClick={() => setPriceIsFrom(!priceIsFrom)} aria-pressed={priceIsFrom} aria-label="Starting price"
                   className={`w-11 h-6 rounded-full transition-all flex-shrink-0 ${priceIsFrom ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-                  <div className="w-5 h-5 rounded-full bg-white shadow-sm transition-all" style={{ transform: `translateX(${priceIsFrom ? '22px' : '2px'})` }} />
+                  <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${priceIsFrom ? '22px' : '2px'})` }} />
                 </button>
               </div>
               <p className="text-[11px] text-gray-600 mt-1">On your website the price reads “From €48” and drops the “per guest” suffix.</p>
@@ -402,7 +402,7 @@ function ServiceForm({
             <span className="text-sm text-white font-medium">Active</span>
             <button type="button" onClick={() => setIsActive(!isActive)}
               className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-white shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>
@@ -575,7 +575,7 @@ function CategoryForm({ category, onClose, onSaved }: { category: ServiceCategor
             <span className="text-sm text-white font-medium">Active</span>
             <button type="button" onClick={() => setIsActive(!isActive)}
               className={`w-11 h-6 rounded-full transition-all ${isActive ? 'bg-primary-500' : 'bg-white/[0.08]'}`}>
-              <div className="w-5 h-5 rounded-full bg-white shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
+              <div className="w-5 h-5 rounded-full bg-on-fill shadow-sm transition-all" style={{ transform: `translateX(${isActive ? '22px' : '2px'})` }} />
             </button>
           </div>
         </div>

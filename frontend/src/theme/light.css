@@ -1,0 +1,149 @@
+/* ════════════════════════════════════════════════════════════════════════
+   Clean light: the admin on paper (spec 2026-10-09-admin-clean-light-design.md).
+   Token values come from theme/lightTokens.ts through the Tailwind plugin;
+   this file holds what tokens cannot: faces, the shell, shadows, scrollbars,
+   native controls and the old inline surfaces. Every rule is scoped to the
+   signed-in admin in this style.
+   ════════════════════════════════════════════════════════════════════════ */
+
+/* Geist and Geist Mono, self-hosted (OFL 1.1, npm geist@1.3.1; OFL-Geist.txt). */
+@font-face {
+  font-family: 'HX Geist';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/geist-var.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'HX Geist Mono';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/geist-mono-var.woff2') format('woff2');
+}
+
+/* Native controls, scrollbars and form widgets in their light form. */
+:root[data-style="light"][data-shell="admin"] {
+  color-scheme: light;
+}
+:root[data-style="light"][data-shell="admin"] :is(select, input[type="number"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"]) {
+  color-scheme: light;
+}
+
+/* The theme code paints the palette on <body> inline; in this style the
+   shell owns the page, so overscroll never flashes the dark palette. */
+:root[data-style="light"][data-shell="admin"] body {
+  background-color: #F4F6F8 !important;
+  color: #1B2A34 !important;
+}
+:root[data-style="light"][data-shell="admin"] .hx-shell {
+  background-color: #F4F6F8;
+  color: #1B2A34;
+}
+
+/* Sidebar: docked, light grey, a hairline on the right. */
+:root[data-style="light"][data-shell="admin"] .hx-sidebar {
+  background-color: #ECEFF3;
+  border-right-color: #DDE3E8;
+}
+/* Section labels and the active item in each section's deep accent
+   (lightTokens.ts LIGHT_NAV_ACCENT_TEXT, set inline by Layout.tsx). The
+   active item is a white pill. */
+:root[data-style="light"][data-shell="admin"] .hx-sidebar [data-nav-group] {
+  --nav-label-text: var(--nav-accent-light);
+}
+:root[data-style="light"][data-shell="admin"] .hx-sidebar [data-nav-active] {
+  --nav-active-text: var(--nav-accent-light);
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 2px rgb(14 26 36 / 0.08), 0 2px 8px rgb(14 26 36 / 0.05) !important;
+}
+
+/* Header: translucent paper with blur, above the page so its own popovers
+   stay on top (backdrop-filter makes it a stacking context). */
+:root[data-style="light"][data-shell="admin"] .hx-header {
+  position: relative;
+  z-index: 35;
+  background-color: rgb(244 246 248 / 0.82);
+  border-bottom-color: #DDE3E8;
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+
+@media (max-width: 1023px) {
+  :root[data-style="light"][data-shell="admin"] .mobile-bottom-nav {
+    background: rgb(255 255 255 / 0.92);
+    border-top-color: #DDE3E8;
+    box-shadow: 0 -4px 14px rgb(14 26 36 / 0.08);
+    -webkit-backdrop-filter: blur(16px) saturate(140%);
+    backdrop-filter: blur(16px) saturate(140%);
+  }
+  :root[data-style="light"][data-shell="admin"] .mobile-bottom-nav > a,
+  :root[data-style="light"][data-shell="admin"] .mobile-bottom-nav > button {
+    color: #54626E;
+  }
+  :root[data-style="light"][data-shell="admin"] .mobile-bottom-nav > a.active,
+  :root[data-style="light"][data-shell="admin"] .mobile-bottom-nav > button.active {
+    color: rgb(var(--tc-primary-500, var(--color-primary-500, 59 130 246)));
+  }
+}
+
+/* Cards: a soft two-step shadow; Tailwind's ring variables stay in it. */
+:root[data-style="light"][data-shell="admin"] :is(.bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim).border:not(.absolute, .fixed, .sticky, .hx-sidebar, input, textarea, select, button) {
+  box-shadow:
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000),
+    0 1px 2px rgb(14 26 36 / 0.05),
+    0 8px 24px rgb(14 26 36 / 0.06);
+}
+
+/* Menus, popovers, sticky headers, modals and drawers: opaque paper with a
+   deeper shadow, never see-through. */
+:root[data-style="light"][data-shell="admin"] :is(.absolute, .fixed, .sticky, [style*="position: fixed"]):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+:root[data-style="light"][data-shell="admin"] :is(.shadow-xl, .shadow-2xl):is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well):not(.hx-sidebar),
+:root[data-style="light"][data-shell="admin"] .fixed.inset-0 > :is(.bg-dark-bg, .bg-dark-surface, .bg-dark-surface2, .bg-dark-card, .bg-panel, .bg-panel-dim, .bg-well) {
+  box-shadow: 0 12px 32px rgb(14 26 36 / 0.14), 0 1px 2px rgb(14 26 36 / 0.06);
+}
+
+/* Page titles and big numbers in the display face; figures in Geist Mono. */
+:root[data-style="light"][data-shell="admin"] :is(.text-xl, .text-2xl, .text-3xl, .text-4xl, .text-5xl) {
+  font-family: var(--theme-font-display);
+  letter-spacing: -0.02em;
+}
+:root[data-style="light"][data-shell="admin"] :is(.font-mono, [class*="font-mono"]) {
+  font-family: 'HX Geist Mono', ui-monospace, Menlo, Consolas, monospace !important;
+}
+
+/* Scrollbars on paper. */
+:root[data-style="light"][data-shell="admin"] ::-webkit-scrollbar-track {
+  background: transparent;
+}
+:root[data-style="light"][data-shell="admin"] ::-webkit-scrollbar-thumb {
+  background: rgb(27 42 52 / 0.2);
+}
+
+/* Dark text on status fills (text-dark-bg) stays dark here, where the page
+   ink is light. */
+:root[data-style="light"][data-shell="admin"] .text-dark-bg {
+  --style-dark-bg: 3 5 10;
+}
+
+/* The old dark-green inline surfaces (legacySurfaces.css), on paper. */
+:root[data-style="light"][data-shell="admin"] {
+  --legacy-panel-60: #FFFFFF;
+  --legacy-panel-50: #FFFFFF;
+  --legacy-panel-raised: #EEF2F5;
+  --legacy-well-60: #F4F6F8;
+  --legacy-well-50: #F4F6F8;
+  --legacy-well-40: #F7F9FB;
+  --legacy-well-dark: #EEF2F5;
+  --legacy-card: #FFFFFF;
+  --legacy-card-deep: #FFFFFF;
+  --legacy-card-gradient: linear-gradient(180deg, #FFFFFF, #FBFCFD);
+  --legacy-card-gradient-diagonal: linear-gradient(135deg, #FFFFFF, #FBFCFD);
+  --legacy-card-gradient-deep: linear-gradient(180deg, #FFFFFF, #F7F9FB);
+  --legacy-hero-gradient: linear-gradient(135deg, #FFFFFF, #F7F9FB);
+  --legacy-hero-gradient-soft: linear-gradient(135deg, #FBFCFD, #F7F9FB);
+  --legacy-tile-gradient: linear-gradient(180deg, #FFFFFF, #FBFCFD);
+  --legacy-success-gradient: linear-gradient(180deg, rgb(23 100 59 / 0.08), rgb(23 100 59 / 0.03));
+  --legacy-alert-gradient: linear-gradient(180deg, rgb(163 36 59 / 0.08), rgb(163 36 59 / 0.03));
+}

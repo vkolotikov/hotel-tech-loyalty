@@ -398,7 +398,7 @@ export function Bookings() {
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
           <button onClick={exportCsv} disabled={bulkBusy}
-            className="flex items-center gap-1.5 bg-dark-surface border border-dark-border text-[#e0e0e0] px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50 whitespace-nowrap"
+            className="flex items-center gap-1.5 bg-dark-surface border border-dark-border text-hx-e0e0e0 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-semibold hover:bg-dark-surface2 transition-colors disabled:opacity-50 whitespace-nowrap"
             title={t('bookings.actions.export_csv_tooltip', 'Download CSV of the current filtered list')}>
             <Download size={15} />
             <span className="hidden sm:inline">{t('bookings.actions.export_csv', 'Export CSV')}</span>
@@ -1092,7 +1092,7 @@ function ReservationCard({ b, t, refetch }: {
         )}
         {b.apartment_name && <span className="text-[11px] text-t-soft truncate max-w-[140px]">{b.apartment_name}</span>}
       </div>
-      <div className="text-[11px] text-[#9a9a9a] mb-2.5 tabular-nums">
+      <div className="text-[11px] text-hx-9a9a9a mb-2.5 tabular-nums">
         {fmtDateShort(b.arrival_date)} <span className="text-t-muted">→</span> {fmtDateShort(b.departure_date)}
         {nights ? <span className="text-t-muted"> · {nights}n</span> : null}
         {b.adults != null ? <span className="text-t-muted"> · {b.adults}A{b.children > 0 ? ` ${b.children}C` : ''}</span> : null}
@@ -1234,7 +1234,7 @@ function ReservationRow({ b, t, refetch }: {
 
       {/* Stay (combined arrival → departure + nights + pax) */}
       <td className="p-4 text-xs whitespace-nowrap">
-        <div className="text-[#e0e0e0] tabular-nums">
+        <div className="text-hx-e0e0e0 tabular-nums">
           {fmtDateShort(b.arrival_date)} <span className="text-t-muted">→</span> {fmtDateShort(b.departure_date)}
         </div>
         <div className="text-[10px] text-t-muted mt-0.5">
@@ -1410,7 +1410,7 @@ function CompactBookingRow({
 
       {/* Stay */}
       <div className="hidden md:block text-right flex-shrink-0 min-w-[140px]">
-        <div className="text-xs text-[#e0e0e0] tabular-nums whitespace-nowrap">
+        <div className="text-xs text-hx-e0e0e0 tabular-nums whitespace-nowrap">
           {fmtDateShort(b.arrival_date)} → {fmtDateShort(b.departure_date)}
         </div>
         <div className="text-[10px] text-t-muted">

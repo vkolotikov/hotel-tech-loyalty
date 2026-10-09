@@ -177,7 +177,7 @@ export function SendTemplateModal({ defaultTo, memberId, context, onClose, onSen
                       title="Template preview"
                       sandbox=""
                       srcDoc={selected.html_body}
-                      className="w-full h-72 bg-white rounded-lg border border-dark-border"
+                      className="w-full h-72 bg-on-fill rounded-lg border border-dark-border"
                     />
                     <p className="text-[10px] text-gray-600 mt-2">
                       Merge tags like <code className="text-primary-300">{'{{name}}'}</code> are substituted server-side when sending. Preview shows the raw template.

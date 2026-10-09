@@ -62,7 +62,7 @@ export function ReviewDetail() {
             {s.overall_rating !== null && (
               <div className="flex gap-0.5 justify-end mb-1">
                 {[1, 2, 3, 4, 5].map(i => (
-                  <Star key={i} size={22} className={i <= (s.overall_rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-[#444]'} />
+                  <Star key={i} size={22} className={i <= (s.overall_rating ?? 0) ? 'fill-amber-400 text-amber-400' : 'text-hx-444444'} />
                 ))}
               </div>
             )}
@@ -74,7 +74,7 @@ export function ReviewDetail() {
         </div>
 
         {s.comment && (
-          <div className="bg-dark-surface rounded-lg p-4 border-l-4 border-primary-500 text-[#e5e5e5] italic">
+          <div className="bg-dark-surface rounded-lg p-4 border-l-4 border-primary-500 text-hx-e5e5e5 italic">
             "{s.comment}"
           </div>
         )}

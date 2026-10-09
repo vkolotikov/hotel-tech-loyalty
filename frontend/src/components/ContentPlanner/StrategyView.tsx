@@ -257,7 +257,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
         />
         <button
           onClick={() => generate.mutate(instructions)}
-          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 px-5 py-2.5 text-sm font-medium text-white transition-colors"
+          className="inline-flex items-center gap-2 rounded-lg bg-violet-600 hover:bg-violet-700 px-5 py-2.5 text-sm font-medium text-on-fill transition-colors"
         >
           <Sparkles size={15} /> Generate strategy
         </button>
@@ -293,7 +293,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
           <div className="relative">
             <button
               onClick={() => setRegenOpen(o => !o)}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-white transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-on-fill transition-colors"
             >
               <RefreshCw size={13} /> Regenerate
             </button>
@@ -319,7 +319,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
                   </button>
                   <button
                     onClick={() => generate.mutate(regenInstructions)}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-xs font-medium text-white transition-colors"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-xs font-medium text-on-fill transition-colors"
                   >
                     <Sparkles size={12} /> Regenerate now
                   </button>
@@ -632,7 +632,7 @@ export function StrategyView({ profile }: { profile: PlannerProfile }) {
                 <div key={i} className="rounded-lg border border-dark-border bg-dark-surface2 p-3 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <span
-                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-white"
+                      className="rounded-full px-2 py-0.5 text-[10px] font-semibold text-on-fill"
                       style={{ background: meta?.color ?? '#6b7280' }}
                     >
                       {meta?.label ?? p.platform ?? 'Post'}

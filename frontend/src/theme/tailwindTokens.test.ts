@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 // @ts-ignore -- tailwind.config.js is plain JS outside the app's tsconfig
 import config from '../../tailwind.config.js'
 import { GLASS_SCOPE } from './glassTokens'
+import { LIGHT_SCOPE } from './lightTokens'
 
 type Block = Record<string, string>
 
@@ -58,7 +59,9 @@ describe('the Glass variable block', () => {
     const source = JSON.stringify({ colors: extend.colors, textColor: extend.textColor, placeholderColor: extend.placeholderColor })
     const read = new Set([...source.matchAll(/var\((--(?:style|tc)-[a-z0-9-]+)/g)].map(m => m[1]))
     expect(read.size).toBeGreaterThan(100)
-    for (const name of read) expect(block[name], name).toBeDefined()
+    // Grey 100, 200, 700 and 800 text are read by every style but only Clean light sets them.
+    const lightOnly = /^--tc-(gray|slate)-(100|200|700|800)$/
+    for (const name of read) if (!lightOnly.test(name)) expect(block[name], name).toBeDefined()
   })
 
   it('has solid stand-ins for reduced transparency and no blur', () => {
@@ -66,5 +69,48 @@ describe('the Glass variable block', () => {
     const reduced = base['@media (prefers-reduced-transparency: reduce)'] as Record<string, Block>
     expect(reduced[GLASS_SCOPE]['--alpha-dark-surface']).toBe('1')
     expect(reduced[GLASS_SCOPE]['--style-dark-surface']).toBe('26 34 51')
+  })
+})
+
+describe('Clean light wiring', () => {
+  it('routes white through --hx-white, white by default, and adds on-fill as a fixed white', () => {
+    expect(extend.colors.white).toBe('rgb(var(--hx-white, 255 255 255) / <alpha-value>)')
+    expect(extend.colors['on-fill']).toBe('rgb(255 255 255 / <alpha-value>)')
+  })
+
+  it('gives grey 100, 200, 700 and 800 text a variable with the exact Tailwind value as fallback', () => {
+    expect(extend.textColor.gray[100]).toBe('rgb(var(--tc-gray-100, 243 244 246) / <alpha-value>)')
+    expect(extend.textColor.gray[800]).toBe('rgb(var(--tc-gray-800, 31 41 55) / <alpha-value>)')
+    expect(extend.textColor.slate[700]).toBe('rgb(var(--tc-slate-700, 51 65 85) / <alpha-value>)')
+  })
+
+  it('adds a light block, scoped to the signed-in admin, that turns white into the ink', () => {
+    const base = glassBase()
+    const block = base[LIGHT_SCOPE] as Record<string, string>
+    expect(block).toBeDefined()
+    expect(block['--hx-white']).toBe('27 42 52')
+    expect(block['--style-dark-surface']).toBe('255 255 255')
+    expect(block['--alpha-dark-surface']).toBe('1')
+    expect(block['--tc-primary-400']).toBe('var(--light-primary-400)')
+    expect(block['--tc-gray-100']).toBe('27 42 52')
+    expect(block['--tc-amber-400']).toBe('146 64 14') // amber-800
+    expect(block['--theme-font-display']).toContain("'HX Geist'")
+    expect(block['--hx-color-scheme']).toBe('light')
+  })
+
+  it('defines every style variable the tokens read', () => {
+    const light = glassBase()[LIGHT_SCOPE] as Record<string, string>
+    const source = JSON.stringify({ colors: extend.colors, textColor: extend.textColor, placeholderColor: extend.placeholderColor })
+    const read = new Set([...source.matchAll(/var\((--(?:style|tc)-[a-z0-9-]+)/g)].map(m => m[1]))
+    for (const name of read) expect(light[name], name).toBeDefined()
+  })
+
+  it('sets nothing outside the light scope that Glass or Classic could read', () => {
+    const base = glassBase()
+    for (const [selector, block] of Object.entries(base)) {
+      if (selector === LIGHT_SCOPE) continue
+      expect(JSON.stringify(block), selector).not.toContain('--hx-white')
+      expect(JSON.stringify(block), selector).not.toContain('--light-')
+    }
   })
 })

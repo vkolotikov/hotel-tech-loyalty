@@ -258,7 +258,7 @@ export function EmailTemplates() {
                   style={{ transform: 'scale(0.35)', transformOrigin: 'top left' }}
                   sandbox=""
                 />
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#1c1c1e]" />
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-hx-1c1c1e" />
               </div>
 
               <div className="p-4">
@@ -302,7 +302,7 @@ export function EmailTemplates() {
                   </button>
                   <button
                     onClick={() => { if (confirm('Delete this template?')) deleteMutation.mutate(t.id) }}
-                    className="text-xs font-semibold text-danger hover:text-[#ff6680] bg-danger/10 hover:bg-danger/20 rounded-lg py-1.5 px-3 transition-colors"
+                    className="text-xs font-semibold text-danger hover:text-hx-ff6680 bg-danger/10 hover:bg-danger/20 rounded-lg py-1.5 px-3 transition-colors"
                   >
                     Delete
                   </button>
@@ -387,7 +387,7 @@ export function EmailTemplates() {
                           : 'border-dark-border hover:border-primary-500/60'
                       }`}
                     >
-                      <div className="h-44 bg-white overflow-hidden relative">
+                      <div className="h-44 bg-on-fill overflow-hidden relative">
                         <iframe
                           srcDoc={renderEmailHtml(p.content)}
                           title={p.name}
@@ -454,7 +454,7 @@ export function EmailTemplates() {
                           onChange={e => setRawHtml(e.target.value)}
                           rows={24}
                           spellCheck={false}
-                          className="w-full bg-[#0b0b0b] border border-dark-border rounded-lg px-3 py-2 text-xs text-[#e0e0e0] font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y leading-relaxed"
+                          className="w-full bg-hx-0b0b0b border border-dark-border rounded-lg px-3 py-2 text-xs text-hx-e0e0e0 font-mono focus:outline-none focus:ring-2 focus:ring-primary-500 resize-y leading-relaxed"
                         />
                         <p className="text-[11px] text-t-muted mt-2">
                           Editing raw HTML disconnects the visual builder for this template. Switch back to Design to regenerate from scratch.
@@ -469,7 +469,7 @@ export function EmailTemplates() {
                     <label className="block text-[11px] font-semibold text-t-soft uppercase tracking-wide">Live Preview</label>
                     <span className="text-[10px] text-t-muted">Merge tags shown as-is</span>
                   </div>
-                  <div className="bg-white rounded-lg overflow-hidden border border-dark-border" style={{ height: 'calc(70vh - 40px)' }}>
+                  <div className="bg-on-fill rounded-lg overflow-hidden border border-dark-border" style={{ height: 'calc(70vh - 40px)' }}>
                     <iframe
                       srcDoc={previewSrc}
                       title="Preview"
@@ -510,7 +510,7 @@ export function EmailTemplates() {
               </div>
               <button onClick={() => setShowPreview(false)} className="text-t-muted hover:text-white text-lg">&times;</button>
             </div>
-            <div className="flex-1 overflow-auto bg-white">
+            <div className="flex-1 overflow-auto bg-on-fill">
               <iframe
                 srcDoc={previewHtml}
                 title="Rendered Preview"
@@ -964,7 +964,7 @@ function BlockFields({ block, onChange }: { block: Block; onChange: (patch: Part
                   const items = block.items.filter((_, i) => i !== idx)
                   onChange({ items } as Partial<Block>)
                 }}
-                className="w-6 h-6 rounded text-xs text-[#ff6680] hover:bg-danger/15"
+                className="w-6 h-6 rounded text-xs text-hx-ff6680 hover:bg-danger/15"
                 title="Remove"
               >
                 &times;
@@ -993,9 +993,9 @@ function IconBtn({ children, onClick, disabled, title, danger }: { children: Rea
       title={title}
       className={`w-6 h-6 rounded text-xs flex items-center justify-center transition-colors ${
         disabled
-          ? 'text-[#444] cursor-not-allowed'
+          ? 'text-hx-444444 cursor-not-allowed'
           : danger
-            ? 'text-[#ff6680] hover:bg-danger/15'
+            ? 'text-hx-ff6680 hover:bg-danger/15'
             : 'text-t-secondary hover:text-white hover:bg-dark-surface3'
       }`}
     >

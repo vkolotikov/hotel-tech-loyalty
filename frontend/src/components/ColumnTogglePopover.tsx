@@ -184,7 +184,7 @@ export default function ColumnTogglePopover({ settingKey, section, fields }: Col
                   <span
                     className={`relative inline-flex shrink-0 h-4 w-7 mt-0.5 items-center rounded-full transition-colors ${on ? 'bg-primary-500' : 'bg-white/10'} ${f.alwaysOn ? 'opacity-60' : ''}`}
                     aria-hidden="true">
-                    <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${on ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                    <span className={`inline-block h-3 w-3 transform rounded-full bg-on-fill transition-transform ${on ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
                   </span>
                   {/* Label + description */}
                   <span className="flex-1 min-w-0">

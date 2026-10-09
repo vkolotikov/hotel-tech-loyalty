@@ -1153,9 +1153,9 @@ function WidgetPreview({ cfg }: { cfg: any }) {
       >
         {/* Fake browser chrome */}
         <div className="flex items-center gap-1.5 px-3 py-2 bg-dark-bg border-b border-dark-border">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#febc2e]" />
-          <span className="w-2.5 h-2.5 rounded-full bg-[#28c840]" />
+          <span className="w-2.5 h-2.5 rounded-full bg-hx-ff5f57" />
+          <span className="w-2.5 h-2.5 rounded-full bg-hx-febc2e" />
+          <span className="w-2.5 h-2.5 rounded-full bg-hx-28c840" />
           <span className="ml-3 text-[10px] text-t-secondary truncate">your-hotel.com</span>
         </div>
 

@@ -662,7 +662,7 @@ export function Login() {
   // login form — the user just set their password and expects to be signed in.
   if (ssoLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#060b1e] text-white">
+      <div className="min-h-screen flex items-center justify-center bg-hx-060b1e text-white">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-slate-400">{t('auth.sso.loading', 'Signing you in…')}</p>
@@ -674,7 +674,7 @@ export function Login() {
   // ─── Verify View ────────────────────────────────────────────────────────────
   if (view === 'verify') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-[#0d0d0d] via-[#111118] to-[#0d0d0d] flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-hx-0d0d0d via-hx-111118 to-hx-0d0d0d flex items-center justify-center p-4">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <div className={`w-16 h-16 mx-auto mb-4 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-500 ${verified ? 'bg-green-500 shadow-green-500/20' : 'bg-gradient-to-br from-primary-500 to-primary-700 shadow-primary-500/20'}`}>
@@ -694,7 +694,7 @@ export function Login() {
           </div>
 
           {!verified && (
-            <div className="bg-[#141419] rounded-2xl border border-white/[0.06] p-8">
+            <div className="bg-hx-141419 rounded-2xl border border-white/[0.06] p-8">
               {error && (
                 <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg mb-6 text-sm">
                   {error}
@@ -717,7 +717,7 @@ export function Login() {
                     // accepted — edits during either fired extra verify-code
                     // POSTs that burned brute-force attempts.
                     disabled={loading || verified}
-                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-[#1e1e24] border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:opacity-60"
+                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-xl sm:text-2xl font-bold bg-hx-1e1e24 border border-white/[0.08] rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all disabled:opacity-60"
                     autoFocus={i === 0}
                   />
                 ))}
@@ -800,7 +800,7 @@ export function Login() {
         : 'Sign in to your HexaTech workspace'
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-[#060b1e] text-white">
+    <div className="min-h-screen grid lg:grid-cols-[1.05fr_1fr] bg-hx-060b1e text-white">
       {/* ─── Hero ──────────────────────────────────────────────── */}
       <aside className="relative overflow-hidden hidden lg:flex flex-col justify-between p-14 border-r border-white/[0.06]"
         style={{
@@ -944,7 +944,7 @@ export function Login() {
                   </div>
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                   {loading ? t('auth.login.submitting', 'Signing in…') : t('auth.login.submit', 'Sign in')}
                 </button>
               </form>
@@ -1046,7 +1046,7 @@ export function Login() {
                       <span className={'text-xs ' + (billingInterval === 'monthly' ? 'text-white' : 'text-slate-500')}>{t('auth.plans.monthly', 'Monthly')}</span>
                       <button type="button" onClick={() => setBillingInterval(b => b === 'monthly' ? 'yearly' : 'monthly')}
                         className={'relative w-10 h-5 rounded-full transition-colors ' + (billingInterval === 'yearly' ? 'bg-blue-600' : 'bg-white/10')}>
-                        <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
+                        <div className={'absolute top-0.5 w-4 h-4 rounded-full bg-on-fill transition-transform ' + (billingInterval === 'yearly' ? 'translate-x-5' : 'translate-x-0.5')} />
                       </button>
                       <span className={'text-xs ' + (billingInterval === 'yearly' ? 'text-white' : 'text-slate-500')}>
                         {t('auth.plans.yearly', 'Yearly')} <span className="text-green-400 text-[10px]">{t('auth.plans.save_pct', 'Save ~17%')}</span>
@@ -1104,12 +1104,12 @@ export function Login() {
                               }
                             >
                               {isPopular && !isSelected && (
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                                   {t('auth.plans.most_popular', 'Most Popular')}
                                 </div>
                               )}
                               {isSelected && (
-                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
+                                <div className="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-500 text-on-fill text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider inline-flex items-center gap-1">
                                   <Check size={10} /> {t('auth.plans.selected', 'Selected')}
                                 </div>
                               )}
@@ -1179,7 +1179,7 @@ export function Login() {
                 </div>
 
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2">
                   {loading ? 'Sending code…' : (<><ShieldCheck size={16} /> {t('auth.register.submit', 'Verify Email & Start Trial')}</>)}
                 </button>
                 <p className="text-[11px] text-slate-500 text-center">{t('auth.register.verification_hint', "We'll send a verification code to your email. No credit card required.")}</p>
@@ -1204,7 +1204,7 @@ export function Login() {
                   </div>
                 </div>
                 <button type="submit" disabled={loading}
-                  className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                  className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                   {loading ? 'Sending…' : 'Send reset code'}
                 </button>
               </form>
@@ -1263,7 +1263,7 @@ export function Login() {
                     </div>
                   </div>
                   <button type="submit" disabled={loading}
-                    className="w-full py-3 rounded-lg text-sm font-medium text-white bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
+                    className="w-full py-3 rounded-lg text-sm font-medium text-on-fill bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 transition disabled:opacity-60 shadow-lg shadow-blue-500/25">
                     {loading ? 'Updating…' : 'Update password'}
                   </button>
                 </form>

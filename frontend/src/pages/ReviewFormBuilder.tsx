@@ -320,7 +320,7 @@ export function ReviewFormBuilder() {
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            className="bg-transparent text-2xl font-bold text-white focus:outline-none w-full placeholder:text-[#444]"
+            className="bg-transparent text-2xl font-bold text-white focus:outline-none w-full placeholder:text-hx-444444"
             placeholder="Form name"
           />
           <div className="flex items-center gap-2 mt-2">
@@ -406,7 +406,7 @@ export function ReviewFormBuilder() {
           comment) — their settings ARE the build surface, so they render
           unconditionally with an explainer instead of a blank page. */}
       {form.type === 'basic' && (
-        <div className="bg-primary-500/[0.06] border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-[#c8c8cc] leading-relaxed">
+        <div className="bg-primary-500/[0.06] border border-primary-500/25 rounded-xl p-4 mb-6 text-[12.5px] text-hx-c8c8cc leading-relaxed">
           This is a <span className="font-semibold text-white">basic survey</span>: a 5-star rating question
           {config.ask_for_comment ? ' plus an optional comment box' : ''}, with high ratings offered a redirect
           to your public review profiles. Adjust its behaviour below — or create a <span className="font-semibold text-white">custom survey</span> from
@@ -502,7 +502,7 @@ export function ReviewFormBuilder() {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <h2 className="text-sm font-bold text-white uppercase tracking-wider">Questions</h2>
-              <span className="text-[10px] bg-white/[0.06] text-[#888] px-2 py-0.5 rounded-full font-medium">
+              <span className="text-[10px] bg-white/[0.06] text-hx-888888 px-2 py-0.5 rounded-full font-medium">
                 {questions.length} {questions.length === 1 ? 'question' : 'questions'}
               </span>
             </div>
@@ -525,9 +525,9 @@ export function ReviewFormBuilder() {
           <div className="space-y-2">
             {questions.length === 0 && (
               <div className="border-2 border-dashed border-dark-border rounded-xl py-16 text-center">
-                <div className="text-[#444] text-4xl mb-3">+</div>
-                <div className="text-[#888] text-sm font-medium mb-1">No questions yet</div>
-                <div className="text-[#555] text-xs">Add your first question to start building the review form</div>
+                <div className="text-hx-444444 text-4xl mb-3">+</div>
+                <div className="text-hx-888888 text-sm font-medium mb-1">No questions yet</div>
+                <div className="text-hx-555555 text-xs">Add your first question to start building the review form</div>
               </div>
             )}
 
@@ -578,7 +578,7 @@ export function ReviewFormBuilder() {
                     className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none"
                     onClick={() => setExpanded(ex => ({ ...ex, [i]: !ex[i] }))}
                   >
-                    <div className="text-[#444] cursor-grab active:cursor-grabbing shrink-0" onClick={e => e.stopPropagation()}>
+                    <div className="text-hx-444444 cursor-grab active:cursor-grabbing shrink-0" onClick={e => e.stopPropagation()}>
                       <GripVertical size={16} />
                     </div>
 
@@ -591,9 +591,9 @@ export function ReviewFormBuilder() {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-[#555] tabular-nums">Q{i + 1}</span>
+                        <span className="text-[10px] font-bold text-hx-555555 tabular-nums">Q{i + 1}</span>
                         <span className="text-sm text-white font-medium truncate">
-                          {q.label || <span className="text-[#555] italic">Untitled question</span>}
+                          {q.label || <span className="text-hx-555555 italic">Untitled question</span>}
                         </span>
                       </div>
                       {!isExpanded && (
@@ -611,7 +611,7 @@ export function ReviewFormBuilder() {
                     </div>
 
                     <div className="flex items-center gap-1 shrink-0">
-                      {isExpanded ? <ChevronDown size={16} className="text-[#555]" /> : <ChevronRight size={16} className="text-[#555]" />}
+                      {isExpanded ? <ChevronDown size={16} className="text-hx-555555" /> : <ChevronRight size={16} className="text-hx-555555" />}
                     </div>
                   </div>
 
@@ -622,7 +622,7 @@ export function ReviewFormBuilder() {
                         {/* Label + Type row */}
                         <div className="grid grid-cols-1 md:grid-cols-[1fr,200px] gap-3">
                           <div>
-                            <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">Question</label>
+                            <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">Question</label>
                             <input
                               value={q.label}
                               onChange={e => setQuestions(qs => qs.map((x, ix) => ix === i ? { ...x, label: e.target.value } : x))}
@@ -632,7 +632,7 @@ export function ReviewFormBuilder() {
                             />
                           </div>
                           <div>
-                            <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">Type</label>
+                            <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">Type</label>
                             <select
                               value={q.kind}
                               onChange={e => {
@@ -651,8 +651,8 @@ export function ReviewFormBuilder() {
 
                         {/* Help text */}
                         <div>
-                          <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">
-                            Help text <span className="font-normal text-[#555]">(optional)</span>
+                          <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">
+                            Help text <span className="font-normal text-hx-555555">(optional)</span>
                           </label>
                           <input
                             value={q.help_text ?? ''}
@@ -753,20 +753,20 @@ export function ReviewFormBuilder() {
           <div className="mt-4 relative" ref={addBtnRef}>
             <button
               onClick={() => setShowAddMenu(!showAddMenu)}
-              className="w-full border-2 border-dashed border-dark-border hover:border-primary-500/30 rounded-xl py-3 text-sm font-medium text-[#888] hover:text-primary-400 flex items-center justify-center gap-2 transition-colors"
+              className="w-full border-2 border-dashed border-dark-border hover:border-primary-500/30 rounded-xl py-3 text-sm font-medium text-hx-888888 hover:text-primary-400 flex items-center justify-center gap-2 transition-colors"
             >
               <Plus size={16} /> Add question
             </button>
 
             {showAddMenu && (
-              <div className="absolute left-0 right-0 bottom-full mb-2 bg-[#161616] border border-dark-border rounded-2xl shadow-2xl shadow-black/50 p-3 grid grid-cols-2 md:grid-cols-3 gap-2 z-50 max-h-[60vh] overflow-y-auto">
+              <div className="absolute left-0 right-0 bottom-full mb-2 bg-hx-161616 border border-dark-border rounded-2xl shadow-2xl shadow-black/50 p-3 grid grid-cols-2 md:grid-cols-3 gap-2 z-50 max-h-[60vh] overflow-y-auto">
                 {(Object.entries(KIND_META) as [Kind, typeof KIND_META[Kind]][]).map(([kind, meta]) => {
                   const Icon = meta.icon
                   return (
                     <button
                       key={kind}
                       onClick={() => addQuestion(kind)}
-                      className="rounded-xl border border-dark-border bg-[#1c1c1c] hover:border-primary-500/40 hover:bg-white/[0.03] transition-all text-left p-3 group/item"
+                      className="rounded-xl border border-dark-border bg-hx-1c1c1c hover:border-primary-500/40 hover:bg-white/[0.03] transition-all text-left p-3 group/item"
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <div className="w-7 h-7 rounded-md flex items-center justify-center shrink-0" style={{ backgroundColor: meta.color + '18' }}>
@@ -774,7 +774,7 @@ export function ReviewFormBuilder() {
                         </div>
                         <span className="text-xs text-white font-semibold">{meta.label}</span>
                       </div>
-                      <div className="text-[10px] text-[#777] mb-2 leading-snug">{meta.desc}</div>
+                      <div className="text-[10px] text-hx-777777 mb-2 leading-snug">{meta.desc}</div>
                       <KindExample kind={kind} />
                     </button>
                   )
@@ -786,7 +786,7 @@ export function ReviewFormBuilder() {
           {/* Save questions bar */}
           {questions.length > 0 && (
             <div className="fixed bottom-0 left-0 right-0 bg-well/95 backdrop-blur-sm border-t border-dark-border px-6 py-4 flex items-center justify-between z-40">
-              <div className="text-xs text-[#888]">
+              <div className="text-xs text-hx-888888">
                 {questions.length} question{questions.length !== 1 ? 's' : ''}
                 {hasConditions && <span className="ml-2 text-purple-400">with conditional logic</span>}
               </div>
@@ -808,12 +808,12 @@ export function ReviewFormBuilder() {
 
 /* ──────────────────────── Shared helpers ──────────────────────── */
 
-const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-[#444] transition-shadow'
+const inputCls = 'w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/40 placeholder:text-hx-444444 transition-shadow'
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">{label}</label>
+      <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">{label}</label>
       {children}
     </div>
   )
@@ -821,13 +821,13 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <label className="flex items-center gap-2.5 text-sm text-[#ccc] cursor-pointer group/toggle">
+    <label className="flex items-center gap-2.5 text-sm text-hx-cccccc cursor-pointer group/toggle">
       <button
         type="button"
         onClick={() => onChange(!checked)}
         className={`w-9 h-5 rounded-full relative transition-colors ${checked ? 'bg-primary-500' : 'bg-panel-raised'}`}
       >
-        <div className={`w-3.5 h-3.5 rounded-full bg-white absolute top-[3px] transition-all ${checked ? 'left-[19px]' : 'left-[3px]'}`} />
+        <div className={`w-3.5 h-3.5 rounded-full bg-on-fill absolute top-[3px] transition-all ${checked ? 'left-[19px]' : 'left-[3px]'}`} />
       </button>
       <span className="text-xs">{label}</span>
     </label>
@@ -839,11 +839,11 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 function ChoiceEditor({ choices, onChange }: { choices: string[]; onChange: (c: string[]) => void }) {
   return (
     <div>
-      <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">Choices</label>
+      <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">Choices</label>
       <div className="space-y-1.5">
         {choices.map((c, ci) => (
           <div key={ci} className="flex gap-2 items-center">
-            <div className="w-5 h-5 rounded-full border border-[#444] shrink-0 flex items-center justify-center text-[10px] text-[#555]">
+            <div className="w-5 h-5 rounded-full border border-hx-444444 shrink-0 flex items-center justify-center text-[10px] text-hx-555555">
               {ci + 1}
             </div>
             <input
@@ -858,7 +858,7 @@ function ChoiceEditor({ choices, onChange }: { choices: string[]; onChange: (c: 
             />
             <button
               onClick={() => onChange(choices.filter((_, x) => x !== ci))}
-              className="text-[#555] hover:text-red-400 p-1 rounded transition-colors shrink-0"
+              className="text-hx-555555 hover:text-red-400 p-1 rounded transition-colors shrink-0"
             >
               <Trash2 size={12} />
             </button>
@@ -882,11 +882,11 @@ function EmojiEditor({ emojis, labels, onChange }: {
 }) {
   return (
     <div>
-      <label className="block text-[10px] font-semibold text-[#888] uppercase tracking-wider mb-1.5">Emoji reactions</label>
+      <label className="block text-[10px] font-semibold text-hx-888888 uppercase tracking-wider mb-1.5">Emoji reactions</label>
       <div className="flex flex-wrap gap-1.5 mb-2.5">
         {EMOJI_PRESETS.map(p => (
           <button key={p.name} onClick={() => onChange([...p.emojis], [...p.labels])}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-panel border border-dark-border text-[11px] font-medium text-[#bbb] hover:text-white hover:border-primary-500/40 transition-colors">
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-panel border border-dark-border text-[11px] font-medium text-hx-bbbbbb hover:text-white hover:border-primary-500/40 transition-colors">
             <span className="leading-none">{p.emojis.join('')}</span> {p.name}
           </button>
         ))}
@@ -914,7 +914,7 @@ function EmojiEditor({ emojis, labels, onChange }: {
             />
             <button
               onClick={() => onChange(emojis.filter((_, x) => x !== ci), labels.filter((_, x) => x !== ci))}
-              className="text-[#555] hover:text-red-400 p-1 rounded transition-colors shrink-0"
+              className="text-hx-555555 hover:text-red-400 p-1 rounded transition-colors shrink-0"
             >
               <Trash2 size={12} />
             </button>
@@ -960,15 +960,15 @@ function ConditionEditor({ q, index, priorQuestions, onChange }: {
     <div className={`rounded-xl border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/[0.04]' : 'border-dashed border-dark-border'} p-3.5`}>
       <div className="flex items-center gap-2 mb-0">
         <GitBranch size={13} className={hasCondition ? 'text-purple-400' : 'text-t-muted'} />
-        <span className="text-xs font-semibold text-[#ccc]">Show this question</span>
-        <div className="flex gap-0.5 bg-[#141414] border border-dark-border p-0.5 rounded-lg ml-1">
+        <span className="text-xs font-semibold text-hx-cccccc">Show this question</span>
+        <div className="flex gap-0.5 bg-hx-141414 border border-dark-border p-0.5 rounded-lg ml-1">
           <button
             onClick={() => onChange({ ...q, condition_index: null, condition_operator: null, condition_value: null })}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${!hasCondition ? 'bg-white/[0.09] text-white' : 'text-[#888] hover:text-white'}`}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${!hasCondition ? 'bg-white/[0.09] text-white' : 'text-hx-888888 hover:text-white'}`}
           >Always</button>
           <button
             onClick={() => { if (!hasCondition) setParent(index - 1) }}
-            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${hasCondition ? 'bg-purple-500/25 text-purple-200' : 'text-[#888] hover:text-white'}`}
+            className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-colors ${hasCondition ? 'bg-purple-500/25 text-purple-200' : 'text-hx-888888 hover:text-white'}`}
           >Only if…</button>
         </div>
       </div>
@@ -1037,10 +1037,10 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
         {[1, 2, 3, 4, 5].map(n => (
           <button key={n} onClick={() => pick(String(n))} title={`${n} star${n > 1 ? 's' : ''}`}
             className="p-0.5">
-            <Star size={22} className={Number(scalar) >= n ? 'text-amber-400 fill-amber-400' : 'text-[#3a3a3a]'} />
+            <Star size={22} className={Number(scalar) >= n ? 'text-amber-400 fill-amber-400' : 'text-hx-3a3a3a'} />
           </button>
         ))}
-        <span className="text-xs text-[#888] ml-2">{scalar || '—'} star{scalar === '1' ? '' : 's'}</span>
+        <span className="text-xs text-hx-888888 ml-2">{scalar || '—'} star{scalar === '1' ? '' : 's'}</span>
       </div>
     )
   }
@@ -1051,7 +1051,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex flex-wrap gap-1">
         {Array.from({ length: 11 - lo }, (_, ix) => lo + ix).map(n => (
           <button key={n} onClick={() => pick(String(n))}
-            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${isOn(String(n)) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#999] hover:text-white'}`}>
+            className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${isOn(String(n)) ? 'bg-purple-500 text-on-fill' : 'bg-panel border border-dark-border text-hx-999999 hover:text-white'}`}>
             {n}
           </button>
         ))}
@@ -1064,7 +1064,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex gap-1.5">
         {[['true', 'Yes'], ['false', 'No']].map(([v, lbl]) => (
           <button key={v} onClick={() => pick(v)}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOn(v) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#999] hover:text-white'}`}>
+            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-colors ${isOn(v) ? 'bg-purple-500 text-on-fill' : 'bg-panel border border-dark-border text-hx-999999 hover:text-white'}`}>
             {lbl}
           </button>
         ))}
@@ -1081,7 +1081,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
       <div className="flex flex-wrap gap-1.5">
         {opts.map((c, ci) => (
           <button key={ci} onClick={() => pick(c)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${isOn(c) ? 'bg-purple-500 text-white' : 'bg-panel border border-dark-border text-[#bbb] hover:text-white'}`}>
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1.5 ${isOn(c) ? 'bg-purple-500 text-on-fill' : 'bg-panel border border-dark-border text-hx-bbbbbb hover:text-white'}`}>
             {parent.kind === 'emoji' && emojis[ci] && <span className="text-sm leading-none">{emojis[ci]}</span>}
             {c}
           </button>
@@ -1106,7 +1106,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
 function KindExample({ kind }: { kind: Kind }) {
   switch (kind) {
     case 'stars':
-      return <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} size={13} className={n <= 4 ? 'text-amber-400 fill-amber-400' : 'text-[#333]'} />)}</div>
+      return <div className="flex gap-0.5">{[1, 2, 3, 4, 5].map(n => <Star key={n} size={13} className={n <= 4 ? 'text-amber-400 fill-amber-400' : 'text-hx-333333'} />)}</div>
     case 'emoji':
       return <div className="flex gap-1 text-[13px] leading-none">😡 😕 😐 🙂 😍</div>
     case 'nps':
@@ -1137,24 +1137,24 @@ function KindExample({ kind }: { kind: Kind }) {
 function QuestionPreview({ q }: { q: Question }) {
   return (
     <div className="rounded-lg bg-well border border-white/[0.04] p-3">
-      <div className="text-[10px] uppercase tracking-wider text-[#555] font-semibold mb-2 flex items-center gap-1">
+      <div className="text-[10px] uppercase tracking-wider text-hx-555555 font-semibold mb-2 flex items-center gap-1">
         <Eye size={10} /> Preview
       </div>
       <div className="text-sm text-white font-medium mb-1">
         {q.label || 'Your question here'}
         {q.required && <span className="text-red-400 ml-0.5">*</span>}
       </div>
-      {q.help_text && <div className="text-xs text-[#888] mb-2">{q.help_text}</div>}
+      {q.help_text && <div className="text-xs text-hx-888888 mb-2">{q.help_text}</div>}
 
       {q.kind === 'stars' && (
         <div className="flex gap-1">
-          {[1, 2, 3, 4, 5].map(n => <Star key={n} size={20} className={n <= 3 ? 'text-amber-400 fill-amber-400' : 'text-[#333]'} />)}
+          {[1, 2, 3, 4, 5].map(n => <Star key={n} size={20} className={n <= 3 ? 'text-amber-400 fill-amber-400' : 'text-hx-333333'} />)}
         </div>
       )}
       {q.kind === 'scale' && (
         <div className="flex gap-1">
           {Array.from({ length: 10 }, (_, i) => (
-            <div key={i} className={`w-7 h-7 rounded text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-panel text-[#555]'}`}>
+            <div key={i} className={`w-7 h-7 rounded text-xs flex items-center justify-center font-medium ${i < 6 ? 'bg-primary-500/20 text-primary-300' : 'bg-panel text-hx-555555'}`}>
               {i + 1}
             </div>
           ))}
@@ -1170,23 +1170,23 @@ function QuestionPreview({ q }: { q: Question }) {
         </div>
       )}
       {q.kind === 'text' && (
-        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555]">Short answer...</div>
+        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-hx-555555">Short answer...</div>
       )}
       {q.kind === 'textarea' && (
-        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-[#555] h-16">Long answer...</div>
+        <div className="bg-panel border border-dark-border rounded-lg px-3 py-2 text-xs text-hx-555555 h-16">Long answer...</div>
       )}
       {q.kind === 'boolean' && (
         <div className="flex gap-2">
           <div className="px-4 py-1.5 rounded-lg bg-primary-500/15 text-primary-300 text-xs font-medium">Yes</div>
-          <div className="px-4 py-1.5 rounded-lg bg-panel text-[#555] text-xs">No</div>
+          <div className="px-4 py-1.5 rounded-lg bg-panel text-hx-555555 text-xs">No</div>
         </div>
       )}
       {(q.kind === 'single_choice' || q.kind === 'multi_choice') && (
         <div className="space-y-1.5">
           {(q.options?.choices ?? []).slice(0, 4).map((c, i) => (
             <div key={i} className="flex items-center gap-2">
-              <div className={`w-4 h-4 border border-[#444] shrink-0 ${q.kind === 'multi_choice' ? 'rounded' : 'rounded-full'} ${i === 0 ? 'bg-primary-500/30 border-primary-500/50' : ''}`} />
-              <span className="text-xs text-[#aaa]">{c}</span>
+              <div className={`w-4 h-4 border border-hx-444444 shrink-0 ${q.kind === 'multi_choice' ? 'rounded' : 'rounded-full'} ${i === 0 ? 'bg-primary-500/30 border-primary-500/50' : ''}`} />
+              <span className="text-xs text-hx-aaaaaa">{c}</span>
             </div>
           ))}
         </div>

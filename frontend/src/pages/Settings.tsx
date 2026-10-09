@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, resolveImage } from '../lib/api'
 import { useAuthStore } from '../stores/authStore'
-import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
+import { applyThemeToDom, persistThemeSnapshot, readCachedPreset, readCachedTheme, readThemeStyle, type ThemeStyle } from '../hooks/useTheme'
 import { StylePicker } from '../components/settings/StylePicker'
 import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
@@ -1089,8 +1089,7 @@ export function Settings() {
   // The admin style shown as active in Settings → Branding → Style. Starts
   // from what is painted, follows the saved setting once it loads, and
   // switches the moment a card is clicked (applyStyle / undo).
-  const [activeStyle, setActiveStyle] = useState<ThemeStyle>(() =>
-    readThemeStyle(document.documentElement.getAttribute('data-style')))
+  const [activeStyle, setActiveStyle] = useState<ThemeStyle>(() => readThemeStyle(readCachedTheme()?.style))
   const savedStyle = getVal('theme_style')
   useEffect(() => {
     if (savedStyle) setActiveStyle(readThemeStyle(savedStyle))
@@ -1372,7 +1371,7 @@ export function Settings() {
       return (
         <button onClick={() => handleChange(setting.key, isOn ? 'false' : 'true')}
           className={`relative w-12 h-6 rounded-full transition-colors ${isOn ? 'bg-emerald-500' : 'bg-white/[0.08]'}`}>
-          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white transition-transform ${isOn ? 'translate-x-6' : 'translate-x-0.5'}`} />
+          <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-on-fill transition-transform ${isOn ? 'translate-x-6' : 'translate-x-0.5'}`} />
         </button>
       )
     }
@@ -1525,7 +1524,7 @@ export function Settings() {
               {logoPreview || currentLogoUrl ? (
                 <div className="relative group">
                   <img src={logoPreview || currentLogoUrl!} alt="Logo"
-                    className="h-20 max-w-[200px] object-contain rounded-xl border border-white/[0.06] bg-[#0a1410] p-2" />
+                    className="h-20 max-w-[200px] object-contain rounded-xl border border-white/[0.06] bg-hx-0a1410 p-2" />
                   <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     onClick={() => logoInputRef.current?.click()}>
                     <Upload size={20} className="text-white" />
@@ -2281,7 +2280,7 @@ export function Settings() {
               <span onClick={toggleEnabled} role="switch" aria-checked={isEnabled}
                 title={isEnabled ? 'Click to deactivate (credentials kept; data sync stops)' : 'Click to reactivate'}
                 className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 cursor-pointer ${isEnabled ? 'bg-emerald-500/70' : 'bg-gray-600/60'}`}>
-                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
+                <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-on-fill transition-transform ${isEnabled ? 'translate-x-5' : 'translate-x-1'}`} />
               </span>
             )}
             {!isComingSoon && (

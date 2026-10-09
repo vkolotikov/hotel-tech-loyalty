@@ -289,7 +289,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
             createMutation.mutate(quickCreate)
           }}
           disabled={createMutation.isPending}
-          className="inline-flex w-full items-center justify-center gap-1.5 rounded bg-violet-600 hover:bg-violet-700 disabled:opacity-60 px-2 py-1.5 text-xs font-medium text-white transition-colors"
+          className="inline-flex w-full items-center justify-center gap-1.5 rounded bg-violet-600 hover:bg-violet-700 disabled:opacity-60 px-2 py-1.5 text-xs font-medium text-on-fill transition-colors"
         >
           {createMutation.isPending ? <Loader size={12} className="animate-spin" /> : <Plus size={12} />}
           Create
@@ -328,7 +328,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
             >
               <p
                 className={`mb-1 inline-flex h-5 w-5 items-center justify-center rounded-full text-xs font-semibold ${
-                  isToday ? 'bg-violet-600 text-white ring-2 ring-violet-500/40' : inMonth ? 'text-white' : 'text-t-secondary'
+                  isToday ? 'bg-violet-600 text-on-fill ring-2 ring-violet-500/40' : inMonth ? 'text-white' : 'text-t-secondary'
                 }`}
               >
                 {day.getDate()}
@@ -504,7 +504,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                 setQuickCreate(null)
               }}
               className={`px-3 py-1.5 text-xs font-medium capitalize transition-colors ${
-                view === v ? 'bg-violet-600 text-white' : 'bg-dark-surface text-t-secondary hover:text-white'
+                view === v ? 'bg-violet-600 text-on-fill' : 'bg-dark-surface text-t-secondary hover:text-white'
               }`}
             >
               {v}
@@ -514,14 +514,14 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
         <div className="ml-auto flex items-center gap-2">
           <button
             onClick={() => openGeneration('week')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700"
           >
             <Sparkles size={14} />
             Generate week
           </button>
           <button
             onClick={() => openGeneration('month')}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700"
           >
             <Sparkles size={14} />
             Generate month
@@ -572,7 +572,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
           </p>
           <button
             onClick={() => openGeneration('month')}
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700"
+            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-on-fill transition-colors hover:bg-violet-700"
           >
             <Sparkles size={16} />
             Generate month
@@ -690,7 +690,7 @@ export function CalendarView({ profile, onOpenPost }: { profile: PlannerProfile;
                   </button>
                   <button
                     onClick={startGeneration}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-medium text-white transition-colors hover:bg-violet-700"
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-4 py-1.5 text-xs font-medium text-on-fill transition-colors hover:bg-violet-700"
                   >
                     <Sparkles size={14} />
                     {genNotice && genFillEmpty ? 'Retry empty slots' : 'Start'}

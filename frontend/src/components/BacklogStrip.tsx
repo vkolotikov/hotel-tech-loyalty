@@ -459,7 +459,7 @@ export function BacklogStrip({ currentUserId, currentUserName = '', plannerSkill
       >
         <Inbox size={22} />
         {totalCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-dark-bg">
+          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-red-500 text-on-fill text-[10px] font-bold flex items-center justify-center border-2 border-dark-bg">
             {totalCount > 99 ? '99+' : totalCount}
           </span>
         )}

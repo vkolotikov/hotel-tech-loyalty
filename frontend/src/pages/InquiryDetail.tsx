@@ -848,7 +848,7 @@ function ActivityComposer({ onSubmit, disabled, seed, onSeedConsumed }: {
           disabled={transcribing || disabled}
           className={`rounded-md px-3 disabled:opacity-50 ${
             recording
-              ? 'bg-red-500 text-white animate-pulse hover:bg-red-400'
+              ? 'bg-red-500 text-on-fill animate-pulse hover:bg-red-400'
               : 'bg-dark-bg border border-dark-border text-t-secondary hover:text-white hover:border-accent/50'
           }`}
           title={recording ? t('inquiryDetail.timeline.composer.stop_recording', 'Stop recording') : t('inquiryDetail.timeline.composer.voice_note', 'Voice note (Whisper)')}
@@ -1309,7 +1309,7 @@ function LostModal({ inq, stage, onClose, onSuccess }: {
         <button
           onClick={() => submit.mutate()}
           disabled={!reasonId || submit.isPending}
-          className="bg-red-500 hover:bg-red-400 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
+          className="bg-red-500 hover:bg-red-400 text-on-fill font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
         >
           <X size={14} />
           {submit.isPending ? t('inquiryDetail.lost.saving', 'Saving…') : t('inquiryDetail.lost.submit', 'Mark lost')}

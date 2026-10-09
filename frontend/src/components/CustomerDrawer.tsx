@@ -257,7 +257,7 @@ function DeleteConfirmModal({
           <button
             onClick={onConfirm}
             disabled={loading || confirmText !== required}
-            className="bg-red-500 hover:bg-red-600 text-white font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
+            className="bg-red-500 hover:bg-red-600 text-on-fill font-bold rounded-md px-4 py-2 text-sm disabled:opacity-50 flex items-center gap-2"
           >
             {loading && <Loader2 size={14} className="animate-spin" />}
             Delete customer

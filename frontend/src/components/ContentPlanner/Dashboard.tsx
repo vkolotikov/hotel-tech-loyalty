@@ -111,7 +111,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
                     s.done
                       ? 'bg-green-500/15 text-green-300'
                       : s === nextStep
-                        ? 'bg-violet-600 text-white'
+                        ? 'bg-violet-600 text-on-fill'
                         : 'bg-dark-surface2 text-t-secondary'
                   }`}>
                     {s.done ? <CheckCircle2 size={12} /> : <span className="text-[10px] font-bold">{i + 1}</span>}
@@ -125,7 +125,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
               <button
                 type="button"
                 onClick={() => onNavigate(nextStep.action)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-violet-700"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 px-3.5 py-1.5 text-sm font-medium text-on-fill transition-colors hover:bg-violet-700"
               >
                 {nextStep.cta} <ArrowRight size={13} />
               </button>
@@ -224,7 +224,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
               <p className="text-sm text-t-secondary">Generate a strategy to define pillars</p>
               <button
                 onClick={() => onNavigate('strategy')}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-white transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-1.5 text-sm font-medium text-on-fill transition-colors"
               >
                 <Sparkles size={13} /> Generate strategy
               </button>
@@ -311,7 +311,7 @@ export function Dashboard({ profile, readiness, onNavigate }: Props) {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => onNavigate('strategy')}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-2 text-sm font-medium text-white transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 px-3 py-2 text-sm font-medium text-on-fill transition-colors"
             >
               <Sparkles size={14} /> Generate strategy
             </button>

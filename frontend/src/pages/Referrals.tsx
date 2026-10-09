@@ -59,7 +59,7 @@ export function Referrals() {
       {stats?.top_referrers?.length > 0 && (
         <Card>
           <div className="flex items-center gap-2 mb-3">
-            <Trophy size={16} className="text-[#c9a84c]" />
+            <Trophy size={16} className="text-hx-c9a84c" />
             <h2 className="text-sm font-semibold text-white">{t('referrals.top_referrers.title', 'Top referrers')}</h2>
             <span className="text-[11px] text-t-muted">{t('referrals.top_referrers.all_time', 'all-time')}</span>
           </div>
@@ -214,7 +214,7 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
 
 function statusClass(status: string): string {
   if (status === 'rewarded') return 'bg-success/15 text-success'
-  if (status === 'qualified') return 'bg-[#5ac8fa]/15 text-[#5ac8fa]'
-  if (status === 'pending') return 'bg-[#f59e0b]/15 text-[#f59e0b]'
+  if (status === 'qualified') return 'bg-hx-5ac8fa/15 text-hx-5ac8fa'
+  if (status === 'pending') return 'bg-hx-f59e0b/15 text-hx-f59e0b'
   return 'bg-dark-surface3 text-t-muted'
 }

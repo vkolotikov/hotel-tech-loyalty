@@ -224,7 +224,7 @@ export function Dashboard() {
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => navigate('/scan')}
-            className="flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-[#e0e0e0] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
+            className="flex items-center justify-center gap-2 bg-dark-surface border border-dark-border text-hx-e0e0e0 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-dark-surface2 transition-colors">
             <Scan size={15} /> {t('dashboard.actions.scan_card', 'Scan Card')}
           </button>
           <button onClick={() => navigate('/notifications')}

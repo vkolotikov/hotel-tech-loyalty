@@ -1910,7 +1910,7 @@ export function Inquiries() {
                       } finally { setCaptureLoading(false) }
                     }}
                     disabled={captureLoading || !captureText.trim()}
-                    className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors"
                   >
                     {captureLoading ? <><Loader2 size={14} className="animate-spin" /> Extracting...</> : <><Sparkles size={14} /> Extract</>}
                   </button>

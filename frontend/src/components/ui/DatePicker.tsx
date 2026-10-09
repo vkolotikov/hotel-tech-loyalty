@@ -118,14 +118,14 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
       <button
         type="button"
         onClick={() => { if (!open) calcPosition(); setOpen(!open) }}
-        className="w-full flex items-center gap-2 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-left hover:border-[#6366f1]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366f1]/40"
+        className="w-full flex items-center gap-2 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-left hover:border-hx-6366f1/50 transition-colors focus:outline-none focus:ring-2 focus:ring-hx-6366f1/40"
       >
-        <Calendar size={15} className="text-[#6366f1] flex-shrink-0" />
+        <Calendar size={15} className="text-hx-6366f1 flex-shrink-0" />
         <span className={displayValue ? 'text-white flex-1' : 'text-t-muted flex-1'}>{displayValue || placeholder}</span>
         {value && (
           <span
             onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }}
-            className="text-t-muted hover:text-[#ef4444] transition-colors text-xs cursor-pointer"
+            className="text-t-muted hover:text-hx-ef4444 transition-colors text-xs cursor-pointer"
           >
             &times;
           </span>
@@ -135,13 +135,13 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
       {open && (
         <div className={`absolute z-50 w-[280px] bg-dark-surface border border-dark-border rounded-xl shadow-2xl shadow-black/50 p-3 ${alignRight ? 'right-0' : 'left-0'} ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[#222240] text-[#9ca3af] hover:text-white transition-colors">
+            <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-hx-222240 text-hx-9ca3af hover:text-white transition-colors">
               <ChevronLeft size={16} />
             </button>
             <span className="text-sm font-semibold text-white">
               {MONTHS[viewMonth]} {viewYear}
             </span>
-            <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-[#222240] text-[#9ca3af] hover:text-white transition-colors">
+            <button type="button" onClick={nextMonth} className="p-1.5 rounded-lg hover:bg-hx-222240 text-hx-9ca3af hover:text-white transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -161,9 +161,9 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
                 className={`
                   h-8 w-8 mx-auto rounded-lg text-xs font-medium transition-all
                   flex items-center justify-center
-                  ${!cell.current ? 'text-[#3a3a5c]' : 'text-[#9ca3af] hover:bg-[#222240] hover:text-white'}
-                  ${isToday(cell.date) && !isSelected(cell.date) ? 'ring-1 ring-[#6366f1]/40 text-[#6366f1]' : ''}
-                  ${isSelected(cell.date) ? 'bg-[#6366f1] text-white hover:bg-[#6366f1]' : ''}
+                  ${!cell.current ? 'text-hx-3a3a5c' : 'text-hx-9ca3af hover:bg-hx-222240 hover:text-white'}
+                  ${isToday(cell.date) && !isSelected(cell.date) ? 'ring-1 ring-hx-6366f1/40 text-hx-6366f1' : ''}
+                  ${isSelected(cell.date) ? 'bg-hx-6366f1 text-on-fill hover:bg-hx-6366f1' : ''}
                 `}
               >
                 {cell.day}
@@ -182,7 +182,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
             <button
               type="button"
               onClick={() => { onChange(fmt(today)); setOpen(false) }}
-              className="text-xs text-[#6366f1] hover:text-[#818cf8] transition-colors font-medium px-2 py-1"
+              className="text-xs text-hx-6366f1 hover:text-hx-818cf8 transition-colors font-medium px-2 py-1"
             >
               Today
             </button>

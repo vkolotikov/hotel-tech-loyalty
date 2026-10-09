@@ -395,7 +395,7 @@ export function LandingPreview({ nonce, draft, dirty, focusKey, onSelect }: {
           <div
             ref={measureBox}
             className={device === 'mobile'
-              ? 'relative mx-auto rounded-[28px] border-4 border-[#222] bg-black overflow-hidden'
+              ? 'relative mx-auto rounded-[28px] border-4 border-hx-222222 bg-black overflow-hidden'
               : 'relative border border-dark-border rounded-lg overflow-hidden bg-black'}
             // The box is the SCALED frame's size: a real phone (390 px, shown
             // at 300) or one desktop screen (1440 × 900, shown at the pane's

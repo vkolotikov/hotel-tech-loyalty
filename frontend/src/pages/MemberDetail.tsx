@@ -946,7 +946,7 @@ function MemberQrCard({ memberId, memberNumber }: { memberId: string; memberNumb
           <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-400 border-t-transparent" />
         </div>
       ) : data?.qr_image ? (
-        <img src={data.qr_image} alt="Member QR" className="w-40 h-40 rounded-lg bg-white p-2" />
+        <img src={data.qr_image} alt="Member QR" className="w-40 h-40 rounded-lg bg-on-fill p-2" />
       ) : (
         <div className="w-40 h-40 bg-dark-surface2 rounded-lg flex items-center justify-center">
           <span className="text-t-secondary text-xs">QR unavailable</span>

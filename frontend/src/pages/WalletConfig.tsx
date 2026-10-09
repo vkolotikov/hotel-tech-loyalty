@@ -205,7 +205,7 @@ export function WalletConfig() {
 
           {/* Save / activate */}
           <Card>
-            <label className="flex items-center gap-2 text-sm text-[#e0e0e0] mb-3 cursor-pointer">
+            <label className="flex items-center gap-2 text-sm text-hx-e0e0e0 mb-3 cursor-pointer">
               <input type="checkbox" checked={form.is_active}
                 onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))} />
               Wallet passes are active (members can add passes from the mobile app)

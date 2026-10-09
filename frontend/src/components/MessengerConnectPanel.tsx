@@ -430,7 +430,7 @@ export function MessengerConnectPanel() {
           <button
             onClick={startConnect}
             disabled={connecting}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-white"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-blue-600 hover:bg-blue-500 text-on-fill"
           >
             {connecting ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
             Connect Facebook Page

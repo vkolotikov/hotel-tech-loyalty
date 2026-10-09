@@ -391,7 +391,7 @@ export function EmailCampaigns() {
                     <button
                       key={key}
                       onClick={() => applyTemplate(key)}
-                      className="px-3 py-1.5 rounded-full text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-[#d0d0d0] hover:text-white border border-dark-border transition-colors"
+                      className="px-3 py-1.5 rounded-full text-xs font-semibold bg-dark-surface2 hover:bg-dark-surface3 text-hx-d0d0d0 hover:text-white border border-dark-border transition-colors"
                     >
                       {t.label}
                     </button>
@@ -511,7 +511,7 @@ export function EmailCampaigns() {
                     title="Email preview"
                     sandbox=""
                     srcDoc={previewHtml}
-                    className="w-full bg-white"
+                    className="w-full bg-on-fill"
                     style={{ height: 540 }}
                   />
                 </div>
@@ -535,7 +535,7 @@ export function EmailCampaigns() {
                 <button
                   onClick={() => testMutation.mutate(editId)}
                   disabled={testMutation.isPending}
-                  className="flex items-center gap-1.5 bg-dark-surface3 hover:bg-dark-surface text-[#e0e0e0] text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 border border-dark-border"
+                  className="flex items-center gap-1.5 bg-dark-surface3 hover:bg-dark-surface text-hx-e0e0e0 text-sm font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50 border border-dark-border"
                 >
                   {testMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Beaker size={14} />}
                   {t('emailCampaigns.form.send_test_to_me', 'Send test to me')}
@@ -552,7 +552,7 @@ export function EmailCampaigns() {
                 <button
                   onClick={() => confirm(t('emailCampaigns.form.send_now_confirm', 'Send this campaign now? Recipients are locked in by the segment.')) && sendMutation.mutate(editId)}
                   disabled={sendMutation.isPending}
-                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
+                  className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-on-fill text-sm font-semibold px-4 py-1.5 rounded-lg flex items-center gap-1.5"
                 >
                   {sendMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
                   {t('emailCampaigns.form.send_now', 'Send now')}
@@ -626,8 +626,8 @@ export function EmailCampaigns() {
                     <td className="px-5 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         c.status === 'sent'    ? 'bg-success/15 text-success' :
-                        c.status === 'sending' ? 'bg-[#5ac8fa]/15 text-[#5ac8fa]' :
-                        c.status === 'failed'  ? 'bg-[#ef4444]/15 text-[#ef4444]' :
+                        c.status === 'sending' ? 'bg-hx-5ac8fa/15 text-hx-5ac8fa' :
+                        c.status === 'failed'  ? 'bg-hx-ef4444/15 text-hx-ef4444' :
                                                  'bg-amber-500/15 text-amber-300'
                       }`}>
                         {c.status === 'sent'    && <CheckCircle size={11} />}
@@ -637,7 +637,7 @@ export function EmailCampaigns() {
                         {c.status}
                       </span>
                       {c.failed_count > 0 && c.status === 'sent' && (
-                        <div className="text-[10px] text-[#f59e0b] mt-0.5">{t('emailCampaigns.table.failed_count', { count: c.failed_count, defaultValue: '{{count}} failed' })}</div>
+                        <div className="text-[10px] text-hx-f59e0b mt-0.5">{t('emailCampaigns.table.failed_count', { count: c.failed_count, defaultValue: '{{count}} failed' })}</div>
                       )}
                     </td>
                     <td className="px-5 py-3 text-right text-white font-semibold tabular-nums">
@@ -660,7 +660,7 @@ export function EmailCampaigns() {
                             </button>
                             <button
                               onClick={() => confirm(t('emailCampaigns.table.send_confirm', { name: c.name, audience: c.segment ? t('emailCampaigns.table.send_confirm_audience', { name: c.segment.name, defaultValue: ' Audience: {{name}}.' }) : '', defaultValue: 'Send "{{name}}" now?{{audience}}' })) && sendMutation.mutate(c.id)}
-                              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-2.5 py-1 rounded transition-colors"
+                              className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-on-fill text-xs font-semibold px-2.5 py-1 rounded transition-colors"
                             >
                               <Send size={12} /> {t('emailCampaigns.table.send', 'Send')}
                             </button>

@@ -397,7 +397,7 @@ export function Segments() {
                   maxLength={500} rows={4} placeholder={t('segments.send.message_placeholder', 'Double points this weekend on every stay.')}
                   className="w-full bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
               </div>
-              <label className="flex items-center gap-2 text-sm text-[#e0e0e0] cursor-pointer">
+              <label className="flex items-center gap-2 text-sm text-hx-e0e0e0 cursor-pointer">
                 <input type="checkbox" checked={sendForm.send_email} onChange={e => setSendForm(s => ({ ...s, send_email: e.target.checked }))} />
                 {t('segments.send.also_email', 'Also send as email')}
               </label>

@@ -190,7 +190,7 @@ describe('index.css mood rules', () => {
     const moodRules = selectors(indexCss).filter(s => s.includes('[data-mood'))
     expect(moodRules.length).toBeGreaterThan(60)
     for (const selector of moodRules) {
-      expect(selector.startsWith(':root:where(:not([data-style="glass"][data-shell="admin"]))[data-mood'), selector).toBe(true)
+      expect(selector.startsWith(':root:where(:not([data-style="glass"][data-shell="admin"], [data-style="light"][data-shell="admin"]))[data-mood'), selector).toBe(true)
     }
   })
 })

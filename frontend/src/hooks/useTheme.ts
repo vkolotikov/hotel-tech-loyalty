@@ -3,6 +3,8 @@ import { useEffect } from 'react'
 import { api } from '../lib/api'
 import { SHADES, hexToRgb, isHex, shadeScale, toTriplet } from '../theme/colour'
 import { brandGlassVariables } from '../theme/glass'
+import { brandLightVariables } from '../theme/light'
+import { effectiveStyle } from '../lib/stylePreview'
 
 interface ThemeColors {
   primary_color: string
@@ -50,13 +52,13 @@ const PALETTE_KEYS = [
 ] as const
 
 /** The admin styles. Clean light joins in part 2. */
-export const THEME_STYLES = ['glass', 'classic'] as const
+export const THEME_STYLES = ['glass', 'classic', 'light'] as const
 export type ThemeStyle = (typeof THEME_STYLES)[number]
 export const DEFAULT_STYLE: ThemeStyle = 'glass'
 
 /** Only an explicit 'classic' is Classic; anything else (missing, empty, unknown) is Glass. */
 export function readThemeStyle(raw: unknown): ThemeStyle {
-  return raw === 'classic' ? 'classic' : DEFAULT_STYLE
+  return raw === 'classic' || raw === 'light' ? raw : DEFAULT_STYLE
 }
 
 /** What applyThemeToDom paints: <html> and <body>, or a stand-in in tests. */
@@ -105,7 +107,7 @@ function surfaceShade(hex: string, amount: number): string {
  * change style, only colour". Empty/null mood removes the attribute so
  * the default (Inter, neutral corners) renders.
  *
- * The optional `style` writes `data-style` ('glass' | 'classic'); left
+ * The optional `style` writes `data-style` ('glass' | 'classic' | 'light'), or this device's preview when a super admin has one on; left
  * out, the current style stays. The palette variables are written in
  * every style, plus the Glass extras (lifted brand text, glow colours,
  * text on brand fills). Glass's own values live in the stylesheet, scoped
@@ -152,6 +154,7 @@ export function applyThemeToDom(
   set('--color-info',    rgb(merged.info_color))
 
   for (const [name, value] of Object.entries(brandGlassVariables(merged.primary_color))) set(name, value)
+  for (const [name, value] of Object.entries(brandLightVariables(merged.primary_color))) set(name, value)
 
   body.style.backgroundColor = merged.background_color
   body.style.color = merged.text_color
@@ -168,7 +171,7 @@ export function applyThemeToDom(
     root.removeAttribute('data-mood')
   }
 
-  root.setAttribute('data-style', style ?? readThemeStyle(root.getAttribute('data-style')))
+  root.setAttribute('data-style', effectiveStyle(style ?? readThemeStyle(root.getAttribute('data-style'))))
 }
 
 export type { ThemeColors }
@@ -266,13 +269,13 @@ export function paintCachedTheme(snap: CachedTheme | null, target: ThemeTarget =
   if (snap?.colors) {
     applyThemeToDom(snap.colors, snap.mood ?? null, readThemeStyle(snap.style), target)
   } else {
-    target.root.setAttribute('data-style', DEFAULT_STYLE)
+    target.root.setAttribute('data-style', effectiveStyle(DEFAULT_STYLE))
   }
 }
 
 /** A server answer with a style but no palette: switch the style only. */
 export function applyStyleOnly(style: ThemeStyle, target: ThemeTarget = pageTarget()): void {
-  target.root.setAttribute('data-style', style)
+  target.root.setAttribute('data-style', effectiveStyle(style))
   const snap = readCachedTheme()
   persistThemeSnapshot(snap?.colors ?? {}, snap?.preset ?? null, snap?.mood ?? null, style)
 }

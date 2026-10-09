@@ -15,6 +15,7 @@ export function withoutThemeMeta<T extends { key: string }>(settings: T[]): T[] 
 export const STYLE_NAMES: Record<ThemeStyle, string> = {
   glass: 'Glass',
   classic: 'Classic',
+  light: 'Clean light',
 }
 
 /** The settings save for a style switch. */

@@ -1024,7 +1024,7 @@ export default function AiChat() {
             onClick={voiceCallActive ? endVoiceCall : startVoiceCall}
             className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold transition-all active:scale-95 ${
               voiceCallActive
-                ? 'bg-red-500 hover:bg-red-600 text-white shadow-md shadow-red-500/30'
+                ? 'bg-red-500 hover:bg-red-600 text-on-fill shadow-md shadow-red-500/30'
                 : 'bg-gradient-to-br from-primary-400 to-primary-600 hover:from-primary-300 hover:to-primary-500 text-on-primary shadow-md shadow-primary-500/30'
             }`}
             title={voiceCallActive ? 'End voice call' : 'Start a voice call — speak naturally to plan your day, search any data, take actions'}
@@ -1048,7 +1048,7 @@ export default function AiChat() {
                 {hasSpeechSynthesis && (
                   <button
                     onClick={() => { if (speaking) stopSpeaking(); setTtsEnabled(!ttsEnabled); setMenuOpen(false) }}
-                    className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                    className="w-full flex items-center justify-between gap-2 px-3 py-2 hover:bg-dark-surface2 text-hx-d8d8d8 hover:text-white transition-colors"
                   >
                     <span className="flex items-center gap-2">
                       {ttsEnabled ? <Volume2 size={13} className="text-primary-400" /> : <VolumeX size={13} />}
@@ -1061,7 +1061,7 @@ export default function AiChat() {
                 )}
                 <button
                   onClick={() => { setExpanded(!expanded); setMenuOpen(false) }}
-                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                  className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-hx-d8d8d8 hover:text-white transition-colors"
                 >
                   {expanded ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                   {expanded ? 'Compact view' : 'Expand view'}
@@ -1069,7 +1069,7 @@ export default function AiChat() {
                 {(launcherPos.right !== DEFAULT_LAUNCHER_POS.right || launcherPos.bottom !== DEFAULT_LAUNCHER_POS.bottom) && (
                   <button
                     onClick={() => { resetLauncherPos(); setMenuOpen(false) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-[#d8d8d8] hover:text-white transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-dark-surface2 text-hx-d8d8d8 hover:text-white transition-colors"
                     title="Move the floating button back to the bottom-right corner"
                   >
                     <MoreHorizontal size={13} />
@@ -1079,7 +1079,7 @@ export default function AiChat() {
                 {messages.length > 0 && (
                   <button
                     onClick={() => { clearChat(); setMenuOpen(false) }}
-                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-500/10 text-[#d8d8d8] hover:text-red-300 transition-colors border-t border-dark-border"
+                    className="w-full flex items-center gap-2 px-3 py-2 hover:bg-red-500/10 text-hx-d8d8d8 hover:text-red-300 transition-colors border-t border-dark-border"
                   >
                     <Trash2 size={13} />
                     Clear conversation
@@ -1112,7 +1112,7 @@ export default function AiChat() {
               </div>
               <div>
                 <div className="text-[17px] font-bold text-white tracking-tight mb-1">How can I help?</div>
-                <div className="text-[12px] text-[#9c9c9e] max-w-[290px] mx-auto leading-relaxed">
+                <div className="text-[12px] text-hx-9c9c9e max-w-[290px] mx-auto leading-relaxed">
                   Ask anything about your day, customers, or business — by text or by voice.
                 </div>
               </div>
@@ -1164,11 +1164,11 @@ export default function AiChat() {
                         <button
                           key={q}
                           onClick={() => send(q)}
-                          className={`group flex items-center w-full text-left text-[12.5px] text-[#b8b8ba] hover:text-white bg-dark-surface/70 hover:bg-dark-surface border border-dark-border ${group.border} rounded-xl px-3 py-2.5 transition-all active:scale-[0.99]`}
+                          className={`group flex items-center w-full text-left text-[12.5px] text-hx-b8b8ba hover:text-white bg-dark-surface/70 hover:bg-dark-surface border border-dark-border ${group.border} rounded-xl px-3 py-2.5 transition-all active:scale-[0.99]`}
                         >
                           <span className={`w-1 h-1 rounded-full ${group.accent.replace('text-', 'bg-')} opacity-50 group-hover:opacity-100 mr-2.5 flex-shrink-0 transition-opacity`} />
                           <span className="flex-1 leading-snug">{q}</span>
-                          <ChevronRight size={12} className="text-[#5a5a5c] group-hover:text-white opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all flex-shrink-0" />
+                          <ChevronRight size={12} className="text-hx-5a5a5c group-hover:text-white opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all flex-shrink-0" />
                         </button>
                       ))}
                     </div>
@@ -1189,7 +1189,7 @@ export default function AiChat() {
             <div className={`max-w-[85%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
               msg.role === 'user'
                 ? 'bg-primary-600 text-on-primary rounded-br-md font-medium'
-                : 'bg-dark-surface text-[#c8c8c8] border border-dark-border rounded-bl-md'
+                : 'bg-dark-surface text-hx-c8c8c8 border border-dark-border rounded-bl-md'
             }`}>
               {msg.role === 'assistant' ? (
                 <div className="group/msg relative">
@@ -1262,7 +1262,7 @@ export default function AiChat() {
               disabled={loading}
               className={`p-2.5 rounded-xl transition-all flex-shrink-0 ${
                 listening
-                  ? 'bg-red-500 text-white shadow-md shadow-red-500/30 animate-pulse'
+                  ? 'bg-red-500 text-on-fill shadow-md shadow-red-500/30 animate-pulse'
                   : 'bg-dark-surface border border-dark-border text-t-muted hover:text-primary-400 hover:border-primary-500/30'
               } disabled:opacity-40`}
               title={listening ? 'Stop recording' : 'Voice input'}
@@ -1315,7 +1315,7 @@ export default function AiChat() {
     {/* Voice Call Overlay — full-viewport, mic-reactive waveform, live
       * transcript stream, tool-call chips, status pill. */}
     {voiceCallActive && (
-      <div className="fixed inset-0 z-[60] bg-gradient-to-br from-[#0a0a0c] via-[#0c0c12] to-[#080810] backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
+      <div className="fixed inset-0 z-[60] bg-gradient-to-br from-hx-0a0a0c via-hx-0c0c12 to-hx-080810 backdrop-blur-md flex flex-col items-center justify-between py-10 px-6">
         {/* Top: live status pill + tool-call chips */}
         <div className="w-full max-w-2xl flex flex-col items-center gap-3">
           <div className="inline-flex items-center gap-2 bg-primary-500/10 border border-primary-500/30 rounded-full px-4 py-1.5 text-primary-300 text-xs font-medium uppercase tracking-wider">
@@ -1420,7 +1420,7 @@ export default function AiChat() {
         {/* Bottom: end-call button */}
         <button
           onClick={endVoiceCall}
-          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-7 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30"
+          className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-on-fill px-7 py-3 rounded-full font-semibold text-sm transition-colors shadow-lg shadow-red-500/30"
         >
           <PhoneOff size={18} /> End Call
         </button>
@@ -1456,7 +1456,7 @@ export default function AiChat() {
           <div className="px-5 py-3 bg-dark-bg/40 border-t border-dark-border flex items-center justify-end gap-2">
             <button
               onClick={() => pendingConfirm.resolve(false)}
-              className="px-4 py-2 rounded-lg bg-dark-surface border border-dark-border hover:border-red-400/50 text-[#c8c8c8] hover:text-red-300 text-sm font-medium transition-colors"
+              className="px-4 py-2 rounded-lg bg-dark-surface border border-dark-border hover:border-red-400/50 text-hx-c8c8c8 hover:text-red-300 text-sm font-medium transition-colors"
             >
               Cancel
             </button>

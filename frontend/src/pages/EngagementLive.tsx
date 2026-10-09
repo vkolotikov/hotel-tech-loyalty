@@ -120,7 +120,7 @@ export function EngagementLive() {
   const k = kpis?.data
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-[#070b14] via-[#0a0d14] to-[#0a0d1f] text-white overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-gradient-to-br from-hx-070b14 via-hx-0a0d14 to-hx-0a0d1f text-white overflow-hidden flex flex-col">
       {/* Header */}
       <header className="flex items-center justify-between px-8 py-6 border-b border-white/5">
         <div className="flex items-center gap-3">

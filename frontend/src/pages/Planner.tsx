@@ -1378,7 +1378,7 @@ function DayTimeline({ tasks, isToday, currentDate, onTaskClick, onCreateAtTime,
             <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: nowTop }}>
               <div className="flex items-center">
                 <span
-                  className="text-right text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded shadow-[0_2px_6px_rgba(239,68,68,0.5)] mr-1"
+                  className="text-right text-[10px] font-bold text-on-fill bg-red-500 px-1.5 py-0.5 rounded shadow-[0_2px_6px_rgba(239,68,68,0.5)] mr-1"
                   style={{ width: TIME_LABEL_WIDTH - 4 }}>
                   {to12h(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`)}
                 </span>
@@ -3308,7 +3308,7 @@ export function Planner() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setCopyTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
-                <button type="submit" disabled={copyMutation.isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{copyMutation.isPending ? 'Duplicating...' : 'Duplicate'}</button>
+                <button type="submit" disabled={copyMutation.isPending} className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{copyMutation.isPending ? 'Duplicating...' : 'Duplicate'}</button>
               </div>
             </form>
           </div>
@@ -3384,7 +3384,7 @@ export function Planner() {
               </button>
               {autoPlan.proposals.length > 0 && (
                 <button onClick={applyAutoPlan} disabled={autoPlanApplying}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-purple-500 hover:bg-purple-400 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">
                   <Sparkles size={13} />
                   {autoPlanApplying ? 'Applying…' : `Apply ${autoPlan.proposals.length} task${autoPlan.proposals.length === 1 ? '' : 's'}`}
                 </button>
@@ -3405,7 +3405,7 @@ export function Planner() {
               </div>
               <div className="flex justify-end gap-3 pt-2">
                 <button type="button" onClick={() => setMoveTarget(null)} className="px-4 py-2.5 text-sm text-gray-400 hover:text-white rounded-lg hover:bg-dark-surface2 transition-colors">{t('actions.cancel', 'Cancel')}</button>
-                <button type="submit" disabled={moveMutation.isPending} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{moveMutation.isPending ? 'Moving...' : 'Move'}</button>
+                <button type="submit" disabled={moveMutation.isPending} className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-on-fill font-semibold text-sm rounded-lg disabled:opacity-50 transition-colors">{moveMutation.isPending ? 'Moving...' : 'Move'}</button>
               </div>
             </form>
           </div>

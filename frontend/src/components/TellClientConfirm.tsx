@@ -17,7 +17,7 @@ export function TellClientConfirm({ title, email, many, defaultTell, busy, onCon
         <TellClientCheckbox email={email} many={many} checked={tell} onChange={setTell} />
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onClose} className="rounded-lg px-3 py-2 text-sm text-gray-400 hover:text-white">{t('tell_client.back', 'Back')}</button>
-          <button type="button" disabled={busy} onClick={() => onConfirm(many ? tell : notifyFor(email, tell))} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">{t('tell_client.go', 'Yes')}</button>
+          <button type="button" disabled={busy} onClick={() => onConfirm(many ? tell : notifyFor(email, tell))} className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-on-fill disabled:opacity-50">{t('tell_client.go', 'Yes')}</button>
         </div>
       </div>
     </div>
