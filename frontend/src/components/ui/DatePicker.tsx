@@ -118,14 +118,14 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
       <button
         type="button"
         onClick={() => { if (!open) calcPosition(); setOpen(!open) }}
-        className="w-full flex items-center gap-2 bg-panel border border-[#2e2e50] rounded-lg px-3 py-2 text-sm text-left hover:border-[#6366f1]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366f1]/40"
+        className="w-full flex items-center gap-2 bg-panel border border-dark-border rounded-lg px-3 py-2 text-sm text-left hover:border-[#6366f1]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[#6366f1]/40"
       >
         <Calendar size={15} className="text-[#6366f1] flex-shrink-0" />
-        <span className={displayValue ? 'text-white flex-1' : 'text-[#4b5563] flex-1'}>{displayValue || placeholder}</span>
+        <span className={displayValue ? 'text-white flex-1' : 'text-t-muted flex-1'}>{displayValue || placeholder}</span>
         {value && (
           <span
             onClick={(e) => { e.stopPropagation(); onChange(''); setOpen(false) }}
-            className="text-[#4b5563] hover:text-[#ef4444] transition-colors text-xs cursor-pointer"
+            className="text-t-muted hover:text-[#ef4444] transition-colors text-xs cursor-pointer"
           >
             &times;
           </span>
@@ -133,7 +133,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
       </button>
 
       {open && (
-        <div className={`absolute z-50 w-[280px] bg-[#1a1a2e] border border-[#2e2e50] rounded-xl shadow-2xl shadow-black/50 p-3 ${alignRight ? 'right-0' : 'left-0'} ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
+        <div className={`absolute z-50 w-[280px] bg-dark-surface border border-dark-border rounded-xl shadow-2xl shadow-black/50 p-3 ${alignRight ? 'right-0' : 'left-0'} ${openUpward ? 'bottom-full mb-1' : 'top-full mt-1'}`}>
           <div className="flex items-center justify-between mb-3">
             <button type="button" onClick={prevMonth} className="p-1.5 rounded-lg hover:bg-[#222240] text-[#9ca3af] hover:text-white transition-colors">
               <ChevronLeft size={16} />
@@ -148,7 +148,7 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
 
           <div className="grid grid-cols-7 mb-1">
             {DAYS.map(d => (
-              <div key={d} className="text-center text-[10px] font-semibold text-[#4b5563] py-1">{d}</div>
+              <div key={d} className="text-center text-[10px] font-semibold text-t-muted py-1">{d}</div>
             ))}
           </div>
 
@@ -171,11 +171,11 @@ export function DatePicker({ value, onChange, placeholder = 'Select date', class
             ))}
           </div>
 
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-[#2e2e50]">
+          <div className="flex items-center justify-between mt-2 pt-2 border-t border-dark-border">
             <button
               type="button"
               onClick={() => { onChange(''); setOpen(false) }}
-              className="text-xs text-[#4b5563] hover:text-white transition-colors px-2 py-1"
+              className="text-xs text-t-muted hover:text-white transition-colors px-2 py-1"
             >
               Clear
             </button>

@@ -74,7 +74,7 @@ export function ReviewDetail() {
         </div>
 
         {s.comment && (
-          <div className="bg-[#151515] rounded-lg p-4 border-l-4 border-primary-500 text-[#e5e5e5] italic">
+          <div className="bg-dark-surface rounded-lg p-4 border-l-4 border-primary-500 text-[#e5e5e5] italic">
             "{s.comment}"
           </div>
         )}

@@ -149,7 +149,7 @@ export function AiInsights() {
               <Sparkles size={28} className="opacity-30" />
             </div>
             <p className="text-sm font-medium">No report generated yet</p>
-            <p className="text-xs text-[#4a4a4a] mt-1">Click "Generate Report" to get AI-powered weekly analysis</p>
+            <p className="text-xs text-t-muted mt-1">Click "Generate Report" to get AI-powered weekly analysis</p>
           </div>
         )}
       </Card>
@@ -268,7 +268,7 @@ export function AiInsights() {
                 <div className="bg-dark-surface2/50 border border-dark-border rounded-lg p-3">
                   <p className="text-sm text-[#c8c8c8] italic leading-relaxed">"{memberInsights.upsell_suggestion}"</p>
                 </div>
-                <p className="text-[10px] text-[#4a4a4a] mt-2">Ready-to-use script for front desk staff</p>
+                <p className="text-[10px] text-t-muted mt-2">Ready-to-use script for front desk staff</p>
               </div>
             </div>
           </div>

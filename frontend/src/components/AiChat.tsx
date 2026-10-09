@@ -958,7 +958,7 @@ export default function AiChat() {
           bottom: launcherPos.bottom + autoShiftPx,
           touchAction: 'none', // prevent page scroll while dragging
         }}
-        className="group fixed z-50 flex items-center gap-2 select-none cursor-grab active:cursor-grabbing"
+        className="group fixed z-40 flex items-center gap-2 select-none cursor-grab active:cursor-grabbing"
         title="AI Assistant — click to start · drag to reposition"
         aria-label="Open AI Assistant"
       >
@@ -1013,7 +1013,7 @@ export default function AiChat() {
                 </span>
               )}
             </div>
-            <div className="text-[11px] text-[#7e7e80] truncate">
+            <div className="text-[11px] text-t-muted truncate">
               CRM · Loyalty · Planner · Voice
             </div>
           </div>
@@ -1036,7 +1036,7 @@ export default function AiChat() {
           <div className="relative" data-ai-menu>
             <button
               onClick={() => setMenuOpen(o => !o)}
-              className="p-1.5 rounded-lg hover:bg-dark-surface text-[#7e7e80] hover:text-white transition-colors"
+              className="p-1.5 rounded-lg hover:bg-dark-surface text-t-muted hover:text-white transition-colors"
               title="More options"
               aria-haspopup="true"
               aria-expanded={menuOpen}
@@ -1054,7 +1054,7 @@ export default function AiChat() {
                       {ttsEnabled ? <Volume2 size={13} className="text-primary-400" /> : <VolumeX size={13} />}
                       Read responses aloud
                     </span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ttsEnabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-dark-bg text-[#7e7e80] border border-dark-border'}`}>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${ttsEnabled ? 'bg-emerald-500/15 text-emerald-400' : 'bg-dark-bg text-t-muted border border-dark-border'}`}>
                       {ttsEnabled ? 'ON' : 'OFF'}
                     </span>
                   </button>
@@ -1090,7 +1090,7 @@ export default function AiChat() {
           </div>
           <button
             onClick={() => { stopSpeaking(); setOpen(false) }}
-            className="p-1.5 rounded-lg hover:bg-dark-surface text-[#7e7e80] hover:text-white transition-colors"
+            className="p-1.5 rounded-lg hover:bg-dark-surface text-t-muted hover:text-white transition-colors"
             title="Close"
           >
             <X size={16} />
@@ -1155,7 +1155,7 @@ export default function AiChat() {
                       <div className={`w-5 h-5 rounded-md ${group.bg} flex items-center justify-center`}>
                         <Icon size={11} className={group.accent} strokeWidth={2.5} />
                       </div>
-                      <div className="text-[10.5px] font-semibold text-[#7e7e80] uppercase tracking-wider">
+                      <div className="text-[10.5px] font-semibold text-t-muted uppercase tracking-wider">
                         {group.label}
                       </div>
                     </div>
@@ -1294,7 +1294,7 @@ export default function AiChat() {
           </button>
         </div>
         <div className="flex items-center justify-between mt-1.5 px-1">
-          <span className="text-[10px] text-[#4a4a4a]">
+          <span className="text-[10px] text-t-muted">
             {listening ? (
               <span className="text-red-400 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 bg-red-400 rounded-full animate-pulse" />
@@ -1302,7 +1302,7 @@ export default function AiChat() {
               </span>
             ) : 'Shift+Enter for new line'}
           </span>
-          <span className="text-[10px] text-[#4a4a4a]">{messages.length} messages</span>
+          <span className="text-[10px] text-t-muted">{messages.length} messages</span>
         </div>
       </div>
     </div>

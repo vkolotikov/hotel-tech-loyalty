@@ -141,7 +141,7 @@ export function GuestDetail() {
       </button>
 
       {/* Header */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-6">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-6">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center">
@@ -231,7 +231,7 @@ export function GuestDetail() {
 
 function StatCard({ icon, label, value }: { icon: React.ReactNode; label: string; value: string | number }) {
   return (
-    <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
+    <div className="bg-dark-surface border border-white/10 rounded-xl p-4">
       <div className="flex items-center gap-2 text-gray-400 mb-2">
         {icon}
         <span className="text-xs">{label}</span>
@@ -256,7 +256,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
   return (
     <div className="grid md:grid-cols-2 gap-6">
       {editing && (
-        <div className="md:col-span-2 bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+        <div className="md:col-span-2 bg-dark-surface border border-white/10 rounded-xl p-5">
           <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
             <User size={16} /> {t('guest_detail.sections.identity', 'Identity')}
           </h3>
@@ -272,7 +272,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
       )}
 
       {/* Contact Info */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Mail size={16} /> {t('guest_detail.sections.contact', 'Contact Information')}
         </h3>
@@ -296,7 +296,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
       </div>
 
       {/* Preferences */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Star size={16} /> {t('guest_detail.sections.preferences', 'Preferences')}
         </h3>
@@ -320,7 +320,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
       </div>
 
       {/* Tags */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <Tag size={16} /> {t('guest_detail.sections.tags', 'Tags')}
         </h3>
@@ -336,7 +336,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
       </div>
 
       {/* Notes */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-5">
         <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
           <StickyNote size={16} /> {t('guest_detail.sections.notes', 'Notes')}
         </h3>
@@ -351,7 +351,7 @@ function OverviewTab({ guest, editing, form, setForm, saving, onSave }: {
 
       {/* Custom fields — admin-defined per industry. Renders nothing
           if no custom fields are configured for guests. */}
-      <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-5 md:col-span-2">
+      <div className="bg-dark-surface border border-white/10 rounded-xl p-5 md:col-span-2">
         {editing ? (
           <CustomFieldsForm
             entity="guest"
@@ -414,7 +414,7 @@ function InquiriesTab({ data }: { data: any }) {
           : item.status === 'pending' ? t('guest_detail.inquiry_status.pending', 'pending')
           : (item.status || t('guest_detail.inquiry_status.open', 'open'));
         return (
-        <div key={i} className="bg-[#1a1a2e] border border-white/10 rounded-xl p-4">
+        <div key={i} className="bg-dark-surface border border-white/10 rounded-xl p-4">
           <div className="flex justify-between items-start mb-2">
             <h4 className="text-white font-medium">{item.subject || t('guest_detail.inquiry_default', { n: i + 1, defaultValue: 'Inquiry #{{n}}' })}</h4>
             <span className={'px-2 py-0.5 rounded text-xs ' +
@@ -486,7 +486,7 @@ function ReservationsTab({ data }: { data: any }) {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div className="bg-[#1a1a2e] border border-white/10 rounded-xl p-12 text-center text-gray-500">
+    <div className="bg-dark-surface border border-white/10 rounded-xl p-12 text-center text-gray-500">
       {text}
     </div>
   );

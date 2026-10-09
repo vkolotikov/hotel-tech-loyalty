@@ -110,7 +110,7 @@ export function MembersOnboarding({ onComplete }: Props) {
   const Icon = picked ? (ICON_MAP[picked.icon] ?? Star) : Star
 
   return (
-    <div className="bg-dark-bg min-h-[calc(100vh-80px)] flex flex-col items-center px-4 py-8">
+    <div className="min-h-[calc(100vh-80px)] flex flex-col items-center px-4 py-8">
       <div className="w-full max-w-3xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">

@@ -355,7 +355,7 @@ export function ReviewFormBuilder() {
 
       {/* Public URL bar */}
       <div className="flex items-center gap-2 mb-6 bg-dark-surface border border-dark-border rounded-xl px-4 py-3">
-        <Link2 size={14} className="text-[#666] shrink-0" />
+        <Link2 size={14} className="text-t-muted shrink-0" />
         <input
           readOnly
           value={publicUrl}
@@ -484,7 +484,7 @@ export function ReviewFormBuilder() {
               </div>
             </div>
           </div>
-          <div className="border-t border-dark-border bg-[#0f0f0f] px-5 py-3 flex justify-end">
+          <div className="border-t border-dark-border bg-dark-bg px-5 py-3 flex justify-end">
             <button
               onClick={() => saveFormMut.mutate()}
               disabled={saveFormMut.isPending}
@@ -598,7 +598,7 @@ export function ReviewFormBuilder() {
                       </div>
                       {!isExpanded && (
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-[10px] text-[#666]">{meta.label}</span>
+                          <span className="text-[10px] text-t-muted">{meta.label}</span>
                           {q.required && <span className="text-[10px] text-amber-400/70 font-medium">Required</span>}
                           {(() => {
                             const kids = questions.filter(x => x.condition_index === i).length
@@ -959,7 +959,7 @@ function ConditionEditor({ q, index, priorQuestions, onChange }: {
   return (
     <div className={`rounded-xl border transition-colors ${hasCondition ? 'border-purple-500/25 bg-purple-500/[0.04]' : 'border-dashed border-dark-border'} p-3.5`}>
       <div className="flex items-center gap-2 mb-0">
-        <GitBranch size={13} className={hasCondition ? 'text-purple-400' : 'text-[#666]'} />
+        <GitBranch size={13} className={hasCondition ? 'text-purple-400' : 'text-t-muted'} />
         <span className="text-xs font-semibold text-[#ccc]">Show this question</span>
         <div className="flex gap-0.5 bg-[#141414] border border-dark-border p-0.5 rounded-lg ml-1">
           <button
@@ -1003,7 +1003,7 @@ function ConditionEditor({ q, index, priorQuestions, onChange }: {
 
           <ConditionValuePicker parent={parent} q={q} onChange={onChange} />
 
-          <p className="text-[10px] text-[#666] leading-relaxed">
+          <p className="text-[10px] text-t-muted leading-relaxed">
             The guest only sees this question when the rule matches — otherwise the survey skips straight past it.
           </p>
         </div>
@@ -1086,7 +1086,7 @@ function ConditionValuePicker({ parent, q, onChange }: { parent: Question; q: Qu
             {c}
           </button>
         ))}
-        {isMulti && <span className="text-[10px] text-[#666] self-center ml-1">tap all that apply</span>}
+        {isMulti && <span className="text-[10px] text-t-muted self-center ml-1">tap all that apply</span>}
       </div>
     )
   }
@@ -1136,7 +1136,7 @@ function KindExample({ kind }: { kind: Kind }) {
 
 function QuestionPreview({ q }: { q: Question }) {
   return (
-    <div className="rounded-lg bg-[#0f0f0f] border border-white/[0.04] p-3">
+    <div className="rounded-lg bg-well border border-white/[0.04] p-3">
       <div className="text-[10px] uppercase tracking-wider text-[#555] font-semibold mb-2 flex items-center gap-1">
         <Eye size={10} /> Preview
       </div>
@@ -1196,7 +1196,7 @@ function QuestionPreview({ q }: { q: Question }) {
           {(q.options?.emojis ?? []).map((e, i) => (
             <div key={i} className="flex flex-col items-center gap-0.5">
               <span className={`text-2xl ${i === 3 ? 'scale-125' : 'opacity-60'}`}>{e}</span>
-              <span className="text-[10px] text-[#666]">{(q.options?.choices ?? [])[i] ?? ''}</span>
+              <span className="text-[10px] text-t-muted">{(q.options?.choices ?? [])[i] ?? ''}</span>
             </div>
           ))}
         </div>

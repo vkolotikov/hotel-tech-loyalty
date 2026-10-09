@@ -307,7 +307,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
       <aside
         role="dialog"
         aria-modal="true"
-        className="fixed right-0 top-0 h-screen w-full max-w-2xl bg-[#0f0f0f] border-l border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden">
+        className="fixed right-0 top-0 h-screen w-full max-w-2xl bg-dark-bg border-l border-white/10 shadow-2xl z-50 flex flex-col overflow-hidden">
         {/* Header — gradient hero with primary CTA echo */}
         <div className="relative px-5 pt-5 pb-4 border-b border-white/10"
           style={{ background: 'linear-gradient(180deg, rgba(201,168,76,0.10) 0%, rgba(201,168,76,0.02) 100%)' }}
@@ -396,7 +396,7 @@ export function AddInquiryDrawer({ open, onClose, onCreated, properties, setting
                       <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-t-secondary animate-spin" />
                     )}
                     {searchOpen && search.length >= 2 && (
-                      <div className="absolute z-10 mt-1 left-0 right-0 bg-[#171717] border border-white/10 rounded-lg shadow-2xl max-h-72 overflow-y-auto">
+                      <div className="absolute z-10 mt-1 left-0 right-0 bg-dark-surface border border-white/10 rounded-lg shadow-2xl max-h-72 overflow-y-auto">
                         {searchResults.length === 0 && !searching && (
                           <div className="px-3 py-4 text-center text-xs text-t-secondary">
                             No matches.

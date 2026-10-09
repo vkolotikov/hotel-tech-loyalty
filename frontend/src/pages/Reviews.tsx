@@ -238,7 +238,7 @@ function SubmissionsTab() {
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-[#151515] text-t-soft text-xs uppercase tracking-wider">
+          <thead className="bg-dark-surface text-t-soft text-xs uppercase tracking-wider">
             <tr>
               <th className="text-left p-3">Who</th>
               <th className="text-left p-3">Form</th>
@@ -251,20 +251,20 @@ function SubmissionsTab() {
           </thead>
           <tbody>
             {subs.length === 0 && (
-              <tr><td colSpan={7} className="p-10 text-center text-[#666]">No submissions yet.</td></tr>
+              <tr><td colSpan={7} className="p-10 text-center text-t-muted">No submissions yet.</td></tr>
             )}
             {subs.map(s => (
-              <tr key={s.id} onClick={() => navigate(`/reviews/submissions/${s.id}`)} className="border-t border-dark-border hover:bg-[#151515] cursor-pointer">
+              <tr key={s.id} onClick={() => navigate(`/reviews/submissions/${s.id}`)} className="border-t border-dark-border hover:bg-dark-surface cursor-pointer">
                 <td className="p-3 text-white">{s.member?.user.name ?? s.guest?.full_name ?? s.anonymous_name ?? 'Anonymous'}</td>
                 <td className="p-3 text-t-soft text-xs">{s.form.name}</td>
                 <td className="p-3">
-                  {s.overall_rating ? <StarDisplay value={s.overall_rating} /> : s.nps_score !== null ? <span className="text-white">NPS {s.nps_score}</span> : <span className="text-[#666]">—</span>}
+                  {s.overall_rating ? <StarDisplay value={s.overall_rating} /> : s.nps_score !== null ? <span className="text-white">NPS {s.nps_score}</span> : <span className="text-t-muted">—</span>}
                 </td>
                 <td className="p-3 text-t-soft text-xs max-w-md truncate">{s.comment ?? '—'}</td>
                 <td className="p-3 text-xs">
                   {s.redirected_externally ? (
                     <span className="inline-flex items-center gap-1 text-emerald-300"><ExternalLink size={12} /> {PLATFORM_LABELS[s.external_platform ?? ''] ?? 'External'}</span>
-                  ) : <span className="text-[#666]">—</span>}
+                  ) : <span className="text-t-muted">—</span>}
                 </td>
                 <td className="p-3 text-t-soft text-xs">{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : '—'}</td>
                 <td className="p-3" onClick={e => e.stopPropagation()}>
@@ -363,7 +363,7 @@ function FormsTab() {
               <div className="text-xs text-t-soft mt-1">
                 {f.type === 'custom' ? `${f.questions_count ?? 0} questions` : 'Single rating'} · {f.submissions_count ?? 0} submissions
               </div>
-              <div className="flex items-center gap-2 mt-2 text-xs text-[#666]">
+              <div className="flex items-center gap-2 mt-2 text-xs text-t-muted">
                 <LinkIcon size={12} />
                 <span className="truncate">{publicUrl(f)}</span>
                 <button
@@ -394,12 +394,12 @@ function FormsTab() {
           </div>
         ))}
         {forms.length === 0 && (
-          <div className="bg-dark-surface border border-dark-border rounded-xl p-10 text-center text-[#666]">No forms yet.</div>
+          <div className="bg-dark-surface border border-dark-border rounded-xl p-10 text-center text-t-muted">No forms yet.</div>
         )}
       </div>
 
       {defaultForm && (
-        <div className="mt-4 text-xs text-[#666]">
+        <div className="mt-4 text-xs text-t-muted">
           The default form "<span className="text-t-soft">{defaultForm.name}</span>" is used for automated post-stay invitations.
         </div>
       )}
@@ -785,7 +785,7 @@ function InvitationsTab() {
 
       <div className="bg-dark-surface border border-dark-border rounded-xl overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-[#151515] text-t-soft">
+          <thead className="bg-dark-surface text-t-soft">
             <tr>
               <th className="text-left px-4 py-3 font-semibold">Recipient</th>
               <th className="text-left px-4 py-3 font-semibold">Form</th>
@@ -797,7 +797,7 @@ function InvitationsTab() {
           </thead>
           <tbody>
             {invitations.length === 0 && (
-              <tr><td colSpan={6} className="text-center py-10 text-[#666]">No invitations yet.</td></tr>
+              <tr><td colSpan={6} className="text-center py-10 text-t-muted">No invitations yet.</td></tr>
             )}
             {invitations.map(inv => {
               const name = inv.member?.user.name ?? inv.guest?.full_name ?? '—'
@@ -821,7 +821,7 @@ function InvitationsTab() {
                         {inv.submission.overall_rating ? `${inv.submission.overall_rating}★` : 'View'}
                       </button>
                     ) : (
-                      <span className="text-[#666]">—</span>
+                      <span className="text-t-muted">—</span>
                     )}
                   </td>
                 </tr>

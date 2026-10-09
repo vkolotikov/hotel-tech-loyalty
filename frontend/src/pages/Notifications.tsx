@@ -778,7 +778,7 @@ function Step4Review({ form, setForm, audience, selectedTemplate, onTestSend, te
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] text-[#999] uppercase tracking-wide font-semibold">{t('notifications.wizard.step4.your_app', 'Your App')}</p>
-                    <p className="text-[10px] text-[#666]">{t('notifications.wizard.step4.now', 'now')}</p>
+                    <p className="text-[10px] text-t-muted">{t('notifications.wizard.step4.now', 'now')}</p>
                   </div>
                   <p className="text-sm font-bold text-white mt-0.5 truncate">{form.title || t('notifications.wizard.step4.push_placeholder_title', 'Push title')}</p>
                   <p className="text-xs text-[#ccc] mt-0.5 line-clamp-3">{form.body || t('notifications.wizard.step4.push_placeholder_body', 'Push message body preview')}</p>

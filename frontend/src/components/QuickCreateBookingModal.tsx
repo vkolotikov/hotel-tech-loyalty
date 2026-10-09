@@ -82,7 +82,7 @@ export function QuickCreateBookingModal({ initialDate, initialApartmentId, initi
     })
   }
 
-  const inputCls = 'w-full bg-[#0f1c18] border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const inputCls = 'w-full bg-dark-bg border border-white/[0.08] rounded-xl text-sm text-white placeholder-gray-600 px-3 py-2 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>

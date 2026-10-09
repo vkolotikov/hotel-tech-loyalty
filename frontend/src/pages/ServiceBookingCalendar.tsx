@@ -138,7 +138,7 @@ export default function ServiceBookingCalendar() {
     return { bookings, revenue }
   }, [filtered])
 
-  const selectClass = 'bg-[#0f1c18] border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500/40'
+  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary-500/40'
 
   const selectedBookings = selectedDay ? (byDay.get(selectedDay) || []) : []
 

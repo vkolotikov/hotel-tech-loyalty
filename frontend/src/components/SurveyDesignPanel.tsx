@@ -140,7 +140,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
               </button>
             ))}
           </div>
-          <p className="text-[11px] text-[#666] mt-3">
+          <p className="text-[11px] text-t-muted mt-3">
             Kiosk devices always render full-screen mode regardless of this setting.
           </p>
         </Section>
@@ -209,7 +209,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
               value={kiosk.idle_reset_seconds ?? 60}
               onChange={v => setTheme({ kiosk: { ...kiosk, idle_reset_seconds: v } })} />
           </div>
-          <p className="text-[11px] text-[#666] mt-2">
+          <p className="text-[11px] text-t-muted mt-2">
             Kiosk only: after the thank-you screen (or when a guest walks away mid-survey), the kiosk resets for the next guest.
           </p>
         </Section>
@@ -226,7 +226,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
                 onChange={v => setConfig({ ...config, auto_send_delay_days: v })} />
             </div>
           )}
-          <p className="text-[11px] text-[#666] mt-3 leading-relaxed">
+          <p className="text-[11px] text-t-muted mt-3 leading-relaxed">
             Runs daily at 09:00 — invites every booking-engine guest (with an email) who checked out that many
             days earlier. Each booking is invited once. Enable this on ONE survey only, or guests get multiple emails.
           </p>
@@ -256,7 +256,7 @@ export function SurveyDesignPanel({ config, setConfig, onSave, saving, previewUr
               try { frameRef.current?.contentWindow?.postMessage({ source: 'hotel-tech-review-admin', config }, '*') } catch {}
             }} />
         </div>
-        <p className="text-[10px] text-[#666] mt-2 leading-relaxed">
+        <p className="text-[10px] text-t-muted mt-2 leading-relaxed">
           Updates live as you tweak the design. Question changes need a save + Reload. Preview loads don't count in analytics.
         </p>
       </div>
@@ -301,7 +301,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
     <div className="bg-dark-surface border border-dark-border rounded-xl p-4">
       <div className="text-t-soft text-[10px] uppercase tracking-wider mb-1.5">{label}</div>
       <div className="text-xl font-bold text-white">{value}</div>
-      {sub && <div className="text-[10px] text-[#666] mt-0.5">{sub}</div>}
+      {sub && <div className="text-[10px] text-t-muted mt-0.5">{sub}</div>}
     </div>
   )
 
@@ -340,7 +340,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
             ))}
           </div>
         )}
-        <div className="flex gap-4 mt-2 text-[10px] text-[#666]">
+        <div className="flex gap-4 mt-2 text-[10px] text-t-muted">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary-500/30 inline-block" /> Views</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-primary-400 inline-block" /> Responses</span>
         </div>
@@ -377,7 +377,7 @@ export function SurveyAnalyticsPanel({ formId }: { formId: number }) {
           <div key={q.id} className="bg-dark-surface border border-dark-border rounded-xl p-4">
             <div className="flex items-center justify-between mb-3 gap-3">
               <div className="text-sm font-semibold text-white truncate">{q.label}</div>
-              <div className="text-[10px] text-[#666] whitespace-nowrap">
+              <div className="text-[10px] text-t-muted whitespace-nowrap">
                 {q.answered} answered{q.average != null && <span className="ml-2 text-primary-300 font-bold">avg {q.average}</span>}
               </div>
             </div>
@@ -477,7 +477,7 @@ function WidgetSnippet({ embed }: { embed: { formId: number; embedKey: string; o
           </button>
         </div>
         <pre className="bg-well border border-dark-border rounded-lg p-3 text-[10.5px] text-[#9ae6b4] overflow-x-auto whitespace-pre-wrap break-all">{snippet}</pre>
-        <p className="text-[10px] text-[#666] mt-2 leading-relaxed">
+        <p className="text-[10px] text-t-muted mt-2 leading-relaxed">
           Auto-open modes remember each visitor: after they submit, the survey stays away for 90 days;
           after they dismiss it, 7 days. The floating button is always available until they submit.
         </p>

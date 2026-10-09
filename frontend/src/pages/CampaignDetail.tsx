@@ -137,7 +137,7 @@ export function CampaignDetail() {
             ))}
           </div>
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-t-muted" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
@@ -149,7 +149,7 @@ export function CampaignDetail() {
 
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-[#151515] text-t-soft text-xs uppercase tracking-wider">
+            <thead className="bg-dark-surface text-t-soft text-xs uppercase tracking-wider">
               <tr>
                 <th className="text-left p-3 font-semibold">Recipient</th>
                 <th className="text-left p-3 font-semibold">Channel</th>
@@ -160,10 +160,10 @@ export function CampaignDetail() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={5} className="p-8 text-center text-[#666]">No recipients match.</td></tr>
+                <tr><td colSpan={5} className="p-8 text-center text-t-muted">No recipients match.</td></tr>
               )}
               {filtered.map(r => (
-                <tr key={r.id} className="border-t border-dark-border hover:bg-[#151515]">
+                <tr key={r.id} className="border-t border-dark-border hover:bg-dark-surface">
                   <td className="p-3">
                     <div className="text-white font-medium">{r.member?.name ?? '—'}</div>
                     <div className="text-t-soft text-xs">{r.email ?? r.member?.email ?? '—'}{r.member?.tier ? ` · ${r.member.tier}` : ''}</div>
@@ -188,7 +188,7 @@ export function CampaignDetail() {
                         {r.open_count > 1 && <div className="text-t-soft">{r.open_count}× opens</div>}
                       </div>
                     ) : r.channel === 'push' ? (
-                      <span className="text-[#666]">—</span>
+                      <span className="text-t-muted">—</span>
                     ) : (
                       <span className="text-t-soft">Not yet</span>
                     )}

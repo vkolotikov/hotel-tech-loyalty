@@ -324,7 +324,7 @@ export function Rewards() {
                 </div>
               ) : rewards.map(r => (
                 <div key={r.id} className={`bg-panel-dim border rounded-xl overflow-hidden ${r.is_active ? 'border-dark-border' : 'border-dark-border opacity-60'}`}>
-                  <div className="aspect-[16/10] bg-[#0f0f0f] flex items-center justify-center">
+                  <div className="aspect-[16/10] bg-well flex items-center justify-center">
                     {r.image_url ? (
                       <img src={resolveImage(r.image_url)!} alt={r.name} className="w-full h-full object-cover" />
                     ) : (

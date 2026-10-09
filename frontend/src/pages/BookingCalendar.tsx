@@ -212,7 +212,7 @@ export function BookingCalendar() {
     return s
   }
 
-  const selectClass = 'bg-[#0f1c18] border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-xs text-white px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="space-y-5">

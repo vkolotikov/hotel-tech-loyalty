@@ -12,7 +12,7 @@ export function TellClientConfirm({ title, email, many, defaultTell, busy, onCon
   const [tell, setTell] = useState(defaultTell)
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label={title}>
-      <div className="w-full max-w-sm space-y-4 rounded-xl border border-white/[0.08] bg-[#0a1210] p-5">
+      <div className="w-full max-w-sm space-y-4 rounded-xl border border-white/[0.08] bg-dark-surface p-5">
         <p className="text-base font-semibold text-white">{title}</p>
         <TellClientCheckbox email={email} many={many} checked={tell} onChange={setTell} />
         <div className="flex justify-end gap-2">

@@ -8,6 +8,7 @@ import { StylePicker } from '../components/settings/StylePicker'
 import { STYLE_NAMES, styleSettings, withoutThemeMeta } from '../theme/themeSettings'
 import { useVocabulary } from '../lib/vocabulary'
 import { bookingTabCopyFor, useIndustryHiddenSettingsTabs } from '../lib/industryGating'
+import { activePresetName } from '../lib/activePreset'
 import { dropSaved } from '../lib/settingsEdits'
 import {
   Save, RefreshCw, RotateCcw, Upload, ExternalLink, Palette, Settings2,
@@ -1262,37 +1263,20 @@ export function Settings() {
   }, [undoSnapshot?.expiresAt])
 
   /**
-   * Detect which preset (if any) matches the current colors.
-   *
-   * Resolution order:
-   *   1. Server-stored `theme_preset_name` setting (added in 2026-06)
-   *      -- authoritative across devices.
-   *   2. Exact color match -- catches legacy orgs that picked a preset
-   *      before the name was being persisted.
-   *   3. localStorage cached name -- bridge between an in-flight save
-   *      and the server fetch landing, so the "X active" chip never
-   *      blanks out mid-save.
+   * Which preset (if any) the current colours are, for the "X active" chip.
+   * The colours compare as the theme paints them (a blank key takes its
+   * default); the server-stored `theme_preset_name`, then the browser's
+   * cached name, only pick between presets whose colours match, so a palette
+   * edited by hand shows no preset and a stale cached name never wins.
    */
-  const detectActivePreset = (): string | null => {
-    // 1. Server-stored name wins
-    const storedName = getVal('theme_preset_name')
-    if (storedName && PRESETS[storedName]) return storedName
-
-    // 2. Fall back to exact color match
-    const current: Record<string, string> = {}
-    for (const k of COLOR_KEYS) current[k] = (getVal(k) || '').toLowerCase()
-    for (const [name, p] of Object.entries(PRESETS)) {
-      if (COLOR_KEYS.every(k => current[k] === p.colors[k]?.toLowerCase())) return name
-    }
-
-    // 3. localStorage bridge — only honour if the cached name is still
-    // in the PRESETS catalogue (presets removed in a future release
-    // shouldn't show ghost "active" chips)
-    const cached = readCachedPreset()
-    if (cached && PRESETS[cached]) return cached
-
-    return null
-  }
+  const detectActivePreset = (): string | null =>
+    activePresetName(
+      Object.fromEntries(COLOR_KEYS.map(k => [k, getVal(k)])),
+      PRESETS,
+      COLOR_KEYS,
+      getVal('theme_preset_name') || null,
+      readCachedPreset(),
+    )
 
   const toggleReveal = (key: string) => {
     setRevealedSecrets(prev => {
@@ -1358,7 +1342,7 @@ export function Settings() {
 
   const cardClass = 'rounded-2xl border border-white/[0.06] p-6'
   const cardStyle = { background: 'var(--legacy-card-gradient)', boxShadow: '0 16px 30px rgba(0,0,0,0.18)' }
-  const inputClass = 'w-full bg-[#0f1c18] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const inputClass = 'w-full bg-dark-bg border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
   const btnPrimary = 'flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all'
 
   /* ── Setting Field Renderer ──────────────────────────────────────────── */

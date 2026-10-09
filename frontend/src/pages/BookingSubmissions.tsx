@@ -21,7 +21,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
   const items = data?.data ?? []
   const lastPage = data?.last_page ?? 1
 
-  const selectClass = 'bg-[#0f1c18] border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
+  const selectClass = 'bg-dark-bg border border-white/[0.08] rounded-xl text-sm text-white px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/40'
 
   return (
     <div className="space-y-7">
@@ -42,7 +42,7 @@ export function BookingSubmissions({ embedded = false }: { embedded?: boolean } 
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-600" />
             <input type="text" value={search} onChange={e => { setSearch(e.target.value); setPage(1) }}
               placeholder="Search by guest name, email, reference..."
-              className="w-full pl-10 pr-4 py-2.5 bg-[#0f1c18] border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
+              className="w-full pl-10 pr-4 py-2.5 bg-dark-bg border border-white/[0.06] rounded-xl text-sm text-white placeholder-gray-600 focus:outline-none focus:ring-1 focus:ring-emerald-500/40"
             />
           </div>
           <select value={outcome} onChange={e => { setOutcome(e.target.value); setPage(1) }} className={selectClass}>

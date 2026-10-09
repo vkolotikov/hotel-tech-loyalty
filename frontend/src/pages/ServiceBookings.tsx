@@ -588,7 +588,7 @@ export function BookingDetailDrawer({ booking, onClose, onChanged }: { booking: 
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-end overflow-y-auto">
-      <div className="w-full max-w-md min-h-full bg-[#0a1210] border-l border-white/[0.08] p-6 overflow-y-auto">
+      <div className="w-full max-w-md min-h-full bg-dark-surface border-l border-white/[0.08] p-6 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-white">{booking.booking_reference}</h2>
           <button onClick={onClose} className="p-2 rounded-lg hover:bg-white/[0.06] text-gray-500"><X size={18} /></button>

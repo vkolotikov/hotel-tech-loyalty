@@ -1717,7 +1717,7 @@ export function Inquiries() {
         return (
           <div data-menu-root
             style={{ position: 'fixed', top, left, right, zIndex: 60 }}
-            className="bg-[#0f1c18] border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
+            className="bg-dark-surface border border-white/10 rounded-xl shadow-2xl py-1 min-w-[180px]">
             {openMenu.type === 'status' && (() => {
               // Prefer the live pipeline stages (name + colour); fall back to
               // the legacy status list only if pipelines haven't loaded.
