@@ -153,7 +153,7 @@ export const navGroups: NavGroup[] = [
       // a duplicate of the in-page Timeline view.
       { path: '/bookings',          labelKey: 'nav.items.reservations',    defaultLabel: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
       { path: '/service-bookings',  labelKey: 'nav.items.services',        defaultLabel: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
-      { path: '/booking-rooms',    labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
+      { path: '/booking-rooms',     labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
       { path: '/service-masters',   labelKey: 'nav.items.masters',         defaultLabel: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
       { path: '/booking-extras',    labelKey: 'nav.items.extras',          defaultLabel: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
       { path: '/bookings/payments', labelKey: 'nav.items.payments',        defaultLabel: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },

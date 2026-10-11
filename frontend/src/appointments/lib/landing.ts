@@ -7,7 +7,7 @@ const WORKSPACE_PATH = /^\/appointments(\/|\?|$)/
 
 /**
  * Whether the full admin shows its way into HexaTech Appointments (the menu
- * item, the top-bar button and the button on the service-booking pages):
+ * item, first in Bookings, and the button on the service-booking pages):
  * staff of every organisation that has the workspace, with or without
  * services yet — the workspace's Setup is where the first one is added
  * (owner, 2026-10-06). The menu's own rules still apply on top.
