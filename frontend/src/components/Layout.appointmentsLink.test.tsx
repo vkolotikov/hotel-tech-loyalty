@@ -5,12 +5,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { SubscriptionData } from '../hooks/useSubscription'
 
 /**
- * The full admin's ways into HexaTech Appointments: a menu item in the
- * Bookings group, under "Services", and a button on the two service-booking
- * pages. Both appear only for staff of an organisation that has the
- * workspace and at least one active service (`workspaces.appointments`
- * from /auth/me). Rendered to a string, like Layout.landingSidebar.test.tsx,
- * whose harness this follows.
+ * The full admin's ways into HexaTech Appointments: a menu item that is the
+ * first one in the Bookings group (owner, 2026-10-11; there is no button in
+ * the top bar any more), and a button on the two service-booking pages. Both
+ * appear only for staff of an organisation that has the workspace
+ * (`workspaces.appointments` from /auth/me). Rendered to a string, like
+ * Layout.landingSidebar.test.tsx, whose harness this follows.
  */
 
 // Layout reads localStorage unguarded on its first render; node has none.
@@ -99,12 +99,18 @@ function button(workspaces: Workspaces): string {
 const ON = { appointments: { landing: false, has_services: true } }
 
 describe('the full admin menu', () => {
-  it('lists HexaTech Appointments in Bookings, right under Services, for a venue that can book', () => {
+  // Owner, 2026-10-11: the way in lives in the left panel only, and it leads the Bookings group.
+  it('lists HexaTech Appointments first in Bookings, above Reservations and Services, for a venue that can book', () => {
     const html = sidebar(ON)
     expect(html).toContain('href="/appointments"')
     expect(html).toContain('HexaTech Appointments')
-    expect(html.indexOf('href="/service-bookings"')).toBeLessThan(html.indexOf('href="/appointments"'))
-    expect(html.indexOf('href="/appointments"')).toBeLessThan(html.indexOf('href="/booking-rooms"'))
+    const appointments = html.indexOf('href="/appointments"')
+    const reservations = html.indexOf('href="/bookings"')
+    const services = html.indexOf('href="/service-bookings"')
+    expect(reservations).toBeGreaterThan(-1)
+    expect(services).toBeGreaterThan(-1)
+    expect(appointments).toBeLessThan(reservations)
+    expect(appointments).toBeLessThan(services)
   })
 
   it('lists it for a venue with no services yet (owner, 2026-10-06: Setup is where the first one is added)', () => {
@@ -114,30 +120,13 @@ describe('the full admin menu', () => {
   it('leaves it out where the workspace is switched off', () => {
     expect(sidebar(undefined)).not.toContain('href="/appointments"')
   })
-})
 
-describe('the full admin top bar', () => {
-  // The owner asked for a button on every page (2026-10-06): the sidebar item sits inside a group and is easy to miss.
-  it('offers HexaTech Appointments on every page, beside the brand switcher, for a venue that can book', () => {
-    const html = sidebar(ON)
-    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
-    expect(header).toMatch(/<a[^>]*href="\/appointments"[^>]*data-topbar-appointments=""|<a[^>]*data-topbar-appointments=""[^>]*href="\/appointments"/)
-    expect(header).toContain('HexaTech Appointments')
-  })
-
-  it('offers it to a venue with no services yet, and not where the workspace is switched off', () => {
-    expect(sidebar({ appointments: { landing: false, has_services: false } })).toContain('data-topbar-appointments')
-    expect(sidebar(undefined)).not.toContain('data-topbar-appointments')
-  })
-
-  // Polish review: the button must follow the menu's own rules, not only "the venue has services".
+  // Polish review: the item follows the menu's own rules, not only "the venue has services".
   it('is not there for a staff member whose manager limited their menu to other groups', () => {
     const before = auth.state.staff
     auth.state.staff = { ...before, role: 'staff', allowed_nav_groups: ['Loyalty'] as unknown as null }
     try {
-      const html = sidebar(ON)
-      expect(html).not.toContain('href="/appointments"')
-      expect(html).not.toContain('data-topbar-appointments')
+      expect(sidebar(ON)).not.toContain('href="/appointments"')
     } finally {
       auth.state.staff = before
     }
@@ -147,24 +136,44 @@ describe('the full admin top bar', () => {
   // signed in with; the full admin follows the server's answer now (/v1/auth/me), not the stored one.
   it('follows the fresh /auth/me answer over a session signed in before the workspace existed', () => {
     const html = sidebar(undefined, { workspaces: { appointments: { landing: false, has_services: false } } })
-    expect(html).toContain('data-topbar-appointments')
     expect(html).toContain('href="/appointments"')
   })
 
   it('hides it once the server says the workspace is switched off, whatever the stored session says', () => {
-    expect(sidebar(ON, {})).not.toContain('data-topbar-appointments')
+    expect(sidebar(ON, {})).not.toContain('href="/appointments"')
   })
 
   it('is not there for an organisation without the booking product', () => {
     const before = subscription.products
     subscription.products = ['crm', 'chat', 'loyalty']
     try {
-      const html = sidebar(ON)
-      expect(html).not.toContain('href="/appointments"')
-      expect(html).not.toContain('data-topbar-appointments')
+      expect(sidebar(ON)).not.toContain('href="/appointments"')
     } finally {
       subscription.products = before
     }
+  })
+})
+
+describe('the full admin top bar', () => {
+  // The owner asked for the way in to live in the left panel only (2026-10-11): the button the top bar carried since
+  // 2026-10-06 is gone, for a venue that can book and for one with no services yet.
+  it('no longer carries a HexaTech Appointments button, for a venue that can book', () => {
+    const html = sidebar(ON)
+    const start = html.indexOf('<header')
+    const header = html.slice(start, html.indexOf('</header>'))
+    expect(start).toBeGreaterThan(-1)
+    expect(header.length).toBeGreaterThan(0)
+    expect(header).not.toContain('href="/appointments"')
+    expect(header).not.toContain('HexaTech Appointments')
+    expect(html).not.toContain('data-topbar-appointments')
+  })
+
+  it('has none for a venue with no services yet either, while the menu item stays', () => {
+    const html = sidebar({ appointments: { landing: false, has_services: false } })
+    const header = html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+    expect(header).not.toContain('href="/appointments"')
+    expect(html).not.toContain('data-topbar-appointments')
+    expect(html).toContain('href="/appointments"')
   })
 })
 

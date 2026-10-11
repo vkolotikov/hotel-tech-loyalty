@@ -145,14 +145,15 @@ export const navGroups: NavGroup[] = [
     labelKey: 'nav.groups.bookings', defaultLabel: 'Bookings',
     accent: '#34d399', // emerald
     items: [
+      // The same service bookings in the calendar-first workspace, at its own address. First in Bookings (owner,
+      // 2026-10-11): the left panel is its only way in from the full admin now that the top-bar button is gone.
+      { path: '/appointments',      labelKey: 'nav.items.appointments_workspace', defaultLabel: 'HexaTech Appointments', icon: CalendarDays, gate: 'all', product: 'booking', workspace: 'appointments' },
       // Reservations & Services each surface own resource. The List ↔ Calendar
       // toggle lives inside the page; the dropped /calendar legacy entry was
       // a duplicate of the in-page Timeline view.
       { path: '/bookings',          labelKey: 'nav.items.reservations',    defaultLabel: 'Reservations',     icon: BedDouble,     gate: 'all',   product: 'booking', altPaths: ['/bookings/calendar'] },
       { path: '/service-bookings',  labelKey: 'nav.items.services',        defaultLabel: 'Services',         icon: Scissors,      gate: 'all',   product: 'booking', altPaths: ['/service-bookings/calendar'] },
-      // The same service bookings in the calendar-first workspace, at its own address.
-      { path: '/appointments',      labelKey: 'nav.items.appointments_workspace', defaultLabel: 'HexaTech Appointments', icon: CalendarDays, gate: 'all', product: 'booking', workspace: 'appointments' },
-      { path: '/booking-rooms',     labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
+      { path: '/booking-rooms',    labelKey: 'nav.items.rooms_services',  defaultLabel: 'Rooms & Services', icon: Home,          gate: 'admin', product: 'booking', altPaths: ['/services'] },
       { path: '/service-masters',   labelKey: 'nav.items.masters',         defaultLabel: 'Masters',          icon: UserCog,       gate: 'admin', product: 'booking' },
       { path: '/booking-extras',    labelKey: 'nav.items.extras',          defaultLabel: 'Extras',           icon: Package,       gate: 'admin', product: 'booking', altPaths: ['/service-extras'] },
       { path: '/bookings/payments', labelKey: 'nav.items.payments',        defaultLabel: 'Payments',         icon: CreditCard,    gate: 'all',   product: 'booking' },
@@ -1011,21 +1012,6 @@ export function Layout({ children }: { children: ReactNode }) {
             )}
           </div>
           <div className="flex-1" />
-
-          {/* The way into HexaTech Appointments from every page (owner, 2026-10-06): shown exactly when its menu item
-              is — the menu's whole rule (a manager's per-person limits, hidden groups, the product, the industry). */}
-          {visibleGroups.some(g => g.items.some(i => i.workspace === 'appointments')) && (
-            <Link
-              to="/appointments"
-              data-topbar-appointments=""
-              title={t('nav.items.appointments_workspace', 'HexaTech Appointments')}
-              className="flex items-center gap-1.5 rounded-lg border border-dark-border px-2.5 py-1.5 text-xs font-medium text-t-secondary hover:text-white hover:bg-dark-surface2 transition-colors"
-            >
-              <CalendarDays size={16} aria-hidden />
-              <span className="hidden sm:inline">{t('nav.items.appointments_workspace', 'HexaTech Appointments')}</span>
-              <span className="sr-only sm:hidden">{t('nav.items.appointments_workspace', 'HexaTech Appointments')}</span>
-            </Link>
-          )}
 
           {/* Brand switcher — auto-hides when org has only one brand */}
           <BrandSwitcher />
