@@ -18,9 +18,9 @@ const doneCount = (checklist: ChecklistData): number => checklist.steps.filter(s
 export function Checklist({ checklist, onTab }: { checklist: ChecklistData; onTab: (tab: SetupTab) => void }) {
   const { t } = useTranslation()
   return (
-    <section aria-labelledby="setup-checklist-title" className="space-y-3 rounded-lg border border-a-border bg-a-surface p-4">
+    <section aria-labelledby="setup-checklist-title" className="space-y-3 rounded-xl border border-a-border bg-a-surface p-4 shadow-a-sm animate-a-fade">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="setup-checklist-title" className="text-base font-semibold text-a-text">{t('appointments.setup.checklist.title', 'Get ready to take bookings')}</h2>
+        <h2 id="setup-checklist-title" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.checklist.title', 'Get ready to take bookings')}</h2>
         <span className="text-xs text-a-text-2">{t('appointments.setup.checklist.progress', '{{done}} of {{total}} done', { done: doneCount(checklist), total: checklist.steps.length })}</span>
       </div>
       <ol className="space-y-2">
@@ -29,7 +29,7 @@ export function Checklist({ checklist, onTab }: { checklist: ChecklistData; onTa
           const label = t(`appointments.setup.step.${step.key}`)
           return (
             <li key={step.key} className="flex items-center gap-3 text-sm">
-              <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${step.done ? 'bg-a-st-confirmed/[0.12] text-a-st-confirmed' : 'bg-a-surface-2 text-a-text-2'}`}>
+              <span aria-hidden className={`grid h-6 w-6 shrink-0 place-items-center rounded-full font-a-mono text-xs font-medium ${step.done ? 'bg-a-st-confirmed/[0.12] text-a-st-confirmed' : 'bg-a-surface-2 text-a-text-2'}`}>
                 {step.done ? <Check size={14} /> : i + 1}
               </span>
               <span className={step.done ? 'text-a-text-2' : 'text-a-text'}>
@@ -38,8 +38,8 @@ export function Checklist({ checklist, onTab }: { checklist: ChecklistData; onTa
               </span>
               {step.optional && <span className="text-xs text-a-text-2">{t('appointments.setup.checklist.optional', 'Optional')}</span>}
               {!step.done && (target === 'calendar'
-                ? <Link to="/appointments?new=1" aria-label={label} className="ml-auto text-sm font-semibold text-a-accent-deep">{t('appointments.setup.checklist.go', 'Go')}</Link>
-                : <button type="button" onClick={() => onTab(target)} aria-label={label} className="ml-auto text-sm font-semibold text-a-accent-deep">{t('appointments.setup.checklist.go', 'Go')}</button>)}
+                ? <Link to="/appointments?new=1" aria-label={label} className="ml-auto text-sm font-semibold text-a-accent-text">{t('appointments.setup.checklist.go', 'Go')}</Link>
+                : <button type="button" onClick={() => onTab(target)} aria-label={label} className="ml-auto text-sm font-semibold text-a-accent-text">{t('appointments.setup.checklist.go', 'Go')}</button>)}
             </li>
           )
         })}
@@ -54,7 +54,7 @@ export function ChecklistBanner({ checklist }: { checklist: ChecklistData }) {
   return (
     <Notice tone="info">
       {t('appointments.setup.checklist.banner', 'Setup is not finished: {{done}} of {{total}} steps done.', { done: doneCount(checklist), total: checklist.steps.length })}{' '}
-      <Link to="/appointments/setup" className="font-semibold text-a-accent-deep underline">{t('appointments.setup.checklist.open', 'Continue setup')}</Link>
+      <Link to="/appointments/setup" className="font-semibold text-a-accent-text underline">{t('appointments.setup.checklist.open', 'Continue setup')}</Link>
     </Notice>
   )
 }

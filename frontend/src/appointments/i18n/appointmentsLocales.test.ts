@@ -78,6 +78,11 @@ describe('appointments bundle', () => {
     }
   })
 
+  it('names the middle visit step for every industry, not for a salon: "In progress", never "In the chair"', () => {
+    expect(at(bundle('en'), 'steps.in_chair')).toBe('In progress')
+    for (const locale of LOCALES) expect(String(at(bundle(locale), 'steps.in_chair')), locale).not.toMatch(/chair/i)
+  })
+
   it('has no generic "something went wrong" for an unknown error: the server\'s own sentence is shown instead', () => {
     expect(at(bundle('en'), 'error.unknown')).toBeUndefined()
   })

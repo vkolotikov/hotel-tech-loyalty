@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { render, renderAsync } from '../book/testUtils'
 import { DatesStep } from './DatesStep'
 import { RoomStep } from './RoomStep'
@@ -22,6 +22,13 @@ vi.mock('../../lib/portalApi', async () => {
   const never = () => new Promise(() => {})
   return { ...actual, portalApi: { ...actual.portalApi, stayCatalogue: never, stayAvailability: never, stayQuote: never, stayPaymentIntent: never, stayConfirm: never, offers: never, redemptions: never } }
 })
+
+// The fixture's stay starts on 2026-10-10: keep "today" before it, whatever day the suite runs.
+beforeAll(() => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-01T09:00:00Z'))
+})
+afterAll(() => { vi.useRealTimers() })
 
 const noop = () => {}
 const picked = { ...initialStayState, checkIn: '2026-10-10', checkOut: '2026-10-12' }

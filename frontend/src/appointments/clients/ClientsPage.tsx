@@ -5,6 +5,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { appointmentsApi } from '../lib/api'
 import { useVocab } from '../lib/vocab'
 import { Notice } from '../ui/Notice'
+import { PageTitle } from '../ui/Typography'
 
 /** Find a client. The list is the organisation's own clients — the people the full admin lists under Customers. */
 export function ClientsPage() {
@@ -37,7 +38,7 @@ export function ClientsPage() {
 
   return (
     <div className="p-6 max-w-3xl space-y-4">
-      <h1 className="text-xl font-semibold text-a-text">{vocab('clients')}</h1>
+      <PageTitle>{vocab('clients')}</PageTitle>
       <label className="block">
         <span className="sr-only">{t('appointments.shell.search', 'Search clients')}</span>
         <input value={term} onChange={(e) => setTerm(e.target.value)} autoFocus

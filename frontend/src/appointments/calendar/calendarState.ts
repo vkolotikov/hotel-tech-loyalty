@@ -1,5 +1,6 @@
 import type { AppointmentSummary, CalendarMaster, DateKey, MasterDay } from '../lib/types'
 import type { View } from '../lib/prefs'
+import { initialsOf } from '../lib/firstLetter'
 import { addDays, formatDate, weekOf } from '../lib/wallClock'
 import { dayRange } from '../lib/layout'
 
@@ -16,11 +17,6 @@ export function needsWindows(view: View): boolean {
 
 export function shift(view: View, date: DateKey, dir: 1 | -1): DateKey {
   return addDays(date, dir * (view === 'day' ? 1 : 7))
-}
-
-/** Up to two initials of a name: "Mara Ilves-Kask" → "MI". */
-function initialsOf(name: string): string {
-  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('')
 }
 
 /** One column of the time grid: a person on a date. */

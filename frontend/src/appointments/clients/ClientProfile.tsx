@@ -21,7 +21,7 @@ export function ClientProfile() {
   return (
     <div>
       <div className="px-6 pt-4">
-        <Link to="/appointments/clients" className="text-sm font-semibold text-a-accent-deep underline-offset-2 hover:underline">← {vocab('clients')}</Link>
+        <Link to="/appointments/clients" className="text-sm font-semibold text-a-accent-text underline-offset-2 hover:underline">← {vocab('clients')}</Link>
       </div>
       {query.isLoading && <p className="p-6 text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
       {(clientId === null || query.isError) && (

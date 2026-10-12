@@ -4,10 +4,10 @@ import { Loader2 } from 'lucide-react'
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
 
 const VARIANT: Record<Variant, string> = {
-  primary:   'bg-a-accent text-a-accent-ink hover:bg-a-accent-deep',
-  secondary: 'bg-a-surface text-a-text border border-a-border hover:bg-a-surface-2',
-  ghost:     'bg-transparent text-a-accent-deep hover:bg-a-accent/10',
-  danger:    'bg-a-danger text-a-accent-ink hover:bg-a-danger/90',
+  primary:   'rounded-full bg-a-accent text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep [@media(hover:hover)]:hover:-translate-y-px',
+  secondary: 'rounded-full bg-a-surface text-a-text border border-a-border hover:bg-a-surface-2',
+  ghost:     'rounded-full bg-transparent text-a-accent-text hover:bg-a-accent/10',
+  danger:    'rounded-full bg-a-danger text-a-danger-ink hover:bg-a-danger/90',
 }
 
 export function Button({
@@ -18,7 +18,7 @@ export function Button({
       {...rest}
       disabled={disabled || loading}
       aria-busy={loading || undefined}
-      className={`inline-flex items-center justify-center gap-2 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:pointer-events-none ${size === 'sm' ? 'px-3 py-1.5' : 'px-4 py-2.5'} ${full ? 'w-full' : ''} ${VARIANT[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 font-semibold text-sm transition duration-150 disabled:opacity-50 disabled:pointer-events-none ${size === 'sm' ? 'px-3 py-1.5' : 'px-4 py-2.5'} ${full ? 'w-full' : ''} ${VARIANT[variant]} ${className}`}
     >
       {loading && <Loader2 size={15} className="animate-spin" aria-hidden />}
       {children}

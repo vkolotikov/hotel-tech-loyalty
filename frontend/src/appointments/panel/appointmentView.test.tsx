@@ -81,6 +81,23 @@ describe('AppointmentView', () => {
     expect((view().match(/Sophie Williams/g) ?? []).length).toBe(1)
   })
 
+  it('sets the name in the display serif beside an initials avatar, and shows where the visit stands', () => {
+    const html = view()
+    expect(html).toMatch(/aria-hidden="true"[^>]*>SW<\/span>/) // first letters of the first two words
+    expect(html).toMatch(/font-a-display[^>]*>Sophie Williams</)
+    expect(html).toMatch(/<ol[^>]*aria-label="Visit progress"/)
+    expect(view({ status: 'cancelled' })).not.toContain('Visit progress') // no progress for a visit that did not happen
+    expect(view({ client: { ...booking.client, name: '🌸 rose' } })).toMatch(/aria-hidden="true"[^>]*>🌸R<\/span>/) // a whole emoji is one letter
+  })
+
+  it('draws a neutral person in the avatar when the client has no name, never an empty circle', () => {
+    for (const name of ['', '   ']) {
+      const html = view({ client: { ...booking.client, name } })
+      expect(html, JSON.stringify(name)).toMatch(/<span aria-hidden="true" class="[^"]*rounded-full[^"]*"><svg[^>]*lucide-user/)
+    }
+    expect(view()).not.toMatch(/rounded-full[^"]*"><svg[^>]*lucide-user/)
+  })
+
   it('prints a benefit once when its display says the same as its name', () => {
     const same = view({ loyalty: { ...booking.loyalty!, benefits: [{ name: '10% off retail', display: '10% off retail', description: null }] } })
     expect((same.match(/10% off retail/g) ?? []).length).toBe(1)
@@ -137,6 +154,10 @@ describe('ActionConfirm', () => {
     expect(html).not.toContain('No message is sent to the client') // a cancellation asks "Tell the client" instead (Part D)
     expect(html).toContain('Reason')
     expect(html.indexOf('NOT refunded')).toBeLessThan(html.indexOf('Cancel appointment</button>'))
+  })
+
+  it('scales in like every dialog (spec 4.7)', () => {
+    expect(confirm(act('cancel', true))).toMatch(/^<div class="[^"]*animate-a-pop/)
   })
 
   it('completing shows the points, not a reason field', () => {

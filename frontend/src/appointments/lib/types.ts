@@ -13,6 +13,8 @@ export interface Bootstrap {
   name: string
   organization: { id: number; name: string; industry: string }
   brand: { id: number; name: string } | null
+  /** The organisation's brand colour (#rrggbb) for the accent; null when none is set (spec 4.2). */
+  accent?: string | null
   venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
   staff: { name: string; role: string | null; can_manage?: boolean }
   loyalty: { programme_on: boolean; points_on_bookings: boolean }

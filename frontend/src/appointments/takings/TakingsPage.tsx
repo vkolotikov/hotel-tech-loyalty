@@ -9,8 +9,11 @@ import { formatInstant } from '../lib/wallClock'
 import { KIND_FALLBACK, METHOD_FALLBACK, kindKey } from '../panel/moneyLines'
 import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
+import { PageTitle } from '../ui/Typography'
 
 const METHODS: RefundVia[] = ['cash', 'card_desk', 'transfer', 'other', 'online_card']
+/** Table heads: mono, small caps feel, hairline weight (spec 4.6). */
+const HEAD = 'font-a-mono text-xs font-medium uppercase tracking-[0.08em] text-a-text-2'
 
 /** One day's takings for cashing up (Part E, managers only; the server refuses everyone else). */
 export function TakingsPage() {
@@ -21,7 +24,7 @@ export function TakingsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
-      <h1 className="text-xl font-semibold text-a-text">{t('appointments.takings.title', 'Takings')}</h1>
+      <PageTitle>{t('appointments.takings.title', 'Takings')}</PageTitle>
       <Field label={t('appointments.takings.day', 'Day')}>
         <input type="date" className="rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text" value={date} onChange={(e) => { if (e.target.value) setDate(e.target.value) }} />
       </Field>
@@ -42,33 +45,42 @@ export function TakingsView({ data, locale, zone }: { data: Takings; locale: str
   return (
     <div className="space-y-4 text-sm">
       {currencies.map(cur => (
-        <table key={cur} className="w-full max-w-xl">
-          <thead><tr className="text-left text-a-text-2"><th className="py-1">{t('appointments.takings.method', 'Method')}</th><th className="text-right">{t('appointments.takings.in', 'In')}</th><th className="text-right">{t('appointments.takings.out', 'Out')}</th><th className="text-right">{t('appointments.takings.net', 'Net')}</th></tr></thead>
-          <tbody>
-            {METHODS.filter(m => data.totals[cur][m].in > 0 || data.totals[cur][m].out > 0).map(m => (
-              <tr key={m} className="border-t border-a-border">
-                <td className="py-1 text-a-text">{t(`appointments.money.method.${m}`, METHOD_FALLBACK[m])}</td>
-                <td className="text-right">{fmt(data.totals[cur][m].in, cur)}</td>
-                <td className="text-right">{fmt(data.totals[cur][m].out, cur)}</td>
-                <td className="text-right font-semibold">{fmt(data.totals[cur][m].in - data.totals[cur][m].out, cur)}</td>
+        <div key={cur} className="max-w-xl rounded-xl border border-a-border bg-a-surface p-5 shadow-a-sm">
+          <table className="w-full">
+            <thead>
+              <tr>
+                <th className={`${HEAD} pb-2 text-left`}>{t('appointments.takings.method', 'Method')}</th>
+                <th className={`${HEAD} pb-2 text-right`}>{t('appointments.takings.in', 'In')}</th>
+                <th className={`${HEAD} pb-2 text-right`}>{t('appointments.takings.out', 'Out')}</th>
+                <th className={`${HEAD} pb-2 text-right`}>{t('appointments.takings.net', 'Net')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {METHODS.filter(m => data.totals[cur][m].in > 0 || data.totals[cur][m].out > 0).map(m => (
+                <tr key={m} className="border-t border-a-border">
+                  <td className="py-2 text-a-text">{t(`appointments.money.method.${m}`, METHOD_FALLBACK[m])}</td>
+                  <td className="py-2 text-right tabular-nums">{fmt(data.totals[cur][m].in, cur)}</td>
+                  <td className="py-2 text-right tabular-nums">{fmt(data.totals[cur][m].out, cur)}</td>
+                  <td className="py-2 text-right font-semibold tabular-nums">{fmt(data.totals[cur][m].in - data.totals[cur][m].out, cur)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ))}
       {Object.entries(data.online).map(([cur, amount]) => (
         <p key={cur} className="text-a-text-2">{t('appointments.takings.online', "Paid online for this day's appointments: {{amount}}", { amount: fmt(amount, cur) })}</p>
       ))}
       {data.rows.length > 0 && (
-        <ol className="space-y-1">
+        <ol className="rounded-xl border border-a-border bg-a-surface px-5 py-3 shadow-a-sm">
           {data.rows.map(r => (
-            <li key={r.id} className="flex flex-wrap gap-x-3 border-t border-a-border pt-1 text-a-text-2">
-              {r.at && <time dateTime={r.at}>{formatInstant(r.at, locale, zone)}</time>}
+            <li key={r.id} className="flex flex-wrap gap-x-3 border-t border-a-border py-2 text-a-text-2 first:border-t-0">
+              {r.at && <time dateTime={r.at} className="font-a-mono tabular-nums">{formatInstant(r.at, locale, zone)}</time>}
               <span className="text-a-text">{r.client ?? '—'}</span>
-              <span>{r.reference}</span>
+              <span className="font-a-mono">{r.reference}</span>
               <span>{t(`appointments.money.kind.${kindKey(r)}`, KIND_FALLBACK[kindKey(r)])}</span>
               <span>{t(`appointments.money.method.${r.method}`, METHOD_FALLBACK[r.method])}</span>
-              <span className="font-semibold text-a-text">{r.kind === 'refund' ? '−' : ''}{fmt(r.amount, r.currency)}</span>
+              <span className="font-semibold tabular-nums text-a-text">{r.kind === 'refund' ? '−' : ''}{fmt(r.amount, r.currency)}</span>
               {r.by && <span>{r.by}</span>}
               {r.note && <span className="w-full">{r.note}</span>}
             </li>

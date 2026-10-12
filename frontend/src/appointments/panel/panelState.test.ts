@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CLOSED, canSave, detailPollMs, draftBody, emptyDraft, panelReducer, type PanelState } from './panelState'
+import { CLOSED, canSave, detailPollMs, draftBody, emptyDraft, nextPanelMotion, panelKey, panelReducer, type PanelState } from './panelState'
 import type { ClientSummary } from '../lib/types'
 
 const sophie: ClientSummary = { id: 5, name: 'Sophie Williams', phone: '+44 7700 900123', email: null, member: null }
@@ -128,5 +128,30 @@ describe('detailPollMs', () => {
   it('has nothing to refresh when no appointment is open', () => {
     expect(detailPollMs(CLOSED)).toBe(false)
     expect(detailPollMs(open())).toBe(false)
+  })
+})
+
+describe('panel motion', () => {
+  it('mounts the panel afresh per appointment, and once for a new one', () => {
+    expect(panelKey(CLOSED)).toBeNull()
+    expect(panelKey(panelReducer(CLOSED, { type: 'openView', id: 7 }))).toBe('view-7')
+    expect(panelKey(open())).toBe('create')
+  })
+
+  it('slides in only when it opens from closed; switching appointments keeps it where it is', () => {
+    // Replaying the slide on every switch blinked the panel see-through over the calendar (browser pass).
+    let motion = { key: null as string | null, slide: true }
+    motion = nextPanelMotion(motion, 'view-7')
+    expect(motion).toEqual({ key: 'view-7', slide: true })
+    motion = nextPanelMotion(motion, 'view-8')
+    expect(motion).toEqual({ key: 'view-8', slide: false })
+    motion = nextPanelMotion(motion, 'create')
+    expect(motion).toEqual({ key: 'create', slide: false })
+    motion = nextPanelMotion(motion, null)
+    expect(motion.key).toBeNull()
+    expect(nextPanelMotion(motion, 'view-9')).toEqual({ key: 'view-9', slide: true })
+    // The same key is no change at all.
+    const same = { key: 'view-9', slide: false }
+    expect(nextPanelMotion(same, 'view-9')).toBe(same)
   })
 })

@@ -10,12 +10,15 @@ import { formatDate } from '../lib/wallClock'
 import { Button } from '../ui/Button'
 import { Field } from '../ui/Field'
 import { Notice } from '../ui/Notice'
+import { Figure, PageTitle, SectionTitle } from '../ui/Typography'
 import {
   ARROW, PICKS, TONE_CLASS, average, canShow, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare,
   pickOf, pointsChange, rangeFor, rangeFromSearch, share, toneOf, type Change, type Metric, type Range,
 } from './insightsMath'
 
 const PICK_FALLBACK = { this_week: 'This week', last_week: 'Last week', this_month: 'This month', last_month: 'Last month', custom: 'Choose dates' }
+/** Table heads: mono, small caps feel (spec 4.6). */
+const HEAD = 'font-a-mono text-xs font-medium uppercase tracking-[0.08em] text-a-text-2'
 const TILE_FALLBACK = {
   done: 'Visits done', no_show: 'No-shows', late_cancel: 'Late cancellations', value_done: 'Value of visits done',
   average: 'Average per visit', taken: 'Money taken', owed_done: 'Still owed',
@@ -31,7 +34,7 @@ export function InsightsPage() {
 
   return (
     <div className="p-4 lg:p-6 space-y-4">
-      <h1 className="text-xl font-semibold text-a-text">{t('appointments.insights.title', 'Insights')}</h1>
+      <PageTitle>{t('appointments.insights.title', 'Insights')}</PageTitle>
       <PeriodPicker range={range} today={boot.venue.today} onGo={(r) => setSearch({ from: r.from, to: r.to })} />
       {q.isLoading && <p className="text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
       {q.isError && <InsightsError error={q.error} />}
@@ -120,7 +123,7 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
   const rate = (f: InsightsFigures, key: 'done' | 'no_show' | 'late_cancel') => share(f.groups[key], f.due)
   const countTile = (key: 'done' | 'no_show' | 'late_cancel') => (
     <Tile key={key} title={t(`appointments.insights.tile.${key}`, TILE_FALLBACK[key])}>
-      <p className="text-2xl font-semibold text-a-text">{now.groups[key]} <span className="text-sm font-normal text-a-text-2">({formatShare(rate(now, key), locale)})</span></p>
+      <Figure>{now.groups[key]} <span className="text-sm font-normal text-a-text-2">({formatShare(rate(now, key), locale)})</span></Figure>
       {key === 'done'
         ? changeLine('done', countChange(now.groups.done, before.groups.done), 'count', before.groups.done)
         : changeLine(key, pointsChange(rate(now, key), rate(before, key)), 'points')}
@@ -128,7 +131,7 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
   )
   const moneyTile = (key: 'value_done' | 'average' | 'taken' | 'owed_done') => (
     <Tile key={key} title={t(`appointments.insights.tile.${key}`, TILE_FALLBACK[key])}>
-      {currencies.length === 0 && <p className="text-2xl font-semibold text-a-text">—</p>}
+      {currencies.length === 0 && <Figure>—</Figure>}
       {currencies.map(cur => {
         const m = now.money[cur]
         const p = before.money[cur]
@@ -136,7 +139,7 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
         const prev = p === undefined ? undefined : key === 'average' ? average(p) ?? undefined : p[key]
         return (
           <div key={cur}>
-            <p className="text-2xl font-semibold text-a-text">{value === null ? '—' : fmt(value, cur)}</p>
+            <Figure>{value === null ? '—' : fmt(value, cur)}</Figure>
             {key !== 'owed_done' && changeLine(key, value === null ? null : moneyChange(value, prev), 'money', undefined, cur)}
           </div>
         )
@@ -163,7 +166,8 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
         ? <p className="text-sm text-a-text-2">{t('appointments.insights.empty', 'No appointments in this period.')}</p>
         : (
           <>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+            {/* Wider tiles than the old seven across: a headline figure in the display face (€12,410.50) needs about 140 px. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
               {countTile('done')}
               {countTile('no_show')}
               {countTile('late_cancel')}
@@ -178,7 +182,7 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
             <Breakdown title={t('appointments.insights.by_service', 'By service')} heading={t('appointments.insights.col.service', 'Service')} rows={now.by_service} locale={locale} />
             <Breakdown title={t('appointments.insights.by_person', 'By person')} heading={t('appointments.insights.col.person', 'Person')} rows={now.by_person} locale={locale} />
             <section className="space-y-1">
-              <h2 className="text-base font-semibold text-a-text">{t('appointments.insights.sources_title', 'Where bookings come from')}</h2>
+              <SectionTitle>{t('appointments.insights.sources_title', 'Where bookings come from')}</SectionTitle>
               <p className="text-sm text-a-text">{t('appointments.insights.sources', 'Online {{online}} · At the desk {{desk}} · Other {{other}} — booked online: {{share}}', {
                 ...now.sources, share: formatShare(onlineShare(now.sources), locale),
               })}</p>
@@ -191,8 +195,8 @@ export function InsightsView({ data, locale }: { data: Insights; locale: string 
 
 function Tile({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="rounded-lg border border-a-border bg-a-surface p-3 space-y-1">
-      <h2 className="text-xs font-medium text-a-text-2">{title}</h2>
+    <section className="min-w-0 space-y-1 rounded-xl border border-a-border bg-a-surface p-4 shadow-a-sm animate-a-rise">
+      <h2 className="font-a-mono text-xs font-medium uppercase tracking-[0.08em] text-a-text-2">{title}</h2>
       {children}
     </section>
   )
@@ -208,28 +212,28 @@ function Breakdown({ title, heading, rows, locale }: { title: string; heading: s
 
   return (
     <section className="space-y-2">
-      <h2 className="text-base font-semibold text-a-text">{title}</h2>
-      <div className="overflow-x-auto">
+      <SectionTitle>{title}</SectionTitle>
+      <div className="overflow-x-auto rounded-xl border border-a-border bg-a-surface p-5 shadow-a-sm">
         <table className="w-full min-w-[560px] text-sm">
           <thead>
-            <tr className="text-left text-a-text-2">
-              <th className="py-1 font-medium">{heading}</th>
-              <th className="text-right font-medium">{t('appointments.insights.col.due', 'Due')}</th>
-              <th className="text-right font-medium">{t('appointments.insights.col.done', 'Done')}</th>
-              <th className="text-right font-medium">{t('appointments.insights.col.no_show', 'No-shows')}</th>
-              <th className="text-right font-medium">{t('appointments.insights.col.late_cancel', 'Late cancellations')}</th>
-              <th className="text-right font-medium">{t('appointments.insights.col.value_done', 'Value')}</th>
+            <tr>
+              <th className={`${HEAD} pb-2 text-left`}>{heading}</th>
+              <th className={`${HEAD} pb-2 text-right`}>{t('appointments.insights.col.due', 'Due')}</th>
+              <th className={`${HEAD} pb-2 text-right`}>{t('appointments.insights.col.done', 'Done')}</th>
+              <th className={`${HEAD} pb-2 text-right`}>{t('appointments.insights.col.no_show', 'No-shows')}</th>
+              <th className={`${HEAD} pb-2 text-right`}>{t('appointments.insights.col.late_cancel', 'Late cancellations')}</th>
+              <th className={`${HEAD} pb-2 text-right`}>{t('appointments.insights.col.value_done', 'Value')}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map(r => (
               <tr key={r.id ?? 'none'} className="border-t border-a-border">
-                <td className="py-1 text-a-text">{name(r)}</td>
-                <td className="text-right">{r.due}</td>
-                <td className="text-right">{r.done}</td>
-                <td className="text-right">{cell(r.no_show, r.due)}</td>
-                <td className="text-right">{cell(r.late_cancel, r.due)}</td>
-                <td className="text-right">{Object.entries(r.value_done).map(([cur, v]) => fmt(v, cur)).join(' · ') || '—'}</td>
+                <td className="py-2 text-a-text">{name(r)}</td>
+                <td className="py-2 text-right tabular-nums">{r.due}</td>
+                <td className="py-2 text-right tabular-nums">{r.done}</td>
+                <td className="py-2 text-right tabular-nums">{cell(r.no_show, r.due)}</td>
+                <td className="py-2 text-right tabular-nums">{cell(r.late_cancel, r.due)}</td>
+                <td className="py-2 text-right tabular-nums">{Object.entries(r.value_done).map(([cur, v]) => fmt(v, cur)).join(' · ') || '—'}</td>
               </tr>
             ))}
           </tbody>

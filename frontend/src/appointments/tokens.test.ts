@@ -60,6 +60,16 @@ describe('appointments workspace sweep', () => {
     expect(small).toEqual([])
   })
 
+  it('lifts nothing on a bare :hover: on a touch screen the state sticks after a tap', () => {
+    // hover:-translate-y-px must be written [@media(hover:hover)]:hover:-translate-y-px (as the calendar card does).
+    const bare = files.flatMap(file => {
+      const rel = path.relative(DIR, file)
+      // A token that starts with the media variant ("[@media(hover:hover)]:hover:...") does not match: it begins with "[".
+      return fs.readFileSync(file, 'utf8').split(/[\s"'`{}]+/).filter(tok => /^(?:[a-z-]+:)*hover:-?translate-[xy]/.test(tok)).map(tok => `${rel}: ${tok}`)
+    })
+    expect(bare).toEqual([])
+  })
+
   it('every rule in the stylesheet is scoped under [data-appointments]', () => {
     const css = fs.readFileSync(path.join(DIR, 'theme/appointments.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const selectors = [...css.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map(m => m[2].trim()).filter(Boolean)

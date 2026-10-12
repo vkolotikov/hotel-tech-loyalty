@@ -1,31 +1,143 @@
 /*
- * Appointments workspace tokens. Every rule is scoped under
- * [data-appointments], so nothing here can restyle the full admin, and
- * every colour is an `R G B` triplet so Tailwind's `<alpha-value>` works
- * (`bg-a-accent/10` is the soft tint).
+ * Workspace type (spec 4.4), self-hosted from fontsource (SIL OFL; licences
+ * sit in ./fonts). Three families, read through --a-font-display / -text /
+ * -mono below. Each family is cut into the same unicode subsets fontsource
+ * ships, so a browser downloads only the files a page's characters need. As
+ * in fontsource's own CSS, the wider "ext" subset comes first and the base
+ * subset after it: where their ranges overlap (a few combining marks) the
+ * later face wins.
  *
- * A light working canvas, white panels, a deep navy rail. One accent
- * (teal-blue) for primary actions and selection. Status tones are their own
- * set and are never the accent; each is drawn with an icon and a word.
- * theme/contrast.test.ts pins every text pair at 4.5:1.
+ * "A Display": Fraunces for Latin; Fraunces has no Cyrillic, so Russian
+ * headings are set in Source Serif 4, a serif of the same temperament.
+ * Every face of a family carries the same style and weight range (Source
+ * Serif's axis starts at 200, but it is declared 100 900 like Fraunces): a
+ * browser only joins unicode-range subsets whose descriptors match.
+ */
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/fraunces-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/fraunces-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-serif-4-cyrillic-ext-wght.woff2') format('woff2');
+  unicode-range: U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-serif-4-cyrillic-wght.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* "A Text": Inter Tight, Latin and Cyrillic. */
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-cyrillic-wght.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* "A Mono": IBM Plex Mono Medium, for times and small labels. */
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-ext-500.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-500.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-cyrillic-500.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/*
+ * Appointments workspace tokens — "Atelier" (spec 2026-10-12). Every rule is
+ * scoped under [data-appointments]; every colour is an `R G B` triplet so
+ * Tailwind's `<alpha-value>` works. The light set is the default; the dark
+ * set applies with data-theme="dark" on the same element. The accent tokens
+ * here are the fallback brand's; the shell overrides them inline from the
+ * organisation's brand colour (theme/accent.ts). contrast.test.ts pins every
+ * text pair at 4.5:1 in both sets.
  */
 [data-appointments] {
-  --a-canvas: 245 246 248;
+  --a-canvas: 244 246 248;
   --a-surface: 255 255 255;
-  --a-surface-2: 238 240 244;
-  --a-text: 22 27 38;
-  --a-text-2: 84 93 109;
-  --a-border: 223 227 234;
+  --a-surface-2: 238 242 245;
+  --a-text: 27 42 52;
+  --a-text-2: 84 98 110;
+  --a-border: 221 227 232;
 
-  --a-side: 17 24 39;
-  --a-side-2: 31 41 58;
-  --a-side-text: 226 232 240;
-  --a-side-text-2: 160 174 192;
+  --a-side: 14 26 36;
+  --a-side-2: 31 45 56;
+  --a-side-text: 232 238 242;
+  --a-side-text-2: 169 186 196;
 
-  --a-accent: 13 110 122;
+  --a-accent: 59 130 246;
   --a-accent-ink: 255 255 255;
-  --a-accent-deep: 9 84 94;
+  --a-accent-deep: 52 114 216;
+  --a-accent-text: 41 91 172;
+  --a-accent-rail: 59 130 246;
   --a-danger: 176 36 36;
+  --a-danger-ink: 255 255 255;
+  --a-now: 200 50 60;
+  --a-now-ink: 255 255 255;
+  --a-hatch: 84 98 110;
+  --a-scrim: 14 26 36;
 
   --a-st-pending: 138 80 0;
   --a-st-confirmed: 18 100 58;
@@ -34,23 +146,79 @@
   --a-st-cancelled: 88 95 107;
   --a-st-noshow: 166 38 58;
 
+  --a-shadow-sm: 0 1px 2px rgb(14 26 36 / 0.05);
+  --a-shadow: 0 10px 30px rgb(14 26 36 / 0.10);
+  --a-shadow-lg: 0 28px 70px rgb(14 26 36 / 0.20);
+  --a-font-display: 'A Display', Georgia, 'Times New Roman', serif;
+  --a-font-text: 'A Text', system-ui, sans-serif;
+  --a-font-mono: 'A Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
   color-scheme: light;
   background-color: rgb(var(--a-canvas));
   color: rgb(var(--a-text));
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: var(--a-font-text);
   font-size: 14px;
   line-height: 1.45;
   letter-spacing: 0;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-appointments][data-theme="dark"] {
+  --a-canvas: 14 26 36;
+  --a-surface: 19 35 47;
+  --a-surface-2: 26 46 60;
+  --a-text: 232 238 242;
+  --a-text-2: 159 178 189;
+  --a-border: 42 59 72;
+
+  --a-side: 10 20 28;
+  --a-side-2: 22 36 47;
+  --a-side-text: 232 238 242;
+  --a-side-text-2: 159 178 189;
+
+  --a-accent: 59 130 246;
+  --a-accent-ink: 255 255 255;
+  --a-accent-deep: 52 114 216;
+  --a-accent-text: 118 168 249;
+  --a-accent-rail: 59 130 246;
+  --a-danger: 255 138 155;
+  --a-danger-ink: 14 26 36;
+  --a-now: 255 122 128;
+  --a-now-ink: 14 26 36;
+  --a-hatch: 159 178 189;
+  --a-scrim: 4 10 14;
+
+  --a-st-pending: 240 179 90;
+  --a-st-confirmed: 95 211 154;
+  --a-st-progress: 179 166 255;
+  --a-st-completed: 169 193 227;
+  --a-st-cancelled: 163 173 184;
+  --a-st-noshow: 255 138 155;
+
+  --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.30);
+  --a-shadow: 0 12px 32px rgb(0 0 0 / 0.42);
+  --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.55);
+
+  color-scheme: dark;
 }
 
 /* The full admin gives headings the organisation's "mood" typeface and
    form controls a dark colour scheme, both globally (index.css). Neither
-   belongs in this workspace. */
-[data-appointments] h1,
-[data-appointments] h2,
-[data-appointments] h3,
-[data-appointments] h4 {
+   belongs in this workspace. Screens opt in to the display face with
+   `font-a-display` (and the mono face with `font-a-mono`). `:where()` keeps
+   this rule at one class of specificity: it still beats the admin's bare
+   `h1, h2…` rule, but a `font-a-*` utility (emitted later) beats it. Written
+   as `[data-appointments] h1` it would out-rank the utilities and every
+   heading would stay in the text face. */
+[data-appointments] :where(h1),
+[data-appointments] :where(h2),
+[data-appointments] :where(h3),
+[data-appointments] :where(h4) {
   font-family: inherit;
 }
 
@@ -58,7 +226,7 @@
 [data-appointments] input,
 [data-appointments] input[type],
 [data-appointments] textarea {
-  color-scheme: light;
+  color-scheme: inherit;
 }
 
 [data-appointments] ::-webkit-scrollbar-track {
@@ -69,11 +237,16 @@
   background: rgb(var(--a-border));
 }
 
-/* Focus is always visible: the accent on light surfaces, the rail's own text
+/* Focus is always visible: accent-text on light surfaces, the rail's own text
    colour on the dark rail — and only there: the panel and the month are
-   asides too, and white. */
+   asides too, and white. Every accent LINE (this ring, the selected card's
+   ring, the selected row, the setup tab, the today ring) is drawn in
+   accent-text, never in the raw brand: accent.ts derives it to read 3:1 or
+   better on every surface for every brand, and the brand itself does not
+   (medical blue is 2.58:1 on surface-2). Fills keep the brand. The rail's
+   rule is more specific, so it wins inside the panel. */
 [data-appointments] :focus-visible {
-  outline: 2px solid rgb(var(--a-accent));
+  outline: 2px solid rgb(var(--a-accent-text));
   outline-offset: 2px;
 }
 
@@ -87,9 +260,71 @@
   outline: none;
 }
 
+/* Accent fills on a brand that is almost the page colour keep an edge (spec 4.2):
+   an inset line in accent-text, the same colour every accent line is drawn in. */
+[data-appointments][data-accent-edge] .bg-a-accent {
+  box-shadow: inset 0 0 0 1px rgb(var(--a-accent-text));
+}
+
+/* The current visit step is a fill too, at 45 %: on such a brand it takes accent-text. */
+[data-appointments][data-accent-edge] .bg-a-accent\/45 {
+  background-color: rgb(var(--a-accent-text) / 0.45);
+}
+
+/* Form controls: a calm transition and the accent for ticks. */
+[data-appointments] input,
+[data-appointments] select,
+[data-appointments] textarea {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease;
+}
+
+[data-appointments] input[type="checkbox"],
+[data-appointments] input[type="radio"] {
+  accent-color: rgb(var(--a-accent));
+}
+
+/* The slim side panel names each icon beside it on keyboard focus and, where
+   the device hovers, on hover. The label's look is this one rule; it draws
+   nothing until a trigger below gives it `content`. */
+[data-appointments] [data-rail-size="slim"] [data-tip]::after {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgb(var(--a-side-2));
+  color: rgb(var(--a-side-text));
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--a-shadow);
+  pointer-events: none;
+}
+
+[data-appointments] [data-rail-size="slim"] [data-tip]:focus-visible::after {
+  content: attr(data-tip);
+}
+
+/* The slim panel's language control is a transparent select over a globe: the
+   focus is on the select inside the labelled box, so the label follows it.
+   Its own rule: a browser without :has() drops this one and keeps the rule above. */
+[data-appointments] [data-rail-size="slim"] [data-tip]:has(:focus-visible)::after {
+  content: attr(data-tip);
+}
+
+/* Hover only where the device hovers: on an iPad a tap leaves :hover on the
+   icon, and its label would stay over the page until the next tap elsewhere. */
+@media (hover: hover) {
+  [data-appointments] [data-rail-size="slim"] [data-tip]:hover::after {
+    content: attr(data-tip);
+  }
+}
+
 /* Time off on the calendar: hatched, so it reads as blocked without relying on a colour. */
 [data-appointments] .a-hatch {
-  background-image: repeating-linear-gradient(135deg, rgb(var(--a-text-2) / 0.16) 0 6px, transparent 6px 12px);
+  background-image: repeating-linear-gradient(135deg, rgb(var(--a-hatch) / 0.14) 0 6px, transparent 6px 12px);
 }
 
 /* A card in a narrow column (many people in a day, or a week) has no room
@@ -112,8 +347,10 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  [data-appointments],
   [data-appointments] * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }

@@ -23,6 +23,8 @@ interface Props {
   masters: CalendarMaster[]
   services: CatalogueService[]
   today: DateKey
+  /** It is opening from closed, so it slides in; replacing another appointment it stays in place. */
+  slide?: boolean
 }
 
 /**
@@ -31,7 +33,7 @@ interface Props {
  * scroll untouched. Esc closes it and focus goes back to the card or slot
  * that opened it.
  */
-export function AppointmentPanel({ state, dispatch, masters, services, today }: Props) {
+export function AppointmentPanel({ state, dispatch, masters, services, today, slide = true }: Props) {
   const { t, i18n } = useTranslation()
   const boot = useBoot()
   const queryClient = useQueryClient()
@@ -199,9 +201,9 @@ export function AppointmentPanel({ state, dispatch, masters, services, today }: 
 
   return (
     <aside ref={panel} role="dialog" aria-modal="false" aria-labelledby="appointment-panel-title"
-      className="fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
+      className={`fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-a-lg${slide ? ' animate-a-slide-in' : ''}`}>
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-a-border bg-a-surface px-4 py-3">
-        <h2 id="appointment-panel-title" ref={heading} tabIndex={-1} className="text-base font-semibold text-a-text outline-none">{title}</h2>
+        <h2 id="appointment-panel-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text outline-none">{title}</h2>
         <button type="button" onClick={() => dispatch({ type: 'close' })} className="rounded p-1.5 text-a-text-2 hover:text-a-text" aria-label={t('appointments.common.close', 'Close')}>
           <X size={18} aria-hidden />
         </button>

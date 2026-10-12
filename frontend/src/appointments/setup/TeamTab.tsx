@@ -17,8 +17,8 @@ export function TeamTab({ data, refresh }: { data: SetupPayload; refresh: () => 
   return (
     <div className="space-y-5 pt-4">
       {!data.can_manage && (
-        <section aria-labelledby="my-time-off" className="space-y-3 rounded-lg border border-a-border bg-a-surface p-4">
-          <h2 id="my-time-off" className="text-sm font-semibold text-a-text">{t('appointments.setup.team.my_time_off', 'My time off')}</h2>
+        <section aria-labelledby="my-time-off" className="space-y-3 rounded-xl border border-a-border bg-a-surface p-5 shadow-a-sm">
+          <h2 id="my-time-off" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.team.my_time_off', 'My time off')}</h2>
           {mine
             ? <MemberTimeOff member={mine} canEdit onChanged={refresh} />
             : <Notice tone="info">{t('appointments.setup.team.not_linked', 'Your sign-in is not linked to a team member yet. A manager can link it under Team.')}</Notice>}

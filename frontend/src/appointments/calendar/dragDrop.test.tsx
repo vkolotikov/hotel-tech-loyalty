@@ -58,6 +58,8 @@ describe('drag and resize on the grid', () => {
     expect(resize).not.toContain('Tell the client')
     const refused = renderToStaticMarkup(<DropConfirm {...base} title="Make it 10:00–11:30?" tell={null} error={{ code: 'slot_taken', message: 'That time is not free for Emma. Choose another.' }} />)
     expect(refused).toContain('That time is not free for Emma')
+    // Atelier motion (spec 4.7): a dialog scales in from 98 %.
+    expect(move.slice(0, move.indexOf('>'))).toContain('animate-a-pop')
   })
 })
 

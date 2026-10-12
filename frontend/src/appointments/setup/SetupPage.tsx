@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { appointmentsApi } from '../lib/api'
 import type { SetupPayload } from '../lib/types'
 import { Notice } from '../ui/Notice'
+import { PageTitle } from '../ui/Typography'
 import { Checklist, type SetupTab } from './Checklist'
 import { ServicesTab } from './ServicesTab'
 import { SettingsTab } from './SettingsTab'
@@ -41,7 +42,7 @@ export function SetupView({ tab, onTab, data, loading, failed, refresh }: {
 
   return (
     <div className="max-w-5xl space-y-5 p-6">
-      <h1 className="text-xl font-semibold text-a-text">{t('appointments.setup.title', 'Setup')}</h1>
+      <PageTitle>{t('appointments.setup.title', 'Setup')}</PageTitle>
       {loading && <p className="text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
       {failed && <Notice tone="danger">{t('appointments.setup.load_failed', 'Setup could not be loaded. Please try again.')}</Notice>}
       {data && (
@@ -54,7 +55,7 @@ export function SetupView({ tab, onTab, data, loading, failed, refresh }: {
             {TABS.map(key => (
               <button key={key} type="button" role="tab" id={`setup-tab-${key}`} aria-selected={tab === key} aria-controls="setup-panel"
                 onClick={() => onTab(key)}
-                className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium ${tab === key ? 'border-a-accent text-a-text' : 'border-transparent text-a-text-2 hover:text-a-text'}`}>
+                className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors duration-150 ${tab === key ? 'border-a-accent-text text-a-text' : 'border-transparent text-a-text-2 hover:text-a-text'}`}>
                 {labels[key]}
               </button>
             ))}

@@ -33,7 +33,7 @@ export function ListView({ from, to, appointments, locale, selectedId, onOpen }:
   return (
     <table className="w-full text-sm">
       <caption className="sr-only">{t('appointments.list.caption', 'Appointments')}</caption>
-      <thead className="sticky top-0 bg-a-surface text-left text-xs text-a-text-2">
+      <thead className="sticky top-0 bg-a-surface text-left font-a-mono text-xs uppercase tracking-[0.08em] text-a-text-2">
         <tr className="border-b border-a-border">
           <th scope="col" className="px-4 py-2 font-medium">{t('appointments.list.time', 'Time')}</th>
           <th scope="col" className="px-4 py-2 font-medium">{vocab('client')}</th>
@@ -46,13 +46,13 @@ export function ListView({ from, to, appointments, locale, selectedId, onOpen }:
       {days.map(day => (
         <tbody key={day}>
           <tr className="bg-a-surface-2">
-            <th scope="colgroup" colSpan={6} className="px-4 py-1.5 text-left text-xs font-semibold text-a-text">{formatDate(day, locale)}</th>
+            <th scope="colgroup" colSpan={6} className="px-4 py-1.5 text-left font-a-display text-sm font-normal text-a-text">{formatDate(day, locale)}</th>
           </tr>
           {rows.filter(a => dateOf(a.start) === day).map(a => (
-            <tr key={a.id} className={`border-b border-a-border bg-a-surface ${a.id === selectedId ? 'outline outline-2 -outline-offset-2 outline-a-accent' : ''}`}>
+            <tr key={a.id} className={`border-b border-a-border bg-a-surface ${a.id === selectedId ? 'outline outline-2 -outline-offset-2 outline-a-accent-text' : ''}`}>
               <td className="px-4 py-2 whitespace-nowrap">
                 <button type="button" onClick={() => onOpen(a.id)} aria-current={a.id === selectedId ? 'true' : undefined}
-                  className="font-semibold text-a-accent-deep underline-offset-2 hover:underline">
+                  className="font-semibold text-a-accent-text underline-offset-2 hover:underline">
                   {timeOf(a.start)} – {timeOf(a.end)}
                   <span className="sr-only"> {a.client.name}</span>
                 </button>

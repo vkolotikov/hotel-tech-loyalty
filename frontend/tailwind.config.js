@@ -148,7 +148,14 @@ export default {
           accent:         'rgb(var(--a-accent) / <alpha-value>)',
           'accent-ink':   'rgb(var(--a-accent-ink) / <alpha-value>)',
           'accent-deep':  'rgb(var(--a-accent-deep) / <alpha-value>)',
+          'accent-text':  'rgb(var(--a-accent-text) / <alpha-value>)',
+          'accent-rail':  'rgb(var(--a-accent-rail) / <alpha-value>)',
           danger:         'rgb(var(--a-danger) / <alpha-value>)',
+          'danger-ink':   'rgb(var(--a-danger-ink) / <alpha-value>)',
+          now:            'rgb(var(--a-now) / <alpha-value>)',
+          'now-ink':      'rgb(var(--a-now-ink) / <alpha-value>)',
+          hatch:          'rgb(var(--a-hatch) / <alpha-value>)',
+          scrim:          'rgb(var(--a-scrim) / <alpha-value>)',
           'st-pending':   'rgb(var(--a-st-pending) / <alpha-value>)',
           'st-confirmed': 'rgb(var(--a-st-confirmed) / <alpha-value>)',
           'st-progress':  'rgb(var(--a-st-progress) / <alpha-value>)',
@@ -183,11 +190,33 @@ export default {
       },
       boxShadow: {
         p: 'var(--p-shadow)',
+        'a-sm': 'var(--a-shadow-sm)',
+        a: 'var(--a-shadow)',
+        'a-lg': 'var(--a-shadow-lg)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         'p-display': ['var(--p-font-display)'],
         'p-body': ['var(--p-font-body)'],
+        'a-display': ['var(--a-font-display)'],
+        'a-mono': ['var(--a-font-mono)'],
+      },
+      // Appointments workspace motion (src/appointments). Switched off under
+      // prefers-reduced-motion by the rule in appointments.css.
+      keyframes: {
+        'a-rise':     { from: { opacity: '0', transform: 'translateY(12px)' }, to: { opacity: '1', transform: 'none' } },
+        'a-fade':     { from: { opacity: '0' }, to: { opacity: '1' } },
+        'a-slide-in': { from: { opacity: '0', transform: 'translateX(28px)' }, to: { opacity: '1', transform: 'none' } },
+        'a-pop':      { from: { opacity: '0', transform: 'scale(0.98)' }, to: { opacity: '1', transform: 'none' } },
+        'a-pulse':    { '0%': { boxShadow: '0 0 0 0 rgb(var(--a-now) / 0.55)' }, '70%': { boxShadow: '0 0 0 8px rgb(var(--a-now) / 0)' }, '100%': { boxShadow: '0 0 0 0 rgb(var(--a-now) / 0)' } },
+      },
+      animation: {
+        // `backwards`, not `both`: a held `transform: none` after the rise would override every hover lift (hover:-translate-y-*).
+        'a-rise':     'a-rise 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) backwards',
+        'a-fade':     'a-fade 0.25s ease both',
+        'a-slide-in': 'a-slide-in 0.32s cubic-bezier(0.2, 0.8, 0.2, 1) both',
+        'a-pop':      'a-pop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1) both',
+        'a-pulse':    'a-pulse 2.4s ease-out infinite',
       },
     },
   },

@@ -120,7 +120,7 @@ export function ClientPicker({ client, onPick }: { client: ClientSummary | null;
 
       {!adding && (
         <button type="button" onClick={() => { setAdding(true); setForm(f => ({ ...f, name: f.name || term.trim() })) }}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-a-accent-deep">
+          className="inline-flex items-center gap-2 text-sm font-semibold text-a-accent-text">
           <UserPlus size={15} aria-hidden /> {t('appointments.client.new', 'Add new')}
         </button>
       )}

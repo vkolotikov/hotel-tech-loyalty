@@ -52,6 +52,16 @@ export function weekOf(date: DateKey): DateKey[] {
   return Array.from({ length: 7 }, (_, i) => addDays(monday, i))
 }
 
+/** The ISO-8601 week number of a venue day (weeks start on Monday; week 1 holds the year's first Thursday). */
+export function isoWeek(date: DateKey): number {
+  const [y, m, d] = date.split('-').map(Number)
+  const day = new Date(Date.UTC(y, m - 1, d))
+  const weekday = day.getUTCDay() || 7
+  day.setUTCDate(day.getUTCDate() + 4 - weekday)
+  const yearStart = new Date(Date.UTC(day.getUTCFullYear(), 0, 1))
+  return Math.ceil(((day.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7)
+}
+
 /** 'YYYY-MM' */
 export const monthOf = (date: DateKey): string => date.slice(0, 7)
 

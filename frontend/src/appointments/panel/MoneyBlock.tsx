@@ -11,16 +11,23 @@ export function MoneyBlock({ money: m, locale, zone }: { money: MoneyInfo; local
     <div className="flex justify-between gap-3"><dt className="text-a-text-2">{label}</dt><dd className={strong ? 'font-semibold text-a-text' : 'text-a-text'}>{fmt(amount, m.currency)}</dd></div>
   )
 
+  const rows = m.held_online > 0 || m.paid_online > 0 || m.paid_desk > 0 || m.paid_back > 0 || m.owed > 0
+  // A no-show or a free visit has no line to show: the block says so rather than standing empty.
+  const quiet = !rows && !m.legacy_marked_paid && !(m.to_refund > 0) && m.movements.length === 0
+
   return (
     <section className="rounded-lg border border-a-border p-3 text-sm space-y-2">
       <h3 className="font-semibold text-a-text">{t('appointments.money.title', 'Money')}</h3>
-      <dl className="space-y-1">
-        {m.held_online > 0 && row(t('appointments.money.held_online', 'Card held online'), m.held_online)}
-        {m.paid_online > 0 && row(t('appointments.money.paid_online', 'Paid online by card'), m.paid_online)}
-        {m.paid_desk > 0 && row(t('appointments.money.paid_desk', 'Paid at the desk'), m.paid_desk)}
-        {m.paid_back > 0 && row(t('appointments.money.refunded', 'Refunded'), m.paid_back)}
-        {m.owed > 0 && row(t('appointments.money.owed', 'Still owed'), m.owed, true)}
-      </dl>
+      {quiet && <p className="text-a-text-2">{t('appointments.money.nothing', 'Nothing paid, nothing owed.')}</p>}
+      {rows && (
+        <dl className="space-y-1">
+          {m.held_online > 0 && row(t('appointments.money.held_online', 'Card held online'), m.held_online)}
+          {m.paid_online > 0 && row(t('appointments.money.paid_online', 'Paid online by card'), m.paid_online)}
+          {m.paid_desk > 0 && row(t('appointments.money.paid_desk', 'Paid at the desk'), m.paid_desk)}
+          {m.paid_back > 0 && row(t('appointments.money.refunded', 'Refunded'), m.paid_back)}
+          {m.owed > 0 && row(t('appointments.money.owed', 'Still owed'), m.owed, true)}
+        </dl>
+      )}
       {m.legacy_marked_paid && <p className="text-a-text-2">{t('appointments.money.legacy', 'Marked paid (no amount recorded)')}</p>}
       {m.to_refund > 0 && <p className="text-a-text">{t('appointments.money.to_refund', '{{amount}} to refund — a manager can refund it', { amount: fmt(m.to_refund, m.currency) })}</p>}
       {m.movements.length > 0 && (

@@ -15,10 +15,11 @@ export function ConflictDialog({ impact, locale, onConfirm, onCancel }: { impact
   const rest = impact.total - impact.affected.length
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-a-text/40 p-4">
+    // The scrim token is ink in both themes (a-text is pale in the dark one); !mt-0: a fixed layer never takes its stack's spacing.
+    <div className="fixed inset-0 z-50 grid place-items-center bg-a-scrim/40 p-4 !mt-0">
       <div role="alertdialog" aria-modal="true" aria-labelledby="setup-conflict-title" aria-describedby="setup-conflict-intro"
-        className="w-full max-w-lg space-y-4 rounded-xl border border-a-border bg-a-surface p-5 shadow-xl">
-        <h2 id="setup-conflict-title" className="text-base font-semibold text-a-text">
+        className="w-full max-w-lg space-y-4 rounded-xl border border-a-border bg-a-surface p-5 shadow-xl animate-a-pop">
+        <h2 id="setup-conflict-title" className="font-a-display text-xl font-normal text-a-text">
           {t('appointments.setup.conflict.title', 'Appointments affected: {{count}}', { count: impact.total })}
         </h2>
         <p id="setup-conflict-intro" className="text-sm text-a-text-2">
@@ -31,7 +32,7 @@ export function ConflictDialog({ impact, locale, onConfirm, onCancel }: { impact
                 <span className="block font-medium text-a-text">{formatDate(a.start.slice(0, 10), locale)} · {a.start.slice(11, 16)}</span>
                 <span className="block truncate text-xs text-a-text-2">{[a.client, a.service, a.team_member].filter(Boolean).join(' · ')}</span>
               </span>
-              <Link to={`/appointments?open=${a.id}&date=${a.start.slice(0, 10)}`} className="shrink-0 text-sm font-semibold text-a-accent-deep">
+              <Link to={`/appointments?open=${a.id}&date=${a.start.slice(0, 10)}`} className="shrink-0 text-sm font-semibold text-a-accent-text">
                 {t('appointments.setup.conflict.open', 'Open')}
               </Link>
             </li>

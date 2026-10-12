@@ -18,7 +18,16 @@
     "switched_off": "The appointments workspace has been switched off for your organisation. Your bookings are unchanged and remain in the full admin.",
     "subscription_required": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. An administrator can restore access under Billing in the full admin.",
     "subscription_required_plan": "Your organisation's subscription is not active, so the workspace cannot open. Your bookings are unchanged. Contact HexaTech to restore it.",
-    "open_full_admin": "Open the full admin"
+    "open_full_admin": "Open the full admin",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto",
+    "auto_hint": "Auto follows this device"
   },
   "vocab": {
     "beauty": { "client": "Client", "clients": "Clients", "team_member": "Stylist", "service": "Treatment" },
@@ -31,6 +40,12 @@
     "completed": "Completed",
     "cancelled": "Cancelled",
     "no_show": "No-show"
+  },
+  "steps": {
+    "label": "Visit progress",
+    "confirmed": "Confirmed",
+    "in_chair": "In progress",
+    "completed": "Completed"
   },
   "payment": {
     "deposit_paid": "Deposit paid",
@@ -77,6 +92,8 @@
     "all_team": "Whole team",
     "show_cancelled": "Show cancelled",
     "updated": "Updated {{time}}",
+    "week": "Week {{n}}",
+    "booked": "Booked: {{count}}",
     "refresh": "Refresh",
     "month": "Month",
     "previous_month": "Previous month",
@@ -445,6 +462,7 @@
     "owed": "Still owed",
     "to_refund": "{{amount}} to refund — a manager can refund it",
     "legacy": "Marked paid (no amount recorded)",
+    "nothing": "Nothing paid, nothing owed.",
     "take": "Take payment",
     "refund": "Refund",
     "amount": "Amount",

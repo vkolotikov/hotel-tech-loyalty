@@ -46,4 +46,17 @@ describe('CalendarPage', () => {
     vi.setSystemTime(new Date('2026-10-09T12:00:00Z'))
     expect(page()).toContain('value="2026-10-06"')
   })
+
+  it('shows a soft placeholder grid while it loads, in a rounded surface frame; the side column is bare on the canvas', () => {
+    vi.setSystemTime(new Date('2026-10-06T12:00:00Z'))
+    const html = page()
+    expect(html).toContain('role="status"')
+    expect(html).toContain('animate-pulse')
+    expect(html).not.toMatch(/<p[^>]*role="status"/) // the plain "Loading…" paragraph is gone
+    const scroll = html.match(/<div[^>]*data-calendar-scroll=""[^>]*>/)?.[0] ?? ''
+    for (const word of ['mx-4', 'rounded-xl', 'border-a-border', 'bg-a-surface', 'shadow-a-sm']) expect(scroll, word).toContain(word)
+    const aside = html.match(/<aside[^>]*>/)?.[0] ?? ''
+    expect(aside).toContain('bg-a-canvas')
+    expect(aside).not.toContain('border-l')
+  })
 })

@@ -117,7 +117,7 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
       <form onSubmit={save} className="space-y-6">
         <fieldset disabled={readOnly} className="space-y-6">
           <section aria-labelledby="settings-venue" className="space-y-3">
-            <h2 id="settings-venue" className="text-sm font-semibold text-a-text">{t('appointments.setup.settings.venue', 'Venue')}</h2>
+            <h2 id="settings-venue" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.settings.venue', 'Venue')}</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label={t('appointments.setup.settings.timezone', 'Time zone')}
                 hint={t('appointments.setup.settings.timezone_note', 'Changing the time zone does not move appointments: {{count}} upcoming appointments keep their clock times.', { count: s.upcoming_appointments })}>
@@ -134,7 +134,7 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
           </section>
 
           <section aria-labelledby="settings-online" className="space-y-3">
-            <h2 id="settings-online" className="text-sm font-semibold text-a-text">{t('appointments.setup.settings.online', 'Online booking')}</h2>
+            <h2 id="settings-online" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.settings.online', 'Online booking')}</h2>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label={t('appointments.setup.settings.lead', 'Minimum notice (minutes)')}>
                 <input type="number" min={0} max={10080} value={draft.lead_minutes} onChange={(e) => set({ lead_minutes: e.target.value })} className={input} />
@@ -155,7 +155,7 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
           </section>
 
           <section aria-labelledby="settings-deposits" className="space-y-3">
-            <h2 id="settings-deposits" className="text-sm font-semibold text-a-text">{t('appointments.setup.deposits.title', 'Deposits for online bookings')}</h2>
+            <h2 id="settings-deposits" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.deposits.title', 'Deposits for online bookings')}</h2>
             <p className="text-sm text-a-text-2">{s.cancel_hours === 0
               ? t('appointments.setup.deposits.intro_start', 'Clients booking on your booking page pay part of the price by card. Cancelled before the visit starts, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.')
               : t('appointments.setup.deposits.intro', 'Clients booking on your booking page pay part of the price by card. Cancelled at least {{hours}} hours before, it goes back automatically; cancelled later, or a no-show, and the venue keeps it. The rest is paid at the venue.', { hours: s.cancel_hours })}</p>
@@ -175,7 +175,7 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
 
           {s.programme_on && (
             <section aria-labelledby="settings-loyalty" className="space-y-3">
-              <h2 id="settings-loyalty" className="text-sm font-semibold text-a-text">{t('appointments.setup.settings.loyalty', 'Loyalty')}</h2>
+              <h2 id="settings-loyalty" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.settings.loyalty', 'Loyalty')}</h2>
               <label className="flex items-center gap-2 text-sm text-a-text">
                 <input type="checkbox" checked={draft.points_on_bookings} onChange={(e) => set({ points_on_bookings: e.target.checked })} />
                 {t('appointments.setup.settings.points', 'Award points when an appointment is completed')}
@@ -184,7 +184,7 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
           )}
 
           <section aria-labelledby="settings-messages" className="space-y-3">
-            <h2 id="settings-messages" className="text-sm font-semibold text-a-text">{t('appointments.messages.setup.title', 'Client messages')}</h2>
+            <h2 id="settings-messages" className="font-a-display text-xl font-normal text-a-text">{t('appointments.messages.setup.title', 'Client messages')}</h2>
             <label className="flex items-center gap-2 text-sm text-a-text">
               <input type="checkbox" checked={draft.client_messages_staff_default} onChange={(e) => set({ client_messages_staff_default: e.target.checked })} />
               {t('appointments.messages.setup.staff', 'Email clients about changes staff make (staff can untick it each time)')}
@@ -223,11 +223,11 @@ export function SettingsTab({ data, refresh }: { data: SetupPayload; refresh: ()
       </form>
 
       <section aria-labelledby="settings-link" className="space-y-3">
-        <h2 id="settings-link" className="text-sm font-semibold text-a-text">{t('appointments.setup.settings.link', 'Booking page')}</h2>
+        <h2 id="settings-link" className="font-a-display text-xl font-normal text-a-text">{t('appointments.setup.settings.link', 'Booking page')}</h2>
         {s.booking_link && s.embed_snippet ? (
           <>
             <div className="flex flex-wrap items-center gap-2">
-              <a href={s.booking_link} target="_blank" rel="noreferrer" className="min-w-0 break-all text-sm text-a-accent-deep underline">{s.booking_link}</a>
+              <a href={s.booking_link} target="_blank" rel="noreferrer" className="min-w-0 break-all text-sm text-a-accent-text underline">{s.booking_link}</a>
               <Button type="button" size="sm" variant="secondary" onClick={() => { void copy('link', s.booking_link ?? '') }}>
                 <Copy size={14} aria-hidden /> {copied === 'link' ? t('appointments.setup.settings.copied', 'Copied') : t('appointments.setup.settings.copy', 'Copy')}
               </Button>

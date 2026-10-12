@@ -18,7 +18,16 @@
     "switched_off": "El espacio de citas se ha desactivado para su organización. Sus reservas no han cambiado y siguen en la administración completa.",
     "subscription_required": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Un administrador puede restablecer el acceso en «Facturación» de la administración completa.",
     "subscription_required_plan": "La suscripción de su organización no está activa, por lo que el espacio no puede abrirse. Sus reservas no han cambiado. Póngase en contacto con HexaTech para restablecerlo.",
-    "open_full_admin": "Abrir la administración completa"
+    "open_full_admin": "Abrir la administración completa",
+    "collapse": "Contraer menú",
+    "expand": "Expandir menú"
+  },
+  "theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "auto": "Auto",
+    "auto_hint": "Auto sigue a este dispositivo"
   },
   "vocab": {
     "beauty": { "client": "Cliente", "clients": "Clientes", "team_member": "Estilista", "service": "Tratamiento" },
@@ -31,6 +40,12 @@
     "completed": "Completada",
     "cancelled": "Cancelada",
     "no_show": "No se presentó"
+  },
+  "steps": {
+    "label": "Progreso de la cita",
+    "confirmed": "Confirmada",
+    "in_chair": "En curso",
+    "completed": "Completada"
   },
   "payment": {
     "deposit_paid": "Depósito pagado",
@@ -77,6 +92,8 @@
     "all_team": "Todo el equipo",
     "show_cancelled": "Mostrar canceladas",
     "updated": "Actualizado a las {{time}}",
+    "week": "Semana {{n}}",
+    "booked": "Reservas: {{count}}",
     "refresh": "Actualizar",
     "month": "Mes",
     "previous_month": "Mes anterior",
@@ -445,6 +462,7 @@
     "owed": "Pendiente",
     "to_refund": "{{amount}} por devolver — un responsable puede devolverlo",
     "legacy": "Marcado como pagado (sin importe registrado)",
+    "nothing": "Nada pagado, nada pendiente.",
     "take": "Cobrar",
     "refund": "Devolver",
     "amount": "Importe",

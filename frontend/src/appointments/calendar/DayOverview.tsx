@@ -23,18 +23,19 @@ export function DayOverview({ date, now, appointments }: { date: DateKey; now: {
 
   return (
     <section className="p-4 border-t border-a-border">
-      <h2 className="text-sm font-semibold text-a-text mb-2">{t('appointments.overview.title', 'Day overview')}</h2>
+      {/* The eyebrow look, on the heading itself: Eyebrow is a div, and a div may not sit inside an h2. */}
+      <h2 className="font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2 mb-2">{t('appointments.overview.title', 'Day overview')}</h2>
       <dl className="space-y-1.5">
         {rows.map(([key, label]) => (
           <div key={key} className="flex items-center justify-between text-sm">
             <dt className="text-a-text-2">{label}</dt>
-            <dd className="font-semibold text-a-text" data-count={key}>{o[key]}</dd>
+            <dd className="font-a-display text-lg font-normal tabular-nums text-a-text" data-count={key}>{o[key]}</dd>
           </div>
         ))}
       </dl>
       <p className="mt-2 text-xs text-a-text-2">{t('appointments.overview.attention_hint', 'Needs attention: awaiting confirmation, or confirmed and more than 15 minutes late without being started.')}</p>
 
-      <h2 className="text-sm font-semibold text-a-text mt-5 mb-2">{t('appointments.overview.legend', 'Statuses')}</h2>
+      <h2 className="font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2 mt-5 mb-2">{t('appointments.overview.legend', 'Statuses')}</h2>
       <ul className="space-y-1.5">
         {STATUSES.map(s => <li key={s}><StatusMark status={s} /></li>)}
       </ul>

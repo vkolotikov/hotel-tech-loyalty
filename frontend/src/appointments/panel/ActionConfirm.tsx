@@ -46,7 +46,7 @@ export function ActionConfirm({ booking, action, reason, saving, error, tell, on
   const staffDue = booking.money ? (action.consequences.deposit ? 0 : booking.money.refundable_online) + booking.money.refundable_desk : 0
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-a-pop">
       <div>
         <div className="text-base font-semibold text-a-text">{label}</div>
         <div className="text-sm text-a-text-2">{booking.client.name} · {timeOf(booking.start)} – {timeOf(booking.end)}</div>

@@ -47,7 +47,7 @@ export function DropConfirm({ title, tell, note = null, onTell, saving, error, o
   const stale = error?.code === 'stale'
 
   return (
-    <div ref={box} role="dialog" tabIndex={-1} aria-modal="false" aria-label={title} className="w-72 space-y-3 rounded-lg border border-a-border bg-a-surface p-3 text-left shadow-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-a-accent">
+    <div ref={box} role="dialog" tabIndex={-1} aria-modal="false" aria-label={title} className="w-72 space-y-3 rounded-lg border border-a-border bg-a-surface p-3 text-left shadow-xl animate-a-pop focus:outline-none focus-visible:ring-2 focus-visible:ring-a-accent-text">
       <p className="text-sm font-semibold text-a-text">{title}</p>
       {note && <p className="text-sm text-a-text-2">{note}</p>}
       {tell && (tell.loading

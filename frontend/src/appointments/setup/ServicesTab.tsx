@@ -47,7 +47,7 @@ export function ServicesTab({ data, refresh }: { data: SetupPayload; refresh: ()
       {groups.length === 0 && <p className="text-sm text-a-text-2">{t('appointments.setup.none_yet', 'Nothing here yet.')}</p>}
       {groups.map(group => (
         <section key={group.key} aria-labelledby={`services-${group.key}`} className="space-y-2">
-          <h2 id={`services-${group.key}`} className="text-sm font-semibold text-a-text-2">{group.name}</h2>
+          <h2 id={`services-${group.key}`} className="font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2">{group.name}</h2>
           <ul className="divide-y divide-a-border rounded-lg border border-a-border bg-a-surface">
             {group.services.map(s => (
               <li key={s.id}>

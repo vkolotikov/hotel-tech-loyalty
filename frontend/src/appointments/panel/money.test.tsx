@@ -40,6 +40,14 @@ describe('MoneyBlock', () => {
     expect(renderToStaticMarkup(<MoneyBlock money={money({ held_online: 60, owed: 0, paid_desk: 0, movements: [] })} locale="en" zone="UTC" />)).toContain('Card held online')
     expect(renderToStaticMarkup(<MoneyBlock money={money({ to_refund: 20, owed: 0 })} locale="en" zone="UTC" />)).toContain('to refund')
   })
+
+  it('says so when nothing was paid and nothing is owed, instead of an empty box (a no-show, browser pass)', () => {
+    const quiet = renderToStaticMarkup(<MoneyBlock money={money({ paid_desk: 0, owed: 0, paid_in: 0, refundable_desk: 0, movements: [] })} locale="en" zone="UTC" />)
+    expect(quiet).toContain('Nothing paid, nothing owed.')
+    expect(quiet).not.toContain('<dl')
+    expect(renderToStaticMarkup(<MoneyBlock money={money()} locale="en" zone="UTC" />)).not.toContain('Nothing paid')
+    expect(renderToStaticMarkup(<MoneyBlock money={money({ legacy_marked_paid: true, movements: [], paid_desk: 0, owed: 0 })} locale="en" zone="UTC" />)).not.toContain('Nothing paid')
+  })
 })
 
 describe('the forms', () => {

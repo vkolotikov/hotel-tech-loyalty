@@ -103,9 +103,9 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
 
   return (
     <aside role="dialog" aria-modal="false" aria-labelledby="team-editor-title"
-      className="fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[480px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
+      className="fixed right-0 top-14 !mt-0 bottom-0 z-30 w-full sm:w-[480px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-a-border px-5 py-4">
-        <h2 id="team-editor-title" ref={heading} tabIndex={-1} className="text-base font-semibold text-a-text">
+        <h2 id="team-editor-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text">
           {member ? member.name : t('appointments.setup.team.new', 'New team member')}
         </h2>
         <button type="button" onClick={onClose} aria-label={t('appointments.common.close', 'Close')} className="rounded-lg p-1.5 text-a-text-2 hover:text-a-text">
@@ -115,7 +115,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
 
       <div className="space-y-6 px-5 py-4">
         <form onSubmit={saveProfile} className="space-y-4" aria-labelledby="team-profile">
-          <h3 id="team-profile" className="text-sm font-semibold text-a-text">{t('appointments.setup.team.profile', 'Profile')}</h3>
+          <h3 id="team-profile" className="font-a-display text-lg font-normal text-a-text">{t('appointments.setup.team.profile', 'Profile')}</h3>
           <fieldset disabled={readOnly} className="space-y-3">
             <Field label={t('appointments.setup.team.name', 'Name')}>
               <input required value={draft.name} onChange={(e) => set({ name: e.target.value })} className={input} />
@@ -173,7 +173,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
 
         {member && (
           <section aria-labelledby="team-hours" className="space-y-3">
-            <h3 id="team-hours" className="text-sm font-semibold text-a-text">{t('appointments.setup.team.hours', 'Weekly hours')}</h3>
+            <h3 id="team-hours" className="font-a-display text-lg font-normal text-a-text">{t('appointments.setup.team.hours', 'Weekly hours')}</h3>
             <WeekEditor key={`${member.id}:${JSON.stringify(member.week)}`} rows={member.week} readOnly={readOnly} locale={locale}
               saving={saving === 'hours'} onSave={(rows) => { void saveHours(rows) }} />
           </section>
@@ -181,7 +181,7 @@ export function TeamEditor({ member: initial, data, onClose, onChanged }: { memb
 
         {member && (
           <section aria-labelledby="team-time-off" className="space-y-3">
-            <h3 id="team-time-off" className="text-sm font-semibold text-a-text">{t('appointments.setup.team.time_off', 'Time off')}</h3>
+            <h3 id="team-time-off" className="font-a-display text-lg font-normal text-a-text">{t('appointments.setup.team.time_off', 'Time off')}</h3>
             <MemberTimeOff member={member} canEdit={data.can_manage || data.my_team_member_id === member.id} onChanged={(next) => saved(next)} />
           </section>
         )}

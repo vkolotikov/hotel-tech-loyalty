@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  addDays, addMonths, dateOf, formatDate, formatInstant, hhmm, isDateKey, makeWall, minutesOf, monthGrid, monthOf,
+  addDays, addMonths, dateOf, formatDate, formatInstant, hhmm, isDateKey, isoWeek, makeWall, minutesOf, monthGrid, monthOf,
   timeOf, venueNow, wallMinutes, weekOf, weekdayOf,
 } from './wallClock'
 
@@ -55,6 +55,13 @@ describe('calendar arithmetic', () => {
     expect(addMonths('2026-12', 1)).toBe('2027-01')
     expect(addMonths('2026-01', -1)).toBe('2025-12')
     expect(addMonths('2026-10', -10)).toBe('2025-12')
+  })
+
+  it('numbers ISO weeks', () => {
+    expect(isoWeek('2026-10-12')).toBe(42)
+    expect(isoWeek('2026-01-01')).toBe(1)
+    expect(isoWeek('2025-12-29')).toBe(1)
+    expect(isoWeek('2027-01-03')).toBe(53)
   })
 })
 

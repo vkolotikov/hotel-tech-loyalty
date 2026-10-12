@@ -77,6 +77,19 @@ export function detailPollMs(state: PanelState): number | false {
   return state.mode === 'view' && state.sub === 'summary' && !state.saving ? 30_000 : false
 }
 
+/** The panel's mount key: one per appointment (its steps and forms start afresh), one for a new appointment; none while closed. */
+export function panelKey(state: PanelState): string | null {
+  return state.mode === 'view' ? `view-${state.id}` : state.mode === 'create' ? 'create' : null
+}
+
+/** Whether the panel on screen slid in. It slides when it opens from closed; switching to another appointment keeps it in place. */
+export interface PanelMotion { key: string | null; slide: boolean }
+
+export function nextPanelMotion(motion: PanelMotion, key: string | null): PanelMotion {
+  if (key === motion.key) return motion
+  return { key, slide: motion.key === null }
+}
+
 /** A fresh Idempotency-Key. One per draft: see the `edit` event. */
 export function newKey(): string {
   return crypto.randomUUID()

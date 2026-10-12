@@ -79,8 +79,9 @@ export type CardDensity = 'full' | 'two' | 'tight' | 'line'
 
 /**
  * What a card of this height has room for, so that nothing is ever clipped:
- * time, client and service (50 minutes and up); time and client (40–45);
- * the same two set tighter (30); one line (shorter).
+ * time, service and client (50 minutes and up); time and service (40–45, the
+ * client kept in the card's name but not drawn); the same two set tighter
+ * (30); one line (shorter).
  */
 export function cardDensity(height: number): CardDensity {
   if (height >= 60) return 'full'

@@ -8,8 +8,9 @@ import { loadPrefs, savePrefs, type Prefs, type View } from '../lib/prefs'
 import type { AppointmentSummary, DateKey } from '../lib/types'
 import { hhmm, isDateKey, venueNow } from '../lib/wallClock'
 import { AppointmentPanel } from '../panel/AppointmentPanel'
-import { CLOSED, newKey, panelReducer } from '../panel/panelState'
+import { CLOSED, newKey, nextPanelMotion, panelKey, panelReducer, type PanelMotion } from '../panel/panelState'
 import { Notice } from '../ui/Notice'
+import { CalendarSkeleton } from '../ui/Skeleton'
 import { DayOverview } from './DayOverview'
 import type { DropTarget } from './DropConfirm'
 import { saveDrop } from './saveDrop'
@@ -45,6 +46,10 @@ export function CalendarPage() {
   const [date, setDate] = useState<DateKey>(() => boot.venue.today)
   const [panel, dispatch] = useReducer(panelReducer, CLOSED)
   const selectedId = panel.mode === 'view' ? panel.id : null
+  // The panel slides in when it opens; going from one appointment to another it stays put (adjusted while rendering).
+  const shownKey = panelKey(panel)
+  const [motion, setMotion] = useState<PanelMotion>({ key: null, slide: true })
+  if (motion.key !== shownKey) setMotion(nextPanelMotion(motion, shownKey))
   const [params, setParams] = useSearchParams()
 
   // Links into the calendar: ?new=1[&client&service&master][&date], ?open=<id>[&date].
@@ -148,8 +153,8 @@ export function CalendarPage() {
           </div>
         )}
 
-        <div className="flex-1 min-h-0 overflow-auto" data-calendar-scroll="">
-          {query.isLoading && <p className="p-6 text-sm text-a-text-2" role="status">{t('appointments.common.loading', 'Loading…')}</p>}
+        <div className="flex-1 min-h-0 overflow-auto mx-4 lg:mx-6 mb-4 rounded-xl border border-a-border bg-a-surface shadow-a-sm" data-calendar-scroll="">
+          {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view !== 'list' && (
             <TimeGrid
               columns={columnsFor(view, date, masters, masterId, now.date, locale)}
@@ -166,14 +171,14 @@ export function CalendarPage() {
         </div>
       </section>
 
-      <aside className="hidden xl:block w-72 shrink-0 border-l border-a-border bg-a-surface overflow-y-auto" aria-label={t('appointments.overview.title', 'Day overview')}>
+      <aside className="hidden xl:block w-72 shrink-0 bg-a-canvas overflow-y-auto" aria-label={t('appointments.overview.title', 'Day overview')}>
         <MiniMonth date={date} today={now.date} locale={locale} onPick={setDate} />
         <DayOverview date={date} now={now} appointments={appointments} />
       </aside>
 
       {panel.mode !== 'closed' && (
         <AppointmentPanel
-          key={panel.mode === 'view' ? `view-${panel.id}` : 'create'}
+          key={shownKey} slide={motion.slide}
           state={panel} dispatch={dispatch} masters={masters} services={query.data?.services ?? []} today={now.date}
         />
       )}

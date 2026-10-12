@@ -168,6 +168,125 @@ describe('AppointmentsShell', () => {
   })
 })
 
+describe('AppointmentsShell — Atelier frame', () => {
+  const g = globalThis as unknown as { window?: unknown }
+  afterEach(() => { delete g.window })
+  const withLook = (look: string | null) => {
+    g.window = { localStorage: { getItem: () => look, setItem: () => {} }, matchMedia: () => ({ matches: true, addEventListener: () => {}, removeEventListener: () => {} }) }
+  }
+
+  it('starts in the light theme with the full side panel', () => {
+    const html = render({})
+    expect(html).toMatch(/data-appointments=""[^>]*data-theme="light"/)
+    expect(html).toContain('data-rail-size="full"')
+    expect(html).toMatch(/<button[^>]*aria-pressed="true"[^>]*>(?:(?!<\/button>)[\s\S])*>Light<\/span><\/button>/)
+  })
+
+  it('draws the dark theme when chosen, and Auto from the device', () => {
+    withLook('{"theme":"dark","rail":"full"}')
+    expect(render({})).toContain('data-theme="dark"')
+    withLook('{"theme":"auto","rail":"full"}')
+    expect(render({})).toContain('data-theme="dark"') // the stub device prefers dark
+  })
+
+  it("takes the accent from the organisation's brand colour", () => {
+    const html = render({ data: { ...boot, accent: '#c9a84c' } })
+    expect(html).toContain('--a-accent:201 168 76')
+  })
+
+  describe('before the bootstrap arrives', () => {
+    const withStorage = (items: Record<string, string>) => {
+      g.window = { localStorage: { getItem: (k: string) => items[k] ?? null, setItem: () => {} }, matchMedia: () => ({ matches: false, addEventListener: () => {}, removeEventListener: () => {} }) }
+    }
+    const loading = { data: undefined, isLoading: true }
+    const mark = (html: string) => html.match(/<span[^>]*class="grid h-9 [^"]*"[^>]*>([^<]*)<\/span>/)?.[1]
+
+    it('paints the last accent and mark this device saw instead of the fallback blue and an H', () => {
+      withStorage({ 'appointments:brand': '{"accent":"#c9a84c","initial":"Ж"}' })
+      const html = render(loading)
+      expect(html).toContain('--a-accent:201 168 76')
+      expect(html).not.toContain('--a-accent:59 130 246')
+      expect(mark(html)).toBe('Ж')
+      // The same on a failed first load, where the page body gives way to the notice.
+      expect(render({ data: undefined, isError: true, error: { response: { status: 500, data: {} } } })).toContain('--a-accent:201 168 76')
+    })
+
+    it('falls back to the default blue and H when nothing (or something damaged) was saved', () => {
+      const nothing: Record<string, string> = {}
+      for (const stored of [nothing, { 'appointments:brand': 'garbage' }, { 'appointments:brand': '{"accent":"red","initial":"L"}' }]) {
+        withStorage(stored)
+        const html = render(loading)
+        expect(html).toContain('--a-accent:59 130 246')
+        expect(mark(html)).toBe('H')
+      }
+      delete g.window
+      expect(mark(render(loading))).toBe('H')
+    })
+
+    it('gives way to the organisation as soon as it is known', () => {
+      withStorage({ 'appointments:brand': '{"accent":"#c9a84c","initial":"Ж"}' })
+      const html = render({ data: { ...boot, accent: '#4a9fd8' } })
+      expect(html).toContain('--a-accent:74 159 216')
+      expect(html).not.toContain('--a-accent:201 168 76')
+      expect(mark(html)).toBe('L')
+      // An organisation without a brand colour is the fallback blue, not the remembered gold.
+      expect(render({ data: { ...boot, accent: null } })).toContain('--a-accent:59 130 246')
+    })
+
+    it('lets the remembered accent take the edge a pale brand needs', () => {
+      withStorage({ 'appointments:brand': '{"accent":"#ffffff","initial":"L"}' })
+      expect(render(loading)).toContain('data-accent-edge=""')
+    })
+  })
+
+  it('outlines accent fills when the brand is almost the page colour', () => {
+    expect(render({ data: { ...boot, accent: '#ffffff' } })).toContain('data-accent-edge=""')
+    expect(render({ data: { ...boot, accent: '#c9a84c' } })).not.toContain('data-accent-edge')
+  })
+
+  it('keeps every name in the slim side panel and says the toggle is collapsed', () => {
+    withLook('{"theme":"light","rail":"slim"}')
+    const html = render({})
+    expect(html).toContain('data-rail-size="slim"')
+    expect(html).toMatch(/aria-expanded="false"[^>]*>[\s\S]*?Expand menu/)
+    // This file's i18n mock prints the key where no fallback is given, which is how the industry noun for Clients arrives here.
+    for (const label of ['Calendar', 'appointments.vocab.beauty.clients', 'Setup']) expect(html).toMatch(new RegExp(`class="sr-only"[^>]*>${label}<`))
+  })
+
+  it('keeps the language control in the side panel in both sizes, under the same name', () => {
+    const aside = (html: string) => html.slice(html.indexOf('<aside'), html.indexOf('</aside>'))
+    const full = aside(render({}))
+    expect((full.match(/<select/g) ?? []).length).toBe(1)
+    expect(full).toMatch(/<label[^>]*><span class="sr-only">Language<\/span><select/)
+    expect(full).not.toContain('data-tip="Language"')
+
+    withLook('{"theme":"light","rail":"slim"}')
+    const slim = aside(render({}))
+    expect((slim.match(/<select/g) ?? []).length).toBe(1)
+    expect(slim).toMatch(/<label[^>]*><span class="sr-only">Language<\/span><select/)
+    // A globe with the picker laid over it, transparent: it opens on click and on the keyboard, and the rail names it on hover.
+    expect(slim).toMatch(/<div[^>]*data-tip="Language"[^>]*class="[^"]*relative[^"]*">(?:(?!<\/div>)[\s\S])*<svg[^>]*aria-hidden="true"(?:(?!<\/div>)[\s\S])*<select[^>]*class="[^"]*absolute[^"]*inset-0[^"]*opacity-0/)
+    expect(slim).toContain('<option value="ru"')
+    // Opacity does not reach the opened list: it is drawn from the select's own colours, so they match full mode's (light text on the ink panel colour), not the wrapper's grey.
+    const slimSelectClass = slim.match(/<select[^>]*class="([^"]*)"/)?.[1] ?? ''
+    expect(slimSelectClass.split(' ')).toEqual(expect.arrayContaining(['bg-a-side-2', 'text-a-side-text']))
+  })
+
+  it('draws the whole of an emoji as the organisation mark, and H when the name is empty', () => {
+    const mark = (html: string) => html.match(/<span[^>]*class="grid h-9 [^"]*"[^>]*>([^<]*)<\/span>/)?.[1]
+    expect(mark(render({ data: { ...boot, organization: { ...boot.organization, name: '🌸 Bloom' } } }))).toBe('🌸')
+    expect(mark(render({ data: { ...boot, organization: { ...boot.organization, name: '' } } }))).toBe('H')
+    expect(mark(render({}))).toBe('L')
+  })
+
+  it('does the same for the staff avatar, and draws nothing in it when there is no name', () => {
+    const avatar = (html: string) => html.match(/<span[^>]*class="grid h-8 w-8 [^"]*"[^>]*>([^<]*)<\/span>/)?.[1]
+    expect(avatar(render({ data: { ...boot, staff: { ...boot.staff, name: '🌸 Mia' } } }))).toBe('🌸')
+    expect(avatar(render({ data: { ...boot, staff: { ...boot.staff, name: '' } } }))).toBe('')
+    expect(avatar(render({}))).toBe('V')
+  })
+})
+
 describe('AppointmentsShell on the Appointments plan', () => {
   const planUser = { user_type: 'staff', workspaces: { appointments: { landing: true, has_services: true, only: true } } }
   afterEach(() => { auth.user = null })

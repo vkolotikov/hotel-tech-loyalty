@@ -5,6 +5,7 @@ import type { AppointmentSummary, ClientProfile } from '../lib/types'
 import { dateOf, formatDate, timeOf } from '../lib/wallClock'
 import { LoyaltyCard } from '../panel/LoyaltyCard'
 import { StatusMark } from '../ui/StatusMark'
+import { PageTitle, SectionTitle } from '../ui/Typography'
 
 /**
  * "Book again" carries who, what and with whom — never a time or a price.
@@ -32,7 +33,7 @@ function Rows({ rows, locale, empty }: { rows: AppointmentSummary[]; locale: str
     <ul className="divide-y divide-a-border rounded-lg border border-a-border bg-a-surface">
       {rows.map(a => (
         <li key={a.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2 text-sm">
-          <Link to={openPath(a)} className="font-semibold text-a-accent-deep underline-offset-2 hover:underline">
+          <Link to={openPath(a)} className="font-semibold text-a-accent-text underline-offset-2 hover:underline">
             {formatDate(dateOf(a.start), locale)} · {timeOf(a.start)} – {timeOf(a.end)}
           </Link>
           <span className="text-a-text-2">{a.service?.name ?? '—'} · {a.master?.name ?? '—'}</span>
@@ -51,10 +52,10 @@ export function ClientProfileView({ profile, locale }: { profile: ClientProfile;
     <div className="p-6 max-w-3xl space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-a-text">{client.name}</h1>
+          <PageTitle>{client.name}</PageTitle>
           <p className="text-sm text-a-text-2">{[client.phone, client.email].filter(Boolean).join(' · ') || t('appointments.client.no_contact', 'No contact details')}</p>
         </div>
-        <Link to={bookAgainPath(profile)} className="inline-flex items-center gap-2 rounded-lg bg-a-accent text-a-accent-ink hover:bg-a-accent-deep px-4 py-2.5 text-sm font-semibold">
+        <Link to={bookAgainPath(profile)} className="inline-flex items-center gap-2 rounded-full bg-a-accent text-a-accent-ink shadow-a-sm transition duration-150 hover:bg-a-accent-deep [@media(hover:hover)]:hover:-translate-y-px px-4 py-2.5 text-sm font-semibold">
           <CalendarPlus size={16} aria-hidden />
           {profile.last ? t('appointments.client.book_again', 'Book again') : t('appointments.client.book_first', 'Book an appointment')}
         </Link>
@@ -63,18 +64,18 @@ export function ClientProfileView({ profile, locale }: { profile: ClientProfile;
       <LoyaltyCard card={profile.loyalty} preview={null} />
 
       <section>
-        <h2 className="text-sm font-semibold text-a-text mb-2">{t('appointments.client.upcoming', 'Upcoming')}</h2>
+        <div className="mb-2"><SectionTitle>{t('appointments.client.upcoming', 'Upcoming')}</SectionTitle></div>
         <Rows rows={profile.upcoming} locale={locale} empty={t('appointments.client.no_upcoming', 'No upcoming appointments.')} />
       </section>
 
       <section>
-        <h2 className="text-sm font-semibold text-a-text mb-2">{t('appointments.client.past', 'Past')}</h2>
+        <div className="mb-2"><SectionTitle>{t('appointments.client.past', 'Past')}</SectionTitle></div>
         <Rows rows={profile.past} locale={locale} empty={t('appointments.client.no_past', 'No past appointments.')} />
       </section>
 
       {profile.matched_by_email.length > 0 && (
         <section>
-          <h2 className="text-sm font-semibold text-a-text">{t('appointments.client.matched_by_email', 'Matched by email')}</h2>
+          <SectionTitle>{t('appointments.client.matched_by_email', 'Matched by email')}</SectionTitle>
           <p className="text-xs text-a-text-2 mb-2">{t('appointments.client.matched_hint', 'Older bookings made with this email address. They are not linked to this client record.')}</p>
           <Rows rows={profile.matched_by_email} locale={locale} empty="" />
         </section>

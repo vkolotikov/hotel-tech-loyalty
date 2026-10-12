@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import type { CalendarMaster, DateKey } from '../lib/types'
 import type { View } from '../lib/prefs'
-import { formatDate, hhmm } from '../lib/wallClock'
+import { formatDate, hhmm, isoWeek } from '../lib/wallClock'
 import { useVocab } from '../lib/vocab'
 import { rangeFor } from './calendarState'
 
@@ -27,7 +27,7 @@ interface Props {
   onRefresh: () => void
 }
 
-const field = 'rounded-lg border border-a-border bg-a-surface px-3 py-1.5 text-sm text-a-text'
+const field = 'rounded-xl border border-a-border bg-a-surface px-3 py-1.5 text-sm text-a-text shadow-a-sm transition-colors hover:bg-a-surface-2'
 
 export function Toolbar(p: Props) {
   const { t } = useTranslation()
@@ -44,22 +44,24 @@ export function Toolbar(p: Props) {
 
   return (
     // With the panel open on a wide screen, the toolbar wraps short of it, so "Updated" and Refresh stay in view.
-    <div className={`flex flex-wrap items-center gap-2 px-4 py-3 border-b border-a-border bg-a-surface ${p.panelOpen ? 'lg:pr-[456px]' : ''}`}>
+    // The panel is 440 px; from xl the day overview column (288 px) already sits under it, so less is reserved there.
+    <div className={`flex flex-wrap items-center gap-2 px-4 lg:px-6 py-3 bg-a-canvas ${p.panelOpen ? 'lg:pr-[456px] xl:pr-[176px]' : ''}`}>
+      <button type="button" onClick={p.onToday} className={field}>{t('appointments.calendar.today', 'Today')}</button>
       <button type="button" onClick={p.onPrev} className={`${field} px-2`} aria-label={t('appointments.calendar.previous', 'Previous')}><ChevronLeft size={16} aria-hidden /></button>
       <button type="button" onClick={p.onNext} className={`${field} px-2`} aria-label={t('appointments.calendar.next', 'Next')}><ChevronRight size={16} aria-hidden /></button>
+      {/* The week number belongs to the date: they wrap together. */}
+      <div className="flex items-baseline gap-2"><h2 className="font-a-display text-2xl font-normal tracking-tight text-a-text min-w-[11rem]">{label}</h2><span className="font-a-mono text-xs text-a-text-2">{t('appointments.calendar.week', 'Week {{n}}', { n: isoWeek(p.date) })}</span></div>
       <label className="flex items-center gap-2">
-        <span className="text-sm font-semibold text-a-text min-w-[11rem]">{label}</span>
         <span className="sr-only">{t('appointments.calendar.go_to_date', 'Go to date')}</span>
         <input type="date" value={p.date} onChange={(e) => { if (e.target.value) p.onDate(e.target.value) }} className={field} />
       </label>
-      <button type="button" onClick={p.onToday} className={field}>{t('appointments.calendar.today', 'Today')}</button>
 
       {!p.viewLocked && (
-        // The corners are rounded on the buttons, not clipped by the group: a clip would cut off their focus ring.
-        <div className="inline-flex rounded-lg border border-a-border" role="group" aria-label={t('appointments.calendar.view', 'View')}>
+        // The group has no overflow clip: a clip would cut off the buttons' focus ring.
+        <div className="inline-flex gap-1 rounded-xl bg-a-surface-2 p-1" role="group" aria-label={t('appointments.calendar.view', 'View')}>
           {views.map(([v, text]) => (
             <button key={v} type="button" onClick={() => p.onView(v)} aria-pressed={p.view === v}
-              className={`px-3 py-1.5 text-sm font-medium first:rounded-l-[7px] last:rounded-r-[7px] focus-visible:relative focus-visible:z-10 ${p.view === v ? 'bg-a-accent text-a-accent-ink' : 'bg-a-surface text-a-text-2 hover:text-a-text'}`}>{text}</button>
+              className={`rounded-lg px-3.5 py-1.5 text-sm transition-colors focus-visible:relative focus-visible:z-10 ${p.view === v ? 'bg-a-surface text-a-text font-semibold shadow-a-sm' : 'font-medium text-a-text-2 hover:text-a-text'}`}>{text}</button>
           ))}
         </div>
       )}

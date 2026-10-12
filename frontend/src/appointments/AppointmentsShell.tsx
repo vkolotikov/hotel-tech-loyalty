@@ -1,24 +1,31 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, LayoutGrid, LogOut, Menu, Plus, Search, Settings2, TrendingUp, Users, Wallet } from 'lucide-react'
+import { CalendarDays, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, TrendingUp, Users, Wallet } from 'lucide-react'
 import { logoutAndRedirect } from '../lib/logout'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { useAppointments } from './AppointmentsProvider'
 import { failureOf } from './lib/api'
+import { firstLetter } from './lib/firstLetter'
 import { fullAdminPathFor } from './lib/landing'
+import { markShell } from './lib/shellMark'
+import { loadBrand, rememberBrand, useLook } from './lib/look'
 import { useAppointmentsOnly } from './lib/useAppointmentsOnly'
 import { useVocab } from './lib/vocab'
+import { accentStyle, accentTokens } from './theme/accent'
 import { Button } from './ui/Button'
 import { Notice } from './ui/Notice'
+import { ThemeSwitch } from './ui/ThemeSwitch'
 import { ChecklistBanner } from './setup/Checklist'
 
 /**
- * The workspace's frame: a calm dark rail with the two daily areas, a top
- * bar with the organisation, client search and New appointment, and the
- * notices that explain why something is not available. Nothing here links
- * into the full admin except the one "Full admin" entry in the secondary
- * area, and not even that on the Appointments plan, which has no full admin.
+ * The workspace's frame: an ink side panel that collapses to icons, with the
+ * daily areas, the Light/Dark/Auto switch and the organisation's brand colour
+ * as the accent; a top bar with the organisation, client search and New
+ * appointment; and the notices that explain why something is not available.
+ * Nothing here links into the full admin except the one "Full admin" entry in
+ * the secondary area, and not even that on the Appointments plan, which has no
+ * full admin.
  */
 export function AppointmentsShell({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
@@ -37,6 +44,19 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
     if (!arrived.current) { arrived.current = true; return }
     if (document.activeElement === document.body) main.current?.focus()
   }, [pathname])
+
+  // Hooks stay above the early return below so their order never changes.
+  // <html data-shell="appointments"> keeps the full admin's Branding mood typography out, from the first paint.
+  useLayoutEffect(() => markShell(document.documentElement), [])
+  const look = useLook()
+  const slim = look.rail === 'slim'
+  // While the bootstrap loads, the frame wears the accent and mark this device last saw (lib/look.ts) rather than the fallback blue and an H.
+  const [remembered] = useState(loadBrand)
+  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved)
+  const initial = data ? firstLetter(data.organization.name, 'H') : (remembered?.initial ?? 'H')
+  const known = Boolean(data)
+  const brandHex = accent.accent
+  useEffect(() => { if (known) rememberBrand({ accent: brandHex, initial }) }, [known, brandHex, initial])
 
   const refusal = isError ? failureOf(error).code : ''
   const switchedOff = refusal === 'workspace_disabled'
@@ -75,39 +95,74 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   )
 
   return (
-    <div data-appointments="" className="min-h-screen flex bg-a-canvas text-a-text">
-      <aside data-rail="" className="hidden lg:flex w-56 shrink-0 flex-col bg-a-side text-a-side-text" aria-label={t('appointments.shell.menu', 'Menu')}>
-        <div className="px-5 py-5">
-          <div className="text-base font-semibold leading-tight">{data?.name ?? 'HexaTech Appointments'}</div>
-          <div className="text-xs text-a-side-text-2 mt-0.5 truncate">{data?.organization.name}</div>
+    <div data-appointments="" data-theme={look.resolved} data-accent-edge={accent.edge ? '' : undefined}
+      style={accentStyle(accent) as CSSProperties} className="min-h-screen flex bg-a-canvas text-a-text">
+      <aside data-rail="" data-rail-size={look.rail} aria-label={t('appointments.shell.menu', 'Menu')}
+        className={`hidden lg:flex ${slim ? 'w-[76px]' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out`}>
+        <div className={`flex min-h-11 items-center gap-3 ${slim ? 'justify-center' : 'px-2'}`}>
+          <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-accent font-a-display text-lg font-semibold text-a-accent-ink">{initial}</span>
+          <div className={slim ? 'sr-only' : 'min-w-0'}>
+            <div className="truncate text-[15px] font-semibold leading-tight">{data?.organization.name}</div>
+            <div className="truncate text-xs text-a-side-text-2">{data?.name ?? 'HexaTech Appointments'}</div>
+          </div>
         </div>
-        <nav className="px-3 space-y-1">
+        <nav className="space-y-1">
           {nav.map(({ to, end, icon: Icon, label }) => (
-            <NavLink key={to} to={to} end={end}
-              className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium ${isActive ? 'bg-a-side-2 text-a-side-text' : 'text-a-side-text-2 hover:text-a-side-text'}`}>
-              <Icon size={18} aria-hidden /> {label}
+            <NavLink key={to} to={to} end={end} data-tip={slim ? label : undefined}
+              className={({ isActive }) => `relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'bg-a-side-2 text-a-side-text' : 'text-a-side-text-2 hover:bg-a-side-2/60 hover:text-a-side-text'}`}>
+              {({ isActive }) => (
+                <>
+                  <Icon size={18} aria-hidden className="shrink-0" />
+                  <span className={slim ? 'sr-only' : 'truncate'}>{label}</span>
+                  {isActive && !slim && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-a-accent-rail" />}
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto px-3 pb-4 pt-4 border-t border-a-side-2 space-y-1">
+        <div className="mt-auto space-y-2 border-t border-a-side-2 pt-4">
+          <ThemeSwitch value={look.theme} onChange={look.setTheme} vertical={slim} />
           {!appointmentsOnly && (
-            <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
-              <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}
+            <Link to={fullAdmin} data-tip={slim ? t('appointments.shell.full_admin', 'Full admin') : undefined}
+              className={`relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text ${slim ? 'justify-center' : ''}`}>
+              <LayoutGrid size={16} aria-hidden className="shrink-0" /><span className={slim ? 'sr-only' : ''}>{t('appointments.shell.full_admin', 'Full admin')}</span>
             </Link>
           )}
-          <div className="px-3 py-2">
-            {language('w-full rounded-md bg-a-side-2 text-a-side-text text-sm px-2 py-1.5 border border-a-side-2')}
+          {!slim && <div className="px-1">{language('w-full rounded-lg bg-a-side-2 text-a-side-text text-sm px-2 py-1.5 border border-a-side-2')}</div>}
+          {/* Slim: a globe with the real picker laid over it, transparent. The select keeps its "Language" name and opens on click and on the keyboard; its own focus ring is invisible at zero opacity, so the wrapper draws one. The opened list is drawn from the select's own colours, not the wrapper's, hence the explicit bg and text. */}
+          {slim && (
+            <div data-tip={t('appointments.shell.language', 'Language')}
+              className="relative flex min-h-10 items-center justify-center rounded-xl text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-a-side-text">
+              <Globe size={16} aria-hidden />
+              {language('absolute inset-0 h-full w-full cursor-pointer opacity-0 bg-a-side-2 text-a-side-text')}
+            </div>
+          )}
+          <div className={`flex items-center gap-2 px-1 ${slim ? 'justify-center' : ''}`}>
+            <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-a-side-2 text-xs font-semibold">{firstLetter(data?.staff.name, '')}</span>
+            <span className={slim ? 'sr-only' : 'min-w-0 flex-1 truncate text-xs text-a-side-text-2'}>{data?.staff.name}</span>
+            {!slim && (
+              <button type="button" onClick={signOut} className="rounded-lg p-2 text-a-side-text-2 hover:text-a-side-text" aria-label={t('appointments.shell.sign_out', 'Sign out')}>
+                <LogOut size={16} aria-hidden />
+              </button>
+            )}
           </div>
-          <div className="px-3 pt-2 text-xs text-a-side-text-2 break-words">{data?.staff.name}</div>
-          <button type="button" onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-a-side-text-2 hover:text-a-side-text">
-            <LogOut size={16} aria-hidden /> {t('appointments.shell.sign_out', 'Sign out')}
+          {slim && (
+            <button type="button" onClick={signOut} data-tip={t('appointments.shell.sign_out', 'Sign out')}
+              className="relative flex min-h-10 w-full items-center justify-center rounded-xl text-a-side-text-2 hover:bg-a-side-2/60 hover:text-a-side-text">
+              <LogOut size={16} aria-hidden /><span className="sr-only">{t('appointments.shell.sign_out', 'Sign out')}</span>
+            </button>
+          )}
+          <button type="button" onClick={() => look.setRail(slim ? 'full' : 'slim')} aria-expanded={!slim}
+            data-tip={slim ? t('appointments.shell.expand', 'Expand menu') : undefined}
+            className={`relative flex min-h-10 w-full items-center gap-3 rounded-xl px-3 text-sm text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text ${slim ? 'justify-center' : ''}`}>
+            {slim ? <PanelLeftOpen size={16} aria-hidden /> : <PanelLeftClose size={16} aria-hidden />}
+            <span className={slim ? 'sr-only' : ''}>{slim ? t('appointments.shell.expand', 'Expand menu') : t('appointments.shell.collapse', 'Collapse menu')}</span>
           </button>
         </div>
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="h-14 shrink-0 flex items-center gap-3 px-4 bg-a-surface border-b border-a-border">
+        <header className="h-14 shrink-0 flex items-center gap-3 px-4 lg:px-6 bg-a-canvas border-b border-a-border">
           <nav className="flex lg:hidden items-center gap-1" aria-label={t('appointments.shell.menu', 'Menu')}>
             {nav.map(({ to, end, icon: Icon, label }) => (
               <NavLink key={to} to={to} end={end} aria-label={label}
@@ -126,12 +181,12 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
               <Search size={15} aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-a-text-2" />
               <input value={search} onChange={(e) => setSearch(e.target.value)}
                 placeholder={t('appointments.shell.search', 'Search clients')}
-                className="w-full rounded-lg bg-a-surface-2 border border-a-border pl-9 pr-3 py-2 text-sm text-a-text placeholder:text-a-text-2" />
+                className="w-full rounded-xl bg-a-surface border border-a-border pl-9 pr-3 py-2 text-sm text-a-text placeholder:text-a-text-2 shadow-a-sm" />
             </label>
           </form>
           {/* On a phone the header holds three areas, the search and the menu: the button keeps only its icon. */}
           <Link to="/appointments?new=1" aria-label={t('appointments.shell.new_appointment', 'New appointment')}
-            className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-lg bg-a-accent text-a-accent-ink hover:bg-a-accent-deep px-3 sm:px-3.5 py-2 text-sm font-semibold whitespace-nowrap">
+            className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-full bg-a-accent px-3 sm:px-4 py-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition hover:bg-a-accent-deep [@media(hover:hover)]:hover:-translate-y-px whitespace-nowrap">
             <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('appointments.shell.new_appointment', 'New appointment')}</span>
           </Link>
           {/* Below the width of the rail, what the rail's secondary area holds lives here. */}
@@ -139,8 +194,9 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
             <summary className="list-none cursor-pointer rounded-lg p-2 text-a-text-2 hover:text-a-text [&::-webkit-details-marker]:hidden" aria-label={t('appointments.shell.menu', 'Menu')}>
               <Menu size={18} aria-hidden />
             </summary>
-            <div className="absolute right-0 top-full z-40 mt-2 w-56 space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
+            <div className="absolute right-0 top-full z-40 mt-2 w-56 animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{data?.staff.name}</div>
+              <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>
               {!appointmentsOnly && (
                 <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
                   <LayoutGrid size={16} aria-hidden /> {t('appointments.shell.full_admin', 'Full admin')}

@@ -54,12 +54,12 @@ export function WeekEditor({ rows, readOnly, locale, saving, onSave }: { rows: H
             </div>
             {!readOnly && (
               <div className="flex flex-col items-end gap-1">
-                <button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-a-accent-deep"
+                <button type="button" className="inline-flex items-center gap-1 text-xs font-semibold text-a-accent-text"
                   onClick={() => setDay(day, [...windows, windows.length > 0 ? { start: windows[windows.length - 1].end, end: windows[windows.length - 1].end } : { start: '09:00', end: '17:00' }])}>
                   <Plus size={13} aria-hidden /> {t('appointments.setup.hours.add_window', 'Add hours')}
                 </button>
                 {day === 1 && (
-                  <button type="button" onClick={() => setWeek(w => copyToWeekdays(w, 1))} className="text-xs font-semibold text-a-accent-deep">
+                  <button type="button" onClick={() => setWeek(w => copyToWeekdays(w, 1))} className="text-xs font-semibold text-a-accent-text">
                     {t('appointments.setup.hours.copy_to_weekdays', 'Copy to Monday–Friday')}
                   </button>
                 )}

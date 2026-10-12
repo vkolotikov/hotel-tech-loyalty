@@ -46,6 +46,13 @@ describe('columnsFor', () => {
     expect(columnsFor('day', '2026-10-06', [{ ...emma, name: 'mara  ilves-kask' }], null, '2026-10-06', 'en-GB')[0].initials).toBe('MI')
   })
 
+  it('a name that starts with an emoji keeps the whole emoji as its initial, not half a pair', () => {
+    const initials = (name: string) => columnsFor('day', '2026-10-06', [{ ...emma, name }], null, '2026-10-06', 'en-GB')[0].initials
+    expect(initials('🌸 Rose')).toBe('🌸R')
+    expect(initials('🌸')).toBe('🌸')
+    expect(initials('anna 🌸 lee')).toBe('A🌸')
+  })
+
   it('week view: seven day columns for the chosen person, the first when none is chosen', () => {
     const week = columnsFor('week', '2026-10-07', [emma, james], null, '2026-10-06', 'en-GB')
     expect(week).toHaveLength(7)

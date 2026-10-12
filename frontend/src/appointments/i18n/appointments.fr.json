@@ -18,7 +18,16 @@
     "switched_off": "L'espace de rendez-vous a été désactivé pour votre organisation. Vos réservations sont inchangées et restent dans l'administration complète.",
     "subscription_required": "L'abonnement de votre organisation n'est pas actif : l'espace ne peut pas s'ouvrir. Vos réservations sont inchangées. Un administrateur peut rétablir l'accès dans « Facturation » de l'administration complète.",
     "subscription_required_plan": "L'abonnement de votre organisation n'est pas actif : l'espace ne peut pas s'ouvrir. Vos réservations sont inchangées. Contactez HexaTech pour le rétablir.",
-    "open_full_admin": "Ouvrir l'administration complète"
+    "open_full_admin": "Ouvrir l'administration complète",
+    "collapse": "Réduire le menu",
+    "expand": "Développer le menu"
+  },
+  "theme": {
+    "label": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "auto": "Auto",
+    "auto_hint": "Auto suit cet appareil"
   },
   "vocab": {
     "beauty": { "client": "Client", "clients": "Clients", "team_member": "Styliste", "service": "Soin" },
@@ -31,6 +40,12 @@
     "completed": "Terminé",
     "cancelled": "Annulé",
     "no_show": "Absent"
+  },
+  "steps": {
+    "label": "Avancement du rendez-vous",
+    "confirmed": "Confirmé",
+    "in_chair": "En cours",
+    "completed": "Terminé"
   },
   "payment": {
     "deposit_paid": "Acompte payé",
@@ -77,6 +92,8 @@
     "all_team": "Toute l'équipe",
     "show_cancelled": "Afficher les annulés",
     "updated": "Mis à jour à {{time}}",
+    "week": "Semaine {{n}}",
+    "booked": "Réservés : {{count}}",
     "refresh": "Actualiser",
     "month": "Mois",
     "previous_month": "Mois précédent",
@@ -445,6 +462,7 @@
     "owed": "Reste à payer",
     "to_refund": "{{amount}} à rembourser — un responsable peut rembourser",
     "legacy": "Marqué payé (aucun montant enregistré)",
+    "nothing": "Rien de payé, rien à régler.",
     "take": "Encaisser",
     "refund": "Rembourser",
     "amount": "Montant",

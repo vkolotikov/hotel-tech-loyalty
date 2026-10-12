@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Appointments;
 
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
+use App\Models\HotelSetting;
 use App\Models\Organization;
 use App\Models\Service;
 use App\Models\ServiceMaster;
@@ -38,6 +39,7 @@ class BootstrapController extends Controller
             'name'         => self::NAME,
             'organization' => ['id' => $orgId, 'name' => (string) $org->name, 'industry' => (string) $org->resolved_industry],
             'brand'        => $brand ? ['id' => (int) $brand->id, 'name' => (string) $brand->name] : null,
+            'accent'       => self::accent($orgId),
             'venue'        => [
                 'timezone'       => VenueClock::zone($orgId),
                 'timezone_named' => VenueClock::isNamed($orgId),
@@ -57,5 +59,17 @@ class BootstrapController extends Controller
                 'checklist' => $checklist->for($orgId, $brandId ? (int) $brandId : null),
             ],
         ]);
+    }
+
+    /** The organisation's brand colour (Settings → Branding → Primary) when it is a #rrggbb value. */
+    public static function accent(int $orgId): ?string
+    {
+        $value = HotelSetting::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('key', 'primary_color')
+            ->value('value');
+        $value = is_string($value) ? strtolower(trim($value)) : '';
+
+        return preg_match('/^#[0-9a-f]{6}$/', $value) === 1 ? $value : null;
     }
 }

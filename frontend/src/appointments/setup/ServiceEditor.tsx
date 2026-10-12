@@ -122,9 +122,9 @@ export function ServiceEditor({ service, data, onClose, onSaved }: { service: Se
 
   return (
     <aside role="dialog" aria-modal="false" aria-labelledby="service-editor-title"
-      className="fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
+      className="fixed right-0 top-14 !mt-0 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-xl">
       <div className="flex items-center justify-between gap-3 border-b border-a-border px-5 py-4">
-        <h2 id="service-editor-title" ref={heading} tabIndex={-1} className="text-base font-semibold text-a-text">
+        <h2 id="service-editor-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text">
           {service ? t('appointments.setup.services.edit', 'Edit service') : t('appointments.setup.services.new', 'New service')}
         </h2>
         <button type="button" onClick={onClose} aria-label={t('appointments.common.close', 'Close')} className="rounded-lg p-1.5 text-a-text-2 hover:text-a-text">
@@ -199,7 +199,7 @@ export function ServiceEditor({ service, data, onClose, onSaved }: { service: Se
         {!appointmentsOnly && (
           <p className="text-xs text-a-text-2">
             {t('appointments.setup.services.full_admin', 'Photos, gallery and the long description are edited in the full admin.')}{' '}
-            <Link to="/services" className="font-semibold text-a-accent-deep underline">{t('appointments.setup.services.full_admin_link', 'Open in the full admin')}</Link>
+            <Link to="/services" className="font-semibold text-a-accent-text underline">{t('appointments.setup.services.full_admin_link', 'Open in the full admin')}</Link>
           </p>
         )}
         <FailureNotice failure={failure} />

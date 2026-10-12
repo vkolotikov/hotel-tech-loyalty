@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppointmentSummary, CatalogueService, DateKey } from '../lib/types'
 import { PX_PER_MIN, freeSlotStarts, offHours, placeAppointments } from '../lib/layout'
@@ -30,6 +30,8 @@ interface Props {
 }
 
 const SLOT_STEP = 30
+/** The now chip and an hour label are both 16 px tall (12 px text); closer than this many minutes they would overlap, so the label steps aside. */
+const CHIP_CLEAR_MIN = 15
 
 /**
  * Time down the left, a column per person (day) or per day (week). White is
@@ -77,6 +79,8 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
     const bookable = col.date >= today
     return {
       col, i, day, bookable,
+      // The column head's count: this column's own appointments, the cancelled ones left out (the same match that places the cards).
+      booked: own.filter(a => a.status !== 'cancelled').length,
       free: bookable ? freeSlotStarts(day, own.filter(a => coversSlot(a.status)), col.date, SLOT_STEP) : [],
       placed: placeAppointments(own, col.date, startMin),
     }
@@ -103,18 +107,23 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
   const whyText = (why: Why, col: GridColumn, moved: AppointmentSummary) =>
     t(`appointments.calendar.drag.reason.${why.reason}`, REASON_FALLBACK[why.reason], { name: col.master.name, client: why.other?.client.name ?? '', service: moved.service?.name ?? '' })
 
+  // The now line and its gutter chip show while a column is on the venue's today and the grid's hours reach the present.
+  const nowInGrid = now.minutes >= startMin && now.minutes <= endMin
+  const todayShown = nowInGrid && columns.some(col => col.date === now.date)
+
   return (
     <div className="min-w-max">
       <div className="sticky top-0 z-20 flex bg-a-surface border-b border-a-border">
         <div className="w-14 shrink-0" />
-        {columns.map(col => (
-          <div key={col.key} className={`flex flex-1 min-w-[168px] items-center gap-2 border-l border-a-border px-3 py-2 ${col.isToday ? 'bg-a-accent/10' : ''}`}>
+        {cols.map(({ col, booked }) => (
+          <div key={col.key} className={`flex flex-1 min-w-[168px] items-center gap-3 border-l border-a-border px-3 py-2.5 animate-a-fade ${col.isToday ? 'bg-a-accent/10' : ''}`}>
             {col.initials && (
-              <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-a-surface-2 text-xs font-semibold text-a-text-2">{col.initials}</span>
+              <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-a-surface-2 text-a-text text-xs font-semibold ring-1 ring-a-border">{col.initials}</span>
             )}
             <div className="min-w-0">
               <div className="text-sm font-semibold text-a-text truncate">{col.title}</div>
               {col.subtitle && <div className="text-xs text-a-text-2 truncate">{col.subtitle}</div>}
+              <div className="font-a-mono text-xs text-a-text-2">{t('appointments.calendar.booked', 'Booked: {{count}}', { count: booked })}</div>
             </div>
           </div>
         ))}
@@ -125,12 +134,15 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
         <p id="calendar-keys-hint" className="sr-only">{t('appointments.calendar.keys_hint', 'Use the arrow keys to move between times and people; Enter opens or books.')}</p>
         <div className="relative w-14 shrink-0" style={{ height }} aria-hidden>
           {hours.map(h => (
-            <div key={h} className="absolute right-2 -translate-y-1/2 text-xs text-a-text-2" style={{ top: (h - startMin) * PX_PER_MIN }}>{h === startMin ? '' : hhmm(h)}</div>
+            <div key={h} className={`absolute right-2 -translate-y-1/2 font-a-mono text-xs text-a-text-2${todayShown && Math.abs(h - now.minutes) < CHIP_CLEAR_MIN ? ' invisible' : ''}`} style={{ top: (h - startMin) * PX_PER_MIN }}>{h === startMin ? '' : hhmm(h)}</div>
           ))}
+          {todayShown && (
+            <span className="absolute right-1 z-10 -translate-y-1/2 rounded-md bg-a-now px-1.5 font-a-mono text-xs text-a-now-ink" style={{ top: (now.minutes - startMin) * PX_PER_MIN }}>{hhmm(now.minutes)}</span>
+          )}
         </div>
 
         {cols.map(({ col, i, day, bookable, free, placed }) => {
-          const showNow = col.date === now.date && now.minutes >= startMin && now.minutes <= endMin
+          const showNow = nowInGrid && col.date === now.date
 
           return (
             <div key={col.key} data-col={i} className="relative flex-1 min-w-[168px] border-l border-a-border bg-a-surface" style={{ height }}>
@@ -150,7 +162,10 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
               })}
 
               {hours.map(h => (
-                <div key={h} className="absolute inset-x-0 border-t border-a-border" style={{ top: (h - startMin) * PX_PER_MIN }} aria-hidden />
+                <Fragment key={h}>
+                  <div className="absolute inset-x-0 border-t border-a-border" style={{ top: (h - startMin) * PX_PER_MIN }} aria-hidden />
+                  <div className="absolute inset-x-0 border-t border-dashed border-a-border/60" style={{ top: (h - startMin + 30) * PX_PER_MIN }} aria-hidden />
+                </Fragment>
               ))}
 
               {free.map(m => (
@@ -159,7 +174,7 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
                   aria-describedby={current?.key === `slot:${i}:${m}` ? 'calendar-keys-hint' : undefined}
                   onFocus={() => setActiveKey(`slot:${i}:${m}`)}
                   aria-label={t('appointments.calendar.book_at', 'Book {{name}} at {{time}}', { name: col.master.name, time: hhmm(m) })}
-                  className="group absolute inset-x-0 rounded text-left text-xs text-a-accent-deep hover:bg-a-accent/10 focus-visible:bg-a-accent/10"
+                  className="group absolute inset-x-0 rounded text-left text-xs text-a-accent-text hover:bg-a-accent/10 focus-visible:bg-a-accent/10"
                   style={{ top: (m - startMin) * PX_PER_MIN, height: SLOT_STEP * PX_PER_MIN }}>
                   <span className="px-2 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100">+ {hhmm(m)}</span>
                 </button>
@@ -189,7 +204,9 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
               )}
 
               {showNow && (
-                <div data-now-line="" className="absolute inset-x-0 z-10 border-t-2 border-a-danger pointer-events-none" style={{ top: (now.minutes - startMin) * PX_PER_MIN }} aria-hidden />
+                <div data-now-line="" className="absolute inset-x-0 z-10 border-t-2 border-a-now pointer-events-none" style={{ top: (now.minutes - startMin) * PX_PER_MIN }} aria-hidden>
+                  <span className="absolute -left-1.5 -top-[7px] h-3 w-3 rounded-full bg-a-now animate-a-pulse" />
+                </div>
               )}
             </div>
           )

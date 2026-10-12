@@ -50,6 +50,13 @@ describe('ListView', () => {
     expect(html).toMatch(/aria-current="true"[^>]*>[\s\S]*?Emily Johnson/)
   })
 
+  it('sets the header row in mono capitals and each day in the display serif on surface-2', () => {
+    const html = render([appt(1, '2026-10-06T09:00', 'confirmed', 'Ava Martinez')])
+    expect(html).toMatch(/<thead class="[^"]*font-a-mono[^"]*uppercase[^"]*"/)
+    expect(html).toMatch(/<tr class="bg-a-surface-2"><th scope="colgroup"[^>]*class="[^"]*font-a-display[^"]*font-normal[^"]*"/)
+    expect(html).toMatch(/<button[^>]*class="[^"]*text-a-accent-text[^"]*"/) // the time button keeps its readable accent
+  })
+
   it('says so when the range is empty', () => {
     expect(render([])).toContain('No appointments in this period.')
   })

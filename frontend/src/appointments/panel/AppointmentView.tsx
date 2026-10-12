@@ -1,7 +1,9 @@
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import { User } from 'lucide-react'
 import { money } from '../../lib/money'
 import type { ActionKey, AppointmentDetail, ClientMessageInfo, PointsResult } from '../lib/types'
+import { initialsOf } from '../lib/firstLetter'
 import { dateOf, formatDate, timeOf } from '../lib/wallClock'
 import { Button } from '../ui/Button'
 import { Notice } from '../ui/Notice'
@@ -11,6 +13,7 @@ import { LoyaltyCard } from './LoyaltyCard'
 import { Messages } from './Messages'
 import { MoneyBlock } from './MoneyBlock'
 import { refundWays } from './moneyLines'
+import { VisitSteps } from './VisitSteps'
 import { messageLine } from './messageLine'
 import { pointsLine } from './consequences'
 import type { PanelError } from './panelState'
@@ -65,6 +68,7 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
         : (() => { const line = pointsLine({ points: 0, reason: outcome.reason }); return { text: line ? t(line.key, line.fallback) : '', tone: outcome.reason === 'failed' ? 'warning' as const : 'info' as const } })())
     : null
   const toldLine = told ? messageLine(told) : null
+  const initials = initialsOf(b.client.name)
 
   return (
     <div className="space-y-4">
@@ -74,31 +78,36 @@ export function AppointmentView({ booking: b, zone, locale, saving, error, outco
 
       <section>
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-lg font-semibold text-a-text truncate">{b.client.name}</div>
-            <div className="text-sm text-a-text-2">{b.service?.name ?? '—'} · {b.master?.name ?? '—'}</div>
+          <div className="flex min-w-0 items-center gap-3">
+            {/* A client without a name gets a neutral person, never an empty circle. */}
+            <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-a-surface-2 text-sm font-semibold text-a-text ring-1 ring-a-border">{initials || <User size={20} className="text-a-text-2" />}</span>
+            <div className="min-w-0">
+              <div className="font-a-display text-2xl font-normal leading-tight text-a-text truncate">{b.client.name}</div>
+              <div className="text-sm text-a-text-2">{b.service?.name ?? '—'} · {b.master?.name ?? '—'}</div>
+            </div>
           </div>
           <StatusMark status={b.status} />
         </div>
-        <dl className="mt-3 space-y-1.5 text-sm">
-          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.when', 'When')}</dt><dd className="font-semibold text-a-text text-right">{formatDate(dateOf(b.start), locale)} · {timeOf(b.start)} – {timeOf(b.end)}
+        <VisitSteps status={b.status} className="mt-4" />
+        <dl className="mt-4 divide-y divide-a-border overflow-hidden rounded-xl border border-a-border text-sm">
+          <div className="flex justify-between gap-3 px-3.5 py-2.5"><dt className="text-a-text-2">{t('appointments.panel.when', 'When')}</dt><dd className="font-semibold text-a-text text-right">{formatDate(dateOf(b.start), locale)} · {timeOf(b.start)} – {timeOf(b.end)}
             {b.length_set_by_staff && <span className="block text-xs font-normal text-a-text-2">{t('appointments.panel.length_set', 'Length set by staff')}</span>}</dd></div>
-          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.price', 'Price')}</dt><dd className="text-a-text text-right">
+          <div className="flex justify-between gap-3 px-3.5 py-2.5"><dt className="text-a-text-2">{t('appointments.panel.price', 'Price')}</dt><dd className="text-a-text text-right">
             <span className="font-semibold">{money(b.price.total, b.price.currency)}</span>
             {b.price.discount_label && <span className="text-a-text-2"> · {b.price.discount_label}</span>}
           </dd></div>
-          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.list.payment', 'Payment')}</dt><dd className="text-a-text text-right">
+          <div className="flex justify-between gap-3 px-3.5 py-2.5"><dt className="text-a-text-2">{t('appointments.list.payment', 'Payment')}</dt><dd className="text-a-text text-right">
             {t(`appointments.payment.${b.payment.state}`)}
             {b.payment.refunded_amount !== null && <span className="text-a-text-2"> · {money(b.payment.refunded_amount, b.payment.currency)}</span>}
           </dd></div>
-          <div className="flex justify-between gap-3"><dt className="text-a-text-2">{t('appointments.panel.reference', 'Reference')}</dt><dd className="text-a-text-2">{b.reference}</dd></div>
+          <div className="flex justify-between gap-3 px-3.5 py-2.5"><dt className="text-a-text-2">{t('appointments.panel.reference', 'Reference')}</dt><dd className="text-a-text-2">{b.reference}</dd></div>
         </dl>
       </section>
 
-      <section className="rounded-lg border border-a-border p-3 text-sm">
+      <section className="rounded-xl border border-a-border bg-a-surface-2/50 p-3.5 text-sm">
         <div className="flex items-start justify-between gap-3">
           <span className="min-w-0 break-words text-a-text">{[b.client.phone, b.client.email].filter(Boolean).join(' · ') || t('appointments.client.no_contact', 'No contact details')}</span>
-          {b.client.id !== null && <Link to={`/appointments/clients/${b.client.id}`} className="shrink-0 text-a-accent-deep font-semibold underline-offset-2 hover:underline">{t('appointments.client.open_profile', 'Open profile')}</Link>}
+          {b.client.id !== null && <Link to={`/appointments/clients/${b.client.id}`} className="shrink-0 text-a-accent-text font-semibold underline-offset-2 hover:underline">{t('appointments.client.open_profile', 'Open profile')}</Link>}
         </div>
         {b.client.id === null && <p className="mt-1 text-xs text-a-text-2">{t('appointments.client.unlinked', 'This booking is not linked to a client record.')}</p>}
       </section>

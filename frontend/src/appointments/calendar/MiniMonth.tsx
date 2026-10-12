@@ -20,10 +20,10 @@ export function MiniMonth({ date, today, locale, onPick }: { date: DateKey; toda
   return (
     <section className="p-4" aria-label={t('appointments.calendar.month', 'Month')}>
       <div className="flex items-center justify-between mb-2">
-        <h2 className="text-sm font-semibold text-a-text">{formatDate(`${month}-01`, locale, { month: 'long', year: 'numeric' })}</h2>
+        <h2 className="font-a-display text-lg font-normal text-a-text">{formatDate(`${month}-01`, locale, { month: 'long', year: 'numeric' })}</h2>
         <div className="flex gap-1">
-          <button type="button" onClick={() => setMonth(addMonths(month, -1))} className="rounded p-1 text-a-text-2 hover:text-a-text" aria-label={t('appointments.calendar.previous_month', 'Previous month')}><ChevronLeft size={16} aria-hidden /></button>
-          <button type="button" onClick={() => setMonth(addMonths(month, 1))} className="rounded p-1 text-a-text-2 hover:text-a-text" aria-label={t('appointments.calendar.next_month', 'Next month')}><ChevronRight size={16} aria-hidden /></button>
+          <button type="button" onClick={() => setMonth(addMonths(month, -1))} className="rounded p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.previous_month', 'Previous month')}><ChevronLeft size={16} aria-hidden /></button>
+          <button type="button" onClick={() => setMonth(addMonths(month, 1))} className="rounded p-1 text-a-text-2 transition-colors hover:text-a-text" aria-label={t('appointments.calendar.next_month', 'Next month')}><ChevronRight size={16} aria-hidden /></button>
         </div>
       </div>
       <div className="grid grid-cols-7 gap-y-1 text-center text-xs text-a-text-2" aria-hidden>
@@ -37,7 +37,7 @@ export function MiniMonth({ date, today, locale, onPick }: { date: DateKey; toda
             <button key={d} type="button" onClick={() => onPick(d)}
               aria-pressed={selected} aria-current={isToday ? 'date' : undefined}
               aria-label={formatDate(d, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
-              className={`mx-auto h-8 w-8 rounded-full text-sm ${selected ? 'bg-a-accent text-a-accent-ink font-semibold' : isToday ? 'border border-a-accent text-a-accent-deep font-semibold' : monthOf(d) === month ? 'text-a-text hover:bg-a-surface-2' : 'text-a-text-2 hover:bg-a-surface-2'}`}>{Number(d.slice(8))}</button>
+              className={`mx-auto h-8 w-8 rounded-full text-sm transition-colors ${selected ? 'bg-a-accent text-a-accent-ink font-semibold shadow-a-sm' : isToday ? 'ring-1 ring-a-accent-text text-a-accent-text font-semibold' : monthOf(d) === month ? 'text-a-text hover:bg-a-surface-2' : 'text-a-text-2 hover:bg-a-surface-2'}`}>{Number(d.slice(8))}</button>
           )
         })}
       </div>

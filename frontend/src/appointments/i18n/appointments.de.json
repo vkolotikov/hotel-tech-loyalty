@@ -18,7 +18,16 @@
     "switched_off": "Der Termin-Arbeitsbereich wurde für Ihre Organisation abgeschaltet. Ihre Buchungen sind unverändert und bleiben in der vollständigen Verwaltung.",
     "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Ein Administrator kann den Zugang unter „Abrechnung“ in der vollständigen Verwaltung wiederherstellen.",
     "subscription_required_plan": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher lässt sich der Arbeitsbereich nicht öffnen. Ihre Buchungen sind unverändert. Wenden Sie sich an HexaTech, um den Zugang wiederherzustellen.",
-    "open_full_admin": "Vollständige Verwaltung öffnen"
+    "open_full_admin": "Vollständige Verwaltung öffnen",
+    "collapse": "Menü einklappen",
+    "expand": "Menü ausklappen"
+  },
+  "theme": {
+    "label": "Darstellung",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "auto": "Auto",
+    "auto_hint": "Auto folgt diesem Gerät"
   },
   "vocab": {
     "beauty": { "client": "Kunde", "clients": "Kunden", "team_member": "Stylist(in)", "service": "Behandlung" },
@@ -31,6 +40,12 @@
     "completed": "Abgeschlossen",
     "cancelled": "Storniert",
     "no_show": "Nicht erschienen"
+  },
+  "steps": {
+    "label": "Fortschritt des Termins",
+    "confirmed": "Bestätigt",
+    "in_chair": "Im Termin",
+    "completed": "Abgeschlossen"
   },
   "payment": {
     "deposit_paid": "Anzahlung bezahlt",
@@ -77,6 +92,8 @@
     "all_team": "Ganzes Team",
     "show_cancelled": "Stornierte anzeigen",
     "updated": "Aktualisiert um {{time}}",
+    "week": "KW {{n}}",
+    "booked": "Gebucht: {{count}}",
     "refresh": "Aktualisieren",
     "month": "Monat",
     "previous_month": "Vorheriger Monat",
@@ -445,6 +462,7 @@
     "owed": "Noch offen",
     "to_refund": "{{amount}} zu erstatten — eine Leitung kann erstatten",
     "legacy": "Als bezahlt markiert (kein Betrag erfasst)",
+    "nothing": "Nichts bezahlt, nichts offen.",
     "take": "Zahlung annehmen",
     "refund": "Erstatten",
     "amount": "Betrag",
