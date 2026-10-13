@@ -47,7 +47,7 @@ describe('New appointment price', () => {
   const sophie = { id: 5, name: 'Sophie', phone: null, email: null, member: { id: 9, number: 'HL-9', tier: 'Gold', points: 0 } }
   const render = (extra: Record<string, unknown>) => renderToStaticMarkup(
     <QueryClientProvider client={new QueryClient()}>
-      <CreateForm draft={{ ...emptyDraft('2026-10-06'), masterId: 1, serviceId: 3, client: sophie, time: '10:00' }} masters={[{ id: 1, name: 'Mara', title: null, avatar: null, days: {} }]}
+      <CreateForm draft={{ ...emptyDraft('2026-10-06'), masterId: 1, serviceId: 3, client: sophie, time: '10:00' }} masters={[{ id: 1, name: 'Mara', title: null, avatar: null, color: '#3b7dd8', days: {} }]}
         services={[{ id: 3, name: 'Cut', duration_minutes: 45, buffer_after_minutes: 0, price: 60, currency: 'EUR', master_ids: [1] }]}
         slots={{ slots: [{ start: '2026-10-06T10:00', end: '2026-10-06T10:45', label: '10:00' }], duration_minutes: 45, price: 60, currency: 'EUR' }}
         slotsLoading={false} today="2026-10-06" saving={false} error={null} onEdit={() => {}} onSave={() => {}} tell={false} onTell={() => {}}

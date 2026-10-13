@@ -24,6 +24,8 @@ const FAMILIES: Record<string, readonly string[]> = {
   'money.method': ['cash', 'card_desk', 'transfer', 'other', 'online_card'],
   'money.kind': ['payment', 'refund'],
   'messages.reason': ['not_requested', 'no_recipient', 'suppressed', 'stale', 'mail_error'],
+  // `colours.<key>` is not listed here: the palette is the server's (TeamColours::PALETTE), and
+  // tests/Unit/Appointments/TeamColourLabelsTest.php checks every one of its keys against these five files.
 }
 
 function bundle(locale: string): Record<string, unknown> {

@@ -28,6 +28,7 @@ class SetupTeamController extends Controller
     public function store(Request $request, TeamSetup $setup, SetupPresenter $present): JsonResponse
     {
         SetupAccess::requireManager($request->user());
+        $this->lowerCaseColour($request);
         $data = $request->validate(TeamSetup::rules(true));
         $master = DB::transaction(fn () => $setup->create($data));
 
@@ -38,6 +39,7 @@ class SetupTeamController extends Controller
     {
         SetupAccess::requireManager($request->user());
         $master = $this->member($id);
+        $this->lowerCaseColour($request);
         $data = $request->validate(TeamSetup::rules(false, $master));
 
         $stranded = AppointmentImpact::none();
@@ -101,6 +103,14 @@ class SetupTeamController extends Controller
         }
 
         return response()->json(['team_member' => $this->present($master, $present)]);
+    }
+
+    /** A hex may arrive in any case; the palette and the column are lower case. Only when the key was sent. */
+    private function lowerCaseColour(Request $request): void
+    {
+        if ($request->has('color') && is_string($request->input('color'))) {
+            $request->merge(['color' => strtolower($request->input('color'))]);
+        }
     }
 
     private function member(int $id): ServiceMaster

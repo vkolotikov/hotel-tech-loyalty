@@ -49,4 +49,8 @@ describe('AppointmentPanel motion', () => {
     expect(tag).toContain('role="dialog"')
     expect(tag).not.toContain('animate-a-slide-in')
   })
+
+  it('says it covers the calendar, so a card\'s preview is not placed under it', () => {
+    expect(panel()).toContain('data-covers-calendar=""')
+  })
 })

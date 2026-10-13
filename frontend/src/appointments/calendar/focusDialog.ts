@@ -1,3 +1,5 @@
+import { handBackFocus } from '../lib/handBack'
+
 /**
  * Moves the focus into a dialog that just opened — onto the dialog itself,
  * since its Save may still be disabled — and brings it into view (the drop
@@ -10,5 +12,5 @@ export function focusDialog(
 ): () => void {
   box.focus({ preventScroll: true })
   box.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  return () => { if (before?.isConnected) before.focus() }
+  return () => { if (before?.isConnected) handBackFocus(before) }
 }

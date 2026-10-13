@@ -22,6 +22,36 @@
     "collapse": "Contraer menú",
     "expand": "Expandir menú"
   },
+  "find": {
+    "open": "Buscar cliente, cita o acción",
+    "title": "Buscar",
+    "actions": "Acciones",
+    "go_to": "Ir a",
+    "coming_up": "Próximas de hoy",
+    "appointments": "Citas",
+    "search_all": "Buscar «{{q}}» en todos los clientes",
+    "none": "Nada coincide con «{{q}}».",
+    "count": "Resultados: {{count}}",
+    "time_off": "Ausencias",
+    "theme_dark": "Cambiar a oscuro",
+    "theme_light": "Cambiar a claro",
+    "shortcuts": "Atajos de teclado",
+    "hint_move": "mover",
+    "hint_open": "abrir",
+    "hint_close": "cerrar",
+    "searching": "Buscando clientes…"
+  },
+  "shortcuts": {
+    "title": "Atajos de teclado",
+    "find": "Buscar",
+    "days": "Día anterior o siguiente (semana en la vista semanal)",
+    "views": "Día, semana, lista",
+    "close": "Cerrar el panel",
+    "card": "Mover la cita seleccionada",
+    "help": "Esta lista",
+    "on_calendar": "En el calendario",
+    "or": "o"
+  },
   "theme": {
     "label": "Tema",
     "light": "Claro",
@@ -90,6 +120,8 @@
     "go_to_date": "Ir a la fecha",
     "today": "Hoy",
     "all_team": "Todo el equipo",
+    "team_chips": "Equipo en el calendario",
+    "team_chips_last": "Al menos una persona sigue en el calendario",
     "show_cancelled": "Mostrar canceladas",
     "updated": "Actualizado a las {{time}}",
     "week": "Semana {{n}}",
@@ -100,15 +132,34 @@
     "next_month": "Mes siguiente",
     "load_failed": "No se ha podido actualizar la agenda. Lo que ve puede no estar al día."
   },
+  "preview": {
+    "points": "{{tier}} · {{points}} puntos",
+    "points_only": "{{points}} puntos",
+    "with": "con {{name}}",
+    "length": "{{minutes}} min",
+    "hint": "Haz clic para abrir",
+    "hint_keyboard": "Pulsa Intro para abrir"
+  },
   "overview": {
     "title": "Resumen del día",
     "total": "Citas",
-    "upcoming": "Próximas",
-    "in_progress": "En curso",
-    "completed": "Completadas",
     "attention": "Requieren atención",
-    "attention_hint": "Requieren atención: pendientes de confirmación, o confirmadas y sin empezar más de 15 minutos después de su hora.",
     "legend": "Estados"
+  },
+  "today": {
+    "label": "De un vistazo",
+    "done_noshow": "{{done}} hechas · {{noshow}} no presentadas",
+    "next": "Siguiente",
+    "first": "Primera cita",
+    "next_line": "{{service}} · {{client}} con {{member}}",
+    "nothing_more": "Nada más reservado hoy",
+    "nothing": "Nada reservado",
+    "takings": "Cobros",
+    "payments": "Pagos: {{count}}",
+    "attention_hint": "Sin confirmar o con retraso",
+    "team": "Equipo",
+    "team_in": "Presentes: {{count}}",
+    "team_off": "Libres: {{names}}"
   },
   "list": {
     "empty": "No hay citas en este periodo.",
@@ -368,7 +419,10 @@
       "not_linked": "Su inicio de sesión aún no está vinculado a un miembro del equipo. Un gerente puede vincularlo en Equipo.",
       "save_profile": "Guardar perfil",
       "save_hours": "Guardar horario",
-      "services_count": "Servicios: {{count}}"
+      "services_count": "Servicios: {{count}}",
+      "colour": "Color en el calendario",
+      "colour_auto": "Automático",
+      "colour_hint": "Se muestra como un punto en sus citas y un aro en su columna."
     },
     "hours": {
       "off": "Libre",
@@ -561,5 +615,17 @@
     "client": "Cliente",
     "reference": "Referencia",
     "by": "Registrado por"
+  },
+  "colours": {
+    "blue": "Azul",
+    "orange": "Naranja",
+    "violet": "Violeta",
+    "raspberry": "Frambuesa",
+    "teal": "Verde azulado",
+    "ochre": "Ocre",
+    "green": "Verde",
+    "coral": "Coral",
+    "indigo": "Índigo",
+    "brown": "Marrón"
   }
 }

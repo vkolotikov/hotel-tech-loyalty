@@ -10,6 +10,7 @@ use App\Models\ServiceMasterTimeOff;
 use App\Services\Appointments\AppointmentPresenter;
 use App\Services\Appointments\AppointmentRefused;
 use App\Services\Appointments\StaffBookingWriter;
+use App\Services\Appointments\TeamColours;
 use App\Services\Appointments\VenueClock;
 use App\Services\ServiceSchedulingService;
 use Carbon\CarbonImmutable;
@@ -46,6 +47,7 @@ class CalendarController extends Controller
         }
 
         $masters = ServiceMaster::where('is_active', true)->orderBy('sort_order')->orderBy('id')->get();
+        $colours = TeamColours::assign($masters);
 
         $withWindows = [];
         if ($days <= self::WINDOW_DAYS && $request->boolean('windows', true)) {
@@ -61,7 +63,7 @@ class CalendarController extends Controller
             ->get()
             ->groupBy(fn (ServiceMasterTimeOff $o) => $o->service_master_id . '|' . $o->date->toDateString());
 
-        $masterRows = $masters->map(function (ServiceMaster $m) use ($from, $to, $withWindows, $timeOff, $scheduler) {
+        $masterRows = $masters->map(function (ServiceMaster $m) use ($from, $to, $withWindows, $timeOff, $scheduler, $colours) {
             $perDay = [];
             if (in_array($m->id, $withWindows, true)) {
                 for ($day = $from; $day->lte($to); $day = $day->addDay()) {
@@ -89,6 +91,7 @@ class CalendarController extends Controller
                 'name'   => (string) $m->name,
                 'title'  => $m->title,
                 'avatar' => $m->avatar,
+                'color'  => $colours[(int) $m->id],
                 // An object even when empty, so the client always reads a map.
                 'days'   => (object) $perDay,
             ];

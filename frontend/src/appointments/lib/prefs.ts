@@ -1,9 +1,9 @@
 export type View = 'day' | 'week' | 'list'
 
 /** Display preferences, per browser. They change what is shown — never what is available and never who may see it. */
-export interface Prefs { view: View; masterId: number | null; showCancelled: boolean }
+export interface Prefs { view: View; masterId: number | null; showCancelled: boolean; hiddenMasters: number[] }
 
-export const DEFAULT_PREFS: Prefs = { view: 'day', masterId: null, showCancelled: false }
+export const DEFAULT_PREFS: Prefs = { view: 'day', masterId: null, showCancelled: false, hiddenMasters: [] }
 
 const KEY = 'appointments:prefs'
 const VIEWS: readonly string[] = ['day', 'week', 'list']
@@ -22,6 +22,9 @@ export function parsePrefs(raw: string | null): Prefs {
     view: typeof v.view === 'string' && VIEWS.includes(v.view) ? (v.view as View) : DEFAULT_PREFS.view,
     masterId: typeof v.masterId === 'number' && Number.isInteger(v.masterId) ? v.masterId : null,
     showCancelled: v.showCancelled === true,
+    hiddenMasters: Array.isArray(v.hiddenMasters)
+      ? [...new Set(v.hiddenMasters.filter((x): x is number => typeof x === 'number' && Number.isInteger(x)))]
+      : [],
   }
 }
 

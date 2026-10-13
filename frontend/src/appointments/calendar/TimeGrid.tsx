@@ -1,15 +1,17 @@
-import { Fragment, useCallback, useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Fragment, useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppointmentSummary, CatalogueService, DateKey } from '../lib/types'
 import { PX_PER_MIN, freeSlotStarts, offHours, placeAppointments } from '../lib/layout'
 import { coversSlot, isLive } from '../lib/status'
 import { dateOf, formatDate, hhmm, minutesOf, wallMinutes } from '../lib/wallClock'
 import { AppointmentCard } from './AppointmentCard'
+import { CardPreview, previewPlacement, visibleArea, type PreviewPlacement } from './CardPreview'
 import { DragPreview } from './DragPreview'
 import { PendingDrop, type DropTarget } from './DropConfirm'
 import { gridRange, type GridColumn } from './calendarState'
 import { REASON_FALLBACK, pinnedColumnIndex, whyNot, type Why } from './dragMath'
 import { GRID_KEYS, initialStop, nextStop, orderStops, type Stop } from './gridFocus'
+import { createPreviewTimer, gridKey, ontoOwnCard, previewStillShown, watchPreviewEscape, type PreviewFor, type PreviewOpener } from './previewTimer'
 import { useCardDrag } from './useCardDrag'
 
 interface Props {
@@ -32,6 +34,24 @@ interface Props {
 const SLOT_STEP = 30
 /** The now chip and an hour label are both 16 px tall (12 px text); closer than this many minutes they would overlap, so the label steps aside. */
 const CHIP_CLEAR_MIN = 15
+
+/**
+ * Where a card's preview goes, measured from the page as it is when the preview
+ * opens: the card's column (the preview is placed beside it) and the card itself,
+ * and what can be seen of the grid — the scroller around it, below its sticky
+ * column head (the previous sibling of the columns' row), up to an open panel
+ * (`[data-covers-calendar]`) over its right.
+ */
+function placeFor(id: number): PreviewPlacement {
+  const card = document.querySelector<HTMLElement>(`[data-calendar-scroll] [data-stop="appt:${id}"]`)
+  const scroller = card?.closest<HTMLElement>('[data-calendar-scroll]')
+  const column = card?.closest<HTMLElement>('[data-col]')
+  const columns = column?.parentElement
+  if (!card || !scroller || !column || !columns) return { side: 'right', above: false }
+  const headBottom = columns.previousElementSibling?.getBoundingClientRect().bottom ?? 0
+  const cover = document.querySelector<HTMLElement>('[data-covers-calendar]')?.getBoundingClientRect().left ?? null
+  return previewPlacement(column.getBoundingClientRect(), card.getBoundingClientRect(), visibleArea(scroller.getBoundingClientRect(), headBottom, cover))
+}
 
 /**
  * Time down the left, a column per person (day) or per day (week). White is
@@ -67,12 +87,6 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
   useEffect(() => { if (pendingGone) cancel() }, [pendingGone, cancel])
   const shownAt = drag?.phase === 'confirming' ? pendingAt : drag?.place.colIndex ?? -1
 
-  if (columns.length === 0) {
-    return <p className="p-8 text-sm text-a-text-2">{t('appointments.calendar.no_team', 'No team members to show. Add team members and their working hours in the full admin.')}</p>
-  }
-
-  const height = (endMin - startMin) * PX_PER_MIN
-  const hours = Array.from({ length: (endMin - startMin) / 60 }, (_, i) => startMin + i * 60)
   const cols = columns.map((col, i) => {
     const day = col.master.days[col.date]
     const own = appointments.filter(a => a.master?.id === col.master.id && dateOf(a.start) === col.date)
@@ -85,6 +99,33 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
       placed: placeAppointments(own, col.date, startMin),
     }
   })
+
+  // A card's preview (spec 5.5): one at a time, after a short rest, and never while a card is being dragged.
+  // Where it goes is measured as it opens, from what can be seen of the grid then (placeFor).
+  const [preview, setPreview] = useState<(PreviewFor & { placement: PreviewPlacement }) | null>(null)
+  const [previewTimer] = useState(() => createPreviewTimer<PreviewFor>(what => setPreview(what === null ? null : { ...what, placement: placeFor(what.id) })))
+  const dragging = Boolean(drag)
+  useEffect(() => { if (dragging) previewTimer.cancel() }, [dragging, previewTimer])
+  useEffect(() => previewTimer.cancel, [previewTimer]) // nothing opens after the grid is gone
+  // While a preview is open, Escape closes it wherever the focus is, and nothing else (WCAG 1.4.13); a panel stays open. Nothing listens otherwise.
+  const previewOpen = preview !== null
+  useEffect(() => (previewOpen ? watchPreviewEscape(window, previewTimer.end) : undefined), [previewOpen, previewTimer])
+  // A preview closes when a drag begins under it, and when its card is no longer drawn in the columns it opened in
+  // (another day or view, a refresh without it): no pointer or focus leaves the card then. Through the timer, so a
+  // rest still pending is dropped too; a rest that fires later carries the grid it began on and is closed here.
+  const grid = gridKey(columns)
+  const drawn = new Set(cols.flatMap(c => c.placed.map(p => p.item.id)))
+  if (preview !== null && (dragging || !previewStillShown(preview, drawn, grid))) previewTimer.end()
+  const startPreview = (id: number, by: PreviewOpener) => { if (!dragging) previewTimer.start({ id, grid, by }) }
+  // A click on a preview does what a click on its card does: the preview closes and the panel opens (unless the click ends a drag).
+  const open = (id: number) => { previewTimer.end(); if (!consumeClick()) onOpen(id) }
+
+  if (columns.length === 0) {
+    return <p className="p-8 text-sm text-a-text-2">{t('appointments.calendar.no_team', 'No team members to show. Add team members and their working hours in the full admin.')}</p>
+  }
+
+  const height = (endMin - startMin) * PX_PER_MIN
+  const hours = Array.from({ length: (endMin - startMin) / 60 }, (_, i) => startMin + i * 60)
   // Part F: the grid is one tab stop; the arrow keys move between free slots and cards.
   const stops: Stop[] = orderStops(cols.flatMap(({ i, free, placed }) => [
     ...free.map(m => ({ key: `slot:${i}:${m}`, col: i, start: m, end: m + SLOT_STEP })),
@@ -118,7 +159,8 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
         {cols.map(({ col, booked }) => (
           <div key={col.key} className={`flex flex-1 min-w-[168px] items-center gap-3 border-l border-a-border px-3 py-2.5 animate-a-fade ${col.isToday ? 'bg-a-accent/10' : ''}`}>
             {col.initials && (
-              <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-a-surface-2 text-a-text text-xs font-semibold ring-1 ring-a-border">{col.initials}</span>
+              <span aria-hidden className="a-member-ring flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-a-surface-2 text-a-text text-xs font-semibold"
+                style={{ '--a-m': col.master.color } as CSSProperties}>{col.initials}</span>
             )}
             <div className="min-w-0">
               <div className="text-sm font-semibold text-a-text truncate">{col.title}</div>
@@ -183,15 +225,25 @@ export function TimeGrid({ columns, appointments, now, today, selectedId, onSlot
               {placed.map(p => {
                 const movable = onDrop !== undefined && isLive(p.item.status)
                 return (
-                  <AppointmentCard key={p.item.id} placed={p} selected={p.item.id === selectedId}
+                  <AppointmentCard key={p.item.id} placed={p} selected={p.item.id === selectedId} memberColor={col.master.color}
                     gutter={bookable && !coversSlot(p.item.status)}
                     onOpen={(id) => { if (!consumeClick()) onOpen(id) }}
                     draggable={movable} lifted={drag?.origin.appt.id === p.item.id}
                     stopKey={`appt:${p.item.id}`} tabIndex={current?.key === `appt:${p.item.id}` ? 0 : -1} onFocusStop={setActiveKey}
                     describedBy={current?.key === `appt:${p.item.id}` ? 'calendar-keys-hint' : undefined}
+                    onPreviewStart={startPreview} onPreviewEnd={previewTimer.end} onPreviewLeave={previewTimer.leave}
+                    previewId={preview?.id === p.item.id ? `card-preview-${p.item.id}` : undefined}
                     onDragStart={movable ? (e, kind) => begin(e, kind, { appt: p.item, colIndex: i, start: wallMinutes(p.item.start), length: p.item.duration_minutes }) : undefined} />
                 )
               })}
+
+              {preview && placed.filter(p => p.item.id === preview.id).map(p => (
+                <CardPreview key={p.item.id} id={`card-preview-${p.item.id}`} appointment={p.item} memberName={col.master.name}
+                  placement={preview.placement} top={p.top} bottom={p.top + p.height} by={preview.by}
+                  // A hover card (WCAG 1.4.13): the pointer may rest on it; leaving it closes it, unless back onto its own card.
+                  onHold={previewTimer.hold} onLeave={(to) => { if (!ontoOwnCard(to, p.item.id)) previewTimer.end() }}
+                  onOpen={() => open(p.item.id)} />
+              ))}
 
               {drag && shownAt === i && (
                 <DragPreview top={(drag.place.start - startMin) * PX_PER_MIN} height={drag.place.length * PX_PER_MIN}

@@ -21,7 +21,7 @@ const { releasedDrop, installTouchGuard } = await import('./useCardDrag')
 const { pinnedColumnIndex, samePlace } = await import('./dragMath')
 const { claimEscape, panelClosesOn, dropNotify, lengthNote } = await import('./dropDialog')
 
-const emma: CalendarMaster = { id: 1, name: 'Emma', title: null, avatar: null, days: { '2026-10-06': { windows: [{ start: '09:00', end: '17:00' }], time_off: [] } } }
+const emma: CalendarMaster = { id: 1, name: 'Emma', title: null, avatar: null, color: '#3b7dd8', days: { '2026-10-06': { windows: [{ start: '09:00', end: '17:00' }], time_off: [] } } }
 const appt = (id: number, start: string, end: string, status: Status): AppointmentSummary => ({
   id, reference: `SVC-${id}`, start, end, duration_minutes: 45, service: { id: 1, name: 'Haircut' }, master: { id: 1, name: 'Emma' },
   client: { id: 5, name: 'Sophie', is_member: false }, status, payment: { state: 'not_paid_online' }, revision: 'r',

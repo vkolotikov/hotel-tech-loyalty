@@ -19,7 +19,7 @@ const { TeamTab } = await import('./TeamTab')
 const { TeamEditor, teamBodyOf, teamDraftOf } = await import('./TeamEditor')
 
 const mara: SetupTeamMember = {
-  id: 2, name: 'Mara Ilves', title: 'Therapist', email: 'mara@example.test', phone: null, user_id: 13, is_active: true,
+  id: 2, name: 'Mara Ilves', title: 'Therapist', email: 'mara@example.test', phone: null, user_id: 13, is_active: true, color: null,
   services: [{ id: 1, duration_minutes: 50, price: null }],
   week: [{ day_of_week: 1, start_time: '09:00', end_time: '17:00', is_active: true }],
   time_off: [{ id: 5, date: '2026-10-09', start_time: null, end_time: null, reason: 'Holiday' }],
@@ -28,7 +28,7 @@ const data: SetupPayload = {
   can_manage: true, my_team_member_id: null,
   services: [{ id: 1, name: 'Deep Tissue Massage', category_id: null, duration_minutes: 45, buffer_after_minutes: 0, price: 60, currency: 'EUR', short_description: null, is_active: true, performers: [] }],
   categories: [], team: [mara], staff_accounts: [{ user_id: 13, name: 'Mara Ilves', email: 'mara@example.test' }],
-  checklist: { steps: [], complete: true }, settings: {} as SetupPayload['settings'],
+  checklist: { steps: [], complete: true }, settings: {} as SetupPayload['settings'], palette: [], team_colors: {},
 }
 const boot = { venue: { today: '2026-10-05', timezone: 'Europe/Riga', timezone_named: true, currency: 'EUR' }, organization: { id: 1, name: 'Lumière', industry: 'beauty' } } as Bootstrap
 
@@ -42,7 +42,8 @@ describe('the team form', () => {
   it('reads a person into a draft and writes back what the server takes', () => {
     const draft = teamDraftOf(mara, data.services)
     expect(draft.services[1]).toEqual({ on: true, duration: '50', price: '' })
-    expect(teamBodyOf({ ...draft, phone: ' +371 2000 0000 ' })).toEqual({
+    // The colour was not changed, so it is not sent (editors.test.tsx covers when it is).
+    expect(teamBodyOf({ ...draft, phone: ' +371 2000 0000 ' }, mara)).toEqual({
       name: 'Mara Ilves', title: 'Therapist', email: 'mara@example.test', phone: '+371 2000 0000', user_id: 13, is_active: true,
       services: [{ id: 1, duration_minutes: 50, price: null }],
     })

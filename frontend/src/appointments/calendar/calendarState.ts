@@ -55,6 +55,29 @@ export function columnsFor(view: 'day' | 'week', date: DateKey, masters: Calenda
   }))
 }
 
+/**
+ * The day view's team (Atelier R2 §5.4): who is on show, which cards stay and how many each person has.
+ * A hidden id that names no one on the team is ignored, and a stored list that would hide everyone hides no one.
+ * Cards nobody is assigned to stay. The counts are the day's non-cancelled cards, hidden people included.
+ */
+export function dayTeam(masters: CalendarMaster[], appointments: AppointmentSummary[], hiddenIds: number[]): {
+  hidden: number[]; masters: CalendarMaster[]; appointments: AppointmentSummary[]; counts: Record<number, number>
+} {
+  const named = hiddenIds.filter(id => masters.some(m => m.id === id))
+  const hidden = named.length >= masters.length ? [] : named
+  const shownMasters = masters.filter(m => !hidden.includes(m.id))
+  const counts: Record<number, number> = {}
+  for (const a of appointments) {
+    if (a.master !== null && a.status !== 'cancelled') counts[a.master.id] = (counts[a.master.id] ?? 0) + 1
+  }
+  return {
+    hidden,
+    masters: shownMasters,
+    appointments: appointments.filter(a => a.master === null || shownMasters.some(m => m.id === a.master?.id)),
+    counts,
+  }
+}
+
 /** The hours the grid must show: every column's working hours and every appointment, on a whole-hour frame. */
 export function gridRange(columns: GridColumn[], appointments: AppointmentSummary[]): { startMin: number; endMin: number } {
   let startMin = Infinity

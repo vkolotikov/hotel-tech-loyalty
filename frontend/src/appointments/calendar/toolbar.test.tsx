@@ -16,17 +16,17 @@ vi.mock('react-i18next', () => ({
 }))
 
 const masters: CalendarMaster[] = [
-  { id: 1, name: 'Emma', title: null, avatar: null, days: {} },
-  { id: 2, name: 'James', title: null, avatar: null, days: {} },
+  { id: 1, name: 'Emma', title: null, avatar: null, color: '#3b7dd8', days: {} },
+  { id: 2, name: 'James', title: null, avatar: null, color: '#c46f1b', days: {} },
 ]
 
-function toolbar(view: View, masterId: number | null, extra: { viewLocked?: boolean; panelOpen?: boolean; date?: string } = {}) {
+function toolbar(view: View, masterId: number | null, extra: { viewLocked?: boolean; panelOpen?: boolean; date?: string; personPicker?: boolean } = {}) {
   const noop = () => {}
   return renderToStaticMarkup(
     <AppointmentsContext.Provider value={{ data: undefined, isLoading: false, isError: false, error: null, refetch: noop }}>
       <Toolbar
         view={view} viewLocked={extra.viewLocked ?? false} panelOpen={extra.panelOpen ?? false} date={extra.date ?? '2026-10-06'} locale="en-GB"
-        masters={masters} masterId={masterId} showCancelled={false} updatedAt={615} refreshing={false}
+        masters={masters} masterId={masterId} personPicker={extra.personPicker ?? view !== 'day'} showCancelled={false} updatedAt={615} refreshing={false}
         onView={noop} onDate={noop} onPrev={noop} onNext={noop} onToday={noop} onMaster={noop} onShowCancelled={noop} onRefresh={noop}
       />
     </AppointmentsContext.Provider>,
@@ -76,9 +76,16 @@ describe('Toolbar', () => {
     expect(root).not.toContain('border-b')
   })
 
-  it('offers the whole team in the day and list views', () => {
-    expect(toolbar('day', null)).toContain('Whole team')
+  it('offers the whole team in the list view; the day view shows team chips instead of a picker', () => {
     expect(toolbar('list', null)).toContain('Whole team')
+    expect(toolbar('day', null)).not.toContain('Whole team')
+  })
+
+  it('renders the team picker only when asked to (the day view has chips instead)', () => {
+    expect(toolbar('day', null, { personPicker: false })).not.toContain('<select')
+    expect(toolbar('day', null, { personPicker: false })).not.toContain('James')
+    expect(toolbar('day', null, { personPicker: true })).toContain('<select')
+    expect(toolbar('week', 1, { personPicker: true })).toContain('<select')
   })
 
   it('the week view is one person\'s week, so it names that person and offers no "whole team"', () => {

@@ -108,11 +108,11 @@ describe('AppointmentsShell', () => {
     expect(menu).toMatch(/<summary[^>]*aria-label="Menu"/)
   })
 
-  it('fits a 390 px phone: the search can shrink and New appointment keeps only its icon below sm', () => {
+  it('fits a 390 px phone: Find can shrink and New appointment keeps only its icon below sm', () => {
     // With Calendar, Clients and Setup in the narrow header, the menu button was pushed off a phone screen.
     const header = (html: string) => html.slice(html.indexOf('<header'), html.indexOf('</header>'))
     const html = header(render({}))
-    expect(html).toMatch(/<form role="search"[^>]*class="[^"]*min-w-0/)
+    expect(html.match(/<button[^>]*aria-label="Find a client, appointment or action"[^>]*>/)?.[0]).toMatch(/class="[^"]*min-w-0/)
     const newLink = html.match(/<a[^>]*href="\/appointments\?new=1"[^>]*>/)?.[0] ?? html.match(/<a[^>]*aria-label="New appointment"[^>]*>/)?.[0] ?? ''
     expect(newLink).toContain('href="/appointments?new=1"')
     expect(newLink).toContain('aria-label="New appointment"')
@@ -284,6 +284,64 @@ describe('AppointmentsShell — Atelier frame', () => {
     expect(avatar(render({ data: { ...boot, staff: { ...boot.staff, name: '🌸 Mia' } } }))).toBe('🌸')
     expect(avatar(render({ data: { ...boot, staff: { ...boot.staff, name: '' } } }))).toBe('')
     expect(avatar(render({}))).toBe('V')
+  })
+})
+
+describe('AppointmentsShell — Find in the top bar', () => {
+  afterEach(() => { vi.unstubAllGlobals() })
+  const header = (html: string) => html.slice(html.indexOf('<header'), html.indexOf('</header>'))
+  const findButton = (html: string) => header(html).match(/<button[^>]*aria-label="Find a client, appointment or action"[^>]*>(?:(?!<\/button>)[\s\S])*<\/button>/)?.[0] ?? ''
+
+  it('is one button that opens Find, with the key that will, and not the old client search', () => {
+    vi.stubGlobal('navigator', { platform: 'Win32' })
+    const html = render({})
+    const button = findButton(html)
+    expect(button).toContain('type="button"')
+    expect(button).toMatch(/<kbd[^>]*>Ctrl K<\/kbd>/)
+    expect(button).toMatch(/<span[^>]*>Find a client, appointment or action<\/span>/)
+    expect(button).toMatch(/<svg[^>]*aria-hidden="true"/)
+    expect(html).not.toContain('role="search"')
+    expect(header(html)).not.toContain('<input')
+    expect(html).not.toContain('Search clients')
+  })
+
+  it('shows ⌘ K on a Mac, an iPhone and an iPad', () => {
+    for (const platform of ['MacIntel', 'iPhone', 'iPad']) {
+      vi.stubGlobal('navigator', { platform })
+      expect(findButton(render({}))).toMatch(/<kbd[^>]*>⌘ K<\/kbd>/)
+    }
+  })
+
+  it('still draws without a navigator (a server render), and says Ctrl K', () => {
+    vi.stubGlobal('navigator', undefined)
+    expect(findButton(render({}))).toMatch(/<kbd[^>]*>Ctrl K<\/kbd>/)
+  })
+
+  it('keeps only the icon on a phone: the words and the key hint appear from sm up', () => {
+    vi.stubGlobal('navigator', { platform: 'Win32' })
+    const button = findButton(render({}))
+    expect(button).toMatch(/<span[^>]*class="[^"]*hidden sm:inline[^"]*"[^>]*>Find a client, appointment or action<\/span>/)
+    expect(button).toMatch(/<kbd[^>]*class="[^"]*hidden sm:inline[^"]*"/)
+  })
+
+  it('draws no dialog until Find is opened', () => {
+    expect(render({})).not.toContain('role="combobox"')
+  })
+
+  it('draws no modal, and so keeps the shortcuts free, until Find or the list of shortcuts is opened', () => {
+    const html = render({})
+    expect(html).not.toContain('aria-modal="true"')
+    expect(html).not.toContain('role="dialog"')
+  })
+
+  it('is switched off while the workspace loads and once it has stopped, and on when it is ready', () => {
+    const disabled = (html: string) => /<button[^>]*aria-label="Find a client, appointment or action"[^>]*>/.exec(html)?.[0].includes(' disabled=""') ?? null
+    expect(disabled(render({}))).toBe(false)
+    expect(disabled(render({ data: undefined, isLoading: true }))).toBe(true)
+    expect(disabled(render({ data: undefined, isError: true, error: { response: { status: 500, data: {} } } }))).toBe(true)
+    expect(disabled(render({ isError: true, error: refused('workspace_disabled') }))).toBe(true) // switched off while the page was open
+    expect(disabled(render({ isError: true, error: refused('subscription_required') }))).toBe(true)
+    expect(disabled(render({ isError: true, error: { response: { status: 500, data: {} } } }))).toBe(false) // a failed background refresh keeps the page, and Find
   })
 })
 

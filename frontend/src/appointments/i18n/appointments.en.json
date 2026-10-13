@@ -22,6 +22,36 @@
     "collapse": "Collapse menu",
     "expand": "Expand menu"
   },
+  "find": {
+    "open": "Find a client, appointment or action",
+    "title": "Find",
+    "actions": "Actions",
+    "go_to": "Go to",
+    "coming_up": "Coming up today",
+    "appointments": "Appointments",
+    "search_all": "Search all clients for “{{q}}”",
+    "none": "Nothing matches “{{q}}”.",
+    "count": "Results: {{count}}",
+    "time_off": "Time off",
+    "theme_dark": "Switch to dark",
+    "theme_light": "Switch to light",
+    "shortcuts": "Keyboard shortcuts",
+    "hint_move": "move",
+    "hint_open": "open",
+    "hint_close": "close",
+    "searching": "Searching clients…"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "find": "Find",
+    "days": "Previous or next day (week in the week view)",
+    "views": "Day, week, list",
+    "close": "Close the panel",
+    "card": "Move a selected appointment",
+    "help": "This list",
+    "on_calendar": "On the calendar",
+    "or": "or"
+  },
   "theme": {
     "label": "Theme",
     "light": "Light",
@@ -90,6 +120,8 @@
     "go_to_date": "Go to date",
     "today": "Today",
     "all_team": "Whole team",
+    "team_chips": "Team on the calendar",
+    "team_chips_last": "At least one person stays on the calendar",
     "show_cancelled": "Show cancelled",
     "updated": "Updated {{time}}",
     "week": "Week {{n}}",
@@ -100,15 +132,34 @@
     "next_month": "Next month",
     "load_failed": "The calendar could not be refreshed. What you see may be out of date."
   },
+  "preview": {
+    "points": "{{tier}} · {{points}} points",
+    "points_only": "{{points}} points",
+    "with": "with {{name}}",
+    "length": "{{minutes}} min",
+    "hint": "Click to open",
+    "hint_keyboard": "Press Enter to open"
+  },
   "overview": {
     "title": "Day overview",
     "total": "Appointments",
-    "upcoming": "Upcoming",
-    "in_progress": "In progress",
-    "completed": "Completed",
     "attention": "Needs attention",
-    "attention_hint": "Needs attention: awaiting confirmation, or confirmed and more than 15 minutes late without being started.",
     "legend": "Statuses"
+  },
+  "today": {
+    "label": "At a glance",
+    "done_noshow": "{{done}} done · {{noshow}} no-show",
+    "next": "Next up",
+    "first": "First appointment",
+    "next_line": "{{service}} · {{client}} with {{member}}",
+    "nothing_more": "Nothing else booked today",
+    "nothing": "Nothing booked",
+    "takings": "Takings",
+    "payments": "Payments: {{count}}",
+    "attention_hint": "Awaiting confirmation or late",
+    "team": "Team",
+    "team_in": "In: {{count}}",
+    "team_off": "Off: {{names}}"
   },
   "list": {
     "empty": "No appointments in this period.",
@@ -368,7 +419,10 @@
       "not_linked": "Your sign-in is not linked to a team member yet. A manager can link it under Team.",
       "save_profile": "Save profile",
       "save_hours": "Save hours",
-      "services_count": "Services: {{count}}"
+      "services_count": "Services: {{count}}",
+      "colour": "Colour on the calendar",
+      "colour_auto": "Automatic",
+      "colour_hint": "Shown as a dot on their appointments and a ring on their column."
     },
     "hours": {
       "off": "Off",
@@ -561,5 +615,17 @@
     "client": "Client",
     "reference": "Reference",
     "by": "Recorded by"
+  },
+  "colours": {
+    "blue": "Blue",
+    "orange": "Orange",
+    "violet": "Violet",
+    "raspberry": "Raspberry",
+    "teal": "Teal",
+    "ochre": "Ochre",
+    "green": "Green",
+    "coral": "Coral",
+    "indigo": "Indigo",
+    "brown": "Brown"
   }
 }

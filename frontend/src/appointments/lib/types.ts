@@ -182,7 +182,8 @@ export interface MasterDay {
   /** Both null = the whole day. */
   time_off: { start: string | null; end: string | null; reason: string | null }[]
 }
-export interface CalendarMaster { id: number; name: string; title: string | null; avatar: string | null; days: Record<DateKey, MasterDay> }
+/** `color`: the person's calendar colour (spec 5.3), always set by the server as a lower-case #rrggbb from its palette. */
+export interface CalendarMaster { id: number; name: string; title: string | null; avatar: string | null; color: string; days: Record<DateKey, MasterDay> }
 export interface CatalogueService { id: number; name: string; duration_minutes: number; buffer_after_minutes: number; price: number; currency: string; master_ids: number[] }
 export interface CalendarPayload { from: DateKey; to: DateKey; masters: CalendarMaster[]; services: CatalogueService[]; appointments: AppointmentSummary[] }
 export interface SlotsPayload { slots: { start: Wall; end: Wall; label: string }[]; duration_minutes: number; price: number; currency: string }
@@ -228,6 +229,8 @@ export interface TimeOffEntry { id: number; date: DateKey; start_time: string | 
 export interface SetupTeamMember {
   id: number; name: string; title: string | null; email: string | null; phone: string | null; user_id: number | null
   is_active: boolean; services: SetupLink[]; week: HoursRow[]; time_off: TimeOffEntry[]
+  /** The colour a manager chose from the palette; null = Automatic (the server assigns one, see `SetupPayload.team_colors`). */
+  color: string | null
 }
 export interface StaffAccount { user_id: number; name: string; email: string }
 export interface SetupSettings {
@@ -244,6 +247,10 @@ export interface SetupSettings {
 export interface SetupPayload {
   can_manage: boolean; my_team_member_id: number | null; services: SetupService[]; categories: SetupCategory[]
   team: SetupTeamMember[]; staff_accounts: StaffAccount[]; settings: SetupSettings; checklist: Checklist
+  /** The server's colour palette, in order (never mirrored in the frontend). Absent from a server older than R2 (the deploy window): read it with `?? []`. */
+  palette?: { key: string; hex: string }[]
+  /** Each active member's colour on the calendar, chosen or assigned: `{ "<id>": "#rrggbb" }`. Absent like `palette`: read it with `?? {}`. */
+  team_colors?: Record<string, string>
 }
 /** An upcoming appointment a setup change would leave outside the person's hours. */
 export interface Stranded { id: number; start: Wall; end: Wall; client: string; service: string | null; team_member: string | null }
@@ -256,6 +263,8 @@ export interface ServiceBody {
 export interface TeamBody {
   name: string; title: string | null; email: string | null; phone: string | null; user_id: number | null
   is_active: boolean; services: SetupLink[]
+  /** A palette hex, or null for Automatic. */
+  color?: string | null
 }
 export interface TimeOffBody { from: DateKey; to?: DateKey; start_time?: string; end_time?: string; reason?: string }
 export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'

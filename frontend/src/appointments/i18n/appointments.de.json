@@ -22,6 +22,36 @@
     "collapse": "Menü einklappen",
     "expand": "Menü ausklappen"
   },
+  "find": {
+    "open": "Kunde, Termin oder Aktion finden",
+    "title": "Suchen",
+    "actions": "Aktionen",
+    "go_to": "Gehe zu",
+    "coming_up": "Heute als Nächstes",
+    "appointments": "Termine",
+    "search_all": "Alle Kunden nach „{{q}}“ durchsuchen",
+    "none": "Nichts passt zu „{{q}}“.",
+    "count": "Treffer: {{count}}",
+    "time_off": "Abwesenheit",
+    "theme_dark": "Zu dunkel wechseln",
+    "theme_light": "Zu hell wechseln",
+    "shortcuts": "Tastenkürzel",
+    "hint_move": "wählen",
+    "hint_open": "öffnen",
+    "hint_close": "schließen",
+    "searching": "Kunden werden gesucht…"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "find": "Suchen",
+    "days": "Vorheriger oder nächster Tag (Woche in der Wochenansicht)",
+    "views": "Tag, Woche, Liste",
+    "close": "Bereich schließen",
+    "card": "Ausgewählten Termin verschieben",
+    "help": "Diese Liste",
+    "on_calendar": "Im Kalender",
+    "or": "oder"
+  },
   "theme": {
     "label": "Darstellung",
     "light": "Hell",
@@ -90,6 +120,8 @@
     "go_to_date": "Zu Datum springen",
     "today": "Heute",
     "all_team": "Ganzes Team",
+    "team_chips": "Team im Kalender",
+    "team_chips_last": "Mindestens eine Person bleibt im Kalender",
     "show_cancelled": "Stornierte anzeigen",
     "updated": "Aktualisiert um {{time}}",
     "week": "KW {{n}}",
@@ -100,15 +132,34 @@
     "next_month": "Nächster Monat",
     "load_failed": "Der Kalender konnte nicht aktualisiert werden. Die Anzeige ist möglicherweise veraltet."
   },
+  "preview": {
+    "points": "{{tier}} · {{points}} Punkte",
+    "points_only": "{{points}} Punkte",
+    "with": "bei {{name}}",
+    "length": "{{minutes}} Min.",
+    "hint": "Zum Öffnen klicken",
+    "hint_keyboard": "Zum Öffnen die Eingabetaste drücken"
+  },
   "overview": {
     "title": "Tagesübersicht",
     "total": "Termine",
-    "upcoming": "Bevorstehend",
-    "in_progress": "Laufend",
-    "completed": "Abgeschlossen",
     "attention": "Handlungsbedarf",
-    "attention_hint": "Handlungsbedarf: wartet auf Bestätigung, oder bestätigt und mehr als 15 Minuten nach Beginn noch nicht gestartet.",
     "legend": "Status"
+  },
+  "today": {
+    "label": "Auf einen Blick",
+    "done_noshow": "{{done}} erledigt · {{noshow}} nicht erschienen",
+    "next": "Als Nächstes",
+    "first": "Erster Termin",
+    "next_line": "{{service}} · {{client}} bei {{member}}",
+    "nothing_more": "Heute nichts mehr gebucht",
+    "nothing": "Nichts gebucht",
+    "takings": "Einnahmen",
+    "payments": "Zahlungen: {{count}}",
+    "attention_hint": "Unbestätigt oder verspätet",
+    "team": "Team",
+    "team_in": "Da: {{count}}",
+    "team_off": "Frei: {{names}}"
   },
   "list": {
     "empty": "In diesem Zeitraum gibt es keine Termine.",
@@ -368,7 +419,10 @@
       "not_linked": "Ihre Anmeldung ist noch keinem Teammitglied zugeordnet. Ein Manager kann sie unter Team verknüpfen.",
       "save_profile": "Profil speichern",
       "save_hours": "Arbeitszeiten speichern",
-      "services_count": "Leistungen: {{count}}"
+      "services_count": "Leistungen: {{count}}",
+      "colour": "Farbe im Kalender",
+      "colour_auto": "Automatisch",
+      "colour_hint": "Erscheint als Punkt auf ihren Terminen und als Ring über ihrer Spalte."
     },
     "hours": {
       "off": "Frei",
@@ -561,5 +615,17 @@
     "client": "Kunde",
     "reference": "Referenz",
     "by": "Erfasst von"
+  },
+  "colours": {
+    "blue": "Blau",
+    "orange": "Orange",
+    "violet": "Violett",
+    "raspberry": "Himbeere",
+    "teal": "Petrol",
+    "ochre": "Ocker",
+    "green": "Grün",
+    "coral": "Koralle",
+    "indigo": "Indigo",
+    "brown": "Braun"
   }
 }

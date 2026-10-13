@@ -15,6 +15,7 @@ import { NEEDS_CONFIRM } from './consequences'
 import { CreateForm } from './CreateForm'
 import { detailPollMs, draftBody, newKey, refundDefaultsFor, type CancelRefunds, type PanelEvent, type PanelState } from './panelState'
 import { makeWall, minutesOf } from '../lib/wallClock'
+import { handBackFocus } from '../lib/handBack'
 import { panelClosesOn } from '../calendar/dropDialog'
 
 interface Props {
@@ -50,7 +51,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today, sl
       window.removeEventListener('keydown', onKey)
       // The slot that opened the panel is gone once it is booked: fall back to the page.
       const back = opener?.isConnected ? opener : document.querySelector<HTMLElement>('[data-appointments] main')
-      back?.focus()
+      handBackFocus(back)
     }
   }, [dispatch])
 
@@ -133,6 +134,8 @@ export function AppointmentPanel({ state, dispatch, masters, services, today, sl
   const settle = (next: AppointmentDetail, outcome: PointsResult | null, told: ClientMessageInfo | null = null) => {
     queryClient.setQueryData(['appointments', 'booking', next.id], { booking: next })
     void queryClient.invalidateQueries({ queryKey: ['appointments', 'calendar'] })
+    // A payment, a refund or a cancel with a refund changes the day's takings (the Today strip and the Takings page read them).
+    void queryClient.invalidateQueries({ queryKey: ['appointments', 'takings'] })
     dispatch({ type: 'done', outcome, told })
   }
 
@@ -200,7 +203,7 @@ export function AppointmentPanel({ state, dispatch, masters, services, today, sl
     : t('appointments.panel.title', 'Appointment')
 
   return (
-    <aside ref={panel} role="dialog" aria-modal="false" aria-labelledby="appointment-panel-title"
+    <aside ref={panel} role="dialog" aria-modal="false" aria-labelledby="appointment-panel-title" data-covers-calendar=""
       className={`fixed right-0 top-14 bottom-0 z-30 w-full sm:w-[440px] overflow-y-auto bg-a-surface border-l border-a-border shadow-a-lg${slide ? ' animate-a-slide-in' : ''}`}>
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-a-border bg-a-surface px-4 py-3">
         <h2 id="appointment-panel-title" ref={heading} tabIndex={-1} className="font-a-display text-xl font-normal text-a-text outline-none">{title}</h2>

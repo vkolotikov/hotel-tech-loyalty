@@ -132,6 +132,8 @@ describe('appointments stylesheet structure', () => {
     // !important: the animate-a-* and transition utilities have the same specificity and would otherwise win by order.
     expect(body).toContain('animation-iteration-count: 1 !important')
     expect(body).toContain('animation-duration: 0.01ms !important')
+    // A stagger (the Today strip's tiles) is an animation-delay: under reduced motion nothing may wait before it appears.
+    expect(body).toContain('animation-delay: 0s !important')
     expect(body).toContain('transition-duration: 0.01ms !important')
   })
 
@@ -203,6 +205,22 @@ describe('appointments stylesheet structure', () => {
     const rail = rules.indexOf('[data-appointments] [data-rail] :focus-visible {')
     expect(rail).toBeGreaterThan(base)
     expect(rules.slice(rail, rules.indexOf('}', rail))).toContain('outline-color: rgb(var(--a-side-text))')
+  })
+
+  it('draws a team member\'s colour through --a-m: the dot and the ring rules exist, are scoped, and read the variable', () => {
+    // The colour arrives as data from the server's palette and is set as --a-m on the element; no hex lives in the stylesheet.
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const cls of ['a-member-dot', 'a-member-ring']) {
+      const at = rules.indexOf(`.${cls} {`)
+      expect(at, `no .${cls} rule`).toBeGreaterThanOrEqual(0)
+      const selector = rules.slice(rules.lastIndexOf('}', at) + 1, at + cls.length + 1).trim()
+      expect(selector.startsWith('[data-appointments]'), `unscoped: ${selector}`).toBe(true)
+      const body = rules.slice(at, rules.indexOf('}', at))
+      expect(body, cls).toContain('var(--a-m)')
+      expect(body, cls).not.toMatch(/#[0-9a-f]{3,8}\b/i)
+    }
+    expect(rules.slice(rules.indexOf('.a-member-dot {'), rules.indexOf('}', rules.indexOf('.a-member-dot {')))).toContain('background-color: var(--a-m)')
+    expect(rules.slice(rules.indexOf('.a-member-ring {'), rules.indexOf('}', rules.indexOf('.a-member-ring {')))).toContain('box-shadow: 0 0 0 2px var(--a-m)')
   })
 
   it('shows the slim panel\'s hover labels only on a device that hovers, so a tap does not leave one stuck', () => {

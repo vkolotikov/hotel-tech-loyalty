@@ -53,7 +53,7 @@ describe('the Move form and the panel', () => {
   it('starts the Length field at the length staff set', () => {
     const html = renderToStaticMarkup(
       <QueryClientProvider client={new QueryClient()}>
-        <MoveForm booking={booking} masters={[{ id: 1, name: 'Mara', title: null, avatar: null, days: {} }]}
+        <MoveForm booking={booking} masters={[{ id: 1, name: 'Mara', title: null, avatar: null, color: '#3b7dd8', days: {} }]}
           services={[{ id: 1, name: 'Massage', duration_minutes: 45, buffer_after_minutes: 0, price: 60, currency: 'EUR', master_ids: [1] }]}
           today="2026-10-05" saving={false} error={null} tell={false} onTell={() => {}} onMove={() => {}} onBack={() => {}} />
       </QueryClientProvider>,

@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { ComponentProps, ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { TimeGrid } from './TimeGrid'
+import { AppointmentCard } from './AppointmentCard'
 import { DayOverview } from './DayOverview'
 import { MiniMonth } from './MiniMonth'
 import { columnsFor } from './calendarState'
+import { placeAppointments } from '../lib/layout'
 import type { AppointmentSummary, CalendarMaster, Status } from '../lib/types'
 
 vi.mock('react-i18next', () => ({
@@ -16,8 +19,11 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
+/** The server sends each person's colour as data; the tests hold their own fixtures (component files hold no hex). */
+const MEMBER_COLOURS = ['#3b7dd8', '#c46f1b']
+
 const emma: CalendarMaster = {
-  id: 1, name: 'Emma', title: 'Hair Stylist', avatar: null,
+  id: 1, name: 'Emma', title: 'Hair Stylist', avatar: null, color: MEMBER_COLOURS[0],
   days: { '2026-10-06': { windows: [{ start: '09:00', end: '13:00' }, { start: '14:00', end: '17:00' }], time_off: [{ start: '13:00', end: '14:00', reason: 'Lunch' }] } },
 }
 
@@ -26,7 +32,7 @@ const appt = (id: number, start: string, end: string, status: Status = 'confirme
   client: { id: 5, name, is_member: true }, status, payment: { state: 'not_paid_online' }, revision: 'r',
 })
 
-const james: CalendarMaster = { id: 2, name: 'James', title: null, avatar: null, days: { '2026-10-06': { windows: [{ start: '09:00', end: '17:00' }], time_off: [] } } }
+const james: CalendarMaster = { id: 2, name: 'James', title: null, avatar: null, color: MEMBER_COLOURS[1], days: { '2026-10-06': { windows: [{ start: '09:00', end: '17:00' }], time_off: [] } } }
 
 function grid(appointments: AppointmentSummary[], today = '2026-10-06') {
   const columns = columnsFor('day', '2026-10-06', [emma], null, today, 'en-GB')
@@ -273,6 +279,56 @@ describe('TimeGrid', () => {
     expect([...html.matchAll(/Booked: (\d+)/g)].map(m => m[1])).toEqual(['0', '1', '1', '0', '0', '0', '0']) // Monday to Sunday
   })
 
+  describe('team colours (spec 5.3)', () => {
+    const tagsWith = (html: string, cls: string) => (html.match(/<span[^>]*>/g) ?? []).filter(tag => classesOf(tag).includes(cls))
+    const colourOf = (tag: string) => tag.match(/style="--a-m:([^";]+)/)?.[1]
+    const cardsOf = (html: string) => html.match(/<button[^>]*data-density="[^"]*"[^>]*>[\s\S]*?<\/button>/g) ?? []
+    const text = (html: string) => html.replace(/<[^>]+>/g, '')
+    const james2 = (id: number, start: string, end: string) => ({ ...appt(id, start, end), master: { id: 2, name: 'James' } })
+
+    it('rings each column-head avatar in that person\'s colour, in place of the grey hairline', () => {
+      const html = gridOf(columnsFor('day', '2026-10-06', [emma, james], null, '2026-10-06', 'en-GB'), [])
+      const rings = tagsWith(html, 'a-member-ring')
+      expect(rings.map(colourOf)).toEqual(MEMBER_COLOURS)
+      for (const ring of rings) {
+        expect(ring).toContain('aria-hidden')
+        expect(classesOf(ring)).not.toContain('ring-1')
+        expect(classesOf(ring)).not.toContain('ring-a-border')
+      }
+    })
+
+    it('leads each card with a dot in its person\'s colour, at every card size, and the dot says nothing', () => {
+      const sized: [string, string][] = [['full', '10:00'], ['two', '09:40'], ['tight', '09:30'], ['line', '09:20']]
+      const columns = columnsFor('day', '2026-10-06', [emma, james], null, '2026-10-06', 'en-GB')
+      for (const [density, end] of sized) {
+        const html = gridOf(columns, [appt(7, '2026-10-06T09:00', `2026-10-06T${end}`), james2(8, '2026-10-06T11:00', '2026-10-06T12:00')])
+        const [emmaCard = '', jamesCard = ''] = cardsOf(html)
+        expect(emmaCard, density).toContain(`data-density="${density}"`)
+        const dots = tagsWith(emmaCard, 'a-member-dot')
+        expect(dots.map(colourOf), density).toEqual([MEMBER_COLOURS[0]])
+        expect(dots[0], density).toContain('aria-hidden')
+        expect(emmaCard, density).toMatch(/<span[^>]*class="a-member-dot [^"]*"[^>]*><\/span>/) // nothing inside it
+        // The first thing in the time row (inside the row's own time group when the status icon shares it).
+        expect(emmaCard.replace(/^<button[^>]*>/, ''), density).toMatch(/^<div class="flex items-center[^"]*">(<span class="flex[^"]*">)?<span[^>]*class="a-member-dot /)
+        expect(tagsWith(jamesCard, 'a-member-dot').map(colourOf), density).toEqual([MEMBER_COLOURS[1]])
+      }
+    })
+
+    it('never makes the colour the status: the card reads the same with and without it', () => {
+      const a = appt(7, '2026-10-06T09:00', '2026-10-06T10:00')
+      const placed = placeAppointments([a], '2026-10-06', 9 * 60)[0]
+      const draw = (memberColor?: string) => renderToStaticMarkup(<AppointmentCard placed={placed} selected={false} gutter={false} onOpen={() => {}} memberColor={memberColor} />)
+      const plain = draw()
+      const coloured = draw(MEMBER_COLOURS[0])
+      expect(plain).not.toContain('a-member-dot')
+      expect(coloured).toContain('a-member-dot')
+      expect(text(coloured)).toBe(text(plain)) // the same words: time, service, client, status
+      for (const html of [plain, coloured]) {
+        expect(html).toMatch(/<span[^>]*title="appointments\.status\.confirmed"[^>]*>.*?<span data-status-word=""[^>]*>appointments\.status\.confirmed<\/span>/) // icon + word
+      }
+    })
+  })
+
   it('says so when there is no team to show', () => {
     const html = renderToStaticMarkup(
       <TimeGrid columns={[]} appointments={[]} now={{ date: '2026-10-06', minutes: 600 }} today="2026-10-06" selectedId={null} onSlot={() => {}} onOpen={() => {}} />,
@@ -281,35 +337,109 @@ describe('TimeGrid', () => {
   })
 })
 
-describe('DayOverview', () => {
-  it('counts the day from the appointments it is given, with no comparison to other days', () => {
-    const html = renderToStaticMarkup(
-      <DayOverview date="2026-10-06" now={{ date: '2026-10-06', minutes: 10 * 60 + 20 }} appointments={[
-        appt(1, '2026-10-06T09:00', '2026-10-06T09:45', 'completed'),
-        appt(2, '2026-10-06T09:30', '2026-10-06T10:15', 'confirmed'), // 50 minutes late, not started
-        appt(3, '2026-10-06T10:00', '2026-10-06T10:45', 'in_progress'),
-        appt(4, '2026-10-06T15:00', '2026-10-06T15:45', 'confirmed'),
-        appt(5, '2026-10-06T16:00', '2026-10-06T16:45', 'pending'),
-        appt(6, '2026-10-07T09:00', '2026-10-07T09:45', 'confirmed'), // another day
-      ]} />,
-    )
-    expect(html).toContain('data-count="total">5<')
-    expect(html).toContain('data-count="upcoming">1<')
-    expect(html).toContain('data-count="in_progress">1<')
-    expect(html).toContain('data-count="completed">1<')
-    expect(html).toContain('data-count="attention">2<')
-    expect(html).not.toMatch(/%|vs\.|last week/)
+describe('AppointmentCard hover preview', () => {
+  const a = appt(7, '2026-10-06T09:00', '2026-10-06T10:00')
+  const placed = placeAppointments([a], '2026-10-06', 9 * 60)[0]
+  const base = { placed, selected: false, gutter: false, onOpen: () => {} }
+  type Handler = (e: unknown) => void
+  type Handlers = { onPointerEnter?: Handler; onPointerLeave?: Handler; onBlur?: Handler; onFocus?: Handler; onKeyDown?: Handler; onClick?: Handler }
+  /** The card's event handlers, read off the button it draws (the card holds no state, so it can be called as a function). */
+  const handlersOf = (extra: Partial<ComponentProps<typeof AppointmentCard>>) => (AppointmentCard({ ...base, ...extra }) as ReactElement<Handlers>).props
+  const describedBy = (extra: { describedBy?: string; previewId?: string }) =>
+    renderToStaticMarkup(<AppointmentCard {...base} {...extra} />).match(/<button[^>]*aria-describedby="([^"]*)"/)?.[1]
+
+  it('points at its preview while the preview is open, besides the grid\'s keys hint when it is the current stop', () => {
+    expect(describedBy({})).toBeUndefined()
+    expect(describedBy({ describedBy: 'calendar-keys-hint' })).toBe('calendar-keys-hint')
+    expect(describedBy({ previewId: 'card-preview-7' })).toBe('card-preview-7')
+    expect(describedBy({ describedBy: 'calendar-keys-hint', previewId: 'card-preview-7' })).toBe('calendar-keys-hint card-preview-7')
   })
 
-  it('keeps both headings as headings, set as mono eyebrows, and the counts in the display serif', () => {
-    const html = renderToStaticMarkup(<DayOverview date="2026-10-06" now={{ date: '2026-10-06', minutes: 600 }} appointments={[]} />)
+  it('previews after a mouse arrives, never for touch or a pen (a tap opens the panel as before); the pointer leaving hands over to the grid\'s grace, not an immediate close', () => {
+    const start = vi.fn()
+    const end = vi.fn()
+    const leave = vi.fn()
+    const h = handlersOf({ onPreviewStart: start, onPreviewEnd: end, onPreviewLeave: leave })
+    h.onPointerEnter?.({ pointerType: 'touch' })
+    h.onPointerEnter?.({ pointerType: 'pen' })
+    expect(start).not.toHaveBeenCalled()
+    h.onPointerEnter?.({ pointerType: 'mouse' })
+    expect(start.mock.calls).toEqual([[7, 'pointer']]) // opened by the pointer: the preview says "Click to open"
+    h.onPointerLeave?.({ pointerType: 'mouse' })
+    expect(leave).toHaveBeenCalledTimes(1)
+    expect(end).not.toHaveBeenCalled() // the pointer may be on its way to the preview (WCAG 1.4.13)
+  })
+
+  it('previews when the keyboard focuses it, closes when it loses focus, and still reports itself as the grid\'s stop', () => {
+    const start = vi.fn()
+    const end = vi.fn()
+    const stop = vi.fn()
+    const h = handlersOf({ onPreviewStart: start, onPreviewEnd: end, stopKey: 'appt:7', onFocusStop: stop })
+    h.onFocus?.({ currentTarget: { matches: (q: string) => q === ':focus-visible' } })
+    expect(start.mock.calls).toEqual([[7, 'focus']]) // opened by the keyboard: the preview says "Press Enter to open"
+    expect(stop.mock.calls).toEqual([['appt:7']])
+    h.onBlur?.({})
+    expect(end).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not preview for focus that is not the keyboard\'s (a click, or focus handed back when the panel closes), yet still reports the stop', () => {
+    const start = vi.fn()
+    const stop = vi.fn()
+    const h = handlersOf({ onPreviewStart: start, stopKey: 'appt:7', onFocusStop: stop })
+    h.onFocus?.({ currentTarget: { matches: () => false } })
+    expect(start).not.toHaveBeenCalled()
+    expect(stop.mock.calls).toEqual([['appt:7']])
+    // An engine that does not know :focus-visible throws on the selector: every focus then counts as the keyboard's.
+    h.onFocus?.({ currentTarget: { matches: () => { throw new SyntaxError('not a valid selector') } } })
+    expect(start.mock.calls).toEqual([[7, 'focus']])
+  })
+
+  it('closes the preview when it is clicked, then opens the panel (Safari and Firefox on macOS do not focus a button on click, so no blur would)', () => {
+    const calls: string[] = []
+    const h = handlersOf({ onPreviewEnd: () => calls.push('end'), onOpen: (id) => calls.push(`open ${id}`), previewId: 'card-preview-7' })
+    h.onClick?.({})
+    expect(calls).toEqual(['end', 'open 7'])
+  })
+
+  it('still opens the panel on a click when the grid gave it no preview props', () => {
+    const open = vi.fn()
+    handlersOf({ onOpen: open }).onClick?.({})
+    expect(open.mock.calls).toEqual([[7]])
+  })
+
+  it('leaves the keyboard alone: the grid closes a preview on Escape from the window, so the card handles no key of its own', () => {
+    expect(handlersOf({ onPreviewEnd: vi.fn(), previewId: 'card-preview-7' }).onKeyDown).toBeUndefined()
+    expect(handlersOf({}).onKeyDown).toBeUndefined()
+  })
+
+  it('is untouched without the preview props: no handler throws', () => {
+    const h = handlersOf({})
+    expect(() => { h.onPointerEnter?.({ pointerType: 'mouse' }); h.onPointerLeave?.({}); h.onBlur?.({}); h.onFocus?.({ currentTarget: { matches: () => true } }) }).not.toThrow()
+  })
+
+  it('draws no preview until one is asked for', () => {
+    const html = grid([appt(7, '2026-10-06T09:00', '2026-10-06T10:00')])
+    expect(html).not.toContain('role="tooltip"')
+    expect(html).not.toContain('card-preview-')
+  })
+})
+
+describe('DayOverview', () => {
+  it('keeps only the status legend: the day\'s counts moved to the Today strip', () => {
+    const html = renderToStaticMarkup(<DayOverview />)
+    expect(html).not.toContain('data-count')
+    expect(html).not.toContain('<dl')
+    expect(html).not.toMatch(/overview\.(total|upcoming|in_progress|completed|attention)/)
+    expect(html).toContain('Statuses')
+    for (const status of ['pending', 'confirmed', 'in_progress', 'completed', 'no_show', 'cancelled']) expect(html, status).toContain(`appointments.status.${status}`)
+  })
+
+  it('keeps its one heading a heading, set as a mono eyebrow', () => {
+    const html = renderToStaticMarkup(<DayOverview />)
     const heads = [...html.matchAll(/<h2 class="([^"]*)"/g)].map(m => m[1])
-    expect(heads).toHaveLength(2)
-    for (const classes of heads) {
-      expect(classes).toContain('font-a-mono')
-      expect(classes).toContain('uppercase')
-    }
-    expect(html).toMatch(/<dd class="[^"]*font-a-display[^"]*tabular-nums[^"]*" data-count="total">0</)
+    expect(heads).toHaveLength(1)
+    expect(heads[0]).toContain('font-a-mono')
+    expect(heads[0]).toContain('uppercase')
   })
 })
 

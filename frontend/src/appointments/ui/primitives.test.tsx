@@ -14,6 +14,11 @@ describe('workspace primitives', () => {
     expect(renderToStaticMarkup(<Figure>€470</Figure>)).toMatch(/font-a-display[^"]*tabular-nums/)
   })
 
+  it('a figure is fitted to its tile only when asked (the Today strip); elsewhere it keeps the display size', () => {
+    expect(renderToStaticMarkup(<Figure>€470</Figure>)).not.toContain('data-fit')
+    expect(renderToStaticMarkup(<Figure fit>€470</Figure>)).toMatch(/^<p class="[^"]*text-3xl[^"]*" data-fit="">€470<\/p>$/)
+  })
+
   it('the primary button is the accent pill; danger text follows its own ink', () => {
     expect(renderToStaticMarkup(<Button>Save</Button>)).toMatch(/rounded-full[^"]*bg-a-accent[^"]*text-a-accent-ink/)
     expect(renderToStaticMarkup(<Button variant="danger">Cancel</Button>)).toContain('text-a-danger-ink')

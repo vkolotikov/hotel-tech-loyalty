@@ -3,6 +3,7 @@
 namespace App\Services\Booking\Setup;
 
 use App\Models\ServiceMaster;
+use App\Services\Appointments\TeamColours;
 use Illuminate\Validation\Rule;
 
 /**
@@ -13,7 +14,7 @@ use Illuminate\Validation\Rule;
  */
 final class TeamSetup
 {
-    private const FIELDS = ['name', 'title', 'email', 'phone', 'user_id', 'is_active'];
+    private const FIELDS = ['name', 'title', 'email', 'phone', 'user_id', 'is_active', 'color'];
 
     public static function rules(bool $creating, ?ServiceMaster $master = null): array
     {
@@ -26,6 +27,8 @@ final class TeamSetup
             'email'                       => 'nullable|email|max:255',
             'phone'                       => 'nullable|string|max:40',
             'is_active'                   => 'sometimes|boolean',
+            // A manager's calendar colour: one of the palette (lower case), or null for automatic.
+            'color'                       => ['nullable', 'string', Rule::in(array_values(TeamColours::PALETTE))],
             'user_id'                     => [
                 'nullable', 'integer',
                 Rule::exists('staff', 'user_id')->where('organization_id', $orgId),

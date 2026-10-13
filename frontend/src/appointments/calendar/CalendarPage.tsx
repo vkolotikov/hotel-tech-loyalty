@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi } from '../lib/api'
 import { loadPrefs, savePrefs, type Prefs, type View } from '../lib/prefs'
+import { onShortcuts } from '../lib/shortcuts'
 import type { AppointmentSummary, DateKey } from '../lib/types'
 import { hhmm, isDateKey, venueNow } from '../lib/wallClock'
 import { AppointmentPanel } from '../panel/AppointmentPanel'
@@ -17,8 +18,10 @@ import { saveDrop } from './saveDrop'
 import { ListView } from './ListView'
 import { MiniMonth } from './MiniMonth'
 import { TimeGrid } from './TimeGrid'
-import { Toolbar } from './Toolbar'
-import { columnsFor, needsWindows, rangeFor, shift } from './calendarState'
+import { TeamChips, toggleHidden } from './TeamChips'
+import { TodayStrip } from './TodayStrip'
+import { PANEL_CLEARANCE, Toolbar } from './Toolbar'
+import { columnsFor, dayTeam, needsWindows, rangeFor, shift } from './calendarState'
 
 const NARROW = '(max-width: 1023px)'
 
@@ -95,6 +98,20 @@ export function CalendarPage() {
 
   const narrow = useNarrow()
   const view: View = narrow ? 'list' : prefs.view
+
+  // Shortcuts for this page (spec §5.2): today, the days or weeks, the views. The ones for every page (Find, ?, N) are the shell's.
+  // The updates are written as functions of what was there, so a key held down steps once per press.
+  useEffect(() => onShortcuts(window, document, (hit, e) => {
+    if (hit === 'today') setDate(now.date)
+    else if (hit === 'prev') setDate(d => shift(view, d, -1))
+    else if (hit === 'next') setDate(d => shift(view, d, 1))
+    else if (hit === 'day' || hit === 'week' || hit === 'list') {
+      if (narrow) return // the list is the only view on a narrow screen
+      setPrefs(p => (p.view === hit ? p : { ...p, view: hit }))
+    } else return
+    e.preventDefault()
+  }), [now.date, view, narrow])
+
   const range = rangeFor(view, date)
   const weekMasterId = view === 'week' ? prefs.masterId : null
   const windows = needsWindows(view)
@@ -125,8 +142,11 @@ export function CalendarPage() {
   const appointments = useMemo(() => query.data?.appointments ?? [], [query.data])
   // The week view shows one person; with no one chosen that is the first, and the filter says so.
   const masterId = view === 'week' ? (masters.find(m => m.id === prefs.masterId) ?? masters[0])?.id ?? null : prefs.masterId
+  // The day view shows the people the chips leave on (the picker is only for the week and list views).
+  const team = dayTeam(masters, appointments, prefs.hiddenMasters)
   // A filter hides cards; it never makes a slot look free (slots come from the person's own column).
-  const shown = masterId === null ? appointments : appointments.filter(a => a.master?.id === masterId)
+  const shown = view === 'day' ? team.appointments
+    : masterId === null ? appointments : appointments.filter(a => a.master?.id === masterId)
   const updatedAt = query.dataUpdatedAt ? venueNow(zone, new Date(query.dataUpdatedAt)).minutes : null
 
   return (
@@ -135,7 +155,7 @@ export function CalendarPage() {
         <h1 className="sr-only">{t('appointments.nav.calendar', 'Calendar')}</h1>
         <Toolbar
           view={view} viewLocked={narrow} panelOpen={panel.mode !== 'closed'} date={date} locale={locale}
-          masters={masters} masterId={masterId} showCancelled={prefs.showCancelled}
+          masters={masters} masterId={masterId} personPicker={view !== 'day'} showCancelled={prefs.showCancelled}
           updatedAt={updatedAt} refreshing={query.isFetching}
           onView={(v) => setPrefs({ ...prefs, view: v })}
           onDate={setDate}
@@ -147,6 +167,25 @@ export function CalendarPage() {
           onRefresh={() => { void query.refetch() }}
         />
 
+        {view === 'day' && query.data && (
+          // The day at a glance, then the team chips. Both are kept clear of the open panel the way the toolbar is
+          // (see Toolbar), so nothing hides under it. The strip counts the whole day: it takes the unfiltered
+          // appointments and people, not what the chips leave on the grid. It waits for the first load so it never shows false zeros,
+          // and while the next day loads over the previous payload (keepPreviousData) it stays mounted but shows dashes (`pending`).
+          <div className={`px-4 lg:px-6 ${panel.mode !== 'closed' ? PANEL_CLEARANCE : ''}`}>
+            <TodayStrip date={date} now={now} appointments={appointments} masters={masters} pending={query.isPlaceholderData} />
+            {/* A team of one has no one to hide: no chips. */}
+            {masters.length > 1 && (
+              <div className="pb-3">
+                <TeamChips
+                  masters={masters} hidden={team.hidden} counts={team.counts} pending={query.isPlaceholderData}
+                  onToggle={(id) => setPrefs({ ...prefs, hiddenMasters: toggleHidden(team.hidden, id, masters.map(m => m.id)) })}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         {query.isError && (
           <div className="px-4 pt-3">
             <Notice tone="danger">{t('appointments.calendar.load_failed', 'The calendar could not be refreshed. What you see may be out of date.')}</Notice>
@@ -157,7 +196,9 @@ export function CalendarPage() {
           {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view !== 'list' && (
             <TimeGrid
-              columns={columnsFor(view, date, masters, masterId, now.date, locale)}
+              columns={view === 'day'
+                ? columnsFor('day', date, team.masters, null, now.date, locale)
+                : columnsFor(view, date, masters, masterId, now.date, locale)}
               appointments={shown} now={now} today={now.date} selectedId={selectedId}
               onSlot={(masterId, slotDate, minutes) => dispatch({ type: 'openCreate', key: newKey(), draft: { date: slotDate, time: hhmm(minutes), masterId } })}
               onOpen={(id) => dispatch({ type: 'openView', id })}
@@ -173,7 +214,7 @@ export function CalendarPage() {
 
       <aside className="hidden xl:block w-72 shrink-0 bg-a-canvas overflow-y-auto" aria-label={t('appointments.overview.title', 'Day overview')}>
         <MiniMonth date={date} today={now.date} locale={locale} onPick={setDate} />
-        <DayOverview date={date} now={now} appointments={appointments} />
+        <DayOverview />
       </aside>
 
       {panel.mode !== 'closed' && (

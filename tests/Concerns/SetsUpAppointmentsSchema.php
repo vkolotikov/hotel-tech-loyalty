@@ -68,6 +68,7 @@ trait SetsUpAppointmentsSchema
             'user_id'    => fn (Blueprint $t) => $t->unsignedBigInteger('user_id')->nullable(),
             'email'      => fn (Blueprint $t) => $t->string('email')->nullable(),
             'phone'      => fn (Blueprint $t) => $t->string('phone', 40)->nullable(),
+            'color'      => fn (Blueprint $t) => $t->string('color', 7)->nullable(),
         ]);
         $this->addColumnsIfMissing('service_categories', [
             'slug' => fn (Blueprint $t) => $t->string('slug')->nullable(),

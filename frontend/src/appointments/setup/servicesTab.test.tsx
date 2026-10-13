@@ -32,9 +32,9 @@ const data: SetupPayload = {
   can_manage: true, my_team_member_id: null,
   services: [service(1, 'Deep Tissue Massage', 10), service(2, 'Scalp Ritual', null), service(3, 'Old Facial', 10, false)],
   categories: [{ id: 10, name: 'Massage' }],
-  team: [{ id: 2, name: 'Mara Ilves', title: null, email: null, phone: null, user_id: null, is_active: true, services: [], week: [], time_off: [] }],
+  team: [{ id: 2, name: 'Mara Ilves', title: null, email: null, phone: null, user_id: null, is_active: true, color: null, services: [], week: [], time_off: [] }],
   staff_accounts: [], checklist: { steps: [], complete: true },
-  settings: {} as SetupPayload['settings'],
+  settings: {} as SetupPayload['settings'], palette: [], team_colors: {},
 }
 
 const render = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)

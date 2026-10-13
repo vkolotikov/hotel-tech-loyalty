@@ -495,6 +495,69 @@ venue without deposits is byte for byte as before (`tests/Feature/Widget/Service
 **Owner's first live check:** switch deposits on at your venue, make a small real booking on the booking page, cancel
 it in time from the workspace, and see the refund arrive on the card.
 
+## Atelier (release 1 and 2, 2026-10-12)
+
+The workspace's own look and faster daily work. Spec: `docs/superpowers/specs/2026-10-12-appointments-atelier-design.md`.
+Nothing anyone can do changed: actions, permissions, URLs and data are as before.
+
+**The look (release 1).** Every colour is a workspace token (`--a-*` in `frontend/src/appointments/theme/appointments.css`,
+Tailwind `a-*`; `tokens.test.ts` refuses raw colours, `contrast.test.ts` pins every text pair at 4.5:1 in both themes).
+Light is the default for everyone; each person chooses Light, Dark or Auto (follows the device) at the foot of the
+side menu, remembered on that device (`appointments:look`). The side menu folds to a 76 px icon rail ("Collapse
+menu"), also per device. The accent is the organisation's own brand colour (the bootstrap's `accent`, from Settings →
+Branding → Primary; blue when none is set), made readable by `theme/accent.ts`: fills use the brand, lines and text
+use a derived `accent-text`, text on a fill is white while white reads 3:1 or better, else ink; a brand almost the
+colour of the page gets a thin edge. The last accent is remembered on the device (`appointments:brand`), so the frame
+does not flash blue while it loads. Type is self-hosted (Fraunces with Source Serif 4 for Cyrillic, Inter Tight, IBM
+Plex Mono) and loaded only in the workspace. Motion is off under "reduce motion".
+
+**Team colours.** The server owns a palette of ten colours (`App\Services\Appointments\TeamColours`), each reading 3:1
+or better as a dot or a ring on the light and the dark surfaces. A manager may choose one per person in Setup → Team
+(or leave Automatic); everyone else gets one worked out on every read, never stored: every manager's choice is
+reserved first, then each person on Automatic takes the first colour nobody has, in id order (the palette starts
+again past ten people). The calendar payload carries it (`masters[].color`), Setup carries `palette` and
+`team_colors`; the team update takes `color` (a palette colour, any case, stored lower case; null = Automatic) and
+refuses anything else (422). The editor sends `color` only when the manager changed it. Colour is a dot on cards, a
+ring on column heads, chips and avatars, and never says a status. The words for the colours are
+`appointments.colours.<key>`, checked against the palette by `tests/Unit/Appointments/TeamColourLabelsTest.php`.
+One migration: `2026_10_12_100000_add_color_to_service_masters_table` (additive, nullable, no backfill); the full admin
+ignores the column.
+
+**Team chips.** In the Day view, chips under the strip show or hide people's columns; what is hidden is kept on the
+device (`hiddenMasters` in `appointments:prefs`), and at least one person stays. The Week and List views keep their
+one-person picker.
+
+**Today strip.** Above the Day view's grid: the day's appointments (done, no-show), the next (or, on another day, the
+first) appointment, then for managers the day's net takings and number of payments (the Takings screen's own figures,
+`GET …/takings`), for everyone else "Needs attention", and who is in and off. The takings are never requested for
+staff, and refresh every 30 seconds and on coming back to the window, like the cards. Four tiles in a row from 660 px
+of strip, else two by two; each figure is sized to its tile, up to the design's 30 px (`ui/fitFigure.ts`), so an
+amount with a currency code ("CHF 1,234.50") fits; at the narrowest it wraps at its space. While the next day
+loads the strip shows dashes, never zeros.
+
+**Hover preview.** A pointer resting 300 ms on a card, or the keyboard's focus on it, shows a small card beside it:
+client, tier and points (when the programme is on), service, time and length, person, price and paid state (the
+same detail the panel loads). The pointer can move onto it (a 150 ms grace after leaving the card) and a click on it
+opens the appointment; leaving it closes it, and so do Escape (only the preview, an open panel stays), a drag, a click
+on the card, and the card leaving the grid (another day or view, a refresh without it). Its last line says "Click to
+open", or "Press Enter to open" when the keyboard opened it. Never on touch, never while dragging.
+
+**Find.** Ctrl K (⌘ K on a Mac), "/" or the top bar's search: actions (new appointment, pages, time off, theme,
+menu, the shortcuts), the appointments of the calendar ranges already loaded, and from two letters the server's
+client search (200 ms after typing stops). Arrow keys move, Enter opens, Escape closes and gives the focus back.
+
+**Shortcuts.** N new appointment, "?" this list, Ctrl K / "/" Find, everywhere; on the calendar T today, ← → the
+previous or next day (week in the Week view), D W L the views, Esc closes the panel. None of them act while someone
+types in a field, inside a dialog or under a modal, and a focused card's own arrow keys win over ← →. On a layout
+that types something else (Russian), the key is read by its place on the keyboard: the character first, and only when
+it is not a Latin letter, its place (N, T, D, W, L, Ctrl or ⌘ with K); the "/" key's place counts only for the
+Cyrillic layouts' "." (Find) and Shift "," (the list). Ctrl or ⌘ Shift K is left to the browser.
+
+Code: `frontend/src/appointments/{theme, lib/look.ts, lib/prefs.ts, lib/shortcuts.ts, find/, calendar/TodayStrip.tsx,
+calendar/TeamChips.tsx, calendar/CardPreview.tsx, calendar/previewTimer.ts, ui/ShortcutsSheet.tsx}`,
+`App\Services\Appointments\TeamColours`; tests in `tests/Unit/Appointments/TeamColour*Test.php`,
+`tests/Feature/Appointments/Setup/TeamColourTest.php` and the workspace's own tests.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
@@ -531,3 +594,8 @@ every organisation:
   `payment_status`.
 - (Part F) no migration and no new setting; the scheduler's optional length nobody else passes; every
   organisation's workspace gains drag, length and reopen on deploy; a booking's `meta` may carry `length_minutes`.
+- (Atelier release 1) no migration; the bootstrap gains `accent`; every organisation's workspace takes the new look
+  in Light.
+- (Atelier release 2) one additive migration (`service_masters.color`); the calendar payload gains `masters[].color`,
+  Setup gains `palette` and `team_colors`, and the team update takes `color`. A new page that meets the old server
+  during the deploy still opens Setup (it reads the two new keys only when present, and offers Automatic alone).

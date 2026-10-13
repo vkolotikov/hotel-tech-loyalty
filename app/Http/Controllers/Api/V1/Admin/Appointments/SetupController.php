@@ -9,6 +9,7 @@ use App\Models\ServiceCategory;
 use App\Models\ServiceMaster;
 use App\Services\Appointments\Setup\SetupAccess;
 use App\Services\Appointments\Setup\SetupPresenter;
+use App\Services\Appointments\TeamColours;
 use App\Services\Appointments\VenueClock;
 use App\Services\Booking\Setup\BookingRules;
 use App\Services\Booking\Setup\SetupChecklist;
@@ -33,6 +34,9 @@ class SetupController extends Controller
             'services'          => Service::with('masters')->orderBy('sort_order')->orderBy('name')->get()->map(fn (Service $s) => $present->service($s))->all(),
             'categories'        => ServiceCategory::orderBy('sort_order')->orderBy('name')->get()->map(fn (ServiceCategory $c) => $present->category($c))->all(),
             'team'              => ServiceMaster::with(SetupPresenter::memberRelations($today))->orderBy('sort_order')->orderBy('name')->get()->map(fn (ServiceMaster $m) => $present->member($m))->all(),
+            'palette'           => TeamColours::paletteList(),
+            // The colour every active person shows in on the calendar (a choice kept, or the automatic one), id => hex.
+            'team_colors'       => (object) TeamColours::assign(ServiceMaster::where('is_active', true)->get(['id', 'color'])),
             'staff_accounts'    => $canManage ? $present->staffAccounts() : [],
             'settings'          => BookingRules::read($org),
             'checklist'         => $checklist->for($orgId, self::brandId()),

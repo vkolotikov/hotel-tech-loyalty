@@ -44,6 +44,7 @@ final class SetupPresenter
             'phone'     => $master->phone,
             'user_id'   => $master->user_id ? (int) $master->user_id : null,
             'is_active' => (bool) $master->is_active,
+            'color'     => $master->color,
             'services'  => $master->services->map(fn (Service $s) => self::link((int) $s->id, $s->pivot))->values()->all(),
             'week'      => $master->schedules
                 ->sortBy(fn (ServiceMasterSchedule $r) => sprintf('%d %s', $r->day_of_week, $r->start_time))

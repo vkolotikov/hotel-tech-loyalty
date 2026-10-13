@@ -40,7 +40,7 @@ const checklist: ChecklistData = {
 const data = {
   can_manage: true, my_team_member_id: null, categories: [], team: [], staff_accounts: [], checklist,
   services: [{ id: 1, name: 'Deep Tissue Massage', category_id: null, duration_minutes: 45, buffer_after_minutes: 0, price: 60, currency: 'EUR', short_description: null, is_active: true, performers: [] }],
-  settings: {} as SetupPayload['settings'],
+  settings: {} as SetupPayload['settings'], palette: [], team_colors: {},
 } as SetupPayload
 
 const render = (node: React.ReactNode) => renderToStaticMarkup(<MemoryRouter>{node}</MemoryRouter>)

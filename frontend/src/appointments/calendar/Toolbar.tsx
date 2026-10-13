@@ -14,6 +14,7 @@ interface Props {
   locale: string
   masters: CalendarMaster[]
   masterId: number | null
+  personPicker: boolean // the one-person picker; the day view has team chips instead
   showCancelled: boolean
   updatedAt: number | null // minutes of the venue's day at the last successful load
   refreshing: boolean
@@ -26,6 +27,13 @@ interface Props {
   onShowCancelled: (on: boolean) => void
   onRefresh: () => void
 }
+
+/**
+ * The room kept clear of the open appointment panel on the calendar's header rows (toolbar, today strip, team chips).
+ * The panel is 440 px; from xl the day overview column (288 px) already sits under it, so less is reserved there.
+ * One literal, so Tailwind sees it and the rows never drift apart.
+ */
+export const PANEL_CLEARANCE = 'lg:pr-[456px] xl:pr-[176px]'
 
 const field = 'rounded-xl border border-a-border bg-a-surface px-3 py-1.5 text-sm text-a-text shadow-a-sm transition-colors hover:bg-a-surface-2'
 
@@ -44,8 +52,7 @@ export function Toolbar(p: Props) {
 
   return (
     // With the panel open on a wide screen, the toolbar wraps short of it, so "Updated" and Refresh stay in view.
-    // The panel is 440 px; from xl the day overview column (288 px) already sits under it, so less is reserved there.
-    <div className={`flex flex-wrap items-center gap-2 px-4 lg:px-6 py-3 bg-a-canvas ${p.panelOpen ? 'lg:pr-[456px] xl:pr-[176px]' : ''}`}>
+    <div className={`flex flex-wrap items-center gap-2 px-4 lg:px-6 py-3 bg-a-canvas ${p.panelOpen ? PANEL_CLEARANCE : ''}`}>
       <button type="button" onClick={p.onToday} className={field}>{t('appointments.calendar.today', 'Today')}</button>
       <button type="button" onClick={p.onPrev} className={`${field} px-2`} aria-label={t('appointments.calendar.previous', 'Previous')}><ChevronLeft size={16} aria-hidden /></button>
       <button type="button" onClick={p.onNext} className={`${field} px-2`} aria-label={t('appointments.calendar.next', 'Next')}><ChevronRight size={16} aria-hidden /></button>
@@ -66,14 +73,16 @@ export function Toolbar(p: Props) {
         </div>
       )}
 
-      <label>
-        <span className="sr-only">{vocab('team_member')}</span>
-        <select value={p.masterId ?? ''} onChange={(e) => p.onMaster(e.target.value ? Number(e.target.value) : null)} className={field}>
-          {/* A week is one person's week (a column per day), so "whole team" is not on offer there. */}
-          {p.view !== 'week' && <option value="">{t('appointments.calendar.all_team', 'Whole team')}</option>}
-          {p.masters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-      </label>
+      {p.personPicker && (
+        <label>
+          <span className="sr-only">{vocab('team_member')}</span>
+          <select value={p.masterId ?? ''} onChange={(e) => p.onMaster(e.target.value ? Number(e.target.value) : null)} className={field}>
+            {/* A week is one person's week (a column per day), so "whole team" is not on offer there. */}
+            {p.view !== 'week' && <option value="">{t('appointments.calendar.all_team', 'Whole team')}</option>}
+            {p.masters.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        </label>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-a-text-2">
         <input type="checkbox" checked={p.showCancelled} onChange={(e) => p.onShowCancelled(e.target.checked)} />

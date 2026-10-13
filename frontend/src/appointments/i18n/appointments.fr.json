@@ -22,6 +22,36 @@
     "collapse": "Réduire le menu",
     "expand": "Développer le menu"
   },
+  "find": {
+    "open": "Trouver un client, un rendez-vous ou une action",
+    "title": "Rechercher",
+    "actions": "Actions",
+    "go_to": "Aller à",
+    "coming_up": "À venir aujourd'hui",
+    "appointments": "Rendez-vous",
+    "search_all": "Chercher « {{q}} » dans tous les clients",
+    "none": "Aucun résultat pour « {{q}} ».",
+    "count": "Résultats : {{count}}",
+    "time_off": "Absences",
+    "theme_dark": "Passer au sombre",
+    "theme_light": "Passer au clair",
+    "shortcuts": "Raccourcis clavier",
+    "hint_move": "naviguer",
+    "hint_open": "ouvrir",
+    "hint_close": "fermer",
+    "searching": "Recherche des clients…"
+  },
+  "shortcuts": {
+    "title": "Raccourcis clavier",
+    "find": "Rechercher",
+    "days": "Jour précédent ou suivant (semaine en vue semaine)",
+    "views": "Jour, semaine, liste",
+    "close": "Fermer le panneau",
+    "card": "Déplacer le rendez-vous sélectionné",
+    "help": "Cette liste",
+    "on_calendar": "Dans le calendrier",
+    "or": "ou"
+  },
   "theme": {
     "label": "Thème",
     "light": "Clair",
@@ -90,6 +120,8 @@
     "go_to_date": "Aller à la date",
     "today": "Aujourd'hui",
     "all_team": "Toute l'équipe",
+    "team_chips": "Équipe dans le calendrier",
+    "team_chips_last": "Au moins une personne reste dans le calendrier",
     "show_cancelled": "Afficher les annulés",
     "updated": "Mis à jour à {{time}}",
     "week": "Semaine {{n}}",
@@ -100,15 +132,34 @@
     "next_month": "Mois suivant",
     "load_failed": "L'agenda n'a pas pu être actualisé. Ce que vous voyez n'est peut-être plus à jour."
   },
+  "preview": {
+    "points": "{{tier}} · {{points}} points",
+    "points_only": "{{points}} points",
+    "with": "avec {{name}}",
+    "length": "{{minutes}} min",
+    "hint": "Cliquez pour ouvrir",
+    "hint_keyboard": "Appuyez sur Entrée pour ouvrir"
+  },
   "overview": {
     "title": "Aperçu de la journée",
     "total": "Rendez-vous",
-    "upcoming": "À venir",
-    "in_progress": "En cours",
-    "completed": "Terminés",
     "attention": "À traiter",
-    "attention_hint": "À traiter : en attente de confirmation, ou confirmé et non commencé plus de 15 minutes après l'heure prévue.",
     "legend": "Statuts"
+  },
+  "today": {
+    "label": "En un coup d'œil",
+    "done_noshow": "{{done}} terminés · {{noshow}} absences",
+    "next": "Ensuite",
+    "first": "Premier rendez-vous",
+    "next_line": "{{service}} · {{client}} avec {{member}}",
+    "nothing_more": "Plus rien de réservé aujourd'hui",
+    "nothing": "Rien de réservé",
+    "takings": "Encaissements",
+    "payments": "Paiements : {{count}}",
+    "attention_hint": "À confirmer ou en retard",
+    "team": "Équipe",
+    "team_in": "Présents : {{count}}",
+    "team_off": "Absents : {{names}}"
   },
   "list": {
     "empty": "Aucun rendez-vous sur cette période.",
@@ -368,7 +419,10 @@
       "not_linked": "Votre connexion n’est pas encore associée à un membre de l’équipe. Un manager peut l’associer dans Équipe.",
       "save_profile": "Enregistrer le profil",
       "save_hours": "Enregistrer les horaires",
-      "services_count": "Prestations : {{count}}"
+      "services_count": "Prestations : {{count}}",
+      "colour": "Couleur dans le calendrier",
+      "colour_auto": "Automatique",
+      "colour_hint": "Affichée en point sur ses rendez-vous et en anneau sur sa colonne."
     },
     "hours": {
       "off": "Repos",
@@ -561,5 +615,17 @@
     "client": "Client",
     "reference": "Référence",
     "by": "Enregistré par"
+  },
+  "colours": {
+    "blue": "Bleu",
+    "orange": "Orange",
+    "violet": "Violet",
+    "raspberry": "Framboise",
+    "teal": "Bleu canard",
+    "ochre": "Ocre",
+    "green": "Vert",
+    "coral": "Corail",
+    "indigo": "Indigo",
+    "brown": "Brun"
   }
 }

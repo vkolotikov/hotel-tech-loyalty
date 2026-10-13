@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { Link, NavLink, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays, Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, Plus, Search, Settings2, TrendingUp, Users, Wallet } from 'lucide-react'
@@ -10,19 +10,25 @@ import { firstLetter } from './lib/firstLetter'
 import { fullAdminPathFor } from './lib/landing'
 import { markShell } from './lib/shellMark'
 import { loadBrand, rememberBrand, useLook } from './lib/look'
+import { onShortcuts } from './lib/shortcuts'
 import { useAppointmentsOnly } from './lib/useAppointmentsOnly'
+import { useMedia } from './lib/useMedia'
 import { useVocab } from './lib/vocab'
+import { FindDialog } from './find/FindDialog'
+import { findActions, type FindTarget } from './find/findResults'
 import { accentStyle, accentTokens } from './theme/accent'
 import { Button } from './ui/Button'
 import { Notice } from './ui/Notice'
+import { ShortcutsSheet } from './ui/ShortcutsSheet'
 import { ThemeSwitch } from './ui/ThemeSwitch'
 import { ChecklistBanner } from './setup/Checklist'
 
 /**
  * The workspace's frame: an ink side panel that collapses to icons, with the
  * daily areas, the Light/Dark/Auto switch and the organisation's brand colour
- * as the accent; a top bar with the organisation, client search and New
- * appointment; and the notices that explain why something is not available.
+ * as the accent; a top bar with the organisation, Find (clients, appointments
+ * and actions in one box) and New appointment; and the notices that explain
+ * why something is not available.
  * Nothing here links into the full admin except the one "Full admin" entry in
  * the secondary area, and not even that on the Appointments plan, which has no
  * full admin.
@@ -34,8 +40,12 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { data, isLoading, isError, error, refetch } = useAppointments()
   const appointmentsOnly = useAppointmentsOnly()
-  const [search, setSearch] = useState('')
+  const [findOpen, setFindOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
+  // The side panel, and with it "collapse the menu", exists from 1024 px (lg).
+  const wide = useMedia('(min-width: 1024px)')
   const main = useRef<HTMLElement>(null)
+  const findButton = useRef<HTMLButtonElement>(null)
   const arrived = useRef(false)
 
   // The link that led to a page is gone with the page it was on. Without
@@ -63,6 +73,24 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
   // The organisation's subscription is not active: nothing here can load, before or after the page was open.
   const lapsed = refusal === 'subscription_required'
   const stopped = switchedOff || lapsed
+  // Find needs the workspace: not while it loads, and not once it has stopped. A box left open by a stop closes.
+  const ready = Boolean(data) && !stopped
+  if (findOpen && !ready) setFindOpen(false)
+  if (helpOpen && !ready) setHelpOpen(false)
+
+  // Shortcuts (spec §5.2) that belong to every page: Find, the list of shortcuts, a new appointment. The ones for the calendar
+  // (today, the days, the views) are heard by the calendar page itself. None of them act while the workspace loads or has stopped.
+  useEffect(() => {
+    if (!ready) return
+    return onShortcuts(window, document, (hit, e) => {
+      if (hit === 'find') setFindOpen(true)
+      else if (hit === 'help') setHelpOpen(true)
+      else if (hit === 'new') navigate('/appointments?new=1')
+      else return
+      e.preventDefault()
+    })
+  }, [ready, navigate])
+
   // An organisation that never had the workspace: the route is not for them.
   if (switchedOff && !data) return <Navigate to="/" replace />
 
@@ -76,10 +104,27 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
     { to: '/appointments/setup', end: false, icon: Settings2, label: t('appointments.nav.setup', 'Setup') },
   ]
 
-  const onSearch = (e: FormEvent) => {
-    e.preventDefault()
-    const term = search.trim()
-    if (term.length >= 2) navigate(`/appointments/clients?search=${encodeURIComponent(term)}`)
+  // Find: what it can do (the pages are the ones this person sees above), and what each choice does.
+  const findLabel = t('appointments.find.open', 'Find a client, appointment or action')
+  const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
+  const findList = findActions({
+    nav, canManage: Boolean(data?.staff.can_manage), wide, dark: look.resolved === 'dark', slim,
+    words: {
+      newAppointment: t('appointments.shell.new_appointment', 'New appointment'),
+      goTo: t('appointments.find.go_to', 'Go to'),
+      timeOff: t('appointments.find.time_off', 'Time off'),
+      toDark: t('appointments.find.theme_dark', 'Switch to dark'),
+      toLight: t('appointments.find.theme_light', 'Switch to light'),
+      collapse: t('appointments.shell.collapse', 'Collapse menu'),
+      expand: t('appointments.shell.expand', 'Expand menu'),
+      shortcuts: t('appointments.find.shortcuts', 'Keyboard shortcuts'),
+    },
+  })
+  const runFind = (target: FindTarget) => {
+    if ('to' in target) navigate(target.to)
+    else if (target.run === 'theme') look.setTheme(look.resolved === 'dark' ? 'light' : 'dark')
+    else if (target.run === 'rail') look.setRail(slim ? 'full' : 'slim')
+    else if (target.run === 'shortcuts') setHelpOpen(true)
   }
 
   // "Full admin" opens the same tool there (the calendar, the client list); anything else, the dashboard.
@@ -175,16 +220,14 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
             <div className="text-sm font-semibold truncate">{data?.organization.name}</div>
             {data?.brand && data.brand.name !== data.organization.name && <div className="text-xs text-a-text-2 truncate">{data.brand.name}</div>}
           </div>
-          <form role="search" onSubmit={onSearch} className="flex-1 min-w-0 max-w-md lg:ml-4">
-            <label className="relative block">
-              <span className="sr-only">{t('appointments.shell.search', 'Search clients')}</span>
-              <Search size={15} aria-hidden className="absolute left-3 top-1/2 -translate-y-1/2 text-a-text-2" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)}
-                placeholder={t('appointments.shell.search', 'Search clients')}
-                className="w-full rounded-xl bg-a-surface border border-a-border pl-9 pr-3 py-2 text-sm text-a-text placeholder:text-a-text-2 shadow-a-sm" />
-            </label>
-          </form>
-          {/* On a phone the header holds three areas, the search and the menu: the button keeps only its icon. */}
+          {/* Find opens the one box for clients, appointments and actions. On a phone it keeps only its icon (and its name, for a screen reader). */}
+          <button ref={findButton} type="button" onClick={() => { if (ready) setFindOpen(true) }} disabled={!ready} aria-label={findLabel} aria-haspopup="dialog"
+            className="flex min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4">
+            <Search size={15} aria-hidden className="shrink-0" />
+            <span className="hidden sm:inline min-w-0 truncate">{findLabel}</span>
+            <kbd className="ml-auto hidden sm:inline shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs">{modKey} K</kbd>
+          </button>
+          {/* On a phone the header holds three areas, Find and the menu: the button keeps only its icon. */}
           <Link to="/appointments?new=1" aria-label={t('appointments.shell.new_appointment', 'New appointment')}
             className="ml-auto inline-flex shrink-0 items-center gap-2 rounded-full bg-a-accent px-3 sm:px-4 py-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition hover:bg-a-accent-deep [@media(hover:hover)]:hover:-translate-y-px whitespace-nowrap">
             <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('appointments.shell.new_appointment', 'New appointment')}</span>
@@ -249,6 +292,9 @@ export function AppointmentsShell({ children }: { children: ReactNode }) {
           </>
         )}
       </div>
+
+      {ready && <FindDialog open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, main]} />}
+      {ready && <ShortcutsSheet open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, main]} />}
     </div>
   )
 }

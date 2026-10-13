@@ -15,7 +15,7 @@ class ServiceMaster extends Model
 
     protected $fillable = [
         'organization_id', 'brand_id', 'user_id', 'name', 'title', 'bio',
-        'email', 'phone', 'avatar', 'specialties', 'sort_order', 'is_active',
+        'email', 'phone', 'avatar', 'color', 'specialties', 'sort_order', 'is_active',
     ];
 
     protected $casts = [

@@ -260,6 +260,22 @@
   outline: none;
 }
 
+/* Find's input is the box's one control and the focus never leaves it: instead
+   of an outline round the input (a sharp rectangle inside the rounded box), its
+   row shows the focus as a 2 px accent-text underline — the row's own bottom
+   border, coloured, and 1 px more inside it so nothing moves. The input's
+   outline is transparent, not none: forced-colours mode (Windows High
+   Contrast) drops the row's colours and shadow, and paints this outline in the
+   system colour instead, so the focus still shows there. */
+[data-appointments] [data-find-row] input:focus-visible {
+  outline: 2px solid transparent;
+}
+
+[data-appointments] [data-find-row]:focus-within {
+  border-bottom-color: rgb(var(--a-accent-text));
+  box-shadow: inset 0 -1px 0 rgb(var(--a-accent-text));
+}
+
 /* Accent fills on a brand that is almost the page colour keep an edge (spec 4.2):
    an inset line in accent-text, the same colour every accent line is drawn in. */
 [data-appointments][data-accent-edge] .bg-a-accent {
@@ -327,6 +343,15 @@
   background-image: repeating-linear-gradient(135deg, rgb(var(--a-hatch) / 0.14) 0 6px, transparent 6px 12px);
 }
 
+/* A team member's calendar colour (spec §5.3), set as --a-m on the element from the server's palette. */
+[data-appointments] .a-member-dot {
+  background-color: var(--a-m);
+}
+
+[data-appointments] .a-member-ring {
+  box-shadow: 0 0 0 2px var(--a-m);
+}
+
 /* A card in a narrow column (many people in a day, or a week) has no room
    for its time and the status word side by side. The time stays; the word
    is taken out of sight — not out of the page, so it is still read out as
@@ -346,11 +371,38 @@
   }
 }
 
+/* The Today strip (TodayStrip, a container of its own): four tiles in a row once each
+   can be 156 px wide — "€1,234.50" in the display face, or three avatars and "+N" —
+   so 4 × 156 + 3 × 12 px of gap; two by two below that. The screen's width cannot
+   say this: the open panel and the side menu take their share of it. */
+@container (min-width: 660px) {
+  [data-appointments] [data-glance] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Each tile of the strip is a container of its own (TodayStrip), and each of
+   its figures is as large as its tile allows, up to the design's 30 px: a
+   tile has 104 to 228 px inside (1024 with the panel open to 1280 with it, two
+   by two), and at 30 px "£1,234.50" takes 122 px, "€12,345.50" 139, "CHF
+   1,234.50" 170, "UAH 125,000.00" 216. --a-fit is the figure's size in cqi at
+   which it takes 98 % of its tile, from its measured width in ems
+   (ui/fitFigure.ts), so the count and the time stay at 30 px everywhere and
+   an amount shrinks only as far as it must. Below 18 px it stops shrinking:
+   an amount with a currency code then wraps at the space before the number,
+   and nothing runs out of its tile. */
+[data-appointments] [data-glance] [data-fit] {
+  font-size: clamp(1.125rem, calc(var(--a-fit, 100) * 1cqi), 1.875rem);
+  overflow-wrap: anywhere;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-appointments],
   [data-appointments] * {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    /* The Today strip staggers its tiles with animation-delay; without this they would wait invisible for it. */
+    animation-delay: 0s !important;
   }
 }

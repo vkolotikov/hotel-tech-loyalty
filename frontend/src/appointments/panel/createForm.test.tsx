@@ -16,8 +16,8 @@ vi.mock('react-i18next', () => ({
 }))
 
 const masters: CalendarMaster[] = [
-  { id: 1, name: 'Emma', title: null, avatar: null, days: {} },
-  { id: 2, name: 'James', title: null, avatar: null, days: {} },
+  { id: 1, name: 'Emma', title: null, avatar: null, color: '#3b7dd8', days: {} },
+  { id: 2, name: 'James', title: null, avatar: null, color: '#c46f1b', days: {} },
 ]
 const services: CatalogueService[] = [
   { id: 3, name: 'Haircut & Styling', duration_minutes: 60, buffer_after_minutes: 0, price: 45, currency: 'GBP', master_ids: [1] },

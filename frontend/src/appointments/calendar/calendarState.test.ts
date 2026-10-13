@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { columnsFor, gridRange, needsWindows, rangeFor, shift } from './calendarState'
+import { columnsFor, dayTeam, gridRange, needsWindows, rangeFor, shift } from './calendarState'
 import type { AppointmentSummary, CalendarMaster } from '../lib/types'
 
 const day = (windows: [string, string][]) => ({ windows: windows.map(([start, end]) => ({ start, end })), time_off: [] })
-const emma: CalendarMaster = { id: 1, name: 'Emma', title: 'Hair Stylist', avatar: null, days: { '2026-10-06': day([['09:00', '17:00']]), '2026-10-07': day([['10:00', '18:00']]) } }
-const james: CalendarMaster = { id: 2, name: 'James', title: null, avatar: null, days: { '2026-10-06': day([['08:00', '12:00']]) } }
+const emma: CalendarMaster = { id: 1, name: 'Emma', title: 'Hair Stylist', avatar: null, color: '#3b7dd8', days: { '2026-10-06': day([['09:00', '17:00']]), '2026-10-07': day([['10:00', '18:00']]) } }
+const james: CalendarMaster = { id: 2, name: 'James', title: null, avatar: null, color: '#c46f1b', days: { '2026-10-06': day([['08:00', '12:00']]) } }
 
 const appt = (start: string, end: string, masterId = 1): AppointmentSummary => ({
   id: 1, reference: 'SVC-1', start, end, duration_minutes: 45, service: { id: 1, name: 'Cut' }, master: { id: masterId, name: 'x' },
@@ -76,5 +76,40 @@ describe('gridRange', () => {
     expect(gridRange(columns, [])).toEqual({ startMin: 8 * 60, endMin: 19 * 60 })
     expect(gridRange(columns, [appt('2026-10-06T06:30', '2026-10-06T07:15'), appt('2026-10-06T20:00', '2026-10-06T21:30', 2)]))
       .toEqual({ startMin: 6 * 60, endMin: 22 * 60 })
+  })
+})
+
+describe('dayTeam', () => {
+  const own = (id: number, masterId: number | null, status: AppointmentSummary['status'] = 'confirmed'): AppointmentSummary => ({
+    ...appt('2026-10-06T10:00', '2026-10-06T10:45', masterId ?? 1), id, status, master: masterId === null ? null : { id: masterId, name: 'x' },
+  })
+  const cards = [own(1, 1), own(2, 2), own(3, null), own(4, 2, 'cancelled'), own(5, 2)]
+
+  it('shows everyone when no one is hidden', () => {
+    const team = dayTeam([emma, james], cards, [])
+    expect(team.hidden).toEqual([])
+    expect(team.masters.map(m => m.id)).toEqual([1, 2])
+    expect(team.appointments.map(a => a.id)).toEqual([1, 2, 3, 4, 5])
+  })
+
+  it('hides a person\'s column and cards, keeps cards nobody is assigned to, and still counts the hidden person', () => {
+    const team = dayTeam([emma, james], cards, [2])
+    expect(team.hidden).toEqual([2])
+    expect(team.masters.map(m => m.id)).toEqual([1])
+    expect(team.appointments.map(a => a.id)).toEqual([1, 3])
+    expect(team.counts).toEqual({ 1: 1, 2: 2 }) // the cancelled card is not counted
+  })
+
+  it('ignores a stored id that names no one on the team', () => {
+    const team = dayTeam([emma, james], cards, [9, 1])
+    expect(team.hidden).toEqual([1])
+    expect(team.masters.map(m => m.id)).toEqual([2])
+  })
+
+  it('never hides everyone: a stored list that covers the whole team shows the whole team', () => {
+    const team = dayTeam([emma, james], cards, [1, 2])
+    expect(team.hidden).toEqual([])
+    expect(team.masters.map(m => m.id)).toEqual([1, 2])
+    expect(dayTeam([], [], [1]).hidden).toEqual([])
   })
 })
