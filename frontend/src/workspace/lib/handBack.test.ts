@@ -41,16 +41,16 @@ describe('who hands the focus back, and who listens', () => {
   const source = (path: string) => readFileSync(new URL(path, import.meta.url), 'utf8')
 
   it('the panel, Find, the shortcuts sheet and the drop dialog hand it back through handBackFocus', () => {
-    expect(source('../panel/AppointmentPanel.tsx')).toMatch(/handBackFocus\(back\)/)
-    expect(source('../find/FindDialog.tsx')).toMatch(/handBackFocus\(focusTarget\(/)
+    expect(source('../../appointments/panel/AppointmentPanel.tsx')).toMatch(/handBackFocus\(back\)/)
+    expect(source('../find/FindFrame.tsx')).toMatch(/handBackFocus\(focusTarget\(/)
     expect(source('../ui/ShortcutsSheet.tsx')).toMatch(/handBackFocus\(focusTarget\(/)
-    expect(source('../calendar/focusDialog.ts')).toMatch(/handBackFocus\(before\)/)
-    for (const path of ['../panel/AppointmentPanel.tsx', '../find/FindDialog.tsx', '../ui/ShortcutsSheet.tsx', '../calendar/focusDialog.ts']) {
+    expect(source('../../appointments/calendar/focusDialog.ts')).toMatch(/handBackFocus\(before\)/)
+    for (const path of ['../../appointments/panel/AppointmentPanel.tsx', '../find/FindFrame.tsx', '../ui/ShortcutsSheet.tsx', '../../appointments/calendar/focusDialog.ts']) {
       expect(source(path), path).not.toMatch(/\b(back|before)\?*\.focus\(\)|focusTarget\([^)]*\)\)\?\.focus\(\)/)
     }
   })
 
   it('a calendar card opens no preview for a focus handed back to it', () => {
-    expect(source('../calendar/AppointmentCard.tsx')).toMatch(/if \(isKeyboardFocus\(e\) && !isHandedBack\(e\.currentTarget\)\) onPreviewStart\?\.\(item\.id, 'focus'\)/)
+    expect(source('../../appointments/calendar/AppointmentCard.tsx')).toMatch(/if \(isKeyboardFocus\(e\) && !isHandedBack\(e\.currentTarget\)\) onPreviewStart\?\.\(item\.id, 'focus'\)/)
   })
 })

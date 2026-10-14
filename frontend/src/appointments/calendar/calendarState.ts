@@ -1,7 +1,7 @@
 import type { AppointmentSummary, CalendarMaster, DateKey, MasterDay } from '../lib/types'
 import type { View } from '../lib/prefs'
-import { initialsOf } from '../lib/firstLetter'
-import { addDays, formatDate, weekOf } from '../lib/wallClock'
+import { initialsOf } from '../../workspace/lib/firstLetter'
+import { addDays, formatDate, weekOf } from '../../workspace/lib/wallClock'
 import { dayRange } from '../lib/layout'
 
 export function rangeFor(view: View, date: DateKey): { from: DateKey; to: DateKey } {

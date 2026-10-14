@@ -1,0 +1,34 @@
+{
+  "theme": {
+    "label": "Darstellung",
+    "light": "Hell",
+    "dark": "Dunkel",
+    "auto": "Auto",
+    "auto_hint": "Auto folgt diesem Gerät"
+  },
+  "common": {
+    "loading": "Wird geladen…",
+    "close": "Schließen"
+  },
+  "shortcuts": {
+    "title": "Tastenkürzel",
+    "or": "oder",
+    "help": "Diese Liste"
+  },
+  "find": {
+    "title": "Suchen",
+    "none": "Nichts passt zu „{{q}}“.",
+    "count": "Treffer: {{count}}",
+    "hint_move": "wählen",
+    "hint_open": "öffnen",
+    "hint_close": "schließen"
+  },
+  "shell": {
+    "menu": "Menü",
+    "full_admin": "Vollständige Verwaltung",
+    "language": "Sprache",
+    "sign_out": "Abmelden",
+    "collapse": "Menü einklappen",
+    "expand": "Menü ausklappen"
+  }
+}

@@ -5,11 +5,11 @@ import { money as fmt } from '../../lib/money'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi } from '../lib/api'
 import type { DateKey, RefundVia, Takings } from '../lib/types'
-import { formatInstant } from '../lib/wallClock'
+import { formatInstant } from '../../workspace/lib/wallClock'
 import { KIND_FALLBACK, METHOD_FALLBACK, kindKey } from '../panel/moneyLines'
-import { Field } from '../ui/Field'
-import { Notice } from '../ui/Notice'
-import { PageTitle } from '../ui/Typography'
+import { Field } from '../../workspace/ui/Field'
+import { Notice } from '../../workspace/ui/Notice'
+import { PageTitle } from '../../workspace/ui/Typography'
 
 const METHODS: RefundVia[] = ['cash', 'card_desk', 'transfer', 'other', 'online_card']
 /** Table heads: mono, small caps feel, hairline weight (spec 4.6). */

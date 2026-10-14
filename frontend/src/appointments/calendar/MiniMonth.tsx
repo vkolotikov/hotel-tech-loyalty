@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { DateKey } from '../lib/types'
-import { addMonths, formatDate, monthGrid, monthOf } from '../lib/wallClock'
+import { addMonths, formatDate, monthGrid, monthOf } from '../../workspace/lib/wallClock'
 
 /** A month to jump around in. Every day is a button; the chosen day and the venue's today are marked in the markup, not by colour alone. */
 export function MiniMonth({ date, today, locale, onPick }: { date: DateKey; today: DateKey; locale: string; onPick: (date: DateKey) => void }) {

@@ -17,7 +17,7 @@ export function Eyebrow({ children }: { children: ReactNode }) {
 /**
  * A big figure in the display face. `fit` (the Today strip): sized to its tile,
  * up to the display size: its width in ems is measured before paint, for each
- * value and again once the display face has loaded, and appointments.css
+ * value and again once the display face has loaded, and workspace.css
  * ([data-fit]) turns it into a size in the tile's own units (ui/fitFigure.ts).
  */
 export function Figure({ children, fit = false }: { children: ReactNode; fit?: boolean }) {

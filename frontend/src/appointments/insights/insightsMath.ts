@@ -1,5 +1,5 @@
 import type { DateKey, InsightsMoney } from '../lib/types'
-import { addDays, addMonths, isDateKey, monthOf, weekdayOf } from '../lib/wallClock'
+import { addDays, addMonths, isDateKey, monthOf, weekdayOf } from '../../workspace/lib/wallClock'
 
 /** Part G's arithmetic, in one place: the server sends counts and money, the screen works out the rest (spec §5.1). */
 

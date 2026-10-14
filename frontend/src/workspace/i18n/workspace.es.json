@@ -1,0 +1,34 @@
+{
+  "theme": {
+    "label": "Tema",
+    "light": "Claro",
+    "dark": "Oscuro",
+    "auto": "Auto",
+    "auto_hint": "Auto sigue a este dispositivo"
+  },
+  "common": {
+    "loading": "Cargando…",
+    "close": "Cerrar"
+  },
+  "shortcuts": {
+    "title": "Atajos de teclado",
+    "or": "o",
+    "help": "Esta lista"
+  },
+  "find": {
+    "title": "Buscar",
+    "none": "Nada coincide con «{{q}}».",
+    "count": "Resultados: {{count}}",
+    "hint_move": "mover",
+    "hint_open": "abrir",
+    "hint_close": "cerrar"
+  },
+  "shell": {
+    "menu": "Menú",
+    "full_admin": "Administración completa",
+    "language": "Idioma",
+    "sign_out": "Cerrar sesión",
+    "collapse": "Contraer menú",
+    "expand": "Expandir menú"
+  }
+}

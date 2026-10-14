@@ -9,7 +9,7 @@ export function CalendarSkeleton() {
   const { t } = useTranslation()
   return (
     <div role="status" className="p-4">
-      <span className="sr-only">{t('appointments.common.loading', 'Loading…')}</span>
+      <span className="sr-only">{t('workspace.common.loading', 'Loading…')}</span>
       <div className="flex gap-3">
         {[0, 1, 2, 3].map(c => (
           <div key={c} className="flex-1 space-y-3">

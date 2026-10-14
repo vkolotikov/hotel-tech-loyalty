@@ -4,15 +4,16 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { FALLBACK_ACCENT, SURFACES, accentTokens } from './accent'
 
-const DIR_APPOINTMENTS = fileURLToPath(new URL('..', import.meta.url))
+/** The sources whose accent classes the line rule below sweeps: the shared core and every workspace built on it. */
+const SOURCE_DIRS = [fileURLToPath(new URL('..', import.meta.url)), fileURLToPath(new URL('../../appointments', import.meta.url))]
 
 /**
  * Every text-on-background pair the workspace draws, at 4.5:1 or better,
- * in the light set ([data-appointments]) and the dark set
- * ([data-appointments][data-theme="dark"]). Status tones are drawn as text
+ * in the light set ([data-workspace]) and the dark set
+ * ([data-workspace][data-theme="dark"]). Status tones are drawn as text
  * in the tone over a 12 % tint of the same tone (cards, StatusMark, Notice).
  */
-const css = readFileSync(new URL('./appointments.css', import.meta.url), 'utf8')
+const css = readFileSync(new URL('./workspace.css', import.meta.url), 'utf8')
 
 function block(selector: string): Record<string, number[]> {
   const start = css.indexOf(`${selector} {`)
@@ -44,9 +45,9 @@ const PAIRS: [string, string][] = [
 ]
 const TONES = ['st-pending', 'st-confirmed', 'st-progress', 'st-completed', 'st-cancelled', 'st-noshow', 'danger']
 
-for (const [theme, selector] of [['light', '[data-appointments]'], ['dark', '[data-appointments][data-theme="dark"]']] as const) {
-  describe(`appointments tokens — ${theme}`, () => {
-    const vars = theme === 'light' ? block(selector) : { ...block('[data-appointments]'), ...block(selector) }
+for (const [theme, selector] of [['light', '[data-workspace]'], ['dark', '[data-workspace][data-theme="dark"]']] as const) {
+  describe(`workspace tokens — ${theme}`, () => {
+    const vars = theme === 'light' ? block(selector) : { ...block('[data-workspace]'), ...block(selector) }
 
     it('defines every token the Tailwind aliases read', () => {
       for (const name of TOKENS) expect(vars[name], `--a-${name} is missing`).toBeDefined()
@@ -99,18 +100,11 @@ for (const [theme, selector] of [['light', '[data-appointments]'], ['dark', '[da
   })
 }
 
-describe('appointments stylesheet structure', () => {
-  it('a narrow card drops the status word from view without removing it from the page', () => {
-    const tail = css.slice(css.indexOf('@container'))
-    expect(css).toContain('container-type: inline-size')
-    expect(tail).toMatch(/@container \(max-width: \d+px\)\s*\{\s*\[data-appointments\] \[data-density\] \[data-status-word\]/)
-    expect(tail).not.toMatch(/display:\s*none/) // hidden from sight only: the word stays in the card's name
-  })
-
+describe('workspace stylesheet structure', () => {
   // The tests above merge the light block under the dark one, so a token the dark
   // block forgot would be borrowed from the light set and pass. This one does not merge.
   it('the dark block alone defines every colour token', () => {
-    const dark = block('[data-appointments][data-theme="dark"]')
+    const dark = block('[data-workspace][data-theme="dark"]')
     for (const name of TOKENS) expect(dark[name], `--a-${name} is missing from the dark block`).toBeDefined()
   })
 
@@ -127,8 +121,8 @@ describe('appointments stylesheet structure', () => {
     }
     const body = rules.slice(open + 1, close)
     const selectors = body.slice(0, body.indexOf('{')).split(',').map(s => s.trim())
-    expect(selectors).toContain('[data-appointments]')
-    expect(selectors).toContain('[data-appointments] *')
+    expect(selectors).toContain('[data-workspace]')
+    expect(selectors).toContain('[data-workspace] *')
     // !important: the animate-a-* and transition utilities have the same specificity and would otherwise win by order.
     expect(body).toContain('animation-iteration-count: 1 !important')
     expect(body).toContain('animation-duration: 0.01ms !important')
@@ -139,15 +133,15 @@ describe('appointments stylesheet structure', () => {
 
   it('the rail\'s pale ring is drawn on the rail only — the panel and the month are white and keep the accent', () => {
     const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
-    const light = block('[data-appointments]')
-    expect(rules).toContain('[data-appointments] [data-rail] :focus-visible')
+    const light = block('[data-workspace]')
+    expect(rules).toContain('[data-workspace] [data-rail] :focus-visible')
     expect(rules).not.toMatch(/\baside\s+:focus-visible/)
     expect(ratio(light['side-text'], light.surface)).toBeLessThan(3) // why it must never reach a white surface
   })
 
   it('accent fills with an edge, the slim panel tooltips and the form-control rules are scoped and in place', () => {
-    expect(css).toContain('[data-appointments][data-accent-edge] .bg-a-accent')
-    expect(css).toContain('[data-appointments] [data-rail-size="slim"] [data-tip]:hover::after')
+    expect(css).toContain('[data-workspace][data-accent-edge] .bg-a-accent')
+    expect(css).toContain('[data-workspace] [data-rail-size="slim"] [data-tip]:hover::after')
     expect(css).toContain('accent-color: rgb(var(--a-accent))')
   })
 
@@ -155,9 +149,9 @@ describe('appointments stylesheet structure', () => {
     // Fills (bg-a-accent, the mark, the pill, the selected day) keep the brand. A line needs 3:1 against the page and the
     // brand alone gives that on few colours (medical #4a9fd8 is 2.58:1 on surface-2 in Light), so every ring, outline,
     // border and text colour is `-a-accent-text`, which accent.ts derives to read on every surface (accent.test.ts).
-    const sources = readdirSync(DIR_APPOINTMENTS, { recursive: true, encoding: 'utf8' })
+    const sources = SOURCE_DIRS.flatMap(dir => readdirSync(dir, { recursive: true, encoding: 'utf8' })
       .filter(f => f.endsWith('.tsx') && !f.includes('.test.'))
-      .map(f => readFileSync(join(DIR_APPOINTMENTS, f), 'utf8')).join('\n')
+      .map(f => readFileSync(join(dir, f), 'utf8'))).join('\n')
     // Whole class tokens, so a variant-prefixed one (focus-visible:ring-a-accent) is seen as itself, not as its tail.
     const tokens = sources.split(/[\s"'`{}()]+/)
     const utilities = tokens.map(tok => (tok.split(':').pop() ?? '').replace(/^-/, ''))
@@ -183,10 +177,10 @@ describe('appointments stylesheet structure', () => {
       expect(rules, `${cls} has no rule any more`).not.toContain(cls)
     expect(rules).not.toContain('[data-accent-edge] :focus-visible')
     // Fills keep the edge: the inset line on every accent fill, and the 45 % current-step bar (a fill) in accent-text.
-    const fill = rules.indexOf('[data-appointments][data-accent-edge] .bg-a-accent {')
+    const fill = rules.indexOf('[data-workspace][data-accent-edge] .bg-a-accent {')
     expect(fill, 'the fill edge').toBeGreaterThanOrEqual(0)
     expect(rules.slice(fill, rules.indexOf('}', fill))).toContain('inset 0 0 0 1px rgb(var(--a-accent-text))')
-    const step = rules.indexOf('[data-appointments][data-accent-edge] .bg-a-accent\\/45 {')
+    const step = rules.indexOf('[data-workspace][data-accent-edge] .bg-a-accent\\/45 {')
     expect(step, 'the current visit step').toBeGreaterThanOrEqual(0)
     expect(rules.slice(step, rules.indexOf('}', step))).toContain('var(--a-accent-text)')
   })
@@ -194,7 +188,7 @@ describe('appointments stylesheet structure', () => {
   it('draws the keyboard focus ring in accent-text on every brand, and leaves the side panel its own ring colour', () => {
     // WCAG 2.4.7 / 1.4.11: the raw brand under 3:1 on most colours made the ring faint (final review, 2026-10-12).
     const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
-    const base = rules.indexOf('[data-appointments] :focus-visible {')
+    const base = rules.indexOf('[data-workspace] :focus-visible {')
     expect(base, 'no base focus rule').toBeGreaterThanOrEqual(0)
     const body = rules.slice(base, rules.indexOf('}', base))
     expect(body).toContain('outline: 2px solid rgb(var(--a-accent-text))')
@@ -202,25 +196,9 @@ describe('appointments stylesheet structure', () => {
     // No rule anywhere draws an outline, border or ring in the raw brand.
     expect(rules).not.toMatch(/(?:outline|border|--tw-ring)[a-z-]*:[^;{}]*var\(--a-accent\)/)
     // The rail's rule is more specific (0,3,0 against 0,2,0), so the dark panel keeps its pale ring either way.
-    const rail = rules.indexOf('[data-appointments] [data-rail] :focus-visible {')
+    const rail = rules.indexOf('[data-workspace] [data-rail] :focus-visible {')
     expect(rail).toBeGreaterThan(base)
     expect(rules.slice(rail, rules.indexOf('}', rail))).toContain('outline-color: rgb(var(--a-side-text))')
-  })
-
-  it('draws a team member\'s colour through --a-m: the dot and the ring rules exist, are scoped, and read the variable', () => {
-    // The colour arrives as data from the server's palette and is set as --a-m on the element; no hex lives in the stylesheet.
-    const rules = css.replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const cls of ['a-member-dot', 'a-member-ring']) {
-      const at = rules.indexOf(`.${cls} {`)
-      expect(at, `no .${cls} rule`).toBeGreaterThanOrEqual(0)
-      const selector = rules.slice(rules.lastIndexOf('}', at) + 1, at + cls.length + 1).trim()
-      expect(selector.startsWith('[data-appointments]'), `unscoped: ${selector}`).toBe(true)
-      const body = rules.slice(at, rules.indexOf('}', at))
-      expect(body, cls).toContain('var(--a-m)')
-      expect(body, cls).not.toMatch(/#[0-9a-f]{3,8}\b/i)
-    }
-    expect(rules.slice(rules.indexOf('.a-member-dot {'), rules.indexOf('}', rules.indexOf('.a-member-dot {')))).toContain('background-color: var(--a-m)')
-    expect(rules.slice(rules.indexOf('.a-member-ring {'), rules.indexOf('}', rules.indexOf('.a-member-ring {')))).toContain('box-shadow: 0 0 0 2px var(--a-m)')
   })
 
   it('shows the slim panel\'s hover labels only on a device that hovers, so a tap does not leave one stuck', () => {
@@ -237,16 +215,16 @@ describe('appointments stylesheet structure', () => {
     const inside = rules.slice(open + 1, close)
     const outside = rules.slice(0, at) + rules.slice(close + 1)
     // The hover label is inside; every rule inside is scoped like the rest of the file.
-    expect(inside).toContain('[data-appointments] [data-rail-size="slim"] [data-tip]:hover::after')
+    expect(inside).toContain('[data-workspace] [data-rail-size="slim"] [data-tip]:hover::after')
     expect(inside).toContain('content: attr(data-tip)')
     const selectors = [...inside.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map(m => m[2].trim())
     expect(selectors.length).toBeGreaterThan(0)
     for (const selector of selectors)
-      for (const part of selector.split(',')) expect(part.trim().startsWith('[data-appointments]'), `unscoped: ${part.trim()}`).toBe(true)
+      for (const part of selector.split(',')) expect(part.trim().startsWith('[data-workspace]'), `unscoped: ${part.trim()}`).toBe(true)
     // Keyboard focus is not a hover: its labels, with and without :has(), stay outside, and nothing outside hovers.
     expect(inside).not.toContain(':focus-visible')
-    expect(outside).toContain('[data-appointments] [data-rail-size="slim"] [data-tip]:focus-visible::after')
-    expect(outside).toContain('[data-appointments] [data-rail-size="slim"] [data-tip]:has(:focus-visible)::after')
+    expect(outside).toContain('[data-workspace] [data-rail-size="slim"] [data-tip]:focus-visible::after')
+    expect(outside).toContain('[data-workspace] [data-rail-size="slim"] [data-tip]:has(:focus-visible)::after')
     expect(outside).not.toContain(':hover')
     // Both outside rules still show the label.
     for (const sel of ['[data-tip]:focus-visible::after', '[data-tip]:has(:focus-visible)::after']) {

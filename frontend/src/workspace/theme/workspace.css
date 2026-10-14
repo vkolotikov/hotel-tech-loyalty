@@ -1,0 +1,380 @@
+/*
+ * The shared workspace core's stylesheet: the Atelier look every workspace
+ * beside the full admin wears (HexaTech Appointments now, HexaTech Content
+ * next). Every rule is scoped under [data-workspace], the attribute on a
+ * workspace's root; a workspace's own rules live in its own stylesheet under
+ * its own attribute ([data-appointments]).
+ *
+ * Workspace type (Atelier spec 4.4), self-hosted from fontsource (SIL OFL;
+ * licences sit in ./fonts). Three families, read through --a-font-display /
+ * -text / -mono below. Each family is cut into the same unicode subsets
+ * fontsource ships, so a browser downloads only the files a page's characters
+ * need. As in fontsource's own CSS, the wider "ext" subset comes first and the
+ * base subset after it: where their ranges overlap (a few combining marks) the
+ * later face wins.
+ *
+ * "A Display": Fraunces for Latin; Fraunces has no Cyrillic, so Russian
+ * headings are set in Source Serif 4, a serif of the same temperament.
+ * Every face of a family carries the same style and weight range (Source
+ * Serif's axis starts at 200, but it is declared 100 900 like Fraunces): a
+ * browser only joins unicode-range subsets whose descriptors match.
+ */
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/fraunces-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/fraunces-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-serif-4-cyrillic-ext-wght.woff2') format('woff2');
+  unicode-range: U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F;
+}
+
+@font-face {
+  font-family: 'A Display';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/source-serif-4-cyrillic-wght.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* "A Text": Inter Tight, Latin and Cyrillic. */
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-latin-ext-wght.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-latin-wght.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Text';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/inter-tight-cyrillic-wght.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/* "A Mono": IBM Plex Mono Medium, for times and small labels. */
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-ext-500.woff2') format('woff2');
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-latin-500.woff2') format('woff2');
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD;
+}
+
+@font-face {
+  font-family: 'A Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/ibm-plex-mono-cyrillic-500.woff2') format('woff2');
+  unicode-range: U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116;
+}
+
+/*
+ * Atelier tokens (spec 2026-10-12). Every colour is an `R G B` triplet so
+ * Tailwind's `<alpha-value>` works. The light set is the default; the dark
+ * set applies with data-theme="dark" on the same element. The accent tokens
+ * here are the fallback brand's; the shell overrides them inline from the
+ * organisation's brand colour (theme/accent.ts). contrast.test.ts pins every
+ * text pair at 4.5:1 in both sets.
+ */
+[data-workspace] {
+  --a-canvas: 244 246 248;
+  --a-surface: 255 255 255;
+  --a-surface-2: 238 242 245;
+  --a-text: 27 42 52;
+  --a-text-2: 84 98 110;
+  --a-border: 221 227 232;
+
+  --a-side: 14 26 36;
+  --a-side-2: 31 45 56;
+  --a-side-text: 232 238 242;
+  --a-side-text-2: 169 186 196;
+
+  --a-accent: 59 130 246;
+  --a-accent-ink: 255 255 255;
+  --a-accent-deep: 52 114 216;
+  --a-accent-text: 41 91 172;
+  --a-accent-rail: 59 130 246;
+  --a-danger: 176 36 36;
+  --a-danger-ink: 255 255 255;
+  --a-now: 200 50 60;
+  --a-now-ink: 255 255 255;
+  --a-hatch: 84 98 110;
+  --a-scrim: 14 26 36;
+
+  --a-st-pending: 138 80 0;
+  --a-st-confirmed: 18 100 58;
+  --a-st-progress: 79 58 176;
+  --a-st-completed: 44 70 108;
+  --a-st-cancelled: 88 95 107;
+  --a-st-noshow: 166 38 58;
+
+  --a-shadow-sm: 0 1px 2px rgb(14 26 36 / 0.05);
+  --a-shadow: 0 10px 30px rgb(14 26 36 / 0.10);
+  --a-shadow-lg: 0 28px 70px rgb(14 26 36 / 0.20);
+  --a-font-display: 'A Display', Georgia, 'Times New Roman', serif;
+  --a-font-text: 'A Text', system-ui, sans-serif;
+  --a-font-mono: 'A Mono', ui-monospace, 'SFMono-Regular', monospace;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  color-scheme: light;
+  background-color: rgb(var(--a-canvas));
+  color: rgb(var(--a-text));
+  font-family: var(--a-font-text);
+  font-size: 14px;
+  line-height: 1.45;
+  letter-spacing: 0;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-workspace][data-theme="dark"] {
+  --a-canvas: 14 26 36;
+  --a-surface: 19 35 47;
+  --a-surface-2: 26 46 60;
+  --a-text: 232 238 242;
+  --a-text-2: 159 178 189;
+  --a-border: 42 59 72;
+
+  --a-side: 10 20 28;
+  --a-side-2: 22 36 47;
+  --a-side-text: 232 238 242;
+  --a-side-text-2: 159 178 189;
+
+  --a-accent: 59 130 246;
+  --a-accent-ink: 255 255 255;
+  --a-accent-deep: 52 114 216;
+  --a-accent-text: 118 168 249;
+  --a-accent-rail: 59 130 246;
+  --a-danger: 255 138 155;
+  --a-danger-ink: 14 26 36;
+  --a-now: 255 122 128;
+  --a-now-ink: 14 26 36;
+  --a-hatch: 159 178 189;
+  --a-scrim: 4 10 14;
+
+  --a-st-pending: 240 179 90;
+  --a-st-confirmed: 95 211 154;
+  --a-st-progress: 179 166 255;
+  --a-st-completed: 169 193 227;
+  --a-st-cancelled: 163 173 184;
+  --a-st-noshow: 255 138 155;
+
+  --a-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.30);
+  --a-shadow: 0 12px 32px rgb(0 0 0 / 0.42);
+  --a-shadow-lg: 0 28px 70px rgb(0 0 0 / 0.55);
+
+  color-scheme: dark;
+}
+
+/* The full admin gives headings the organisation's "mood" typeface and
+   form controls a dark colour scheme, both globally (index.css). Neither
+   belongs in a workspace. Screens opt in to the display face with
+   `font-a-display` (and the mono face with `font-a-mono`). `:where()` keeps
+   this rule at one class of specificity: it still beats the admin's bare
+   `h1, h2…` rule, but a `font-a-*` utility (emitted later) beats it. Written
+   as `[data-workspace] h1` it would out-rank the utilities and every
+   heading would stay in the text face. */
+[data-workspace] :where(h1),
+[data-workspace] :where(h2),
+[data-workspace] :where(h3),
+[data-workspace] :where(h4) {
+  font-family: inherit;
+}
+
+[data-workspace] select,
+[data-workspace] input,
+[data-workspace] input[type],
+[data-workspace] textarea {
+  color-scheme: inherit;
+}
+
+[data-workspace] ::-webkit-scrollbar-track {
+  background: rgb(var(--a-surface-2));
+}
+
+[data-workspace] ::-webkit-scrollbar-thumb {
+  background: rgb(var(--a-border));
+}
+
+/* Focus is always visible: accent-text on light surfaces, the rail's own text
+   colour on the dark rail — and only there: the panel and the month are
+   asides too, and white. Every accent LINE (this ring, the selected card's
+   ring, the selected row, the setup tab, the today ring) is drawn in
+   accent-text, never in the raw brand: accent.ts derives it to read 3:1 or
+   better on every surface for every brand, and the brand itself does not
+   (medical blue is 2.58:1 on surface-2). Fills keep the brand. The rail's
+   rule is more specific, so it wins inside the panel. */
+[data-workspace] :focus-visible {
+  outline: 2px solid rgb(var(--a-accent-text));
+  outline-offset: 2px;
+}
+
+[data-workspace] [data-rail] :focus-visible {
+  outline-color: rgb(var(--a-side-text));
+}
+
+/* Places focus is only ever sent to by the workspace (a panel's heading, the
+   page after a link) are not controls and draw no ring. */
+[data-workspace] [tabindex="-1"]:focus-visible {
+  outline: none;
+}
+
+/* Find's input is the box's one control and the focus never leaves it: instead
+   of an outline round the input (a sharp rectangle inside the rounded box), its
+   row shows the focus as a 2 px accent-text underline — the row's own bottom
+   border, coloured, and 1 px more inside it so nothing moves. The input's
+   outline is transparent, not none: forced-colours mode (Windows High
+   Contrast) drops the row's colours and shadow, and paints this outline in the
+   system colour instead, so the focus still shows there. */
+[data-workspace] [data-find-row] input:focus-visible {
+  outline: 2px solid transparent;
+}
+
+[data-workspace] [data-find-row]:focus-within {
+  border-bottom-color: rgb(var(--a-accent-text));
+  box-shadow: inset 0 -1px 0 rgb(var(--a-accent-text));
+}
+
+/* Accent fills on a brand that is almost the page colour keep an edge (Atelier spec 4.2):
+   an inset line in accent-text, the same colour every accent line is drawn in. */
+[data-workspace][data-accent-edge] .bg-a-accent {
+  box-shadow: inset 0 0 0 1px rgb(var(--a-accent-text));
+}
+
+/* A 45 % accent fill (Appointments' current visit step) is a fill too: on such a brand it takes accent-text. */
+[data-workspace][data-accent-edge] .bg-a-accent\/45 {
+  background-color: rgb(var(--a-accent-text) / 0.45);
+}
+
+/* Form controls: a calm transition and the accent for ticks. */
+[data-workspace] input,
+[data-workspace] select,
+[data-workspace] textarea {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.3s ease;
+}
+
+[data-workspace] input[type="checkbox"],
+[data-workspace] input[type="radio"] {
+  accent-color: rgb(var(--a-accent));
+}
+
+/* The slim side panel names each icon beside it on keyboard focus and, where
+   the device hovers, on hover. The label's look is this one rule; it draws
+   nothing until a trigger below gives it `content`. */
+[data-workspace] [data-rail-size="slim"] [data-tip]::after {
+  position: absolute;
+  left: calc(100% + 10px);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 50;
+  white-space: nowrap;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgb(var(--a-side-2));
+  color: rgb(var(--a-side-text));
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--a-shadow);
+  pointer-events: none;
+}
+
+[data-workspace] [data-rail-size="slim"] [data-tip]:focus-visible::after {
+  content: attr(data-tip);
+}
+
+/* The slim panel's language control is a transparent select over a globe: the
+   focus is on the select inside the labelled box, so the label follows it.
+   Its own rule: a browser without :has() drops this one and keeps the rule above. */
+[data-workspace] [data-rail-size="slim"] [data-tip]:has(:focus-visible)::after {
+  content: attr(data-tip);
+}
+
+/* Hover only where the device hovers: on an iPad a tap leaves :hover on the
+   icon, and its label would stay over the page until the next tap elsewhere. */
+@media (hover: hover) {
+  [data-workspace] [data-rail-size="slim"] [data-tip]:hover::after {
+    content: attr(data-tip);
+  }
+}
+
+/* A glance strip (Appointments' Today strip, TodayStrip: a container of its own): four tiles in a row once each
+   can be 156 px wide — "€1,234.50" in the display face, or three avatars and "+N" —
+   so 4 × 156 + 3 × 12 px of gap; two by two below that. The screen's width cannot
+   say this: the open panel and the side menu take their share of it. */
+@container (min-width: 660px) {
+  [data-workspace] [data-glance] {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Each tile of the strip is a container of its own (TodayStrip), and each of
+   its figures is as large as its tile allows, up to the design's 30 px: a
+   tile has 104 to 228 px inside (1024 with the panel open to 1280 with it, two
+   by two), and at 30 px "£1,234.50" takes 122 px, "€12,345.50" 139, "CHF
+   1,234.50" 170, "UAH 125,000.00" 216. --a-fit is the figure's size in cqi at
+   which it takes 98 % of its tile, from its measured width in ems
+   (ui/fitFigure.ts), so the count and the time stay at 30 px everywhere and
+   an amount shrinks only as far as it must. Below 18 px it stops shrinking:
+   an amount with a currency code then wraps at the space before the number,
+   and nothing runs out of its tile. */
+[data-workspace] [data-glance] [data-fit] {
+  font-size: clamp(1.125rem, calc(var(--a-fit, 100) * 1cqi), 1.875rem);
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-workspace],
+  [data-workspace] * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    /* A glance strip staggers its tiles with animation-delay; without this they would wait invisible for it. */
+    animation-delay: 0s !important;
+  }
+}

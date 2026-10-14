@@ -1,5 +1,5 @@
 import type { ActionKey, ClientMessageInfo, ClientSummary, CouponRef, CreateBody, DateKey, DeskMethod, MoneyInfo, PointsResult } from '../lib/types'
-import { makeWall, minutesOf } from '../lib/wallClock'
+import { makeWall, minutesOf } from '../../workspace/lib/wallClock'
 
 export type Source = 'admin' | 'phone' | 'walk_in'
 

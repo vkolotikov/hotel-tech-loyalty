@@ -6,11 +6,11 @@ import { money as fmt } from '../../lib/money'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi, failureOf } from '../lib/api'
 import type { DateKey, Insights, InsightsFigures, InsightsRow } from '../lib/types'
-import { formatDate } from '../lib/wallClock'
-import { Button } from '../ui/Button'
-import { Field } from '../ui/Field'
-import { Notice } from '../ui/Notice'
-import { Figure, PageTitle, SectionTitle } from '../ui/Typography'
+import { formatDate } from '../../workspace/lib/wallClock'
+import { Button } from '../../workspace/ui/Button'
+import { Field } from '../../workspace/ui/Field'
+import { Notice } from '../../workspace/ui/Notice'
+import { Figure, PageTitle, SectionTitle } from '../../workspace/ui/Typography'
 import {
   ARROW, PICKS, TONE_CLASS, average, canShow, countChange, formatPeriod, formatShare, moneyChange, needsDeskNote, onlineShare,
   pickOf, pointsChange, rangeFor, rangeFromSearch, share, toneOf, type Change, type Metric, type Range,

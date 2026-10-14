@@ -12,19 +12,19 @@ export function ThemeSwitch({ value, onChange, vertical = false, tone = 'side' }
 }) {
   const { t } = useTranslation()
   const items: [ThemePref, string, LucideIcon][] = [
-    ['light', t('appointments.theme.light', 'Light'), Sun],
-    ['dark', t('appointments.theme.dark', 'Dark'), Moon],
-    ['auto', t('appointments.theme.auto', 'Auto'), Monitor],
+    ['light', t('workspace.theme.light', 'Light'), Sun],
+    ['dark', t('workspace.theme.dark', 'Dark'), Moon],
+    ['auto', t('workspace.theme.auto', 'Auto'), Monitor],
   ]
   const side = tone === 'side'
   return (
-    <div role="group" aria-label={t('appointments.theme.label', 'Theme')}
+    <div role="group" aria-label={t('workspace.theme.label', 'Theme')}
       className={`flex gap-1 rounded-xl p-1 ${vertical ? 'flex-col' : ''} ${side ? 'bg-a-side-2/60' : 'bg-a-surface-2'}`}>
       {items.map(([v, label, Icon]) => {
         const on = value === v
         return (
           <button key={v} type="button" aria-pressed={on} onClick={() => onChange(v)}
-            title={v === 'auto' && !vertical ? t('appointments.theme.auto_hint', 'Auto follows this device') : undefined}
+            title={v === 'auto' && !vertical ? t('workspace.theme.auto_hint', 'Auto follows this device') : undefined}
             data-tip={vertical ? label : undefined}
             className={`relative flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs transition-colors ${on
               ? `font-semibold ${side ? 'bg-a-side-2 text-a-side-text' : 'bg-a-surface text-a-text shadow-a-sm'}`

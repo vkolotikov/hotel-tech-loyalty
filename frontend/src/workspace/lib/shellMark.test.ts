@@ -17,7 +17,7 @@ function fakeRoot(initial?: string) {
 describe('markShell', () => {
   it('marks the root as the workspace while mounted and removes the mark after', () => {
     const { attrs, el } = fakeRoot()
-    const cleanup = markShell(el)
+    const cleanup = markShell(el, 'appointments')
     expect(attrs.get('data-shell')).toBe('appointments')
     cleanup()
     expect(attrs.has('data-shell')).toBe(false)
@@ -25,18 +25,28 @@ describe('markShell', () => {
 
   it('puts back the mark that was there before', () => {
     const { attrs, el } = fakeRoot('admin')
-    const cleanup = markShell(el)
+    const cleanup = markShell(el, 'appointments')
     expect(attrs.get('data-shell')).toBe('appointments')
     cleanup()
     expect(attrs.get('data-shell')).toBe('admin')
   })
 
-  it('is set by the shell before the first paint and undone when it unmounts (as the full admin Layout does)', () => {
+  it('marks any workspace by its name', () => {
+    const { attrs, el } = fakeRoot('admin')
+    const cleanup = markShell(el, 'content')
+    expect(attrs.get('data-shell')).toBe('content')
+    cleanup()
+    expect(attrs.get('data-shell')).toBe('admin')
+  })
+
+  it('is set by the frame before the first paint and undone when it unmounts (as the full admin Layout does)', () => {
     // A static render runs no effects, so the wiring is read from the source.
-    const shell = readFileSync(new URL('../AppointmentsShell.tsx', import.meta.url), 'utf8')
-    expect(shell).toContain('useLayoutEffect(() => markShell(document.documentElement), [])')
-    // Above the early return, so the hook order never changes.
-    expect(shell.indexOf('markShell(document.documentElement)')).toBeLessThan(shell.indexOf('return <Navigate'))
+    const frame = readFileSync(new URL('../WorkspaceShell.tsx', import.meta.url), 'utf8')
+    expect(frame).toContain('useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])')
+    // Appointments no longer marks <html> itself: the frame does, with its name.
+    const shell = readFileSync(new URL('../../appointments/AppointmentsShell.tsx', import.meta.url), 'utf8')
+    expect(shell).not.toContain('markShell')
+    expect(shell).toContain('workspace="appointments"')
   })
 })
 

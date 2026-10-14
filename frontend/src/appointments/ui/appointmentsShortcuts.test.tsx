@@ -1,7 +1,6 @@
-import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { ShortcutsSheet } from './ShortcutsSheet'
+import { AppointmentsShortcuts } from './AppointmentsShortcuts'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -10,7 +9,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-const draw = (open: boolean, modKey = 'Ctrl') => renderToStaticMarkup(<ShortcutsSheet open={open} onClose={() => {}} modKey={modKey} />)
+const draw = (open: boolean, modKey = 'Ctrl') => renderToStaticMarkup(<AppointmentsShortcuts open={open} onClose={() => {}} modKey={modKey} />)
 const tag = (html: string, pattern: RegExp): string => html.match(pattern)?.[0] ?? ''
 
 /** The keys beside a row's name, in order, each as drawn in its kbd. */
@@ -19,7 +18,7 @@ function keysOf(html: string, name: string): string[] | null {
   return row === undefined ? null : [...row.matchAll(/<kbd[^>]*>([^<]*)<\/kbd>/g)].map(m => m[1])
 }
 
-describe('ShortcutsSheet', () => {
+describe('AppointmentsShortcuts', () => {
   it('draws nothing while closed', () => {
     expect(draw(false)).toBe('')
   })
@@ -85,13 +84,5 @@ describe('ShortcutsSheet', () => {
     const close = html.match(/<button[^>]*type="button"[^>]*>(?:(?!<\/button>)[\s\S])*Close<\/button>/g) ?? []
     expect(close).toHaveLength(1)
     expect(html).not.toContain('<input')
-  })
-
-  // Effects do not run in a static render: the wiring is read from the source.
-  it('remembers where the focus was once, so React\'s development re-run cannot replace it with its own Close button', () => {
-    const source = readFileSync(new URL('./ShortcutsSheet.tsx', import.meta.url), 'utf8')
-    expect(source).toMatch(/useRef<HTMLElement \| null \| undefined>\(undefined\)/)
-    expect(source).toMatch(/firstFocus\(\w+, document\.activeElement instanceof HTMLElement \? document\.activeElement : null\)/)
-    expect(source).not.toMatch(/const before = document\.activeElement/)
   })
 })

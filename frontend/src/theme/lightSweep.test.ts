@@ -1,10 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { OWN_TOKEN_DIRS } from './ownTokenDirs'
 
 /**
  * The Clean light sweep. EVERY admin source file is scanned (everything
- * under src/ except portal/, appointments/, theme/, tests and .d.ts), so a
+ * under src/ except portal/, appointments/, workspace/, theme/, tests and .d.ts), so a
  * new file is covered the day it is written; EXEMPT_FILES names the few
  * files that legitimately keep colour literals, each with its reason.
  * CONVERTED_FILES records the screens Tasks 8-14 and the fix waves converted
@@ -471,12 +472,12 @@ function literalsIn(file: string): string[] {
   return unconvertedColours(s, DATA_COLOURS[file] ?? [])
 }
 
-/** Every admin source file, relative to src/: not portal/, appointments/ (their own tokens and sweeps) or theme/ (the token sources), no tests. */
+/** Every admin source file, relative to src/: not portal/, appointments/, workspace/ (their own tokens and sweeps) or theme/ (the token sources), no tests. */
 function adminFiles(dir = SRC): string[] {
   return fs.readdirSync(dir).flatMap(entry => {
     const full = path.join(dir, entry)
     const rel = path.relative(SRC, full).split(path.sep).join('/')
-    if (fs.statSync(full).isDirectory()) return ['portal', 'appointments', 'theme'].includes(rel) ? [] : adminFiles(full)
+    if (fs.statSync(full).isDirectory()) return [...OWN_TOKEN_DIRS, 'theme'].includes(rel) ? [] : adminFiles(full)
     return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) && !/\.d\.ts$/.test(entry) ? [rel] : []
   })
 }

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { OWN_TOKEN_DIRS } from './ownTokenDirs'
 
 /**
  * A ratchet on hard-coded colours in the admin (portal/ and appointments/
@@ -24,7 +25,7 @@ function adminSourceFiles(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(entry => {
     const full = path.join(dir, entry)
     const rel = path.relative(SRC, full).split(path.sep).join('/')
-    if (fs.statSync(full).isDirectory()) return rel === 'portal' || rel === 'appointments' ? [] : adminSourceFiles(full)
+    if (fs.statSync(full).isDirectory()) return OWN_TOKEN_DIRS.includes(rel) ? [] : adminSourceFiles(full)
     return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [full] : []
   })
 }

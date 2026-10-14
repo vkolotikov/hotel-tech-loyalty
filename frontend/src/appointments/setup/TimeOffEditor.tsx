@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { DateKey, TimeOffBody, TimeOffEntry } from '../lib/types'
-import { formatDate } from '../lib/wallClock'
-import { Button } from '../ui/Button'
-import { Field } from '../ui/Field'
+import { formatDate } from '../../workspace/lib/wallClock'
+import { Button } from '../../workspace/ui/Button'
+import { Field } from '../../workspace/ui/Field'
 
 const field = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
 

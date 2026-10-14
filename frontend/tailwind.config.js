@@ -132,8 +132,8 @@ export default {
           danger:        'rgb(var(--p-danger) / <alpha-value>)',
           scrim:         'rgb(var(--p-scrim) / <alpha-value>)',
         },
-        // Appointments workspace tokens — see src/appointments/theme/appointments.css.
-        // Only frontend/src/appointments uses these; its sweep test forbids the reverse.
+        // Atelier workspace tokens — see src/workspace/theme/workspace.css.
+        // Only the workspaces (src/workspace, src/appointments) use these; the admin sweeps skip them (src/theme/ownTokenDirs.ts).
         a: {
           canvas:         'rgb(var(--a-canvas) / <alpha-value>)',
           surface:        'rgb(var(--a-surface) / <alpha-value>)',
@@ -201,8 +201,8 @@ export default {
         'a-display': ['var(--a-font-display)'],
         'a-mono': ['var(--a-font-mono)'],
       },
-      // Appointments workspace motion (src/appointments). Switched off under
-      // prefers-reduced-motion by the rule in appointments.css.
+      // Workspace motion (src/workspace, src/appointments). Switched off under
+      // prefers-reduced-motion by the rule in workspace.css.
       keyframes: {
         'a-rise':     { from: { opacity: '0', transform: 'translateY(12px)' }, to: { opacity: '1', transform: 'none' } },
         'a-fade':     { from: { opacity: '0' }, to: { opacity: '1' } },

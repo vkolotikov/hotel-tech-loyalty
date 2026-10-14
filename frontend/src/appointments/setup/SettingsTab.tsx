@@ -3,9 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Copy } from 'lucide-react'
 import { appointmentsApi, failureOf, type ApiFailure } from '../lib/api'
 import type { SettingsBody, SetupPayload, SetupSettings } from '../lib/types'
-import { Button } from '../ui/Button'
-import { Field } from '../ui/Field'
-import { Notice } from '../ui/Notice'
+import { Button } from '../../workspace/ui/Button'
+import { Field } from '../../workspace/ui/Field'
+import { Notice } from '../../workspace/ui/Notice'
 import { FailureNotice } from './FailureNotice'
 
 // eslint-disable-next-line react-refresh/only-export-components

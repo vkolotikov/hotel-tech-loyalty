@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { money as fmt } from '../../lib/money'
 import type { MoneyInfo } from '../lib/types'
-import { formatInstant } from '../lib/wallClock'
+import { formatInstant } from '../../workspace/lib/wallClock'
 import { KIND_FALLBACK, METHOD_FALLBACK, kindKey } from './moneyLines'
 
 /** What the appointment costs, what came in and went back, what is still owed, and every movement (Part E). */

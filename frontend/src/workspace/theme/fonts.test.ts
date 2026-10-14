@@ -3,7 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const DIR = path.resolve(__dirname)
-const css = fs.readFileSync(path.join(DIR, 'appointments.css'), 'utf8')
+const css = fs.readFileSync(path.join(DIR, 'workspace.css'), 'utf8')
 const faces = [...css.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(m => m[1])
 const family = (body: string) => /font-family:\s*'([^']+)'/.exec(body)?.[1]
 
@@ -54,15 +54,15 @@ describe('workspace type', () => {
   })
 
   it('lets font-a-display and font-a-mono win on headings (the neutraliser sits in :where, one class of specificity)', () => {
-    // `[data-appointments] h1 { font-family: inherit }` has more specificity than a `.font-a-display` utility, so a
+    // `[data-workspace] h1 { font-family: inherit }` has more specificity than a `.font-a-display` utility, so a
     // heading carrying the utility would stay in the text face. :where() keeps the rule at one class: it still
     // beats the admin's bare `h1, h2…`, and the utilities (emitted later) beat it.
     const bare = css.replace(/\/\*[\s\S]*?\*\//g, '')
-    const rules = [...bare.matchAll(/(\[data-appointments\][^{}]*h[1-4][^{}]*)\{\s*font-family:\s*inherit;\s*\}/g)].map(m => m[1])
+    const rules = [...bare.matchAll(/(\[data-workspace\][^{}]*h[1-4][^{}]*)\{\s*font-family:\s*inherit;\s*\}/g)].map(m => m[1])
     expect(rules.length).toBeGreaterThan(0)
     for (const selectors of rules) {
       for (const selector of selectors.split(',').map(s => s.trim()).filter(Boolean)) {
-        expect(selector, `${selector} out-ranks the font-a-* utilities`).toMatch(/^\[data-appointments\] :where\(h[1-4]\)$/)
+        expect(selector, `${selector} out-ranks the font-a-* utilities`).toMatch(/^\[data-workspace\] :where\(h[1-4]\)$/)
       }
     }
   })

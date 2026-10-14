@@ -1,6 +1,6 @@
 import { dayOverview } from '../lib/status'
 import type { AppointmentSummary, CalendarMaster, DateKey, Takings } from '../lib/types'
-import { dateOf, wallMinutes } from '../lib/wallClock'
+import { dateOf, wallMinutes } from '../../workspace/lib/wallClock'
 
 export interface TodayFigures {
   total: number; done: number; noShow: number; attention: number

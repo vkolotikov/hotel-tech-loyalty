@@ -22,7 +22,7 @@ const WHITE = '#ffffff'
 /**
  * The colours accent text and marks sit on: the Atelier palette (spec 4.1).
  * theme/contrast.test.ts proves they equal the --a-canvas / --a-surface /
- * --a-surface-2 / --a-side tokens in appointments.css.
+ * --a-surface-2 / --a-side tokens in workspace.css.
  */
 export const SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
   light: { canvas: '#f4f6f8', surface: '#ffffff', surface2: '#eef2f5', side: '#0e1a24' },

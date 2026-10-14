@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { lightFillFor } from './light'
+import { OWN_TOKEN_DIRS } from './ownTokenDirs'
 
 /**
  * Inside Clean light, Tailwind's white is the ink. White that must stay
@@ -13,7 +14,7 @@ function adminFiles(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(entry => {
     const full = path.join(dir, entry)
     const rel = path.relative(SRC, full).split(path.sep).join('/')
-    if (fs.statSync(full).isDirectory()) return rel === 'portal' || rel === 'appointments' ? [] : adminFiles(full)
+    if (fs.statSync(full).isDirectory()) return OWN_TOKEN_DIRS.includes(rel) ? [] : adminFiles(full)
     return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [full] : []
   })
 }

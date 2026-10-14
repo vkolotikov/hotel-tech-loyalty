@@ -1,5 +1,5 @@
 import type { DateKey, Status, Wall } from './types'
-import { dateOf, wallMinutes } from './wallClock'
+import { dateOf, wallMinutes } from '../../workspace/lib/wallClock'
 
 export type Tone = 'pending' | 'confirmed' | 'progress' | 'completed' | 'cancelled' | 'noshow'
 

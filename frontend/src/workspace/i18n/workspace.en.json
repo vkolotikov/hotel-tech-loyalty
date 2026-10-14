@@ -1,0 +1,34 @@
+{
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark",
+    "auto": "Auto",
+    "auto_hint": "Auto follows this device"
+  },
+  "common": {
+    "loading": "Loading…",
+    "close": "Close"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "or": "or",
+    "help": "This list"
+  },
+  "find": {
+    "title": "Find",
+    "none": "Nothing matches “{{q}}”.",
+    "count": "Results: {{count}}",
+    "hint_move": "move",
+    "hint_open": "open",
+    "hint_close": "close"
+  },
+  "shell": {
+    "menu": "Menu",
+    "full_admin": "Full admin",
+    "language": "Language",
+    "sign_out": "Sign out",
+    "collapse": "Collapse menu",
+    "expand": "Expand menu"
+  }
+}

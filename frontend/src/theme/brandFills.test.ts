@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { contrast, hexToRgb } from './colour'
+import { OWN_TOKEN_DIRS } from './ownTokenDirs'
 
 /**
  * Text on coloured fills, and colour classes that do not exist.
@@ -46,7 +47,7 @@ function classChunks(source: string): string[] {
 }
 
 const rel = (file: string) => path.relative(SRC, file).split(path.sep).join('/')
-const adminFiles = sourceFiles(SRC, ['portal', 'appointments'])
+const adminFiles = sourceFiles(SRC, [...OWN_TOKEN_DIRS])
 
 describe('text on coloured fills', () => {
   it('scans the admin source', () => {

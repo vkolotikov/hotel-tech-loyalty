@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { OWN_TOKEN_DIRS } from '../theme/ownTokenDirs'
 
 /**
  * A switch knob is an absolutely positioned round element slid with
@@ -13,7 +14,7 @@ function files(dir: string): string[] {
   return fs.readdirSync(dir).flatMap(entry => {
     const full = path.join(dir, entry)
     const rel = path.relative(SRC, full).split(path.sep).join('/')
-    if (fs.statSync(full).isDirectory()) return rel === 'portal' || rel === 'appointments' ? [] : files(full)
+    if (fs.statSync(full).isDirectory()) return OWN_TOKEN_DIRS.includes(rel) ? [] : files(full)
     return /\.tsx?$/.test(entry) && !/\.test\.tsx?$/.test(entry) ? [full] : []
   })
 }

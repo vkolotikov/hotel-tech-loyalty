@@ -558,6 +558,50 @@ calendar/TeamChips.tsx, calendar/CardPreview.tsx, calendar/previewTimer.ts, ui/S
 `App\Services\Appointments\TeamColours`; tests in `tests/Unit/Appointments/TeamColour*Test.php`,
 `tests/Feature/Appointments/Setup/TeamColourTest.php` and the workspace's own tests.
 
+## The shared workspace core (HexaTech Content, release 1)
+
+The generic parts of this workspace live in `frontend/src/workspace/`, so HexaTech Content (`/content`) can be built on
+the same frame. They are:
+
+- the Atelier stylesheet and fonts (`workspace/theme/workspace.css`, tokens under `[data-workspace]`)
+- the accent maths
+- the look: the per-device keys stay `appointments:look` and `appointments:brand`
+- the `<html data-shell>` mark
+- the shortcut engine
+- the focus hand-back
+- the venue clock
+- the UI pieces
+- the list of shortcuts
+- Find's frame
+- the side-panel frame, `WorkspaceShell`
+
+Appointments keeps its own rules (`appointments.css`, `[data-appointments]`), its own words, and two binding modules
+(`lib/look.ts`, `lib/shortcuts.ts`) that set its keys on the shared engines. Its Find results, their icons and its
+rows for the list of shortcuts (`ui/AppointmentsShortcuts.tsx`) stay in this folder. The shared words are in
+`workspace/i18n/workspace.*.json`, read as `workspace.*` and registered when the Appointments chunk loads. The
+Appointments bundles still hold copies of those words, which no code reads any more.
+
+Rules the code keeps:
+
+- `workspace/` never imports from a workspace folder, calls no API, and uses only `a-*` classes
+  (`workspace/tokens.test.ts`).
+- The admin sweeps skip one list of folders (`theme/ownTokenDirs.ts`).
+
+How it was checked (2026-10-14): a before/after pixel comparison, `origin/main` against the branch, on local org 16.
+
+- At 1440 px, in light and dark: the calendar (day, week, list), the panel, clients, a client profile, Setup, Takings,
+  Insights, Find (empty and with a query), the list of shortcuts and the slim rail.
+- At 390 px, in light and dark: the calendar list, the phone menu, the panel, clients, the client profile, Setup,
+  Takings and Insights.
+- In Russian: the calendar, Find, the list of shortcuts and the phone menu.
+
+Result: 46 screens, 0 differing pixels.
+
+- Chromium ran with deterministic-raster flags.
+- A base-against-base control run also showed 0 differences.
+- Each capture asserted which tree served it: the branch draws `[data-workspace]`, `origin/main` does not.
+- Keyboard hand-back (Find, the list of shortcuts, "?" in an empty Find box) passed in a real browser on both trees.
+
 ## Deploying it
 
 Merging to `main` is a production deploy; it needs the owner's explicit yes and the main-cut source-patch recipe
@@ -599,3 +643,5 @@ every organisation:
 - (Atelier release 2) one additive migration (`service_masters.color`); the calendar payload gains `masters[].color`,
   Setup gains `palette` and `team_colors`, and the team update takes `color`. A new page that meets the old server
   during the deploy still opens Setup (it reads the two new keys only when present, and offers Automatic alone).
+- (Content release 1) no migration and no PHP: the workspace's code moves into `frontend/src/workspace/`; nothing
+  anyone sees changes, and per-device choices are kept.

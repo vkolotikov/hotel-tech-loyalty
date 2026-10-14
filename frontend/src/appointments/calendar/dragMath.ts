@@ -1,7 +1,7 @@
 import { PX_PER_MIN } from '../lib/layout'
 import { isLive } from '../lib/status'
 import type { AppointmentSummary, DateKey, MasterDay } from '../lib/types'
-import { dateOf, minutesOf, wallMinutes } from '../lib/wallClock'
+import { dateOf, minutesOf, wallMinutes } from '../../workspace/lib/wallClock'
 
 /** Drags snap to 15 minutes; a length is 15 minutes to 8 hours — the server's own rule (StaffBookingWriter). */
 export const DRAG_STEP = 15

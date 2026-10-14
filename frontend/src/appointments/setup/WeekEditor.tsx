@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Plus, Trash2 } from 'lucide-react'
 import { copyToWeekdays, dayDate, dayProblem, toRows, toWeek, WEEK_ORDER, type Week, type Window } from '../lib/hours'
 import type { HoursRow } from '../lib/types'
-import { formatDate } from '../lib/wallClock'
-import { Button } from '../ui/Button'
+import { formatDate } from '../../workspace/lib/wallClock'
+import { Button } from '../../workspace/ui/Button'
 
 const timeField = 'w-[5.5rem] rounded-lg border border-a-border bg-a-surface px-2 py-1.5 text-sm text-a-text disabled:bg-a-surface-2'
 

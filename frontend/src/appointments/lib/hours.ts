@@ -1,5 +1,5 @@
 import type { DateKey, HoursRow } from './types'
-import { minutesOf } from './wallClock'
+import { minutesOf } from '../../workspace/lib/wallClock'
 
 /** Monday first, as a week is read at the desk; the values are the server's day numbers (0 = Sunday). */
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0] as const

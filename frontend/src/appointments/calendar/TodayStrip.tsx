@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { money } from '../../lib/money'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi } from '../lib/api'
-import { initialsOf } from '../lib/firstLetter'
+import { initialsOf } from '../../workspace/lib/firstLetter'
 import type { AppointmentSummary, CalendarMaster, DateKey } from '../lib/types'
-import { timeOf } from '../lib/wallClock'
-import { Figure } from '../ui/Typography'
+import { timeOf } from '../../workspace/lib/wallClock'
+import { Figure } from '../../workspace/ui/Typography'
 import { avatarsThatFit, takenNet, todayFigures } from './todayFigures'
 
 /** The content width of the element the returned ref is put on, kept up to date; 0 until it is measured (and on the server). */

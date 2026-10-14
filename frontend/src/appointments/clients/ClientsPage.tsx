@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next'
 import { Link, useSearchParams } from 'react-router-dom'
 import { appointmentsApi } from '../lib/api'
 import { useVocab } from '../lib/vocab'
-import { Notice } from '../ui/Notice'
-import { PageTitle } from '../ui/Typography'
+import { Notice } from '../../workspace/ui/Notice'
+import { PageTitle } from '../../workspace/ui/Typography'
 
 /** Find a client. The list is the organisation's own clients — the people the full admin lists under Customers. */
 export function ClientsPage() {

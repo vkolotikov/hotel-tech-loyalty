@@ -1,8 +1,13 @@
-import { useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
+import { Fragment, useEffect, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import { useTranslation } from 'react-i18next'
-import { firstFocus, focusTarget } from '../find/findResults'
+import { firstFocus, focusTarget } from '../find/findCore'
 import { handBackFocus } from '../lib/handBack'
 import { SectionTitle } from './Typography'
+
+/** One shortcut: its name and its keys. Each inner list is one way to press it; the ways are joined by "or". */
+export interface ShortcutRow { name: string; keys: string[][] }
+/** A group of rows. The first has no heading (the keys for every page); a later one names where its keys work. */
+export interface ShortcutSection { title?: string; rows: ShortcutRow[] }
 
 const kbd = 'rounded-md border border-a-border px-1.5 font-a-mono text-xs'
 
@@ -20,23 +25,23 @@ function Row({ name, children }: { name: string; children: ReactNode }) {
 }
 
 /**
- * The list of keyboard shortcuts behind "?": a modal sheet. The focus moves
- * onto its Close button when it opens and returns to where it was when it
- * closes; Escape and the scrim close it. Nothing is drawn while it is closed.
+ * The list of keyboard shortcuts behind "?": a modal sheet of the
+ * workspace's own sections. The focus moves onto its Close button when it
+ * opens and returns to where it was when it closes; Escape and the scrim
+ * close it. Nothing is drawn while it is closed.
  */
-export function ShortcutsSheet({ open, onClose, modKey, fallbackFocus }: {
+export function ShortcutsSheet({ open, onClose, sections, fallbackFocus }: {
   open: boolean
   onClose: () => void
-  /** "Ctrl", or "⌘" on a Mac. */
-  modKey: string
+  sections: ShortcutSection[]
   /** Where the focus goes on close when the person was on nothing in particular (or the place is gone), tried in order. */
   fallbackFocus?: RefObject<HTMLElement | null>[]
 }) {
   if (!open) return null
-  return <ShortcutsPanel onClose={onClose} modKey={modKey} fallbackFocus={fallbackFocus} />
+  return <ShortcutsPanel onClose={onClose} sections={sections} fallbackFocus={fallbackFocus} />
 }
 
-function ShortcutsPanel({ onClose, modKey, fallbackFocus }: { onClose: () => void; modKey: string; fallbackFocus?: RefObject<HTMLElement | null>[] }) {
+function ShortcutsPanel({ onClose, sections, fallbackFocus }: { onClose: () => void; sections: ShortcutSection[]; fallbackFocus?: RefObject<HTMLElement | null>[] }) {
   const { t } = useTranslation()
   const closeButton = useRef<HTMLButtonElement>(null)
   const fallbacks = useRef(fallbackFocus)
@@ -64,37 +69,38 @@ function ShortcutsPanel({ onClose, modKey, fallbackFocus }: { onClose: () => voi
     else if (e.key === 'Tab') e.preventDefault()
   }
 
-  const title = t('appointments.shortcuts.title', 'Keyboard shortcuts')
-  const or = t('appointments.shortcuts.or', 'or')
+  const title = t('workspace.shortcuts.title', 'Keyboard shortcuts')
+  const or = t('workspace.shortcuts.or', 'or')
 
   return (
     <>
-      <button type="button" aria-label={t('appointments.common.close', 'Close')} tabIndex={-1} onClick={onClose}
+      <button type="button" aria-label={t('workspace.common.close', 'Close')} tabIndex={-1} onClick={onClose}
         className="fixed inset-0 z-50 cursor-default bg-a-scrim/40 animate-a-fade" />
       {/* Centred with auto margins, not translate: the pop animation ends on transform: none and would undo a translate. */}
       <div role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} onKeyDown={onPanelKey}
         className="fixed inset-x-0 top-24 z-50 mx-auto max-h-[calc(100vh-8rem)] w-[min(30rem,calc(100%-2rem))] overflow-y-auto rounded-2xl border border-a-border bg-a-surface p-5 text-a-text shadow-a-lg animate-a-pop focus:outline-none">
         <SectionTitle>{title}</SectionTitle>
-        {/* Keys for every page, then the calendar's own: the sheet opens anywhere, the day, view and panel keys work only there. */}
-        <dl className="mt-2 divide-y divide-a-border">
-          <Row name={t('appointments.shortcuts.find', 'Find')}>
-            <Keys>{[`${modKey} K`]}</Keys><span className="text-xs">{or}</span><Keys>{['/']}</Keys>
-          </Row>
-          <Row name={t('appointments.shell.new_appointment', 'New appointment')}><Keys>{['N']}</Keys></Row>
-          <Row name={t('appointments.shortcuts.help', 'This list')}><Keys>{['?']}</Keys></Row>
-        </dl>
-        <h3 className="mt-4 font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2">{t('appointments.shortcuts.on_calendar', 'On the calendar')}</h3>
-        <dl className="mt-1 divide-y divide-a-border">
-          <Row name={t('appointments.calendar.today', 'Today')}><Keys>{['T']}</Keys></Row>
-          <Row name={t('appointments.shortcuts.days', 'Previous or next day (week in the week view)')}><Keys>{['←', '→']}</Keys></Row>
-          <Row name={t('appointments.shortcuts.views', 'Day, week, list')}><Keys>{['D', 'W', 'L']}</Keys></Row>
-          <Row name={t('appointments.shortcuts.close', 'Close the panel')}><Keys>{['Esc']}</Keys></Row>
-          <Row name={t('appointments.shortcuts.card', 'Move a selected appointment')}><Keys>{['↑', '↓', '←', '→']}</Keys></Row>
-        </dl>
+        {sections.map((section, i) => (
+          <Fragment key={section.title ?? i}>
+            {section.title && <h3 className="mt-4 font-a-mono text-xs font-medium uppercase tracking-[0.12em] text-a-text-2">{section.title}</h3>}
+            <dl className={`${section.title ? 'mt-1' : 'mt-2'} divide-y divide-a-border`}>
+              {section.rows.map(row => (
+                <Row key={row.name} name={row.name}>
+                  {row.keys.map((way, j) => (
+                    <Fragment key={way.join(' ')}>
+                      {j > 0 && <span className="text-xs">{or}</span>}
+                      <Keys>{way}</Keys>
+                    </Fragment>
+                  ))}
+                </Row>
+              ))}
+            </dl>
+          </Fragment>
+        ))}
         <div className="mt-4 flex justify-end">
           <button ref={closeButton} type="button" onClick={onClose}
             className="inline-flex min-h-10 items-center justify-center rounded-full border border-a-border bg-a-surface px-4 text-sm font-semibold text-a-text transition hover:bg-a-surface-2">
-            {t('appointments.common.close', 'Close')}
+            {t('workspace.common.close', 'Close')}
           </button>
         </div>
       </div>

@@ -5,7 +5,7 @@ import { money } from '../../lib/money'
 import { useBoot } from '../AppointmentsProvider'
 import { appointmentsApi } from '../lib/api'
 import type { AppointmentSummary } from '../lib/types'
-import { timeOf } from '../lib/wallClock'
+import { timeOf } from '../../workspace/lib/wallClock'
 import type { PreviewOpener } from './previewTimer'
 
 /** A box on the screen (a DOMRect has these): a card, or the part of the grid that can be seen. */

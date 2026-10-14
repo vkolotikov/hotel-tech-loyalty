@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { AppointmentSummary, DateKey } from '../lib/types'
-import { dateOf, formatDate, timeOf } from '../lib/wallClock'
+import { dateOf, formatDate, timeOf } from '../../workspace/lib/wallClock'
 import { useVocab } from '../lib/vocab'
 import { StatusMark } from '../ui/StatusMark'
 

@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { ApiFailure } from '../lib/api'
-import { Notice } from '../ui/Notice'
+import { Notice } from '../../workspace/ui/Notice'
 
 /** Why a setup save was refused: the server's field messages, a missing right, or a plain failure. */
 export function FailureNotice({ failure }: { failure: ApiFailure | null }) {

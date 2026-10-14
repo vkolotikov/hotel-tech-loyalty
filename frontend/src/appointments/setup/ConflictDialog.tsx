@@ -2,8 +2,8 @@ import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Impact } from '../lib/types'
-import { formatDate } from '../lib/wallClock'
-import { Button } from '../ui/Button'
+import { formatDate } from '../../workspace/lib/wallClock'
+import { Button } from '../../workspace/ui/Button'
 
 /**
  * "These appointments fall outside this change" (owner decision: warn, list,

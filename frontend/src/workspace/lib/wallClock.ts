@@ -1,4 +1,7 @@
-import type { DateKey, Wall } from './types'
+/** The venue's wall clock as the server sends and accepts it: 'YYYY-MM-DDTHH:mm'. Never an instant — do not pass it to `new Date()`. */
+export type Wall = string
+/** 'YYYY-MM-DD' */
+export type DateKey = string
 
 /**
  * Time in the workspace.

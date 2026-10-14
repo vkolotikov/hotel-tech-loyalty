@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
+import { registerWorkspaceLocales } from '../workspace/i18n'
 import { registerAppointmentsLocales } from './i18n'
 import { AppointmentsProvider } from './AppointmentsProvider'
 import { AppointmentsShell } from './AppointmentsShell'
@@ -11,6 +12,7 @@ import { loginPath } from './lib/landing'
 import { SetupPage } from './setup/SetupPage'
 import { TakingsPage } from './takings/TakingsPage'
 
+registerWorkspaceLocales()
 registerAppointmentsLocales()
 
 /**

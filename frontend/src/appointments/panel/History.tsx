@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { HistoryEntry } from '../lib/types'
-import { formatInstant } from '../lib/wallClock'
+import { formatInstant } from '../../workspace/lib/wallClock'
 
 /** `service_booking.bulk.mark_no_show` → `bulk_mark_no_show`: the key under appointments.history. */
 function suffix(action: string): string {

@@ -1,5 +1,7 @@
+import { ArrowRight, CalendarDays, Plus, Search, User, type LucideIcon } from 'lucide-react'
 import type { AppointmentSummary, ClientSummary, DateKey } from '../lib/types'
-import { dateOf, timeOf, wallMinutes } from '../lib/wallClock'
+import { dateOf, timeOf, wallMinutes } from '../../workspace/lib/wallClock'
+import { fold } from '../../workspace/find/findCore'
 
 /** Where choosing a result goes: to a page, or to something the shell does itself. */
 export type FindTarget = { to: string } | { run: 'theme' | 'rail' | 'shortcuts' }
@@ -10,12 +12,15 @@ export interface FindLabels {
   day: (date: DateKey) => string
 }
 
-/** Lower case without accents, so "emilie" finds "Émilie". */
-export function fold(text: string): string {
-  return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-}
-
 const LIMIT = 6
+
+/** Appointments' icon for a result: a calendar day, a person, a magnifier, and a plus or an arrow for an action. */
+export function iconOf(item: FindItem): LucideIcon {
+  if (item.kind === 'appointment') return CalendarDays
+  if (item.kind === 'client') return User
+  if (item.kind === 'search') return Search
+  return item.id === 'new' ? Plus : ArrowRight
+}
 
 function apptItem(a: AppointmentSummary, day: FindLabels['day']): FindItem {
   return {
@@ -87,43 +92,6 @@ export function latestAppointments(entries: { updatedAt: number; appointments: A
 /** The clients to list: the server's answer, and only when it is the answer to the words in the box now and they are two letters or more. */
 export function settledClients(typed: string, debounced: string, data: ClientSummary[] | undefined): ClientSummary[] {
   return typed.length >= 2 && debounced === typed ? (data ?? []) : []
-}
-
-export interface Focusable { isConnected: boolean; disabled?: boolean; focus: () => void }
-
-/**
- * Where the focus goes when Find closes: where the person was; and when that
- * was nothing in particular (the page body, which is where Safari leaves it
- * after a click on a button) or is gone, the first fallback still on the page.
- * A place that cannot take focus is no place: a disabled button (Find's own,
- * once the workspace has stopped) is skipped, so the focus reaches `main`.
- */
-export function focusTarget<T extends Focusable>(before: T | null, body: unknown, fallbacks: (T | null)[]): T | null {
-  const candidates = before && before !== body ? [before, ...fallbacks] : fallbacks
-  return candidates.find((c): c is T => c !== null && c.isConnected && c.disabled !== true) ?? null
-}
-
-/**
- * Where the focus was when a dialog opened, read once into `slot` (`undefined`
- * = not read yet; `null` = nothing in particular). React's development re-run
- * of a mount effect reads it again with the dialog's own button focused; the
- * first answer is the one that counts.
- */
-export function firstFocus<T>(slot: { current: T | undefined }, now: T): T {
-  if (slot.current === undefined) slot.current = now
-  return slot.current
-}
-
-/** "?" in an empty box opens the list of shortcuts, as the footer says; with anything typed it is a character of the search. */
-export function opensShortcuts(key: string, query: string): boolean {
-  return key === '?' && query === ''
-}
-
-/** The option after (1) or before (-1) the current one, wrapping at both ends. A current option that is gone counts as the first. */
-export function nextActive(ids: string[], current: string | null, delta: 1 | -1): string | null {
-  if (ids.length === 0) return null
-  const at = Math.max(0, current === null ? 0 : ids.indexOf(current))
-  return ids[(at + delta + ids.length) % ids.length]
 }
 
 /**

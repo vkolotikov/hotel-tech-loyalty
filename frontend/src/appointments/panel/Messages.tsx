@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import type { ClientMessageInfo } from '../lib/types'
-import { formatInstant } from '../lib/wallClock'
+import { formatInstant } from '../../workspace/lib/wallClock'
 import { messageLine } from './messageLine'
 
 const KIND: Record<string, string> = { booked: 'Booked', moved: 'Moved', confirmed: 'Confirmed', cancelled: 'Cancelled', reminder: 'Reminder' }

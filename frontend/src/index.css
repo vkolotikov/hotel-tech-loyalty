@@ -1,4 +1,5 @@
 @import './portal/theme/portal.css';
+@import './workspace/theme/workspace.css';
 @import './appointments/theme/appointments.css';
 @import './theme/legacySurfaces.css';
 @import './theme/glass.css';

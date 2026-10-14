@@ -1,5 +1,5 @@
 import type { DateKey, MasterDay, Wall } from './types'
-import { dateOf, minutesOf, wallMinutes } from './wallClock'
+import { dateOf, minutesOf, wallMinutes } from '../../workspace/lib/wallClock'
 
 /** 72 px per hour: a 30-minute appointment is tall enough for a time and a name. */
 export const PX_PER_MIN = 1.2

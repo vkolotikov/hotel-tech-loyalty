@@ -4,8 +4,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppointmentsContext } from '../AppointmentsProvider'
 import type { AppointmentSummary, Bootstrap, CalendarPayload } from '../lib/types'
-import { FindDialog, FindList } from './FindDialog'
-import type { FindItem } from './findResults'
+import { FindList } from '../../workspace/find/FindFrame'
+import { FindDialog } from './FindDialog'
+import { iconOf, type FindItem } from './findResults'
 
 const lang = vi.hoisted(() => ({ current: 'en' }))
 vi.mock('react-i18next', () => ({
@@ -138,12 +139,12 @@ describe('FindDialog', () => {
     const row = before.slice(before.lastIndexOf('<div')).match(/^<div([^>]*)>/)?.[1] ?? ''
     expect(row).toContain('data-find-row=""')
     expect(row).toMatch(/\bborder-b\b/)
-    const css = readFileSync(new URL('../theme/appointments.css', import.meta.url), 'utf8')
+    const css = readFileSync(new URL('../../workspace/theme/workspace.css', import.meta.url), 'utf8')
     // Not `outline: none`: a transparent outline draws nothing here, but forced-colours mode (Windows High Contrast)
     // paints it in the system colour, where the row's coloured border and shadow are taken away.
-    expect(css).toMatch(/\[data-appointments\] \[data-find-row\] input:focus-visible\s*\{\s*outline: 2px solid transparent;/)
+    expect(css).toMatch(/\[data-workspace\] \[data-find-row\] input:focus-visible\s*\{\s*outline: 2px solid transparent;/)
     expect(css).not.toMatch(/\[data-find-row\] input:focus-visible\s*\{\s*outline: none/)
-    expect(css).toMatch(/\[data-appointments\] \[data-find-row\]:focus-within\s*\{\s*border-bottom-color: rgb\(var\(--a-accent-text\)\);\s*box-shadow: inset 0 -1px 0 rgb\(var\(--a-accent-text\)\);/)
+    expect(css).toMatch(/\[data-workspace\] \[data-find-row\]:focus-within\s*\{\s*border-bottom-color: rgb\(var\(--a-accent-text\)\);\s*box-shadow: inset 0 -1px 0 rgb\(var\(--a-accent-text\)\);/)
   })
 
   it('lists every action when nothing is typed, and gives the list a scroll of its own', () => {
@@ -191,7 +192,7 @@ describe('FindList', () => {
       { id: 'search-all', kind: 'search', label: 'Search all clients for “mi”', go: { to: '/appointments/clients?search=mi' } },
     ] as FindItem[] },
   ]
-  const draw = (activeId: string | null) => renderToStaticMarkup(<FindList groups={groups} activeId={activeId} onPick={() => {}} onHover={() => {}} />)
+  const draw = (activeId: string | null) => renderToStaticMarkup(<FindList groups={groups} activeId={activeId} onPick={() => {}} onHover={() => {}} iconOf={iconOf} />)
 
   it('marks only the active option as selected', () => {
     const html = draw('client-9')
@@ -212,7 +213,7 @@ describe('FindList', () => {
   })
 
   it('gives an action the plus or the arrow', () => {
-    const html = renderToStaticMarkup(<FindList groups={[{ title: 'Actions', items: actions }]} activeId={null} onPick={() => {}} onHover={() => {}} />)
+    const html = renderToStaticMarkup(<FindList groups={[{ title: 'Actions', items: actions }]} activeId={null} onPick={() => {}} onHover={() => {}} iconOf={iconOf} />)
     expect(html).toContain('lucide-plus')
     expect(html).toContain('lucide-arrow-right')
   })

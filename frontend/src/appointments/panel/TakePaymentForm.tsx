@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { AppointmentDetail, DeskMethod } from '../lib/types'
-import { Button } from '../ui/Button'
-import { Field } from '../ui/Field'
-import { Notice } from '../ui/Notice'
+import { Button } from '../../workspace/ui/Button'
+import { Field } from '../../workspace/ui/Field'
+import { Notice } from '../../workspace/ui/Notice'
 import { DESK_METHODS, METHOD_FALLBACK } from './moneyLines'
 import type { PanelError } from './panelState'
 

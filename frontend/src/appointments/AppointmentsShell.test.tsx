@@ -52,6 +52,7 @@ const refused = (code: string) => ({ response: { status: 403, data: { error: cod
 describe('AppointmentsShell', () => {
   it('is the token scope, names the product and the organisation, and draws the page', () => {
     const html = render({})
+    expect(html).toContain('data-workspace=""')
     expect(html).toContain('data-appointments=""')
     expect(html).toContain('HexaTech Appointments')
     expect(html).toContain('Lumière Salon')

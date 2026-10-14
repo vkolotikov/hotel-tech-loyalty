@@ -1,8 +1,8 @@
 import type { CSSProperties, FocusEvent as ReactFocusEvent, PointerEvent as ReactPointerEvent } from 'react'
 import type { AppointmentSummary } from '../lib/types'
 import { cardDensity, type Placed } from '../lib/layout'
-import { isHandedBack } from '../lib/handBack'
-import { timeOf } from '../lib/wallClock'
+import { isHandedBack } from '../../workspace/lib/handBack'
+import { timeOf } from '../../workspace/lib/wallClock'
 import { StatusMark } from '../ui/StatusMark'
 import type { PreviewOpener } from './previewTimer'
 

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Plus } from 'lucide-react'
 import { money } from '../../lib/money'
 import type { SetupCategory, SetupPayload, SetupService } from '../lib/types'
-import { Button } from '../ui/Button'
+import { Button } from '../../workspace/ui/Button'
 import { ServiceEditor } from './ServiceEditor'
 
 export interface ServiceGroup { key: string; name: string; services: SetupService[] }

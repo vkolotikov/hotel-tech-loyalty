@@ -19,9 +19,9 @@ const EMS = {
 /** A tile's inner width (px) in each layout, measured: 1440 closed and with the panel, 1280 closed and with it (two by two), 1024 closed and with it (the narrowest). */
 const TILES = { '1440': 169, '1440+panel': 131, '1280': 129, '1280+panel': 228, '1024': 137, '1024+panel': 104 }
 
-/** The clamp the strip's CSS gives a fitted figure, read from appointments.css: min, the share of the tile's width, max. */
-const css = readFileSync(new URL('../theme/appointments.css', import.meta.url), 'utf8')
-const rule = css.match(/\[data-appointments\] \[data-glance\] \[data-fit\]\s*\{\s*font-size: clamp\(([\d.]+)rem, calc\(var\(--a-fit, (\d+)\) \* 1cqi\), ([\d.]+)rem\);\s*overflow-wrap: anywhere;\s*\}/)
+/** The clamp the strip's CSS gives a fitted figure, read from workspace.css: min, the share of the tile's width, max. */
+const css = readFileSync(new URL('../theme/workspace.css', import.meta.url), 'utf8')
+const rule = css.match(/\[data-workspace\] \[data-glance\] \[data-fit\]\s*\{\s*font-size: clamp\(([\d.]+)rem, calc\(var\(--a-fit, (\d+)\) \* 1cqi\), ([\d.]+)rem\);\s*overflow-wrap: anywhere;\s*\}/)
 const MIN = Number(rule?.[1]) * 16
 const MAX = Number(rule?.[3]) * 16
 /** The size the browser gives a figure `ems` wide in a tile `inner` px wide. */
@@ -42,7 +42,7 @@ describe('fitCqi', () => {
   })
 })
 
-describe('the strip\'s fitted figures (appointments.css with fitCqi)', () => {
+describe('the strip\'s fitted figures (workspace.css with fitCqi)', () => {
   it('are clamped between 18 px (1.125rem) and the design\'s 30 px (1.875rem)', () => {
     expect(rule).not.toBeNull()
     expect(MIN).toBe(18)

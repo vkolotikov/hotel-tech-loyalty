@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import type { CalendarMaster, DateKey } from '../lib/types'
 import type { View } from '../lib/prefs'
-import { formatDate, hhmm, isoWeek } from '../lib/wallClock'
+import { formatDate, hhmm, isoWeek } from '../../workspace/lib/wallClock'
 import { useVocab } from '../lib/vocab'
 import { rangeFor } from './calendarState'
 

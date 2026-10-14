@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Link, useParams } from 'react-router-dom'
 import { appointmentsApi, failureOf } from '../lib/api'
 import { useVocab } from '../lib/vocab'
-import { Notice } from '../ui/Notice'
+import { Notice } from '../../workspace/ui/Notice'
 import { ClientProfileView } from './ClientProfileView'
 
 export function ClientProfile() {

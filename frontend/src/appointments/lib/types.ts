@@ -1,7 +1,6 @@
-/** The venue's wall clock as the server sends and accepts it: 'YYYY-MM-DDTHH:mm'. Never an instant — do not pass it to `new Date()`. */
-export type Wall = string
-/** 'YYYY-MM-DD' */
-export type DateKey = string
+/** A venue wall-clock time and a venue day: declared with the venue clock in the shared core. */
+import type { DateKey, Wall } from '../../workspace/lib/wallClock'
+export type { DateKey, Wall }
 
 export type Status = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled' | 'no_show'
 export type PaymentState =

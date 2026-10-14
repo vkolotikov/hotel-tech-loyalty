@@ -2,7 +2,7 @@ import { Check } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { Checklist as ChecklistData, ChecklistKey } from '../lib/types'
-import { Notice } from '../ui/Notice'
+import { Notice } from '../../workspace/ui/Notice'
 
 export type SetupTab = 'services' | 'team' | 'settings'
 

@@ -116,12 +116,12 @@ describe('TodayStrip', () => {
     expect(section).toContain('data-glance=""')
     expect(section).toMatch(/class="[^"]*\bgrid-cols-2\b/)
     expect(section).not.toMatch(/xl:grid-cols-4/) // the screen's width ignored the panel and the side menu
-    const css = readFileSync(new URL('../theme/appointments.css', import.meta.url), 'utf8')
-    expect(css).toMatch(/@container \(min-width: 660px\)\s*\{\s*\[data-appointments\] \[data-glance\]\s*\{\s*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/)
+    const css = readFileSync(new URL('../../workspace/theme/workspace.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/@container \(min-width: 660px\)\s*\{\s*\[data-workspace\] \[data-glance\]\s*\{\s*grid-template-columns: repeat\(4, minmax\(0, 1fr\)\);/)
   })
 
   // "CHF 1,234.50" is 170 px at 30 px and a tile has 129 px inside at 1280 (104 at the narrowest): every figure is sized to its own tile.
-  it('makes each tile a container and sizes every display figure in it to that tile (fitCqi, appointments.css [data-fit])', () => {
+  it('makes each tile a container and sizes every display figure in it to that tile (fitCqi, workspace.css [data-fit])', () => {
     for (const manager of [true, false]) {
       const html = strip({ manager })
       const tiles = [...html.matchAll(/<div class="([^"]*\brounded-xl\b[^"]*)"/g)].map(m => m[1])
@@ -132,9 +132,10 @@ describe('TodayStrip', () => {
       for (const m of figures) expect(m[1], m[2]).toContain('data-fit=""')
     }
     // The one rule sizes them; the narrow-strip step-down it replaces is gone.
-    const css = readFileSync(new URL('../theme/appointments.css', import.meta.url), 'utf8')
-    expect(css).toMatch(/\[data-appointments\] \[data-glance\] \[data-fit\]\s*\{\s*font-size: clamp\(1\.125rem, calc\(var\(--a-fit, 100\) \* 1cqi\), 1\.875rem\);/)
-    expect(css).not.toMatch(/@container \(max-width: \d+px\)\s*\{\s*\[data-appointments\] \[data-glance\] \.font-a-display/)
+    const css = readFileSync(new URL('../../workspace/theme/workspace.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\[data-workspace\] \[data-glance\] \[data-fit\]\s*\{\s*font-size: clamp\(1\.125rem, calc\(var\(--a-fit, 100\) \* 1cqi\), 1\.875rem\);/)
+    expect(css).not.toMatch(/@container \(max-width: \d+px\)\s*\{\s*\[data-(?:workspace|appointments)\] \[data-glance\] \.font-a-display/)
+    expect(readFileSync(new URL('../theme/appointments.css', import.meta.url), 'utf8')).not.toContain('[data-glance]')
     // The loading dash in the Team tile is a single character in the display face: it always fits at the design's size.
     expect(strip({ manager: true, pending: true })).toMatch(/<span aria-hidden="true" class="font-a-display[^"]*">—<\/span>/)
   })

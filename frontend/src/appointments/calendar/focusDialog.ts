@@ -1,4 +1,4 @@
-import { handBackFocus } from '../lib/handBack'
+import { handBackFocus } from '../../workspace/lib/handBack'
 
 /**
  * Moves the focus into a dialog that just opened — onto the dialog itself,

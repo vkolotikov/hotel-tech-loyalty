@@ -2,10 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { CalendarPlus } from 'lucide-react'
 import type { AppointmentSummary, ClientProfile } from '../lib/types'
-import { dateOf, formatDate, timeOf } from '../lib/wallClock'
+import { dateOf, formatDate, timeOf } from '../../workspace/lib/wallClock'
 import { LoyaltyCard } from '../panel/LoyaltyCard'
 import { StatusMark } from '../ui/StatusMark'
-import { PageTitle, SectionTitle } from '../ui/Typography'
+import { PageTitle, SectionTitle } from '../../workspace/ui/Typography'
 
 /**
  * "Book again" carries who, what and with whom — never a time or a price.
