@@ -1,10 +1,11 @@
-import { useLayoutEffect, type CSSProperties, type ReactNode } from 'react'
+import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
 import { SUPPORTED_LANGUAGES } from '../i18n'
 import { logoutAndRedirect } from '../lib/logout'
 import { firstLetter } from './lib/firstLetter'
+import { leave } from './lib/leave'
 import type { LiveLook } from './lib/look'
 import { markShell } from './lib/shellMark'
 import { accentStyle, type AccentTokens } from './theme/accent'
@@ -24,7 +25,7 @@ export interface WorkspaceNavItem { to: string; end: boolean; icon: LucideIcon; 
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, initial, organization, product, person, nav, fullAdmin, header, overlays, children }: {
+export function WorkspaceShell({ workspace, look, accent, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, menuFits = false, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -40,15 +41,24 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
   /** Where "Full admin" goes, or null where there is no full admin (the Appointments plan). */
   fullAdmin: string | null
   header: ReactNode
+  /** Asked before "Full admin" and Sign out leave the workspace; false stays (unsaved work). */
+  onLeave?: () => boolean
   /** Dialogs drawn over the whole frame (Find, the list of shortcuts). */
   overlays?: ReactNode
+  /**
+   * The phone menu as wide as what it holds (at least 14rem, never past the screen): the theme switch is longer in
+   * Russian. Content asks for it; Appointments keeps its fixed 14rem until its own release (its pixels are pinned).
+   */
+  menuFits?: boolean
   children: ReactNode
 }) {
   const { t, i18n } = useTranslation()
   // <html data-shell="<workspace>"> keeps the full admin's Branding mood typography out, from the first paint.
   useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])
   const slim = look.rail === 'slim'
-  const signOut = () => { void logoutAndRedirect('/login') }
+  // Neither exit unloads a page the browser could ask about (Sign out even revokes the session first): the app is asked.
+  const signOut = () => { leave(onLeave, () => { void logoutAndRedirect('/login') }) }
+  const toFullAdmin = (e: MouseEvent) => { leave(onLeave, () => {}, e) }
   const language = (className: string) => (
     <label className="block">
       <span className="sr-only">{t('workspace.shell.language', 'Language')}</span>
@@ -88,7 +98,7 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
         <div className="mt-auto space-y-2 border-t border-a-side-2 pt-4">
           <ThemeSwitch value={look.theme} onChange={look.setTheme} vertical={slim} />
           {fullAdmin !== null && (
-            <Link to={fullAdmin} data-tip={slim ? t('workspace.shell.full_admin', 'Full admin') : undefined}
+            <Link to={fullAdmin} onClick={toFullAdmin} data-tip={slim ? t('workspace.shell.full_admin', 'Full admin') : undefined}
               className={`relative flex min-h-10 items-center gap-3 rounded-xl px-3 text-sm text-a-side-text-2 transition-colors hover:bg-a-side-2/60 hover:text-a-side-text ${slim ? 'justify-center' : ''}`}>
               <LayoutGrid size={16} aria-hidden className="shrink-0" /><span className={slim ? 'sr-only' : ''}>{t('workspace.shell.full_admin', 'Full admin')}</span>
             </Link>
@@ -142,11 +152,11 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
             <summary className="list-none cursor-pointer rounded-lg p-2 text-a-text-2 hover:text-a-text [&::-webkit-details-marker]:hidden" aria-label={t('workspace.shell.menu', 'Menu')}>
               <Menu size={18} aria-hidden />
             </summary>
-            <div className="absolute right-0 top-full z-40 mt-2 w-56 animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
+            <div className={`absolute right-0 top-full z-40 mt-2 ${menuFits ? 'w-max min-w-56 max-w-[calc(100vw-2rem)]' : 'w-56'} animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg`}>
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{person}</div>
               <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>
               {fullAdmin !== null && (
-                <Link to={fullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
+                <Link to={fullAdmin} onClick={toFullAdmin} className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
                   <LayoutGrid size={16} aria-hidden /> {t('workspace.shell.full_admin', 'Full admin')}
                 </Link>
               )}

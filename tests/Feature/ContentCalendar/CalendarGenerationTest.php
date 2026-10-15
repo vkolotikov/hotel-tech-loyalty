@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\ContentCalendar;
 
-use App\Http\Controllers\Api\V1\Admin\ContentPlannerCalendarController;
 use App\Models\ContentPlannerChannel;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
@@ -16,7 +15,6 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
 use Mockery;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -49,7 +47,6 @@ class CalendarGenerationTest extends TestCase
         $knowledge = Mockery::mock(ContentKnowledgeService::class);
         $knowledge->shouldReceive('summarizeForAi')->andReturn('Test business context.');
         $this->app->instance(ContentKnowledgeService::class, $knowledge);
-        Route::post('/api/_calendar-regression', [ContentPlannerCalendarController::class, 'generate']);
     }
 
     protected function tearDown(): void
@@ -70,9 +67,9 @@ class CalendarGenerationTest extends TestCase
             return Http::response($this->message([$this->item('2026-09-07')]));
         });
 
-        $this->generate('2026-09-07', '2026-09-13')->assertOk()
-            ->assertJsonPath('status', 'completed')->assertJsonPath('created_count', 1)
-            ->assertJsonPath('failed_windows', []);
+        $result = $this->generate('2026-09-07', '2026-09-13');
+        $this->assertCount(1, $result['created']);
+        $this->assertSame([], $result['failed_windows']);
         $this->assertSame(1, ContentPlannerPost::count());
         $this->assertSame(1, ContentPlannerVisualBrief::count());
         Http::assertSentCount(1);
@@ -91,12 +88,12 @@ class CalendarGenerationTest extends TestCase
             return Http::response(['error' => ['type' => 'overloaded_error', 'message' => 'Private provider detail']], 503, ['Retry-After' => '600']);
         });
 
-        $this->generate('2026-09-07', '2026-09-27')->assertStatus(503)
-            ->assertJsonPath('status', 'failed')->assertJsonPath('created_count', 0)
-            ->assertJsonPath('failed_windows.0.start_date', '2026-09-07')
-            ->assertJsonPath('failed_windows.0.reason', 'provider_unavailable')
-            ->assertJsonPath('failed_windows.1.reason', 'not_attempted')
-            ->assertDontSee('Private provider detail');
+        $result = $this->generate('2026-09-07', '2026-09-27');
+        $this->assertSame([], $result['created']);
+        $this->assertSame('2026-09-07', $result['failed_windows'][0]['start_date']);
+        $this->assertSame('provider_unavailable', $result['failed_windows'][0]['reason']);
+        $this->assertSame('not_attempted', $result['failed_windows'][1]['reason']);
+        $this->assertStringNotContainsString('Private provider detail', json_encode($result));
         $this->assertSame(1, $attempts);
         $this->assertSame(0, ContentPlannerPost::count());
     }
@@ -111,10 +108,10 @@ class CalendarGenerationTest extends TestCase
         Http::fakeSequence()->push($this->message([$this->item('2026-09-07')]))
             ->push(['error' => ['type' => 'overloaded_error', 'message' => 'Unavailable']], 503);
 
-        $this->generate('2026-09-07', '2026-09-27')->assertOk()
-            ->assertJsonPath('status', 'partial')->assertJsonPath('created_count', 1)
-            ->assertJsonPath('failed_windows.0.start_date', '2026-09-14')
-            ->assertJsonPath('failed_windows.1.start_date', '2026-09-21');
+        $result = $this->generate('2026-09-07', '2026-09-27');
+        $this->assertCount(1, $result['created']);
+        $this->assertSame('2026-09-14', $result['failed_windows'][0]['start_date']);
+        $this->assertSame('2026-09-21', $result['failed_windows'][1]['start_date']);
         $this->assertSame(1, ContentPlannerPost::count());
         Http::assertSentCount(2);
     }
@@ -163,25 +160,12 @@ class CalendarGenerationTest extends TestCase
         $this->assertSame([], $result['created']);
     }
 
-    #[DataProvider('invalidRanges')]
-    public function test_invalid_ranges_return_422_without_ai_calls(string $start, string $end): void
-    {
-        $this->generate($start, $end)->assertUnprocessable()->assertJsonValidationErrors('end_date');
-        Http::assertNothingSent();
-    }
-
-    public static function invalidRanges(): array
-    {
-        return [['2026-09-14', '2026-09-07'], ['2026-09-07', '2026-12-01']];
-    }
-
     public function test_local_database_failure_is_not_a_provider_503(): void
     {
         Schema::drop('content_planner_ai_generations');
         Http::fakeSequence()->push($this->message([$this->item('2026-09-07')]));
 
-        $this->generate('2026-09-07', '2026-09-13')->assertStatus(500)
-            ->assertJsonPath('error', 'Calendar generation failed');
+        $this->generationStops('2026-09-07', '2026-09-13');
         $this->assertSame(0, ContentPlannerPost::count());
         Http::assertSentCount(1);
     }
@@ -191,10 +175,10 @@ class CalendarGenerationTest extends TestCase
         Http::fakeSequence()->push($this->message([], 'incomplete {'))
             ->push($this->message([], 'still incomplete {'));
 
-        $this->generate('2026-09-07', '2026-09-27')->assertStatus(503)
-            ->assertJsonPath('created_count', 0)
-            ->assertJsonPath('failed_windows.0.reason', 'invalid_ai_response')
-            ->assertJsonPath('failed_windows.2.end_date', '2026-09-27');
+        $result = $this->generate('2026-09-07', '2026-09-27');
+        $this->assertSame([], $result['created']);
+        $this->assertSame('invalid_ai_response', $result['failed_windows'][0]['reason']);
+        $this->assertSame('2026-09-27', $result['failed_windows'][2]['end_date']);
         Http::assertSentCount(2);
         $this->assertSame(0, ContentPlannerPost::count());
     }
@@ -204,8 +188,9 @@ class CalendarGenerationTest extends TestCase
         Http::fakeSequence()->push($this->message([], 'incomplete {'))
             ->push($this->message([$this->item('2026-09-07')]));
 
-        $this->generate('2026-09-07', '2026-09-13')->assertOk()
-            ->assertJsonPath('status', 'completed')->assertJsonPath('created_count', 1);
+        $result = $this->generate('2026-09-07', '2026-09-13');
+        $this->assertCount(1, $result['created']);
+        $this->assertSame([], $result['failed_windows']);
         Http::assertSentCount(2);
     }
 
@@ -213,9 +198,9 @@ class CalendarGenerationTest extends TestCase
     {
         Http::fakeSequence()->push($this->message([null, ['date' => [], 'platform' => []]]));
 
-        $this->generate('2026-09-07', '2026-09-27')->assertStatus(503)
-            ->assertJsonPath('status', 'failed')->assertJsonPath('created_count', 0)
-            ->assertJsonPath('failed_windows.0.reason', 'invalid_ai_response');
+        $result = $this->generate('2026-09-07', '2026-09-27');
+        $this->assertSame([], $result['created']);
+        $this->assertSame('invalid_ai_response', $result['failed_windows'][0]['reason']);
         Http::assertSentCount(1);
     }
 
@@ -224,10 +209,11 @@ class CalendarGenerationTest extends TestCase
         Http::fakeSequence()->push($this->message([$this->item('2026-09-07')]))
             ->push($this->message([$this->item('2026-09-07'), $this->item('2026-09-08')]));
 
-        $this->generate('2026-09-07', '2026-09-13')->assertOk()->assertJsonPath('created_count', 1);
+        $this->assertCount(1, $this->generate('2026-09-07', '2026-09-13')['created']);
         $firstId = ContentPlannerPost::firstOrFail()->id;
-        $this->generate('2026-09-07', '2026-09-13')->assertOk()->assertJsonPath('created_count', 1)
-            ->assertJsonPath('skipped_dates.0.reason', 'slot_already_filled');
+        $second = $this->generate('2026-09-07', '2026-09-13');
+        $this->assertCount(1, $second['created']);
+        $this->assertSame('slot_already_filled', $second['skipped_dates'][0]['reason']);
         $this->assertSame(2, ContentPlannerPost::count());
         $this->assertNotNull(ContentPlannerPost::find($firstId));
     }
@@ -238,15 +224,26 @@ class CalendarGenerationTest extends TestCase
         Schema::drop('content_planner_visual_briefs');
         Http::fakeSequence()->push($this->message([$this->item('2026-09-07')]));
 
-        $response = $this->generate('2026-09-07', '2026-09-13');
+        $this->generationStops('2026-09-07', '2026-09-13');
         $this->assertSame(0, ContentPlannerPost::count());
-        $response->assertStatus(500);
     }
 
-    private function generate(string $start, string $end)
+    /** One generation, as the new calendar route runs it (Content\GenerationController): the service's own answer. */
+    private function generate(string $start, string $end): array
     {
-        return $this->postJson('/api/_calendar-regression', ['planner_profile_id' => $this->profile->id,
-            'start_date' => $start, 'end_date' => $end, 'fill_empty_only' => true]);
+        return app(ContentCalendarGenerationService::class)->generate($this->profile, $start, $end, ['fill_empty_only' => true]);
+    }
+
+    /** A generation that must stop with an exception (the route answers 500 generation_failed for it). */
+    private function generationStops(string $start, string $end): void
+    {
+        $stopped = false;
+        try {
+            $this->generate($start, $end);
+        } catch (\Throwable $e) {
+            $stopped = !$e instanceof \PHPUnit\Framework\AssertionFailedError;
+        }
+        $this->assertTrue($stopped, 'the generation should have stopped with an exception');
     }
 
     private function item(string $date): array

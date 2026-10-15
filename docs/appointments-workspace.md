@@ -138,7 +138,7 @@ marked as held whose payment Stripe had in fact already taken. A booking already
 - One points worker. Only `BookingPointsService::awardForServiceBooking()` awards; the panel's "Completing awards
   N points" is `previewForServiceBooking()`, the same predicates (`tests/Feature/Appointments/PointsPreviewTest.php`).
 - Times are the venue's wall clock, sent and received as `YYYY-MM-DDTHH:mm`. The frontend never builds a `Date`
-  from one (`frontend/src/appointments/lib/wallClock.ts`). The full admin's service-booking list, its calendar,
+  from one (`frontend/src/workspace/lib/wallClock.ts`). The full admin's service-booking list, its calendar,
   the unified `/calendar` and the dashboard read the same times through `frontend/src/lib/venueTime.ts`
   (page tests `*.venueTime.test.tsx` run with the clock set to Riga).
 - A retry with the same `Idempotency-Key` and body answers with the first booking; a save against an older
@@ -500,7 +500,7 @@ it in time from the workspace, and see the refund arrive on the card.
 The workspace's own look and faster daily work. Spec: `docs/superpowers/specs/2026-10-12-appointments-atelier-design.md`.
 Nothing anyone can do changed: actions, permissions, URLs and data are as before.
 
-**The look (release 1).** Every colour is a workspace token (`--a-*` in `frontend/src/appointments/theme/appointments.css`,
+**The look (release 1).** Every colour is a workspace token (`--a-*` in `frontend/src/workspace/theme/workspace.css`; Appointments' own rules stay in `appointments.css`;
 Tailwind `a-*`; `tokens.test.ts` refuses raw colours, `contrast.test.ts` pins every text pair at 4.5:1 in both themes).
 Light is the default for everyone; each person chooses Light, Dark or Auto (follows the device) at the foot of the
 side menu, remembered on that device (`appointments:look`). The side menu folds to a 76 px icon rail ("Collapse

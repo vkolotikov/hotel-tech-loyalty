@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Exceptions\BrandNotAllowed;
 use App\Models\Brand;
 use Closure;
 use Illuminate\Http\Request;
@@ -66,7 +67,8 @@ class BrandMiddleware
                 !(method_exists($user, 'isPlatformAdmin') && $user->isPlatformAdmin())) {
                 $assignedIds = $user->brands()->pluck('brands.id')->all();
                 if (!empty($assignedIds) && !in_array($brand->id, $assignedIds, true)) {
-                    abort(403, 'You do not have access to this brand.');
+                    // 403 with the same sentence as before, plus a code (BrandNotAllowed).
+                    throw new BrandNotAllowed();
                 }
             }
             return $brand->id;

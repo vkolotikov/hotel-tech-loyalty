@@ -6,6 +6,7 @@ use Anthropic\Client;
 use Anthropic\Core\Exceptions\APIException;
 use App\Models\ContentPlannerAiGeneration;
 use App\Models\ContentPlannerProfile;
+use App\Services\AiUsageService;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -22,6 +23,9 @@ final class AiClient
     private Client $client;
 
     private string $model;
+
+    /** The feature name Content's AI calls carry in the shared AI ledger (Settings → AI Usage). */
+    public const USAGE_FEATURE = 'content';
 
     public function __construct()
     {
@@ -211,6 +215,16 @@ final class AiClient
             'cost_estimate' => $this->estimateCost($inputTokens, $outputTokens),
             'status' => 'success',
         ]);
+
+        // The shared AI ledger counts every Content call too, so Settings → AI Usage and the
+        // organisation's monthly cap see it (spec 2026-10-14 §5.2). recordUsage never throws.
+        app(AiUsageService::class)->recordUsage(
+            (int) $profile->organization_id,
+            $this->model,
+            (int) ($inputTokens ?? 0),
+            (int) ($outputTokens ?? 0),
+            self::USAGE_FEATURE,
+        );
     }
 
     /**

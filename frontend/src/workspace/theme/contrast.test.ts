@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { FALLBACK_ACCENT, SURFACES, accentTokens } from './accent'
 
-/** The sources whose accent classes the line rule below sweeps: the shared core and every workspace built on it. */
-const SOURCE_DIRS = [fileURLToPath(new URL('..', import.meta.url)), fileURLToPath(new URL('../../appointments', import.meta.url))]
+/** The sources whose accent classes the line rule below sweeps: the shared core and every workspace built on it (Appointments, Content). */
+const SOURCE_DIRS = ['..', '../../appointments', '../../content'].map(dir => fileURLToPath(new URL(dir, import.meta.url)))
 
 /**
  * Every text-on-background pair the workspace draws, at 4.5:1 or better,

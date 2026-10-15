@@ -17,6 +17,19 @@ use App\Models\Organization;
 class ContentKnowledgeService
 {
     /**
+     * Every readiness gap by its code (`missing`, beside the English `hints`): the portal says
+     * each one in the reader's language (content.brand.gap.<code>; a test keeps both lists equal).
+     */
+    public const GAPS = [
+        'company_name', 'company_industry', 'company_website', 'brand_summary', 'usp', 'mission',
+        'faq_none', 'faq_more', 'services',
+        'audience_none', 'audience_pains', 'audience_goals',
+        'voice_none', 'voice_tone', 'voice_emoji', 'voice_hashtag',
+        'channels_none', 'channels_days', 'channels_per_week',
+        'content_mix', 'weekly_rhythm', 'engagement_goals',
+    ];
+
+    /**
      * Build knowledge summary for a brand from all available sources.
      * Returns structured data ready for AI prompts + UI display.
      */
@@ -191,9 +204,21 @@ class ContentKnowledgeService
      *   "sections": [{"key":"company","label":"Company info","score":80,"hints":["..."]}, ...]
      * }
      *
-     * Also persists the overall score to $profile->knowledge_score.
+     * Saves the overall score to the profile; readinessOf() does not.
      */
     public function readinessFor(ContentPlannerProfile $profile): array
+    {
+        $readiness = $this->readinessOf($profile);
+        $profile->update(['knowledge_score' => $readiness['overall']]);
+
+        return $readiness;
+    }
+
+    /**
+     * The same readiness without saving it: what a read shows (spec 2026-10-14 §7, F4).
+     * readinessFor() saves it, for the moments the profile or its knowledge changed.
+     */
+    public function readinessOf(ContentPlannerProfile $profile): array
     {
         $knowledge = $this->buildForBrand($profile->organization_id, $profile->brand_id);
 
@@ -208,12 +233,17 @@ class ContentKnowledgeService
 
         $overall = (int) round(array_sum(array_column($sections, 'score')) / count($sections));
 
-        $profile->update(['knowledge_score' => $overall]);
-
         return [
             'overall' => $overall,
             'sections' => $sections,
         ];
+    }
+
+    /** A gap: its sentence for the old screens and its code for the portal. */
+    private static function gap(array &$hints, array &$missing, string $code, string $hint): void
+    {
+        $hints[] = $hint;
+        $missing[] = $code;
     }
 
     /**
@@ -224,44 +254,45 @@ class ContentKnowledgeService
         $org = $knowledge['organization'] ?? null;
         $score = 0;
         $hints = [];
+        $missing = [];
 
         if (!empty($org['name'])) {
             $score += 15;
         } else {
-            $hints[] = 'Set the company name in organization settings.';
+            self::gap($hints, $missing, 'company_name', 'Set the company name in organization settings.');
         }
 
         if (!empty($org['industry'])) {
             $score += 10;
         } else {
-            $hints[] = 'Set the company industry.';
+            self::gap($hints, $missing, 'company_industry', 'Set the company industry.');
         }
 
         if (!empty($org['website'])) {
             $score += 10;
         } else {
-            $hints[] = 'Add the company website.';
+            self::gap($hints, $missing, 'company_website', 'Add the company website.');
         }
 
         if (trim((string) $profile->brand_summary) !== '') {
             $score += 25;
         } else {
-            $hints[] = 'Add a brand summary in the setup wizard.';
+            self::gap($hints, $missing, 'brand_summary', 'Add a brand summary in the setup wizard.');
         }
 
         if (trim((string) $profile->usp) !== '') {
             $score += 20;
         } else {
-            $hints[] = 'Define your USP (what makes you different).';
+            self::gap($hints, $missing, 'usp', 'Define your USP (what makes you different).');
         }
 
         if (trim((string) $profile->mission) !== '') {
             $score += 20;
         } else {
-            $hints[] = 'Add your mission statement.';
+            self::gap($hints, $missing, 'mission', 'Add your mission statement.');
         }
 
-        return ['key' => 'company', 'label' => 'Company info', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'company', 'label' => 'Company info', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing];
     }
 
     /**
@@ -271,22 +302,23 @@ class ContentKnowledgeService
     {
         $faqCount = (int) ($knowledge['sources']['faq_count'] ?? 0);
         $hints = [];
+        $missing = [];
 
         $score = (int) round(min($faqCount, 5) / 5 * 70);
 
         if ($faqCount === 0) {
-            $hints[] = 'Add FAQ entries in the AI Chat Widget knowledge base.';
+            self::gap($hints, $missing, 'faq_none', 'Add FAQ entries in the AI Chat Widget knowledge base.');
         } elseif ($faqCount < 5) {
-            $hints[] = "Add more FAQ entries (have {$faqCount}, 5+ recommended).";
+            self::gap($hints, $missing, 'faq_more', "Add more FAQ entries (have {$faqCount}, 5+ recommended).");
         }
 
         if (!empty($knowledge['sources']['has_services'])) {
             $score += 30;
         } else {
-            $hints[] = 'Add your services/products list.';
+            self::gap($hints, $missing, 'services', 'Add your services/products list.');
         }
 
-        return ['key' => 'knowledge', 'label' => 'FAQ & knowledge', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'knowledge', 'label' => 'FAQ & knowledge', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing, 'faq_count' => $faqCount];
     }
 
     /**
@@ -302,10 +334,12 @@ class ContentKnowledgeService
                 'label' => 'Audience',
                 'score' => 0,
                 'hints' => ['Add at least one target audience segment.'],
+                'missing' => ['audience_none'],
             ];
         }
 
         $hints = [];
+        $missing = [];
         $score = 40;
         $total = $audiences->count();
 
@@ -316,14 +350,14 @@ class ContentKnowledgeService
         $score += (int) round($withGoals / $total * 30);
 
         if ($withPains < $total) {
-            $hints[] = 'Add pain points to every audience segment.';
+            self::gap($hints, $missing, 'audience_pains', 'Add pain points to every audience segment.');
         }
 
         if ($withGoals < $total) {
-            $hints[] = 'Add goals/desires to every audience segment.';
+            self::gap($hints, $missing, 'audience_goals', 'Add goals/desires to every audience segment.');
         }
 
-        return ['key' => 'audience', 'label' => 'Audience', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'audience', 'label' => 'Audience', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing];
     }
 
     /**
@@ -339,31 +373,33 @@ class ContentKnowledgeService
                 'label' => 'Brand voice',
                 'score' => 0,
                 'hints' => ['Define your brand voice in the setup wizard.'],
+                'missing' => ['voice_none'],
             ];
         }
 
         $hints = [];
+        $missing = [];
         $score = 40;
 
         if (trim((string) $voice->tone) !== '') {
             $score += 20;
         } else {
-            $hints[] = 'Choose a tone for your brand voice.';
+            self::gap($hints, $missing, 'voice_tone', 'Choose a tone for your brand voice.');
         }
 
         if (trim((string) $voice->emoji_policy) !== '') {
             $score += 20;
         } else {
-            $hints[] = 'Set an emoji policy.';
+            self::gap($hints, $missing, 'voice_emoji', 'Set an emoji policy.');
         }
 
         if (trim((string) $voice->hashtag_policy) !== '') {
             $score += 20;
         } else {
-            $hints[] = 'Set a hashtag policy.';
+            self::gap($hints, $missing, 'voice_hashtag', 'Set a hashtag policy.');
         }
 
-        return ['key' => 'voice', 'label' => 'Brand voice', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'voice', 'label' => 'Brand voice', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing];
     }
 
     /**
@@ -379,10 +415,12 @@ class ContentKnowledgeService
                 'label' => 'Social channels',
                 'score' => 0,
                 'hints' => ['Activate at least one social channel.'],
+                'missing' => ['channels_none'],
             ];
         }
 
         $hints = [];
+        $missing = [];
         $score = 50;
 
         $hasFrequency = $channels->contains(function ($channel) {
@@ -394,16 +432,16 @@ class ContentKnowledgeService
         if ($hasFrequency) {
             $score += 25;
         } else {
-            $hints[] = 'Set posting days (frequency) on your channels.';
+            self::gap($hints, $missing, 'channels_days', 'Set posting days (frequency) on your channels.');
         }
 
         if ($hasPostsPerWeek) {
             $score += 25;
         } else {
-            $hints[] = 'Set posts per week on your channels.';
+            self::gap($hints, $missing, 'channels_per_week', 'Set posts per week on your channels.');
         }
 
-        return ['key' => 'channels', 'label' => 'Social channels', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'channels', 'label' => 'Social channels', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing];
     }
 
     /**
@@ -412,26 +450,27 @@ class ContentKnowledgeService
     private function scoreStrategyInputs(ContentPlannerProfile $profile): array
     {
         $hints = [];
+        $missing = [];
         $score = 0;
 
         if (!empty($profile->content_mix)) {
             $score += 40;
         } else {
-            $hints[] = 'Set your content mix percentages.';
+            self::gap($hints, $missing, 'content_mix', 'Set your content mix percentages.');
         }
 
         if (!empty($profile->weekly_rhythm)) {
             $score += 30;
         } else {
-            $hints[] = 'Configure your weekly rhythm.';
+            self::gap($hints, $missing, 'weekly_rhythm', 'Configure your weekly rhythm.');
         }
 
         if (!empty($profile->engagement_goals)) {
             $score += 30;
         } else {
-            $hints[] = 'Choose your engagement goals.';
+            self::gap($hints, $missing, 'engagement_goals', 'Choose your engagement goals.');
         }
 
-        return ['key' => 'strategy_inputs', 'label' => 'Strategy inputs', 'score' => min(100, $score), 'hints' => $hints];
+        return ['key' => 'strategy_inputs', 'label' => 'Strategy inputs', 'score' => min(100, $score), 'hints' => $hints, 'missing' => $missing];
     }
 }

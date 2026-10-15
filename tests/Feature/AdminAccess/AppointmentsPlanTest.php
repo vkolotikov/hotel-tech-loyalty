@@ -88,7 +88,7 @@ class AppointmentsPlanTest extends TestCase
 
     public function test_a_full_customer_is_told_only_false_and_is_otherwise_unchanged(): void
     {
-        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true, 'only' => false]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
         $this->assertSame(['enabled' => true, 'landing' => false], $this->org->fresh()->workspace('appointments'));
         $this->assertFalse($this->org->fresh()->workspaceIsException('appointments'));
     }

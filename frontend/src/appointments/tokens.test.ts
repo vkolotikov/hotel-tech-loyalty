@@ -30,6 +30,9 @@ const ADMIN_CLASS = /(?:^|[\s'"`{(])(?:hover:|focus:|focus-visible:|active:|disa
 const PORTAL_CLASS = /(?:^|[\s'"`{(])(?:[a-z-]+:)*(?:bg|text|border|ring|divide|placeholder|outline|rounded|shadow|font)-p-[a-z]/
 const FOREIGN_API = /\/v1\/(?!admin\/appointments\b)/
 
+/** Every rule's selector list: after the start, a `}` — or a `{` (the first rule inside @media/@container). */
+const SELECTORS = /(^|[{}])\s*([^{}@]+)\{/g
+
 describe('appointments workspace sweep', () => {
   const files = sourceFiles(DIR)
 
@@ -70,9 +73,14 @@ describe('appointments workspace sweep', () => {
     expect(bare).toEqual([])
   })
 
+  it('finds the first rule inside an @media or @container block too', () => {
+    const css = '@media (max-width: 600px) { .first { color: red } .second { color: blue } }'
+    expect([...css.matchAll(SELECTORS)].map(m => m[2].trim())).toEqual(['.first', '.second'])
+  })
+
   it('every rule in the stylesheet is scoped under [data-appointments]', () => {
     const css = fs.readFileSync(path.join(DIR, 'theme/appointments.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-    const selectors = [...css.matchAll(/(^|\})\s*([^{}@]+)\{/g)].map(m => m[2].trim()).filter(Boolean)
+    const selectors = [...css.matchAll(SELECTORS)].map(m => m[2].trim()).filter(Boolean)
     expect(selectors.length).toBeGreaterThan(3)
     for (const selector of selectors) {
       for (const part of selector.split(',')) {

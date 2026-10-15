@@ -1,10 +1,13 @@
 import { lazy, Suspense, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Bell, Mail, Star, ArrowLeft, Search, Sparkles } from 'lucide-react'
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom'
+import { Bell, Mail, Star, ArrowLeft, Search, PenLine } from 'lucide-react'
+import { useAuthStore } from '../../stores/authStore'
 import { useDataInk } from '../../theme/hx'
+import { showsWorkspaceLink } from '../../workspace/lib/landing'
 
 /**
- * "Marketing" hub — outbound communication + customer feedback + AI content planning.
+ * "Marketing" hub — outbound communication + customer feedback, and the way
+ * into HexaTech Content (AI content planning, in its own workspace at /content).
  *
  * Layout (2026-05-30 rev): flat square-tile grid. Outreach / Feedback
  * section headers dropped — each tile carries its own accent for
@@ -17,32 +20,32 @@ import { useDataInk } from '../../theme/hx'
 const Notifications  = lazy(() => import('../Notifications').then(m => ({ default: m.Notifications })))
 const EmailTemplates = lazy(() => import('../EmailTemplates').then(m => ({ default: m.EmailTemplates })))
 const Reviews        = lazy(() => import('../Reviews').then(m => ({ default: m.Reviews })))
-const ContentPlanner = lazy(() => import('../ContentPlanner').then(m => ({ default: m.ContentPlanner })))
 
-type TabKey = 'campaigns' | 'email-templates' | 'reviews' | 'content-planner'
+type TabKey = 'campaigns' | 'email-templates' | 'reviews'
 
 // Warm a tab's chunk on hover/pointer-down so the click opens instantly.
 const TAB_IMPORT: Record<TabKey, () => Promise<unknown>> = {
   'campaigns':       () => import('../Notifications'),
   'email-templates': () => import('../EmailTemplates'),
   'reviews':         () => import('../Reviews'),
-  'content-planner': () => import('../ContentPlanner'),
 }
-const preloadTab = (k: TabKey) => { try { TAB_IMPORT[k]?.() } catch { /* best-effort */ } }
+const preloadTab = (k: string) => { try { TAB_IMPORT[k as TabKey]?.() } catch { /* best-effort */ } }
 
 interface TileDef {
-  key: TabKey
+  key: TabKey | 'content'
   label: string
   desc: string
   icon: any
   accent: string
+  /** A tile that opens another place (a workspace) rather than a tab here. */
+  to?: string
 }
 
 const TILES: TileDef[] = [
   { key: 'campaigns',       label: 'Campaigns',       desc: 'Scheduled and one-off push + email campaigns',  icon: Bell, accent: '#a78bfa' }, // violet
   { key: 'email-templates', label: 'Email Templates', desc: 'Reusable email designs you can send to anyone', icon: Mail, accent: '#f472b6' }, // pink
   { key: 'reviews',         label: 'Reviews & Surveys', desc: 'Feedback surveys for web, email and on-site kiosks — with per-survey analytics', icon: Star, accent: '#c9a84c' }, // gold
-  { key: 'content-planner', label: 'AI Content Planner', desc: 'Generate and manage social media content with AI', icon: Sparkles, accent: '#8b5cf6' }, // purple
+  { key: 'content', label: 'HexaTech Content', desc: 'Plan and write your social posts with AI, in their own workspace', icon: PenLine, accent: '#8b5cf6', to: '/content' }, // purple
 ]
 
 const fallback = <div className="text-center text-t-muted py-8 text-sm">Loading…</div>
@@ -69,8 +72,16 @@ export function MarketingHub() {
   }
 
   const [homeSearch, setHomeSearch] = useState('')
+  const navigate = useNavigate()
+  // HexaTech Content only where the organisation has it (the menu's rule; Layout keeps the user fresh from /auth/me).
+  const hasContent = showsWorkspaceLink(useAuthStore(s => s.user), 'content')
+  const tiles = TILES.filter(td => td.key !== 'content' || hasContent)
 
-  const tile = TILES.find(td => td.key === active)
+  // The old planner tab now lives in its own workspace (spec §6.9): old bookmarks land there — or on the hub's home
+  // where the organisation does not have it.
+  if (searchParams.get('tab') === 'content-planner' && hasContent) return <Navigate to="/content" replace />
+
+  const tile = TILES.find(td => td.key === active && !td.to)
   const onHome = active === 'home' || !tile
 
   return (
@@ -85,8 +96,8 @@ export function MarketingHub() {
       {onHome ? (() => {
         const q = homeSearch.trim().toLowerCase()
         const visibleTiles = q
-          ? TILES.filter(t => t.label.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q))
-          : TILES
+          ? tiles.filter(t => t.label.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q))
+          : tiles
 
         return (
           <div className="space-y-5">
@@ -105,7 +116,7 @@ export function MarketingHub() {
             )}
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 max-w-[1400px]">
-              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => setActive(t.key)} onPreload={() => preloadTab(t.key)} />)}
+              {visibleTiles.map(t => <Tile key={t.key} tile={t} onClick={() => (t.to ? navigate(t.to) : setActive(t.key as TabKey))} onPreload={() => preloadTab(t.key)} />)}
             </div>
           </div>
         )
@@ -131,7 +142,6 @@ export function MarketingHub() {
             {active === 'campaigns'        && <Notifications />}
             {active === 'email-templates'  && <EmailTemplates />}
             {active === 'reviews'          && <Reviews />}
-            {active === 'content-planner'  && <ContentPlanner />}
           </Suspense>
         </div>
       )}

@@ -33,6 +33,8 @@ const PortalClaim  = lazy(() => import('./portal/pages/Claim').then(m => ({ defa
 // someone who opens /appointments (the server refuses its API to an
 // organisation that was switched off).
 const AppointmentsRoutes = lazy(() => import('./appointments/AppointmentsApp').then(m => ({ default: m.AppointmentsApp })))
+// HexaTech Content (spec 2026-10-14): one lazy chunk and its own shell, like Appointments.
+const ContentRoutes = lazy(() => import('./content/ContentApp').then(m => ({ default: m.ContentApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -124,8 +126,8 @@ function AuthedFloatingAiChat() {
   const { token, user } = useAuthStore()
   const { hasFeature } = useSubscription()
   const { pathname } = useLocation()
-  // The workspace is a focused product: the full admin's copilot stays out.
-  if (pathname.startsWith('/appointments')) return null
+  // A workspace is a focused product: the full admin's copilot stays out.
+  if (/^\/(appointments|content)(\/|$)/.test(pathname)) return null
   if (!token) return null
   // Never in the member portal. This is the staff CRM copilot with 35+
   // admin tools behind it; a loyalty member has no business seeing the
@@ -267,6 +269,8 @@ export default function App() {
 
           {/* Appointments workspace — same login, a second staff shell. */}
           <Route path="/appointments/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AppointmentsRoutes /></Suspense></ChunkErrorBoundary>} />
+          {/* HexaTech Content — same login, a third staff shell. */}
+          <Route path="/content/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><ContentRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />

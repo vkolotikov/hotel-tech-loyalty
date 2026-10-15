@@ -52,7 +52,7 @@ const ACCENT_MAP: Record<string, string> = {
   ai:           '#c084fc', // purple
   marketing:    '#f97316', // orange
   reviews:      '#fbbf24',
-  'content-planner': '#8b5cf6', // purple — matches the Marketing hub tile
+  'content': '#8b5cf6', // purple — HexaTech Content
   analytics:    '#22d3ee', // cyan
   notifications:'#f97316',
   settings:     '#9ca3af',

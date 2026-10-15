@@ -8,7 +8,7 @@
  * `toISOString()` moved every date one day back east of UTC. Everything
  * here reads the wall clock from the text itself and does its calendar
  * arithmetic on UTC dates, which no zone moves. The appointments workspace
- * keeps the same rule (appointments/lib/wallClock.ts).
+ * keeps the same rule (workspace/lib/wallClock.ts).
  */
 
 /** 'YYYY-MM-DD' */

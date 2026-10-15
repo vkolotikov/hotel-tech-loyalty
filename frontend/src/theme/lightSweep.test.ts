@@ -119,10 +119,6 @@ export const CONVERTED_FILES: string[] = [
   'components/SurveyDesignPanel.tsx',
   'components/ChatGptConnectionsPanel.tsx',
   'components/chatbot/ChatbotWizard.tsx',
-  'components/ContentPlanner/Dashboard.tsx',
-  'components/ContentPlanner/PostsView.tsx',
-  'components/ContentPlanner/StrategyView.tsx',
-  'components/ContentPlanner/CalendarView.tsx',
   'components/PlannerDaySidebar.tsx',
   'components/PlannerStats.tsx',
   'components/PoolManager.tsx',
@@ -163,7 +159,6 @@ export const EXEMPT_FILES: Record<string, string> = {
   'lib/bookingBars.ts': 'Booking bar fill colours (data); the bar text goes through onColor (barTextFor).',
   'lib/emailBuilder.ts': "E-mail HTML for the recipient's inbox and its iframe preview, not the admin.",
   'lib/plannerMeta.ts': 'Planner group and channel colours (data) used as fills; chips draw text over them through onColor/ink.',
-  'components/ContentPlanner/lib.ts': 'Content planner platform and status colours (data): fills and tints, text through ink() (VARIABLE_COLOURS guard).',
   'pages/Login.tsx': 'Renders outside the admin shell (no data-shell="admin"): Clean light never applies.',
   'pages/Activate.tsx': 'Renders outside the admin shell (no data-shell="admin"): Clean light never applies.',
   'pages/Setup.tsx': 'Renders instead of the admin Layout before setup is done: Clean light never applies.',
@@ -303,18 +298,6 @@ export const DATA_COLOURS: Record<string, string[]> = {
   'components/SurveyDesignPanel.tsx': [
     '#2563eb', '#38bdf8', '#4f46e5', '#a855f7', '#f97316', '#ec4899', '#047857', '#84cc16', '#0f172a', '#334155', '#334155', '#64748b', '#334155', '#64748b', '#ffffff', '#ffffff', '#2563eb',
   ],
-  'components/ContentPlanner/Dashboard.tsx': [
-    '#8b5cf6', '#60a5fa', '#10b981', '#22c55e', '#9ca3af', '#9ca3af', 'rgba(139,92,246,0.15)', 'rgba(156,163,175,0.15)',
-  ],
-  'components/ContentPlanner/PostsView.tsx': [
-    '#9ca3af', '#9ca3af', '#34d399', '#fbbf24', '#f87171', '#0b0b0e', '#9ca3af', '#34d399', '#f87171', '#fbbf24', '#34d399', '#fbbf24', '#f87171', 'rgba(156,163,175,0.15)', 'rgba(52,211,153,0.15)', 'rgba(248,113,113,0.15)', 'rgba(251,191,36,0.15)',
-  ],
-  'components/ContentPlanner/StrategyView.tsx': [
-    '#9ca3af', '#9ca3af', '#9ca3af', '#6b7280',
-  ],
-  'components/ContentPlanner/CalendarView.tsx': [
-    '#9ca3af', '#9ca3af', '#9ca3af', '#9ca3af', 'rgba(156,163,175,0.15)', 'rgba(156,163,175,0.15)',
-  ],
   'components/PlannerDaySidebar.tsx': [
     '#22c55e', '#3b82f6', '#ef4444', '#9ca3af', '#1f2937',
   ],
@@ -389,9 +372,6 @@ export const DATA_COLOURS: Record<string, string[]> = {
   // Not colours: "Inquiry #123" and "e.g. #7c3aed" in hint text.
   'components/FieldManagerPanel.tsx': [
     '#123',
-  ],
-  'components/ContentPlanner/SetupWizard.tsx': [
-    '#7c3aed',
   ],
   // The Apple Wallet pass's own colours (form defaults and a hint), not admin colours.
   'pages/WalletConfig.tsx': [

@@ -587,60 +587,6 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('email-campaigns/{id}/test',       [\App\Http\Controllers\Api\V1\Admin\EmailCampaignController::class, 'test']);
             });
 
-            // ─── AI Content Planner ────────────────────────────────────────────
-            // Social media + content generation using existing FAQ/KB knowledge.
-            // Setup wizard, strategy generation, calendar, posts, campaigns.
-            // Profile + audiences + channels + brand voice CRUD.
-            Route::prefix('content-planner')->group(function () {
-                // Profile setup & management
-                Route::get('profile',                           [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'show']);
-                Route::post('profile',                          [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'store']);
-                Route::get('profile/readiness',                 [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'readiness']);
-                Route::post('profile/quick-setup',              [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'quickSetup']);
-                Route::put('profile/{id}',                      [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'update']);
-                Route::post('profile/{id}/refresh-knowledge',   [\App\Http\Controllers\Api\V1\Admin\ContentPlannerProfileController::class, 'refreshKnowledge']);
-
-                // Target audiences
-                Route::get('audiences',                         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerAudienceController::class, 'index']);
-                Route::post('audiences',                        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerAudienceController::class, 'store']);
-                Route::get('audiences/{id}',                    [\App\Http\Controllers\Api\V1\Admin\ContentPlannerAudienceController::class, 'show']);
-                Route::put('audiences/{id}',                    [\App\Http\Controllers\Api\V1\Admin\ContentPlannerAudienceController::class, 'update']);
-                Route::delete('audiences/{id}',                 [\App\Http\Controllers\Api\V1\Admin\ContentPlannerAudienceController::class, 'destroy']);
-
-                // Social channels
-                Route::get('channels',                          [\App\Http\Controllers\Api\V1\Admin\ContentPlannerChannelController::class, 'index']);
-                Route::post('channels',                         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerChannelController::class, 'store']);
-                Route::get('channels/{id}',                     [\App\Http\Controllers\Api\V1\Admin\ContentPlannerChannelController::class, 'show']);
-                Route::put('channels/{id}',                     [\App\Http\Controllers\Api\V1\Admin\ContentPlannerChannelController::class, 'update']);
-                Route::delete('channels/{id}',                  [\App\Http\Controllers\Api\V1\Admin\ContentPlannerChannelController::class, 'destroy']);
-
-                // Strategies (AI-generated)
-                Route::get('strategies',                        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'index']);
-                Route::post('strategies/generate',              [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'generate']);
-                Route::get('strategies/{id}',                   [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'show']);
-                Route::put('strategies/{id}',                   [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'update']);
-                Route::post('strategies/{id}/set-active',       [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'setActive']);
-                Route::delete('strategies/{id}',                [\App\Http\Controllers\Api\V1\Admin\ContentPlannerStrategyController::class, 'destroy']);
-
-                // Calendar generation (AI fills empty date+platform slots)
-                Route::post('calendar/generate',                [\App\Http\Controllers\Api\V1\Admin\ContentPlannerCalendarController::class, 'generate']);
-
-                // Posts (AI-generated content)
-                Route::get('posts',                             [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'index']);
-                Route::post('posts',                            [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'store']);
-                Route::get('posts/{id}',                        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'show']);
-                Route::put('posts/{id}',                        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'update']);
-                Route::post('posts/{id}/generate-copy',         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateCopy']);
-                Route::post('posts/{id}/generate-alternative',  [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateAlternative']);
-                Route::post('posts/{id}/visual-brief',          [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'visualBrief']);
-                Route::post('posts/{id}/generate-image',        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'generateImage']);
-                Route::post('posts/{id}/quality-check',         [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'qualityCheck']);
-                Route::post('posts/{id}/mark-ready',            [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'markReady']);
-                Route::post('posts/{id}/mark-published',        [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'markPublished']);
-                Route::post('posts/{id}/duplicate',             [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'duplicate']);
-                Route::delete('posts/{id}',                     [\App\Http\Controllers\Api\V1\Admin\ContentPlannerPostController::class, 'destroy']);
-            });
-
             // Member segments — saved criteria sets + campaign send
             Route::get('segments',                [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'index']);
             Route::post('segments',               [\App\Http\Controllers\Api\V1\Admin\SegmentAdminController::class, 'store']);
@@ -1321,6 +1267,51 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('setup/team/{id}/time-off', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'addTimeOff'])->whereNumber('id');
                 Route::delete('setup/team/{id}/time-off/{entryId}', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupTeamController::class, 'removeTimeOff'])->whereNumber('id')->whereNumber('entryId');
                 Route::patch('setup/settings', [\App\Http\Controllers\Api\V1\Admin\Appointments\SetupSettingsController::class, 'update']);
+            });
+
+            // ─── HexaTech Content workspace ─────────────────────────────────
+            // The AI Content Planner as its own workspace beside the full admin
+            // (spec 2026-10-14). Every organisation has it unless an operator
+            // switched it off (`php artisan workspace:content <id> --off`);
+            // `workspace:content` then answers 403, and `content.brand` pins
+            // every call to exactly one brand.
+            Route::prefix('content')->middleware(['workspace:content', 'content.brand'])->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
+                Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
+                Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'search']);
+                Route::get('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'index']);
+                Route::post('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'store']);
+                Route::get('posts/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'show'])->whereNumber('id');
+                Route::put('posts/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'update'])->whereNumber('id');
+                Route::delete('posts/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'destroy'])->whereNumber('id');
+                Route::post('posts/{id}/move', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'move'])->whereNumber('id');
+                Route::post('posts/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'duplicate'])->whereNumber('id');
+                Route::post('posts/{id}/mark-ready', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markReady'])->whereNumber('id');
+                Route::post('posts/{id}/mark-published', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markPublished'])->whereNumber('id');
+                Route::post('posts/{id}/write', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'write'])->whereNumber('id');
+                Route::post('posts/{id}/rewrite', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'rewrite'])->whereNumber('id');
+                Route::post('posts/{id}/quality', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'quality'])->whereNumber('id');
+                Route::post('posts/{id}/visual-brief', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'visualBrief'])->whereNumber('id');
+                Route::post('posts/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'image'])->whereNumber('id');
+                Route::post('slots/fill', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'fill']);
+                Route::post('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'generate']);
+                Route::get('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'index']);
+                Route::post('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'store']);
+                Route::get('strategies/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'show'])->whereNumber('id');
+                Route::post('strategies/{id}/activate', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'activate'])->whereNumber('id');
+                Route::post('strategies/{id}/archive', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'archive'])->whereNumber('id');
+                Route::get('brand', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'show']);
+                Route::put('brand/profile', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'saveProfile']);
+                Route::put('brand/voice', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'saveVoice']);
+                Route::post('brand/audiences', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'storeAudience']);
+                Route::put('brand/audiences/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'updateAudience'])->whereNumber('id');
+                Route::delete('brand/audiences/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'destroyAudience'])->whereNumber('id');
+                Route::post('brand/channels', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'storeChannel']);
+                Route::put('brand/channels/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'updateChannel'])->whereNumber('id');
+                Route::delete('brand/channels/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'destroyChannel'])->whereNumber('id');
+                Route::post('brand/quick-setup', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'quickSetup']);
+                Route::post('brand/setup', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'finishSetup']);
+                Route::post('brand/refresh-knowledge', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'refreshKnowledge']);
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────

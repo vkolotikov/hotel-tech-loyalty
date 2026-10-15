@@ -44,10 +44,11 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'portal'),
   path.join(SRC_DIR, 'appointments'),
   path.join(SRC_DIR, 'workspace'),
+  path.join(SRC_DIR, 'content'),
   path.join(SRC_DIR, 'components/OpenInAppointments.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
@@ -93,7 +94,10 @@ function readLocale(locale: string): unknown {
   // The shared workspace core registers its bundle under `workspace` the same way (src/workspace/i18n/index.ts).
   const workspaceFile = path.join(SRC_DIR, 'workspace/i18n', `workspace.${locale}.json`)
   const workspace = fs.existsSync(workspaceFile) ? JSON.parse(fs.readFileSync(workspaceFile, 'utf8')) : {}
-  return { ...common, portal, appointments, workspace }
+  // HexaTech Content registers its bundle under `content` the same way (src/content/i18n/index.ts).
+  const contentFile = path.join(SRC_DIR, 'content/i18n', `content.${locale}.json`)
+  const content = fs.existsSync(contentFile) ? JSON.parse(fs.readFileSync(contentFile, 'utf8')) : {}
+  return { ...common, portal, appointments, workspace, content }
 }
 
 describe('locale completeness — landing pages + reviews', () => {

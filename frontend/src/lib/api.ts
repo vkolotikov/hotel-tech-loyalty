@@ -1,5 +1,6 @@
 import axios from 'axios'
-import { loginPathAfterExpiry, withAppointmentsOnly } from '../appointments/lib/landing'
+import { withAppointmentsOnly } from '../appointments/lib/landing'
+import { loginPathAfterExpiry } from '../workspace/lib/landing'
 import { ACCESS_OFF_LOGIN, refusalOf } from './accessOff'
 
 const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
@@ -79,7 +80,7 @@ api.interceptors.response.use(
         // Dynamic import — avoids the api.ts ↔ logout.ts ↔ authStore.ts
         // ↔ queryClient.ts circular-import chain at module-load time.
         // The 401 path is rare and async, so a dynamic import is cheap.
-        // From the appointments workspace, signing in again returns to the same page.
+        // From a workspace page, signing in again returns to the same page.
         import('./logout').then(({ logoutAndRedirect }) => {
           void logoutAndRedirect(loginPathAfterExpiry(window.location.pathname, window.location.search))
         })

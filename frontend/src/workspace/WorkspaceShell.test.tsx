@@ -22,11 +22,11 @@ const nav: WorkspaceNavItem[] = [
 ]
 const look = (rail: 'full' | 'slim' = 'full'): LiveLook => ({ theme: 'light', rail, resolved: 'light', setTheme: () => {}, setRail: () => {} })
 
-function render({ rail = 'full', fullAdmin = '/marketing' }: { rail?: 'full' | 'slim'; fullAdmin?: string | null } = {}) {
+function render({ rail = 'full', fullAdmin = '/marketing', menuFits = false }: { rail?: 'full' | 'slim'; fullAdmin?: string | null; menuFits?: boolean } = {}) {
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={['/content']}>
       <WorkspaceShell workspace="content" look={look(rail)} accent={accentTokens('#c9a84c', 'light')} initial="L"
-        organization="Lumière Salon" product="HexaTech Content" person="Vitalij K" nav={nav} fullAdmin={fullAdmin}
+        organization="Lumière Salon" product="HexaTech Content" person="Vitalij K" nav={nav} fullAdmin={fullAdmin} menuFits={menuFits}
         header={<p>the workspace header</p>} overlays={<p>an overlay</p>}>
         <main>page body</main>
       </WorkspaceShell>
@@ -80,5 +80,16 @@ describe('WorkspaceShell', () => {
   it('marks <html> with the workspace\'s name before the first paint', () => {
     const source = readFileSync(new URL('./WorkspaceShell.tsx', import.meta.url), 'utf8')
     expect(source).toContain('useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])')
+  })
+
+  // Found by eyes on a phone in Russian: "Светлая · Тёмная · Авто" ran past the phone menu's fixed 14rem.
+  // Opt-in: Appointments keeps its fixed 14rem until its own release (its pixels are pinned in Content's).
+  it('sizes the phone menu to what it holds (at least 14rem, never past the screen) where asked, else keeps 14rem', () => {
+    expect(render().match(/<summary[\s\S]*?<\/summary><div class="([^"]*)"/)?.[1].split(' ')).toContain('w-56')
+    const menu = render({ menuFits: true }).match(/<summary[\s\S]*?<\/summary><div class="([^"]*)"/)?.[1] ?? ''
+    expect(menu).toContain('w-max')
+    expect(menu).toContain('min-w-56')
+    expect(menu).toContain('max-w-[calc(100vw-2rem)]')
+    expect(menu.split(' ')).not.toContain('w-56')
   })
 })

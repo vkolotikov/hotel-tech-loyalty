@@ -1,7 +1,7 @@
 /**
  * Fitting a display figure to its tile (the Today strip). The tile is an
  * inline-size container; the figure's size is
- * `clamp(18px, var(--a-fit) × 1cqi, 30px)` (appointments.css, [data-fit]),
+ * `clamp(18px, var(--a-fit) × 1cqi, 30px)` (workspace.css, [data-fit]),
  * and `--a-fit` is worked out here from the figure's own width in ems, measured
  * once per value: the browser then follows the tile's width by itself. A
  * width counted from the characters would not do: in the display face a "1" is

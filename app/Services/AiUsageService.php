@@ -79,6 +79,19 @@ class AiUsageService
     ];
 
     /**
+     * US cents per generated image, by model and size: OpenAI's published
+     * prices at the quality ImageGenerationService asks for — gpt-image-1 at
+     * "high" (1024×1024 $0.167, 1024×1536 and 1536×1024 $0.25), dall-e-3 at
+     * "hd" (1024×1024 $0.08, 1024×1792 and 1792×1024 $0.12) — rounded up to a
+     * whole cent. A size not listed costs the model's largest; a model not
+     * listed is logged at 0 with a note, like an unknown chat model.
+     */
+    public const IMAGE_PRICING = [
+        'gpt-image-1' => ['1024x1024' => 17, '1024x1536' => 25, '1536x1024' => 25],
+        'dall-e-3'    => ['1024x1024' => 8, '1024x1792' => 12, '1792x1024' => 12],
+    ];
+
+    /**
      * Record a single AI call. Computes cost_cents from MODEL_PRICING.
      * Safe to call from inside a try/catch — never throws on missing
      * pricing data, just logs and stores cost=0.
@@ -125,6 +138,36 @@ class AiUsageService
                 'model'  => $model,
                 'error'  => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Record one generated image (images are priced per picture, not per
+     * token). Safe to call from inside a try/catch — never throws.
+     */
+    public function recordImage(int $orgId, string $model, string $size, string $feature): void
+    {
+        $prices = self::IMAGE_PRICING[$model] ?? null;
+        if ($prices === null) {
+            Log::info('AI usage: unknown image pricing (cost recorded as 0)', ['model' => $model]);
+        }
+
+        try {
+            AiUsageLog::create([
+                'organization_id' => $orgId,
+                'brand_id'        => app()->bound('current_brand_id') ? app('current_brand_id') : null,
+                'user_id'         => auth()->id(),
+                'model'           => $model,
+                'kind'            => 'image',
+                'feature'         => mb_substr($feature, 0, 60),
+                'input_tokens'    => 0,
+                'output_tokens'   => 0,
+                'cost_cents'      => $prices === null ? 0 : ($prices[$size] ?? max($prices)),
+            ]);
+
+            Cache::forget("ai_usage:month:{$orgId}:" . now()->format('Y-m'));
+        } catch (\Throwable $e) {
+            Log::warning('AI usage log write failed', ['org_id' => $orgId, 'model' => $model, 'error' => $e->getMessage()]);
         }
     }
 

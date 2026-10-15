@@ -1,0 +1,84 @@
+/*
+ * HexaTech Content's own rules. The Atelier fonts, tokens and the rules every
+ * workspace shares live in src/workspace/theme/workspace.css; this file adds
+ * what only Content draws: each platform's colour and the ink on it, and each
+ * post status's tone. Every rule is scoped under [data-content], which sits
+ * beside [data-workspace] on Content's root. Values are RGB triplets, read as
+ * rgb(var(--…)) like the Atelier tokens (contentCss.test.ts checks them).
+ */
+
+[data-content] {
+  /* The dark ink on a platform fill white does not read on (owner, 2026-10-09: white while it reads 3:1, else ink). */
+  --c-ink: 20 24 28;
+  /* Post statuses: a tone for the dot, and for text over a 12 % tint of itself. */
+  --c-st-idea: 88 95 107;
+  --c-st-draft: 44 70 108;
+  --c-st-review: 138 80 0;
+  --c-st-visual: 79 58 176;
+  --c-st-approved: 13 94 110;
+  --c-st-ready: 18 100 58;
+  --c-st-published: 47 84 61;
+  --c-st-skipped: 105 95 85;
+  --c-st-archived: 88 95 107;
+}
+
+[data-content][data-theme="dark"] {
+  --c-st-idea: 163 173 184;
+  --c-st-draft: 169 193 227;
+  --c-st-review: 240 179 90;
+  --c-st-visual: 179 166 255;
+  --c-st-approved: 94 200 214;
+  --c-st-ready: 95 211 154;
+  --c-st-published: 150 210 170;
+  --c-st-skipped: 190 175 160;
+  --c-st-archived: 163 173 184;
+}
+
+/* Each platform's colour, and the ink its mark's letters take. */
+[data-content] [data-platform="linkedin"] { --c-pf: 10 102 194; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="instagram"] { --c-pf: 225 48 108; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="tiktok"] { --c-pf: 0 242 234; --c-pf-ink: 20 24 28; }
+[data-content] [data-platform="facebook"] { --c-pf: 24 119 242; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="x"] { --c-pf: 15 20 25; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="youtube"] { --c-pf: 255 0 0; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="blog"] { --c-pf: 245 158 11; --c-pf-ink: 20 24 28; }
+[data-content] [data-platform="email"] { --c-pf: 139 92 246; --c-pf-ink: 255 255 255; }
+/* X's black would vanish on the dark canvas: a pale mark there, with the dark ink. */
+[data-content][data-theme="dark"] [data-platform="x"] { --c-pf: 231 233 234; --c-pf-ink: 20 24 28; }
+
+[data-content] .c-mark {
+  background-color: rgb(var(--c-pf));
+  color: rgb(var(--c-pf-ink));
+}
+
+/* A card's platform edge: a 3 px line inside its left side. */
+[data-content] .c-edge {
+  box-shadow: inset 3px 0 0 rgb(var(--c-pf));
+}
+
+/* The open post's card: a ring around it, beside its platform edge (Tailwind's ring would be overridden by the edge). */
+[data-content] .c-edge[aria-current="true"] {
+  box-shadow: inset 3px 0 0 rgb(var(--c-pf)), 0 0 0 2px rgb(var(--a-accent-text));
+}
+
+[data-content] [data-status="idea"] { --c-st: var(--c-st-idea); }
+[data-content] [data-status="draft"] { --c-st: var(--c-st-draft); }
+[data-content] [data-status="needs_review"] { --c-st: var(--c-st-review); }
+[data-content] [data-status="needs_visual"] { --c-st: var(--c-st-visual); }
+[data-content] [data-status="approved"] { --c-st: var(--c-st-approved); }
+[data-content] [data-status="ready_to_publish"] { --c-st: var(--c-st-ready); }
+[data-content] [data-status="published"] { --c-st: var(--c-st-published); }
+[data-content] [data-status="skipped"] { --c-st: var(--c-st-skipped); }
+[data-content] [data-status="archived"] { --c-st: var(--c-st-archived); }
+
+[data-content] .c-st-dot {
+  background-color: rgb(var(--c-st));
+}
+
+[data-content] .c-st-text {
+  color: rgb(var(--c-st));
+}
+
+[data-content] .c-st-tint {
+  background-color: rgb(var(--c-st) / 0.12);
+}

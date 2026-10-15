@@ -5,6 +5,7 @@ namespace App\Services\ContentPlanner;
 use App\Models\ContentPlannerAiGeneration;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerVisualBrief;
+use App\Services\AiUsageService;
 use App\Services\ContentVisualBriefService;
 use App\Services\MediaService;
 use GuzzleHttp\Client as GuzzleClient;
@@ -76,6 +77,14 @@ class ImageGenerationService
         }
 
         $this->logGeneration($post, $modelUsed, 'success', null);
+
+        // Images are priced per picture in the shared AI ledger (spec 2026-10-14 §5.2).
+        app(AiUsageService::class)->recordImage(
+            (int) $profile->organization_id,
+            (string) $modelUsed,
+            $this->sizeForModel((string) $modelUsed, $brief->aspect_ratio),
+            AiClient::USAGE_FEATURE,
+        );
 
         return $brief->fresh();
     }

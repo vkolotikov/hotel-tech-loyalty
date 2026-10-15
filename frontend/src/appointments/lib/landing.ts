@@ -1,9 +1,7 @@
-interface LandingUser {
-  user_type?: string
-  workspaces?: { appointments?: { landing?: boolean; has_services?: boolean; only?: boolean } }
-}
+import { showsWorkspaceLink, type LandingUser } from '../../workspace/lib/landing'
 
-const WORKSPACE_PATH = /^\/appointments(\/|\?|$)/
+// The generic half lives in the shared core; its old importers keep importing it from here.
+export { landingPath, loginPath, loginPathAfterExpiry, safeRedirect } from '../../workspace/lib/landing'
 
 /**
  * Whether the full admin shows its way into HexaTech Appointments (the menu
@@ -13,7 +11,7 @@ const WORKSPACE_PATH = /^\/appointments(\/|\?|$)/
  * (owner, 2026-10-06). The menu's own rules still apply on top.
  */
 export function showsAppointmentsLink(user: LandingUser | null | undefined): boolean {
-  return user?.user_type !== 'member' && user?.workspaces?.appointments != null
+  return showsWorkspaceLink(user, 'appointments')
 }
 
 /**
@@ -38,46 +36,9 @@ export function withAppointmentsOnly<T extends LandingUser>(user: T): T {
   }
 }
 
-/**
- * Where a sign-in that ran out sends the user: back to the same workspace
- * page after signing in again; every other page keeps the plain sign-in it
- * always had.
- */
-export function loginPathAfterExpiry(pathname: string, search: string): string {
-  return /^\/appointments(\/|$)/.test(pathname) ? loginPath({ pathname, search }) : '/login'
-}
-
 /** "Full admin" from the workspace opens the same tool there. */
 export function fullAdminPathFor(pathname: string): string {
   if (/^\/appointments\/?$/.test(pathname)) return '/service-bookings/calendar'
   if (/^\/appointments\/clients(\/|$)/.test(pathname)) return '/leads?tab=customers'
   return '/'
-}
-
-/**
- * A `?redirect=` the sign-in screen may follow: a path on this site, or the
- * dashboard. `//host` and `/\host` are other sites to a browser.
- */
-export function safeRedirect(raw: string | null): string {
-  return raw && raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : '/'
-}
-
-/** The sign-in screen, set to bring the visitor back to where they were (see safeRedirect). */
-export function loginPath(location: { pathname: string; search: string }): string {
-  return `/login?redirect=${encodeURIComponent(location.pathname + location.search)}`
-}
-
-/**
- * Where a user goes right after signing in. `fallback` is what the sign-in
- * screen would have used anyway ('/' or an explicit ?redirect=): the
- * workspace is chosen only when nothing else was asked for and the
- * organisation chose it (`--landing`); everyone else lands where they always
- * did. On the Appointments plan the workspace is all there is, whatever
- * the link asked for.
- */
-export function landingPath(user: LandingUser | null | undefined, fallback: string): string {
-  if (user?.user_type === 'member') return '/portal'
-  if (isAppointmentsOnly(user)) return WORKSPACE_PATH.test(fallback) ? fallback : '/appointments'
-  if (fallback === '/' && user?.workspaces?.appointments?.landing === true) return '/appointments'
-  return fallback
 }

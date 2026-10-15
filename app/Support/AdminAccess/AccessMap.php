@@ -19,7 +19,7 @@ use Illuminate\Routing\Route;
  *   (`super_admin` or `manager`) or a capability column of `staff`
  *   (managers, and staff whose flag is set — as the menu shows those pages).
  * - `product` says what an organisation on the Appointments plan may reach:
- *   `appointments` and `account`. The others (`admin`, `booking`, `loyalty`,
+ *   `appointments` and `account`. The others (`content`, `admin`, `booking`, `loyalty`,
  *   `crm`, `chat`) are recorded for the day the existing plans are enforced
  *   too; today they enforce nothing for them.
  *
@@ -36,7 +36,7 @@ final class AccessMap
     /** What an organisation on the Appointments plan may reach (spec §6.2). */
     public const PLAN_PRODUCTS = ['appointments', 'account'];
 
-    public const PRODUCTS = ['appointments', 'account', 'admin', 'booking', 'loyalty', 'crm', 'chat'];
+    public const PRODUCTS = ['appointments', 'content', 'account', 'admin', 'booking', 'loyalty', 'crm', 'chat'];
 
     /** @var array{0: string, 1: string, 2: string} */
     public const FALLBACK = ['manager', 'manager', 'admin'];
@@ -45,6 +45,7 @@ final class AccessMap
     public const MAP = [
         // ── The workspace (Setup keeps its own manager rule, SetupAccess)
         'admin/appointments'                    => ['staff',              'staff',              'appointments'],  // The workspace; Setup keeps its own manager rule (SetupAccess)
+        'admin/content'                         => ['staff',              'staff',              'content'],       // HexaTech Content; brand, strategy and whole-calendar AI keep their own manager rule (ContentAccess)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)
@@ -58,7 +59,6 @@ final class AccessMap
         'admin/audit-logs'                      => ['manager',            'manager',            'admin'],         // Audit log (menu: manager)
         'admin/brands'                          => ['staff',              'manager',            'admin'],         // Brands (menu: manager); the brand switcher reads them
         'admin/business-reporting-key'          => ['can_view_analytics', 'can_view_analytics', 'admin'],         // Reporting key (the route checks can_view_analytics)
-        'admin/content-planner'                 => ['staff',              'staff',              'admin'],         // Content planner (menu: everyone)
         'admin/dashboard'                       => ['staff',              'staff',              'admin'],         // Dashboard (menu: everyone)
         'admin/diag'                            => ['manager',            'manager',            'admin'],         // Operator diagnostics (route already needs super_admin)
         'admin/documentation'                   => ['staff',              'staff',              'admin'],         // Help pages

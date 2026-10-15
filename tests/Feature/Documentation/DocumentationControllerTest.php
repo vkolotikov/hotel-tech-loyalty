@@ -285,4 +285,20 @@ class DocumentationControllerTest extends TestCase
         $this->assertArrayHasKey('error', $body);
         $this->assertSame('Section not found', $body['error']);
     }
+
+    public function test_the_help_describes_hexatech_content_and_not_the_old_planner(): void
+    {
+        $sections = collect(DocumentationController::getAllSections())->keyBy('slug');
+        $this->assertTrue($sections->has('content'));
+        $this->assertFalse($sections->has('content-planner'));
+        $this->assertSame('HexaTech Content', $sections['content']['title']);
+        // The help describes HexaTech Content; only the FAQ names the old planner, to answer where it went.
+        $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE;
+        $this->assertStringNotContainsString('AI Content Planner', json_encode(DocumentationController::getAllSections(), $flags));
+        $this->assertStringContainsString('/content', json_encode($sections['content'], $flags));
+        $faq = collect(DocumentationController::getFaq())->where('category', 'HexaTech Content');
+        $this->assertCount(4, $faq);
+        $this->assertStringContainsString('/content', json_encode($faq->first(), $flags));
+        $this->assertSame(0, collect(DocumentationController::getFaq())->where('category', 'Content Planner')->count());
+    }
 }

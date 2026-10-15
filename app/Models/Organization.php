@@ -260,7 +260,8 @@ class Organization extends Model
 
     // ─── Workspaces ────────────────────────────────────────────
     // Product experiences beside the full admin; the appointments workspace
-    // is the first. Each has a default for an organisation that never set
+    // is the first. HexaTech Content (`/content`, spec 2026-10-14) is the
+    // second; it is not part of the Appointments plan. Each has a default for an organisation that never set
     // anything (WORKSPACE_DEFAULTS): the owner ruled on 2026-10-01 that every
     // organisation has the appointments workspace, signing in to the full
     // admin as before, unless an operator switches it off. What an operator
@@ -268,7 +269,7 @@ class Organization extends Model
     // no billing sync writes (`php artisan workspace:appointments`).
 
     /** Every workspace there is, and whether an organisation that never set anything has it. */
-    public const WORKSPACE_DEFAULTS = ['appointments' => true];
+    public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true];
 
     /** Products an organisation on the Appointments plan holds (Part C spec §6.1). */
     public const APPOINTMENTS_PLAN_PRODUCTS = ['appointments', 'booking'];
@@ -279,6 +280,10 @@ class Organization extends Model
         // The Appointments plan IS the workspace: always on, and where its staff land.
         if ($name === 'appointments' && $this->appointmentsOnly()) {
             return ['enabled' => true, 'landing' => true];
+        }
+        // The Appointments plan holds the appointments workspace and nothing else (spec 2026-10-14 §6.3).
+        if ($name !== 'appointments' && $this->appointmentsOnly()) {
+            return ['enabled' => false, 'landing' => false];
         }
 
         $row = (array) data_get($this->settings ?? [], "workspaces.{$name}", []);
@@ -316,6 +321,14 @@ class Organization extends Model
             $row['only'] = $only;
         }
         data_set($settings, "workspaces.{$name}", $row);
+        // One landing per organisation: landing on this workspace takes it from every other one.
+        if ($row['landing']) {
+            foreach (array_keys(self::WORKSPACE_DEFAULTS) as $other) {
+                if ($other !== $name && data_get($settings, "workspaces.{$other}.landing") === true) {
+                    data_set($settings, "workspaces.{$other}.landing", false);
+                }
+            }
+        }
         $this->forceFill(['settings' => $settings])->save();
     }
 

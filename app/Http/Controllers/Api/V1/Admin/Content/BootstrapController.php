@@ -1,0 +1,61 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin\Content;
+
+use App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController as AppointmentsBootstrap;
+use App\Http\Controllers\Controller;
+use App\Models\Brand;
+use App\Models\Organization;
+use App\Models\Staff;
+use App\Services\AiUsageService;
+use App\Services\Appointments\VenueClock;
+use App\Services\Content\ContentAccess;
+use App\Services\Content\ContentContext;
+use App\Services\Content\ContentRules;
+use App\Services\ContentKnowledgeService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/** What HexaTech Content needs before it can draw anything (spec 2026-10-14 §6.4). */
+class BootstrapController extends Controller
+{
+    public const NAME = 'HexaTech Content';
+
+    public function show(Request $request, ContentKnowledgeService $knowledge, AiUsageService $usage): JsonResponse
+    {
+        /** @var Organization $org */
+        $org = $request->attributes->get('workspace_org');
+        $orgId = (int) $org->id;
+        $user = $request->user();
+        // Tenant-scoped: a user with staff rows in two organisations reports this one's role.
+        $staff = Staff::where('user_id', $user->id)->first();
+        $brands = ContentContext::brandsFor($user);
+        $brandId = ContentContext::brandId();
+        $brand = $brands->firstWhere('id', $brandId) ?? Brand::find($brandId);
+        $profile = ContentContext::profile();
+        $budget = $usage->budgetStatus($org);
+
+        return response()->json([
+            'name'         => self::NAME,
+            'organization' => ['id' => $orgId, 'name' => (string) $org->name, 'industry' => (string) $org->resolved_industry],
+            'brand'        => $brand ? ['id' => (int) $brand->id, 'name' => (string) $brand->name] : null,
+            'brands'       => $brands->map(fn (Brand $b) => ['id' => (int) $b->id, 'name' => (string) $b->name])->values(),
+            'accent'       => AppointmentsBootstrap::accent($orgId),
+            'venue'        => [
+                'timezone'       => VenueClock::zone($orgId),
+                'timezone_named' => VenueClock::isNamed($orgId),
+                'today'          => VenueClock::today($orgId),
+            ],
+            'staff'        => ['name' => (string) $user->name, 'role' => $staff?->role, 'can_manage' => ContentAccess::canManage($user)],
+            'profile'      => $profile ? [
+                'id'              => (int) $profile->id,
+                'setup_completed' => $profile->setup_completed_at !== null,
+                'readiness'       => (int) $knowledge->readinessOf($profile)['overall'],
+            ] : null,
+            'ai'           => ['status' => $budget['status'], 'percent' => $budget['percent']],
+            'platforms'    => ContentRules::PLATFORMS,
+            'statuses'     => ContentRules::STATUSES,
+            'rewrites'     => ContentRules::REWRITES,
+        ]);
+    }
+}

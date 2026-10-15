@@ -90,7 +90,7 @@ export function TodayStrip({ date, now, appointments, masters, pending = false }
   const teamLine = t('appointments.today.team_in', 'In: {{count}}', { count: f.teamIn.length })
     + (f.teamOff.length > 0 ? ` · ${t('appointments.today.team_off', 'Off: {{names}}', { names: f.teamOff.map(m => m.name).join(', ') })}` : '')
 
-  // Four tiles in a row where the strip itself has room for them, else two by two (appointments.css, [data-glance]):
+  // Four tiles in a row where the strip itself has room for them, else two by two (workspace.css, [data-glance]):
   // the screen's width says nothing of the open panel or the side menu.
   return (
     <div className="[container-type:inline-size]">

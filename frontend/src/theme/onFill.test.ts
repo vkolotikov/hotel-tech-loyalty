@@ -88,9 +88,6 @@ const FOREGROUND_WHITE: { file: string; snippet: string }[] = []
 
 /** Elements whose inline background is a translucent tint: there text-white should follow the ink (paper under the tint in light). */
 const INLINE_TINT_WHITE: { file: string; snippet: string }[] = [
-  { file: 'components/ContentPlanner/CalendarView.tsx', snippet: 'text-left text-[11px] text-white hover:brightness-125' },
-  { file: 'components/ContentPlanner/CalendarView.tsx', snippet: 'rounded px-2 py-0.5 text-[11px] font-medium text-white' },
-  { file: 'components/ContentPlanner/PostsView.tsx', snippet: 'rounded px-2 py-1 text-xs font-medium text-white' },
   { file: 'pages/Analytics.tsx', snippet: 'min-w-[44px] px-2 py-1 rounded text-xs font-semibold text-white' },
   { file: 'pages/Settings.tsx', snippet: "btnPrimary + ' text-white border border-emerald-500/30" },
 ]

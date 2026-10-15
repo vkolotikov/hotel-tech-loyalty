@@ -23,7 +23,7 @@ class SignInWorkspacesTest extends TestCase
         $this->setUpAppointments();
 
         // Never switched on or off: on, landing on the full admin.
-        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => true, 'only' => false]]);
+        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false]]);
 
         $this->org->setWorkspace('appointments', true, landing: true);
         $this->me($this->staff)->assertJsonPath('workspaces.appointments.landing', true);
@@ -36,14 +36,16 @@ class SignInWorkspacesTest extends TestCase
         $fresh = $this->otherOrganization();
         $staff = $this->staffUser($fresh);
 
-        $this->me($staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => false, 'only' => false]]);
+        $this->me($staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => false, 'only' => false], 'content' => ['landing' => false]]);
     }
 
-    public function test_an_organisation_switched_off_gets_no_key(): void
+    public function test_an_organisation_with_appointments_switched_off_gets_no_appointments_key(): void
     {
         $this->setUpAppointments(enabled: false);
 
-        $this->assertArrayNotHasKey('workspaces', $this->me($this->staff)->json());
+        $workspaces = $this->me($this->staff)->json('workspaces');
+        $this->assertArrayNotHasKey('appointments', $workspaces);
+        $this->assertSame(['landing' => false], $workspaces['content']);
     }
 
     public function test_the_key_costs_no_extra_read_of_the_organisation(): void
@@ -98,6 +100,35 @@ class SignInWorkspacesTest extends TestCase
 
         $this->org->setWorkspace('appointments', false);
         $answer = $this->postJson('/api/v1/auth/login', ['email' => $this->staff->email, 'password' => 'secret-pass-1'])->assertOk()->json('user');
-        $this->assertArrayNotHasKey('workspaces', $answer);
+        $this->assertArrayNotHasKey('appointments', $answer['workspaces'] ?? []);
+    }
+
+    public function test_staff_are_told_about_content_and_landing_there_takes_the_landing_from_appointments(): void
+    {
+        $this->setUpAppointments();
+        $this->me($this->staff)->assertJsonPath('workspaces.content', ['landing' => false]);
+
+        $this->org->setWorkspace('appointments', true, landing: true);
+        $this->org->fresh()->setWorkspace('content', true, landing: true);
+        $this->me($this->staff)
+            ->assertJsonPath('workspaces.content.landing', true)
+            ->assertJsonPath('workspaces.appointments.landing', false);
+
+        // And back: landing on Appointments takes it from Content.
+        $this->org->fresh()->setWorkspace('appointments', true, landing: true);
+        $this->me($this->staff)
+            ->assertJsonPath('workspaces.appointments.landing', true)
+            ->assertJsonPath('workspaces.content.landing', false);
+    }
+
+    public function test_an_appointments_only_organisation_has_no_content(): void
+    {
+        $this->setUpAppointments();
+        $this->org->setAppointmentsOnly(true);
+
+        $workspaces = $this->me($this->staff)->json('workspaces');
+        $this->assertArrayHasKey('appointments', $workspaces);
+        $this->assertArrayNotHasKey('content', $workspaces);
+        $this->assertSame(['enabled' => false, 'landing' => false], $this->org->fresh()->workspace('content'));
     }
 }

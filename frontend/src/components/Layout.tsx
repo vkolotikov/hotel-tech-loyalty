@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
-  Menu, X, MoreHorizontal, Lock, Link2,
+  Menu, X, MoreHorizontal, Lock, Link2, PenLine,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -42,7 +42,7 @@ import { useTranslation } from 'react-i18next'
 import { useVocabulary } from '../lib/vocabulary'
 import { useIndustryHiddenGroups, useIndustryHiddenItems } from '../lib/industryGating'
 import { IndustryMismatchBanner } from './IndustryMismatchBanner'
-import { showsAppointmentsLink } from '../appointments/lib/landing'
+import { showsWorkspaceLink, type WorkspaceName } from '../workspace/lib/landing'
 import { GLASS_NAV_ACCENT_TEXT } from '../theme/glassTokens'
 import { LIGHT_NAV_ACCENT_TEXT } from '../theme/lightTokens'
 
@@ -66,8 +66,8 @@ interface NavItem {
   product?: string   // required SaaS product slug
   feature?: string   // required SaaS feature key
   altPaths?: string[] // sibling routes that should keep this item highlighted (used for PairTabs siblings)
-  /** The way into a workspace beside the full admin: shown only where `showsAppointmentsLink()` says so. */
-  workspace?: 'appointments'
+  /** The way into a workspace beside the full admin: shown only where `showsWorkspaceLink()` says so. */
+  workspace?: WorkspaceName
 }
 
 interface NavGroup {
@@ -175,7 +175,9 @@ export const navGroups: NavGroup[] = [
       //
       // Legacy paths redirect into the new hubs with ?tab= so
       // bookmarks survive — see App.tsx.
-      { path: '/leads',     labelKey: 'nav.items.leads',     defaultLabel: 'Leads',     icon: FileText, gate: 'all',   altPaths: ['/contacts', '/pipeline', '/customers', '/guests', '/corporate', '/inquiries', '/lead-forms'] },
+      // The way into HexaTech Content (spec 2026-10-14 §6.9): everyone who may open it.
+      { path: '/content',   labelKey: 'nav.items.content_workspace', defaultLabel: 'HexaTech Content', icon: PenLine, gate: 'all', workspace: 'content' },
+      { path: '/leads',    labelKey: 'nav.items.leads',     defaultLabel: 'Leads',     icon: FileText, gate: 'all',   altPaths: ['/contacts', '/pipeline', '/customers', '/guests', '/corporate', '/inquiries', '/lead-forms'] },
       { path: '/deals',     labelKey: 'nav.items.deals',     defaultLabel: 'Deals',     icon: Briefcase, gate: 'all' },
       { path: '/marketing', labelKey: 'nav.items.marketing', defaultLabel: 'Marketing', icon: Bell,     gate: 'admin', altPaths: ['/notifications', '/email-templates', '/reviews'] },
     ],
@@ -615,9 +617,8 @@ export function Layout({ children }: { children: ReactNode }) {
         .filter(item => {
           if (!canAccess(item.gate, staff)) return false
           if (item.product && !hasProduct(item.product)) return false
-          // The way into the appointments workspace: wherever the
-          // organisation has it, services or not (owner, 2026-10-06).
-          if (item.workspace === 'appointments' && !showsAppointmentsLink(liveUser)) return false
+          // The way into a workspace: wherever the organisation has it (Appointments with services or not, owner 2026-10-06).
+          if (item.workspace && !showsWorkspaceLink(liveUser, item.workspace)) return false
           // Phase 4 — per-industry item hide (Deals for beauty/medical,
           // Scan for medical/restaurant). Matches canonical English
           // defaultLabel; vocabulary relabel happens AFTER this filter.
