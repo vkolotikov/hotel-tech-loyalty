@@ -70,6 +70,28 @@ export const ERRORS = {
     ai_failed: 'The AI could not finish. Please try again.',
     unknown: 'The change could not be saved. Please try again.',
   },
+  repeat: {
+    already_repeating: 'This post already repeats.',
+    no_day: 'Give the post a day first: a post repeats from its day.',
+    no_dates: 'There is no day to repeat on before that date.',
+    too_many_copies: 'A post repeats at most 26 times. Choose an earlier end date.',
+    until_too_far: 'A post repeats for at most 12 months after its day.',
+    too_many_ai: 'The AI rewrites at most 12 copies. Choose an earlier end date, or repeat the copies as they are.',
+    ai_budget_used_up: "This month's AI budget is used up. The copies can still repeat without rewording.",
+    not_found: 'This post no longer exists.',
+    invalid: 'Check the repeat: how often, and until when.',
+    unknown: 'The post could not be repeated. Please try again.',
+  },
+  snippet: {
+    manager_only: 'Only an owner or a manager can change hashtags and snippets.',
+    too_many_snippets: 'A brand keeps at most 50 of each. Remove one first.',
+    invalid: 'Give it a name and some text.',
+    not_found: 'This item no longer exists. The page now shows the brand as it is.',
+    no_profile: 'This brand is not set up yet.',
+    ai_budget_used_up: "This month's AI budget is used up.",
+    ai_failed: 'The AI could not suggest hashtags. Please try again.',
+    unknown: 'The change could not be saved. Please try again.',
+  },
 } as const
 
 export type ErrorFamily = keyof typeof ERRORS

@@ -27,6 +27,11 @@ const voice = {
 } as Voice
 
 describe('VoiceSection', () => {
+  // Plan C deferred: after a refused save the keyboard fell to the page; it goes to the first marked field, else Save.
+  it('marks its Save button so a refusal can bring the keyboard back to the form', () => {
+    expect(renderBrand(brandWith(), true, <VoiceSection brand={brandWith()} canEdit startOpen />)).toContain('data-section-save=""')
+  })
+
   it('reads the voice in the reader\'s words', () => {
     const html = renderBrand(brandWith({ voice }), false, <VoiceSection brand={brandWith({ voice })} canEdit={false} />)
     expect(html).toContain('Warm')

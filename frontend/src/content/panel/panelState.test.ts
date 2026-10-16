@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../i18n/content.en.json'
 import type { PostDetail } from '../lib/types'
-import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase } from './panelState'
+import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, withChannels } from './panelState'
 
 describe('fallback words', () => {
   it('name the rewrites and the brief\'s fields in the English bundle\'s words', () => {
@@ -96,5 +96,44 @@ describe('createBody and invalidFields', () => {
   it('marks the form fields a refused save names', () => {
     expect(invalidFields({ hook: ['too long'], 'hashtags.0': ['too long'], updated_at: ['required'] })).toEqual(['hook', 'hashtags'])
     expect(invalidFields(undefined)).toEqual([])
+  })
+})
+
+describe('a new post\'s time', () => {
+  it('starts at the time its day or slot gave, else with none', () => {
+    expect(newForm({ date: '2026-10-09', platform: 'instagram', time: '08:30' }, ['instagram']).scheduled_time).toBe('08:30')
+    expect(newForm({ date: '2026-10-09', platform: 'instagram' }, ['instagram']).scheduled_time).toBe('')
+  })
+
+  it('starts a New post on the brand\'s first channel at that channel\'s usual time when the channels are already known', () => {
+    expect(newForm({ date: '2026-10-09', platform: null }, ['instagram'], ['linkedin'], { linkedin: '08:00' })).toMatchObject({ platform: 'linkedin', scheduled_time: '08:00' })
+    expect(newForm({ date: '2026-10-09', platform: null, time: '10:30' }, ['instagram'], ['linkedin'], { linkedin: '08:00' }).scheduled_time).toBe('10:30')
+  })
+})
+
+// Release check (Plan 3B Task 11): a "+" clicked before the brand's channels arrived started at the suggested 11:00,
+// not the channel's own 08:30. The panel applies a new post's channel and usual time once the channels are known.
+describe('withChannels', () => {
+  const editing = (platform: 'instagram' | 'linkedin', time = '') => {
+    const form = { ...newForm({ date: '2026-10-09', platform }, ['instagram', 'linkedin']), scheduled_time: time }
+    return { base: form, draft: form, post: null }
+  }
+
+  it('gives a new post with no time its platform\'s usual time, and keeps a time it was given', () => {
+    expect(withChannels(editing('instagram'), { date: '2026-10-09', platform: 'instagram' }, ['instagram'], { instagram: '08:30' }).draft.scheduled_time).toBe('08:30')
+    expect(withChannels(editing('instagram', '10:00'), { date: '2026-10-09', platform: 'instagram', time: '10:00' }, ['instagram'], { instagram: '08:30' }).draft.scheduled_time).toBe('10:00')
+  })
+
+  it('moves a new post with no platform to the brand\'s first channel at its usual time', () => {
+    const out = withChannels(editing('instagram'), { date: '2026-10-09', platform: null }, ['linkedin'], { linkedin: '08:00' })
+    expect(out.draft).toMatchObject({ platform: 'linkedin', scheduled_time: '08:00' })
+    expect(out.base).toMatchObject({ platform: 'linkedin', scheduled_time: '08:00' })
+  })
+
+  it('keeps a time the person typed, and answers the same editing when nothing changes', () => {
+    const typed = { ...editing('instagram'), draft: { ...editing('instagram').draft, scheduled_time: '07:15' } }
+    expect(withChannels(typed, { date: '2026-10-09', platform: 'instagram' }, ['instagram'], { instagram: '08:30' }).draft.scheduled_time).toBe('07:15')
+    const settled = editing('instagram', '08:30')
+    expect(withChannels(settled, { date: '2026-10-09', platform: 'instagram' }, ['instagram'], { instagram: '08:30' })).toBe(settled)
   })
 })

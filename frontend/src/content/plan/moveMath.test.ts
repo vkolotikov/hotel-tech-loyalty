@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../../lib/api', () => ({ api: {} }))
 
 import type { PostCard } from '../lib/types'
-import { createMover, dropTargetAt, isDragClick, keyMove, movePost, movedDate, pointerStartsDrag, refetchAfter, touchStartsDrag, undoOf } from './moveMath'
+import { createMover, dropTargetAt, isDragClick, keyMove, leavesRange, movePost, movedDate, pointerStartsDrag, refetchAfter, touchStartsDrag, undoOf } from './moveMath'
 
 const card: PostCard = {
   id: 9, platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: '09:00', status: 'draft',
@@ -109,5 +109,15 @@ describe('createMover', () => {
     // Once it has landed, the next move goes (sent at once; this fake never answers it).
     void mover(moved, '2026-10-09')
     expect(api.movePost).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('leavesRange', () => {
+  // Plan B deferred: Shift+→ on Sunday saved the move but the card left the view and the focus with it.
+  it('tells a keyboard move that leaves the week on screen, so the Plan can follow it', () => {
+    const week = { from: '2026-10-05', to: '2026-10-11' }
+    expect(leavesRange(keyMove('2026-10-11', 'ArrowRight', true) as string, week)).toBe(true)
+    expect(leavesRange(keyMove('2026-10-05', 'ArrowLeft', true) as string, week)).toBe(true)
+    expect(leavesRange(keyMove('2026-10-07', 'ArrowRight', true) as string, week)).toBe(false)
   })
 })

@@ -2,8 +2,8 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 
 /**
- * Content's own colours (spec §6.2): every platform's mark reads (white ink while white reads 3:1 on the fill,
- * else the dark ink — owner, 2026-10-09), and every post status's tone reads 4.5:1 as text over its own 12 % tint
+ * Content's own colours (spec §6.2): every platform's mark reads (white ink while white reads 4.5:1 on the fill,
+ * else the dark ink — owner, 2026-10-15), and every post status's tone reads 4.5:1 as text over its own 12 % tint
  * and on the bare canvas and surface, in Light and in Dark.
  */
 const css = readFileSync(new URL('./content.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
@@ -43,12 +43,12 @@ const THEMES = [
 for (const theme of THEMES) {
   describe(`content colours — ${theme.name}`, () => {
     for (const p of PLATFORMS) {
-      it(`${p}: white ink while white reads 3:1 on its fill, else the dark ink — and the ink reads`, () => {
+      it(`${p}: white ink where white reads 4.5:1 on its fill, else the dark ink — and the ink reads 4.5:1`, () => {
         const v = pf(p, theme.dark)
         expect(v.pf, `--c-pf of ${p}`).toBeDefined()
-        const white = ratio(WHITE, v.pf) >= 3
+        const white = ratio(WHITE, v.pf) >= 4.5
         expect(v['pf-ink']).toEqual(white ? WHITE : theme.own.ink)
-        expect(ratio(v['pf-ink'], v.pf)).toBeGreaterThanOrEqual(white ? 3 : 4.5)
+        expect(ratio(v['pf-ink'], v.pf)).toBeGreaterThanOrEqual(4.5)
       })
     }
     for (const s of STATUSES) {

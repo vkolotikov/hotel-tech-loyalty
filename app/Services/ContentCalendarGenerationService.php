@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerVisualBrief;
+use App\Models\Organization;
+use App\Services\Content\BestTimes;
 use App\Services\ContentPlanner\AiClient;
 use App\Services\ContentPlanner\CalendarGenerationBudget;
 use App\Services\ContentPlanner\CalendarGenerationException;
@@ -72,6 +74,12 @@ class ContentCalendarGenerationService
         }
         if ($channels->isEmpty()) {
             throw new InvalidArgumentException('No active channels to plan for. Activate at least one social channel first.');
+        }
+        // A post the AI gave no time takes its channel's usual time (spec 2026-10-15 §5): its own, else the first suggested.
+        $industry = Organization::find($profile->organization_id)?->resolved_industry;
+        $usualTimes = [];
+        foreach ($channels as $channel) {
+            $usualTimes[(string) $channel->platform] ??= BestTimes::usual($channel->post_time, (string) $channel->platform, $industry);
         }
 
         $activePlatforms = $channels
@@ -247,7 +255,7 @@ class ContentCalendarGenerationService
                         'audience_id' => $this->matchByName($audiences, $this->str($item['audience'] ?? null)),
                         'platform' => mb_substr($platform, 0, 50),
                         'scheduled_date' => $date->toDateString(),
-                        'scheduled_time' => $time,
+                        'scheduled_time' => $time ?? ($usualTimes[$platform] ?? null),
                         'language' => $profile->default_language ?: 'en',
                         'topic' => mb_substr($topic, 0, 255),
                         'hook' => $hook !== null ? mb_substr($hook, 0, 500) : null,

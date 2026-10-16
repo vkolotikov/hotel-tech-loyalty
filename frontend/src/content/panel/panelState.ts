@@ -49,14 +49,15 @@ export function formOf(post: PostDetail): PostForm {
 }
 
 /**
- * A new post: the slot's day and platform, or else the brand's own first
- * channel, or else the first platform HexaTech knows; a draft in the brand's language.
+ * A new post: the day, platform and time it was started with, or else the brand's own first
+ * channel (at its usual time, `times`), or else the first platform HexaTech knows; a draft in the brand's language.
  */
-export function newForm(draft: NewDraft, platforms: readonly Platform[], channels: readonly Platform[] = []): PostForm {
+export function newForm(draft: NewDraft, platforms: readonly Platform[], channels: readonly Platform[] = [], times: Partial<Record<Platform, string>> = {}): PostForm {
+  const platform = draft.platform ?? channels[0] ?? platforms[0] ?? 'instagram'
   return {
-    platform: draft.platform ?? channels[0] ?? platforms[0] ?? 'instagram',
+    platform,
     scheduled_date: draft.date ?? '',
-    scheduled_time: '',
+    scheduled_time: draft.time ?? (draft.platform === null ? times[platform] : undefined) ?? '',
     status: 'draft',
     pillar_id: '',
     audience_id: '',
@@ -107,6 +108,28 @@ export const isDirty = (base: PostForm, draft: PostForm): boolean => Object.keys
 
 /** The form as loaded (`base`), as edited (`draft`), and the post it belongs to (null until a new post is created). */
 export interface Editing { base: PostForm; draft: PostForm; post: PostDetail | null }
+
+/**
+ * A new post once the brand's channels are known (spec 2026-10-15 §4–§5): one started with no platform takes the
+ * brand's first channel; one started with no time takes its platform's usual time. A time it was given, or one the
+ * person typed, stays. The same `editing` comes back when nothing changes (the panel adopts it while rendering).
+ */
+export function withChannels(editing: Editing, started: NewDraft, channels: readonly Platform[], times: Partial<Record<Platform, string>>): Editing {
+  if (editing.post !== null) return editing
+  let base = editing.base
+  let draft = editing.draft
+  const first = channels[0]
+  if (started.platform === null && first && base.platform !== first && draft.platform === base.platform) {
+    base = { ...base, platform: first }
+    draft = { ...draft, platform: first }
+  }
+  const usual = started.time ? undefined : times[draft.platform]
+  if (usual !== undefined && base.scheduled_time !== usual && draft.scheduled_time === base.scheduled_time) {
+    base = { ...base, scheduled_time: usual }
+    draft = { ...draft, scheduled_time: usual }
+  }
+  return base === editing.base && draft === editing.draft ? editing : { ...editing, base, draft }
+}
 
 /**
  * The server's copy of the form (`fresh`) under the person's own edits: each

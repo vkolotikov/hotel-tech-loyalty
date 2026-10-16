@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { contentApi, failureOf, onWorkspaceOff, type ContentApi } from './lib/api'
-import { deviceStorage, loadBootstrap, rememberBrand, storedBrand } from './lib/brand'
+import { deviceStorage, firstBrand, loadBootstrap, rememberBrand } from './lib/brand'
 import { APP_NAME } from './lib/constants'
 import type { Bootstrap } from './lib/types'
 
@@ -37,7 +37,8 @@ export function useBoot(): Bootstrap {
 /** The brand every call works on: the start of every query key after 'content'. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function useBrandId(): number | null {
-  return useBoot().brand?.id ?? null
+  // Null, not a throw, before the bootstrap: the panel's provider reads it while the portal is still loading.
+  return useContext(ContentContext).data?.brand?.id ?? null
 }
 
 /** The calls, for the brand the portal works on. */
@@ -50,7 +51,9 @@ export function useApi(): ContentApi {
 export function ContentProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   // The brand to ask for: this device's last one here, else the full admin's choice, else the person's default (spec §6.7).
-  const [asked, setAsked] = useState<number | null>(() => storedBrand(deviceStorage()))
+  // A shared post link names its brand; otherwise this device's own choice (a brand the person may not use falls back
+  // to their default in loadBootstrap, and the post then reads "not found").
+  const [asked, setAsked] = useState<number | null>(() => firstBrand(typeof window === 'undefined' ? '' : window.location.search, deviceStorage()))
   const query = useQuery({
     queryKey: ['content', 'bootstrap', asked],
     queryFn: () => loadBootstrap(asked, deviceStorage(), brand => contentApi(brand).bootstrap()),

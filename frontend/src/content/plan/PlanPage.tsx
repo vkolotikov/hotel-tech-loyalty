@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { useMedia } from '../../workspace/lib/useMedia'
 import { formatDate, isDateKey } from '../../workspace/lib/wallClock'
@@ -18,8 +18,11 @@ import { DragGhost } from './DragGhost'
 import { GenerateDialog } from './GenerateDialog'
 import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
-import { createMover, keyMove, movedDate, undoOf, type DropTarget } from './moveMath'
-import { filtered, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
+import { createMover, keyMove, leavesRange, movedDate, undoOf, type DropTarget } from './moveMath'
+import { filtered, keepWithinBrand, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
+import { canAdd, newPostDraft, usualTimes } from './addMath'
+import { GoalsLine } from './GoalsLine'
+import { showGoals } from './goalsMath'
 import { MOVE_HINT_ID } from './PostCardView'
 import { loadPrefs, savePrefs, type PlanPrefs } from './prefs'
 import { Toolbar } from './Toolbar'
@@ -44,6 +47,9 @@ export function PlanPage() {
   const boot = useBoot()
   const api = useApi()
   const brand = useBrandId()
+  // The brand on screen when an answer comes back (a Fill takes a while; the brand may change meanwhile).
+  const brandNow = useRef(brand)
+  useEffect(() => { brandNow.current = brand }, [brand])
   const panel = usePanel()
   const queryClient = useQueryClient()
   const wide = useMedia('(min-width: 1024px)')
@@ -83,9 +89,31 @@ export function PlanPage() {
     queryFn: () => api.plan(range.from, range.to),
     refetchInterval: PLAN_REFRESH_MS,
     refetchOnWindowFocus: true,
-    placeholderData: keepPreviousData,
+    placeholderData: keepWithinBrand(brand),
   })
   const refresh = () => refreshLists(queryClient, brand)
+
+  // The brand's channels (the same read as the panel's): what a new post from a day starts on, and each platform's usual time.
+  const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
+  const channels = useMemo(() => brandInfo.data?.channels ?? [], [brandInfo.data])
+  const industry = boot.organization.industry
+  const times = useMemo(() => usualTimes(channels, industry), [channels, industry])
+  // This week's posting goals and the streak (spec 2026-10-15 §7), read with the plan.
+  const goals = useQuery({ queryKey: ['content', brand, 'goals'], queryFn: api.goals, refetchInterval: PLAN_REFRESH_MS, refetchOnWindowFocus: true })
+
+  // A card moved out of the week by keyboard: once its new week is read, focus it there.
+  const [follow, setFollow] = useState<number | null>(null)
+  const [focusCard, setFocusCard] = useState<{ id: number; seq: number } | null>(null)
+  const followed = follow !== null && !query.isPlaceholderData && (query.data?.posts ?? []).some(p => p.id === follow)
+  if (followed) {
+    setFocusCard({ id: follow, seq: (focusCard?.seq ?? 0) + 1 })
+    setFollow(null)
+  }
+  useEffect(() => {
+    if (!focusCard) return
+    const frame = window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`[data-post="${focusCard.id}"]`)?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [focusCard])
 
   // This page's shortcuts (spec §4.7): this week, back and forward, the views. The shell hears Find, ? and N.
   useEffect(() => onShortcuts(window, document, (hit, e) => {
@@ -154,16 +182,21 @@ export function PlanPage() {
       setNote({ tone: 'danger', text: t(key, text), undo: null })
       return
     }
+    // Past Sunday or Monday: show the card's new week and focus it there once it is read.
+    if (leavesRange(to, range)) { setDate(to); setFollow(post.id) }
     void move(post, to, true, true)
   }
 
   // The click a drag's release fires is not an opening.
   const openPost = (id: number) => { if (!drag.consumeClick()) panel.open(id) }
-  const write = (slot: Slot) => { panel.openNew({ date: slot.date, platform: slot.platform }) }
+  // The usual time only once the brand's channels are read; before that the panel gives it when they arrive.
+  const write = (slot: Slot) => { panel.openNew({ date: slot.date, platform: slot.platform, time: brandInfo.data ? times[slot.platform] ?? null : undefined }) }
   const fill = async (slot: Slot) => {
     setFilling(slotKey(slot))
+    const madeFor = brand
     try {
       const { post } = await api.fill(slot.date, slot.platform)
+      if (!opensAfterFill(madeFor, brandNow.current)) return // the brand changed while the AI wrote: this post belongs to the other one
       queryClient.setQueryData(['content', brand, 'post', post.id], post)
       await refresh()
       panel.open(post.id)
@@ -174,6 +207,14 @@ export function PlanPage() {
     } finally {
       setFilling(null)
     }
+  }
+
+  // A day's empty space or its "+" (spec 2026-10-15 §4). The click a drag's release fires over a day's empty space is
+  // not one (Review Focus 1): the same guard as opening a card. The plan's own slots, before the platform filter.
+  const addOn = (day: DateKey) => {
+    if (drag.consumeClick() || !canAdd(day, today)) return
+    const draft = newPostDraft(day, data?.slots ?? [], channels, industry)
+    panel.openNew(brandInfo.data ? draft : { ...draft, time: undefined })
   }
 
   const dropTarget = drag.state?.target ?? null
@@ -190,7 +231,10 @@ export function PlanPage() {
         onGenerate={() => setGenerating(true)} aiPaused={aiPaused} />
 
       {view !== 'month' && (
-        <div className="px-4 pb-3 lg:px-6"><WeekStrip figures={data?.figures} pending={!data || query.isPlaceholderData} /></div>
+        <div className="space-y-3 px-4 pb-3 lg:px-6">
+          <WeekStrip figures={data?.figures} pending={!data || query.isPlaceholderData} />
+          {showGoals(goals.data, range, today) && <GoalsLine goals={goals.data} />}
+        </div>
       )}
 
       {query.isError && (
@@ -217,20 +261,20 @@ export function PlanPage() {
         <div className="min-h-[24rem] min-w-0 flex-1 overflow-auto rounded-xl border border-a-border bg-a-surface shadow-a-sm">
           {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view === 'week' && (
-            <WeekGrid plans={plans} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} fillingKey={filling} aiPaused={aiPaused}
+            <WeekGrid plans={plans} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} fillingKey={filling} aiPaused={aiPaused} times={times} onAdd={addOn}
               {...handlers} onCardPointerDown={drag.begin} />
           )}
           {!query.isLoading && view === 'month' && (
-            <MonthGrid plans={plans} date={date} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate}
+            <MonthGrid plans={plans} date={date} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} onAdd={addOn}
               onDay={(day) => { setDate(day); setPrefs({ ...prefs, view: 'week' }) }}
               onOpen={openPost} onCardPointerDown={drag.begin} onCardKeyDown={onCardKeyDown} />
           )}
           {!query.isLoading && view === 'list' && (
-            <ListView plans={plans} today={today} locale={locale} selectedId={selectedId} fillingKey={filling} aiPaused={aiPaused} {...handlers} />
+            <ListView plans={plans} today={today} locale={locale} selectedId={selectedId} fillingKey={filling} aiPaused={aiPaused} {...handlers} times={times} onAdd={addOn} />
           )}
         </div>
         <div className="xl:w-64 xl:shrink-0">
-          <Tray posts={data?.unscheduled ?? []} active={dropTarget?.kind === 'tray'} selectedId={selectedId}
+          <Tray posts={data?.unscheduled ?? []} total={data?.unscheduled_total} active={dropTarget?.kind === 'tray'} selectedId={selectedId}
             onOpen={openPost} onCardPointerDown={wide ? drag.begin : undefined} onCardKeyDown={onCardKeyDown} />
         </div>
       </div>

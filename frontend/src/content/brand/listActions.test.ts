@@ -4,7 +4,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 
 import type { Audience, BrandPayload, Channel } from '../lib/types'
 import { changedFields } from './brandForms'
-import { audienceForm, channelFields, channelForm, removeAudience, removeChannel, saveAudience, saveChannel } from './listActions'
+import { asksBeforeRemoving, audienceForm, channelFields, channelForm, removeAudience, removeChannel, saveAudience, saveChannel } from './listActions'
 
 const payload = { profile: null, audiences: [], channels: [], voice: null, readiness: null } as BrandPayload
 const inUse = { response: { status: 409, data: { error: 'audience_in_use', message: 'x', posts: 4 } } }
@@ -89,5 +89,23 @@ describe('saving audiences and channels', () => {
     const channel = { id: 6, platform: 'linkedin', label: 'LinkedIn', active: true, frequency: null, posts_per_week: null } as Channel
     expect(changedFields(channelFields(channelForm(channel, 'linkedin')), channelFields(channelForm(channel, 'linkedin')))).toEqual({})
     expect(channelForm(channel, 'linkedin').days).toEqual({ mon: false, tue: false, wed: false, thu: false, fri: false, sat: false, sun: false })
+  })
+})
+
+describe('asksBeforeRemoving', () => {
+  // Plan C deferred: removing an audience posts use asked twice ("Remove?" then "N posts use it — remove anyway?").
+  it('asks its own question only for an audience no post uses; the server\'s in-use answer brings the other one', () => {
+    expect(asksBeforeRemoving({ posts_count: 0 })).toBe(true)
+    expect(asksBeforeRemoving({ posts_count: 3 })).toBe(false)
+  })
+})
+
+describe('a channel\'s usual time', () => {
+  it('keeps it in the form, sends it, and sends an emptied one as none', () => {
+    const c = { id: 7, platform: 'instagram', label: 'Insta', active: true, frequency: null, post_time: '08:30' } as unknown as Channel
+    expect(channelForm(c, 'instagram').post_time).toBe('08:30')
+    expect(channelFields(channelForm(c, 'instagram')).post_time).toBe('08:30')
+    expect(channelFields({ ...channelForm(c, 'instagram'), post_time: '' }).post_time).toBeNull()
+    expect(channelForm(null, 'instagram').post_time).toBe('')
   })
 })

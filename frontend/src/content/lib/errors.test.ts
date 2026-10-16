@@ -16,3 +16,12 @@ describe('refusal words', () => {
     expect(errorKey('save', 'toString')).toEqual(['content.save.error.unknown', ERRORS.save.unknown])
   })
 })
+
+describe('release 3 refusals', () => {
+  it('words a repeat and a snippet refusal in the portal\'s own sentence', () => {
+    expect(errorKey('repeat', 'already_repeating')).toEqual(['content.repeat.error.already_repeating', 'This post already repeats.'])
+    expect(errorKey('repeat', 'too_many_copies')[0]).toBe('content.repeat.error.too_many_copies')
+    expect(errorKey('snippet', 'too_many_snippets')).toEqual(['content.snippet.error.too_many_snippets', 'A brand keeps at most 50 of each. Remove one first.'])
+    expect(errorKey('snippet', 'whatever')[0]).toBe('content.snippet.error.unknown')
+  })
+})

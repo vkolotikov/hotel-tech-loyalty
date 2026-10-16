@@ -79,6 +79,15 @@ trait SetsUpContentSchema
         if (!Schema::hasColumn('content_planner_visual_briefs', 'image_url')) {
             (require database_path('migrations/2026_07_09_000000_add_image_to_content_planner_visual_briefs.php'))->up();
         }
+        if (!Schema::hasColumn('content_planner_channels', 'post_time')) {
+            (require database_path('migrations/2026_10_15_100000_add_post_time_to_content_planner_channels.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_snippets')) {
+            (require database_path('migrations/2026_10_15_100100_create_content_planner_snippets_table.php'))->up();
+        }
+        if (!Schema::hasColumn('content_planner_posts', 'series_id')) {
+            (require database_path('migrations/2026_10_15_100200_add_series_id_to_content_planner_posts.php'))->up();
+        }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 

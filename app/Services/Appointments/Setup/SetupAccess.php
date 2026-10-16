@@ -7,6 +7,7 @@ use App\Models\Staff;
 use App\Models\User;
 use App\Scopes\BrandScope;
 use App\Services\Appointments\AppointmentRefused;
+use App\Support\AdminAccess\AccessMap;
 
 /**
  * Who may change what in the workspace's Setup (owner decision 2026-10-01):
@@ -16,12 +17,10 @@ use App\Services\Appointments\AppointmentRefused;
  */
 final class SetupAccess
 {
-    public const MANAGER_ROLES = ['super_admin', 'manager'];
-
     /** The caller's role in the bound organisation (Staff is tenant-scoped), never another organisation's; a deactivated row counts for nothing. */
     public static function canManage(User $user): bool
     {
-        return in_array(self::activeStaff($user)?->role, self::MANAGER_ROLES, true);
+        return in_array(self::activeStaff($user)?->role, AccessMap::MANAGER_ROLES, true);
     }
 
     /** The team member linked to this sign-in in the bound organisation, active or not, whatever brand is selected. */

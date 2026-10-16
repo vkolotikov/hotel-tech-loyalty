@@ -68,3 +68,11 @@ export const inMonth = (day: DateKey, date: DateKey): boolean => monthOf(day) ==
 
 /** One slot's name, for the one being filled ("2026-10-07|instagram"). */
 export const slotKey = (slot: Slot): string => `${slot.date}|${slot.platform}`
+
+/** After an AI fill comes back: open its post only while the portal still shows the brand it was made for. */
+export const opensAfterFill = (madeFor: number | null, shownNow: number | null): boolean => madeFor === shownNow
+
+/** Keep showing the last plan while the next range loads — but never another brand's (a switch, or the server's fallback). */
+export const keepWithinBrand = (brand: number | null) =>
+  <T,>(previous: T | undefined, previousQuery?: { queryKey: readonly unknown[] }): T | undefined =>
+    previousQuery?.queryKey[1] === brand ? previous : undefined

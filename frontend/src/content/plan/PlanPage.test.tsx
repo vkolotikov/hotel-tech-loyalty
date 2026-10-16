@@ -85,4 +85,9 @@ describe('PlanPage', () => {
   it('opens on the day a link names', () => {
     expect(page('/content?date=2026-10-20', boot, null)).toContain('19 Oct – 25 Oct 2026')
   })
+
+  // Spec 2026-10-15 §4: the list (the phone's view) offers a new post on the days ahead.
+  it('offers a new post on a day ahead', () => {
+    expect(page()).toMatch(/data-add="\d{4}-\d{2}-\d{2}"/)
+  })
 })

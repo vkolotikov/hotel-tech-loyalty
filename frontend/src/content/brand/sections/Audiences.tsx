@@ -11,7 +11,7 @@ import { LANGUAGES, languageName } from '../../lib/languages'
 import type { Audience, BrandPayload } from '../../lib/types'
 import { asList } from '../brandForms'
 import { ChoiceChips, ReadTags, SelectField, TagInput, TextField } from '../inputs'
-import { audienceForm, removeAudience, saveAudience, type AudienceForm } from '../listActions'
+import { asksBeforeRemoving, audienceForm, removeAudience, saveAudience, type AudienceForm } from '../listActions'
 import { useBrand } from '../useBrand'
 
 function AudienceEditor({ audience, onDone, onCancel }: { audience: Audience | null; onDone: () => void; onCancel: (() => void) | null }) {
@@ -101,7 +101,8 @@ export function AudiencesSection({ brand, canEdit, startOpen = false, onSaved }:
   const w = (key: string, english: string) => t(`content.brand.audiences.${key}`, english)
 
   const remove = async (audience: Audience) => {
-    if (!window.confirm(w('remove_confirm', 'Remove this audience?'))) return
+    // One question: for an audience posts use, the server's in-use answer asks it.
+    if (asksBeforeRemoving(audience) && !window.confirm(w('remove_confirm', 'Remove this audience?'))) return
     setNote(null)
     try {
       const answer = await removeAudience(api, audience.id, (posts) =>

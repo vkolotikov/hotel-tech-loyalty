@@ -1278,6 +1278,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
             Route::prefix('content')->middleware(['workspace:content', 'content.brand'])->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
+                Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
                 Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'search']);
                 Route::get('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'index']);
                 Route::post('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'store']);
@@ -1286,6 +1287,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('posts/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'destroy'])->whereNumber('id');
                 Route::post('posts/{id}/move', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'move'])->whereNumber('id');
                 Route::post('posts/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'duplicate'])->whereNumber('id');
+                Route::post('posts/{id}/repeat', [\App\Http\Controllers\Api\V1\Admin\Content\RepeatController::class, 'store'])->whereNumber('id');
+                Route::delete('posts/{id}/repeat', [\App\Http\Controllers\Api\V1\Admin\Content\RepeatController::class, 'destroy'])->whereNumber('id');
                 Route::post('posts/{id}/mark-ready', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markReady'])->whereNumber('id');
                 Route::post('posts/{id}/mark-published', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markPublished'])->whereNumber('id');
                 Route::post('posts/{id}/write', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'write'])->whereNumber('id');
@@ -1312,6 +1315,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('brand/quick-setup', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'quickSetup']);
                 Route::post('brand/setup', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'finishSetup']);
                 Route::post('brand/refresh-knowledge', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'refreshKnowledge']);
+                Route::post('brand/snippets/suggest', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'suggestSnippets']);
+                Route::post('brand/snippets', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'storeSnippet']);
+                Route::put('brand/snippets/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'updateSnippet'])->whereNumber('id');
+                Route::delete('brand/snippets/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'destroySnippet'])->whereNumber('id');
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────

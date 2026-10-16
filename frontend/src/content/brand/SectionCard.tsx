@@ -26,8 +26,11 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
   /** What is stored, when the form starts from more (Guided setup fills in a new brand's name): what Save compares with. */
   makeBase?: () => F
   editView: (draft: F, change: (next: F) => void, invalid: string[]) => ReactNode
-  /** Saves the draft against the form as it was opened (`base`); the brand's answer is adopted by the caller. */
-  save: (draft: F, base: F) => Promise<void>
+  /**
+   * Saves the draft against the form as it was opened (`base`); the brand's answer is adopted by the caller. A string
+   * it resolves to is a warning shown once the section closes (the save went through).
+   */
+  save: (draft: F, base: F) => Promise<void | string | undefined>
   startOpen?: boolean
   saveLabel?: string
   onSaved?: () => void
@@ -42,15 +45,17 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [invalid, setInvalid] = useState<string[]>([])
+  const [warning, setWarning] = useState<string | null>(null)
   const box = useRef<HTMLElement>(null)
-  const focusAfter = useRef<'form' | 'edit' | null>(null)
+  const focusAfter = useRef<'form' | 'edit' | 'invalid' | null>(null)
 
-  // Edit puts the keyboard in the form; Save and Cancel bring it back to Edit (the buttons that had it are gone).
+  // Edit puts the keyboard in the form; Save and Cancel bring it back to Edit (the buttons that had it are gone);
+  // a refusal brings it to the first marked field, else to Save (document order: a field comes before Save).
   useEffect(() => {
     const want = focusAfter.current
     if (!want) return
     focusAfter.current = null
-    const into = want === 'form' ? 'input, textarea, select, button[aria-pressed]' : '[data-section-edit]'
+    const into = want === 'form' ? 'input, textarea, select, button[aria-pressed]' : want === 'invalid' ? '[aria-invalid="true"], [data-section-save]' : '[data-section-edit]'
     box.current?.querySelector<HTMLElement>(into)?.focus()
   })
 
@@ -60,13 +65,15 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
     if (problems.length > 0) {
       setInvalid(problems)
       setError(t('content.brand.error.invalid', 'Some fields need attention.'))
+      focusAfter.current = 'invalid'
       return
     }
     setBusy(true)
     setError(null)
     setInvalid([])
     try {
-      await save(draft, base ?? draft)
+      const said = await save(draft, base ?? draft)
+      setWarning(typeof said === 'string' ? said : null)
       setDraft(null)
       if (!onSaved) focusAfter.current = 'edit'
       onSaved?.()
@@ -75,6 +82,7 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
       setInvalid(Object.keys(failure.fields ?? {}).map(name => name.split('.')[0]))
       const [key, text] = errorKey('brand', failure.code)
       setError(t(key, text))
+      focusAfter.current = 'invalid'
     } finally {
       setBusy(false)
     }
@@ -89,15 +97,15 @@ export function SectionCard<F>({ id, title, description, canEdit, readView, make
         </div>
         {canEdit && draft === null && (
           <Button size="sm" variant="secondary" data-section-edit=""
-            onClick={() => { const opened = open(); focusAfter.current = 'form'; setDraft(opened.draft); setBase(opened.base) }}>{t('content.brand.edit', 'Edit')}</Button>
+            onClick={() => { const opened = open(); focusAfter.current = 'form'; setWarning(null); setDraft(opened.draft); setBase(opened.base) }}>{t('content.brand.edit', 'Edit')}</Button>
         )}
       </div>
-      {draft === null ? readView : (
+      {draft === null ? <>{readView}{warning && <Notice tone="warning">{warning}</Notice>}</> : (
         <div className="space-y-4">
           {editView(draft, setDraft, invalid)}
           {error && <Notice tone="danger">{error}</Notice>}
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => { void submit() }} loading={busy}>{saveLabel ?? t('content.brand.save', 'Save')}</Button>
+            <Button data-section-save="" onClick={() => { void submit() }} loading={busy}>{saveLabel ?? t('content.brand.save', 'Save')}</Button>
             {!onSaved && <Button variant="secondary" disabled={busy} onClick={() => { focusAfter.current = 'edit'; setDraft(null); setError(null); setInvalid([]) }}>{t('content.common.cancel', 'Cancel')}</Button>}
           </div>
         </div>

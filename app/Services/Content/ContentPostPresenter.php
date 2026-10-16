@@ -55,6 +55,9 @@ final class ContentPostPresenter
             'published_url'     => $post->published_url,
             'published_at'      => $post->published_at?->toISOString(),
             'generated_by'      => $post->generated_by,
+            // A repeated post and its copies (spec 2026-10-15 §8): how the series runs, for the panel's line.
+            'series_id'         => $post->series_id ? (int) $post->series_id : null,
+            'series'            => ContentRepeat::describe($post),
             'hook_alternatives' => array_values((array) data_get($post->source_context, 'hook_alternatives', [])),
             'visual_brief'      => $brief ? [
                 'visual_type'  => $brief->visual_type,

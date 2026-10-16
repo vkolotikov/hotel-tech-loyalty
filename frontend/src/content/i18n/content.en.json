@@ -42,12 +42,12 @@
     "all_statuses": "All statuses",
     "generate": "Generate",
     "strip": { "title": "This week", "planned": "Planned", "ready": "Ready", "published": "Published", "open": "Empty slots" },
-    "slot": { "label": "Empty {{platform}} slot", "write": "Write", "fill": "Fill with AI", "filling": "Writing…" },
+    "slot": { "label": "Empty {{platform}} slot", "write": "Write", "fill": "Fill with AI", "filling": "Writing…", "best": "Best around {{time}}" },
     "more": "+{{count}} more",
     "open_slots": "Empty slots: {{count}}",
     "empty_day": "Nothing planned",
     "list_empty": "Nothing planned this week.",
-    "tray": { "title": "Unscheduled", "empty": "Drag a post here to take it off the calendar." },
+    "tray": { "title": "Unscheduled", "empty": "Drag a post here to take it off the calendar.", "showing": "Showing {{shown}} of {{total}}", "see_all": "See all" },
     "load_failed": "The plan could not be refreshed. What you see may be out of date.",
     "moved": "Moved to {{day}}",
     "moved_tray": "Moved to Unscheduled",
@@ -56,7 +56,9 @@
     "card_label": "{{platform}}: {{text}}, {{status}}",
     "card_label_time": "{{platform}} {{time}}: {{text}}, {{status}}",
     "untitled": "Untitled post",
-    "move_hint": "Shift and the left or right arrow moves it a day."
+    "move_hint": "Shift and the left or right arrow moves it a day.",
+    "add_on": "New post on {{day}}",
+    "goals": { "title": "Posting goals", "line": "{{platform}}: {{published}} of {{target}} published · {{planned}} planned", "met": "met", "streak": "{{count}}-week streak", "at_risk": "Posts still needed by Sunday to keep your {{weeks}}-week streak: {{count}}", "hint": "Only posts marked published count." }
   },
   "move": {
     "error": {
@@ -126,7 +128,8 @@
       "platform": "Platform", "date": "Date", "time": "Time", "status": "Status", "pillar": "Pillar", "audience": "Audience",
       "language": "Language", "brand_language": "The brand's language", "none": "None", "other_pillar": "Another pillar", "other_audience": "Another audience",
       "topic": "Topic", "hook": "Hook", "main_copy": "Text", "cta": "Call to action", "hashtags": "Hashtags",
-      "hashtags_hint": "Separate them with spaces or commas.", "published_date": "A published post keeps the date it went out."
+      "hashtags_hint": "Separate them with spaces or commas.", "published_date": "A published post keeps the date it went out.",
+      "time_suggested": "Suggested times"
     },
     "ai": {
       "title": "AI",
@@ -167,8 +170,15 @@
       "copied": "Copied",
       "delete": "Delete",
       "delete_confirm": "Delete this post? This cannot be undone.",
-      "delete_yes": "Delete post"
-    }
+      "delete_yes": "Delete post",
+      "copy_link": "Copy link",
+      "link_copied": "Link copied"
+    },
+    "failed": "This post could not be shown. What you saved is safe.",
+    "insert": "Insert",
+    "insert_snippet": "Insert snippet",
+    "too_many_tags": "{{platform}} takes at most {{limit}} hashtags; this post has {{count}}.",
+    "repeat": { "title": "Repeat", "every": "How often", "every_week": "Every week", "every_2weeks": "Every 2 weeks", "every_month": "Every month", "until": "Until", "ai": "Let the AI rewrite each copy", "copies": "Copies: {{count}}", "submit": "Repeat", "needs_day": "Give the post a day to repeat it.", "line_week": "Repeats every week until {{date}}", "line_2weeks": "Repeats every 2 weeks until {{date}}", "line_month": "Repeats every month until {{date}}", "more": "{{count}} more", "rewording": "The AI is rewording the copies…", "stop": "Stop repeating", "stop_confirm": "Stop repeating? The copies from today on will be removed ({{count}}); published posts and the original stay.", "stop_yes": "Stop repeating" }
   },
   "save": {
     "error": {
@@ -326,8 +336,8 @@
   "brand": {
     "setup": { "title": "Set up this brand", "intro": "The AI needs to know the brand before it writes for it. Choose how to start.", "not_finished": "Setup has started but is not finished.", "quick": "Quick setup", "quick_title": "Quick setup", "quick_text": "One AI call writes a first version from what HexaTech already knows about you. It takes a minute or two; you can change everything afterwards.", "guided": "Guided setup", "guided_text": "The sections one after another, at your own pace. Your place is kept on this device.", "continue": "Continue setup", "name": "Brand name", "language": "Language of the posts", "goal": "Main goal (optional)", "platforms": "Where the brand posts", "intensity": "How often to post", "start": "Set up with AI", "working": "The AI is setting up the brand. This takes a minute or two.", "done": "The brand is set up.", "assumptions": "What the AI assumed. Check these on the Brand page:", "step": "Step {{step}} of {{total}}", "leave": "Leave setup", "back": "Back", "next": "Next", "skip": "Skip this step", "finish_title": "Finish", "finish_text": "That is everything. Finish the setup and the AI starts writing from this brand.", "finish": "Finish setup" },
     "audiences": { "title": "Audiences", "intro": "Who the posts speak to.", "add": "Add audience", "remove": "Remove", "remove_confirm": "Remove this audience?", "remove_in_use": "{{count}} posts use this audience. Remove it anyway? Those posts keep everything else.", "removed": "Audience removed.", "used": "Posts using it: {{count}}", "assumed": "Assumed by the AI", "none": "No audience yet.", "name": "Name", "name_required": "Give the audience a name.", "job_role": "Job or role", "industry": "Industry", "country": "Country", "size": "Business size", "language": "Language", "language_brand": "The brand language", "pains": "Pain points", "goals": "Goals", "platforms": "Where they are", "more": "More about this audience", "fears": "Fears", "objections": "Objections", "buying": "What makes them buy", "emotional": "Emotional triggers", "rational": "Rational triggers", "questions": "Their questions", "trust": "Content they trust", "transformation": "What they want to change", "description": "Description" },
-    "channels": { "title": "Channels", "intro": "Where the brand posts, on which days and how often. The empty slots on the Plan come from here.", "add": "Add channel", "remove": "Remove", "remove_confirm": "Remove this channel? Its empty slots leave the Plan.", "removed": "Channel removed.", "none": "No channel yet. Add one to plan posts.", "on": "On", "off": "Off", "switch": "Posting on {{channel}}", "per_week": "{{count}} posts a week", "no_days": "No posting days", "platform": "Platform", "label": "Name", "label_required": "Give the channel a name.", "url": "Link", "days": "Posting days", "posts_per_week": "Posts per week", "audience": "Audience", "audience_none": "All audiences", "formats": "Formats", "goal": "Goal", "role": "Role of the channel", "more": "More rules", "cta_style": "Call-to-action style", "visual_style": "Visual style", "link_policy": "Links", "tone_override": "Tone on this channel", "language": "Language", "language_brand": "The brand language" },
-    "voice": { "title": "Voice", "intro": "How the brand sounds when it writes.", "tone": "Tone", "style": "Style in a few words", "formality": "Formality", "sentences": "Sentences", "pov": "Written as", "emoji": "Emoji", "hashtags": "Hashtags", "preferred": "Words to use", "forbidden": "Words to avoid", "claims": "Claims to avoid" },
+    "channels": { "title": "Channels", "intro": "Where the brand posts, on which days and how often. The empty slots on the Plan come from here.", "add": "Add channel", "remove": "Remove", "remove_confirm": "Remove this channel? Its empty slots leave the Plan.", "removed": "Channel removed.", "none": "No channel yet. Add one to plan posts.", "on": "On", "off": "Off", "switch": "Posting on {{channel}}", "per_week": "posts a week: {{count}}", "no_days": "No posting days", "platform": "Platform", "label": "Name", "label_required": "Give the channel a name.", "url": "Link", "days": "Posting days", "posts_per_week": "Posts per week", "audience": "Audience", "audience_none": "All audiences", "formats": "Formats", "goal": "Goal", "role": "Role of the channel", "more": "More rules", "cta_style": "Call-to-action style", "visual_style": "Visual style", "link_policy": "Links", "tone_override": "Tone on this channel", "language": "Language", "language_brand": "The brand language", "post_time": "Usual posting time", "post_time_suggested": "Suggested times", "post_time_hint": "Left empty, posts start at {{time}}.", "usual_at": "usually at {{time}}" },
+    "voice": { "title": "Voice", "intro": "How the brand sounds when it writes.", "tone": "Tone", "style": "Style in a few words", "formality": "Formality", "sentences": "Sentences", "pov": "Written as", "emoji": "Emoji", "hashtags": "Hashtags", "preferred": "Words to use", "forbidden": "Words to avoid", "claims": "Claims to avoid", "tone_sync_failed": "The voice is saved, but the default tone for new posts could not be updated. Save the voice again to try once more." },
     "positioning": { "title": "Positioning", "intro": "Where the brand stands: what it moves people away from, and towards.", "old_way": "The old way", "new_way": "The new way", "transformation": "What changes for the client", "beliefs": "Beliefs", "key_messages": "Key messages" },
     "rhythm": { "title": "Rhythm and goals", "intro": "The shape of the week, the content mix, and what the posts should achieve.", "days": "Weekly rhythm", "role": "Role of the day", "notes": "Notes", "usual_week": "Start from a usual week", "mix": "Content mix", "mix_who": "Who sets it", "mix_ai": "Let the AI decide", "mix_manual": "Set it myself", "mix_by_ai": "The AI decides the mix.", "total": "Total {{total}} %", "balance": "Balance to 100 %", "goals": "Engagement goals", "trend": "Trends", "style": "Visual style", "style_none": "No style chosen", "image_types": "Kinds of images", "colors": "Colours", "avoid": "Avoid in images" },
     "title": "Brand",
@@ -345,6 +355,9 @@
     "section": { "company": "Company and brand", "knowledge": "Knowledge", "audience": "Audiences", "voice": "Voice", "channels": "Channels", "strategy_inputs": "Strategy inputs" },
     "gap": { "company_name": "The organisation has no name yet (full admin, Settings).", "company_industry": "The organisation has no industry yet (full admin, Settings).", "company_website": "The organisation has no website yet (full admin, Settings).", "brand_summary": "Add a brand summary (Brand DNA).", "usp": "Say what makes the brand different (Brand DNA).", "mission": "Add the mission (Brand DNA).", "faq_none": "Add questions and answers to the knowledge base of the AI chat widget.", "faq_more": "Add more questions and answers to the knowledge base: {{count}} so far, 5 or more work best.", "services": "Add your services or products in the full admin.", "audience_none": "Add at least one audience (Audiences).", "audience_pains": "Give every audience its pain points.", "audience_goals": "Give every audience its goals.", "voice_none": "Describe the brand voice (Voice).", "voice_tone": "Choose a tone (Voice).", "voice_emoji": "Choose how many emoji to use (Voice).", "voice_hashtag": "Choose how many hashtags to use (Voice).", "channels_none": "Switch on at least one channel (Channels).", "channels_days": "Choose posting days on your channels.", "channels_per_week": "Set posts per week on your channels.", "content_mix": "Set the content mix (Rhythm and goals).", "weekly_rhythm": "Set the weekly rhythm (Rhythm and goals).", "engagement_goals": "Choose engagement goals (Rhythm and goals)." },
     "dna": { "title": "Brand DNA", "intro": "Who the brand is, in its own words. The AI writes from this.", "name": "Brand name", "language": "Language of the posts", "language_none": "Choose a language", "goal": "Main goal", "summary": "Brand summary", "usp": "What makes it different", "mission": "Mission", "promise": "Brand promise", "differentiators": "Differentiators", "values": "Values", "proof": "Proof points", "price": "Price position", "cta": "Main call to action", "links": "Important links" },
-    "error": { "manager_only": "Only an owner or a manager can change the brand.", "invalid": "Some fields need attention.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "already_set_up": "This brand is already set up.", "already_generating": "The brand is already being set up. Please wait a moment.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not finish. Please try again.", "unknown": "The change could not be saved. Please try again." }
-  }
+    "error": { "manager_only": "Only an owner or a manager can change the brand.", "invalid": "Some fields need attention.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "already_set_up": "This brand is already set up.", "already_generating": "The brand is already being set up. Please wait a moment.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not finish. Please try again.", "unknown": "The change could not be saved. Please try again." },
+    "snippets": { "title": "Hashtags and snippets", "intro": "Hashtag groups and lines you use often — a call to action, a sign-off, an address. The post panel puts them in with one click.", "groups": "Hashtag groups", "texts": "Snippets", "add_group": "Add a hashtag group", "add_text": "Add a snippet", "name": "Name", "tags": "Hashtags", "tags_hint": "Separate them with spaces.", "text": "Text", "remove": "Remove", "remove_confirm": "Remove “{{name}}”?", "none_groups": "No hashtag groups yet.", "none_texts": "No snippets yet.", "suggest": "Suggest hashtag groups with AI", "no_suggestions": "No more suggestions. Ask again for new ones.", "add_suggestion": "Add" }
+  },
+  "repeat": { "error": { "already_repeating": "This post already repeats.", "no_day": "Give the post a day first: a post repeats from its day.", "no_dates": "There is no day to repeat on before that date.", "too_many_copies": "A post repeats at most 26 times. Choose an earlier end date.", "until_too_far": "A post repeats for at most 12 months after its day.", "too_many_ai": "The AI rewrites at most 12 copies. Choose an earlier end date, or repeat the copies as they are.", "ai_budget_used_up": "This month's AI budget is used up. The copies can still repeat without rewording.", "not_found": "This post no longer exists.", "invalid": "Check the repeat: how often, and until when.", "unknown": "The post could not be repeated. Please try again." } },
+  "snippet": { "error": { "manager_only": "Only an owner or a manager can change hashtags and snippets.", "too_many_snippets": "A brand keeps at most 50 of each. Remove one first.", "invalid": "Give it a name and some text.", "not_found": "This item no longer exists. The page now shows the brand as it is.", "no_profile": "This brand is not set up yet.", "ai_budget_used_up": "This month's AI budget is used up.", "ai_failed": "The AI could not suggest hashtags. Please try again.", "unknown": "The change could not be saved. Please try again." } }
 }

@@ -48,6 +48,16 @@ export function generationState(list: readonly StrategySummary[], now: number): 
   return { state: 'running', id: making.id, minutes: Math.floor(elapsed / 60_000) }
 }
 
+/** The server's clock when it answered the list (this computer's may be off); the time the list was read when it sent none. */
+export function serverClock(data: { now?: string } | undefined, fetchedAt: number): number {
+  const at = data?.now ? Date.parse(data.now) : NaN
+  return Number.isNaN(at) ? fetchedAt : at
+}
+
+/** A generation that was running is over (made, failed or stuck): every cached strategy detail is out of date. */
+export const generationFinished = (before: Generation['state'], now: Generation['state']): boolean =>
+  before === 'running' && now !== 'running'
+
 /**
  * A new strategy that failed after the active one was made (or with none
  * active): the newest strategy, when it is a failed one. The page says so,

@@ -86,6 +86,10 @@ class PostController extends Controller
         $data = $request->validate(
             ['platform' => ['required', Rule::in(ContentRules::PLATFORMS)]] + Arr::except(ContentRules::postFields(), ['platform'])
         );
+        // A post without a day has no time either (as a move to the tray, and as update, keep it).
+        if (($data['scheduled_date'] ?? null) === null) {
+            $data['scheduled_time'] = null;
+        }
 
         $post = ContentPlannerPost::create(array_merge(
             ['status' => 'draft', 'language' => $profile->default_language ?: 'en'],
@@ -117,12 +121,12 @@ class PostController extends Controller
             && $fields['scheduled_date'] !== $post->scheduled_date?->format('Y-m-d')) {
             self::refusePublishedMove();
         }
-        // A post put back to "no day" has no time either (as a move to the tray does).
-        if (array_key_exists('scheduled_date', $fields) && $fields['scheduled_date'] === null) {
-            $fields['scheduled_time'] = null;
+        $post->fill($fields);
+        // A post without a day has no time either — also when only a time was sent for it.
+        if ($post->scheduled_date === null) {
+            $post->scheduled_time = null;
         }
-
-        $post->fill($fields)->save();
+        $post->save();
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -156,7 +160,8 @@ class PostController extends Controller
 
     public function duplicate(Request $request, int $id): JsonResponse
     {
-        $copy = self::find($id)->replicate(['published_url', 'published_at', 'status']);
+        // A copy made by hand is not in the original's repeat series.
+        $copy = self::find($id)->replicate(['published_url', 'published_at', 'status', 'series_id']);
         $copy->status = 'draft';
         $copy->created_by = $request->user()->id;
         $copy->scheduled_date = CarbonImmutable::parse(VenueClock::today(ContentContext::orgId()))->addDays(7)->format('Y-m-d');

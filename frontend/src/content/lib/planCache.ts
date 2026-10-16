@@ -34,10 +34,11 @@ export function putInPlans(queryClient: QueryClient, brand: number | null, card:
   }
 }
 
-/** After a post changes, the Plan's and the Posts page's reads of the brand are read again (an open page at once, the others when shown). */
+/** After a post changes, the Plan's, the Posts page's and the goals' reads of the brand are read again (an open page at once, the others when shown). */
 export function refreshLists(queryClient: QueryClient, brand: number | null): Promise<unknown> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'plan'] }),
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'posts'] }),
+    queryClient.invalidateQueries({ queryKey: ['content', brand, 'goals'] }),
   ])
 }

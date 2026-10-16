@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Copy, CopyPlus, ExternalLink, Send, Trash2 } from 'lucide-react'
+import { CheckCircle2, Copy, CopyPlus, ExternalLink, Link2, Send, Trash2 } from 'lucide-react'
 import { formatInstant } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
+import { postLink } from '../lib/links'
 import { copyText } from '../lib/postText'
 import type { PostDetail } from '../lib/types'
 
@@ -34,6 +35,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
   const [url, setUrl] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [linkCopied, setLinkCopied] = useState(false)
   const waits = dirty || busy !== null
   const urlOk = url.trim() === '' || LINK.test(url.trim())
 
@@ -42,6 +44,12 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
     const timer = window.setTimeout(() => setCopied(false), 2000)
     return () => window.clearTimeout(timer)
   }, [copied])
+
+  useEffect(() => {
+    if (!linkCopied) return
+    const timer = window.setTimeout(() => setLinkCopied(false), 2000)
+    return () => window.clearTimeout(timer)
+  }, [linkCopied])
 
   const act = async (name: string, call: () => Promise<void>) => {
     setBusy(name)
@@ -89,6 +97,11 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
         <Button size="sm" variant="secondary" disabled={waits}
           onClick={() => { void act('copy', async () => { await navigator.clipboard.writeText(copyText(post)); setCopied(true) }) }}>
           <Copy size={14} aria-hidden />{copied ? t('content.panel.actions.copied', 'Copied') : t('content.panel.actions.copy', 'Copy text')}
+        </Button>
+        {/* The post's own link with its brand, so a colleague on another brand opens this post. */}
+        <Button size="sm" variant="secondary" disabled={waits}
+          onClick={() => { void act('link', async () => { await navigator.clipboard.writeText(`${window.location.origin}${postLink(post.id, boot.brand?.id ?? null)}`); setLinkCopied(true) }) }}>
+          <Link2 size={14} aria-hidden />{linkCopied ? t('content.panel.actions.link_copied', 'Link copied') : t('content.panel.actions.copy_link', 'Copy link')}
         </Button>
         <Button size="sm" variant="ghost" disabled={waits} onClick={() => setConfirmDelete(true)}>
           <Trash2 size={14} aria-hidden />{t('content.panel.actions.delete', 'Delete')}

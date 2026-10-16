@@ -142,4 +142,42 @@ class PostsTest extends TestCase
         $this->asStaffMember()->getJson($this->api('posts'))->assertOk()
             ->assertJsonPath('data.0.topic', 'Autumn timed')->assertJsonPath('data.1.topic', 'Autumn dated')->assertJsonPath('data.2.topic', 'Autumn idea');
     }
+
+    public function test_a_post_created_without_a_day_keeps_no_time(): void
+    {
+        $this->asStaffMember()->postJson($this->api('posts'), ['platform' => 'instagram', 'scheduled_time' => '09:00', 'topic' => 'Idea'])
+            ->assertCreated()->assertJsonPath('post.scheduled_date', null)->assertJsonPath('post.scheduled_time', null);
+    }
+
+    public function test_setting_only_a_time_on_a_post_without_a_day_keeps_no_time(): void
+    {
+        $post = $this->makePost(['scheduled_date' => null]);
+
+        $this->asStaffMember()->putJson($this->api("posts/{$post->id}"), ['updated_at' => $post->fresh()->updated_at->toISOString(), 'scheduled_time' => '10:00'])
+            ->assertOk()->assertJsonPath('post.scheduled_time', null);
+    }
+
+    public function test_search_words_are_taken_literally(): void
+    {
+        $this->makePost(['topic' => '50% off colour', 'scheduled_date' => null]);
+        $this->makePost(['topic' => '500 off colour', 'scheduled_date' => null]);
+        $this->makePost(['topic' => 'cut_and_go', 'scheduled_date' => null]);
+        $this->makePost(['topic' => 'cutxandxgo', 'scheduled_date' => null]);
+
+        $this->asStaffMember()->getJson($this->api('find?q=' . urlencode('50%')))->assertOk()->assertJsonCount(1, 'posts')->assertJsonPath('posts.0.topic', '50% off colour');
+        $this->asStaffMember()->getJson($this->api('find?q=cut_and'))->assertOk()->assertJsonCount(1, 'posts')->assertJsonPath('posts.0.topic', 'cut_and_go');
+        $this->asStaffMember()->getJson($this->api('posts?q=' . urlencode('50%')))->assertOk()->assertJsonPath('meta.total', 1);
+    }
+
+    // Final review: ESCAPE '\' broke PDO's placeholder parsing on PHP 8.3 with PostgreSQL (SQLSTATE HY093).
+    public function test_search_escapes_with_a_character_every_driver_reads_the_same_way(): void
+    {
+        $sql = \App\Services\Content\ContentPlan::search(ContentPlannerPost::query(), 'au')->toSql();
+        $this->assertStringContainsString("ESCAPE '!'", $sql);
+        $this->assertStringNotContainsString('\\', $sql);
+
+        $this->makePost(['topic' => 'wow! sale', 'scheduled_date' => null]);
+        $this->makePost(['topic' => 'wow sale', 'scheduled_date' => null]);
+        $this->asStaffMember()->getJson($this->api('find?q=' . urlencode('wow!')))->assertOk()->assertJsonCount(1, 'posts')->assertJsonPath('posts.0.topic', 'wow! sale');
+    }
 }

@@ -31,8 +31,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   screen shows, and `code` is `brand_not_allowed`, so the portal can drop a stored brand and ask again without one.
 - Refusals are `{error, message}`. The codes are `no_brand`, `no_profile`, `manager_only`, `not_found`,
   `ai_budget_used_up`, `already_generating`, `changed_elsewhere`, `published_cannot_move`, `slot_not_open`,
-  `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready` and
-  `generation_failed`.
+  `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready`,
+  `generation_failed`, `already_repeating`, `no_day` and `too_many_snippets`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
 
@@ -45,6 +45,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Generate | `POST generate` | managers |
 | Strategy | `GET strategies`, `GET strategies/{id}` (everyone); `POST strategies`, `/activate`, `/archive` (managers) | |
 | Brand | `GET brand` (everyone); `PUT brand/profile`, `PUT brand/voice`, audiences and channels `POST/PUT/DELETE`, `POST brand/quick-setup`, `POST brand/setup`, `POST brand/refresh-knowledge` (managers) | |
+| Goals | `GET goals` (this week per platform, the streak) | everyone |
+| Repeat | `POST posts/{id}/repeat`, `DELETE posts/{id}/repeat` | everyone |
+| Snippets | `brand/snippets` `POST`, `PUT/DELETE brand/snippets/{id}`, `POST brand/snippets/suggest` (AI) | managers (everyone reads them in `GET brand`) |
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -72,6 +75,23 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   (`report()`).
 - **Spend needs a price.** An overridden `CONTENT_PLANNER_AI_MODEL` must be in `AiUsageService::MODEL_PRICING`, or its
   spend is logged at 0.
+- **A time needs a day.** A post with no day stores no time, however it was saved (`PostsTest`).
+- **Search words are literal.** `%`, `_` and `\` in Find and Posts search match themselves (`PostsTest`).
+- **A channel's usual time** (`post_time`, `HH:MM`) is what Generate and Fill give a post the AI left without a time;
+  empty means the first suggested time for its platform and the organisation's industry (`BestTimes`, the same table
+  as `frontend/src/content/lib/bestTimes.json`; `BestTimesTest`).
+- **Snippets:** at most 50 hashtag groups and 50 text snippets per brand; suggestions are one AI call and save nothing
+  (`SnippetsTest`).
+- **Goals** count only posts marked published, in the venue's week (Monday–Sunday); targets are the channels'
+  `posts_per_week` as they are now, summed per platform; "planned" leaves published, archived and skipped posts out;
+  the streak looks back 52 weeks, no further than the week the oldest channel with a target was added (target history
+  is not kept); "at risk" from Friday 00:00 on the venue's clock (`GoalsTest`).
+- **Repeat posts:** up to 26 copies within 12 months of the post's day, from today on; the AI rewords at most 12, one
+  call each, stops at the budget cap and never rewrites a copy a person changed (also not one saved while the AI wrote);
+  Stop repeating removes the unpublished copies from today on, and the post's `series.removable` is that count
+  (`RepeatTest`). The rewording runs on the queue (`RewriteRepeatCopies`), one copy per run (80 s timeout, under the
+  queue connections' `retry_after` of 90 s), each run handing the rest to the next.
+- **The strategy job** counts its AI use for its brand and stores a fixed sentence when it fails (`StrategyTest`).
 
 ## The portal (`/content`, `frontend/src/content/`)
 
@@ -108,7 +128,21 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - **Words.**
   - Five languages in `src/content/i18n/content.{en,ru,de,fr,es}.json`, under `content.*`. `contentLocales.test.ts` keeps the key sets equal and the `{{names}}` intact.
   - Every refusal is shown in the portal's own words (`lib/errors.ts`).
-- **Colours.** `theme/content.css`, under `[data-content]`. Each platform's fill takes white ink while white reads 3:1 on it, else dark ink. Each status's tone reads 4.5:1 over its own tint (`contentCss.test.ts`).
+- **Colours.** `theme/content.css`, under `[data-content]`. Each platform's fill takes white ink while white reads 4.5:1 on it, else dark ink (release 3). Each status's tone reads 4.5:1 over its own tint (`contentCss.test.ts`).
+- **Click-to-add** (release 3): a day's empty space, or its "+" (week: at the day's foot; month: the corner; list: the
+  day's header), opens a new post on that day from the venue's today on; past days take no clicks. The post starts on
+  the day's first open slot, else the brand's first active channel, at that channel's usual time; nothing is saved
+  before Save; the click a drag's release fires opens nothing (`plan/addMath.ts`).
+- **Best times**: a slot reads "Best around {{time}}", the panel's time field offers the platform's suggested times, a
+  channel keeps a usual time (Brand → Channels); one table for server and portal (`lib/bestTimes.json`).
+- **Hashtags and snippets**: Brand → Hashtags and snippets (managers keep them, everyone reads them; AI suggestions
+  save nothing until Add); in the panel, Insert beside Hashtags (no double tags, ignoring case and #) and Insert snippet
+  beside Text and Call to action (at the cursor, else at the end); Instagram is warned about past 30 tags.
+- **Goals**: under the This week strip on the current week: per platform "published of target · planned", a met goal
+  in words, the streak, and from Friday the nudge. Read with the plan and after every post change.
+- **Repeat**: in the panel of a saved post with a day; the limits (26 copies, 12 months, 12 AI copies) are checked
+  before sending (`panel/repeatMath.ts` mirrors `ContentRepeat`); the panel reads its post every 5 s while the AI
+  rewords the series, and the Plan with it.
 
 ## What this release does not do
 
@@ -118,7 +152,17 @@ and its screens are removed; a browser tab left open across the deploy must be r
 
 ## Deploying
 
-- No migration: every profile, strategy, post and image carries over as it is.
+- Release 3 brings three additive migrations (`content_planner_channels.post_time`, `content_planner_snippets`,
+  `content_planner_posts.series_id`); nothing existing changes, and every profile, strategy, post and image carries
+  over as it is.
+- Queue (owner check): `config/queue.php` sets `retry_after` to 90 s on the database and redis connections, while
+  `GenerateContentStrategy` may run 600 s (and the email campaign chunks 300 s). With more than one worker, a run longer
+  than 90 s is taken again by a second worker and failed. Confirm the production queue connection and worker count,
+  and raise `retry_after` above the longest job timeout if more than one worker runs.
+- Verify release 3 by content on the live site: the `ContentApp` chunk carries "Best around", "Hashtags and snippets"
+  and "Repeats every week until"; `/api/v1/admin/content/goals` answers 401 when signed out (404 before release 3).
+- After the deploy (owner): on a real brand, give a channel a usual time, add one hashtag group, start a post with a
+  day's "+", repeat one post weekly for a month and stop it; check the goals line on the Plan.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.

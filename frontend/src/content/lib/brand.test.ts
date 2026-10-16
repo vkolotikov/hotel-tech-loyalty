@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../lib/api', () => ({ api: {} }))
 
-import { BRAND_KEY, forgetBrand, loadBootstrap, rememberBrand, storedBrand } from './brand'
+import { BRAND_KEY, firstBrand, forgetBrand, loadBootstrap, rememberBrand, storedBrand } from './brand'
 import type { Bootstrap } from './types'
 
 function store(entries: Record<string, string> = {}) {
@@ -58,5 +58,15 @@ describe('loadBootstrap', () => {
     const fetch = vi.fn(() => Promise.reject(notAllowed))
     await expect(loadBootstrap(null, store(), fetch)).rejects.toBe(notAllowed)
     expect(fetch).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('firstBrand', () => {
+  const storage = (v: string | null) => ({ getItem: () => v, setItem: () => {}, removeItem: () => {} })
+  it('asks for the brand a shared post link names, else the one this device chose', () => {
+    expect(firstBrand('?brand_id=7', storage('3'))).toBe(7)
+    expect(firstBrand('', storage('3'))).toBe(3)
+    expect(firstBrand('?brand_id=x', storage('3'))).toBe(3)
+    expect(firstBrand('?brand_id=0', null)).toBeNull()
   })
 })

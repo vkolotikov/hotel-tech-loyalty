@@ -28,7 +28,7 @@ export const audienceFields = (f: AudienceForm): AudienceFields => ({
 export interface ChannelForm {
   platform: Platform; label: string; url: string; active: boolean; posts_per_week: string; days: Record<Weekday, boolean>; audience_id: string
   preferred_formats: string[]; emoji_policy: string; hashtag_policy: string; goal: string; role: string
-  cta_style: string; visual_style: string; link_policy: string; tone_override: string; default_language: string
+  cta_style: string; visual_style: string; link_policy: string; tone_override: string; default_language: string; post_time: string
 }
 
 /** A channel as its form; a new one starts on Mon, Wed and Fri, three a week, named after its platform in the reader's words (`label`). */
@@ -39,6 +39,7 @@ export const channelForm = (c: Channel | null, platform: Platform, label?: strin
   preferred_formats: asList(c?.preferred_formats), emoji_policy: asText(c?.emoji_policy), hashtag_policy: asText(c?.hashtag_policy),
   goal: asText(c?.goal), role: asText(c?.role), cta_style: asText(c?.cta_style), visual_style: asText(c?.visual_style),
   link_policy: asText(c?.link_policy), tone_override: asText(c?.tone_override), default_language: asText(c?.default_language),
+  post_time: asText(c?.post_time),
 })
 
 export const channelFields = (f: ChannelForm): ChannelFields => ({
@@ -48,6 +49,7 @@ export const channelFields = (f: ChannelForm): ChannelFields => ({
   emoji_policy: orNull(f.emoji_policy), hashtag_policy: orNull(f.hashtag_policy), goal: orNull(f.goal), role: orNull(f.role),
   cta_style: orNull(f.cta_style), visual_style: orNull(f.visual_style), link_policy: orNull(f.link_policy),
   tone_override: orNull(f.tone_override), default_language: orNull(f.default_language),
+  post_time: orNull(f.post_time),
 })
 
 type Adopt = (payload: BrandPayload) => void
@@ -106,3 +108,6 @@ export async function removeChannel(
   adopt(await api.deleteChannel(id))
   refresh()
 }
+
+/** Removing an audience asks first only when no post uses it: for one in use the server's answer brings the one question. */
+export const asksBeforeRemoving = (audience: { posts_count: number }): boolean => audience.posts_count === 0

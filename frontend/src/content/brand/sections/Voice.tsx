@@ -6,6 +6,7 @@ import { asList, asText, changedFields, orNull } from '../brandForms'
 import { ReadRow, ReadTags, Segmented, TagInput, TextField } from '../inputs'
 import { SectionCard } from '../SectionCard'
 import { useBrand } from '../useBrand'
+import { saveVoiceAndTone } from '../voiceSave'
 
 interface VoiceForm {
   tone: string; style: string; formality_level: string; sentence_style: string; point_of_view: string
@@ -44,10 +45,10 @@ export function VoiceSection({ brand, canEdit, startOpen, onSaved }: { brand: Br
   const shown = voiceForm(brand)
 
   const save = async (draft: VoiceForm, base: VoiceForm) => {
-    const fields = changedFields(voiceFields(base), voiceFields(draft))
-    if (Object.keys(fields).length === 0) return
-    adopt(await api.saveVoice(fields))
-    if ('tone' in fields) await saveProfile({ default_tone: fields.tone ?? null })
+    const outcome = await saveVoiceAndTone(api, adopt, saveProfile, changedFields(voiceFields(base), voiceFields(draft)))
+    return outcome === 'tone_sync_failed'
+      ? t('content.brand.voice.tone_sync_failed', 'The voice is saved, but the default tone for new posts could not be updated. Save the voice again to try once more.')
+      : undefined
   }
 
   return (

@@ -12,12 +12,15 @@ import { cardOf, putInPlans, refreshLists } from '../lib/planCache'
 import type { PostDetail } from '../lib/types'
 import { PlatformMark } from '../ui/PlatformMark'
 import { StatusPill } from '../ui/StatusDot'
+import { usualTimes } from '../plan/addMath'
 import { dropKept, keep, keptFor, ownerOf } from './kept'
 import { usePanel, type PanelTarget } from './PanelProvider'
 import { AiTools } from './AiTools'
 import { PostActions } from './PostActions'
 import { PostFormFields } from './PostFormFields'
-import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, type Editing, type PostForm } from './panelState'
+import { pollsWhileRewording } from './repeatMath'
+import { RepeatSection } from './RepeatSection'
+import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, withChannels, type Editing, type PostForm } from './panelState'
 
 /** The post panel (spec §4.3): over the right edge of every page, one post at a time (PanelProvider). */
 export function PostPanel() {
@@ -51,14 +54,19 @@ function PanelBody({ target }: { target: PanelTarget }) {
     }
   }, [])
 
-  const detail = useQuery({ queryKey: ['content', brand, 'post', id], queryFn: () => api.post(id as number).then(r => r.post), enabled: id !== null })
+  const detail = useQuery({
+    queryKey: ['content', brand, 'post', id], queryFn: () => api.post(id as number).then(r => r.post), enabled: id !== null,
+    // While the AI rewords this post's series it is read again every 5 s (spec 2026-10-15 §8); otherwise the panel does not poll.
+    refetchInterval: (query) => (pollsWhileRewording(query.state.data) ? 5_000 : false),
+  })
   const strategies = useQuery({ queryKey: ['content', brand, 'strategies'], queryFn: api.strategies, staleTime: 300_000 })
   const activeId = strategies.data?.strategies.find(s => s.status === 'active')?.id ?? null
   const strategy = useQuery({
     queryKey: ['content', brand, 'strategy', activeId], queryFn: () => api.strategy(activeId as number), enabled: activeId !== null, staleTime: 300_000,
   })
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
-  const channels = useMemo(() => (brandInfo.data?.channels ?? []).filter(c => c.active).map(c => c.platform), [brandInfo.data])
+  const activeChannels = useMemo(() => (brandInfo.data?.channels ?? []).filter(c => c.active), [brandInfo.data])
+  const channels = useMemo(() => activeChannels.map(c => c.platform), [activeChannels])
 
   // Edits kept when the portal last went away (kept.ts) come back with their post; they are this panel's now.
   const [restored] = useState(() => keptFor<Editing>(ownerOf(brand), target.seq))
@@ -66,7 +74,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
   const [editing, setEditing] = useState<Editing | null>(() => {
     if (restored) return restored
     if (target.kind !== 'new') return null
-    const form = newForm(target.draft, boot.platforms, channels)
+    const form = newForm(target.draft, boot.platforms, channels, usualTimes(activeChannels, boot.organization.industry))
     return { base: form, draft: form, post: null }
   })
 
@@ -86,16 +94,22 @@ function PanelBody({ target }: { target: PanelTarget }) {
     const fresh = { ...next.post, ...moved }
     next = { base: formOf(fresh), draft: rebase(next.base, next.draft, formOf(fresh)), post: fresh }
   }
-  // a new post with no slot behind it starts on the brand's own first channel, once the brand's channels are known.
-  const first = channels[0]
-  if (next && next.post === null && target.kind === 'new' && target.draft.platform === null && first
-    && next.base.platform !== first && next.draft.platform === next.base.platform) {
-    next = { ...next, base: { ...next.base, platform: first }, draft: { ...next.draft, platform: first } }
-  }
+  // a new post, once the brand's channels are known: no platform given → the brand's first channel; no time given →
+  // its platform's usual time (a time it was given, or one already typed, stays).
+  if (next && target.kind === 'new') next = withChannels(next, target.draft, channels, usualTimes(activeChannels, boot.organization.industry))
   if (next !== editing) setEditing(next)
 
   const dirty = editing !== null && isDirty(editing.base, editing.draft)
   useEffect(() => { panelNow.current.reportDirty(dirty) }, [dirty])
+
+  // While the AI rewords, every read of the post reads the Plan again too; once it is done, once more (its copies changed).
+  const rewording = pollsWhileRewording(detail.data)
+  const wasRewording = useRef(rewording)
+  const readAt = detail.dataUpdatedAt
+  useEffect(() => {
+    if (rewording || wasRewording.current) void refreshLists(queryClient, brand)
+    wasRewording.current = rewording
+  }, [readAt, rewording, queryClient, brand])
 
   // The portal going away while edits are held (the browser's Back to the full admin) keeps them in this tab (kept.ts).
   const leaving = useRef({ editing, brand, target })
@@ -193,13 +207,21 @@ function PanelBody({ target }: { target: PanelTarget }) {
         )}
         {editing && (
           <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={boot.statuses}
-            pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} />
+            pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []} />
         )}
         {editing && !post && <p className="text-xs text-a-text-2">{t('content.panel.ai.create_first', 'Create the post first to use AI.')}</p>}
         {post && (
           <>
             <AiTools post={post} dirty={dirty} onPost={adopt}
               onUseCopy={(copy) => setEditing(e => (e ? { ...e, draft: { ...e.draft, main_copy: copy } } : e))} />
+            {/* The series as last read: its rewording ends without the post itself changing, so the panel's copy would keep "rewording". */}
+            <RepeatSection post={post} dirty={dirty} onPost={adopt}
+              series={(detail.data && detail.data.id === post.id ? detail.data.series : post.series) ?? null}
+              onGone={() => {
+                queryClient.removeQueries({ queryKey: ['content', brand, 'post', post.id] })
+                void refreshLists(queryClient, brand)
+                panel.close()
+              }} />
             <PostActions post={post} dirty={dirty} onPost={adopt}
               onDuplicated={(copy) => {
                 queryClient.setQueryData(['content', brand, 'post', copy.id], copy)

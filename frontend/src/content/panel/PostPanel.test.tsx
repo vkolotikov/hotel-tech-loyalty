@@ -90,6 +90,7 @@ describe('PostPanel', () => {
     const saved = render({ kind: 'post', id: 5, seq: 1 })
     expect(saved).toContain('Write the text')
     expect(saved).toContain('Mark ready')
+    expect(saved).toContain('Copy link')
     expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'linkedin' }, seq: 1 }, null)).toContain('Create the post first to use AI.')
   })
 
@@ -97,6 +98,16 @@ describe('PostPanel', () => {
     const brand = { audiences: [], channels: [{ id: 1, platform: 'linkedin', label: 'LinkedIn', active: true }] }
     const html = render({ kind: 'new', draft: { date: null, platform: null }, seq: 1 }, null, brand)
     expect(html).toMatch(/<option value="linkedin" selected="">/)
+  })
+
+  // Spec 2026-10-15 §4–§5: a post started from a day or a slot comes with that channel's usual time.
+  it('starts a post from a day or a slot at the time it was given', () => {
+    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'instagram', time: '08:30' }, seq: 1 }, null)).toMatch(/<input type="time"[^>]*value="08:30"/)
+  })
+
+  it('starts a post from the New post button on the brand\'s first channel at that channel\'s usual time', () => {
+    const brand = { audiences: [], channels: [{ id: 1, platform: 'linkedin', label: 'LinkedIn', active: true, post_time: null }] }
+    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: null }, seq: 1 }, null, brand)).toMatch(/<input type="time"[^>]*value="08:00"/)
   })
 
   it('hands back the edits kept when the person left the portal by Back, and says so', () => {
@@ -125,5 +136,39 @@ describe('PostPanel', () => {
     expect(out).toContain('>Hair care</option>')
     expect(out).not.toContain('>Old pillar</option>')
     expect(out).toMatch(/<option value="42" selected="">Another audience<\/option>/)
+  })
+
+  // Spec 2026-10-15 §5: the time field offers the platform's suggested times as one-click chips.
+  it('offers the platform\'s suggested times beside the time, the chosen one pressed', () => {
+    const out = render({ kind: 'post', id: 5, seq: 1 }, { ...post, scheduled_time: '19:00' })
+    expect(out).toContain('aria-label="Suggested times"')
+    expect(out).toMatch(/<button[^>]*aria-pressed="false"[^>]*>11:00<\/button>/)
+    expect(out).toMatch(/<button[^>]*aria-pressed="true"[^>]*>19:00<\/button>/)
+  })
+
+  // Spec 2026-10-15 §6: the brand's hashtag groups and snippets one click away beside their fields.
+  it('offers the brand\'s hashtag groups beside Hashtags, and its snippets beside Text and Call to action', () => {
+    const brand = { audiences: [], channels: [], snippets: [{ id: 1, kind: 'hashtags', name: 'Autumn', body: '#autumn' }, { id: 2, kind: 'text', name: 'Sign-off', body: 'See you!' }] }
+    const out = render({ kind: 'post', id: 5, seq: 1 }, post, brand)
+    expect(out).toContain('Insert</button>')
+    expect(out.match(/Insert snippet<\/button>/g)).toHaveLength(2)
+  })
+
+  it('warns when an Instagram post holds more than 30 hashtags', () => {
+    const many = { ...post, hashtags: Array.from({ length: 31 }, (_, i) => `#tag${i}`) }
+    expect(render({ kind: 'post', id: 5, seq: 1 }, many)).toContain('instagram takes at most 30 hashtags; this post has 31.')
+  })
+
+  // Spec 2026-10-15 §8: a saved post with a day can repeat; a post in a series says how it runs.
+  it('offers Repeat on a saved post, and the series line on a post in a series', () => {
+    expect(render({ kind: 'post', id: 5, seq: 1 })).toContain('Let the AI rewrite each copy')
+    const series = { id: 5, every: 'month' as const, until: '2027-01-07', more: 2, removable: 2, rewriting: false }
+    expect(render({ kind: 'post', id: 5, seq: 1 }, { ...post, series_id: 5, series })).toContain('Repeats every month until January 7, 2027 · 2 more')
+  })
+
+  // Release check (Task 11): a post started on a platform with no time takes that channel's usual time in the panel.
+  it('starts a post on a platform given no time at that channel\'s usual time', () => {
+    const brand = { audiences: [], channels: [{ id: 1, platform: 'instagram', label: 'Instagram', active: true, post_time: '08:30' }] }
+    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'instagram' }, seq: 1 }, null, brand)).toMatch(/<input type="time"[^>]*value="08:30"/)
   })
 })

@@ -40,7 +40,11 @@ class StrategyController extends Controller
             ? ContentPlannerStrategy::where('planner_profile_id', $profile->id)->orderByDesc('id')->limit(20)->get()
             : collect();
 
-        return response()->json(['strategies' => $strategies->map(fn (ContentPlannerStrategy $s) => self::summary($s))->values()]);
+        // The server's clock comes with the list: the page judges "stuck" on it, not on the device's.
+        return response()->json([
+            'strategies' => $strategies->map(fn (ContentPlannerStrategy $s) => self::summary($s))->values(),
+            'now'        => now()->toISOString(),
+        ]);
     }
 
     public function show(int $id): JsonResponse

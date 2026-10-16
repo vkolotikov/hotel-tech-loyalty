@@ -60,6 +60,14 @@ describe('FindFrame', () => {
     expect(draw('au', null)).not.toContain('Looking for posts…')
   })
 
+  // Owner, 2026-10-15: "Nothing matches" while the search is still on its way told people a post was missing.
+  it('says nothing matches only once nothing is still on its way', () => {
+    const looking = draw('zzz', 'Looking for posts…', [])
+    expect(looking).not.toContain('Nothing matches')
+    expect(looking).toContain('Looking for posts…')
+    expect(draw('zzz', null, [])).toContain('Nothing matches “zzz”.')
+  })
+
   it('names the keys in its footer, the list of shortcuts last', () => {
     const footer = draw().slice(draw().lastIndexOf('<div class="hidden items-center'))
     for (const word of ['move', 'open', 'close']) expect(footer).toContain(word)

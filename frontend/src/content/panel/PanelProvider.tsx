@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useBrandId } from '../ContentProvider'
 import type { DateKey, Platform, PostCard } from '../lib/types'
 import { keptTarget } from './kept'
 
-/** What a new post starts from: the day and platform a slot or the New post button gave. */
-export interface NewDraft { date: DateKey | null; platform: Platform | null }
+/** What a new post starts from: the day, platform and time a day's "+", a slot or the New post button gave. */
+export interface NewDraft { date: DateKey | null; platform: Platform | null; time?: string | null }
 /** What the post panel shows. `seq` remounts it for every opening, so no state leaks from one post to the next. */
 export type PanelTarget = { kind: 'post'; id: number; seq: number } | { kind: 'new'; draft: NewDraft; seq: number }
 
@@ -61,6 +62,19 @@ export function PanelProvider({ initial = null, children }: {
   const [target, setTarget] = useState<PanelTarget | null>(() => initial ?? keptTarget())
   const [moved, setMoved] = useState<PostCard | null>(null)
   const dirty = useRef(false)
+  // The panel belongs to one brand: another brand — chosen (it already asked) or the server's fallback — closes it.
+  // From no brand yet (the first read) nothing closes: a post kept from the last visit comes back on its brand.
+  const brand = useBrandId()
+  const [brandShown, setBrandShown] = useState(brand)
+  if (brand !== brandShown) {
+    setBrandShown(brand)
+    if (brandShown !== null) setTarget(null)
+  }
+  const brandBefore = useRef(brand)
+  useEffect(() => {
+    if (brandBefore.current !== null && brandBefore.current !== brand) dirty.current = false
+    brandBefore.current = brand
+  }, [brand])
   const seq = useRef(target?.seq ?? 0)
 
   const guard = useCallback(() => {

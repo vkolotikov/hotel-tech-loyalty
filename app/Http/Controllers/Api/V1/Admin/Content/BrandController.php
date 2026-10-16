@@ -7,12 +7,14 @@ use App\Models\ContentPlannerAudience;
 use App\Models\ContentPlannerChannel;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
+use App\Models\ContentPlannerSnippet;
 use App\Services\Content\ContentAccess;
 use App\Services\Content\ContentAiGate;
 use App\Services\Content\ContentBrandEditor;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
+use App\Services\Content\ContentSnippetSuggester;
 use App\Services\ContentKnowledgeService;
 use App\Services\ContentPlanner\ProfileBootstrapService;
 use Illuminate\Http\JsonResponse;
@@ -131,6 +133,13 @@ class BrandController extends Controller
         if (!$lock->get()) {
             throw new ContentRefused('already_generating', 'This brand is already being set up.', 409);
         }
+        // A run that finished while this request waited must not be paid for twice.
+        try {
+            $this->editor->refuseIfSetUp($profile);
+        } catch (ContentRefused $e) {
+            $lock->release();
+            throw $e;
+        }
 
         set_time_limit(600);
         try {
@@ -176,6 +185,62 @@ class BrandController extends Controller
         return response()->json($this->payload($profile->fresh()));
     }
 
+    /** A hashtag group or snippet (spec 2026-10-15 §6): managers keep them, at most 50 of each kind per brand. */
+    public function storeSnippet(Request $request): JsonResponse
+    {
+        ContentAccess::requireManager($request->user());
+        $profile = ContentContext::requireProfile();
+        $data = $request->validate(ContentRules::snippetFields(true));
+        if ($profile->snippets()->where('kind', $data['kind'])->count() >= ContentPlannerSnippet::MAX_PER_KIND) {
+            throw new ContentRefused('too_many_snippets', 'A brand keeps at most ' . ContentPlannerSnippet::MAX_PER_KIND . ' of each.', 422);
+        }
+        $snippet = $profile->snippets()->create($data + [
+            'brand_id'   => $profile->brand_id,
+            'sort_order' => (int) $profile->snippets()->max('sort_order') + 1,
+        ]);
+
+        return response()->json(['snippet' => $this->snippet($snippet)] + $this->payload($profile->fresh()), 201);
+    }
+
+    /** Hashtag groups the AI proposes for this brand (spec 2026-10-15 §6): suggestions only, nothing is saved. */
+    public function suggestSnippets(Request $request, ContentAiGate $gate, ContentSnippetSuggester $suggester): JsonResponse
+    {
+        ContentAccess::requireManager($request->user());
+        $gate->allow($request->attributes->get('workspace_org'));
+        $profile = ContentContext::requireProfile();
+        set_time_limit(120);
+        try {
+            $suggestions = $suggester->suggest($profile);
+        } catch (ContentRefused $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            report($e);
+            // The provider's own words stay in the log.
+            throw new ContentRefused('ai_failed', 'The AI could not finish this. Please try again.', 502);
+        }
+
+        return response()->json(['suggestions' => $suggestions]);
+    }
+
+    public function updateSnippet(Request $request, int $id): JsonResponse
+    {
+        ContentAccess::requireManager($request->user());
+        $profile = ContentContext::requireProfile();
+        $snippet = $this->findSnippet($profile, $id);
+        $snippet->fill($request->validate(ContentRules::snippetFields(false)))->save();
+
+        return response()->json(['snippet' => $this->snippet($snippet->fresh())] + $this->payload($profile->fresh()));
+    }
+
+    public function destroySnippet(Request $request, int $id): JsonResponse
+    {
+        ContentAccess::requireManager($request->user());
+        $profile = ContentContext::requireProfile();
+        $this->findSnippet($profile, $id)->delete();
+
+        return response()->json($this->payload($profile->fresh()));
+    }
+
     /** A manager writing a section: the brand's profile, made on the first save. */
     private function managerProfile(Request $request): ContentPlannerProfile
     {
@@ -196,11 +261,23 @@ class BrandController extends Controller
             ?? throw new ContentRefused('not_found', 'This channel no longer exists.', 404);
     }
 
+    private function findSnippet(ContentPlannerProfile $profile, int $id): ContentPlannerSnippet
+    {
+        return $profile->snippets()->where('id', $id)->first()
+            ?? throw new ContentRefused('not_found', 'This item no longer exists.', 404);
+    }
+
+    /** @return array{id: int, kind: string, name: string, body: string} */
+    private function snippet(ContentPlannerSnippet $snippet): array
+    {
+        return ['id' => (int) $snippet->id, 'kind' => (string) $snippet->kind, 'name' => (string) $snippet->name, 'body' => (string) $snippet->body];
+    }
+
     /** @return array<string, mixed> */
     private function payload(?ContentPlannerProfile $profile): array
     {
         if (!$profile) {
-            return ['profile' => null, 'audiences' => [], 'channels' => [], 'voice' => null, 'readiness' => null];
+            return ['profile' => null, 'audiences' => [], 'channels' => [], 'snippets' => [], 'voice' => null, 'readiness' => null];
         }
         $voice = $profile->brandVoices()->where('active', true)->first();
 
@@ -217,6 +294,9 @@ class BrandController extends Controller
             'audiences' => $profile->audiences()->where('active', true)->withCount('posts')->orderBy('id')->get()
                 ->map(fn (ContentPlannerAudience $a) => $this->audience($a))->values()->all(),
             'channels'  => $profile->channels()->orderBy('id')->get()->map(fn (ContentPlannerChannel $c) => $this->channel($c))->values()->all(),
+            // Hashtag groups first, then text snippets ('hashtags' sorts before 'text'), each in the order made.
+            'snippets'  => $profile->snippets()->orderBy('kind')->orderBy('sort_order')->orderBy('id')->get()
+                ->map(fn (ContentPlannerSnippet $s) => $this->snippet($s))->values()->all(),
             'voice'     => $voice ? $voice->only(['id', 'tone', 'style', 'formality_level', 'emoji_policy', 'hashtag_policy', 'sentence_style', 'point_of_view', 'preferred_words', 'forbidden_words', 'claims_to_avoid', 'example_good_posts', 'example_bad_posts']) : null,
             'readiness' => $this->knowledge->readinessOf($profile),
         ];
@@ -232,6 +312,6 @@ class BrandController extends Controller
     /** @return array<string, mixed> */
     private function channel(ContentPlannerChannel $channel): array
     {
-        return $channel->only(['id', 'platform', 'label', 'url', 'goal', 'role', 'cta_style', 'visual_style', 'link_policy', 'tone_override', 'default_language', 'emoji_policy', 'hashtag_policy', 'posts_per_week', 'preferred_formats', 'frequency', 'audience_id', 'active']);
+        return $channel->only(['id', 'platform', 'label', 'url', 'goal', 'role', 'cta_style', 'visual_style', 'link_policy', 'tone_override', 'default_language', 'emoji_policy', 'hashtag_policy', 'posts_per_week', 'preferred_formats', 'frequency', 'audience_id', 'active', 'post_time']);
     }
 }

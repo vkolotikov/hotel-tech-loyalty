@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Content;
 
+use App\Jobs\GenerateContentStrategy;
 use App\Models\ContentPlannerPillar;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerStrategy;
+use App\Services\AiUsageService;
 use App\Services\ContentPlannerStrategyService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Mockery;
 use Tests\Concerns\SetsUpContentSchema;
 use Tests\TestCase;
@@ -129,11 +132,47 @@ class StrategyTest extends TestCase
 
     public function test_two_requests_at_once_cannot_both_start_a_strategy(): void
     {
+        $service = Mockery::mock(ContentPlannerStrategyService::class);
+        $service->shouldNotReceive('generate');
+        $this->app->instance(ContentPlannerStrategyService::class, $service);
         $held = Cache::lock("content:strategy:{$this->org->id}:{$this->brandId}", 10);
         $this->assertTrue($held->get());
 
         $this->asManager()->postJson($this->api('strategies'), [])->assertStatus(409)->assertJsonPath('error', 'already_generating');
         $this->assertSame(0, \App\Models\ContentPlannerStrategy::where('status', 'generating')->count());
         $held->release();
+    }
+
+    public function test_the_list_carries_the_servers_clock(): void
+    {
+        $this->asStaffMember()->getJson($this->api('strategies'))->assertOk()->assertJsonPath('now', '2026-10-05T06:00:00.000000Z');
+    }
+
+    public function test_a_failed_strategy_says_so_in_our_words(): void
+    {
+        $strategy = ContentPlannerStrategy::create(['brand_id' => $this->brandId, 'planner_profile_id' => $this->profile->id, 'title' => 'Generating strategy…', 'status' => 'generating']);
+
+        (new GenerateContentStrategy((int) $strategy->id, (int) $this->profile->id, (int) $this->org->id))->failed(new \RuntimeException('Private provider detail: key sk-test'));
+
+        $this->assertSame('failed', $strategy->fresh()->status);
+        $this->assertSame('The strategy could not be made. Please try again.', $strategy->fresh()->summary);
+    }
+
+    public function test_the_strategy_job_counts_its_ai_use_for_its_brand(): void
+    {
+        $strategy = ContentPlannerStrategy::create(['brand_id' => $this->brandId, 'planner_profile_id' => $this->profile->id, 'title' => 'Generating strategy…', 'status' => 'generating']);
+        $service = Mockery::mock(ContentPlannerStrategyService::class);
+        $service->shouldReceive('generate')->once()->andReturnUsing(function () {
+            app(AiUsageService::class)->recordUsage((int) $this->org->id, 'claude-sonnet-5', 10, 10, 'content');
+
+            return ['strategy' => null, 'pillars' => []];
+        });
+        // A queue worker has no request: nothing binds the brand before the job does.
+        app()->forgetInstance('current_brand_id');
+
+        (new GenerateContentStrategy((int) $strategy->id, (int) $this->profile->id, (int) $this->org->id))->handle($service);
+
+        $this->assertSame($this->brandId, (int) DB::table('ai_usage_logs')->where('feature', 'content')->latest('id')->value('brand_id'));
+        $this->assertFalse(app()->bound('current_brand_id'), 'the job leaves the binding as it found it');
     }
 }

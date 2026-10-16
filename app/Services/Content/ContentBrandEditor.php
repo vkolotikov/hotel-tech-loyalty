@@ -31,11 +31,22 @@ final class ContentBrandEditor
 
     private const PROFILE_FIELDS = ['name', 'default_language', 'default_tone', 'primary_goal', 'secondary_goals', 'content_rules', 'brand_summary', 'usp', 'mission', 'brand_values', 'brand_promise', 'differentiators', 'proof_points', 'price_position', 'main_cta', 'important_links', 'positioning', 'key_messages', 'content_mix', 'weekly_rhythm', 'engagement_goals', 'visual_style', 'trend_mode', 'setup_step'];
     private const AUDIENCE_FIELDS = ['name', 'description', 'industry', 'country', 'business_size', 'job_role', 'preferred_tone', 'language', 'pain_points', 'goals', 'fears', 'objections', 'buying_triggers', 'emotional_triggers', 'rational_triggers', 'questions', 'preferred_platforms', 'content_they_trust', 'desired_transformation', 'is_ai_assumed'];
-    private const CHANNEL_FIELDS = ['platform', 'label', 'url', 'goal', 'role', 'cta_style', 'visual_style', 'link_policy', 'tone_override', 'default_language', 'emoji_policy', 'hashtag_policy', 'posts_per_week', 'preferred_formats', 'frequency', 'active'];
+    private const CHANNEL_FIELDS = ['platform', 'label', 'url', 'goal', 'role', 'cta_style', 'visual_style', 'link_policy', 'tone_override', 'default_language', 'emoji_policy', 'hashtag_policy', 'posts_per_week', 'preferred_formats', 'frequency', 'active', 'post_time'];
     private const VOICE_FIELDS = ['tone', 'style', 'formality_level', 'emoji_policy', 'hashtag_policy', 'sentence_style', 'point_of_view', 'preferred_words', 'forbidden_words', 'claims_to_avoid', 'example_good_posts', 'example_bad_posts'];
 
     public function __construct(private ContentKnowledgeService $knowledge)
     {
+    }
+
+    /**
+     * Refuses a quick setup for a brand that is already set up — read from what is stored, so a run that finished
+     * while this request waited for the lock is seen (spec 2026-10-15 §3.2).
+     */
+    public function refuseIfSetUp(ContentPlannerProfile $profile): void
+    {
+        if (ContentPlannerProfile::whereKey($profile->id)->whereNotNull('setup_completed_at')->exists()) {
+            throw new ContentRefused('already_set_up', 'This brand is already set up — change it section by section.', 409);
+        }
     }
 
     /** The brand's profile, created as an empty shell the first time a manager saves any part of it. */

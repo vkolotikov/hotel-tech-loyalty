@@ -5,8 +5,10 @@ import { PlatformMark } from '../ui/PlatformMark'
 import { slotKey } from './planMath'
 
 /** An empty slot (spec §4.2): a day and platform the brand's channels expect, with Write and Fill with AI. */
-export function SlotRow({ slot, filling, aiPaused, onWrite, onFill }: {
+export function SlotRow({ slot, time, filling, aiPaused, onWrite, onFill }: {
   slot: Slot
+  /** The platform's usual time (spec 2026-10-15 §5): the slot says when it is best posted. */
+  time?: string | null
   filling: boolean
   /** This month's AI budget is used up: Fill waits, Write still works. */
   aiPaused: boolean
@@ -19,6 +21,7 @@ export function SlotRow({ slot, filling, aiPaused, onWrite, onFill }: {
     <div role="group" aria-label={t('content.plan.slot.label', 'Empty {{platform}} slot', { platform })} data-slot={slotKey(slot)}
       className="flex flex-wrap items-center gap-1 rounded-lg border border-dashed border-a-border bg-a-canvas/60 px-2 py-1.5">
       <PlatformMark platform={slot.platform} size="sm" />
+      {time && <span className="text-xs text-a-text-2">{t('content.plan.slot.best', 'Best around {{time}}', { time })}</span>}
       <button type="button" onClick={onWrite}
         className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-a-accent-text hover:bg-a-surface-2">
         <PenLine size={12} aria-hidden />{t('content.plan.slot.write', 'Write')}

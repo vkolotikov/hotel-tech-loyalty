@@ -119,10 +119,13 @@ export function FindFrame<I extends FindItem>({ prompt, query, onQuery, groups, 
   }
 
   const typed = query.trim()
-  const none = typed !== '' && items.length === 0
+  // While the workspace is still looking, nothing is missing yet: no "Nothing matches" until the answer is in.
+  const none = typed !== '' && items.length === 0 && !waiting
   const status = none
     ? t('workspace.find.none', 'Nothing matches “{{q}}”.', { q: typed })
-    : t('workspace.find.count', 'Results: {{count}}', { count: items.length })
+    : waiting && items.length === 0
+      ? waiting
+      : t('workspace.find.count', 'Results: {{count}}', { count: items.length })
 
   return (
     <>

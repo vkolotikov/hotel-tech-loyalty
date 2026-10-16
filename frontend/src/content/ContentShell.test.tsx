@@ -103,6 +103,14 @@ describe('ContentShell', () => {
     expect(render({ data: undefined, isLoading: true })).toContain('role="status"')
   })
 
+  // Spec §8.2: an organisation with Content switched off is told so calmly, not sent to the dashboard without a word.
+  it('says calmly that Content is switched off when the first visit is refused, with the way back', () => {
+    const html = render({ data: undefined, isLoading: false, isError: true, error: refused('workspace_disabled') })
+    expect(html).toContain('HexaTech Content has been switched off for your organisation.')
+    expect(html).toContain('Open the full admin')
+    expect(html).not.toContain('full admin dashboard')
+  })
+
   it('opens the full admin at the Marketing hub for managers and at the dashboard for staff', () => {
     expect(render()).toContain('href="/marketing"')
     expect(render({}, { staff })).not.toContain('href="/marketing"')

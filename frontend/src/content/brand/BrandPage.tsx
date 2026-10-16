@@ -9,6 +9,7 @@ import { Readiness } from './Readiness'
 import { AudiencesSection } from './sections/Audiences'
 import { BrandDnaSection } from './sections/BrandDna'
 import { ChannelsSection } from './sections/Channels'
+import { SnippetsSection } from './sections/Snippets'
 import { PositioningSection } from './sections/Positioning'
 import { RhythmSection } from './sections/Rhythm'
 import { VoiceSection } from './sections/Voice'
@@ -57,6 +58,7 @@ export function BrandPage() {
               <VoiceSection brand={brand} canEdit={canEdit} />
               <PositioningSection brand={brand} canEdit={canEdit} />
               <ChannelsSection brand={brand} canEdit={canEdit} />
+              <SnippetsSection brand={brand} canEdit={canEdit} />
               <RhythmSection brand={brand} canEdit={canEdit} />
             </>
           )}

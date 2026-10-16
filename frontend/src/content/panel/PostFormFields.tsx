@@ -1,7 +1,11 @@
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { suggestedTimes } from '../lib/bestTimes'
 import { LANGUAGES, languageName } from '../lib/languages'
-import type { AudienceRef, PillarRef, Platform, PostStatus } from '../lib/types'
+import { Notice } from '../../workspace/ui/Notice'
+import type { AudienceRef, PillarRef, Platform, PostStatus, Snippet } from '../lib/types'
+import { InsertMenu } from './InsertMenu'
+import { insertAt, insertHashtags, tooManyTags } from './snippetInsert'
 import type { PostForm } from './panelState'
 
 const BOX = 'w-full rounded-lg border bg-a-surface px-3 py-2 text-sm text-a-text disabled:bg-a-surface-2 disabled:text-a-text-2'
@@ -25,7 +29,7 @@ function FieldBox({ label, hint, invalid, children }: { label: string; hint?: st
  * audience, language, topic, hook, text, call to action and hashtags. A
  * published post keeps its day: the day is the record of when it went out.
  */
-export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale }: {
+export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets }: {
   form: PostForm
   onChange: (form: PostForm) => void
   platforms: Platform[]
@@ -35,6 +39,10 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   published: boolean
   invalid: (keyof PostForm)[]
   locale: string
+  /** The organisation's industry: the time field's suggested times follow it (spec 2026-10-15 §5). */
+  industry: string | null
+  /** The brand's hashtag groups and snippets (spec 2026-10-15 §6). */
+  snippets: Snippet[]
 }) {
   const { t } = useTranslation()
   const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => onChange({ ...form, [key]: value })
@@ -44,6 +52,21 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   if (form.language !== '' && !languages.includes(form.language)) languages.push(form.language)
   const pillarKnown = form.pillar_id === '' || pillars.some(p => String(p.id) === form.pillar_id)
   const audienceKnown = form.audience_id === '' || audiences.some(a => String(a.id) === form.audience_id)
+  const suggested = suggestedTimes(form.platform, industry)
+  const groups = snippets.filter(s => s.kind === 'hashtags')
+  const texts = snippets.filter(s => s.kind === 'text')
+  const textRef = useRef<HTMLTextAreaElement>(null)
+  const ctaRef = useRef<HTMLInputElement>(null)
+  // Whether the person has put the cursor in the field: a snippet goes there, else at the end (read in the handler only).
+  const placed = useRef({ main_copy: false, cta: false })
+  const insertInto = (key: 'main_copy' | 'cta', el: HTMLTextAreaElement | HTMLInputElement | null, text: string) => {
+    const cursor = el && placed.current[key] && el.selectionStart !== null && el.selectionEnd !== null ? { start: el.selectionStart, end: el.selectionEnd } : null
+    const next = insertAt(form[key], text, cursor, key === 'main_copy')
+    const max = key === 'main_copy' ? 20000 : 255
+    set(key, next.value.slice(0, max))
+    if (el) window.requestAnimationFrame(() => { el.focus(); el.setSelectionRange(Math.min(next.caret, max), Math.min(next.caret, max)) })
+  }
+  const tooMany = tooManyTags(form.platform, form.hashtags)
 
   return (
     <div className="space-y-3">
@@ -63,9 +86,19 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
           <input type="date" value={form.scheduled_date} disabled={published} onChange={(e) => set('scheduled_date', e.target.value)}
             aria-invalid={bad('scheduled_date')} className={box('scheduled_date')} />
         </FieldBox>
-        <FieldBox label={t('content.panel.fields.time', 'Time')} invalid={invalid.includes('scheduled_time')}>
-          <input type="time" value={form.scheduled_time} onChange={(e) => set('scheduled_time', e.target.value)} aria-invalid={bad('scheduled_time')} className={box('scheduled_time')} />
-        </FieldBox>
+        <div className="min-w-0">
+          <FieldBox label={t('content.panel.fields.time', 'Time')} invalid={invalid.includes('scheduled_time')}>
+            <input type="time" value={form.scheduled_time} onChange={(e) => set('scheduled_time', e.target.value)} aria-invalid={bad('scheduled_time')} className={box('scheduled_time')} />
+          </FieldBox>
+          {suggested.length > 0 && (
+            <div role="group" aria-label={t('content.panel.fields.time_suggested', 'Suggested times')} className="mt-1.5 flex flex-wrap gap-1">
+              {suggested.map(time => (
+                <button key={time} type="button" aria-pressed={form.scheduled_time === time} onClick={() => set('scheduled_time', time)}
+                  className={`rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${form.scheduled_time === time ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>{time}</button>
+              ))}
+            </div>
+          )}
+        </div>
         <FieldBox label={t('content.panel.fields.pillar', 'Pillar')} invalid={invalid.includes('pillar_id')}>
           <select value={form.pillar_id} onChange={(e) => set('pillar_id', e.target.value)} aria-invalid={bad('pillar_id')} className={box('pillar_id')}>
             <option value="">{t('content.panel.fields.none', 'None')}</option>
@@ -93,16 +126,38 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
       <FieldBox label={t('content.panel.fields.hook', 'Hook')} invalid={invalid.includes('hook')}>
         <textarea value={form.hook} rows={2} maxLength={500} onChange={(e) => set('hook', e.target.value)} aria-invalid={bad('hook')} className={box('hook')} />
       </FieldBox>
-      <FieldBox label={t('content.panel.fields.main_copy', 'Text')} invalid={invalid.includes('main_copy')}>
-        <textarea value={form.main_copy} rows={8} maxLength={20000} onChange={(e) => set('main_copy', e.target.value)} aria-invalid={bad('main_copy')} className={box('main_copy')} />
-      </FieldBox>
-      <FieldBox label={t('content.panel.fields.cta', 'Call to action')} invalid={invalid.includes('cta')}>
-        <input value={form.cta} maxLength={255} onChange={(e) => set('cta', e.target.value)} aria-invalid={bad('cta')} className={box('cta')} />
-      </FieldBox>
-      <FieldBox label={t('content.panel.fields.hashtags', 'Hashtags')} invalid={invalid.includes('hashtags')}
-        hint={t('content.panel.fields.hashtags_hint', 'Separate them with spaces or commas.')}>
-        <input value={form.hashtags} onChange={(e) => set('hashtags', e.target.value)} aria-invalid={bad('hashtags')} className={box('hashtags')} />
-      </FieldBox>
+      <div className="relative">
+        <FieldBox label={t('content.panel.fields.main_copy', 'Text')} invalid={invalid.includes('main_copy')}>
+          <textarea ref={textRef} value={form.main_copy} rows={8} maxLength={20000} onFocus={() => { placed.current.main_copy = true }}
+            onChange={(e) => set('main_copy', e.target.value)} aria-invalid={bad('main_copy')} className={box('main_copy')} />
+        </FieldBox>
+        <div className="absolute right-0 top-0">
+          <InsertMenu label={t('content.panel.insert_snippet', 'Insert snippet')} items={texts} onPick={(s) => insertInto('main_copy', textRef.current, s.body)} />
+        </div>
+      </div>
+      <div className="relative">
+        <FieldBox label={t('content.panel.fields.cta', 'Call to action')} invalid={invalid.includes('cta')}>
+          <input ref={ctaRef} value={form.cta} maxLength={255} onFocus={() => { placed.current.cta = true }}
+            onChange={(e) => set('cta', e.target.value)} aria-invalid={bad('cta')} className={box('cta')} />
+        </FieldBox>
+        <div className="absolute right-0 top-0">
+          <InsertMenu label={t('content.panel.insert_snippet', 'Insert snippet')} items={texts} onPick={(s) => insertInto('cta', ctaRef.current, s.body)} />
+        </div>
+      </div>
+      <div className="relative">
+        <FieldBox label={t('content.panel.fields.hashtags', 'Hashtags')} invalid={invalid.includes('hashtags')}
+          hint={t('content.panel.fields.hashtags_hint', 'Separate them with spaces or commas.')}>
+          <input value={form.hashtags} onChange={(e) => set('hashtags', e.target.value)} aria-invalid={bad('hashtags')} className={box('hashtags')} />
+        </FieldBox>
+        <div className="absolute right-0 top-0">
+          <InsertMenu label={t('content.panel.insert', 'Insert')} items={groups} onPick={(s) => set('hashtags', insertHashtags(form.hashtags, s.body).value)} />
+        </div>
+      </div>
+      {tooMany && (
+        <Notice tone="warning">
+          {t('content.panel.too_many_tags', '{{platform}} takes at most {{limit}} hashtags; this post has {{count}}.', { platform: t(`content.platform.${form.platform}`, form.platform), limit: tooMany.limit, count: tooMany.count })}
+        </Notice>
+      )}
     </div>
   )
 }

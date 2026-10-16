@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Loader2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
@@ -11,7 +11,7 @@ import type { StrategySummary } from '../lib/types'
 import { PageHeader } from '../ui/PageHeader'
 import { PillarBalance } from './PillarBalance'
 import { StrategyDocument } from './StrategyDocument'
-import { freshFailure, generationState, pickStrategy, safeOutput, strategyTitle, type Generation } from './strategyMath'
+import { freshFailure, generationFinished, generationState, pickStrategy, safeOutput, serverClock, strategyTitle, type Generation } from './strategyMath'
 
 const STATUS_TEXT: Record<StrategySummary['status'], string> = {
   generating: 'Being made', active: 'Active', superseded: 'Replaced', archived: 'Archived', failed: 'Failed',
@@ -43,10 +43,18 @@ export function StrategyPage({ actions }: { actions?: (shown: StrategySummary | 
   const list = useQuery({
     queryKey: ['content', brand, 'strategies'], queryFn: api.strategies, staleTime: 300_000,
     // While a strategy is being made the list is read every 5 s; it stops once it is made, failed, or stuck.
-    refetchInterval: (query) => (generationState(query.state.data?.strategies ?? [], query.state.dataUpdatedAt).state === 'running' ? 5_000 : false),
+    refetchInterval: (query) => (generationState(query.state.data?.strategies ?? [], serverClock(query.state.data, query.state.dataUpdatedAt)).state === 'running' ? 5_000 : false),
   })
   const strategies = list.data?.strategies ?? []
-  const generation = generationState(strategies, list.dataUpdatedAt)
+  // "Stuck" is judged on the server's clock: this computer's may run fast or slow.
+  const generation = generationState(strategies, serverClock(list.data, list.dataUpdatedAt))
+  const queryClient = useQueryClient()
+  // A finished generation changes which strategy is active: every cached detail (the old active's balance too) is read again.
+  const lastState = useRef(generation.state)
+  useEffect(() => {
+    if (generationFinished(lastState.current, generation.state)) void queryClient.invalidateQueries({ queryKey: ['content', brand, 'strategy'] })
+    lastState.current = generation.state
+  }, [generation.state, queryClient, brand])
   const asked = Number(params.get('id'))
   const shown = strategies.find(s => s.id === asked) ?? pickStrategy(strategies)
   const finished = shown !== null && shown.status !== 'generating' && shown.status !== 'failed'

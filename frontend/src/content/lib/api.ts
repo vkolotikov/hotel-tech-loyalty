@@ -1,8 +1,8 @@
 import { api } from '../../lib/api'
 import type {
-  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, PlanPayload, Platform,
-  PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody, Rewrite, StrategyDetail, StrategySummary,
-  Variation, VoiceFields,
+  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, PlanPayload, Platform,
+  PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody, RepeatEvery, Rewrite, Snippet, SnippetKind,
+  SnippetSuggestion, StrategyDetail, StrategySummary, Variation, VoiceFields,
 } from './types'
 
 /**
@@ -94,9 +94,14 @@ export function contentApi(brand: number | null) {
       throw error
     })),
 
-    strategies: (): Promise<{ strategies: StrategySummary[] }> => watched(api.get(url('strategies'))),
+    strategies: (): Promise<{ strategies: StrategySummary[]; now?: string }> => watched(api.get(url('strategies'))),
     strategy: (id: number): Promise<{ strategy: StrategyDetail }> => watched(api.get(url(`strategies/${id}`))),
     brand: (): Promise<BrandPayload> => watched(api.get(url('brand'))),
+    goals: (): Promise<Goals> => watched(api.get(url('goals'))),
+    repeatPost: (id: number, body: { every: RepeatEvery; until: DateKey; ai_rewrite: boolean }): Promise<{ post: PostDetail; copies: PostCard[] }> =>
+      watched(api.post(url(`posts/${id}/repeat`), body)),
+    /** Stops a series: its unpublished copies from today on go; `post` is null when the post asked about was one of them. */
+    stopRepeat: (id: number): Promise<{ removed: number; post: PostDetail | null }> => watched(api.delete(url(`posts/${id}/repeat`))),
 
     posts: (filters: PostFilters): Promise<PostsPage> => watched(api.get(url('posts'), { params: postsParams(filters) })),
 
@@ -121,6 +126,13 @@ export function contentApi(brand: number | null) {
     quickSetup: (body: QuickSetupBody): Promise<BrandPayload & { assumptions: string[] }> => watched(api.post(url('brand/quick-setup'), body)),
     finishSetup: (): Promise<BrandPayload> => watched(api.post(url('brand/setup'))),
     refreshKnowledge: (): Promise<BrandPayload> => watched(api.post(url('brand/refresh-knowledge'))),
+    createSnippet: (fields: { kind: SnippetKind; name: string; body: string }): Promise<BrandPayload & { snippet: Snippet }> =>
+      watched(api.post(url('brand/snippets'), fields)),
+    updateSnippet: (id: number, fields: { name?: string; body?: string }): Promise<BrandPayload & { snippet: Snippet }> =>
+      watched(api.put(url(`brand/snippets/${id}`), fields)),
+    deleteSnippet: (id: number): Promise<BrandPayload> => watched(api.delete(url(`brand/snippets/${id}`))),
+    /** One AI call: hashtag groups from the brand's pillars, audiences and industry; nothing is saved. */
+    suggestSnippets: (): Promise<{ suggestions: SnippetSuggestion[] }> => watched(api.post(url('brand/snippets/suggest'))),
   }
 }
 

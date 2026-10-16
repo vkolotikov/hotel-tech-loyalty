@@ -10,3 +10,8 @@ export function fullAdminPath(canManage: boolean): string {
 export function postHome(post: { scheduled_date: string | null }): string {
   return post.scheduled_date === null ? '/content/posts?unscheduled=1' : `/content?date=${post.scheduled_date}`
 }
+
+/** A post's own link (spec §4.3) with its brand, so it opens on the right brand for whoever follows it. */
+export function postLink(id: number, brand: number | null): string {
+  return brand === null ? `/content/posts/${id}` : `/content/posts/${id}?brand_id=${brand}`
+}

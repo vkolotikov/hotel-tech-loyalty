@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { CalendarDays, Compass, FileText, Fingerprint, Plus, Search } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
@@ -18,6 +18,7 @@ import { fullAdminPath } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { onShortcuts } from './lib/shortcuts'
 import { usePanel } from './panel/PanelProvider'
+import { PanelFailed } from './panel/PanelFailed'
 import { PostPanel } from './panel/PostPanel'
 import { ContentErrorBoundary } from './ui/ContentErrorBoundary'
 import { ContentShortcuts } from './ui/ContentShortcuts'
@@ -82,9 +83,6 @@ export function ContentShell({ children }: { children: ReactNode }) {
     })
   }, [ready, today, openNew])
 
-  // An organisation that never had Content: the route is not for them.
-  if (switchedOff && !data) return <Navigate to="/" replace />
-
   const nav: WorkspaceNavItem[] = [
     { to: '/content', end: true, icon: CalendarDays, label: t('content.nav.plan', 'Plan') },
     { to: '/content/posts', end: false, icon: FileText, label: t('content.nav.posts', 'Posts') },
@@ -128,7 +126,6 @@ export function ContentShell({ children }: { children: ReactNode }) {
       nav={nav}
       fullAdmin={fullAdminPath(canManage)}
       onLeave={panel.guard}
-      menuFits
       header={<>
         {/* On a phone the brand takes the free room and shrinks with it: a long name is cut, never under the buttons. */}
         <div className="min-w-0 flex-1 sm:flex-initial">
@@ -158,7 +155,12 @@ export function ContentShell({ children }: { children: ReactNode }) {
         </button>
       </>}
       overlays={ready ? <>
-        <PostPanel />
+        {/* The panel has its own boundary, keyed by its opening: a post that breaks says so in the panel's place. */}
+        <ContentErrorBoundary key={panel.target?.seq ?? 0}
+          message={t('content.panel.failed', 'This post could not be shown. What you saved is safe.')}
+          reload={t('content.common.reload', 'Reload the page')} fallback={<PanelFailed />}>
+          <PostPanel />
+        </ContentErrorBoundary>
         <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, main]} />
         <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, main]} />
       </> : null}>

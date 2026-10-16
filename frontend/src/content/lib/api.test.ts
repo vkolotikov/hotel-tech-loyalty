@@ -36,6 +36,25 @@ describe('contentApi', () => {
     expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/slots/fill?brand_id=5', body: { date: '2026-10-07', platform: 'instagram' } })
   })
 
+  it('reaches goals, repeat posts and the brand\'s hashtag groups and snippets under the prefix', async () => {
+    calls.fail = null
+    const api = contentApi(5)
+    await api.goals()
+    expect(last()).toMatchObject({ method: 'get', url: '/v1/admin/content/goals?brand_id=5' })
+    await api.repeatPost(9, { every: 'week', until: '2026-10-28', ai_rewrite: true })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts/9/repeat?brand_id=5', body: { every: 'week', until: '2026-10-28', ai_rewrite: true } })
+    await api.stopRepeat(9)
+    expect(last()).toMatchObject({ method: 'delete', url: '/v1/admin/content/posts/9/repeat?brand_id=5' })
+    await api.createSnippet({ kind: 'hashtags', name: 'Autumn', body: '#autumn' })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/brand/snippets?brand_id=5', body: { kind: 'hashtags', name: 'Autumn', body: '#autumn' } })
+    await api.updateSnippet(4, { body: '#fall' })
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/brand/snippets/4?brand_id=5', body: { body: '#fall' } })
+    await api.deleteSnippet(4)
+    expect(last()).toMatchObject({ method: 'delete', url: '/v1/admin/content/brand/snippets/4?brand_id=5' })
+    await api.suggestSnippets()
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/brand/snippets/suggest?brand_id=5' })
+  })
+
   it('treats a generation that wrote nothing (503 with its report) as a result to show', async () => {
     const report = { status: 'failed', created_count: 0, posts: [], skipped: [], failed_windows: [{ start_date: '2026-10-05', end_date: '2026-10-11', reason: 'provider_unavailable' }] }
     calls.fail = { response: { status: 503, data: report } }

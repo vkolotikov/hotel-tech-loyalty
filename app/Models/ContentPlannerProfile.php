@@ -82,6 +82,11 @@ class ContentPlannerProfile extends Model
         return $this->hasMany(ContentPlannerChannel::class, 'planner_profile_id');
     }
 
+    public function snippets(): HasMany
+    {
+        return $this->hasMany(ContentPlannerSnippet::class, 'planner_profile_id');
+    }
+
     public function brandVoices(): HasMany
     {
         return $this->hasMany(ContentPlannerBrandVoice::class, 'planner_profile_id');

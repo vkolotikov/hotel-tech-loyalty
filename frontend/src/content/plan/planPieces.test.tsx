@@ -1,8 +1,11 @@
+import fs from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { ReactElement } from 'react'
+import { MemoryRouter } from 'react-router-dom'
 import type { PostCard, Slot } from '../lib/types'
 import { plansFor, rangeFor } from './planMath'
+import { GoalsLine } from './GoalsLine'
 import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
 import { PostCardView } from './PostCardView'
@@ -155,6 +158,13 @@ describe('Tray', () => {
     expect(out).toContain('Hook 1')
     expect(html(<Tray posts={[]} active selectedId={null} onOpen={noop} />)).toContain('Drag a post here')
   })
+
+  it('says when it shows only part of the posts with no day, and links to all of them', () => {
+    const out = html(<MemoryRouter><Tray posts={[post(1, { scheduled_date: null }), post(2, { scheduled_date: null })]} total={102} active={false} selectedId={null} onOpen={noop} /></MemoryRouter>)
+    expect(out).toContain('Showing 2 of 102')
+    expect(out).toMatch(/<a[^>]*href="\/content\/posts\?unscheduled=1"[^>]*>See all<\/a>/)
+    expect(out).toContain('>102<')
+  })
 })
 
 describe('Toolbar', () => {
@@ -181,5 +191,109 @@ describe('Toolbar', () => {
   it('keeps Generate waiting while this month\'s AI budget is used up', () => {
     const out = html(<Toolbar {...base} viewLocked={false} canGenerate aiPaused />)
     expect(out).toMatch(/<button[^>]*\bdisabled=""[^>]*>(?:(?!<\/button>).)*Generate/s)
+  })
+})
+
+describe('click-to-add in the week', () => {
+  // Spec 2026-10-15 §4 and Review Focus 2: a "+" at the foot of each day from the venue's today on, named by its day.
+  it('puts a "+" named by its day at the foot of today and the days ahead, none on days already gone', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    const out = html(<WeekGrid plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    expect(out).toContain('data-add="2026-10-07"')
+    expect(out).toContain('data-add="2026-10-11"')
+    expect(out).not.toContain('data-add="2026-10-06"')
+    expect(out).toContain('aria-label="New post on Wednesday 7 October"')
+  })
+
+  it('shows the "+" on hover and focus where the device hovers, and always where it cannot', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    const out = html(<WeekGrid plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    const button = out.match(/<button[^>]*data-add="2026-10-07"[^>]*>/)?.[0] ?? ''
+    expect(button).toContain('[@media(hover:hover)]:opacity-0')
+    expect(button).toContain('[@media(hover:hover)]:group-hover:opacity-100')
+    expect(button).toContain('focus-visible:opacity-100')
+    expect(out).toMatch(/<section[^>]*class="group /)
+  })
+
+  it('takes no clicks where the Plan gives no onAdd', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    expect(html(<WeekGrid plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} />)).not.toContain('data-add=')
+  })
+
+  // Review Focus 1: the click a drag's release fires over a day's empty space reaches the day, not the card. The tests
+  // cannot drag, so the guard is read from the source: a new post from a day goes through the drag's consumeClick first.
+  it('lets no drag release open a new post: the same guard as opening a card', () => {
+    const source = fs.readFileSync(new URL('./PlanPage.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/const addOn = \(day: DateKey\) => \{\s*if \(drag\.consumeClick\(\) \|\| !canAdd\(day, today\)\) return/)
+  })
+})
+
+describe('click-to-add in the month and the list', () => {
+  it('puts a "+" in the corner of a month day from today on; the date number still opens the week', () => {
+    const days = rangeFor('month', '2026-10-07').days
+    const out = html(<MonthGrid plans={plansFor(days, [], [])} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} onDay={noop} onOpen={noop} onAdd={noop} />)
+    expect(out).toContain('data-add="2026-10-07"')
+    expect(out).not.toContain('data-add="2026-10-06"')
+    expect(out).toMatch(/<button[^>]*data-add="2026-10-07"[^>]*class="[^"]*absolute right-1 top-1/)
+    expect(out).toContain('aria-label="Wednesday 7 October"')
+  })
+
+  it('lists today and the days ahead with a "+" even when empty, and leaves out empty days already gone', () => {
+    const days = rangeFor('list', '2026-10-07').days
+    const out = html(<ListView plans={plansFor(days, [post(1, { scheduled_date: '2026-10-05' })], [])} today="2026-10-07" locale="en-GB" selectedId={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    expect(out.match(/<section/g)).toHaveLength(6) // Monday (its post), then Wednesday to Sunday
+    expect(out).not.toContain('list-2026-10-06')
+    expect(out).toContain('data-add="2026-10-07"')
+    expect(out).not.toContain('data-add="2026-10-05"')
+    expect(out).toContain('Nothing planned')
+  })
+})
+
+describe('best-time hints', () => {
+  // Spec 2026-10-15 §5: an empty slot reads "Best around {{time}}".
+  it('says when an empty slot is best posted, and nothing without a time', () => {
+    expect(html(<SlotRow slot={{ date: '2026-10-07', platform: 'instagram' }} time="08:30" filling={false} aiPaused={false} onWrite={noop} onFill={noop} />)).toContain('Best around 08:30')
+    expect(html(<SlotRow slot={{ date: '2026-10-07', platform: 'instagram' }} filling={false} aiPaused={false} onWrite={noop} onFill={noop} />)).not.toContain('Best around')
+  })
+
+  it('gives each slot of the week and of the list its platform\'s usual time', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    const plans = plansFor(days, [], [{ date: '2026-10-08', platform: 'instagram' }])
+    expect(html(<WeekGrid plans={plans} times={{ instagram: '19:00' }} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} />)).toContain('Best around 19:00')
+    expect(html(<ListView plans={plans} times={{ instagram: '19:00' }} today="2026-10-07" locale="en-GB" selectedId={null} fillingKey={null} aiPaused={false} {...handlers} />)).toContain('Best around 19:00')
+  })
+})
+
+describe('GoalsLine', () => {
+  // Spec 2026-10-15 §7: per platform "2 of 3 published · 1 planned", a met goal said in words, the streak and its nudge.
+  it('says each platform\'s progress, a met goal in words, and the streak', () => {
+    const out = html(<GoalsLine goals={{
+      week: { from: '2026-10-05', to: '2026-10-11' },
+      platforms: [{ platform: 'instagram', target: 3, published: 2, planned: 1 }, { platform: 'linkedin', target: 1, published: 1, planned: 0 }],
+      streak: { weeks: 4, current_met: false, at_risk: false, short_by: 1 },
+    }} />)
+    expect(out).toContain('instagram: 2 of 3 published · 1 planned')
+    expect(out).toMatch(/data-goal="linkedin" data-met="true"[\s\S]*?met</)
+    expect(out).toContain('4-week streak')
+    expect(out).toContain('Only posts marked published count.')
+    expect(out).not.toContain('by Sunday')
+  })
+
+  it('from Friday, says how many more posts keep a running streak', () => {
+    const out = html(<GoalsLine goals={{
+      week: { from: '2026-10-05', to: '2026-10-11' },
+      platforms: [{ platform: 'instagram', target: 3, published: 1, planned: 0 }],
+      streak: { weeks: 4, current_met: false, at_risk: true, short_by: 2 },
+    }} />)
+    expect(out).toContain('Posts still needed by Sunday to keep your 4-week streak: 2')
+  })
+})
+
+describe('a new post from the Plan before the brand is read', () => {
+  // Release check (Task 11): the Plan sends a time only when it knows the channels; else the panel fills it once they arrive.
+  it('leaves the time to the panel while the brand\'s channels are not read yet', () => {
+    const source = fs.readFileSync(new URL('./PlanPage.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/panel\.openNew\(brandInfo\.data \? draft : \{ \.\.\.draft, time: undefined \}\)/)
+    expect(source).toMatch(/time: brandInfo\.data \? times\[slot\.platform\] \?\? null : undefined/)
   })
 })

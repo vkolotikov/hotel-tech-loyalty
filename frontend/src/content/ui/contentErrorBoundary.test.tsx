@@ -14,6 +14,14 @@ describe('ContentErrorBoundary', () => {
     expect(html).toContain('>Reload the page<')
   })
 
+  it('shows the fallback it was given in place of its own notice', () => {
+    const boundary = new ContentErrorBoundary({ message: 'x', reload: 'y', fallback: <aside>The panel could not be shown</aside>, children: null })
+    boundary.state = { failed: true }
+    const html = renderToStaticMarkup(<>{boundary.render()}</>)
+    expect(html).toContain('The panel could not be shown')
+    expect(html).not.toContain('>y<')
+  })
+
   it('shows the page when nothing broke', () => {
     expect(renderToStaticMarkup(<ContentErrorBoundary message="x" reload="y"><p>The page</p></ContentErrorBoundary>)).toContain('The page')
   })

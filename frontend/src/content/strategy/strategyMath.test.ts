@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { StrategySummary } from '../lib/types'
-import { GENERATION_STUCK_MS, balanceRows, freshFailure, generationState, pickStrategy, strategyTitle, strings } from './strategyMath'
+import { GENERATION_STUCK_MS, balanceRows, freshFailure, generationFinished, generationState, pickStrategy, serverClock, strategyTitle, strings } from './strategyMath'
 
 const s = (id: number, status: StrategySummary['status']): StrategySummary => ({ id, title: `S${id}`, summary: null, status, created_at: null })
 
@@ -87,5 +87,29 @@ describe('strategyTitle', () => {
     expect(strategyTitle(made('failed', 'Generating strategy…'), t)).toBe('A strategy that could not be made')
     expect(strategyTitle(made('active', 'Autumn plan'), t)).toBe('Autumn plan')
     expect(strategyTitle(made('superseded', null), t)).toBe('Untitled strategy')
+  })
+})
+
+describe('serverClock', () => {
+  it('reads the clock the server sent with the list, else the time the list was read', () => {
+    expect(serverClock({ now: '2026-10-05T06:00:00.000000Z' }, 123)).toBe(Date.parse('2026-10-05T06:00:00.000000Z'))
+    expect(serverClock({}, 123)).toBe(123)
+    expect(serverClock(undefined, 123)).toBe(123)
+  })
+
+  it('keeps a fresh generation running when this computer\'s clock runs an hour fast', () => {
+    const making = [{ id: 9, title: null, summary: null, status: 'generating' as const, created_at: '2026-10-05T05:58:00.000000Z' }]
+    const fastDevice = Date.parse('2026-10-05T07:00:00.000000Z')
+    expect(generationState(making, fastDevice).state).toBe('stuck')
+    expect(generationState(making, serverClock({ now: '2026-10-05T06:00:00.000000Z' }, fastDevice)).state).toBe('running')
+  })
+})
+
+describe('generationFinished', () => {
+  it('is true once a generation that was running is no longer running', () => {
+    expect(generationFinished('running', 'none')).toBe(true)
+    expect(generationFinished('running', 'stuck')).toBe(true)
+    expect(generationFinished('running', 'running')).toBe(false)
+    expect(generationFinished('none', 'none')).toBe(false)
   })
 })

@@ -8,7 +8,7 @@
  */
 
 [data-content] {
-  /* The dark ink on a platform fill white does not read on (owner, 2026-10-09: white while it reads 3:1, else ink). */
+  /* The dark ink on a platform fill white does not read on (owner, 2026-10-15: white where it reads 4.5:1, else ink). */
   --c-ink: 20 24 28;
   /* Post statuses: a tone for the dot, and for text over a 12 % tint of itself. */
   --c-st-idea: 88 95 107;
@@ -36,13 +36,13 @@
 
 /* Each platform's colour, and the ink its mark's letters take. */
 [data-content] [data-platform="linkedin"] { --c-pf: 10 102 194; --c-pf-ink: 255 255 255; }
-[data-content] [data-platform="instagram"] { --c-pf: 225 48 108; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="instagram"] { --c-pf: 215 40 100; --c-pf-ink: 255 255 255; }
 [data-content] [data-platform="tiktok"] { --c-pf: 0 242 234; --c-pf-ink: 20 24 28; }
-[data-content] [data-platform="facebook"] { --c-pf: 24 119 242; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="facebook"] { --c-pf: 24 112 232; --c-pf-ink: 255 255 255; }
 [data-content] [data-platform="x"] { --c-pf: 15 20 25; --c-pf-ink: 255 255 255; }
-[data-content] [data-platform="youtube"] { --c-pf: 255 0 0; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="youtube"] { --c-pf: 230 0 0; --c-pf-ink: 255 255 255; }
 [data-content] [data-platform="blog"] { --c-pf: 245 158 11; --c-pf-ink: 20 24 28; }
-[data-content] [data-platform="email"] { --c-pf: 139 92 246; --c-pf-ink: 255 255 255; }
+[data-content] [data-platform="email"] { --c-pf: 130 82 240; --c-pf-ink: 255 255 255; }
 /* X's black would vanish on the dark canvas: a pale mark there, with the dark ink. */
 [data-content][data-theme="dark"] [data-platform="x"] { --c-pf: 231 233 234; --c-pf-ink: 20 24 28; }
 

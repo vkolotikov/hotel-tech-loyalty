@@ -46,6 +46,21 @@ describe('content bundle', () => {
     })
   }
 
+  // Final review (Plan 3B): "1 copies", "Ещё 5 поста", "1 Wochen in Folge". The bundles keep one key per word (no
+  // _one/_few/_many), so a count stands where no noun has to agree with it: after a colon, or in brackets.
+  it('every count reads right at 1, 2 and 5: no noun follows the number', () => {
+    const COUNTED = ['plan.goals.at_risk', 'plan.goals.streak', 'panel.repeat.copies', 'panel.repeat.stop_confirm', 'brand.channels.per_week']
+    for (const locale of LOCALES) {
+      const json = bundle(locale)
+      const wrong = COUNTED.filter(key => {
+        // English "a 4-week streak" is a compound, right at every number; an abbreviation ("нед.") agrees with none.
+        const text = String(at(json, key)).replace(/\{\{(count|weeks)\}\}-week streak/g, locale === 'en' ? 'N' : '$&')
+        return /\{\{(count|weeks)\}\}[\s-]+\p{L}+(?![\p{L}.])/u.test(text)
+      })
+      expect(wrong, `${locale}: ${wrong.join(', ')}`).toEqual([])
+    }
+  })
+
   it('the five bundles carry exactly the same key set', () => {
     const en = flatten(bundle('en')).sort()
     for (const locale of LOCALES) expect(flatten(bundle(locale)).sort(), `${locale} keys differ from en`).toEqual(en)

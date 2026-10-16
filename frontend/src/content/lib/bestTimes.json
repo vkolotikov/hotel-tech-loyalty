@@ -1,0 +1,19 @@
+{
+  "default": {
+    "instagram": ["11:00", "19:00"],
+    "facebook": ["09:00", "13:00"],
+    "linkedin": ["08:00", "12:00"],
+    "tiktok": ["18:00", "21:00"],
+    "x": ["09:00", "12:00"],
+    "youtube": ["15:00", "18:00"],
+    "blog": ["10:00"],
+    "email": ["10:00"]
+  },
+  "industries": {
+    "beauty": { "facebook": ["10:00", "19:00"] },
+    "fitness": { "instagram": ["06:30", "18:00"], "facebook": ["06:30", "18:00"] },
+    "restaurant": { "instagram": ["11:00", "17:00"], "facebook": ["11:00", "17:00"] },
+    "hotel": { "instagram": ["10:00", "20:00"], "facebook": ["10:00", "20:00"] },
+    "medical": { "instagram": ["12:00", "19:00"], "facebook": ["09:00", "12:00"] }
+  }
+}

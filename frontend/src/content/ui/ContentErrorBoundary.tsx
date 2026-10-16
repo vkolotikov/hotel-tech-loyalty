@@ -1,7 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { Notice } from '../../workspace/ui/Notice'
 
-interface Props { message: string; reload: string; children: ReactNode }
+/** `fallback`: drawn in place of the notice where the page's own layout is wrong for it (the panel). */
+interface Props { message: string; reload: string; fallback?: ReactNode; children: ReactNode }
 
 /**
  * Catches a page that breaks while it renders, so the person sees the
@@ -23,6 +24,7 @@ export class ContentErrorBoundary extends Component<Props, { failed: boolean }> 
 
   render(): ReactNode {
     if (!this.state.failed) return this.props.children
+    if (this.props.fallback !== undefined) return this.props.fallback
     return (
       <div className="max-w-xl space-y-3 p-6">
         <Notice tone="danger">{this.props.message}</Notice>

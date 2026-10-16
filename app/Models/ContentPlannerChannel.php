@@ -32,6 +32,7 @@ class ContentPlannerChannel extends Model
         'settings',
         'role',
         'posts_per_week',
+        'post_time',
         'cta_style',
         'visual_style',
         'link_policy',

@@ -58,4 +58,18 @@ class PlanTest extends TestCase
             ->assertOk()
             ->assertJsonPath('figures', ['planned' => 0, 'ready' => 0, 'published' => 0, 'open_slots' => 0]);
     }
+
+    public function test_the_tray_lists_a_hundred_and_says_how_many_there_are(): void
+    {
+        for ($i = 0; $i < 102; $i++) {
+            $this->makePost(['scheduled_date' => null, 'topic' => "Idea {$i}"]);
+        }
+        $this->makePost(['scheduled_date' => null, 'status' => 'archived']);
+
+        $this->asStaffMember()->getJson($this->api('plan?from=2026-10-05&to=2026-10-11'))
+            ->assertOk()->assertJsonCount(100, 'unscheduled')->assertJsonPath('unscheduled_total', 102);
+        [$second] = $this->secondBrand(false);
+        $this->asManager()->getJson($this->api("plan?from=2026-10-05&to=2026-10-11&brand_id={$second}"))
+            ->assertOk()->assertJsonPath('unscheduled_total', 0);
+    }
 }

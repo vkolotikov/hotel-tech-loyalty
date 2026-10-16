@@ -26,7 +26,7 @@ class PlanController extends Controller
 
         $profile = ContentContext::profile();
         if (!$profile) {
-            return response()->json(['posts' => [], 'unscheduled' => [], 'slots' => [], 'figures' => ['planned' => 0, 'ready' => 0, 'published' => 0, 'open_slots' => 0]]);
+            return response()->json(['posts' => [], 'unscheduled' => [], 'unscheduled_total' => 0, 'slots' => [], 'figures' => ['planned' => 0, 'ready' => 0, 'published' => 0, 'open_slots' => 0]]);
         }
 
         return response()->json(ContentPlan::for($profile, $data['from'], $data['to'], VenueClock::today(ContentContext::orgId())));

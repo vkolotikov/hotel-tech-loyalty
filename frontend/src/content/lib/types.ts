@@ -89,12 +89,15 @@ export interface PostDetail extends PostCard {
   generated_by: string | null
   hook_alternatives: string[]
   visual_brief: VisualBrief | null
+  /** The repeat series it belongs to (the original's id), and how that series runs (spec 2026-10-15 §8). */
+  series_id?: number | null
+  series?: Series | null
 }
 
 /** A day and platform the brand's channels expect, with no post yet. */
 export interface Slot { date: DateKey; platform: Platform }
 export interface PlanFigures { planned: number; ready: number; published: number; open_slots: number }
-export interface PlanPayload { posts: PostCard[]; unscheduled: PostCard[]; slots: Slot[]; figures: PlanFigures }
+export interface PlanPayload { posts: PostCard[]; unscheduled: PostCard[]; unscheduled_total?: number; slots: Slot[]; figures: PlanFigures }
 
 /** The fields the panel saves; each one optional, `null` for "none". */
 export interface PostFields {
@@ -207,6 +210,8 @@ export interface Channel {
   frequency: Partial<Record<Weekday, boolean>> | null
   audience_id: number | null
   active: boolean
+  /** The channel's usual posting time, HH:MM; null = the first suggested time (spec 2026-10-15 §5). */
+  post_time: string | null
 }
 export type ChannelRef = Pick<Channel, 'id' | 'platform' | 'label' | 'active'>
 
@@ -299,6 +304,8 @@ export interface BrandPayload {
   channels: Channel[]
   voice: Voice | null
   readiness: Readiness | null
+  /** The brand's hashtag groups and text snippets (spec 2026-10-15 §6); every brand answer carries them. */
+  snippets?: Snippet[]
 }
 
 /** What a brand change sends: only the fields it changes. */
@@ -309,3 +316,19 @@ export type ChannelFields = Partial<Omit<Channel, 'id'>>
 
 export type Intensity = 'light' | 'standard' | 'active'
 export interface QuickSetupBody { platforms: Platform[]; name?: string; default_language?: string; primary_goal?: string; intensity?: Intensity }
+
+/** A saved hashtag group or text snippet of the brand (spec 2026-10-15 §6). */
+export type SnippetKind = 'hashtags' | 'text'
+export interface Snippet { id: number; kind: SnippetKind; name: string; body: string }
+/** A hashtag group the AI proposes: nothing is saved until a manager adds it. */
+export interface SnippetSuggestion { name: string; body: string }
+
+/** Posting goals for the venue's current week, per platform, and the streak (spec 2026-10-15 §7). */
+export interface GoalPlatform { platform: Platform; target: number; published: number; planned: number }
+export interface Streak { weeks: number; current_met: boolean; at_risk: boolean; short_by: number }
+export interface Goals { week: { from: DateKey; to: DateKey } | null; platforms: GoalPlatform[]; streak: Streak }
+
+/** How often a repeated post comes back (spec 2026-10-15 §8). */
+export type RepeatEvery = 'week' | '2weeks' | 'month'
+/** A post's series as the server reads it: `more` copies still ahead after this post, `removable` what Stop removes. */
+export interface Series { id: number; every: RepeatEvery; until: DateKey | null; more: number; removable: number; rewriting: boolean }

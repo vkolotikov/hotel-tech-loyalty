@@ -39,6 +39,11 @@ export function storedBrand(storage: BrandStorage | null): number | null {
   }
 }
 
+/** The brand to ask for first: the one a shared post link names (`?brand_id=`), else this device's own choice. */
+export function firstBrand(search: string, storage: BrandStorage | null): number | null {
+  return positiveId(new URLSearchParams(search).get('brand_id')) ?? storedBrand(storage)
+}
+
 export function rememberBrand(storage: BrandStorage | null, id: number): void {
   try { storage?.setItem(BRAND_KEY, String(id)) } catch { /* the choice lasts this visit */ }
 }

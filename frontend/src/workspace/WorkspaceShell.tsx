@@ -25,7 +25,7 @@ export interface WorkspaceNavItem { to: string; end: boolean; icon: LucideIcon; 
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, menuFits = false, children }: {
+export function WorkspaceShell({ workspace, look, accent, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
@@ -45,11 +45,6 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
   onLeave?: () => boolean
   /** Dialogs drawn over the whole frame (Find, the list of shortcuts). */
   overlays?: ReactNode
-  /**
-   * The phone menu as wide as what it holds (at least 14rem, never past the screen): the theme switch is longer in
-   * Russian. Content asks for it; Appointments keeps its fixed 14rem until its own release (its pixels are pinned).
-   */
-  menuFits?: boolean
   children: ReactNode
 }) {
   const { t, i18n } = useTranslation()
@@ -152,7 +147,8 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
             <summary className="list-none cursor-pointer rounded-lg p-2 text-a-text-2 hover:text-a-text [&::-webkit-details-marker]:hidden" aria-label={t('workspace.shell.menu', 'Menu')}>
               <Menu size={18} aria-hidden />
             </summary>
-            <div className={`absolute right-0 top-full z-40 mt-2 ${menuFits ? 'w-max min-w-56 max-w-[calc(100vw-2rem)]' : 'w-56'} animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg`}>
+            {/* As wide as what it holds (the theme switch is longer in Russian), at least 14rem, never past the screen. */}
+            <div className="absolute right-0 top-full z-40 mt-2 w-max min-w-56 max-w-[calc(100vw-2rem)] animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{person}</div>
               <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>
               {fullAdmin !== null && (

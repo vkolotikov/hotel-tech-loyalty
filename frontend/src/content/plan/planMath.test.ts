@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PostCard, Slot } from '../lib/types'
-import { byTime, filtered, inMonth, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey, togglePlatform } from './planMath'
+import { byTime, filtered, inMonth, keepWithinBrand, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey, togglePlatform } from './planMath'
 
 const post = (id: number, more: Partial<PostCard> = {}): PostCard => ({
   id, platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: null, status: 'draft',
@@ -66,5 +66,21 @@ describe('labels', () => {
     expect(inMonth('2026-10-31', '2026-10-08')).toBe(true)
     expect(inMonth('2026-11-01', '2026-10-08')).toBe(false)
     expect(slotKey({ date: '2026-10-07', platform: 'instagram' })).toBe('2026-10-07|instagram')
+  })
+})
+
+describe('brand changes while something is on its way', () => {
+  // Plan B deferred: a Fill finishing after a brand switch opened the old brand's post id under the new brand.
+  it('opens a filled post only while the portal still shows the brand it was made for', () => {
+    expect(opensAfterFill(3, 3)).toBe(true)
+    expect(opensAfterFill(3, 4)).toBe(false)
+  })
+
+  // Plan B deferred: a fallback to another brand briefly showed the old brand's plan (keepPreviousData).
+  it('keeps the last plan on screen only while it is the same brand\'s', () => {
+    const plan = { posts: [] }
+    expect(keepWithinBrand(3)(plan, { queryKey: ['content', 3, 'plan', '2026-10-05', '2026-10-11'] })).toBe(plan)
+    expect(keepWithinBrand(4)(plan, { queryKey: ['content', 3, 'plan', '2026-10-05', '2026-10-11'] })).toBeUndefined()
+    expect(keepWithinBrand(3)(undefined, undefined)).toBeUndefined()
   })
 })

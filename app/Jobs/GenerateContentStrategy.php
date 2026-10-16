@@ -39,6 +39,9 @@ class GenerateContentStrategy implements ShouldQueue
     public int $tries = 1;
     public int $timeout = 600;
 
+    /** What a failed strategy says; the provider's own words stay in the log. */
+    public const FAILED_SUMMARY = 'The strategy could not be made. Please try again.';
+
     public function __construct(
         public int $strategyId,
         public int $profileId,
@@ -61,7 +64,15 @@ class GenerateContentStrategy implements ShouldQueue
             return; // deleted while queued
         }
 
-        $strategies->generate($profile, $this->params, $strategy);
+        // The AI ledger takes the brand from the container: bind the profile's for the run, then leave it as found
+        // (in tests the sync queue runs this inside a request that has its own brand bound).
+        $prior = app()->bound('current_brand_id') ? app('current_brand_id') : null;
+        app()->instance('current_brand_id', (int) $profile->brand_id);
+        try {
+            $strategies->generate($profile, $this->params, $strategy);
+        } finally {
+            $prior === null ? app()->forgetInstance('current_brand_id') : app()->instance('current_brand_id', $prior);
+        }
     }
 
     /**
@@ -81,7 +92,7 @@ class GenerateContentStrategy implements ShouldQueue
             ->where('id', $this->strategyId)
             ->update([
                 'status'  => 'failed',
-                'summary' => mb_substr($e->getMessage(), 0, 500),
+                'summary' => self::FAILED_SUMMARY,
             ]);
     }
 }

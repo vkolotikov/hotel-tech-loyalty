@@ -92,3 +92,6 @@ export function createMover({ api, place, refresh }: {
 
 /** After a refused move, whether the plan must be read again: it shows something that is no longer true, or the answer was lost (the move may have happened). */
 export const refetchAfter = (code: string): boolean => code === 'changed_elsewhere' || code === 'not_found' || code === 'published_cannot_move' || code === 'network'
+
+/** A keyboard move to a day outside the range on screen: the Plan shows that day's week and keeps the card focused. */
+export const leavesRange = (to: DateKey, range: { from: DateKey; to: DateKey }): boolean => to < range.from || to > range.to

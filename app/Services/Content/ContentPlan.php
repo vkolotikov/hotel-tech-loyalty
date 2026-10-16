@@ -12,14 +12,18 @@ final class ContentPlan
     /**
      * Posts whose title, topic, hook or copy hold the words, in any case:
      * LIKE is case-sensitive on PostgreSQL, so both sides are lower-cased.
+     * The words are taken literally: %, _ and the escape character are
+     * escaped. The escape character is "!", not a backslash: PDO before
+     * PHP 8.4 reads \' as an escaped quote and loses its placeholders on
+     * PostgreSQL (as app/Mcp/Support/CustomerBookingAccess.php does).
      */
     public static function search(Builder $query, string $words): Builder
     {
-        $needle = '%' . mb_strtolower(trim($words)) . '%';
+        $needle = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], mb_strtolower(trim($words))) . '%';
 
         return $query->where(function (Builder $q) use ($needle) {
             foreach (['title', 'topic', 'hook', 'main_copy'] as $column) {
-                $q->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ?", [$needle]);
+                $q->orWhereRaw("LOWER(COALESCE({$column}, '')) LIKE ? ESCAPE '!'", [$needle]);
             }
         });
     }
@@ -44,7 +48,7 @@ final class ContentPlan
      * the This week strip — planned (not skipped or archived), ready,
      * published, open slots.
      *
-     * @return array{posts: list<array>, unscheduled: list<array>, slots: list<array>, figures: array{planned: int, ready: int, published: int, open_slots: int}}
+     * @return array{posts: list<array>, unscheduled: list<array>, unscheduled_total: int, slots: list<array>, figures: array{planned: int, ready: int, published: int, open_slots: int}}
      */
     public static function for(ContentPlannerProfile $profile, string $from, string $to, string $today): array
     {
@@ -57,11 +61,15 @@ final class ContentPlan
             ->where('planner_profile_id', $profile->id)
             ->whereNull('scheduled_date')->where('status', '!=', 'archived')
             ->orderByDesc('id')->limit(100)->get();
+        // The tray lists the newest 100; the portal says when there are more (the same filter as Posts' Unscheduled).
+        $unscheduledTotal = ContentPlannerPost::where('planner_profile_id', $profile->id)
+            ->whereNull('scheduled_date')->where('status', '!=', 'archived')->count();
         $slots = self::openSlots($profile, $from, $to, $today);
 
         return [
             'posts'       => $posts->map(fn (ContentPlannerPost $p) => ContentPostPresenter::card($p))->values()->all(),
             'unscheduled' => $unscheduled->map(fn (ContentPlannerPost $p) => ContentPostPresenter::card($p))->values()->all(),
+            'unscheduled_total' => $unscheduledTotal,
             'slots'       => $slots,
             'figures'     => [
                 'planned'    => $posts->whereNotIn('status', ['skipped'])->count(),

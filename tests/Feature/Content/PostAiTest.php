@@ -4,8 +4,11 @@ namespace Tests\Feature\Content;
 
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerPostVariation;
+use App\Models\ContentPlannerVisualBrief;
+use App\Services\ContentPlanner\ImageGenerationService;
 use App\Services\ContentPostGenerationService;
 use App\Services\ContentQualityService;
+use App\Services\ContentVisualBriefService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Mockery;
 use Tests\Concerns\SetsUpContentSchema;
@@ -129,5 +132,67 @@ class PostAiTest extends TestCase
         $this->asStaffMember()->postJson($this->api("posts/{$post->id}/write"))
             ->assertStatus(502)->assertJsonPath('error', 'ai_failed')
             ->assertDontSee('Private provider detail');
+    }
+
+    public function test_anyone_on_the_team_gets_a_visual_brief_for_a_post(): void
+    {
+        $post = $this->makePost();
+        $briefs = Mockery::mock(ContentVisualBriefService::class);
+        $briefs->shouldReceive('generateFor')->once()->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'description' => 'A warm still life']));
+        $this->app->instance(ContentVisualBriefService::class, $briefs);
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/visual-brief"))
+            ->assertOk()->assertJsonPath('post.visual_brief.description', 'A warm still life');
+    }
+
+    public function test_anyone_on_the_team_gets_an_image_for_a_post(): void
+    {
+        $post = $this->makePost();
+        $images = Mockery::mock(ImageGenerationService::class);
+        $images->shouldReceive('generateForPost')->once()->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'image_url' => '/storage/a.png', 'image_status' => 'ready']));
+        $this->app->instance(ImageGenerationService::class, $images);
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/image"), ['instructions' => 'Warm light'])
+            ->assertOk()->assertJsonPath('post.image_url', '/storage/a.png');
+    }
+
+    public function test_a_visual_brief_and_an_image_wait_while_the_ai_budget_is_used_up(): void
+    {
+        $post = $this->makePost();
+        $this->setAiCap(100, 120);
+        $briefs = Mockery::mock(ContentVisualBriefService::class);
+        $briefs->shouldNotReceive('generateFor');
+        $this->app->instance(ContentVisualBriefService::class, $briefs);
+        $images = Mockery::mock(ImageGenerationService::class);
+        $images->shouldNotReceive('generateForPost');
+        $this->app->instance(ImageGenerationService::class, $images);
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/visual-brief"))->assertStatus(403)->assertJsonPath('error', 'ai_budget_used_up');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/image"))->assertStatus(403)->assertJsonPath('error', 'ai_budget_used_up');
+    }
+
+    public function test_another_organisations_post_gets_no_visual_brief_or_image(): void
+    {
+        $other = $this->otherOrganization();
+        $briefs = Mockery::mock(ContentVisualBriefService::class);
+        $briefs->shouldNotReceive('generateFor');
+        $this->app->instance(ContentVisualBriefService::class, $briefs);
+        $images = Mockery::mock(ImageGenerationService::class);
+        $images->shouldNotReceive('generateForPost');
+        $this->app->instance(ImageGenerationService::class, $images);
+
+        $this->asStaffMember()->postJson($this->api("posts/{$other['post']->id}/visual-brief"))->assertNotFound();
+        $this->asStaffMember()->postJson($this->api("posts/{$other['post']->id}/image"))->assertNotFound();
+    }
+
+    public function test_an_image_that_fails_says_so_in_our_words(): void
+    {
+        $post = $this->makePost();
+        $images = Mockery::mock(ImageGenerationService::class);
+        $images->shouldReceive('generateForPost')->once()->andThrow(new \RuntimeException('OpenAI is not configured: sk-secret'));
+        $this->app->instance(ImageGenerationService::class, $images);
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/image"))
+            ->assertStatus(502)->assertJsonPath('error', 'ai_failed')->assertDontSee('sk-secret');
     }
 }

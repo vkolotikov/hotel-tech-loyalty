@@ -50,10 +50,19 @@ describe('cardOf', () => {
 })
 
 describe('refreshLists', () => {
-  it('marks both the Plan\'s and the Posts page\'s reads of the brand for a new read', () => {
+  it('marks the Plan\'s, the Posts page\'s and the goals\' reads of the brand for a new read', () => {
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     void refreshLists(client, 3)
-    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts']])
+    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals']])
+  })
+})
+
+describe('refreshLists and the goals', () => {
+  it('reads the week\'s goals again with the plan after a post changes', async () => {
+    const client = new QueryClient()
+    client.setQueryData(['content', 3, 'goals'], { week: null, platforms: [], streak: { weeks: 0, current_met: false, at_risk: false, short_by: 0 } })
+    await refreshLists(client, 3)
+    expect(client.getQueryState(['content', 3, 'goals'])?.isInvalidated).toBe(true)
   })
 })

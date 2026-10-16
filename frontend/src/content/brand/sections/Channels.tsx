@@ -7,6 +7,7 @@ import { Button } from '../../../workspace/ui/Button'
 import { Notice } from '../../../workspace/ui/Notice'
 import { useApi, useBoot, useBrandId } from '../../ContentProvider'
 import { failureOf } from '../../lib/api'
+import { suggestedTimes, usualTime } from '../../lib/bestTimes'
 import { errorKey } from '../../lib/errors'
 import { LANGUAGES, languageName } from '../../lib/languages'
 import { CHANNEL_DAYS, EMOJI_POLICIES, HASHTAG_POLICIES, optionText } from '../../lib/options'
@@ -79,6 +80,21 @@ function ChannelEditor({ channel, onDone, onCancel }: { channel: Channel | null;
           <span className="mb-1 block text-xs font-medium text-a-text-2">{w('posts_per_week', 'Posts per week')}</span>
           <input type="number" min={0} max={21} value={form.posts_per_week} onChange={(e) => set({ posts_per_week: e.target.value })} className={`${INPUT} border-a-border`} />
         </label>
+        <div>
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-a-text-2">{w('post_time', 'Usual posting time')}</span>
+            <input type="time" value={form.post_time} onChange={(e) => set({ post_time: e.target.value })} className={`${INPUT} border-a-border`} />
+          </label>
+          <div role="group" aria-label={w('post_time_suggested', 'Suggested times')} className="mt-1.5 flex flex-wrap gap-1">
+            {suggestedTimes(form.platform, boot.organization.industry).map(time => (
+              <button key={time} type="button" aria-pressed={form.post_time === time} onClick={() => set({ post_time: form.post_time === time ? '' : time })}
+                className={`rounded-full border px-2 py-0.5 text-xs font-medium tabular-nums ${form.post_time === time ? 'border-a-accent-text bg-a-accent/10 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>{time}</button>
+            ))}
+          </div>
+          <span className="mt-1 block text-xs text-a-text-2">
+            {t('content.brand.channels.post_time_hint', 'Left empty, posts start at {{time}}.', { time: suggestedTimes(form.platform, boot.organization.industry)[0] ?? '' })}
+          </span>
+        </div>
         <div className="md:col-span-2" role="group" aria-label={w('days', 'Posting days')}>
           <span className="mb-1 block text-xs font-medium text-a-text-2">{w('days', 'Posting days')}</span>
           <div className="flex flex-wrap gap-1.5">
@@ -127,6 +143,7 @@ export function ChannelsSection({ brand, canEdit, startOpen = false, onSaved }: 
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const api = useApi()
+  const boot = useBoot()
   const brandId = useBrandId()
   const queryClient = useQueryClient()
   const { adopt } = useBrand()
@@ -169,16 +186,18 @@ export function ChannelsSection({ brand, canEdit, startOpen = false, onSaved }: 
               ? <ChannelEditor channel={channel} onDone={done} onCancel={() => setOpen(null)} />
               : (
                 // A switched-off channel says so in words, with a dashed edge: fading the row put its buttons under 4.5:1.
+                // The words keep 12rem (basis-48): on a phone the switch and buttons wrap below them instead of squeezing them.
                 <div className={`flex flex-wrap items-center gap-3 rounded-lg border border-a-border p-3 ${channel.active ? '' : 'border-dashed'}`}>
                   <PlatformMark platform={channel.platform} />
-                  <div className="min-w-0 flex-1">
+                  <div className="min-w-0 grow basis-48">
                     <p className="truncate text-sm font-semibold text-a-text">
                       {channel.label}
                       {canEdit && !channel.active && <span className="ml-2 text-xs font-normal text-a-text-2">{w('off', 'Off')}</span>}
                     </p>
                     <p className="text-xs text-a-text-2">
                       {daysText(channel)}
-                      {channel.posts_per_week ? ` · ${t('content.brand.channels.per_week', '{{count}} posts a week', { count: channel.posts_per_week })}` : ''}
+                      {channel.posts_per_week ? ` · ${t('content.brand.channels.per_week', 'posts a week: {{count}}', { count: channel.posts_per_week })}` : ''}
+                      {usualTime(channel, boot.organization.industry) ? ` · ${t('content.brand.channels.usual_at', 'usually at {{time}}', { time: usualTime(channel, boot.organization.industry) })}` : ''}
                     </p>
                   </div>
                   {canEdit ? (

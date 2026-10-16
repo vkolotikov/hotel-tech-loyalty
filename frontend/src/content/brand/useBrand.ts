@@ -10,6 +10,12 @@ import type { BrandPayload, ProfileFields } from '../lib/types'
  * the bootstrap again (readiness, "set up"); `saveProfile` sends only what it
  * is given, and nothing at all when that is nothing.
  */
+/** What the brand cache keeps of an answer: the whole brand (some answers carry one item more), its snippets included. */
+export function brandCache(payload: BrandPayload): BrandPayload {
+  const { profile, audiences, channels, voice, readiness, snippets } = payload
+  return { profile, audiences, channels, voice, readiness, snippets: snippets ?? [] }
+}
+
 export function useBrand() {
   const api = useApi()
   const brandId = useBrandId()
@@ -17,8 +23,7 @@ export function useBrand() {
   const query = useQuery({ queryKey: ['content', brandId, 'brand'], queryFn: api.brand, staleTime: 300_000 })
 
   const adopt = useCallback((payload: BrandPayload) => {
-    const { profile, audiences, channels, voice, readiness } = payload
-    queryClient.setQueryData<BrandPayload>(['content', brandId, 'brand'], { profile, audiences, channels, voice, readiness })
+    queryClient.setQueryData<BrandPayload>(['content', brandId, 'brand'], brandCache(payload))
     void queryClient.invalidateQueries({ queryKey: ['content', 'bootstrap'] })
   }, [queryClient, brandId])
 

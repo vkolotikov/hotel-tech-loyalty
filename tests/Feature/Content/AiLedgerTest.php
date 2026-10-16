@@ -55,4 +55,18 @@ class AiLedgerTest extends TestCase
         $this->assertStringContainsString('->recordImage(', $source);
         $this->assertStringContainsString('AiClient::USAGE_FEATURE', $source);
     }
+
+    public function test_hashtag_suggestions_go_through_the_counted_ai_client(): void
+    {
+        $source = file_get_contents(app_path('Services/Content/ContentSnippetSuggester.php'));
+        $this->assertStringContainsString('protected AiClient $ai', $source);
+        $this->assertStringContainsString("->generateJson(\$profile, 'snippet_suggest'", $source);
+    }
+
+    public function test_repeat_rewording_goes_through_the_counted_ai_client(): void
+    {
+        $source = file_get_contents(app_path('Services/Content/ContentRepeatRewriter.php'));
+        $this->assertStringContainsString('protected AiClient $ai', $source);
+        $this->assertStringContainsString("->generateJson(\$profile, 'repeat_rewrite'", $source);
+    }
 }

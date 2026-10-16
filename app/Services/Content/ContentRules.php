@@ -2,6 +2,7 @@
 
 namespace App\Services\Content;
 
+use App\Models\ContentPlannerSnippet;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
@@ -125,6 +126,16 @@ final class ContentRules
         ];
     }
 
+    /** A hashtag group or a text snippet (spec 2026-10-15 §6); its kind is fixed once made. */
+    public static function snippetFields(bool $creating): array
+    {
+        return [
+            'kind' => $creating ? ['required', Rule::in(ContentPlannerSnippet::KINDS)] : ['prohibited'],
+            'name' => $creating ? ['required', 'string', 'max:60'] : ['sometimes', 'string', 'max:60'],
+            'body' => $creating ? ['required', 'string', 'max:2000'] : ['sometimes', 'string', 'max:2000'],
+        ];
+    }
+
     /** @return array<string, mixed> */
     public static function channelFields(bool $creating): array
     {
@@ -142,6 +153,8 @@ final class ContentRules
             'audience_id' => ['sometimes', 'nullable', 'integer', self::owned('content_planner_audiences')],
             'active' => ['sometimes', 'boolean'],
             'frequency' => ['sometimes', 'nullable', 'array'],
+            // The usual posting time (spec 2026-10-15 §5): two-digit HH:MM; an empty value reaches here as null and clears it.
+            'post_time' => ['sometimes', 'nullable', 'date_format:H:i'],
         ];
         foreach (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as $day) {
             $fields["frequency.{$day}"] = ['sometimes', 'boolean'];

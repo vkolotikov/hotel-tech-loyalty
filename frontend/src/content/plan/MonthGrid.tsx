@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next'
 import { formatDate } from '../../workspace/lib/wallClock'
 import type { DateKey } from '../lib/types'
+import { AddButton } from './AddButton'
+import { canAdd, clickAdds } from './addMath'
 import { inMonth, type DayPlan } from './planMath'
 import { PostCardView } from './PostCardView'
 import type { PlanHandlers } from './WeekGrid'
@@ -9,7 +11,7 @@ import type { PlanHandlers } from './WeekGrid'
 const SHOWN = 3
 
 /** The month view: six Monday-first weeks; each day its first posts, how many more, and its empty slots. A day's number opens its week. */
-export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, onDay, onOpen, onCardPointerDown, onCardKeyDown }: Pick<PlanHandlers, 'onOpen' | 'onCardPointerDown' | 'onCardKeyDown'> & {
+export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, onDay, onAdd, onOpen, onCardPointerDown, onCardKeyDown }: Pick<PlanHandlers, 'onOpen' | 'onCardPointerDown' | 'onCardKeyDown'> & {
   plans: DayPlan[]
   /** A day of the month shown. */
   date: DateKey
@@ -18,6 +20,8 @@ export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, on
   selectedId: number | null
   dropDate: DateKey | null
   onDay: (day: DateKey) => void
+  /** Opens a new post on a day (spec 2026-10-15 §4): its empty space and its corner "+", from today on. */
+  onAdd?: (day: DateKey) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -31,14 +35,17 @@ export function MonthGrid({ plans, date, today, locale, selectedId, dropDate, on
         {plans.map(day => {
           const own = inMonth(day.date, date)
           const extra = day.posts.length - SHOWN
+          const adds = onAdd !== undefined && canAdd(day.date, today)
           return (
             <div key={day.date} data-drop-date={day.date}
-              className={`min-h-[7.5rem] min-w-0 border-b border-r border-a-border p-1.5 transition-colors ${dropDate === day.date ? 'bg-a-accent/10' : own ? '' : 'bg-a-surface-2/60'}`}>
+              onClick={adds ? (e) => { if (clickAdds(e.target as Element)) onAdd(day.date) } : undefined}
+              className={`group relative min-h-[7.5rem] min-w-0 border-b border-r border-a-border p-1.5 transition-colors ${dropDate === day.date ? 'bg-a-accent/10' : own ? '' : 'bg-a-surface-2/60'}`}>
               <button type="button" onClick={() => onDay(day.date)} aria-current={day.date === today ? 'date' : undefined}
                 aria-label={formatDate(day.date, locale, { weekday: 'long', day: 'numeric', month: 'long' })}
                 className={`mb-1 rounded-full px-1.5 text-xs font-medium ${day.date === today ? 'bg-a-accent text-a-accent-ink' : own ? 'text-a-text hover:bg-a-surface-2' : 'text-a-text-2 hover:bg-a-surface-2'}`}>
                 {Number(day.date.slice(8))}
               </button>
+              {adds && <AddButton day={day.date} locale={locale} onAdd={onAdd} className="absolute right-1 top-1" />}
               <div className="space-y-1">
                 {day.posts.slice(0, SHOWN).map(post => (
                   <PostCardView key={post.id} post={post} compact selected={selectedId === post.id} onOpen={onOpen} onPointerDown={onCardPointerDown} onKeyDown={onCardKeyDown} />

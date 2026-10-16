@@ -4,6 +4,7 @@ namespace App\Services\Content;
 
 use App\Models\Staff;
 use App\Models\User;
+use App\Support\AdminAccess\AccessMap;
 
 /**
  * Who may do what in HexaTech Content (spec 2026-10-14 §5.1): owners and
@@ -13,12 +14,10 @@ use App\Models\User;
  */
 final class ContentAccess
 {
-    public const MANAGER_ROLES = ['super_admin', 'manager'];
-
     /** The caller's role in the bound organisation (Staff is tenant-scoped); a deactivated row counts for nothing. */
     public static function canManage(User $user): bool
     {
-        return in_array(Staff::where('user_id', $user->id)->where('is_active', true)->first()?->role, self::MANAGER_ROLES, true);
+        return in_array(Staff::where('user_id', $user->id)->where('is_active', true)->first()?->role, AccessMap::MANAGER_ROLES, true);
     }
 
     public static function requireManager(User $user): void

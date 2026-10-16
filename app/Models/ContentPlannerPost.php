@@ -48,6 +48,7 @@ class ContentPlannerPost extends Model
         'strategic_reason',
         'engagement_mechanic',
         'generated_by',
+        'series_id',
     ];
 
     protected $casts = [
