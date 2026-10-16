@@ -71,6 +71,31 @@ describe('contentApi', () => {
     stop()
     calls.fail = null
   })
+
+  it('reaches the ideas, key dates, templates and a write from a template under the prefix (spec 2026-10-16 §9.2)', async () => {
+    calls.fail = null
+    const api = contentApi(5)
+    await api.ideas({ platform: 'instagram', pillar_id: 4 })
+    expect(last()).toMatchObject({ method: 'get', url: '/v1/admin/content/ideas?brand_id=5', config: { params: { platform: 'instagram', pillar_id: 4 } } })
+    await api.createKeyDate({ kind: 'event', title: 'Spring sale', start_date: '2026-03-01', end_date: '2026-03-14' })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/key-dates?brand_id=5', body: { kind: 'event', title: 'Spring sale' } })
+    await api.updateKeyDate(7, { title: 'Big sale' })
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/key-dates/7?brand_id=5', body: { title: 'Big sale' } })
+    await api.deleteKeyDate(7)
+    expect(last()).toMatchObject({ method: 'delete', url: '/v1/admin/content/key-dates/7?brand_id=5' })
+    await api.createTemplate({ name: 'Offer', hook: 'Book your [treatment]' })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/brand/templates?brand_id=5', body: { name: 'Offer' } })
+    await api.updateTemplate(3, { cta: 'Book now' })
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/brand/templates/3?brand_id=5', body: { cta: 'Book now' } })
+    await api.deleteTemplate(3)
+    expect(last()).toMatchObject({ method: 'delete', url: '/v1/admin/content/brand/templates/3?brand_id=5' })
+    await api.suggestTemplates()
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/brand/templates/suggest?brand_id=5' })
+    await api.write(9, null, 3)
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts/9/write?brand_id=5', body: { instructions: null, template_id: 3 } })
+    await api.write(9, 'Shorter')
+    expect(last()?.body).toEqual({ instructions: 'Shorter' })
+  })
 })
 
 describe('failureOf', () => {

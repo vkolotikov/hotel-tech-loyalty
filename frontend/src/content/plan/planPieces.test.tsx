@@ -202,7 +202,8 @@ describe('click-to-add in the week', () => {
     expect(out).toContain('data-add="2026-10-07"')
     expect(out).toContain('data-add="2026-10-11"')
     expect(out).not.toContain('data-add="2026-10-06"')
-    expect(out).toContain('aria-label="New post on Wednesday 7 October"')
+    expect(out).toContain('aria-label="Add to Wednesday 7 October"')
+    expect(out).toMatch(/<button[^>]*aria-haspopup="true"[^>]*data-add="2026-10-07"/)
   })
 
   it('shows the "+" on hover and focus where the device hovers, and always where it cannot', () => {
@@ -224,7 +225,7 @@ describe('click-to-add in the week', () => {
   // cannot drag, so the guard is read from the source: a new post from a day goes through the drag's consumeClick first.
   it('lets no drag release open a new post: the same guard as opening a card', () => {
     const source = fs.readFileSync(new URL('./PlanPage.tsx', import.meta.url), 'utf8')
-    expect(source).toMatch(/const addOn = \(day: DateKey\) => \{\s*if \(drag\.consumeClick\(\) \|\| !canAdd\(day, today\)\) return/)
+    expect(source).toMatch(/const addOn = \(day: DateKey, choice: AddChoice = 'post'\) => \{\s*if \(drag\.consumeClick\(\) \|\| !canAdd\(day, today\)\) return/)
   })
 })
 
@@ -234,7 +235,7 @@ describe('click-to-add in the month and the list', () => {
     const out = html(<MonthGrid plans={plansFor(days, [], [])} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} onDay={noop} onOpen={noop} onAdd={noop} />)
     expect(out).toContain('data-add="2026-10-07"')
     expect(out).not.toContain('data-add="2026-10-06"')
-    expect(out).toMatch(/<button[^>]*data-add="2026-10-07"[^>]*class="[^"]*absolute right-1 top-1/)
+    expect(out).toMatch(/<div class="absolute right-1 top-1"><div data-menu="" data-side="below" data-align="right" class="relative[^"]*"><button[^>]*data-add="2026-10-07"/)
     expect(out).toContain('aria-label="Wednesday 7 October"')
   })
 
@@ -295,5 +296,67 @@ describe('a new post from the Plan before the brand is read', () => {
     const source = fs.readFileSync(new URL('./PlanPage.tsx', import.meta.url), 'utf8')
     expect(source).toMatch(/panel\.openNew\(brandInfo\.data \? draft : \{ \.\.\.draft, time: undefined \}\)/)
     expect(source).toMatch(/time: brandInfo\.data \? times\[slot\.platform\] \?\? null : undefined/)
+  })
+})
+
+describe('key dates in the three views (spec 2026-10-16 §3.4)', () => {
+  const holiday = { id: 'christmas', kind: 'holiday' as const, date: '2026-10-08', substitute: false, name_en: 'Christmas Day' }
+  const pastNote = { id: 5, kind: 'note' as const, title: 'Photographer', details: null, start: '2026-10-05', end: null }
+
+  it('puts a day’s chips under its name in the week and in the list — a past day too', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    const keyDates = { '2026-10-08': [holiday], '2026-10-05': [pastNote] }
+    const week = html(<WeekGrid plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers}
+      keyDates={keyDates} observed={false} onKeyDate={noop} />)
+    expect(week).toContain('aria-label="Public holiday: Christmas Day"')
+    expect(week).toContain('aria-label="Note: Photographer"')
+    // The list shows a past day that holds only a chip.
+    const list = html(<ListView plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} fillingKey={null} aiPaused={false} {...handlers}
+      keyDates={keyDates} observed={false} onKeyDate={noop} />)
+    expect(list).toContain('list-2026-10-05')
+    expect(list).toContain('Photographer')
+  })
+
+  it('shows the first chip and how many more in a month day', () => {
+    const days = rangeFor('month', '2026-10-07').days
+    const out = html(<MonthGrid plans={plansFor(days, [], [])} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} onDay={noop} onOpen={noop}
+      keyDates={{ '2026-10-08': [holiday, { ...pastNote, start: '2026-10-08' }] }} observed={false} onKeyDate={noop} />)
+    expect(out).toContain('Christmas Day')
+    // Final review: a plain span let the click reach the day (a new post) and no keyboard could reach the rest.
+    expect(out).toMatch(/<button[^>]*>\+1 more<\/button>/)
+  })
+})
+
+// Release check (Plan 4A-2 Task 12, eyes): at the foot of a week day the "+" menu opened downward, past the bottom of the
+// calendar's scroll box, so it could not be seen without scrolling.
+describe('the "+" menu opens where it can be seen', () => {
+  it('opens upward from the foot of a week day, and from a month day in the last two weeks', () => {
+    const week = html(<WeekGrid plans={plansFor(rangeFor('week', '2026-10-07').days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    expect(week).toMatch(/<div data-menu="" data-side="above"[^>]*><button[^>]*data-add="2026-10-07"/)
+    const days = rangeFor('month', '2026-10-07').days
+    const month = html(<MonthGrid plans={plansFor(days, [], [])} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} onDay={noop} onOpen={noop} onAdd={noop} />)
+    expect(month).toMatch(/<div data-menu="" data-side="below"[^>]*><button[^>]*data-add="2026-10-07"/)
+    expect(month).toMatch(new RegExp(`<div data-menu="" data-side="above"[^>]*><button[^>]*data-add="${days[days.length - 1]}"`))
+  })
+
+  // The same release check: on Sunday the week's menu ran past the calendar's right edge ("From a template…" was cut);
+  // a month Monday's menu, opening leftward from its corner "+", would run past the left edge.
+  it('opens toward the calendar: leftward at the week’s end, rightward from a month Monday', () => {
+    const week = html(<WeekGrid plans={plansFor(rangeFor('week', '2026-10-07').days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    expect(week).toMatch(/<div data-menu="" data-side="above" data-align="left"[^>]*><button[^>]*data-add="2026-10-07"/)
+    expect(week).toMatch(/<div data-menu="" data-side="above" data-align="right"[^>]*><button[^>]*data-add="2026-10-11"/)
+    const month = html(<MonthGrid plans={plansFor(rangeFor('month', '2026-10-07').days, [], [])} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={null} dropDate={null} onDay={noop} onOpen={noop} onAdd={noop} />)
+    expect(month).toMatch(/<div data-menu="" data-side="below" data-align="left"[^>]*><button[^>]*data-add="2026-10-12"/)
+    expect(month).toMatch(/<div data-menu="" data-side="below" data-align="right"[^>]*><button[^>]*data-add="2026-10-07"/)
+  })
+})
+
+// Final review (Plan 4A-2): in the list, the last day's "+" menu opened below, out of the calendar's scroll box.
+describe('the list view\'s "+" menus', () => {
+  it('open upward from the last day shown, downward elsewhere', () => {
+    const days = rangeFor('week', '2026-10-07').days
+    const out = html(<ListView plans={plansFor(days, [], [])} today="2026-10-07" locale="en-GB" selectedId={null} fillingKey={null} aiPaused={false} {...handlers} onAdd={noop} />)
+    expect(out).toMatch(/<div data-menu="" data-side="below"[^>]*><button[^>]*data-add="2026-10-07"/)
+    expect(out).toMatch(/<div data-menu="" data-side="above"[^>]*><button[^>]*data-add="2026-10-11"/)
   })
 })

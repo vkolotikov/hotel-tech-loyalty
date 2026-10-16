@@ -4,8 +4,9 @@ import type { PlanFilter, PlanView } from './planMath'
 /** The Plan's choices on this device: the view and the filters (spec §4.2). Kept apart from the look (lib/look.ts). */
 export const PREFS_KEY = 'content:plan'
 
-export interface PlanPrefs { view: PlanView; filter: PlanFilter }
-export const DEFAULT_PREFS: PlanPrefs = { view: 'week', filter: { platforms: [], status: 'all' } }
+/** `keyDates`: the Key dates layer shows (spec 2026-10-16 §3.4; on until switched off on this device). */
+export interface PlanPrefs { view: PlanView; filter: PlanFilter; keyDates: boolean }
+export const DEFAULT_PREFS: PlanPrefs = { view: 'week', filter: { platforms: [], status: 'all' }, keyDates: true }
 
 const VIEWS: readonly PlanView[] = ['week', 'month', 'list']
 
@@ -21,6 +22,7 @@ export function parsePrefs(raw: string | null, platforms: readonly string[], sta
       platforms: Array.isArray(f.platforms) ? (f.platforms.filter(p => typeof p === 'string' && platforms.includes(p)) as Platform[]) : [],
       status: typeof f.status === 'string' && statuses.includes(f.status) ? (f.status as PostStatus) : 'all',
     },
+    keyDates: typeof o.keyDates === 'boolean' ? o.keyDates : true,
   }
 }
 

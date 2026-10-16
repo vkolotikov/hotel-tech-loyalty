@@ -20,6 +20,7 @@ export function ContentShortcuts({ open, onClose, modKey, fallbackFocus }: {
       { rows: [
         { name: t('content.shortcuts.find', 'Find'), keys: [[`${modKey} K`], ['/']] },
         { name: t('content.shell.new_post', 'New post'), keys: [['N']] },
+        { name: t('content.shortcuts.idea', 'Add an idea'), keys: [['I']] },
         { name: t('content.shortcuts.help', 'This list'), keys: [['?']] },
       ] },
       { title: t('content.shortcuts.on_plan', 'On the plan'), rows: [

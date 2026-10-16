@@ -143,10 +143,25 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - **Repeat**: in the panel of a saved post with a day; the limits (26 copies, 12 months, 12 AI copies) are checked
   before sending (`panel/repeatMath.ts` mirrors `ContentRepeat`); the panel reads its post every 5 s while the AI
   rewords the series, and the Plan with it.
+- **Key dates** (release 4a): each day's chips above its posts (week, list; the month shows the first and "+N"); a
+  holiday's card offers "Write a post for it" from today on; an event or note opens its editor (anyone on the team; an
+  event lasts 31 days at most). The toolbar's Key dates switch is remembered on the device (`content:plan`). Day names
+  come from the bundles under `keydates.day.<id>`; `tests/Unit/Content/DayWordsTest.php` ties them to `DayNames::EN`.
+  A United States substitute day says "observed", elsewhere "day off in lieu". Brand → Key dates: the country (or none,
+  or the guess) and the marketing switch, managers only.
+- **The day's "+"** is a menu — New post · From a template… (when the brand has templates) · Note · Event — on one
+  shared component (`ui/PopMenu.tsx`, also Insert, the Template menu and "Move to…"); a day's empty space still starts
+  a post at once.
+- **Ideas** (`/content/ideas`): the posts without a day by stage (Idea, Draft, In review, Ready); a card moves by drag,
+  Shift + ← / → or "Move to…"; Schedule puts it on the Plan with Undo; past 50 a stage links to the Posts page. Quick
+  capture: the Idea stage's line, Find's "Add an idea" and the I key.
+- **Templates**: Brand → Templates (managers keep them; everyone reads them; AI suggestions save nothing until Add);
+  the panel's Template menu beside Topic (asks before replacing written words), the blanks line, managers' "Save as
+  template"; "+ → From a template…" with Use and Write with AI (the panel shows the AI working).
 
 ## What this release does not do
 
-No approvals, no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
+No approvals yet (release 4b), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
 model allowlist for Content. The old AI Content Planner is gone: its `/v1/admin/content-planner/*` routes answer 404
 and its screens are removed; a browser tab left open across the deploy must be reloaded.
 
@@ -163,6 +178,20 @@ and its screens are removed; a browser tab left open across the deploy must be r
   and "Repeats every week until"; `/api/v1/admin/content/goals` answers 401 when signed out (404 before release 3).
 - After the deploy (owner): on a real brand, give a channel a usual time, add one hashtag group, start a post with a
   day's "+", repeat one post weekly for a month and stop it; check the goals line on the Plan.
+- Release 4a (server, Plan 4A-1): three additive migrations (`content_planner_profiles.holiday_country` and
+  `marketing_days`, `content_planner_key_dates`, `content_planner_templates`); nothing existing changes. Built-in days
+  come from our own rule table in `app/Services/Content/Days/`: the public holidays of GB, IE, DE, FR, ES, LV, LT, EE
+  and US with their substitute and observed days, marketing days by country, international days by industry. A brand
+  that never chose a country gets a guess (the organisation's country, else the venue time zone's own country, legacy
+  names such as `GB` and `US/Eastern` included); `none` means no
+  holidays. A one-off holiday (a coronation bank holiday, Latvia's day after a Song Festival) is one rule line in
+  `PublicHolidays::RULES`, its English name in `DayNames::EN` and its words in the five bundles.
+- Key dates reach the AI (Generate, Fill with AI, Write the text): holidays, special days and the brand's events with
+  their details; notes never do. Templates and their AI suggestions are counted in the AI budget like every other call.
+- Verify release 4a by content (after Plan 4A-2's deploy): `/api/v1/admin/content/ideas` answers 401 when signed out
+  (404 before release 4a); the `ContentApp` chunk carries the Ideas page's and the Key dates section's words.
+- After the deploy (owner): on a real brand, check the guessed country on Brand → Key dates, add one event, capture
+  one idea with I and schedule it, add one template and use it from a day's "+"; reload admin tabs left open.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.

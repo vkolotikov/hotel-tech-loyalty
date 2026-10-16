@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Channel } from '../lib/types'
-import { canAdd, clickAdds, newPostDraft, usualTimes } from './addMath'
+import { addChoices, canAdd, clickAdds, newPostDraft, usualTimes } from './addMath'
 
 const channel = (id: number, platform: Channel['platform'], more: Partial<Channel> = {}): Channel => ({
   id, platform, label: platform, url: null, goal: null, role: null, cta_style: null, visual_style: null, link_policy: null, tone_override: null,
@@ -25,6 +25,8 @@ describe('clickAdds', () => {
     expect(clickAdds(at('[data-post]'))).toBe(false)
     expect(clickAdds(at('[data-slot]'))).toBe(false)
     expect(clickAdds(at('button'))).toBe(false)
+    // Review Focus 3: a click on an open menu's own padding (between its items) starts nothing.
+    expect(clickAdds(at('[data-menu]'))).toBe(false)
     expect(clickAdds(null)).toBe(false)
   })
 })
@@ -47,5 +49,12 @@ describe('usualTimes', () => {
   it('gives each platform its first active channel\'s usual time', () => {
     expect(usualTimes([channel(1, 'instagram', { active: false, post_time: '07:00' }), channel(2, 'instagram'), channel(3, 'instagram', { post_time: '21:00' })], 'fitness'))
       .toEqual({ instagram: '06:30' })
+  })
+})
+
+describe('addChoices (spec 2026-10-16 §3.5)', () => {
+  it('offers a new post, a template where the brand has one, a note and an event', () => {
+    expect(addChoices(false)).toEqual(['post', 'note', 'event'])
+    expect(addChoices(true)).toEqual(['post', 'template', 'note', 'event'])
   })
 })

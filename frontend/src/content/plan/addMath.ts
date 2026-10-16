@@ -8,7 +8,7 @@ export const canAdd = (day: DateKey, today: DateKey): boolean => day >= today
 /** What a click inside a day hit: its empty space counts; a card, a slot, a link or a control does its own thing. */
 export function clickAdds(target: { closest?: (selector: string) => unknown } | null): boolean {
   if (!target || typeof target.closest !== 'function') return false
-  return !target.closest('button, a, input, select, textarea, label, summary, [data-post], [data-slot]')
+  return !target.closest('button, a, input, select, textarea, label, summary, [data-post], [data-slot], [data-menu]')
 }
 
 /** Each platform's usual posting time (spec 2026-10-15 §5): its first active channel's own, else the first suggested time. */
@@ -30,4 +30,12 @@ export function newPostDraft(day: DateKey, slots: readonly Slot[], channels: rea
   const platform = slots.find(s => s.date === day)?.platform ?? channels.find(c => c.active)?.platform ?? null
   const time = platform ? usualTimes(channels, industry)[platform] ?? suggestedTimes(platform, industry)[0] ?? null : null
   return { date: day, platform, time }
+}
+
+/** What a day's "+" offers (spec 2026-10-16 §3.5); a day's empty space always starts a post. */
+export type AddChoice = 'post' | 'template' | 'note' | 'event'
+
+/** The "+" menu's choices: a new post, a template where the brand has one, a note and an event. */
+export function addChoices(templates: boolean): AddChoice[] {
+  return templates ? ['post', 'template', 'note', 'event'] : ['post', 'note', 'event']
 }

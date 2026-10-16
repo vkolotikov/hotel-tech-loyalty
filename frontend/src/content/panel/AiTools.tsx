@@ -20,13 +20,17 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * it has unsaved edits (they would overwrite them); a rewrite only offers
  * text to use, so it does not. With the month's budget used up, all wait.
  */
-export function AiTools({ post, dirty, onPost, onUseCopy }: {
+export function AiTools({ post, dirty, onPost, onUseCopy, outside = null, onOutsideSeen }: {
   post: PostDetail
   dirty: boolean
   /** The post the server answered with (write, quality, brief, image change it). */
   onPost: (post: PostDetail) => void
   /** Put a rewrite into the text field, as an unsaved edit. */
   onUseCopy: (copy: string) => void
+  /** The AI writing this post from elsewhere ("Write with AI" from a template, spec 2026-10-16 §5.3): working, or the refusal's code. */
+  outside?: { failed: string | null } | null
+  /** That write is forgotten once the person uses a tool here. */
+  onOutsideSeen?: () => void
 }) {
   const { t } = useTranslation()
   const api = useApi()
@@ -38,11 +42,16 @@ export function AiTools({ post, dirty, onPost, onUseCopy }: {
   const [variation, setVariation] = useState<Variation | null>(null)
   const paused = boot.ai.status === 'over'
   const note = guidance.trim() === '' ? null : guidance.trim()
-  const writes = dirty || paused || busy !== null
+  const working = outside !== null && outside.failed === null
+  const writes = dirty || paused || busy !== null || working
+  const [outsideKey, outsideText] = errorKey('ai', outside?.failed ?? 'unknown')
+  const shownError = error ?? (outside?.failed ? t(outsideKey, outsideText) : null)
 
   const run = async (action: AiAction, call: () => Promise<{ post?: PostDetail; variation?: Variation }>) => {
     setBusy(action)
     setError(null)
+    // A failure is forgotten once the person acts; a write still running is not (final review: it was cleared mid-write).
+    if (outside?.failed) onOutsideSeen?.()
     try {
       const answer = await call()
       if (answer.variation) setVariation(answer.variation)
@@ -91,13 +100,13 @@ export function AiTools({ post, dirty, onPost, onUseCopy }: {
             {boot.rewrites.map(r => <option key={r} value={r}>{t(`content.panel.ai.rewrite_type.${r}`, REWRITE_TEXT[r])}</option>)}
           </select>
         </label>
-        <Button size="sm" variant="secondary" disabled={paused || busy !== null} loading={busy === 'rewrite'}
+        <Button size="sm" variant="secondary" disabled={paused || busy !== null || working} loading={busy === 'rewrite'}
           onClick={() => { void run('rewrite', () => api.rewrite(post.id, kind, note)) }}>
           {t('content.panel.ai.rewrite', 'Rewrite')}
         </Button>
       </div>
-      {busy !== null && <p role="status" className="text-xs text-a-text-2">{t('content.panel.ai.working', 'The AI is working…')}</p>}
-      {error && <Notice tone="danger">{error}</Notice>}
+      {(busy !== null || working) && <p role="status" className="text-xs text-a-text-2">{t('content.panel.ai.working', 'The AI is working…')}</p>}
+      {shownError && <Notice tone="danger">{shownError}</Notice>}
       {variation && (
         <div className="space-y-2 rounded-lg border border-a-border bg-a-surface p-3">
           <p className="whitespace-pre-wrap text-sm text-a-text">{variation.copy}</p>

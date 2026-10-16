@@ -3,9 +3,19 @@ import { useTranslation } from 'react-i18next'
 import { useBrandId } from '../ContentProvider'
 import type { DateKey, Platform, PostCard } from '../lib/types'
 import { keptTarget } from './kept'
+import type { PostForm } from './panelState'
+import { withWriting, type OutsideWrite } from './writing'
 
-/** What a new post starts from: the day, platform and time a day's "+", a slot or the New post button gave. */
-export interface NewDraft { date: DateKey | null; platform: Platform | null; time?: string | null }
+/**
+ * What a new post starts from: the day, platform and time a day's "+", a slot or the New post button gave; `fields` are
+ * words it starts with (a key date's name as its topic, a template's words: spec 2026-10-16 §3.4, §5.3).
+ */
+export interface NewDraft {
+  date: DateKey | null
+  platform: Platform | null
+  time?: string | null
+  fields?: Partial<Pick<PostForm, 'topic' | 'hook' | 'main_copy' | 'cta' | 'hashtags' | 'pillar_id'>>
+}
 /** What the post panel shows. `seq` remounts it for every opening, so no state leaks from one post to the next. */
 export type PanelTarget = { kind: 'post'; id: number; seq: number } | { kind: 'new'; draft: NewDraft; seq: number }
 
@@ -27,6 +37,10 @@ export interface PanelApi {
   /** The last post this person moved on the Plan: the panel showing it takes the new day under any unsaved edits. */
   moved: PostCard | null
   noteMoved: (card: PostCard) => void
+  /** The writes the AI is doing for posts from outside the panel ("Write with AI" from a template, spec 2026-10-16 §5.3), by post id. */
+  writing: Record<number, OutsideWrite>
+  /** One post's write: working ({ failed: null }), failed (its code), or done (null) — the other posts' are left alone. */
+  noteWriting: (id: number, state: OutsideWrite | null) => void
 }
 
 /** Whether something that drops unsaved edits may go ahead: always without edits; with edits only when the person says so. */
@@ -61,6 +75,7 @@ export function PanelProvider({ initial = null, children }: {
   // Edits kept when the portal last went away (kept.ts) reopen their post.
   const [target, setTarget] = useState<PanelTarget | null>(() => initial ?? keptTarget())
   const [moved, setMoved] = useState<PostCard | null>(null)
+  const [writing, setWriting] = useState<PanelApi['writing']>({})
   const dirty = useRef(false)
   // The panel belongs to one brand: another brand — chosen (it already asked) or the server's fallback — closes it.
   // From no brand yet (the first read) nothing closes: a post kept from the last visit comes back on its brand.
@@ -113,6 +128,7 @@ export function PanelProvider({ initial = null, children }: {
   const reportDirty = useCallback((value: boolean) => { dirty.current = value }, [])
   const holdsEdits = useCallback(() => dirty.current, [])
   const noteMoved = useCallback((card: PostCard) => { setMoved(card) }, [])
+  const noteWriting = useCallback((id: number, state: OutsideWrite | null) => { setWriting(w => withWriting(w, id, state)) }, [])
 
   // Leaving the site (a reload, a closed tab) with unsaved edits asks the browser's own question.
   useEffect(() => {
@@ -122,8 +138,8 @@ export function PanelProvider({ initial = null, children }: {
   }, [])
 
   const value = useMemo<PanelApi>(
-    () => ({ target, open, openNew, close, replace, reportDirty, guard, holdsEdits, moved, noteMoved }),
-    [target, open, openNew, close, replace, reportDirty, guard, holdsEdits, moved, noteMoved],
+    () => ({ target, open, openNew, close, replace, reportDirty, guard, holdsEdits, moved, noteMoved, writing, noteWriting }),
+    [target, open, openNew, close, replace, reportDirty, guard, holdsEdits, moved, noteMoved, writing, noteWriting],
   )
   return <PanelContext.Provider value={value}>{children}</PanelContext.Provider>
 }

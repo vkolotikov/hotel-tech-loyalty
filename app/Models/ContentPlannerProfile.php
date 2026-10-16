@@ -46,6 +46,8 @@ class ContentPlannerProfile extends Model
         'trend_mode',
         'knowledge_score',
         'setup_step',
+        'holiday_country',
+        'marketing_days',
     ];
 
     protected $casts = [
@@ -65,6 +67,7 @@ class ContentPlannerProfile extends Model
         'visual_style' => 'array',
         'knowledge_score' => 'integer',
         'setup_step' => 'integer',
+        'marketing_days' => 'boolean',
     ];
 
     public function createdBy(): BelongsTo
@@ -85,6 +88,16 @@ class ContentPlannerProfile extends Model
     public function snippets(): HasMany
     {
         return $this->hasMany(ContentPlannerSnippet::class, 'planner_profile_id');
+    }
+
+    public function keyDates(): HasMany
+    {
+        return $this->hasMany(ContentPlannerKeyDate::class, 'planner_profile_id');
+    }
+
+    public function templates(): HasMany
+    {
+        return $this->hasMany(ContentPlannerTemplate::class, 'planner_profile_id');
     }
 
     public function brandVoices(): HasMany

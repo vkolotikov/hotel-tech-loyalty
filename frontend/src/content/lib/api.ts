@@ -1,8 +1,9 @@
 import { api } from '../../lib/api'
 import type {
-  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, PlanPayload, Platform,
-  PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody, RepeatEvery, Rewrite, Snippet, SnippetKind,
-  SnippetSuggestion, StrategyDetail, StrategySummary, Variation, VoiceFields,
+  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, IdeasPayload, KeyDateFields,
+  OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
+  RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
+  Variation, VoiceFields,
 } from './types'
 
 /**
@@ -79,7 +80,9 @@ export function contentApi(brand: number | null) {
       watched(api.post(url(`posts/${id}/mark-published`), { published_url: publishedUrl })),
     deletePost: (id: number): Promise<{ deleted: boolean }> => watched(api.delete(url(`posts/${id}`))),
 
-    write: (id: number, instructions: string | null): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/write`), { instructions })),
+    /** "Write with AI" from a template sends its id (spec 2026-10-16 §5.3); any other write sends only the guidance. */
+    write: (id: number, instructions: string | null, templateId: number | null = null): Promise<{ post: PostDetail }> =>
+      watched(api.post(url(`posts/${id}/write`), templateId === null ? { instructions } : { instructions, template_id: templateId })),
     rewrite: (id: number, type: Rewrite, guidance: string | null): Promise<{ variation: Variation }> =>
       watched(api.post(url(`posts/${id}/rewrite`), { type, guidance })),
     quality: (id: number): Promise<{ quality: Quality; post: PostDetail }> => watched(api.post(url(`posts/${id}/quality`))),
@@ -98,6 +101,13 @@ export function contentApi(brand: number | null) {
     strategy: (id: number): Promise<{ strategy: StrategyDetail }> => watched(api.get(url(`strategies/${id}`))),
     brand: (): Promise<BrandPayload> => watched(api.get(url('brand'))),
     goals: (): Promise<Goals> => watched(api.get(url('goals'))),
+    /** The Ideas board (spec 2026-10-16 §4): the posts without a day by stage; a filter left out is not sent. */
+    ideas: (filters: { platform?: Platform | null; pillar_id?: number | null } = {}): Promise<IdeasPayload> =>
+      watched(api.get(url('ideas'), { params: { platform: filters.platform ?? undefined, pillar_id: filters.pillar_id ?? undefined } })),
+    createKeyDate: (fields: KeyDateFields & { kind: OwnKind; title: string; start_date: DateKey }): Promise<{ key_date: OwnKeyDate }> =>
+      watched(api.post(url('key-dates'), fields)),
+    updateKeyDate: (id: number, fields: KeyDateFields): Promise<{ key_date: OwnKeyDate }> => watched(api.put(url(`key-dates/${id}`), fields)),
+    deleteKeyDate: (id: number): Promise<{ deleted: boolean }> => watched(api.delete(url(`key-dates/${id}`))),
     repeatPost: (id: number, body: { every: RepeatEvery; until: DateKey; ai_rewrite: boolean }): Promise<{ post: PostDetail; copies: PostCard[] }> =>
       watched(api.post(url(`posts/${id}/repeat`), body)),
     /** Stops a series: its unpublished copies from today on go; `post` is null when the post asked about was one of them. */
@@ -133,6 +143,14 @@ export function contentApi(brand: number | null) {
     deleteSnippet: (id: number): Promise<BrandPayload> => watched(api.delete(url(`brand/snippets/${id}`))),
     /** One AI call: hashtag groups from the brand's pillars, audiences and industry; nothing is saved. */
     suggestSnippets: (): Promise<{ suggestions: SnippetSuggestion[] }> => watched(api.post(url('brand/snippets/suggest'))),
+    /** A brand's templates (spec 2026-10-16 §5.2): each change answers the changed template and the whole list. */
+    createTemplate: (fields: TemplateFields & { name: string }): Promise<{ template: Template; templates: Template[] }> =>
+      watched(api.post(url('brand/templates'), fields)),
+    updateTemplate: (id: number, fields: TemplateFields): Promise<{ template: Template; templates: Template[] }> =>
+      watched(api.put(url(`brand/templates/${id}`), fields)),
+    deleteTemplate: (id: number): Promise<{ templates: Template[] }> => watched(api.delete(url(`brand/templates/${id}`))),
+    /** One AI call: templates for the brand's industry and pillars, with [blanks]; nothing is saved. */
+    suggestTemplates: (): Promise<{ suggestions: TemplateSuggestion[] }> => watched(api.post(url('brand/templates/suggest'))),
   }
 }
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Content;
 use App\Http\Controllers\Controller;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentContext;
+use App\Services\Content\ContentKeyDates;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentRules;
 use Illuminate\Http\JsonResponse;
@@ -24,11 +25,14 @@ class PlanController extends Controller
             throw ValidationException::withMessages(['to' => 'The range can be at most ' . ContentRules::MAX_RANGE_DAYS . ' days.']);
         }
 
+        $org = $request->attributes->get('workspace_org');
         $profile = ContentContext::profile();
+        // Spec 2026-10-16 §3.4: the range's holidays, special days, events and notes.
+        $keyDates = ContentKeyDates::forRange($org, $profile, $data['from'], $data['to']);
         if (!$profile) {
-            return response()->json(['posts' => [], 'unscheduled' => [], 'unscheduled_total' => 0, 'slots' => [], 'figures' => ['planned' => 0, 'ready' => 0, 'published' => 0, 'open_slots' => 0]]);
+            return response()->json(['posts' => [], 'unscheduled' => [], 'unscheduled_total' => 0, 'slots' => [], 'figures' => ['planned' => 0, 'ready' => 0, 'published' => 0, 'open_slots' => 0], 'key_dates' => $keyDates]);
         }
 
-        return response()->json(ContentPlan::for($profile, $data['from'], $data['to'], VenueClock::today(ContentContext::orgId())));
+        return response()->json(ContentPlan::for($profile, $data['from'], $data['to'], VenueClock::today(ContentContext::orgId())) + ['key_dates' => $keyDates]);
     }
 }

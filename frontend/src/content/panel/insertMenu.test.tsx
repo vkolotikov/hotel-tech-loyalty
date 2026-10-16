@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Snippet } from '../lib/types'
 import { InsertMenu } from './InsertMenu'
-import { focusWasInside, outside } from './menuFocus'
+import { focusWasInside, listPlace, outside } from '../ui/menuFocus'
 
 const items: Snippet[] = [{ id: 1, kind: 'hashtags', name: 'Autumn colour', body: '#autumnhair #copperhair' }]
 /** A stand-in for the menu's element: it contains the nodes named. */
@@ -32,10 +32,16 @@ describe('InsertMenu', () => {
   })
 
   it('claims an Escape anywhere while open (the panel stays), and listens for presses outside', () => {
-    const source = fs.readFileSync(new URL('./InsertMenu.tsx', import.meta.url), 'utf8')
+    // The behaviour lives in the shared menu (spec 2026-10-16 §3.5) that Insert, the "+" and the Template menu use.
+    const source = fs.readFileSync(new URL('../ui/PopMenu.tsx', import.meta.url), 'utf8')
     expect(source).toMatch(/addEventListener\('keydown', [^)]*, true\)/)
     expect(source).toMatch(/addEventListener\('pointerdown', [^)]*, true\)/)
     expect(source).toContain('e.preventDefault()')
     expect(source).toContain('aria-controls={open ? listId : undefined}')
+  })
+
+  it('places its list below the button, or above it where a list below would leave the screen', () => {
+    expect(listPlace('right', 'below')).toBe('right-0 top-full mt-1')
+    expect(listPlace('left', 'above')).toBe('left-0 bottom-full mb-1')
   })
 })

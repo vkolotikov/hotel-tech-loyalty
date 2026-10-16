@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Compass, FileText, Fingerprint, Plus, Search } from 'lucide-react'
+import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Plus, Search } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -11,6 +11,7 @@ import { Button } from '../workspace/ui/Button'
 import { Notice } from '../workspace/ui/Notice'
 import { useContent } from './ContentProvider'
 import { ContentFind } from './find/ContentFind'
+import { CaptureDialog } from './ideas/CaptureDialog'
 import { findActions, postOf } from './find/findItems'
 import { failureOf } from './lib/api'
 import { APP_NAME } from './lib/constants'
@@ -41,6 +42,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
   const wide = useMedia('(min-width: 1024px)')
   const [findOpen, setFindOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
+  // The capture box (I, or Find's "Add an idea": spec 2026-10-16 §4.3).
+  const [capturing, setCapturing] = useState(false)
   const main = useRef<HTMLElement>(null)
   const findButton = useRef<HTMLButtonElement>(null)
   const arrived = useRef(false)
@@ -68,6 +71,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
   const ready = Boolean(data) && !stopped
   if (findOpen && !ready) setFindOpen(false)
   if (helpOpen && !ready) setHelpOpen(false)
+  if (capturing && !ready) setCapturing(false)
   const today = data?.venue.today ?? null
   const { openNew, close, open: openPost } = panel
 
@@ -78,6 +82,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
       if (hit === 'find') setFindOpen(true)
       else if (hit === 'help') setHelpOpen(true)
       else if (hit === 'new') openNew({ date: today, platform: null })
+      else if (hit === 'idea') setCapturing(true)
       else return
       e.preventDefault()
     })
@@ -85,6 +90,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
 
   const nav: WorkspaceNavItem[] = [
     { to: '/content', end: true, icon: CalendarDays, label: t('content.nav.plan', 'Plan') },
+    { to: '/content/ideas', end: false, icon: Lightbulb, label: t('content.nav.ideas', 'Ideas') },
     { to: '/content/posts', end: false, icon: FileText, label: t('content.nav.posts', 'Posts') },
     { to: '/content/strategy', end: false, icon: Compass, label: t('content.nav.strategy', 'Strategy') },
     { to: '/content/brand', end: false, icon: Fingerprint, label: t('content.nav.brand', 'Brand') },
@@ -102,6 +108,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
     nav, dark: look.resolved === 'dark', wide, slim,
     words: {
       newPost: t('content.shell.new_post', 'New post'),
+      newIdea: t('content.find.new_idea', 'Add an idea'),
       goTo: t('content.find.go_to', 'Go to'),
       toDark: t('content.find.theme_dark', 'Switch to dark'),
       toLight: t('content.find.theme_light', 'Switch to light'),
@@ -118,6 +125,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
     else if (target.run === 'theme') look.setTheme(look.resolved === 'dark' ? 'light' : 'dark')
     else if (target.run === 'rail') look.setRail(slim ? 'full' : 'slim')
     else if (target.run === 'shortcuts') setHelpOpen(true)
+    else if (target.run === 'idea') setCapturing(true)
   }
 
   return (
@@ -163,6 +171,7 @@ export function ContentShell({ children }: { children: ReactNode }) {
         </ContentErrorBoundary>
         <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, main]} />
         <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, main]} />
+        {capturing && <CaptureDialog onClose={() => setCapturing(false)} />}
       </> : null}>
       {stopped && (
         <div className="max-w-xl space-y-3 p-6">

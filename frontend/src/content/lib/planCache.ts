@@ -34,11 +34,13 @@ export function putInPlans(queryClient: QueryClient, brand: number | null, card:
   }
 }
 
-/** After a post changes, the Plan's, the Posts page's and the goals' reads of the brand are read again (an open page at once, the others when shown). */
+/** After a post changes, the Plan's, the Posts page's, the goals' and the Ideas board's reads of the brand are read again (an open page at once, the others when shown). */
 export function refreshLists(queryClient: QueryClient, brand: number | null): Promise<unknown> {
   return Promise.all([
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'plan'] }),
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'posts'] }),
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'goals'] }),
+    // The Ideas board (spec 2026-10-16 §4) holds the posts without a day: a change can move a card.
+    queryClient.invalidateQueries({ queryKey: ['content', brand, 'ideas'] }),
   ])
 }

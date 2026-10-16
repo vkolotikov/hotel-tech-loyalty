@@ -70,6 +70,7 @@ class ContentGateTest extends TestCase
             ['POST', 'brand/channels'], ['PUT', "brand/channels/{$channel->id}"], ['DELETE', "brand/channels/{$channel->id}"],
             ['POST', 'brand/quick-setup'], ['POST', 'brand/setup'], ['POST', 'brand/refresh-knowledge'],
             ['POST', 'brand/snippets'], ['PUT', 'brand/snippets/1'], ['DELETE', 'brand/snippets/1'], ['POST', 'brand/snippets/suggest'],
+            ['POST', 'brand/templates'], ['PUT', 'brand/templates/1'], ['DELETE', 'brand/templates/1'], ['POST', 'brand/templates/suggest'],
         ];
         foreach ($managerOnly as [$method, $path]) {
             $this->asStaffMember()->json($method, $this->api($path))

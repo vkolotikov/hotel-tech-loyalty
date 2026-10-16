@@ -67,6 +67,8 @@ export function newForm(draft: NewDraft, platforms: readonly Platform[], channel
     main_copy: '',
     cta: '',
     hashtags: '',
+    // The words it starts with (a key date's name, a template's fields) over the empty ones.
+    ...draft.fields,
   }
 }
 

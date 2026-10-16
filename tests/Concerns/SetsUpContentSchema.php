@@ -51,6 +51,7 @@ trait SetsUpContentSchema
             'currency'          => fn (Blueprint $t) => $t->string('currency', 10)->nullable(),
             'entitled_products' => fn (Blueprint $t) => $t->text('entitled_products')->nullable(),
             'plan_slug'         => fn (Blueprint $t) => $t->string('plan_slug', 64)->nullable(),
+            'country'           => fn (Blueprint $t) => $t->string('country', 2)->nullable(),
         ];
         foreach ($columns as $column => $add) {
             if (!Schema::hasColumn('organizations', $column)) {
@@ -87,6 +88,15 @@ trait SetsUpContentSchema
         }
         if (!Schema::hasColumn('content_planner_posts', 'series_id')) {
             (require database_path('migrations/2026_10_15_100200_add_series_id_to_content_planner_posts.php'))->up();
+        }
+        if (!Schema::hasColumn('content_planner_profiles', 'holiday_country')) {
+            (require database_path('migrations/2026_10_16_100000_add_holiday_settings_to_content_planner_profiles.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_key_dates')) {
+            (require database_path('migrations/2026_10_16_100100_create_content_planner_key_dates_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_templates')) {
+            (require database_path('migrations/2026_10_16_100200_create_content_planner_templates_table.php'))->up();
         }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));

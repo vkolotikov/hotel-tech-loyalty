@@ -92,6 +92,35 @@ export const ERRORS = {
     ai_failed: 'The AI could not suggest hashtags. Please try again.',
     unknown: 'The change could not be saved. Please try again.',
   },
+  // Spec 2026-10-16 §9.3: the portal checks the limits first, so a refusal names the limit
+  // (end_before_start, too_long and too_many_tags are the portal's own checks; the server answers `invalid`).
+  keydate: {
+    invalid: 'Give it a title and a first day.',
+    end_before_start: 'The last day cannot be before the first.',
+    too_long: 'An event lasts at most 31 days.',
+    too_many_key_dates: 'A brand keeps at most 1,000 events and notes. Remove one first.',
+    not_found: 'This key date no longer exists.',
+    no_profile: 'This brand is not set up yet.',
+    unknown: 'The key date could not be saved. Please try again.',
+  },
+  idea: {
+    invalid: 'Write the idea first.',
+    changed_elsewhere: 'Someone else changed this post. The board now shows their version.',
+    not_found: 'This post no longer exists.',
+    no_profile: 'This brand is not set up yet.',
+    unknown: 'The idea could not be saved. Please try again.',
+  },
+  template: {
+    manager_only: 'Only an owner or a manager can change templates.',
+    invalid: 'Give the template a name.',
+    too_many_tags: 'A template keeps at most 30 hashtags.',
+    too_many_templates: 'A brand keeps at most 100 templates. Remove one first.',
+    not_found: 'This template no longer exists.',
+    no_profile: 'This brand is not set up yet.',
+    ai_budget_used_up: "This month's AI budget is used up.",
+    ai_failed: 'The AI could not suggest templates. Please try again.',
+    unknown: 'The template could not be saved. Please try again.',
+  },
 } as const
 
 export type ErrorFamily = keyof typeof ERRORS

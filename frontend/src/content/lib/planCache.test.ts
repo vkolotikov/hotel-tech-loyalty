@@ -54,7 +54,7 @@ describe('refreshLists', () => {
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     void refreshLists(client, 3)
-    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals']])
+    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals'], ['content', 3, 'ideas']])
   })
 })
 

@@ -8,6 +8,7 @@ use App\Models\ContentPlannerChannel;
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerSnippet;
+use App\Models\Organization;
 use App\Services\Content\ContentAccess;
 use App\Services\Content\ContentAiGate;
 use App\Services\Content\ContentBrandEditor;
@@ -15,6 +16,8 @@ use App\Services\Content\ContentContext;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
 use App\Services\Content\ContentSnippetSuggester;
+use App\Services\Content\ContentTemplates;
+use App\Services\Content\Days\HolidayCountry;
 use App\Services\ContentKnowledgeService;
 use App\Services\ContentPlanner\ProfileBootstrapService;
 use Illuminate\Http\JsonResponse;
@@ -276,8 +279,10 @@ class BrandController extends Controller
     /** @return array<string, mixed> */
     private function payload(?ContentPlannerProfile $profile): array
     {
+        // The country the venue suggests, for the Key dates section's "guessed" line (spec 2026-10-16 §3.3).
+        $guess = ($org = Organization::find(ContentContext::orgId())) ? HolidayCountry::guess($org) : null;
         if (!$profile) {
-            return ['profile' => null, 'audiences' => [], 'channels' => [], 'snippets' => [], 'voice' => null, 'readiness' => null];
+            return ['profile' => null, 'audiences' => [], 'channels' => [], 'snippets' => [], 'templates' => [], 'voice' => null, 'readiness' => null, 'holiday_country_guess' => $guess];
         }
         $voice = $profile->brandVoices()->where('active', true)->first();
 
@@ -290,6 +295,8 @@ class BrandController extends Controller
             ]) + [
                 'setup_completed_at'     => $profile->setup_completed_at?->toISOString(),
                 'last_knowledge_sync_at' => $profile->last_knowledge_sync_at?->toISOString(),
+                'holiday_country'        => $profile->holiday_country,
+                'marketing_days'         => (bool) ($profile->marketing_days ?? true),
             ],
             'audiences' => $profile->audiences()->where('active', true)->withCount('posts')->orderBy('id')->get()
                 ->map(fn (ContentPlannerAudience $a) => $this->audience($a))->values()->all(),
@@ -297,8 +304,10 @@ class BrandController extends Controller
             // Hashtag groups first, then text snippets ('hashtags' sorts before 'text'), each in the order made.
             'snippets'  => $profile->snippets()->orderBy('kind')->orderBy('sort_order')->orderBy('id')->get()
                 ->map(fn (ContentPlannerSnippet $s) => $this->snippet($s))->values()->all(),
+            'templates' => ContentTemplates::list($profile),
             'voice'     => $voice ? $voice->only(['id', 'tone', 'style', 'formality_level', 'emoji_policy', 'hashtag_policy', 'sentence_style', 'point_of_view', 'preferred_words', 'forbidden_words', 'claims_to_avoid', 'example_good_posts', 'example_bad_posts']) : null,
             'readiness' => $this->knowledge->readinessOf($profile),
+            'holiday_country_guess' => $guess,
         ];
     }
 

@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({
 describe('ContentShortcuts', () => {
   it('lists the keys for every page, then the Plan\'s own', () => {
     const html = renderToStaticMarkup(<ContentShortcuts open onClose={() => {}} modKey="Ctrl" />)
-    for (const words of ['Find', 'Ctrl K', 'New post', 'This list', 'On the plan', 'This week', 'Week, month, list', 'Shift ←', 'Close the panel']) {
+    for (const words of ['Find', 'Ctrl K', 'New post', 'Add an idea', 'This list', 'On the plan', 'This week', 'Week, month, list', 'Shift ←', 'Close the panel']) {
       expect(html).toContain(words)
     }
     expect(renderToStaticMarkup(<ContentShortcuts open={false} onClose={() => {}} modKey="Ctrl" />)).toBe('')

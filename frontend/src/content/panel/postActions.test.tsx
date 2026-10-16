@@ -15,7 +15,8 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('../../lib/api', () => ({ api: {} }))
 
-const boot = { brand: { id: 3, name: 'Lumière Salon' }, venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' } } as unknown as Bootstrap
+// The bootstrap always names the person's role: "Save as template" is offered to managers (spec 2026-10-16 §5.2).
+const boot = { brand: { id: 3, name: 'Lumière Salon' }, venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' }, staff: { can_manage: false } } as unknown as Bootstrap
 const post = { id: 5, status: 'draft', hook: 'Three colours', main_copy: 'Warm tones.', cta: null, hashtags: [], published_url: null, published_at: null } as unknown as PostDetail
 
 function render(p: PostDetail, dirty = false) {

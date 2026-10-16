@@ -73,3 +73,20 @@ describe('AiTools', () => {
     for (const label of ['Write the text', 'Rewrite', 'Check quality']) expect(disabled(html, label), label).toBe(true)
   })
 })
+
+describe('AiTools and a write from elsewhere (spec 2026-10-16 §5.3)', () => {
+  const shown = (outside: { failed: string | null }) => renderToStaticMarkup(
+    <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+      <AiTools post={post} dirty={false} onPost={() => {}} onUseCopy={() => {}} outside={outside} onOutsideSeen={() => {}} />
+    </ContentContext.Provider>,
+  )
+
+  it('shows the AI working on a post a template is writing, its write tools waiting, and why it stopped', () => {
+    const working = shown({ failed: null })
+    expect(working).toContain('The AI is working…')
+    expect(disabled(working, 'Write the text')).toBe(true)
+    // Final review: a rewrite pressed meanwhile cleared the note, and the write tools came back during the write.
+    expect(disabled(working, 'Rewrite')).toBe(true)
+    expect(shown({ failed: 'ai_failed' })).toContain('The AI could not finish this. Please try again.')
+  })
+})

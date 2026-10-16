@@ -12,7 +12,7 @@ import { PLAN_REFRESH_MS, UNDO_MS } from '../lib/constants'
 import { errorKey } from '../lib/errors'
 import { putInPlans, refreshLists } from '../lib/planCache'
 import { onShortcuts } from '../lib/shortcuts'
-import type { DateKey, PostCard, PostDetail, Slot } from '../lib/types'
+import type { BuiltInDay, DateKey, KeyDate, OwnKeyDate, OwnKind, PostCard, PostDetail, Slot } from '../lib/types'
 import { usePanel } from '../panel/PanelProvider'
 import { DragGhost } from './DragGhost'
 import { GenerateDialog } from './GenerateDialog'
@@ -20,8 +20,12 @@ import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
 import { createMover, keyMove, leavesRange, movedDate, undoOf, type DropTarget } from './moveMath'
 import { filtered, keepWithinBrand, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
-import { canAdd, newPostDraft, usualTimes } from './addMath'
+import { canAdd, newPostDraft, usualTimes, type AddChoice } from './addMath'
 import { GoalsLine } from './GoalsLine'
+import { KeyDateEditor } from './KeyDateEditor'
+import { KeyDayCard } from './KeyDayCard'
+import { TemplatePicker } from './TemplatePicker'
+import { holidayCountryOf, isBuiltIn, keyDatesByDay } from './keyDateMath'
 import { showGoals } from './goalsMath'
 import { MOVE_HINT_ID } from './PostCardView'
 import { loadPrefs, savePrefs, type PlanPrefs } from './prefs'
@@ -63,6 +67,11 @@ export function PlanPage() {
   const held = note !== null && heldNote === note
   const [filling, setFilling] = useState<string | null>(null)
   const [generating, setGenerating] = useState(false)
+  // A holiday or special day's card, and an event or note being written (spec 2026-10-16 §3.4).
+  const [dayCard, setDayCard] = useState<{ day: DateKey; keyDate: BuiltInDay } | null>(null)
+  const [keyDateEdit, setKeyDateEdit] = useState<{ kind: OwnKind; keyDate: OwnKeyDate | null; day: DateKey } | null>(null)
+  // "+ → From a template…" (spec 2026-10-16 §5.3): the day the picker is open for.
+  const [picking, setPicking] = useState<DateKey | null>(null)
   const [params, setParams] = useSearchParams()
 
   // A link names a day (?date=…, the post links): adopted while rendering, then cleared from the address.
@@ -98,6 +107,7 @@ export function PlanPage() {
   const channels = useMemo(() => brandInfo.data?.channels ?? [], [brandInfo.data])
   const industry = boot.organization.industry
   const times = useMemo(() => usualTimes(channels, industry), [channels, industry])
+  const templates = brandInfo.data?.templates ?? []
   // This week's posting goals and the streak (spec 2026-10-15 §7), read with the plan.
   const goals = useQuery({ queryKey: ['content', brand, 'goals'], queryFn: api.goals, refetchInterval: PLAN_REFRESH_MS, refetchOnWindowFocus: true })
 
@@ -135,6 +145,9 @@ export function PlanPage() {
   const aiPaused = boot.ai.status === 'over'
   const today = boot.venue.today
   const dayName = (day: DateKey) => formatDate(day, locale, { weekday: 'short', day: 'numeric', month: 'short' })
+  // The range's key dates by day, while the layer shows; a substitute day says "observed" for the United States.
+  const keyDates = prefs.keyDates ? keyDatesByDay(data?.key_dates ?? [], range.days) : undefined
+  const observed = holidayCountryOf(brandInfo.data) === 'US'
 
   // A saved move shows at once, on every plan read, in the post's cached copy and in the panel when it shows that post.
   const { noteMoved } = panel
@@ -211,13 +224,34 @@ export function PlanPage() {
 
   // A day's empty space or its "+" (spec 2026-10-15 §4). The click a drag's release fires over a day's empty space is
   // not one (Review Focus 1): the same guard as opening a card. The plan's own slots, before the platform filter.
-  const addOn = (day: DateKey) => {
+  const addOn = (day: DateKey, choice: AddChoice = 'post') => {
     if (drag.consumeClick() || !canAdd(day, today)) return
+    if (choice === 'note' || choice === 'event') {
+      setKeyDateEdit({ kind: choice, keyDate: null, day })
+      return
+    }
+    // "From a template…" (offered only when the brand has templates) opens the template picker (spec 2026-10-16 §5.3).
+    if (choice === 'template') {
+      setPicking(day)
+      return
+    }
     const draft = newPostDraft(day, data?.slots ?? [], channels, industry)
     panel.openNew(brandInfo.data ? draft : { ...draft, time: undefined })
   }
 
   const dropTarget = drag.state?.target ?? null
+
+  // A chip: a built-in day opens its card; an event or note its editor.
+  const onKeyDate = (keyDate: KeyDate, day: DateKey) => {
+    if (isBuiltIn(keyDate)) setDayCard({ day, keyDate })
+    else setKeyDateEdit({ kind: keyDate.kind, keyDate, day })
+  }
+  // "Write a post for it": a new post on the day, the day's name as its topic.
+  const writeFor = (day: DateKey, topic: string) => {
+    setDayCard(null)
+    const draft = newPostDraft(day, data?.slots ?? [], channels, industry)
+    panel.openNew({ ...(brandInfo.data ? draft : { ...draft, time: undefined }), fields: { topic } })
+  }
   const dropDate = dropTarget?.kind === 'day' ? dropTarget.date : null
   const handlers = { onOpen: openPost, onWrite: write, onFill: (slot: Slot) => { void fill(slot) }, onCardKeyDown }
 
@@ -228,7 +262,8 @@ export function PlanPage() {
         onPrev={() => setDate(shiftDate(view, date, -1))} onNext={() => setDate(shiftDate(view, date, 1))}
         onToday={() => setDate(boot.venue.today)}
         onView={(v) => setPrefs({ ...prefs, view: v })} onFilter={(filter) => setPrefs({ ...prefs, filter })}
-        onGenerate={() => setGenerating(true)} aiPaused={aiPaused} />
+        onGenerate={() => setGenerating(true)} aiPaused={aiPaused}
+        keyDates={prefs.keyDates} onKeyDates={(on) => setPrefs({ ...prefs, keyDates: on })} />
 
       {view !== 'month' && (
         <div className="space-y-3 px-4 pb-3 lg:px-6">
@@ -262,15 +297,18 @@ export function PlanPage() {
           {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view === 'week' && (
             <WeekGrid plans={plans} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} fillingKey={filling} aiPaused={aiPaused} times={times} onAdd={addOn}
+              keyDates={keyDates} observed={observed} onKeyDate={onKeyDate} templates={templates.length > 0}
               {...handlers} onCardPointerDown={drag.begin} />
           )}
           {!query.isLoading && view === 'month' && (
             <MonthGrid plans={plans} date={date} today={today} locale={locale} selectedId={selectedId} dropDate={dropDate} onAdd={addOn}
+              keyDates={keyDates} observed={observed} onKeyDate={onKeyDate} templates={templates.length > 0}
               onDay={(day) => { setDate(day); setPrefs({ ...prefs, view: 'week' }) }}
               onOpen={openPost} onCardPointerDown={drag.begin} onCardKeyDown={onCardKeyDown} />
           )}
           {!query.isLoading && view === 'list' && (
-            <ListView plans={plans} today={today} locale={locale} selectedId={selectedId} fillingKey={filling} aiPaused={aiPaused} {...handlers} times={times} onAdd={addOn} />
+            <ListView plans={plans} today={today} locale={locale} selectedId={selectedId} fillingKey={filling} aiPaused={aiPaused} {...handlers} times={times} onAdd={addOn}
+              keyDates={keyDates} observed={observed} onKeyDate={onKeyDate} templates={templates.length > 0} />
           )}
         </div>
         <div className="xl:w-64 xl:shrink-0">
@@ -282,6 +320,12 @@ export function PlanPage() {
       <p id={MOVE_HINT_ID} className="sr-only">{t('content.plan.move_hint', 'Shift and the left or right arrow moves it a day.')}</p>
       {drag.state && <DragGhost post={drag.state.post} x={drag.state.x} y={drag.state.y} />}
       {generating && <GenerateDialog today={today} onClose={() => setGenerating(false)} onDone={() => { void refresh() }} />}
+      {dayCard && (
+        <KeyDayCard day={dayCard.day} keyDate={dayCard.keyDate} observed={observed} canWrite={canAdd(dayCard.day, today)}
+          onWrite={(topic) => writeFor(dayCard.day, topic)} onClose={() => setDayCard(null)} />
+      )}
+      {keyDateEdit && <KeyDateEditor kind={keyDateEdit.kind} keyDate={keyDateEdit.keyDate} day={keyDateEdit.day} onClose={() => setKeyDateEdit(null)} />}
+      {picking && <TemplatePicker day={picking} templates={templates} slots={data?.slots ?? []} channels={channels} onClose={() => setPicking(null)} />}
     </div>
   )
 }

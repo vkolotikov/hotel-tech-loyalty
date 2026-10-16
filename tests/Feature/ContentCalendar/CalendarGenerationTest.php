@@ -35,6 +35,24 @@ class CalendarGenerationTest extends TestCase
         $this->setUpKnowledgeSchema();
         (require database_path('migrations/2026_07_08_000000_create_content_planner_tables.php'))->up();
         (require database_path('migrations/2026_07_08_200000_upgrade_content_planner_tables.php'))->up();
+        // Release 4a tells the AI the window's key dates (spec 2026-10-16 §3.6): the brand's holiday settings and own
+        // events, and the venue's zone (VenueClock reads `hotel_timezone` from hotel_settings) for the country guess.
+        (require database_path('migrations/2026_10_16_100000_add_holiday_settings_to_content_planner_profiles.php'))->up();
+        (require database_path('migrations/2026_10_16_100100_create_content_planner_key_dates_table.php'))->up();
+        if (!Schema::hasTable('hotel_settings')) {
+            Schema::create('hotel_settings', function ($t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->string('key', 100);
+                $t->text('value')->nullable();
+                $t->string('type', 32)->nullable();
+                $t->string('group', 32)->nullable();
+                $t->string('label')->nullable();
+                $t->text('description')->nullable();
+                $t->string('scope', 16)->default('company');
+                $t->timestamps();
+            });
+        }
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
         $brandId = $org->defaultBrand()->firstOrFail()->id;

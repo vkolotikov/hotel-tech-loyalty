@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { CalendarDays, FileText } from 'lucide-react'
+import { CalendarDays, FileText, Lightbulb } from 'lucide-react'
 import type { PostCard } from '../lib/types'
 import { findActions, findGroups, iconOf, postOf, settledPosts } from './findItems'
 
-const words = { newPost: 'New post', goTo: 'Go to', toDark: 'Switch to dark', toLight: 'Switch to light', collapse: 'Collapse menu', expand: 'Expand menu', shortcuts: 'Keyboard shortcuts' }
+const words = { newPost: 'New post', newIdea: 'Add an idea', goTo: 'Go to', toDark: 'Switch to dark', toLight: 'Switch to light', collapse: 'Collapse menu', expand: 'Expand menu', shortcuts: 'Keyboard shortcuts' }
 const nav = [{ to: '/content', label: 'Plan' }]
 const post = (id: number, more: Partial<PostCard> = {}): PostCard => ({
   id, platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: null, status: 'draft',
@@ -14,10 +14,11 @@ const labels = { actions: 'Actions', posts: 'Posts', untitled: 'Untitled post', 
 describe('findActions', () => {
   it('a new post, the pages, the other theme, the side panel only where there is one, and the shortcuts', () => {
     const light = findActions({ nav, dark: false, wide: true, slim: false, words })
-    expect(light.map(a => a.label)).toEqual(['New post', 'Go to Plan', 'Switch to dark', 'Collapse menu', 'Keyboard shortcuts'])
-    expect(light[1].go).toEqual({ to: '/content' })
+    expect(light.map(a => a.label)).toEqual(['New post', 'Add an idea', 'Go to Plan', 'Switch to dark', 'Collapse menu', 'Keyboard shortcuts'])
+    expect(light[1].go).toEqual({ run: 'idea' })
+    expect(light[2].go).toEqual({ to: '/content' })
     const phone = findActions({ nav, dark: true, wide: false, slim: true, words })
-    expect(phone.map(a => a.label)).toEqual(['New post', 'Go to Plan', 'Switch to light', 'Keyboard shortcuts'])
+    expect(phone.map(a => a.label)).toEqual(['New post', 'Add an idea', 'Go to Plan', 'Switch to light', 'Keyboard shortcuts'])
   })
 })
 
@@ -49,5 +50,6 @@ describe('the rest', () => {
     expect(settledPosts('a', 'a', [post(1)])).toEqual([])
     expect(iconOf({ id: 'p', kind: 'post', label: '', go: { run: 'post:1' } })).toBe(FileText)
     expect(iconOf({ id: 'g', kind: 'page', label: '', go: { to: '/content' } })).toBe(CalendarDays)
+    expect(iconOf({ id: 'idea', kind: 'idea', label: '', go: { run: 'idea' } })).toBe(Lightbulb)
   })
 })

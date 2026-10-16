@@ -207,12 +207,14 @@ function PanelBody({ target }: { target: PanelTarget }) {
         )}
         {editing && (
           <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={boot.statuses}
-            pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []} />
+            pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []}
+            templates={brandInfo.data?.templates ?? []} />
         )}
         {editing && !post && <p className="text-xs text-a-text-2">{t('content.panel.ai.create_first', 'Create the post first to use AI.')}</p>}
         {post && (
           <>
             <AiTools post={post} dirty={dirty} onPost={adopt}
+              outside={panel.writing[post.id] ?? null} onOutsideSeen={() => panel.noteWriting(post.id, null)}
               onUseCopy={(copy) => setEditing(e => (e ? { ...e, draft: { ...e.draft, main_copy: copy } } : e))} />
             {/* The series as last read: its rewording ends without the post itself changing, so the panel's copy would keep "rewording". */}
             <RepeatSection post={post} dirty={dirty} onPost={adopt}
@@ -223,6 +225,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
                 panel.close()
               }} />
             <PostActions post={post} dirty={dirty} onPost={adopt}
+              pillarName={post.pillar_id === null ? null : (pillars.find(p => p.id === post.pillar_id)?.name ?? null)}
               onDuplicated={(copy) => {
                 queryClient.setQueryData(['content', brand, 'post', copy.id], copy)
                 void refreshLists(queryClient, brand)

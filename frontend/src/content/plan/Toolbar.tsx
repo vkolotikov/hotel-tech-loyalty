@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react'
+import { CalendarHeart, ChevronLeft, ChevronRight, Loader2, Sparkles } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import type { Platform, PostStatus } from '../lib/types'
 import { PlatformMark } from '../ui/PlatformMark'
@@ -11,7 +11,7 @@ const VIEW_TEXT: Record<PlanView, string> = { week: 'Week', month: 'Month', list
 const ICON = 'rounded-full p-2 text-a-text-2 hover:bg-a-surface-2 hover:text-a-text'
 
 /** The Plan's toolbar: back and forward, this week, the range's name, the views, Generate (managers) and the filters. */
-export function Toolbar({ view, viewLocked, label, refreshing, canGenerate, filter, platforms, statuses, onPrev, onNext, onToday, onView, onFilter, onGenerate, aiPaused = false }: {
+export function Toolbar({ view, viewLocked, label, refreshing, canGenerate, filter, platforms, statuses, onPrev, onNext, onToday, onView, onFilter, onGenerate, aiPaused = false, keyDates = true, onKeyDates }: {
   view: PlanView
   /** Below 1024 px the list is the only view. */
   viewLocked: boolean
@@ -30,6 +30,9 @@ export function Toolbar({ view, viewLocked, label, refreshing, canGenerate, filt
   onGenerate: () => void
   /** This month's AI budget is used up: Generate waits. */
   aiPaused?: boolean
+  /** The Key dates layer shows (spec 2026-10-16 §3.4); the switch is offered only with `onKeyDates`. */
+  keyDates?: boolean
+  onKeyDates?: (on: boolean) => void
 }) {
   const { t } = useTranslation()
   return (
@@ -76,6 +79,12 @@ export function Toolbar({ view, viewLocked, label, refreshing, canGenerate, filt
               )
             })}
           </div>
+        )}
+        {onKeyDates && (
+          <button type="button" aria-pressed={keyDates} onClick={() => onKeyDates(!keyDates)}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${keyDates ? 'border-a-accent-text bg-a-surface-2 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>
+            <CalendarHeart size={12} aria-hidden />{t('content.plan.key_dates', 'Key dates')}
+          </button>
         )}
         <label className="ml-auto inline-flex items-center gap-1.5 text-xs text-a-text-2">
           <span>{t('content.plan.filter_status', 'Status')}</span>

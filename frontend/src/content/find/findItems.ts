@@ -1,17 +1,18 @@
 import type { LucideIcon } from 'lucide-react'
-import { CalendarDays, FileText, Keyboard, Moon, PanelLeft, Plus, Sun } from 'lucide-react'
+import { CalendarDays, FileText, Keyboard, Lightbulb, Moon, PanelLeft, Plus, Sun } from 'lucide-react'
 import type { FindGroup } from '../../workspace/find/FindFrame'
 import { fold, type FindItem, type FindTarget } from '../../workspace/find/findCore'
 import type { WorkspaceNavItem } from '../../workspace/WorkspaceShell'
 import { cardLine } from '../lib/postText'
 import type { DateKey, Platform, PostCard } from '../lib/types'
 
-export interface ActionWords { newPost: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string }
+export interface ActionWords { newPost: string; newIdea: string; goTo: string; toDark: string; toLight: string; collapse: string; expand: string; shortcuts: string }
 
-/** Find's actions (spec §4.7): a new post, the pages, the other theme, the side panel (from 1024 px), the list of shortcuts. */
+/** Find's actions (spec §4.7): a new post, an idea (spec 2026-10-16 §4.3), the pages, the other theme, the side panel (from 1024 px), the list of shortcuts. */
 export function findActions(p: { nav: Pick<WorkspaceNavItem, 'to' | 'label'>[]; dark: boolean; wide: boolean; slim: boolean; words: ActionWords }): FindItem[] {
   return [
     { id: 'new', kind: 'new', label: p.words.newPost, go: { run: 'new' } },
+    { id: 'idea', kind: 'idea', label: p.words.newIdea, go: { run: 'idea' } },
     ...p.nav.map(n => ({ id: `page:${n.to}`, kind: 'page', label: `${p.words.goTo} ${n.label}`, go: { to: n.to } })),
     { id: 'theme', kind: p.dark ? 'light' : 'dark', label: p.dark ? p.words.toLight : p.words.toDark, go: { run: 'theme' } },
     ...(p.wide ? [{ id: 'rail', kind: 'rail', label: p.slim ? p.words.expand : p.words.collapse, go: { run: 'rail' } }] : []),
@@ -65,6 +66,7 @@ export function iconOf(item: FindItem): LucideIcon {
   switch (item.kind) {
     case 'page': return CalendarDays
     case 'new': return Plus
+    case 'idea': return Lightbulb
     case 'dark': return Moon
     case 'light': return Sun
     case 'rail': return PanelLeft

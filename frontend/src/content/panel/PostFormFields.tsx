@@ -1,10 +1,13 @@
 import { useRef, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { LayoutTemplate } from 'lucide-react'
 import { suggestedTimes } from '../lib/bestTimes'
 import { LANGUAGES, languageName } from '../lib/languages'
 import { Notice } from '../../workspace/ui/Notice'
-import type { AudienceRef, PillarRef, Platform, PostStatus, Snippet } from '../lib/types'
+import type { AudienceRef, PillarRef, Platform, PostStatus, Snippet, Template } from '../lib/types'
+import { PopMenu } from '../ui/PopMenu'
 import { InsertMenu } from './InsertMenu'
+import { applyTemplate, blanksIn, replacesText } from './templateApply'
 import { insertAt, insertHashtags, tooManyTags } from './snippetInsert'
 import type { PostForm } from './panelState'
 
@@ -29,7 +32,7 @@ function FieldBox({ label, hint, invalid, children }: { label: string; hint?: st
  * audience, language, topic, hook, text, call to action and hashtags. A
  * published post keeps its day: the day is the record of when it went out.
  */
-export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets }: {
+export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [] }: {
   form: PostForm
   onChange: (form: PostForm) => void
   platforms: Platform[]
@@ -43,6 +46,8 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   industry: string | null
   /** The brand's hashtag groups and snippets (spec 2026-10-15 §6). */
   snippets: Snippet[]
+  /** The brand's templates: the Template menu beside Topic (spec 2026-10-16 §5.3). */
+  templates?: Template[]
 }) {
   const { t } = useTranslation()
   const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => onChange({ ...form, [key]: value })
@@ -67,6 +72,14 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
     if (el) window.requestAnimationFrame(() => { el.focus(); el.setSelectionRange(Math.min(next.caret, max), Math.min(next.caret, max)) })
   }
   const tooMany = tooManyTags(form.platform, form.hashtags)
+  // Spec 2026-10-16 §5.3: the blanks still to fill (a quiet line; it never stops a save).
+  const blanks = blanksIn(form)
+  const pickTemplate = (id: string) => {
+    const template = templates.find(tpl => String(tpl.id) === id)
+    if (!template) return
+    if (replacesText(form, template) && !window.confirm(t('content.panel.template_replace', 'Replace the words already written with this template?'))) return
+    onChange(applyTemplate(form, template, pillars))
+  }
 
   return (
     <div className="space-y-3">
@@ -120,9 +133,18 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
           {languages.map(code => <option key={code} value={code}>{languageName(code, locale)}</option>)}
         </select>
       </FieldBox>
-      <FieldBox label={t('content.panel.fields.topic', 'Topic')} invalid={invalid.includes('topic')}>
-        <input value={form.topic} maxLength={255} onChange={(e) => set('topic', e.target.value)} aria-invalid={bad('topic')} className={box('topic')} />
-      </FieldBox>
+      <div className="relative">
+        <FieldBox label={t('content.panel.fields.topic', 'Topic')} invalid={invalid.includes('topic')}>
+          <input value={form.topic} maxLength={255} onChange={(e) => set('topic', e.target.value)} aria-invalid={bad('topic')} className={box('topic')} />
+        </FieldBox>
+        <div className="absolute right-0 top-0">
+          <PopMenu label={t('content.panel.template', 'Template')} onPick={pickTemplate}
+            items={templates.map(tpl => ({ id: String(tpl.id), label: tpl.name, sub: [tpl.platform ? t(`content.platform.${tpl.platform}`, tpl.platform) : '', tpl.pillar_name ?? ''].filter(Boolean).join(' · ') || undefined }))}
+            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-a-accent-text hover:bg-a-surface-2">
+            <LayoutTemplate size={12} aria-hidden />{t('content.panel.template', 'Template')}
+          </PopMenu>
+        </div>
+      </div>
       <FieldBox label={t('content.panel.fields.hook', 'Hook')} invalid={invalid.includes('hook')}>
         <textarea value={form.hook} rows={2} maxLength={500} onChange={(e) => set('hook', e.target.value)} aria-invalid={bad('hook')} className={box('hook')} />
       </FieldBox>
@@ -153,6 +175,11 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
           <InsertMenu label={t('content.panel.insert', 'Insert')} items={groups} onPick={(s) => set('hashtags', insertHashtags(form.hashtags, s.body).value)} />
         </div>
       </div>
+      {blanks.length > 0 && (
+        <p data-blanks="" className="text-xs text-a-text-2">
+          {t('content.panel.blanks', 'Blanks to fill: {{count}} — {{list}}', { count: blanks.length, list: blanks.join(', ') })}
+        </p>
+      )}
       {tooMany && (
         <Notice tone="warning">
           {t('content.panel.too_many_tags', '{{platform}} takes at most {{limit}} hashtags; this post has {{count}}.', { platform: t(`content.platform.${form.platform}`, form.platform), limit: tooMany.limit, count: tooMany.count })}

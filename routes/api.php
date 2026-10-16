@@ -1279,6 +1279,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Content\BootstrapController::class, 'show']);
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
                 Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
+                Route::get('ideas', [\App\Http\Controllers\Api\V1\Admin\Content\IdeasController::class, 'show']);
+                Route::post('key-dates', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'store']);
+                Route::put('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'update'])->whereNumber('id');
+                Route::delete('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'destroy'])->whereNumber('id');
                 Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'search']);
                 Route::get('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'index']);
                 Route::post('posts', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'store']);
@@ -1319,6 +1323,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('brand/snippets', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'storeSnippet']);
                 Route::put('brand/snippets/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'updateSnippet'])->whereNumber('id');
                 Route::delete('brand/snippets/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\BrandController::class, 'destroySnippet'])->whereNumber('id');
+                Route::post('brand/templates/suggest', [\App\Http\Controllers\Api\V1\Admin\Content\TemplateController::class, 'suggest']);
+                Route::post('brand/templates', [\App\Http\Controllers\Api\V1\Admin\Content\TemplateController::class, 'store']);
+                Route::put('brand/templates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\TemplateController::class, 'update'])->whereNumber('id');
+                Route::delete('brand/templates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\TemplateController::class, 'destroy'])->whereNumber('id');
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────

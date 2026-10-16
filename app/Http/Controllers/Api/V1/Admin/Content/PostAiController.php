@@ -11,6 +11,7 @@ use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
+use App\Services\Content\ContentTemplates;
 use App\Services\ContentCalendarGenerationService;
 use App\Services\ContentPlanner\ImageGenerationService;
 use App\Services\ContentPostGenerationService;
@@ -34,9 +35,11 @@ class PostAiController extends Controller
 
     public function write(Request $request, int $id, ContentPostGenerationService $posts): JsonResponse
     {
-        $data = $request->validate(['instructions' => 'nullable|string|max:1000']);
+        $data = $request->validate(['instructions' => 'nullable|string|max:1000', 'template_id' => 'nullable|integer']);
         $post = $this->prepare($request, $id);
-        $this->run(fn () => $posts->generate($post, $data['instructions'] ?? null));
+        // Spec 2026-10-16 §5.3: "Write with AI" from one of this brand's templates; another brand's does not exist here.
+        $template = isset($data['template_id']) ? ContentTemplates::find(ContentContext::requireProfile(), (int) $data['template_id']) : null;
+        $this->run(fn () => $posts->generate($post, $data['instructions'] ?? null, $template));
 
         return $this->post($post);
     }

@@ -2,7 +2,9 @@
 
 namespace App\Services\Content;
 
+use App\Models\ContentPlannerKeyDate;
 use App\Models\ContentPlannerSnippet;
+use App\Services\Content\Days\PublicHolidays;
 use Carbon\CarbonImmutable;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Exists;
@@ -89,6 +91,9 @@ final class ContentRules
             'main_cta' => $text, 'important_links' => $list, 'positioning' => $list, 'key_messages' => $list,
             'content_mix' => $list, 'weekly_rhythm' => $list, 'engagement_goals' => $list, 'visual_style' => $list,
             'trend_mode' => ['sometimes', 'string', 'max:50'], 'setup_step' => ['sometimes', 'integer', 'min:0', 'max:20'],
+            // Spec 2026-10-16 §3.3: null = never chosen (guessed), one of the nine, or none.
+            'holiday_country' => ['sometimes', 'nullable', Rule::in([...PublicHolidays::COUNTRIES, 'none'])],
+            'marketing_days' => ['sometimes', 'boolean'],
         ];
     }
 
@@ -133,6 +138,36 @@ final class ContentRules
             'kind' => $creating ? ['required', Rule::in(ContentPlannerSnippet::KINDS)] : ['prohibited'],
             'name' => $creating ? ['required', 'string', 'max:60'] : ['sometimes', 'string', 'max:60'],
             'body' => $creating ? ['required', 'string', 'max:2000'] : ['sometimes', 'string', 'max:2000'],
+        ];
+    }
+
+    /** An event or note (spec 2026-10-16 §3.1); the controller checks its days against each other. @return array<string, mixed> */
+    public static function keyDateFields(bool $creating): array
+    {
+        return [
+            'kind'       => $creating ? ['required', Rule::in(ContentPlannerKeyDate::KINDS)] : ['prohibited'],
+            'title'      => $creating ? ['required', 'string', 'max:120'] : ['sometimes', 'string', 'max:120'],
+            'details'    => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'start_date' => $creating ? ['required', 'date_format:Y-m-d'] : ['sometimes', 'date_format:Y-m-d'],
+            'end_date'   => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+        ];
+    }
+
+    /** A template (spec 2026-10-16 §5.1): a name, an optional platform and pillar, the post's fields with [blanks]. @return array<string, mixed> */
+    public static function templateFields(bool $creating): array
+    {
+        $text = fn (int $max) => ['sometimes', 'nullable', 'string', "max:{$max}"];
+
+        return [
+            'name'        => $creating ? ['required', 'string', 'max:80'] : ['sometimes', 'string', 'max:80'],
+            'platform'    => ['sometimes', 'nullable', Rule::in(self::PLATFORMS)],
+            'pillar_name' => $text(255),
+            'topic'       => $text(255),
+            'hook'        => $text(500),
+            'main_copy'   => $text(5000),
+            'cta'         => $text(255),
+            'hashtags'    => ['sometimes', 'nullable', 'array', 'max:30'],
+            'hashtags.*'  => ['string', 'max:100'],
         ];
     }
 

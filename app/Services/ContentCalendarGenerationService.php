@@ -7,6 +7,7 @@ use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerVisualBrief;
 use App\Models\Organization;
 use App\Services\Content\BestTimes;
+use App\Services\Content\ContentKeyDates;
 use App\Services\ContentPlanner\AiClient;
 use App\Services\ContentPlanner\CalendarGenerationBudget;
 use App\Services\ContentPlanner\CalendarGenerationException;
@@ -76,7 +77,8 @@ class ContentCalendarGenerationService
             throw new InvalidArgumentException('No active channels to plan for. Activate at least one social channel first.');
         }
         // A post the AI gave no time takes its channel's usual time (spec 2026-10-15 §5): its own, else the first suggested.
-        $industry = Organization::find($profile->organization_id)?->resolved_industry;
+        $org = Organization::find($profile->organization_id);
+        $industry = $org?->resolved_industry;
         $usualTimes = [];
         foreach ($channels as $channel) {
             $usualTimes[(string) $channel->platform] ??= BestTimes::usual($channel->post_time, (string) $channel->platform, $industry);
@@ -157,7 +159,9 @@ class ContentCalendarGenerationService
                 $windowScheduledLines,
                 $fillEmptyOnly,
                 $instructions,
-                $activePlatforms
+                $activePlatforms,
+                // Spec 2026-10-16 §3.6: the window's holidays, special days and the brand's events (never notes).
+                $org ? ContentKeyDates::forAi($org, $profile, $cursor->toDateString(), $chunkEnd->toDateString()) : ''
             );
 
             try {
@@ -360,7 +364,8 @@ class ContentCalendarGenerationService
         string $windowScheduledLines,
         bool $fillEmptyOnly,
         string $instructions,
-        array $activePlatforms
+        array $activePlatforms,
+        string $keyDates = ''
     ): string {
         $channelLines = $channels->map(function ($channel) {
             $days = collect((array) ($channel->frequency ?? []))
@@ -427,6 +432,9 @@ class ContentCalendarGenerationService
         $instructionsBlock = $instructions !== ''
             ? "## EXTRA INSTRUCTIONS FROM THE USER\n" . $instructions
             : '';
+        $keyDatesBlock = $keyDates !== ''
+            ? "## KEY DATES IN THIS WINDOW (plan around them where they fit the brand; never invent other dates)\n" . $keyDates
+            : '';
 
         $platformList = implode(', ', $activePlatforms);
         $windowStartStr = $windowStart->toDateString();
@@ -445,6 +453,8 @@ GOLDEN RULES: Audience first, brand second, promotion third. Never start posts w
 
 ## PLANNING WINDOW
 Plan posts ONLY for dates from {$windowStartStr} to {$windowEndStr} (inclusive). Dates outside this window will be rejected.
+
+{$keyDatesBlock}
 
 ## ACTIVE CHANNELS & POSTING FREQUENCY (only these platforms are allowed; respect days and posts per week)
 {$channelLines}

@@ -4,7 +4,10 @@ namespace App\Services;
 
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerProfile;
+use App\Models\ContentPlannerTemplate;
 use App\Models\ContentPlannerVisualBrief;
+use App\Models\Organization;
+use App\Services\Content\ContentKeyDates;
 use App\Services\ContentPlanner\AiClient;
 use App\Services\ContentPlanner\ContextBuilder;
 
@@ -24,11 +27,11 @@ class ContentPostGenerationService
     /**
      * Generate full copy + visual brief for a specific post.
      */
-    public function generate(ContentPlannerPost $post, ?string $instructions = null): array
+    public function generate(ContentPlannerPost $post, ?string $instructions = null, ?ContentPlannerTemplate $template = null): array
     {
         $profile = $post->profile;
 
-        $prompt = $this->buildPostPrompt($post, $profile, $instructions);
+        $prompt = $this->buildPostPrompt($post, $profile, $instructions, $template);
 
         $data = $this->ai->generateJson($profile, 'post_copy', $prompt, 6000);
 
@@ -38,6 +41,7 @@ class ContentPostGenerationService
             : [];
 
         $post->update([
+            'topic' => self::topicAfterWrite($template, $post->topic, $data),
             'hook' => isset($data['hook']) ? mb_substr((string) $data['hook'], 0, 500) : $post->hook,
             'main_copy' => $data['main_copy'] ?? $post->main_copy,
             'short_copy' => $data['short_copy'] ?? $post->short_copy,
@@ -54,6 +58,26 @@ class ContentPostGenerationService
             'post' => $post->fresh(['visualBrief']),
             'ai_response' => $data,
         ];
+    }
+
+    /** A blank in a template's words (spec 2026-10-16 §5.1): "[" + 1–40 characters without brackets or a line break + "]". */
+    public static function hasBlank(?string $text): bool
+    {
+        return $text !== null && preg_match('/\[[^\[\]\n]{1,40}\]/u', $text) === 1;
+    }
+
+    /**
+     * The topic after Write the text (spec 2026-10-16 §5.3): from a template, a topic that held blanks takes the AI's
+     * filled topic (cut to 255); any other write, or an empty answer, leaves the topic as it was.
+     */
+    public static function topicAfterWrite(?ContentPlannerTemplate $template, ?string $topic, array $data): ?string
+    {
+        $filled = is_string($data['topic'] ?? null) ? trim($data['topic']) : '';
+        if ($template === null || !self::hasBlank($topic) || $filled === '') {
+            return $topic;
+        }
+
+        return mb_substr($filled, 0, 255);
     }
 
     /**
@@ -102,7 +126,7 @@ class ContentPostGenerationService
      * platform rules, post strategy fields, engagement goal mechanics, and
      * anti-repetition digest, with the exact required output schema.
      */
-    protected function buildPostPrompt(ContentPlannerPost $post, ContentPlannerProfile $profile, ?string $instructions = null): string
+    protected function buildPostPrompt(ContentPlannerPost $post, ContentPlannerProfile $profile, ?string $instructions = null, ?ContentPlannerTemplate $template = null): string
     {
         $context = $this->context->build($profile);
         $recentDigest = $this->context->recentPostsDigest($profile, 30, $post->id);
@@ -158,6 +182,35 @@ Rules:
 # PLATFORM RULES ({$post->platform})
 {$platformRules}
 PROMPT;
+
+        // Spec 2026-10-16 §3.6: the key dates of the post's day (holidays, special days, the brand's events; never notes).
+        $day = $post->scheduled_date?->format('Y-m-d');
+        $org = $day !== null ? Organization::find($profile->organization_id) : null;
+        $keyDates = $org !== null ? ContentKeyDates::forAi($org, $profile, $day, $day) : '';
+        if ($keyDates !== '') {
+            $prompt .= "\n\n# KEY DATES ON THIS POST'S DAY\nConnect the post to them only where it fits naturally:\n" . $keyDates;
+        }
+
+        // Spec 2026-10-16 §5.3: write in the shape of the brand's template, its [blanks] filled from the brand context.
+        $shape = $template === null ? [] : array_filter([
+            'Hook' => $template->hook,
+            'Main text' => $template->main_copy,
+            'Call to action' => $template->cta,
+            'Hashtags' => implode(' ', array_map('strval', (array) ($template->hashtags ?? []))),
+        ], fn ($value) => trim((string) $value) !== '');
+        // The portal fills a new post from the template first, so its topic can still hold blanks: ask for it filled.
+        $topicBlanks = $template !== null && self::hasBlank($post->topic);
+        if ($shape !== [] || $topicBlanks) {
+            $prompt .= "\n\n# TEMPLATE TO FOLLOW\nWrite this post in the shape of the brand's template below. Keep its structure and intent; "
+                . "replace every [blank] with a concrete detail from the brand context. Never leave square brackets, and never invent "
+                . "prices, dates or facts the context does not give: write around a detail you do not know.\n";
+            foreach ($shape as $label => $value) {
+                $prompt .= "{$label}: {$value}\n";
+            }
+            if ($topicBlanks) {
+                $prompt .= "The post's topic still holds blanks: \"{$post->topic}\". Also return \"topic\": that topic with every [blank] filled the same way.\n";
+            }
+        }
 
         if ($engagementGuidance !== '') {
             $prompt .= "\n\n# ENGAGEMENT GOAL MECHANICS\nDesign the engagement mechanic around the brand's priority goals:\n" . $engagementGuidance;

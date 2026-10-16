@@ -9,6 +9,8 @@ const card = { tagName: 'BUTTON', getAttribute: () => null, closest: (s: string)
 describe('Content shortcuts', () => {
   it('N new post, T this week, W M L the views, the arrows page, / and Ctrl K find, ? help', () => {
     expect([hit(key('n')), hit(key('t')), hit(key('w')), hit(key('m')), hit(key('l'))]).toEqual(['new', 'today', 'week', 'month', 'list'])
+    // Spec 2026-10-16 §4.3: I adds an idea, anywhere in Content.
+    expect(hit(key('i'))).toBe('idea')
     expect([hit(key('ArrowLeft')), hit(key('ArrowRight'))]).toEqual(['prev', 'next'])
     expect([hit(key('/')), hit(key('k', { ctrlKey: true })), hit(key('?'))]).toEqual(['find', 'find', 'help'])
   })
@@ -16,6 +18,7 @@ describe('Content shortcuts', () => {
   it('reaches the letters by their place on a Cyrillic layout', () => {
     expect(hit(key('т', { code: 'KeyN' }))).toBe('new')
     expect(hit(key('ь', { code: 'KeyM' }))).toBe('month')
+    expect(hit(key('ш', { code: 'KeyI' }))).toBe('idea')
   })
 
   it('leaves a focused card its own arrows, and a key the card already took (Shift+arrow) alone', () => {

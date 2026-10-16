@@ -97,7 +97,15 @@ export interface PostDetail extends PostCard {
 /** A day and platform the brand's channels expect, with no post yet. */
 export interface Slot { date: DateKey; platform: Platform }
 export interface PlanFigures { planned: number; ready: number; published: number; open_slots: number }
-export interface PlanPayload { posts: PostCard[]; unscheduled: PostCard[]; unscheduled_total?: number; slots: Slot[]; figures: PlanFigures }
+export interface PlanPayload {
+  posts: PostCard[]
+  unscheduled: PostCard[]
+  unscheduled_total?: number
+  slots: Slot[]
+  figures: PlanFigures
+  /** The range's holidays, special days, events and notes (spec 2026-10-16 §3.4). */
+  key_dates?: KeyDate[]
+}
 
 /** The fields the panel saves; each one optional, `null` for "none". */
 export interface PostFields {
@@ -262,6 +270,10 @@ export interface RhythmDay { role?: string; notes?: string }
 export interface VisualStyle { style?: string; image_types?: string[]; avoid?: string[]; aspect_ratios?: string[]; colors?: string[] }
 
 export interface BrandProfile {
+  /** Spec 2026-10-16 §3.3: null = never chosen (guessed), one of the nine countries, or "none". */
+  holiday_country?: string | null
+  /** Marketing and industry days on the Plan (default on). */
+  marketing_days?: boolean
   id: number
   name: string | null
   default_language: string | null
@@ -306,6 +318,10 @@ export interface BrandPayload {
   readiness: Readiness | null
   /** The brand's hashtag groups and text snippets (spec 2026-10-15 §6); every brand answer carries them. */
   snippets?: Snippet[]
+  /** The brand's post templates (spec 2026-10-16 §5); every brand answer carries them. */
+  templates?: Template[]
+  /** The holiday country the venue suggests (its organisation's country or time zone), for "guessed". */
+  holiday_country_guess?: string | null
 }
 
 /** What a brand change sends: only the fields it changes. */
@@ -322,6 +338,35 @@ export type SnippetKind = 'hashtags' | 'text'
 export interface Snippet { id: number; kind: SnippetKind; name: string; body: string }
 /** A hashtag group the AI proposes: nothing is saved until a manager adds it. */
 export interface SnippetSuggestion { name: string; body: string }
+
+/** A built-in day on the Plan (spec 2026-10-16 §3.2); `substitute` is the day off in lieu (observed, in the US). */
+export type BuiltInKind = 'holiday' | 'marketing' | 'industry'
+export interface BuiltInDay { id: string; kind: BuiltInKind; date: DateKey; substitute: boolean; name_en: string }
+/** The brand's own key date (spec §3.1): an event of up to 31 days, or a note; `end` is null for one day. */
+export type OwnKind = 'event' | 'note'
+export interface OwnKeyDate { id: number; kind: OwnKind; title: string; details: string | null; start: DateKey; end: DateKey | null }
+export type KeyDate = BuiltInDay | OwnKeyDate
+export interface KeyDateFields { kind?: OwnKind; title?: string; details?: string | null; start_date?: DateKey; end_date?: DateKey | null }
+
+/** A post template (spec 2026-10-16 §5.1): words with [blanks]; the pillar kept by name. */
+export interface Template {
+  id: number
+  name: string
+  platform: Platform | null
+  pillar_name: string | null
+  topic: string | null
+  hook: string | null
+  main_copy: string | null
+  cta: string | null
+  hashtags: string[]
+}
+export type TemplateFields = Partial<Omit<Template, 'id'>>
+/** A template the AI proposes: nothing is saved until a manager adds it. */
+export type TemplateSuggestion = Omit<Template, 'id'>
+
+/** The Ideas board (spec 2026-10-16 §4.1): the posts without a day, by stage. */
+export type IdeasColumn = 'idea' | 'draft' | 'review' | 'ready'
+export interface IdeasPayload { columns: Record<IdeasColumn, { posts: PostCard[]; total: number }> }
 
 /** Posting goals for the venue's current week, per platform, and the streak (spec 2026-10-15 §7). */
 export interface GoalPlatform { platform: Platform; target: number; published: number; planned: number }

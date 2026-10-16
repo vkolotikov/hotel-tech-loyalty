@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { CheckCircle2, Copy, CopyPlus, ExternalLink, Link2, Send, Trash2 } from 'lucide-react'
+import { CheckCircle2, Copy, CopyPlus, ExternalLink, LayoutTemplate, Link2, Send, Trash2 } from 'lucide-react'
 import { formatInstant } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
+import { TemplateEditor } from '../brand/sections/Templates'
+import { templateFromPost } from '../brand/templateActions'
 import { postLink } from '../lib/links'
+import { Dialog } from '../ui/Dialog'
 import { copyText } from '../lib/postText'
 import type { PostDetail } from '../lib/types'
 
@@ -19,12 +22,14 @@ const LINK = /^https?:\/\/\S+$/i
  * published (with its link), duplicate it, copy its text, delete it (after a
  * confirm). They wait while the post has unsaved edits.
  */
-export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
+export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pillarName = null }: {
   post: PostDetail
   dirty: boolean
   onPost: (post: PostDetail) => void
   onDuplicated: (copy: PostDetail) => void
   onDeleted: (id: number) => void
+  /** The post's pillar by name (the panel knows the active strategy's pillars): "Save as template" keeps it. */
+  pillarName?: string | null
 }) {
   const { t, i18n } = useTranslation()
   const api = useApi()
@@ -36,6 +41,8 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [copied, setCopied] = useState(false)
   const [linkCopied, setLinkCopied] = useState(false)
+  // "Save as template" (managers, spec 2026-10-16 §5.2): the editor filled from the post, its pillar by name.
+  const [templating, setTemplating] = useState(false)
   const waits = dirty || busy !== null
   const urlOk = url.trim() === '' || LINK.test(url.trim())
 
@@ -103,6 +110,11 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
           onClick={() => { void act('link', async () => { await navigator.clipboard.writeText(`${window.location.origin}${postLink(post.id, boot.brand?.id ?? null)}`); setLinkCopied(true) }) }}>
           <Link2 size={14} aria-hidden />{linkCopied ? t('content.panel.actions.link_copied', 'Link copied') : t('content.panel.actions.copy_link', 'Copy link')}
         </Button>
+        {boot.staff.can_manage && (
+          <Button size="sm" variant="secondary" disabled={waits} onClick={() => setTemplating(true)}>
+            <LayoutTemplate size={14} aria-hidden />{t('content.panel.actions.save_template', 'Save as template')}
+          </Button>
+        )}
         <Button size="sm" variant="ghost" disabled={waits} onClick={() => setConfirmDelete(true)}>
           <Trash2 size={14} aria-hidden />{t('content.panel.actions.delete', 'Delete')}
         </Button>
@@ -133,6 +145,11 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted }: {
         </div>
       )}
       {error && <Notice tone="danger">{error}</Notice>}
+      {templating && (
+        <Dialog title={t('content.panel.actions.save_template', 'Save as template')} onClose={() => setTemplating(false)}>
+          <TemplateEditor template={null} initial={templateFromPost(post, pillarName)} onDone={() => setTemplating(false)} />
+        </Dialog>
+      )}
     </section>
   )
 }

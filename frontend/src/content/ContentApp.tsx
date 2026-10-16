@@ -5,6 +5,7 @@ import { BrandPage } from './brand/BrandPage'
 import { ContentProvider } from './ContentProvider'
 import { ContentShell } from './ContentShell'
 import { registerContentLocales } from './i18n'
+import { IdeasPage } from './ideas/IdeasPage'
 import { loginPath } from './lib/links'
 import { PanelProvider } from './panel/PanelProvider'
 import { PostLink } from './panel/PostLink'
@@ -33,6 +34,7 @@ export function ContentApp() {
         <ContentShell>
           <Routes>
             <Route index element={<PlanPage />} />
+            <Route path="ideas" element={<IdeasPage />} />
             <Route path="posts" element={<PostsPage />} />
             <Route path="posts/:id" element={<PostLink />} />
             <Route path="strategy" element={<StrategyScreen />} />

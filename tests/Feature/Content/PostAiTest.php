@@ -4,6 +4,7 @@ namespace Tests\Feature\Content;
 
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerPostVariation;
+use App\Models\ContentPlannerTemplate;
 use App\Models\ContentPlannerVisualBrief;
 use App\Services\ContentPlanner\ImageGenerationService;
 use App\Services\ContentPostGenerationService;
@@ -194,5 +195,34 @@ class PostAiTest extends TestCase
 
         $this->asStaffMember()->postJson($this->api("posts/{$post->id}/image"))
             ->assertStatus(502)->assertJsonPath('error', 'ai_failed')->assertDontSee('sk-secret');
+    }
+
+    // Spec 2026-10-16 §5.3: "Write with AI" from a template of this brand.
+    public function test_write_follows_a_template_of_this_brand(): void
+    {
+        $post = $this->makePost();
+        $template = ContentPlannerTemplate::create(['planner_profile_id' => $this->profile->id, 'brand_id' => $this->brandId, 'name' => 'Seasonal offer', 'hook' => 'Book your [treatment] before [date]']);
+        $this->mockPosts()->shouldReceive('generate')->once()->andReturnUsing(function (ContentPlannerPost $p, ?string $instructions, ?ContentPlannerTemplate $used) use ($template) {
+            $this->assertNull($instructions);
+            $this->assertSame((int) $template->id, (int) $used?->id);
+            $p->update(['hook' => 'Book your colour refresh before Friday', 'status' => 'needs_review']);
+
+            return ['post' => $p->fresh(['visualBrief']), 'ai_response' => []];
+        });
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/write"), ['template_id' => $template->id])
+            ->assertOk()
+            ->assertJsonPath('post.hook', 'Book your colour refresh before Friday');
+    }
+
+    public function test_another_brands_template_cannot_steer_the_ai(): void
+    {
+        $post = $this->makePost();
+        [$second] = $this->secondBrand();
+        $theirs = $this->asManager()->postJson($this->api("brand/templates?brand_id={$second}"), ['name' => 'Theirs', 'hook' => 'Theirs'])->json('template.id');
+        $this->mockPosts()->shouldNotReceive('generate');
+
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/write"), ['template_id' => $theirs])->assertNotFound()->assertJsonPath('error', 'not_found');
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/write"), ['template_id' => 'first'])->assertStatus(422)->assertJsonValidationErrors('template_id');
     }
 }
