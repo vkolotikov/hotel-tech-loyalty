@@ -32,7 +32,7 @@ final class ContentIdeas
                 ->when($platform !== null, fn ($q) => $q->where('platform', $platform))
                 ->when($pillarId !== null, fn ($q) => $q->where('pillar_id', $pillarId));
             $columns[$column] = [
-                'posts' => $query()->with('visualBrief')->orderByDesc('updated_at')->orderByDesc('id')->limit(self::PER_COLUMN)->get()
+                'posts' => $query()->with('visualBrief')->withReview()->orderByDesc('updated_at')->orderByDesc('id')->limit(self::PER_COLUMN)->get()
                     ->map(fn (ContentPlannerPost $post) => ContentPostPresenter::card($post))->values()->all(),
                 'total' => $query()->count(),
             ];

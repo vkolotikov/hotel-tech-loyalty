@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { QueryClient } from '@tanstack/react-query'
-import { cardOf, placePost, refreshLists } from './planCache'
+import { cardOf, keepTimeline, placePost, putPost, refreshLists } from './planCache'
 import type { PlanPayload, PostCard, PostDetail } from './types'
 
 const card = (id: number, scheduled_date: string | null, more: Partial<PostCard> = {}): PostCard => ({
@@ -54,7 +54,7 @@ describe('refreshLists', () => {
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     void refreshLists(client, 3)
-    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals'], ['content', 3, 'ideas']])
+    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals'], ['content', 3, 'ideas'], ['content', 3, 'inbox']])
   })
 })
 
@@ -64,5 +64,44 @@ describe('refreshLists and the goals', () => {
     client.setQueryData(['content', 3, 'goals'], { week: null, platforms: [], streak: { weeks: 0, current_met: false, at_risk: false, short_by: 0 } })
     await refreshLists(client, 3)
     expect(client.getQueryState(['content', 3, 'goals'])?.isInvalidated).toBe(true)
+  })
+})
+
+describe('release 4b: what the panel keeps', () => {
+  it('carries a post’s comment count and "sent back" onto its card', () => {
+    const detail = { ...card(5, '2026-10-07'), comments_count: 3, sent_back: true, language: 'en' } as unknown as PostDetail
+    expect(cardOf(detail)).toEqual(card(5, '2026-10-07', { comments_count: 3, sent_back: true }))
+  })
+
+  it('keeps the timeline already read when an answer brings the post without one', () => {
+    const timeline = [{ type: 'comment', id: 1, user: null, body: 'Hi', edited: false, mine: false, at: '2026-10-05T06:00:00.000000Z' }] as PostDetail['timeline']
+    const old = { ...card(5, '2026-10-07'), timeline } as unknown as PostDetail
+    const fresh = { ...card(5, '2026-10-08') } as unknown as PostDetail
+    expect(keepTimeline(fresh, old).timeline).toBe(timeline)
+    expect(keepTimeline(fresh, old).scheduled_date).toBe('2026-10-08')
+    expect(keepTimeline({ ...fresh, timeline: [] }, old).timeline).toEqual([])
+    expect(keepTimeline(fresh, { ...old, id: 6 }).timeline).toBeUndefined()
+    expect(keepTimeline(fresh, undefined)).toBe(fresh)
+  })
+})
+
+// Final review: an Ideas move wrote its timeline-less answer over the open panel's post and dropped its timeline.
+describe('final review: a post an answer brought, in the panel’s cache', () => {
+  const timeline = [{ type: 'comment', id: 1, user: null, body: 'Hi', edited: false, mine: false, at: '2026-10-05T06:00:00.000000Z' }] as PostDetail['timeline']
+
+  it('keeps the timeline already read and has the post read again when the answer carries none', () => {
+    const qc = new QueryClient()
+    qc.setQueryData(['content', 3, 'post', 5], { ...card(5, '2026-10-07'), timeline })
+    putPost(qc, 3, { ...card(5, '2026-10-08', { status: 'needs_review' }) } as unknown as PostDetail)
+    expect(qc.getQueryData<PostDetail>(['content', 3, 'post', 5])).toMatchObject({ status: 'needs_review', timeline })
+    expect(qc.getQueryState(['content', 3, 'post', 5])?.isInvalidated).toBe(true)
+  })
+
+  it('takes an answer that carries its timeline as it is, with no new read', () => {
+    const qc = new QueryClient()
+    qc.setQueryData(['content', 3, 'post', 5], { ...card(5, '2026-10-07'), timeline })
+    putPost(qc, 3, { ...card(5, '2026-10-07'), timeline: [] } as unknown as PostDetail)
+    expect(qc.getQueryData<PostDetail>(['content', 3, 'post', 5])?.timeline).toEqual([])
+    expect(qc.getQueryState(['content', 3, 'post', 5])?.isInvalidated).toBe(false)
   })
 })

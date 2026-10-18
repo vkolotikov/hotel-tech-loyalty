@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Channel, IdeasPayload, PostCard, PostStatus } from '../lib/types'
-import { ageOf, ageText, columnOf, ideaBody, ideaLine, inFlight, moveStatus, placeCard, scheduleDefaults, seeAllLink, stepColumn } from './ideasMath'
+import { ageOf, ageText, canEnter, columnOf, ideaBody, ideaLine, inFlight, moveStatus, moveTargets, placeCard, scheduleDefaults, seeAllLink, stepColumn, stepTarget } from './ideasMath'
 
 describe('the board’s stages (spec 2026-10-16 §4.1)', () => {
   it('puts each status in its stage, and published, skipped or archived posts in none', () => {
@@ -93,5 +93,22 @@ describe('a moved card, at once', () => {
     expect(moving.start(6)).toBe(true)
     moving.done(5)
     expect(moving.start(5)).toBe(true)
+  })
+})
+
+describe('approvals on the board (spec 2026-10-16 §6.2)', () => {
+  it('keeps staff out of Ready while approvals are on, by drop, by "Move to…" and by Shift + →', () => {
+    expect(canEnter('ready', true)).toBe(false)
+    expect(canEnter('ready', false)).toBe(true)
+    expect(canEnter('review', true)).toBe(true)
+    expect(moveTargets('review', true)).toEqual(['idea', 'draft'])
+    expect(moveTargets('review', false)).toEqual(['idea', 'draft', 'ready'])
+    expect(stepTarget('review', 1, true)).toBeNull()
+    expect(stepTarget('review', 1, false)).toBe('ready')
+  })
+
+  it('lets a card already in Ready move out', () => {
+    expect(moveTargets('ready', true)).toEqual(['idea', 'draft', 'review'])
+    expect(stepTarget('ready', -1, true)).toBe('review')
   })
 })

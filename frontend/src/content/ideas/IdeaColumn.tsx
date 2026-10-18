@@ -9,7 +9,7 @@ import { COLUMN_TEXT } from './ideasMath'
  * One stage of the board (spec 2026-10-16 §4.1): its name and total, its 50 most recently changed cards, and "See all"
  * past them. While a card from another stage is dragged, it takes the drop.
  */
-export function IdeaColumn({ column, posts, total, seeAll, locale, now, pillarName, draggable, dropping, onOpen, onMove, onSchedule, onDragStart, onDragEnd, onDrop, children }: {
+export function IdeaColumn({ column, posts, total, seeAll, locale, now, pillarName, draggable, locked = false, dropping, onOpen, onMove, onSchedule, onDragStart, onDragEnd, onDrop, children }: {
   column: IdeasColumn
   posts: PostCard[]
   total: number
@@ -18,6 +18,8 @@ export function IdeaColumn({ column, posts, total, seeAll, locale, now, pillarNa
   now: number
   pillarName: (id: number | null) => string | null
   draggable: boolean
+  /** Staff while the brand's approvals are on: its cards offer no move into Ready. */
+  locked?: boolean
   /** A card from another stage is being dragged: this stage takes the drop. */
   dropping: boolean
   onOpen: (id: number) => void
@@ -46,7 +48,7 @@ export function IdeaColumn({ column, posts, total, seeAll, locale, now, pillarNa
         : (
           <ul className="space-y-2">
             {posts.map(post => (
-              <IdeaCard key={post.id} post={post} column={column} locale={locale} now={now} pillar={pillarName(post.pillar_id)} draggable={draggable}
+              <IdeaCard key={post.id} post={post} column={column} locale={locale} now={now} pillar={pillarName(post.pillar_id)} draggable={draggable} locked={locked}
                 onOpen={onOpen} onMove={onMove} onSchedule={onSchedule} onDragStart={onDragStart} onDragEnd={onDragEnd} />
             ))}
           </ul>

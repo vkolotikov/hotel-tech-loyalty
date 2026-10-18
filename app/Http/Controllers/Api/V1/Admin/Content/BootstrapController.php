@@ -51,6 +51,8 @@ class BootstrapController extends Controller
                 'id'              => (int) $profile->id,
                 'setup_completed' => $profile->setup_completed_at !== null,
                 'readiness'       => (int) $knowledge->readinessOf($profile)['overall'],
+                // Spec 2026-10-16 §6: the portal hides what staff may not do while approvals are on.
+                'requires_approval' => (bool) ($profile->requires_approval ?? false),
             ] : null,
             'ai'           => ['status' => $budget['status'], 'percent' => $budget['percent']],
             'platforms'    => ContentRules::PLATFORMS,

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ContentContext, type ContentContextValue } from './ContentProvider'
 import { ContentShell } from './ContentShell'
 import { PanelProvider } from './panel/PanelProvider'
@@ -38,6 +39,7 @@ const staff = { name: 'Sam', role: 'staff', can_manage: false }
 function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstrap> = {}) {
   const full: ContentContextValue = { data: { ...boot, ...data }, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {}, ...value }
   return renderToStaticMarkup(
+    <QueryClientProvider client={new QueryClient()}>
     <MemoryRouter initialEntries={['/content']}>
       <Routes>
         <Route path="/" element={<p>full admin dashboard</p>} />
@@ -47,10 +49,18 @@ function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstra
           </ContentContext.Provider>
         } />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
+    </QueryClientProvider>,
   )
 }
 const refused = (code: string) => ({ response: { status: 403, data: { error: code } } })
+
+describe('ContentShell: the bell (spec 2026-10-16 §8)', () => {
+  it('puts the "For you" bell beside New post once the workspace is ready, and not while it loads', () => {
+    expect(render()).toContain('data-bell=""')
+    expect(render({ data: undefined, isLoading: true })).not.toContain('data-bell=""')
+  })
+})
 
 describe('ContentShell', () => {
   it('is the token scope, names the product and the organisation, and draws the page', () => {
@@ -75,6 +85,22 @@ describe('ContentShell', () => {
   // Found by eyes on a phone: a long brand name's switcher kept its own width (up to 12rem) and slid under Find and New post.
   it('asks for the phone menu that fits what it holds (the theme switch is longer in Russian)', () => {
     expect(render()).toMatch(/<summary[\s\S]*?<\/summary><div class="[^"]*\bw-max\b/)
+  })
+
+  // Found by eyes at 390 px, then by the final review at 375 and 360 px: with the bell, the header's pieces outgrew a
+  // phone, pushed the menu off the screen and squeezed the brand switcher to nothing. On a phone Find and the switcher
+  // have their own row above the page, and the bell and New post are 32 px; from 640 px on nothing changes.
+  it('on a phone gives Find and the brand switcher their own row above the page, so the header fits with the bell', () => {
+    const html = render({}, { brands: [{ id: 3, name: 'Lumière Salon' }, { id: 7, name: 'Second Studio' }] })
+    expect(html).toContain('<div class="hidden min-w-0 flex-1 sm:block sm:flex-initial">')
+    expect(html).toMatch(/aria-label="Find a post or action" aria-keyshortcuts="[^"]*" aria-haspopup="dialog" class="hidden\b[^"]*\bsm:flex\b/)
+    expect(html).toMatch(/data-phone-row="" class="[^"]*\bsm:hidden\b[^"]*">(?:(?!<\/div>).)*data-find-phone=""(?:(?!<\/div>).)*data-brand-switcher-phone=""/s)
+    expect(html).toContain('<div class="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">')
+    expect(html).toMatch(/aria-label="New post" class="[^"]*\bp-2\b[^"]*\bsm:px-4\b/)
+    expect(html).toMatch(/data-bell=""[^>]*class="[^"]*\bh-8 w-8 sm:h-9 sm:w-9\b/)
+    // One brand: the row still holds Find, and no switcher.
+    expect(render()).toContain('data-find-phone=""')
+    expect(render()).not.toContain('data-brand-switcher-phone')
   })
 
   it('lets the brand switcher shrink with the header, so a long name never slides under the buttons', () => {

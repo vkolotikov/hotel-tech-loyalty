@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1\Admin\Content;
 use App\Http\Controllers\Controller;
 use App\Models\ContentPlannerPost;
 use App\Services\Appointments\VenueClock;
+use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
@@ -38,7 +39,7 @@ class PostController extends Controller
             return response()->json(['data' => [], 'meta' => ['page' => 1, 'pages' => 0, 'total' => 0]]);
         }
 
-        $query = ContentPlannerPost::with(self::WITH)
+        $query = ContentPlannerPost::with(self::WITH)->withReview()
             ->where('planner_profile_id', $profile->id)
             // Archived posts are put away: listed only when asked for by their status.
             ->when($data['status'] ?? null, fn ($q, $status) => $q->where('status', $status), fn ($q) => $q->where('status', '!=', 'archived'))
@@ -71,7 +72,7 @@ class PostController extends Controller
             return response()->json(['posts' => []]);
         }
 
-        $posts = ContentPlan::search(ContentPlannerPost::with(self::WITH)->where('planner_profile_id', $profile->id), $words)
+        $posts = ContentPlan::search(ContentPlannerPost::with(self::WITH)->withReview()->where('planner_profile_id', $profile->id), $words)
             ->where('status', '!=', 'archived')
             ->orderByRaw('CASE WHEN scheduled_date IS NULL THEN 1 ELSE 0 END')
             ->orderByDesc('scheduled_date')->orderByDesc('id')
@@ -86,6 +87,7 @@ class PostController extends Controller
         $data = $request->validate(
             ['platform' => ['required', Rule::in(ContentRules::PLATFORMS)]] + Arr::except(ContentRules::postFields(), ['platform'])
         );
+        ContentApproval::guardStatus($data['status'] ?? null, null, $request->user(), $profile);
         // A post without a day has no time either (as a move to the tray, and as update, keep it).
         if (($data['scheduled_date'] ?? null) === null) {
             $data['scheduled_time'] = null;
@@ -102,12 +104,16 @@ class PostController extends Controller
             ],
         ));
 
+        if ($kind = ContentApproval::onCreate($post, $request->user(), $profile)) {
+            ContentApproval::record($post, $kind, $request->user()->id);
+        }
+
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))], 201);
     }
 
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
-        return response()->json(['post' => ContentPostPresenter::detail(self::find($id))]);
+        return response()->json(['post' => ContentPostPresenter::panel(self::find($id), $request->user())]);
     }
 
     public function update(Request $request, int $id): JsonResponse
@@ -121,12 +127,20 @@ class PostController extends Controller
             && $fields['scheduled_date'] !== $post->scheduled_date?->format('Y-m-d')) {
             self::refusePublishedMove();
         }
+        $profile = ContentContext::profile();
+        $before = (string) $post->status;
+        // Spec 2026-10-16 §6.2: refused whole, before anything of the save is filled.
+        ContentApproval::guardStatus($fields['status'] ?? null, $before, $request->user(), $profile);
         $post->fill($fields);
         // A post without a day has no time either — also when only a time was sent for it.
         if ($post->scheduled_date === null) {
             $post->scheduled_time = null;
         }
+        $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile);
         $post->save();
+        if ($kind) {
+            ContentApproval::record($post, $kind, $request->user()->id);
+        }
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -170,10 +184,13 @@ class PostController extends Controller
         return response()->json(['post' => ContentPostPresenter::detail($copy->fresh(self::WITH))], 201);
     }
 
-    public function markReady(int $id): JsonResponse
+    public function markReady(Request $request, int $id): JsonResponse
     {
         $post = self::find($id);
+        $before = (string) $post->status;
+        ContentApproval::guardStatus('ready_to_publish', $before, $request->user(), ContentContext::profile());
         $post->update(['status' => 'ready_to_publish']);
+        ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -182,7 +199,10 @@ class PostController extends Controller
     {
         $data = $request->validate(['published_url' => 'nullable|url|max:255']);
         $post = self::find($id);
+        $before = (string) $post->status;
+        ContentApproval::guardStatus('published', $before, $request->user(), ContentContext::profile());
         $post->update(['status' => 'published', 'published_at' => now(), 'published_url' => $data['published_url'] ?? null]);
+        ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }

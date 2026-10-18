@@ -58,14 +58,15 @@ final class ContentRepeat
 
     /**
      * The copies, made in one transaction; the original joins its own series. A published or archived original gives
-     * draft copies; any other keeps its status.
+     * draft copies; any other keeps its status — unless `$status` is given (copies the AI rewords while approvals are
+     * on wait for approval: spec 2026-10-16 §6.2).
      *
      * @param list<string> $dates
      * @return Collection<int, ContentPlannerPost>
      */
-    public static function copy(ContentPlannerPost $original, array $dates, ?int $userId): Collection
+    public static function copy(ContentPlannerPost $original, array $dates, ?int $userId, ?string $status = null): Collection
     {
-        $status = in_array($original->status, ['published', 'archived'], true) ? 'draft' : (string) $original->status;
+        $status ??= in_array($original->status, ['published', 'archived'], true) ? 'draft' : (string) $original->status;
 
         return DB::transaction(function () use ($original, $dates, $status, $userId) {
             $original->forceFill(['series_id' => $original->id])->save();

@@ -1280,6 +1280,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('plan', [\App\Http\Controllers\Api\V1\Admin\Content\PlanController::class, 'show']);
                 Route::get('goals', [\App\Http\Controllers\Api\V1\Admin\Content\GoalsController::class, 'show']);
                 Route::get('ideas', [\App\Http\Controllers\Api\V1\Admin\Content\IdeasController::class, 'show']);
+                Route::get('inbox', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'index']);
+                Route::get('inbox/count', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'count']);
+                Route::post('inbox/seen', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'seen']);
                 Route::post('key-dates', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'store']);
                 Route::put('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'update'])->whereNumber('id');
                 Route::delete('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'destroy'])->whereNumber('id');
@@ -1295,6 +1298,12 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('posts/{id}/repeat', [\App\Http\Controllers\Api\V1\Admin\Content\RepeatController::class, 'destroy'])->whereNumber('id');
                 Route::post('posts/{id}/mark-ready', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markReady'])->whereNumber('id');
                 Route::post('posts/{id}/mark-published', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markPublished'])->whereNumber('id');
+                Route::post('posts/{id}/send-for-approval', [\App\Http\Controllers\Api\V1\Admin\Content\ApprovalController::class, 'send'])->whereNumber('id');
+                Route::post('posts/{id}/approve', [\App\Http\Controllers\Api\V1\Admin\Content\ApprovalController::class, 'approve'])->whereNumber('id');
+                Route::post('posts/{id}/send-back', [\App\Http\Controllers\Api\V1\Admin\Content\ApprovalController::class, 'sendBack'])->whereNumber('id');
+                Route::post('posts/{id}/comments', [\App\Http\Controllers\Api\V1\Admin\Content\CommentController::class, 'store'])->whereNumber('id');
+                Route::put('comments/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\CommentController::class, 'update'])->whereNumber('id');
+                Route::delete('comments/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\CommentController::class, 'destroy'])->whereNumber('id');
                 Route::post('posts/{id}/write', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'write'])->whereNumber('id');
                 Route::post('posts/{id}/rewrite', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'rewrite'])->whereNumber('id');
                 Route::post('posts/{id}/quality', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'quality'])->whereNumber('id');

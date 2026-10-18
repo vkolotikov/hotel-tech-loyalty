@@ -101,6 +101,29 @@ class ContentPlannerPost extends Model
         return $this->hasMany(ContentPlannerPostVariation::class, 'post_id');
     }
 
+    /** Its approval steps (spec 2026-10-16 §6.4). */
+    public function events(): HasMany
+    {
+        return $this->hasMany(ContentPlannerPostEvent::class, 'post_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(ContentPlannerPostComment::class, 'post_id');
+    }
+
+    /**
+     * Cards' review facts in the list's own query (spec 2026-10-16 §6.3, §7.1): the comment count and the latest
+     * approval step, so a card never asks again.
+     */
+    public function scopeWithReview($query)
+    {
+        $latest = fn (string $column) => ContentPlannerPostEvent::select($column)
+            ->whereColumn('post_id', 'content_planner_posts.id')->orderByDesc('id')->limit(1);
+
+        return $query->withCount('comments')->addSelect(['last_event_kind' => $latest('kind'), 'last_event_at' => $latest('created_at')]);
+    }
+
     public function scopeByStatus($query, string $status)
     {
         return $query->where('status', $status);

@@ -7,8 +7,9 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
+import { staffLocked, statusChoices } from '../lib/approval'
 import { errorKey } from '../lib/errors'
-import { cardOf, putInPlans, refreshLists } from '../lib/planCache'
+import { cardOf, putInPlans, putPost, refreshLists } from '../lib/planCache'
 import type { PostDetail } from '../lib/types'
 import { PlatformMark } from '../ui/PlatformMark'
 import { StatusPill } from '../ui/StatusDot'
@@ -18,8 +19,11 @@ import { usePanel, type PanelTarget } from './PanelProvider'
 import { AiTools } from './AiTools'
 import { PostActions } from './PostActions'
 import { PostFormFields } from './PostFormFields'
+import { postQuery } from './panelQuery'
 import { pollsWhileRewording } from './repeatMath'
 import { RepeatSection } from './RepeatSection'
+import { ReviewBar } from './ReviewBar'
+import { Timeline } from './Timeline'
 import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, withChannels, type Editing, type PostForm } from './panelState'
 
 /** The post panel (spec §4.3): over the right edge of every page, one post at a time (PanelProvider). */
@@ -54,11 +58,8 @@ function PanelBody({ target }: { target: PanelTarget }) {
     }
   }, [])
 
-  const detail = useQuery({
-    queryKey: ['content', brand, 'post', id], queryFn: () => api.post(id as number).then(r => r.post), enabled: id !== null,
-    // While the AI rewords this post's series it is read again every 5 s (spec 2026-10-15 §8); otherwise the panel does not poll.
-    refetchInterval: (query) => (pollsWhileRewording(query.state.data) ? 5_000 : false),
-  })
+  // A post cached without its timeline is read again on opening; one whose series the AI rewords, every 5 s (panelQuery.ts).
+  const detail = useQuery(postQuery(brand, id, () => api.post(id as number).then(r => r.post)))
   const strategies = useQuery({ queryKey: ['content', brand, 'strategies'], queryFn: api.strategies, staleTime: 300_000 })
   const activeId = strategies.data?.strategies.find(s => s.status === 'active')?.id ?? null
   const strategy = useQuery({
@@ -126,7 +127,8 @@ function PanelBody({ target }: { target: PanelTarget }) {
 
   /** The post as the server answered: its cached copy and the plan show it at once (so the next move sends its version). */
   const show = (fresh: PostDetail) => {
-    queryClient.setQueryData(['content', brand, 'post', fresh.id], fresh)
+    // An answer without the timeline (a save, an AI answer) keeps the one read and has the post read again (putPost).
+    putPost(queryClient, brand, fresh)
     putInPlans(queryClient, brand, cardOf(fresh))
     void refreshLists(queryClient, brand)
   }
@@ -205,8 +207,9 @@ function PanelBody({ target }: { target: PanelTarget }) {
             <Button variant="secondary" size="sm" onClick={() => { loadTheirs(conflict); setConflict(null) }}>{t('content.panel.conflict_reload', 'Load their version')}</Button>
           </div>
         )}
+        {post && <ReviewBar post={post} dirty={dirty} onPost={adopt} />}
         {editing && (
-          <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={boot.statuses}
+          <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={statusChoices(boot.statuses, staffLocked(boot), editing.base.status)}
             pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []}
             templates={brandInfo.data?.templates ?? []} />
         )}
@@ -236,6 +239,8 @@ function PanelBody({ target }: { target: PanelTarget }) {
                 void refreshLists(queryClient, brand)
                 panel.close()
               }} />
+            {/* The timeline as last read (spec 2026-10-16 §7.1): an answer that carried none keeps it until the post is read again. */}
+            <Timeline post={post} items={detail.data && detail.data.id === post.id ? (detail.data.timeline ?? null) : null} />
           </>
         )}
       </div>

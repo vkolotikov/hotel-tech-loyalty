@@ -6,6 +6,7 @@ import { Skeleton } from '../../workspace/ui/Skeleton'
 import { useBoot } from '../ContentProvider'
 import { PageHeader } from '../ui/PageHeader'
 import { Readiness } from './Readiness'
+import { ApprovalsSection } from './sections/Approvals'
 import { AudiencesSection } from './sections/Audiences'
 import { BrandDnaSection } from './sections/BrandDna'
 import { ChannelsSection } from './sections/Channels'
@@ -61,6 +62,7 @@ export function BrandPage() {
               <PositioningSection brand={brand} canEdit={canEdit} />
               <ChannelsSection brand={brand} canEdit={canEdit} />
               <KeyDatesSection brand={brand} canEdit={canEdit} />
+              <ApprovalsSection brand={brand} canEdit={canEdit} />
               <SnippetsSection brand={brand} canEdit={canEdit} />
               <TemplatesSection brand={brand} canEdit={canEdit} />
               <RhythmSection brand={brand} canEdit={canEdit} />

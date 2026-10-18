@@ -1,7 +1,10 @@
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useContent } from '../ContentProvider'
+import { approvalsOn, cardFlags, flagWords } from '../lib/approval'
 import { cardLine } from '../lib/postText'
 import type { PostCard } from '../lib/types'
+import { CardFlags } from '../ui/CardFlags'
 import { PlatformMark } from '../ui/PlatformMark'
 import { StatusDot } from '../ui/StatusDot'
 
@@ -25,6 +28,7 @@ export function PostCardView({ post, compact = false, selected = false, onOpen, 
   onKeyDown?: (e: KeyboardEvent<HTMLButtonElement>, post: PostCard) => void
 }) {
   const { t } = useTranslation()
+  const { data } = useContent()
   const text = cardLine(post) || t('content.plan.untitled', 'Untitled post')
   const movable = post.status !== 'published'
   const words = { platform: t(`content.platform.${post.platform}`, post.platform), status: t(`content.status.${post.status}`, post.status), text, time: post.scheduled_time ?? '' }
@@ -32,9 +36,11 @@ export function PostCardView({ post, compact = false, selected = false, onOpen, 
   const label = post.scheduled_time
     ? t('content.plan.card_label_time', '{{platform}} {{time}}: {{text}}, {{status}}', words)
     : t('content.plan.card_label', '{{platform}}: {{text}}, {{status}}', words)
+  // Spec 2026-10-16 §6.3, §7.1: the card's flags end its name (the compact card draws them without words).
+  const flags = flagWords(cardFlags(post, approvalsOn(data)), (key, fallback, vars) => t(key, fallback, vars))
   return (
     <button type="button" data-post={post.id} data-platform={post.platform} data-movable={movable ? 'true' : 'false'} data-stop=""
-      aria-label={label} aria-describedby={movable && post.scheduled_date !== null ? MOVE_HINT_ID : undefined} aria-current={selected ? 'true' : undefined}
+      aria-label={flags ? `${label}, ${flags}` : label} aria-describedby={movable && post.scheduled_date !== null ? MOVE_HINT_ID : undefined} aria-current={selected ? 'true' : undefined}
       onClick={() => onOpen(post.id)}
       onPointerDown={onPointerDown && movable ? (e) => onPointerDown(e, post) : undefined}
       onKeyDown={onKeyDown ? (e) => onKeyDown(e, post) : undefined}
@@ -43,6 +49,7 @@ export function PostCardView({ post, compact = false, selected = false, onOpen, 
         <>
           <PlatformMark platform={post.platform} size="sm" />
           <span className="min-w-0 flex-1 truncate text-sm leading-snug text-a-text">{text}</span>
+          <CardFlags post={post} compact />
           <StatusDot status={post.status} />
         </>
       ) : (
@@ -54,6 +61,7 @@ export function PostCardView({ post, compact = false, selected = false, onOpen, 
             <span className="ml-auto flex"><StatusDot status={post.status} /></span>
           </span>
           <span className="line-clamp-3 w-full break-words text-sm leading-snug text-a-text">{text}</span>
+          <CardFlags post={post} />
           {post.image_url && <img src={post.image_url} alt="" loading="lazy" draggable={false} className="h-14 w-full max-w-[8rem] rounded-md object-cover" />}
         </>
       )}

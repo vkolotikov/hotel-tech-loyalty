@@ -3,6 +3,8 @@
 namespace App\Services\Content;
 
 use App\Models\ContentPlannerPost;
+use App\Models\User;
+use Carbon\CarbonImmutable;
 
 /** The shapes HexaTech Content sends for a post (spec 2026-10-14 §4). */
 final class ContentPostPresenter
@@ -29,7 +31,31 @@ final class ContentPostPresenter
             'pillar_id'      => $post->pillar_id ? (int) $post->pillar_id : null,
             'image_url'      => $brief?->image_status === 'ready' ? $brief->image_url : null,
             'updated_at'     => $post->updated_at?->toISOString(),
+            // Spec 2026-10-16 §6.3, §7.1 (read in the list's query by withReview(); asked here otherwise).
+            'comments_count' => (int) ($post->comments_count ?? $post->comments()->count()),
+            'sent_back'      => self::sentBack($post),
         ];
+    }
+
+    /** A draft whose latest approval step is a send-back, with no change to the post after it (spec 2026-10-16 §6.3). */
+    public static function sentBack(ContentPlannerPost $post): bool
+    {
+        if ($post->status !== 'draft') {
+            return false;
+        }
+        if (array_key_exists('last_event_kind', $post->getAttributes())) {
+            $kind = $post->getAttribute('last_event_kind');
+            $at = $post->getAttribute('last_event_at');
+        } else {
+            $last = $post->events()->orderByDesc('id')->first();
+            $kind = $last?->kind;
+            $at = $last?->created_at;
+        }
+        if ($kind !== 'sent_back' || $at === null || $post->updated_at === null) {
+            return false;
+        }
+
+        return $post->updated_at->getTimestamp() <= CarbonImmutable::parse($at)->getTimestamp();
     }
 
     /** Everything the post panel shows and edits. @return array<string, mixed> */
@@ -38,6 +64,9 @@ final class ContentPostPresenter
         $brief = $post->relationLoaded('visualBrief') ? $post->visualBrief : $post->visualBrief()->first();
 
         return self::card($post) + [
+            // Who wrote it (spec 2026-10-16 §7.1): only a post a person wrote here. A calendar post keeps who pressed
+            // Generate in created_by, a repeat copy who repeated it: neither wrote it, so they show none (final review).
+            'author'            => $post->generated_by === 'manual' && $post->created_by ? $post->createdBy?->name : null,
             'language'          => $post->language,
             'goal'              => $post->goal,
             'format'            => $post->format,
@@ -74,6 +103,12 @@ final class ContentPostPresenter
                 'image_error'  => $brief->image_error,
             ] : null,
         ];
+    }
+
+    /** The post as its panel opens it: everything, with its comments and approval steps (spec 2026-10-16 §7.1). @return array<string, mixed> */
+    public static function panel(ContentPlannerPost $post, ?User $viewer): array
+    {
+        return self::detail($post) + ['timeline' => ContentTimeline::for($post, $viewer)];
     }
 
     /** PostgreSQL answers a time column as HH:MM:SS; the portal works in HH:MM. */

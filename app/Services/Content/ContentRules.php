@@ -94,6 +94,8 @@ final class ContentRules
             // Spec 2026-10-16 §3.3: null = never chosen (guessed), one of the nine, or none.
             'holiday_country' => ['sometimes', 'nullable', Rule::in([...PublicHolidays::COUNTRIES, 'none'])],
             'marketing_days' => ['sometimes', 'boolean'],
+            // Spec 2026-10-16 §6.1: posts need a manager's approval (managers only, as every profile field).
+            'requires_approval' => ['sometimes', 'boolean'],
         ];
     }
 

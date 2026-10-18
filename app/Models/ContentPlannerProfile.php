@@ -48,6 +48,7 @@ class ContentPlannerProfile extends Model
         'setup_step',
         'holiday_country',
         'marketing_days',
+        'requires_approval',
     ];
 
     protected $casts = [
@@ -68,6 +69,7 @@ class ContentPlannerProfile extends Model
         'knowledge_score' => 'integer',
         'setup_step' => 'integer',
         'marketing_days' => 'boolean',
+        'requires_approval' => 'boolean',
     ];
 
     public function createdBy(): BelongsTo

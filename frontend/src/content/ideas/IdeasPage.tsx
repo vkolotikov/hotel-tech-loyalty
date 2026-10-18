@@ -7,15 +7,16 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
+import { staffLocked } from '../lib/approval'
 import { errorKey } from '../lib/errors'
-import { refreshLists } from '../lib/planCache'
+import { putPost, refreshLists } from '../lib/planCache'
 import type { IdeasColumn, IdeasPayload, Platform, PostCard } from '../lib/types'
 import { useActiveStrategy } from '../lib/useActiveStrategy'
 import { usePanel } from '../panel/PanelProvider'
 import { PageHeader } from '../ui/PageHeader'
 import { IdeaColumn } from './IdeaColumn'
 import { QuickCapture } from './QuickCapture'
-import { COLUMN_TEXT, COLUMNS, columnOf, IDEAS_HINT_ID, inFlight, moveStatus, placeCard, seeAllLink } from './ideasMath'
+import { canEnter, COLUMN_TEXT, COLUMNS, columnOf, IDEAS_HINT_ID, inFlight, moveStatus, placeCard, seeAllLink } from './ideasMath'
 import { ScheduleDialog } from './ScheduleDialog'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text'
@@ -34,6 +35,8 @@ export function IdeasPage() {
   const queryClient = useQueryClient()
   const panel = usePanel()
   const wide = useMedia('(min-width: 1024px)')
+  // Spec 2026-10-16 §6.2: while the brand's approvals are on, staff cannot move a card into Ready (the server refuses it).
+  const locked = staffLocked(boot)
   const [platform, setPlatform] = useState<Platform | null>(null)
   const [pillarId, setPillarId] = useState<number | null>(null)
   const [stage, setStage] = useState<IdeasColumn>('idea')
@@ -69,11 +72,12 @@ export function IdeasPage() {
 
   const move = async (post: PostCard, to: IdeasColumn) => {
     const status = moveStatus(post, to)
-    if (status === null || !moving.start(post.id)) return
+    if (status === null || !canEnter(to, locked) || !moving.start(post.id)) return
     setError(null)
     try {
       const { post: saved } = await api.savePost(post.id, { status, updated_at: post.updated_at })
-      queryClient.setQueryData(['content', brand, 'post', saved.id], saved)
+      // An open panel keeps the post's timeline and reads it again (a move into review records a step): final review.
+      putPost(queryClient, brand, saved)
       refocus.current = saved.id
       // The card in its new place at once, with its new version, for the next move (final review).
       queryClient.setQueryData<IdeasPayload>(['content', brand, 'ideas', platform, pillarId], old => (old ? placeCard(old, saved) : old))
@@ -158,7 +162,7 @@ export function IdeasPage() {
         {shown.map(column => (
           <IdeaColumn key={column} column={column} posts={board.columns[column].posts} total={board.columns[column].total}
             seeAll={seeAllLink(column, { platform, pillarId })} locale={locale} now={query.dataUpdatedAt} pillarName={pillarName}
-            draggable={wide} dropping={dragging !== null && columnOf(dragging.status) !== column}
+            draggable={wide} locked={locked} dropping={dragging !== null && columnOf(dragging.status) !== column && canEnter(column, locked)}
             onOpen={(id) => { panel.open(id) }} onMove={(post, to) => { void move(post, to) }} onSchedule={setScheduling}
             onDragStart={setDragging} onDragEnd={() => setDragging(null)} onDrop={() => drop(column)}>
             {column === 'idea' && <QuickCapture />}

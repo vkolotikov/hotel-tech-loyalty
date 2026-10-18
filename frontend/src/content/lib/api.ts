@@ -3,7 +3,7 @@ import type {
   Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, IdeasPayload, KeyDateFields,
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
   RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
-  Variation, VoiceFields,
+  TimelineComment, Variation, VoiceFields, InboxPayload,
 } from './types'
 
 /**
@@ -112,6 +112,19 @@ export function contentApi(brand: number | null) {
       watched(api.post(url(`posts/${id}/repeat`), body)),
     /** Stops a series: its unpublished copies from today on go; `post` is null when the post asked about was one of them. */
     stopRepeat: (id: number): Promise<{ removed: number; post: PostDetail | null }> => watched(api.delete(url(`posts/${id}/repeat`))),
+    /** The approval steps (spec 2026-10-16 §6.2): each answers the post with its timeline. Approve sends the version the manager read. */
+    sendForApproval: (id: number): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/send-for-approval`))),
+    approve: (id: number, updatedAt: string): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/approve`), { updated_at: updatedAt })),
+    sendBack: (id: number, note: string): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/send-back`), { note })),
+    /** Comments (spec §7.1): each answers the comment as the timeline shows it, and the post's comment count. */
+    addComment: (postId: number, body: string): Promise<{ comment: TimelineComment; comments_count: number }> =>
+      watched(api.post(url(`posts/${postId}/comments`), { body })),
+    editComment: (id: number, body: string): Promise<{ comment: TimelineComment }> => watched(api.put(url(`comments/${id}`), { body })),
+    deleteComment: (id: number): Promise<{ deleted: boolean; comments_count: number }> => watched(api.delete(url(`comments/${id}`))),
+    /** The "For you" bell (spec §8): its list with when it was read, its count, and "seen" up to that read (now when none). */
+    inbox: (): Promise<InboxPayload> => watched(api.get(url('inbox'))),
+    inboxCount: (): Promise<{ count: number }> => watched(api.get(url('inbox/count'))),
+    inboxSeen: (at: string | null): Promise<{ count: number }> => watched(api.post(url('inbox/seen'), at === null ? {} : { at })),
 
     posts: (filters: PostFilters): Promise<PostsPage> => watched(api.get(url('posts'), { params: postsParams(filters) })),
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ContentPlannerPost;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentAiGate;
+use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
@@ -39,7 +40,9 @@ class PostAiController extends Controller
         $post = $this->prepare($request, $id);
         // Spec 2026-10-16 §5.3: "Write with AI" from one of this brand's templates; another brand's does not exist here.
         $template = isset($data['template_id']) ? ContentTemplates::find(ContentContext::requireProfile(), (int) $data['template_id']) : null;
+        $before = (string) $post->status;
         $this->run(fn () => $posts->generate($post, $data['instructions'] ?? null, $template));
+        ContentApproval::afterAi($post->fresh(), $before, $request->user(), ContentContext::profile());
 
         return $this->post($post);
     }
@@ -80,7 +83,9 @@ class PostAiController extends Controller
     {
         $data = $request->validate(['instructions' => 'nullable|string|max:1000']);
         $post = $this->prepare($request, $id);
+        $before = (string) $post->status;
         $this->run(fn () => $images->generateForPost($post, $data['instructions'] ?? null));
+        ContentApproval::afterAi($post->fresh(), $before, $request->user(), ContentContext::profile());
 
         return $this->post($post);
     }

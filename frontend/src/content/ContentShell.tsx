@@ -9,6 +9,7 @@ import { useMedia } from '../workspace/lib/useMedia'
 import { accentTokens } from '../workspace/theme/accent'
 import { Button } from '../workspace/ui/Button'
 import { Notice } from '../workspace/ui/Notice'
+import { ForYouBell } from './bell/ForYouBell'
 import { useContent } from './ContentProvider'
 import { ContentFind } from './find/ContentFind'
 import { CaptureDialog } from './ideas/CaptureDialog'
@@ -28,7 +29,7 @@ import { ContentShortcuts } from './ui/ContentShortcuts'
  * HexaTech Content on the shared frame (WorkspaceShell): its areas in the
  * side panel, the organisation's brand colour as the accent; in the top bar
  * the organisation and the brand (a switcher when the person may use more
- * than one), Find and New post; and the notices that explain why something
+ * than one), Find, the "For you" bell and New post; and the notices that explain why something
  * is not available. "Full admin" opens the Marketing hub for managers and
  * the dashboard for staff.
  */
@@ -46,6 +47,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
   const [capturing, setCapturing] = useState(false)
   const main = useRef<HTMLElement>(null)
   const findButton = useRef<HTMLButtonElement>(null)
+  // Find's place on a phone: the row above the page (the header has no room for it there).
+  const findPhone = useRef<HTMLButtonElement>(null)
   const arrived = useRef(false)
 
   // The link that led to a page is gone with the page it was on: the keyboard starts again from the page, not the top.
@@ -135,8 +138,9 @@ export function ContentShell({ children }: { children: ReactNode }) {
       fullAdmin={fullAdminPath(canManage)}
       onLeave={panel.guard}
       header={<>
-        {/* On a phone the brand takes the free room and shrinks with it: a long name is cut, never under the buttons. */}
-        <div className="min-w-0 flex-1 sm:flex-initial">
+        {/* The brand takes the free room and shrinks with it: a long name is cut, never under the buttons. On a phone the
+            switcher has its own row above the page (found by eyes: with the bell, a 390 px header has no room left for it). */}
+        <div className="hidden min-w-0 flex-1 sm:block sm:flex-initial">
           <div className="hidden truncate text-sm font-semibold md:block">{data?.organization.name}</div>
           {data && data.brands.length > 1 ? (
             <label data-brand-switcher="" className="block">
@@ -151,16 +155,20 @@ export function ContentShell({ children }: { children: ReactNode }) {
           )}
         </div>
         <button ref={findButton} type="button" onClick={() => { if (ready) setFindOpen(true) }} disabled={!ready} aria-label={findLabel} aria-keyshortcuts={modKey === '⌘' ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog"
-          className="flex min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4">
+          className="hidden min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:flex sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4">
           <Search size={15} aria-hidden className="shrink-0" />
           <span className="hidden min-w-0 truncate sm:inline">{findLabel}</span>
           <kbd aria-hidden="true" className="ml-auto hidden shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs sm:inline">{modKey} K</kbd>
         </button>
-        <button type="button" onClick={() => { if (today !== null) openNew({ date: today, platform: null }) }} disabled={!ready}
-          aria-label={t('content.shell.new_post', 'New post')}
-          className="ml-auto inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-a-accent px-3 py-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition hover:bg-a-accent-deep disabled:opacity-60 sm:px-4 [@media(hover:hover)]:hover:-translate-y-px">
-          <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('content.shell.new_post', 'New post')}</span>
-        </button>
+        {/* The bell beside New post (spec 2026-10-16 §8): what waits for this person, and their news, for the brand at work. */}
+        <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
+          {ready && <ForYouBell />}
+          <button type="button" onClick={() => { if (today !== null) openNew({ date: today, platform: null }) }} disabled={!ready}
+            aria-label={t('content.shell.new_post', 'New post')}
+            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-a-accent p-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition hover:bg-a-accent-deep disabled:opacity-60 sm:px-4 [@media(hover:hover)]:hover:-translate-y-px">
+            <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('content.shell.new_post', 'New post')}</span>
+          </button>
+        </div>
       </>}
       overlays={ready ? <>
         {/* The panel has its own boundary, keyed by its opening: a post that breaks says so in the panel's place. */}
@@ -169,8 +177,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
           reload={t('content.common.reload', 'Reload the page')} fallback={<PanelFailed />}>
           <PostPanel />
         </ContentErrorBoundary>
-        <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, main]} />
-        <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, main]} />
+        <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, findPhone, main]} />
+        <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, findPhone, main]} />
         {capturing && <CaptureDialog onClose={() => setCapturing(false)} />}
       </> : null}>
       {stopped && (
@@ -197,6 +205,23 @@ export function ContentShell({ children }: { children: ReactNode }) {
 
       {!stopped && data && (
         <>
+          {/* On a phone Find and the brand switcher have their own row (found by eyes at 390 px and by the final review at
+              375 and 360 px: with the bell, a phone's header has no room for them). */}
+          <div data-phone-row="" className="flex items-center gap-2 px-4 pt-3 sm:hidden">
+            <button ref={findPhone} type="button" data-find-phone="" onClick={() => setFindOpen(true)} aria-haspopup="dialog"
+              className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left text-sm text-a-text-2 shadow-a-sm">
+              <Search size={15} aria-hidden className="shrink-0" /><span className="truncate">{findLabel}</span>
+            </button>
+            {data.brands.length > 1 && (
+              <label data-brand-switcher-phone="" className="block min-w-0 max-w-[45%] shrink">
+                <span className="sr-only">{t('content.shell.brand', 'Brand')}</span>
+                <select value={data.brand?.id ?? ''} onChange={(e) => chooseBrand(Number(e.target.value))}
+                  className="w-full truncate rounded-md border border-a-border bg-a-surface px-1.5 py-2 text-sm text-a-text">
+                  {data.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+              </label>
+            )}
+          </div>
           {(data.ai.status === 'warn' || data.ai.status === 'over' || !setUp) && (
             <div className="space-y-2 px-4 pt-3 lg:px-6">
               {data.ai.status === 'warn' && (

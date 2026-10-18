@@ -297,6 +297,7 @@ class BrandController extends Controller
                 'last_knowledge_sync_at' => $profile->last_knowledge_sync_at?->toISOString(),
                 'holiday_country'        => $profile->holiday_country,
                 'marketing_days'         => (bool) ($profile->marketing_days ?? true),
+                'requires_approval'      => (bool) ($profile->requires_approval ?? false),
             ],
             'audiences' => $profile->audiences()->where('active', true)->withCount('posts')->orderBy('id')->get()
                 ->map(fn (ContentPlannerAudience $a) => $this->audience($a))->values()->all(),

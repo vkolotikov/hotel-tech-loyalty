@@ -18,8 +18,22 @@ export function placePost(plan: PlanPayload, card: PostCard, from: DateKey, to: 
 
 /** The card part of a post the panel holds (what the plan shows of it). */
 export function cardOf(post: PostDetail): PostCard {
-  const { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at } = post
-  return { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at }
+  const { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back } = post
+  return { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back }
+}
+
+/** A post an answer brought without its timeline (a save, an AI answer) keeps the one already read (spec 2026-10-16 §7.1). */
+export function keepTimeline(fresh: PostDetail, old: PostDetail | undefined): PostDetail {
+  return fresh.timeline === undefined && old?.id === fresh.id && old.timeline !== undefined ? { ...fresh, timeline: old.timeline } : fresh
+}
+
+/**
+ * A post an answer brought, in the panel's cache: a timeline already read is kept, and an answer without one (a save, an
+ * AI answer, a board move) has the post read again — it may have recorded an approval step (spec 2026-10-16 §7.1).
+ */
+export function putPost(queryClient: QueryClient, brand: number | null, fresh: PostDetail): void {
+  queryClient.setQueryData<PostDetail>(['content', brand, 'post', fresh.id], old => keepTimeline(fresh, old))
+  if (fresh.timeline === undefined) void queryClient.invalidateQueries({ queryKey: ['content', brand, 'post', fresh.id], exact: true })
 }
 
 /**
@@ -42,5 +56,7 @@ export function refreshLists(queryClient: QueryClient, brand: number | null): Pr
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'goals'] }),
     // The Ideas board (spec 2026-10-16 §4) holds the posts without a day: a change can move a card.
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'ideas'] }),
+    // The bell (spec §8): a post that enters or leaves review, an approval step or a comment changes what it says.
+    queryClient.invalidateQueries({ queryKey: ['content', brand, 'inbox'] }),
   ])
 }

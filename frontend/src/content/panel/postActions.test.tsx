@@ -45,3 +45,27 @@ describe('PostActions', () => {
     expect(html).not.toContain('Mark published')
   })
 })
+
+describe('PostActions while approvals are on (spec 2026-10-16 §6.2)', () => {
+  const locked = { ...boot, profile: { id: 1, setup_completed: true, readiness: 80, requires_approval: true } } as unknown as Bootstrap
+  const renderAs = (value: Bootstrap, p: PostDetail) => renderToStaticMarkup(
+    <ContentContext.Provider value={{ data: value, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+      <PostActions post={p} dirty={false} onPost={() => {}} onDuplicated={() => {}} onDeleted={() => {}} />
+    </ContentContext.Provider>,
+  )
+
+  it('hides Mark ready and Mark published from staff, and says who does them', () => {
+    const html = renderAs(locked, post)
+    expect(html).not.toContain('Mark ready')
+    expect(html).not.toContain('Mark published')
+    expect(html).toContain('While approvals are on, a manager approves, marks ready and publishes.')
+    expect(html).toContain('Duplicate')
+  })
+
+  it('keeps them for managers', () => {
+    const html = renderAs({ ...locked, staff: { can_manage: true } } as unknown as Bootstrap, post)
+    expect(html).toContain('Mark ready')
+    expect(html).toContain('Mark published')
+    expect(html).not.toContain('While approvals are on')
+  })
+})

@@ -172,3 +172,36 @@ describe('PostPanel', () => {
     expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'instagram' }, seq: 1 }, null, brand)).toMatch(/<input type="time"[^>]*value="08:30"/)
   })
 })
+
+describe('PostPanel while approvals are on (spec 2026-10-16 §6.2)', () => {
+  it('stops a staff member’s status list before Approved, Ready and Published', () => {
+    const lockedBoot = {
+      ...boot, statuses: ['idea', 'draft', 'needs_review', 'approved', 'ready_to_publish', 'published'],
+      profile: { id: 1, setup_completed: true, readiness: 80, requires_approval: true },
+    } as unknown as Bootstrap
+    const client = new QueryClient()
+    client.setQueryData(['content', 3, 'post', post.id], post)
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <ContentContext.Provider value={{ data: lockedBoot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+          <PanelProvider initial={{ kind: 'post', id: 5, seq: 1 }}><PostPanel /></PanelProvider>
+        </ContentContext.Provider>
+      </QueryClientProvider>,
+    )
+    expect(html).toContain('<option value="needs_review">')
+    expect(html).not.toContain('<option value="approved">')
+    expect(html).not.toContain('<option value="ready_to_publish">')
+    expect(html).not.toContain('<option value="published">')
+  })
+})
+
+describe('PostPanel: comments and history (spec 2026-10-16 §7.1)', () => {
+  it('shows the post’s timeline at its foot, after the actions', () => {
+    const withTimeline = {
+      ...post, timeline: [{ type: 'comment', id: 1, user: { id: 9, name: 'Maria' }, body: 'Love the hook', edited: false, mine: false, at: '2026-10-05T08:00:00.000000Z' }],
+    } as PostDetail
+    const html = render({ kind: 'post', id: 5, seq: 1 }, withTimeline)
+    expect(html).toContain('Love the hook')
+    expect(html.indexOf('Comments and history')).toBeGreaterThan(html.indexOf('content-actions-title'))
+  })
+})

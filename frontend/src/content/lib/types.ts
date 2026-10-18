@@ -23,7 +23,8 @@ export interface Bootstrap {
   accent: string | null
   venue: { timezone: string; timezone_named: boolean; today: DateKey }
   staff: { name: string; role: string | null; can_manage: boolean }
-  profile: { id: number; setup_completed: boolean; readiness: number } | null
+  /** `requires_approval`: the brand's posts need a manager's approval (spec 2026-10-16 §6.1). */
+  profile: { id: number; setup_completed: boolean; readiness: number; requires_approval?: boolean } | null
   ai: { status: BudgetStatus; percent: number | null }
   platforms: Platform[]
   statuses: PostStatus[]
@@ -43,6 +44,10 @@ export interface PostCard {
   pillar_id: number | null
   image_url: string | null
   updated_at: string
+  /** Spec 2026-10-16 §7.1: its comments, counted. */
+  comments_count?: number
+  /** Spec §6.3: a draft whose latest approval step sent it back, with no change to the post since. */
+  sent_back?: boolean
 }
 
 export interface VisualBrief {
@@ -92,6 +97,10 @@ export interface PostDetail extends PostCard {
   /** The repeat series it belongs to (the original's id), and how that series runs (spec 2026-10-15 §8). */
   series_id?: number | null
   series?: Series | null
+  /** Who wrote it (spec 2026-10-16 §7.1): null for a post the AI or a repeat made, or whose writer left. */
+  author?: string | null
+  /** Its comments and approval steps, oldest first, the newest 200 (`GET posts/{id}` and the approval steps send it). */
+  timeline?: TimelineItem[]
 }
 
 /** A day and platform the brand's channels expect, with no post yet. */
@@ -274,6 +283,8 @@ export interface BrandProfile {
   holiday_country?: string | null
   /** Marketing and industry days on the Plan (default on). */
   marketing_days?: boolean
+  /** Spec 2026-10-16 §6.1: posts need a manager's approval (default off, managers switch it). */
+  requires_approval?: boolean
   id: number
   name: string | null
   default_language: string | null
@@ -377,3 +388,27 @@ export interface Goals { week: { from: DateKey; to: DateKey } | null; platforms:
 export type RepeatEvery = 'week' | '2weeks' | 'month'
 /** A post's series as the server reads it: `more` copies still ahead after this post, `removable` what Stop removes. */
 export interface Series { id: number; every: RepeatEvery; until: DateKey | null; more: number; removable: number; rewriting: boolean }
+
+/** Someone on the team as the timeline and the bell name them; null in their place when they have left (spec 2026-10-16 §7.1). */
+export interface Person { id: number; name: string }
+/** An approval step (spec §6.4). */
+export type EventKind = 'sent_for_approval' | 'approved' | 'sent_back' | 'changed_after_approval'
+export interface TimelineComment { type: 'comment'; id: number; user: Person | null; body: string; edited: boolean; mine: boolean; at: string }
+export interface TimelineEvent { type: 'event'; id: number; kind: EventKind; user: Person | null; note: string | null; at: string }
+export type TimelineItem = TimelineComment | TimelineEvent
+
+/** One line of the "For you" list (spec §8): what waits for this manager, or news since they last looked. */
+export type InboxKind = 'waiting' | 'approved' | 'sent_back' | 'comment'
+export interface InboxItem {
+  id: string
+  kind: InboxKind
+  post: Pick<PostCard, 'id' | 'platform' | 'title' | 'hook' | 'topic' | 'scheduled_date'> | null
+  /** Who acted or commented; for a waiting post, its writer. */
+  by: Person | null
+  /** A send-back's note or a comment, cut to 200 characters. */
+  note: string | null
+  at: string
+  unread: boolean
+}
+/** `GET inbox`: the newest 50, everything counted, and when it was read ("seen" goes up to that). */
+export interface InboxPayload { items: InboxItem[]; count: number; read_at: string }

@@ -52,12 +52,12 @@ final class ContentPlan
      */
     public static function for(ContentPlannerProfile $profile, string $from, string $to, string $today): array
     {
-        $posts = self::datedPosts($profile, $from, $to)->with('visualBrief')
+        $posts = self::datedPosts($profile, $from, $to)->with('visualBrief')->withReview()
             ->orderBy('scheduled_date')
             ->orderByRaw('CASE WHEN scheduled_time IS NULL THEN 0 ELSE 1 END')
             ->orderBy('scheduled_time')->orderBy('id')
             ->get();
-        $unscheduled = ContentPlannerPost::with('visualBrief')
+        $unscheduled = ContentPlannerPost::with('visualBrief')->withReview()
             ->where('planner_profile_id', $profile->id)
             ->whereNull('scheduled_date')->where('status', '!=', 'archived')
             ->orderByDesc('id')->limit(100)->get();

@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { cardLine } from '../lib/postText'
 import type { PostCard } from '../lib/types'
+import { CardFlags } from '../ui/CardFlags'
 import { PlatformMark } from '../ui/PlatformMark'
 import { StatusPill } from '../ui/StatusDot'
 
@@ -26,6 +27,7 @@ export function PostRow({ post, locale, pillar, selected, onOpen }: {
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-medium text-a-text">{text}</span>
         <span className="block truncate text-xs text-a-text-2">{pillar ? `${day} · ${pillar}` : day}</span>
+        <CardFlags post={post} />
       </span>
       {post.image_url && <img src={post.image_url} alt="" loading="lazy" draggable={false} className="hidden h-10 w-10 shrink-0 rounded-md object-cover sm:block" />}
       <StatusPill status={post.status} />

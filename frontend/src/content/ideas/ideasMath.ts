@@ -32,6 +32,18 @@ export function stepColumn(from: IdeasColumn, step: -1 | 1): IdeasColumn | null 
   return COLUMNS[COLUMNS.indexOf(from) + step] ?? null
 }
 
+/** Whether a card may enter a stage: staff may not move one into Ready while the brand's approvals are on (spec 2026-10-16 §6.2). */
+export const canEnter = (column: IdeasColumn, locked: boolean): boolean => !(locked && column === 'ready')
+
+/** The stages "Move to…" offers a card in `column`. */
+export const moveTargets = (column: IdeasColumn, locked: boolean): IdeasColumn[] => COLUMNS.filter(c => c !== column && canEnter(c, locked))
+
+/** The stage Shift + ← / → moves a card to, or null: past either end, or a stage it may not enter. */
+export function stepTarget(column: IdeasColumn, step: -1 | 1, locked: boolean): IdeasColumn | null {
+  const to = stepColumn(column, step)
+  return to !== null && canEnter(to, locked) ? to : null
+}
+
 /** "See all": the Posts page with no day, the stage's status where it holds only one, and the board's filters. */
 export function seeAllLink(column: IdeasColumn, filters: { platform: Platform | null; pillarId: number | null }): string {
   const statuses = COLUMN_STATUSES[column]

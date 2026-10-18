@@ -32,7 +32,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - Refusals are `{error, message}`. The codes are `no_brand`, `no_profile`, `manager_only`, `not_found`,
   `ai_budget_used_up`, `already_generating`, `changed_elsewhere`, `published_cannot_move`, `slot_not_open`,
   `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready`,
-  `generation_failed`, `already_repeating`, `no_day` and `too_many_snippets`.
+  `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, and from release 4b `needs_approval`,
+  `approvals_off`, `wrong_status` and `not_yours`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
 
@@ -48,6 +49,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Goals | `GET goals` (this week per platform, the streak) | everyone |
 | Repeat | `POST posts/{id}/repeat`, `DELETE posts/{id}/repeat` | everyone |
 | Snippets | `brand/snippets` `POST`, `PUT/DELETE brand/snippets/{id}`, `POST brand/snippets/suggest` (AI) | managers (everyone reads them in `GET brand`) |
+| Approvals | `POST posts/{id}/send-for-approval` (everyone); `POST posts/{id}/approve` (with the `updated_at` read), `POST posts/{id}/send-back` (`note`) (managers); only while the brand's switch (`requires_approval`) is on | |
+| Comments | `POST posts/{id}/comments`; `PUT comments/{id}` (your own); `DELETE comments/{id}` (your own, or any as a manager) | everyone |
+| For you | `GET inbox`, `GET inbox/count`, `POST inbox/seen` (`at`: the list's `read_at`) | everyone |
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -92,6 +96,22 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   (`RepeatTest`). The rewording runs on the queue (`RewriteRepeatCopies`), one copy per run (80 s timeout, under the
   queue connections' `retry_after` of 90 s), each run handing the rest to the next.
 - **The strategy job** counts its AI use for its brand and stores a fixed sentence when it fails (`StrategyTest`).
+- **Approvals** (release 4b; per brand, default off; `ContentApproval`): while on, staff cannot set Approved, Ready or
+  Published by any write — save, new post, Mark ready, Mark published — and get 403 `needs_approval` with nothing of
+  the save kept; a staff change to the words (topic, hook, text, call to action, hashtags, platform) of an approved or
+  ready post sends it back to review, moving its day or time does not; repeat copies the AI rewords wait for approval;
+  Approve refuses a post changed since the manager read it (`changed_elsewhere`). Write with AI or a new image that
+  puts a staff member's post into review records the step too, and a manager taking a post from review to Approved,
+  Ready or Published by any way records `approved`. Every step is a row in `content_planner_post_events`
+  (`ApprovalRuleTest`, `ApprovalActionsTest`). "Written by" shows only for posts a person wrote here
+  (`generated_by` `manual`): calendar posts and repeat copies show none (`PostReviewTest`).
+- **Comments** are plain text of 1–2,000 characters and do not touch their post (no stale saves, "sent back" stays);
+  a post's timeline is its comments and approval steps, the newest 200, oldest first; a removed member's comments and
+  steps stay with no name (`CommentsTest`, `PostReviewTest`).
+- **The bell** is per brand: the posts waiting for approval (managers, while the switch is on; they stay until acted
+  on), then the news since `seen_at` in `content_planner_reads` — approved and sent back on your posts, comments by
+  others on posts you wrote or commented on (after your own first comment) — at most 30 days old, the newest 50.
+  "Seen" takes the list's `read_at`, so news that came in while the list was open stays new (`InboxTest`).
 
 ## The portal (`/content`, `frontend/src/content/`)
 
@@ -158,10 +178,23 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - **Templates**: Brand → Templates (managers keep them; everyone reads them; AI suggestions save nothing until Add);
   the panel's Template menu beside Topic (asks before replacing written words), the blanks line, managers' "Save as
   template"; "+ → From a template…" with Use and Write with AI (the panel shows the AI working).
+- **Approvals** (release 4b): Brand → Approvals switches them per brand (managers; everyone reads it). While on, a
+  staff member's status list stops before Approved, Mark ready and Mark published are not offered, and the Ideas
+  board's Ready column takes no card (`lib/approval.ts`). The panel's review bar says who wrote the post, "Waiting for
+  approval" or "Sent back", and offers Send for approval (staff, from Idea, Draft or Needs visual — not again on a post
+  already in review) or Approve and Send back with a note (managers, on a post in review). Approve sends the version
+  the panel holds: a post changed since is refused and shown as it now is. Cards on the Plan, Ideas and Posts carry the
+  same flags and their comment count.
+- **Comments and history** at the panel's foot: comments and approval steps, oldest first, the newest 200; Enter sends,
+  Shift + Enter adds a line; 2,000 characters at most, said before sending; edit or delete your own, managers delete
+  anyone's; "Former team member" where the user is gone. A comment never touches the post.
+- **The "For you" bell** beside New post (`bell/ForYouBell.tsx`, on `ui/PopMenu.tsx`): its count read every 60 s while
+  the tab is shown and when the tab comes back into view; the list read when opened, news marked, then marked seen up
+  to that read (`read_at`); a line opens its post. One brand at a time.
 
 ## What this release does not do
 
-No approvals yet (release 4b), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
+No email notices, mentions or attachments (approvals, comments and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
 model allowlist for Content. The old AI Content Planner is gone: its `/v1/admin/content-planner/*` routes answer 404
 and its screens are removed; a browser tab left open across the deploy must be reloaded.
 
@@ -192,6 +225,15 @@ and its screens are removed; a browser tab left open across the deploy must be r
   (404 before release 4a); the `ContentApp` chunk carries the Ideas page's and the Key dates section's words.
 - After the deploy (owner): on a real brand, check the guessed country on Brand → Key dates, add one event, capture
   one idea with I and schedule it, add one template and use it from a day's "+"; reload admin tabs left open.
+- Release 4b (server, Plan 4B-1): four additive migrations (`content_planner_profiles.requires_approval`,
+  `content_planner_post_events`, `content_planner_post_comments`, `content_planner_reads`). The switch starts off for
+  every brand, so nothing changes for anyone until a manager turns it on.
+- Verify release 4b by content (after Plan 4B-2's deploy): `/api/v1/admin/content/inbox/count` answers 401 when signed
+  out (404 before release 4b); the `ContentApp` chunk carries "Comments and history", "Waiting for approval" and
+  "Nothing new for you".
+- After the deploy (owner): on a real brand, switch Approvals on, send one post for approval as a staff member,
+  approve one and send one back as a manager, add a comment, and look at both bells; switch Approvals off again if the
+  team does not want them yet; reload admin tabs left open.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.

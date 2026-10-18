@@ -98,6 +98,18 @@ trait SetsUpContentSchema
         if (!Schema::hasTable('content_planner_templates')) {
             (require database_path('migrations/2026_10_16_100200_create_content_planner_templates_table.php'))->up();
         }
+        if (!Schema::hasColumn('content_planner_profiles', 'requires_approval')) {
+            (require database_path('migrations/2026_10_18_100000_add_requires_approval_to_content_planner_profiles.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_post_events')) {
+            (require database_path('migrations/2026_10_18_100100_create_content_planner_post_events_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_post_comments')) {
+            (require database_path('migrations/2026_10_18_100200_create_content_planner_post_comments_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_planner_reads')) {
+            (require database_path('migrations/2026_10_18_100300_create_content_planner_reads_table.php'))->up();
+        }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 

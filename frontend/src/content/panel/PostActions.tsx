@@ -6,6 +6,7 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot } from '../ContentProvider'
 import { failureOf } from '../lib/api'
+import { staffLocked } from '../lib/approval'
 import { errorKey } from '../lib/errors'
 import { TemplateEditor } from '../brand/sections/Templates'
 import { templateFromPost } from '../brand/templateActions'
@@ -19,7 +20,8 @@ const LINK = /^https?:\/\/\S+$/i
 
 /**
  * What can be done with a saved post (spec §4.3): mark it ready, mark it
- * published (with its link), duplicate it, copy its text, delete it (after a
+ * published (with its link) — only managers while the brand's approvals are on
+ * (spec 2026-10-16 §6.2) — duplicate it, copy its text, delete it (after a
  * confirm). They wait while the post has unsaved edits.
  */
 export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pillarName = null }: {
@@ -34,6 +36,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
   const { t, i18n } = useTranslation()
   const api = useApi()
   const boot = useBoot()
+  const locked = staffLocked(boot)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
@@ -85,14 +88,15 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
         </p>
       )}
       {dirty && <p className="text-xs text-a-text-2">{t('content.panel.ai.save_first', 'Save your changes first.')}</p>}
+      {locked && <p className="text-xs text-a-text-2">{t('content.review.staff_hint', 'While approvals are on, a manager approves, marks ready and publishes.')}</p>}
       <div className="flex flex-wrap gap-2">
-        {post.status !== 'ready_to_publish' && post.status !== 'published' && (
+        {!locked && post.status !== 'ready_to_publish' && post.status !== 'published' && (
           <Button size="sm" variant="secondary" disabled={waits} loading={busy === 'ready'}
             onClick={() => { void act('ready', async () => { onPost((await api.markReady(post.id)).post) }) }}>
             <CheckCircle2 size={14} aria-hidden />{t('content.panel.actions.ready', 'Mark ready')}
           </Button>
         )}
-        {post.status !== 'published' && (
+        {!locked && post.status !== 'published' && (
           <Button size="sm" variant="secondary" disabled={waits} aria-expanded={publishing} onClick={() => setPublishing(p => !p)}>
             <Send size={14} aria-hidden />{t('content.panel.actions.published', 'Mark published')}
           </Button>
@@ -119,7 +123,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
           <Trash2 size={14} aria-hidden />{t('content.panel.actions.delete', 'Delete')}
         </Button>
       </div>
-      {publishing && post.status !== 'published' && (
+      {!locked && publishing && post.status !== 'published' && (
         <div className="space-y-2 rounded-lg border border-a-border bg-a-surface-2 p-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-a-text-2">{t('content.panel.actions.published_url', 'Link to the published post (optional)')}</span>

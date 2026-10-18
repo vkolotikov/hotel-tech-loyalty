@@ -25,3 +25,17 @@ describe('release 3 refusals', () => {
     expect(errorKey('snippet', 'whatever')[0]).toBe('content.snippet.error.unknown')
   })
 })
+
+// Review Focus 1: a tab that has not heard of the switch meets the rule on a save, an action or a board move.
+describe('release 4b refusals', () => {
+  it('words the approval rule wherever a staff write meets it, and the approval, comment and bell refusals', () => {
+    const rule = 'Only a manager can approve posts while approvals are on for this brand.'
+    for (const family of ['save', 'action', 'idea', 'approval'] as const) {
+      expect(errorKey(family, 'needs_approval')).toEqual([`content.${family}.error.needs_approval`, rule])
+    }
+    expect(errorKey('approval', 'changed_elsewhere')[1]).toBe('Someone changed this post since you opened it. Read it again before approving.')
+    expect(errorKey('comment', 'not_yours')).toEqual(['content.comment.error.not_yours', 'You can only change your own comments.'])
+    expect(errorKey('comment', 'too_long')[1]).toBe('A comment holds at most 2,000 characters.')
+    expect(errorKey('inbox', 'network')).toEqual(['content.inbox.error.unknown', 'The list could not be loaded. Please try again.'])
+  })
+})

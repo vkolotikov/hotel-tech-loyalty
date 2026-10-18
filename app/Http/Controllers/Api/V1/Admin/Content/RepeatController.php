@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\RewriteRepeatCopies;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentAiGate;
+use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRefused;
@@ -53,7 +54,9 @@ class RepeatController extends Controller
             $gate->allow($request->attributes->get('workspace_org'));
         }
 
-        $copies = ContentRepeat::copy($post, $dates, $request->user()->id);
+        // Copies the AI rewords wait for a manager while approvals are on (spec 2026-10-16 §6.2); plain copies keep the status.
+        $waits = $request->boolean('ai_rewrite') && ContentApproval::isOn(ContentContext::profile());
+        $copies = ContentRepeat::copy($post, $dates, $request->user()->id, $waits ? 'needs_review' : null);
         if ($request->boolean('ai_rewrite')) {
             // The panel shows "rewording…" until the job forgets this (or 15 minutes pass).
             Cache::put(ContentRepeat::rewritingKey((int) $post->id), true, now()->addMinutes(15));

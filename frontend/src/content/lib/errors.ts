@@ -29,6 +29,7 @@ export const ERRORS = {
     unknown: 'Generation failed. Please try again.',
   },
   save: {
+    needs_approval: 'Only a manager can approve posts while approvals are on for this brand.',
     published_cannot_move: 'A published post keeps the date it went out.',
     invalid: 'Some fields need attention.',
     not_found: 'This post no longer exists.',
@@ -42,6 +43,7 @@ export const ERRORS = {
     unknown: 'The AI could not finish this. Please try again.',
   },
   action: {
+    needs_approval: 'Only a manager can approve posts while approvals are on for this brand.',
     invalid: 'Check the link and try again.',
     not_found: 'This post no longer exists.',
     unknown: 'That did not work. Please try again.',
@@ -104,6 +106,7 @@ export const ERRORS = {
     unknown: 'The key date could not be saved. Please try again.',
   },
   idea: {
+    needs_approval: 'Only a manager can approve posts while approvals are on for this brand.',
     invalid: 'Write the idea first.',
     changed_elsewhere: 'Someone else changed this post. The board now shows their version.',
     not_found: 'This post no longer exists.',
@@ -120,6 +123,28 @@ export const ERRORS = {
     ai_budget_used_up: "This month's AI budget is used up.",
     ai_failed: 'The AI could not suggest templates. Please try again.',
     unknown: 'The template could not be saved. Please try again.',
+  },
+  // Release 4b (spec 2026-10-16 §6–§8). `invalid` (approval) and `invalid` / `too_long` (comment) are also the portal's
+  // own checks, made before anything is sent.
+  approval: {
+    needs_approval: 'Only a manager can approve posts while approvals are on for this brand.',
+    approvals_off: 'Approvals are off for this brand. Reload to see the post as it is.',
+    wrong_status: 'This post has moved on since you opened it. The panel now shows it as it is.',
+    changed_elsewhere: 'Someone changed this post since you opened it. Read it again before approving.',
+    manager_only: 'Only an owner or a manager can approve or send back posts.',
+    invalid: 'Say what should change, in at most 2,000 characters.',
+    not_found: 'This post no longer exists.',
+    unknown: 'That did not work. Please try again.',
+  },
+  comment: {
+    invalid: 'Write the comment first.',
+    too_long: 'A comment holds at most 2,000 characters.',
+    not_yours: 'You can only change your own comments.',
+    not_found: 'This comment no longer exists.',
+    unknown: 'The comment could not be saved. Please try again.',
+  },
+  inbox: {
+    unknown: 'The list could not be loaded. Please try again.',
   },
 } as const
 
