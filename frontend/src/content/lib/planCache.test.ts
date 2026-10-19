@@ -105,3 +105,10 @@ describe('final review: a post an answer brought, in the panel’s cache', () =>
     expect(qc.getQueryState(['content', 3, 'post', 5])?.isInvalidated).toBe(false)
   })
 })
+
+describe('release 5a: what the panel keeps', () => {
+  it('carries a post’s group size and who posts it onto its card', () => {
+    const detail = { ...card(5, '2026-10-07'), group_size: 3, poster_id: 7, language: 'en' } as unknown as PostDetail
+    expect(cardOf(detail)).toEqual(card(5, '2026-10-07', { group_size: 3, poster_id: 7 }))
+  })
+})

@@ -171,6 +171,12 @@ Schedule::command('loyalty:send-digest')
     ->hourly()
     ->withoutOverlapping(10);
 
+// HexaTech Content's morning email (spec 2026-10-19 §4.5) — the same hourly + venue-clock + once-a-day pattern,
+// its own opt-in (users.wants_content_morning_email): today's posts for whoever posts them.
+Schedule::command('content:send-morning-email')
+    ->hourly()
+    ->withoutOverlapping(10);
+
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
 // forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)

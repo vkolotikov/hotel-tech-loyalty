@@ -69,3 +69,26 @@ describe('PostActions while approvals are on (spec 2026-10-16 §6.2)', () => {
     expect(html).not.toContain('While approvals are on')
   })
 })
+
+describe('PostActions: the poster under approvals (spec 2026-10-19 §4.4)', () => {
+  const locked = { brand: { id: 3, name: 'Lumière Salon' }, venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' },
+    staff: { can_manage: false, id: 7 }, profile: { id: 1, setup_completed: true, readiness: 60, requires_approval: true } } as unknown as Bootstrap
+  const renderLocked = (p: PostDetail) => renderToStaticMarkup(
+    <ContentContext.Provider value={{ data: locked, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+      <PostActions post={p} dirty={false} onPost={() => {}} onDuplicated={() => {}} onDeleted={() => {}} />
+    </ContentContext.Provider>,
+  )
+
+  it('offers Mark published to the post’s own poster on an approved post, and says why', () => {
+    const html = renderLocked({ ...post, status: 'approved', poster_id: 7 } as PostDetail)
+    expect(html).toContain('Mark published')
+    expect(html).toContain('You post this one: mark it published once it is out.')
+    expect(html).not.toContain('Mark ready')
+  })
+
+  it('offers nothing of the kind on someone else’s post, which still says a manager publishes', () => {
+    const html = renderLocked({ ...post, status: 'approved', poster_id: 8 } as PostDetail)
+    expect(html).not.toContain('Mark published')
+    expect(html).toContain('While approvals are on, a manager approves, marks ready and publishes.')
+  })
+})

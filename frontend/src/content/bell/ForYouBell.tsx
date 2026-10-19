@@ -2,13 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Bell } from 'lucide-react'
-import { formatInstant } from '../../workspace/lib/wallClock'
+import { formatDate, formatInstant } from '../../workspace/lib/wallClock'
 import { useApi, useBoot, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import { usePanel } from '../panel/PanelProvider'
 import { PopMenu } from '../ui/PopMenu'
 import { BELL_LIST_CLASS, badgeText, bellItems } from './bellMath'
+import { MorningEmailSwitch } from './MorningEmailSwitch'
 
 /**
  * The "For you" bell (spec 2026-10-16 §8), for the brand the portal works on: its count read every 60 seconds while the
@@ -43,11 +44,14 @@ export function ForYouBell() {
   const label = total > 0 ? t('content.bell.label_count', 'For you ({{count}})', { count: total }) : t('content.bell.label', 'For you')
   const [failedKey, failedWords] = errorKey('inbox', failureOf(list.error).code)
   const emptyText = list.isError ? t(failedKey, failedWords) : read ? t('content.bell.empty', 'Nothing new for you.') : t('content.common.loading', 'Loading…')
-  const items = read ? bellItems(read.items, (key, fallback, vars) => t(key, fallback, vars), at => formatInstant(at, locale, boot.venue.timezone)) : []
+  const items = read
+    ? bellItems(read.items, (key, fallback, vars) => t(key, fallback, vars), at => formatInstant(at, locale, boot.venue.timezone),
+      day => formatDate(day, locale, { weekday: 'short', day: 'numeric', month: 'short' }))
+    : []
 
   return (
     <PopMenu label={label} title={label} items={items} emptyText={emptyText} markLabel={t('content.bell.new', 'New')}
-      align="right" listClassName={BELL_LIST_CLASS} data={{ 'data-bell': '' }}
+      align="right" listClassName={BELL_LIST_CLASS} data={{ 'data-bell': '' }} footer={<MorningEmailSwitch />}
       onOpenChange={(next) => {
         setOpen(next)
         // A closed list is dropped: the next opening reads it afresh (and marks that read seen).

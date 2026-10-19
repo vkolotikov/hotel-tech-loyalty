@@ -73,6 +73,8 @@ final class ContentRules
             'funnel_stage'     => ['sometimes', 'nullable', 'string', 'max:50'],
             'post_type'        => ['sometimes', 'nullable', 'string', 'max:50'],
             'strategic_reason' => ['sometimes', 'nullable', 'string', 'max:5000'],
+            // Who posts it (spec 2026-10-19 §4.1): a member of the brand's team, checked by ContentTeam::assertPoster.
+            'poster_id'        => ['sometimes', 'nullable', 'integer'],
         ];
     }
 

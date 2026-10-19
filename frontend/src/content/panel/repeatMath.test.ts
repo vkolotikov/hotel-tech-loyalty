@@ -69,3 +69,12 @@ describe('asksAi', () => {
     expect(asksAi(false, 'under')).toBe(false)
   })
 })
+
+describe('pollsWhileRewording and versions (spec 2026-10-19 §3.3)', () => {
+  it('reads the post again while the AI adapts any version of its group, and not once it is done', () => {
+    const group = { id: 5, posts: [], adapting: [6], kept_original: [], kept_reason: null }
+    expect(pollsWhileRewording({ group } as unknown as PostDetail)).toBe(true)
+    expect(pollsWhileRewording({ group: { ...group, adapting: [] } } as unknown as PostDetail)).toBe(false)
+    expect(pollsWhileRewording({ group: null } as unknown as PostDetail)).toBe(false)
+  })
+})

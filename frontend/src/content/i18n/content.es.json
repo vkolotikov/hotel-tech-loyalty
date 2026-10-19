@@ -68,7 +68,8 @@
       "changed_elsewhere": "Otra persona ha cambiado esta publicación. El plan muestra ahora su versión.",
       "published_cannot_move": "Una publicación publicada conserva la fecha en que salió.",
       "not_found": "Esta publicación ya no existe.",
-      "unknown": "No se pudo mover la publicación. Inténtalo de nuevo."
+      "unknown": "No se pudo mover la publicación. Inténtalo de nuevo.",
+      "invalid": "Revisa el día y quién la publica."
     }
   },
   "fill": {
@@ -132,7 +133,9 @@
       "language": "Idioma", "brand_language": "El idioma de la marca", "none": "Ninguno", "other_pillar": "Otro pilar", "other_audience": "Otra audiencia",
       "topic": "Tema", "hook": "Gancho", "main_copy": "Texto", "cta": "Llamada a la acción", "hashtags": "Hashtags",
       "hashtags_hint": "Sepáralos con espacios o comas.", "published_date": "Una publicación publicada conserva la fecha en que salió.",
-      "time_suggested": "Horas sugeridas"
+      "time_suggested": "Horas sugeridas",
+      "poster": "Quién la publica",
+      "not_set": "Sin asignar"
     },
     "ai": {
       "title": "IA",
@@ -383,9 +386,11 @@
   "approval": { "error": { "needs_approval": "Mientras la aprobación esté activada para esta marca, solo un responsable puede aprobar publicaciones.", "approvals_off": "La aprobación está desactivada para esta marca. Recarga para ver la publicación tal como está.", "wrong_status": "Esta publicación ha cambiado desde que la abriste. El panel ahora la muestra tal como está.", "changed_elsewhere": "Alguien ha cambiado esta publicación desde que la abriste. Vuelve a leerla antes de aprobarla.", "manager_only": "Solo un propietario o un responsable puede aprobar o devolver publicaciones.", "invalid": "Indica qué debe cambiar, en un máximo de 2000 caracteres.", "not_found": "Esta publicación ya no existe.", "unknown": "No funcionó. Inténtalo de nuevo." } },
   "comment": { "error": { "invalid": "Escribe primero el comentario.", "too_long": "Un comentario tiene como máximo 2000 caracteres.", "not_yours": "Solo puedes cambiar tus propios comentarios.", "not_found": "Este comentario ya no existe.", "unknown": "No se pudo guardar el comentario. Inténtalo de nuevo." } },
   "inbox": { "error": { "unknown": "No se pudo cargar la lista. Inténtalo de nuevo." } },
-  "review": { "staff_hint": "Mientras la aprobación esté activada, un responsable aprueba, marca como listo y publica.", "title": "Aprobación", "written_by": "Escrita por {{name}}", "send": "Enviar a aprobación", "approve": "Aprobar", "send_back": "Devolver", "note": "¿Qué debe cambiar? Quien la escribió verá este texto.", "done_sent": "Enviada a aprobación.", "done_approved": "Aprobada.", "done_back": "Devuelta a quien la escribió." },
-  "flags": { "waiting": "Pendiente de aprobación", "sent_back": "Devuelta", "comments": "Comentarios: {{count}}" },
+  "review": { "staff_hint": "Mientras la aprobación esté activada, un responsable aprueba, marca como listo y publica.", "title": "Aprobación", "written_by": "Escrita por {{name}}", "send": "Enviar a aprobación", "approve": "Aprobar", "send_back": "Devolver", "note": "¿Qué debe cambiar? Quien la escribió verá este texto.", "done_sent": "Enviada a aprobación.", "done_approved": "Aprobada.", "done_back": "Devuelta a quien la escribió.", "poster_hint": "Esta la publicas tú: márcala como publicada cuando esté en línea." },
+  "flags": { "waiting": "Pendiente de aprobación", "sent_back": "Devuelta", "comments": "Comentarios: {{count}}", "versions": "Versiones: {{count}}" },
   "timeline": { "title": "Comentarios e historial", "empty": "Aún no hay comentarios.", "box": "Escribe un comentario", "hint": "Intro envía · Mayús + Intro añade una línea", "send": "Comentar", "edited": "editado", "edit": "Editar", "save": "Guardar", "delete": "Eliminar", "delete_confirm": "¿Eliminar este comentario?", "delete_yes": "Eliminar comentario", "event": { "sent_for_approval": "{{name}} la envió a aprobación", "approved": "{{name}} la aprobó", "sent_back": "{{name}} la devolvió", "changed_after_approval": "{{name}} la cambió tras la aprobación: necesita aprobarse de nuevo" } },
   "people": { "former": "Antiguo miembro del equipo" },
-  "bell": { "label": "Para ti", "label_count": "Para ti ({{count}})", "empty": "Nada nuevo para ti.", "new": "Nuevo", "kind": { "waiting": "Pendiente de aprobación: {{post}}", "approved": "{{name}} aprobó: {{post}}", "sent_back": "{{name}} devolvió: {{post}}", "comment": "{{name}} comentó: {{post}}" } }
+  "bell": { "label": "Para ti", "label_count": "Para ti ({{count}})", "empty": "Nada nuevo para ti.", "new": "Nuevo", "kind": { "waiting": "Pendiente de aprobación: {{post}}", "approved": "{{name}} aprobó: {{post}}", "sent_back": "{{name}} devolvió: {{post}}", "comment": "{{name}} comentó: {{post}}", "to_post": "Para publicar hoy: {{post}}", "not_posted": "Sin marcar como publicada: {{post}}" }, "at": "a las {{time}}", "due": "Prevista el {{day}}", "morning": "Correo de la mañana: publicaciones de hoy", "morning_hint": "A las 8, las publicaciones que publicas hoy.", "morning_failed": "No se pudo guardar el ajuste. Inténtalo de nuevo." },
+  "version": { "error": { "version_exists": "Esta publicación ya tiene una versión para esa plataforma.", "ai_budget_used_up": "El presupuesto de IA de este mes se ha agotado. Elige «Copiar tal cual».", "invalid": "Elige al menos una plataforma.", "not_found": "Esta publicación ya no existe.", "unknown": "No se pudieron crear las versiones. Inténtalo de nuevo." } },
+  "versions": { "title": "Versiones", "intro": "La misma publicación para otras plataformas. Cada versión es una publicación propia.", "make": "Crear versiones…", "platforms": "Para qué plataformas", "how": "Cómo", "ai": "Adaptar con IA", "copy": "Copiar tal cual", "ai_paused": "El presupuesto de IA de este mes se ha agotado: las versiones copian el texto tal cual.", "submit": "Crear versiones", "none_left": "Esta publicación tiene una versión para cada plataforma.", "this_one": "Esta publicación", "no_day": "Sin día", "unlink": "Desvincular esta publicación", "adapting": "Adaptando para {{platform}}…", "adapting_others": "La IA está adaptando las versiones…", "kept_budget": "Se agotó el presupuesto de IA; esta versión conserva el texto original.", "kept_failed": "La IA no pudo adaptar esta versión; conserva el texto original.", "made": "Versiones creadas: {{count}}" }
 }

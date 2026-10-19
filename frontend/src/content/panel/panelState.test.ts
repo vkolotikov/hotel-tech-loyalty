@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../i18n/content.en.json'
 import type { PostDetail } from '../lib/types'
-import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, withChannels } from './panelState'
+import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, withChannels } from './panelState'
 
 describe('fallback words', () => {
   it('name the rewrites and the brief\'s fields in the English bundle\'s words', () => {
@@ -22,7 +22,7 @@ describe('formOf and newForm', () => {
   it('turns a post into the inputs\' text, with "" for none', () => {
     expect(formOf(detail)).toEqual({
       platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: '09:00', status: 'draft', pillar_id: '2', audience_id: '',
-      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair',
+      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair', poster_id: '',
     })
   })
 
@@ -135,5 +135,32 @@ describe('withChannels', () => {
     expect(withChannels(typed, { date: '2026-10-09', platform: 'instagram' }, ['instagram'], { instagram: '08:30' }).draft.scheduled_time).toBe('07:15')
     const settled = editing('instagram', '08:30')
     expect(withChannels(settled, { date: '2026-10-09', platform: 'instagram' }, ['instagram'], { instagram: '08:30' })).toBe(settled)
+  })
+})
+
+describe('who posts it (spec 2026-10-19 §4.1)', () => {
+  it('reads the poster who is still on the team, and sends a change as an id or null', () => {
+    const withPoster = { ...detail, poster_id: 7, poster: { id: 7, name: 'Sam' } } as PostDetail
+    expect(formOf(withPoster).poster_id).toBe('7')
+    const base = formOf(withPoster)
+    expect(changes(base, { ...base, poster_id: '' })).toEqual({ poster_id: null })
+    expect(changes(base, { ...base, poster_id: '8' })).toEqual({ poster_id: 8 })
+    expect(changes(base, base)).toEqual({})
+    expect(createBody({ ...newForm({ date: null, platform: 'instagram' }, ['instagram']), poster_id: '8' })).toMatchObject({ poster_id: 8 })
+    expect(createBody(newForm({ date: null, platform: 'instagram' }, ['instagram']))).not.toHaveProperty('poster_id')
+    expect(invalidFields({ poster_id: ['Choose someone on this brand’s team.'] })).toEqual(['poster_id'])
+  })
+
+  // Review Focus 5: someone who left shows as nobody; nothing is sent unless the person picks someone.
+  it('shows someone who left as nobody, and sends nothing for them', () => {
+    const left = formOf({ ...detail, poster_id: 9, poster: null } as PostDetail)
+    expect(left.poster_id).toBe('')
+    expect(changes(left, left)).toEqual({})
+  })
+
+  it('keeps the poster among the choices while the team list loads', () => {
+    expect(posterChoices([], { id: 7, name: 'Sam' })).toEqual([{ id: 7, name: 'Sam' }])
+    expect(posterChoices([{ id: 7, name: 'Sam', role: 'staff' }], { id: 7, name: 'Sam' })).toEqual([{ id: 7, name: 'Sam' }])
+    expect(posterChoices([{ id: 3, name: 'Mia', role: 'manager' }], null)).toEqual([{ id: 3, name: 'Mia' }])
   })
 })

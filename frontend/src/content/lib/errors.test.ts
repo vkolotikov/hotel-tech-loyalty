@@ -39,3 +39,12 @@ describe('release 4b refusals', () => {
     expect(errorKey('inbox', 'network')).toEqual(['content.inbox.error.unknown', 'The list could not be loaded. Please try again.'])
   })
 })
+
+describe('release 5a refusals (spec 2026-10-19 §7.3)', () => {
+  it('words a refused version and a refused poster on a schedule in the portal’s own sentence', () => {
+    expect(errorKey('version', 'version_exists')).toEqual(['content.version.error.version_exists', 'This post already has a version for that platform.'])
+    expect(errorKey('version', 'ai_budget_used_up')[1]).toBe("This month's AI budget is used up. Choose Copy as is.")
+    expect(errorKey('version', 'teapot')[0]).toBe('content.version.error.unknown')
+    expect(errorKey('move', 'invalid')).toEqual(['content.move.error.invalid', 'Check the day and who posts it.'])
+  })
+})

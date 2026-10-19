@@ -195,3 +195,20 @@ describe('release 4b calls (spec 2026-10-16 §6–§8)', () => {
     expect(last().body).toEqual({})
   })
 })
+
+describe('release 5a calls (spec 2026-10-19)', () => {
+  it('reaches versions, the team and the morning email switch under the prefix, and sends who posts it on a schedule', async () => {
+    calls.fail = null
+    const api = contentApi(5)
+    await api.makeVersions(9, ['linkedin', 'x'], true)
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts/9/versions?brand_id=5', body: { platforms: ['linkedin', 'x'], ai: true } })
+    await api.unlinkGroup(9)
+    expect(last()).toMatchObject({ method: 'delete', url: '/v1/admin/content/posts/9/group?brand_id=5' })
+    await api.team()
+    expect(last()).toMatchObject({ method: 'get', url: '/v1/admin/content/team?brand_id=5' })
+    await api.setMorningEmail(true)
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/me/morning-email?brand_id=5', body: { on: true } })
+    await api.movePost(9, { updated_at: 'x', scheduled_date: '2026-10-09', poster_id: 4 })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts/9/move?brand_id=5', body: { scheduled_date: '2026-10-09', poster_id: 4 } })
+  })
+})

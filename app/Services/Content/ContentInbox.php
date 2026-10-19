@@ -8,6 +8,7 @@ use App\Models\ContentPlannerPostEvent;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentPlannerRead;
 use App\Models\User;
+use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -16,7 +17,9 @@ use Illuminate\Support\Str;
  * The "For you" bell (spec 2026-10-16 §8), for one person and the current brand: the posts waiting for approval
  * (managers, while the switch is on; they stay until acted on), and the news since the person last opened the list —
  * "approved" and "sent back" on posts they wrote, comments by others on posts they wrote or commented on. News is at
- * most 30 days old; an item whose author has left stays, with no name.
+ * most 30 days old; an item whose author has left stays, with no name. Release 5a adds the reminders (spec 2026-10-19
+ * §4.3): today's posts once their time comes and the ones not marked as posted — like the waiting posts, they stay
+ * until done and count while they last.
  */
 final class ContentInbox
 {
@@ -27,7 +30,7 @@ final class ContentInbox
     /** A send-back note or a comment is cut to this in the list; the panel shows it whole. */
     public const NOTE_LENGTH = 200;
 
-    private const WITH = ['post:id,platform,title,hook,topic,scheduled_date', 'user:id,name'];
+    private const WITH = ['post:id,platform,title,hook,topic,scheduled_date,scheduled_time,status', 'user:id,name'];
 
     /** @return array{items: list<array<string, mixed>>, count: int, read_at: string} */
     public static function for(User $user, ?ContentPlannerProfile $profile): array
@@ -46,6 +49,16 @@ final class ContentInbox
             foreach ($waiting->with('createdBy:id,name')->orderByDesc('updated_at')->orderByDesc('id')->limit(self::LIMIT)->get() as $post) {
                 $at = $post->waiting_since ? CarbonImmutable::parse($post->waiting_since) : CarbonImmutable::instance($post->updated_at);
                 $items[] = self::item("waiting:{$post->id}", 'waiting', $post, $post->createdBy, null, $at, $seenAt === null || $at->gt($seenAt));
+            }
+        }
+        $orgId = (int) $profile->organization_id;
+        $venueNow = VenueClock::now($orgId);
+        $zone = VenueClock::zone($orgId);
+        $reminders = ['to_post' => ContentReminders::today($user, $profile, $venueNow), 'not_posted' => ContentReminders::missed($user, $profile, $venueNow)];
+        foreach ($reminders as $kind => $query) {
+            foreach ($query->orderByDesc('scheduled_date')->orderByDesc('scheduled_time')->orderByDesc('id')->limit(self::LIMIT)->get() as $post) {
+                $at = ContentReminders::appearsAt($post, $zone);
+                $items[] = self::item("{$kind}:{$post->id}", $kind, $post, null, null, $at, $seenAt === null || $at->gt($seenAt));
             }
         }
         foreach (self::approvals($user, $profile, $since)->with(self::WITH)->orderByDesc('created_at')->orderByDesc('id')->limit(self::LIMIT)->get() as $event) {
@@ -67,8 +80,11 @@ final class ContentInbox
             return 0;
         }
         $since = self::since(self::seenAt($user, $profile));
+        $venueNow = VenueClock::now((int) $profile->organization_id);
 
         return (self::waiting($user, $profile)?->count() ?? 0)
+            + ContentReminders::today($user, $profile, $venueNow)->count()
+            + ContentReminders::missed($user, $profile, $venueNow)->count()
             + self::approvals($user, $profile, $since)->count()
             + self::comments($user, $profile, $since)->count();
     }
@@ -151,6 +167,9 @@ final class ContentInbox
                 'hook'           => $post->hook,
                 'topic'          => $post->topic,
                 'scheduled_date' => $post->scheduled_date?->format('Y-m-d'),
+                // The reminders' second line: its time, and its status when it is not ready yet (spec 2026-10-19 §4.3).
+                'scheduled_time' => $post->scheduled_time ? substr((string) $post->scheduled_time, 0, 5) : null,
+                'status'         => (string) $post->status,
             ] : null,
             'by'     => $by ? ['id' => (int) $by->id, 'name' => (string) $by->name] : null,
             'note'   => $note === null ? null : Str::limit($note, self::NOTE_LENGTH, '…'),

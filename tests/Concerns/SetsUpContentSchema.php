@@ -110,6 +110,12 @@ trait SetsUpContentSchema
         if (!Schema::hasTable('content_planner_reads')) {
             (require database_path('migrations/2026_10_18_100300_create_content_planner_reads_table.php'))->up();
         }
+        if (!Schema::hasColumn('content_planner_posts', 'group_id')) {
+            (require database_path('migrations/2026_10_19_100000_add_group_and_poster_to_content_planner_posts.php'))->up();
+        }
+        if (!Schema::hasColumn('users', 'wants_content_morning_email')) {
+            (require database_path('migrations/2026_10_19_100100_add_content_morning_email_to_users.php'))->up();
+        }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 

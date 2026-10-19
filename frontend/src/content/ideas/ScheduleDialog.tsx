@@ -1,16 +1,18 @@
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { isDateKey } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { INPUT } from '../brand/inputs'
-import { useApi } from '../ContentProvider'
+import { useApi, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import type { Channel, DateKey, PostCard } from '../lib/types'
 import { canAdd } from '../plan/addMath'
 import { Dialog } from '../ui/Dialog'
-import { scheduleDefaults } from './ideasMath'
+import { PosterSelect } from '../ui/PosterSelect'
+import { initialPoster, scheduleBody, scheduleDefaults } from './ideasMath'
 
 /** Schedule (spec 2026-10-16 §4.2): a day from today on and the channel's usual time; the post goes to the Plan. */
 export function ScheduleDialog({ post, today, channels, industry, onClose, onScheduled }: {
@@ -24,7 +26,14 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
 }) {
   const { t } = useTranslation()
   const api = useApi()
+  const brand = useBrandId()
   const [form, setForm] = useState(() => scheduleDefaults(post.platform, channels, industry, today))
+  // Who posts it (spec 2026-10-19 §4.1): the team, the post's own poster to start; sent only when changed.
+  const team = useQuery({ queryKey: ['content', brand, 'team'], queryFn: api.team, staleTime: 300_000 })
+  const members = team.data?.team ?? []
+  const initial = initialPoster(post, members)
+  const [picked, setPicked] = useState<string | null>(null)
+  const poster = picked ?? initial
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const ok = isDateKey(form.date) && canAdd(form.date, today)
@@ -34,7 +43,7 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
     setBusy(true)
     setError(null)
     try {
-      const { post: moved } = await api.movePost(post.id, { updated_at: post.updated_at, scheduled_date: form.date, scheduled_time: form.time === '' ? null : form.time })
+      const { post: moved } = await api.movePost(post.id, scheduleBody(post, form, poster, initial) as Parameters<typeof api.movePost>[1])
       onScheduled(moved)
     } catch (e) {
       const [key, text] = errorKey('move', failureOf(e).code)
@@ -56,6 +65,10 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
             <input type="time" value={form.time} onChange={(e) => setForm({ ...form, time: e.target.value })} className={`${INPUT} border-a-border`} />
           </label>
         </div>
+        <label className="block">
+          <span className="mb-1 block text-xs font-medium text-a-text-2">{t('content.panel.fields.poster', 'Who posts it')}</span>
+          <PosterSelect value={poster} onChange={setPicked} choices={members.map(m => ({ id: m.id, name: m.name }))} className={`${INPUT} border-a-border`} />
+        </label>
         {error && <Notice tone="danger">{error}</Notice>}
         <div className="flex gap-2">
           <Button onClick={() => { void save() }} loading={busy} disabled={!ok}>{t('content.ideas.schedule_yes', 'Schedule')}</Button>

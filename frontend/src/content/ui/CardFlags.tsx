@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Hourglass, MessageSquare, Undo2 } from 'lucide-react'
+import { Hourglass, Layers, MessageSquare, Undo2 } from 'lucide-react'
 import { useContent } from '../ContentProvider'
-import { approvalsOn, cardFlags } from '../lib/approval'
+import { approvalsOn, cardFlags, versionsOf } from '../lib/approval'
 import type { PostCard } from '../lib/types'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium'
@@ -15,10 +15,13 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
   const { t } = useTranslation()
   const { data } = useContent()
   const flags = cardFlags(post, approvalsOn(data))
-  if (!flags.waiting && !flags.sentBack && flags.comments === 0) return null
+  // Spec 2026-10-19 §3.4: a post that is one of several versions says so.
+  const versions = versionsOf(post)
+  if (!flags.waiting && !flags.sentBack && flags.comments === 0 && versions === 0) return null
   const waiting = t('content.flags.waiting', 'Waiting for approval')
   const back = t('content.flags.sent_back', 'Sent back')
   const comments = t('content.flags.comments', 'Comments: {{count}}', { count: flags.comments })
+  const versionWords = t('content.flags.versions', 'Versions: {{count}}', { count: versions })
   if (compact) {
     return (
       <span data-flags="" className="flex shrink-0 items-center gap-1 text-a-text-2">
@@ -27,6 +30,11 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
         {flags.comments > 0 && (
           <span title={comments} className="inline-flex items-center gap-0.5 text-xs tabular-nums">
             <MessageSquare size={12} aria-hidden /><span aria-hidden>{flags.comments}</span><span className="sr-only">{comments}</span>
+          </span>
+        )}
+        {versions > 0 && (
+          <span title={versionWords} className="inline-flex items-center gap-0.5 text-xs tabular-nums">
+            <Layers size={12} aria-hidden /><span aria-hidden>{versions}</span><span className="sr-only">{versionWords}</span>
           </span>
         )}
       </span>
@@ -39,6 +47,11 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
       {flags.comments > 0 && (
         <span title={comments} className={`${CHIP} bg-a-surface-2 text-a-text-2 tabular-nums`}>
           <MessageSquare size={12} aria-hidden /><span aria-hidden>{flags.comments}</span><span className="sr-only">{comments}</span>
+        </span>
+      )}
+      {versions > 0 && (
+        <span title={versionWords} className={`${CHIP} bg-a-surface-2 text-a-text-2 tabular-nums`}>
+          <Layers size={12} aria-hidden /><span aria-hidden>{versions}</span><span className="sr-only">{versionWords}</span>
         </span>
       )}
     </span>

@@ -10,7 +10,7 @@ export interface PopItem {
 }
 
 /** The open list of a PopMenu — its own component so a static render can draw it (a test cannot open the menu). */
-export function PopList({ id, items, onPick, className, emptyText, markLabel }: {
+export function PopList({ id, items, onPick, className, emptyText, markLabel, footer }: {
   id: string
   items: PopItem[]
   onPick: (id: string) => void
@@ -19,6 +19,8 @@ export function PopList({ id, items, onPick, className, emptyText, markLabel }: 
   emptyText?: string
   /** The word a screen reader hears before a marked line ("New"). */
   markLabel?: string
+  /** Drawn under the lines (the bell's morning email switch, spec 2026-10-19 §4.5). */
+  footer?: ReactNode
 }) {
   return (
     <ul id={id} className={className}>
@@ -38,6 +40,8 @@ export function PopList({ id, items, onPick, className, emptyText, markLabel }: 
           </button>
         </li>
       ))}
+      {/* Pinned to the foot of the scrolling list, so a long list never hides it (final review). */}
+      {footer !== undefined && <li data-menu-footer="" className="sticky bottom-0 mt-1 border-t border-a-border bg-a-surface pt-1">{footer}</li>}
     </ul>
   )
 }
@@ -49,7 +53,7 @@ export function PopList({ id, items, onPick, className, emptyText, markLabel }: 
  * a choice or an Escape in the list the focus goes back to the button. Nothing shows without items — unless the menu has
  * an empty line to say (`emptyText`). `onOpenChange` hears every opening and closing.
  */
-export function PopMenu({ label, items, onPick, className, children, wrapClassName = '', data, align = 'right', side = 'below', listClassName = 'w-64', title, emptyText, markLabel, onOpenChange }: {
+export function PopMenu({ label, items, onPick, className, children, wrapClassName = '', data, align = 'right', side = 'below', listClassName = 'w-64', title, emptyText, markLabel, onOpenChange, footer }: {
   /** The button's accessible name. */
   label: string
   items: PopItem[]
@@ -71,6 +75,8 @@ export function PopMenu({ label, items, onPick, className, children, wrapClassNa
   emptyText?: string
   markLabel?: string
   onOpenChange?: (open: boolean) => void
+  /** Drawn under the open list's lines (PopList). */
+  footer?: ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
@@ -121,7 +127,7 @@ export function PopMenu({ label, items, onPick, className, children, wrapClassNa
         {children}
       </button>
       {open && (
-        <PopList id={listId} items={items} emptyText={emptyText} markLabel={markLabel} onPick={(id) => { onPick(id); close() }}
+        <PopList id={listId} items={items} emptyText={emptyText} markLabel={markLabel} footer={footer} onPick={(id) => { onPick(id); close() }}
           className={`absolute ${listPlace(align, side)} z-20 max-h-64 overflow-y-auto rounded-lg border border-a-border bg-a-surface p-1 shadow-a-lg ${listClassName}`} />
       )}
     </div>

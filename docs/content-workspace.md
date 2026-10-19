@@ -32,8 +32,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - Refusals are `{error, message}`. The codes are `no_brand`, `no_profile`, `manager_only`, `not_found`,
   `ai_budget_used_up`, `already_generating`, `changed_elsewhere`, `published_cannot_move`, `slot_not_open`,
   `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready`,
-  `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, and from release 4b `needs_approval`,
-  `approvals_off`, `wrong_status` and `not_yours`.
+  `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, from release 4b `needs_approval`,
+  `approvals_off`, `wrong_status` and `not_yours`, and from release 5a `version_exists`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
 
@@ -52,6 +52,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Approvals | `POST posts/{id}/send-for-approval` (everyone); `POST posts/{id}/approve` (with the `updated_at` read), `POST posts/{id}/send-back` (`note`) (managers); only while the brand's switch (`requires_approval`) is on | |
 | Comments | `POST posts/{id}/comments`; `PUT comments/{id}` (your own); `DELETE comments/{id}` (your own, or any as a manager) | everyone |
 | For you | `GET inbox`, `GET inbox/count`, `POST inbox/seen` (`at`: the list's `read_at`) | everyone |
+| Versions | `POST posts/{id}/versions` (`platforms`, `ai`), `DELETE posts/{id}/group` | everyone |
+| Team | `GET team` (the brand's active staff: names and roles); `poster_id` on `POST posts`, `PUT posts/{id}`, `POST posts/{id}/move` | everyone |
+| Morning email | `PUT me/morning-email` (`on`); also `wants_content_morning_email` in `PUT admin/me/preferences` | each person, for themselves |
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -112,6 +115,25 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   on), then the news since `seen_at` in `content_planner_reads` — approved and sent back on your posts, comments by
   others on posts you wrote or commented on (after your own first comment) — at most 30 days old, the newest 50.
   "Seen" takes the list's `read_at`, so news that came in while the list was open stays new (`InboxTest`).
+- **Versions** (release 5a; `ContentVersions`): `group_id` holds the original's id. A version is a draft on the
+  original's day and time with its words, poster and its own copy of the visual brief (the same picture file: Content
+  never deletes pictures); one per platform in a group (`version_exists`); joining or leaving a group never changes a
+  post's `updated_at`; a group of one is not shown. With `ai`, the budget is checked before anything is made, then
+  `AdaptPostVersions` adapts one version per run with the platform's rules (`ContentPlatformRules`, shared with the
+  post writer); at the cap or on an AI failure the rest keep the original's words and the panel says so
+  (`kept_original`, `kept_reason`); a version a person changed keeps their words (`VersionsTest`, `VersionsAdaptTest`).
+- **Who posts it** (`ContentTeam`): a member of the brand's team — active staff with no brand rows or a row for the
+  brand. Someone who left or was switched off counts as nobody (the panel shows nobody; their post still saves with
+  them sent again). It is not a change of words. While approvals are on, the post's own poster may Mark published an
+  Approved or Ready post; every other staff case is refused as before (`PosterTest`).
+- **Reminders** (`ContentReminders`): in the bell, "to post today" from the day's start or the post's time (venue
+  clock) and "not marked as posted" for the seven days after, for the poster — or, when nobody on the team posts it,
+  the brand's managers — until the post is published, skipped, archived or moved; they count while they last
+  (`RemindersTest`).
+- **The morning email** (`content:send-morning-email`, hourly): opted-in staff with an email and an active staff row,
+  in organisations with Content (not switched off, not Appointments-only), at 8 am venue time, once a venue day, only
+  when they have posts today or posts not marked as posted; words in the person's language from
+  `lang/*/content_morning.php`, links open the post on its brand (`?brand_id=`) (`MorningEmailTest`).
 
 ## The portal (`/content`, `frontend/src/content/`)
 
@@ -191,10 +213,19 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 - **The "For you" bell** beside New post (`bell/ForYouBell.tsx`, on `ui/PopMenu.tsx`): its count read every 60 s while
   the tab is shown and when the tab comes back into view; the list read when opened, news marked, then marked seen up
   to that read (`read_at`); a line opens its post. One brand at a time.
+- **Versions** (release 5a): the panel's Versions section lists the post's group as chips (platform, status, day; this
+  post marked; a chip opens that version), Make versions… for the brand's platforms not yet in the group — "Adapt with
+  AI" (unavailable at the AI budget cap) or "Copy as is" — and Unlink. While the AI adapts, the panel reads the post
+  every 5 s and says "Adapting for …"; a version it did not adapt says why. Cards carry "Versions: N".
+- **Who posts it** beside Status in the panel and in Ideas → Schedule (`ui/PosterSelect.tsx`, the team from `GET team`):
+  someone who left shows as Not set. While approvals are on, a staff member who posts an Approved or Ready post sees
+  Mark published with "You post this one…".
+- **The bell's reminders** ("To post today", with the time and a status not yet ready; "Not marked as posted", with the
+  day it was due) and, at its foot, **the morning email switch** (each person's own).
 
 ## What this release does not do
 
-No email notices, mentions or attachments (approvals, comments and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
+No email notices other than the opt-in morning email, no mentions or attachments (approvals, comments, reminders and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI
 model allowlist for Content. The old AI Content Planner is gone: its `/v1/admin/content-planner/*` routes answer 404
 and its screens are removed; a browser tab left open across the deploy must be reloaded.
 
@@ -234,6 +265,17 @@ and its screens are removed; a browser tab left open across the deploy must be r
 - After the deploy (owner): on a real brand, switch Approvals on, send one post for approval as a staff member,
   approve one and send one back as a manager, add a comment, and look at both bells; switch Approvals off again if the
   team does not want them yet; reload admin tabs left open.
+- Release 5a (server, Plan 5A-1): two additive migrations (`content_planner_posts.group_id` and `poster_id`;
+  `users.wants_content_morning_email` and `content_morning_email_last_sent_at`) and one hourly scheduled command,
+  `content:send-morning-email`. The email is off for everyone until they switch it on. The queue must be running for
+  versions adapted by AI (`AdaptPostVersions`, one AI call per run, 80 s) and for the email (`ContentMorningEmail`).
+- Verify release 5a by content (after Plan 5A-2's deploy): `/api/v1/admin/content/team` answers 401 when signed out
+  (404 before release 5a); `php artisan schedule:list` lists `content:send-morning-email`; the `ContentApp` chunk carries
+  "Make versions", "Who posts it", "To post today" and "Morning email".
+- After the deploy (owner): on a real brand, make one version as a copy and one adapted by AI, set "Who posts it" on a
+  post for today and look at that person's bell, switch the morning email on for yourself and read it the next morning
+  at 8; tell the team that a manager's bell lists today's and the last seven days' unpublished posts nobody posts until
+  "Who posts it" is set or the posts are marked published; reload admin tabs left open.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.

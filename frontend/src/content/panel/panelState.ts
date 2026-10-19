@@ -1,5 +1,5 @@
 import { parseHashtags } from '../lib/postText'
-import type { DateKey, Platform, PostDetail, PostFields, PostStatus, Rewrite, VisualBrief } from '../lib/types'
+import type { DateKey, Person, Platform, PostDetail, PostFields, PostStatus, Rewrite, TeamMember, VisualBrief } from '../lib/types'
 import type { NewDraft } from './PanelProvider'
 
 /** The rewrites' English names, the fallback under the bundles' words (panelState.test.ts keeps them equal). */
@@ -27,6 +27,8 @@ export interface PostForm {
   main_copy: string
   cta: string
   hashtags: string
+  /** Who posts it (spec 2026-10-19 §4.1): a team member's id, '' for nobody. */
+  poster_id: string
 }
 
 const text = (value: string | null | undefined): string => value ?? ''
@@ -45,6 +47,8 @@ export function formOf(post: PostDetail): PostForm {
     main_copy: text(post.main_copy),
     cta: text(post.cta),
     hashtags: post.hashtags.join(' '),
+    // The effective poster: someone who left reads as nobody, and nothing is sent for them unless changed.
+    poster_id: post.poster ? String(post.poster.id) : '',
   }
 }
 
@@ -67,6 +71,7 @@ export function newForm(draft: NewDraft, platforms: readonly Platform[], channel
     main_copy: '',
     cta: '',
     hashtags: '',
+    poster_id: '',
     // The words it starts with (a key date's name, a template's fields) over the empty ones.
     ...draft.fields,
   }
@@ -89,6 +94,7 @@ function valuesOf(form: PostForm) {
     main_copy: form.main_copy.trim() === '' ? null : form.main_copy,
     cta: orNull(form.cta),
     hashtags: parseHashtags(form.hashtags),
+    poster_id: id(form.poster_id),
   }
 }
 type Values = ReturnType<typeof valuesOf>
@@ -160,7 +166,13 @@ export function createBody(draft: PostForm): PostFields & { platform: Platform }
   return { ...(out as PostFields), platform: draft.platform }
 }
 
-const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags']
+const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags', 'poster_id']
+
+/** "Who posts it"'s choices: the team, with the post's own poster kept while the team list loads (spec 2026-10-19 §4.1). */
+export function posterChoices(team: readonly TeamMember[], poster: Person | null | undefined): Person[] {
+  const people = team.map(m => ({ id: m.id, name: m.name }))
+  return poster && !people.some(p => p.id === poster.id) ? [...people, { id: poster.id, name: poster.name }] : people
+}
 
 /** The form fields a refused save names (Laravel's `errors`; `hashtags.0` is the hashtags field). */
 export function invalidFields(fields: Record<string, string[]> | undefined): (keyof PostForm)[] {

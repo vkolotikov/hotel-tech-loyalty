@@ -31,6 +31,8 @@ class MeController extends Controller
             'daily_summary_last_sent_at'  => $user->daily_summary_last_sent_at?->toIso8601String(),
             'wants_loyalty_digest'        => (bool) ($user->wants_loyalty_digest ?? false),
             'loyalty_digest_last_sent_at' => $user->loyalty_digest_last_sent_at?->toIso8601String(),
+            'wants_content_morning_email'        => (bool) ($user->wants_content_morning_email ?? false),
+            'content_morning_email_last_sent_at' => $user->content_morning_email_last_sent_at?->toIso8601String(),
             'language'                    => $user->language ?: 'en',
         ]);
     }
@@ -40,6 +42,7 @@ class MeController extends Controller
         $validated = $request->validate([
             'wants_daily_summary'   => 'sometimes|boolean',
             'wants_loyalty_digest'  => 'sometimes|boolean',
+            'wants_content_morning_email' => 'sometimes|boolean',
             'language'              => ['sometimes', 'string', 'in:' . implode(',', self::SUPPORTED_LANGUAGES)],
         ]);
 
@@ -51,6 +54,8 @@ class MeController extends Controller
             'daily_summary_last_sent_at'  => $user->daily_summary_last_sent_at?->toIso8601String(),
             'wants_loyalty_digest'        => (bool) $user->wants_loyalty_digest,
             'loyalty_digest_last_sent_at' => $user->loyalty_digest_last_sent_at?->toIso8601String(),
+            'wants_content_morning_email'        => (bool) $user->wants_content_morning_email,
+            'content_morning_email_last_sent_at' => $user->content_morning_email_last_sent_at?->toIso8601String(),
             'language'                    => $user->language ?: 'en',
         ]);
     }

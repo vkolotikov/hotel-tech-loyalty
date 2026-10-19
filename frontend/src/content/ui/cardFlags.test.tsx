@@ -60,3 +60,15 @@ describe('card flags (spec 2026-10-16 §6.3, §7.1)', () => {
     expect(render(false, <PostRow post={card({ comments_count: 3 })} locale="en-GB" pillar={null} selected={false} onOpen={() => {}} />)).toContain('Comments: 3')
   })
 })
+
+describe('release 5a: the versions mark (spec 2026-10-19 §3.4)', () => {
+  it('marks a post that is one of several versions, with its words for a screen reader, and nothing for none', () => {
+    expect(render(false, <CardFlags post={card({ status: 'draft', group_size: 3 })} />)).toContain('Versions: 3')
+    expect(render(false, <CardFlags post={card({ status: 'draft', group_size: 3 })} compact />)).toContain('Versions: 3')
+    expect(render(false, <CardFlags post={card({ status: 'draft', group_size: 0 })} />)).toBe('')
+  })
+
+  it('ends a Plan card’s name with it', () => {
+    expect(render(false, <PostCardView post={card({ status: 'draft', group_size: 2 })} onOpen={() => {}} />)).toMatch(/aria-label="[^"]*Versions: 2"/)
+  })
+})

@@ -4,8 +4,9 @@ import { LayoutTemplate } from 'lucide-react'
 import { suggestedTimes } from '../lib/bestTimes'
 import { LANGUAGES, languageName } from '../lib/languages'
 import { Notice } from '../../workspace/ui/Notice'
-import type { AudienceRef, PillarRef, Platform, PostStatus, Snippet, Template } from '../lib/types'
+import type { AudienceRef, Person, PillarRef, Platform, PostStatus, Snippet, Template } from '../lib/types'
 import { PopMenu } from '../ui/PopMenu'
+import { PosterSelect } from '../ui/PosterSelect'
 import { InsertMenu } from './InsertMenu'
 import { applyTemplate, blanksIn, replacesText } from './templateApply'
 import { insertAt, insertHashtags, tooManyTags } from './snippetInsert'
@@ -32,7 +33,7 @@ function FieldBox({ label, hint, invalid, children }: { label: string; hint?: st
  * audience, language, topic, hook, text, call to action and hashtags. A
  * published post keeps its day: the day is the record of when it went out.
  */
-export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [] }: {
+export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [], team = [] }: {
   form: PostForm
   onChange: (form: PostForm) => void
   platforms: Platform[]
@@ -48,6 +49,8 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   snippets: Snippet[]
   /** The brand's templates: the Template menu beside Topic (spec 2026-10-16 §5.3). */
   templates?: Template[]
+  /** Who can post it (spec 2026-10-19 §4.1): the brand's team, the post's own poster kept (posterChoices). */
+  team?: Person[]
 }) {
   const { t } = useTranslation()
   const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => onChange({ ...form, [key]: value })
@@ -93,6 +96,9 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
           <select value={form.status} onChange={(e) => set('status', e.target.value as PostStatus)} aria-invalid={bad('status')} className={box('status')}>
             {statuses.map(s => <option key={s} value={s}>{t(`content.status.${s}`, s)}</option>)}
           </select>
+        </FieldBox>
+        <FieldBox label={t('content.panel.fields.poster', 'Who posts it')} invalid={invalid.includes('poster_id')}>
+          <PosterSelect value={form.poster_id} onChange={(value) => set('poster_id', value)} choices={team} invalid={bad('poster_id')} className={box('poster_id')} />
         </FieldBox>
         <FieldBox label={t('content.panel.fields.date', 'Date')} invalid={invalid.includes('scheduled_date')}
           hint={published ? t('content.panel.fields.published_date', 'A published post keeps the date it went out.') : undefined}>

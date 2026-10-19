@@ -21,7 +21,7 @@ const FAMILIES: Record<string, readonly string[]> = {
   // Spec 2026-10-16 §6.4: the approval steps in the timeline.
   'timeline.event': ['sent_for_approval', 'approved', 'sent_back', 'changed_after_approval'],
   // Spec §8: the bell's lines by kind.
-  'bell.kind': ['waiting', 'approved', 'sent_back', 'comment'],
+  'bell.kind': ['waiting', 'approved', 'sent_back', 'comment', 'to_post', 'not_posted'],
   ...Object.fromEntries(Object.entries(ERRORS).map(([family, words]) => [`${family}.error`, Object.keys(words)])),
 }
 
@@ -57,7 +57,7 @@ describe('content bundle', () => {
   // Final review (Plan 3B): "1 copies", "Ещё 5 поста", "1 Wochen in Folge". The bundles keep one key per word (no
   // _one/_few/_many), so a count stands where no noun has to agree with it: after a colon, or in brackets.
   it('every count reads right at 1, 2 and 5: no noun follows the number', () => {
-    const COUNTED = ['plan.goals.at_risk', 'plan.goals.streak', 'panel.repeat.copies', 'panel.repeat.stop_confirm', 'brand.channels.per_week', 'ideas.see_all', 'panel.blanks', 'flags.comments', 'bell.label_count']
+    const COUNTED = ['plan.goals.at_risk', 'plan.goals.streak', 'panel.repeat.copies', 'panel.repeat.stop_confirm', 'brand.channels.per_week', 'ideas.see_all', 'panel.blanks', 'flags.comments', 'bell.label_count', 'versions.made', 'flags.versions']
     for (const locale of LOCALES) {
       const json = bundle(locale)
       const wrong = COUNTED.filter(key => {

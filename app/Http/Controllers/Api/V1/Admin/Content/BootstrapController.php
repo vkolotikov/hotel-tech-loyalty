@@ -46,7 +46,15 @@ class BootstrapController extends Controller
                 'timezone_named' => VenueClock::isNamed($orgId),
                 'today'          => VenueClock::today($orgId),
             ],
-            'staff'        => ['name' => (string) $user->name, 'role' => $staff?->role, 'can_manage' => ContentAccess::canManage($user)],
+            'staff'        => [
+                // Plan 5A-2: the portal knows the person's own posts by it (spec 2026-10-19 §4.4).
+                'id'            => (int) $user->id,
+                'name'          => (string) $user->name,
+                'role'          => $staff?->role,
+                'can_manage'    => ContentAccess::canManage($user),
+                // Spec 2026-10-19 §4.5: the switch in Content's menu.
+                'morning_email' => (bool) ($user->wants_content_morning_email ?? false),
+            ],
             'profile'      => $profile ? [
                 'id'              => (int) $profile->id,
                 'setup_completed' => $profile->setup_completed_at !== null,

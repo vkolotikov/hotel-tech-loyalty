@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class ContentPlannerPost extends Model
 {
@@ -49,6 +50,8 @@ class ContentPlannerPost extends Model
         'engagement_mechanic',
         'generated_by',
         'series_id',
+        'group_id',
+        'poster_id',
     ];
 
     protected $casts = [
@@ -121,7 +124,13 @@ class ContentPlannerPost extends Model
         $latest = fn (string $column) => ContentPlannerPostEvent::select($column)
             ->whereColumn('post_id', 'content_planner_posts.id')->orderByDesc('id')->limit(1);
 
-        return $query->withCount('comments')->addSelect(['last_event_kind' => $latest('kind'), 'last_event_at' => $latest('created_at')]);
+        return $query->withCount('comments')->addSelect([
+            'last_event_kind' => $latest('kind'),
+            'last_event_at'   => $latest('created_at'),
+            // Spec 2026-10-19 §3.4: how many posts share its group of versions (none for a post in no group).
+            'group_size'      => DB::table('content_planner_posts as same_group')->selectRaw('count(*)')
+                ->whereColumn('same_group.group_id', 'content_planner_posts.group_id'),
+        ]);
     }
 
     public function scopeByStatus($query, string $status)

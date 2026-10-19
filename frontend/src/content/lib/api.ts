@@ -3,7 +3,7 @@ import type {
   Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, IdeasPayload, KeyDateFields,
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
   RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
-  TimelineComment, Variation, VoiceFields, InboxPayload,
+  TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember,
 } from './types'
 
 /**
@@ -72,7 +72,8 @@ export function contentApi(brand: number | null) {
     post: (id: number): Promise<{ post: PostDetail }> => watched(api.get(url(`posts/${id}`))),
     createPost: (body: PostFields & { platform: Platform }): Promise<{ post: PostDetail }> => watched(api.post(url('posts'), body)),
     savePost: (id: number, body: PostFields & { updated_at: string }): Promise<{ post: PostDetail }> => watched(api.put(url(`posts/${id}`), body)),
-    movePost: (id: number, body: { updated_at: string; scheduled_date: DateKey | null; scheduled_time?: string | null }): Promise<{ post: PostCard }> =>
+    /** Ideas → Schedule also sends who posts it, when the person chose (spec 2026-10-19 §4.1). */
+    movePost: (id: number, body: { updated_at: string; scheduled_date: DateKey | null; scheduled_time?: string | null; poster_id?: number | null }): Promise<{ post: PostCard }> =>
       watched(api.post(url(`posts/${id}/move`), body)),
     duplicatePost: (id: number): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/duplicate`))),
     markReady: (id: number): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/mark-ready`))),
@@ -125,6 +126,14 @@ export function contentApi(brand: number | null) {
     inbox: (): Promise<InboxPayload> => watched(api.get(url('inbox'))),
     inboxCount: (): Promise<{ count: number }> => watched(api.get(url('inbox/count'))),
     inboxSeen: (at: string | null): Promise<{ count: number }> => watched(api.post(url('inbox/seen'), at === null ? {} : { at })),
+    /** Versions per platform (spec 2026-10-19 §3): the post, now in its group, and the new versions as cards. */
+    makeVersions: (id: number, platforms: Platform[], ai: boolean): Promise<{ post: PostDetail; versions: PostCard[] }> =>
+      watched(api.post(url(`posts/${id}/versions`), { platforms, ai })),
+    unlinkGroup: (id: number): Promise<{ post: PostDetail }> => watched(api.delete(url(`posts/${id}/group`))),
+    /** The brand's team for "Who posts it" (spec §4.1): names and roles only. */
+    team: (): Promise<{ team: TeamMember[] }> => watched(api.get(url('team'))),
+    /** The morning email switch (spec §4.5): each person's own. */
+    setMorningEmail: (on: boolean): Promise<{ on: boolean }> => watched(api.put(url('me/morning-email'), { on })),
 
     posts: (filters: PostFilters): Promise<PostsPage> => watched(api.get(url('posts'), { params: postsParams(filters) })),
 

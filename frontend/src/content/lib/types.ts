@@ -22,7 +22,8 @@ export interface Bootstrap {
   brands: BrandRef[]
   accent: string | null
   venue: { timezone: string; timezone_named: boolean; today: DateKey }
-  staff: { name: string; role: string | null; can_manage: boolean }
+  /** `id`: the user's own id — the posts they post (spec 2026-10-19 §4.4); `morning_email`: their switch (§4.5). */
+  staff: { name: string; role: string | null; can_manage: boolean; id?: number; morning_email?: boolean }
   /** `requires_approval`: the brand's posts need a manager's approval (spec 2026-10-16 §6.1). */
   profile: { id: number; setup_completed: boolean; readiness: number; requires_approval?: boolean } | null
   ai: { status: BudgetStatus; percent: number | null }
@@ -48,6 +49,10 @@ export interface PostCard {
   comments_count?: number
   /** Spec §6.3: a draft whose latest approval step sent it back, with no change to the post since. */
   sent_back?: boolean
+  /** Spec 2026-10-19 §3.4: the posts in its group of versions (0 for none and for a group of one). */
+  group_size?: number
+  /** Spec 2026-10-19 §4.1: who posts it, as stored (the panel's `poster` says whether they are still on the team). */
+  poster_id?: number | null
 }
 
 export interface VisualBrief {
@@ -101,7 +106,18 @@ export interface PostDetail extends PostCard {
   author?: string | null
   /** Its comments and approval steps, oldest first, the newest 200 (`GET posts/{id}` and the approval steps send it). */
   timeline?: TimelineItem[]
+  /** Its versions for other platforms (spec 2026-10-19 §3.4); null when it is in no group (or a group of one). */
+  group?: PostGroup | null
+  /** Who posts it: a member of the brand's team, or null for nobody (also someone who left) (spec 2026-10-19 §4.1). */
+  poster?: Person | null
 }
+
+/** A post in a group of versions, as the panel lists it (spec 2026-10-19 §3.4). */
+export interface GroupPost { id: number; platform: Platform; status: PostStatus; scheduled_date: DateKey | null; scheduled_time: string | null }
+/** A post's group: its posts oldest first, the versions the AI is still adapting, and those it did not adapt, and why (§3.3). */
+export interface PostGroup { id: number; posts: GroupPost[]; adapting: number[]; kept_original: number[]; kept_reason: 'budget' | 'ai_failed' | null }
+/** Someone on the brand's team, for "Who posts it" (spec 2026-10-19 §4.1). */
+export interface TeamMember { id: number; name: string; role: 'manager' | 'staff' }
 
 /** A day and platform the brand's channels expect, with no post yet. */
 export interface Slot { date: DateKey; platform: Platform }
@@ -130,6 +146,8 @@ export interface PostFields {
   main_copy?: string | null
   cta?: string | null
   hashtags?: string[]
+  /** Who posts it (spec 2026-10-19 §4.1): a member of the team, or null for nobody. */
+  poster_id?: number | null
 }
 
 export interface Variation { id: number; type: Rewrite; copy: string }
@@ -398,11 +416,12 @@ export interface TimelineEvent { type: 'event'; id: number; kind: EventKind; use
 export type TimelineItem = TimelineComment | TimelineEvent
 
 /** One line of the "For you" list (spec §8): what waits for this manager, or news since they last looked. */
-export type InboxKind = 'waiting' | 'approved' | 'sent_back' | 'comment'
+export type InboxKind = 'waiting' | 'approved' | 'sent_back' | 'comment' | 'to_post' | 'not_posted'
 export interface InboxItem {
   id: string
   kind: InboxKind
-  post: Pick<PostCard, 'id' | 'platform' | 'title' | 'hook' | 'topic' | 'scheduled_date'> | null
+  /** The reminders' second line reads its time and status (spec 2026-10-19 §4.3). */
+  post: (Pick<PostCard, 'id' | 'platform' | 'title' | 'hook' | 'topic' | 'scheduled_date'> & { scheduled_time?: string | null; status?: PostStatus }) | null
   /** Who acted or commented; for a waiting post, its writer. */
   by: Person | null
   /** A send-back's note or a comment, cut to 200 characters. */

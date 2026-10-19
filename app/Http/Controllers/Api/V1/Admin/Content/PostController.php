@@ -11,6 +11,7 @@ use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
+use App\Services\Content\ContentTeam;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -87,6 +88,7 @@ class PostController extends Controller
         $data = $request->validate(
             ['platform' => ['required', Rule::in(ContentRules::PLATFORMS)]] + Arr::except(ContentRules::postFields(), ['platform'])
         );
+        ContentTeam::assertPoster($data['poster_id'] ?? null, null, (int) $profile->brand_id);
         ContentApproval::guardStatus($data['status'] ?? null, null, $request->user(), $profile);
         // A post without a day has no time either (as a move to the tray, and as update, keep it).
         if (($data['scheduled_date'] ?? null) === null) {
@@ -123,6 +125,7 @@ class PostController extends Controller
         self::assertFresh($post, $data['updated_at']);
 
         $fields = Arr::except($data, ['updated_at']);
+        ContentTeam::assertPoster($fields['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
         if ($post->status === 'published' && array_key_exists('scheduled_date', $fields)
             && $fields['scheduled_date'] !== $post->scheduled_date?->format('Y-m-d')) {
             self::refusePublishedMove();
@@ -153,15 +156,21 @@ class PostController extends Controller
             'updated_at'     => 'required|string',
             'scheduled_date' => 'present|nullable|date_format:Y-m-d',
             'scheduled_time' => 'sometimes|nullable|date_format:H:i',
+            // Ideas → Schedule asks who posts it (spec 2026-10-19 §4.1).
+            'poster_id'      => 'sometimes|nullable|integer',
         ]);
         self::assertFresh($post, $data['updated_at']);
         if ($post->status === 'published') {
             self::refusePublishedMove();
         }
+        ContentTeam::assertPoster($data['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
 
         $post->scheduled_date = $data['scheduled_date'];
         if (array_key_exists('scheduled_time', $data)) {
             $post->scheduled_time = $data['scheduled_time'];
+        }
+        if (array_key_exists('poster_id', $data)) {
+            $post->poster_id = $data['poster_id'];
         }
         // The tray holds ideas without a day: no day, no time.
         if ($data['scheduled_date'] === null) {
@@ -174,8 +183,8 @@ class PostController extends Controller
 
     public function duplicate(Request $request, int $id): JsonResponse
     {
-        // A copy made by hand is not in the original's repeat series.
-        $copy = self::find($id)->replicate(['published_url', 'published_at', 'status', 'series_id']);
+        // A copy made by hand is not in the original's repeat series, nor in its group of versions.
+        $copy = self::find($id)->replicate(['published_url', 'published_at', 'status', 'series_id', 'group_id']);
         $copy->status = 'draft';
         $copy->created_by = $request->user()->id;
         $copy->scheduled_date = CarbonImmutable::parse(VenueClock::today(ContentContext::orgId()))->addDays(7)->format('Y-m-d');
@@ -200,7 +209,7 @@ class PostController extends Controller
         $data = $request->validate(['published_url' => 'nullable|url|max:255']);
         $post = self::find($id);
         $before = (string) $post->status;
-        ContentApproval::guardStatus('published', $before, $request->user(), ContentContext::profile());
+        ContentApproval::guardPublish($post, $request->user(), ContentContext::profile());
         $post->update(['status' => 'published', 'published_at' => now(), 'published_url' => $data['published_url'] ?? null]);
         ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
 

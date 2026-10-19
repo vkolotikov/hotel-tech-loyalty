@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bootstrap, PostStatus } from './types'
-import { approvalsOn, cardFlags, flagWords, staffLocked, statusChoices } from './approval'
+import { approvalsOn, canMarkPublished, cardFlags, flagWords, staffLocked, statusChoices, versionsOf } from './approval'
 
 const boot = (requires: boolean | undefined, manager: boolean) => ({
   profile: { id: 1, setup_completed: true, readiness: 80, requires_approval: requires },
@@ -40,6 +40,35 @@ describe('a card’s flags in words', () => {
     const t = (_key: string, fallback: string, vars?: Record<string, unknown>) => fallback.replace('{{count}}', String(vars?.count ?? ''))
     expect(flagWords({ waiting: true, sentBack: false, comments: 2 }, t)).toBe('Waiting for approval, Comments: 2')
     expect(flagWords({ waiting: false, sentBack: true, comments: 0 }, t)).toBe('Sent back')
+    expect(flagWords({ waiting: false, sentBack: false, comments: 0 }, t)).toBe('')
+  })
+})
+
+describe('Mark published for the poster (spec 2026-10-19 §4.4)', () => {
+  it('is offered on any post not yet published when approvals do not lock the person', () => {
+    expect(canMarkPublished({ status: 'draft' }, false, 7)).toBe(true)
+    expect(canMarkPublished({ status: 'published' }, false, 7)).toBe(false)
+  })
+
+  it('while locked, only to the post’s own poster on an approved or ready post', () => {
+    expect(canMarkPublished({ status: 'approved', poster_id: 7 }, true, 7)).toBe(true)
+    expect(canMarkPublished({ status: 'ready_to_publish', poster_id: 7 }, true, 7)).toBe(true)
+    expect(canMarkPublished({ status: 'draft', poster_id: 7 }, true, 7)).toBe(false)
+    expect(canMarkPublished({ status: 'needs_review', poster_id: 7 }, true, 7)).toBe(false)
+    expect(canMarkPublished({ status: 'approved', poster_id: 8 }, true, 7)).toBe(false)
+    expect(canMarkPublished({ status: 'approved', poster_id: null }, true, 7)).toBe(false)
+    expect(canMarkPublished({ status: 'approved', poster_id: 7 }, true, null)).toBe(false)
+  })
+})
+
+describe('the versions mark (spec 2026-10-19 §3.4)', () => {
+  const t = (_key: string, fallback: string, vars?: Record<string, unknown>) => fallback.replace(/\{\{(\w+)\}\}/g, (_, n) => String((vars ?? {})[n] ?? ''))
+
+  it('counts a post’s versions from 2, and names them last', () => {
+    expect(versionsOf({ group_size: 3 })).toBe(3)
+    expect(versionsOf({ group_size: 1 })).toBe(0)
+    expect(versionsOf({})).toBe(0)
+    expect(flagWords({ waiting: false, sentBack: true, comments: 2 }, t, 3)).toBe('Sent back, Comments: 2, Versions: 3')
     expect(flagWords({ waiting: false, sentBack: false, comments: 0 }, t)).toBe('')
   })
 })

@@ -46,7 +46,9 @@ export function repeatProblem({ from, every, until, aiRewrite, today }: {
 }
 
 /** The panel reads its post again every few seconds only while the AI rewords the post's series (spec §8). */
-export const pollsWhileRewording = (post: PostDetail | undefined): boolean => post?.series?.rewriting === true
+export const pollsWhileRewording = (post: PostDetail | undefined): boolean =>
+  // …and while the AI adapts a version of its group (spec 2026-10-19 §3.3).
+  post?.series?.rewriting === true || (post?.group?.adapting.length ?? 0) > 0
 
 /**
  * The end date Repeat offers: the date the person picked, or else four weeks after the post's day (today, if that day is

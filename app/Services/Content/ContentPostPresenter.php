@@ -34,7 +34,24 @@ final class ContentPostPresenter
             // Spec 2026-10-16 §6.3, §7.1 (read in the list's query by withReview(); asked here otherwise).
             'comments_count' => (int) ($post->comments_count ?? $post->comments()->count()),
             'sent_back'      => self::sentBack($post),
+            // Spec 2026-10-19 §3.4: the posts in its group of versions, from 2 (read in the list's query by withReview()).
+            'group_size'     => self::groupSize($post),
+            // Who posts it as stored (spec 2026-10-19 §4.1); the panel's `poster` says whether they are still on the team.
+            'poster_id'      => $post->poster_id === null ? null : (int) $post->poster_id,
         ];
+    }
+
+    /** How many posts share its group; 0 for none and for a group of one. */
+    private static function groupSize(ContentPlannerPost $post): int
+    {
+        if (!$post->group_id) {
+            return 0;
+        }
+        $size = array_key_exists('group_size', $post->getAttributes())
+            ? (int) $post->getAttribute('group_size')
+            : ContentPlannerPost::where('group_id', $post->group_id)->count();
+
+        return $size >= 2 ? $size : 0;
     }
 
     /** A draft whose latest approval step is a send-back, with no change to the post after it (spec 2026-10-16 §6.3). */
@@ -87,6 +104,10 @@ final class ContentPostPresenter
             // A repeated post and its copies (spec 2026-10-15 §8): how the series runs, for the panel's line.
             'series_id'         => $post->series_id ? (int) $post->series_id : null,
             'series'            => ContentRepeat::describe($post),
+            // Its versions for other platforms (spec 2026-10-19 §3.4), for the panel's Versions section.
+            'group'             => ContentVersions::describe($post),
+            // Who posts it: a member of the brand's team, or nobody (spec 2026-10-19 §4.1).
+            'poster'            => ContentTeam::poster($post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id),
             'hook_alternatives' => array_values((array) data_get($post->source_context, 'hook_alternatives', [])),
             'visual_brief'      => $brief ? [
                 'visual_type'  => $brief->visual_type,

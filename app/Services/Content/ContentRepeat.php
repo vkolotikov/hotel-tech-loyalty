@@ -21,10 +21,11 @@ final class ContentRepeat
     public const MAX_MONTHS = 12;
     public const MAX_AI_COPIES = 12;
 
-    /** What a copy takes from its original. */
+    /** What a copy takes from its original — who posts it too: the same post on another day (spec 2026-10-19 §4.1). */
     public const COPIED = [
         'platform', 'scheduled_time', 'main_copy', 'short_copy', 'hashtags', 'cta', 'pillar_id', 'audience_id', 'campaign_id',
         'strategy_id', 'language', 'topic', 'title', 'hook', 'goal', 'format', 'weekday_role', 'funnel_stage', 'post_type', 'strategic_reason',
+        'poster_id',
     ];
 
     /**

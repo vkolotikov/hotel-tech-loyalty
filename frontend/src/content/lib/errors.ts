@@ -8,6 +8,8 @@ export const ERRORS = {
   move: {
     changed_elsewhere: 'Someone else changed this post. The plan now shows their version.',
     published_cannot_move: 'A published post keeps the date it went out.',
+    // Ideas → Schedule sends who posts it (spec 2026-10-19 §4.1): someone off the team is refused.
+    invalid: 'Check the day and who posts it.',
     not_found: 'This post no longer exists.',
     unknown: 'The post could not be moved. Please try again.',
   },
@@ -145,6 +147,14 @@ export const ERRORS = {
   },
   inbox: {
     unknown: 'The list could not be loaded. Please try again.',
+  },
+  // Release 5a (spec 2026-10-19 §3). `invalid` is also the portal's own check (no platform picked).
+  version: {
+    version_exists: 'This post already has a version for that platform.',
+    ai_budget_used_up: "This month's AI budget is used up. Choose Copy as is.",
+    invalid: 'Choose at least one platform.',
+    not_found: 'This post no longer exists.',
+    unknown: 'The versions could not be made. Please try again.',
   },
 } as const
 

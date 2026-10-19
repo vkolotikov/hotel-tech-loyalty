@@ -119,3 +119,20 @@ export function inFlight(): { start: (id: number) => boolean; done: (id: number)
     done: (id) => { ids.delete(id) },
   }
 }
+
+/** The poster Schedule starts on (spec 2026-10-19 §4.1): the post's own when they are on the team, else nobody. */
+export function initialPoster(post: { poster_id?: number | null }, team: readonly { id: number }[]): string {
+  const id = post.poster_id ?? null
+  return id !== null && team.some(m => m.id === id) ? String(id) : ''
+}
+
+/** Schedule's request: the day, the time, and who posts it only when the person changed it. */
+export function scheduleBody(post: { updated_at: string }, form: { date: string; time: string }, poster: string, initial: string): {
+  updated_at: string
+  scheduled_date: string
+  scheduled_time: string | null
+  poster_id?: number | null
+} {
+  const body = { updated_at: post.updated_at, scheduled_date: form.date, scheduled_time: form.time === '' ? null : form.time }
+  return poster === initial ? body : { ...body, poster_id: poster === '' ? null : Number(poster) }
+}

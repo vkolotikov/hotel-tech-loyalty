@@ -1283,6 +1283,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('inbox', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'index']);
                 Route::get('inbox/count', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'count']);
                 Route::post('inbox/seen', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'seen']);
+                Route::get('team', [\App\Http\Controllers\Api\V1\Admin\Content\TeamController::class, 'index']);
+                Route::put('me/morning-email', [\App\Http\Controllers\Api\V1\Admin\Content\MorningEmailController::class, 'update']);
                 Route::post('key-dates', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'store']);
                 Route::put('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'update'])->whereNumber('id');
                 Route::delete('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'destroy'])->whereNumber('id');
@@ -1296,6 +1298,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('posts/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'duplicate'])->whereNumber('id');
                 Route::post('posts/{id}/repeat', [\App\Http\Controllers\Api\V1\Admin\Content\RepeatController::class, 'store'])->whereNumber('id');
                 Route::delete('posts/{id}/repeat', [\App\Http\Controllers\Api\V1\Admin\Content\RepeatController::class, 'destroy'])->whereNumber('id');
+                Route::post('posts/{id}/versions', [\App\Http\Controllers\Api\V1\Admin\Content\VersionController::class, 'store'])->whereNumber('id');
+                Route::delete('posts/{id}/group', [\App\Http\Controllers\Api\V1\Admin\Content\VersionController::class, 'destroy'])->whereNumber('id');
                 Route::post('posts/{id}/mark-ready', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markReady'])->whereNumber('id');
                 Route::post('posts/{id}/mark-published', [\App\Http\Controllers\Api\V1\Admin\Content\PostController::class, 'markPublished'])->whereNumber('id');
                 Route::post('posts/{id}/send-for-approval', [\App\Http\Controllers\Api\V1\Admin\Content\ApprovalController::class, 'send'])->whereNumber('id');

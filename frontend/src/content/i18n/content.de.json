@@ -68,7 +68,8 @@
       "changed_elsewhere": "Jemand anderes hat diesen Beitrag geändert. Der Plan zeigt jetzt diese Version.",
       "published_cannot_move": "Ein veröffentlichter Beitrag behält sein Veröffentlichungsdatum.",
       "not_found": "Diesen Beitrag gibt es nicht mehr.",
-      "unknown": "Der Beitrag konnte nicht verschoben werden. Bitte versuchen Sie es erneut."
+      "unknown": "Der Beitrag konnte nicht verschoben werden. Bitte versuchen Sie es erneut.",
+      "invalid": "Prüfen Sie den Tag und wer ihn veröffentlicht."
     }
   },
   "fill": {
@@ -132,7 +133,9 @@
       "language": "Sprache", "brand_language": "Sprache der Marke", "none": "Keine", "other_pillar": "Eine andere Säule", "other_audience": "Eine andere Zielgruppe",
       "topic": "Thema", "hook": "Aufhänger", "main_copy": "Text", "cta": "Handlungsaufruf", "hashtags": "Hashtags",
       "hashtags_hint": "Mit Leerzeichen oder Kommas trennen.", "published_date": "Ein veröffentlichter Beitrag behält sein Veröffentlichungsdatum.",
-      "time_suggested": "Vorgeschlagene Zeiten"
+      "time_suggested": "Vorgeschlagene Zeiten",
+      "poster": "Wer veröffentlicht",
+      "not_set": "Nicht festgelegt"
     },
     "ai": {
       "title": "KI",
@@ -383,9 +386,11 @@
   "approval": { "error": { "needs_approval": "Solange für diese Marke Freigaben aktiv sind, kann nur ein Manager Beiträge freigeben.", "approvals_off": "Freigaben sind für diese Marke ausgeschaltet. Laden Sie neu, um den Beitrag im aktuellen Stand zu sehen.", "wrong_status": "Dieser Beitrag hat sich geändert, seit Sie ihn geöffnet haben. Das Panel zeigt jetzt den aktuellen Stand.", "changed_elsewhere": "Jemand hat diesen Beitrag geändert, seit Sie ihn geöffnet haben. Lesen Sie ihn vor der Freigabe noch einmal.", "manager_only": "Nur Inhaber oder Manager können Beiträge freigeben oder zurückschicken.", "invalid": "Schreiben Sie, was sich ändern soll, in höchstens 2.000 Zeichen.", "not_found": "Diesen Beitrag gibt es nicht mehr.", "unknown": "Das hat nicht geklappt. Bitte versuchen Sie es erneut." } },
   "comment": { "error": { "invalid": "Schreiben Sie zuerst den Kommentar.", "too_long": "Ein Kommentar hat höchstens 2.000 Zeichen.", "not_yours": "Sie können nur Ihre eigenen Kommentare ändern.", "not_found": "Diesen Kommentar gibt es nicht mehr.", "unknown": "Der Kommentar konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." } },
   "inbox": { "error": { "unknown": "Die Liste konnte nicht geladen werden. Bitte versuchen Sie es erneut." } },
-  "review": { "staff_hint": "Solange Freigaben aktiv sind, gibt ein Manager frei, markiert als bereit und veröffentlicht.", "title": "Freigabe", "written_by": "Geschrieben von {{name}}", "send": "Zur Freigabe senden", "approve": "Freigeben", "send_back": "Zurückschicken", "note": "Was soll sich ändern? Wer den Beitrag geschrieben hat, sieht diesen Text.", "done_sent": "Zur Freigabe gesendet.", "done_approved": "Freigegeben.", "done_back": "An die Person zurückgeschickt, die ihn geschrieben hat." },
-  "flags": { "waiting": "Wartet auf Freigabe", "sent_back": "Zurückgeschickt", "comments": "Kommentare: {{count}}" },
+  "review": { "staff_hint": "Solange Freigaben aktiv sind, gibt ein Manager frei, markiert als bereit und veröffentlicht.", "title": "Freigabe", "written_by": "Geschrieben von {{name}}", "send": "Zur Freigabe senden", "approve": "Freigeben", "send_back": "Zurückschicken", "note": "Was soll sich ändern? Wer den Beitrag geschrieben hat, sieht diesen Text.", "done_sent": "Zur Freigabe gesendet.", "done_approved": "Freigegeben.", "done_back": "An die Person zurückgeschickt, die ihn geschrieben hat.", "poster_hint": "Diesen Beitrag veröffentlichen Sie: Markieren Sie ihn als veröffentlicht, sobald er online ist." },
+  "flags": { "waiting": "Wartet auf Freigabe", "sent_back": "Zurückgeschickt", "comments": "Kommentare: {{count}}", "versions": "Versionen: {{count}}" },
   "timeline": { "title": "Kommentare und Verlauf", "empty": "Noch keine Kommentare.", "box": "Kommentar schreiben", "hint": "Enter sendet · Umschalt + Enter fügt eine Zeile ein", "send": "Kommentieren", "edited": "bearbeitet", "edit": "Bearbeiten", "save": "Speichern", "delete": "Löschen", "delete_confirm": "Diesen Kommentar löschen?", "delete_yes": "Kommentar löschen", "event": { "sent_for_approval": "Zur Freigabe gesendet von {{name}}", "approved": "Freigegeben von {{name}}", "sent_back": "Zurückgeschickt von {{name}}", "changed_after_approval": "Nach der Freigabe geändert von {{name}} – braucht erneut eine Freigabe" } },
   "people": { "former": "Ehemaliges Teammitglied" },
-  "bell": { "label": "Für Sie", "label_count": "Für Sie ({{count}})", "empty": "Nichts Neues für Sie.", "new": "Neu", "kind": { "waiting": "Wartet auf Freigabe: {{post}}", "approved": "Freigegeben von {{name}}: {{post}}", "sent_back": "Zurückgeschickt von {{name}}: {{post}}", "comment": "Kommentar von {{name}}: {{post}}" } }
+  "bell": { "label": "Für Sie", "label_count": "Für Sie ({{count}})", "empty": "Nichts Neues für Sie.", "new": "Neu", "kind": { "waiting": "Wartet auf Freigabe: {{post}}", "approved": "Freigegeben von {{name}}: {{post}}", "sent_back": "Zurückgeschickt von {{name}}: {{post}}", "comment": "Kommentar von {{name}}: {{post}}", "to_post": "Heute veröffentlichen: {{post}}", "not_posted": "Nicht als veröffentlicht markiert: {{post}}" }, "at": "um {{time}}", "due": "Fällig: {{day}}", "morning": "Morgen-E-Mail: heutige Beiträge", "morning_hint": "Um 8 Uhr die Beiträge, die Sie heute veröffentlichen.", "morning_failed": "Die Einstellung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut." },
+  "version": { "error": { "version_exists": "Für diese Plattform gibt es schon eine Version dieses Beitrags.", "ai_budget_used_up": "Das KI-Budget dieses Monats ist aufgebraucht. Wählen Sie „Unverändert kopieren“.", "invalid": "Wählen Sie mindestens eine Plattform.", "not_found": "Diesen Beitrag gibt es nicht mehr.", "unknown": "Die Versionen konnten nicht erstellt werden. Bitte versuchen Sie es erneut." } },
+  "versions": { "title": "Versionen", "intro": "Derselbe Beitrag für andere Plattformen. Jede Version ist ein eigener Beitrag.", "make": "Versionen erstellen…", "platforms": "Für welche Plattformen", "how": "Wie", "ai": "Mit KI anpassen", "copy": "Unverändert kopieren", "ai_paused": "Das KI-Budget dieses Monats ist aufgebraucht: Die Versionen übernehmen den Text unverändert.", "submit": "Versionen erstellen", "none_left": "Dieser Beitrag hat für jede Plattform eine Version.", "this_one": "Dieser Beitrag", "no_day": "Ohne Tag", "unlink": "Diesen Beitrag lösen", "adapting": "Wird für {{platform}} angepasst…", "adapting_others": "Die KI passt die Versionen an…", "kept_budget": "Das KI-Budget ist aufgebraucht; diese Version behält den ursprünglichen Text.", "kept_failed": "Die KI konnte diese Version nicht anpassen; sie behält den ursprünglichen Text.", "made": "Erstellte Versionen: {{count}}" }
 }

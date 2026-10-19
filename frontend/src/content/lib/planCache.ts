@@ -18,8 +18,8 @@ export function placePost(plan: PlanPayload, card: PostCard, from: DateKey, to: 
 
 /** The card part of a post the panel holds (what the plan shows of it). */
 export function cardOf(post: PostDetail): PostCard {
-  const { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back } = post
-  return { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back }
+  const { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back, group_size, poster_id } = post
+  return { id, platform, scheduled_date, scheduled_time, status, title, hook, topic, pillar_id, image_url, updated_at, comments_count, sent_back, group_size, poster_id }
 }
 
 /** A post an answer brought without its timeline (a save, an AI answer) keeps the one already read (spec 2026-10-16 §7.1). */

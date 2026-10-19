@@ -51,3 +51,25 @@ describe('the "For you" bell (spec 2026-10-16 §8)', () => {
     expect(ai.sub).toBe('at 08:00')
   })
 })
+
+describe('release 5a: reminders in the bell (spec 2026-10-19 §4.3)', () => {
+  const tr = (_key: string, fallback: string, vars?: Record<string, unknown>) => fallback.replace(/\{\{(\w+)\}\}/g, (_, n) => String((vars ?? {})[n] ?? ''))
+  const reminder = (kind: 'to_post' | 'not_posted', post: Partial<NonNullable<InboxItem['post']>>): InboxItem => ({
+    id: `${kind}:1`, kind, by: null, note: null, at: '2026-10-05T00:00:00.000000Z', unread: true,
+    post: { id: 1, platform: 'instagram', title: null, hook: 'Autumn offer', topic: null, scheduled_date: '2026-10-05', ...post },
+  })
+
+  // Review Focus 4
+  it('says what is to post today with its time, and its status only when it is not ready; a missed one says when it was due', () => {
+    const [timed, untimed, missed, waitingMissed] = bellItems([
+      reminder('to_post', { scheduled_time: '18:00', status: 'approved' }),
+      reminder('to_post', { scheduled_time: null, status: 'draft' }),
+      reminder('not_posted', { scheduled_time: '09:00', status: 'ready_to_publish' }),
+      reminder('not_posted', { scheduled_time: null, status: 'needs_review' }),
+    ], tr, () => 'when', (day) => `day ${day}`)
+    expect(timed).toMatchObject({ label: 'To post today: Autumn offer', sub: 'at 18:00', mark: true })
+    expect(untimed.sub).toBe('draft')
+    expect(missed).toMatchObject({ label: 'Not marked as posted: Autumn offer', sub: 'Due day 2026-10-05' })
+    expect(waitingMissed.sub).toBe('Due day 2026-10-05 · needs_review')
+  })
+})

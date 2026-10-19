@@ -24,3 +24,20 @@ describe('the shared menu (spec 2026-10-16 §3.5, §8)', () => {
     expect(html).toContain('<span class="block truncate text-sm font-medium text-a-text">Anna approved: Spring</span>')
   })
 })
+
+describe('PopList footer (spec 2026-10-19 §4.5: the bell’s morning email switch)', () => {
+  it('draws a footer under the lines, also when the list is empty', () => {
+    const html = renderToStaticMarkup(<PopList id="l" items={[]} onPick={() => {}} className="c" emptyText="Nothing new" footer={<span>Footer here</span>} />)
+    expect(html).toMatch(/Nothing new.*data-menu-footer=""[^>]*><span>Footer here<\/span>/)
+    expect(renderToStaticMarkup(<PopList id="l" items={[{ id: 'a', label: 'A' }]} onPick={() => {}} className="c" />)).not.toContain('data-menu-footer')
+  })
+})
+
+// Final review: with a manager's long list of reminders (day one: every post nobody posts), the footer — the only place
+// to switch the morning email on — sat below the list's scroll.
+describe('PopList footer stays in view (final review)', () => {
+  it('sticks to the bottom of the scrolling list, on the list’s own background', () => {
+    const html = renderToStaticMarkup(<PopList id="l" items={[{ id: 'a', label: 'A' }]} onPick={() => {}} className="c" footer={<span>F</span>} />)
+    expect(html).toMatch(/<li data-menu-footer="" class="[^"]*\bsticky\b[^"]*\bbottom-0\b[^"]*\bbg-a-surface\b/)
+  })
+})

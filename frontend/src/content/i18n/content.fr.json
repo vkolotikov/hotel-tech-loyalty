@@ -68,7 +68,8 @@
       "changed_elsewhere": "Quelqu'un d'autre a modifié cette publication. Le planning affiche maintenant sa version.",
       "published_cannot_move": "Une publication publiée garde sa date de parution.",
       "not_found": "Cette publication n'existe plus.",
-      "unknown": "La publication n'a pas pu être déplacée. Veuillez réessayer."
+      "unknown": "La publication n'a pas pu être déplacée. Veuillez réessayer.",
+      "invalid": "Vérifiez le jour et qui la publie."
     }
   },
   "fill": {
@@ -132,7 +133,9 @@
       "language": "Langue", "brand_language": "La langue de la marque", "none": "Aucun", "other_pillar": "Un autre pilier", "other_audience": "Une autre audience",
       "topic": "Sujet", "hook": "Accroche", "main_copy": "Texte", "cta": "Appel à l'action", "hashtags": "Hashtags",
       "hashtags_hint": "Séparez-les par des espaces ou des virgules.", "published_date": "Une publication publiée garde sa date de parution.",
-      "time_suggested": "Heures suggérées"
+      "time_suggested": "Heures suggérées",
+      "poster": "Qui la publie",
+      "not_set": "Non défini"
     },
     "ai": {
       "title": "IA",
@@ -383,9 +386,11 @@
   "approval": { "error": { "needs_approval": "Tant que la validation est activée pour cette marque, seul un responsable peut approuver les publications.", "approvals_off": "La validation est désactivée pour cette marque. Rechargez pour voir la publication telle qu’elle est.", "wrong_status": "Cette publication a changé depuis que vous l’avez ouverte. Le panneau la montre maintenant telle qu’elle est.", "changed_elsewhere": "Quelqu’un a modifié cette publication depuis que vous l’avez ouverte. Relisez-la avant de l’approuver.", "manager_only": "Seul un propriétaire ou un responsable peut approuver ou renvoyer des publications.", "invalid": "Indiquez ce qui doit changer, en 2 000 caractères au plus.", "not_found": "Cette publication n'existe plus.", "unknown": "Cela n'a pas fonctionné. Veuillez réessayer." } },
   "comment": { "error": { "invalid": "Écrivez d’abord le commentaire.", "too_long": "Un commentaire compte au plus 2 000 caractères.", "not_yours": "Vous ne pouvez modifier que vos propres commentaires.", "not_found": "Ce commentaire n’existe plus.", "unknown": "Le commentaire n’a pas pu être enregistré. Veuillez réessayer." } },
   "inbox": { "error": { "unknown": "La liste n’a pas pu être chargée. Veuillez réessayer." } },
-  "review": { "staff_hint": "Tant que la validation est active, un responsable approuve, marque prêt et publie.", "title": "Validation", "written_by": "Rédigée par {{name}}", "send": "Soumettre à validation", "approve": "Approuver", "send_back": "Renvoyer", "note": "Que faut-il changer ? L’auteur verra ce texte.", "done_sent": "Soumise à validation.", "done_approved": "Approuvée.", "done_back": "Renvoyée à l’auteur." },
-  "flags": { "waiting": "En attente d’approbation", "sent_back": "Renvoyée", "comments": "Commentaires : {{count}}" },
+  "review": { "staff_hint": "Tant que la validation est active, un responsable approuve, marque prêt et publie.", "title": "Validation", "written_by": "Rédigée par {{name}}", "send": "Soumettre à validation", "approve": "Approuver", "send_back": "Renvoyer", "note": "Que faut-il changer ? L’auteur verra ce texte.", "done_sent": "Soumise à validation.", "done_approved": "Approuvée.", "done_back": "Renvoyée à l’auteur.", "poster_hint": "C’est vous qui la publiez : marquez-la comme publiée une fois en ligne." },
+  "flags": { "waiting": "En attente d’approbation", "sent_back": "Renvoyée", "comments": "Commentaires : {{count}}", "versions": "Versions : {{count}}" },
   "timeline": { "title": "Commentaires et historique", "empty": "Aucun commentaire pour l’instant.", "box": "Écrire un commentaire", "hint": "Entrée envoie · Maj + Entrée ajoute une ligne", "send": "Commenter", "edited": "modifié", "edit": "Modifier", "save": "Enregistrer", "delete": "Supprimer", "delete_confirm": "Supprimer ce commentaire ?", "delete_yes": "Supprimer le commentaire", "event": { "sent_for_approval": "{{name}} l’a soumise à validation", "approved": "{{name}} l’a approuvée", "sent_back": "{{name}} l’a renvoyée", "changed_after_approval": "{{name}} l’a modifiée après approbation : elle doit être approuvée à nouveau" } },
   "people": { "former": "Ancien membre de l’équipe" },
-  "bell": { "label": "Pour vous", "label_count": "Pour vous ({{count}})", "empty": "Rien de nouveau pour vous.", "new": "Nouveau", "kind": { "waiting": "En attente d’approbation : {{post}}", "approved": "{{name}} a approuvé : {{post}}", "sent_back": "{{name}} a renvoyé : {{post}}", "comment": "{{name}} a commenté : {{post}}" } }
+  "bell": { "label": "Pour vous", "label_count": "Pour vous ({{count}})", "empty": "Rien de nouveau pour vous.", "new": "Nouveau", "kind": { "waiting": "En attente d’approbation : {{post}}", "approved": "{{name}} a approuvé : {{post}}", "sent_back": "{{name}} a renvoyé : {{post}}", "comment": "{{name}} a commenté : {{post}}", "to_post": "À publier aujourd’hui : {{post}}", "not_posted": "Pas marquée comme publiée : {{post}}" }, "at": "à {{time}}", "due": "Prévue le {{day}}", "morning": "E-mail du matin : publications du jour", "morning_hint": "À 8 h, les publications que vous publiez aujourd’hui.", "morning_failed": "Le réglage n’a pas pu être enregistré. Veuillez réessayer." },
+  "version": { "error": { "version_exists": "Cette publication a déjà une version pour cette plateforme.", "ai_budget_used_up": "Le budget IA du mois est épuisé. Choisissez « Copier tel quel ».", "invalid": "Choisissez au moins une plateforme.", "not_found": "Cette publication n'existe plus.", "unknown": "Les versions n'ont pas pu être créées. Veuillez réessayer." } },
+  "versions": { "title": "Versions", "intro": "La même publication pour d’autres plateformes. Chaque version est une publication à part entière.", "make": "Créer des versions…", "platforms": "Pour quelles plateformes", "how": "Comment", "ai": "Adapter avec l’IA", "copy": "Copier tel quel", "ai_paused": "Le budget IA du mois est épuisé : les versions reprennent le texte tel quel.", "submit": "Créer les versions", "none_left": "Cette publication a une version pour chaque plateforme.", "this_one": "Cette publication", "no_day": "Sans jour", "unlink": "Détacher cette publication", "adapting": "Adaptation pour {{platform}}…", "adapting_others": "L’IA adapte les versions…", "kept_budget": "Le budget IA est épuisé ; cette version garde le texte d’origine.", "kept_failed": "L’IA n’a pas pu adapter cette version ; elle garde le texte d’origine.", "made": "Versions créées : {{count}}" }
 }

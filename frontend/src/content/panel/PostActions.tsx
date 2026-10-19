@@ -6,7 +6,7 @@ import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useApi, useBoot } from '../ContentProvider'
 import { failureOf } from '../lib/api'
-import { staffLocked } from '../lib/approval'
+import { canMarkPublished, staffLocked } from '../lib/approval'
 import { errorKey } from '../lib/errors'
 import { TemplateEditor } from '../brand/sections/Templates'
 import { templateFromPost } from '../brand/templateActions'
@@ -37,6 +37,8 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
   const api = useApi()
   const boot = useBoot()
   const locked = staffLocked(boot)
+  // Spec 2026-10-19 §4.4: the post's own poster may mark an approved or ready post published, approvals on or off.
+  const publishable = canMarkPublished(post, locked, boot.staff.id ?? null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [publishing, setPublishing] = useState(false)
@@ -88,7 +90,13 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
         </p>
       )}
       {dirty && <p className="text-xs text-a-text-2">{t('content.panel.ai.save_first', 'Save your changes first.')}</p>}
-      {locked && <p className="text-xs text-a-text-2">{t('content.review.staff_hint', 'While approvals are on, a manager approves, marks ready and publishes.')}</p>}
+      {locked && (
+        <p className="text-xs text-a-text-2">
+          {publishable
+            ? t('content.review.poster_hint', 'You post this one: mark it published once it is out.')
+            : t('content.review.staff_hint', 'While approvals are on, a manager approves, marks ready and publishes.')}
+        </p>
+      )}
       <div className="flex flex-wrap gap-2">
         {!locked && post.status !== 'ready_to_publish' && post.status !== 'published' && (
           <Button size="sm" variant="secondary" disabled={waits} loading={busy === 'ready'}
@@ -96,7 +104,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
             <CheckCircle2 size={14} aria-hidden />{t('content.panel.actions.ready', 'Mark ready')}
           </Button>
         )}
-        {!locked && post.status !== 'published' && (
+        {publishable && (
           <Button size="sm" variant="secondary" disabled={waits} aria-expanded={publishing} onClick={() => setPublishing(p => !p)}>
             <Send size={14} aria-hidden />{t('content.panel.actions.published', 'Mark published')}
           </Button>
@@ -123,7 +131,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
           <Trash2 size={14} aria-hidden />{t('content.panel.actions.delete', 'Delete')}
         </Button>
       </div>
-      {!locked && publishing && post.status !== 'published' && (
+      {publishable && publishing && (
         <div className="space-y-2 rounded-lg border border-a-border bg-a-surface-2 p-3">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-a-text-2">{t('content.panel.actions.published_url', 'Link to the published post (optional)')}</span>

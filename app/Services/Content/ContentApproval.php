@@ -40,6 +40,19 @@ final class ContentApproval
     }
 
     /**
+     * Mark published (spec 2026-10-19 §4.4): the post's own poster may mark it published once it is approved or ready —
+     * the person who posts it says it is out. Every other case is guardStatus's.
+     */
+    public static function guardPublish(ContentPlannerPost $post, User $user, ?ContentPlannerProfile $profile): void
+    {
+        if ($post->poster_id !== null && (int) $post->poster_id === (int) $user->id
+            && in_array($post->status, ['approved', 'ready_to_publish'], true)) {
+            return;
+        }
+        self::guardStatus('published', (string) $post->status, $user, $profile);
+    }
+
+    /**
      * After a save's fields are filled, before it is written: a staff change to the words of an approved or ready post
      * sends it back to review. Returns the step to record once the post is saved, or null.
      */

@@ -22,9 +22,10 @@ import { PostFormFields } from './PostFormFields'
 import { postQuery } from './panelQuery'
 import { pollsWhileRewording } from './repeatMath'
 import { RepeatSection } from './RepeatSection'
+import { VersionsSection } from './VersionsSection'
 import { ReviewBar } from './ReviewBar'
 import { Timeline } from './Timeline'
-import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, rebase, withChannels, type Editing, type PostForm } from './panelState'
+import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, withChannels, type Editing, type PostForm } from './panelState'
 
 /** The post panel (spec §4.3): over the right edge of every page, one post at a time (PanelProvider). */
 export function PostPanel() {
@@ -67,6 +68,8 @@ function PanelBody({ target }: { target: PanelTarget }) {
   })
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
   const activeChannels = useMemo(() => (brandInfo.data?.channels ?? []).filter(c => c.active), [brandInfo.data])
+  // "Who posts it" (spec 2026-10-19 §4.1): the brand's team, read once in a while.
+  const team = useQuery({ queryKey: ['content', brand, 'team'], queryFn: api.team, staleTime: 300_000 })
   const channels = useMemo(() => activeChannels.map(c => c.platform), [activeChannels])
 
   // Edits kept when the portal last went away (kept.ts) come back with their post; they are this panel's now.
@@ -211,7 +214,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
         {editing && (
           <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={statusChoices(boot.statuses, staffLocked(boot), editing.base.status)}
             pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []}
-            templates={brandInfo.data?.templates ?? []} />
+            templates={brandInfo.data?.templates ?? []} team={posterChoices(team.data?.team ?? [], post?.poster)} />
         )}
         {editing && !post && <p className="text-xs text-a-text-2">{t('content.panel.ai.create_first', 'Create the post first to use AI.')}</p>}
         {post && (
@@ -219,6 +222,9 @@ function PanelBody({ target }: { target: PanelTarget }) {
             <AiTools post={post} dirty={dirty} onPost={adopt}
               outside={panel.writing[post.id] ?? null} onOutsideSeen={() => panel.noteWriting(post.id, null)}
               onUseCopy={(copy) => setEditing(e => (e ? { ...e, draft: { ...e.draft, main_copy: copy } } : e))} />
+            {/* The group as last read: the AI's adapting ends without this post changing (spec 2026-10-19 §3.3). */}
+            <VersionsSection post={post} dirty={dirty} onPost={adopt}
+              group={(detail.data && detail.data.id === post.id ? detail.data.group : post.group) ?? null} />
             {/* The series as last read: its rewording ends without the post itself changing, so the panel's copy would keep "rewording". */}
             <RepeatSection post={post} dirty={dirty} onPost={adopt}
               series={(detail.data && detail.data.id === post.id ? detail.data.series : post.series) ?? null}
