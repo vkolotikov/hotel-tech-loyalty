@@ -156,6 +156,22 @@ export const ERRORS = {
     not_found: 'This post no longer exists.',
     unknown: 'The versions could not be made. Please try again.',
   },
+  // Release 5b (spec 2026-10-19 §5.1, §6.4). The bio page's `invalid` and `bad_link` are also the portal's own checks,
+  // made before anything is sent.
+  link: {
+    bad_link: 'The link must be a web address that starts with http:// or https://.',
+    unknown: 'The link could not be saved. Please try again.',
+  },
+  bio: {
+    bio_name_invalid: 'Use 3 to 63 lowercase letters, digits and single hyphens, and not a word HexaTech keeps for itself.',
+    bio_name_taken: 'Another page already has this name. Choose another one.',
+    too_many_buttons: 'A page has at most 8 buttons.',
+    bad_link: 'Each button needs a web address that starts with http:// or https://.',
+    invalid: 'Some fields need attention.',
+    manager_only: 'Only an owner or a manager can change the link-in-bio page.',
+    no_profile: 'This brand is not set up yet.',
+    unknown: 'The page could not be saved. Please try again.',
+  },
 } as const
 
 export type ErrorFamily = keyof typeof ERRORS

@@ -25,7 +25,7 @@ import { RepeatSection } from './RepeatSection'
 import { VersionsSection } from './VersionsSection'
 import { ReviewBar } from './ReviewBar'
 import { Timeline } from './Timeline'
-import { changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, withChannels, type Editing, type PostForm } from './panelState'
+import { changes, createBody, formOf, isDirty, newForm, newer, posterChoices, rebase, refusalOf, withChannels, type Editing, type PostForm } from './panelState'
 
 /** The post panel (spec §4.3): over the right edge of every page, one post at a time (PanelProvider). */
 export function PostPanel() {
@@ -171,8 +171,10 @@ function PanelBody({ target }: { target: PanelTarget }) {
       if (failure.code === 'changed_elsewhere' && failure.post) {
         setConflict(failure.post)
       } else {
-        setInvalid(invalidFields(failure.fields))
-        const [key, text] = errorKey('save', failure.code)
+        // A refused Link (spec 2026-10-19 §5.1) is the Link's own: its field marked, its own words.
+        const refused = refusalOf(failure.code, failure.fields)
+        setInvalid(refused.invalid)
+        const [key, text] = errorKey(refused.family, failure.code)
         setNote({ tone: 'danger', text: t(key, text) })
       }
     } finally {
@@ -214,7 +216,7 @@ function PanelBody({ target }: { target: PanelTarget }) {
         {editing && (
           <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={statusChoices(boot.statuses, staffLocked(boot), editing.base.status)}
             pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []}
-            templates={brandInfo.data?.templates ?? []} team={posterChoices(team.data?.team ?? [], post?.poster)} />
+            templates={brandInfo.data?.templates ?? []} team={posterChoices(team.data?.team ?? [], post?.poster)} link={post?.link ?? null} />
         )}
         {editing && !post && <p className="text-xs text-a-text-2">{t('content.panel.ai.create_first', 'Create the post first to use AI.')}</p>}
         {post && (

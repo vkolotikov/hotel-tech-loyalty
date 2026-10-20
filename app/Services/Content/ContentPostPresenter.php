@@ -5,6 +5,7 @@ namespace App\Services\Content;
 use App\Models\ContentPlannerPost;
 use App\Models\User;
 use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\DB;
 
 /** The shapes HexaTech Content sends for a post (spec 2026-10-14 §4). */
 final class ContentPostPresenter
@@ -38,7 +39,22 @@ final class ContentPostPresenter
             'group_size'     => self::groupSize($post),
             // Who posts it as stored (spec 2026-10-19 §4.1); the panel's `poster` says whether they are still on the team.
             'poster_id'      => $post->poster_id === null ? null : (int) $post->poster_id,
+            // Its short link's clicks in all (spec 2026-10-19 §5.5; read in the list's query by withReview()).
+            'clicks'         => self::clicks($post),
         ];
+    }
+
+    /** Its short link's clicks in all; 0 for a post without a Link. */
+    private static function clicks(ContentPlannerPost $post): int
+    {
+        if (array_key_exists('link_clicks', $post->getAttributes())) {
+            return (int) $post->getAttribute('link_clicks');
+        }
+
+        return (int) DB::table('content_link_clicks')
+            ->join('content_links', 'content_links.id', '=', 'content_link_clicks.link_id')
+            ->where('content_links.post_id', $post->id)
+            ->sum('content_link_clicks.clicks');
     }
 
     /** How many posts share its group; 0 for none and for a group of one. */
@@ -108,6 +124,8 @@ final class ContentPostPresenter
             'group'             => ContentVersions::describe($post),
             // Who posts it: a member of the brand's team, or nobody (spec 2026-10-19 §4.1).
             'poster'            => ContentTeam::poster($post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id),
+            // Its tracked short link (spec 2026-10-19 §5.5), or null for a post that never had a Link.
+            'link'              => ContentLinks::describe($post),
             'hook_alternatives' => array_values((array) data_get($post->source_context, 'hook_alternatives', [])),
             'visual_brief'      => $brief ? [
                 'visual_type'  => $brief->visual_type,

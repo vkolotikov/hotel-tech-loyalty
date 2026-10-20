@@ -1,7 +1,7 @@
 import type { KeyboardEvent, PointerEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useContent } from '../ContentProvider'
-import { approvalsOn, cardFlags, flagWords, versionsOf } from '../lib/approval'
+import { approvalsOn, cardFlags, clicksOf, flagWords, versionsOf } from '../lib/approval'
 import { cardLine } from '../lib/postText'
 import type { PostCard } from '../lib/types'
 import { CardFlags } from '../ui/CardFlags'
@@ -37,7 +37,7 @@ export function PostCardView({ post, compact = false, selected = false, onOpen, 
     ? t('content.plan.card_label_time', '{{platform}} {{time}}: {{text}}, {{status}}', words)
     : t('content.plan.card_label', '{{platform}}: {{text}}, {{status}}', words)
   // Spec 2026-10-16 §6.3, §7.1: the card's flags end its name (the compact card draws them without words).
-  const flags = flagWords(cardFlags(post, approvalsOn(data)), (key, fallback, vars) => t(key, fallback, vars), versionsOf(post))
+  const flags = flagWords(cardFlags(post, approvalsOn(data)), (key, fallback, vars) => t(key, fallback, vars), versionsOf(post), clicksOf(post))
   return (
     <button type="button" data-post={post.id} data-platform={post.platform} data-movable={movable ? 'true' : 'false'} data-stop=""
       aria-label={flags ? `${label}, ${flags}` : label} aria-describedby={movable && post.scheduled_date !== null ? MOVE_HINT_ID : undefined} aria-current={selected ? 'true' : undefined}

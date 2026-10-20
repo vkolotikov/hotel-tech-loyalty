@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import en from '../i18n/content.en.json'
 import type { PostDetail } from '../lib/types'
-import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, withChannels } from './panelState'
+import { BRIEF_TEXT, REWRITE_TEXT, changes, createBody, formOf, invalidFields, isDirty, newForm, newer, posterChoices, rebase, refusalOf, withChannels } from './panelState'
 
 describe('fallback words', () => {
   it('name the rewrites and the brief\'s fields in the English bundle\'s words', () => {
@@ -22,7 +22,7 @@ describe('formOf and newForm', () => {
   it('turns a post into the inputs\' text, with "" for none', () => {
     expect(formOf(detail)).toEqual({
       platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: '09:00', status: 'draft', pillar_id: '2', audience_id: '',
-      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair', poster_id: '',
+      language: 'en', topic: 'Autumn', hook: 'Three colours', main_copy: 'Warm tones.\nBook now.', cta: '', hashtags: '#autumn hair', poster_id: '', link: '',
     })
   })
 
@@ -162,5 +162,34 @@ describe('who posts it (spec 2026-10-19 §4.1)', () => {
     expect(posterChoices([], { id: 7, name: 'Sam' })).toEqual([{ id: 7, name: 'Sam' }])
     expect(posterChoices([{ id: 7, name: 'Sam', role: 'staff' }], { id: 7, name: 'Sam' })).toEqual([{ id: 7, name: 'Sam' }])
     expect(posterChoices([{ id: 3, name: 'Mia', role: 'manager' }], null)).toEqual([{ id: 3, name: 'Mia' }])
+  })
+})
+
+describe('the Link (spec 2026-10-19 §5.1)', () => {
+  const facts = { code: 'abc2345', short_url: 'https://sites.hexa-tech.uk/go/abc2345', destination: 'https://lumiere.example/autumn', on: true, clicks: 0, clicks_bio: 0, days: [] }
+  const withLink: PostDetail = { ...detail, link: facts }
+
+  it('holds the short link’s address, and none for a post without one or with its short link off', () => {
+    expect(formOf(withLink).link).toBe('https://lumiere.example/autumn')
+    expect(formOf(detail).link).toBe('')
+    expect(formOf({ ...withLink, link: { ...facts, on: false, destination: null } }).link).toBe('')
+    expect(newForm({ date: '2026-10-09', platform: 'instagram' }, ['instagram']).link).toBe('')
+  })
+
+  it('sends a new address trimmed, null when emptied, nothing when unchanged; a new post sends one only when typed', () => {
+    const base = formOf(withLink)
+    expect(changes(base, { ...base, link: ' https://lumiere.example/winter ' })).toEqual({ link: 'https://lumiere.example/winter' })
+    expect(changes(base, { ...base, link: '' })).toEqual({ link: null })
+    expect(changes(base, base)).toEqual({})
+    const fresh = newForm({ date: '2026-10-09', platform: 'instagram' }, ['instagram'])
+    expect(createBody(fresh)).not.toHaveProperty('link')
+    expect(createBody({ ...fresh, link: 'https://lumiere.example' })).toMatchObject({ link: 'https://lumiere.example' })
+  })
+
+  // Review Focus 3: a save refused for its Link says so in the Link's own words, on the Link.
+  it('marks the Link and names its family when a save is refused for it; any other refusal as before', () => {
+    expect(refusalOf('bad_link', undefined)).toEqual({ invalid: ['link'], family: 'link' })
+    expect(refusalOf('invalid', { hook: ['too long'] })).toEqual({ invalid: ['hook'], family: 'save' })
+    expect(refusalOf('unknown', undefined)).toEqual({ invalid: [], family: 'save' })
   })
 })

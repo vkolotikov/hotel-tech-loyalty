@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
-import { Hourglass, Layers, MessageSquare, Undo2 } from 'lucide-react'
+import { Hourglass, Layers, MessageSquare, MousePointerClick, Undo2 } from 'lucide-react'
 import { useContent } from '../ContentProvider'
-import { approvalsOn, cardFlags, versionsOf } from '../lib/approval'
+import { approvalsOn, cardFlags, clicksOf, versionsOf } from '../lib/approval'
 import type { PostCard } from '../lib/types'
 
 const CHIP = 'inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-medium'
@@ -17,11 +17,14 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
   const flags = cardFlags(post, approvalsOn(data))
   // Spec 2026-10-19 §3.4: a post that is one of several versions says so.
   const versions = versionsOf(post)
-  if (!flags.waiting && !flags.sentBack && flags.comments === 0 && versions === 0) return null
+  // Spec 2026-10-19 §5.5: its short link's clicks, from 1.
+  const clicks = clicksOf(post)
+  if (!flags.waiting && !flags.sentBack && flags.comments === 0 && versions === 0 && clicks === 0) return null
   const waiting = t('content.flags.waiting', 'Waiting for approval')
   const back = t('content.flags.sent_back', 'Sent back')
   const comments = t('content.flags.comments', 'Comments: {{count}}', { count: flags.comments })
   const versionWords = t('content.flags.versions', 'Versions: {{count}}', { count: versions })
+  const clickWords = t('content.flags.clicks', 'Clicks: {{count}}', { count: clicks })
   if (compact) {
     return (
       <span data-flags="" className="flex shrink-0 items-center gap-1 text-a-text-2">
@@ -35,6 +38,11 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
         {versions > 0 && (
           <span title={versionWords} className="inline-flex items-center gap-0.5 text-xs tabular-nums">
             <Layers size={12} aria-hidden /><span aria-hidden>{versions}</span><span className="sr-only">{versionWords}</span>
+          </span>
+        )}
+        {clicks > 0 && (
+          <span title={clickWords} className="inline-flex items-center gap-0.5 text-xs tabular-nums">
+            <MousePointerClick size={12} aria-hidden /><span aria-hidden>{clicks}</span><span className="sr-only">{clickWords}</span>
           </span>
         )}
       </span>
@@ -52,6 +60,11 @@ export function CardFlags({ post, compact = false }: { post: PostCard; compact?:
       {versions > 0 && (
         <span title={versionWords} className={`${CHIP} bg-a-surface-2 text-a-text-2 tabular-nums`}>
           <Layers size={12} aria-hidden /><span aria-hidden>{versions}</span><span className="sr-only">{versionWords}</span>
+        </span>
+      )}
+      {clicks > 0 && (
+        <span title={clickWords} className={`${CHIP} bg-a-surface-2 text-a-text-2 tabular-nums`}>
+          <MousePointerClick size={12} aria-hidden /><span aria-hidden>{clicks}</span><span className="sr-only">{clickWords}</span>
         </span>
       )}
     </span>

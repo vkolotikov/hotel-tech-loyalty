@@ -72,3 +72,13 @@ describe('release 5a: the versions mark (spec 2026-10-19 §3.4)', () => {
     expect(render(false, <PostCardView post={card({ status: 'draft', group_size: 2 })} onOpen={() => {}} />)).toMatch(/aria-label="[^"]*Versions: 2"/)
   })
 })
+
+describe('clicks on cards (spec 2026-10-19 §5.5)', () => {
+  it('count a post’s short-link clicks from 1 without reading the number twice, and end a Plan card’s name with them', () => {
+    expect(render(false, <CardFlags post={card({ status: 'draft', clicks: 0 })} />)).toBe('')
+    expect(render(false, <CardFlags post={card({ status: 'draft', clicks: 12 })} />)).toContain('<span aria-hidden="true">12</span><span class="sr-only">Clicks: 12</span>')
+    expect(render(false, <CardFlags post={card({ status: 'draft', clicks: 1 })} compact />)).toContain('title="Clicks: 1"')
+    expect(render(false, <PostCardView post={card({ status: 'draft', clicks: 3, group_size: 2 })} onOpen={() => {}} />))
+      .toContain('aria-label="instagram 09:00: Three colours, draft, Versions: 2, Clicks: 3"')
+  })
+})

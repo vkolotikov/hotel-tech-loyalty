@@ -33,3 +33,25 @@ describe('"Who posts it" in the panel (spec 2026-10-19 §4.1)', () => {
     expect(render('')).toMatch(/<option value="" selected="">Not set<\/option>/)
   })
 })
+
+describe('the Link next to the call to action (spec 2026-10-19 §5.1, §5.5)', () => {
+  const linked = (link: string, facts: import('../lib/types').ShortLinkFacts | null = null) => renderToStaticMarkup(
+    <PostFormFields form={{ ...newForm({ date: '2026-10-07', platform: 'instagram' }, ['instagram']), link }} onChange={() => {}}
+      platforms={['instagram']} statuses={['draft']} pillars={[]} audiences={[]} published={false} invalid={[]} locale="en" industry={null}
+      snippets={[]} link={facts} />,
+  )
+
+  it('is a web address field after the call to action and before the hashtags, saying the short link comes with the save', () => {
+    const html = linked('https://lumiere.example')
+    expect(html).toMatch(/Call to action[\s\S]*>Link<[\s\S]*type="url"[^>]*value="https:\/\/lumiere.example"[\s\S]*Hashtags/)
+    expect(html).toContain('Where readers should go. HexaTech makes a short link that counts clicks.')
+    expect(html).toContain('The short link appears once the post is saved.')
+  })
+
+  it('shows the saved post’s short link and its clicks under it', () => {
+    const facts = { code: 'abc2345', short_url: 'https://sites.hexa-tech.uk/go/abc2345', destination: 'https://lumiere.example/autumn', on: true, clicks: 2, clicks_bio: 0, days: [] }
+    const html = linked('https://lumiere.example/autumn', facts)
+    expect(html).toContain('https://sites.hexa-tech.uk/go/abc2345')
+    expect(html).toContain('Clicks: 2')
+  })
+})

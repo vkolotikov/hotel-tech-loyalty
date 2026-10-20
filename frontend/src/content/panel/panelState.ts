@@ -29,6 +29,8 @@ export interface PostForm {
   hashtags: string
   /** Who posts it (spec 2026-10-19 §4.1): a team member's id, '' for nobody. */
   poster_id: string
+  /** The Link (spec 2026-10-19 §5.1): the address its short link leads to, '' for none (or a short link switched off). */
+  link: string
 }
 
 const text = (value: string | null | undefined): string => value ?? ''
@@ -49,6 +51,7 @@ export function formOf(post: PostDetail): PostForm {
     hashtags: post.hashtags.join(' '),
     // The effective poster: someone who left reads as nobody, and nothing is sent for them unless changed.
     poster_id: post.poster ? String(post.poster.id) : '',
+    link: text(post.link?.destination),
   }
 }
 
@@ -72,6 +75,7 @@ export function newForm(draft: NewDraft, platforms: readonly Platform[], channel
     cta: '',
     hashtags: '',
     poster_id: '',
+    link: '',
     // The words it starts with (a key date's name, a template's fields) over the empty ones.
     ...draft.fields,
   }
@@ -95,6 +99,7 @@ function valuesOf(form: PostForm) {
     cta: orNull(form.cta),
     hashtags: parseHashtags(form.hashtags),
     poster_id: id(form.poster_id),
+    link: orNull(form.link),
   }
 }
 type Values = ReturnType<typeof valuesOf>
@@ -166,7 +171,7 @@ export function createBody(draft: PostForm): PostFields & { platform: Platform }
   return { ...(out as PostFields), platform: draft.platform }
 }
 
-const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags', 'poster_id']
+const FIELDS: readonly (keyof PostForm)[] = ['platform', 'scheduled_date', 'scheduled_time', 'status', 'pillar_id', 'audience_id', 'language', 'topic', 'hook', 'main_copy', 'cta', 'hashtags', 'poster_id', 'link']
 
 /** "Who posts it"'s choices: the team, with the post's own poster kept while the team list loads (spec 2026-10-19 §4.1). */
 export function posterChoices(team: readonly TeamMember[], poster: Person | null | undefined): Person[] {
@@ -178,4 +183,9 @@ export function posterChoices(team: readonly TeamMember[], poster: Person | null
 export function invalidFields(fields: Record<string, string[]> | undefined): (keyof PostForm)[] {
   const named = new Set(Object.keys(fields ?? {}).map(name => name.split('.')[0]))
   return FIELDS.filter(key => named.has(key))
+}
+
+/** A refused save in the panel's terms: a refused Link is the Link's (its field, its own words: spec 2026-10-19 §5.1). */
+export function refusalOf(code: string, fields: Record<string, string[]> | undefined): { invalid: (keyof PostForm)[]; family: 'save' | 'link' } {
+  return code === 'bad_link' ? { invalid: ['link'], family: 'link' } : { invalid: invalidFields(fields), family: 'save' }
 }

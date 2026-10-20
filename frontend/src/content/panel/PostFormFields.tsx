@@ -4,13 +4,14 @@ import { LayoutTemplate } from 'lucide-react'
 import { suggestedTimes } from '../lib/bestTimes'
 import { LANGUAGES, languageName } from '../lib/languages'
 import { Notice } from '../../workspace/ui/Notice'
-import type { AudienceRef, Person, PillarRef, Platform, PostStatus, Snippet, Template } from '../lib/types'
+import type { AudienceRef, Person, PillarRef, Platform, PostStatus, ShortLinkFacts, Snippet, Template } from '../lib/types'
 import { PopMenu } from '../ui/PopMenu'
 import { PosterSelect } from '../ui/PosterSelect'
 import { InsertMenu } from './InsertMenu'
 import { applyTemplate, blanksIn, replacesText } from './templateApply'
 import { insertAt, insertHashtags, tooManyTags } from './snippetInsert'
 import type { PostForm } from './panelState'
+import { ShortLink } from './ShortLink'
 
 const BOX = 'w-full rounded-lg border bg-a-surface px-3 py-2 text-sm text-a-text disabled:bg-a-surface-2 disabled:text-a-text-2'
 
@@ -33,7 +34,7 @@ function FieldBox({ label, hint, invalid, children }: { label: string; hint?: st
  * audience, language, topic, hook, text, call to action and hashtags. A
  * published post keeps its day: the day is the record of when it went out.
  */
-export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [], team = [] }: {
+export function PostFormFields({ form, onChange, platforms, statuses, pillars, audiences, published, invalid, locale, industry, snippets, templates = [], team = [], link = null }: {
   form: PostForm
   onChange: (form: PostForm) => void
   platforms: Platform[]
@@ -51,6 +52,8 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
   templates?: Template[]
   /** Who can post it (spec 2026-10-19 §4.1): the brand's team, the post's own poster kept (posterChoices). */
   team?: Person[]
+  /** The saved post's short link (spec 2026-10-19 §5.5), shown under the Link field; null for a new post or one without. */
+  link?: ShortLinkFacts | null
 }) {
   const { t } = useTranslation()
   const set = <K extends keyof PostForm>(key: K, value: PostForm[K]) => onChange({ ...form, [key]: value })
@@ -171,6 +174,14 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
         <div className="absolute right-0 top-0">
           <InsertMenu label={t('content.panel.insert_snippet', 'Insert snippet')} items={texts} onPick={(s) => insertInto('cta', ctaRef.current, s.body)} />
         </div>
+      </div>
+      <div className="space-y-2">
+        <FieldBox label={t('content.panel.fields.link', 'Link')} invalid={invalid.includes('link')}
+          hint={t('content.panel.fields.link_hint', 'Where readers should go. HexaTech makes a short link that counts clicks.')}>
+          <input type="url" inputMode="url" value={form.link} maxLength={2000} placeholder="https://" onChange={(e) => set('link', e.target.value)}
+            aria-invalid={bad('link')} className={box('link')} />
+        </FieldBox>
+        <ShortLink typed={form.link} link={link} />
       </div>
       <div className="relative">
         <FieldBox label={t('content.panel.fields.hashtags', 'Hashtags')} invalid={invalid.includes('hashtags')}

@@ -33,7 +33,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   `ai_budget_used_up`, `already_generating`, `changed_elsewhere`, `published_cannot_move`, `slot_not_open`,
   `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready`,
   `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, from release 4b `needs_approval`,
-  `approvals_off`, `wrong_status` and `not_yours`, and from release 5a `version_exists`.
+  `approvals_off`, `wrong_status` and `not_yours`, from release 5a `version_exists`, and from release 5b `bad_link`,
+  `bio_name_invalid`, `bio_name_taken` and `too_many_buttons`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
 
@@ -55,6 +56,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Versions | `POST posts/{id}/versions` (`platforms`, `ai`), `DELETE posts/{id}/group` | everyone |
 | Team | `GET team` (the brand's active staff: names and roles); `poster_id` on `POST posts`, `PUT posts/{id}`, `POST posts/{id}/move` | everyone |
 | Morning email | `PUT me/morning-email` (`on`); also `wants_content_morning_email` in `PUT admin/me/preferences` | each person, for themselves |
+| Links | `link` (an address or null) on `POST posts` and `PUT posts/{id}`; `GET posts/{id}` carries `link`, cards carry `clicks` | everyone |
+| Link-in-bio | `GET bio`; `PUT bio` (`is_on`, `slug`, `title`, `line`, `show_posts`, `buttons: [{id?, label, destination}]`) | read: everyone; save: owners and managers |
+| Public host | `GET /go/{code}` (302; `?via=bio`), `GET /links/{name}` | visitors |
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -134,6 +138,23 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   in organisations with Content (not switched off, not Appointments-only), at 8 am venue time, once a venue day, only
   when they have posts today or posts not marked as posted; words in the person's language from
   `lang/*/content_morning.php`, links open the post on its brand (`?brand_id=`) (`MorningEmailTest`).
+- **Tracked links** (release 5b; `ContentLinks`, `ContentLinkClicks`): a post's Link becomes a short link on the public
+  host, `/go/{code}` (7 characters, no 0/o/1/l). Changing the address keeps the code; clearing it switches the code off
+  (the row stays: a link already out answers 404 "This link is no longer active" in the brand's Content language);
+  versions, repeat copies and duplicates get their own code; deleting a post keeps its link working. The UTM tags
+  (`utm_source` the platform or `link-in-bio`, `utm_medium` social, `utm_campaign` the campaign's slug or
+  `content-plan`, `utm_content` `post-{id}` or `button`) are worked out at save and when the platform or campaign
+  changes, and never replace a tag the address carries. A new Link is a change of words under approvals and moves the
+  post's version on. Clicks: one row per link, venue day and source (`direct` | `bio`), raised by one upsert; HEAD
+  requests and robots are not counted; no IP address, cookie, user agent or referrer is stored (`LinkRedirectTest`,
+  `LinksTest`, `LinkCopiesTest`).
+- **Link-in-bio** (`ContentBio`, `ContentBioPublic`): one page per brand at `/links/{name}` on the public host, off
+  (404) until a manager switches it on. The name follows the landing-page rules, is not reserved (`links` is, now) and
+  is unique among bio pages; the default is the brand's landing-page name, else the brand's slug with `-2`, `-3`…. Up
+  to eight buttons, each a tracked link that keeps its code across saves (removed: switched off); up to twelve latest
+  published posts with a live link, one per group of versions. A Blade page with its own stylesheet
+  (`public/landing/content-public.css`) and the brand colour in one nonce'd block; no scripts, no session, cached five
+  minutes (`BioPageTest`, `BioEditorTest`).
 
 ## The portal (`/content`, `frontend/src/content/`)
 
@@ -222,6 +243,14 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   Mark published with "You post this one…".
 - **The bell's reminders** ("To post today", with the time and a status not yet ready; "Not marked as posted", with the
   day it was due) and, at its foot, **the morning email switch** (each person's own).
+- **Tracked links** (release 5b): the panel's **Link** field after the call to action; under it the short link with
+  Copy, "Clicks: N" (and those from the link-in-bio page) and 14 bars, each named for screen readers. Before a save the
+  panel says what it will do: make the short link, keep it for a new address, switch it off when the field is emptied,
+  switch it back on. A refused Link marks the field (`link` refusals). Cards say "Clicks: N" from 1.
+- **Link-in-bio** on the Brand page, after Channels (`brand/sections/LinkInBio.tsx`): staff see the address with Copy
+  while the page is on; managers edit the switch, the name (lowercase as typed; the full address shown; a warning when
+  a saved page is renamed), title, line, "Show latest posts" and up to eight buttons (add, move up and down, remove),
+  saved in one call; each button's clicks for the last 30 days; Open page while it is on.
 
 ## What this release does not do
 
@@ -276,6 +305,18 @@ and its screens are removed; a browser tab left open across the deploy must be r
   post for today and look at that person's bell, switch the morning email on for yourself and read it the next morning
   at 8; tell the team that a manager's bell lists today's and the last seven days' unpublished posts nobody posts until
   "Who posts it" is set or the posts are marked published; reload admin tabs left open.
+- Release 5b (server, Plan 5B-1): four additive migrations (`content_links`, `content_link_clicks`,
+  `content_bio_pages`, `content_bio_buttons`); two public routes on the landing host, `/go/{code}` and
+  `/links/{name}`, both in `routes/landing.php` (outside the `web` group) and in `LandingHostGuard::ALLOWED`; one new
+  reserved landing name, `links`; one new static file, `public/landing/content-public.css`. No queue or schedule change.
+- Verify release 5b by content (after Plan 5B-2's deploy): `/api/v1/admin/content/bio` answers 401 when signed out
+  (404 before release 5b); `https://sites.hexa-tech.uk/landing/content-public.css` answers 200 (404 before);
+  `https://sites.hexa-tech.uk/go/zzzz222` and `https://sites.hexa-tech.uk/links/zzzz-none` answer 404 without a cookie;
+  the `ContentApp` chunk carries "Link-in-bio", "Short link" and "Clicks per day".
+- After the deploy (owner): on a real brand, give one post a Link, save it, open its short link on a phone (the visit
+  counts by the next panel read), and look at the card's click count; on the Brand page, set up the link-in-bio page,
+  switch it on, add two buttons, open it, and put its address in one profile's bio; open your own landing page once (the
+  public host's list of paths changed); reload admin tabs left open.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.

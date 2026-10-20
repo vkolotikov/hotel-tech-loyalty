@@ -212,3 +212,22 @@ describe('release 5a calls (spec 2026-10-19)', () => {
     expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts/9/move?brand_id=5', body: { scheduled_date: '2026-10-09', poster_id: 4 } })
   })
 })
+
+describe('release 5b calls (spec 2026-10-19 §5, §6)', () => {
+  it('sends a post’s Link with a save and a new post, and reads and saves the link-in-bio page under the prefix', async () => {
+    calls.fail = null
+    const api = contentApi(5)
+    await api.savePost(9, { link: 'https://lumiere.example/autumn', updated_at: 'x' })
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/posts/9?brand_id=5', body: { link: 'https://lumiere.example/autumn' } })
+    await api.createPost({ platform: 'instagram', link: null })
+    expect(last()).toMatchObject({ method: 'post', url: '/v1/admin/content/posts?brand_id=5', body: { platform: 'instagram', link: null } })
+    await api.bio()
+    expect(last()).toMatchObject({ method: 'get', url: '/v1/admin/content/bio?brand_id=5' })
+    const body = {
+      is_on: true, slug: 'lumiere', title: null, line: null, show_posts: true,
+      buttons: [{ id: 4, label: 'Book', destination: 'https://lumiere.example/book' }, { label: 'Gifts', destination: 'https://lumiere.example/gifts' }],
+    }
+    await api.saveBio(body)
+    expect(last()).toMatchObject({ method: 'put', url: '/v1/admin/content/bio?brand_id=5', body })
+  })
+})

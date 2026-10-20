@@ -48,3 +48,14 @@ describe('release 5a refusals (spec 2026-10-19 §7.3)', () => {
     expect(errorKey('move', 'invalid')).toEqual(['content.move.error.invalid', 'Check the day and who posts it.'])
   })
 })
+
+describe('release 5b refusals (spec 2026-10-19 §7.3)', () => {
+  it('words a bad Link and the link-in-bio page’s refusals in the portal’s own sentence', () => {
+    expect(errorKey('link', 'bad_link')).toEqual(['content.link.error.bad_link', 'The link must be a web address that starts with http:// or https://.'])
+    expect(errorKey('bio', 'bio_name_taken')).toEqual(['content.bio.error.bio_name_taken', 'Another page already has this name. Choose another one.'])
+    expect(errorKey('bio', 'bio_name_invalid')[0]).toBe('content.bio.error.bio_name_invalid')
+    expect(errorKey('bio', 'too_many_buttons')).toEqual(['content.bio.error.too_many_buttons', 'A page has at most 8 buttons.'])
+    expect(errorKey('bio', 'bad_link')[0]).toBe('content.bio.error.bad_link')
+    expect(errorKey('bio', 'whatever')[0]).toBe('content.bio.error.unknown')
+  })
+})

@@ -3,7 +3,7 @@ import type {
   Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, IdeasPayload, KeyDateFields,
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
   RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
-  TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember,
+  TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember, BioBody, BioPayload,
 } from './types'
 
 /**
@@ -134,6 +134,9 @@ export function contentApi(brand: number | null) {
     team: (): Promise<{ team: TeamMember[] }> => watched(api.get(url('team'))),
     /** The morning email switch (spec §4.5): each person's own. */
     setMorningEmail: (on: boolean): Promise<{ on: boolean }> => watched(api.put(url('me/morning-email'), { on })),
+    /** The link-in-bio page (spec 2026-10-19 §6.4): everyone reads it; a manager saves the page and its buttons in one call. */
+    bio: (): Promise<BioPayload> => watched(api.get(url('bio'))),
+    saveBio: (body: BioBody): Promise<BioPayload> => watched(api.put(url('bio'), body)),
 
     posts: (filters: PostFilters): Promise<PostsPage> => watched(api.get(url('posts'), { params: postsParams(filters) })),
 

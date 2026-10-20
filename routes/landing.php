@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\ContentPublic\BioPageController;
+use App\Http\Controllers\ContentPublic\GoController;
 use App\Http\Controllers\Landing\LandingPageController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,4 +34,15 @@ Route::domain(config('landing.host'))
             ->where('page', '[0-9]+')
             ->middleware('signed')
             ->name('landing.preview');
+
+        // HexaTech Content's tracked short links (spec 2026-10-19 §5.3). Two segments, so never a landing slug; keep
+        // the pattern in step with LandingHostGuard::ALLOWED.
+        Route::get('/go/{code}', [GoController::class, 'show'])
+            ->where('code', '[a-z2-9]{7}')
+            ->name('content.go');
+
+        // A brand's link-in-bio page (spec 2026-10-19 §6); `links` is a reserved landing name (config/landing.php).
+        Route::get('/links/{name}', [BioPageController::class, 'show'])
+            ->where('name', '[a-z0-9-]+')
+            ->name('content.bio');
     });

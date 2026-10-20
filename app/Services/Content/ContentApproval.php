@@ -56,13 +56,14 @@ final class ContentApproval
      * After a save's fields are filled, before it is written: a staff change to the words of an approved or ready post
      * sends it back to review. Returns the step to record once the post is saved, or null.
      */
-    public static function beforeSave(ContentPlannerPost $post, string $before, User $user, ?ContentPlannerProfile $profile): ?string
+    public static function beforeSave(ContentPlannerPost $post, string $before, User $user, ?ContentPlannerProfile $profile, bool $otherWords = false): ?string
     {
         if (!self::isOn($profile)) {
             return null;
         }
         $manager = ContentAccess::canManage($user);
-        if (!$manager && $post->status === $before && in_array($before, ['approved', 'ready_to_publish'], true) && $post->isDirty(self::WORDS)) {
+        // $otherWords: a change of words that is not a post column — the Link (spec 2026-10-19 §5.1).
+        if (!$manager && $post->status === $before && in_array($before, ['approved', 'ready_to_publish'], true) && ($post->isDirty(self::WORDS) || $otherWords)) {
             $post->status = 'needs_review';
 
             return 'changed_after_approval';

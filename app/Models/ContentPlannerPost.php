@@ -130,6 +130,11 @@ class ContentPlannerPost extends Model
             // Spec 2026-10-19 §3.4: how many posts share its group of versions (none for a post in no group).
             'group_size'      => DB::table('content_planner_posts as same_group')->selectRaw('count(*)')
                 ->whereColumn('same_group.group_id', 'content_planner_posts.group_id'),
+            // Spec 2026-10-19 §5.5: its short link's clicks in all.
+            'link_clicks'     => DB::table('content_link_clicks')
+                ->join('content_links', 'content_links.id', '=', 'content_link_clicks.link_id')
+                ->selectRaw('coalesce(sum(content_link_clicks.clicks), 0)')
+                ->whereColumn('content_links.post_id', 'content_planner_posts.id'),
         ]);
     }
 

@@ -35,6 +35,10 @@ return [
         // The framework health route. On the landing host /up matches
         // landing.show, so a tenant holding this slug would shadow it.
         'up',
+        // HexaTech Content's link-in-bio pages live under /links/{name} (spec
+        // 2026-10-19 D9). Its short links' /go is two letters, below
+        // LandingSlug::MIN, so no tenant can hold it anyway.
+        'links',
     ],
 
     /** Seconds a published page may be cached. Short, and revalidating. */

@@ -7,6 +7,7 @@ use App\Models\ContentPlannerPost;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentApproval;
 use App\Services\Content\ContentContext;
+use App\Services\Content\ContentLinks;
 use App\Services\Content\ContentPlan;
 use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRefused;
@@ -88,6 +89,8 @@ class PostController extends Controller
         $data = $request->validate(
             ['platform' => ['required', Rule::in(ContentRules::PLATFORMS)]] + Arr::except(ContentRules::postFields(), ['platform'])
         );
+        // The Link (spec 2026-10-19 §5.1) is not a post column: its short link lives in content_links.
+        $link = ContentLinks::clean($request->input('link'));
         ContentTeam::assertPoster($data['poster_id'] ?? null, null, (int) $profile->brand_id);
         ContentApproval::guardStatus($data['status'] ?? null, null, $request->user(), $profile);
         // A post without a day has no time either (as a move to the tray, and as update, keep it).
@@ -106,6 +109,9 @@ class PostController extends Controller
             ],
         ));
 
+        if ($link !== null) {
+            ContentLinks::set($post, $link);
+        }
         if ($kind = ContentApproval::onCreate($post, $request->user(), $profile)) {
             ContentApproval::record($post, $kind, $request->user()->id);
         }
@@ -123,6 +129,9 @@ class PostController extends Controller
         $post = self::find($id);
         $data = $request->validate(['updated_at' => 'required|string'] + ContentRules::postFields());
         self::assertFresh($post, $data['updated_at']);
+        // The Link (spec 2026-10-19 §5.1): refused whole before anything is saved; a new address is a change of the post.
+        $link = $request->has('link') ? ContentLinks::clean($request->input('link')) : null;
+        $linkChanges = $request->has('link') && ContentLinks::changes($post, $link);
 
         $fields = Arr::except($data, ['updated_at']);
         ContentTeam::assertPoster($fields['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
@@ -139,8 +148,17 @@ class PostController extends Controller
         if ($post->scheduled_date === null) {
             $post->scheduled_time = null;
         }
-        $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile);
+        if ($linkChanges) {
+            // Its version moves on, so a panel still holding the old Link cannot save it back (F3).
+            $post->updated_at = $post->freshTimestamp();
+        }
+        $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile, $linkChanges);
         $post->save();
+        if ($linkChanges) {
+            ContentLinks::set($post, $link);
+        } elseif ($post->wasChanged(['platform', 'campaign_id'])) {
+            ContentLinks::retag($post);
+        }
         if ($kind) {
             ContentApproval::record($post, $kind, $request->user()->id);
         }
@@ -184,11 +202,14 @@ class PostController extends Controller
     public function duplicate(Request $request, int $id): JsonResponse
     {
         // A copy made by hand is not in the original's repeat series, nor in its group of versions.
-        $copy = self::find($id)->replicate(['published_url', 'published_at', 'status', 'series_id', 'group_id']);
+        $original = self::find($id);
+        $copy = $original->replicate(['published_url', 'published_at', 'status', 'series_id', 'group_id']);
         $copy->status = 'draft';
         $copy->created_by = $request->user()->id;
         $copy->scheduled_date = CarbonImmutable::parse(VenueClock::today(ContentContext::orgId()))->addDays(7)->format('Y-m-d');
         $copy->save();
+        // Its own short link to the same address (spec 2026-10-19 §5.1).
+        ContentLinks::copyTo($original, [$copy]);
 
         return response()->json(['post' => ContentPostPresenter::detail($copy->fresh(self::WITH))], 201);
     }

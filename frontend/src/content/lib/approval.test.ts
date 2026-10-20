@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Bootstrap, PostStatus } from './types'
-import { approvalsOn, canMarkPublished, cardFlags, flagWords, staffLocked, statusChoices, versionsOf } from './approval'
+import { approvalsOn, canMarkPublished, cardFlags, clicksOf, flagWords, staffLocked, statusChoices, versionsOf } from './approval'
 
 const boot = (requires: boolean | undefined, manager: boolean) => ({
   profile: { id: 1, setup_completed: true, readiness: 80, requires_approval: requires },
@@ -70,5 +70,16 @@ describe('the versions mark (spec 2026-10-19 §3.4)', () => {
     expect(versionsOf({})).toBe(0)
     expect(flagWords({ waiting: false, sentBack: true, comments: 2 }, t, 3)).toBe('Sent back, Comments: 2, Versions: 3')
     expect(flagWords({ waiting: false, sentBack: false, comments: 0 }, t)).toBe('')
+  })
+})
+
+describe('clicks in a card’s words (spec 2026-10-19 §5.5)', () => {
+  const t = (_key: string, fallback: string, vars?: Record<string, unknown>) => fallback.replace('{{count}}', String(vars?.count ?? ''))
+
+  it('come last, from 1; a card without a Link has none', () => {
+    expect(flagWords({ waiting: false, sentBack: false, comments: 1 }, t, 2, 4)).toBe('Comments: 1, Versions: 2, Clicks: 4')
+    expect(flagWords({ waiting: false, sentBack: false, comments: 0 }, t, 0, 0)).toBe('')
+    expect(clicksOf({})).toBe(0)
+    expect(clicksOf({ clicks: 7 })).toBe(7)
   })
 })

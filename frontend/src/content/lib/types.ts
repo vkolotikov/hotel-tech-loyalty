@@ -53,6 +53,8 @@ export interface PostCard {
   group_size?: number
   /** Spec 2026-10-19 §4.1: who posts it, as stored (the panel's `poster` says whether they are still on the team). */
   poster_id?: number | null
+  /** Spec 2026-10-19 §5.5: its short link's clicks in all (0 without a Link). */
+  clicks?: number
 }
 
 export interface VisualBrief {
@@ -110,6 +112,8 @@ export interface PostDetail extends PostCard {
   group?: PostGroup | null
   /** Who posts it: a member of the brand's team, or null for nobody (also someone who left) (spec 2026-10-19 §4.1). */
   poster?: Person | null
+  /** Its tracked short link (spec 2026-10-19 §5.5); null when it never had a Link. */
+  link?: ShortLinkFacts | null
 }
 
 /** A post in a group of versions, as the panel lists it (spec 2026-10-19 §3.4). */
@@ -118,6 +122,17 @@ export interface GroupPost { id: number; platform: Platform; status: PostStatus;
 export interface PostGroup { id: number; posts: GroupPost[]; adapting: number[]; kept_original: number[]; kept_reason: 'budget' | 'ai_failed' | null }
 /** Someone on the brand's team, for "Who posts it" (spec 2026-10-19 §4.1). */
 export interface TeamMember { id: number; name: string; role: 'manager' | 'staff' }
+
+/** A post's short link and its clicks (spec 2026-10-19 §5.5): `on` false once its Link was cleared; `days` the last 14 venue days, oldest first. */
+export interface ShortLinkFacts { code: string; short_url: string; destination: string | null; on: boolean; clicks: number; clicks_bio: number; days: { day: DateKey; clicks: number }[] }
+/** A brand's link-in-bio page (spec §6): off until a manager switches it on; `title` null is the brand's name. */
+export interface BioPage { is_on: boolean; slug: string; title: string | null; line: string | null; show_posts: boolean }
+/** A button on it, with its short link and its clicks over the last 30 venue days. */
+export interface BioButton { id: number; label: string; destination: string | null; short_url: string | null; clicks_30d: number }
+/** `GET bio`: the page (null before its first save), its buttons in order, its address, a name to start from, and the address without a name. */
+export interface BioPayload { page: BioPage | null; buttons: BioButton[]; url: string | null; suggested_name: string; base_url: string }
+/** `PUT bio`: the whole page and its buttons in order; a button sent with its id keeps its short link. */
+export interface BioBody { is_on: boolean; slug: string; title: string | null; line: string | null; show_posts: boolean; buttons: { id?: number; label: string; destination: string }[] }
 
 /** A day and platform the brand's channels expect, with no post yet. */
 export interface Slot { date: DateKey; platform: Platform }
@@ -148,6 +163,8 @@ export interface PostFields {
   hashtags?: string[]
   /** Who posts it (spec 2026-10-19 §4.1): a member of the team, or null for nobody. */
   poster_id?: number | null
+  /** The Link (spec 2026-10-19 §5.1): an http(s) address, or null to switch its short link off. */
+  link?: string | null
 }
 
 export interface Variation { id: number; type: Rewrite; copy: string }

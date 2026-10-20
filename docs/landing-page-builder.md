@@ -87,7 +87,9 @@ not exist; the only theme override is `theme.brand_color`, applied through `App\
 **Server**
 
 - `routes/landing.php` — `GET /{slug}` (`landing.show`) and the signed `GET /preview/{page}`; both behind
-  `landing.security` and a throttle.
+  `landing.security` and a throttle. HexaTech Content shares the group with `GET /go/{code}` (tracked short links) and
+  `GET /links/{name}` (link-in-bio pages; `links` is reserved), both in `LandingHostGuard::ALLOWED` and served by
+  `app/Http/Controllers/ContentPublic/` with `public/landing/content-public.css` (`docs/content-workspace.md`).
 - `app/Http/Controllers/Landing/LandingPageController.php` — `show()`, `preview()`; builds the booking URL,
   chat frame URL and feedback URL for the templates.
 - `app/Http/Middleware/LandingPageSecurity.php` — the CSP (`script-src 'self'`, nonce-based `style-src`,

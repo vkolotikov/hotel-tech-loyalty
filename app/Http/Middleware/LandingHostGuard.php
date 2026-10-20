@@ -91,7 +91,7 @@ class LandingHostGuard
     /**
      * Paths the landing origin may serve, matched against the trimmed path.
      *
-     * Keep the first two in step with routes/landing.php. They are repeated
+     * Keep the route patterns (landing.*, content.*) in step with routes/landing.php. They are repeated
      * rather than derived because this runs before routing: there is no
      * matched route to ask, and asking the route collection here would match
      * every request twice.
@@ -112,6 +112,8 @@ class LandingHostGuard
     private const ALLOWED = [
         '#^[a-z0-9-]+$#',      // landing.show
         '#^preview/[0-9]+$#',  // landing.preview
+        '#^go/[a-z2-9]{7}$#',  // content.go: HexaTech Content's short links (routes/landing.php, outside `web`)
+        '#^links/[a-z0-9-]+$#', // content.bio: a brand's link-in-bio page (routes/landing.php, outside `web`)
 
         // The chat widget, and only the chat widget, stays same-origin. It is
         // a script that has to execute inside the landing page, so it cannot

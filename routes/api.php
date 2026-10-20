@@ -1285,6 +1285,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('inbox/seen', [\App\Http\Controllers\Api\V1\Admin\Content\InboxController::class, 'seen']);
                 Route::get('team', [\App\Http\Controllers\Api\V1\Admin\Content\TeamController::class, 'index']);
                 Route::put('me/morning-email', [\App\Http\Controllers\Api\V1\Admin\Content\MorningEmailController::class, 'update']);
+                Route::get('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'show']);
+                Route::put('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'update']);
                 Route::post('key-dates', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'store']);
                 Route::put('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'update'])->whereNumber('id');
                 Route::delete('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'destroy'])->whereNumber('id');

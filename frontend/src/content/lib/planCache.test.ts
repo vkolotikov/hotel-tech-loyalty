@@ -112,3 +112,10 @@ describe('release 5a: what the panel keeps', () => {
     expect(cardOf(detail)).toEqual(card(5, '2026-10-07', { group_size: 3, poster_id: 7 }))
   })
 })
+
+describe('cardOf, release 5b', () => {
+  it('carries the card’s clicks (spec 2026-10-19 §5.5)', () => {
+    const detail = { ...card(5, '2026-10-07', { clicks: 6 }), language: 'en', main_copy: 'Text', hashtags: [], link: null } as unknown as PostDetail
+    expect(cardOf(detail).clicks).toBe(6)
+  })
+})

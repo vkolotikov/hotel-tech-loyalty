@@ -72,7 +72,7 @@ final class ContentRepeat
         return DB::transaction(function () use ($original, $dates, $status, $userId) {
             $original->forceFill(['series_id' => $original->id])->save();
 
-            return collect($dates)->map(fn (string $date) => ContentPlannerPost::create($original->only(self::COPIED) + [
+            $copies = collect($dates)->map(fn (string $date) => ContentPlannerPost::create($original->only(self::COPIED) + [
                 'planner_profile_id' => $original->planner_profile_id,
                 'brand_id'           => $original->brand_id,
                 'scheduled_date'     => $date,
@@ -81,6 +81,10 @@ final class ContentRepeat
                 'generated_by'       => 'repeat',
                 'created_by'         => $userId,
             ]));
+            // Each copy gets its own short link to the same address (spec 2026-10-19 §5.1).
+            ContentLinks::copyTo($original, $copies);
+
+            return $copies;
         });
     }
 

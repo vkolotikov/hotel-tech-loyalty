@@ -52,6 +52,8 @@ trait SetsUpContentSchema
             'entitled_products' => fn (Blueprint $t) => $t->text('entitled_products')->nullable(),
             'plan_slug'         => fn (Blueprint $t) => $t->string('plan_slug', 64)->nullable(),
             'country'           => fn (Blueprint $t) => $t->string('country', 2)->nullable(),
+            // The link-in-bio page's logo falls back to the organisation's (spec 2026-10-19 §6.2).
+            'logo_url'          => fn (Blueprint $t) => $t->string('logo_url')->nullable(),
         ];
         foreach ($columns as $column => $add) {
             if (!Schema::hasColumn('organizations', $column)) {
@@ -116,6 +118,26 @@ trait SetsUpContentSchema
         if (!Schema::hasColumn('users', 'wants_content_morning_email')) {
             (require database_path('migrations/2026_10_19_100100_add_content_morning_email_to_users.php'))->up();
         }
+        if (!Schema::hasTable('content_links')) {
+            (require database_path('migrations/2026_10_19_100200_create_content_links_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_link_clicks')) {
+            (require database_path('migrations/2026_10_19_100300_create_content_link_clicks_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_bio_pages')) {
+            (require database_path('migrations/2026_10_19_100400_create_content_bio_pages_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_bio_buttons')) {
+            (require database_path('migrations/2026_10_19_100500_create_content_bio_buttons_table.php'))->up();
+        }
+        // The link-in-bio page's default name reads the brand's landing page (spec 2026-10-19 §6.1).
+        if (!Schema::hasTable('landing_pages')) {
+            (require database_path('migrations/2026_08_21_100000_create_landing_pages_table.php'))->up();
+        }
+        // The link-in-bio page's buttons take the brand's colour (spec 2026-10-19 §6.2).
+        if (!Schema::hasColumn('brands', 'primary_color')) {
+            Schema::table('brands', fn (Blueprint $t) => $t->string('primary_color', 7)->nullable());
+        }
 
         $this->travelTo(CarbonImmutable::parse('2026-10-05 06:00:00'));
 
@@ -155,9 +177,13 @@ trait SetsUpContentSchema
         app()->forgetScopedInstances();
     }
 
+    /**
+     * On the admin host, as an absolute address (the one a relative path got before): after a request to the public
+     * host (a short link, a bio page), the test client resolves a relative path against that host instead.
+     */
     protected function api(string $path): string
     {
-        return '/api/v1/admin/content/' . ltrim($path, '/');
+        return rtrim((string) config('app.url'), '/') . '/api/v1/admin/content/' . ltrim($path, '/');
     }
 
     protected function asManager(): static

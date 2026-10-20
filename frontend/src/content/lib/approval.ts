@@ -44,12 +44,16 @@ export function cardFlags(post: Pick<PostCard, 'status' | 'sent_back' | 'comment
 /** How many posts share a card's group of versions (spec 2026-10-19 §3.4): 0 for none and for a group of one. */
 export const versionsOf = (post: Pick<PostCard, 'group_size'>): number => ((post.group_size ?? 0) >= 2 ? (post.group_size as number) : 0)
 
-/** A card's flags in words, in order, its versions last: the name of a card whose marks are drawn without them (the Plan's cards). */
-export function flagWords(flags: ReturnType<typeof cardFlags>, t: Translate, versions = 0): string {
+/** Spec 2026-10-19 §5.5: a card's short-link clicks (0 without a Link); a card says so from 1. */
+export const clicksOf = (post: Pick<PostCard, 'clicks'>): number => Math.max(0, post.clicks ?? 0)
+
+/** A card's flags in words, in order, its versions and clicks last: the name of a card whose marks are drawn without them (the Plan's cards). */
+export function flagWords(flags: ReturnType<typeof cardFlags>, t: Translate, versions = 0, clicks = 0): string {
   return [
     flags.waiting ? t('content.flags.waiting', 'Waiting for approval') : '',
     flags.sentBack ? t('content.flags.sent_back', 'Sent back') : '',
     flags.comments > 0 ? t('content.flags.comments', 'Comments: {{count}}', { count: flags.comments }) : '',
     versions > 0 ? t('content.flags.versions', 'Versions: {{count}}', { count: versions }) : '',
+    clicks > 0 ? t('content.flags.clicks', 'Clicks: {{count}}', { count: clicks }) : '',
   ].filter(Boolean).join(', ')
 }

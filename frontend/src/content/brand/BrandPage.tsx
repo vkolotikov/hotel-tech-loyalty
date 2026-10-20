@@ -11,6 +11,7 @@ import { AudiencesSection } from './sections/Audiences'
 import { BrandDnaSection } from './sections/BrandDna'
 import { ChannelsSection } from './sections/Channels'
 import { KeyDatesSection } from './sections/KeyDates'
+import { LinkInBioSection } from './sections/LinkInBio'
 import { SnippetsSection } from './sections/Snippets'
 import { TemplatesSection } from './sections/Templates'
 import { PositioningSection } from './sections/Positioning'
@@ -61,6 +62,8 @@ export function BrandPage() {
               <VoiceSection brand={brand} canEdit={canEdit} />
               <PositioningSection brand={brand} canEdit={canEdit} />
               <ChannelsSection brand={brand} canEdit={canEdit} />
+              {/* Spec 2026-10-19 §6.4: the brand's link-in-bio page, after Channels. */}
+              <LinkInBioSection canEdit={canEdit} />
               <KeyDatesSection brand={brand} canEdit={canEdit} />
               <ApprovalsSection brand={brand} canEdit={canEdit} />
               <SnippetsSection brand={brand} canEdit={canEdit} />

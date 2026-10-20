@@ -55,7 +55,7 @@ final class ContentVersions
             }
             $brief = $original->visualBrief()->first();
 
-            return collect($platforms)->map(function (string $platform) use ($original, $groupId, $userId, $brief) {
+            $versions = collect($platforms)->map(function (string $platform) use ($original, $groupId, $userId, $brief) {
                 $version = ContentPlannerPost::create($original->only(self::COPIED) + [
                     'planner_profile_id' => $original->planner_profile_id,
                     'brand_id'           => $original->brand_id,
@@ -73,6 +73,10 @@ final class ContentVersions
 
                 return $version;
             });
+            // Each version gets its own short link to the same address (spec 2026-10-19 §5.1).
+            ContentLinks::copyTo($original, $versions);
+
+            return $versions;
         });
     }
 

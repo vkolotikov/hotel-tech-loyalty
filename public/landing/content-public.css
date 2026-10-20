@@ -1,0 +1,113 @@
+/*
+ * HexaTech Content on the public host (spec 2026-10-19 §5.3, §6): the switched-off short link and the link-in-bio page.
+ * Same-origin under the landing CSP. The brand colour comes in as --cp-brand / --cp-on-brand from the page's one
+ * nonce'd <style> block; everything else is here.
+ */
+:root {
+  --cp-ink: #14161a;
+  --cp-muted: #5b616b;
+  --cp-paper: #f6f6f4;
+  --cp-card: #ffffff;
+  --cp-line: #e2e3e0;
+  --cp-brand: #2d6a4f;
+  --cp-on-brand: #ffffff;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body.cp {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--cp-paper);
+  color: var(--cp-ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.cp-off { max-width: 480px; margin: 0 auto; padding: 96px 24px; text-align: center; }
+.cp-off h1 { margin: 0; font-size: 1.375rem; line-height: 1.3; font-weight: 600; }
+
+/* The link-in-bio page (spec §6.2): mobile first, at most 480 px wide, centred on wider screens. */
+.cp-bio { max-width: 480px; margin: 0 auto; padding: 40px 20px 56px; }
+.cp-head { text-align: center; }
+.cp-logo {
+  display: block;
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--cp-card);
+  border: 1px solid var(--cp-line);
+}
+.cp-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: var(--cp-brand);
+  color: var(--cp-on-brand);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.cp-title { margin: 0; font-size: 1.5rem; line-height: 1.25; font-weight: 650; overflow-wrap: anywhere; }
+.cp-line { margin: 8px 0 0; color: var(--cp-muted); overflow-wrap: anywhere; }
+
+.cp-buttons ul,
+.cp-tiles { list-style: none; margin: 0; padding: 0; }
+.cp-buttons { margin-top: 28px; }
+.cp-buttons li + li { margin-top: 12px; }
+.cp-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: 12px 20px;
+  border-radius: 14px;
+  background: var(--cp-brand);
+  color: var(--cp-on-brand);
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+.cp-button:hover { filter: brightness(1.06); }
+.cp-button:focus-visible,
+.cp-tile:focus-visible { outline: 3px solid var(--cp-ink); outline-offset: 3px; }
+
+.cp-posts { margin-top: 40px; }
+.cp-posts h2 {
+  margin: 0 0 14px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cp-muted);
+}
+.cp-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.cp-tile {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--cp-card);
+  border: 1px solid var(--cp-line);
+  color: var(--cp-ink);
+  text-decoration: none;
+}
+.cp-tile img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.cp-tile-text {
+  display: flex;
+  align-items: center;
+  aspect-ratio: 1 / 1;
+  padding: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.cp-tile time { display: block; padding: 8px 12px 10px; font-size: 0.8125rem; color: var(--cp-muted); }
