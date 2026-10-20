@@ -38,6 +38,19 @@ for (const [host, kind] of [['fds-cards.co.uk','fds'],['fdscards.de','fds'],['fd
 const external=fixture('customer.example',true,'hexa');
 vm.runInContext("reportWidgetAnalytics('contact_click');reportConfirmedLead({lead_receipt:'a'.repeat(64)});",external.ctx);
 assert.equal(external.calls.length,0);
+for (const host of ['fdscards.it', 'fdscards.com']) {
+  const f = fixture(host, true, 'fds');
+  // A legacy consent object or gtag alone cannot opt the new sites in.
+  vm.runInContext("reportWidgetAnalytics('contact_click'); reportConfirmedLead({lead_receipt:'b'.repeat(64)});", f.ctx);
+  assert.equal(f.calls.length, 0);
+  const forwarded = [];
+  f.ctx.window.fdsAnalytics = {chatEvent: (...args) => forwarded.push(args)};
+  vm.runInContext("reportWidgetAnalytics('contact_click'); reportConfirmedLead({lead_receipt:'bad'}); reportConfirmedLead({lead_receipt:'b'.repeat(64), email:'private@example.test', message:'secret'});", f.ctx);
+  assert.deepEqual(forwarded, [['contact_click', undefined], ['generate_lead', 'b'.repeat(64)]]);
+  assert.equal(f.calls.length, 0, 'The website adapter must be the sole GA emitter.');
+}
+external.ctx.window.fdsAnalytics = {chatEvent: () => { throw Error('Unexpected cross-tenant forwarding'); }};
+vm.runInContext("reportConfirmedLead({lead_receipt:'b'.repeat(64)});", external.ctx);
 assert.match(source,/btn\.onclick = function \(\) \{[\s\S]*?if \(!isOpen\).*reportWidgetAnalytics\('contact_click'\)/);
 assert.doesNotMatch(source.slice(source.indexOf('function togglePanel()'),source.indexOf('function startPolling()')),/reportWidgetAnalytics/);
 console.log(`${checks} owned hosts: consent, click/lead separation, receipt deduplication, privacy and external-host isolation passed. Automatic popups excluded.`);
