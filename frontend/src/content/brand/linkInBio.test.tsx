@@ -108,7 +108,7 @@ describe('the link-in-bio editor', () => {
     expect(editor(full)).toMatch(/<button[^>]*data-bio-add=""[^>]*disabled=""/)
     expect(editor(full)).toContain('A page has at most 8 buttons.')
     expect(editor(form, ['slug'])).toMatch(/aria-invalid="true" aria-describedby="content-bio-address"/)
-    expect(editor(form, ['buttons.1.label'])).toMatch(/aria-label="Button 2: label" aria-invalid="true"/)
+    expect(editor(form, ['buttons.b5.label'])).toMatch(/aria-label="Button 2: label" aria-invalid="true"/)
   })
 })
 
@@ -118,5 +118,29 @@ describe('the name’s hint on a narrow screen', () => {
     const html = editor()
     expect(html).toContain('<span class="break-all">https://sites.hexa-tech.uk/links/lumiere</span>')
     expect(html).not.toMatch(/id="content-bio-address" class="[^"]*break-all/)
+  })
+})
+
+// 5B-2 review: marks by row key, a label that holds only the name, placeholders on the labels, and a warning beside
+// the manager's Copy address while the page is off.
+describe('the link-in-bio editor after the 5B-2 review', () => {
+  it('marks a button by its row key', () => {
+    expect(editor(bioFormOf(payload()), ['buttons.b5.label'])).toMatch(/aria-label="Button 2: label"[^>]*aria-invalid="true"/)
+    expect(editor(bioFormOf(payload()), ['buttons.b5.label'])).not.toMatch(/aria-label="Button 1: label"[^>]*aria-invalid="true"/)
+  })
+  it('names the name field by its label only, the address and the rules after it', () => {
+    const html = editor()
+    expect(html).toMatch(/<label for="content-bio-name"[^>]*>Name<\/label>/)
+    expect(html).toMatch(/<input id="content-bio-name"[^>]*aria-describedby="content-bio-address"/)
+    expect(html.indexOf('id="content-bio-address"')).toBeGreaterThan(html.indexOf('</label>', html.indexOf('for="content-bio-name"')))
+    expect(html).toContain('3 to 63 lowercase letters, digits and single hyphens.')
+  })
+  it('shows an example in each button label', () => {
+    expect(editor().match(/placeholder="e\.g\. Book a visit"/g)?.length).toBe(2)
+  })
+  it('warns a manager beside Copy address while the page is off', () => {
+    const off = payload({ page: { is_on: false, slug: 'lumiere', title: null, line: null, show_posts: true } })
+    expect(section(off, true)).toContain('The page is switched off: this address shows a page that is not found until you switch it on.')
+    expect(section(payload(), true)).not.toContain('The page is switched off')
   })
 })

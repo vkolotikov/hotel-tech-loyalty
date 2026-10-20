@@ -193,3 +193,10 @@ describe('the Link (spec 2026-10-19 §5.1)', () => {
     expect(refusalOf('unknown', undefined)).toEqual({ invalid: [], family: 'save' })
   })
 })
+
+// Task 2: a save moving a version onto a platform its group has marks Platform with the save family's words.
+describe('a save refused for the group’s platform', () => {
+  it('marks Platform', () => {
+    expect(refusalOf('version_exists', undefined)).toEqual({ invalid: ['platform'], family: 'save' })
+  })
+})

@@ -92,3 +92,10 @@ describe('PostActions: the poster under approvals (spec 2026-10-19 §4.4)', () =
     expect(html).toContain('While approvals are on, a manager approves, marks ready and publishes.')
   })
 })
+
+// 5B-2 review: "Copy link" read like the post's own Link; it copies the post's address in the admin, for the team.
+describe('the copy button for the post’s admin address', () => {
+  it('says who the link is for', () => {
+    expect(render(post)).toContain('Copy link for the team')
+  })
+})

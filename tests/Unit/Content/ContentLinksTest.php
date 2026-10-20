@@ -60,6 +60,17 @@ class ContentLinksTest extends TestCase
         $this->assertNotSame('content-plan', $cyrillic);
     }
 
+    // Owner, 2026-10-20: an email or blog post's clicks are a referral in Google Analytics, not social.
+    public function test_email_and_blog_posts_are_tagged_as_a_referral_and_every_other_platform_as_social(): void
+    {
+        $this->assertSame('referral', ContentLinks::postTags('email', null, 7)['utm_medium']);
+        $this->assertSame('referral', ContentLinks::postTags('blog', 'Spring', 7)['utm_medium']);
+        foreach (['linkedin', 'instagram', 'tiktok', 'facebook', 'x', 'youtube'] as $platform) {
+            $this->assertSame('social', ContentLinks::postTags($platform, null, 7)['utm_medium'], $platform);
+        }
+        $this->assertSame('email', ContentLinks::postTags('email', null, 7)['utm_source']);
+    }
+
     public function test_only_web_addresses_up_to_2000_characters_are_links(): void
     {
         $this->assertSame('https://lumiere.example/a', ContentLinks::clean('  https://lumiere.example/a  '));

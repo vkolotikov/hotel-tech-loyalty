@@ -34,10 +34,11 @@ final class ContentMorningDigest
                 if (!$profile) {
                     continue;
                 }
-                $posts = ContentReminders::today($user, $profile, $venueNow, true)
+                $audience = ContentReminders::audience($user, $profile);
+                $posts = ContentReminders::today($user, $profile, $venueNow, true, $audience)
                     ->orderByRaw('CASE WHEN scheduled_time IS NULL THEN 0 ELSE 1 END')->orderBy('scheduled_time')->orderBy('id')
                     ->limit(self::MAX_POSTS)->get();
-                $missed = ContentReminders::missed($user, $profile, $venueNow)->count();
+                $missed = ContentReminders::missed($user, $profile, $venueNow, $audience)->count();
                 if ($posts->isEmpty() && $missed === 0) {
                     continue;
                 }

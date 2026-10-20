@@ -37,7 +37,8 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
   const api = useApi()
   const boot = useBoot()
   const locked = staffLocked(boot)
-  // Spec 2026-10-19 §4.4: the post's own poster may mark an approved or ready post published, approvals on or off.
+  // Spec 2026-10-19 §4.4: the post's own poster may mark an approved or ready post published while approvals are on;
+  // with approvals off, anyone may mark it published.
   const publishable = canMarkPublished(post, locked, boot.staff.id ?? null)
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -120,7 +121,7 @@ export function PostActions({ post, dirty, onPost, onDuplicated, onDeleted, pill
         {/* The post's own link with its brand, so a colleague on another brand opens this post. */}
         <Button size="sm" variant="secondary" disabled={waits}
           onClick={() => { void act('link', async () => { await navigator.clipboard.writeText(`${window.location.origin}${postLink(post.id, boot.brand?.id ?? null)}`); setLinkCopied(true) }) }}>
-          <Link2 size={14} aria-hidden />{linkCopied ? t('content.panel.actions.link_copied', 'Link copied') : t('content.panel.actions.copy_link', 'Copy link')}
+          <Link2 size={14} aria-hidden />{linkCopied ? t('content.panel.actions.link_copied', 'Link copied') : t('content.panel.actions.copy_link', 'Copy link for the team')}
         </Button>
         {boot.staff.can_manage && (
           <Button size="sm" variant="secondary" disabled={waits} onClick={() => setTemplating(true)}>

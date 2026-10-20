@@ -75,6 +75,7 @@ class PostAiController extends Controller
     {
         $post = $this->prepare($request, $id);
         $this->run(fn () => $briefs->generateFor($post));
+        self::worked($post);
 
         return $this->post($post);
     }
@@ -85,9 +86,20 @@ class PostAiController extends Controller
         $post = $this->prepare($request, $id);
         $before = (string) $post->status;
         $this->run(fn () => $images->generateForPost($post, $data['instructions'] ?? null));
+        self::worked($post);
         ContentApproval::afterAi($post->fresh(), $before, $request->user(), ContentContext::profile());
 
         return $this->post($post);
+    }
+
+    /**
+     * A new picture or visual brief is someone working on the post: its version moves on, which also ends "Sent back"
+     * (owner, 2026-10-20; final review). The picture lives on the brief, so the post itself would not change otherwise.
+     */
+    private static function worked(ContentPlannerPost $post): void
+    {
+        $post->refresh();
+        $post->touch();
     }
 
     /** One AI-written post for an open slot (spec §4.2), through the calendar's own one-day generation. */

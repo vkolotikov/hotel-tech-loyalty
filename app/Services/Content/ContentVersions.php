@@ -33,6 +33,33 @@ final class ContentVersions
     }
 
     /**
+     * Locks the group's key post — the post whose id is `group_id`, or the post itself outside a group — for the rest of
+     * the caller's transaction, so every change to a group's platforms waits on one row whichever post it starts from
+     * (5A-1 review). Unlink can re-key a group while this waits: then the new key is locked too. Refreshes `$post`.
+     */
+    public static function lockGroup(ContentPlannerPost $post): int
+    {
+        $key = (int) ($post->group_id ?: $post->id);
+        ContentPlannerPost::whereKey($key)->lockForUpdate()->first();
+        $post->refresh();
+        $now = (int) ($post->group_id ?: $post->id);
+        if ($now !== $key) {
+            ContentPlannerPost::whereKey($now)->lockForUpdate()->first();
+            $post->refresh();
+        }
+
+        return $now;
+    }
+
+    /** A save that moves a grouped post to a platform another post of its group has is refused: one post per platform. */
+    public static function assertPlatformFree(ContentPlannerPost $post, string $platform): void
+    {
+        if ($post->group_id && ContentPlannerPost::where('group_id', $post->group_id)->where('id', '!=', $post->id)->where('platform', $platform)->exists()) {
+            throw new ContentRefused('version_exists', 'Another version in this group is already for that platform.', 409);
+        }
+    }
+
+    /**
      * The versions, made in one transaction, as drafts on the original's day and time, each with its own copy of the
      * original's visual brief and picture (Content never deletes a picture file, so two briefs may share one). A
      * platform already in the group refuses the whole call.
@@ -43,9 +70,9 @@ final class ContentVersions
     public static function make(ContentPlannerPost $original, array $platforms, int $userId): Collection
     {
         return DB::transaction(function () use ($original, $platforms, $userId) {
-            // Two calls at once for the same platform: the second waits here, then sees the first one's version.
-            ContentPlannerPost::whereKey($original->id)->lockForUpdate()->first();
-            $original->refresh();
+            // Two calls at once for the same platform, from any posts of the group: the second waits here, then sees the
+            // first one's version.
+            self::lockGroup($original);
             if (array_intersect($platforms, self::platformsOf($original)) !== []) {
                 throw new ContentRefused('version_exists', 'This post already has a version for that platform.', 409);
             }
@@ -134,7 +161,8 @@ final class ContentVersions
             ])->values()->all(),
             'adapting'      => array_values(array_intersect(array_map('intval', (array) Cache::get(self::adaptingKey((int) $post->group_id), [])), $ids)),
             'kept_original' => $keptIds,
-            'kept_reason'   => $keptIds === [] ? null : ($kept['reason'] ?? null),
+            // The post's own reason when it is kept; otherwise the first kept version's (the panel words this post's).
+            'kept_reason'   => $keptIds === [] ? null : self::reasonOf($kept, in_array((int) $post->id, $keptIds, true) ? (int) $post->id : $keptIds[0]),
         ];
     }
 
@@ -158,13 +186,26 @@ final class ContentVersions
             : Cache::put(self::adaptingKey($groupId), array_values(array_unique(array_map('intval', $ids))), now()->addMinutes(15));
     }
 
-    /** @param list<int> $ids */
+    /** @param list<int> $ids — each keeps the reason it was kept for (5A-1 review: a later batch does not relabel them). */
     public static function keep(int $groupId, array $ids, string $reason): void
     {
-        $before = (array) (Cache::get(self::keptKey($groupId))['ids'] ?? []);
-        Cache::put(self::keptKey($groupId), [
-            'ids'    => array_values(array_unique(array_map('intval', array_merge($before, $ids)))),
-            'reason' => $reason,
-        ], now()->addDay());
+        $before = (array) Cache::get(self::keptKey($groupId), []);
+        $reasons = (array) ($before['reasons'] ?? []);
+        foreach ((array) ($before['ids'] ?? []) as $id) {
+            // An entry written before reasons were kept per version: its one reason stands for each of its ids.
+            $reasons[(int) $id] ??= $before['reason'] ?? $reason;
+        }
+        foreach ($ids as $id) {
+            $reasons[(int) $id] = $reason;
+        }
+        Cache::put(self::keptKey($groupId), ['ids' => array_map('intval', array_keys($reasons)), 'reasons' => $reasons], now()->addDay());
+    }
+
+    /** @param array<string, mixed> $kept */
+    private static function reasonOf(array $kept, int $id): ?string
+    {
+        $reasons = (array) ($kept['reasons'] ?? []);
+
+        return isset($reasons[$id]) ? (string) $reasons[$id] : (isset($kept['reason']) ? (string) $kept['reason'] : null);
     }
 }

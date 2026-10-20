@@ -6,6 +6,7 @@ use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerPostComment;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpContentSchema;
 use Tests\TestCase;
 
@@ -169,5 +170,31 @@ class InboxTest extends TestCase
         $this->asManager()->getJson($this->api('inbox') . "?brand_id={$second}")->assertOk()->assertJsonPath('items', [])->assertJsonPath('count', 0);
         $this->asManager()->getJson($this->api('inbox/count') . "?brand_id={$second}")->assertOk()->assertJsonPath('count', 0);
         $this->asManager()->postJson($this->api('inbox/seen') . "?brand_id={$second}")->assertOk()->assertJsonPath('count', 0);
+    }
+
+    // 5A-1 review: the bell's count is asked every minute per open tab — who manages and who is on the team are read once.
+    public function test_the_bells_count_reads_the_staff_table_a_fixed_number_of_times(): void
+    {
+        $this->makePost(['scheduled_date' => '2026-10-05', 'poster_id' => null]);
+        $this->asManager()->getJson($this->api('inbox/count'))->assertOk(); // warm the middleware's own caches
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->asManager()->getJson($this->api('inbox/count'))->assertOk();
+        $staffReads = collect(DB::getQueryLog())->filter(fn (array $q) => preg_match('/\bfrom\s+"?staff"?(\s|$)/i', $q['query']) === 1)->count();
+        DB::disableQueryLog();
+        $this->assertLessThanOrEqual(3, $staffReads, "staff reads: {$staffReads}"); // 6 before: the access check, then who manages and the team for each query
+    }
+
+    // Final review: the bell's list worked out who manages and the team, then again for its count.
+    public function test_the_bells_list_reads_the_staff_table_a_fixed_number_of_times(): void
+    {
+        $this->makePost(['scheduled_date' => '2026-10-05', 'poster_id' => null]);
+        $this->asManager()->getJson($this->api('inbox'))->assertOk(); // warm the middleware's own caches
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $this->asManager()->getJson($this->api('inbox'))->assertOk();
+        $staffReads = collect(DB::getQueryLog())->filter(fn (array $q) => preg_match('/\bfrom\s+"?staff"?(\s|$)/i', $q['query']) === 1)->count();
+        DB::disableQueryLog();
+        $this->assertLessThanOrEqual(3, $staffReads, "staff reads: {$staffReads}");
     }
 }

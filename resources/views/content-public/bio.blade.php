@@ -13,8 +13,8 @@
 <meta name="description" content="{{ $line }}">
 @endif
 <meta property="og:title" content="{{ $title }}">
-@if ($logo)
-<meta property="og:image" content="{{ $logo }}">
+@if ($og_image)
+<meta property="og:image" content="{{ $og_image }}">
 @endif
 <link rel="stylesheet" href="{{ asset('landing/content-public.css') }}{{ \App\Support\AssetVersion::query('landing/content-public.css') }}">
 <style nonce="{{ $cspNonce }}">:root{--cp-brand: {{ $brand }};--cp-on-brand: {{ $onBrand }};}</style>

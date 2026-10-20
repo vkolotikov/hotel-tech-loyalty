@@ -115,53 +115,70 @@ final class ContentBio
         }
         $destinations = array_map(fn (array $button) => ContentLinks::cleanRequired($button['destination'] ?? null), $buttons);
 
-        try {
-            return DB::transaction(function () use ($profile, $data, $slug, $buttons, $destinations) {
-                $page = ContentBioPage::where('planner_profile_id', $profile->id)->lockForUpdate()->first();
-                if (ContentBioPage::withoutGlobalScopes()->where('slug', $slug)->when($page, fn ($q) => $q->where('id', '!=', $page->id))->exists()) {
+        // Two managers saving the brand's first page at the same moment: the second insert meets the first one's page
+        // (one page per profile) and is tried once more, as an update of it. The retry's own look finds a name another
+        // page holds (`bio_name_taken`); a second violation is that name taken at the same moment (5B-1 review).
+        for ($attempt = 1; ; $attempt++) {
+            try {
+                return self::write($profile, $data, $slug, $buttons, $destinations);
+            } catch (UniqueConstraintViolationException) {
+                if ($attempt > 1) {
                     throw self::taken();
                 }
-                $fields = [
-                    'slug'       => $slug,
-                    'is_on'      => (bool) $data['is_on'],
-                    'title'      => self::words($data['title'] ?? null),
-                    'line'       => self::words($data['line'] ?? null),
-                    'show_posts' => (bool) $data['show_posts'],
-                ];
-                if ($page) {
-                    $page->update($fields);
-                } else {
-                    $page = ContentBioPage::create($fields + [
-                        'organization_id'    => $profile->organization_id,
-                        'brand_id'           => $profile->brand_id,
-                        'planner_profile_id' => $profile->id,
-                    ]);
-                }
-                $existing = $page->buttons()->with('link')->get()->keyBy('id');
-                $kept = [];
-                foreach ($buttons as $position => $sent) {
-                    $id = isset($sent['id']) ? (int) $sent['id'] : null;
-                    $button = $id !== null && !in_array($id, $kept, true) ? $existing->get($id) : null;
-                    if ($button) {
-                        $button->link->update(['destination' => $destinations[$position], 'utm' => ContentLinks::BUTTON_TAGS]);
-                        $button->update(['label' => $sent['label'], 'position' => $position]);
-                    } else {
-                        $link = ContentLinks::make((int) $page->organization_id, (int) $page->brand_id, null, $destinations[$position], ContentLinks::BUTTON_TAGS);
-                        $button = ContentBioButton::create(['bio_page_id' => $page->id, 'link_id' => $link->id, 'label' => $sent['label'], 'position' => $position]);
-                    }
-                    $kept[] = (int) $button->id;
-                }
-                foreach ($existing->except($kept) as $gone) {
-                    $gone->link?->update(['destination' => null]);
-                    $gone->delete();
-                }
-
-                return $page->fresh();
-            });
-        } catch (UniqueConstraintViolationException) {
-            // Two pages saved the same name at the same moment: the second is refused as if it had seen the first.
-            throw self::taken();
+            }
         }
+    }
+
+    /**
+     * One try at the save, in one transaction.
+     *
+     * @param list<array{id?: ?int, label: string, destination: string}> $buttons
+     * @param list<string> $destinations
+     */
+    private static function write(ContentPlannerProfile $profile, array $data, string $slug, array $buttons, array $destinations): ContentBioPage
+    {
+        return DB::transaction(function () use ($profile, $data, $slug, $buttons, $destinations) {
+            $page = ContentBioPage::where('planner_profile_id', $profile->id)->lockForUpdate()->first();
+            if (ContentBioPage::withoutGlobalScopes()->where('slug', $slug)->when($page, fn ($q) => $q->where('id', '!=', $page->id))->exists()) {
+                throw self::taken();
+            }
+            $fields = [
+                'slug'       => $slug,
+                'is_on'      => (bool) $data['is_on'],
+                'title'      => self::words($data['title'] ?? null),
+                'line'       => self::words($data['line'] ?? null),
+                'show_posts' => (bool) $data['show_posts'],
+            ];
+            if ($page) {
+                $page->update($fields);
+            } else {
+                $page = ContentBioPage::create($fields + [
+                    'organization_id'    => $profile->organization_id,
+                    'brand_id'           => $profile->brand_id,
+                    'planner_profile_id' => $profile->id,
+                ]);
+            }
+            $existing = $page->buttons()->with('link')->get()->keyBy('id');
+            $kept = [];
+            foreach ($buttons as $position => $sent) {
+                $id = isset($sent['id']) ? (int) $sent['id'] : null;
+                $button = $id !== null && !in_array($id, $kept, true) ? $existing->get($id) : null;
+                if ($button) {
+                    $button->link->update(['destination' => $destinations[$position], 'utm' => ContentLinks::BUTTON_TAGS]);
+                    $button->update(['label' => $sent['label'], 'position' => $position]);
+                } else {
+                    $link = ContentLinks::make((int) $page->organization_id, (int) $page->brand_id, null, $destinations[$position], ContentLinks::BUTTON_TAGS);
+                    $button = ContentBioButton::create(['bio_page_id' => $page->id, 'link_id' => $link->id, 'label' => $sent['label'], 'position' => $position]);
+                }
+                $kept[] = (int) $button->id;
+            }
+            foreach ($existing->except($kept) as $gone) {
+                $gone->link?->update(['destination' => null]);
+                $gone->delete();
+            }
+
+            return $page->fresh();
+        });
     }
 
     /** A name a page may take: valid, not reserved, not another page's. */

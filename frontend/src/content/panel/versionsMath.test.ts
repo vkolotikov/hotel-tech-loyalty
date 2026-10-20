@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Platform, PostGroup } from '../lib/types'
-import { aiAllowed, submitReady, versionChoices, versionNote, versionsBody } from './versionsMath'
+import { aiAllowed, groupPostsToRefresh, submitReady, versionChoices, versionNote, versionsBody } from './versionsMath'
 
 const group = (more: Partial<PostGroup> = {}): PostGroup => ({
   id: 5,
@@ -60,5 +60,15 @@ describe('submitReady (final review)', () => {
     expect(submitReady({ platforms: ['x'], ai: false }, false)).toBe(true)
     expect(submitReady({ platforms: ['x'], ai: false }, true)).toBe(false)
     expect(submitReady(null, false)).toBe(false)
+  })
+})
+
+// 5A-2 review: the other versions' cached copies showed the old group for up to 30 s after Make versions or Unlink.
+describe('the versions to read again', () => {
+  const g = (...ids: number[]): PostGroup => ({ id: ids[0], posts: ids.map(id => ({ id, platform: 'instagram' as Platform, status: 'draft' as const, scheduled_date: null, scheduled_time: null })), adapting: [], kept_original: [], kept_reason: null })
+  it('are every post of the group before and after, but this one, each once', () => {
+    expect(groupPostsToRefresh(g(1, 2), g(1, 2, 3), 1)).toEqual([2, 3])
+    expect(groupPostsToRefresh(g(1, 2, 3), null, 2)).toEqual([1, 3])
+    expect(groupPostsToRefresh(null, null, 5)).toEqual([])
   })
 })

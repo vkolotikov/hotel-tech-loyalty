@@ -28,7 +28,7 @@ class RewriteRepeatCopies implements ShouldQueue
 
     public int $tries = 1;
 
-    /** One AI call per run, well under the queue connections' retry_after (90 s). */
+    /** One AI call per run: a short run hands the rest on, well under every queue connection's retry_after. */
     public int $timeout = 80;
 
     /** @param list<int> $copyIds */

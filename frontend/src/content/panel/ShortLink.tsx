@@ -25,7 +25,7 @@ export function ShortLink({ typed, link }: { typed: string; link: ShortLinkFacts
         <span className="text-xs font-medium text-a-text-2">{w('short', 'Short link')}</span>
         <span className={`min-w-0 break-all font-a-mono text-sm ${link.on ? 'text-a-text' : 'text-a-text-2'}`}>{link.short_url}</span>
         {link.on
-          ? <CopyButton text={link.short_url} label={w('copy', 'Copy')} />
+          ? <CopyButton text={link.short_url} label={w('copy', 'Copy short link')} />
           : <span className="text-xs font-medium text-a-text-2">{`(${w('off_badge', 'switched off')})`}</span>}
       </div>
       {note}

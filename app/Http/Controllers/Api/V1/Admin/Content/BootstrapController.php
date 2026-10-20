@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\V1\Admin\Content;
 
-use App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController as AppointmentsBootstrap;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Organization;
@@ -13,6 +12,7 @@ use App\Services\Content\ContentAccess;
 use App\Services\Content\ContentContext;
 use App\Services\Content\ContentRules;
 use App\Services\ContentKnowledgeService;
+use App\Support\OrgAccent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -40,7 +40,7 @@ class BootstrapController extends Controller
             'organization' => ['id' => $orgId, 'name' => (string) $org->name, 'industry' => (string) $org->resolved_industry],
             'brand'        => $brand ? ['id' => (int) $brand->id, 'name' => (string) $brand->name] : null,
             'brands'       => $brands->map(fn (Brand $b) => ['id' => (int) $b->id, 'name' => (string) $b->name])->values(),
-            'accent'       => AppointmentsBootstrap::accent($orgId),
+            'accent'       => OrgAccent::of($orgId),
             'venue'        => [
                 'timezone'       => VenueClock::zone($orgId),
                 'timezone_named' => VenueClock::isNamed($orgId),

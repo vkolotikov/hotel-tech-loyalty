@@ -13,6 +13,7 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('../../lib/api', () => ({ api: {} }))
 
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ContentContext } from '../ContentProvider'
 import { bootFor } from '../brand/brandTesting'
 import type { BudgetStatus, Bootstrap, Platform, PostDetail, PostGroup } from '../lib/types'
@@ -31,9 +32,11 @@ const group = (more: Partial<PostGroup> = {}): PostGroup => ({
 function render(element: ReactElement, platforms: Platform[] = ['instagram', 'linkedin', 'x'], budget: BudgetStatus = 'under') {
   const boot = { ...bootFor(false), platforms, ai: { status: budget, percent: 10 } } as unknown as Bootstrap
   return renderToStaticMarkup(
-    <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
-      <PanelProvider>{element}</PanelProvider>
-    </ContentContext.Provider>,
+    <QueryClientProvider client={new QueryClient()}>
+      <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+        <PanelProvider>{element}</PanelProvider>
+      </ContentContext.Provider>
+    </QueryClientProvider>,
   )
 }
 const section = (g: PostGroup | null, dirty = false) => <VersionsSection post={post} group={g} dirty={dirty} onPost={() => {}} />

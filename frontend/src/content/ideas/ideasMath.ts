@@ -136,3 +136,23 @@ export function scheduleBody(post: { updated_at: string }, form: { date: string;
   const body = { updated_at: post.updated_at, scheduled_date: form.date, scheduled_time: form.time === '' ? null : form.time }
   return poster === initial ? body : { ...body, poster_id: poster === '' ? null : Number(poster) }
 }
+
+/**
+ * What Undo gives back as the poster: undefined when Schedule did not change who posts it; otherwise the poster the
+ * dialog started from as the team knows it — someone who has left is nobody (null), since the server refuses to set
+ * someone off the team (final review).
+ */
+export function undoPoster(body: { poster_id?: number | null }, initial: string): number | null | undefined {
+  if (!('poster_id' in body)) return undefined
+  return initial === '' ? null : Number(initial)
+}
+
+/** Undo after Schedule (5A-2 review): the day goes, and — when Schedule changed it — the poster goes back (undoPoster). */
+export function unscheduleBody(moved: { updated_at: string }, poster: number | null | undefined): {
+  updated_at: string
+  scheduled_date: null
+  poster_id?: number | null
+} {
+  const body = { updated_at: moved.updated_at, scheduled_date: null }
+  return poster === undefined ? body : { ...body, poster_id: poster }
+}

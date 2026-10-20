@@ -25,17 +25,17 @@ final class ContentReminders
      * Today's posts for the person, by `$venueNow` (the venue's wall clock): those whose time has come — a post with no
      * time from the start of the day — or, with `$wholeDay`, all of them (the morning email lists the day).
      */
-    public static function today(User $user, ContentPlannerProfile $profile, CarbonImmutable $venueNow, bool $wholeDay = false): Builder
+    public static function today(User $user, ContentPlannerProfile $profile, CarbonImmutable $venueNow, bool $wholeDay = false, ?array $audience = null): Builder
     {
-        return self::mine($user, $profile)->whereDate('scheduled_date', $venueNow->format('Y-m-d'))
+        return self::mine($user, $profile, $audience)->whereDate('scheduled_date', $venueNow->format('Y-m-d'))
             ->when(!$wholeDay, fn (Builder $q) => $q->where(fn (Builder $t) => $t->whereNull('scheduled_time')
                 ->orWhere('scheduled_time', '<=', $venueNow->format('H:i:s'))));
     }
 
     /** The person's posts from the seven days before today that nobody marked as done. */
-    public static function missed(User $user, ContentPlannerProfile $profile, CarbonImmutable $venueNow): Builder
+    public static function missed(User $user, ContentPlannerProfile $profile, CarbonImmutable $venueNow, ?array $audience = null): Builder
     {
-        return self::mine($user, $profile)
+        return self::mine($user, $profile, $audience)
             ->whereDate('scheduled_date', '>=', $venueNow->subDays(self::MISSED_DAYS)->format('Y-m-d'))
             ->whereDate('scheduled_date', '<', $venueNow->format('Y-m-d'));
     }
@@ -48,11 +48,25 @@ final class ContentReminders
         return CarbonImmutable::createFromFormat('Y-m-d H:i', $post->scheduled_date->format('Y-m-d') . ' ' . $time, $zone)->utc();
     }
 
-    /** Posts not done that the person posts, or — for a manager — that nobody on the team posts. */
-    private static function mine(User $user, ContentPlannerProfile $profile): Builder
+    /**
+     * Who the reminders are for, to read once per request (5A-1 review: the bell asks every minute per open tab): whether
+     * the person manages, and — for a manager — the brand's team. @return array{manager: bool, members: list<int>}
+     */
+    public static function audience(User $user, ContentPlannerProfile $profile): array
     {
         $manager = ContentAccess::canManage($user);
-        $members = $manager ? ContentTeam::memberIds((int) $profile->brand_id) : [];
+
+        return ['manager' => $manager, 'members' => $manager ? ContentTeam::memberIds((int) $profile->brand_id) : []];
+    }
+
+    /**
+     * Posts not done that the person posts, or — for a manager — that nobody on the team posts.
+     *
+     * @param array{manager: bool, members: list<int>}|null $audience from audience(); null: read here
+     */
+    private static function mine(User $user, ContentPlannerProfile $profile, ?array $audience = null): Builder
+    {
+        ['manager' => $manager, 'members' => $members] = $audience ?? self::audience($user, $profile);
 
         return ContentPlannerPost::query()->where('planner_profile_id', $profile->id)->whereNotIn('status', self::DONE)
             ->where(function (Builder $q) use ($user, $manager, $members) {

@@ -30,7 +30,7 @@ describe('the short link under the Link field (spec 2026-10-19 §5.5)', () => {
   it('shows the short link with Copy, the clicks and those from the bio page, and 14 bars each named for a screen reader', () => {
     const html = renderToStaticMarkup(<ShortLink typed="https://lumiere.example/autumn" link={link} />)
     expect(html).toContain('https://sites.hexa-tech.uk/go/abc2345')
-    expect(html).toContain('Copy</button>')
+    expect(html).toContain('Copy short link</button>')
     expect(html).toContain('Clicks: 9')
     expect(html).toContain('From the link-in-bio page: 3')
     expect(html).toContain('Clicks per day, last 14 days')
@@ -47,7 +47,7 @@ describe('the short link under the Link field (spec 2026-10-19 §5.5)', () => {
     const off = renderToStaticMarkup(<ShortLink typed="" link={{ ...link, on: false, destination: null }} />)
     expect(off).toContain('This short link is switched off. Enter a link to switch it back on.')
     expect(off).toContain('switched off')
-    expect(off).not.toContain('Copy</button>')
+    expect(off).not.toContain('Copy short link</button>')
     expect(renderToStaticMarkup(<ShortLink typed="https://lumiere.example" link={{ ...link, on: false, destination: null }} />)).toContain('Saving switches this short link back on.')
   })
 })

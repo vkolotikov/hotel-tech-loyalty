@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { ArrowDown, ArrowUp, ExternalLink, Plus, Trash2 } from 'lucide-react'
@@ -11,8 +11,8 @@ import type { BioPayload } from '../../lib/types'
 import { CopyButton } from '../../ui/CopyButton'
 import { INPUT, ReadRow } from '../inputs'
 import {
-  MAX_BUTTONS, addButton, addressOf, bioBody, bioFormOf, bioProblems, focusAfterMove, focusAfterRemove, freshBio, moveButton, refusedFields,
-  removeButton, renamedFrom, slugInput, type BioButtonForm, type BioForm,
+  MAX_BUTTONS, addButton, addressOf, bioBody, bioFormOf, bioProblems, caretToRestore, focusAfterMove, focusAfterRemove, freshBio, keyedMarks, moveButton,
+  problemCodes, refusedFields, removeButton, renamedFrom, slugInput, type BioButtonForm, type BioForm,
 } from '../bioForm'
 
 const edge = (bad: boolean) => (bad ? 'border-a-danger' : 'border-a-border')
@@ -72,9 +72,9 @@ export function LinkInBioSection({ canEdit }: { canEdit: boolean }) {
     if (draft === null || busy) return
     const problems = bioProblems(draft)
     if (problems.length > 0) {
-      setInvalid(problems)
-      const [key, text] = errorKey('bio', 'invalid')
-      setError(t(key, text))
+      // Marks by row, so a move keeps them on their rows; the words name each rule that failed (5B-2 review).
+      setInvalid(keyedMarks(draft.buttons, problems))
+      setError(problemCodes(problems).map(code => { const [key, text] = errorKey('bio', code); return t(key, text) }).join(' '))
       focusAfter.current = '[aria-invalid="true"]'
       return
     }
@@ -87,7 +87,7 @@ export function LinkInBioSection({ canEdit }: { canEdit: boolean }) {
       close()
     } catch (e) {
       const failure = failureOf(e)
-      setInvalid(refusedFields(failure.code, failure.fields))
+      setInvalid(keyedMarks(draft.buttons, refusedFields(failure.code, failure.fields)))
       const [key, text] = errorKey('bio', failure.code)
       setError(t(key, text))
       focusAfter.current = '[aria-invalid="true"], [data-bio-save]'
@@ -156,6 +156,8 @@ export function BioReadView({ bio, canEdit, brandName }: { bio: BioPayload; canE
   return (
     <div className="space-y-3">
       <AddressLine address={address} open={page.is_on} />
+      {/* Copy stays (the address can be shared before the page goes on), with what it shows meanwhile (5B-2 review). */}
+      {!page.is_on && <p data-bio-off="" className="text-xs text-a-text-2">{w('off_warning', 'The page is switched off: this address shows a page that is not found until you switch it on.')}</p>}
       <dl className="grid gap-3 sm:grid-cols-2">
         <ReadRow label={w('state', 'Page')} value={onOff(page.is_on)} />
         <ReadRow label={w('posts_state', 'Latest posts')} value={onOff(page.show_posts)} />
@@ -200,6 +202,14 @@ export function BioEditor({ bio, draft, onChange, invalid, error, busy, brandNam
   const { t } = useTranslation()
   const w = (key: string, english: string, vars?: Record<string, unknown>) => t(`content.bio.${key}`, english, vars)
   const counter = useRef(0)
+  const nameField = useRef<HTMLInputElement>(null)
+  const caret = useRef<number | null>(null)
+  // The name is rewritten as it is typed (lowercase, hyphens): the caret stays after what was typed (5B-2 review).
+  useLayoutEffect(() => {
+    if (caret.current === null || nameField.current === null) return
+    nameField.current.setSelectionRange(caret.current, caret.current)
+    caret.current = null
+  })
   const bad = (key: string) => invalid.includes(key)
   const set = (part: Partial<BioForm>) => onChange({ ...draft, ...part })
   const setButton = (index: number, part: Partial<BioButtonForm>) => set({ buttons: draft.buttons.map((b, i) => (i === index ? { ...b, ...part } : b)) })
@@ -233,16 +243,18 @@ export function BioEditor({ bio, draft, onChange, invalid, error, busy, brandNam
         </div>
         <p id="content-bio-switch-line" className="text-xs text-a-text-2">{w('switch_line', 'While it is off, its address shows a page that is not found.')}</p>
       </div>
-      <label className="block">
-        <span className="mb-1 block text-xs font-medium text-a-text-2">{w('name', 'Name')}</span>
-        <input value={draft.slug} maxLength={63} autoCapitalize="none" spellCheck={false} aria-invalid={bad('slug') || undefined} aria-describedby="content-bio-address"
-          onChange={(e) => set({ slug: slugInput(e.target.value) })} className={`${INPUT} ${edge(bad('slug'))}`} />
-        {/* Only the address may break anywhere (a long name on a phone); the hint wraps between its words. */}
-        <span id="content-bio-address" className="mt-1 block text-xs text-a-text-2">
+      <div>
+        <label htmlFor="content-bio-name" className="mb-1 block text-xs font-medium text-a-text-2">{w('name', 'Name')}</label>
+        <input id="content-bio-name" ref={nameField} value={draft.slug} maxLength={63} autoCapitalize="none" spellCheck={false} aria-invalid={bad('slug') || undefined} aria-describedby="content-bio-address"
+          onChange={(e) => { const raw = e.target.value; caret.current = caretToRestore(raw, e.target.selectionStart ?? raw.length); set({ slug: slugInput(raw) }) }}
+          className={`${INPUT} ${edge(bad('slug'))}`} />
+        {/* Outside the label, so the field is named once (5B-2 review). Only the address may break anywhere (a long name on
+            a phone); the rules wrap between their words. */}
+        <p id="content-bio-address" className="mt-1 text-xs text-a-text-2">
           <span className="break-all">{addressOf(bio.base_url, draft.slug.trim())}</span>
-          {` · ${w('name_hint', 'Lowercase letters, digits and hyphens.')}`}
-        </span>
-      </label>
+          {` · ${w('name_hint', '3 to 63 lowercase letters, digits and single hyphens.')}`}
+        </p>
+      </div>
       {old && <Notice tone="warning">{w('rename', 'The old address stops working when you save: {{old}}', { old })}</Notice>}
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-a-text-2">{w('page_title', 'Title')}</span>
@@ -268,11 +280,13 @@ export function BioEditor({ bio, draft, onChange, invalid, error, busy, brandNam
             const n = i + 1
             return (
               <li key={button.key} data-bio-row={button.key} className="space-y-2 rounded-lg border border-a-border p-2">
-                <input value={button.label} maxLength={40} aria-label={w('button_label', 'Button {{n}}: label', { n })} aria-invalid={bad(`buttons.${i}.label`) || undefined}
-                  onChange={(e) => setButton(i, { label: e.target.value })} className={`${INPUT} ${edge(bad(`buttons.${i}.label`))}`} />
+                {/* Marks by the row's key: they stay on the row through a move or a removal (5B-2 review). */}
+                <input value={button.label} maxLength={40} placeholder={w('button_label_placeholder', 'e.g. Book a visit')} aria-label={w('button_label', 'Button {{n}}: label', { n })}
+                  aria-invalid={bad(`buttons.${button.key}.label`) || undefined}
+                  onChange={(e) => setButton(i, { label: e.target.value })} className={`${INPUT} ${edge(bad(`buttons.${button.key}.label`))}`} />
                 <input type="url" inputMode="url" value={button.destination} maxLength={2000} placeholder="https://" aria-label={w('button_address', 'Button {{n}}: address', { n })}
-                  aria-invalid={bad(`buttons.${i}.destination`) || undefined} onChange={(e) => setButton(i, { destination: e.target.value })}
-                  className={`${INPUT} ${edge(bad(`buttons.${i}.destination`))}`} />
+                  aria-invalid={bad(`buttons.${button.key}.destination`) || undefined} onChange={(e) => setButton(i, { destination: e.target.value })}
+                  className={`${INPUT} ${edge(bad(`buttons.${button.key}.destination`))}`} />
                 <div className="flex gap-1">
                   <button type="button" data-move="up" disabled={i === 0} aria-label={w('up', 'Move button {{n}} up', { n })} onClick={() => move(i, -1)} className={ICON}>
                     <ArrowUp size={14} aria-hidden />

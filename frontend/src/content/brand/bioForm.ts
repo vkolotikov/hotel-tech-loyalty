@@ -108,3 +108,34 @@ export async function freshBio(refetch: () => Promise<{ data?: BioPayload }>, he
     return held
   }
 }
+
+/**
+ * A check's marks with each button's row key in place of its number (`buttons.1.label` → `buttons.n0.label`), so a mark
+ * stays on its row through a move or a removal (5B-2 review). A number with no row stays as it is.
+ */
+export function keyedMarks(buttons: readonly BioButtonForm[], marks: readonly string[]): string[] {
+  return marks.map(mark => {
+    const found = /^buttons\.(\d+)\.(label|destination)$/.exec(mark)
+    const row = found ? buttons[Number(found[1])] : undefined
+    return found && row ? `buttons.${row.key}.${found[2]}` : mark
+  })
+}
+
+/** The refusal words for what a check marked: the name's rule, the address rule, a missing label, the count — each once. */
+export function problemCodes(marks: readonly string[]): string[] {
+  const codes: string[] = []
+  if (marks.includes('slug')) codes.push('bio_name_invalid')
+  if (marks.some(m => /^buttons\.[^.]+\.destination$/.test(m))) codes.push('bad_link')
+  if (marks.some(m => /^buttons\.[^.]+\.label$/.test(m))) codes.push('label_missing')
+  if (marks.includes('buttons')) codes.push('too_many_buttons')
+  return codes.length > 0 ? codes : ['invalid']
+}
+
+/** Where the caret belongs once the name field rewrote what was typed: after the same characters, rewritten (5B-2 review). */
+export const caretAfter = (raw: string, caret: number): number => slugInput(raw.slice(0, caret)).length
+
+/**
+ * The caret to put back after a key press, or null when the name was typed as it is kept: putting the caret back on
+ * every key press can disturb a keyboard composing a word (Android), so it is put back only after a rewrite (final review).
+ */
+export const caretToRestore = (raw: string, caret: number): number | null => (slugInput(raw) === raw ? null : caretAfter(raw, caret))

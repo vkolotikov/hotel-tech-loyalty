@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Channel, IdeasPayload, PostCard, PostStatus } from '../lib/types'
-import { ageOf, ageText, canEnter, columnOf, ideaBody, ideaLine, inFlight, moveStatus, moveTargets, placeCard, scheduleDefaults, seeAllLink, stepColumn, stepTarget } from './ideasMath'
+import { ageOf, ageText, canEnter, columnOf, ideaBody, ideaLine, inFlight, moveStatus, moveTargets, placeCard, scheduleDefaults, scheduleBody, seeAllLink, stepColumn, stepTarget, undoPoster, unscheduleBody } from './ideasMath'
 
 describe('the board’s stages (spec 2026-10-16 §4.1)', () => {
   it('puts each status in its stage, and published, skipped or archived posts in none', () => {
@@ -110,5 +110,21 @@ describe('approvals on the board (spec 2026-10-16 §6.2)', () => {
   it('lets a card already in Ready move out', () => {
     expect(moveTargets('ready', true)).toEqual(['idea', 'draft', 'review'])
     expect(stepTarget('ready', -1, true)).toBe('review')
+  })
+})
+
+// 5A-2 review: Undo after Schedule took the day away but kept the person picked in the dialog.
+describe('Undo after Schedule', () => {
+  it('takes the day away and, when the dialog changed who posts it, gives back the poster it started from', () => {
+    expect(unscheduleBody({ updated_at: 't2' }, 4)).toEqual({ updated_at: 't2', scheduled_date: null, poster_id: 4 })
+    expect(unscheduleBody({ updated_at: 't2' }, null)).toEqual({ updated_at: 't2', scheduled_date: null, poster_id: null })
+    expect(unscheduleBody({ updated_at: 't2' }, undefined)).toEqual({ updated_at: 't2', scheduled_date: null })
+  })
+  // Final review: a poster who has left the team is never sent back — the server refuses someone off the team.
+  it('starts from the poster as the team knows it, and only when the dialog changed it', () => {
+    const form = { date: '2026-10-21', time: '' }
+    expect(undoPoster(scheduleBody({ updated_at: 't1' }, form, '7', ''), '')).toBeNull()
+    expect(undoPoster(scheduleBody({ updated_at: 't1' }, form, '7', '4'), '4')).toBe(4)
+    expect(undoPoster(scheduleBody({ updated_at: 't1' }, form, '4', '4'), '4')).toBeUndefined()
   })
 })

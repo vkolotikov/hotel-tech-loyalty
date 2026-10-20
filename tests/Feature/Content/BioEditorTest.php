@@ -6,8 +6,10 @@ use App\Models\ContentBioButton;
 use App\Models\ContentBioPage;
 use App\Models\ContentLink;
 use App\Services\Content\ContentLinks;
+use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Tests\Concerns\SetsUpContentSchema;
 use Tests\TestCase;
 
@@ -164,5 +166,56 @@ class BioEditorTest extends TestCase
             ['link_id' => $linkId, 'day' => '2026-09-05', 'via' => 'direct', 'clicks' => 9],
         ]);
         $this->asManager()->getJson($this->api('bio'))->assertOk()->assertJsonPath('buttons.0.clicks_30d', 6);
+    }
+
+    // 5B-1 review: two managers saving the brand's first page at the same moment — the second becomes an update of the
+    // first one's page, not "name taken".
+    public function test_a_first_page_saved_by_someone_else_at_the_same_moment_is_updated_not_refused(): void
+    {
+        // The other manager's page meets this save's insert (one page per profile)…
+        $row = fn (ContentBioPage $page) => [
+            'organization_id' => $page->organization_id, 'brand_id' => $page->brand_id, 'planner_profile_id' => $page->planner_profile_id,
+            'slug' => 'lumiere-other', 'is_on' => false, 'show_posts' => true, 'created_at' => now(), 'updated_at' => now(),
+        ];
+        $first = null;
+        ContentBioPage::creating(function (ContentBioPage $page) use (&$first, $row) {
+            if ($first === null) {
+                $first = $row($page);
+                DB::table('content_bio_pages')->insert($first);
+            }
+        });
+        // …and is still there once this attempt rolls back (it was committed by the other request): the retry updates it
+        // (final review: the test now runs the update branch).
+        $competing = null;
+        Event::listen(TransactionRolledBack::class, function () use (&$first, &$competing) {
+            if ($first !== null && $competing === null) {
+                $competing = DB::table('content_bio_pages')->insertGetId($first);
+            }
+        });
+        $this->save($this->body([['label' => 'Book now', 'destination' => 'https://lumiere.example/book']]))
+            ->assertOk()->assertJsonPath('page.slug', 'lumiere')->assertJsonPath('buttons.0.label', 'Book now');
+        $this->assertNotNull($competing);
+        $this->assertSame([(int) $competing], DB::table('content_bio_pages')->where('planner_profile_id', $this->profile->id)->pluck('id')->map(fn ($id) => (int) $id)->all());
+        ContentBioPage::flushEventListeners();
+    }
+
+    // 5B-1 review (test gap): a button id from another organisation's page is a new button here; theirs is untouched.
+    public function test_a_button_id_from_another_organisations_page_is_a_new_button(): void
+    {
+        $other = $this->otherOrganization();
+        $pageId = DB::table('content_bio_pages')->insertGetId([
+            'organization_id' => $other['org']->id, 'brand_id' => $other['brandId'], 'planner_profile_id' => $other['post']->planner_profile_id,
+            'slug' => 'theirs', 'is_on' => true, 'show_posts' => true, 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $linkId = DB::table('content_links')->insertGetId([
+            'organization_id' => $other['org']->id, 'brand_id' => $other['brandId'], 'code' => 'zzzz222', 'destination' => 'https://theirs.example/',
+            'utm' => '{}', 'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $theirs = DB::table('content_bio_buttons')->insertGetId(['bio_page_id' => $pageId, 'link_id' => $linkId, 'label' => 'Theirs', 'position' => 0]);
+
+        $this->save($this->body([['id' => $theirs, 'label' => 'Mine', 'destination' => 'https://lumiere.example/mine']]))->assertOk();
+        $this->assertNotSame($theirs, $this->asManager()->getJson($this->api('bio'))->json('buttons.0.id'));
+        $this->assertSame('Theirs', DB::table('content_bio_buttons')->where('id', $theirs)->value('label'));
+        $this->assertSame('https://theirs.example/', DB::table('content_links')->where('id', $linkId)->value('destination'));
     }
 }

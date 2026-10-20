@@ -16,7 +16,7 @@ import { usePanel } from '../panel/PanelProvider'
 import { PageHeader } from '../ui/PageHeader'
 import { IdeaColumn } from './IdeaColumn'
 import { QuickCapture } from './QuickCapture'
-import { canEnter, COLUMN_TEXT, COLUMNS, columnOf, IDEAS_HINT_ID, inFlight, moveStatus, placeCard, seeAllLink } from './ideasMath'
+import { canEnter, COLUMN_TEXT, COLUMNS, columnOf, IDEAS_HINT_ID, inFlight, moveStatus, placeCard, seeAllLink, unscheduleBody } from './ideasMath'
 import { ScheduleDialog } from './ScheduleDialog'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text'
@@ -42,7 +42,8 @@ export function IdeasPage() {
   const [stage, setStage] = useState<IdeasColumn>('idea')
   const [dragging, setDragging] = useState<PostCard | null>(null)
   const [scheduling, setScheduling] = useState<PostCard | null>(null)
-  const [undo, setUndo] = useState<PostCard | null>(null)
+  // The post as scheduled, and the poster Undo gives back when Schedule changed it (5A-2 review; final review).
+  const [undo, setUndo] = useState<{ moved: PostCard; poster: number | null | undefined } | null>(null)
   const [error, setError] = useState<string | null>(null)
   // A moved card is focused again in its new stage once the board is read again (its old place is gone).
   const refocus = useRef<number | null>(null)
@@ -93,17 +94,17 @@ export function IdeasPage() {
     setDragging(null)
     if (post) void move(post, to)
   }
-  const scheduled = (post: PostCard) => {
+  const scheduled = (post: PostCard, poster: number | null | undefined) => {
     setScheduling(null)
-    setUndo(post)
+    setUndo({ moved: post, poster })
     void refreshLists(queryClient, brand)
   }
   const unschedule = async () => {
-    const post = undo
-    if (!post) return
+    const last = undo
+    if (!last) return
     setUndo(null)
     try {
-      await api.movePost(post.id, { updated_at: post.updated_at, scheduled_date: null })
+      await api.movePost(last.moved.id, unscheduleBody(last.moved, last.poster))
     } catch (e) {
       fail('move', e)
     }
@@ -145,7 +146,7 @@ export function IdeasPage() {
 
       {undo && (
         <div role="status" className="flex flex-wrap items-center gap-2 rounded-lg border border-a-border bg-a-surface-2 px-3 py-2 text-sm text-a-text">
-          <span>{t('content.ideas.scheduled', 'Scheduled for {{day}}.', { day: undo.scheduled_date ? formatDate(undo.scheduled_date, locale, { weekday: 'long', day: 'numeric', month: 'long' }) : '' })}</span>
+          <span>{t('content.ideas.scheduled', 'Scheduled for {{day}}.', { day: undo.moved.scheduled_date ? formatDate(undo.moved.scheduled_date, locale, { weekday: 'long', day: 'numeric', month: 'long' }) : '' })}</span>
           <Button size="sm" variant="secondary" onClick={() => { void unschedule() }}>{t('content.ideas.undo', 'Undo')}</Button>
         </div>
       )}

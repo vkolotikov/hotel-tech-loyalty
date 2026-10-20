@@ -153,4 +153,19 @@ class VersionsAdaptTest extends TestCase
             $this->assertLessThan((int) config("queue.connections.{$connection}.retry_after"), $job->timeout, $connection);
         }
     }
+
+    // 5A-1 review: a later batch that stopped for another reason must not relabel the versions kept earlier.
+    public function test_each_kept_version_keeps_its_own_reason(): void
+    {
+        $original = $this->makePost(['platform' => 'instagram']);
+        $versions = ContentVersions::make($original, ['linkedin', 'facebook'], $this->staffMember->id);
+        [$first, $second] = [(int) $versions[0]->id, (int) $versions[1]->id];
+
+        ContentVersions::keep((int) $original->id, [$first], 'budget');
+        ContentVersions::keep((int) $original->id, [$second], 'ai_failed');
+
+        $this->assertSame('budget', ContentVersions::describe(ContentPlannerPost::findOrFail($first))['kept_reason']);
+        $this->assertSame('ai_failed', ContentVersions::describe(ContentPlannerPost::findOrFail($second))['kept_reason']);
+        $this->assertSame([$first, $second], ContentVersions::describe(ContentPlannerPost::findOrFail($first))['kept_original']);
+    }
 }

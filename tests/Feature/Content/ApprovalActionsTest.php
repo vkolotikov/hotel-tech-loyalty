@@ -3,6 +3,10 @@
 namespace Tests\Feature\Content;
 
 use App\Models\ContentPlannerPostEvent;
+use App\Models\ContentPlannerVisualBrief;
+use App\Services\ContentPlanner\ImageGenerationService;
+use App\Services\ContentQualityService;
+use App\Services\ContentVisualBriefService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\Concerns\SetsUpContentSchema;
 use Tests\TestCase;
@@ -19,9 +23,10 @@ class ApprovalActionsTest extends TestCase
         $this->profile->forceFill(['requires_approval' => true])->save();
     }
 
-    public function test_staff_send_a_post_for_approval_from_idea_draft_needs_visual_or_needs_review(): void
+    // A post already in review: see test_sending_a_post_already_in_review_again_changes_nothing (owner, 2026-10-20).
+    public function test_staff_send_a_post_for_approval_from_idea_draft_or_needs_visual(): void
     {
-        foreach (['idea', 'draft', 'needs_visual', 'needs_review'] as $status) {
+        foreach (['idea', 'draft', 'needs_visual'] as $status) {
             $post = $this->makePost(['status' => $status]);
             $this->asStaffMember()->postJson($this->api("posts/{$post->id}/send-for-approval"))->assertOk()
                 ->assertJsonPath('post.status', 'needs_review')
@@ -88,5 +93,61 @@ class ApprovalActionsTest extends TestCase
         $other = $this->otherOrganization();
         $this->asManager()->postJson($this->api("posts/{$other['post']->id}/send-back"), ['note' => 'No'])->assertNotFound()->assertJsonPath('error', 'not_found');
         $this->asStaffMember()->postJson($this->api("posts/{$other['post']->id}/send-for-approval"))->assertNotFound()->assertJsonPath('error', 'not_found');
+    }
+
+    // Owner, 2026-10-20 (4B question): sending a post already in review again does nothing — no second step, no new bell item.
+    public function test_sending_a_post_already_in_review_again_changes_nothing(): void
+    {
+        $post = $this->makePost(['status' => 'draft']);
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/send-for-approval"))->assertOk();
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/send-for-approval"))->assertOk()
+            ->assertJsonPath('post.status', 'needs_review')->assertJsonCount(1, 'post.timeline');
+        $this->assertSame(1, ContentPlannerPostEvent::where('post_id', $post->id)->count());
+    }
+
+    // Owner, 2026-10-20 (4B question): "sent back" ends when someone works on the post, not on a quality check or a repeat.
+    public function test_a_sent_back_post_stays_sent_back_through_a_quality_check_and_a_repeat(): void
+    {
+        $post = $this->makePost(['status' => 'needs_review']);
+        $this->asManager()->postJson($this->api("posts/{$post->id}/send-back"), ['note' => 'Warmer, please.'])->assertOk();
+        $this->travel(5)->seconds();
+        // The quality check's AI client is final and talks through the Anthropic SDK (no Http::fake): its save is tested.
+        ContentQualityService::saveScore($post->fresh(), ['overall' => 8]);
+        $this->assertSame(['overall' => 8], $post->fresh()->quality_score);
+        $this->asStaffMember()->getJson($this->api("posts/{$post->id}"))->assertOk()->assertJsonPath('post.sent_back', true);
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/repeat"), ['every' => 'week', 'until' => '2026-10-28'])->assertCreated();
+        $this->asStaffMember()->getJson($this->api("posts/{$post->id}"))->assertOk()->assertJsonPath('post.sent_back', true);
+        // Work on the post still ends it.
+        $fresh = $post->fresh();
+        $this->asStaffMember()->putJson($this->api("posts/{$post->id}"), ['updated_at' => $fresh->updated_at->toISOString(), 'hook' => 'Warmer now'])->assertOk()
+            ->assertJsonPath('post.sent_back', false);
+    }
+
+    // Final review: "sent back" ends when someone works on the post — a new picture or a new visual brief is work on it.
+    public function test_a_new_picture_or_visual_brief_ends_sent_back(): void
+    {
+        $this->mock(ImageGenerationService::class, fn ($images) => $images->shouldReceive('generateForPost')->once()
+            ->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'image_url' => '/storage/a.png', 'image_status' => 'ready'])));
+        $this->mock(ContentVisualBriefService::class, fn ($briefs) => $briefs->shouldReceive('generateFor')->once()
+            ->andReturnUsing(fn ($p) => ContentPlannerVisualBrief::create(['post_id' => $p->id, 'description' => 'A warm still life'])));
+        foreach (['image', 'visual-brief'] as $action) {
+            $post = $this->makePost(['status' => 'needs_review']);
+            $this->asManager()->postJson($this->api("posts/{$post->id}/send-back"), ['note' => 'A warmer picture, please.'])->assertOk();
+            $this->travel(5)->seconds();
+            $this->asStaffMember()->postJson($this->api("posts/{$post->id}/{$action}"))->assertOk()->assertJsonPath('post.sent_back', false);
+            $this->asStaffMember()->getJson($this->api("posts/{$post->id}"))->assertOk()->assertJsonPath('post.sent_back', false);
+        }
+    }
+
+    // Final review: leaving a series (Stop repeating) is no more an edit than joining one — "sent back" stays.
+    public function test_a_sent_back_post_stays_sent_back_when_its_repeats_stop(): void
+    {
+        $post = $this->makePost(['status' => 'needs_review']);
+        $this->asManager()->postJson($this->api("posts/{$post->id}/send-back"), ['note' => 'Warmer, please.'])->assertOk();
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/repeat"), ['every' => 'week', 'until' => '2026-10-28'])->assertCreated();
+        $this->travel(5)->seconds();
+        $this->asStaffMember()->deleteJson($this->api("posts/{$post->id}/repeat"))->assertOk();
+        $this->assertNull($post->fresh()->series_id);
+        $this->asStaffMember()->getJson($this->api("posts/{$post->id}"))->assertOk()->assertJsonPath('post.sent_back', true);
     }
 }

@@ -16,6 +16,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 import { ContentContext } from '../ContentProvider'
 import { bootFor } from '../brand/brandTesting'
 import type { Bootstrap } from '../lib/types'
+import { withMorningEmail } from './bellMath'
 import { MorningEmailSwitch, MorningSwitchView } from './MorningEmailSwitch'
 
 const render = (on: boolean | undefined) => {
@@ -50,5 +51,21 @@ describe('the switch while it saves (final review)', () => {
 
   it('says when the setting could not be saved', () => {
     expect(renderToStaticMarkup(<MorningSwitchView on={false} busy={false} failed onFlip={() => {}} />)).toContain('The setting could not be saved. Please try again.')
+  })
+})
+
+// 5A-2 review: a reopened bell read the switch from the cached bootstrap before it was read again.
+describe('the switch after a save', () => {
+  it('writes the answer into the cached bootstrap', () => {
+    const boot = { staff: { name: 'Anna', role: 'staff', can_manage: false, morning_email: false } }
+    expect(withMorningEmail(boot, true)?.staff.morning_email).toBe(true)
+    expect(withMorningEmail(boot, true)?.staff.name).toBe('Anna')
+    expect(withMorningEmail(undefined, true)).toBeUndefined()
+  })
+  it('tells a manager they also get the posts nobody is set to post', () => {
+    expect(renderToStaticMarkup(<MorningSwitchView on={false} busy={false} failed={false} manager onFlip={() => {}} />))
+      .toContain('At 8 am, the posts you post today and those nobody is set to post.')
+    expect(renderToStaticMarkup(<MorningSwitchView on={false} busy={false} failed={false} manager={false} onFlip={() => {}} />))
+      .toContain('At 8 am, the posts you post today.')
   })
 })

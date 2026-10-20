@@ -36,10 +36,24 @@ class ContentQualityService
 
         $result = $this->ai->generateJson($profile, 'quality_check', $this->buildPrompt($post, $context, $digest), 3000);
 
-        $post->quality_score = $result;
-        $post->save();
+        self::saveScore($post, $result);
 
         return $result;
+    }
+
+    /**
+     * Saves a quality check's result on the post. A score is not an edit: the post's version (`updated_at`) stays, so
+     * "sent back" and an open panel's copy stay as they are (owner, 2026-10-20).
+     */
+    public static function saveScore(ContentPlannerPost $post, array $result): void
+    {
+        $post->quality_score = $result;
+        $post->timestamps = false;
+        try {
+            $post->save();
+        } finally {
+            $post->timestamps = true;
+        }
     }
 
     /**

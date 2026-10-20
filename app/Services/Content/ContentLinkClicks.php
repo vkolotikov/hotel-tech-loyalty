@@ -5,24 +5,42 @@ namespace App\Services\Content;
 use App\Models\ContentLink;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 /**
  * Clicks on tracked links (spec 2026-10-19 §5.4): one row per link, venue day and source (`direct` | `bio`), raised by
- * one in a single upsert. HEAD requests and robots are not counted. Nothing about the visitor is stored: no IP address,
- * cookie, user agent or referrer. Counts are taps, not people.
+ * one in a single upsert. HEAD requests, robots and prefetches are not counted. Nothing about the visitor is stored: no
+ * IP address, cookie, user agent or referrer. Counts are taps, not people.
  */
 final class ContentLinkClicks
 {
-    /** Link-preview robots by name, and anything that calls itself a robot (§5.4). */
-    public const ROBOTS = '/facebookexternalhit|facebot|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot|discordbot|pinterest|applebot|bot|crawl|spider|preview|headless/i';
+    /**
+     * Link-preview robots by name, and anything that calls itself a robot (§5.4). Pinterest by its crawler only
+     * (`Pinterestbot`, `Pinterest/0.x`): people tapping inside Pinterest's app carry `[Pinterest/iOS]` and are counted
+     * (owner, 2026-10-20).
+     */
+    public const ROBOTS = '/facebookexternalhit|facebot|twitterbot|linkedinbot|whatsapp|telegrambot|slackbot|discordbot|pinterestbot|pinterest\/0\.|applebot|vkshare|mastodon\/|cardyb|iframely|embedly|bot|crawl|spider|preview|headless/i';
     /** The panel's bars: the last 14 venue days (§5.5). */
     public const DAYS = 14;
 
     public static function isRobot(?string $userAgent): bool
     {
         return preg_match(self::ROBOTS, (string) $userAgent) === 1;
+    }
+
+    /** Whether a request on a short link is a click: not a HEAD request, not a robot, not a prefetch (owner, 2026-10-20). */
+    public static function counts(Request $request): bool
+    {
+        if ($request->isMethod('HEAD') || self::isRobot($request->userAgent())) {
+            return false;
+        }
+        $purpose = strtolower(implode(' ', array_filter([
+            $request->header('Sec-Purpose'), $request->header('Purpose'), $request->header('X-Purpose'), $request->header('X-Moz'),
+        ])));
+
+        return !str_contains($purpose, 'prefetch') && !str_contains($purpose, 'preview');
     }
 
     /** One more click on the link's venue day. A counting failure is logged and never stops the visitor. */

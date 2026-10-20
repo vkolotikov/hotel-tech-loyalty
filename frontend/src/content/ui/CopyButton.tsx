@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Copy } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
+import { resetAfterCopied } from './copyReset'
 
 /**
  * Copies `text` (a short link, a page's address) and says so; where the browser refuses the clipboard (an insecure
@@ -10,6 +11,7 @@ import { Button } from '../../workspace/ui/Button'
 export function CopyButton({ text, label }: { text: string; label: string }) {
   const { t } = useTranslation()
   const [state, setState] = useState<'idle' | 'copied' | 'failed'>('idle')
+  useEffect(() => resetAfterCopied(state, () => setState('idle')), [state])
   const copy = () => {
     // navigator.clipboard is missing on an insecure page: that throw becomes the refusal too.
     void Promise.resolve().then(() => navigator.clipboard.writeText(text)).then(() => setState('copied'), () => setState('failed'))

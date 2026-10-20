@@ -55,3 +55,13 @@ describe('the Link next to the call to action (spec 2026-10-19 §5.1, §5.5)', (
     expect(html).toContain('Clicks: 2')
   })
 })
+
+// 5A-2 review: Date and Time sit side by side; Who posts it comes after them.
+describe('the panel’s field order', () => {
+  it('is Platform, Status, Date, Time, Who posts it, Pillar, Audience', () => {
+    const html = render('')
+    const order = ['Platform', 'Status', 'Date', 'Time', 'Who posts it', 'Pillar', 'Audience'].map(label => html.indexOf(`>${label}<`))
+    expect(order.every(i => i >= 0)).toBe(true)
+    expect([...order].sort((a, b) => a - b)).toEqual(order)
+  })
+})

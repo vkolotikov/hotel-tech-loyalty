@@ -52,3 +52,8 @@ export function bellItems(items: InboxItem[], t: Translate, when: (at: string) =
     return { id: item.id, label, sub: subLine(item, t, when, day).join(' · '), mark: item.unread }
   })
 }
+
+/** The cached bootstrap with the morning switch as saved, so a bell reopened before it is read again shows the new state (5A-2 review). */
+export function withMorningEmail<T extends { staff: { morning_email?: boolean } }>(boot: T | undefined, on: boolean): T | undefined {
+  return boot ? { ...boot, staff: { ...boot.staff, morning_email: on } } : boot
+}

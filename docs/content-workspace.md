@@ -142,12 +142,15 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   host, `/go/{code}` (7 characters, no 0/o/1/l). Changing the address keeps the code; clearing it switches the code off
   (the row stays: a link already out answers 404 "This link is no longer active" in the brand's Content language);
   versions, repeat copies and duplicates get their own code; deleting a post keeps its link working. The UTM tags
-  (`utm_source` the platform or `link-in-bio`, `utm_medium` social, `utm_campaign` the campaign's slug or
-  `content-plan`, `utm_content` `post-{id}` or `button`) are worked out at save and when the platform or campaign
-  changes, and never replace a tag the address carries. A new Link is a change of words under approvals and moves the
-  post's version on. Clicks: one row per link, venue day and source (`direct` | `bio`), raised by one upsert; HEAD
-  requests and robots are not counted; no IP address, cookie, user agent or referrer is stored (`LinkRedirectTest`,
-  `LinksTest`, `LinkCopiesTest`).
+  (`utm_source` the platform or `link-in-bio`, `utm_medium` social — referral for email and blog posts (owner,
+  2026-10-20) —, `utm_campaign` the campaign's slug or `content-plan`, `utm_content` `post-{id}` or `button`) are worked
+  out at save and when the platform or campaign changes, and never replace a tag the address carries. A new Link is a
+  change of words under approvals and moves the post's version on; the save, its Link and its approval step are one
+  write. Clicks: one row per link, venue day and source (`direct` | `bio`), raised by one upsert; HEAD requests,
+  prefetches (`Sec-Purpose`/`Purpose`/`X-Purpose`/`X-Moz`) and robots (`ContentLinkClicks::ROBOTS`: preview robots by
+  name, Pinterest's crawler but not people in Pinterest's app, anything calling itself a bot) are not counted; no IP
+  address, cookie, user agent or referrer is stored (`LinkRedirectTest`, `LinksTest`, `LinkCopiesTest`). Any account's
+  staff can make short links that redirect from the shared host: accepted by the owner (2026-10-20).
 - **Link-in-bio** (`ContentBio`, `ContentBioPublic`): one page per brand at `/links/{name}` on the public host, off
   (404) until a manager switches it on. The name follows the landing-page rules, is not reserved (`links` is, now) and
   is unique among bio pages; the default is the brand's landing-page name, else the brand's slug with `-2`, `-3`…. Up
@@ -238,9 +241,9 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   post marked; a chip opens that version), Make versions… for the brand's platforms not yet in the group — "Adapt with
   AI" (unavailable at the AI budget cap) or "Copy as is" — and Unlink. While the AI adapts, the panel reads the post
   every 5 s and says "Adapting for …"; a version it did not adapt says why. Cards carry "Versions: N".
-- **Who posts it** beside Status in the panel and in Ideas → Schedule (`ui/PosterSelect.tsx`, the team from `GET team`):
-  someone who left shows as Not set. While approvals are on, a staff member who posts an Approved or Ready post sees
-  Mark published with "You post this one…".
+- **Who posts it** after Date and Time in the panel, and in Ideas → Schedule (`ui/PosterSelect.tsx`, the team from
+  `GET team`; "Loading…" until the team is read): someone who left shows as Not set. While approvals are on, a staff
+  member who posts an Approved or Ready post sees Mark published with "You post this one…".
 - **The bell's reminders** ("To post today", with the time and a status not yet ready; "Not marked as posted", with the
   day it was due) and, at its foot, **the morning email switch** (each person's own).
 - **Tracked links** (release 5b): the panel's **Link** field after the call to action; under it the short link with
@@ -251,6 +254,28 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   while the page is on; managers edit the switch, the name (lowercase as typed; the full address shown; a warning when
   a saved page is renamed), title, line, "Show latest posts" and up to eight buttons (add, move up and down, remove),
   saved in one call; each button's clicks for the last 30 days; Open page while it is on.
+
+## Small-fixes batch (2026-10-20)
+
+The deferred minors of releases 5a and 5b and the owner's answers of 2026-10-20, in one deploy (no migration):
+
+- Copy buttons say "Copied" for two seconds, then their own words again; the short link's button reads "Copy short
+  link", the panel's admin-address button "Copy link for the team".
+- The link-in-bio editor names the rule that failed (the name's 3 to 63 characters, the address rule, a missing label),
+  keeps each mark on its row through a move, keeps the caret in place while the name is rewritten, shows an example in
+  each button label, and warns beside Copy address while the page is off. Two managers saving the first page at the
+  same moment both succeed (the second as an update).
+- Sending a post already in review for approval again does nothing. "Sent back" survives a quality check and starting
+  or stopping repeats (none moves the post's version); a new picture or visual brief ends it, as a save does. A poster
+  whose staff row was switched off cannot mark their post published.
+- A version cannot be saved onto a platform its group already has (`version_exists`, Platform marked); Make versions
+  from two posts of one group waits on one lock; deleting the post whose id keys a group re-keys the rest to the oldest
+  one (as Unlink does); each version the AI kept as written keeps its own reason.
+- Undo after Schedule gives back the poster only when Schedule changed it, and never a poster who has left the team.
+- The panel's fields: Date beside Time, then Who posts it. The morning email switch shows its saved state at once; a
+  manager's hint says the email also lists the posts nobody is set to post. Unlink and a Plan move have their own
+  refusal words. Other versions refresh after Make versions or Unlink.
+- The bell's count and list read who manages and the team once per call (5–6 staff reads before, at most 3).
 
 ## What this release does not do
 
@@ -263,14 +288,13 @@ and its screens are removed; a browser tab left open across the deploy must be r
 - Release 3 brings three additive migrations (`content_planner_channels.post_time`, `content_planner_snippets`,
   `content_planner_posts.series_id`); nothing existing changes, and every profile, strategy, post and image carries
   over as it is.
-- Queue (owner check): `config/queue.php` sets `retry_after` to 90 s on the database and redis connections, while
-  `GenerateContentStrategy` may run 600 s (and the email campaign chunks 300 s). With more than one worker, a run longer
-  than 90 s is taken again by a second worker and failed. Confirm the production queue connection and worker count,
-  and raise `retry_after` above the longest job timeout if more than one worker runs.
+- Queue: `retry_after` is 660 s on the database, redis and beanstalkd connections (`DB_QUEUE_RETRY_AFTER`,
+  `REDIS_QUEUE_RETRY_AFTER`, `BEANSTALKD_QUEUE_RETRY_AFTER`), longer than the longest job may run
+  (`GenerateContentStrategy`, 600 s), so a long run is never handed to a second worker; `QueueRetryAfterTest` keeps it
+  so. A job whose worker died is retried after 11 minutes. Owner check: if Laravel Cloud sets one of those variables,
+  it must be above 600.
 - Verify release 3 by content on the live site: the `ContentApp` chunk carries "Best around", "Hashtags and snippets"
   and "Repeats every week until"; `/api/v1/admin/content/goals` answers 401 when signed out (404 before release 3).
-- After the deploy (owner): on a real brand, give a channel a usual time, add one hashtag group, start a post with a
-  day's "+", repeat one post weekly for a month and stop it; check the goals line on the Plan.
 - Release 4a (server, Plan 4A-1): three additive migrations (`content_planner_profiles.holiday_country` and
   `marketing_days`, `content_planner_key_dates`, `content_planner_templates`); nothing existing changes. Built-in days
   come from our own rule table in `app/Services/Content/Days/`: the public holidays of GB, IE, DE, FR, ES, LV, LT, EE
@@ -283,17 +307,12 @@ and its screens are removed; a browser tab left open across the deploy must be r
   their details; notes never do. Templates and their AI suggestions are counted in the AI budget like every other call.
 - Verify release 4a by content (after Plan 4A-2's deploy): `/api/v1/admin/content/ideas` answers 401 when signed out
   (404 before release 4a); the `ContentApp` chunk carries the Ideas page's and the Key dates section's words.
-- After the deploy (owner): on a real brand, check the guessed country on Brand → Key dates, add one event, capture
-  one idea with I and schedule it, add one template and use it from a day's "+"; reload admin tabs left open.
 - Release 4b (server, Plan 4B-1): four additive migrations (`content_planner_profiles.requires_approval`,
   `content_planner_post_events`, `content_planner_post_comments`, `content_planner_reads`). The switch starts off for
   every brand, so nothing changes for anyone until a manager turns it on.
 - Verify release 4b by content (after Plan 4B-2's deploy): `/api/v1/admin/content/inbox/count` answers 401 when signed
   out (404 before release 4b); the `ContentApp` chunk carries "Comments and history", "Waiting for approval" and
   "Nothing new for you".
-- After the deploy (owner): on a real brand, switch Approvals on, send one post for approval as a staff member,
-  approve one and send one back as a manager, add a comment, and look at both bells; switch Approvals off again if the
-  team does not want them yet; reload admin tabs left open.
 - Release 5a (server, Plan 5A-1): two additive migrations (`content_planner_posts.group_id` and `poster_id`;
   `users.wants_content_morning_email` and `content_morning_email_last_sent_at`) and one hourly scheduled command,
   `content:send-morning-email`. The email is off for everyone until they switch it on. The queue must be running for
@@ -301,10 +320,6 @@ and its screens are removed; a browser tab left open across the deploy must be r
 - Verify release 5a by content (after Plan 5A-2's deploy): `/api/v1/admin/content/team` answers 401 when signed out
   (404 before release 5a); `php artisan schedule:list` lists `content:send-morning-email`; the `ContentApp` chunk carries
   "Make versions", "Who posts it", "To post today" and "Morning email".
-- After the deploy (owner): on a real brand, make one version as a copy and one adapted by AI, set "Who posts it" on a
-  post for today and look at that person's bell, switch the morning email on for yourself and read it the next morning
-  at 8; tell the team that a manager's bell lists today's and the last seven days' unpublished posts nobody posts until
-  "Who posts it" is set or the posts are marked published; reload admin tabs left open.
 - Release 5b (server, Plan 5B-1): four additive migrations (`content_links`, `content_link_clicks`,
   `content_bio_pages`, `content_bio_buttons`); two public routes on the landing host, `/go/{code}` and
   `/links/{name}`, both in `routes/landing.php` (outside the `web` group) and in `LandingHostGuard::ALLOWED`; one new
@@ -313,15 +328,32 @@ and its screens are removed; a browser tab left open across the deploy must be r
   (404 before release 5b); `https://sites.hexa-tech.uk/landing/content-public.css` answers 200 (404 before);
   `https://sites.hexa-tech.uk/go/zzzz222` and `https://sites.hexa-tech.uk/links/zzzz-none` answer 404 without a cookie;
   the `ContentApp` chunk carries "Link-in-bio", "Short link" and "Clicks per day".
-- After the deploy (owner): on a real brand, give one post a Link, save it, open its short link on a phone (the visit
-  counts by the next panel read), and look at the card's click count; on the Brand page, set up the link-in-bio page,
-  switch it on, add two buttons, open it, and put its address in one profile's bio; open your own landing page once (the
-  public host's list of paths changed); reload admin tabs left open.
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
   since the last deployed feature tip with every deletion, the suites on the artifact, a fresh build, then push. Never
   push the feature branch.
 - Verify by content on the live site: the `ContentApp` chunk carries the portal's words and the index bundle does not;
   `/api/v1/admin/content/bootstrap` answers 401 when signed out (404 before release 2);
   `/api/v1/admin/content-planner/profile` answers 404; the Appointments chunk is as before.
-- After the deploy (owner): open `/content` as a manager and as a staff member; generate one week on a real brand;
+
+### After the deploy (owner, signed in)
+
+Every check that needs no account is done at each deploy, by content on the live site. These need a person signed in
+to a real brand, and stay the owner's:
+
+- Release 3: on a real brand, give a channel a usual time, add one hashtag group, start a post with a day's "+", repeat
+  one post weekly for a month and stop it; check the goals line on the Plan.
+- Release 4a: on a real brand, check the guessed country on Brand → Key dates, add one event, capture one idea with I
+  and schedule it, add one template and use it from a day's "+"; reload admin tabs left open.
+- Release 4b: on a real brand, switch Approvals on, send one post for approval as a staff member, approve one and send
+  one back as a manager, add a comment, and look at both bells; switch Approvals off again if the team does not want
+  them yet; reload admin tabs left open.
+- Release 5a: on a real brand, make one version as a copy and one adapted by AI, set "Who posts it" on a post for today
+  and look at that person's bell, switch the morning email on for yourself and read it the next morning at 8; tell the
+  team that a manager's bell lists today's and the last seven days' unpublished posts nobody posts until "Who posts it"
+  is set or the posts are marked published; reload admin tabs left open.
+- Release 5b: on a real brand, give one post a Link, save it, open its short link on a phone (the visit counts by the
+  next panel read), and look at the card's click count; on the Brand page, set up the link-in-bio page, switch it on,
+  add two buttons, open it, and put its address in one profile's bio; open your own landing page once (the public host's
+  list of paths changed); reload admin tabs left open.
+- Release 2 (and every release): open `/content` as a manager and as a staff member; generate one week on a real brand;
   check Settings → AI Usage for the `content` line; reload admin tabs left open across the deploy.

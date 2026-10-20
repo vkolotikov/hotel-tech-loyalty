@@ -70,7 +70,10 @@ final class ContentRepeat
         $status ??= in_array($original->status, ['published', 'archived'], true) ? 'draft' : (string) $original->status;
 
         return DB::transaction(function () use ($original, $dates, $status, $userId) {
-            $original->forceFill(['series_id' => $original->id])->save();
+            // Joining a series is not an edit (as joining a group of versions is not): the post's version stays.
+            ContentPlannerPost::whereKey($original->id)->toBase()->update(['series_id' => $original->id]);
+            $original->series_id = $original->id;
+            $original->syncOriginalAttribute('series_id');
 
             $copies = collect($dates)->map(fn (string $date) => ContentPlannerPost::create($original->only(self::COPIED) + [
                 'planner_profile_id' => $original->planner_profile_id,
@@ -93,7 +96,8 @@ final class ContentRepeat
     {
         return DB::transaction(function () use ($seriesId, $today) {
             $removed = self::removable($seriesId, $today)->delete();
-            ContentPlannerPost::where('series_id', $seriesId)->update(['series_id' => null]);
+            // Leaving a series is not an edit, as joining one is not: the posts' versions stay (final review).
+            ContentPlannerPost::where('series_id', $seriesId)->toBase()->update(['series_id' => null]);
 
             return $removed;
         });

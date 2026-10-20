@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type { BioPayload } from '../lib/types'
 import {
-  MAX_BUTTONS, addButton, addressOf, bioBody, bioFormOf, bioProblems, focusAfterMove, focusAfterRemove, freshBio, moveButton, refusedFields,
-  removeButton, renamedFrom, slugInput,
+  MAX_BUTTONS, addButton, addressOf, bioBody, bioFormOf, bioProblems, caretAfter, focusAfterMove, focusAfterRemove, freshBio, keyedMarks, moveButton,
+  problemCodes, refusedFields, removeButton, renamedFrom, slugInput, caretToRestore,
 } from './bioForm'
 
 const payload = (more: Partial<BioPayload> = {}): BioPayload => ({
@@ -99,5 +99,40 @@ describe('opening the editor', () => {
     const held = payload()
     expect(await freshBio(async () => ({ data: undefined }), held)).toBe(held)
     expect(await freshBio(async () => { throw new Error('offline') }, held)).toBe(held)
+  })
+})
+
+// 5B-2 review: a mark follows its row through a move or a removal, and the portal's own check says which rule failed.
+describe('the editor’s marks and words', () => {
+  const rows = [
+    { key: 'b4', id: 4, label: 'Book', destination: 'https://a.example' },
+    { key: 'n0', id: null, label: '', destination: 'nope' },
+  ]
+  it('keys each button mark by its row, so a move keeps the mark on its row', () => {
+    const marks = keyedMarks(rows, ['slug', 'buttons.1.label', 'buttons.1.destination', 'buttons'])
+    expect(marks).toEqual(['slug', 'buttons.n0.label', 'buttons.n0.destination', 'buttons'])
+    expect(moveButton(rows, 1, -1)[0].key).toBe('n0')
+    expect(keyedMarks(rows, ['buttons.7.label'])).toEqual(['buttons.7.label'])
+  })
+  it('names the rule each mark broke, each once, the general line only for anything else', () => {
+    expect(problemCodes(['slug'])).toEqual(['bio_name_invalid'])
+    expect(problemCodes(['buttons.n0.destination', 'buttons.b4.destination', 'buttons.n0.label'])).toEqual(['bad_link', 'label_missing'])
+    expect(problemCodes(['slug', 'buttons'])).toEqual(['bio_name_invalid', 'too_many_buttons'])
+    expect(problemCodes(['title'])).toEqual(['invalid'])
+  })
+  it('puts the caret after the same characters once the name is rewritten', () => {
+    expect(caretAfter('Lumiere Salon', 8)).toBe(8)
+    expect(caretAfter('lumiere  salon', 9)).toBe(8)
+    expect(caretAfter('abc', 3)).toBe(3)
+  })
+})
+
+// Final review: putting the caret back on every key press can disturb an Android keyboard composing a word; it is put
+// back only when the name was rewritten.
+describe('when the caret is put back', () => {
+  it('only when the typed name was rewritten', () => {
+    expect(caretToRestore('lumiere', 4)).toBeNull()
+    expect(caretToRestore('Lumiere', 4)).toBe(4)
+    expect(caretToRestore('lumiere  salon', 9)).toBe(8)
   })
 })

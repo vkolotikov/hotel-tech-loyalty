@@ -163,4 +163,23 @@ class LinksTest extends TestCase
         $this->assertSame(13, $cards[$post->id]['clicks']);
         $this->assertSame(0, $cards[$plain->id]['clicks']);
     }
+
+    // 5B-1 review: a post save and its Link are one write — a Link that cannot be written leaves the post as it was.
+    public function test_a_save_whose_short_link_cannot_be_written_changes_nothing(): void
+    {
+        ContentLink::creating(fn () => throw new \RuntimeException('the link store is down'));
+        $posts = ContentPlannerPost::count();
+        $this->asStaffMember()->postJson($this->api('posts'), ['platform' => 'instagram', 'topic' => 'New', 'link' => 'https://lumiere.example/new'])->assertStatus(500);
+        $this->assertSame($posts, ContentPlannerPost::count());
+
+        $this->profile->forceFill(['requires_approval' => true])->save();
+        $post = $this->makePost(['status' => 'draft', 'topic' => 'Before']);
+        $this->asStaffMember()->putJson($this->api("posts/{$post->id}"), [
+            'updated_at' => $post->updated_at->toISOString(), 'topic' => 'After', 'status' => 'needs_review', 'link' => 'https://lumiere.example/after',
+        ])->assertStatus(500);
+        $this->assertSame('Before', $post->fresh()->topic);
+        $this->assertSame('draft', $post->fresh()->status);
+        $this->assertSame(0, ContentPlannerPostEvent::where('post_id', $post->id)->count());
+        ContentLink::flushEventListeners();
+    }
 }

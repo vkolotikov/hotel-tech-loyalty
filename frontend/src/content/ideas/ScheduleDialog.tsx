@@ -12,7 +12,7 @@ import type { Channel, DateKey, PostCard } from '../lib/types'
 import { canAdd } from '../plan/addMath'
 import { Dialog } from '../ui/Dialog'
 import { PosterSelect } from '../ui/PosterSelect'
-import { initialPoster, scheduleBody, scheduleDefaults } from './ideasMath'
+import { initialPoster, scheduleBody, scheduleDefaults, undoPoster } from './ideasMath'
 
 /** Schedule (spec 2026-10-16 §4.2): a day from today on and the channel's usual time; the post goes to the Plan. */
 export function ScheduleDialog({ post, today, channels, industry, onClose, onScheduled }: {
@@ -21,8 +21,8 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
   channels: Channel[]
   industry: string | null
   onClose: () => void
-  /** The post as the server moved it. */
-  onScheduled: (post: PostCard) => void
+  /** The post as the server moved it, and the poster Undo gives back (undefined: Schedule left it as it was). */
+  onScheduled: (post: PostCard, undoPoster: number | null | undefined) => void
 }) {
   const { t } = useTranslation()
   const api = useApi()
@@ -43,10 +43,12 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
     setBusy(true)
     setError(null)
     try {
-      const { post: moved } = await api.movePost(post.id, scheduleBody(post, form, poster, initial) as Parameters<typeof api.movePost>[1])
-      onScheduled(moved)
+      const body = scheduleBody(post, form, poster, initial)
+      const { post: moved } = await api.movePost(post.id, body)
+      onScheduled(moved, undoPoster(body, initial))
     } catch (e) {
-      const [key, text] = errorKey('move', failureOf(e).code)
+      // Its own family: only Schedule sends who posts it (5A-2 review).
+      const [key, text] = errorKey('schedule', failureOf(e).code)
       setError(t(key, text))
       setBusy(false)
     }
@@ -67,7 +69,7 @@ export function ScheduleDialog({ post, today, channels, industry, onClose, onSch
         </div>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-a-text-2">{t('content.panel.fields.poster', 'Who posts it')}</span>
-          <PosterSelect value={poster} onChange={setPicked} choices={members.map(m => ({ id: m.id, name: m.name }))} className={`${INPUT} border-a-border`} />
+          <PosterSelect value={poster} onChange={setPicked} choices={members.map(m => ({ id: m.id, name: m.name }))} loading={team.isLoading} className={`${INPUT} border-a-border`} />
         </label>
         {error && <Notice tone="danger">{error}</Notice>}
         <div className="flex gap-2">

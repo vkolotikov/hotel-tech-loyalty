@@ -43,8 +43,9 @@ final class ContentInbox
         $seenAt = self::seenAt($user, $profile);
         $since = self::since($seenAt);
         $items = [];
+        $audience = ContentReminders::audience($user, $profile);
 
-        $waiting = self::waiting($user, $profile);
+        $waiting = self::waiting($profile, $audience['manager']);
         if ($waiting) {
             foreach ($waiting->with('createdBy:id,name')->orderByDesc('updated_at')->orderByDesc('id')->limit(self::LIMIT)->get() as $post) {
                 $at = $post->waiting_since ? CarbonImmutable::parse($post->waiting_since) : CarbonImmutable::instance($post->updated_at);
@@ -54,7 +55,7 @@ final class ContentInbox
         $orgId = (int) $profile->organization_id;
         $venueNow = VenueClock::now($orgId);
         $zone = VenueClock::zone($orgId);
-        $reminders = ['to_post' => ContentReminders::today($user, $profile, $venueNow), 'not_posted' => ContentReminders::missed($user, $profile, $venueNow)];
+        $reminders = ['to_post' => ContentReminders::today($user, $profile, $venueNow, false, $audience), 'not_posted' => ContentReminders::missed($user, $profile, $venueNow, $audience)];
         foreach ($reminders as $kind => $query) {
             foreach ($query->orderByDesc('scheduled_date')->orderByDesc('scheduled_time')->orderByDesc('id')->limit(self::LIMIT)->get() as $post) {
                 $at = ContentReminders::appearsAt($post, $zone);
@@ -70,7 +71,8 @@ final class ContentInbox
         // Newest first; usort keeps the order above for items of the same second.
         usort($items, fn (array $a, array $b) => $b['at'] <=> $a['at']);
 
-        return ['items' => array_slice($items, 0, self::LIMIT), 'count' => self::count($user, $profile), 'read_at' => $readAt];
+        // The count from what the list already read: who manages, the team and the last seen (final review).
+        return ['items' => array_slice($items, 0, self::LIMIT), 'count' => self::tally($user, $profile, $audience, $since, $venueNow), 'read_at' => $readAt];
     }
 
     /** Everything waiting, and the news not yet seen. */
@@ -79,12 +81,16 @@ final class ContentInbox
         if (!$profile) {
             return 0;
         }
-        $since = self::since(self::seenAt($user, $profile));
-        $venueNow = VenueClock::now((int) $profile->organization_id);
 
-        return (self::waiting($user, $profile)?->count() ?? 0)
-            + ContentReminders::today($user, $profile, $venueNow)->count()
-            + ContentReminders::missed($user, $profile, $venueNow)->count()
+        return self::tally($user, $profile, ContentReminders::audience($user, $profile), self::since(self::seenAt($user, $profile)), VenueClock::now((int) $profile->organization_id));
+    }
+
+    /** @param array{manager: bool, members: list<int>} $audience */
+    private static function tally(User $user, ContentPlannerProfile $profile, array $audience, CarbonImmutable $since, CarbonImmutable $venueNow): int
+    {
+        return (self::waiting($profile, $audience['manager'])?->count() ?? 0)
+            + ContentReminders::today($user, $profile, $venueNow, false, $audience)->count()
+            + ContentReminders::missed($user, $profile, $venueNow, $audience)->count()
             + self::approvals($user, $profile, $since)->count()
             + self::comments($user, $profile, $since)->count();
     }
@@ -102,9 +108,9 @@ final class ContentInbox
     }
 
     /** The posts waiting for approval, for a manager while the brand's switch is on; null for everyone else. */
-    private static function waiting(User $user, ContentPlannerProfile $profile): ?Builder
+    private static function waiting(ContentPlannerProfile $profile, bool $manager): ?Builder
     {
-        if (!ContentApproval::isOn($profile) || !ContentAccess::canManage($user)) {
+        if (!ContentApproval::isOn($profile) || !$manager) {
             return null;
         }
 

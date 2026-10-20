@@ -196,7 +196,8 @@ managers only. Switching changes no existing post's status. A **manager** is a s
   on for this brand." — an old tab cannot get around the rule.
 - **Send for approval** (staff, on a post in Idea, Draft, Needs visual or Needs review) → `needs_review`. A staff
   member who sets Needs review another way (the status list, a drop into In review) sends it for approval too: the
-  same event is recorded.
+  same event is recorded. On a post already in Needs review it does nothing: no second step, no new bell item
+  (owner, 2026-10-20).
 - **Approve** (manager, on a post in Needs review) → `approved`. **Send back** (manager, on a post in Needs review,
   with a note of 1–2,000 characters) → `draft`.
 - A staff change to the **words** of an `approved` or `ready_to_publish` post — topic, hook, text, call to action,
@@ -211,7 +212,9 @@ managers only. Switching changes no existing post's status. A **manager** is a s
 ### 6.3 What everyone sees
 
 - Cards: **Waiting for approval** (status `needs_review` while the switch is on) and **Sent back** (status `draft`
-  whose latest approval event is a send-back with no change to the post after it).
+  whose latest approval event is a send-back with no change to the post after it). A change is someone working on the
+  post — a save, a move, Write with AI, a new picture or visual brief; a quality check, or joining or leaving a repeat
+  series, is not one (owner, 2026-10-20).
 - The post panel: **Send for approval** (staff), **Approve** / **Send back** (managers, on a post in review), and the
   timeline (§7.1) with the history lines.
 
@@ -231,7 +234,9 @@ line; plain text, lines kept, 1–2,000 characters. No mentions, no attachments.
 
 - Everyone with access to Content can comment on any of the brand's posts.
 - You edit or delete your own comments (an edited one says "edited"); managers delete anyone's.
-- A comment whose author was removed shows "Former team member".
+- A comment whose author was removed shows "Former team member". A deactivated team member is not removed: their
+  name stays on what they wrote and did, so the record of who said what stays true; only a deleted user shows "Former
+  team member" (owner, 2026-10-20).
 - Cards show a small comment count.
 - The panel also says who wrote the post: "Written by Anna" (`created_by`, already stored, not yet sent to the
   portal); an AI-generated post with no author shows nothing.

@@ -46,7 +46,9 @@ final class ContentApproval
     public static function guardPublish(ContentPlannerPost $post, User $user, ?ContentPlannerProfile $profile): void
     {
         if ($post->poster_id !== null && (int) $post->poster_id === (int) $user->id
-            && in_array($post->status, ['approved', 'ready_to_publish'], true)) {
+            && in_array($post->status, ['approved', 'ready_to_publish'], true)
+            // A poster who left or was switched off counts as nobody (5A-1 review).
+            && ContentTeam::isMember((int) $user->id, (int) $post->brand_id)) {
             return;
         }
         self::guardStatus('published', (string) $post->status, $user, $profile);

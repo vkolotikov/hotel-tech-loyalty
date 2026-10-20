@@ -45,7 +45,7 @@ describe('release 5a refusals (spec 2026-10-19 §7.3)', () => {
     expect(errorKey('version', 'version_exists')).toEqual(['content.version.error.version_exists', 'This post already has a version for that platform.'])
     expect(errorKey('version', 'ai_budget_used_up')[1]).toBe("This month's AI budget is used up. Choose Copy as is.")
     expect(errorKey('version', 'teapot')[0]).toBe('content.version.error.unknown')
-    expect(errorKey('move', 'invalid')).toEqual(['content.move.error.invalid', 'Check the day and who posts it.'])
+    expect(errorKey('schedule', 'invalid')).toEqual(['content.schedule.error.invalid', 'Check the day and who posts it.']) // its own family since the 5A-2 review
   })
 })
 
@@ -57,5 +57,17 @@ describe('release 5b refusals (spec 2026-10-19 §7.3)', () => {
     expect(errorKey('bio', 'too_many_buttons')).toEqual(['content.bio.error.too_many_buttons', 'A page has at most 8 buttons.'])
     expect(errorKey('bio', 'bad_link')[0]).toBe('content.bio.error.bad_link')
     expect(errorKey('bio', 'whatever')[0]).toBe('content.bio.error.unknown')
+  })
+})
+
+// 5A-2 review: an Unlink failure had Make versions' words; a Plan drag's rare 422 had the Schedule dialog's.
+// Task 2: a save moving a version onto its group's platform.
+describe('refusal words after the 5A-2 review', () => {
+  it('gives Unlink its own words, Schedule the day-and-poster line, and a Plan move the general one', () => {
+    expect(errorKey('unlink', 'unknown')[1]).toBe('The post could not be unlinked. Please try again.')
+    expect(errorKey('schedule', 'invalid')[1]).toBe('Check the day and who posts it.')
+    expect(errorKey('schedule', 'changed_elsewhere')[0]).toBe('content.schedule.error.changed_elsewhere')
+    expect(errorKey('move', 'invalid')).toEqual(['content.move.error.unknown', 'The post could not be moved. Please try again.'])
+    expect(errorKey('save', 'version_exists')[1]).toBe('Another version in this group is already for that platform.')
   })
 })

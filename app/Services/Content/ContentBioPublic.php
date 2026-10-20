@@ -2,7 +2,6 @@
 
 namespace App\Services\Content;
 
-use App\Http\Controllers\Api\V1\Admin\Appointments\BootstrapController as AppointmentsBootstrap;
 use App\Models\Brand;
 use App\Models\ContentBioButton;
 use App\Models\ContentBioPage;
@@ -12,6 +11,7 @@ use App\Services\Appointments\VenueClock;
 use App\Support\Accent;
 use App\Support\CssColor;
 use App\Support\LandingSlug;
+use App\Support\OrgAccent;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
@@ -40,13 +40,16 @@ final class ContentBioPublic
         $orgId = (int) $page->organization_id;
         $language = ContentPublicLanguage::of((int) $page->brand_id);
         $title = $page->title ?: (string) $brand->name;
-        $colour = CssColor::safe($brand->primary_color, '') ?: CssColor::safe(AppointmentsBootstrap::accent($orgId));
+        $colour = CssColor::safe($brand->primary_color, '') ?: CssColor::safe(OrgAccent::of($orgId));
+        $logo = self::picture($brand->logo_url) ?? self::picture(Organization::withoutGlobalScopes()->whereKey($orgId)->value('logo_url'));
 
         return [
             'lang'     => $language,
             'title'    => $title,
             'line'     => $page->line,
-            'logo'     => self::picture($brand->logo_url) ?? self::picture(Organization::withoutGlobalScopes()->whereKey($orgId)->value('logo_url')),
+            'logo'     => $logo,
+            // A preview robot needs an absolute address; the page itself uses the path as stored (5B-1 review).
+            'og_image' => self::absolute($logo),
             'initials' => self::initials($title),
             'brand'    => $colour,
             'onBrand'  => Accent::contrast($colour, '#ffffff') >= 3 ? '#ffffff' : self::INK,
@@ -117,6 +120,12 @@ final class ContentBioPublic
         $url = trim((string) $url);
 
         return str_starts_with($url, 'https://') || (str_starts_with($url, '/') && !str_starts_with($url, '//')) ? $url : null;
+    }
+
+    /** A path on this host as a full address; an https address as it is. */
+    private static function absolute(?string $url): ?string
+    {
+        return $url !== null && str_starts_with($url, '/') ? url($url) : $url;
     }
 
     /** Up to two initials of the title, for a brand without a logo. */

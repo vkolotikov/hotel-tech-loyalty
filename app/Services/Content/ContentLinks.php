@@ -55,14 +55,18 @@ final class ContentLinks
         return self::clean($value) ?? self::refuse();
     }
 
-    /** A post's tags (§5.2): its platform, social, its campaign's name as a slug (else content-plan), post-{id}. @return array<string, string> */
+    /**
+     * A post's tags (§5.2): its platform, social — referral for email and blog —, its campaign's name as a slug (else
+     * content-plan), post-{id}. @return array<string, string>
+     */
     public static function postTags(string $platform, ?string $campaign, int $postId): array
     {
         $slug = Str::slug((string) $campaign);
 
         return [
             'utm_source'   => $platform,
-            'utm_medium'   => 'social',
+            // Owner, 2026-10-20: an email or a blog post sends readers from outside social networks.
+            'utm_medium'   => in_array($platform, ['email', 'blog'], true) ? 'referral' : 'social',
             'utm_campaign' => $slug !== '' ? $slug : 'content-plan',
             'utm_content'  => 'post-' . $postId,
         ];

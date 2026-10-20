@@ -4,7 +4,9 @@ namespace Tests\Feature\Content;
 
 use App\Models\ContentPlannerPost;
 use App\Models\ContentPlannerVisualBrief;
+use App\Services\Content\ContentVersions;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpContentSchema;
 use Tests\TestCase;
 
@@ -120,10 +122,11 @@ class VersionsTest extends TestCase
         // Leaving a group is not an edit: the panel's version still saves.
         $this->asStaffMember()->putJson($this->api("posts/{$linkedin}"), ['updated_at' => $seen, 'hook' => 'Mine'])->assertOk();
 
-        // Deleting the original leaves the others grouped under its id.
+        // Deleting the original leaves the others grouped — under the oldest one's id, as Unlink does (final review: the
+        // group's lock needs a row).
         $this->asStaffMember()->postJson($this->api("posts/{$post->id}/versions"), ['platforms' => ['x']])->assertCreated();
         $this->asStaffMember()->deleteJson($this->api("posts/{$post->id}"))->assertOk();
-        $this->asStaffMember()->getJson($this->api("posts/{$facebook}"))->assertJsonPath('post.group_size', 2)->assertJsonPath('post.group.id', $post->id);
+        $this->asStaffMember()->getJson($this->api("posts/{$facebook}"))->assertJsonPath('post.group_size', 2)->assertJsonPath('post.group.id', $facebook);
 
         // The last one left is no longer in a group; unlinking a post in none changes nothing.
         $this->asStaffMember()->deleteJson($this->api("posts/{$facebook}/group"))->assertOk()->assertJsonPath('post.group', null);
@@ -165,5 +168,50 @@ class VersionsTest extends TestCase
             ->assertJsonPath('versions.0.scheduled_date', null)
             ->assertJsonPath('versions.0.scheduled_time', null)
             ->assertJsonPath('versions.0.status', 'draft');
+    }
+
+    // 5A-1 review: a group holds one post per platform — also after a save that changes a version's platform.
+    public function test_a_version_cannot_be_moved_to_a_platform_its_group_already_has(): void
+    {
+        $original = $this->makePost(['platform' => 'instagram']);
+        $this->asStaffMember()->postJson($this->api("posts/{$original->id}/versions"), ['platforms' => ['linkedin']])->assertCreated();
+        $version = ContentPlannerPost::where('group_id', $original->id)->where('id', '!=', $original->id)->firstOrFail();
+
+        $this->asStaffMember()->putJson($this->api("posts/{$version->id}"), ['updated_at' => $version->updated_at->toISOString(), 'platform' => 'instagram'])
+            ->assertStatus(409)->assertJsonPath('error', 'version_exists');
+        $this->assertSame('linkedin', $version->fresh()->platform);
+        $this->asStaffMember()->putJson($this->api("posts/{$version->id}"), ['updated_at' => $version->updated_at->toISOString(), 'platform' => 'facebook'])
+            ->assertOk()->assertJsonPath('post.platform', 'facebook');
+        // A post outside any group changes platform freely.
+        $alone = $this->makePost(['platform' => 'instagram']);
+        $this->asStaffMember()->putJson($this->api("posts/{$alone->id}"), ['updated_at' => $alone->updated_at->toISOString(), 'platform' => 'linkedin'])->assertOk();
+    }
+
+    // 5A-1 review: Make versions from two posts of one group at once must wait on the same lock: the group's key post.
+    public function test_make_versions_locks_the_groups_key_post_whichever_of_its_posts_it_is_called_from(): void
+    {
+        $original = $this->makePost(['platform' => 'instagram']);
+        $this->asStaffMember()->postJson($this->api("posts/{$original->id}/versions"), ['platforms' => ['linkedin']])->assertCreated();
+        $version = ContentPlannerPost::where('group_id', $original->id)->where('id', '!=', $original->id)->firstOrFail();
+        $alone = $this->makePost(['platform' => 'instagram']);
+
+        DB::transaction(function () use ($original, $version, $alone) {
+            $this->assertSame((int) $original->id, ContentVersions::lockGroup($version));
+            $this->assertSame((int) $original->id, ContentVersions::lockGroup($original));
+            $this->assertSame((int) $alone->id, ContentVersions::lockGroup($alone));
+        });
+    }
+
+    // Final review: deleting the post whose id keys a group used to leave the others keyed by a deleted row, so the lock
+    // that keeps one post per platform matched nothing. The rest take the oldest one's id, as Unlink does.
+    public function test_deleting_the_groups_key_post_rekeys_the_rest(): void
+    {
+        $original = $this->makePost(['platform' => 'instagram']);
+        $this->asStaffMember()->postJson($this->api("posts/{$original->id}/versions"), ['platforms' => ['linkedin', 'facebook']])->assertCreated();
+        [$first, $second] = ContentPlannerPost::where('group_id', $original->id)->where('id', '!=', $original->id)->orderBy('id')->pluck('id')->all();
+
+        $this->asStaffMember()->deleteJson($this->api("posts/{$original->id}"))->assertOk();
+        $this->assertSame([(int) $first, (int) $first], ContentPlannerPost::whereIn('id', [$first, $second])->orderBy('id')->pluck('group_id')->map(fn ($g) => (int) $g)->all());
+        DB::transaction(fn () => $this->assertSame((int) $first, ContentVersions::lockGroup(ContentPlannerPost::findOrFail($second))));
     }
 }

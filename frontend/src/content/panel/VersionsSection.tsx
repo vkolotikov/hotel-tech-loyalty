@@ -1,15 +1,16 @@
 import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { Layers } from 'lucide-react'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
-import { useApi, useBoot } from '../ContentProvider'
+import { useApi, useBoot, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import type { BudgetStatus, Platform, PostDetail, PostGroup } from '../lib/types'
 import { usePanel } from './PanelProvider'
-import { aiAllowed, submitReady, versionChoices, versionNote, versionsBody } from './versionsMath'
+import { aiAllowed, groupPostsToRefresh, submitReady, versionChoices, versionNote, versionsBody } from './versionsMath'
 
 const CHIP = 'rounded-full border px-2.5 py-1 text-xs font-medium'
 
@@ -32,6 +33,8 @@ export function VersionsSection({ post, group, dirty, onPost }: {
   const api = useApi()
   const boot = useBoot()
   const panel = usePanel()
+  const queryClient = useQueryClient()
+  const brand = useBrandId()
   const [making, setMaking] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -41,27 +44,36 @@ export function VersionsSection({ post, group, dirty, onPost }: {
   const w = (key: string, english: string, vars?: Record<string, unknown>) => t(`content.versions.${key}`, english, vars)
   const platformName = (p: Platform) => t(`content.platform.${p}`, p)
 
-  const run = async (call: () => Promise<void>) => {
+  const run = async (family: 'version' | 'unlink', call: () => Promise<void>) => {
     setBusy(true)
     setError(null)
     try {
       await call()
     } catch (e) {
-      const [key, text] = errorKey('version', failureOf(e).code)
+      const [key, text] = errorKey(family, failureOf(e).code)
       setError(t(key, text))
     } finally {
       setBusy(false)
     }
   }
-  const make = (platforms: Platform[], ai: boolean) => run(async () => {
+  // The other posts of the group, before and after, are read again: their cached copies show the old group (5A-2 review).
+  const refreshOthers = (after: PostDetail) => {
+    for (const id of groupPostsToRefresh(group, after.group ?? null, post.id)) {
+      void queryClient.invalidateQueries({ queryKey: ['content', brand, 'post', id], exact: true })
+    }
+  }
+  const make = (platforms: Platform[], ai: boolean) => run('version', async () => {
     const answer = await api.makeVersions(post.id, platforms, ai)
     setMaking(false)
     setMade(answer.versions.length)
     onPost(answer.post)
+    refreshOthers(answer.post)
   })
-  const unlink = () => run(async () => {
+  const unlink = () => run('unlink', async () => {
     setMade(null)
-    onPost((await api.unlinkGroup(post.id)).post)
+    const answer = await api.unlinkGroup(post.id)
+    onPost(answer.post)
+    refreshOthers(answer.post)
   })
 
   return (

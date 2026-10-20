@@ -182,4 +182,34 @@ class BioPageTest extends TestCase
         $this->profile->update(['default_language' => 'it']);
         $this->visit('lumiere')->assertSee('<html lang="en">', false)->assertSee('Latest posts');
     }
+
+    // 5B-1 review: og:image must be absolute for a logo stored as a path (a preview robot cannot resolve a path).
+    public function test_a_logo_stored_as_a_path_gives_an_absolute_og_image(): void
+    {
+        $this->page();
+        DB::table('brands')->where('id', $this->brandId)->update(['logo_url' => '/storage/logos/brand.png']);
+        $this->visit('lumiere')
+            ->assertSee('src="/storage/logos/brand.png"', false)
+            ->assertSee('<meta property="og:image" content="http://' . config('landing.host') . '/storage/logos/brand.png">', false);
+    }
+
+    // 5B-1 review (test gaps): HEAD and robots get the page as people do; the page allocates no session.
+    public function test_head_and_robots_get_the_page_and_no_session_is_made(): void
+    {
+        $this->page();
+        $this->call('HEAD', 'http://' . config('landing.host') . '/links/lumiere')->assertOk();
+        $this->withHeaders(['User-Agent' => 'facebookexternalhit/1.1'])->get('http://' . config('landing.host') . '/links/lumiere')->assertOk()->assertSee('og:title', false);
+        $this->flushHeaders();
+        $dir = storage_path('framework/testing/sessions-' . uniqid());
+        mkdir($dir, 0777, true);
+        config(['session.driver' => 'file', 'session.files' => $dir]);
+        try {
+            $response = $this->visit('lumiere')->assertOk();
+            $this->assertSame([], $response->headers->getCookies());
+            $this->assertSame([], array_values(array_diff(scandir($dir), ['.', '..'])), 'the bio page allocated a session');
+        } finally {
+            array_map('unlink', glob($dir . '/*'));
+            @rmdir($dir);
+        }
+    }
 }

@@ -32,3 +32,9 @@ export function versionsBody(picked: readonly Platform[], choices: readonly Plat
   const platforms = choices.filter(p => picked.includes(p))
   return platforms.length === 0 ? null : { platforms, ai: ai && aiAllowed(budget) }
 }
+
+/** After Make versions or Unlink: the other posts of the group, before and after, whose cached copies show the old group (5A-2 review). */
+export function groupPostsToRefresh(before: PostGroup | null, after: PostGroup | null, current: number): number[] {
+  const ids = [...(before?.posts ?? []), ...(after?.posts ?? [])].map(p => p.id).filter(id => id !== current)
+  return [...new Set(ids)]
+}

@@ -100,9 +100,6 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
             {statuses.map(s => <option key={s} value={s}>{t(`content.status.${s}`, s)}</option>)}
           </select>
         </FieldBox>
-        <FieldBox label={t('content.panel.fields.poster', 'Who posts it')} invalid={invalid.includes('poster_id')}>
-          <PosterSelect value={form.poster_id} onChange={(value) => set('poster_id', value)} choices={team} invalid={bad('poster_id')} className={box('poster_id')} />
-        </FieldBox>
         <FieldBox label={t('content.panel.fields.date', 'Date')} invalid={invalid.includes('scheduled_date')}
           hint={published ? t('content.panel.fields.published_date', 'A published post keeps the date it went out.') : undefined}>
           <input type="date" value={form.scheduled_date} disabled={published} onChange={(e) => set('scheduled_date', e.target.value)}
@@ -121,6 +118,10 @@ export function PostFormFields({ form, onChange, platforms, statuses, pillars, a
             </div>
           )}
         </div>
+        {/* After Date and Time, which sit side by side (5A-2 review). */}
+        <FieldBox label={t('content.panel.fields.poster', 'Who posts it')} invalid={invalid.includes('poster_id')}>
+          <PosterSelect value={form.poster_id} onChange={(value) => set('poster_id', value)} choices={team} invalid={bad('poster_id')} className={box('poster_id')} />
+        </FieldBox>
         <FieldBox label={t('content.panel.fields.pillar', 'Pillar')} invalid={invalid.includes('pillar_id')}>
           <select value={form.pillar_id} onChange={(e) => set('pillar_id', e.target.value)} aria-invalid={bad('pillar_id')} className={box('pillar_id')}>
             <option value="">{t('content.panel.fields.none', 'None')}</option>

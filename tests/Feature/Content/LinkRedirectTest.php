@@ -119,6 +119,35 @@ class LinkRedirectTest extends TestCase
         $this->assertSame(['2026-10-05 direct' => 1], $this->clicks($link));
     }
 
+    // Owner, 2026-10-20 ("do as better"): Pinterest's crawler is a robot, a person tapping in Pinterest's app is not;
+    // the preview fetchers of VK, Mastodon, Bluesky, Iframely and Embedly are robots; a prefetch is not a click.
+    public function test_people_in_pinterests_app_are_counted_and_its_crawler_previews_and_prefetches_are_not(): void
+    {
+        $link = $this->link();
+        $robots = [
+            'Mozilla/5.0 (compatible; Pinterestbot/1.0; +http://www.pinterest.com/bot.html)', 'Pinterest/0.2 (+https://www.pinterest.com/bot.html)',
+            'vkShare; +http://vk.com/dev/Share', 'Mastodon/4.3.0 (http.rb/5.2.0; +https://mastodon.social/)',
+            'Mozilla/5.0 (compatible; Bluesky Cardyb/1.1; +mailto:support@bsky.app)', 'Iframely/1.3.1 (+https://iframely.com/docs/about)',
+            'Mozilla/5.0 (compatible; Embedly/0.2; +http://support.embed.ly/)',
+        ];
+        foreach ($robots as $agent) {
+            $this->withHeaders(['User-Agent' => $agent])->get($this->go($link->code))->assertStatus(302);
+        }
+        $chrome = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
+        foreach ([['Sec-Purpose' => 'prefetch'], ['Sec-Purpose' => 'prefetch;prerender'], ['Purpose' => 'prefetch'], ['X-Purpose' => 'preview'], ['X-Moz' => 'prefetch']] as $headers) {
+            $this->withHeaders($headers + ['User-Agent' => $chrome])->get($this->go($link->code))->assertStatus(302);
+        }
+        $this->assertSame([], $this->clicks($link));
+
+        // withHeaders() keeps headers for the test's later requests: the prefetch ones go before the taps.
+        $this->flushHeaders();
+        $this->withHeaders(['User-Agent' => 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [Pinterest/iOS]'])
+            ->get($this->go($link->code))->assertStatus(302);
+        $this->withHeaders(['User-Agent' => 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36 [Pinterest/Android]'])
+            ->get($this->go($link->code))->assertStatus(302);
+        $this->assertSame(['2026-10-05 direct' => 2], $this->clicks($link));
+    }
+
     public function test_a_switched_off_code_says_so_in_the_brands_content_language_and_an_unknown_code_is_the_hosts_404(): void
     {
         $link = $this->link();

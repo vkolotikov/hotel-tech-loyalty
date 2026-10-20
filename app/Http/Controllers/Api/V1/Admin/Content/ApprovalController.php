@@ -22,7 +22,13 @@ class ApprovalController extends Controller
 {
     public function send(Request $request, int $id): JsonResponse
     {
-        return self::step($request, self::post($id, ContentApproval::SENDABLE), 'needs_review', 'sent_for_approval');
+        $post = self::post($id, ContentApproval::SENDABLE);
+        // Already in review (owner, 2026-10-20): nothing to record again, and the manager's waiting item stays as it is.
+        if ($post->status === 'needs_review') {
+            return response()->json(['post' => ContentPostPresenter::panel($post->fresh(PostController::WITH), $request->user())]);
+        }
+
+        return self::step($request, $post, 'needs_review', 'sent_for_approval');
     }
 
     public function approve(Request $request, int $id): JsonResponse

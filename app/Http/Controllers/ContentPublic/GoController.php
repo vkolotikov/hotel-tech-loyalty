@@ -28,7 +28,7 @@ class GoController extends Controller
 
             return response()->view('content-public.link-off', ['lang' => $language], 404)->header('Cache-Control', 'no-store');
         }
-        if (!$request->isMethod('HEAD') && !ContentLinkClicks::isRobot($request->userAgent())) {
+        if (ContentLinkClicks::counts($request)) {
             ContentLinkClicks::count($link, $request->query('via') === 'bio' ? 'bio' : 'direct');
         }
 

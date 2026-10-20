@@ -8,7 +8,14 @@ export const ERRORS = {
   move: {
     changed_elsewhere: 'Someone else changed this post. The plan now shows their version.',
     published_cannot_move: 'A published post keeps the date it went out.',
-    // Ideas → Schedule sends who posts it (spec 2026-10-19 §4.1): someone off the team is refused.
+    not_found: 'This post no longer exists.',
+    unknown: 'The post could not be moved. Please try again.',
+  },
+  // Ideas → Schedule sends who posts it (spec 2026-10-19 §4.1): someone off the team is refused. A Plan move has no
+  // poster, so its rare 422 reads as `move`'s general line (5A-2 review).
+  schedule: {
+    changed_elsewhere: 'Someone else changed this post. The plan now shows their version.',
+    published_cannot_move: 'A published post keeps the date it went out.',
     invalid: 'Check the day and who posts it.',
     not_found: 'This post no longer exists.',
     unknown: 'The post could not be moved. Please try again.',
@@ -33,6 +40,8 @@ export const ERRORS = {
   save: {
     needs_approval: 'Only a manager can approve posts while approvals are on for this brand.',
     published_cannot_move: 'A published post keeps the date it went out.',
+    // A version moved onto a platform its group already has (one post per platform).
+    version_exists: 'Another version in this group is already for that platform.',
     invalid: 'Some fields need attention.',
     not_found: 'This post no longer exists.',
     no_profile: 'This brand is not set up yet.',
@@ -156,6 +165,11 @@ export const ERRORS = {
     not_found: 'This post no longer exists.',
     unknown: 'The versions could not be made. Please try again.',
   },
+  // Unlink has its own words (5A-2 review): it makes nothing.
+  unlink: {
+    not_found: 'This post no longer exists.',
+    unknown: 'The post could not be unlinked. Please try again.',
+  },
   // Release 5b (spec 2026-10-19 §5.1, §6.4). The bio page's `invalid` and `bad_link` are also the portal's own checks,
   // made before anything is sent.
   link: {
@@ -167,6 +181,7 @@ export const ERRORS = {
     bio_name_taken: 'Another page already has this name. Choose another one.',
     too_many_buttons: 'A page has at most 8 buttons.',
     bad_link: 'Each button needs a web address that starts with http:// or https://.',
+    label_missing: 'Each button needs a label.',
     invalid: 'Some fields need attention.',
     manager_only: 'Only an owner or a manager can change the link-in-bio page.',
     no_profile: 'This brand is not set up yet.',

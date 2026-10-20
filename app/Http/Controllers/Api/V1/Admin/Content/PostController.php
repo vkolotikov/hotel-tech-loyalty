@@ -13,10 +13,12 @@ use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
 use App\Services\Content\ContentTeam;
+use App\Services\Content\ContentVersions;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 /** A brand's posts: written, read, saved, moved and marked by every staff member (spec 2026-10-14 §5.1). */
@@ -98,23 +100,28 @@ class PostController extends Controller
             $data['scheduled_time'] = null;
         }
 
-        $post = ContentPlannerPost::create(array_merge(
-            ['status' => 'draft', 'language' => $profile->default_language ?: 'en'],
-            $data,
-            [
-                'planner_profile_id' => $profile->id,
-                'brand_id'           => $profile->brand_id,
-                'generated_by'       => 'manual',
-                'created_by'         => $request->user()->id,
-            ],
-        ));
+        // The post, its short link and its approval step are one write (5B-1 review): a Link that cannot be written
+        // leaves no post behind.
+        $post = DB::transaction(function () use ($data, $profile, $request, $link) {
+            $post = ContentPlannerPost::create(array_merge(
+                ['status' => 'draft', 'language' => $profile->default_language ?: 'en'],
+                $data,
+                [
+                    'planner_profile_id' => $profile->id,
+                    'brand_id'           => $profile->brand_id,
+                    'generated_by'       => 'manual',
+                    'created_by'         => $request->user()->id,
+                ],
+            ));
+            if ($link !== null) {
+                ContentLinks::set($post, $link);
+            }
+            if ($kind = ContentApproval::onCreate($post, $request->user(), $profile)) {
+                ContentApproval::record($post, $kind, $request->user()->id);
+            }
 
-        if ($link !== null) {
-            ContentLinks::set($post, $link);
-        }
-        if ($kind = ContentApproval::onCreate($post, $request->user(), $profile)) {
-            ContentApproval::record($post, $kind, $request->user()->id);
-        }
+            return $post;
+        });
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))], 201);
     }
@@ -143,25 +150,33 @@ class PostController extends Controller
         $before = (string) $post->status;
         // Spec 2026-10-16 §6.2: refused whole, before anything of the save is filled.
         ContentApproval::guardStatus($fields['status'] ?? null, $before, $request->user(), $profile);
-        $post->fill($fields);
-        // A post without a day has no time either — also when only a time was sent for it.
-        if ($post->scheduled_date === null) {
-            $post->scheduled_time = null;
-        }
-        if ($linkChanges) {
-            // Its version moves on, so a panel still holding the old Link cannot save it back (F3).
-            $post->updated_at = $post->freshTimestamp();
-        }
-        $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile, $linkChanges);
-        $post->save();
-        if ($linkChanges) {
-            ContentLinks::set($post, $link);
-        } elseif ($post->wasChanged(['platform', 'campaign_id'])) {
-            ContentLinks::retag($post);
-        }
-        if ($kind) {
-            ContentApproval::record($post, $kind, $request->user()->id);
-        }
+        // The save, its short link and its approval step are one write (5B-1 review); a grouped post keeps one post per
+        // platform (5A-1 review), checked under the group's lock.
+        DB::transaction(function () use ($post, $fields, $linkChanges, $link, $before, $request, $profile) {
+            if (array_key_exists('platform', $fields) && $fields['platform'] !== $post->platform && $post->group_id) {
+                ContentVersions::lockGroup($post);
+                ContentVersions::assertPlatformFree($post, (string) $fields['platform']);
+            }
+            $post->fill($fields);
+            // A post without a day has no time either — also when only a time was sent for it.
+            if ($post->scheduled_date === null) {
+                $post->scheduled_time = null;
+            }
+            if ($linkChanges) {
+                // Its version moves on, so a panel still holding the old Link cannot save it back (F3).
+                $post->updated_at = $post->freshTimestamp();
+            }
+            $kind = ContentApproval::beforeSave($post, $before, $request->user(), $profile, $linkChanges);
+            $post->save();
+            if ($linkChanges) {
+                ContentLinks::set($post, $link);
+            } elseif ($post->wasChanged(['platform', 'campaign_id'])) {
+                ContentLinks::retag($post);
+            }
+            if ($kind) {
+                ContentApproval::record($post, $kind, $request->user()->id);
+            }
+        });
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -239,7 +254,13 @@ class PostController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        self::find($id)->delete();
+        $post = self::find($id);
+        // Out of its group first: a deleted key post would leave the rest keyed by a missing row, with no row for the
+        // group's lock (final review); Unlink gives them the oldest one's id.
+        DB::transaction(function () use ($post) {
+            ContentVersions::unlink($post);
+            $post->delete();
+        });
 
         return response()->json(['deleted' => true]);
     }

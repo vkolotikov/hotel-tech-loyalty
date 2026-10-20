@@ -168,7 +168,7 @@ Worked out when the link is saved, and again when the post's platform or campaig
 | Tag | Value |
 |---|---|
 | `utm_source` | the post's platform (`instagram`, …); `link-in-bio` for bio buttons |
-| `utm_medium` | `social` |
+| `utm_medium` | `social`; `referral` for the email and blog platforms (owner, 2026-10-20) |
 | `utm_campaign` | the post's campaign name as a slug when it has one; otherwise `content-plan` |
 | `utm_content` | `post-{id}`; `button` for bio buttons |
 
@@ -188,9 +188,12 @@ A tag the address already carries is never overwritten; the address's own query 
 
 - `content_link_clicks`: one row per link, venue day (the link's organisation) and source (`direct` | `bio`), raised by
   one in a single upsert (`ON CONFLICT … DO UPDATE`).
-- **Not counted** (still redirected): HEAD requests, and user agents that match the bot list — link-preview robots
-  (`facebookexternalhit`, `Facebot`, `Twitterbot`, `LinkedInBot`, `WhatsApp`, `TelegramBot`, `Slackbot`,
-  `Discordbot`, `Pinterest`, `Applebot`) and anything with `bot`, `crawl`, `spider`, `preview` or `headless`.
+- **Not counted** (still redirected): HEAD requests; prefetches (`Sec-Purpose`, `Purpose`, `X-Purpose` or `X-Moz`
+  naming prefetch or preview); and user agents that match the bot list — link-preview robots (`facebookexternalhit`,
+  `Facebot`, `Twitterbot`, `LinkedInBot`, `WhatsApp`, `TelegramBot`, `Slackbot`, `Discordbot`, Pinterest's crawler
+  `Pinterestbot` / `Pinterest/0.x`, `Applebot`, `vkShare`, `Mastodon/`, Bluesky's `Cardyb`, `Iframely`, `Embedly`) and
+  anything with `bot`, `crawl`, `spider`, `preview` or `headless`. People tapping inside Pinterest's app
+  (`[Pinterest/iOS]`, `[Pinterest/Android]`) are counted (owner, 2026-10-20).
 - **Never stored:** IP addresses, cookies, user agents, referrers. Counts are taps, not people: the portal says
   "clicks", never "people" or "visitors".
 

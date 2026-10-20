@@ -187,5 +187,8 @@ export function invalidFields(fields: Record<string, string[]> | undefined): (ke
 
 /** A refused save in the panel's terms: a refused Link is the Link's (its field, its own words: spec 2026-10-19 §5.1). */
 export function refusalOf(code: string, fields: Record<string, string[]> | undefined): { invalid: (keyof PostForm)[]; family: 'save' | 'link' } {
-  return code === 'bad_link' ? { invalid: ['link'], family: 'link' } : { invalid: invalidFields(fields), family: 'save' }
+  if (code === 'bad_link') return { invalid: ['link'], family: 'link' }
+  // A version moved onto a platform its group already has (one post per platform).
+  if (code === 'version_exists') return { invalid: ['platform'], family: 'save' }
+  return { invalid: invalidFields(fields), family: 'save' }
 }
