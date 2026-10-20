@@ -52,6 +52,7 @@ class ContentPlannerPost extends Model
         'series_id',
         'group_id',
         'poster_id',
+        'site_page_id',
     ];
 
     protected $casts = [

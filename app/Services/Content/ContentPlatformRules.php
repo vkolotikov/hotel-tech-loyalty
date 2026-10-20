@@ -8,6 +8,9 @@ namespace App\Services\Content;
  */
 final class ContentPlatformRules
 {
+    /** Platforms whose posts cannot carry a clickable link: they point to the link in bio (spec 2026-10-20 §D9). */
+    public const NO_LINKS = ['instagram', 'tiktok'];
+
     public const RULES = [
         'linkedin' => 'Purpose: B2B trust, authority, thought leadership, founder credibility, education, soft lead generation. '
             . 'Best content types: founder/expert insights, industry lessons, case studies, customer problems, transformation stories, practical frameworks, contrarian-but-useful opinions, company updates with a human angle. '

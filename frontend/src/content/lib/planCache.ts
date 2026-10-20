@@ -58,5 +58,8 @@ export function refreshLists(queryClient: QueryClient, brand: number | null): Pr
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'ideas'] }),
     // The bell (spec §8): a post that enters or leaves review, an approval step or a comment changes what it says.
     queryClient.invalidateQueries({ queryKey: ['content', brand, 'inbox'] }),
+    // The website's pages (spec 2026-10-20 §4.6): a promotion post's change moves its page's numbers and "Show posts".
+    queryClient.invalidateQueries({ queryKey: ['content', brand, 'site'] }),
+    queryClient.invalidateQueries({ queryKey: ['content', brand, 'page-posts'] }),
   ])
 }

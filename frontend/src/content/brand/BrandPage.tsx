@@ -17,6 +17,7 @@ import { TemplatesSection } from './sections/Templates'
 import { PositioningSection } from './sections/Positioning'
 import { RhythmSection } from './sections/Rhythm'
 import { VoiceSection } from './sections/Voice'
+import { WebsiteSection } from './sections/Website'
 import { GuidedSetup } from './setup/GuidedSetup'
 import { QuickSetupDialog } from './setup/QuickSetup'
 import { SetupChoice } from './setup/SetupChoice'
@@ -57,6 +58,8 @@ export function BrandPage() {
           )}
           {brand.profile && (
             <>
+              {/* Spec 2026-10-20 §5: the website and its company summary, right after Readiness. */}
+              <WebsiteSection canEdit={canEdit} />
               <BrandDnaSection brand={brand} canEdit={canEdit} />
               <AudiencesSection brand={brand} canEdit={canEdit} />
               <VoiceSection brand={brand} canEdit={canEdit} />

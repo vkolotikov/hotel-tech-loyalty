@@ -24,6 +24,8 @@ const FAMILIES: Record<string, readonly string[]> = {
   'bell.kind': ['waiting', 'approved', 'sent_back', 'comment', 'to_post', 'not_posted'],
   // Spec 2026-10-19 §5.5: what the panel says a save does to a short link.
   'links.note': ['pending', 'moving', 'clearing', 'off', 'reviving'],
+  // Spec 2026-10-20 §4.2: what stops the promote dialog before anything is sent.
+  'promote.dialog.problem': ['no_pages', 'too_many_pages', 'no_channels', 'per_page', 'per_week', 'too_many_posts', 'order', 'too_long', 'past'],
   ...Object.fromEntries(Object.entries(ERRORS).map(([family, words]) => [`${family}.error`, Object.keys(words)])),
 }
 
@@ -59,7 +61,10 @@ describe('content bundle', () => {
   // Final review (Plan 3B): "1 copies", "Ещё 5 поста", "1 Wochen in Folge". The bundles keep one key per word (no
   // _one/_few/_many), so a count stands where no noun has to agree with it: after a colon, or in brackets.
   it('every count reads right at 1, 2 and 5: no noun follows the number', () => {
-    const COUNTED = ['plan.goals.at_risk', 'plan.goals.streak', 'panel.repeat.copies', 'panel.repeat.stop_confirm', 'brand.channels.per_week', 'ideas.see_all', 'panel.blanks', 'flags.comments', 'bell.label_count', 'versions.made', 'flags.versions', 'links.clicks', 'links.from_bio', 'links.bar', 'flags.clicks', 'bio.clicks_30d']
+    const COUNTED = ['plan.goals.at_risk', 'plan.goals.streak', 'panel.repeat.copies', 'panel.repeat.stop_confirm', 'brand.channels.per_week', 'ideas.see_all', 'panel.blanks', 'flags.comments', 'bell.label_count', 'versions.made', 'flags.versions', 'links.clicks', 'links.from_bio', 'links.bar', 'flags.clicks', 'bio.clicks_30d',
+      // Release 6 (spec 2026-10-20 §5).
+      'promote.numbers', 'promote.selected', 'promote.removed', 'promote.tab_articles', 'promote.tab_pages', 'promote.dialog.pages', 'promote.dialog.more',
+      'promote.run.done', 'promote.run.writing', 'promote.run.stopped', 'site.scanned']
     for (const locale of LOCALES) {
       const json = bundle(locale)
       const wrong = COUNTED.filter(key => {

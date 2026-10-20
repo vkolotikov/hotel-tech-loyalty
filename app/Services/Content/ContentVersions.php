@@ -19,6 +19,8 @@ final class ContentVersions
         'scheduled_date', 'scheduled_time', 'language', 'topic', 'title', 'goal', 'format', 'hook', 'main_copy', 'short_copy',
         'cta', 'hashtags', 'pillar_id', 'audience_id', 'campaign_id', 'strategy_id', 'weekday_role', 'funnel_stage',
         'post_type', 'strategic_reason', 'poster_id',
+        // The website page it promotes (spec 2026-10-20 §4.7): a version counts for the page, its link carries its campaign.
+        'site_page_id',
     ];
 
     /** The platforms already in the post's group; its own when it has none. @return list<string> */

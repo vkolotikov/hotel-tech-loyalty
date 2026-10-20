@@ -36,6 +36,8 @@ class QueueRetryAfterTest extends TestCase
             new \App\Jobs\GenerateContentStrategy(1, 1, 1, []),
             new \App\Jobs\AdaptPostVersions(1, 1, 1, 'instagram', [2]),
             new \App\Jobs\RewriteRepeatCopies(1, 1, 1, [2]),
+            new \App\Jobs\ScanContentWebsite(1, 'token', true, 1),
+            new \App\Jobs\WritePromotionPosts(1),
         ];
         foreach ($jobs as $job) {
             $this->assertSame('ai', $job->queue, $job::class);

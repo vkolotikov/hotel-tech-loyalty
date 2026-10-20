@@ -126,6 +126,8 @@ final class ContentPostPresenter
             'poster'            => ContentTeam::poster($post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id),
             // Its tracked short link (spec 2026-10-19 §5.5), or null for a post that never had a Link.
             'link'              => ContentLinks::describe($post),
+            // The website page a promotion post promotes (spec 2026-10-20 §4.7).
+            'promotes'          => ContentPromotions::promotes($post),
             'hook_alternatives' => array_values((array) data_get($post->source_context, 'hook_alternatives', [])),
             'visual_brief'      => $brief ? [
                 'visual_type'  => $brief->visual_type,

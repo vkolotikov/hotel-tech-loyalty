@@ -33,8 +33,10 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   `ai_budget_used_up`, `already_generating`, `changed_elsewhere`, `published_cannot_move`, `slot_not_open`,
   `no_channels`, `range_in_past`, `ai_failed`, `audience_in_use`, `already_set_up`, `not_ready`,
   `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, from release 4b `needs_approval`,
-  `approvals_off`, `wrong_status` and `not_yours`, from release 5a `version_exists`, and from release 5b `bad_link`,
-  `bio_name_invalid`, `bio_name_taken` and `too_many_buttons`.
+  `approvals_off`, `wrong_status` and `not_yours`, from release 5a `version_exists`, from release 5b `bad_link`,
+  `bio_name_invalid`, `bio_name_taken` and `too_many_buttons`, and from release 6 `bad_address`, `already_scanning`,
+  `too_many_scans`, `scan_running`, `scan_failed`, `already_promoting`, `period_too_short`, `too_many_posts`,
+  `page_not_found` and `promotion_failed`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
 
@@ -60,6 +62,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Links | `link` (an address or null) on `POST posts` and `PUT posts/{id}`; `GET posts/{id}` carries `link`, cards carry `clicks` | everyone |
 | Link-in-bio | `GET bio`; `PUT bio` (`is_on`, `slug`, `title`, `line`, `show_posts`, `buttons: [{id?, label, destination}]`) | read: everyone; save: owners and managers |
 | Public host | `GET /go/{code}` (302; `?via=bio`), `GET /links/{name}` | visitors |
+| Website | `GET site` (the site, its pages with their numbers, the suggested address); `PUT site` (`url`, `summary`), `POST site/scan` (`url?`, `update_summary?`; 202 while the queued scan reads), `DELETE site/pages/{id}/posts` (remove draft posts) | read: everyone; the rest: managers |
+| Promotions | `POST promotions/preview`, `POST promotions` (`page_ids`, `posts_per_page`, `platforms`, `from`, `to`, `per_week`, `use_picture?`, `instructions?`; 202 while queued), `DELETE promotions/current` (stop) (managers); `GET promotions/current` (everyone); `GET posts/{id}` carries `promotes` | |
 
 ## Rules the code keeps (and the tests that keep them)
 
@@ -255,6 +259,19 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   while the page is on; managers edit the switch, the name (lowercase as typed; the full address shown; a warning when
   a saved page is renamed), title, line, "Show latest posts" and up to eight buttons (add, move up and down, remove),
   saved in one call; each button's clicks for the last 30 days; Open page while it is on.
+- **Release 6 — Promote** (`/content/promote`, `promote/`; menu item after Posts). Two shared queries:
+  `['content', brand, 'site']` (`GET site`, read every 4 s while a scan runs) and `['content', brand, 'promotion']`
+  (`GET promotions/current`, every 4 s while a promotion runs); `usePromotionWatch` reads the plan and the pages'
+  numbers again when a run ends (the Promote page and the Plan both watch; the Plan says "Promotion posts added…").
+  The page: the website line (`WebsiteScan`: address, Scan, "Update the company summary", the status line), the running
+  or finished promotion (`PromotionLine`, Stop for managers), two tabs (Blog articles, Other pages) of `PageRow`s
+  (picture, title opening the page, date and numbers, "Not found on the last scan", Show posts — the page's posts,
+  each opens in the panel — and Remove draft posts with a confirmation); managers tick up to 20 pages and press
+  Promote…. The dialog (`PromoteDialog`) asks the server's preview (`POST promotions/preview`, keyed by the request) and
+  enables Promote only when every post fits; the period follows the numbers until a date is changed. The Brand page's
+  **Website** section (first after Readiness) holds the same scan control and the company summary (managers edit it;
+  an edit is kept by the next scan unless "Update the company summary" is ticked). The panel shows "Promotes: …" on a
+  promotion post. Refusal families: `site`, `promote`, `promotion` (per page), `summary`, `drafts`.
 
 ## Small-fixes batch (2026-10-20)
 
@@ -284,6 +301,31 @@ The deferred minors of releases 5a and 5b and the owner's answers of 2026-10-20,
   `not_found`. Writes that change a group take the group's key post first, then the post (Make versions, Unlink, a
   platform save); Stop repeating takes removed copies out of their groups; a deadlock abort is retried (3 tries).
   `ConcurrentWritesTest` stages the other request right after the post is read.
+
+## Release 6: promote your website (2026-10-20)
+
+Spec `docs/superpowers/specs/2026-10-20-content-release-6-design.md`.
+
+- **The scan** (`POST site/scan`, managers; `ScanContentWebsite` on the `ai` queue, `tries` 1, `timeout` 600): robots.txt
+  (`HexaTechContentBot`), then its sitemaps or the usual ones, else the home page's feed, links and blog page; reads up to
+  30 pages (home first) and then the 100 newest articles, one at a time, for at most 420 s. Public addresses only: every
+  DNS answer is checked and the connection pinned with `CURLOPT_RESOLVE` (on curl — a streamed Guzzle request would go
+  through PHP's stream handler and ignore the pin); each redirect is checked again; HTML 3 MB, XML 10 MB, pictures 5 MB.
+  20 scans per organisation a day (`RateLimiter` key `content:site-scan:{org}`). A token per press: a late job writes
+  nothing. A scan reads failed 1,800 s after it was queued, or 660 s after its job started.
+- **The company summary** (one AI call, feature `content`, type `website_summary`): kept on `content_sites.summary`, read
+  by `ContextBuilder` ("FROM THE BRAND'S WEBSITE") in every Content AI call; it fills `brand_summary`, `usp` and `mission`
+  only where they are empty. A manager's edit (`PUT site`) sets `summary_edited`, and a scan then keeps it unless
+  `update_summary` is sent. The readiness check counts the scanned address as the company website.
+- **Promotions** (`POST promotions`, managers): `PromotionSchedule` spreads the posts (an evenly spaced ideal day, the
+  nearest free slot, channels taking turns at a cost of 3 days, the weekly pace); one `content_promotions` row per page
+  and one `WritePromotionPosts` job per row, chained on the `ai` queue. Each post is a draft with `generated_by =
+  promotion`, `site_page_id`, its own short link (`utm_campaign = promote-{page}`), the link after the text except on
+  Instagram and TikTok, and the page's picture copied once into the media store. A batch's page reads failed 660 s after
+  its job started, or after 1,800 s without progress in the batch; the next press marks such rows failed.
+- **Undo:** `DELETE site/pages/{id}/posts` removes the page's promotion posts in idea, draft, needs review or needs visual,
+  as deleting one post does (versions unlinked first; short links keep working).
+- **Copies:** versions, repeat copies and duplicates keep `site_page_id`.
 
 ## What this release does not do
 
@@ -371,5 +413,9 @@ to a real brand, and stay the owner's:
   next panel read), and look at the card's click count; on the Brand page, set up the link-in-bio page, switch it on,
   add two buttons, open it, and put its address in one profile's bio; open your own landing page once (the public host's
   list of paths changed); reload admin tabs left open.
+- Release 6: on the Brand page, enter the website and Scan; check the article list on the Promote page and the company
+  summary on the Brand page (edit it if something is wrong); promote one article with 2 posts on one channel over the
+  next two weeks; open one of its posts (the Promotes line, the short link, the picture); then Remove draft posts on that
+  article.
 - Release 2 (and every release): open `/content` as a manager and as a staff member; generate one week on a real brand;
   check Settings → AI Usage for the `content` line; reload admin tabs left open across the deploy.

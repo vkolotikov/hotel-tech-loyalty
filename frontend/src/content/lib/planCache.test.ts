@@ -54,7 +54,8 @@ describe('refreshLists', () => {
     const client = new QueryClient()
     const spy = vi.spyOn(client, 'invalidateQueries')
     void refreshLists(client, 3)
-    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals'], ['content', 3, 'ideas'], ['content', 3, 'inbox']])
+    // Release 6 review: a post's change also moves the website pages' numbers and their "Show posts" lists.
+    expect(spy.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([['content', 3, 'plan'], ['content', 3, 'posts'], ['content', 3, 'goals'], ['content', 3, 'ideas'], ['content', 3, 'inbox'], ['content', 3, 'site'], ['content', 3, 'page-posts']])
   })
 })
 

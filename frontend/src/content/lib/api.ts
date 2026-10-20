@@ -4,6 +4,7 @@ import type {
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
   RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
   TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember, BioBody, BioPayload,
+  PromotionBody, PromotionPreview, PromotionRun, SitePage, SitePayload,
 } from './types'
 
 /**
@@ -142,6 +143,19 @@ export function contentApi(brand: number | null) {
     /** The link-in-bio page (spec 2026-10-19 §6.4): everyone reads it; a manager saves the page and its buttons in one call. */
     bio: (): Promise<BioPayload> => watched(api.get(url('bio'))),
     saveBio: (body: BioBody): Promise<BioPayload> => watched(api.put(url('bio'), body)),
+    /** The brand's website (spec 2026-10-20 §6.2): everyone reads it and its pages; managers save it and scan it. */
+    site: (): Promise<SitePayload> => watched(api.get(url('site'))),
+    saveSite: (body: { url?: string | null; summary?: string | null }): Promise<SitePayload> => watched(api.put(url('site'), body)),
+    /** Starts a scan: 202 while the queue worker reads (follow it with `site`), or — where the queue is sync — its result. */
+    scanSite: (body: { url?: string; update_summary?: boolean }): Promise<SitePayload> => watched(api.post(url('site/scan'), body)),
+    pagePosts: (id: number): Promise<{ posts: PostCard[] }> => watched(api.get(url(`site/pages/${id}/posts`))),
+    /** Remove draft posts (spec §4.6): the page's promotion posts not yet approved. */
+    removePageDrafts: (id: number): Promise<{ removed: number; kept: number; page: SitePage }> => watched(api.delete(url(`site/pages/${id}/posts`))),
+    /** Promotions (spec §4.2, §4.5): the preview writes nothing; a promotion runs page by page on the queue worker. */
+    previewPromotion: (body: PromotionBody): Promise<PromotionPreview> => watched(api.post(url('promotions/preview'), body)),
+    promote: (body: PromotionBody): Promise<PromotionRun> => watched(api.post(url('promotions'), body)),
+    promotion: (): Promise<PromotionRun> => watched(api.get(url('promotions/current'))),
+    stopPromotion: (): Promise<PromotionRun> => watched(api.delete(url('promotions/current'))),
 
     posts: (filters: PostFilters): Promise<PostsPage> => watched(api.get(url('posts'), { params: postsParams(filters) })),
 

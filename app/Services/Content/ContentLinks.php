@@ -5,6 +5,7 @@ namespace App\Services\Content;
 use App\Models\ContentLink;
 use App\Models\ContentPlannerCampaign;
 use App\Models\ContentPlannerPost;
+use App\Models\ContentSitePage;
 use Illuminate\Support\Str;
 
 /**
@@ -142,12 +143,15 @@ final class ContentLinks
         return ContentLink::withoutGlobalScopes()->where('post_id', $post->id)->first();
     }
 
-    /** The post's tags as it is now (§5.2). @return array<string, string> */
+    /** The post's tags as it is now (§5.2): its campaign's name, else the page it promotes (spec 2026-10-20 §D11). @return array<string, string> */
     public static function tagsFor(ContentPlannerPost $post): array
     {
         $campaign = $post->campaign_id
             ? ContentPlannerCampaign::withoutGlobalScopes()->whereKey($post->campaign_id)->value('name')
             : null;
+        if (($campaign === null || trim((string) $campaign) === '') && $post->site_page_id) {
+            $campaign = ContentSitePage::withoutGlobalScopes()->whereKey($post->site_page_id)->first(['id', 'url', 'title'])?->campaignName();
+        }
 
         return self::postTags((string) $post->platform, $campaign, (int) $post->id);
     }

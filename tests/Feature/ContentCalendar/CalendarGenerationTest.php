@@ -39,6 +39,8 @@ class CalendarGenerationTest extends TestCase
         // events, and the venue's zone (VenueClock reads `hotel_timezone` from hotel_settings) for the country guess.
         (require database_path('migrations/2026_10_16_100000_add_holiday_settings_to_content_planner_profiles.php'))->up();
         (require database_path('migrations/2026_10_16_100100_create_content_planner_key_dates_table.php'))->up();
+        // Release 6: every AI call's context reads the brand's website summary (spec 2026-10-20 §3.6).
+        (require database_path('migrations/2026_10_20_100000_create_content_sites_table.php'))->up();
         if (!Schema::hasTable('hotel_settings')) {
             Schema::create('hotel_settings', function ($t) {
                 $t->bigIncrements('id');

@@ -11,6 +11,7 @@ import { PanelProvider } from './panel/PanelProvider'
 import { PostLink } from './panel/PostLink'
 import { PlanPage } from './plan/PlanPage'
 import { PostsPage } from './posts/PostsPage'
+import { PromotePage } from './promote/PromotePage'
 import { StrategyScreen } from './strategy/StrategyScreen'
 
 registerWorkspaceLocales()
@@ -37,6 +38,7 @@ export function ContentApp() {
             <Route path="ideas" element={<IdeasPage />} />
             <Route path="posts" element={<PostsPage />} />
             <Route path="posts/:id" element={<PostLink />} />
+            <Route path="promote" element={<PromotePage />} />
             <Route path="strategy" element={<StrategyScreen />} />
             <Route path="brand" element={<BrandPage />} />
             <Route path="*" element={<Navigate to="/content" replace />} />

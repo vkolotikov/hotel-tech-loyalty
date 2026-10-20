@@ -187,6 +187,58 @@ export const ERRORS = {
     no_profile: 'This brand is not set up yet.',
     unknown: 'The page could not be saved. Please try again.',
   },
+  // Release 6 (spec 2026-10-20 §6.3). A scan's outcome reads through `site` too (its `error`).
+  site: {
+    bad_address: 'Enter the website address, starting with https:// — a public site.',
+    already_scanning: 'The website is already being read.',
+    too_many_scans: 'A website can be read at most 20 times a day. Try again tomorrow.',
+    scan_running: 'The website is being read. Try again when it is done.',
+    site_unreachable: 'The website could not be reached. Check the address and try again.',
+    site_blocked: "The website's robots.txt does not let Content read it.",
+    nothing_found: 'Nothing could be read on this website. Check the address and try again.',
+    scan_failed: 'Reading the website stopped unexpectedly. Please try again.',
+    manager_only: 'Only an owner or a manager can change the website.',
+    no_profile: 'This brand is not set up yet.',
+    invalid: 'Some fields need attention.',
+    unknown: 'That did not work. Please try again.',
+  },
+  promote: {
+    already_promoting: 'A promotion is already being written for this brand.',
+    period_too_short: 'Not every post fits in these days: choose a longer period, a higher pace or fewer posts.',
+    too_many_posts: 'One promotion writes at most 200 posts.',
+    no_channels: 'None of these channels is active for this brand.',
+    page_not_found: 'One of these pages is no longer in the list. Reload the page.',
+    scan_running: 'The website is being read. Promote when it is done.',
+    range_in_past: 'These days are already over.',
+    ai_budget_used_up: "This month's AI budget is used up.",
+    promotion_failed: 'The promotion could not start. Please try again.',
+    manager_only: 'Only an owner or a manager can promote pages.',
+    no_profile: 'This brand is not set up yet.',
+    invalid: 'Check the pages, channels, days and numbers.',
+    unknown: 'The promotion could not start. Please try again.',
+  },
+  // A page of a promotion that did not get all its posts (spec §4.5).
+  promotion: {
+    ai_failed: 'The AI could not write these posts.',
+    ai_incomplete: 'The AI wrote fewer posts than asked.',
+    ai_budget_used_up: "This month's AI budget ran out.",
+    page_gone: 'This page is no longer in the list.',
+    promotion_failed: 'Writing stopped unexpectedly.',
+    unknown: 'These posts could not be written.',
+  },
+  // Why the last scan did not update the company summary (spec §3.6).
+  summary: {
+    ai_budget_used_up: "This month's AI budget is used up, so the company summary was not updated.",
+    ai_failed: 'The AI could not write the company summary this time; the list of pages is up to date.',
+    unknown: 'The company summary was not updated.',
+  },
+  // Remove draft posts (spec §4.6).
+  drafts: {
+    already_promoting: 'Wait until the promotion being written is done.',
+    not_found: 'This page is no longer in the list.',
+    manager_only: 'Only an owner or a manager can remove posts.',
+    unknown: 'The posts could not be removed. Please try again.',
+  },
 } as const
 
 export type ErrorFamily = keyof typeof ERRORS

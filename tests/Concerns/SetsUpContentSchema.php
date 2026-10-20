@@ -54,6 +54,8 @@ trait SetsUpContentSchema
             'country'           => fn (Blueprint $t) => $t->string('country', 2)->nullable(),
             // The link-in-bio page's logo falls back to the organisation's (spec 2026-10-19 §6.2).
             'logo_url'          => fn (Blueprint $t) => $t->string('logo_url')->nullable(),
+            // The website's suggested address (spec 2026-10-20 §3.1) and the readiness check read it.
+            'website'           => fn (Blueprint $t) => $t->string('website')->nullable(),
         ];
         foreach ($columns as $column => $add) {
             if (!Schema::hasColumn('organizations', $column)) {
@@ -129,6 +131,19 @@ trait SetsUpContentSchema
         }
         if (!Schema::hasTable('content_bio_buttons')) {
             (require database_path('migrations/2026_10_19_100500_create_content_bio_buttons_table.php'))->up();
+        }
+        // Release 6 (spec 2026-10-20 §6.1): the website, its pages, promotions, and the page a post promotes.
+        if (!Schema::hasTable('content_sites')) {
+            (require database_path('migrations/2026_10_20_100000_create_content_sites_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_site_pages')) {
+            (require database_path('migrations/2026_10_20_100100_create_content_site_pages_table.php'))->up();
+        }
+        if (!Schema::hasTable('content_promotions')) {
+            (require database_path('migrations/2026_10_20_100200_create_content_promotions_table.php'))->up();
+        }
+        if (!Schema::hasColumn('content_planner_posts', 'site_page_id')) {
+            (require database_path('migrations/2026_10_20_100300_add_site_page_id_to_content_planner_posts.php'))->up();
         }
         // The link-in-bio page's default name reads the brand's landing page (spec 2026-10-19 §6.1).
         if (!Schema::hasTable('landing_pages')) {

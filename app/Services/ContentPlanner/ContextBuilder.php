@@ -3,6 +3,7 @@
 namespace App\Services\ContentPlanner;
 
 use App\Models\ContentPlannerProfile;
+use App\Models\ContentSite;
 use App\Models\Organization;
 use App\Services\ContentKnowledgeService;
 
@@ -24,6 +25,7 @@ final class ContextBuilder
     {
         $sections = array_filter([
             $this->brandProfileSection($profile),
+            $this->websiteSection($profile),
             $this->brandVoiceSection($profile),
             $this->audiencesSection($profile),
             $this->channelsSection($profile),
@@ -117,6 +119,19 @@ final class ContextBuilder
         }
 
         return $this->section('BRAND PROFILE', $lines);
+    }
+
+    /** What the brand's own website says (spec 2026-10-20 §3.6): the company summary of its last scan, or the manager's. */
+    private function websiteSection(ContentPlannerProfile $profile): ?string
+    {
+        $site = ContentSite::withoutGlobalScopes()->where('planner_profile_id', $profile->id)->first(['summary', 'summary_updated_at', 'scanned_at']);
+        $summary = trim((string) $site?->summary);
+        if ($summary === '') {
+            return null;
+        }
+        $date = ($site->summary_updated_at ?? $site->scanned_at)?->format('Y-m-d');
+
+        return "## FROM THE BRAND'S WEBSITE" . ($date ? " (scanned {$date})" : '') . "\n" . mb_substr($summary, 0, 6000);
     }
 
     private function brandVoiceSection(ContentPlannerProfile $profile): ?string

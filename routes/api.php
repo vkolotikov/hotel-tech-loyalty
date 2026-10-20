@@ -1287,6 +1287,16 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('me/morning-email', [\App\Http\Controllers\Api\V1\Admin\Content\MorningEmailController::class, 'update']);
                 Route::get('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'show']);
                 Route::put('bio', [\App\Http\Controllers\Api\V1\Admin\Content\BioController::class, 'update']);
+                // Release 6 (spec 2026-10-20 §6.2): the brand's website, its scan and its pages.
+                Route::get('site', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'show']);
+                Route::put('site', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'update']);
+                Route::post('site/scan', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'scan']);
+                Route::get('site/pages/{id}/posts', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'pagePosts'])->whereNumber('id');
+                Route::delete('site/pages/{id}/posts',[\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'destroyPagePosts'])->whereNumber('id');
+                Route::post('promotions/preview', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'preview']);
+                Route::post('promotions', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'store']);
+                Route::get('promotions/current', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'current']);
+                Route::delete('promotions/current', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'stop']);
                 Route::post('key-dates', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'store']);
                 Route::put('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'update'])->whereNumber('id');
                 Route::delete('key-dates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\KeyDateController::class, 'destroy'])->whereNumber('id');

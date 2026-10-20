@@ -19,6 +19,7 @@ import { usePanel, type PanelTarget } from './PanelProvider'
 import { AiTools } from './AiTools'
 import { PostActions } from './PostActions'
 import { PostFormFields } from './PostFormFields'
+import { PromotesLine } from './PromotesLine'
 import { postQuery } from './panelQuery'
 import { pollsWhileRewording } from './repeatMath'
 import { RepeatSection } from './RepeatSection'
@@ -213,6 +214,8 @@ function PanelBody({ target }: { target: PanelTarget }) {
           </div>
         )}
         {post && <ReviewBar post={post} dirty={dirty} onPost={adopt} />}
+        {/* Spec 2026-10-20 §4.7: the website page a promotion post promotes. */}
+        {post?.promotes && <PromotesLine page={post.promotes} />}
         {editing && (
           <PostFormFields form={editing.draft} onChange={(draft) => setEditing({ ...editing, draft })} platforms={boot.platforms} statuses={statusChoices(boot.statuses, staffLocked(boot), editing.base.status)}
             pillars={pillars} audiences={audiences} published={post?.status === 'published'} invalid={invalid} locale={locale} industry={boot.organization.industry} snippets={brandInfo.data?.snippets ?? []}

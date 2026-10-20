@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ContentPlannerProfile;
+use App\Models\ContentSite;
 use App\Models\KnowledgeItem;
 use App\Models\KnowledgeCategory;
 use App\Models\ChatWidgetConfig;
@@ -39,6 +40,8 @@ class ContentKnowledgeService
         $chatbot = $this->loadChatbotConfig($brandId);
         $services = $this->loadServices($orgId);
         $org = Organization::find($orgId);
+        // The address Content scans counts as the company website when the organisation has none (spec 2026-10-20 §3.6).
+        $website = $org?->website ?: ContentSite::withoutGlobalScopes()->where('brand_id', $brandId)->value('url');
 
         return [
             'exists' => true,
@@ -70,9 +73,9 @@ class ContentKnowledgeService
             'organization' => $org ? [
                 'name' => $org->name,
                 'industry' => $org->resolved_industry,
-                'website' => $org->website,
+                'website' => $website,
             ] : null,
-            'missing_fields' => $this->detectMissingFields($faq, $chatbot, $services, $org),
+            'missing_fields' => $this->detectMissingFields($faq, $chatbot, $services, $org, $website),
         ];
     }
 
@@ -160,7 +163,7 @@ class ContentKnowledgeService
      * Detect missing information that would improve content generation.
      * Returns a list of fields to prompt the user to fill.
      */
-    private function detectMissingFields($faq, $chatbot, $services, $org): array
+    private function detectMissingFields($faq, $chatbot, $services, $org, ?string $website = null): array
     {
         $missing = [];
 
@@ -168,7 +171,7 @@ class ContentKnowledgeService
         if (!$org || !$org->name) {
             $missing[] = 'Company name';
         }
-        if (!$org || !$org->website) {
+        if (!$website) {
             $missing[] = 'Website';
         }
 

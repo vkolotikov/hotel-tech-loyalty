@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Plus, Search } from 'lucide-react'
+import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Megaphone, Plus, Search } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -95,6 +95,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
     { to: '/content', end: true, icon: CalendarDays, label: t('content.nav.plan', 'Plan') },
     { to: '/content/ideas', end: false, icon: Lightbulb, label: t('content.nav.ideas', 'Ideas') },
     { to: '/content/posts', end: false, icon: FileText, label: t('content.nav.posts', 'Posts') },
+    // Release 6 (spec 2026-10-20 §5): the brand's website, its articles and pages, and their promotion.
+    { to: '/content/promote', end: false, icon: Megaphone, label: t('content.nav.promote', 'Promote') },
     { to: '/content/strategy', end: false, icon: Compass, label: t('content.nav.strategy', 'Strategy') },
     { to: '/content/brand', end: false, icon: Fingerprint, label: t('content.nav.brand', 'Brand') },
   ]

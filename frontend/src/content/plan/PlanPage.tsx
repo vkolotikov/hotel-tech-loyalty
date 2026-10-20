@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -12,8 +12,11 @@ import { PLAN_REFRESH_MS, UNDO_MS } from '../lib/constants'
 import { errorKey } from '../lib/errors'
 import { putInPlans, refreshLists } from '../lib/planCache'
 import { onShortcuts } from '../lib/shortcuts'
-import type { BuiltInDay, DateKey, GenerateRun, KeyDate, OwnKeyDate, OwnKind, PostCard, PostDetail, Slot } from '../lib/types'
+import type { BuiltInDay, DateKey, GenerateRun, KeyDate, OwnKeyDate, OwnKind, PostCard, PostDetail, PromotionRun, Slot } from '../lib/types'
 import { usePanel } from '../panel/PanelProvider'
+import { isPromoting, planNote } from '../promote/promoteMath'
+import { PromotingLine } from '../promote/PromotingLine'
+import { usePromotionWatch } from '../promote/useSite'
 import { DragGhost } from './DragGhost'
 import { GenerateDialog } from './GenerateDialog'
 import { GeneratingLine } from './GeneratingLine'
@@ -114,6 +117,12 @@ export function PlanPage() {
     }
     seenRun.current = generation.data
   }, [generation.data, queryClient, brand, t])
+  // A promotion finishing on the queue worker (spec 2026-10-20 §5): the watcher reads the plan again; the note says so.
+  const onPromoted = useCallback((run: PromotionRun) => {
+    // The posts added, or that none were (final review, 6-2: "added: 0" read like news).
+    if (run.status === 'finished') setNote({ ...planNote(run, t), undo: null })
+  }, [t])
+  const promotion = usePromotionWatch(onPromoted)
 
   // The brand's channels (the same read as the panel's): what a new post from a day starts on, and each platform's usual time.
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
@@ -290,6 +299,7 @@ export function PlanPage() {
       )}
 
       {isRunning(generation.data) && <div className="px-4 pb-3 lg:px-6"><GeneratingLine run={generation.data} /></div>}
+      {isPromoting(promotion.data) && <div className="px-4 pb-3 lg:px-6"><PromotingLine run={promotion.data} /></div>}
 
       {note && (
         <div className="px-4 pb-3 lg:px-6">

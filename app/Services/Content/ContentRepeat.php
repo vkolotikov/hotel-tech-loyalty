@@ -26,6 +26,8 @@ final class ContentRepeat
         'platform', 'scheduled_time', 'main_copy', 'short_copy', 'hashtags', 'cta', 'pillar_id', 'audience_id', 'campaign_id',
         'strategy_id', 'language', 'topic', 'title', 'hook', 'goal', 'format', 'weekday_role', 'funnel_stage', 'post_type', 'strategic_reason',
         'poster_id',
+        // The website page it promotes (spec 2026-10-20 §4.7).
+        'site_page_id',
     ];
 
     /**

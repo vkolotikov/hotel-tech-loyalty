@@ -114,6 +114,8 @@ export interface PostDetail extends PostCard {
   poster?: Person | null
   /** Its tracked short link (spec 2026-10-19 §5.5); null when it never had a Link. */
   link?: ShortLinkFacts | null
+  /** The website page a promotion post promotes (spec 2026-10-20 §4.7); null for any other post. */
+  promotes?: { id: number; title: string; url: string } | null
 }
 
 /** A post in a group of versions, as the panel lists it (spec 2026-10-19 §3.4). */
@@ -457,3 +459,55 @@ export interface InboxItem {
 }
 /** `GET inbox`: the newest 50, everything counted, and when it was read ("seen" goes up to that). */
 export interface InboxPayload { items: InboxItem[]; count: number; read_at: string }
+
+/** The brand's website as Content read it (spec 2026-10-20 §3, §6.2). */
+export type SiteStatus = 'new' | 'scanning' | 'ready' | 'failed'
+export interface Site {
+  url: string | null
+  status: SiteStatus
+  /** Why the last scan failed (`content.site.error.*`). */
+  error: string | null
+  scanned_at: string | null
+  articles_count: number
+  pages_count: number
+  summary: string | null
+  summary_updated_at: string | null
+  summary_edited: boolean
+  /** Why the last scan did not update the summary (`content.summary.error.*`). */
+  summary_note: string | null
+}
+export type SitePageKind = 'article' | 'page'
+/** An article or page the scan found, with its promotion numbers (spec §4.6). */
+export interface SitePage {
+  id: number
+  kind: SitePageKind
+  url: string
+  title: string
+  description: string | null
+  image_url: string | null
+  published_at: string | null
+  /** Found on the last scan (a promoted page that disappeared stays, with false). */
+  seen: boolean
+  posts: number
+  published: number
+  clicks: number
+  last_promoted_at: string | null
+}
+export interface SitePayload { site: Site | null; suggested_url: string | null; pages: SitePage[] }
+export interface PromotionPreview { wanted: number; fit: number; first_date: DateKey | null; last_date: DateKey | null; weeks: number }
+export interface PromotionBody {
+  page_ids: number[]
+  posts_per_page: number
+  platforms: Platform[]
+  from: DateKey
+  to: DateKey
+  per_week: number
+  use_picture?: boolean
+  instructions?: string
+}
+export type PromotionPageStatus = 'queued' | 'writing' | 'done' | 'failed' | 'stopped'
+export interface PromotionPage { page_id: number | null; title: string | null; status: PromotionPageStatus; posts_wanted: number; posts_made: number; error: string | null }
+/** The brand's latest promotion (spec §4.5): idle, running, or finished (shown for an hour). */
+export type PromotionRun =
+  | { status: 'idle' }
+  | { status: 'running' | 'finished'; batch: string; pages: PromotionPage[]; created_count: number; wanted_count: number; finished_at: string | null }
