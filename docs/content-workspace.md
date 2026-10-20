@@ -276,6 +276,13 @@ The deferred minors of releases 5a and 5b and the owner's answers of 2026-10-20,
   manager's hint says the email also lists the posts nobody is set to post. Unlink and a Plan move have their own
   refusal words. Other versions refresh after Make versions or Unlink.
 - The bell's count and list read who manages and the team once per call (5–6 staff reads before, at most 3).
+- Two requests on one post at the same moment (follow-up, same day): approval steps, saves, moves, Mark ready and Mark
+  published lock the post's row and check it again first — a double Send for approval records once, a second Approve or
+  Send back on a post that moved on is refused (409 `wrong_status`), Approve/save/move refuse a post changed after their
+  check (409 `changed_elsewhere`), a platform change racing Make versions is refused, a post deleted meanwhile answers
+  `not_found`. Writes that change a group take the group's key post first, then the post (Make versions, Unlink, a
+  platform save); Stop repeating takes removed copies out of their groups; a deadlock abort is retried (3 tries).
+  `ConcurrentWritesTest` stages the other request right after the post is read.
 
 ## What this release does not do
 

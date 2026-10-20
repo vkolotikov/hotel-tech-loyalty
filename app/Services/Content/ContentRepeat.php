@@ -95,6 +95,11 @@ final class ContentRepeat
     public static function stop(int $seriesId, string $today): int
     {
         return DB::transaction(function () use ($seriesId, $today) {
+            // A copy someone made versions from leaves its group first: its versions must not stay keyed to a deleted
+            // post (race-fix review).
+            foreach (self::removable($seriesId, $today)->whereNotNull('group_id')->get() as $copy) {
+                ContentVersions::unlink($copy);
+            }
             $removed = self::removable($seriesId, $today)->delete();
             // Leaving a series is not an edit, as joining one is not: the posts' versions stay (final review).
             ContentPlannerPost::where('series_id', $seriesId)->toBase()->update(['series_id' => null]);

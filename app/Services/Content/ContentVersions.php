@@ -113,11 +113,17 @@ final class ContentVersions
      */
     public static function unlink(ContentPlannerPost $post): void
     {
-        if (!$post->group_id) {
-            return;
-        }
-        $groupId = (int) $post->group_id;
-        DB::transaction(function () use ($post, $groupId) {
+        // Whether it is in a group is read under the lock: a post read without one may have joined one since (Make versions
+        // at the same moment), and a delete must still take it out (race-fix review).
+        DB::transaction(function () use ($post) {
+            // The group's key post first, then the post — the order every write that changes a group takes, so two of
+            // them never wait on each other in a circle. lockGroup has read the post again; every write to group_id holds
+            // the key's lock, so it cannot change while we hold it.
+            $groupId = self::lockGroup($post);
+            ContentPlannerPost::whereKey($post->id)->lockForUpdate()->first();
+            if (!$post->group_id) {
+                return;
+            }
             ContentPlannerPost::whereKey($post->id)->toBase()->update(['group_id' => null]);
             $left = ContentPlannerPost::where('group_id', $groupId)->orderBy('id')->pluck('id');
             if ($left->count() === 1) {

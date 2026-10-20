@@ -214,4 +214,19 @@ class VersionsTest extends TestCase
         $this->assertSame([(int) $first, (int) $first], ContentPlannerPost::whereIn('id', [$first, $second])->orderBy('id')->pluck('group_id')->map(fn ($g) => (int) $g)->all());
         DB::transaction(fn () => $this->assertSame((int) $first, ContentVersions::lockGroup(ContentPlannerPost::findOrFail($second))));
     }
+
+    // Race-fix review: Stop repeating deleted future copies without taking them out of their groups — the versions made
+    // from such a copy stayed keyed to a deleted post.
+    public function test_stopping_repeats_takes_a_removed_copy_out_of_its_group_first(): void
+    {
+        $post = $this->makePost(['platform' => 'instagram', 'scheduled_date' => '2026-10-07']);
+        $this->asStaffMember()->postJson($this->api("posts/{$post->id}/repeat"), ['every' => 'week', 'until' => '2026-10-21'])->assertCreated();
+        $copy = ContentPlannerPost::where('series_id', $post->id)->where('id', '!=', $post->id)->orderBy('scheduled_date')->firstOrFail();
+        $this->asStaffMember()->postJson($this->api("posts/{$copy->id}/versions"), ['platforms' => ['linkedin']])->assertCreated();
+        $version = ContentPlannerPost::where('group_id', $copy->id)->where('id', '!=', $copy->id)->firstOrFail();
+
+        $this->asStaffMember()->deleteJson($this->api("posts/{$post->id}/repeat"))->assertOk();
+        $this->assertNull(ContentPlannerPost::find($copy->id));
+        $this->assertNull($version->fresh()->group_id);
+    }
 }

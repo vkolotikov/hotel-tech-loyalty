@@ -15,6 +15,7 @@ use App\Services\Content\ContentRules;
 use App\Services\Content\ContentTeam;
 use App\Services\Content\ContentVersions;
 use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -25,6 +26,9 @@ use Illuminate\Validation\Rule;
 class PostController extends Controller
 {
     public const WITH = ['visualBrief'];
+
+    /** A write that PostgreSQL aborts in a rare deadlock is tried again: each try locks and checks the post afresh. */
+    public const ATTEMPTS = 3;
 
     public function index(Request $request): JsonResponse
     {
@@ -150,11 +154,12 @@ class PostController extends Controller
         $before = (string) $post->status;
         // Spec 2026-10-16 §6.2: refused whole, before anything of the save is filled.
         ContentApproval::guardStatus($fields['status'] ?? null, $before, $request->user(), $profile);
-        // The save, its short link and its approval step are one write (5B-1 review); a grouped post keeps one post per
-        // platform (5A-1 review), checked under the group's lock.
-        DB::transaction(function () use ($post, $fields, $linkChanges, $link, $before, $request, $profile) {
-            if (array_key_exists('platform', $fields) && $fields['platform'] !== $post->platform && $post->group_id) {
-                ContentVersions::lockGroup($post);
+        // The save, its short link and its approval step are one write (5B-1 review); a post keeps one post per platform in
+        // its group (5A-1 review) — checked under the group's lock, also for a post that had no group when it was read.
+        $platformChanges = array_key_exists('platform', $fields) && $fields['platform'] !== $post->platform;
+        DB::transaction(function () use ($post, $fields, $linkChanges, $link, $before, $request, $profile, $platformChanges, $data) {
+            self::lockForWrite($post, $platformChanges, $data['updated_at']);
+            if ($platformChanges) {
                 ContentVersions::assertPlatformFree($post, (string) $fields['platform']);
             }
             $post->fill($fields);
@@ -176,7 +181,7 @@ class PostController extends Controller
             if ($kind) {
                 ContentApproval::record($post, $kind, $request->user()->id);
             }
-        });
+        }, self::ATTEMPTS);
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -198,18 +203,21 @@ class PostController extends Controller
         }
         ContentTeam::assertPoster($data['poster_id'] ?? null, $post->poster_id === null ? null : (int) $post->poster_id, (int) $post->brand_id);
 
-        $post->scheduled_date = $data['scheduled_date'];
-        if (array_key_exists('scheduled_time', $data)) {
-            $post->scheduled_time = $data['scheduled_time'];
-        }
-        if (array_key_exists('poster_id', $data)) {
-            $post->poster_id = $data['poster_id'];
-        }
-        // The tray holds ideas without a day: no day, no time.
-        if ($data['scheduled_date'] === null) {
-            $post->scheduled_time = null;
-        }
-        $post->save();
+        DB::transaction(function () use ($post, $data) {
+            self::lockForWrite($post, false, $data['updated_at']);
+            $post->scheduled_date = $data['scheduled_date'];
+            if (array_key_exists('scheduled_time', $data)) {
+                $post->scheduled_time = $data['scheduled_time'];
+            }
+            if (array_key_exists('poster_id', $data)) {
+                $post->poster_id = $data['poster_id'];
+            }
+            // The tray holds ideas without a day: no day, no time.
+            if ($data['scheduled_date'] === null) {
+                $post->scheduled_time = null;
+            }
+            $post->save();
+        }, self::ATTEMPTS);
 
         return response()->json(['post' => ContentPostPresenter::card($post->fresh(self::WITH))]);
     }
@@ -232,10 +240,14 @@ class PostController extends Controller
     public function markReady(Request $request, int $id): JsonResponse
     {
         $post = self::find($id);
-        $before = (string) $post->status;
-        ContentApproval::guardStatus('ready_to_publish', $before, $request->user(), ContentContext::profile());
-        $post->update(['status' => 'ready_to_publish']);
-        ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
+        // Under the post's lock, from its status as it is now: a post sent back meanwhile is not recorded as approved.
+        DB::transaction(function () use ($post, $request) {
+            self::lockRow($post);
+            $before = (string) $post->status;
+            ContentApproval::guardStatus('ready_to_publish', $before, $request->user(), ContentContext::profile());
+            $post->update(['status' => 'ready_to_publish']);
+            ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
+        }, self::ATTEMPTS);
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -244,10 +256,14 @@ class PostController extends Controller
     {
         $data = $request->validate(['published_url' => 'nullable|url|max:255']);
         $post = self::find($id);
-        $before = (string) $post->status;
-        ContentApproval::guardPublish($post, $request->user(), ContentContext::profile());
-        $post->update(['status' => 'published', 'published_at' => now(), 'published_url' => $data['published_url'] ?? null]);
-        ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
+        // Under the post's lock, from its status as it is now: the poster cannot publish a post taken back meanwhile.
+        DB::transaction(function () use ($post, $request, $data) {
+            self::lockRow($post);
+            $before = (string) $post->status;
+            ContentApproval::guardPublish($post, $request->user(), ContentContext::profile());
+            $post->update(['status' => 'published', 'published_at' => now(), 'published_url' => $data['published_url'] ?? null]);
+            ContentApproval::afterMark($post, $before, $request->user(), ContentContext::profile());
+        }, self::ATTEMPTS);
 
         return response()->json(['post' => ContentPostPresenter::detail($post->fresh(self::WITH))]);
     }
@@ -260,7 +276,7 @@ class PostController extends Controller
         DB::transaction(function () use ($post) {
             ContentVersions::unlink($post);
             $post->delete();
-        });
+        }, self::ATTEMPTS);
 
         return response()->json(['deleted' => true]);
     }
@@ -268,8 +284,19 @@ class PostController extends Controller
     /** A post of this organisation and brand, or not_found (another brand's post does not exist here). */
     public static function find(int $id): ContentPlannerPost
     {
-        return ContentPlannerPost::with(self::WITH)->where('id', $id)->first()
-            ?? throw new ContentRefused('not_found', 'This post no longer exists.', 404);
+        return ContentPlannerPost::with(self::WITH)->where('id', $id)->first() ?? throw self::gone();
+    }
+
+    /** The post's row locked for the rest of the transaction, and the post read again; one deleted meanwhile is gone. */
+    public static function lockRow(ContentPlannerPost $post): void
+    {
+        ContentPlannerPost::whereKey($post->id)->lockForUpdate()->first() ?? throw self::gone();
+        $post->refresh();
+    }
+
+    private static function gone(): ContentRefused
+    {
+        return new ContentRefused('not_found', 'This post no longer exists.', 404);
     }
 
     /**
@@ -288,6 +315,25 @@ class PostController extends Controller
                 ['post' => ContentPostPresenter::detail($post->fresh(self::WITH))],
             );
         }
+    }
+
+    /**
+     * Inside a save's or a move's transaction: the rows it writes, locked — the group's key post first when the platform
+     * changes (Make versions and Unlink take it first too, so no two writes wait on each other in a circle), then the
+     * post — and the post read again, still the version the panel saw. A write that passed its check just before someone
+     * else's landed would otherwise overwrite it (F3; owner, 2026-10-20).
+     */
+    private static function lockForWrite(ContentPlannerPost $post, bool $platformChanges, string $seen): void
+    {
+        if ($platformChanges) {
+            try {
+                ContentVersions::lockGroup($post);
+            } catch (ModelNotFoundException) {
+                throw self::gone();
+            }
+        }
+        self::lockRow($post);
+        self::assertFresh($post, $seen);
     }
 
     private static function refusePublishedMove(): never
