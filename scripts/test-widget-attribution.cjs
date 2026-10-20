@@ -54,3 +54,17 @@ assert.equal(capped.attribution.touches[0].campaign_id, '0');
 assert.equal(capped.attribution.touches[11].campaign_id, '14');
 assert.equal(capped.attribution.truncated, true);
 console.log('Widget attribution passed: consent, landing-to-chat continuity, observed campaign sequence, source evidence, site scope, revocation and bounded history.');
+for (const host of ['fdscards.it', 'fdscards.com']) {
+  store.clear();
+  const f = fixture(`https://${host}/contact?utm_source=google&utm_medium=cpc&email=private`, '');
+  assert.equal(f.payload().analytics_consent, false, 'New markets fail closed before the adapter is available.');
+  let allowed = true;
+  const journey = {version:1, touches:[{channel:'google', campaign_id:'123', observed_at:new Date(now).toISOString(), evidence:'utm'}], truncated:false};
+  f.context.window.fdsAnalytics = {isAllowed: () => allowed, journey: () => journey};
+  assert.deepEqual(f.payload(), {analytics_consent:true, attribution:journey});
+  assert.equal(store.size, 0, 'The website remains the sole journey owner.');
+  allowed = false;
+  assert.deepEqual(f.payload(), {analytics_consent:false});
+  assert.equal(JSON.stringify(f.payload()).includes('123'), false);
+}
+console.log('Italy/US adapter: delayed availability, original journey reuse and withdrawal passed.');

@@ -70,6 +70,13 @@
     if (event !== 'contact_click' && event !== 'generate_lead') return;
     var receipt = data && data.lead_receipt;
     if (event === 'generate_lead' && (typeof receipt !== 'string' || !/^[a-f0-9]{64}$/.test(receipt))) return;
+    // These Astro sites own their destination, consent and receipt deduplication.
+    // Forward only the event contract, never customer fields or a second GA hit.
+    if (['fdscards.it', 'fdscards.com'].indexOf(location.hostname) !== -1) {
+      var fds = window.fdsAnalytics;
+      if (fds && typeof fds.chatEvent === 'function') fds.chatEvent(event, receipt);
+      return;
+    }
     var ownHosts = ['fds-cards.co.uk', 'fdscards.de', 'fdscards.fr', 'fdscards.es', 'fdscards.lv', 'fdscards.ee',
       'hexa-academy.co.uk', 'hexa-academy.lv', 'hexa-tech.uk', 'beauty-tech.uk', 'hotel-tech.ai',
       'gym.hexa-tech.uk', 'med.hexa-tech.uk', 'hospitality.hexa-tech.uk'];
@@ -115,6 +122,9 @@
     'hexa-academy.co.uk', 'hexa-academy.lv', 'hexa-tech.uk', 'beauty-tech.uk', 'hotel-tech.ai',
     'gym.hexa-tech.uk', 'med.hexa-tech.uk', 'hospitality.hexa-tech.uk'];
   function marketingAllowed() {
+    if (['fdscards.it', 'fdscards.com'].indexOf(location.hostname) !== -1) {
+      try { return !!(window.fdsAnalytics && window.fdsAnalytics.isAllowed()); } catch (_) { return false; }
+    }
     if (ownedMarketingHosts.indexOf(location.hostname.replace(/^www\./, '')) === -1) return false;
     try {
       if (window.academyAnalytics) return window.academyAnalytics.isAllowed() === true;
@@ -162,6 +172,16 @@
     return fields;
   }
   function marketingPayload() {
+    // Reuse the landing's consented journey so opening chat is not a new source.
+    // The adapter clears its own storage immediately when consent is withdrawn.
+    if (['fdscards.it', 'fdscards.com'].indexOf(location.hostname) !== -1) {
+      try {
+        if (marketingAllowed() && typeof window.fdsAnalytics.journey === 'function') {
+          return {analytics_consent: true, attribution: window.fdsAnalytics.journey()};
+        }
+      } catch (_) { /* Chat remains available when measurement is unavailable. */ }
+      return {analytics_consent: false};
+    }
     if (!marketingAllowed()) {
       try { localStorage.removeItem(marketingStorageKey); } catch (_) {}
       return {analytics_consent: false};
