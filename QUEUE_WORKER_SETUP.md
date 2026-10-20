@@ -1,5 +1,22 @@
 # Queue worker — required from this deploy onward
 
+> **Production status (2026-10-20):** done. Until this date production set no `QUEUE_CONNECTION`, so the config
+> fallback (`sync`) ran every queued job inside the web request, and no worker existed. Now:
+> - `config/queue.php` falls back to `database` (production still sets no variable; tests set `sync` in phpunit.xml;
+>   `QueueRetryAfterTest` pins both the fallback and `retry_after` 660 s > the longest job, 600 s);
+> - the Worker cluster (which also runs the scheduler) has two background processes — Laravel Cloud restarts them on
+>   every deploy, so no `queue:restart` is needed:
+>   - `php artisan queue:work database --queue=default --tries=3 --timeout=600 --sleep=3 --max-time=3600` — mail,
+>     campaigns, client messages: never behind a long AI job;
+>   - `php artisan queue:work database --queue=ai --tries=1 --timeout=600 --sleep=3 --max-time=3600` — the long AI
+>     jobs (`GenerateContentCalendar`, `GenerateContentStrategy`, `AdaptPostVersions`, `RewriteRepeatCopies`), which
+>     put themselves on the `ai` queue;
+> - the environment's request timeout is 60 s (Cloud's maximum; it was 20 s, and a CRM AI chat request had timed out);
+> - the worker is a separate container, and the default cache is each container's own files (`CACHE_DRIVER=file`), so
+>   what a job tells the web app (Content's "adapting", "kept", "rewording") goes through `App\Support\SharedCache`
+>   (`cache.shared`, the database store; the `cache` table exists). Any new job→web status must use it too.
+> Check: `php artisan queue:monitor database:default` (Cloud → Commands) shows the queue size; `php artisan queue:failed`.
+
 `QUEUE_CONNECTION` has changed from `sync` to `database`. **A worker must be
 running in production or queued work never happens.**
 
@@ -31,20 +48,22 @@ php artisan migrate --force
 QUEUE_CONNECTION=database
 ```
 
-**3. Run a worker process.** On Laravel Cloud, add it to the existing Worker
-container alongside `schedule:work`:
+**3. Run the worker processes** (production, 2026-10-20: see the status at the top). On Laravel Cloud, background
+processes on the Worker cluster, alongside the scheduler — one for `default`, one for `ai`:
 
 ```
-php artisan queue:work --tries=3 --timeout=300 --sleep=3 --max-time=3600
+php artisan queue:work database --queue=default --tries=3 --timeout=600 --sleep=3 --max-time=3600
+php artisan queue:work database --queue=ai --tries=1 --timeout=600 --sleep=3 --max-time=3600
 ```
 
-`--max-time=3600` recycles the process hourly, which keeps a long-lived PHP
+`--max-time=3600` recycles each process hourly, which keeps a long-lived PHP
 worker from accumulating memory. Any supervisor (Supervisor, systemd, the
 platform's own process manager) that restarts it on exit is fine.
 
-**4. Restart the worker on every deploy.** A worker holds the old code in
-memory until it restarts, so a deploy that changes a job class must be
-followed by:
+**4. Restart the workers on every deploy.** A worker holds the old code in
+memory until it restarts. Laravel Cloud starts new containers on every deploy,
+so nothing is needed there; anywhere else, a deploy that changes a job class
+must be followed by:
 
 ```
 php artisan queue:restart

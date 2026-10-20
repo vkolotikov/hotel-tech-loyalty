@@ -63,7 +63,8 @@
     "goals": { "title": "Posting goals", "line": "{{platform}}: {{published}} of {{target}} published · {{planned}} planned", "met": "met", "streak": "{{count}}-week streak", "at_risk": "Posts still needed by Sunday to keep your {{weeks}}-week streak: {{count}}", "hint": "Only posts marked published count." },
     "key_dates": "Key dates",
     "add_menu": "Add to {{day}}",
-    "add": { "post": "New post", "template": "From a template…", "note": "Note", "event": "Event" }
+    "add": { "post": "New post", "template": "From a template…", "note": "Note", "event": "Event" },
+    "generating": "The AI is writing posts…"
   },
   "move": {
     "error": {
@@ -113,7 +114,8 @@
       "manager_only": "Only an owner or a manager can generate posts.",
       "unknown": "Generation failed. Please try again."
     },
-    "close": "Close"
+    "close": "Close",
+    "running": "The AI is writing your posts. This can take a minute or two — you can close this window: the plan fills in when they are ready."
   },
   "panel": {
     "title": "Post",

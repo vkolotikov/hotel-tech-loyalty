@@ -61,3 +61,23 @@ describe('GenerateDialog', () => {
     expect(out).toContain('Instructions for the AI (optional)')
   })
 })
+
+// Generate on the queue (2026-10-20): while the worker writes, the dialog says so and may be closed.
+describe('Generate while the run is on the queue', () => {
+  it('says the AI is writing, in a live region, with Close and no second Generate', () => {
+    const client = new QueryClient()
+    client.setQueryData(['content', 3, 'brand'], { audiences: [], channels: [{ id: 1, platform: 'instagram', label: 'Instagram', active: true }] })
+    client.setQueryData(['content', 3, 'generation'], { status: 'running', started_at: '2026-10-20T12:00:00+00:00' })
+    const html = renderToStaticMarkup(
+      <QueryClientProvider client={client}>
+        <ContentContext.Provider value={{ data: boot, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {} }}>
+          <GenerateDialog today="2026-10-08" onClose={() => {}} onDone={() => {}} />
+        </ContentContext.Provider>
+      </QueryClientProvider>,
+    )
+    expect(html).toMatch(/role="status"[^>]*>(?:<[^>]+>)*The AI is writing your posts\./)
+    expect(html).toContain('you can close this window')
+    expect(html).toContain('>Close<')
+    expect(html).not.toContain('The AI writes drafts for the days your channels expect.')
+  })
+})

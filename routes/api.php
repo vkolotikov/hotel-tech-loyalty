@@ -1317,6 +1317,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('posts/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'image'])->whereNumber('id');
                 Route::post('slots/fill', [\App\Http\Controllers\Api\V1\Admin\Content\PostAiController::class, 'fill']);
                 Route::post('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'generate']);
+                // How the brand's Generate run stands (it runs on the queue worker): what the panel polls.
+                Route::get('generate', [\App\Http\Controllers\Api\V1\Admin\Content\GenerationController::class, 'status']);
                 Route::get('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'index']);
                 Route::post('strategies', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'store']);
                 Route::get('strategies/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\StrategyController::class, 'show'])->whereNumber('id');

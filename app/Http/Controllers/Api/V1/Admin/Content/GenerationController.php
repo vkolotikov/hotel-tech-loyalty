@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api\V1\Admin\Content;
 
 use App\Http\Controllers\Controller;
-use App\Models\ContentPlannerPost;
+use App\Jobs\GenerateContentCalendar;
+use App\Models\ContentPlannerChannel;
 use App\Services\Appointments\VenueClock;
 use App\Services\Content\ContentAccess;
 use App\Services\Content\ContentAiGate;
 use App\Services\Content\ContentContext;
-use App\Services\Content\ContentPostPresenter;
+use App\Services\Content\ContentGenerationRun;
 use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentRules;
-use App\Services\ContentCalendarGenerationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +21,9 @@ use Illuminate\Validation\ValidationException;
  * Generate (spec 2026-10-14 §4.2): a manager has AI write a week, a month or
  * a range of up to 62 days, empty slots only by default, one generation at a
  * time per brand. A partial run keeps what it wrote and says which windows
- * failed; a run that wrote nothing answers 503.
+ * failed; a run that wrote nothing answers 503. The run is a queued job
+ * (GenerateContentCalendar, 2026-10-20): POST answers 202 while it runs on
+ * the worker, and GET answers how it stands.
  */
 class GenerationController extends Controller
 {
@@ -29,7 +31,7 @@ class GenerationController extends Controller
     {
     }
 
-    public function generate(Request $request, ContentCalendarGenerationService $calendar): JsonResponse
+    public function generate(Request $request): JsonResponse
     {
         ContentAccess::requireManager($request->user());
         $data = $request->validate([
@@ -52,34 +54,53 @@ class GenerationController extends Controller
         }
         $this->gate->allow($org);
         $profile = ContentContext::requireProfile();
+        // Before the queue: no active channel (of those asked for) is answered at once, not by a failed run.
+        $channels = ContentPlannerChannel::where('planner_profile_id', $profile->id)->where('active', true)
+            ->when($data['platforms'] ?? null, fn ($q, $platforms) => $q->whereIn('platform', $platforms));
+        if (!$channels->exists()) {
+            throw new ContentRefused('no_channels', 'This brand has no active channel to plan for.', 422);
+        }
 
-        set_time_limit(600);
+        // On the queue (2026-10-20): production cuts a request off at 60 s and a week takes longer. The lock and the run's
+        // state live in the cache the web app and the worker share; the job hands the lock back.
+        $brandId = (int) $profile->brand_id;
+        $owner = $this->gate->startGeneration((int) $org->id, $brandId);
+        $userId = (int) $request->user()->id;
+        ContentGenerationRun::queued($brandId, $userId, $from, $data['to'], $owner);
         try {
-            $result = $this->gate->oneGenerationAtATime((int) $org->id, (int) $profile->brand_id, fn () => $calendar->generate($profile, $from, $data['to'], [
-                'platforms'       => $data['platforms'] ?? null,
-                'fill_empty_only' => $request->boolean('fill_empty_only', true),
-                'instructions'    => $data['instructions'] ?? null,
-            ]));
-        } catch (ContentRefused $e) {
-            throw $e;
-        } catch (\InvalidArgumentException $e) {
-            // The service's one remaining refusal once the range is valid: no active channel.
-            throw new ContentRefused('no_channels', $e->getMessage(), 422);
+            GenerateContentCalendar::dispatch((int) $org->id, $brandId, (int) $profile->id, $from, $data['to'],
+                $data['platforms'] ?? null, $request->boolean('fill_empty_only', true), $data['instructions'] ?? null, $owner, $userId);
         } catch (\Throwable $e) {
+            // The queue refused the job (it never started): free the brand and say so.
             report($e);
+            ContentGenerationRun::fail($brandId, 'generation_failed', $owner);
+            $this->gate->endGeneration((int) $org->id, $brandId, $owner);
             throw new ContentRefused('generation_failed', 'Generation stopped unexpectedly. Any drafts already saved remain in your plan. Please reload before retrying.', 500);
         }
 
-        $created = collect($result['created']);
-        $incomplete = $result['failed_windows'] !== [];
-        $status = $incomplete ? ($created->isNotEmpty() ? 'partial' : 'failed') : 'completed';
+        // Running on the worker: 202 and the panel polls GET generate. Where the queue is `sync` (tests, local), the run
+        // is already over: its result, as before.
+        return self::answer(ContentGenerationRun::describe($brandId));
+    }
 
-        return response()->json([
-            'status'         => $status,
-            'created_count'  => $created->count(),
-            'posts'          => $created->map(fn (ContentPlannerPost $p) => ContentPostPresenter::card($p->fresh(PostController::WITH)))->values(),
-            'skipped'        => $result['skipped_dates'],
-            'failed_windows' => $result['failed_windows'],
-        ], $status === 'failed' ? 503 : 200);
+    /** The brand's Generate run (`GET generate`): idle, running, or its result — what the panel polls while it runs. */
+    public function status(): JsonResponse
+    {
+        $profile = ContentContext::profile();
+
+        return response()->json($profile ? ContentGenerationRun::describe((int) $profile->brand_id) : ['status' => 'idle']);
+    }
+
+    /** @param array<string, mixed> $run */
+    private static function answer(array $run): JsonResponse
+    {
+        $code = match (true) {
+            $run['status'] === 'running' => 202,
+            $run['status'] === 'failed' && ($run['error'] ?? null) === 'no_channels' => 422,
+            $run['status'] === 'failed' => 503,
+            default => 200,
+        };
+
+        return response()->json($run, $code);
     }
 }

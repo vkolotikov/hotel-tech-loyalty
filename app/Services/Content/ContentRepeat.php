@@ -6,8 +6,8 @@ use App\Models\ContentPlannerPost;
 use App\Services\Appointments\VenueClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use App\Support\SharedCache;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -147,7 +147,7 @@ final class ContentRepeat
                 ->whereDate('scheduled_date', '>=', $today)
                 ->when($mine, fn ($q) => $q->whereDate('scheduled_date', '>', $mine))->count(),
             'removable' => self::removable((int) $post->series_id, $today)->count(),
-            'rewriting' => Cache::has(self::rewritingKey((int) $post->series_id)),
+            'rewriting' => self::isRewriting((int) $post->series_id),
         ];
     }
 
@@ -155,5 +155,21 @@ final class ContentRepeat
     public static function rewritingKey(int $seriesId): string
     {
         return "content:repeat-rewrite:{$seriesId}";
+    }
+
+    /**
+     * Whether a series' copies are still being reworded — set where the rewording is asked for, cleared by the job on
+     * the queue worker, read by the panel: so it lives in the cache both share (15 minutes at most).
+     */
+    public static function markRewriting(int $seriesId, bool $on): void
+    {
+        $on
+            ? SharedCache::store()->put(self::rewritingKey($seriesId), true, now()->addMinutes(15))
+            : SharedCache::store()->forget(self::rewritingKey($seriesId));
+    }
+
+    public static function isRewriting(int $seriesId): bool
+    {
+        return SharedCache::store()->has(self::rewritingKey($seriesId));
     }
 }

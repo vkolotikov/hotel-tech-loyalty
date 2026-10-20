@@ -18,6 +18,13 @@ return [
     'default' => env('CACHE_DRIVER', 'file'),
 
     /*
+    | The store the web app and the queue worker share (App\Support\SharedCache). The default store above is each
+    | container's own files in production, and the worker runs in another container: what a job tells the web app —
+    | Content's "adapting", "kept" and "rewording" — goes here. Tests use `array` (phpunit.xml).
+    */
+    'shared' => env('CACHE_SHARED_STORE', 'database'),
+
+    /*
     |--------------------------------------------------------------------------
     | Cache Stores
     |--------------------------------------------------------------------------

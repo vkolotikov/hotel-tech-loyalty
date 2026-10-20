@@ -33,6 +33,8 @@ class AdaptPostVersions implements ShouldQueue
     /** @param list<int> $versionIds */
     public function __construct(public int $groupId, public int $organizationId, public int $brandId, public string $from, public array $versionIds)
     {
+        // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
+        $this->onQueue('ai');
     }
 
     public function handle(ContentVersionAdapter $adapter, ContentAiGate $gate): void

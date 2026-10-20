@@ -44,7 +44,8 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
 | Plan | `GET plan?from&to` (≤ 62 days) | everyone |
 | Posts | `GET posts`, `GET find`, `POST posts`, `GET/PUT/DELETE posts/{id}`, `POST posts/{id}/move`, `/duplicate`, `/mark-ready`, `/mark-published` | everyone |
 | AI on a post | `POST posts/{id}/write`, `/rewrite`, `/quality`, `/visual-brief`, `/image`, `POST slots/fill` | everyone |
-| Generate | `POST generate` | managers |
+| Generate | `POST generate` (202 while the queued run writes) | managers |
+| How the Generate run stands | `GET generate` | everyone |
 | Strategy | `GET strategies`, `GET strategies/{id}` (everyone); `POST strategies`, `/activate`, `/archive` (managers) | |
 | Brand | `GET brand` (everyone); `PUT brand/profile`, `PUT brand/voice`, audiences and channels `POST/PUT/DELETE`, `POST brand/quick-setup`, `POST brand/setup`, `POST brand/refresh-knowledge` (managers) | |
 | Goals | `GET goals` (this week per platform, the streak) | everyone |
@@ -298,8 +299,16 @@ and its screens are removed; a browser tab left open across the deploy must be r
 - Queue: `retry_after` is 660 s on the database, redis and beanstalkd connections (`DB_QUEUE_RETRY_AFTER`,
   `REDIS_QUEUE_RETRY_AFTER`, `BEANSTALKD_QUEUE_RETRY_AFTER`), longer than the longest job may run
   (`GenerateContentStrategy`, 600 s), so a long run is never handed to a second worker; `QueueRetryAfterTest` keeps it
-  so. A job whose worker died is retried after 11 minutes. Owner check: if Laravel Cloud sets one of those variables,
-  it must be above 600.
+  so. A job whose worker died is retried after 11 minutes. Production (checked 2026-10-20 through the Cloud API) sets
+  none of those variables and no `QUEUE_CONNECTION`: the config falls back to `database` (it fell back to `sync`, which
+  ran strategy generation, AI-adapted versions, reworded repeats and campaigns inside the web request), the Worker
+  cluster runs two workers — `default` (mail, campaigns, client messages) and `ai` (the long AI jobs) — see
+  `QUEUE_WORKER_SETUP.md`, and the request timeout is 60 s (Cloud's maximum; it was 20 s). **Generate** is a queued
+  job too (`GenerateContentCalendar`, a week took 65.7 s locally): `POST generate` answers 202 while it runs, `GET
+  generate` says how it stands (the dialog and the Plan read it every 4 s while it runs), the brand's lock and the
+  run's state live in the shared cache and belong to the run, a run waits at most 30 minutes in the queue and runs at
+  most 11 minutes (540 s of AI time) before it reads as failed, and the posts are the manager's who pressed Generate.
+  Fill with AI (about 12 s), Write with AI and pictures still run inside their request.
 - Verify release 3 by content on the live site: the `ContentApp` chunk carries "Best around", "Hashtags and snippets"
   and "Repeats every week until"; `/api/v1/admin/content/goals` answers 401 when signed out (404 before release 3).
 - Release 4a (server, Plan 4A-1): three additive migrations (`content_planner_profiles.holiday_country` and

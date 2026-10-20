@@ -13,7 +13,6 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Rewords a repeated post's copies one by one (spec 2026-10-15 §8): one copy per run, the rest handed on to the next
@@ -34,6 +33,8 @@ class RewriteRepeatCopies implements ShouldQueue
     /** @param list<int> $copyIds */
     public function __construct(public int $seriesId, public int $organizationId, public int $brandId, public array $copyIds)
     {
+        // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
+        $this->onQueue('ai');
     }
 
     public function handle(ContentRepeatRewriter $rewriter, ContentAiGate $gate): void
@@ -49,13 +50,13 @@ class RewriteRepeatCopies implements ShouldQueue
             $id = array_shift($ids);
             if ($id !== null && $this->reword((int) $id, $rewriter, $gate) && $ids !== []) {
                 // The rest in the next run; the panel keeps showing "rewording…" meanwhile.
-                Cache::put(ContentRepeat::rewritingKey($this->seriesId), true, now()->addMinutes(15));
+                ContentRepeat::markRewriting($this->seriesId, true);
                 $handedOn = true;
                 self::dispatch($this->seriesId, $this->organizationId, $this->brandId, $ids);
             }
         } finally {
             if (!$handedOn) {
-                Cache::forget(ContentRepeat::rewritingKey($this->seriesId));
+                ContentRepeat::markRewriting($this->seriesId, false);
             }
             $priorOrg === null ? app()->forgetInstance('current_organization_id') : app()->instance('current_organization_id', $priorOrg);
             $priorBrand === null ? app()->forgetInstance('current_brand_id') : app()->instance('current_brand_id', $priorBrand);
@@ -94,6 +95,6 @@ class RewriteRepeatCopies implements ShouldQueue
 
     public function failed(\Throwable $e): void
     {
-        Cache::forget(ContentRepeat::rewritingKey($this->seriesId));
+        ContentRepeat::markRewriting($this->seriesId, false);
     }
 }

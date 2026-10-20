@@ -63,7 +63,8 @@
     "goals": { "title": "Objectifs de publication", "line": "{{platform}} : {{published}} sur {{target}} publiées · {{planned}} prévues", "met": "atteint", "streak": "Semaines d’affilée : {{count}}", "at_risk": "Publications encore nécessaires d’ici dimanche pour garder votre série (semaines : {{weeks}}) : {{count}}", "hint": "Seules les publications marquées comme publiées comptent." },
     "key_dates": "Dates clés",
     "add_menu": "Ajouter le {{day}}",
-    "add": { "post": "Nouvelle publication", "template": "À partir d’un modèle…", "note": "Note", "event": "Événement" }
+    "add": { "post": "Nouvelle publication", "template": "À partir d’un modèle…", "note": "Note", "event": "Événement" },
+    "generating": "L’IA rédige des publications…"
   },
   "move": {
     "error": {
@@ -113,7 +114,8 @@
       "manager_only": "Seul un propriétaire ou un responsable peut générer des publications.",
       "unknown": "La génération a échoué. Veuillez réessayer."
     },
-    "close": "Fermer"
+    "close": "Fermer",
+    "running": "L’IA rédige vos publications. Cela peut prendre une minute ou deux — vous pouvez fermer cette fenêtre : le planning se remplit dès qu’elles sont prêtes."
   },
   "panel": {
     "title": "Publication",

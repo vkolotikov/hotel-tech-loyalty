@@ -13,7 +13,9 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'sync'),
+    // The database queue, run by the Worker cluster's `queue:work database` in production (which sets no
+    // QUEUE_CONNECTION): `sync` ran every queued job inside the web request. Tests set `sync` (phpunit.xml).
+    'default' => env('QUEUE_CONNECTION', 'database'),
 
     /*
     |--------------------------------------------------------------------------

@@ -63,7 +63,8 @@
     "goals": { "title": "Posting-Ziele", "line": "{{platform}}: {{published}} von {{target}} veröffentlicht · {{planned}} geplant", "met": "erreicht", "streak": "Wochen in Folge: {{count}}", "at_risk": "Beiträge bis Sonntag noch nötig, damit Ihre Serie hält (Wochen in Folge: {{weeks}}): {{count}}", "hint": "Es zählen nur Beiträge, die als veröffentlicht markiert sind." },
     "key_dates": "Wichtige Termine",
     "add_menu": "Hinzufügen am {{day}}",
-    "add": { "post": "Neuer Beitrag", "template": "Aus einer Vorlage…", "note": "Notiz", "event": "Ereignis" }
+    "add": { "post": "Neuer Beitrag", "template": "Aus einer Vorlage…", "note": "Notiz", "event": "Ereignis" },
+    "generating": "Die KI schreibt Beiträge…"
   },
   "move": {
     "error": {
@@ -113,7 +114,8 @@
       "manager_only": "Nur Inhaber oder Manager können Beiträge generieren.",
       "unknown": "Die Generierung ist fehlgeschlagen. Bitte versuchen Sie es erneut."
     },
-    "close": "Schließen"
+    "close": "Schließen",
+    "running": "Die KI schreibt Ihre Beiträge. Das kann ein, zwei Minuten dauern — Sie können dieses Fenster schließen: Der Plan füllt sich, sobald sie fertig sind."
   },
   "panel": {
     "title": "Beitrag",

@@ -29,6 +29,7 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="CACHE_DRIVER" value="array"/>
         <env name="CACHE_STORE" value="array"/>
+        <env name="CACHE_SHARED_STORE" value="array"/>
         <!--
             Tests run against an in-memory sqlite database — no Postgres
             connection needed for unit + most Feature tests. Anything that

@@ -9,6 +9,7 @@ use App\OAuth\PluginRefreshTokenRepository;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Laravel\Passport\Bridge\AccessTokenRepository;
 use Laravel\Passport\Bridge\AuthCodeRepository;
@@ -29,6 +30,14 @@ class PluginServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // The queue worker is one long-running process: before each job, forget the tenant the last job bound, so a job
+        // that binds none never runs as another organisation (queue review, 2026-10-20). Here, not AppServiceProvider:
+        // only this provider is listed in bootstrap/providers.php.
+        Queue::looping(function () {
+            app()->forgetInstance('current_organization_id');
+            app()->forgetInstance('current_brand_id');
+        });
+
         RateLimiter::for('chatgpt-user', fn (Request $request) => Limit::perMinute(60)
             ->by($request->user()
                 ? $request->user()->organization_id.':'.$request->user()->getAuthIdentifier()

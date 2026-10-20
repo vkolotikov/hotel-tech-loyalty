@@ -9,6 +9,7 @@ use App\Services\Content\ContentContext;
 use App\Services\Content\ContentPostPresenter;
 use App\Services\Content\ContentRules;
 use App\Services\Content\ContentVersions;
+use App\Support\SharedCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -34,7 +35,7 @@ class VersionController extends Controller
             $groupId = (int) $versions->first()->group_id;
             $ids = $versions->pluck('id')->map(fn ($versionId) => (int) $versionId)->all();
             // The panel shows "Adapting…" on these until the job is done with them (or 15 minutes pass).
-            ContentVersions::stillAdapting($groupId, array_merge((array) cache()->get(ContentVersions::adaptingKey($groupId), []), $ids));
+            ContentVersions::stillAdapting($groupId, array_merge((array) SharedCache::store()->get(ContentVersions::adaptingKey($groupId), []), $ids));
             AdaptPostVersions::dispatch($groupId, ContentContext::orgId(), ContentContext::brandId(), (string) $post->platform, $ids);
         }
 

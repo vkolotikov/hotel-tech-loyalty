@@ -12,10 +12,12 @@ import { PLAN_REFRESH_MS, UNDO_MS } from '../lib/constants'
 import { errorKey } from '../lib/errors'
 import { putInPlans, refreshLists } from '../lib/planCache'
 import { onShortcuts } from '../lib/shortcuts'
-import type { BuiltInDay, DateKey, KeyDate, OwnKeyDate, OwnKind, PostCard, PostDetail, Slot } from '../lib/types'
+import type { BuiltInDay, DateKey, GenerateRun, KeyDate, OwnKeyDate, OwnKind, PostCard, PostDetail, Slot } from '../lib/types'
 import { usePanel } from '../panel/PanelProvider'
 import { DragGhost } from './DragGhost'
 import { GenerateDialog } from './GenerateDialog'
+import { GeneratingLine } from './GeneratingLine'
+import { isRunning, runEnded, runNote, useGenerationRun } from './generateRun'
 import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
 import { createMover, keyMove, leavesRange, movedDate, undoOf, type DropTarget } from './moveMath'
@@ -101,6 +103,17 @@ export function PlanPage() {
     placeholderData: keepWithinBrand(brand),
   })
   const refresh = () => refreshLists(queryClient, brand)
+  // A Generate run on the queue worker (2026-10-20), followed through the query the dialog shares: when one seen
+  // running ends — the dialog open or closed — the plan is read again and the note says how it went.
+  const generation = useGenerationRun()
+  const seenRun = useRef<GenerateRun | undefined>(generation.data)
+  useEffect(() => {
+    if (runEnded(seenRun.current, generation.data)) {
+      void refreshLists(queryClient, brand)
+      setNote({ ...runNote(generation.data, t), undo: null })
+    }
+    seenRun.current = generation.data
+  }, [generation.data, queryClient, brand, t])
 
   // The brand's channels (the same read as the panel's): what a new post from a day starts on, and each platform's usual time.
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
@@ -275,6 +288,8 @@ export function PlanPage() {
       {query.isError && (
         <div className="px-4 pb-3 lg:px-6"><Notice tone="danger">{t('content.plan.load_failed', 'The plan could not be refreshed. What you see may be out of date.')}</Notice></div>
       )}
+
+      {isRunning(generation.data) && <div className="px-4 pb-3 lg:px-6"><GeneratingLine run={generation.data} /></div>}
 
       {note && (
         <div className="px-4 pb-3 lg:px-6">

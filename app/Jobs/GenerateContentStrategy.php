@@ -48,6 +48,8 @@ class GenerateContentStrategy implements ShouldQueue
         public int $organizationId,
         public array $params = [],
     ) {
+        // The long AI jobs have their own queue and worker: mail never waits behind them (queue review).
+        $this->onQueue('ai');
     }
 
     public function handle(ContentPlannerStrategyService $strategies): void

@@ -183,7 +183,16 @@ export interface GenerateResult {
   posts: PostCard[]
   skipped: { date: string; platform: string; reason: string }[]
   failed_windows: { start_date: DateKey; end_date: DateKey; reason: string }[]
+  /** Why a run stopped before it could report (`generation_failed`, `no_channels`). */
+  error?: string
+  finished_at?: string
 }
+
+/**
+ * A brand's Generate run as `POST`/`GET generate` answer it (2026-10-20: the run is a job on the queue worker): none yet,
+ * running (202 on POST), or its result.
+ */
+export type GenerateRun = { status: 'idle' } | { status: 'running'; started_at: string; from?: DateKey; to?: DateKey } | GenerateResult
 
 /** One page of `GET posts`: 50 a page, newest scheduled first, posts with no day last. */
 export interface PostsPage { data: PostCard[]; meta: { page: number; pages: number; total: number } }

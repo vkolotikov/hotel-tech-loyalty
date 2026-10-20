@@ -11,10 +11,11 @@ final class CalendarGenerationBudget
     private Closure $clock;
     private float $deadline;
 
-    public function __construct(?Closure $clock = null)
+    /** @param int|null $seconds the run's time; a queued Generate (GenerateContentCalendar) has more than a request */
+    public function __construct(?Closure $clock = null, ?int $seconds = null)
     {
         $this->clock = $clock ?? static fn (): float => hrtime(true) / 1_000_000_000;
-        $this->deadline = ($this->clock)() + self::MAX_SECONDS;
+        $this->deadline = ($this->clock)() + ($seconds ?? self::MAX_SECONDS);
     }
 
     public function remaining(): float

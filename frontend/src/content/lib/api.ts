@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import type {
-  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, Goals, IdeasPayload, KeyDateFields,
+  Audience, AudienceFields, Bootstrap, BrandPayload, Channel, ChannelFields, DateKey, GenerateBody, GenerateResult, GenerateRun, Goals, IdeasPayload, KeyDateFields,
   OwnKeyDate, OwnKind, PlanPayload, Platform, PostCard, PostDetail, PostFields, PostFilters, PostsPage, ProfileFields, Quality, QuickSetupBody,
   RepeatEvery, Rewrite, Snippet, SnippetKind, SnippetSuggestion, StrategyDetail, StrategySummary, Template, TemplateFields, TemplateSuggestion,
   TimelineComment, Variation, VoiceFields, InboxPayload, TeamMember, BioBody, BioPayload,
@@ -91,12 +91,17 @@ export function contentApi(brand: number | null) {
     image: (id: number, instructions: string | null): Promise<{ post: PostDetail }> => watched(api.post(url(`posts/${id}/image`), { instructions })),
 
     fill: (date: DateKey, platform: Platform): Promise<{ post: PostDetail }> => watched(api.post(url('slots/fill'), { date, platform })),
-    /** A run that wrote nothing answers 503 with the same report: a result to show, not a failure to explain. */
-    generate: (body: GenerateBody): Promise<GenerateResult> => watched(api.post(url('generate'), body).catch((error: unknown) => {
+    /**
+     * Starts a run: 202 `running` while the queue worker writes (follow it with `generation`), or — where the queue is
+     * sync — its result. A run that wrote nothing answers 503 with the same report: a result to show, not a failure.
+     */
+    generate: (body: GenerateBody): Promise<GenerateRun> => watched(api.post(url('generate'), body).catch((error: unknown) => {
       const response = (error as { response?: { status?: number; data?: { status?: string } } }).response
       if (response?.status === 503 && response.data?.status === 'failed') return { data: response.data as GenerateResult }
       throw error
     })),
+    /** How the brand's Generate run stands: idle, running, or its result. */
+    generation: (): Promise<GenerateRun> => watched(api.get(url('generate'))),
 
     strategies: (): Promise<{ strategies: StrategySummary[]; now?: string }> => watched(api.get(url('strategies'))),
     strategy: (id: number): Promise<{ strategy: StrategyDetail }> => watched(api.get(url(`strategies/${id}`))),

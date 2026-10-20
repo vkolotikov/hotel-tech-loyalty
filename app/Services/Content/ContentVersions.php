@@ -3,8 +3,8 @@
 namespace App\Services\Content;
 
 use App\Models\ContentPlannerPost;
+use App\Support\SharedCache;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -151,7 +151,7 @@ final class ContentVersions
             return null;
         }
         $ids = $posts->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $kept = (array) Cache::get(self::keptKey((int) $post->group_id), []);
+        $kept = (array) SharedCache::store()->get(self::keptKey((int) $post->group_id), []);
         // A kept version a person has since changed is theirs now: nothing more to say about it.
         $untouched = $posts->filter(fn (ContentPlannerPost $p) => !$p->updated_at->gt($p->created_at))->pluck('id')->map(fn ($id) => (int) $id)->all();
         $keptIds = array_values(array_intersect(array_map('intval', (array) ($kept['ids'] ?? [])), $untouched));
@@ -165,7 +165,7 @@ final class ContentVersions
                 'scheduled_date' => $p->scheduled_date?->format('Y-m-d'),
                 'scheduled_time' => $p->scheduled_time ? substr((string) $p->scheduled_time, 0, 5) : null,
             ])->values()->all(),
-            'adapting'      => array_values(array_intersect(array_map('intval', (array) Cache::get(self::adaptingKey((int) $post->group_id), [])), $ids)),
+            'adapting'      => array_values(array_intersect(array_map('intval', (array) SharedCache::store()->get(self::adaptingKey((int) $post->group_id), [])), $ids)),
             'kept_original' => $keptIds,
             // The post's own reason when it is kept; otherwise the first kept version's (the panel words this post's).
             'kept_reason'   => $keptIds === [] ? null : self::reasonOf($kept, in_array((int) $post->id, $keptIds, true) ? (int) $post->id : $keptIds[0]),
@@ -188,14 +188,14 @@ final class ContentVersions
     public static function stillAdapting(int $groupId, array $ids): void
     {
         $ids === []
-            ? Cache::forget(self::adaptingKey($groupId))
-            : Cache::put(self::adaptingKey($groupId), array_values(array_unique(array_map('intval', $ids))), now()->addMinutes(15));
+            ? SharedCache::store()->forget(self::adaptingKey($groupId))
+            : SharedCache::store()->put(self::adaptingKey($groupId), array_values(array_unique(array_map('intval', $ids))), now()->addMinutes(15));
     }
 
     /** @param list<int> $ids — each keeps the reason it was kept for (5A-1 review: a later batch does not relabel them). */
     public static function keep(int $groupId, array $ids, string $reason): void
     {
-        $before = (array) Cache::get(self::keptKey($groupId), []);
+        $before = (array) SharedCache::store()->get(self::keptKey($groupId), []);
         $reasons = (array) ($before['reasons'] ?? []);
         foreach ((array) ($before['ids'] ?? []) as $id) {
             // An entry written before reasons were kept per version: its one reason stands for each of its ids.
@@ -204,7 +204,7 @@ final class ContentVersions
         foreach ($ids as $id) {
             $reasons[(int) $id] = $reason;
         }
-        Cache::put(self::keptKey($groupId), ['ids' => array_map('intval', array_keys($reasons)), 'reasons' => $reasons], now()->addDay());
+        SharedCache::store()->put(self::keptKey($groupId), ['ids' => array_map('intval', array_keys($reasons)), 'reasons' => $reasons], now()->addDay());
     }
 
     /** @param array<string, mixed> $kept */

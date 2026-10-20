@@ -14,7 +14,6 @@ use App\Services\Content\ContentRepeat;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -59,7 +58,7 @@ class RepeatController extends Controller
         $copies = ContentRepeat::copy($post, $dates, $request->user()->id, $waits ? 'needs_review' : null);
         if ($request->boolean('ai_rewrite')) {
             // The panel shows "rewording…" until the job forgets this (or 15 minutes pass).
-            Cache::put(ContentRepeat::rewritingKey((int) $post->id), true, now()->addMinutes(15));
+            ContentRepeat::markRewriting((int) $post->id, true);
             RewriteRepeatCopies::dispatch((int) $post->id, ContentContext::orgId(), ContentContext::brandId(), $copies->pluck('id')->map(fn ($copyId) => (int) $copyId)->all());
         }
 
