@@ -136,6 +136,18 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
   `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
 
+## Loyalty-workspace code rules
+
+- `frontend/src/loyalty/` uses only `a-*` and `l-*` classes and only `/v1/admin/loyalty/…` (every call names
+  `brand_id=all`); every string is `t('loyalty.…')` in all five locales. Read `docs/loyalty-workspace.md` first.
+- Who may do what is `App\Services\Loyalty\LoyaltyAccess` on the server (the full admin's own flags; reversing a line
+  is a manager's). Points are written only by `LoyaltyService`; a redemption's fulfil and cancel only by
+  `App\Services\Loyalty\RedemptionActions`, which the full admin's `RewardAdminController` calls too.
+- Every id a request names must be this organisation's; option lists come from the server (`LoyaltyForms`), never a
+  copy in TypeScript. New SQL runs on PostgreSQL and the tests' SQLite (no `ILIKE`, no `FILTER`).
+- The full admin's loyalty screens stay as they are (owner, 2026-10-21); the shared frame pieces in
+  `frontend/src/workspace/` serve Content and Loyalty both, so a change there is checked against both.
+
 ## Appointments-workspace code rules
 
 - `frontend/src/appointments/` uses only `a-*` tokens and only `/v1/admin/appointments/…`; every string is

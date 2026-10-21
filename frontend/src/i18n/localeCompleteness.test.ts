@@ -45,10 +45,11 @@ const SCAN_TARGETS = [
   path.join(SRC_DIR, 'appointments'),
   path.join(SRC_DIR, 'workspace'),
   path.join(SRC_DIR, 'content'),
+  path.join(SRC_DIR, 'loyalty'),
   path.join(SRC_DIR, 'components/OpenInAppointments.tsx'),
 ]
 
-const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.']
+const KEY_PREFIXES = ['landing_pages.', 'reviews.', 'nav.groups.landing_pages', 'nav.items.landing_', 'nav.items.appointments_', 'portal.', 'appointments.', 'workspace.', 'content.', 'loyalty.', 'nav.items.loyalty_']
 
 function listSourceFiles(target: string): string[] {
   const stat = fs.statSync(target)
@@ -97,7 +98,14 @@ function readLocale(locale: string): unknown {
   // HexaTech Content registers its bundle under `content` the same way (src/content/i18n/index.ts).
   const contentFile = path.join(SRC_DIR, 'content/i18n', `content.${locale}.json`)
   const content = fs.existsSync(contentFile) ? JSON.parse(fs.readFileSync(contentFile, 'utf8')) : {}
-  return { ...common, portal, appointments, workspace, content }
+  // HexaTech Loyalty registers its bundles under `loyalty`, Program's and Rewards' under `loyalty.program` and
+  // `loyalty.rewards` (src/loyalty/i18n/index.ts).
+  const loyaltyPart = (name: string) => {
+    const file = path.join(SRC_DIR, 'loyalty/i18n', `${name}.${locale}.json`)
+    return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
+  }
+  const loyalty = { ...loyaltyPart('loyalty'), program: loyaltyPart('program'), rewards: loyaltyPart('rewards') }
+  return { ...common, portal, appointments, workspace, content, loyalty }
 }
 
 describe('locale completeness — landing pages + reviews', () => {

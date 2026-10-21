@@ -49,8 +49,13 @@ interface User {
    * says whether it has an active service (the full admin shows its way in
    * either way since 2026-10-06; see appointments/lib/landing.ts). `only`
    * marks an organisation on the Appointments plan: no full admin (Part C).
+   * HexaTech Content and HexaTech Loyalty carry `landing` only.
    */
-  workspaces?: { appointments?: { landing?: boolean; has_services?: boolean; only?: boolean } }
+  workspaces?: {
+    appointments?: { landing?: boolean; has_services?: boolean; only?: boolean }
+    content?: { landing?: boolean }
+    loyalty?: { landing?: boolean }
+  }
 }
 
 interface Staff {

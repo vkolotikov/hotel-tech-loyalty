@@ -1,22 +1,24 @@
 /**
  * Where people go between the full admin and its workspaces — HexaTech
- * Appointments (/appointments) and HexaTech Content (/content): the generic
+ * Appointments (/appointments), HexaTech Content (/content) and HexaTech
+ * Loyalty (/loyalty): the generic
  * half of the way in (spec 2026-10-14 §6.1). The Appointments-only rules
  * (its plan, its pages in the full admin) stay in appointments/lib/landing.ts,
  * which re-exports these.
  */
-export type WorkspaceName = 'appointments' | 'content'
+export type WorkspaceName = 'appointments' | 'content' | 'loyalty'
 
 export interface LandingUser {
   user_type?: string
   workspaces?: {
     appointments?: { landing?: boolean; has_services?: boolean; only?: boolean }
     content?: { landing?: boolean }
+    loyalty?: { landing?: boolean }
   }
 }
 
-/** A workspace page: /appointments… or /content… (not /contentious). */
-const WORKSPACE_PAGE = /^\/(appointments|content)(\/|$)/
+/** A workspace page: /appointments…, /content… or /loyalty… (not /contentious). */
+const WORKSPACE_PAGE = /^\/(appointments|content|loyalty)(\/|$)/
 const APPOINTMENTS_PATH = /^\/appointments(\/|\?|$)/
 
 /**
@@ -63,5 +65,6 @@ export function landingPath(user: LandingUser | null | undefined, fallback: stri
   if (user?.workspaces?.appointments?.only === true) return APPOINTMENTS_PATH.test(fallback) ? fallback : '/appointments'
   if (fallback === '/' && user?.workspaces?.appointments?.landing === true) return '/appointments'
   if (fallback === '/' && user?.workspaces?.content?.landing === true) return '/content'
+  if (fallback === '/' && user?.workspaces?.loyalty?.landing === true) return '/loyalty'
   return fallback
 }

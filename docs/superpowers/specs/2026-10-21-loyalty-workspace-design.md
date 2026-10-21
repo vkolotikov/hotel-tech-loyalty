@@ -123,7 +123,8 @@ points, the tier's benefits, open requests) with Award, Redeem and "Open member"
 
 - **Find** (Ctrl/⌘ K or "/"): members by name, email, phone or number from two characters (up to 8), plus the areas and
   the look actions (theme, collapse menu, shortcuts).
-- Shortcuts: / or Ctrl K Find · ? the list · G then M / R / P / W / S an area · N award points on a member's page.
+- Shortcuts: / or Ctrl K Find · ? the list · S Scan · on a member's page A awards and R redeems (the shared engine takes
+  single letters only).
 - Notices: switched off, subscription not active, the programme not set up (no active tier: managers are pointed to
   Program).
 
@@ -223,9 +224,9 @@ and one key per area mirroring §5 (`admin/loyalty/program` change `manager`, `a
 | GET `referrals?page` | the numbers and the list |
 
 Refusals are `{error, message}` with a code the workspace turns into its own words: `not_found`, `manager_only`,
-`not_allowed` (a missing capability, with `need`), `not_enough_points`, `cannot_reverse`, `already_reversed`,
-`wrong_state`, `programme_off`, `code_taken`, `bad_value`, the scan's five, and Laravel's validation answer (field
-names) for a form.
+`not_allowed` (a missing capability, with `need`), `not_enough_points` (with `balance`), `cannot_reverse`,
+`already_reversed`, `wrong_state` (with `state`), the scan's five, and Laravel's validation answer (field names) for a
+form — a taken code, a percentage over 100 or a multiplier under 1 are field errors there. (As built, 2026-10-21.)
 
 ### 6.5 Server pieces — `app/Services/Loyalty/`
 

@@ -35,6 +35,8 @@ const PortalClaim  = lazy(() => import('./portal/pages/Claim').then(m => ({ defa
 const AppointmentsRoutes = lazy(() => import('./appointments/AppointmentsApp').then(m => ({ default: m.AppointmentsApp })))
 // HexaTech Content (spec 2026-10-14): one lazy chunk and its own shell, like Appointments.
 const ContentRoutes = lazy(() => import('./content/ContentApp').then(m => ({ default: m.ContentApp })))
+// HexaTech Loyalty (spec 2026-10-21): the loyalty programme as a fourth shell, the same way.
+const LoyaltyRoutes = lazy(() => import('./loyalty/LoyaltyApp').then(m => ({ default: m.LoyaltyApp })))
 const WalletConfig = lazy(() => import('./pages/WalletConfig').then(m => ({ default: m.WalletConfig })))
 
 // Consolidated 4-hub pages. The legacy paths below redirect into
@@ -127,7 +129,7 @@ function AuthedFloatingAiChat() {
   const { hasFeature } = useSubscription()
   const { pathname } = useLocation()
   // A workspace is a focused product: the full admin's copilot stays out.
-  if (/^\/(appointments|content)(\/|$)/.test(pathname)) return null
+  if (/^\/(appointments|content|loyalty)(\/|$)/.test(pathname)) return null
   if (!token) return null
   // Never in the member portal. This is the staff CRM copilot with 35+
   // admin tools behind it; a loyalty member has no business seeing the
@@ -271,6 +273,8 @@ export default function App() {
           <Route path="/appointments/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><AppointmentsRoutes /></Suspense></ChunkErrorBoundary>} />
           {/* HexaTech Content — same login, a third staff shell. */}
           <Route path="/content/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><ContentRoutes /></Suspense></ChunkErrorBoundary>} />
+          {/* HexaTech Loyalty — same login, a fourth staff shell. */}
+          <Route path="/loyalty/*" element={<ChunkErrorBoundary><Suspense fallback={<PageLoader />}><LoyaltyRoutes /></Suspense></ChunkErrorBoundary>} />
 
           <Route path="/register" element={<Login />} />
           <Route path="/forgot-password" element={<Login />} />

@@ -1,0 +1,98 @@
+/*
+ * HexaTech Loyalty's own rules. The Atelier fonts, tokens and the rules every
+ * workspace shares live in src/workspace/theme/workspace.css; this file sets
+ * the cards frame's navy palette (the same values as Content's, spec
+ * 2026-10-21 Loyalty §6.1 — loyaltyContrast.test.ts proves them equal to
+ * NAVY_SURFACES) and adds what only Loyalty draws: a request's state, a
+ * ledger line's sign and a tier's chip. Every rule is scoped under
+ * [data-loyalty], which sits beside [data-workspace] on Loyalty's root.
+ * Values are RGB triplets, read as rgb(var(--…)) like the Atelier tokens.
+ */
+
+[data-loyalty] {
+  --a-canvas: 244 246 249;
+  --a-surface: 255 255 255;
+  --a-surface-2: 238 242 247;
+  --a-border: 221 227 234;
+  --a-text: 27 36 48;
+  --a-text-2: 84 98 114;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  /* A benefit request's state: a tone for the dot, and for text over a 12 % tint of itself. */
+  --l-st-waiting: 138 80 0;
+  --l-st-approved: 13 94 110;
+  --l-st-done: 18 100 58;
+  --l-st-declined: 168 36 56;
+  --l-st-off: 88 95 107;
+  /* A ledger line: points in, points out. */
+  --l-plus: 18 100 58;
+  --l-minus: 168 36 56;
+  /* The dark ink on a tier colour white does not read on. */
+  --l-ink: 20 24 28;
+}
+
+[data-loyalty][data-theme="dark"] {
+  /* The owner's navy (Content spec 2026-10-21 §3.1). */
+  --a-canvas: 32 40 54;
+  --a-surface: 36 44 58;
+  --a-surface-2: 41 48 63;
+  --a-border: 51 62 78;
+  --a-text: 232 238 244;
+  --a-text-2: 150 165 185;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  --l-st-waiting: 240 179 90;
+  --l-st-approved: 94 200 214;
+  --l-st-done: 95 211 154;
+  --l-st-declined: 255 140 152;
+  --l-st-off: 163 173 184;
+  --l-plus: 95 211 154;
+  --l-minus: 255 140 152;
+}
+
+[data-loyalty] [data-state="pending"],
+[data-loyalty] [data-state="eligible"] { --l-st: var(--l-st-waiting); }
+[data-loyalty] [data-state="approved"] { --l-st: var(--l-st-approved); }
+[data-loyalty] [data-state="fulfilled"] { --l-st: var(--l-st-done); }
+[data-loyalty] [data-state="declined"] { --l-st: var(--l-st-declined); }
+[data-loyalty] [data-state="cancelled"] { --l-st: var(--l-st-off); }
+
+[data-loyalty] .l-st-dot {
+  background-color: rgb(var(--l-st, var(--l-st-off)));
+}
+
+[data-loyalty] .l-st-text {
+  color: rgb(var(--l-st, var(--l-st-off)));
+}
+
+[data-loyalty] .l-st-tint {
+  background-color: rgb(var(--l-st, var(--l-st-off)) / 0.12);
+}
+
+[data-loyalty] .l-plus {
+  color: rgb(var(--l-plus));
+}
+
+[data-loyalty] .l-minus {
+  color: rgb(var(--l-minus));
+}
+
+/* A tier's chip: the tier's own colour (inline --l-tier), its ink (inline --l-tier-ink), an outline where the colour
+   nearly vanishes on the page (tierChip.ts). */
+[data-loyalty] .l-tier {
+  background-color: rgb(var(--l-tier, var(--a-surface-2)));
+  color: rgb(var(--l-tier-ink, var(--a-text)));
+}
+
+[data-loyalty] .l-tier[data-edge] {
+  box-shadow: inset 0 0 0 1px rgb(var(--a-border));
+}
+
+/* A tier's mark on a light ground: the dot beside a name where a whole chip would be too loud. */
+[data-loyalty] .l-tier-dot {
+  background-color: rgb(var(--l-tier, var(--a-text-2)));
+}
