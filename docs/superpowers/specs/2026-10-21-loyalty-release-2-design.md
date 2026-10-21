@@ -12,6 +12,7 @@ Status: owner's answers of 2026-10-21. Builds on release 1 (`2026-10-21-loyalty-
 | R2-3 | Merge | **Fix the shared merge** so it keeps all history; the full admin's merge gets the fix too. |
 | R2-4 | Delete | Deleting a member **also clears the date of birth**, in the workspace and the full admin. |
 | R2-5 | Offer image | The full admin's offer **edit** gets the image check its create already has. |
+| R2-6 | Wallet password (2026-10-22) | Saving the wallet settings with the password left blank **keeps the stored certificate password** (the full admin's form sent a blank one on every save, which cleared it and stopped the passes). |
 
 Everything else in the full admin stays as it is (release 1, D3). Where the workspace needs logic the full admin holds
 inside a controller, that logic moves into one shared service which the full admin's controller then calls — the

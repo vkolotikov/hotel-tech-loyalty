@@ -86,24 +86,27 @@ class WalletConfigEndpointsTest extends TestCase
         $this->assertNotSame('p12-secret', $raw);
         $this->assertSame('p12-secret', WalletConfig::query()->first()->apple_cert_password);
 
-        // Not sent: kept. Sent empty: cleared — the controller means "empty is no change", but Laravel's global
-        // ConvertEmptyStringsToNull turns '' into null before it looks, and null clears. The full admin's own form
-        // sends '' on every save, so saving there without typing the password again clears it (known; not changed).
+        // Not sent, sent empty, sent null: kept. The full admin's form sends '' on every save ("Leave blank to keep
+        // current"); Laravel turns it into null, which used to clear the password and stop the passes (fixed on the
+        // owner's word, 2026-10-22). A new value replaces it.
         $this->asManager()->putJson($this->admin(), ['apple_team_id' => 'ABCDE12345'])->assertOk()->assertJsonPath('config.apple_cert_password_set', true);
-        $this->asManager()->putJson($this->admin(), ['apple_cert_password' => ''])->assertOk()->assertJsonPath('config.apple_cert_password_set', false);
-        $this->assertNull(WalletConfig::query()->first()->apple_cert_password);
+        $this->asManager()->putJson($this->admin(), ['apple_cert_password' => ''])->assertOk()->assertJsonPath('config.apple_cert_password_set', true);
+        $this->asManager()->putJson($this->admin(), ['apple_cert_password' => null])->assertOk()->assertJsonPath('config.apple_cert_password_set', true);
+        $this->assertSame('p12-secret', WalletConfig::query()->first()->apple_cert_password);
         $this->asManager()->putJson($this->admin(), ['apple_cert_password' => 'again', 'is_active' => false])
             ->assertOk()->assertJsonPath('config.apple_cert_password_set', true)->assertJsonPath('config.is_active', false);
+        $this->assertSame('again', WalletConfig::query()->first()->apple_cert_password);
 
         $audit = AuditLog::query()->where('action', 'wallet_config_updated')->orderBy('id')->get();
-        $this->assertCount(4, $audit);
+        $this->assertCount(5, $audit);
         $this->assertSame(['fields' => [
             'apple_pass_type_id', 'apple_team_id', 'apple_organization_name', 'apple_cert_password', 'apple_pass_background_color',
             'apple_pass_foreground_color', 'apple_pass_label_color', 'google_issuer_id', 'google_class_suffix',
         ]], $audit[0]->new_values);
         $this->assertSame(['fields' => ['apple_team_id']], $audit[1]->new_values);
-        $this->assertSame(['fields' => ['apple_cert_password']], $audit[2]->new_values);
-        $this->assertSame(['fields' => ['apple_cert_password', 'is_active']], $audit[3]->new_values);
+        $this->assertSame(['fields' => []], $audit[2]->new_values);
+        $this->assertSame(['fields' => []], $audit[3]->new_values);
+        $this->assertSame(['fields' => ['apple_cert_password', 'is_active']], $audit[4]->new_values);
         $this->assertStringNotContainsString('p12-secret', json_encode($audit->toArray()));
     }
 

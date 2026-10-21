@@ -20,8 +20,9 @@ campaigns, card and app, pictures, currency).
 - **The way back:** "Full admin" (Settings, at the side panel's foot) opens `/members`; a member's page has
   "Open in full admin" for what the workspace does not do (bookings, CRM).
 - The full admin's member, programme and rewards screens stay as they were (owner, 2026-10-21): both interfaces
-  work on the same rows. Release 2 changed three full-admin behaviours on the owner's word (R2-3, R2-4, R2-5): a merge
-  keeps every row of history, a delete also clears the date of birth, an offer's edit checks its picture.
+  work on the same rows. Release 2 changed four full-admin behaviours on the owner's word (R2-3 to R2-6): a merge
+  keeps every row of history, a delete also clears the date of birth, an offer's edit checks its picture, and saving
+  the wallet settings with the password left blank keeps the stored certificate password.
 
 ## Who may do what
 
@@ -148,7 +149,8 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
   server with every text escaped (`Campaigns\CampaignBody`); a draft with blocks the workspace does not offer is
   read-only here. Test sends go to the sender's own address with "[TEST]".
 - **Wallet settings have one writer**, `WalletSettings`, which `WalletConfigController` now calls
-  (`tests/Feature/Admin/WalletConfigEndpointsTest.php`); secrets are never answered, logged or audited; uploads are
+  (`tests/Feature/Admin/WalletConfigEndpointsTest.php`); a blank certificate password keeps the stored one (the full
+  admin's form sends one on every save, which used to clear it); secrets are never answered, logged or audited; uploads are
   checked by their content (`App\Services\Loyalty\App\WalletFiles`).
 - **The member app's look** is written by `AppLook` to the same `mobile_app` settings in the same form as the full
   admin's settings page, so `GET /v1/theme` answers alike (`AppLookTest`). The logo is `company_logo`.
@@ -205,9 +207,9 @@ cohort retention or booking figures in Insights; no brand choice. The full admin
   `services_currency` setting. A venue that never ran booking setup shows USD in both until its currency is set.
 - **Campaign retries.** A retried chunk of the shared job can send to up to 100 members a second time, and an address
   suppressed after Send is skipped but counted as sent; both are the shared pipeline's, unchanged.
-- **The full admin's wallet form clears the certificate password on every save** (it sends an empty password, which
-  Laravel turns into "none"). Pinned as it is; the workspace's own save never touches the password, and its readiness
-  says when the certificate no longer opens.
+- **A wallet certificate password cleared before release 2** stays cleared: the full admin's form used to wipe it on
+  every save (fixed in release 2, below). Card & app's readiness then says the certificate does not open; upload the
+  .p12 again with its password.
 - **Wallet certificates** are kept unencrypted on the server's local disk (only the password is encrypted), as before.
 - **Two logo writers.** The full admin's logo upload and the workspace's write `company_logo` in the same form; the
   full admin deletes the old file whatever it is, the workspace only its own.

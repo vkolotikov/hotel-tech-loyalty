@@ -58,15 +58,17 @@ final class WalletSettings
     }
 
     /**
-     * The text, colour and on/off fields. `apple_cert_password` sent as '' keeps the stored one and null clears it
-     * (the full admin's rule; Laravel's ConvertEmptyStringsToNull makes an HTTP '' a null before it gets here).
+     * The text, colour and on/off fields. A blank `apple_cert_password` ('' or null) keeps the stored one, as the full
+     * admin's form promises ("Leave blank to keep current"): that form sends '' on every save, and Laravel's
+     * ConvertEmptyStringsToNull makes it null before it gets here, which used to clear the password and stop the
+     * passes (owner, 2026-10-22). A password is replaced by a new one, or comes with a new certificate.
      * Audited `wallet_config_updated` with the field names only.
      *
      * @param array<string, mixed> $data validated fields
      */
     public static function update(WalletConfig $config, array $data, User $by): WalletConfig
     {
-        if (array_key_exists('apple_cert_password', $data) && $data['apple_cert_password'] === '') {
+        if (array_key_exists('apple_cert_password', $data) && ($data['apple_cert_password'] ?? '') === '') {
             unset($data['apple_cert_password']);
         }
 

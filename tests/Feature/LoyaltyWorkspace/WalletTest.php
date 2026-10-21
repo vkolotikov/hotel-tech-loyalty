@@ -188,7 +188,7 @@ class WalletTest extends TestCase
         $this->assertSame(['source' => 'loyalty_workspace'], AuditLog::query()->where('action', 'wallet_google_sa_uploaded')->sole()->new_values);
     }
 
-    public function test_ready_until_a_file_is_gone_or_the_full_admins_save_clears_the_password(): void
+    public function test_ready_until_a_file_is_gone_or_the_password_no_longer_opens_the_certificate(): void
     {
         $made = self::made();
         $this->asManager()->putJson($this->api('wallet'), [
@@ -202,8 +202,12 @@ class WalletTest extends TestCase
             ->assertJsonPath('wallet.apple_ready', true)->assertJsonPath('wallet.apple_missing', [])
             ->assertJsonPath('wallet.google_ready', true)->assertJsonPath('wallet.google_missing', []);
 
-        // The full admin's form sends the password empty on every save, which clears it.
+        // The full admin's form sends the password blank on every save: it no longer clears it (R2-6).
         $this->asManager()->putJson(rtrim((string) config('app.url'), '/') . '/api/v1/admin/wallet-config', ['apple_cert_password' => ''])->assertOk();
+        $this->asManager()->getJson($this->api('wallet'))->assertOk()->assertJsonPath('wallet.apple_ready', true);
+
+        // A password cleared before that fix, and a key file gone from the disk, are named.
+        DB::table('wallet_configs')->where('organization_id', $this->org->id)->update(['apple_cert_password' => null]);
         Storage::disk('local')->delete("wallet/{$this->org->id}/google-service-account.json");
 
         $this->asManager()->getJson($this->api('wallet'))->assertOk()
