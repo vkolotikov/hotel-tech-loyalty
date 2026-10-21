@@ -108,7 +108,7 @@ describe('Push messages (spec 2026-10-22 release 3 §5)', () => {
     expect(words).toContain('Kind of message')
     for (const kind of ['Offers', 'Points', 'Tier news', 'Visits and bookings']) expect(words).toContain(kind)
     expect(html.match(/<input type="radio"[^>]*>/g) ?? []).toHaveLength(4)
-    expect(html).toMatch(/<input type="radio"[^>]*value="offers"[^>]*checked=""/)
+    expect(html).toMatch(/<input type="radio"[^>]*checked=""[^>]*value="offers"/)
     expect(words).toContain('Gold · 1,200 members')
     expect(words).toContain('Lapsed (a rule needs fixing)')
     expect(words).toContain('26 of about 40 characters that show in full')
@@ -118,8 +118,8 @@ describe('Push messages (spec 2026-10-22 release 3 §5)', () => {
     expect(words).toContain('100 switched push notifications off')
     expect(words).toContain('280 have no phone with the app')
     expect(words).toContain('20 switched off this kind of message')
-    expect(button(html, 'Send…')).not.toContain('disabled')
-    expect(button(html, 'Save draft')).toContain('disabled')
+    expect(button(html, 'Send…')).not.toContain('disabled=""')
+    expect(button(html, 'Save draft')).toContain('disabled=""')
     expect(words).toContain('Delete draft')
   })
 
@@ -135,7 +135,7 @@ describe('Push messages (spec 2026-10-22 release 3 §5)', () => {
     expect(words).toContain('Choose who receives it.')
     expect(words).toContain('Choose a kind and a segment to see who it reaches.')
     expect(words).toContain('Your title')
-    expect(button(html, 'Send…')).toContain('disabled')
+    expect(button(html, 'Send…')).toContain('disabled=""')
   })
 
   it('shows a long title cut as a phone cuts it', () => {

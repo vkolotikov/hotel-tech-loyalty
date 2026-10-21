@@ -59,9 +59,9 @@ export const PROBLEM_WORDS: Record<string, string> = {
 
 /** How a title or a message fits on a phone (pushMath.ts `lengthGuide`). */
 export const GUIDE_WORDS: Record<string, string> = {
-  fits: '{{count}} of about {{guide}} characters that show in full',
-  may_cut: '{{count}} characters: phones may cut it after about {{guide}}',
-  too_long: '{{count}} characters: at most {{max}} can be saved',
+  fits: '{{chars}} of about {{guide}} characters that show in full',
+  may_cut: '{{chars}} characters: phones may cut it after about {{guide}}',
+  too_long: '{{chars}} characters: at most {{max}} can be saved',
 }
 
 /** How each member's push went (push_message_deliveries.status). */

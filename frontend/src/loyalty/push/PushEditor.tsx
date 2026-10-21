@@ -84,7 +84,7 @@ export function PushEditor({ answer }: { answer: PushAnswer }) {
   const chosenGone = form.segment_id !== '' && segments.data !== undefined && !list.some(s => String(s.id) === form.segment_id)
   const guideLine = (text: string, guide: number, max: number): string => {
     const g = lengthGuide(text, guide, max)
-    return t(`loyalty.push.guide.${g.state}`, GUIDE_WORDS[g.state], { count: points(g.count, locale), guide, max })
+    return t(`loyalty.push.guide.${g.state}`, GUIDE_WORDS[g.state], { chars: points(g.count, locale), guide, max })
   }
 
   return (

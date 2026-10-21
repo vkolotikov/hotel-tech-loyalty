@@ -97,9 +97,9 @@
     "unsaved": "Modifications non enregistrées"
   },
   "guide": {
-    "fits": "{{count}} sur environ {{guide}} caractères affichés en entier",
-    "may_cut": "{{count}} caractères : les téléphones peuvent couper après environ {{guide}}",
-    "too_long": "{{count}} caractères : {{max}} au plus peuvent être enregistrés"
+    "fits": "{{chars}} sur environ {{guide}} caractères affichés en entier",
+    "may_cut": "{{chars}} caractères : les téléphones peuvent couper après environ {{guide}}",
+    "too_long": "{{chars}} caractères : {{max}} au plus peuvent être enregistrés"
   },
   "list": {
     "counts": "{{sent}} sur {{total}} remises",
@@ -181,6 +181,7 @@
     "last_progress": "Dernier lot {{when}}.",
     "message": "Le message",
     "of": "Sur",
+    "outcome_count": "{{outcome}} : {{number}}",
     "progress": "Traités jusqu’ici",
     "sending": "Envoi par lots de 100. Cette page se met à jour toutes les 10 secondes.",
     "stopped": "L’envoi s’est arrêté avant la fin : {{sent}} ont été remises, les autres non.",

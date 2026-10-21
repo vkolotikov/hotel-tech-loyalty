@@ -97,9 +97,9 @@
     "unsaved": "Cambios sin guardar"
   },
   "guide": {
-    "fits": "{{count}} de unos {{guide}} caracteres que se ven completos",
-    "may_cut": "{{count}} caracteres: los teléfonos pueden cortarlo a partir de unos {{guide}}",
-    "too_long": "{{count}} caracteres: como máximo se pueden guardar {{max}}"
+    "fits": "{{chars}} de unos {{guide}} caracteres que se ven completos",
+    "may_cut": "{{chars}} caracteres: los teléfonos pueden cortarlo a partir de unos {{guide}}",
+    "too_long": "{{chars}} caracteres: como máximo se pueden guardar {{max}}"
   },
   "list": {
     "counts": "{{sent}} de {{total}} entregadas",
@@ -181,6 +181,7 @@
     "last_progress": "Último lote: {{when}}.",
     "message": "El mensaje",
     "of": "De",
+    "outcome_count": "{{outcome}}: {{number}}",
     "progress": "Procesadas hasta ahora",
     "sending": "Enviando en lotes de 100. Esta página se actualiza cada 10 segundos.",
     "stopped": "El envío se detuvo antes del final: se entregaron {{sent}} y el resto no.",

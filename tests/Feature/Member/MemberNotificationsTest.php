@@ -70,15 +70,16 @@ class MemberNotificationsTest extends MemberEndpointTestCase
 
         $older = $this->row($member, ['title' => 'Older', 'created_at' => '2026-09-30 08:00:00']);
         $newer = $this->row($member, ['title' => 'Newer', 'created_at' => '2026-10-02 08:00:00', 'read_at' => '2026-10-02 09:30:00', 'campaign_id' => null]);
-        $this->row($member, ['title' => 'Not sent', 'is_sent' => false, 'created_at' => '2026-10-03 08:00:00']);
+        // Written by the code before release 3 while the deploy switched over (after the backfill): shown all the same.
+        $this->row($member, ['title' => 'Old code', 'is_sent' => false, 'sent_at' => null, 'created_at' => '2026-09-29 08:00:00']);
         $this->row($someoneElse, ['title' => 'Theirs']);
 
         $json = $this->withToken($token)->getJson(self::INBOX)->assertOk()->json();
 
         $this->assertSame(self::PAGE_KEYS, self::sortedKeys($json));
-        $this->assertSame([1, 50, 2, 1], [$json['current_page'], (int) $json['per_page'], $json['total'], $json['last_page']]);
-        $this->assertSame(['Newer', 'Older'], array_column($json['data'], 'title'));
-        $this->assertSame([$newer, $older], array_column($json['data'], 'id'));
+        $this->assertSame([1, 50, 3, 1], [$json['current_page'], (int) $json['per_page'], $json['total'], $json['last_page']]);
+        $this->assertSame(['Newer', 'Older', 'Old code'], array_column($json['data'], 'title'));
+        $this->assertSame([$newer, $older], array_slice(array_column($json['data'], 'id'), 0, 2));
 
         $first = $json['data'][0];
         $this->assertSame(self::ROW_KEYS, self::sortedKeys($first));
@@ -165,7 +166,10 @@ class MemberNotificationsTest extends MemberEndpointTestCase
         $old = $this->row($member, ['title' => 'Old', 'is_sent' => false, 'sent_at' => null, 'created_at' => '2026-06-01 10:00:00']);
         $readOld = $this->row($member, ['title' => 'Old, read', 'is_sent' => false, 'sent_at' => null, 'created_at' => '2026-06-02 10:00:00', 'read_at' => '2026-06-03 08:00:00']);
         $new = $this->row($member, ['title' => 'New', 'created_at' => '2026-10-04 10:00:00']);
-        $this->assertSame(1, $this->withToken($token)->getJson(self::INBOX)->json('total'));
+        // Before the backfill every row shows (the inbox no longer filters on `is_sent`), the old ones still unread.
+        $before = $this->withToken($token)->getJson(self::INBOX)->json('data');
+        $this->assertSame(3, count($before));
+        $this->assertSame(2, count(array_filter($before, fn ($r) => $r['read_at'] === null)));
 
         $migration = require base_path('database/migrations/2026_10_22_110100_mark_earlier_push_notifications_sent_and_read.php');
         $migration->up();

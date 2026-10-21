@@ -76,7 +76,9 @@ export function PushResults({ push: p, options }: { push: Push; options: PushOpt
             <ul className="space-y-2 border-t border-a-border pt-3" data-outcomes="">
               {outcomes.filter(o => o.code !== 'sent').map(o => (
                 <li key={o.code} className="text-sm">
-                  <span className="font-medium tabular-nums text-a-text">{t(`loyalty.push.outcome.${o.code}`, OUTCOME_WORDS[o.code])}: {n(o.count)}</span>
+                  <span className="font-medium tabular-nums text-a-text">
+                    {t('loyalty.push.results.outcome_count', '{{outcome}}: {{number}}', { outcome: t(`loyalty.push.outcome.${o.code}`, OUTCOME_WORDS[o.code]), number: n(o.count) })}
+                  </span>
                   <span className="block text-xs text-a-text-2">{t(`loyalty.push.outcome_hint.${o.code}`, OUTCOME_HINT_WORDS[o.code])}</span>
                 </li>
               ))}

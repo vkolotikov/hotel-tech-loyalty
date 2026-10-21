@@ -97,9 +97,9 @@
     "unsaved": "Änderungen nicht gespeichert"
   },
   "guide": {
-    "fits": "{{count}} von etwa {{guide}} Zeichen, die vollständig zu sehen sind",
-    "may_cut": "{{count}} Zeichen: Telefone schneiden nach etwa {{guide}} ab",
-    "too_long": "{{count}} Zeichen: höchstens {{max}} lassen sich speichern"
+    "fits": "{{chars}} von etwa {{guide}} Zeichen, die vollständig zu sehen sind",
+    "may_cut": "{{chars}} Zeichen: Telefone schneiden nach etwa {{guide}} ab",
+    "too_long": "{{chars}} Zeichen: höchstens {{max}} lassen sich speichern"
   },
   "list": {
     "counts": "{{sent}} von {{total}} zugestellt",
@@ -181,6 +181,7 @@
     "last_progress": "Letztes Paket {{when}}.",
     "message": "Die Nachricht",
     "of": "Von",
+    "outcome_count": "{{outcome}}: {{number}}",
     "progress": "Bisher bearbeitet",
     "sending": "Wird in Paketen von 100 gesendet. Diese Seite aktualisiert sich alle 10 Sekunden.",
     "stopped": "Der Versand stoppte vor dem Ende: {{sent}} wurden zugestellt, der Rest nicht.",

@@ -217,8 +217,9 @@ final class PortalBootstrap
             ],
             'member'       => $member ? $this->member($member, $loyalty) : null,
             'counts'       => [
+                // Every row is kept for the inbox (release 3 §3), so no `is_sent` filter, as the inbox itself reads.
                 'unread_notifications' => $member ? PushNotification::where('member_id', $member->id)
-                    ->where('is_sent', true)->whereNull('read_at')->count() : 0,
+                    ->whereNull('read_at')->count() : 0,
                 'upcoming_bookings'    => $member ? $this->upcomingBookings($member) : 0,
             ],
         ];

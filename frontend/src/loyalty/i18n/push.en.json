@@ -97,9 +97,9 @@
     "unsaved": "Changes not saved"
   },
   "guide": {
-    "fits": "{{count}} of about {{guide}} characters that show in full",
-    "may_cut": "{{count}} characters: phones may cut it after about {{guide}}",
-    "too_long": "{{count}} characters: at most {{max}} can be saved"
+    "fits": "{{chars}} of about {{guide}} characters that show in full",
+    "may_cut": "{{chars}} characters: phones may cut it after about {{guide}}",
+    "too_long": "{{chars}} characters: at most {{max}} can be saved"
   },
   "list": {
     "counts": "{{sent}} of {{total}} pushed",
@@ -181,6 +181,7 @@
     "last_progress": "Last batch {{when}}.",
     "message": "The message",
     "of": "Of",
+    "outcome_count": "{{outcome}}: {{number}}",
     "progress": "Handled so far",
     "sending": "Sending, in batches of 100. This page updates every 10 seconds.",
     "stopped": "Sending stopped before the end: {{sent}} were pushed, the rest were not.",

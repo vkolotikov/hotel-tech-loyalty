@@ -64,6 +64,7 @@ staff member restricted to one brand is still held to it by the `brand` middlewa
 | Insights | `GET insights?period=30d|90d|12m`, `GET insights/at-risk?days=` (7–365) |
 | Segments | `GET segments`, `GET segments/options`, `POST segments/preview`, `POST segments`, `PUT/DELETE segments/{id}` |
 | Campaigns (`feature:campaigns`) | `GET/POST campaigns`, `GET/PUT/DELETE campaigns/{id}`, `GET campaigns/{id}/audience`, `POST campaigns/{id}/test`, `/send` (`recipients`, `revision`), `/cancel`, `/duplicate` |
+| Push messages (`feature:push_notifications`, release 3) | `GET/POST push`, `GET/PUT/DELETE push/{id}`, `GET push/{id}/audience`, `POST push/{id}/send` (`recipients`, `revision`), `/cancel`, `/duplicate` |
 | Card & app | `GET/PUT wallet`, `POST wallet/apple-cert`, `/apple-wwdr`, `/google-service-account` (`feature:wallet`); `GET/PUT app-look`, `POST app-look/logo` |
 
 Refusals are `{error, message}`; the workspace shows its own words for each code (`lib/errors.ts`,
@@ -76,7 +77,8 @@ area's `errors.ts`: members `member_limit` (402), `no_tier`, `bad_tier`, `name_m
 (with `retry_after`), `no_email`, `email_failed`, and the import's `busy`, `no_rows`, `too_many_rows`,
 `no_email_column`; campaigns `bad_rule` (with the rule's index), `in_use`, `no_audience`, `incomplete`,
 `nobody_to_send_to`, `too_many`, `audience_changed`, `changed`, `already_started`, `not_started`, `not_a_draft`,
-`not_sending`, `not_editable_here`, `suppressed`, `test_failed`; card & app's file checks (`not_pkcs12`,
+`not_sending`, `not_editable_here`, `suppressed`, `test_failed`; push messages (release 3) the same start codes plus
+`no_category`; card & app's file checks (`not_pkcs12`,
 `cert_unreadable`, `not_certificate`, `not_json`, `not_service_account`); `feature_locked` (402) without the plan's
 feature.
 
@@ -145,19 +147,57 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
 - **A campaign is sent once, to the number confirmed** (`Campaigns\CampaignStart`): Send carries the count shown and
   the draft's revision; one conditional update starts it (`draft` → `sending`) and the job is handed exactly the
   members counted (`Campaigns\CampaignAudience`: consent, an address, not suppressed). Sending is the shared
-  `SendEmailCampaignChunk`, unchanged. Bodies are blocks in the full admin builder's shape, rendered to HTML on the
+  `SendEmailCampaignChunk` (since release 3 once per member, with tags filled — below). Bodies are blocks in the full admin builder's shape, rendered to HTML on the
   server with every text escaped (`Campaigns\CampaignBody`); a draft with blocks the workspace does not offer is
   read-only here. Test sends go to the sender's own address with "[TEST]".
 - **Wallet settings have one writer**, `WalletSettings`, which `WalletConfigController` now calls
   (`tests/Feature/Admin/WalletConfigEndpointsTest.php`); a blank certificate password keeps the stored one (the full
   admin's form sends one on every save, which used to clear it); secrets are never answered, logged or audited; uploads are
-  checked by their content (`App\Services\Loyalty\App\WalletFiles`).
+  checked by their content (`App\Services\Loyalty\App\WalletFiles`); since release 3 their contents are kept in the
+  database, encrypted (below).
 - **The member app's look** is written by `AppLook` to the same `mobile_app` settings in the same form as the full
   admin's settings page, so `GET /v1/theme` answers alike (`AppLookTest`). The logo is `company_logo`.
 - **Pictures** for rewards and offers: the full admin's limits, `MediaService`; the old file is deleted only when it
   is this organisation's own in that folder (`App\Services\Loyalty\App\OwnMedia`). The browser asks for `/storage/…` at the API's host
   (`lib/api.ts` `mediaUrl`, the full admin's `resolveImage`).
 - **Currency** is `PortalBootstrap::currency()` in both bootstraps; amounts show as `Intl` money ("€25 off").
+
+### Release 3
+
+Spec: `docs/superpowers/specs/2026-10-22-loyalty-release-3-design.md`.
+
+- **Files that must survive a deploy are in the database.** Laravel Cloud keeps neither the server's disk between
+  deployments nor one disk across replicas. `wallet_configs` keeps the three wallet files (base64 under the
+  `encrypted` cast; read only through `WalletConfig::fileBytes()`); signing writes 0600 temp files and deletes them in
+  `finally`; a file still on a disk from before is taken in on the first read. `member_import_batches.file_content`
+  keeps an import's file (gzip + base64) from the preview to the end of the batch, then clears it. The answers of both
+  admins are unchanged (flags only). Apple passes are signed with the signature part only (`smimeToDer`; they never
+  worked before).
+- **The member inbox.** A `push_notifications` row is a notification kept for the member's inbox; its only writer is
+  `NotificationService::keep()`, which writes it for every member who did not switch that kind off, app or no app,
+  and marks it sent; the push itself still needs push switched on and a device. The app's inbox and the portal's
+  unread count read every row (no `is_sent` filter, so a row the code before release 3 wrote during the deploy still
+  shows). The migration `2026_10_22_110100` marked every earlier row sent and read.
+- **Email campaigns go once per member, with tags.** `SendEmailCampaignChunk` writes the member's
+  `email_campaign_deliveries` row before the send (`insertOrIgnore`); a retried chunk passes over anyone with a row
+  (pending, sent, failed or suppressed) — at most once. A send the suppression listener cancels counts as neither sent
+  nor failed. The full admin's Reset clears the campaign's rows, so its warning ("sending again emails them a second
+  time") stays true. Tags (`EmailTemplate::AVAILABLE_TAGS`, `{{member.name}}`, `{{member.tier}}`,
+  `{{member.points}}`) are filled per member by `App\Services\Email\CampaignTags` after rendering, escaped in the body,
+  one plain line in the subject; an unknown tag stays as written and the workspace names it before Send. Test emails
+  and the preview fill them with the sender's own name and made-up figures.
+- **Push messages** (`Loyalty\Push\*`, `SendPushMessageChunk`): rows of `notification_campaigns` with
+  `source = 'loyalty'` (the full admin's own push campaigns are not listed), a category (offers, points, tier, stays:
+  the member's own opt-outs) and a `member_segment_id`. They reach members with push switched on, a device and the
+  kind switched on; Send starts once (`draft` → `sending`) with the confirmed count; each member is recorded once in
+  `push_message_deliveries` with the inbox row, in one transaction, before the push. Managers only.
+- **Time zones on any PHP.** `App\Support\TimeZones` maps the IANA legacy names (`US/Eastern`, `GB`, …) to their
+  current zones; `PortalBootstrap::namedZone()` reads every zone through it, so a venue with a legacy name gets its
+  real zone whether or not this PHP still knows the old name. Valid zones are unchanged.
+- **One logo writer.** The full admin's logo upload calls `AppLook::setLogo()`; its answer is unchanged.
+- **A new member column** (`email_campaign_deliveries`, `push_message_deliveries`) is in
+  `MemberMergeService::MEMBER_COLUMNS`; a merge keeps the `sent` row (email) or the kept member's (push) where both
+  members have one.
 
 ## The workspace (`/loyalty`, `frontend/src/loyalty/`)
 
@@ -194,8 +234,8 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
 
 ## What the workspace does not do
 
-No push notifications, SMS or bulk messages from the members list; no merge tags or scheduling in campaigns; no
-cohort retention or booking figures in Insights; no brand choice. The full admin keeps these.
+No SMS and no bulk message from the members list; no scheduling of campaigns or push messages; no cohort retention
+or booking figures in Insights; no brand choice. The full admin keeps these.
 
 ## Known limits
 
@@ -205,14 +245,20 @@ cohort retention or booking figures in Insights; no brand choice. The full admin
   browser). Boosts made or saved in the workspace are right. A fix belongs to the full admin's form.
 - **The currency** is the member portal's: `organizations.currency`, which defaults to USD, before the
   `services_currency` setting. A venue that never ran booking setup shows USD in both until its currency is set.
-- **Campaign retries.** A retried chunk of the shared job can send to up to 100 members a second time, and an address
-  suppressed after Send is skipped but counted as sent; both are the shared pipeline's, unchanged.
+- **At most once means a stopped worker can drop a member.** A member whose email or push was under way when a worker
+  died keeps a `pending` delivery row and is not tried again. A Reset in the full admin right after a Cancel, while a
+  chunk is still running, could email that chunk's members again on the next Send.
+- **Tags** are escaped but not URL-encoded inside a link; `{{current_year}}` follows the server's clock (UTC).
+- **Push messages reach app users only.** The full admin's bulk message and segment send still keep inbox rows only for
+  members with push on and a device; the full admin's Notifications list shows the workspace's push messages without
+  their recipients.
 - **A wallet certificate password cleared before release 2** stays cleared: the full admin's form used to wipe it on
   every save (fixed in release 2, below). Card & app's readiness then says the certificate does not open; upload the
   .p12 again with its password.
-- **Wallet certificates** are kept unencrypted on the server's local disk (only the password is encrypted), as before.
-- **Two logo writers.** The full admin's logo upload and the workspace's write `company_logo` in the same form; the
-  full admin deletes the old file whatever it is, the workspace only its own.
+- **Wallet files depend on `APP_KEY`.** They are encrypted with it; changing the key without `APP_PREVIOUS_KEYS` makes
+  them unreadable (Card & app then says they are gone; upload them again). A WWDR certificate uploaded as DER through
+  the full admin still does not sign (the workspace converts it to PEM). Old files left on a server's disk are never
+  deleted; an import previewed but never run or cancelled keeps its file in its row.
 - **Finding duplicates** loads the organisation's members into PHP (the shared service, unchanged).
 - **New rows land on the default brand.** Rewards, offers and boosts created in the workspace go to the
   organisation's default brand, as in the full admin's "All brands".
@@ -223,6 +269,15 @@ cohort retention or booking figures in Insights; no brand choice. The full admin
 
 - Release 2 is live (`main` 7549f28, deployed 2026-10-22), built from branch commit 22b99d0: the next release's change
   list is `git diff --name-status 22b99d0 <tip>`. Release 1 went out as `main` 05f3ad1 from branch commit 5895004.
+- Release 3 runs five migrations, each tried on PostgreSQL with rollback: `2026_10_22_100000` and `100100` (nullable
+  columns for the wallet files and an import's file), `110000` (four nullable columns on `notification_campaigns`, the
+  table `push_message_deliveries`), `110100` (one `UPDATE` marking earlier notifications sent and read), `120000` (the
+  table `email_campaign_deliveries`). Before the deploy, finish or cancel imports in progress (a batch previewed before
+  it fails as `file_unreadable`). After it, upload the three wallet files again (they were on the server's disk and
+  are gone). Full-admin files it changes on purpose: `SendEmailCampaignChunk`, `EmailCampaignController`,
+  `NotificationService`, the member `NotificationController`, `SettingsController` (logo), `WalletConfigController`,
+  `MemberImportController`, `AppleWalletService`, `GoogleWalletService`, `MemberImportService`, `MemberMergeService`,
+  `PortalBootstrap` (zones, unread count), `AppointmentClock`, `HolidayCountry`.
 - Release 2: no migration, no queue or schedule change, no new public route, no new command. It changed full-admin
   files on purpose: `MemberAdminController`, `MemberImportController`,
   `MemberMergeService`, `WalletConfigController`, `OffersAdminController`, `PortalBootstrap` (the currency method).
@@ -241,6 +296,14 @@ cohort retention or booking figures in Insights; no brand choice. The full admin
 - Scan one member's QR code from the member app on a phone, and type one member number.
 - On Program, check the tiers and their colours; on Rewards, the catalogue and pending redemptions.
 - Reload admin tabs left open across the deploy.
+
+### After the release 3 deploy (owner, signed in)
+
+- Card & app → Wallet pass: upload the Apple certificate (with its password), the WWDR certificate and the Google key
+  again; readiness should then say ready. Add a pass to a phone from the member app.
+- Campaigns: in a draft, use a tag from the tag bar and send yourself a test (your own name is filled in).
+- Push messages: write one to a small segment; the confirmation names who has the app; send it and check a phone.
+- Member app and portal: the notifications inbox shows what was sent.
 
 ### After the release 2 deploy (owner, signed in)
 

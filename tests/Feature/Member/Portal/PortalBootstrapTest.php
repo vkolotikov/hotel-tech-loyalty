@@ -198,6 +198,21 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         $this->getJson(self::ENDPOINT)->assertStatus(403)->assertJsonPath('error', 'member_only');
     }
 
+    public function test_unread_notifications_count_every_kept_row_including_one_the_old_code_wrote_unsent(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token, 'member' => $member] = $this->member($org);
+        $row = fn (array $over) => DB::table('push_notifications')->insert($over + [
+            'member_id' => $member->id, 'type' => 'points', 'title' => 'T', 'body' => 'B', 'is_sent' => true,
+            'created_at' => now(), 'updated_at' => now(),
+        ]);
+        $row([]);                                          // kept by NotificationService::keep()
+        $row(['is_sent' => false]);                         // written by the code before release 3 during the deploy
+        $row(['read_at' => now()]);                         // already read
+
+        $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->assertJsonPath('counts.unread_notifications', 2);
+    }
+
     public function test_a_member_gets_venue_capabilities_and_their_card(): void
     {
         $org = $this->tenant('Seaside Hotel');
