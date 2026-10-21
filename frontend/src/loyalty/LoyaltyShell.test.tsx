@@ -18,7 +18,7 @@ vi.mock('react-i18next', () => ({
 }))
 vi.mock('../lib/logout', () => ({ logoutAndRedirect: vi.fn() }))
 vi.mock('../i18n', () => ({ SUPPORTED_LANGUAGES: [{ code: 'en', label: 'English' }, { code: 'ru', label: 'Русский' }] }))
-vi.mock('../lib/api', () => ({ api: {} }))
+vi.mock('../lib/api', () => ({ api: {}, resolveImage: (url: string | null | undefined) => url ?? null }))
 
 const boot: Bootstrap = {
   name: 'HexaTech Loyalty',

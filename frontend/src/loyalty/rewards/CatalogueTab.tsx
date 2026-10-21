@@ -15,6 +15,7 @@ import { RewardDialog } from './RewardDialog'
 import { rewardDiscount, stockOf } from './rewardsMath'
 import type { Reward } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_PHRASE_WORDS, DISCOUNT_TYPE_WORDS } from './words'
+import { mediaUrl } from '../lib/api'
 
 /**
  * The catalogue (spec 2026-10-21 §4.6): every reward as a card — its picture (release 2 §7), its cost, stock,
@@ -72,7 +73,7 @@ export function RewardCard({ reward: r, manage, locale, timeZone, onEdit }: { re
 
   return (
     <li data-reward={r.id} className="flex flex-col gap-3 rounded-2xl border border-a-border bg-a-surface p-4">
-      {r.image_url && <img src={r.image_url} alt={r.name} loading="lazy" className="aspect-[16/9] w-full rounded-xl bg-a-surface-2 object-cover" />}
+      {r.image_url && <img src={mediaUrl(r.image_url)} alt={r.name} loading="lazy" className="aspect-[16/9] w-full rounded-xl bg-a-surface-2 object-cover" />}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1 space-y-1">
           {r.category && <Eyebrow>{r.category}</Eyebrow>}

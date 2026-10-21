@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { useTranslation } from 'react-i18next'
 import { points } from '../lib/format'
 import { svgId, type PreviewPaint } from './appMath'
+import { mediaUrl } from '../lib/api'
 
 /**
  * A phone-sized preview of the member app's home (release 2 §7), drawn as the full admin's live preview draws it:
@@ -45,7 +46,7 @@ export function PhonePreview({ paint, logo, venue, tier }: { paint: PreviewPaint
         <rect x="8" y="40" width="248" height="48" fill={c.surface} />
         <line x1="8" y1="88.5" x2="256" y2="88.5" stroke={c.border} />
         {logo
-          ? <image href={logo} x="20" y="50" width="28" height="28" preserveAspectRatio="xMidYMid meet" />
+          ? <image href={mediaUrl(logo)} x="20" y="50" width="28" height="28" preserveAspectRatio="xMidYMid meet" />
           : (
             <>
               <rect x="20" y="50" width="28" height="28" rx="7" fill={c.primary} />

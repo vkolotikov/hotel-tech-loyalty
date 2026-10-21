@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
-import { failureOf } from '../lib/api'
+import { failureOf, mediaUrl } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
 import { rewardsApi, type PictureOwner } from './api'
@@ -56,7 +56,7 @@ export function PictureField({ owner, id, picture, alt, limits, onChange }: {
     <div data-picture="" className="space-y-2">
       <p className="text-xs font-medium text-a-text-2">{t('loyalty.rewards.picture.label', 'Picture')}</p>
       {picture
-        ? <img src={picture} alt={alt} loading="lazy" className="h-36 w-full rounded-xl border border-a-border bg-a-surface-2 object-cover" />
+        ? <img src={mediaUrl(picture)} alt={alt} loading="lazy" className="h-36 w-full rounded-xl border border-a-border bg-a-surface-2 object-cover" />
         : <p className="rounded-xl border border-dashed border-a-border px-4 py-5 text-center text-sm text-a-text-2">{t('loyalty.rewards.picture.none', 'No picture yet.')}</p>}
       <input ref={input} type="file" accept={limits.types.join(',')} className="sr-only" tabIndex={-1} aria-hidden
         onChange={(e) => { choose(e.target.files?.[0]); e.target.value = '' }} />

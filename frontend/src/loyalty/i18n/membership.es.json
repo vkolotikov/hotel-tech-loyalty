@@ -1,1 +1,346 @@
-{}
+{
+  "page": {
+    "erased_title": "Miembro eliminado",
+    "erased": "Este miembro fue eliminado. Su nombre y sus datos de contacto se han borrado; el número de miembro y el historial de puntos se conservan, para que las cifras cuadren.",
+    "edit": "Editar datos",
+    "card": "Tarjeta",
+    "welcome_sent": "El email de bienvenida va camino de {{email}}, con un código nuevo para crear una contraseña.",
+    "not_given": "Sin indicar",
+    "email": "Email",
+    "phone": "Teléfono",
+    "language": "Idioma",
+    "nationality": "Nacionalidad",
+    "date_of_birth": "Fecha de nacimiento",
+    "marketing": "Emails de marketing",
+    "marketing_yes": "Aceptados",
+    "marketing_no": "No aceptados",
+    "number": "Número de miembro",
+    "joined": "Miembro desde",
+    "tier_kept": "Nivel mantenido hasta",
+    "details_title": "Datos"
+  },
+  "more": {
+    "label": "Más",
+    "welcome": "Reenviar el email de bienvenida",
+    "tier": "Cambiar de nivel",
+    "deactivate": "Desactivar",
+    "reactivate": "Reactivar",
+    "erase": "Eliminar miembro"
+  },
+  "tier": {
+    "title": "Cambiar el nivel de {{name}}",
+    "tier": "Nivel",
+    "choose": "Elija un nivel",
+    "keep_until": "Mantener hasta (opcional)",
+    "note_kept": "El miembro se queda en este nivel hasta el {{day}} inclusive, tenga los puntos que tenga; un nivel superior que alcance se aplica igualmente.",
+    "note_review": "Sin un día hasta el que mantenerlo, la próxima revisión de niveles puede volver a mover al miembro según sus puntos.",
+    "save": "Cambiar de nivel",
+    "problem": {
+      "tier_id": "Elija uno de los niveles del programa.",
+      "keep_until": "Elija un día posterior a hoy, o déjelo vacío."
+    },
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "invalid": "Revise los campos marcados.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo cambiar el nivel. Inténtelo de nuevo."
+    }
+  },
+  "import": {
+    "title": "Importar miembros",
+    "line": "Incorpore al programa a sus clientes actuales desde un archivo CSV, con sus puntos y sus fechas de alta.",
+    "managers_only": "Importar miembros corresponde a un propietario o un responsable.",
+    "another": "Importar otro archivo",
+    "choose_title": "Elija un archivo CSV",
+    "choose_hint": "Un miembro por fila, con la primera fila nombrando las columnas. Cada miembro necesita un email; no se importa nada hasta que haya visto la vista previa.",
+    "file": "Archivo",
+    "not_csv": "Elija un archivo CSV (termina en .csv).",
+    "too_big": "El archivo supera los 20 MB. Divídalo en archivos más pequeños.",
+    "check": "Revisar el archivo",
+    "columns_title": "Columnas que lee",
+    "columns_hint": "Se entienden las grafías habituales («E-mail», «Surname», «Balance»…); las demás columnas se dejan fuera y se nombran en la vista previa.",
+    "unnamed": "Archivo CSV",
+    "rows": "Filas",
+    "new": "Miembros nuevos",
+    "existing": "Ya son miembros",
+    "problems_count": "No se importan",
+    "ready": "{{rows}} filas están listas para importar.",
+    "points": "Saldos iniciales: {{points}} puntos en total, anotados en el historial de cada miembro.",
+    "ignored": "Dejadas fuera: {{columns}}.",
+    "sample": "Primeras filas",
+    "line_no": "Fila {{line}}",
+    "preview_problems": "Filas que no se importarán",
+    "start": "Importar",
+    "progress_label": "Progreso de la importación",
+    "progress": "{{done}} de {{of}} filas · {{created}} miembros creados",
+    "paused": "Esta importación está en pausa. Continúe donde se detuvo, o deténgala; los miembros ya creados se quedan.",
+    "cancel": "Detener la importación",
+    "continue": "Continuar",
+    "created": "Miembros creados",
+    "skipped": "Omitidas",
+    "refused": "Rechazadas",
+    "points_given": "Puntos anotados",
+    "stopped_at": "Detenida tras {{done}} de {{of}} filas; los miembros creados antes de detenerse se quedan.",
+    "result_problems": "Filas que no se importaron",
+    "to_members": "Ver los miembros",
+    "past": "Importaciones anteriores",
+    "past_counts": "{{created}} creados · {{skipped}} omitidas · {{refused}} rechazadas",
+    "open": "Abrir",
+    "problem": {
+      "no_email": "Esta fila no tiene email.",
+      "no_name": "Esta fila no tiene nombre.",
+      "bad_email": "El email no es válido.",
+      "repeated": "La misma dirección está en la fila {{line}}.",
+      "already_member": "Ya es miembro.",
+      "unknown_tier": "No existe ningún nivel llamado «{{tier}}».",
+      "member_limit": "Por encima del límite de miembros del plan.",
+      "not_created": "No se pudo crear el miembro.",
+      "unreadable": "No se pudo leer esta fila: tiene más valores que columnas el archivo.",
+      "other": "Esta fila no se importó."
+    },
+    "kind": {
+      "skipped": "Omitida",
+      "refused": "Rechazada"
+    },
+    "state": {
+      "pending": "Lista para importar",
+      "running": "Importando",
+      "completed": "Terminada",
+      "cancelled": "Detenida",
+      "failed": "Fallida"
+    },
+    "column": {
+      "name": "Nombre",
+      "first_name": "Nombre de pila",
+      "last_name": "Apellido",
+      "email": "Email",
+      "phone": "Teléfono",
+      "tier_name": "Nivel",
+      "points": "Puntos",
+      "lifetime_points": "Puntos acumulados",
+      "joined_at": "Alta",
+      "date_of_birth": "Fecha de nacimiento",
+      "marketing_consent": "Consentimiento de marketing",
+      "external_id": "Número de cliente"
+    },
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "no_email_column": "El archivo no tiene columna de email. Columnas encontradas: {{columns}}. Llame «email» a la columna de las direcciones e inténtelo de nuevo.",
+      "no_rows": "El archivo tiene una fila de encabezados pero ningún miembro debajo.",
+      "file_empty": "El archivo está vacío.",
+      "no_header": "El archivo no tiene fila de encabezados. La primera fila debe nombrar las columnas.",
+      "file_unreadable": "No se pudo leer el archivo. Guárdelo de nuevo como CSV (UTF-8) e inténtelo otra vez.",
+      "too_many_rows": "El archivo tiene {{rows}} filas; una importación admite como máximo {{max}}. Divídalo en archivos más pequeños.",
+      "invalid": "Elija un archivo CSV de 20 MB como máximo.",
+      "busy": "Esta importación se está ejecutando en otra ventana. La página muestra ahora en qué punto está.",
+      "not_found": "Esta importación ya no está.",
+      "network": "Sin conexión. La importación se detuvo donde estaba; pulse Continuar para seguir.",
+      "unknown": "La importación se detuvo. Lo importado se queda; pulse Continuar para seguir."
+    }
+  },
+  "erase": {
+    "title": "Eliminar a {{name}}",
+    "goes_title": "Lo que se borra",
+    "stays_title": "Lo que se queda",
+    "final": "No se puede deshacer. El miembro tendrá que volver a unirse para usar el programa.",
+    "confirm": "Escriba «{{name}}» para confirmar",
+    "keep": "Conservar al miembro",
+    "delete": "Eliminar miembro",
+    "goes": {
+      "name": "El nombre",
+      "email": "El email",
+      "phone": "El número de teléfono",
+      "birthday": "La fecha de nacimiento",
+      "push": "Las notificaciones push de la app",
+      "cards": "Sus tarjetas y códigos QR",
+      "sign_in": "Su acceso a la app y al portal"
+    },
+    "stays": {
+      "number": "El número de miembro",
+      "history": "El historial de puntos, las reservas y los canjes, para que las cifras sigan cuadrando"
+    },
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "name_mismatch": "Escriba el nombre del miembro exactamente como aparece.",
+      "already_erased": "Este miembro ya fue eliminado.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "invalid": "Escriba el nombre del miembro para confirmar.",
+      "network": "Sin conexión: no se eliminó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo eliminar al miembro. No cambió nada; inténtelo de nuevo."
+    }
+  },
+  "duplicates": {
+    "title": "Duplicados",
+    "line": "Miembros que parecen ser una sola persona. Al fusionarlos se conserva uno y todo lo del otro pasa a él.",
+    "managers_only": "Buscar y fusionar duplicados corresponde a un propietario o un responsable.",
+    "none": "No hay duplicados probables. Los miembros se comparan por el mismo email o el mismo número de teléfono.",
+    "count": "Parejas: {{count}}",
+    "keep_legend": "El miembro que se conserva",
+    "will_keep": "Se conserva {{keep}}; {{merge}} se fusiona con él.",
+    "merge": "Fusionar…",
+    "kept": "Se conserva",
+    "reason": {
+      "same_email": "Mismo email",
+      "same_phone": "Mismo teléfono"
+    }
+  },
+  "status": {
+    "off_title": "Desactivar a {{name}}",
+    "on_title": "Reactivar a {{name}}",
+    "off_effect": "El miembro conserva sus puntos y su historial, pero no puede usar la app, el portal ni su tarjeta hasta que la cuenta se reactive.",
+    "on_effect": "El miembro puede volver a usar la app, el portal y su tarjeta, con los puntos que tenía.",
+    "off": "Desactivar",
+    "on": "Reactivar",
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No funcionó. No cambió nada; inténtelo de nuevo."
+    }
+  },
+  "add": {
+    "title": "Añadir un miembro",
+    "name": "Nombre",
+    "email": "Email",
+    "email_hint": "Con él, el miembro accede a la app y al portal.",
+    "phone": "Teléfono (opcional)",
+    "send_welcome": "Enviar el email de bienvenida",
+    "send_welcome_hint": "Con un código para crear una contraseña; es válido 48 horas.",
+    "start": "El miembro empieza en el primer nivel del programa, con el bono de bienvenida.",
+    "save": "Añadir miembro",
+    "problem": {
+      "name": "Escriba el nombre del miembro.",
+      "email": "Escriba un email, p. ej. nombre@example.com.",
+      "email_taken": "Este email ya está en uso. Busque al miembro en la lista o use otra dirección.",
+      "phone": "El teléfono no puede tener más de 20 caracteres."
+    },
+    "error": {
+      "member_limit": "Se ha alcanzado el límite de miembros de su plan. Un propietario puede cambiar el plan en Facturación, en el admin completo.",
+      "no_tier": "El programa aún no tiene ningún nivel, así que nadie puede unirse. Un responsable puede añadir uno en Programa.",
+      "invalid": "Revise los campos marcados.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo añadir el miembro. Inténtelo de nuevo."
+    }
+  },
+  "card": {
+    "title": "Tarjeta de miembro",
+    "hint": "El miembro puede mostrar este código en recepción en lugar de la app; Escanear lo encuentra con él.",
+    "close": "Cerrar",
+    "print": "Imprimir",
+    "qr_alt": "Código QR del número de miembro {{number}}",
+    "error": {
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar la tarjeta. Inténtelo de nuevo."
+    }
+  },
+  "merge": {
+    "title": "Fusionar con {{name}}",
+    "what": "{{merge}} ({{merge_number}}) se fusiona con {{keep}} ({{keep_number}}) y después desaparece. Todo lo suyo pasa:",
+    "after": "{{keep}} tendrá {{points}} puntos ({{lifetime}} ganados en total).",
+    "reason": "Por qué son una sola persona",
+    "problem": {
+      "reason": "Diga por qué, en pocas palabras."
+    },
+    "reason_example": "p. ej. se registró dos veces, una con el teléfono",
+    "final": "No se puede deshacer.",
+    "save": "Fusionar",
+    "moves": {
+      "history": "El historial de puntos y los puntos, sumados a los del miembro que se conserva",
+      "bookings": "Las reservas de estancias y servicios",
+      "redemptions": "Los canjes de recompensas",
+      "referrals": "Los referidos, hechos y recibidos",
+      "requests": "Las solicitudes de ventajas",
+      "cards": "Las tarjetas y códigos QR",
+      "messages": "Las notificaciones, reseñas y emails de campaña",
+      "guests": "El vínculo con la ficha del huésped en el CRM"
+    },
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "already_erased": "Uno de los dos fue eliminado, así que no se pueden fusionar. La lista muestra ahora las parejas tal como están.",
+      "not_found": "Uno de los dos ya no está en su programa. La lista muestra ahora las parejas tal como están.",
+      "invalid": "Diga en pocas palabras por qué los dos son una sola persona.",
+      "network": "Sin conexión: no se fusionó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudieron fusionar los miembros. No cambió nada; inténtelo de nuevo."
+    }
+  },
+  "details": {
+    "title": "Editar los datos de {{name}}",
+    "name": "Nombre",
+    "email": "Email",
+    "email_hint": "El miembro accede con él; un cambio vale desde su próximo acceso.",
+    "phone": "Teléfono",
+    "language": "Idioma",
+    "language_none": "Sin definir",
+    "nationality": "Nacionalidad",
+    "date_of_birth": "Fecha de nacimiento",
+    "marketing_consent": "Acepta emails de marketing",
+    "marketing_consent_hint": "Solo con el acuerdo del propio miembro. Las campañas llegan solo a quienes aceptaron.",
+    "save": "Guardar datos",
+    "problem": {
+      "name": "Escriba el nombre del miembro.",
+      "email": "Escriba un email, p. ej. nombre@example.com.",
+      "email_taken": "Este email ya lo usa otra cuenta. Use otra dirección.",
+      "phone": "El teléfono no puede tener más de 20 caracteres.",
+      "language": "Elija uno de los idiomas ofrecidos.",
+      "nationality": "La nacionalidad no puede tener más de 100 caracteres.",
+      "date_of_birth": "Elija una fecha de nacimiento que no sea futura."
+    },
+    "error": {
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "invalid": "Revise los campos marcados.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "unknown": "No se pudieron guardar los datos. Inténtelo de nuevo."
+    }
+  },
+  "list": {
+    "duplicates": "Duplicados",
+    "import": "Importar",
+    "export": "Exportar",
+    "add": "Añadir miembro"
+  },
+  "load": {
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar. Inténtelo de nuevo."
+    }
+  },
+  "welcome": {
+    "error": {
+      "too_soon": "El email de bienvenida se acaba de enviar. Podrá enviarlo de nuevo dentro de {{minutes}} min.",
+      "no_email": "Este miembro no tiene email. Añada uno primero en Editar datos.",
+      "email_failed": "Ahora mismo no se pudo enviar el email. Inténtelo de nuevo dentro de unos minutos.",
+      "already_erased": "Este miembro fue eliminado. Solo se conservan su número y su historial de puntos.",
+      "not_found": "Este miembro ya no está en su programa.",
+      "network": "Sin conexión: no se envió nada. Inténtelo de nuevo.",
+      "unknown": "No se pudo enviar el email de bienvenida. Inténtelo de nuevo."
+    }
+  },
+  "export": {
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede hacer esto.",
+      "not_allowed": "Solo un propietario o un responsable puede hacer esto.",
+      "no_capability": "Solo un propietario o un responsable puede hacer esto.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo crear el archivo. Inténtelo de nuevo."
+    }
+  }
+}

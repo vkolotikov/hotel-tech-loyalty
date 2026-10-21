@@ -18,6 +18,7 @@ import { Empty, LoadFailed, Loading, TabHead } from './parts'
 import { offerState, offerTone, offerValue } from './rewardsMath'
 import type { Offer } from './types'
 import { APPLIES_TO_WORDS, OFFER_STATE_WORDS, OFFER_TYPE_WORDS, OFFER_VALUE_WORDS } from './words'
+import { mediaUrl } from '../lib/api'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
 
@@ -88,7 +89,7 @@ export function OfferRow({ offer: o, tiers, manage, theme, locale, onEdit }: {
 
   return (
     <li data-offer={o.id} className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
-      {o.image_url && <img src={o.image_url} alt={o.title} loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-a-surface-2 object-cover" />}
+      {o.image_url && <img src={mediaUrl(o.image_url)} alt={o.title} loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-a-surface-2 object-cover" />}
       <div className="min-w-0 flex-1 space-y-1">
         <p className="flex items-center gap-1.5 font-medium text-a-text">
           {o.title}

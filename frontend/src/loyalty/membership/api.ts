@@ -36,15 +36,15 @@ export const membershipApi = {
    * The list's members as a CSV file, through the same client (and so the same sign-in) as every call. A refusal comes
    * back as a file too; it is read as the JSON it is, so the page names its code like any other.
    */
-  exportMembers: (filters: MemberFilters): Promise<Blob> => {
-    return watched<Blob>(api.get(loyaltyUrl('members/export'), { params: exportParams(filters), responseType: 'blob' })).catch(async (error: unknown) => {
+  exportMembers: (filters: MemberFilters): Promise<Blob> => watched<Blob>(
+    api.get(loyaltyUrl('members/export'), { params: exportParams(filters), responseType: 'blob' }).catch(async (error: unknown) => {
       const response = (error as { response?: { data?: unknown } }).response
       if (response && typeof Blob !== 'undefined' && response.data instanceof Blob) {
         try { response.data = JSON.parse(await response.data.text()) } catch { /* not JSON: read as unknown */ }
       }
       throw error
-    })
-  },
+    }),
+  ),
 }
 
 export const duplicatesKey = ['loyalty', 'membership', 'duplicates'] as const

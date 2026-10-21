@@ -12,7 +12,7 @@ vi.mock('react-i18next', () => ({
     i18n: { language: 'en' },
   }),
 }))
-vi.mock('../../lib/api', () => ({ api: {} }))
+vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | undefined) => url ?? null }))
 
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, HistoryPage, MemberDetail } from '../lib/types'

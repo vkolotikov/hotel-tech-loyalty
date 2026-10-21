@@ -1,4 +1,4 @@
-import { api } from '../../lib/api'
+import { api, resolveImage } from '../../lib/api'
 import type {
   Bootstrap, BenefitRequest, HistoryPage, MemberDetail, MemberFilters, MemberRow, MembersPage, PointsAfter, RequestTab, RequestsPage,
 } from './types'
@@ -19,6 +19,14 @@ const BASE = '/v1/admin/loyalty'
  */
 export function loyaltyUrl(path: string): string {
   return `${BASE}/${path}${path.includes('?') ? '&' : '?'}brand_id=all`
+}
+
+/**
+ * A stored picture's address as the browser must ask for it: MediaService answers `/storage/…` on the public disk,
+ * which lives beside the API, not beside the page (they differ in local development). The full admin's own rule.
+ */
+export function mediaUrl(url: string | null | undefined): string | undefined {
+  return resolveImage(url) ?? undefined
 }
 
 export interface ApiFailure {

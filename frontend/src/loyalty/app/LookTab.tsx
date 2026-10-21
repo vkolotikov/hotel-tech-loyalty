@@ -5,7 +5,7 @@ import { Check as CheckIcon, ImagePlus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { useBoot } from '../LoyaltyProvider'
-import { failureOf } from '../lib/api'
+import { failureOf, mediaUrl } from '../lib/api'
 import { refusalKey } from '../lib/errors'
 import { points } from '../lib/format'
 import { named } from '../lib/forms'
@@ -214,7 +214,7 @@ function LogoField({ logo, limits }: { logo: string | null; limits: LookAnswer['
     <Part title={t('loyalty.app.logo.title', 'Logo')} line={t('loyalty.app.logo.line', 'Shown in the app and the member portal. It is the same logo as in the full admin’s Branding.')}>
       <div className="flex flex-wrap items-center gap-4">
         {logo
-          ? <img src={logo} alt={t('loyalty.app.logo.alt', 'The venue’s logo')} loading="lazy" className="h-16 w-16 rounded-xl border border-a-border bg-a-surface-2 object-contain p-1" />
+          ? <img src={mediaUrl(logo)} alt={t('loyalty.app.logo.alt', 'The venue’s logo')} loading="lazy" className="h-16 w-16 rounded-xl border border-a-border bg-a-surface-2 object-contain p-1" />
           : <p className="rounded-xl border border-dashed border-a-border px-4 py-4 text-sm text-a-text-2">{t('loyalty.app.logo.none', 'No logo yet.')}</p>}
         <input ref={input} type="file" accept={limits.types.join(',')} className="sr-only" tabIndex={-1} aria-hidden onChange={(e) => {
           const file = e.target.files?.[0]
