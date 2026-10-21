@@ -4,7 +4,7 @@ import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormO
 import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
-const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, ...more })
+const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const options: ProgramOptions = {
   categories: ['accommodation', 'dining', 'other'],
   fulfillment_modes: ['automatic', 'on_request'],

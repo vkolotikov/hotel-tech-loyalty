@@ -16,7 +16,10 @@ use App\Support\OrgAccent;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** What HexaTech Loyalty needs before it can draw anything (spec 2026-10-21 §6.4). */
+/**
+ * What HexaTech Loyalty needs before it can draw anything (spec 2026-10-21 §6.4); release 2 adds the venue's currency
+ * (the portal's rule) and the plan features its areas depend on.
+ */
 class BootstrapController extends Controller
 {
     public const NAME = 'HexaTech Loyalty';
@@ -38,6 +41,12 @@ class BootstrapController extends Controller
                 'timezone'       => VenueClock::zone($orgId),
                 'timezone_named' => VenueClock::isNamed($orgId),
                 'today'          => VenueClock::today($orgId),
+                'currency'       => PortalBootstrap::currency($org),
+            ],
+            // What the plan holds (the routes behind them answer 402 `feature_locked` without it).
+            'features'     => [
+                'campaigns' => $org->hasFeature('campaigns'),
+                'wallet'    => $org->hasFeature('wallet'),
             ],
             'staff'        => [
                 'id'   => (int) $user->id,

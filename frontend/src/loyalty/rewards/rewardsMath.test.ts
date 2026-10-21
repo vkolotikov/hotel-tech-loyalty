@@ -7,7 +7,7 @@ import {
 } from './rewardsMath'
 import type { Offer, OfferOptions, Reward, RewardOptions } from './types'
 
-const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, ...more })
+const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const rewardOptions: RewardOptions = { discount_types: ['percent_discount', 'fixed_amount'], applies_to: ['all', 'services', 'stays'] }
 const offerOptions: OfferOptions = { types: ['discount', 'bonus_points', 'free_night'], applies_to: ['all', 'stays'] }
 const reward = (more: Partial<Reward> = {}): Reward => ({

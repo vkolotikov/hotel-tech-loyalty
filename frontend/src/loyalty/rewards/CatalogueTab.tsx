@@ -5,10 +5,10 @@ import { Pencil, Plus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Eyebrow } from '../../workspace/ui/Typography'
 import { useBoot } from '../LoyaltyProvider'
-import { points, when } from '../lib/format'
+import { amountOf, points, when } from '../lib/format'
 import { ToneBadge } from '../ui/formParts'
 import { activeTone } from '../program/programMath'
-import { decimal, named } from '../lib/forms'
+import { named } from '../lib/forms'
 import { CATALOGUE_KEY, rewardsApi } from './api'
 import { Empty, LoadFailed, Loading, TabHead } from './parts'
 import { RewardDialog } from './RewardDialog'
@@ -58,13 +58,14 @@ export function CatalogueTab({ manage }: { manage: boolean }) {
 /** One reward as a card. */
 export function RewardCard({ reward: r, manage, locale, timeZone, onEdit }: { reward: Reward; manage: boolean; locale: string; timeZone: string; onEdit: () => void }) {
   const { t } = useTranslation()
+  const currency = useBoot().venue.currency
   const stock = stockOf(r.stock)
   const discount = rewardDiscount(r)
   const phrase = discount ? named('loyalty.rewards.discount_phrase', DISCOUNT_PHRASE_WORDS, discount.type) : null
   const kind = discount && !phrase ? named('loyalty.rewards.discount_type', DISCOUNT_TYPE_WORDS, discount.type) : null
   const scope = r.applies_to !== 'all' ? named('loyalty.rewards.applies_to', APPLIES_TO_WORDS, r.applies_to) : null
   const discountText = discount && [
-    phrase ? t(...phrase, { amount: decimal(discount.amount, locale) }) : `${kind ? t(...kind) : discount.type} ${decimal(discount.amount, locale)}`,
+    phrase ? t(...phrase, { amount: amountOf(discount.type, discount.amount, currency, locale) }) : `${kind ? t(...kind) : discount.type} ${amountOf(discount.type, discount.amount, currency, locale)}`,
     scope ? t(...scope) : r.applies_to !== 'all' ? r.applies_to : null,
   ].filter(Boolean).join(' · ')
 

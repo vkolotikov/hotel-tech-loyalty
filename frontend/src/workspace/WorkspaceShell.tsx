@@ -18,6 +18,11 @@ export interface WorkspaceNavItem {
   label: string
   /** What waits there (HexaTech Loyalty's requests): a small count after the label from 1, said with it. */
   count?: number
+  /**
+   * `false`: not in the phone's top bar, which holds a handful of icons; the area is listed at the top of the phone menu
+   * instead (HexaTech Loyalty's eight areas). Unset, the area is in the top bar, as before.
+   */
+  phone?: boolean
 }
 
 /**
@@ -69,6 +74,8 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
   // <html data-shell="<workspace>"> keeps the full admin's Branding mood typography out, from the first paint.
   useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])
   const slim = look.rail === 'slim'
+  // Areas that live in the phone menu rather than the phone's top bar.
+  const offBar = nav.filter(n => n.phone === false)
   const cards = variant === 'cards'
   // Neither exit unloads a page the browser could ask about (Sign out even revokes the session first): the app is asked.
   const signOut = () => { leave(onLeave, () => { void logoutAndRedirect('/login') }) }
@@ -156,7 +163,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
       <div className="flex-1 min-w-0 flex flex-col">
         <header className="h-14 shrink-0 flex items-center gap-3 px-4 lg:px-6 bg-a-canvas border-b border-a-border">
           <nav className="flex lg:hidden items-center gap-1" aria-label={t('workspace.shell.menu', 'Menu')}>
-            {nav.map(({ to, end, icon: Icon, label }) => (
+            {nav.filter(n => n.phone !== false).map(({ to, end, icon: Icon, label }) => (
               <NavLink key={to} to={to} end={end} aria-label={label}
                 className={({ isActive }) => `rounded-lg p-2 ${isActive ? 'bg-a-surface-2 text-a-text' : 'text-a-text-2'}`}>
                 <Icon size={18} aria-hidden />
@@ -172,6 +179,17 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
             </summary>
             {/* As wide as what it holds (the theme switch is longer in Russian), at least 14rem, never past the screen. */}
             <div className="absolute right-0 top-full z-40 mt-2 w-max min-w-56 max-w-[calc(100vw-2rem)] animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
+              {offBar.length > 0 && (
+                <nav data-phone-areas="" aria-label={t('workspace.shell.more_areas', 'More areas')} className="space-y-1 border-b border-a-border pb-1">
+                  {offBar.map(({ to, end, icon: Icon, label }) => (
+                    // The menu stays open across a move inside the workspace unless it closes itself.
+                    <NavLink key={to} to={to} end={end} onClick={e => e.currentTarget.closest('details')?.removeAttribute('open')}
+                      className={({ isActive }) => `flex items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2 ${isActive ? 'bg-a-surface-2 font-medium' : ''}`}>
+                      <Icon size={16} aria-hidden /> {label}
+                    </NavLink>
+                  ))}
+                </nav>
+              )}
               {phoneMenu ?? <>
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{person}</div>
               <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>

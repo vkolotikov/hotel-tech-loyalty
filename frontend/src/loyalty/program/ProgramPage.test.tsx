@@ -20,12 +20,13 @@ import { PROGRAM_KEY } from './api'
 import { ProgramPage } from './ProgramPage'
 import type { Program } from './types'
 
-const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, ...more })
+const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const boot = (c: Can): Bootstrap => ({
   name: 'HexaTech Loyalty',
   organization: { id: 1, name: 'Lumière', industry: 'hotel' },
   accent: null,
-  venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-21' },
+  venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-21', currency: 'EUR' },
+  features: { campaigns: true, wallet: true },
   staff: { id: 5, name: 'Ada', role: c.manage_program ? 'manager' : 'staff', can: c },
   programme: { on: true, tiers: [{ id: 1, name: 'Silver', color: '#9aa4b1', min_points: 0, is_active: true }, { id: 2, name: 'Gold', color: '#c9a227', min_points: 1000, is_active: true }] },
   counts: { members: 40, requests_waiting: 2 },

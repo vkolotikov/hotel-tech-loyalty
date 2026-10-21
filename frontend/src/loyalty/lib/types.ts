@@ -10,6 +10,19 @@ export interface Can {
   reverse: boolean
   manage_program: boolean
   manage_rewards: boolean
+  /** Release 2: tier, deactivate, delete, duplicates, import, export (a manager's). */
+  manage_members: boolean
+  /** Insights: a manager or `can_view_analytics`. */
+  view_insights: boolean
+  manage_campaigns: boolean
+  /** Card & app: the wallet pass and the member app's look. */
+  manage_app: boolean
+}
+
+/** What the plan holds; the routes behind each answer 402 `feature_locked` without it. */
+export interface Features {
+  campaigns: boolean
+  wallet: boolean
 }
 
 export interface TierRef {
@@ -24,7 +37,9 @@ export interface Bootstrap {
   name: string
   organization: { id: number; name: string; industry: string }
   accent: string | null
-  venue: { timezone: string; timezone_named: boolean; today: DateKey }
+  /** `currency`: the code members see in the portal (PortalBootstrap::currency). */
+  venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
+  features: Features
   staff: { id: number; name: string; role: string | null; can: Can }
   programme: { on: boolean; tiers: TierRef[] }
   counts: { members: number; requests_waiting: number }

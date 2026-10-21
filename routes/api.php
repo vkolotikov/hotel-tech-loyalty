@@ -1396,6 +1396,64 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'store']);
                 Route::put('offers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'update'])->whereNumber('id');
                 Route::get('referrals', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ReferralController::class, 'index']);
+
+                // ── Release 2 (spec 2026-10-21 release 2): members, complete (§4)
+                Route::post('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'store']);
+                Route::put('members/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'update'])->whereNumber('id');
+                Route::put('members/{id}/tier', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'tier'])->whereNumber('id');
+                Route::post('members/{id}/deactivate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'deactivate'])->whereNumber('id');
+                Route::post('members/{id}/reactivate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'reactivate'])->whereNumber('id');
+                Route::post('members/{id}/erase', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'erase'])->whereNumber('id');
+                Route::get('members/{id}/card', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'card'])->whereNumber('id');
+                Route::post('members/{id}/welcome', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MembershipController::class, 'welcome'])->whereNumber('id');
+                Route::get('members/duplicates', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DuplicatesController::class, 'index']);
+                Route::post('members/merge', [\App\Http\Controllers\Api\V1\Admin\Loyalty\DuplicatesController::class, 'merge']);
+                Route::get('members/imports', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImportController::class, 'index']);
+                Route::post('members/imports', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImportController::class, 'store']);
+                Route::get('members/imports/{batch}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImportController::class, 'show'])->whereNumber('batch');
+                Route::post('members/imports/{batch}/run', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImportController::class, 'run'])->whereNumber('batch');
+                Route::post('members/imports/{batch}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImportController::class, 'cancel'])->whereNumber('batch');
+                Route::get('members/export', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ExportController::class, 'members']);
+
+                // Insights (§5)
+                Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'show']);
+                Route::get('insights/at-risk', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'atRisk']);
+
+                // Segments & campaigns (§6); campaigns need the plan's `campaigns` feature, segments do not
+                Route::get('segments', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'index']);
+                Route::get('segments/options', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'options']);
+                Route::post('segments/preview', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'preview']);
+                Route::post('segments', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'store']);
+                Route::put('segments/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'update'])->whereNumber('id');
+                Route::delete('segments/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'destroy'])->whereNumber('id');
+                Route::middleware('feature:campaigns')->group(function () {
+                    Route::get('campaigns', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'index']);
+                    Route::post('campaigns', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'store']);
+                    Route::get('campaigns/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'show'])->whereNumber('id');
+                    Route::put('campaigns/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'update'])->whereNumber('id');
+                    Route::delete('campaigns/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'destroy'])->whereNumber('id');
+                    Route::get('campaigns/{id}/audience', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'audience'])->whereNumber('id');
+                    Route::post('campaigns/{id}/test', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'test'])->whereNumber('id');
+                    Route::post('campaigns/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'send'])->whereNumber('id');
+                    Route::post('campaigns/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'cancel'])->whereNumber('id');
+                    Route::post('campaigns/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'duplicate'])->whereNumber('id');
+                });
+
+                // Card & app (§7): the wallet pass needs the plan's `wallet` feature; images for rewards and offers
+                Route::middleware('feature:wallet')->group(function () {
+                    Route::get('wallet', [\App\Http\Controllers\Api\V1\Admin\Loyalty\WalletController::class, 'show']);
+                    Route::put('wallet', [\App\Http\Controllers\Api\V1\Admin\Loyalty\WalletController::class, 'update']);
+                    Route::post('wallet/apple-cert', [\App\Http\Controllers\Api\V1\Admin\Loyalty\WalletController::class, 'appleCert']);
+                    Route::post('wallet/apple-wwdr', [\App\Http\Controllers\Api\V1\Admin\Loyalty\WalletController::class, 'appleWwdr']);
+                    Route::post('wallet/google-service-account', [\App\Http\Controllers\Api\V1\Admin\Loyalty\WalletController::class, 'googleServiceAccount']);
+                });
+                Route::get('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'show']);
+                Route::put('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'update']);
+                Route::post('app-look/logo', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'logo']);
+                Route::post('rewards/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'storeReward'])->whereNumber('id');
+                Route::delete('rewards/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'destroyReward'])->whereNumber('id');
+                Route::post('offers/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'storeOffer'])->whereNumber('id');
+                Route::delete('offers/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'destroyOffer'])->whereNumber('id');
             });
 
             // ─── Audit Logs ──────────────────────────────────────────────────

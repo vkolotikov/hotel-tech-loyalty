@@ -6,11 +6,11 @@ import { Button } from '../../workspace/ui/Button'
 import type { ThemeName } from '../../workspace/theme/accent'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { useBoot } from '../LoyaltyProvider'
-import { points } from '../lib/format'
+import { amountOf, points } from '../lib/format'
 import { useLook } from '../lib/look'
 import type { TierRef } from '../lib/types'
 import { ToneBadge } from '../ui/formParts'
-import { chosenTiers, decimal, named } from '../lib/forms'
+import { chosenTiers, named } from '../lib/forms'
 import { TierChip } from '../ui/TierChip'
 import { OFFERS_KEY, rewardsApi } from './api'
 import { OfferDialog } from './OfferDialog'
@@ -66,13 +66,14 @@ export function OfferRow({ offer: o, tiers, manage, theme, locale, onEdit }: {
   offer: Offer; tiers: TierRef[]; manage: boolean; theme: ThemeName; locale: string; onEdit: () => void
 }) {
   const { t } = useTranslation()
+  const currency = useBoot().venue.currency
   const state = offerState(o.state)
   const type = named('loyalty.rewards.offer_type', OFFER_TYPE_WORDS, o.type)
   const shown = offerValue(o.type, o.value, Object.keys(OFFER_VALUE_WORDS))
   const scope = o.applies_to !== 'all' ? named('loyalty.rewards.applies_to', APPLIES_TO_WORDS, o.applies_to) : null
   const kind = [
     type ? t(...type) : o.type,
-    shown === 'phrase' ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: decimal(o.value, locale) }) : shown === 'number' ? decimal(o.value, locale) : null,
+    shown === 'phrase' ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: amountOf(o.type, o.value, currency, locale) }) : shown === 'number' ? amountOf(o.type, o.value, currency, locale) : null,
     scope ? t(...scope) : o.applies_to !== 'all' ? o.applies_to : null,
   ].filter(Boolean).join(' · ')
   const days = o.start_date && o.end_date

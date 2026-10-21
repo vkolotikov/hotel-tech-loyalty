@@ -52,6 +52,19 @@ final class AccessMap
         'admin/loyalty/rewards'                 => ['staff',              'can_manage_offers',  'loyalty'],       // The rewards catalogue (changes: can_manage_offers, as admin/rewards)
         'admin/loyalty/offers'                  => ['staff',              'can_manage_offers',  'loyalty'],       // Offers (changes: can_manage_offers, as admin/offers)
         'admin/loyalty/redemptions'             => ['staff',              'can_redeem_points',  'loyalty'],       // Fulfil or cancel a redemption (can_redeem_points, as the full admin's routes)
+        'admin/loyalty/members/{id}/tier'       => ['staff',              'manager',            'loyalty'],       // Release 2: a member's tier is a manager's correction
+        'admin/loyalty/members/{id}/deactivate' => ['staff',              'manager',            'loyalty'],       // Deactivate a member (manager)
+        'admin/loyalty/members/{id}/reactivate' => ['staff',              'manager',            'loyalty'],       // Reactivate a member (manager)
+        'admin/loyalty/members/{id}/erase'      => ['staff',              'manager',            'loyalty'],       // Delete (anonymise) a member (manager)
+        'admin/loyalty/members/duplicates'      => ['manager',            'manager',            'loyalty'],       // Likely duplicates: personal data side by side (manager)
+        'admin/loyalty/members/merge'           => ['manager',            'manager',            'loyalty'],       // Merge two members (manager)
+        'admin/loyalty/members/imports'         => ['manager',            'manager',            'loyalty'],       // Member import (manager)
+        'admin/loyalty/members/export'          => ['manager',            'manager',            'loyalty'],       // Member export: personal data out of the system (manager)
+        'admin/loyalty/insights'                => ['can_view_analytics', 'can_view_analytics', 'loyalty'],       // Insights: the full admin's Analytics rule
+        'admin/loyalty/segments'                => ['staff',              'manager',            'loyalty'],       // Segments (changes: manager, beside the campaigns that use them)
+        'admin/loyalty/campaigns'               => ['staff',              'manager',            'loyalty'],       // Email campaigns (changes and sending: manager, as admin/email-campaigns)
+        'admin/loyalty/wallet'                  => ['manager',            'manager',            'loyalty'],       // Wallet pass settings and certificates (manager, as admin/wallet-config)
+        'admin/loyalty/app-look'                => ['staff',              'manager',            'loyalty'],       // The member app's look (changes: manager, as admin/settings)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)

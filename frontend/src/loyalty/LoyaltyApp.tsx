@@ -5,7 +5,13 @@ import { registerLoyaltyLocales } from './i18n'
 import { loginPath } from './lib/links'
 import { LoyaltyProvider } from './LoyaltyProvider'
 import { LoyaltyShell } from './LoyaltyShell'
+import { AppPage } from './app/AppPage'
+import { CampaignPage } from './campaigns/CampaignPage'
+import { CampaignsPage } from './campaigns/CampaignsPage'
+import { InsightsPage } from './insights/InsightsPage'
 import { MemberPage } from './member/MemberPage'
+import { DuplicatesPage } from './membership/DuplicatesPage'
+import { ImportPage } from './membership/ImportPage'
 import { MembersPage } from './members/MembersPage'
 import { ProgramPage } from './program/ProgramPage'
 import { RequestsPage } from './requests/RequestsPage'
@@ -32,11 +38,17 @@ export function LoyaltyApp() {
       <LoyaltyShell>
         <Routes>
           <Route index element={<MembersPage />} />
+          <Route path="members/duplicates" element={<DuplicatesPage />} />
+          <Route path="members/import" element={<ImportPage />} />
           <Route path="members/:id" element={<MemberPage />} />
           <Route path="requests" element={<RequestsPage />} />
           <Route path="program" element={<ProgramPage />} />
           <Route path="rewards" element={<RewardsPage />} />
+          <Route path="campaigns" element={<CampaignsPage />} />
+          <Route path="campaigns/:id" element={<CampaignPage />} />
+          <Route path="insights" element={<InsightsPage />} />
           <Route path="scan" element={<ScanPage />} />
+          <Route path="app" element={<AppPage />} />
           <Route path="*" element={<Navigate to="/loyalty" replace />} />
         </Routes>
       </LoyaltyShell>

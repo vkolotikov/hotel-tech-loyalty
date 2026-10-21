@@ -220,13 +220,22 @@ final class PortalBootstrap
         ];
     }
 
+    /**
+     * The venue's currency as members see it: the organisation's column, else the services setting, else EUR. HexaTech
+     * Loyalty's bootstrap reads the same, so staff and members see one currency.
+     */
+    public static function currency(Organization $org): string
+    {
+        return strtoupper((string) ($org->currency ?: HotelSetting::getValue('services_currency', 'EUR')));
+    }
+
     private function venue(Organization $org, array $theme): array
     {
         return [
             'name'         => $org->name,
             'logo_url'     => $theme['logo_url'],
             'industry'     => $theme['industry'],
-            'currency'     => strtoupper((string) ($org->currency ?: HotelSetting::getValue('services_currency', 'EUR'))),
+            'currency'     => self::currency($org),
             'timezone'     => self::timezone($org),
             'contact'      => ['email' => $org->email ?: null, 'phone' => $org->phone ?: null],
             'accent'       => $theme['accent'],
