@@ -67,7 +67,7 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
           <p className="text-xs text-a-text-2">{t('loyalty.campaigns.results.last_progress', 'Last batch {{when}}.', { when: when(c.last_progress_at, locale, timeZone) })}</p>
         )}
         {progress.skipped > 0 && (
-          <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started.', { number: n(progress.skipped) })}</p>
+          <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.', { number: n(progress.skipped) })}</p>
         )}
       </section>
 

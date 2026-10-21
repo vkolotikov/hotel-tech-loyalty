@@ -1,1 +1,238 @@
-{}
+{
+  "audience": {
+    "error": {
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: who it would reach could not be counted.",
+      "no_audience": "Choose who receives it first.",
+      "no_category": "Choose what kind of message it is first.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "unknown": "Who it would reach could not be counted. Please try again."
+    }
+  },
+  "back": "All push messages",
+  "blocker": {
+    "body": "Write the message.",
+    "category": "Choose what kind of message it is.",
+    "no_segment": "Choose who receives it.",
+    "segment_gone": "Its segment no longer exists. Choose another.",
+    "segment_problem": "Its segment has a rule that cannot be used. Fix the segment first.",
+    "title": "Write a title.",
+    "unsaved": "Save your changes first."
+  },
+  "cancel": {
+    "body": "{{sent}} pushes already went out and stay sent. The rest are not sent; it stops within one batch of 100.",
+    "confirm": "Stop sending",
+    "error": {
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: it may still be sending. Try again.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "not_sending": "This message is no longer sending. The page now shows it as it is.",
+      "unknown": "It could not be stopped. Please try again."
+    },
+    "keep": "Keep sending",
+    "title": "Stop sending {{name}}?"
+  },
+  "category": {
+    "offers": "Offers",
+    "points": "Points",
+    "stays": "Visits and bookings",
+    "tier": "Tier news"
+  },
+  "category_hint": {
+    "offers": "Special offers, rewards and deals.",
+    "points": "Points earned, bonuses and points that will expire.",
+    "stays": "Visits, stays and bookings.",
+    "tier": "Tier changes and tier benefits."
+  },
+  "copy_name": "{{name}} (copy)",
+  "create": {
+    "error": {
+      "feature_locked": "Your plan does not include push messages.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: no message was made. Try again.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "unknown": "The message could not be made. Please try again."
+    }
+  },
+  "delete": {
+    "body": "The draft goes for good. Nothing was sent from it.",
+    "confirm": "Delete draft",
+    "keep": "Keep it",
+    "title": "Delete {{name}}?"
+  },
+  "duplicate": {
+    "error": {
+      "feature_locked": "Your plan does not include push messages.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: no copy was made. Try again.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "unknown": "The copy could not be made. Please try again."
+    }
+  },
+  "editor": {
+    "audience": "Who receives it",
+    "audience_hint": "Only the segment’s members with the app, push switched on and this kind of message switched on get it. Send shows the exact number first.",
+    "before_send": "Before it can be sent:",
+    "body": "Message",
+    "body_example": "e.g. Every visit until Sunday earns double points.",
+    "category": "Kind of message",
+    "category_hint": "Members choose in the app which kinds they get. A member who switched this kind off does not get it, not even in the inbox.",
+    "choose_segment": "Choose a segment",
+    "delete": "Delete draft",
+    "duplicate": "Duplicate",
+    "heading": "The message",
+    "name": "Name",
+    "name_hint": "Only staff see it.",
+    "save": "Save draft",
+    "segment_gone": "A segment that no longer exists",
+    "segment_option": "{{name}} · {{number}} members",
+    "segment_problem": "{{name}} (a rule needs fixing)",
+    "send": "Send…",
+    "title": "Title",
+    "title_example": "e.g. Double points this weekend",
+    "unsaved": "Changes not saved"
+  },
+  "guide": {
+    "fits": "{{count}} of about {{guide}} characters that show in full",
+    "may_cut": "{{count}} characters: phones may cut it after about {{guide}}",
+    "too_long": "{{count}} characters: at most {{max}} can be saved"
+  },
+  "list": {
+    "counts": "{{sent}} of {{total}} pushed",
+    "edited": "Edited {{day}}",
+    "line": "A short message to the phones of a segment’s members who have the app. Each one also stays in their inbox in the app.",
+    "new": "New push message",
+    "new_name": "New push message, {{day}}",
+    "no_category": "No kind chosen yet",
+    "no_segment": "No segment",
+    "no_title": "No title yet",
+    "none": "No push messages yet. Make one, choose its kind and a segment, and send it."
+  },
+  "load": {
+    "error": {
+      "feature_locked": "Your plan does not include push messages.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection. Check the network and try again.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "unknown": "This could not be loaded. Please try again."
+    }
+  },
+  "not_reached": {
+    "no_device": "{{number}} have no phone with the app",
+    "opted_out": "{{number}} switched off this kind of message",
+    "push_off": "{{number}} switched push notifications off"
+  },
+  "outcome": {
+    "failed": "Not delivered",
+    "inbox_only": "Inbox only",
+    "pending": "Under way",
+    "sent": "Pushed",
+    "skipped": "Passed over"
+  },
+  "outcome_hint": {
+    "failed": "The phone could not be reached, for example the app was removed. It is still in their inbox.",
+    "inbox_only": "They switched push off after it started. It is in their inbox in the app.",
+    "pending": "They were being sent to when sending stopped. They are not sent to again.",
+    "sent": "The phone service took the push.",
+    "skipped": "They switched this kind of message off, or their account was switched off, after it started."
+  },
+  "plan_locked": "Your plan does not include push messages. Email campaigns and segments are not affected.",
+  "preview": {
+    "caption": "How it shows on a lock screen. Phones differ; a long message is cut after a few lines.",
+    "cut": "Phones cut a title after about {{guide}} characters, as here.",
+    "heading": "On a phone",
+    "no_body": "Your message",
+    "no_title": "Your title",
+    "now": "now"
+  },
+  "problem": {
+    "body_long": "Keep the message to {{max}} characters.",
+    "category": "Choose one of the kinds below.",
+    "name": "Give the message a name, up to {{max}} characters.",
+    "segment_gone": "That segment no longer exists. Choose another.",
+    "title_long": "Keep the title to {{max}} characters."
+  },
+  "reach": {
+    "choose": "Choose a kind and a segment to see who it reaches.",
+    "counted": "It would reach {{number}} of the {{members}} members of {{segment}} now.",
+    "save_first": "Save the draft to count who it reaches."
+  },
+  "remove": {
+    "error": {
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: nothing was deleted. Try again.",
+      "not_a_draft": "Only a draft can be deleted. The page now shows it as it is.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "unknown": "The draft could not be deleted. Please try again."
+    }
+  },
+  "results": {
+    "by": "Sent by {{name}}",
+    "cancel": "Stop sending",
+    "cancelled": "Cancelled: {{sent}} were pushed before it stopped.",
+    "done": "Sent {{when}}.",
+    "gone": "{{number}} were not reached: their member record was deleted or merged after it started.",
+    "last_progress": "Last batch {{when}}.",
+    "message": "The message",
+    "of": "Of",
+    "progress": "Handled so far",
+    "sending": "Sending, in batches of 100. This page updates every 10 seconds.",
+    "stopped": "Sending stopped before the end: {{sent}} were pushed, the rest were not.",
+    "title": "How far it got",
+    "to": "To {{segment}}"
+  },
+  "save": {
+    "error": {
+      "feature_locked": "Your plan does not include push messages.",
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection: nothing was saved. Try again.",
+      "not_a_draft": "This message is no longer a draft: it was sent meanwhile. The page now shows it as it is.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "unknown": "The draft could not be saved. Please try again."
+    }
+  },
+  "send": {
+    "confirm": "Send to {{number}} members",
+    "counting": "Counting who it will reach…",
+    "error": {
+      "already_started": "This message was already started. The page now shows how far it got.",
+      "audience_changed": "The number of members it would reach is now {{reached}}. Check the number, then send again.",
+      "bad_rule": "Its segment has a rule that cannot be used. Fix the segment first.",
+      "changed": "The message changed since this page showed it. Check it, then send again.",
+      "feature_locked": "Your plan does not include push messages.",
+      "incomplete": "The message is not ready to send. The page now shows what it still needs.",
+      "manager_only": "Only an owner or a manager can work with push messages.",
+      "network": "No connection. Reload the page to see whether it started before you press Send again.",
+      "no_audience": "Choose who receives it first.",
+      "no_category": "Choose what kind of message it is first.",
+      "nobody_to_send_to": "Nobody in this segment can receive it.",
+      "not_allowed": "Only an owner or a manager can work with push messages.",
+      "not_found": "This push message no longer exists.",
+      "not_started": "The message could not be queued. Nothing was sent; please try again.",
+      "too_many": "It would reach more than {{limit}} members, the most one message may. Narrow the segment.",
+      "unknown": "It may not have started. Reload the page to see its state before you press Send again."
+    },
+    "final": "Once it starts it can be stopped, but pushes already sent cannot be taken back. Each one also stays in the member’s inbox in the app.",
+    "keep": "Not now",
+    "left_out": "{{number}} of its {{members}} members will not get it:",
+    "nobody": "Nobody in {{segment}} can receive it.",
+    "over": "It would reach {{number}} members, more than {{limit}}, the most one message may. Narrow the segment.",
+    "title": "Send this push message",
+    "will_push": "It will push to {{number}} members of {{segment}}, starting now."
+  },
+  "status": {
+    "cancelled": "Cancelled",
+    "draft": "Draft",
+    "failed": "Failed",
+    "sending": "Sending",
+    "sent": "Sent"
+  }
+}

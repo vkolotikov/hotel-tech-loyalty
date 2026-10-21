@@ -1,1 +1,238 @@
-{}
+{
+  "audience": {
+    "error": {
+      "bad_rule": "Son segment contient une règle inutilisable. Corrigez d’abord le segment.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : impossible de compter qui elle toucherait.",
+      "no_audience": "Choisissez d’abord qui la reçoit.",
+      "no_category": "Choisissez d’abord le type de message.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "unknown": "Impossible de compter qui elle toucherait. Veuillez réessayer."
+    }
+  },
+  "back": "Toutes les notifications push",
+  "blocker": {
+    "body": "Écrivez le message.",
+    "category": "Choisissez le type de message.",
+    "no_segment": "Choisissez qui la reçoit.",
+    "segment_gone": "Son segment n’existe plus. Choisissez-en un autre.",
+    "segment_problem": "Son segment contient une règle inutilisable. Corrigez d’abord le segment.",
+    "title": "Écrivez un titre.",
+    "unsaved": "Enregistrez d’abord vos modifications."
+  },
+  "cancel": {
+    "body": "{{sent}} notifications sont déjà parties et le restent. Les autres ne sont pas envoyées ; l’envoi s’arrête en moins d’un lot de 100.",
+    "confirm": "Arrêter l’envoi",
+    "error": {
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : l’envoi continue peut-être. Réessayez.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "not_sending": "Cette notification n’est plus en cours d’envoi. La page l’affiche désormais telle qu’elle est.",
+      "unknown": "Impossible d’arrêter l’envoi. Veuillez réessayer."
+    },
+    "keep": "Poursuivre l’envoi",
+    "title": "Arrêter l’envoi de {{name}} ?"
+  },
+  "category": {
+    "offers": "Offres",
+    "points": "Points",
+    "stays": "Visites et réservations",
+    "tier": "Actualités du niveau"
+  },
+  "category_hint": {
+    "offers": "Offres spéciales, récompenses et promotions.",
+    "points": "Points gagnés, bonus et points qui vont expirer.",
+    "stays": "Visites, séjours et réservations.",
+    "tier": "Changements de niveau et avantages du niveau."
+  },
+  "copy_name": "{{name}} (copie)",
+  "create": {
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : aucune notification n’a été créée. Réessayez.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "unknown": "Impossible de créer la notification. Veuillez réessayer."
+    }
+  },
+  "delete": {
+    "body": "Le brouillon disparaît définitivement. Rien n’a été envoyé à partir de lui.",
+    "confirm": "Supprimer le brouillon",
+    "keep": "Le conserver",
+    "title": "Supprimer {{name}} ?"
+  },
+  "duplicate": {
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : aucune copie n’a été créée. Réessayez.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "unknown": "Impossible de créer la copie. Veuillez réessayer."
+    }
+  },
+  "editor": {
+    "audience": "Qui la reçoit",
+    "audience_hint": "Seuls les membres du segment qui ont l’application, avec les notifications push et ce type de message activés, la reçoivent. L’envoi affiche d’abord le nombre exact.",
+    "before_send": "Avant de pouvoir l’envoyer :",
+    "body": "Message",
+    "body_example": "p. ex. Chaque visite jusqu’à dimanche rapporte le double de points.",
+    "category": "Type de message",
+    "category_hint": "Les membres choisissent dans l’application les types qu’ils reçoivent. Un membre qui a désactivé ce type ne la reçoit pas, pas même dans sa boîte de réception.",
+    "choose_segment": "Choisir un segment",
+    "delete": "Supprimer le brouillon",
+    "duplicate": "Dupliquer",
+    "heading": "Le message",
+    "name": "Nom",
+    "name_hint": "Visible par l’équipe seulement.",
+    "save": "Enregistrer le brouillon",
+    "segment_gone": "Un segment qui n’existe plus",
+    "segment_option": "{{name}} · {{number}} membres",
+    "segment_problem": "{{name}} (une règle est à corriger)",
+    "send": "Envoyer…",
+    "title": "Titre",
+    "title_example": "p. ex. Points doublés ce week-end",
+    "unsaved": "Modifications non enregistrées"
+  },
+  "guide": {
+    "fits": "{{count}} sur environ {{guide}} caractères affichés en entier",
+    "may_cut": "{{count}} caractères : les téléphones peuvent couper après environ {{guide}}",
+    "too_long": "{{count}} caractères : {{max}} au plus peuvent être enregistrés"
+  },
+  "list": {
+    "counts": "{{sent}} sur {{total}} remises",
+    "edited": "Modifiée le {{day}}",
+    "line": "Un court message sur le téléphone des membres d’un segment qui ont l’application. Chacun reste aussi dans leur boîte de réception de l’application.",
+    "new": "Nouvelle notification push",
+    "new_name": "Nouvelle notification push, {{day}}",
+    "no_category": "Type pas encore choisi",
+    "no_segment": "Aucun segment",
+    "no_title": "Pas encore de titre",
+    "none": "Aucune notification push pour l’instant. Créez-en une, choisissez son type et un segment, puis envoyez-la."
+  },
+  "load": {
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "unknown": "Le chargement a échoué. Veuillez réessayer."
+    }
+  },
+  "not_reached": {
+    "no_device": "{{number}} n’ont pas de téléphone avec l’application",
+    "opted_out": "{{number}} ont désactivé ce type de message",
+    "push_off": "{{number}} ont désactivé les notifications push"
+  },
+  "outcome": {
+    "failed": "Non remises",
+    "inbox_only": "Boîte de réception seulement",
+    "pending": "En cours",
+    "sent": "Remises",
+    "skipped": "Ignorées"
+  },
+  "outcome_hint": {
+    "failed": "Le téléphone était injoignable, par exemple parce que l’application a été supprimée. Le message est quand même dans leur boîte de réception.",
+    "inbox_only": "Ils ont désactivé les notifications push après le début de l’envoi. Le message est dans leur boîte de réception de l’application.",
+    "pending": "L’envoi vers eux était en cours quand il s’est arrêté. Rien ne leur est renvoyé.",
+    "sent": "Le service de notifications du téléphone a accepté la notification.",
+    "skipped": "Ils ont désactivé ce type de message, ou leur compte a été désactivé, après le début de l’envoi."
+  },
+  "plan_locked": "Votre formule n’inclut pas les notifications push. Les campagnes e-mail et les segments ne sont pas concernés.",
+  "preview": {
+    "caption": "Son aspect sur l’écran verrouillé. Les téléphones diffèrent ; un long message est coupé après quelques lignes.",
+    "cut": "Les téléphones coupent un titre après environ {{guide}} caractères, comme ici.",
+    "heading": "Sur un téléphone",
+    "no_body": "Votre message",
+    "no_title": "Votre titre",
+    "now": "maintenant"
+  },
+  "problem": {
+    "body_long": "Limitez le message à {{max}} caractères.",
+    "category": "Choisissez l’un des types ci-dessous.",
+    "name": "Donnez un nom à la notification, {{max}} caractères au plus.",
+    "segment_gone": "Ce segment n’existe plus. Choisissez-en un autre.",
+    "title_long": "Limitez le titre à {{max}} caractères."
+  },
+  "reach": {
+    "choose": "Choisissez un type et un segment pour voir qui elle touche.",
+    "counted": "Elle toucherait maintenant {{number}} des {{members}} membres de {{segment}}.",
+    "save_first": "Enregistrez le brouillon pour compter qui elle touche."
+  },
+  "remove": {
+    "error": {
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : rien n’a été supprimé. Réessayez.",
+      "not_a_draft": "Seul un brouillon peut être supprimé. La page l’affiche désormais tel qu’il est.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "unknown": "Impossible de supprimer le brouillon. Veuillez réessayer."
+    }
+  },
+  "results": {
+    "by": "Envoyée par {{name}}",
+    "cancel": "Arrêter l’envoi",
+    "cancelled": "Annulée : {{sent}} ont été remises avant l’arrêt.",
+    "done": "Envoyée le {{when}}.",
+    "gone": "{{number}} n’ont pas été touchés : leur fiche de membre a été supprimée ou fusionnée après le début de l’envoi.",
+    "last_progress": "Dernier lot {{when}}.",
+    "message": "Le message",
+    "of": "Sur",
+    "progress": "Traités jusqu’ici",
+    "sending": "Envoi par lots de 100. Cette page se met à jour toutes les 10 secondes.",
+    "stopped": "L’envoi s’est arrêté avant la fin : {{sent}} ont été remises, les autres non.",
+    "title": "Où en est l’envoi",
+    "to": "À {{segment}}"
+  },
+  "save": {
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "not_a_draft": "Cette notification n’est plus un brouillon : elle a été envoyée entre-temps. La page l’affiche désormais telle qu’elle est.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "unknown": "Impossible d’enregistrer le brouillon. Veuillez réessayer."
+    }
+  },
+  "send": {
+    "confirm": "Envoyer à {{number}} membres",
+    "counting": "Comptage des destinataires…",
+    "error": {
+      "already_started": "Cette notification a déjà été lancée. La page affiche désormais où en est l’envoi.",
+      "audience_changed": "Le nombre de membres touchés est maintenant de {{reached}}. Vérifiez le nombre, puis renvoyez.",
+      "bad_rule": "Son segment contient une règle inutilisable. Corrigez d’abord le segment.",
+      "changed": "La notification a changé depuis l’affichage de cette page. Vérifiez-la, puis renvoyez.",
+      "feature_locked": "Votre formule n’inclut pas les notifications push.",
+      "incomplete": "La notification n’est pas prête à partir. La page affiche désormais ce qu’il lui manque.",
+      "manager_only": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "network": "Pas de connexion. Rechargez la page pour voir si l’envoi a commencé avant d’appuyer de nouveau sur Envoyer.",
+      "no_audience": "Choisissez d’abord qui la reçoit.",
+      "no_category": "Choisissez d’abord le type de message.",
+      "nobody_to_send_to": "Personne dans ce segment ne peut la recevoir.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut travailler sur les notifications push.",
+      "not_found": "Cette notification push n’existe plus.",
+      "not_started": "La notification n’a pas pu être mise en file d’attente. Rien n’a été envoyé ; veuillez réessayer.",
+      "too_many": "Elle toucherait plus de {{limit}} membres, le maximum pour une notification. Réduisez le segment.",
+      "unknown": "L’envoi n’a peut-être pas commencé. Rechargez la page pour voir son état avant d’appuyer de nouveau sur Envoyer."
+    },
+    "final": "Une fois lancé, l’envoi peut être arrêté, mais les notifications déjà parties ne peuvent pas être reprises. Chacune reste aussi dans la boîte de réception du membre dans l’application.",
+    "keep": "Pas maintenant",
+    "left_out": "{{number}} de ses {{members}} membres ne la recevront pas :",
+    "nobody": "Personne dans {{segment}} ne peut la recevoir.",
+    "over": "Elle toucherait {{number}} membres, plus de {{limit}}, le maximum pour une notification. Réduisez le segment.",
+    "title": "Envoyer cette notification push",
+    "will_push": "Elle partira vers {{number}} membres de {{segment}}, dès maintenant."
+  },
+  "status": {
+    "cancelled": "Annulée",
+    "draft": "Brouillon",
+    "failed": "Échec",
+    "sending": "En cours d’envoi",
+    "sent": "Envoyée"
+  }
+}

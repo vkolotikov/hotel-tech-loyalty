@@ -174,7 +174,7 @@ describe('A campaign that went out', () => {
   it('once sent says when, and who it was handed but did not mail', () => {
     const words = text(render(manager, draft({ status: 'sent', recipient_count: 400, sent_count: 395, failed_count: 2, sent_at: '2026-10-21T08:00:00+00:00' })))
     expect(words).toContain('Sent Oct 21, 11:00.')
-    expect(words).toContain('3 were not emailed: they withdrew their consent or unsubscribed after it started.')
+    expect(words).toContain('3 were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.')
     expect(words).not.toContain('Stop sending')
     expect(words).toContain('Duplicate')
   })

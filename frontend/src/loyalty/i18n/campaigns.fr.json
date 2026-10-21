@@ -79,7 +79,7 @@
     "stopped": "L’envoi s’est arrêté avant la fin : {{sent}} ont été envoyés, les autres non.",
     "cancelled": "Annulée : {{sent}} ont été envoyés avant l’arrêt.",
     "last_progress": "Dernier lot le {{when}}.",
-    "skipped": "{{number}} n’ont pas reçu l’e-mail : ils ont retiré leur accord ou se sont désinscrits après le début.",
+    "skipped": "{{number}} n’ont pas reçu l’e-mail : ils ont retiré leur accord ou se sont désinscrits après le début, ou leur adresse a été bloquée après un rejet ou une plainte.",
     "email": "L’e-mail",
     "to": "À {{segment}}",
     "by": "Envoyée par {{name}}",

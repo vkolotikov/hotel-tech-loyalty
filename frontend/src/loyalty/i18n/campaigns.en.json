@@ -79,7 +79,7 @@
     "stopped": "Sending stopped before the end: {{sent}} were sent, the rest were not.",
     "cancelled": "Cancelled: {{sent}} were sent before it stopped.",
     "last_progress": "Last batch {{when}}.",
-    "skipped": "{{number}} were not emailed: they withdrew their consent or unsubscribed after it started.",
+    "skipped": "{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.",
     "email": "The email",
     "to": "To {{segment}}",
     "by": "Sent by {{name}}",

@@ -1,1 +1,238 @@
-{}
+{
+  "audience": {
+    "error": {
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es ließ sich nicht zählen, wen sie erreicht.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "no_category": "Wählen Sie zuerst die Art der Nachricht.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "unknown": "Es ließ sich nicht zählen, wen sie erreicht. Bitte versuchen Sie es erneut."
+    }
+  },
+  "back": "Alle Push-Nachrichten",
+  "blocker": {
+    "body": "Schreiben Sie die Nachricht.",
+    "category": "Wählen Sie die Art der Nachricht.",
+    "no_segment": "Wählen Sie, wer sie erhält.",
+    "segment_gone": "Ihr Segment gibt es nicht mehr. Wählen Sie ein anderes.",
+    "segment_problem": "Ihr Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+    "title": "Schreiben Sie einen Titel.",
+    "unsaved": "Speichern Sie zuerst Ihre Änderungen."
+  },
+  "cancel": {
+    "body": "{{sent}} Push-Nachrichten sind bereits verschickt und bleiben es. Der Rest wird nicht gesendet; der Versand stoppt innerhalb eines Pakets von 100.",
+    "confirm": "Versand stoppen",
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Der Versand läuft vielleicht noch. Bitte versuchen Sie es erneut.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "not_sending": "Diese Nachricht wird nicht mehr gesendet. Die Seite zeigt sie jetzt so, wie sie ist.",
+      "unknown": "Der Versand ließ sich nicht stoppen. Bitte versuchen Sie es erneut."
+    },
+    "keep": "Weiter senden",
+    "title": "Versand von {{name}} stoppen?"
+  },
+  "category": {
+    "offers": "Angebote",
+    "points": "Punkte",
+    "stays": "Besuche und Buchungen",
+    "tier": "Neues zur Stufe"
+  },
+  "category_hint": {
+    "offers": "Sonderangebote, Prämien und Aktionen.",
+    "points": "Gesammelte Punkte, Boni und Punkte, die verfallen.",
+    "stays": "Besuche, Aufenthalte und Buchungen.",
+    "tier": "Stufenwechsel und Vorteile der Stufe."
+  },
+  "copy_name": "{{name}} (Kopie)",
+  "create": {
+    "error": {
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es wurde keine Nachricht angelegt. Bitte versuchen Sie es erneut.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "unknown": "Die Nachricht ließ sich nicht anlegen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "delete": {
+    "body": "Der Entwurf wird endgültig gelöscht. Aus ihm wurde nichts gesendet.",
+    "confirm": "Entwurf löschen",
+    "keep": "Behalten",
+    "title": "{{name}} löschen?"
+  },
+  "duplicate": {
+    "error": {
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es wurde keine Kopie angelegt. Bitte versuchen Sie es erneut.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "unknown": "Die Kopie ließ sich nicht anlegen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "editor": {
+    "audience": "Wer sie erhält",
+    "audience_hint": "Nur Mitglieder des Segments mit der App, eingeschalteten Push-Nachrichten und eingeschalteter Art der Nachricht erhalten sie. Vor dem Senden sehen Sie die genaue Zahl.",
+    "before_send": "Bevor sie gesendet werden kann:",
+    "body": "Nachricht",
+    "body_example": "z. B. Jeder Besuch bis Sonntag bringt doppelte Punkte.",
+    "category": "Art der Nachricht",
+    "category_hint": "Mitglieder wählen in der App, welche Arten sie erhalten. Wer diese Art ausgeschaltet hat, erhält sie nicht, auch nicht im Posteingang.",
+    "choose_segment": "Segment wählen",
+    "delete": "Entwurf löschen",
+    "duplicate": "Duplizieren",
+    "heading": "Die Nachricht",
+    "name": "Name",
+    "name_hint": "Nur für das Team sichtbar.",
+    "save": "Entwurf speichern",
+    "segment_gone": "Ein Segment, das es nicht mehr gibt",
+    "segment_option": "{{name}} · {{number}} Mitglieder",
+    "segment_problem": "{{name}} (eine Regel muss korrigiert werden)",
+    "send": "Senden…",
+    "title": "Titel",
+    "title_example": "z. B. Doppelte Punkte an diesem Wochenende",
+    "unsaved": "Änderungen nicht gespeichert"
+  },
+  "guide": {
+    "fits": "{{count}} von etwa {{guide}} Zeichen, die vollständig zu sehen sind",
+    "may_cut": "{{count}} Zeichen: Telefone schneiden nach etwa {{guide}} ab",
+    "too_long": "{{count}} Zeichen: höchstens {{max}} lassen sich speichern"
+  },
+  "list": {
+    "counts": "{{sent}} von {{total}} zugestellt",
+    "edited": "Bearbeitet am {{day}}",
+    "line": "Eine kurze Nachricht auf die Telefone der Mitglieder eines Segments, die die App haben. Jede bleibt außerdem in ihrem Posteingang in der App.",
+    "new": "Neue Push-Nachricht",
+    "new_name": "Neue Push-Nachricht, {{day}}",
+    "no_category": "Noch keine Art gewählt",
+    "no_segment": "Kein Segment",
+    "no_title": "Noch kein Titel",
+    "none": "Noch keine Push-Nachrichten. Legen Sie eine an, wählen Sie ihre Art und ein Segment und senden Sie sie."
+  },
+  "load": {
+    "error": {
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "unknown": "Das ließ sich nicht laden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "not_reached": {
+    "no_device": "{{number}} haben kein Telefon mit der App",
+    "opted_out": "{{number}} haben diese Art von Nachricht ausgeschaltet",
+    "push_off": "{{number}} haben Push-Nachrichten ausgeschaltet"
+  },
+  "outcome": {
+    "failed": "Nicht zugestellt",
+    "inbox_only": "Nur im Posteingang",
+    "pending": "In Arbeit",
+    "sent": "Zugestellt",
+    "skipped": "Übersprungen"
+  },
+  "outcome_hint": {
+    "failed": "Das Telefon war nicht erreichbar, zum Beispiel weil die App entfernt wurde. Die Nachricht ist trotzdem in ihrem Posteingang.",
+    "inbox_only": "Sie haben Push-Nachrichten nach dem Start ausgeschaltet. Die Nachricht ist in ihrem Posteingang in der App.",
+    "pending": "An sie wurde gerade gesendet, als der Versand stoppte. Es wird nicht erneut an sie gesendet.",
+    "sent": "Der Push-Dienst des Telefons hat die Nachricht angenommen.",
+    "skipped": "Sie haben diese Art von Nachricht ausgeschaltet, oder ihr Konto wurde nach dem Start deaktiviert."
+  },
+  "plan_locked": "Ihr Tarif enthält keine Push-Nachrichten. E-Mail-Kampagnen und Segmente sind davon nicht betroffen.",
+  "preview": {
+    "caption": "So erscheint sie auf dem Sperrbildschirm. Telefone unterscheiden sich; eine lange Nachricht wird nach einigen Zeilen abgeschnitten.",
+    "cut": "Telefone schneiden einen Titel nach etwa {{guide}} Zeichen ab, wie hier.",
+    "heading": "Auf dem Telefon",
+    "no_body": "Ihre Nachricht",
+    "no_title": "Ihr Titel",
+    "now": "jetzt"
+  },
+  "problem": {
+    "body_long": "Die Nachricht darf höchstens {{max}} Zeichen lang sein.",
+    "category": "Wählen Sie eine der Arten unten.",
+    "name": "Geben Sie der Nachricht einen Namen mit höchstens {{max}} Zeichen.",
+    "segment_gone": "Dieses Segment gibt es nicht mehr. Wählen Sie ein anderes.",
+    "title_long": "Der Titel darf höchstens {{max}} Zeichen lang sein."
+  },
+  "reach": {
+    "choose": "Wählen Sie eine Art und ein Segment, um zu sehen, wen sie erreicht.",
+    "counted": "Sie würde jetzt {{number}} der {{members}} Mitglieder von {{segment}} erreichen.",
+    "save_first": "Speichern Sie den Entwurf, um zu zählen, wen sie erreicht."
+  },
+  "remove": {
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Bitte versuchen Sie es erneut.",
+      "not_a_draft": "Nur ein Entwurf lässt sich löschen. Die Seite zeigt ihn jetzt so, wie er ist.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "unknown": "Der Entwurf ließ sich nicht löschen. Bitte versuchen Sie es erneut."
+    }
+  },
+  "results": {
+    "by": "Gesendet von {{name}}",
+    "cancel": "Versand stoppen",
+    "cancelled": "Abgebrochen: {{sent}} wurden vor dem Stopp zugestellt.",
+    "done": "Gesendet am {{when}}.",
+    "gone": "{{number}} wurden nicht erreicht: Ihr Mitgliedsdatensatz wurde nach dem Start gelöscht oder zusammengeführt.",
+    "last_progress": "Letztes Paket {{when}}.",
+    "message": "Die Nachricht",
+    "of": "Von",
+    "progress": "Bisher bearbeitet",
+    "sending": "Wird in Paketen von 100 gesendet. Diese Seite aktualisiert sich alle 10 Sekunden.",
+    "stopped": "Der Versand stoppte vor dem Ende: {{sent}} wurden zugestellt, der Rest nicht.",
+    "title": "Wie weit sie kam",
+    "to": "An {{segment}}"
+  },
+  "save": {
+    "error": {
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "invalid": "Prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "not_a_draft": "Diese Nachricht ist kein Entwurf mehr: Sie wurde inzwischen gesendet. Die Seite zeigt sie jetzt so, wie sie ist.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "unknown": "Der Entwurf ließ sich nicht speichern. Bitte versuchen Sie es erneut."
+    }
+  },
+  "send": {
+    "confirm": "An {{number}} Mitglieder senden",
+    "counting": "Es wird gezählt, wen sie erreicht…",
+    "error": {
+      "already_started": "Diese Nachricht wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie kam.",
+      "audience_changed": "Sie würde jetzt {{reached}} Mitglieder erreichen. Prüfen Sie die Zahl und senden Sie erneut.",
+      "bad_rule": "Das Segment hat eine Regel, die sich nicht anwenden lässt. Korrigieren Sie zuerst das Segment.",
+      "changed": "Die Nachricht hat sich geändert, seit diese Seite sie zeigte. Prüfen Sie sie und senden Sie erneut.",
+      "feature_locked": "Ihr Tarif enthält keine Push-Nachrichten.",
+      "incomplete": "Die Nachricht ist noch nicht bereit zum Senden. Die Seite zeigt jetzt, was noch fehlt.",
+      "manager_only": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu und prüfen Sie, ob der Versand begonnen hat, bevor Sie erneut auf Senden drücken.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "no_category": "Wählen Sie zuerst die Art der Nachricht.",
+      "nobody_to_send_to": "Niemand in diesem Segment kann sie erhalten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Push-Nachrichten arbeiten.",
+      "not_found": "Diese Push-Nachricht gibt es nicht mehr.",
+      "not_started": "Die Nachricht ließ sich nicht einreihen. Es wurde nichts gesendet; bitte versuchen Sie es erneut.",
+      "too_many": "Sie würde mehr als {{limit}} Mitglieder erreichen, das Höchste für eine Nachricht. Grenzen Sie das Segment ein.",
+      "unknown": "Möglicherweise hat sie nicht begonnen. Laden Sie die Seite neu und prüfen Sie ihren Stand, bevor Sie erneut auf Senden drücken."
+    },
+    "final": "Einmal gestartet, lässt sich der Versand stoppen, aber bereits gesendete Push-Nachrichten lassen sich nicht zurückholen. Jede bleibt außerdem im Posteingang des Mitglieds in der App.",
+    "keep": "Nicht jetzt",
+    "left_out": "{{number}} seiner {{members}} Mitglieder erhalten sie nicht:",
+    "nobody": "Niemand in {{segment}} kann sie erhalten.",
+    "over": "Sie würde {{number}} Mitglieder erreichen, mehr als {{limit}}, das Höchste für eine Nachricht. Grenzen Sie das Segment ein.",
+    "title": "Diese Push-Nachricht senden",
+    "will_push": "Sie geht ab sofort an {{number}} Mitglieder von {{segment}}."
+  },
+  "status": {
+    "cancelled": "Abgebrochen",
+    "draft": "Entwurf",
+    "failed": "Fehlgeschlagen",
+    "sending": "Wird gesendet",
+    "sent": "Gesendet"
+  }
+}

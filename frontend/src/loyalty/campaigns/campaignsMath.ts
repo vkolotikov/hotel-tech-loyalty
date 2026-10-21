@@ -95,7 +95,7 @@ export const isLive = (status: string): boolean => status === 'sending'
 /**
  * How far a campaign got: those mailed, those that failed, of how many. `skipped` is, once it is over, the members it
  * was handed that it neither mailed nor failed: they withdrew consent or unsubscribed after it started (the job checks
- * again before every chunk).
+ * again before every chunk), or — since release 3 — the transport refused their address as suppressed.
  */
 export function progressOf(c: Pick<CampaignRow, 'status' | 'recipient_count' | 'sent_count' | 'failed_count'>): { done: number; total: number; percent: number; skipped: number } {
   const done = c.sent_count + c.failed_count

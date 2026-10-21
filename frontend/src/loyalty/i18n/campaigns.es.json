@@ -79,7 +79,7 @@
     "stopped": "El envío se detuvo antes del final: se enviaron {{sent}}, el resto no.",
     "cancelled": "Cancelada: se enviaron {{sent}} antes de detenerse.",
     "last_progress": "Último lote el {{when}}.",
-    "skipped": "{{number}} no recibieron el correo: retiraron su consentimiento o se dieron de baja después de empezar.",
+    "skipped": "{{number}} no recibieron el correo: retiraron su consentimiento o se dieron de baja después de empezar, o su dirección quedó bloqueada tras un rebote o una queja.",
     "email": "El correo",
     "to": "Para {{segment}}",
     "by": "Enviada por {{name}}",
