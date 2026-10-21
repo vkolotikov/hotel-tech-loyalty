@@ -47,6 +47,7 @@ class BootstrapController extends Controller
             'features'     => [
                 'campaigns' => $org->hasFeature('campaigns'),
                 'wallet'    => $org->hasFeature('wallet'),
+                'push'      => $org->hasFeature('push_notifications'),
             ],
             'staff'        => [
                 'id'   => (int) $user->id,

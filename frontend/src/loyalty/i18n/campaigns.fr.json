@@ -206,7 +206,8 @@
   },
   "tab": {
     "campaigns": "Campagnes",
-    "segments": "Segments"
+    "segments": "Segments",
+    "push": "Notifications push"
   },
   "status": {
     "draft": "Brouillon",

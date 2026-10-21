@@ -23,7 +23,7 @@ export const SENDING_REFRESH_MS = 10_000
 
 // ─── The tabs ─────────────────────────────────────────────────────────────
 
-export const CAMPAIGN_TABS = ['campaigns', 'segments'] as const
+export const CAMPAIGN_TABS = ['campaigns', 'segments', 'push'] as const
 export type CampaignTab = typeof CAMPAIGN_TABS[number]
 
 /** The tab an address names (`?tab=segments`); Campaigns for none or anything else. */

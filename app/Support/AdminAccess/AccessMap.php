@@ -65,6 +65,7 @@ final class AccessMap
         'admin/loyalty/campaigns'               => ['staff',              'manager',            'loyalty'],       // Email campaigns (changes and sending: manager, as admin/email-campaigns)
         'admin/loyalty/wallet'                  => ['manager',            'manager',            'loyalty'],       // Wallet pass settings and certificates (manager, as admin/wallet-config)
         'admin/loyalty/app-look'                => ['staff',              'manager',            'loyalty'],       // The member app's look (changes: manager, as admin/settings)
+        'admin/loyalty/push'                    => ['staff',              'manager',            'loyalty'],       // Push messages to a segment (release 3; changes and sending: manager)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)

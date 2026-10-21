@@ -9,6 +9,7 @@
 export const TAB_WORDS: Record<string, string> = {
   campaigns: 'Campaigns',
   segments: 'Segments',
+  push: 'Push messages',
 }
 
 /** A campaign's status (EmailCampaign::STATUS_*). */

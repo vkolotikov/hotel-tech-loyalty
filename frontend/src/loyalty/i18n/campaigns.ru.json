@@ -206,7 +206,8 @@
   },
   "tab": {
     "campaigns": "Кампании",
-    "segments": "Сегменты"
+    "segments": "Сегменты",
+    "push": "Push-уведомления"
   },
   "status": {
     "draft": "Черновик",

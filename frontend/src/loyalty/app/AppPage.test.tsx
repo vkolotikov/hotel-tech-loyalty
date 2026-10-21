@@ -21,7 +21,7 @@ import { AppPage } from './AppPage'
 import type { LookAnswer, Wallet } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
-const boot = (c: Can, features: Features = { campaigns: true, wallet: true }): Bootstrap => ({
+const boot = (c: Can, features: Features = { campaigns: true, wallet: true, push: true }): Bootstrap => ({
   name: 'HexaTech Loyalty',
   organization: { id: 1, name: 'Lumière Spa', industry: 'beauty' },
   accent: null,
@@ -82,7 +82,7 @@ describe('Card & app (release 2 §7)', () => {
   })
 
   it('says calmly that the plan has no wallet passes, without a form', () => {
-    const html = render('', manager, { campaigns: true, wallet: false })
+    const html = render('', manager, { campaigns: true, wallet: false, push: true })
     expect(text(html)).toContain('Your plan does not include wallet passes')
     expect(html).not.toContain('Pass Type ID')
     expect(html).toContain('role="status"')

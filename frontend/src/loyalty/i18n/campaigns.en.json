@@ -206,7 +206,8 @@
   },
   "tab": {
     "campaigns": "Campaigns",
-    "segments": "Segments"
+    "segments": "Segments",
+    "push": "Push messages"
   },
   "status": {
     "draft": "Draft",

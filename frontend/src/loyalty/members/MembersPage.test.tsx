@@ -25,7 +25,7 @@ const boot = (c: Can): Bootstrap => ({
   organization: { id: 1, name: 'Lumière', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-21', currency: 'EUR' },
-  features: { campaigns: true, wallet: true },
+  features: { campaigns: true, wallet: true, push: true },
   staff: { id: 5, name: 'Ada', role: c.manage_members ? 'manager' : 'staff', can: c },
   programme: { on: true, tiers: [] },
   counts: { members: 1, requests_waiting: 0 },

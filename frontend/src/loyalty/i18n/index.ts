@@ -34,6 +34,11 @@ import appRu from './app.ru.json'
 import appDe from './app.de.json'
 import appFr from './app.fr.json'
 import appEs from './app.es.json'
+import pushEn from './push.en.json'
+import pushRu from './push.ru.json'
+import pushDe from './push.de.json'
+import pushFr from './push.fr.json'
+import pushEs from './push.es.json'
 
 /**
  * HexaTech Loyalty's words, kept out of the admin's common.json so a session
@@ -41,15 +46,16 @@ import appEs from './app.es.json'
  * `loyalty` key of the `common` namespace, so call sites read
  * `t('loyalty.members.title')`; each area with its own files sits under its
  * name: `loyalty.program`, `loyalty.rewards`, and release 2's
- * `loyalty.membership`, `loyalty.insights`, `loyalty.campaigns`, `loyalty.app`.
+ * `loyalty.membership`, `loyalty.insights`, `loyalty.campaigns`, `loyalty.app`, and release 3's
+ * `loyalty.push`.
  * Registered when the chunk loads.
  */
 export const LOYALTY_LOCALE_FILES = {
-  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn },
-  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu },
-  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe },
-  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr },
-  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs },
+  en: { ...en, program: programEn, rewards: rewardsEn, membership: membershipEn, insights: insightsEn, campaigns: campaignsEn, app: appEn, push: pushEn },
+  ru: { ...ru, program: programRu, rewards: rewardsRu, membership: membershipRu, insights: insightsRu, campaigns: campaignsRu, app: appRu, push: pushRu },
+  de: { ...de, program: programDe, rewards: rewardsDe, membership: membershipDe, insights: insightsDe, campaigns: campaignsDe, app: appDe, push: pushDe },
+  fr: { ...fr, program: programFr, rewards: rewardsFr, membership: membershipFr, insights: insightsFr, campaigns: campaignsFr, app: appFr, push: pushFr },
+  es: { ...es, program: programEs, rewards: rewardsEs, membership: membershipEs, insights: insightsEs, campaigns: campaignsEs, app: appEs, push: pushEs },
 } as const
 
 let registered = false

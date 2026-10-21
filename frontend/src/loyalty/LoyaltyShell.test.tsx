@@ -25,7 +25,7 @@ const boot: Bootstrap = {
   organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
   accent: '#7c5cff',
   venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-05', currency: 'EUR' },
-  features: { campaigns: true, wallet: true },
+  features: { campaigns: true, wallet: true, push: true },
   staff: { id: 4, name: 'Vitalij K', role: 'super_admin', can: { award: true, redeem: true, reverse: true, manage_program: true, manage_rewards: true, manage_members: true, view_insights: true, manage_campaigns: true, manage_app: true } },
   programme: { on: true, tiers: [{ id: 1, name: 'Silver', color: '#9ca3af', min_points: 0, is_active: true }] },
   counts: { members: 120, requests_waiting: 3 },

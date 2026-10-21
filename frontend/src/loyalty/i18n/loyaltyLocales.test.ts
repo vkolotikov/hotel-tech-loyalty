@@ -59,7 +59,7 @@ function literalKeys(): Map<string, string> {
 
 describe('HexaTech Loyalty words', () => {
   it('checks every area bundle that i18n/index.ts registers', () => {
-    expect(AREAS).toEqual(expect.arrayContaining(['program', 'rewards', 'membership', 'insights', 'campaigns', 'app']))
+    expect(AREAS).toEqual(expect.arrayContaining(['program', 'rewards', 'membership', 'insights', 'campaigns', 'app', 'push']))
   })
 
   for (const b of BUNDLES) {

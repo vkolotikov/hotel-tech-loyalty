@@ -49,9 +49,9 @@ describe('the tab in the address and who sees the page (release 2 §7)', () => {
   })
 
   it('is a manager\'s page; the wallet pass also needs the plan', () => {
-    expect(appAccess(can({ manage_app: true }), { campaigns: true, wallet: true })).toEqual({ manage: true, wallet: true })
-    expect(appAccess(can({ manage_app: true }), { campaigns: true, wallet: false })).toEqual({ manage: true, wallet: false })
-    expect(appAccess(can({ manage_rewards: true, manage_program: true }), { campaigns: true, wallet: true }).manage).toBe(false)
+    expect(appAccess(can({ manage_app: true }), { campaigns: true, wallet: true, push: true })).toEqual({ manage: true, wallet: true })
+    expect(appAccess(can({ manage_app: true }), { campaigns: true, wallet: false, push: true })).toEqual({ manage: true, wallet: false })
+    expect(appAccess(can({ manage_rewards: true, manage_program: true }), { campaigns: true, wallet: true, push: true }).manage).toBe(false)
   })
 })
 

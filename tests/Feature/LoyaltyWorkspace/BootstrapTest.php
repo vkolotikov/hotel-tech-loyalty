@@ -66,19 +66,19 @@ class BootstrapTest extends TestCase
     public function test_it_names_the_venues_currency_as_the_portal_does_and_the_plans_features(): void
     {
         DB::table('organizations')->where('id', $this->org->id)->update([
-            'currency' => 'gbp', 'plan_features' => json_encode(['campaigns' => true, 'wallet' => 'false']),
+            'currency' => 'gbp', 'plan_features' => json_encode(['campaigns' => true, 'wallet' => 'false', 'push_notifications' => true]),
         ]);
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))
             ->assertJsonPath('venue.currency', 'GBP')
-            ->assertJsonPath('features', ['campaigns' => true, 'wallet' => false]);
+            ->assertJsonPath('features', ['campaigns' => true, 'wallet' => false, 'push' => true]);
 
         DB::table('organizations')->where('id', $this->org->id)->update(['currency' => null, 'plan_features' => null]);
         HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'services_currency', 'value' => 'chf']);
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))
             ->assertJsonPath('venue.currency', 'CHF')
-            ->assertJsonPath('features', ['campaigns' => false, 'wallet' => false]);
+            ->assertJsonPath('features', ['campaigns' => false, 'wallet' => false, 'push' => false]);
     }
 
     public function test_a_flag_switched_off_or_a_deactivated_row_counts_for_nothing(): void

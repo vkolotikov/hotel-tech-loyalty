@@ -23,6 +23,8 @@ export interface Can {
 export interface Features {
   campaigns: boolean
   wallet: boolean
+  /** The plan's `push_notifications`: push messages to a segment (release 3 §5). */
+  push: boolean
 }
 
 export interface TierRef {
