@@ -147,6 +147,16 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   copy in TypeScript. New SQL runs on PostgreSQL and the tests' SQLite (no `ILIKE`, no `FILTER`).
 - The full admin's loyalty screens stay as they are (owner, 2026-10-21); the shared frame pieces in
   `frontend/src/workspace/` serve Content and Loyalty both, so a change there is checked against both.
+- Release 2 (`docs/superpowers/specs/2026-10-21-loyalty-release-2-design.md`): a member is added, edited, given a tier,
+  switched off or deleted only through `App\Services\Loyalty\Members\*`, which the full admin's controllers call too.
+  A new table with a member column goes into `MemberMergeService::MEMBER_COLUMNS` (or `KEPT_COLUMNS`, with the reason);
+  `MemberMergeServiceTest` scans the migrations and fails otherwise.
+- A campaign starts only through `Campaigns\CampaignStart` (one conditional update, the confirmed count, the counted
+  members) and sends only through the shared `SendEmailCampaignChunk`; a segment rule is checked by
+  `Campaigns\SegmentRules` (never "everyone" by accident); a body is blocks rendered and escaped on the server.
+- Wallet settings have one writer, `WalletSettings`; a certificate, key or password is never answered, logged or
+  audited. A picture's old file is deleted only when it is this organisation's own (`Loyalty\App\OwnMedia`); the
+  frontend shows stored pictures through `mediaUrl()`.
 
 ## Appointments-workspace code rules
 

@@ -108,7 +108,10 @@ final class MemberDirectory
         return [
             'total'          => LoyaltyMember::query()->count(),
             'active'         => (clone $active)->count(),
-            'new_this_month' => LoyaltyMember::query()->where('created_at', '>=', $monthStart)->count(),
+            // Joined as the list's own column shows it (`joined_at`, else `created_at`), as Insights counts new members: an
+            // import keeps its members' join dates and does not read as a month of new members.
+            'new_this_month' => LoyaltyMember::query()->where(fn ($w) => $w->where('joined_at', '>=', $monthStart)
+                ->orWhere(fn ($x) => $x->whereNull('joined_at')->where('created_at', '>=', $monthStart)))->count(),
             'average_points' => (int) round((float) ((clone $active)->avg('current_points') ?? 0)),
             'tiers'          => (clone $active)->selectRaw('tier_id, COUNT(*) AS n')->groupBy('tier_id')->pluck('n', 'tier_id')
                 ->filter(fn ($n, $tier) => $tier !== null && $tier !== '')
