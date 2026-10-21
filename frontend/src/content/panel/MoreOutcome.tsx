@@ -6,7 +6,7 @@ import { Notice } from '../../workspace/ui/Notice'
 import { TemplateEditor } from '../brand/sections/Templates'
 import { templateFromPost } from '../brand/templateActions'
 import type { PostDetail } from '../lib/types'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import type { PostActionsState } from './postActionsState'
 
 /**

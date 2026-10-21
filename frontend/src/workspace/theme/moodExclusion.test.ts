@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest'
  * each workspace marks <html data-shell="<name>"> (src/workspace/lib/shellMark.ts), and every mood rule excludes
  * every workspace's mark.
  */
-const WORKSPACES = ['appointments', 'content']
+const WORKSPACES = ['appointments', 'content', 'loyalty']
 
 describe('mood typography', () => {
   const rules = readFileSync(new URL('../../index.css', import.meta.url), 'utf8').split('\n').filter(line => line.includes('[data-mood="') && line.trim().startsWith(':root'))

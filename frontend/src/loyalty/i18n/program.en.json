@@ -1,0 +1,247 @@
+{
+  "applies_to": {
+    "all": "Every booking",
+    "services": "Services only",
+    "stays": "Stays only"
+  },
+  "benefit": {
+    "category": "Category",
+    "choose": "Choose…",
+    "code": "Code",
+    "code_fixed": "The code stays as it was made: presets find the benefit by it.",
+    "code_hint": "A short name for the system, e.g. LATE_CHECKOUT. It cannot be changed later.",
+    "create": "Add benefit",
+    "description": "Description",
+    "description_hint": "Optional. Members read it in the app.",
+    "edit_title": "Change {{name}}",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "not_found": "This benefit is no longer in the catalogue. The page now shows it as it is.",
+      "unknown": "The benefit could not be saved. Please try again."
+    },
+    "fulfillment_mode": "How it is given",
+    "name": "Name",
+    "name_example": "e.g. Late checkout",
+    "new_title": "Add a benefit",
+    "problem": {
+      "category": "Choose a category.",
+      "code": "Give the benefit a short code, up to 50 characters.",
+      "code_taken": "Another benefit already has this code. Choose another one.",
+      "description": "Check the description.",
+      "fulfillment_mode": "Choose how the benefit is given.",
+      "name": "Give the benefit a name."
+    },
+    "save": "Save benefit"
+  },
+  "benefits": {
+    "add": "Add benefit",
+    "line": "The catalogue tiers choose their benefits from.",
+    "none": "The catalogue is empty. Benefits such as late checkout or a welcome drink are added here, then given to tiers.",
+    "switch_off": "Switch off",
+    "switch_on": "Switch on",
+    "title": "Benefits"
+  },
+  "boost": {
+    "active": "On",
+    "active_hint": "Switched off, the boost multiplies nothing, even between its dates.",
+    "clock_hint": "On the venue’s clock ({{zone}}).",
+    "create": "Add boost",
+    "description": "Description",
+    "description_hint": "Optional, up to 500 characters.",
+    "edit_title": "Change {{name}}",
+    "ends_at": "Ends",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "not_found": "This boost no longer exists. The page now shows the programme as it is.",
+      "unknown": "The boost could not be saved. Please try again."
+    },
+    "multiplier": "Multiplier",
+    "multiplier_hint": "Points earned while it runs are multiplied by this, from 1 to 10.",
+    "name": "Name",
+    "name_example": "e.g. Double points weekend",
+    "new_title": "Add a boost",
+    "problem": {
+      "days_of_week": "Check the weekdays.",
+      "description": "Keep the description to 500 characters.",
+      "ends_at": "Choose when the boost ends.",
+      "multiplier": "Enter a multiplier from 1 to 10, e.g. 2 or 1.5.",
+      "name": "Give the boost a name, up to 120 characters.",
+      "order": "The boost must end after it starts.",
+      "starts_at": "Choose when the boost starts.",
+      "tier_ids": "A chosen tier is no longer in the programme. Choose the tiers again."
+    },
+    "save": "Save boost",
+    "starts_at": "Starts",
+    "tiers": "Tiers",
+    "tiers_hint": "None chosen: every tier.",
+    "weekdays": "Weekdays",
+    "weekdays_hint": "None chosen: every day."
+  },
+  "boost_state": {
+    "ended": "Ended",
+    "live": "Live",
+    "off": "Switched off",
+    "upcoming": "Upcoming"
+  },
+  "boosts": {
+    "add": "Add boost",
+    "every_day": "Every day",
+    "every_tier": "Every tier",
+    "line": "Times on the venue’s clock ({{zone}}).",
+    "none": "No boosts. A boost multiplies the points members earn for a while, such as a double points weekend.",
+    "range": "{{from}} – {{to}}",
+    "remove": "Remove",
+    "title": "Boost events"
+  },
+  "category": {
+    "access": "Access",
+    "accommodation": "Accommodation",
+    "dining": "Dining",
+    "discount": "Discount",
+    "other": "Other",
+    "points": "Points",
+    "recognition": "Recognition",
+    "transport": "Transport",
+    "wellness": "Wellness"
+  },
+  "edit": "Edit",
+  "fulfillment_mode": {
+    "automatic": "Automatic",
+    "on_request": "On request",
+    "pms_linked": "Linked to the booking system",
+    "staff_approved": "Approved by staff",
+    "voucher": "Voucher"
+  },
+  "in_use": "In use",
+  "line": "The tiers members climb, the benefits they give, and points boosts.",
+  "load": {
+    "error": {
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The programme could not be loaded. Please try again."
+    }
+  },
+  "read_only": "Only an owner or a manager can change the programme.",
+  "remove_boost": {
+    "body": "Points the boost already gave stay with the members. This cannot be undone; to pause it instead, switch it off.",
+    "confirm": "Remove boost",
+    "keep": "Keep it",
+    "title": "Remove {{name}}?"
+  },
+  "switched_off": "Switched off",
+  "take_off": {
+    "body": "Members of {{tier}} stop seeing it in the app and the portal. Requests they already made stay as they are.",
+    "confirm": "Take it off",
+    "keep": "Keep it",
+    "title": "Take {{benefit}} off {{tier}}?"
+  },
+  "threshold": {
+    "nights": "Nights to reach",
+    "points": "Points to reach",
+    "spend": "Spend to reach",
+    "stays": "Stays to reach"
+  },
+  "tier": {
+    "active": "In use",
+    "active_hint": "Switched off, no member moves into this tier.",
+    "color": "Colour",
+    "color_hex": "Colour as a hex code",
+    "create": "Add tier",
+    "description": "Description",
+    "description_hint": "Optional. Members read it in the app.",
+    "earn_rate": "Earn rate",
+    "earn_rate_hint": "Points per unit spent; 1.5 earns half as much again.",
+    "edit_title": "Change {{name}}",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "not_found": "This tier is no longer in the programme. The page now shows it as it is.",
+      "unknown": "The tier could not be saved. Please try again."
+    },
+    "min_points": "Points to reach it",
+    "name": "Name",
+    "name_example": "e.g. Gold",
+    "new_title": "Add a tier",
+    "preview": "Preview",
+    "problem": {
+      "color": "Write the colour as # and six hex digits, e.g. #c9a227, or leave it empty.",
+      "description": "Check the description.",
+      "earn_rate": "Enter an earn rate from 0 to 99.99, e.g. 1.5.",
+      "min_points": "Enter a whole number of points from 0 to 10,000,000.",
+      "name": "Give the tier a name."
+    },
+    "save": "Save tier"
+  },
+  "tier_benefit": {
+    "add_title": "Add a benefit to {{tier}}",
+    "already": "{{tier}} already gives this benefit: saving changes its wording and value.",
+    "applies_to": "Applies to",
+    "applies_to_hint": "Which bookings a discount or multiplier counts on.",
+    "benefit": "Benefit",
+    "choose": "Choose a benefit…",
+    "close": "Close",
+    "create": "Give benefit",
+    "edit_title": "{{benefit}} in {{tier}}",
+    "empty_catalogue": "The catalogue has no benefit in use yet. Add one under Benefits first.",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "not_found": "This tier or benefit is no longer in the programme. The page now shows it as it is.",
+      "unknown": "That did not work. Nothing was changed; please try again."
+    },
+    "problem": {
+      "applies_to": "Choose what the value applies to.",
+      "benefit_id": "Choose a benefit from the catalogue.",
+      "multiplier_under": "A points multiplier must be at least 1.",
+      "percent_over": "A percentage discount cannot be more than 100.",
+      "value": "Keep the wording to 255 characters.",
+      "value_amount": "Enter an amount from 0 to 1,000,000.",
+      "value_type": "Choose what kind of value this is."
+    },
+    "save": "Save benefit",
+    "value": "Wording",
+    "value_amount": "Amount",
+    "value_hint": "What members read beside the benefit, e.g. “Until 2 pm”. Optional.",
+    "value_type": "Kind of value"
+  },
+  "tiers": {
+    "add": "Add tier",
+    "add_benefit": "Add benefit",
+    "benefits": "Benefits",
+    "change_benefit": "Change",
+    "earn_rate": "Earn rate",
+    "ladder": "The ladder, from the first tier up",
+    "members": "Members",
+    "no_benefits": "This tier gives no benefit yet.",
+    "none": "No tiers yet.",
+    "none_manager": "No tiers yet. Add the first one: the programme starts once a tier is in use.",
+    "take_off_label": "Take {{benefit}} off {{tier}}",
+    "title": "Tiers"
+  },
+  "title": "Program",
+  "value_phrase": {
+    "fixed_amount": "{{amount}} off",
+    "percent_discount": "{{amount}}% off",
+    "points_multiplier": "×{{amount}} points"
+  },
+  "value_type": {
+    "fixed_amount": "Fixed amount off",
+    "free_item": "Free item",
+    "percent_discount": "Percentage discount",
+    "points_multiplier": "Points multiplier",
+    "text": "Wording only"
+  }
+}

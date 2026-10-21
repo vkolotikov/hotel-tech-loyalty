@@ -11,7 +11,7 @@ import {
   ChevronLeft, ChevronRight, ChevronDown,
   BedDouble, CreditCard, Home, Package,
   UserCog, AlertTriangle, Scissors, CalendarDays,
-  Menu, X, MoreHorizontal, Lock, Link2, PenLine,
+  Menu, X, MoreHorizontal, Lock, Link2, PenLine, Award,
 } from 'lucide-react'
 import { useAuthStore } from '../stores/authStore'
 import { GlobalSearch } from './GlobalSearch'
@@ -135,6 +135,8 @@ export const navGroups: NavGroup[] = [
       // pages/hubs/* for the per-tab routing. Legacy paths like
       // /tiers, /offers, /referrals etc. still work; they redirect
       // into the right hub tab.
+      // The way into HexaTech Loyalty (spec 2026-10-21 §6.7): everyone who may open it; the hubs below stay as they are.
+      { path: '/loyalty',   labelKey: 'nav.items.loyalty_workspace', defaultLabel: 'HexaTech Loyalty', icon: Award, gate: 'all', product: 'loyalty', workspace: 'loyalty' },
       { path: '/members',   labelKey: 'nav.items.members',   defaultLabel: 'Members',  icon: Users,    gate: 'all',   altPaths: ['/members/duplicates', '/segments'] },
       { path: '/program',   labelKey: 'nav.items.program',   defaultLabel: 'Program',  icon: Crown,    gate: 'admin', product: 'loyalty', altPaths: ['/tiers', '/benefits', '/earn-rate-events'] },
       { path: '/rewards',   labelKey: 'nav.items.rewards',   defaultLabel: 'Rewards',  icon: Gift,     gate: 'admin', product: 'loyalty', altPaths: ['/offers', '/referrals'] },

@@ -1,17 +1,17 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { Notice } from '../../workspace/ui/Notice'
+import { Notice } from './Notice'
 
 /** `fallback`: drawn in place of the notice where the page's own layout is wrong for it (the panel). */
 interface Props { message: string; reload: string; fallback?: ReactNode; children: ReactNode }
 
 /**
  * Catches a page that breaks while it renders, so the person sees the
- * portal's own notice and a way to reload — not the app-wide fallback in
+ * workspace's own notice and a way to reload — not the app-wide fallback in
  * English with the raw error. The shell keys it by the address, so another
  * page starts fresh. (The notice itself is the alert: danger notices carry
  * role="alert".)
  */
-export class ContentErrorBoundary extends Component<Props, { failed: boolean }> {
+export class PageBoundary extends Component<Props, { failed: boolean }> {
   state = { failed: false }
 
   static getDerivedStateFromError(): { failed: boolean } {
@@ -19,7 +19,7 @@ export class ContentErrorBoundary extends Component<Props, { failed: boolean }> 
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error('A Content page could not be shown', error, info.componentStack)
+    console.error('A workspace page could not be shown', error, info.componentStack)
   }
 
   render(): ReactNode {

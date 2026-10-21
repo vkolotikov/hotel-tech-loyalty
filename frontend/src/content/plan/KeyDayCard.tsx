@@ -4,7 +4,7 @@ import { formatDate } from '../../workspace/lib/wallClock'
 import { Button } from '../../workspace/ui/Button'
 import { dayLabel, dayName, type Words } from '../lib/dayNames'
 import type { BuiltInDay, DateKey } from '../lib/types'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { KIND_TEXT } from './keyDateMath'
 
 /** A holiday or special day's card (spec 2026-10-16 §3.4): its name and kind, and "Write a post for it" from today on. */

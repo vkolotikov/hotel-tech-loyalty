@@ -7,6 +7,8 @@ describe('showsWorkspaceLink', () => {
   it('shows the way into a workspace to staff of an organisation that has it', () => {
     expect(showsWorkspaceLink(staff({ content: { landing: false } }), 'content')).toBe(true)
     expect(showsWorkspaceLink(staff({ appointments: { landing: false } }), 'appointments')).toBe(true)
+    expect(showsWorkspaceLink(staff({ loyalty: { landing: false } }), 'loyalty')).toBe(true)
+    expect(showsWorkspaceLink(staff({ content: { landing: false } }), 'loyalty')).toBe(false)
   })
 
   it('shows nothing to an organisation without it (the Appointments plan has no Content), to a member, or before sign-in', () => {
@@ -21,11 +23,13 @@ describe('loginPathAfterExpiry', () => {
     expect(loginPathAfterExpiry('/content/posts', '?status=draft')).toBe('/login?redirect=%2Fcontent%2Fposts%3Fstatus%3Ddraft')
     expect(loginPathAfterExpiry('/content', '')).toBe('/login?redirect=%2Fcontent')
     expect(loginPathAfterExpiry('/appointments/clients', '')).toBe('/login?redirect=%2Fappointments%2Fclients')
+    expect(loginPathAfterExpiry('/loyalty/members/7', '')).toBe('/login?redirect=%2Floyalty%2Fmembers%2F7')
   })
 
   it('keeps the plain sign-in everywhere else, including addresses that only start alike', () => {
     expect(loginPathAfterExpiry('/leads', '?tab=customers')).toBe('/login')
     expect(loginPathAfterExpiry('/contentious', '')).toBe('/login')
+    expect(loginPathAfterExpiry('/loyalty-presets', '')).toBe('/login')
   })
 })
 
@@ -34,6 +38,12 @@ describe('landingPath', () => {
     expect(landingPath(staff({ content: { landing: true } }), '/')).toBe('/content')
     expect(landingPath(staff({ content: { landing: true } }), '/leads')).toBe('/leads')
     expect(landingPath(staff({ content: { landing: false } }), '/')).toBe('/')
+  })
+
+  it('lands on Loyalty after sign-in when the organisation chose it (one landing per organisation, the server keeps it so)', () => {
+    expect(landingPath(staff({ loyalty: { landing: true } }), '/')).toBe('/loyalty')
+    expect(landingPath(staff({ loyalty: { landing: true } }), '/members')).toBe('/members')
+    expect(landingPath(staff({ appointments: { only: true }, loyalty: { landing: true } }), '/')).toBe('/appointments')
   })
 
   it('keeps the Appointments rules: its landing, its plan, and members to their portal', () => {

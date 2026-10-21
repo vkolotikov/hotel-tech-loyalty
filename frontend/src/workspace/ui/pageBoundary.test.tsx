@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { ContentErrorBoundary } from './ContentErrorBoundary'
+import { PageBoundary } from './PageBoundary'
 
 // Plan C's review: one broken page showed the app-wide fallback in English, with the raw error.
-describe('ContentErrorBoundary', () => {
+describe('PageBoundary', () => {
   it('turns a page that broke into the portal\'s notice with a way to reload', () => {
-    expect(ContentErrorBoundary.getDerivedStateFromError()).toEqual({ failed: true })
-    const boundary = new ContentErrorBoundary({ message: 'This page could not be shown.', reload: 'Reload the page', children: null })
+    expect(PageBoundary.getDerivedStateFromError()).toEqual({ failed: true })
+    const boundary = new PageBoundary({ message: 'This page could not be shown.', reload: 'Reload the page', children: null })
     boundary.state = { failed: true }
     const html = renderToStaticMarkup(<>{boundary.render()}</>)
     expect(html).toContain('role="alert"')
@@ -15,7 +15,7 @@ describe('ContentErrorBoundary', () => {
   })
 
   it('shows the fallback it was given in place of its own notice', () => {
-    const boundary = new ContentErrorBoundary({ message: 'x', reload: 'y', fallback: <aside>The panel could not be shown</aside>, children: null })
+    const boundary = new PageBoundary({ message: 'x', reload: 'y', fallback: <aside>The panel could not be shown</aside>, children: null })
     boundary.state = { failed: true }
     const html = renderToStaticMarkup(<>{boundary.render()}</>)
     expect(html).toContain('The panel could not be shown')
@@ -23,6 +23,6 @@ describe('ContentErrorBoundary', () => {
   })
 
   it('shows the page when nothing broke', () => {
-    expect(renderToStaticMarkup(<ContentErrorBoundary message="x" reload="y"><p>The page</p></ContentErrorBoundary>)).toContain('The page')
+    expect(renderToStaticMarkup(<PageBoundary message="x" reload="y"><p>The page</p></PageBoundary>)).toContain('The page')
   })
 })

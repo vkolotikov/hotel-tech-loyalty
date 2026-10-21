@@ -10,6 +10,19 @@ function bundle(locale: string): Record<string, unknown> {
 function appointments(locale: string): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(path.join(__dirname, '../../appointments/i18n', `appointments.${locale}.json`), 'utf8'))
 }
+function content(locale: string): Record<string, unknown> {
+  return JSON.parse(fs.readFileSync(path.join(__dirname, '../../content/i18n', `content.${locale}.json`), 'utf8'))
+}
+
+/** The words that moved here with Content's frame (spec 2026-10-21 Loyalty §6.1), and the key each had in Content. */
+const FROM_CONTENT: Record<string, string> = {
+  'shell.workspace': 'shell.workspace',
+  'shell.settings': 'shell.settings',
+  'shell.help': 'shell.help',
+  'shell.role.owner': 'shell.role.owner',
+  'shell.role.manager': 'shell.role.manager',
+  'shell.role.staff': 'shell.role.staff',
+}
 function at(json: unknown, key: string): unknown {
   return key.split('.').reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), json)
 }
@@ -45,7 +58,14 @@ describe('workspace bundle', () => {
   it('the words moved without changing: each reads as the Appointments bundle reads the same key', () => {
     for (const locale of LOCALES) {
       const words = appointments(locale)
-      for (const key of flatten(bundle(locale))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
+      for (const key of flatten(bundle(locale)).filter(k => !(k in FROM_CONTENT))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
+    }
+  })
+
+  it('the words of Content\'s frame moved without changing: each reads as Content\'s bundle reads it', () => {
+    for (const locale of LOCALES) {
+      const words = content(locale)
+      for (const [key, was] of Object.entries(FROM_CONTENT)) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, was))
     }
   })
 })

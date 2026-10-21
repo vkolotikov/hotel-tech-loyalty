@@ -29,6 +29,14 @@
     "language": "Idioma",
     "sign_out": "Cerrar sesión",
     "collapse": "Contraer menú",
-    "expand": "Expandir menú"
+    "expand": "Expandir menú",
+    "workspace": "Espacio de trabajo",
+    "settings": "Ajustes",
+    "help": "Ayuda y recursos",
+    "role": {
+      "owner": "Propietario",
+      "manager": "Responsable",
+      "staff": "Equipo"
+    }
   }
 }

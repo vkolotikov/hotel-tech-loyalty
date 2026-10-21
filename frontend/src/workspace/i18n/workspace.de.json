@@ -29,6 +29,14 @@
     "language": "Sprache",
     "sign_out": "Abmelden",
     "collapse": "Menü einklappen",
-    "expand": "Menü ausklappen"
+    "expand": "Menü ausklappen",
+    "workspace": "Arbeitsbereich",
+    "settings": "Einstellungen",
+    "help": "Hilfe & Ressourcen",
+    "role": {
+      "owner": "Inhaber",
+      "manager": "Manager",
+      "staff": "Mitarbeiter"
+    }
   }
 }

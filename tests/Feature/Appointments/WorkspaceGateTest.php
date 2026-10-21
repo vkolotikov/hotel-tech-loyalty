@@ -135,16 +135,16 @@ class WorkspaceGateTest extends TestCase
 
         // Nothing stored: on, landing on the full admin; no service yet.
         $this->assertSame(['enabled' => true, 'landing' => false], $fresh->workspace('appointments'));
-        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => false, 'only' => false], 'content' => ['landing' => false]], $fresh->workspacesPayload());
-        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => false, 'only' => false], 'content' => ['landing' => false], 'loyalty' => ['landing' => false]], $fresh->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false], 'loyalty' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
 
         $this->org->setWorkspace('appointments', true, landing: true);
-        $this->assertSame(['appointments' => ['landing' => true, 'has_services' => true, 'only' => false], 'content' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['appointments' => ['landing' => true, 'has_services' => true, 'only' => false], 'content' => ['landing' => false], 'loyalty' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
 
         // Landing means nothing while the workspace is off.
         $this->org->setWorkspace('appointments', false, landing: true);
         $this->assertSame(['enabled' => false, 'landing' => false], $this->org->fresh()->workspace('appointments'));
-        $this->assertSame(['content' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
+        $this->assertSame(['content' => ['landing' => false], 'loyalty' => ['landing' => false]], $this->org->fresh()->workspacesPayload());
     }
 
     public function test_the_command_switches_reports_and_lists_the_exceptions(): void

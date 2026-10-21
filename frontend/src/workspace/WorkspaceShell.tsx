@@ -11,7 +11,14 @@ import { accentStyle, type AccentTokens } from './theme/accent'
 import { LanguageSelect } from './ui/LanguageSelect'
 import { ThemeSwitch } from './ui/ThemeSwitch'
 
-export interface WorkspaceNavItem { to: string; end: boolean; icon: LucideIcon; label: string }
+export interface WorkspaceNavItem {
+  to: string
+  end: boolean
+  icon: LucideIcon
+  label: string
+  /** What waits there (HexaTech Loyalty's requests): a small count after the label from 1, said with it. */
+  count?: number
+}
 
 /**
  * A workspace's frame, the same for every workspace: an ink side panel that
@@ -83,7 +90,7 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
         </div>
         {cards && railLabel && !slim && <p className="-mb-4 px-2 font-a-mono text-xs uppercase tracking-[0.14em] text-a-side-text-2">{railLabel}</p>}
         <nav className={cards ? 'space-y-2' : 'space-y-1'}>
-          {nav.map(({ to, end, icon: Icon, label }) => (
+          {nav.map(({ to, end, icon: Icon, label, count }) => (
             <NavLink key={to} to={to} end={end} data-tip={slim ? label : undefined}
               className={({ isActive }) => cards
                 // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
@@ -93,7 +100,13 @@ export function WorkspaceShell({ workspace, look, accent, card, initial, organiz
                 <>
                   <Icon size={18} aria-hidden className="shrink-0" />
                   <span className={slim ? 'sr-only' : 'truncate'}>{label}</span>
-                  {isActive && !slim && !cards && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-a-accent-rail" />}
+                  {count !== undefined && count > 0 && (
+                    // On the current area's brand-filled card the pill takes the card's own ink (the 3:1 rule of the accent).
+                    <span data-nav-count="" className={`${slim ? 'absolute right-1.5 top-1 min-w-4 px-1 leading-4' : 'ml-auto min-w-5 px-1.5 leading-5'} rounded-full text-center text-xs font-semibold ${isActive && cards ? 'bg-a-accent-ink/20 text-a-accent-ink' : 'bg-a-accent text-a-accent-ink'}`}>
+                      {count}
+                    </span>
+                  )}
+                  {isActive && !slim && !cards && !(count !== undefined && count > 0) && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-a-accent-rail" />}
                 </>
               )}
             </NavLink>

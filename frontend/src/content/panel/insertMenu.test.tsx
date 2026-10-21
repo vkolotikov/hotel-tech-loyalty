@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Snippet } from '../lib/types'
 import { InsertMenu } from './InsertMenu'
-import { focusWasInside, listPlace, outside } from '../ui/menuFocus'
+import { focusWasInside, listPlace, outside } from '../../workspace/lib/menuFocus'
 
 const items: Snippet[] = [{ id: 1, kind: 'hashtags', name: 'Autumn colour', body: '#autumnhair #copperhair' }]
 /** A stand-in for the menu's element: it contains the nodes named. */

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronDown } from 'lucide-react'
 import type { BrandRef } from '../lib/types'
 import { brandInitials } from './shellMath'
-import { SideMenu } from './SideMenu'
+import { SideMenu } from '../../workspace/shell/SideMenu'
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:bg-a-surface-2'
 

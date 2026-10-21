@@ -2,11 +2,11 @@ import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ChevronsUpDown, Keyboard, LayoutGrid, LifeBuoy, LogOut, PanelLeftClose, PanelLeftOpen, Search, Settings } from 'lucide-react'
 import { logoutAndRedirect } from '../../lib/logout'
-import { firstLetter } from '../../workspace/lib/firstLetter'
-import { leave } from '../../workspace/lib/leave'
-import type { LiveLook } from '../../workspace/lib/look'
-import { LanguageSelect } from '../../workspace/ui/LanguageSelect'
-import { ThemeSwitch } from '../../workspace/ui/ThemeSwitch'
+import { firstLetter } from '../lib/firstLetter'
+import { leave } from '../lib/leave'
+import type { LiveLook } from '../lib/look'
+import { LanguageSelect } from '../ui/LanguageSelect'
+import { ThemeSwitch } from '../ui/ThemeSwitch'
 import { roleLabelKey } from './shellMath'
 import { SideMenu } from './SideMenu'
 
@@ -48,10 +48,10 @@ export function HelpList({ onShortcuts, onFind }: Pick<FootProps, 'onShortcuts' 
   return (
     <>
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => { onShortcuts() }} className={ITEM}>
-        <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('content.find.shortcuts', 'Keyboard shortcuts')}
+        <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shortcuts.title', 'Keyboard shortcuts')}
       </button>
       <button type="button" role="menuitem" tabIndex={-1} onClick={() => { onFind() }} className={ITEM}>
-        <Search size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('content.shell.find_short', 'Find')}
+        <Search size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.find.title', 'Find')}
       </button>
     </>
   )
@@ -75,7 +75,7 @@ export function PersonList({ look, onLeave }: Pick<FootProps, 'look' | 'onLeave'
 }
 
 /**
- * The side panel's foot in HexaTech Content (spec 2026-10-21 §4.1, D8): Settings, Help & resources, and the person with
+ * The side panel's foot of a workspace in the cards frame (HexaTech Content, spec 2026-10-21 §4.1, D8; HexaTech Loyalty): Settings, Help & resources, and the person with
  * their role — each opening upward (beside the panel while it is icons only).
  */
 export function FrameFooter(props: FootProps) {
@@ -86,10 +86,10 @@ export function FrameFooter(props: FootProps) {
   const place = slim ? 'beside' : 'up'
   return (
     <div data-frame-footer="" className="mt-auto space-y-1 border-t border-a-side-2 pt-4">
-      <SideMenu label={t('content.shell.settings', 'Settings')} icon={Settings} kind="panel" place={place} slim={slim} buttonClassName={row}>
+      <SideMenu label={t('workspace.shell.settings', 'Settings')} icon={Settings} kind="panel" place={place} slim={slim} buttonClassName={row}>
         <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
       </SideMenu>
-      <SideMenu label={t('content.shell.help', 'Help & resources')} icon={LifeBuoy} kind="menu" place={place} slim={slim} buttonClassName={row}>
+      <SideMenu label={t('workspace.shell.help', 'Help & resources')} icon={LifeBuoy} kind="menu" place={place} slim={slim} buttonClassName={row}>
         <HelpList onShortcuts={props.onShortcuts} onFind={props.onFind} />
       </SideMenu>
       <div className="border-t border-a-side-2 pt-2">
@@ -113,7 +113,7 @@ export function FrameFooter(props: FootProps) {
 /** Closes the phone menu (a <details>) a choice sat in: what it opens covers the page. */
 const shut = (el: HTMLElement) => { el.closest('details')?.removeAttribute('open') }
 
-/** The phone menu in HexaTech Content (below 1024 px): the person, Settings' controls, Help's two, and Sign out. */
+/** The phone menu in the cards frame (below 1024 px): the person, Settings' controls, Help's two, and Sign out. */
 export function PhoneMenu(props: FootProps) {
   const { t } = useTranslation()
   const { look, person, role } = props
@@ -125,10 +125,10 @@ export function PhoneMenu(props: FootProps) {
       </div>
       <SettingsPanel look={look} fullAdmin={props.fullAdmin} onLeave={props.onLeave} />
       <button type="button" onClick={(e) => { shut(e.currentTarget); props.onShortcuts() }} className={ITEM}>
-        <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('content.find.shortcuts', 'Keyboard shortcuts')}
+        <Keyboard size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shortcuts.title', 'Keyboard shortcuts')}
       </button>
       <button type="button" onClick={(e) => { shut(e.currentTarget); props.onFind() }} className={ITEM}>
-        <Search size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('content.shell.find_short', 'Find')}
+        <Search size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.find.title', 'Find')}
       </button>
       <button type="button" onClick={() => leave(props.onLeave, () => { void logoutAndRedirect('/login') })} className={ITEM}>
         <LogOut size={16} aria-hidden className="shrink-0 text-a-text-2" />{t('workspace.shell.sign_out', 'Sign out')}

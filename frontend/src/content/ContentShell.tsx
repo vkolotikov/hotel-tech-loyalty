@@ -22,10 +22,10 @@ import { onShortcuts } from './lib/shortcuts'
 import { usePanel } from './panel/PanelProvider'
 import { PanelFailed } from './panel/PanelFailed'
 import { PostPanel } from './panel/PostPanel'
-import { ContentErrorBoundary } from './ui/ContentErrorBoundary'
+import { PageBoundary } from '../workspace/ui/PageBoundary'
 import { ContentShortcuts } from './ui/ContentShortcuts'
 import { BrandCrumb } from './shell/BrandCrumb'
-import { FrameFooter, PhoneMenu } from './shell/FrameFooter'
+import { FrameFooter, PhoneMenu } from '../workspace/shell/FrameFooter'
 import { pageKeyOf } from './shell/shellMath'
 
 /**
@@ -172,11 +172,11 @@ export function ContentShell({ children }: { children: ReactNode }) {
       </>}
       overlays={ready ? <>
         {/* The panel has its own boundary, keyed by its opening: a post that breaks says so in the panel's place. */}
-        <ContentErrorBoundary key={panel.target?.seq ?? 0}
+        <PageBoundary key={panel.target?.seq ?? 0}
           message={t('content.panel.failed', 'This post could not be shown. What you saved is safe.')}
           reload={t('content.common.reload', 'Reload the page')} fallback={<PanelFailed />}>
           <PostPanel />
-        </ContentErrorBoundary>
+        </PageBoundary>
         <ContentFind open={findOpen} onClose={() => setFindOpen(false)} onRun={runFind} actions={findList} fallbackFocus={[findButton, findPhone, main]} />
         <ContentShortcuts open={helpOpen} onClose={() => setHelpOpen(false)} modKey={modKey} fallbackFocus={[findButton, findPhone, main]} />
         {capturing && <CaptureDialog onClose={() => setCapturing(false)} />}
@@ -233,11 +233,11 @@ export function ContentShell({ children }: { children: ReactNode }) {
           )}
           {/* From 1280 px the open post's panel is a column beside the page: the page makes room for it (spec 2026-10-21 §7.1). */}
           <main ref={main} tabIndex={-1} className={`min-h-0 min-w-0 flex-1 ${panel.target ? 'xl:pr-[400px]' : ''}`}>
-            <ContentErrorBoundary key={pathname}
+            <PageBoundary key={pathname}
               message={t('content.common.page_failed', 'This page could not be shown. What you saved is safe.')}
               reload={t('content.common.reload', 'Reload the page')}>
               {children}
-            </ContentErrorBoundary>
+            </PageBoundary>
           </main>
         </>
       )}

@@ -1,0 +1,233 @@
+{
+  "applies_to": {
+    "all": "Every booking",
+    "services": "Services only",
+    "stays": "Stays only"
+  },
+  "cancel": {
+    "body": "{{points}} points go back to {{name}}, and the reward returns to stock if it has a limit. The code stops working.",
+    "confirm": "Cancel redemption",
+    "keep": "Keep it",
+    "title": "Cancel redemption {{code}}?"
+  },
+  "catalogue": {
+    "add": "Add reward",
+    "fulfilled": "Fulfilled",
+    "line": "What members can spend their points on.",
+    "none": "The catalogue is empty. Rewards added here show in the member app and the portal.",
+    "none_left": "None left",
+    "offered": "Offered",
+    "per_member": "Per member",
+    "read_only": "Only staff allowed to manage offers can add or change rewards.",
+    "redeemed": "Redeemed",
+    "stock": "Stock",
+    "until": "Offered until {{when}}"
+  },
+  "discount_phrase": {
+    "fixed_amount": "{{amount}} off",
+    "percent_discount": "{{amount}}% off"
+  },
+  "discount_type": {
+    "fixed_amount": "Amount off",
+    "percent_discount": "Percentage off"
+  },
+  "edit": "Edit",
+  "line": "What members spend their points on, and what brings them back.",
+  "load": {
+    "error": {
+      "network": "No connection. Check the network and try again.",
+      "unknown": "This could not be loaded. Please try again."
+    }
+  },
+  "no_limit": "No limit",
+  "offer": {
+    "active": "On",
+    "active_hint": "Switched off, members no longer see it, even between its dates.",
+    "applies_to": "Applies to",
+    "choose": "Choose…",
+    "code": "Code",
+    "code_hint": "Optional: 4 to 24 letters, digits or hyphens, saved in capitals.",
+    "create": "Add offer",
+    "description": "Description",
+    "description_hint": "Members read this in the app and the portal.",
+    "edit_title": "Change {{title}}",
+    "end_date": "Last day",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_allowed": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_found": "This offer no longer exists. The list now shows the offers as they are.",
+      "unknown": "The offer could not be saved. Please try again."
+    },
+    "featured": "Featured",
+    "featured_hint": "Shown first to members.",
+    "limit_hint": "Empty: no limit.",
+    "new_title": "Add an offer",
+    "per_member_limit": "Uses per member",
+    "problem": {
+      "applies_to": "Choose what the offer applies to.",
+      "code": "A code has 4 to 24 letters, digits or hyphens, or leave it empty.",
+      "code_taken": "Another offer already has this code. Choose another one.",
+      "description": "Describe the offer: members read this.",
+      "end_date": "Choose the last day.",
+      "order": "The offer must end after the day it starts.",
+      "per_member_limit": "Enter a whole number, 1 or more, or leave it empty for no limit.",
+      "start_date": "Choose the first day.",
+      "tier_ids": "A chosen tier is no longer in the programme. Choose the tiers again.",
+      "title": "Give the offer a title, up to 191 characters.",
+      "type": "Choose the kind of offer.",
+      "usage_limit": "Enter a whole number, 1 or more, or leave it empty for no limit.",
+      "value": "Enter a value from 0 to 999,999.99."
+    },
+    "save": "Save offer",
+    "start_date": "First day",
+    "tiers": "Tiers",
+    "tiers_hint": "None chosen: every tier.",
+    "title_example": "e.g. Autumn weekend",
+    "title_field": "Title",
+    "type": "Kind",
+    "usage_limit": "Uses in all",
+    "value": "Value",
+    "value_hint": "A percentage, an amount, a multiplier or points, as the kind says."
+  },
+  "offer_state": {
+    "ended": "Ended",
+    "live": "Running",
+    "off": "Switched off",
+    "upcoming": "Upcoming"
+  },
+  "offer_type": {
+    "bonus_points": "Bonus points",
+    "cashback": "Cashback",
+    "discount": "Discount",
+    "fixed_amount": "Amount off",
+    "free_night": "Free night",
+    "points_multiplier": "Points multiplier",
+    "upgrade": "Upgrade"
+  },
+  "offer_value": {
+    "bonus_points": "{{value}} bonus points",
+    "discount": "{{value}}% off",
+    "fixed_amount": "{{value}} off",
+    "points_multiplier": "×{{value}} points"
+  },
+  "offers": {
+    "add": "Add offer",
+    "dates": "{{from}} – {{to}}",
+    "every_tier": "Every tier",
+    "featured": "Featured",
+    "line": "Special offers members see in the app and the portal.",
+    "none": "No offers yet.",
+    "per_member": "Up to {{limit}} per member",
+    "read_only": "Only staff allowed to manage offers can add or change them.",
+    "used": "Used: {{used}}",
+    "used_of": "Used: {{used}} of {{limit}}"
+  },
+  "redemption": {
+    "error": {
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Your account may not handle redemptions. A manager can allow it under Team in the full admin.",
+      "not_allowed": "Your account may not handle redemptions. A manager can allow it under Team in the full admin.",
+      "not_found": "This redemption no longer exists. The list now shows it as it is.",
+      "unknown": "That did not work. Nothing was changed; please try again.",
+      "wrong_state": "Someone else already handled this redemption. The list now shows it as it is."
+    }
+  },
+  "redemption_filter": {
+    "all": "All",
+    "done": "Done",
+    "pending": "Pending"
+  },
+  "redemption_state": {
+    "cancelled": "Cancelled",
+    "fulfilled": "Fulfilled",
+    "pending": "Pending"
+  },
+  "redemptions": {
+    "cancel": "Cancel",
+    "filter": "Show",
+    "fulfil": "Mark fulfilled",
+    "line": "Codes members show at the desk for a reward.",
+    "no_member": "Member no longer in the programme",
+    "none": "No redemptions here yet.",
+    "none_pending": "Nothing waits at the desk.",
+    "read_only": "Only staff allowed to redeem points can fulfil or cancel a redemption.",
+    "unknown_reward": "A reward no longer in the catalogue"
+  },
+  "referral_state": {
+    "pending": "Pending",
+    "qualified": "Qualified",
+    "rewarded": "Rewarded"
+  },
+  "referrals": {
+    "from": "Invited by",
+    "gone": "No longer a member",
+    "line": "Members who joined through another member’s code.",
+    "none": "No referrals yet. Members find their code in the app.",
+    "pending": "Pending",
+    "points": "Points: +{{referrer}} to the referrer, +{{referee}} to the new member",
+    "points_paid": "Points paid out",
+    "rewarded": "Rewarded",
+    "total": "Referrals"
+  },
+  "reward": {
+    "active": "Offered to members",
+    "active_hint": "Switched off, members can no longer redeem it; codes already issued can still be fulfilled.",
+    "applies_to": "Applies to",
+    "category": "Category",
+    "category_hint": "Your own word, e.g. Dining. Optional.",
+    "create": "Add reward",
+    "description": "Description",
+    "description_hint": "Optional. Members read it in the app.",
+    "discount_hint": "For a reward the booking engine takes off the price.",
+    "discount_type": "Discount",
+    "discount_value": "Amount",
+    "edit_title": "Change {{name}}",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_allowed": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_found": "This reward is no longer in the catalogue. The list now shows it as it is.",
+      "unknown": "The reward could not be saved. Please try again."
+    },
+    "expires_at": "Offered until",
+    "expires_hint": "On the venue’s clock ({{zone}}). Empty: no end.",
+    "name": "Name",
+    "name_example": "e.g. Breakfast for two",
+    "new_title": "Add a reward",
+    "no_discount": "None",
+    "per_member_hint": "How many one member may take. Empty: no limit.",
+    "per_member_limit": "Per member",
+    "points_cost": "Points it costs",
+    "problem": {
+      "applies_to": "Choose what the discount applies to.",
+      "category": "Keep the category to 60 characters.",
+      "description": "Check the description.",
+      "discount_type": "Choose a kind of discount, or none.",
+      "discount_value": "Enter a discount from 0.01 to 100,000.",
+      "expires_at": "Choose a date and time, or leave it empty.",
+      "name": "Give the reward a name, up to 191 characters.",
+      "per_member_limit": "Enter a whole number from 1 to 1,000, or leave it empty for no limit.",
+      "percent_over": "A percentage discount cannot be more than 100.",
+      "points_cost": "Enter a whole number of points from 1 to 1,000,000.",
+      "stock": "Enter a whole number from 0 to 1,000,000, or leave it empty for no limit.",
+      "terms": "Check the terms."
+    },
+    "save": "Save reward",
+    "stock": "Stock",
+    "stock_hint": "Empty: no limit.",
+    "terms": "Terms",
+    "terms_hint": "Optional, e.g. “Not valid on public holidays.”"
+  },
+  "switched_off": "Switched off",
+  "tab": {
+    "catalogue": "Catalogue",
+    "offers": "Offers",
+    "redemptions": "Redemptions",
+    "referrals": "Referrals"
+  },
+  "tabs": "Rewards areas",
+  "title": "Rewards"
+}

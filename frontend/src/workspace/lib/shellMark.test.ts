@@ -53,9 +53,9 @@ describe('markShell', () => {
 describe('index.css mood rules', () => {
   // The full admin's Branding "mood" typography ((0,3,0) on .text-lg … .text-7xl)
   // would override the workspace's own faces, weights and italics. Every mood
-  // selector leaves out <html data-shell="appointments"> and <html data-shell="content">.
+  // selector leaves out <html data-shell="appointments">, "content" and "loyalty".
   const OLD = ':root:where(:not([data-style="glass"][data-shell="admin"], [data-style="light"][data-shell="admin"]))'
-  const NEW = ':root:where(:not([data-style="glass"][data-shell="admin"], [data-style="light"][data-shell="admin"], [data-shell="appointments"], [data-shell="content"]))'
+  const NEW = ':root:where(:not([data-style="glass"][data-shell="admin"], [data-style="light"][data-shell="admin"], [data-shell="appointments"], [data-shell="content"], [data-shell="loyalty"]))'
   const css = readFileSync(new URL('../../index.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   const count = (needle: string) => css.split(needle).length - 1
 

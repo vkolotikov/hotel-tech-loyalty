@@ -29,6 +29,14 @@
     "language": "Language",
     "sign_out": "Sign out",
     "collapse": "Collapse menu",
-    "expand": "Expand menu"
+    "expand": "Expand menu",
+    "workspace": "Workspace",
+    "settings": "Settings",
+    "help": "Help & resources",
+    "role": {
+      "owner": "Owner",
+      "manager": "Manager",
+      "staff": "Staff"
+    }
   }
 }

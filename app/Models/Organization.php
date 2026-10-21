@@ -261,7 +261,8 @@ class Organization extends Model
     // ─── Workspaces ────────────────────────────────────────────
     // Product experiences beside the full admin; the appointments workspace
     // is the first. HexaTech Content (`/content`, spec 2026-10-14) is the
-    // second; it is not part of the Appointments plan. Each has a default for an organisation that never set
+    // second, HexaTech Loyalty (`/loyalty`, spec 2026-10-21) the third; neither is part of the Appointments plan.
+    // Each has a default for an organisation that never set
     // anything (WORKSPACE_DEFAULTS): the owner ruled on 2026-10-01 that every
     // organisation has the appointments workspace, signing in to the full
     // admin as before, unless an operator switches it off. What an operator
@@ -269,7 +270,7 @@ class Organization extends Model
     // no billing sync writes (`php artisan workspace:appointments`).
 
     /** Every workspace there is, and whether an organisation that never set anything has it. */
-    public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true];
+    public const WORKSPACE_DEFAULTS = ['appointments' => true, 'content' => true, 'loyalty' => true];
 
     /** Products an organisation on the Appointments plan holds (Part C spec §6.1). */
     public const APPOINTMENTS_PLAN_PRODUCTS = ['appointments', 'booking'];

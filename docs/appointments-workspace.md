@@ -123,8 +123,9 @@ marked as held whose payment Stripe had in fact already taken. A booking already
 - **Cancelled, marked no-show or completed by mistake:** a manager uses Reopen in the workspace (Part F); it checks
   the time is still free and refuses a visit whose money or coupon went back. The full admin's status change still
   works, without those checks.
-- **Completed by mistake, and the points should go:** the points are reversed in the full admin (the member's page →
-  points history → reverse). The booking stays stamped as awarded, so completing it again does not award twice.
+- **Completed by mistake, and the points should go:** a manager reverses the line in HexaTech Loyalty (the member's
+  page → Points history → Reverse; `docs/loyalty-workspace.md`). The full admin has no screen for it. The booking stays
+  stamped as awarded, so completing it again does not award twice.
 - **Booked for the wrong client:** cancel it and book again. A booking's client is not editable.
 - Every workspace action leaves an audit row with the staff user and the booking (Audit log, actions
   `service_booking.*`).

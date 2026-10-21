@@ -1,0 +1,217 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "error": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    "loading": "Wird geladen…",
+    "next": "Weiter",
+    "no_tier": "Keine Stufe",
+    "page_failed": "Diese Seite konnte nicht angezeigt werden. Was Sie gespeichert haben, ist sicher.",
+    "page_of": "Seite {{page}} von {{pages}}",
+    "pages": "Seiten",
+    "points_count": "{{points}} Pkt.",
+    "previous": "Zurück",
+    "reload": "Seite neu laden",
+    "retry": "Erneut versuchen"
+  },
+  "find": {
+    "actions": "Aktionen",
+    "go_to": "Gehe zu",
+    "members": "Mitglieder",
+    "scan": "Karte scannen",
+    "searching": "Mitglieder werden gesucht…",
+    "theme_dark": "Dunkel",
+    "theme_light": "Hell"
+  },
+  "history": {
+    "balance_after": "Stand: {{points}}",
+    "by": "von {{name}}",
+    "none": "Noch keine Punktebewegungen.",
+    "reverse": "Stornieren",
+    "reverse_effect": "Der Punktestand ändert sich von {{now}} auf {{after}}. Die Zeile bleibt im Verlauf und wird als storniert markiert.",
+    "reverse_example": "z. B. Dem falschen Mitglied gutgeschrieben",
+    "reverse_needs_reason": "Nennen Sie kurz den Grund.",
+    "reverse_negative": "Das Mitglied hat einen Teil dieser Punkte schon ausgegeben: Der Punktestand liegt dann unter null, bis neue Punkte hinzukommen.",
+    "reverse_reason": "Grund",
+    "reverse_title": "Punkte stornieren: {{points}}",
+    "reversed": "Storniert",
+    "title": "Punkteverlauf",
+    "type": {
+      "adjust": "Korrektur",
+      "bonus": "Bonus",
+      "earn": "Gesammelt",
+      "expire": "Verfallen",
+      "other": "Sonstiges",
+      "redeem": "Eingelöst",
+      "referral": "Empfehlung",
+      "reverse": "Stornierung"
+    }
+  },
+  "load": {
+    "error": {
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "unknown": "Das konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "member": {
+    "award": "Punkte gutschreiben",
+    "award_title": "Punkte für {{name}} gutschreiben",
+    "back": "Alle Mitglieder",
+    "balance_after": "Punktestand danach: {{points}}",
+    "balance_now": "Punktestand jetzt: {{points}}",
+    "benefits_title": "Stufenvorteile",
+    "full_admin": "Im vollständigen Admin öffnen",
+    "inactive": "Konto deaktiviert",
+    "joined": "Mitglied seit {{day}}",
+    "last_seen": "Zuletzt aktiv: {{day}}",
+    "lifetime": "Insgesamt gesammelt: {{points}}",
+    "no_benefits": "Diese Stufe hat noch keine Vorteile.",
+    "no_requests": "Nichts wartet auf das Team.",
+    "not_seen": "Noch nicht aktiv",
+    "points": "Punkte",
+    "points_title": "Punkte",
+    "problem": {
+      "over_balance": "Punktestand des Mitglieds: nur {{balance}}.",
+      "points": "Geben Sie eine ganze Zahl an Punkten ein, mindestens 1.",
+      "reason": "Nennen Sie kurz den Grund. Er erscheint im Verlauf des Mitglieds.",
+      "too_many": "Höchstens 100.000 Punkte auf einmal."
+    },
+    "progress_label": "Fortschritt bis {{tier}}",
+    "reason": "Grund",
+    "reason_award_example": "z. B. Willkommen zurück",
+    "reason_hint": "Erscheint im Verlauf des Mitglieds und in der App.",
+    "reason_redeem_example": "z. B. Gratis-Kaffee",
+    "redeem": "Punkte einlösen",
+    "redeem_title": "Punkte von {{name}} einlösen",
+    "requests_title": "Anfragen",
+    "to_next": "Noch {{points}} bis {{tier}}",
+    "top_tier": "Auf der obersten Stufe."
+  },
+  "members": {
+    "col_joined": "Beigetreten",
+    "col_last": "Zuletzt aktiv",
+    "col_name": "Mitglied",
+    "col_points": "Punkte",
+    "col_tier": "Stufe",
+    "count": "Mitglieder: {{count}}",
+    "figures": "{{active}} von {{total}} aktiv · Diesen Monat beigetreten: {{new}} · Punkte im Schnitt: {{average}}",
+    "never": "Noch nicht",
+    "none": "Noch keine Mitglieder. Sie treten über die Mitglieder-App, das Portal oder das Buchungs-Widget bei.",
+    "none_match": "Kein Mitglied passt.",
+    "scan": "Karte scannen",
+    "search": "Mitglieder suchen",
+    "search_hint": "Name, E-Mail, Telefon oder Mitgliedsnummer",
+    "sort": "Reihenfolge",
+    "sort_activity": "Zuletzt aktiv",
+    "sort_name": "Name",
+    "sort_points": "Meiste Punkte",
+    "sort_recent": "Neueste zuerst",
+    "state": "Anzeigen",
+    "state_active": "Aktiv",
+    "state_all": "Alle",
+    "state_inactive": "Deaktiviert",
+    "tiers": "Stufen",
+    "title": "Mitglieder"
+  },
+  "nav": {
+    "members": "Mitglieder",
+    "program": "Programm",
+    "requests": "Anfragen",
+    "rewards": "Prämien",
+    "scan": "Scannen"
+  },
+  "points": {
+    "error": {
+      "invalid": "Prüfen Sie die Punkte und den Grund.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
+      "no_capability": "Ihr Konto darf das nicht. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "not_allowed": "Ihr Konto darf das nicht. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "not_enough_points": "Punktestand des Mitglieds: nur {{balance}}.",
+      "not_found": "Dieses Mitglied ist nicht mehr in Ihrem Programm.",
+      "unknown": "Das hat nicht geklappt. Es wurde nichts gespeichert; bitte versuchen Sie es erneut."
+    }
+  },
+  "requests": {
+    "approve": "Genehmigen",
+    "asked": "Angefragt am {{when}}",
+    "decline": "Ablehnen",
+    "decline_example": "z. B. Heute Abend ausgebucht",
+    "decline_hint": "Wird für das Team bei der Anfrage gespeichert und nicht an das Mitglied gesendet.",
+    "decline_needs_reason": "Nennen Sie kurz den Grund.",
+    "decline_reason": "Grund",
+    "decline_title": "{{benefit}} ablehnen",
+    "done": "Als erledigt markieren",
+    "error": {
+      "invalid": "Geben Sie an, warum die Anfrage abgelehnt wird.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
+      "not_found": "Diese Anfrage gibt es nicht mehr.",
+      "unknown": "Das hat nicht geklappt. Bitte versuchen Sie es erneut.",
+      "wrong_state": "Jemand anderes hat diese Anfrage bereits bearbeitet. Die Liste zeigt jetzt ihren aktuellen Stand."
+    },
+    "line": "Vorteile, die Mitglieder in der App angefragt haben.",
+    "none": "Hier ist noch nichts.",
+    "none_waiting": "Nichts wartet. Neue Anfragen aus der App erscheinen hier.",
+    "state": {
+      "approved": "Genehmigt",
+      "cancelled": "Vom Mitglied zurückgezogen",
+      "declined": "Abgelehnt",
+      "eligible": "Wartet",
+      "fulfilled": "Erledigt",
+      "pending": "Wartet"
+    },
+    "tab": {
+      "approved": "Genehmigt",
+      "done": "Erledigt",
+      "waiting": "Wartend"
+    },
+    "tabs": "Status der Anfragen",
+    "title": "Anfragen",
+    "unknown_benefit": "Ein Vorteil, den es im Programm nicht mehr gibt"
+  },
+  "reverse": {
+    "error": {
+      "already_reversed": "Diese Zeile wurde bereits storniert.",
+      "cannot_reverse": "Eine Stornierung kann nicht storniert werden.",
+      "invalid": "Geben Sie an, warum die Punkte storniert werden.",
+      "manager_only": "Nur Inhaber oder Manager können Punkte stornieren.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Versuchen Sie es erneut.",
+      "not_allowed": "Nur Inhaber oder Manager können Punkte stornieren.",
+      "not_found": "Diese Zeile ist nicht mehr im Verlauf des Mitglieds.",
+      "unknown": "Die Punkte konnten nicht storniert werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "scan": {
+    "error": {
+      "expired": "Dieser QR-Code ist abgelaufen. Bitten Sie das Mitglied, seine Karte erneut zu öffnen.",
+      "inactive": "Das Konto dieses Mitglieds ist deaktiviert.",
+      "invalid": "Scannen Sie eine Karte oder geben Sie eine Mitgliedsnummer ein.",
+      "network": "Keine Verbindung. Versuchen Sie es erneut.",
+      "not_found": "Kein Mitglied hat diese Karte oder Nummer.",
+      "revoked": "Dieser QR-Code wurde durch einen neueren ersetzt. Bitten Sie das Mitglied, seine Karte erneut zu öffnen.",
+      "unknown": "Der Scan hat nicht geklappt. Bitte versuchen Sie es erneut.",
+      "used_up": "Dieser QR-Code wurde bereits verwendet. Bitten Sie das Mitglied, seine Karte erneut zu öffnen."
+    },
+    "field": "Karte, QR-Code oder Mitgliedsnummer",
+    "find": "Suchen",
+    "line": "Scannen Sie den QR-Code aus der Mitglieder-App oder eine Karte, oder geben Sie eine Mitgliedsnummer ein.",
+    "open": "Mitglied öffnen",
+    "placeholder": "Scannen oder eingeben…",
+    "points": "Punkte",
+    "title": "Scannen"
+  },
+  "shell": {
+    "breadcrumb": "Brotkrumen-Navigation",
+    "find": "Mitglied oder Aktion finden",
+    "open_full_admin": "Vollständigen Admin öffnen",
+    "programme_off_manager": "Das Programm hat noch keine aktive Stufe, daher sehen Mitglieder es weder in der App noch im Portal. Fügen Sie unter Programm eine Stufe hinzu oder schalten Sie eine ein.",
+    "programme_off_staff": "Das Programm läuft noch nicht: Ihre Managerin oder Ihr Manager hat die Stufen noch nicht eingerichtet.",
+    "subscription_required": "Das Abonnement Ihrer Organisation ist nicht aktiv, daher kann HexaTech Loyalty nicht geöffnet werden. Ihre Mitglieder und deren Punkte sind unverändert. Eine Administratorin oder ein Administrator kann den Zugang unter „Abrechnung“ im vollständigen Admin wiederherstellen.",
+    "switched_off": "HexaTech Loyalty wurde für Ihre Organisation ausgeschaltet. Ihre Mitglieder und deren Punkte sind unverändert."
+  },
+  "shortcuts": {
+    "find": "Mitglied finden",
+    "help": "Diese Liste",
+    "on_member": "Auf der Seite eines Mitglieds",
+    "scan": "Karte scannen"
+  }
+}

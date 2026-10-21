@@ -30,13 +30,17 @@ export const SURFACES: Record<ThemeName, { canvas: string; surface: string; surf
 }
 
 /**
- * HexaTech Content's own palette (spec 2026-10-21 §3.1): the owner's navy in Dark, a light set with the navy side panel
- * in Light. content/theme/contentContrast.test.ts proves they equal the [data-content] tokens in content.css.
+ * The cards frame's palette (Content spec 2026-10-21 §3.1): the owner's navy in Dark, a light set with the navy side
+ * panel in Light. HexaTech Content and HexaTech Loyalty wear it; content/theme/contentContrast.test.ts and
+ * loyalty/theme/loyaltyContrast.test.ts prove they equal the [data-content] and [data-loyalty] tokens.
  */
-export const CONTENT_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
+export const NAVY_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
   light: { canvas: '#f4f6f9', surface: '#ffffff', surface2: '#eef2f7', side: '#1c232c' },
   dark: { canvas: '#202836', surface: '#242c3a', surface2: '#29303f', side: '#1c232c' },
 }
+
+/** HexaTech Content's name for the navy palette (release 7a). */
+export const CONTENT_SURFACES = NAVY_SURFACES
 
 /** A post card's text and secondary text in Content (`--a-text` and `--c-card-text-2`). */
 const CARD_TEXT: Record<ThemeName, { text: string; text2: string }> = {

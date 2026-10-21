@@ -1,0 +1,217 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "error": "Une erreur s’est produite. Veuillez réessayer.",
+    "loading": "Chargement…",
+    "next": "Suivant",
+    "no_tier": "Aucun niveau",
+    "page_failed": "Cette page n’a pas pu s’afficher. Ce que vous avez enregistré est en sécurité.",
+    "page_of": "Page {{page}} sur {{pages}}",
+    "pages": "Pages",
+    "points_count": "{{points}} pts",
+    "previous": "Précédent",
+    "reload": "Recharger la page",
+    "retry": "Réessayer"
+  },
+  "find": {
+    "actions": "Actions",
+    "go_to": "Aller à",
+    "members": "Membres",
+    "scan": "Scanner une carte",
+    "searching": "Recherche des membres…",
+    "theme_dark": "Passer en sombre",
+    "theme_light": "Passer en clair"
+  },
+  "history": {
+    "balance_after": "solde : {{points}}",
+    "by": "par {{name}}",
+    "none": "Aucun mouvement de points pour l’instant.",
+    "reverse": "Contre-passer",
+    "reverse_effect": "Le solde passera de {{now}} à {{after}}. La ligne reste dans l’historique, marquée comme contre-passée.",
+    "reverse_example": "ex. Attribués au mauvais membre",
+    "reverse_needs_reason": "Indiquez la raison en quelques mots.",
+    "reverse_negative": "Le membre a déjà dépensé une partie de ces points : le solde restera négatif jusqu’à ce qu’il en gagne d’autres.",
+    "reverse_reason": "Motif",
+    "reverse_title": "Contre-passer des points ({{points}})",
+    "reversed": "Contre-passée",
+    "title": "Historique des points",
+    "type": {
+      "adjust": "Ajustement",
+      "bonus": "Bonus",
+      "earn": "Gagnés",
+      "expire": "Expirés",
+      "other": "Autre",
+      "redeem": "Utilisés",
+      "referral": "Parrainage",
+      "reverse": "Contre-passation"
+    }
+  },
+  "load": {
+    "error": {
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "unknown": "Le chargement a échoué. Veuillez réessayer."
+    }
+  },
+  "member": {
+    "award": "Attribuer des points",
+    "award_title": "Attribuer des points à {{name}}",
+    "back": "Tous les membres",
+    "balance_after": "Solde après : {{points}}",
+    "balance_now": "Solde actuel : {{points}}",
+    "benefits_title": "Avantages du niveau",
+    "full_admin": "Ouvrir dans l’admin complète",
+    "inactive": "Compte désactivé",
+    "joined": "Membre depuis le {{day}}",
+    "last_seen": "Dernière activité : {{day}}",
+    "lifetime": "Total gagné : {{points}}",
+    "no_benefits": "Ce niveau n’a pas encore d’avantages.",
+    "no_requests": "Rien n’attend l’équipe.",
+    "not_seen": "Aucune activité pour l’instant",
+    "points": "Points",
+    "points_title": "Points",
+    "problem": {
+      "over_balance": "Solde du membre : {{balance}} seulement.",
+      "points": "Saisissez un nombre entier de points, 1 ou plus.",
+      "reason": "Indiquez la raison en quelques mots. Elle apparaît dans l’historique du membre.",
+      "too_many": "100 000 points au maximum à la fois."
+    },
+    "progress_label": "Progression vers {{tier}}",
+    "reason": "Motif",
+    "reason_award_example": "ex. Bon retour parmi nous",
+    "reason_hint": "Visible dans l’historique du membre et dans l’app.",
+    "reason_redeem_example": "ex. Café offert",
+    "redeem": "Utiliser des points",
+    "redeem_title": "Utiliser des points de {{name}}",
+    "requests_title": "Demandes",
+    "to_next": "Encore {{points}} pour atteindre {{tier}}",
+    "top_tier": "Au niveau le plus élevé."
+  },
+  "members": {
+    "col_joined": "Inscription",
+    "col_last": "Dernière activité",
+    "col_name": "Membre",
+    "col_points": "Points",
+    "col_tier": "Niveau",
+    "count": "Membres : {{count}}",
+    "figures": "Actifs : {{active}} sur {{total}} · Inscrits ce mois-ci : {{new}} · Points en moyenne : {{average}}",
+    "never": "Pas encore",
+    "none": "Aucun membre pour l’instant. Ils s’inscrivent via l’app membre, le portail ou le widget de réservation.",
+    "none_match": "Aucun membre ne correspond.",
+    "scan": "Scanner une carte",
+    "search": "Rechercher des membres",
+    "search_hint": "Nom, e-mail, téléphone ou numéro de membre",
+    "sort": "Tri",
+    "sort_activity": "Dernière activité",
+    "sort_name": "Nom",
+    "sort_points": "Plus de points",
+    "sort_recent": "Plus récents d’abord",
+    "state": "Afficher",
+    "state_active": "Actifs",
+    "state_all": "Tous",
+    "state_inactive": "Désactivés",
+    "tiers": "Niveaux",
+    "title": "Membres"
+  },
+  "nav": {
+    "members": "Membres",
+    "program": "Programme",
+    "requests": "Demandes",
+    "rewards": "Récompenses",
+    "scan": "Scanner"
+  },
+  "points": {
+    "error": {
+      "invalid": "Vérifiez les points et le motif.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Votre compte n’a pas ce droit. Un responsable peut le modifier dans Équipe, dans l’admin complète.",
+      "not_allowed": "Votre compte n’a pas ce droit. Un responsable peut le modifier dans Équipe, dans l’admin complète.",
+      "not_enough_points": "Solde du membre : {{balance}} seulement.",
+      "not_found": "Ce membre ne fait plus partie de votre programme.",
+      "unknown": "Cela n’a pas fonctionné. Rien n’a été enregistré ; veuillez réessayer."
+    }
+  },
+  "requests": {
+    "approve": "Approuver",
+    "asked": "Demandé le {{when}}",
+    "decline": "Refuser",
+    "decline_example": "ex. Complet ce soir",
+    "decline_hint": "Conservé avec la demande pour l’équipe ; il n’est pas envoyé au membre.",
+    "decline_needs_reason": "Indiquez la raison en quelques mots.",
+    "decline_reason": "Motif",
+    "decline_title": "Refuser : {{benefit}}",
+    "done": "Marquer comme traitée",
+    "error": {
+      "invalid": "Indiquez pourquoi la demande est refusée.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "not_found": "Cette demande n’existe plus.",
+      "unknown": "Cela n’a pas fonctionné. Veuillez réessayer.",
+      "wrong_state": "Quelqu’un d’autre a déjà traité cette demande. La liste l’affiche maintenant dans son état actuel."
+    },
+    "line": "Les avantages demandés par les membres dans l’app.",
+    "none": "Rien pour l’instant.",
+    "none_waiting": "Rien en attente. Les nouvelles demandes de l’app s’affichent ici.",
+    "state": {
+      "approved": "Approuvée",
+      "cancelled": "Annulée par le membre",
+      "declined": "Refusée",
+      "eligible": "En attente",
+      "fulfilled": "Traitée",
+      "pending": "En attente"
+    },
+    "tab": {
+      "approved": "Approuvées",
+      "done": "Traitées",
+      "waiting": "En attente"
+    },
+    "tabs": "États des demandes",
+    "title": "Demandes",
+    "unknown_benefit": "Un avantage qui ne fait plus partie du programme"
+  },
+  "reverse": {
+    "error": {
+      "already_reversed": "Cette ligne a déjà été contre-passée.",
+      "cannot_reverse": "Une contre-passation ne peut pas être contre-passée.",
+      "invalid": "Indiquez pourquoi les points sont contre-passés.",
+      "manager_only": "Seul un propriétaire ou un responsable peut contre-passer des points.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut contre-passer des points.",
+      "not_found": "Cette ligne n’est plus dans l’historique du membre.",
+      "unknown": "Les points n’ont pas pu être contre-passés. Veuillez réessayer."
+    }
+  },
+  "scan": {
+    "error": {
+      "expired": "Ce QR code a expiré. Demandez au membre de rouvrir sa carte.",
+      "inactive": "Le compte de ce membre est désactivé.",
+      "invalid": "Scannez une carte ou saisissez un numéro de membre.",
+      "network": "Pas de connexion. Réessayez.",
+      "not_found": "Aucun membre n’a cette carte ou ce numéro.",
+      "revoked": "Ce QR code a été remplacé par un plus récent. Demandez au membre de rouvrir sa carte.",
+      "unknown": "Le scan n’a pas fonctionné. Veuillez réessayer.",
+      "used_up": "Ce QR code a déjà été utilisé. Demandez au membre de rouvrir sa carte."
+    },
+    "field": "Carte, QR code ou numéro de membre",
+    "find": "Rechercher",
+    "line": "Scannez le QR code de l’app membre ou une carte, ou saisissez un numéro de membre.",
+    "open": "Ouvrir la fiche",
+    "placeholder": "Scannez ou saisissez…",
+    "points": "points",
+    "title": "Scanner"
+  },
+  "shell": {
+    "breadcrumb": "Fil d’Ariane",
+    "find": "Trouver un membre ou une action",
+    "open_full_admin": "Ouvrir l’admin complète",
+    "programme_off_manager": "Le programme n’a pas encore de niveau actif : les membres ne le voient ni dans l’app ni sur le portail. Ajoutez ou activez un niveau dans Programme.",
+    "programme_off_staff": "Le programme ne fonctionne pas encore : votre responsable n’a pas encore configuré ses niveaux.",
+    "subscription_required": "L’abonnement de votre organisation n’est pas actif, HexaTech Loyalty ne peut donc pas s’ouvrir. Vos membres et leurs points sont inchangés. Un administrateur peut rétablir l’accès dans Facturation, dans l’admin complète.",
+    "switched_off": "HexaTech Loyalty a été désactivé pour votre organisation. Vos membres et leurs points sont inchangés."
+  },
+  "shortcuts": {
+    "find": "Trouver un membre",
+    "help": "Cette liste",
+    "on_member": "Sur la page d’un membre",
+    "scan": "Scanner une carte"
+  }
+}

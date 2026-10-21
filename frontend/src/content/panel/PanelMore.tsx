@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Copy, CopyPlus, LayoutTemplate, Link2, MoreHorizontal, Trash2 } from 'lucide-react'
-import { SideMenu } from '../shell/SideMenu'
+import { SideMenu } from '../../workspace/shell/SideMenu'
 import type { PostActionsState } from './postActionsState'
 
 const ITEM = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm text-a-text hover:bg-a-surface-2 focus-visible:bg-a-surface-2 aria-disabled:opacity-50'

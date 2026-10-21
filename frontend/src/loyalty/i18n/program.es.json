@@ -1,0 +1,247 @@
+{
+  "applies_to": {
+    "all": "Todas las reservas",
+    "services": "Solo servicios",
+    "stays": "Solo estancias"
+  },
+  "benefit": {
+    "category": "Categoría",
+    "choose": "Elegir…",
+    "code": "Código",
+    "code_fixed": "El código se mantiene como se creó: las plantillas encuentran el beneficio por él.",
+    "code_hint": "Un nombre corto para el sistema, p. ej. LATE_CHECKOUT. No se podrá cambiar después.",
+    "create": "Añadir beneficio",
+    "description": "Descripción",
+    "description_hint": "Opcional. Los miembros la leen en la aplicación.",
+    "edit_title": "Editar {{name}}",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Este beneficio ya no está en el catálogo. La página muestra ahora su estado actual.",
+      "unknown": "No se ha podido guardar el beneficio. Inténtelo de nuevo."
+    },
+    "fulfillment_mode": "Cómo se concede",
+    "name": "Nombre",
+    "name_example": "p. ej. Salida tardía",
+    "new_title": "Añadir un beneficio",
+    "problem": {
+      "category": "Elija una categoría.",
+      "code": "Indique un código corto, de 50 caracteres como máximo.",
+      "code_taken": "Otro beneficio ya tiene este código. Elija otro.",
+      "description": "Revise la descripción.",
+      "fulfillment_mode": "Elija cómo se concede el beneficio.",
+      "name": "Dé un nombre al beneficio."
+    },
+    "save": "Guardar beneficio"
+  },
+  "benefits": {
+    "add": "Añadir beneficio",
+    "line": "El catálogo del que los niveles eligen sus beneficios.",
+    "none": "El catálogo está vacío. Los beneficios, como una salida tardía o una bebida de bienvenida, se crean aquí y luego se asignan a los niveles.",
+    "switch_off": "Desactivar",
+    "switch_on": "Activar",
+    "title": "Beneficios"
+  },
+  "boost": {
+    "active": "Activa",
+    "active_hint": "Desactivada, la promoción no multiplica nada, ni siquiera entre sus fechas.",
+    "clock_hint": "Según la hora del establecimiento ({{zone}}).",
+    "create": "Añadir promoción",
+    "description": "Descripción",
+    "description_hint": "Opcional, hasta 500 caracteres.",
+    "edit_title": "Editar {{name}}",
+    "ends_at": "Fin",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Esta promoción ya no existe. La página muestra ahora el programa tal como está.",
+      "unknown": "No se ha podido guardar la promoción. Inténtelo de nuevo."
+    },
+    "multiplier": "Multiplicador",
+    "multiplier_hint": "Los puntos ganados durante la promoción se multiplican por este valor, de 1 a 10.",
+    "name": "Nombre",
+    "name_example": "p. ej. Fin de semana de puntos dobles",
+    "new_title": "Añadir una promoción",
+    "problem": {
+      "days_of_week": "Revise los días de la semana.",
+      "description": "La descripción no puede superar los 500 caracteres.",
+      "ends_at": "Indique cuándo termina la promoción.",
+      "multiplier": "Introduzca un multiplicador de 1 a 10, p. ej. 2 o 1,5.",
+      "name": "Dé un nombre a la promoción, de 120 caracteres como máximo.",
+      "order": "La promoción debe terminar después de empezar.",
+      "starts_at": "Indique cuándo empieza la promoción.",
+      "tier_ids": "Uno de los niveles elegidos ya no está en el programa. Vuelva a elegir los niveles."
+    },
+    "save": "Guardar promoción",
+    "starts_at": "Inicio",
+    "tiers": "Niveles",
+    "tiers_hint": "Ninguno elegido: todos los niveles.",
+    "weekdays": "Días de la semana",
+    "weekdays_hint": "Ninguno elegido: todos los días."
+  },
+  "boost_state": {
+    "ended": "Finalizada",
+    "live": "En curso",
+    "off": "Desactivada",
+    "upcoming": "Próxima"
+  },
+  "boosts": {
+    "add": "Añadir promoción",
+    "every_day": "Todos los días",
+    "every_tier": "Todos los niveles",
+    "line": "Horas según el reloj del establecimiento ({{zone}}).",
+    "none": "No hay promociones. Una promoción multiplica durante un tiempo los puntos que ganan los miembros, como un fin de semana de puntos dobles.",
+    "range": "{{from}} – {{to}}",
+    "remove": "Eliminar",
+    "title": "Promociones de puntos"
+  },
+  "category": {
+    "access": "Acceso",
+    "accommodation": "Alojamiento",
+    "dining": "Restauración",
+    "discount": "Descuento",
+    "other": "Otros",
+    "points": "Puntos",
+    "recognition": "Reconocimiento",
+    "transport": "Transporte",
+    "wellness": "Bienestar"
+  },
+  "edit": "Editar",
+  "fulfillment_mode": {
+    "automatic": "Automático",
+    "on_request": "A petición",
+    "pms_linked": "Vinculado al sistema de reservas",
+    "staff_approved": "Aprobado por el personal",
+    "voucher": "Vale"
+  },
+  "in_use": "Activo",
+  "line": "Los niveles por los que suben los miembros, sus beneficios y las promociones de puntos.",
+  "load": {
+    "error": {
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se ha podido cargar el programa. Inténtelo de nuevo."
+    }
+  },
+  "read_only": "Solo un propietario o un responsable puede modificar el programa.",
+  "remove_boost": {
+    "body": "Los puntos que ya otorgó la promoción se quedan con los miembros. Esta acción no se puede deshacer; para pausarla, desactívela en su lugar.",
+    "confirm": "Eliminar promoción",
+    "keep": "Conservarla",
+    "title": "¿Eliminar {{name}}?"
+  },
+  "switched_off": "Desactivado",
+  "take_off": {
+    "body": "Los miembros del nivel {{tier}} dejarán de verlo en la aplicación y en el portal. Las solicitudes ya hechas se mantienen.",
+    "confirm": "Quitarlo",
+    "keep": "Conservarlo",
+    "title": "¿Quitar {{benefit}} del nivel {{tier}}?"
+  },
+  "threshold": {
+    "nights": "Noches para alcanzarlo",
+    "points": "Puntos para alcanzarlo",
+    "spend": "Gasto para alcanzarlo",
+    "stays": "Estancias para alcanzarlo"
+  },
+  "tier": {
+    "active": "Activo",
+    "active_hint": "Desactivado, ningún miembro pasa a este nivel.",
+    "color": "Color",
+    "color_hex": "Color en código hexadecimal",
+    "create": "Añadir nivel",
+    "description": "Descripción",
+    "description_hint": "Opcional. Los miembros la leen en la aplicación.",
+    "earn_rate": "Tasa de acumulación",
+    "earn_rate_hint": "Puntos por unidad gastada; 1,5 da la mitad más.",
+    "edit_title": "Editar {{name}}",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Este nivel ya no está en el programa. La página muestra ahora su estado actual.",
+      "unknown": "No se ha podido guardar el nivel. Inténtelo de nuevo."
+    },
+    "min_points": "Puntos para alcanzarlo",
+    "name": "Nombre",
+    "name_example": "p. ej. Oro",
+    "new_title": "Añadir un nivel",
+    "preview": "Vista previa",
+    "problem": {
+      "color": "Escriba el color como # y seis dígitos hexadecimales, p. ej. #c9a227, o deje el campo vacío.",
+      "description": "Revise la descripción.",
+      "earn_rate": "Introduzca una tasa de 0 a 99,99, p. ej. 1,5.",
+      "min_points": "Introduzca un número entero de puntos de 0 a 10.000.000.",
+      "name": "Dé un nombre al nivel."
+    },
+    "save": "Guardar nivel"
+  },
+  "tier_benefit": {
+    "add_title": "Añadir un beneficio a {{tier}}",
+    "already": "{{tier}} ya ofrece este beneficio: al guardar cambian su texto y su valor.",
+    "applies_to": "Se aplica a",
+    "applies_to_hint": "En qué reservas cuenta un descuento o un multiplicador.",
+    "benefit": "Beneficio",
+    "choose": "Elija un beneficio…",
+    "close": "Cerrar",
+    "create": "Conceder beneficio",
+    "edit_title": "{{benefit}} en {{tier}}",
+    "empty_catalogue": "El catálogo aún no tiene ningún beneficio activo. Añada primero uno en Beneficios.",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede modificar el programa.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_allowed": "Solo un propietario o un responsable puede modificar el programa.",
+      "not_found": "Este nivel o beneficio ya no está en el programa. La página muestra ahora su estado actual.",
+      "unknown": "No ha funcionado. No se ha cambiado nada; inténtelo de nuevo."
+    },
+    "problem": {
+      "applies_to": "Elija a qué se aplica el valor.",
+      "benefit_id": "Elija un beneficio del catálogo.",
+      "multiplier_under": "Un multiplicador de puntos debe ser al menos 1.",
+      "percent_over": "Un descuento porcentual no puede superar 100.",
+      "value": "El texto no puede superar los 255 caracteres.",
+      "value_amount": "Introduzca un importe de 0 a 1.000.000.",
+      "value_type": "Elija el tipo de valor."
+    },
+    "save": "Guardar beneficio",
+    "value": "Texto",
+    "value_amount": "Importe",
+    "value_hint": "Lo que leen los miembros junto al beneficio, p. ej. «Hasta las 14:00». Opcional.",
+    "value_type": "Tipo de valor"
+  },
+  "tiers": {
+    "add": "Añadir nivel",
+    "add_benefit": "Añadir beneficio",
+    "benefits": "Beneficios",
+    "change_benefit": "Editar",
+    "earn_rate": "Tasa de acumulación",
+    "ladder": "Los niveles en orden, desde el primero",
+    "members": "Miembros",
+    "no_benefits": "Este nivel aún no ofrece ningún beneficio.",
+    "none": "Aún no hay niveles.",
+    "none_manager": "Aún no hay niveles. Añada el primero: el programa empieza en cuanto un nivel está activo.",
+    "take_off_label": "Quitar {{benefit}} de {{tier}}",
+    "title": "Niveles"
+  },
+  "title": "Programa",
+  "value_phrase": {
+    "fixed_amount": "{{amount}} de descuento",
+    "percent_discount": "{{amount}} % de descuento",
+    "points_multiplier": "puntos ×{{amount}}"
+  },
+  "value_type": {
+    "fixed_amount": "Importe fijo de descuento",
+    "free_item": "Artículo gratuito",
+    "percent_discount": "Descuento porcentual",
+    "points_multiplier": "Multiplicador de puntos",
+    "text": "Solo texto"
+  }
+}

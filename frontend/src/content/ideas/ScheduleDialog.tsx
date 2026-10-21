@@ -10,7 +10,7 @@ import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import type { Channel, DateKey, PostCard } from '../lib/types'
 import { canAdd } from '../plan/addMath'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { PosterSelect } from '../ui/PosterSelect'
 import { initialPoster, scheduleBody, scheduleDefaults, undoPoster } from './ideasMath'
 

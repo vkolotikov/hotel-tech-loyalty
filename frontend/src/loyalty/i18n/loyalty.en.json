@@ -1,0 +1,217 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "error": "Something went wrong. Please try again.",
+    "loading": "Loading…",
+    "next": "Next",
+    "no_tier": "No tier",
+    "page_failed": "This page could not be shown. What you saved is safe.",
+    "page_of": "Page {{page}} of {{pages}}",
+    "pages": "Pages",
+    "points_count": "{{points}} pts",
+    "previous": "Previous",
+    "reload": "Reload the page",
+    "retry": "Try again"
+  },
+  "find": {
+    "actions": "Actions",
+    "go_to": "Go to",
+    "members": "Members",
+    "scan": "Scan a card",
+    "searching": "Searching members…",
+    "theme_dark": "Switch to dark",
+    "theme_light": "Switch to light"
+  },
+  "history": {
+    "balance_after": "balance {{points}}",
+    "by": "by {{name}}",
+    "none": "No points yet.",
+    "reverse": "Reverse",
+    "reverse_effect": "The balance goes from {{now}} to {{after}} points. The line stays in the history, marked reversed.",
+    "reverse_example": "e.g. Awarded to the wrong member",
+    "reverse_needs_reason": "Say why, in a few words.",
+    "reverse_negative": "The member has spent some of these points: the balance will be below zero until they earn more.",
+    "reverse_reason": "Why",
+    "reverse_title": "Reverse {{points}} points",
+    "reversed": "Reversed",
+    "title": "Points history",
+    "type": {
+      "adjust": "Adjustment",
+      "bonus": "Bonus",
+      "earn": "Earned",
+      "expire": "Expired",
+      "other": "Other",
+      "redeem": "Redeemed",
+      "referral": "Referral",
+      "reverse": "Reversal"
+    }
+  },
+  "load": {
+    "error": {
+      "network": "No connection. Check the network and try again.",
+      "not_found": "This member is not in your programme any more.",
+      "unknown": "This could not be loaded. Please try again."
+    }
+  },
+  "member": {
+    "award": "Award points",
+    "award_title": "Award points to {{name}}",
+    "back": "All members",
+    "balance_after": "Balance after: {{points}} points",
+    "balance_now": "Balance now: {{points}} points",
+    "benefits_title": "Tier benefits",
+    "full_admin": "Open in full admin",
+    "inactive": "Account switched off",
+    "joined": "Joined {{day}}",
+    "last_seen": "Last seen {{day}}",
+    "lifetime": "{{points}} earned in all",
+    "no_benefits": "This tier has no benefits yet.",
+    "no_requests": "Nothing waits for the team.",
+    "not_seen": "Not seen yet",
+    "points": "Points",
+    "points_title": "Points",
+    "problem": {
+      "over_balance": "The member has only {{balance}} points.",
+      "points": "Enter a whole number of points, 1 or more.",
+      "reason": "Say why, in a few words. It shows in the member’s history.",
+      "too_many": "At most 100,000 points at a time."
+    },
+    "progress_label": "Progress to {{tier}}",
+    "reason": "Reason",
+    "reason_award_example": "e.g. Welcome back",
+    "reason_hint": "Shows in the member’s history and the app.",
+    "reason_redeem_example": "e.g. Free coffee",
+    "redeem": "Redeem points",
+    "redeem_title": "Redeem points of {{name}}",
+    "requests_title": "Requests",
+    "to_next": "{{points}} more to reach {{tier}}",
+    "top_tier": "In the top tier."
+  },
+  "members": {
+    "col_joined": "Joined",
+    "col_last": "Last seen",
+    "col_name": "Member",
+    "col_points": "Points",
+    "col_tier": "Tier",
+    "count": "Members: {{count}}",
+    "figures": "{{active}} active of {{total}} · {{new}} joined this month · {{average}} points on average",
+    "never": "Not yet",
+    "none": "No members yet. They join from the member app, the portal or the booking widget.",
+    "none_match": "No member matches.",
+    "scan": "Scan a card",
+    "search": "Search members",
+    "search_hint": "Name, email, phone or member number",
+    "sort": "Order",
+    "sort_activity": "Last seen",
+    "sort_name": "Name",
+    "sort_points": "Most points",
+    "sort_recent": "Newest first",
+    "state": "Show",
+    "state_active": "Active",
+    "state_all": "All",
+    "state_inactive": "Switched off",
+    "tiers": "Tiers",
+    "title": "Members"
+  },
+  "nav": {
+    "members": "Members",
+    "program": "Program",
+    "requests": "Requests",
+    "rewards": "Rewards",
+    "scan": "Scan"
+  },
+  "points": {
+    "error": {
+      "invalid": "Check the points and the reason.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Your account may not do this. A manager can change that under Team in the full admin.",
+      "not_allowed": "Your account may not do this. A manager can change that under Team in the full admin.",
+      "not_enough_points": "The member has only {{balance}} points.",
+      "not_found": "This member is not in your programme any more.",
+      "unknown": "That did not work. Nothing was saved; please try again."
+    }
+  },
+  "requests": {
+    "approve": "Approve",
+    "asked": "Asked {{when}}",
+    "decline": "Decline",
+    "decline_example": "e.g. Fully booked tonight",
+    "decline_hint": "Kept with the request for the team; the member is not sent it.",
+    "decline_needs_reason": "Say why, in a few words.",
+    "decline_reason": "Why",
+    "decline_title": "Decline {{benefit}}",
+    "done": "Mark done",
+    "error": {
+      "invalid": "Say why the request is declined.",
+      "network": "No connection: nothing was saved. Try again.",
+      "not_found": "This request no longer exists.",
+      "unknown": "That did not work. Please try again.",
+      "wrong_state": "Someone else already handled this request. The list now shows it as it is."
+    },
+    "line": "Benefits members asked for in the app.",
+    "none": "Nothing here yet.",
+    "none_waiting": "Nothing waits. New requests from the app show here.",
+    "state": {
+      "approved": "Approved",
+      "cancelled": "Cancelled by the member",
+      "declined": "Declined",
+      "eligible": "Waiting",
+      "fulfilled": "Done",
+      "pending": "Waiting"
+    },
+    "tab": {
+      "approved": "Approved",
+      "done": "Done",
+      "waiting": "Waiting"
+    },
+    "tabs": "Request states",
+    "title": "Requests",
+    "unknown_benefit": "A benefit no longer in the programme"
+  },
+  "reverse": {
+    "error": {
+      "already_reversed": "This line was already reversed.",
+      "cannot_reverse": "A reversal cannot be reversed.",
+      "invalid": "Say why the points are reversed.",
+      "manager_only": "Only an owner or a manager can reverse points.",
+      "network": "No connection: nothing was saved. Try again.",
+      "not_allowed": "Only an owner or a manager can reverse points.",
+      "not_found": "This line is no longer in the member’s history.",
+      "unknown": "The points could not be reversed. Please try again."
+    }
+  },
+  "scan": {
+    "error": {
+      "expired": "This QR code has expired. Ask the member to open their card again.",
+      "inactive": "This member’s account is switched off.",
+      "invalid": "Scan a card or type a member number.",
+      "network": "No connection. Try again.",
+      "not_found": "No member has this card or number.",
+      "revoked": "This QR code was replaced by a newer one. Ask the member to open their card again.",
+      "unknown": "The scan did not work. Please try again.",
+      "used_up": "This QR code was already used. Ask the member to open their card again."
+    },
+    "field": "Card, QR code or member number",
+    "find": "Find",
+    "line": "Scan the member app’s QR code or a card, or type a member number.",
+    "open": "Open member",
+    "placeholder": "Scan or type…",
+    "points": "points",
+    "title": "Scan"
+  },
+  "shell": {
+    "breadcrumb": "Breadcrumb",
+    "find": "Find a member or action",
+    "open_full_admin": "Open the full admin",
+    "programme_off_manager": "The programme has no active tier yet, so members cannot see it in the app or the portal. Add or switch on a tier under Program.",
+    "programme_off_staff": "The programme is not running yet: your manager has not set up its tiers.",
+    "subscription_required": "Your organisation's subscription is not active, so HexaTech Loyalty cannot open. Your members and their points are unchanged. An administrator can restore access under Billing in the full admin.",
+    "switched_off": "HexaTech Loyalty has been switched off for your organisation. Your members and their points are unchanged."
+  },
+  "shortcuts": {
+    "find": "Find a member",
+    "help": "This list",
+    "on_member": "On a member’s page",
+    "scan": "Scan a card"
+  }
+}
