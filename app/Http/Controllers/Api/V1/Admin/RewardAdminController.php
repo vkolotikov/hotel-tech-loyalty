@@ -5,15 +5,13 @@ namespace App\Http\Controllers\Api\V1\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
-use App\Models\PointsTransaction;
 use App\Models\Reward;
 use App\Models\RewardRedemption;
-use App\Services\AnalyticsService;
-use App\Services\LoyaltyService;
+use App\Services\Loyalty\RedemptionActions;
+use App\Services\Loyalty\RedemptionStateException;
 use App\Services\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 /**
@@ -24,10 +22,10 @@ use Illuminate\Support\Facades\Validator;
  *  - /v1/admin/rewards/redemptions    — pending + history table
  *  - /v1/admin/rewards/redemptions/{id}/fulfill | cancel
  *
- * Cancel on a still-pending redemption refunds the points to the
- * member via LoyaltyService::awardPoints (type='adjust'). Cancel on
- * an already-fulfilled redemption only updates status — value is
- * gone and a refund would be theft.
+ * Fulfil and cancel are RedemptionActions', which HexaTech Loyalty calls
+ * too: a cancel on a still-pending redemption gives the points back by
+ * reversing the debit; a cancel on an already-fulfilled redemption only
+ * updates status — value is gone and a refund would be theft.
  */
 class RewardAdminController extends Controller
 {
@@ -158,117 +156,27 @@ class RewardAdminController extends Controller
         return response()->json($rows);
     }
 
-    public function fulfill(Request $request, int $id): JsonResponse
+    public function fulfill(Request $request, int $id, RedemptionActions $actions): JsonResponse
     {
-        // Status transition happens under a row lock — otherwise a
-        // concurrent cancel() can refund the points while we mark the
-        // same redemption fulfilled, leaving the member with both the
-        // reward AND the refunded points.
         try {
-            $row = DB::transaction(function () use ($request, $id) {
-                $row = RewardRedemption::whereKey($id)->lockForUpdate()->firstOrFail();
-                if ($row->status !== RewardRedemption::STATUS_PENDING) {
-                    abort(422, "Redemption is already {$row->status}.");
-                }
-                $row->update([
-                    'status'               => RewardRedemption::STATUS_FULFILLED,
-                    'fulfilled_at'         => now(),
-                    'fulfilled_by_user_id' => $request->user()->id,
-                    'notes'                => $request->input('notes', $row->notes),
-                ]);
-                return $row;
-            });
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            $row = $actions->fulfil($id, $request->user(), $request->exists('notes') ? $request->input('notes') : false);
+        } catch (RedemptionStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-        $row->load('reward');
 
-        AuditLog::record('reward_redemption_fulfilled', $row,
-            ['status' => 'fulfilled'], ['status' => 'pending'],
-            $request->user(), "Redemption {$row->code} fulfilled for {$row->reward?->name}");
-
-        AnalyticsService::clearDashboardCache();
         return response()->json(['redemption' => $row->fresh(['reward', 'member.user'])]);
     }
 
-    public function cancel(Request $request, int $id, LoyaltyService $loyalty): JsonResponse
+    public function cancel(Request $request, int $id, RedemptionActions $actions): JsonResponse
     {
         $request->validate(['notes' => 'nullable|string|max:500']);
 
-        $row = RewardRedemption::with('reward', 'member')->findOrFail($id);
-        if ($row->status === RewardRedemption::STATUS_CANCELLED) {
-            return response()->json(['message' => 'Redemption is already cancelled.'], 422);
-        }
-
         try {
-            DB::transaction(function () use (&$row, $request, $loyalty) {
-                // Re-read under lock: two concurrent cancels both passed
-                // the pre-check above and BOTH refunded points + stock —
-                // a double-clicked Cancel handed out a free double refund.
-                $row = RewardRedemption::with('reward', 'member')
-                    ->whereKey($row->id)->lockForUpdate()->firstOrFail();
-                if ($row->status === RewardRedemption::STATUS_CANCELLED) {
-                    abort(422, 'Redemption is already cancelled.');
-                }
-
-                // Only refund points if the redemption hadn't been fulfilled.
-                // A cancel on a fulfilled redemption is bookkeeping — staff
-                // adjust separately if they want to give the points back.
-                if ($row->status === RewardRedemption::STATUS_PENDING) {
-                    if ($row->member && $row->points_spent > 0) {
-                        // Reverse the original debit rather than awarding the
-                        // points back. awardPoints() increments lifetime_points,
-                        // which redeemPoints() never decremented — so every
-                        // cancel used to push the member permanently above their
-                        // true earnings (verified: redeem 300 then refund 300
-                        // left lifetime at 1300, not 1000) and could hand out a
-                        // tier upgrade nobody earned. reverseTransaction() puts
-                        // the balance and the expiry buckets back without
-                        // touching lifetime.
-                        $debit = PointsTransaction::where('idempotency_key', 'reward_redemption_' . $row->id)
-                            ->where('is_reversed', false)
-                            ->first();
-
-                        if ($debit) {
-                            $loyalty->reverseTransaction(
-                                $debit,
-                                "cancelled reward redemption {$row->code}",
-                                $request->user(),
-                            );
-                        } else {
-                            // No matching debit (legacy rows predating the
-                            // idempotency key). Fall back to a credit so the
-                            // member is not left short, and say so on the row.
-                            $loyalty->awardPoints(
-                                $row->member,
-                                $row->points_spent,
-                                "Refund: cancelled reward redemption {$row->code}",
-                                'adjust',
-                            );
-                        }
-                    }
-                    // Return stock if the reward tracks it.
-                    if ($row->reward && $row->reward->stock !== null) {
-                        $row->reward->increment('stock');
-                    }
-                }
-
-                $row->update([
-                    'status'               => RewardRedemption::STATUS_CANCELLED,
-                    'cancelled_at'         => now(),
-                    'cancelled_by_user_id' => $request->user()->id,
-                    'notes'                => $request->input('notes', $row->notes),
-                ]);
-            });
-        } catch (\Symfony\Component\HttpKernel\Exception\HttpException $e) {
-            return response()->json(['message' => $e->getMessage()], $e->getStatusCode());
+            $row = $actions->cancel($id, $request->user(), $request->exists('notes') ? $request->input('notes') : false);
+        } catch (RedemptionStateException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        AuditLog::record('reward_redemption_cancelled', $row,
-            ['status' => 'cancelled'], ['status' => $row->getOriginal('status')],
-            $request->user(), "Redemption {$row->code} cancelled");
-
-        AnalyticsService::clearDashboardCache();
         return response()->json(['redemption' => $row->fresh(['reward', 'member.user'])]);
     }
 

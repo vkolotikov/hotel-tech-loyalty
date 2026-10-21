@@ -1,0 +1,148 @@
+<?php
+
+namespace Tests\Feature\LoyaltyWorkspace;
+
+use App\Models\BenefitDefinition;
+use App\Models\BenefitEntitlement;
+use App\Models\Brand;
+use App\Models\PointsTransaction;
+use App\Models\TierBenefit;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\Concerns\SetsUpLoyaltyWorkspace;
+use Tests\TestCase;
+
+/** The members list, Find, a member's page and their history (spec 2026-10-21 §4.2, §4.3, §4.8). */
+class MembersTest extends TestCase
+{
+    use DatabaseTransactions, SetsUpLoyaltyWorkspace;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpLoyaltyWorkspace();
+    }
+
+    public function test_the_list_holds_this_organisations_active_members_newest_first_with_the_figures(): void
+    {
+        $this->otherOrganization();
+        $this->ada->forceFill(['created_at' => now()->subMonths(2)])->save();
+        $gone = $this->makeMember('Former Member', 'former@example.test', ['is_active' => false]);
+
+        $response = $this->asStaffMember()->getJson($this->api('members'))->assertOk();
+
+        $this->assertSame(['Grace Hopper', 'Ada Lovelace'], array_column($response->json('members'), 'name'));
+        $response->assertJsonPath('total', 2)
+            ->assertJsonPath('pages', 1)
+            ->assertJsonPath('figures.total', 3)
+            ->assertJsonPath('figures.active', 2)
+            ->assertJsonPath('figures.new_this_month', 2)
+            ->assertJsonPath('figures.average_points', 850)
+            ->assertJsonPath('members.1.points', 1500)
+            ->assertJsonPath('members.1.tier_id', $this->tiers['gold']->id);
+        $this->assertSame([(string) $this->tiers['silver']->id => 1, (string) $this->tiers['gold']->id => 1], $response->json('figures.tiers'));
+
+        $this->asStaffMember()->getJson($this->api('members?state=inactive'))->assertJsonPath('members.0.id', $gone->id);
+        $this->asStaffMember()->getJson($this->api('members?state=all'))->assertJsonPath('total', 3);
+    }
+
+    public function test_it_searches_name_email_number_and_phone_digits_and_filters_by_tier(): void
+    {
+        $this->grace->user->update(['phone' => '+371 26 123 456']);
+
+        $this->assertSame([$this->ada->id], array_column($this->asStaffMember()->getJson($this->api('members?q=LOVE'))->json('members'), 'id'));
+        $this->assertSame([$this->ada->id], array_column($this->asStaffMember()->getJson($this->api('members?q=' . urlencode($this->ada->member_number)))->json('members'), 'id'));
+        $this->assertSame([$this->grace->id], array_column($this->asStaffMember()->getJson($this->api('members?q=26123456'))->json('members'), 'id'));
+        $this->assertSame([$this->grace->id], array_column($this->asStaffMember()->getJson($this->api('members?tier_id=' . $this->tiers['silver']->id))->json('members'), 'id'));
+    }
+
+    public function test_search_words_are_literal(): void
+    {
+        $this->asStaffMember()->getJson($this->api('members?q=' . urlencode('%')))->assertJsonPath('total', 0);
+        $this->asStaffMember()->getJson($this->api('members?q=' . urlencode('a_a')))->assertJsonPath('total', 0);
+    }
+
+    public function test_it_sorts_by_points_name_and_last_activity(): void
+    {
+        $this->grace->update(['last_activity_at' => now()->subDay()]);
+
+        $this->assertSame([$this->ada->id, $this->grace->id], array_column($this->asStaffMember()->getJson($this->api('members?sort=points'))->json('members'), 'id'));
+        $this->assertSame([$this->ada->id, $this->grace->id], array_column($this->asStaffMember()->getJson($this->api('members?sort=name'))->json('members'), 'id'));
+        // Never active comes last.
+        $this->assertSame([$this->grace->id, $this->ada->id], array_column($this->asStaffMember()->getJson($this->api('members?sort=activity'))->json('members'), 'id'));
+    }
+
+    public function test_find_answers_from_two_letters_with_eight_at_most(): void
+    {
+        foreach (range(1, 9) as $i) {
+            $this->makeMember("Adams {$i}", "adams{$i}@example.test");
+        }
+
+        $this->asStaffMember()->getJson($this->api('find?q=a'))->assertJsonPath('members', []);
+        $this->assertCount(8, $this->asStaffMember()->getJson($this->api('find?q=ad'))->json('members'));
+    }
+
+    public function test_a_members_page_carries_progress_benefits_and_open_requests(): void
+    {
+        $benefit = BenefitDefinition::create(['name' => 'Late checkout', 'code' => 'late', 'category' => 'accommodation', 'fulfillment_mode' => 'on_request']);
+        TierBenefit::create(['tier_id' => $this->tiers['gold']->id, 'benefit_id' => $benefit->id, 'value' => 'Until 2 pm', 'is_active' => true]);
+        $waiting = BenefitEntitlement::create(['member_id' => $this->ada->id, 'benefit_id' => $benefit->id, 'status' => 'pending']);
+        BenefitEntitlement::create(['member_id' => $this->ada->id, 'benefit_id' => $benefit->id, 'status' => 'fulfilled']);
+
+        $this->asStaffMember()->getJson($this->api('members/' . $this->ada->id))
+            ->assertOk()
+            ->assertJsonPath('member.name', 'Ada Lovelace')
+            ->assertJsonPath('member.points', 1500)
+            ->assertJsonPath('progress.next_tier.name', 'Platinum')
+            ->assertJsonPath('progress.needed', 3500)
+            ->assertJsonPath('progress.percent', 12)
+            ->assertJsonPath('benefits.0.name', 'Late checkout')
+            ->assertJsonPath('benefits.0.value', 'Until 2 pm')
+            ->assertJsonCount(1, 'requests')
+            ->assertJsonPath('requests.0.id', $waiting->id);
+    }
+
+    public function test_the_top_tier_has_no_next_tier_and_a_member_without_a_tier_still_opens(): void
+    {
+        $this->ada->update(['tier_id' => $this->tiers['platinum']->id]);
+        $this->asStaffMember()->getJson($this->api('members/' . $this->ada->id))->assertJsonPath('progress.next_tier', null)->assertJsonPath('progress.percent', 100);
+
+        $this->grace->update(['tier_id' => null]);
+        $this->asStaffMember()->getJson($this->api('members/' . $this->grace->id))->assertOk()->assertJsonPath('benefits', [])->assertJsonPath('progress.next_tier.name', 'Gold');
+    }
+
+    public function test_another_organisations_member_is_not_found(): void
+    {
+        $other = $this->otherOrganization();
+
+        $this->asManager()->getJson($this->api('members/' . $other['member']->id))->assertStatus(404)->assertJsonPath('error', 'not_found');
+        $this->asManager()->getJson($this->api('members/' . $other['member']->id . '/history'))->assertStatus(404);
+    }
+
+    public function test_the_history_is_the_whole_ledger_of_every_brand_newest_first(): void
+    {
+        $second = Brand::create(['name' => 'Second Studio', 'slug' => 'second-' . uniqid(), 'is_default' => false]);
+        $this->line(['points' => 100, 'type' => 'earn', 'brand_id' => $this->brandId, 'created_at' => now()->subDays(2)]);
+        $this->line(['points' => 50, 'type' => 'bonus', 'brand_id' => $second->id, 'created_at' => now()->subDay(), 'staff_id' => $this->manager->id]);
+        // Bound to one brand, as a staff member restricted to it would be: the member's ledger still shows both.
+        app()->instance('current_brand_id', $this->brandId);
+
+        $response = $this->asStaffMember()->getJson($this->api('members/' . $this->ada->id . '/history'))->assertOk();
+
+        $this->assertSame([50, 100], array_column($response->json('lines'), 'points'));
+        $response->assertJsonPath('lines.0.by', 'Staff')->assertJsonPath('lines.0.can_reverse', true)->assertJsonPath('total', 2);
+    }
+
+    private function line(array $attributes): PointsTransaction
+    {
+        $line = PointsTransaction::withoutGlobalScopes()->create($attributes + [
+            'organization_id' => $this->org->id,
+            'member_id'       => $this->ada->id,
+            'description'     => 'Visit',
+            'balance_after'   => 1500,
+            'idempotency_key' => uniqid('t', true),
+        ]);
+        $line->forceFill(['created_at' => $attributes['created_at']])->save();
+
+        return $line;
+    }
+}

@@ -1356,6 +1356,48 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::delete('brand/templates/{id}', [\App\Http\Controllers\Api\V1\Admin\Content\TemplateController::class, 'destroy'])->whereNumber('id');
             });
 
+            // ─── HexaTech Loyalty workspace ─────────────────────────────────
+            // The loyalty programme as its own workspace beside the full admin
+            // (spec 2026-10-21). Every organisation has it unless an operator
+            // switched it off (`php artisan workspace:loyalty <id> --off`);
+            // `workspace:loyalty` then answers 403. Who may do what is
+            // LoyaltyAccess, checked by each controller.
+            Route::prefix('loyalty')->middleware('workspace:loyalty')->group(function () {
+                Route::get('bootstrap', [\App\Http\Controllers\Api\V1\Admin\Loyalty\BootstrapController::class, 'show']);
+                Route::get('find', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'find']);
+                Route::get('members', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'index']);
+                Route::get('members/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'show'])->whereNumber('id');
+                Route::get('members/{id}/history', [\App\Http\Controllers\Api\V1\Admin\Loyalty\MemberController::class, 'history'])->whereNumber('id');
+                Route::post('members/{id}/award', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'award'])->whereNumber('id');
+                Route::post('members/{id}/redeem', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'redeem'])->whereNumber('id');
+                Route::post('members/{id}/history/{line}/reverse', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PointsController::class, 'reverse'])->whereNumber(['id', 'line']);
+                Route::get('requests', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'index']);
+                Route::post('requests/{id}/approve', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'approve'])->whereNumber('id');
+                Route::post('requests/{id}/decline', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'decline'])->whereNumber('id');
+                Route::post('requests/{id}/done', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RequestController::class, 'done'])->whereNumber('id');
+                Route::post('scan', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ScanController::class, 'scan']);
+                Route::get('program', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'show']);
+                Route::post('program/tiers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeTier']);
+                Route::put('program/tiers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateTier'])->whereNumber('id');
+                Route::post('program/tiers/{id}/benefits', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'attachBenefit'])->whereNumber('id');
+                Route::delete('program/tiers/{id}/benefits/{tierBenefit}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'detachBenefit'])->whereNumber(['id', 'tierBenefit']);
+                Route::post('program/benefits', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeBenefit']);
+                Route::put('program/benefits/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateBenefit'])->whereNumber('id');
+                Route::post('program/boosts', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeBoost']);
+                Route::put('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateBoost'])->whereNumber('id');
+                Route::delete('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'destroyBoost'])->whereNumber('id');
+                Route::get('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'index']);
+                Route::post('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'store']);
+                Route::put('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'update'])->whereNumber('id');
+                Route::get('redemptions', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'index']);
+                Route::post('redemptions/{id}/fulfil', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'fulfil'])->whereNumber('id');
+                Route::post('redemptions/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RedemptionController::class, 'cancel'])->whereNumber('id');
+                Route::get('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'index']);
+                Route::post('offers', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'store']);
+                Route::put('offers/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\OfferController::class, 'update'])->whereNumber('id');
+                Route::get('referrals', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ReferralController::class, 'index']);
+            });
+
             // ─── Audit Logs ──────────────────────────────────────────────────
             Route::get('audit-logs',                      [AuditLogController::class, 'index']);
             Route::get('audit-logs/actions',              [AuditLogController::class, 'actions']);

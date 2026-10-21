@@ -23,7 +23,7 @@ class SignInWorkspacesTest extends TestCase
         $this->setUpAppointments();
 
         // Never switched on or off: on, landing on the full admin.
-        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false]]);
+        $this->me($this->staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => true, 'only' => false], 'content' => ['landing' => false], 'loyalty' => ['landing' => false]]);
 
         $this->org->setWorkspace('appointments', true, landing: true);
         $this->me($this->staff)->assertJsonPath('workspaces.appointments.landing', true);
@@ -36,7 +36,7 @@ class SignInWorkspacesTest extends TestCase
         $fresh = $this->otherOrganization();
         $staff = $this->staffUser($fresh);
 
-        $this->me($staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => false, 'only' => false], 'content' => ['landing' => false]]);
+        $this->me($staff)->assertJsonPath('workspaces', ['appointments' => ['landing' => false, 'has_services' => false, 'only' => false], 'content' => ['landing' => false], 'loyalty' => ['landing' => false]]);
     }
 
     public function test_an_organisation_with_appointments_switched_off_gets_no_appointments_key(): void
