@@ -13,7 +13,7 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   `artisan test tests/Feature/Landing/`, `tests/Unit/Landing/`, `tests/Unit/Support/` (and the other suites
   by directory). Run in the foreground and read the `Tests:` summary line yourself.
 - `php artisan view:clear` after every Blade change before testing.
-- Frontend: `cd frontend && npx tsc -b && npx vitest run` (3 `plannerMeta` failures are pre-existing).
+- Frontend: `cd frontend && npx tsc -b && npx vitest run` (the whole suite passes since 2026-10-22; a failure is new).
   Run `npm install` after pulling; the build model commits `frontend/dist` + `public/spa`
   (`npm run build` → `scripts/postbuild.mjs`).
 - Windows shell: Git Bash for POSIX scripts, PowerShell 5.1 otherwise. Prefer the Edit tool over

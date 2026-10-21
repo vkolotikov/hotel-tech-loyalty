@@ -43,20 +43,27 @@ const original = process.env.TZ
 beforeEach(() => { process.env.TZ = 'Europe/Riga' })
 afterEach(() => { process.env.TZ = original })
 
+/**
+ * A wall-clock time in any form this machine's locale prints it: `15:45` (24-hour locales), `3:45:00 PM`
+ * (toLocaleString, en-US) or `03:45 PM` (the drawer's hour and minute in two digits, en-US).
+ */
+const shown = (h: number, m: string) => new RegExp(`(${h}:${m}|0?${h - 12}:${m}(:00)?\\s?PM)`)
+
 describe('the full admin\'s service bookings, east of UTC', () => {
   it('lists a 15:00 appointment at 15:00', () => {
     const html = wrap(<ServiceBookings />, qc => qc.setQueryData(
       ['service-bookings', { page: 1 }], { data: [booking], current_page: 1, last_page: 1, total: 1 },
     ))
     expect(html).toContain('Emily Johnson')
-    expect(html).toMatch(/(15:00|3:00:00\s?PM)/)
-    expect(html).not.toMatch(/(18:00|6:00:00\s?PM)/)
+    expect(html).toMatch(shown(15, '00'))
+    expect(html).not.toMatch(shown(18, '00'))
   })
 
   it('opens the booking at 15:00 until 15:45', () => {
     const html = wrap(<BookingDetailDrawer booking={booking} onClose={() => {}} onChanged={() => {}} />)
-    expect(html).toMatch(/(15:00|3:00:00\s?PM)/)
-    expect(html).toMatch(/(15:45|3:45:00\s?PM)/)
-    expect(html).not.toMatch(/(18:00|6:00:00\s?PM|18:45|6:45:00\s?PM)/)
+    expect(html).toMatch(shown(15, '00'))
+    expect(html).toMatch(shown(15, '45'))
+    expect(html).not.toMatch(shown(18, '00'))
+    expect(html).not.toMatch(shown(18, '45'))
   })
 })

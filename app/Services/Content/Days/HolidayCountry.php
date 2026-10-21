@@ -13,9 +13,6 @@ use App\Services\Appointments\VenueClock;
  */
 final class HolidayCountry
 {
-    /** Legacy zone names that carry no country of their own (PHP answers "??"): the country each stands for. */
-    private const LEGACY = ['GB' => 'GB', 'GB-Eire' => 'GB', 'Europe/Belfast' => 'GB', 'Eire' => 'IE'];
-
     public static function guess(Organization $org): ?string
     {
         $country = strtoupper(trim((string) $org->country));
@@ -26,7 +23,9 @@ final class HolidayCountry
         }
 
         // Owner ruling (Plan 4A-2): the zone's own country, so every zone of the nine countries counts (America/Boise,
-        // Atlantic/Canary, Europe/Busingen …), and a legacy name stands for its country.
+        // Atlantic/Canary, Europe/Busingen …), and a legacy name stands for its country: the venue's zone already
+        // comes as the zone a legacy name links to (`US/Eastern` → America/New_York, `Eire` → Europe/Dublin, `GB` →
+        // Europe/London; PortalBootstrap::namedZone() through App\Support\TimeZones), whose country is its own.
         $zone = VenueClock::zone((int) $org->id);
         try {
             $location = (new \DateTimeZone($zone))->getLocation();
@@ -34,9 +33,6 @@ final class HolidayCountry
             $location = false;
         }
         $code = is_array($location) ? (string) ($location['country_code'] ?? '') : '';
-        if ($code === '' || $code === '??') {
-            $code = str_starts_with($zone, 'US/') ? 'US' : (self::LEGACY[$zone] ?? '');
-        }
 
         return in_array($code, PublicHolidays::COUNTRIES, true) ? $code : null;
     }

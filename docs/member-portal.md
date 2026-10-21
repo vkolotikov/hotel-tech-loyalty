@@ -175,8 +175,8 @@ shared ever sees or stores an offset that means anything.
 `venue.timezone`). It has two sources, in this order: the zone the venue set in Settings → General →
 Timezone (`hotel_settings.hotel_timezone`, seeded `UTC`; the stays engine reads the same setting), then
 `organizations.timezone` (defaults to `UTC`; no admin screen writes it). Both are free text, so each is read
-through `PortalBootstrap::namedZone()`: a named zone with a location counts (`Europe/Riga`, and a legacy name
-such as `US/Eastern`, kept as written); any name of UTC (`UTC`, `Etc/UTC`, `Zulu`, `GMT`, … in any case)
+through `PortalBootstrap::namedZone()`: a named zone with a location counts (`Europe/Riga`; a legacy name such
+as `US/Eastern` is read as the zone it links to, `America/New_York`, on any PHP — `App\Support\TimeZones`); any name of UTC (`UTC`, `Etc/UTC`, `Zulu`, `GMT`, … in any case)
 counts as `UTC`; an abbreviation (`EET`, `CEST`, `PST`, `Z`), an offset (`+03:00`) and anything PHP does not
 know do not count, because PHP reads the first two as a fixed offset without daylight saving and a browser
 reads them differently or not at all. The first source that names a zone other than UTC wins; otherwise a

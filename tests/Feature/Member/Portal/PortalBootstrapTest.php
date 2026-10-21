@@ -284,8 +284,10 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         ['token' => $token] = $this->member($org);
         DB::table('organizations')->where('id', $org->id)->update(['timezone' => 'US/Eastern']);
 
+        // Shown as the zone the old name links to (App\Support\TimeZones), whether or not this PHP still knows
+        // `US/Eastern`: every server reader of the venue's zone can then construct it, on any PHP.
         $json = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json();
-        $this->assertSame('US/Eastern', $json['venue']['timezone']);
+        $this->assertSame('America/New_York', $json['venue']['timezone']);
     }
 
     public function test_a_saved_zone_php_does_not_know_falls_back_to_the_apps_zone(): void
@@ -510,7 +512,8 @@ class PortalBootstrapTest extends MemberEndpointTestCase
             '4 the setting is garbage, the column a zone'          => ['Mars/Olympus', 'Europe/Riga', 'Europe/Riga'],
             '5 both garbage: the application zone'                 => ['Mars/Olympus', 'Mars/Olympus', 'Asia/Tokyo'],
             '6 both UTC'                                           => ['UTC', 'UTC', 'UTC'],
-            '7 a legacy name in the setting'                       => ['US/Eastern', 'UTC', 'US/Eastern'],
+            // A legacy name is the zone it links to (App\Support\TimeZones), on any PHP.
+            '7 a legacy name in the setting'                       => ['US/Eastern', 'UTC', 'America/New_York'],
             'no setting row, the column a zone'                    => [null, 'Europe/Riga', 'Europe/Riga'],
             'no setting row, the column UTC'                       => [null, 'UTC', 'UTC'],
             // Only a NAMED zone with a location counts: an abbreviation or an
@@ -528,7 +531,8 @@ class PortalBootstrapTest extends MemberEndpointTestCase
             'Zulu in the setting, the column garbage'              => ['Zulu', 'Mars/Olympus', 'UTC'],
             'GMT in the column, the setting garbage'               => ['Mars/Olympus', 'GMT', 'UTC'],
             'spaces around the setting'                            => [' Europe/Riga ', 'UTC', 'Europe/Riga'],
-            'a legacy name in the setting, the column a zone'      => ['US/Eastern', 'Europe/Riga', 'US/Eastern'],
+            'a legacy name in the setting, the column a zone'      => ['US/Eastern', 'Europe/Riga', 'America/New_York'],
+            'a legacy name without a country in the column'        => ['UTC', 'GB', 'Europe/London'],
         ];
     }
 

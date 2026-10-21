@@ -606,31 +606,19 @@ class SettingsController extends Controller
         return 'general';
     }
 
+    /**
+     * POST /v1/admin/settings/logo — the venue's logo (Settings → Appearance). The full admin keeps its own
+     * validation and answer; the write is AppLook::setLogo(), the one writer HexaTech Loyalty's upload uses too:
+     * the `company_logo` row locked while it changes, a new file removed again if the row cannot be saved, and the
+     * old file deleted only when it is this organisation's own in `logos` (release 3, R3-6).
+     */
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
             'logo' => 'required|image|mimes:jpeg,png,jpg,webp|max:4096',
         ]);
 
-        $url = \App\Services\MediaService::upload($request->file('logo'), 'logos');
-
-        $setting = HotelSetting::where('key', 'company_logo')->first();
-        if ($setting) {
-            \App\Services\MediaService::delete($setting->value);
-            $setting->update(['value' => $url]);
-        } else {
-            HotelSetting::create([
-                'key'         => 'company_logo',
-                'value'       => $url,
-                'type'        => 'string',
-                'group'       => 'appearance',
-                'label'       => 'Company Logo',
-                'description' => 'Logo displayed in the app header and member cards',
-            ]);
-        }
-
-        AuditLog::record('logo_uploaded', HotelSetting::where('key', 'company_logo')->first(),
-            ['url' => $url], [], $request->user(), 'Company logo updated');
+        $url = \App\Services\Loyalty\AppLook::setLogo($request->file('logo'), $request->user());
 
         return response()->json(['message' => 'Logo uploaded', 'url' => $url]);
     }

@@ -170,11 +170,18 @@ describe('plannerMeta — resolveGroupMeta', () => {
   })
 })
 
+/**
+ * `planner_channels` is the org's own Tasks list (Settings → Planner → Tasks), tagged to its groups. An org that
+ * has none has none: the six starter channels are no longer injected, because the Tasks editor saves the parsed
+ * list back — injected defaults would be written into the org's setting on its first edit, and a deleted last
+ * task would come back as six.
+ */
 describe('plannerMeta — parsePlannerChannels', () => {
-  it('returns DEFAULT_CHANNELS on null/undefined/empty', () => {
-    expect(parsePlannerChannels(null)).toBe(DEFAULT_CHANNELS)
-    expect(parsePlannerChannels(undefined)).toBe(DEFAULT_CHANNELS)
-    expect(parsePlannerChannels([])).toBe(DEFAULT_CHANNELS)
+  it('returns no tasks on null/undefined/empty', () => {
+    expect(parsePlannerChannels(null)).toEqual([])
+    expect(parsePlannerChannels(undefined)).toEqual([])
+    expect(parsePlannerChannels([])).toEqual([])
+    expect(parsePlannerChannels('')).toEqual([])
   })
 
   it('parses admin-customised channel list', () => {
@@ -188,17 +195,15 @@ describe('plannerMeta — parsePlannerChannels', () => {
     expect(out[0].color).toBe('#ff00ff')
   })
 
-  it('falls back to DEFAULT_CHANNELS when all entries are invalid', () => {
-    // Empty + entries without key/label all get dropped. If the
-    // result list is empty, we fall back to DEFAULT_CHANNELS so the
-    // picker always has SOMETHING to render.
+  it('returns no tasks when all entries are invalid', () => {
+    // Entries without key/label all get dropped, and nothing is put in their place.
     const out = parsePlannerChannels([
       { icon: 'phone' },            // no key + no label
       { key: '', label: 'Empty' },  // empty key
       { key: 'k', label: '' },      // empty label
     ])
 
-    expect(out).toBe(DEFAULT_CHANNELS)
+    expect(out).toEqual([])
   })
 
   it('skips invalid entries while preserving valid ones', () => {
@@ -232,9 +237,9 @@ describe('plannerMeta — parsePlannerChannels', () => {
     expect(out[0].key).toBe('fax')
   })
 
-  it('handles malformed JSON by returning DEFAULT_CHANNELS', () => {
+  it('handles malformed JSON by returning no tasks', () => {
     const out = parsePlannerChannels('{garbage')
-    expect(out).toBe(DEFAULT_CHANNELS)
+    expect(out).toEqual([])
   })
 })
 
