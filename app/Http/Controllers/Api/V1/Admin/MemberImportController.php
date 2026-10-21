@@ -3,15 +3,12 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\MemberImportBatch;
-use App\Services\AnalyticsService;
+use App\Services\Loyalty\Members\ImportRefused;
+use App\Services\Loyalty\Members\MemberImportRun;
 use App\Services\MemberImportService;
-use App\Services\PlanLimitGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 /**
  * Resumable CSV import of existing customers.
@@ -35,12 +32,13 @@ class MemberImportController extends Controller
     /** Rows per `process` call. Sized to stay well inside any proxy timeout. */
     private const CHUNK = 100;
 
-    public function __construct(private MemberImportService $importer)
+    public function __construct(private MemberImportRun $run)
     {
     }
 
     /**
-     * Upload + validate. Creates a batch but no members.
+     * Upload + validate. Creates a batch but no members. The steps are MemberImportRun's (HexaTech Loyalty's import
+     * shares them); this method keeps the admin SPA's answers.
      */
     public function preview(Request $request): JsonResponse
     {
@@ -48,69 +46,16 @@ class MemberImportController extends Controller
             'file' => 'required|file|mimes:csv,txt|max:20480',
         ]);
 
-        @set_time_limit(300);
-        @ini_set('memory_limit', '512M');
-
         $orgId = $this->orgId($request);
         if (!$orgId) {
             return response()->json(['error' => 'No organization context.'], 422);
         }
 
-        $upload = $request->file('file');
-        $parsed = $this->importer->parseFile($upload->getRealPath());
-
-        if ($parsed['error']) {
-            return response()->json(['error' => $parsed['error']], 422);
+        try {
+            ['batch' => $batch, 'report' => $report, 'parsed' => $parsed, 'usage' => $usage] = $this->run->preview($request->file('file'), $orgId, $request->user());
+        } catch (ImportRefused $e) {
+            return response()->json(['error' => $this->refusal($e)], 422);
         }
-        if ($parsed['rows'] === []) {
-            return response()->json(['error' => 'No data rows found under the header row.'], 422);
-        }
-        if (!in_array('email', $parsed['headers'], true)) {
-            $found = $parsed['unmapped'] ? implode(', ', array_slice($parsed['unmapped'], 0, 8)) : 'none';
-            return response()->json([
-                'error' => "Could not find an email column. Columns found: {$found}. "
-                         . 'Every member needs an email address — rename that column to "email" and try again.',
-            ], 422);
-        }
-        if ($parsed['truncated']) {
-            return response()->json([
-                'error' => "This file has {$parsed['file_rows']} rows, above the "
-                         . MemberImportService::MAX_ROWS . '-row limit for a single import. '
-                         . 'Split it so no customers are silently dropped.',
-            ], 422);
-        }
-
-        $usage = app(PlanLimitGuard::class)->usage(PlanLimitGuard::KEY_MEMBERS);
-        $capRemaining = $usage['limit'] !== null
-            ? max(0, (int) $usage['limit'] - (int) $usage['count'])
-            : PHP_INT_MAX;
-
-        // Dry run: identical code path to the commit, so what the operator
-        // approves is exactly what they get.
-        $report = $this->importer->process(
-            rows: $parsed['rows'],
-            dryRun: true,
-            orgId: $orgId,
-            capRemaining: $capRemaining,
-            planLimit: $usage['limit'],
-        );
-
-        // Keep the file for the life of the batch; each chunk re-parses it.
-        $path = $upload->store('member-imports');
-        $absolute = Storage::path($path);
-
-        $batch = MemberImportBatch::create([
-            'uuid'               => (string) Str::uuid(),
-            'organization_id'    => $orgId,
-            'created_by_user_id' => $request->user()?->id,
-            'original_filename'  => $upload->getClientOriginalName(),
-            'stored_path'        => $absolute,
-            'file_rows'          => $parsed['file_rows'],
-            'total_rows'         => count($parsed['rows']),
-            'status'             => 'pending',
-            'columns_used'       => $parsed['headers'],
-            'columns_ignored'    => $parsed['unmapped'],
-        ]);
 
         $problems = array_values(array_filter($report['rows'], fn ($r) => ($r['status'] ?? '') !== 'ok'));
 
@@ -138,8 +83,6 @@ class MemberImportController extends Controller
      */
     public function process(Request $request, string $uuid): JsonResponse
     {
-        @set_time_limit(300);
-
         $batch = $this->findBatch($request, $uuid);
         if (!$batch) {
             return response()->json(['error' => 'Import not found.'], 404);
@@ -151,26 +94,7 @@ class MemberImportController extends Controller
         $size = (int) $request->integer('size', self::CHUNK);
         $size = max(10, min($size, 250));
 
-        $batch = $this->importer->processChunk($batch, $size);
-
-        if ($batch->status === 'completed') {
-            AuditLog::record(
-                'members_bulk_import',
-                null,
-                [
-                    'batch_id'       => $batch->uuid,
-                    'file'           => $batch->original_filename,
-                    'imported'       => $batch->ok_count,
-                    'skipped'        => $batch->skip_count,
-                    'errors'         => $batch->error_count,
-                    'points_awarded' => $batch->points_awarded,
-                ],
-                [],
-                $request->user(),
-                "Member import finished: {$batch->ok_count} created, {$batch->skip_count} skipped, {$batch->error_count} errors"
-            );
-            AnalyticsService::clearDashboardCache();
-        }
+        $batch = $this->run->chunk($batch, $size, $request->user());
 
         return response()->json(['batch' => $this->payload($batch)]);
     }
@@ -192,11 +116,8 @@ class MemberImportController extends Controller
         if (!$batch) {
             return response()->json(['error' => 'Import not found.'], 404);
         }
-        if (!$batch->isFinished()) {
-            $batch->update(['status' => 'cancelled', 'completed_at' => now()]);
-        }
 
-        return response()->json(['batch' => $this->payload($batch)]);
+        return response()->json(['batch' => $this->payload($this->run->cancel($batch))]);
     }
 
     /** Recent imports, so an interrupted run is findable. */
@@ -239,6 +160,20 @@ class MemberImportController extends Controller
             'created_at'      => $b->created_at?->toIso8601String(),
             'problems'        => $withResults ? array_slice($b->results ?? [], -100) : null,
         ], fn ($v) => $v !== null);
+    }
+
+    /** The sentence the admin SPA has always shown for a refused file. */
+    private function refusal(ImportRefused $e): string
+    {
+        return match ($e->errorCode) {
+            'no_email_column' => 'Could not find an email column. Columns found: '
+                . ($e->extra['columns'] ? implode(', ', array_slice($e->extra['columns'], 0, 8)) : 'none') . '. '
+                . 'Every member needs an email address — rename that column to "email" and try again.',
+            'too_many_rows' => "This file has {$e->extra['file_rows']} rows, above the "
+                . MemberImportService::MAX_ROWS . '-row limit for a single import. '
+                . 'Split it so no customers are silently dropped.',
+            default => $e->getMessage(),
+        };
     }
 
     private function orgId(Request $request): ?int

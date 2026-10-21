@@ -11,7 +11,7 @@ import type { ThemeName } from '../../workspace/theme/accent'
 import { useBoot } from '../LoyaltyProvider'
 import { failureOf, type ApiFailure } from '../lib/api'
 import { refusalKey } from '../lib/errors'
-import { points, when } from '../lib/format'
+import { amountOf, points, when } from '../lib/format'
 import { useLook } from '../lib/look'
 import { TierChip } from '../ui/TierChip'
 import { PROGRAM_KEY, afterProgramChange, programApi } from './api'
@@ -181,11 +181,12 @@ export function TierCard({ tier, manage, theme, locale, onOpen }: { tier: Tier; 
 /** A benefit a tier gives, with its wording, its typed value and where it counts; a manager changes it or takes it off. */
 function BenefitChip({ tb, tier, manage, locale, onOpen }: { tb: TierBenefit; tier: Tier; manage: boolean; locale: string; onOpen: (open: Open) => void }) {
   const { t } = useTranslation()
+  const currency = useBoot().venue.currency
   const typed = typedValue(tb)
   const scope = tb.applies_to !== 'all' ? named('loyalty.program.applies_to', APPLIES_TO_WORDS, tb.applies_to) : null
   const detail = [
     tb.value,
-    typed ? t(`loyalty.program.value_phrase.${typed.type}`, VALUE_PHRASE_WORDS[typed.type], { amount: decimal(typed.amount, locale) }) : null,
+    typed ? t(`loyalty.program.value_phrase.${typed.type}`, VALUE_PHRASE_WORDS[typed.type], { amount: amountOf(typed.type, typed.amount, currency, locale) }) : null,
     scope ? t(...scope) : tb.applies_to !== 'all' ? tb.applies_to : null,
   ].filter(Boolean).join(' · ')
   const words = <><span className="font-medium">{tb.name}</span>{detail && <span className="text-a-text-2"> · {detail}</span>}</>

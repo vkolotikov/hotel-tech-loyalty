@@ -1,0 +1,133 @@
+{
+  "at_risk": {
+    "title": "Risque de départ",
+    "line": "Les membres actifs devenus silencieux, les plus anciens en premier. Gagner des points ou faire scanner sa carte compte comme une activité.",
+    "choose": "Sans activité depuis",
+    "days": "{{days}} jours",
+    "none": "Aucun membre actif n’est sans activité depuis {{days}} jours.",
+    "capped": "Les {{shown}} plus silencieux sur {{total}}.",
+    "last_seen": "Dernière activité le {{day}} · jours sans activité : {{days}}",
+    "error": {
+      "not_allowed": "Les analyses sont réservées aux propriétaires, aux managers et au personnel autorisé à voir les statistiques. Un manager peut changer cela dans Équipe, dans l’administration complète.",
+      "no_capability": "Les analyses sont réservées aux propriétaires, aux managers et au personnel autorisé à voir les statistiques. Un manager peut changer cela dans Équipe, dans l’administration complète.",
+      "invalid": "Choisissez de 7 à 365 jours.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "La liste n’a pas pu être chargée. Veuillez réessayer."
+    }
+  },
+  "title": "Analyses",
+  "line": "Comment se porte le programme, pour toute l’organisation, à l’heure de l’établissement.",
+  "period_line": "{{dates}}, {{bucket}}",
+  "period_choice": "Période",
+  "no_right": "Les analyses sont réservées aux propriétaires, aux managers et au personnel autorisé à voir les statistiques. Un manager peut changer cela dans Équipe, dans l’administration complète.",
+  "empty": "Rien à montrer pour l’instant. Dès que des membres rejoignent le programme et gagnent des points, cette page montre combien ils sont, les points qu’ils gagnent et dépensent, leurs niveaux et qui est devenu silencieux.",
+  "points": {
+    "issued": "Attribués",
+    "redeemed": "Utilisés",
+    "expired": "Expirés",
+    "title": "Points entrants et sortants",
+    "line": "Les points attribués au-dessus de la ligne, les points utilisés et expirés en dessous. Une ligne annulée ne compte nulle part."
+  },
+  "tiles": {
+    "members": "Membres",
+    "new_members": "Nouveaux sur la période",
+    "active_members": "Actifs, 90 derniers jours",
+    "outstanding": "Points en circulation",
+    "outstanding_line": "Détenus par les membres actifs",
+    "issued": "Points attribués",
+    "redeemed": "Points utilisés",
+    "expired": "Points expirés",
+    "redemption_rate": "Taux d’utilisation",
+    "redemption_rate_line": "Points utilisés pour 100 attribués",
+    "label": "Les chiffres"
+  },
+  "growth": {
+    "title": "Membres dans le temps",
+    "total": "Membres",
+    "new": "Inscrits"
+  },
+  "redemptions": {
+    "title": "Récompenses échangées",
+    "line": "{{total}} sur la période, selon le jour de l’échange et leur état actuel."
+  },
+  "tiers": {
+    "title": "Membres par niveau",
+    "line": "Les membres actifs de chaque niveau, aujourd’hui.",
+    "off": "désactivé",
+    "none": "Le programme n’a pas encore de niveaux."
+  },
+  "movement": {
+    "title": "Changements de niveau",
+    "line": "Les changements de niveau sur la période.",
+    "none": "Aucun membre n’a changé de niveau sur cette période.",
+    "flows": "D’un niveau à l’autre",
+    "flow": "{{from}} → {{to}}"
+  },
+  "expiry": {
+    "title": "Points bientôt expirés",
+    "line": "Les points encore détenus, selon le mois où ils expirent : ce mois-ci et les cinq suivants.",
+    "overdue": "{{points}} points de {{members}} membres ont atteint leur date et partiront au prochain passage."
+  },
+  "engagement": {
+    "title": "Engagement",
+    "line": "Les membres actifs aujourd’hui, en quatre groupes.",
+    "new": "Nouveaux",
+    "active": "Actifs",
+    "at_risk": "À risque",
+    "dormant": "Endormis"
+  },
+  "balances": {
+    "title": "Soldes",
+    "line": "Les membres actifs selon les points qu’ils détiennent.",
+    "below": "Moins de zéro",
+    "zero": "Aucun",
+    "over": "{{min}} ou plus",
+    "range": "{{min}}–{{max}}"
+  },
+  "share": "{{value}} · {{share}} %",
+  "period": {
+    "30d": "30 jours",
+    "90d": "90 jours",
+    "12m": "12 mois"
+  },
+  "bucket": {
+    "day": "par jour",
+    "week": "par semaine, à partir du lundi",
+    "month": "par mois"
+  },
+  "bucket_head": {
+    "day": "Jour",
+    "week": "Semaine du",
+    "month": "Mois"
+  },
+  "growth_line": {
+    "day": "Tous les membres à la fin de chaque jour, et ceux inscrits ce jour-là.",
+    "week": "Tous les membres à la fin de chaque semaine, et ceux inscrits cette semaine-là.",
+    "month": "Tous les membres à la fin de chaque mois, et ceux inscrits ce mois-là."
+  },
+  "engagement_hint": {
+    "new": "Inscrits dans les 30 derniers jours",
+    "active": "Activité dans les 30 derniers jours",
+    "at_risk": "Dernière activité il y a 31 à 90 jours",
+    "dormant": "Aucune activité dans les 90 derniers jours"
+  },
+  "redemption": {
+    "fulfilled": "Délivrées",
+    "pending": "En attente",
+    "cancelled": "Annulées"
+  },
+  "direction": {
+    "up": "Montée",
+    "down": "Descente",
+    "lateral": "Même rang"
+  },
+  "load": {
+    "error": {
+      "not_allowed": "Les analyses sont réservées aux propriétaires, aux managers et au personnel autorisé à voir les statistiques. Un manager peut changer cela dans Équipe, dans l’administration complète.",
+      "no_capability": "Les analyses sont réservées aux propriétaires, aux managers et au personnel autorisé à voir les statistiques. Un manager peut changer cela dans Équipe, dans l’administration complète.",
+      "invalid": "Cette période ne peut pas être affichée. Choisissez-en une autre.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Les analyses n’ont pas pu être chargées. Veuillez réessayer."
+    }
+  }
+}

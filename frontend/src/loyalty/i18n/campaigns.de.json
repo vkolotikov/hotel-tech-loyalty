@@ -1,0 +1,389 @@
+{
+  "blocks": {
+    "none": "Noch keine Blöcke. Fügen Sie unten eine Überschrift und Text hinzu.",
+    "up": "{{what}} {{n}} nach oben",
+    "down": "{{what}} {{n}} nach unten",
+    "remove": "{{what}} {{n}} entfernen",
+    "heading_text": "Überschrift",
+    "size": "Größe",
+    "text": "Text",
+    "text_hint": "Eine neue Zeile im Feld ist eine neue Zeile in der E-Mail.",
+    "label": "Beschriftung",
+    "label_example": "z. B. Jetzt buchen",
+    "link": "Link",
+    "divider_hint": "Eine dünne Linie quer durch die E-Mail.",
+    "spacer_hint": "Etwas Abstand zwischen Blöcken.",
+    "add": "Block hinzufügen",
+    "align": "Ausrichtung"
+  },
+  "copy_name": "{{name}} (Kopie)",
+  "editor": {
+    "unsaved": "Änderungen nicht gespeichert",
+    "save": "Entwurf speichern",
+    "test": "Test an mich senden",
+    "send": "Senden…",
+    "test_sent": "Ein Test ging an {{email}}, mit „[TEST]“ vor dem Betreff.",
+    "before_send": "Bevor sie gesendet werden kann:",
+    "title": "Die E-Mail",
+    "name": "Name",
+    "name_hint": "Nur für das Team sichtbar.",
+    "subject": "Betreff",
+    "subject_example": "z. B. Herbst bei uns",
+    "audience": "Wer sie erhält",
+    "audience_hint": "Nur Mitglieder des Segments, die Werbe-E-Mails zugestimmt haben, erhalten sie. Vor dem Senden wird die genaue Zahl angezeigt.",
+    "choose_segment": "Segment wählen",
+    "segment_problem": "{{name}} (eine Regel muss korrigiert werden)",
+    "segment_option": "{{name}} · {{number}} Mitglieder",
+    "segment_gone": "Ein Segment, das es nicht mehr gibt",
+    "body": "Inhalt",
+    "tags": "Platzhalter wie {{tag}} werden nicht ausgefüllt: Mitglieder würden sie so lesen, wie sie dastehen. Schreiben Sie die Wörter selbst.",
+    "duplicate": "Duplizieren",
+    "delete": "Entwurf löschen"
+  },
+  "preview": {
+    "heading": "Vorschau",
+    "saved_only": "Dies zeigt den gespeicherten Entwurf. Speichern Sie, um Ihre Änderungen zu sehen.",
+    "footer": "Jede E-Mail an ein Mitglied endet mit dem Namen des Hauses und einem Abmeldelink.",
+    "empty": "Die E-Mail ist leer. Fügen Sie eine Überschrift oder Text hinzu.",
+    "title": "Vorschau der E-Mail"
+  },
+  "delete": {
+    "title": "{{name}} löschen?",
+    "confirm": "Entwurf löschen",
+    "keep": "Behalten",
+    "body": "Der Entwurf wird endgültig gelöscht. Aus ihm wurde nichts gesendet."
+  },
+  "back": "Alle Kampagnen",
+  "managers_only": "Nur Inhaber oder Manager können mit Kampagnen und Segmenten arbeiten.",
+  "plan_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen. Segmente funktionieren hier weiterhin.",
+  "load": {
+    "error": {
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "results": {
+    "title": "Wie weit sie kam",
+    "sent": "Gesendet",
+    "failed": "Fehlgeschlagen",
+    "of": "Von",
+    "progress": "Bisher gesendet",
+    "sending": "Wird gesendet, in Paketen zu 100. Diese Seite aktualisiert sich alle 10 Sekunden.",
+    "done": "Gesendet {{when}}.",
+    "stopped": "Der Versand brach vor dem Ende ab: {{sent}} wurden gesendet, der Rest nicht.",
+    "cancelled": "Abgebrochen: {{sent}} wurden vor dem Stopp gesendet.",
+    "last_progress": "Letztes Paket {{when}}.",
+    "skipped": "{{number}} erhielten keine E-Mail: Sie haben nach dem Start ihre Zustimmung zurückgezogen oder sich abgemeldet.",
+    "email": "Die E-Mail",
+    "to": "An {{segment}}",
+    "by": "Gesendet von {{name}}",
+    "cancel": "Versand stoppen"
+  },
+  "elsewhere": {
+    "note": "Dieser Entwurf wurde im vollständigen Admin mit Teilen erstellt, die dieser Arbeitsbereich nicht bearbeitet, etwa einem Bild oder eigenem HTML. Bearbeiten, testen und senden Sie ihn dort.",
+    "open": "Kampagnen im vollständigen Admin öffnen"
+  },
+  "list": {
+    "no_segment": "Kein Segment",
+    "new_name": "Neue Kampagne, {{day}}",
+    "line": "E-Mails an die Mitglieder eines Segments. Nur Mitglieder, die Werbe-E-Mails zugestimmt haben, erhalten sie.",
+    "new": "Neue Kampagne",
+    "none": "Noch keine Kampagnen. Legen Sie eine an, wählen Sie ein Segment, schreiben Sie die E-Mail und senden Sie sie.",
+    "no_subject": "Noch kein Betreff",
+    "edited": "Bearbeitet {{day}}",
+    "counts": "{{sent}} von {{total}} gesendet · {{failed}} fehlgeschlagen"
+  },
+  "cancel": {
+    "title": "Versand von {{name}} stoppen?",
+    "confirm": "Versand stoppen",
+    "keep": "Weiter senden",
+    "body": "{{sent}} E-Mails sind bereits verschickt und bleiben es. Der Rest wird nicht gesendet; der Versand stoppt innerhalb eines Pakets von 100.",
+    "error": {
+      "not_sending": "Diese Kampagne wird nicht mehr gesendet. Die Seite zeigt jetzt den aktuellen Stand.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Der Versand läuft möglicherweise weiter. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Versand konnte nicht gestoppt werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "title": "Kampagnen",
+  "line": "E-Mails an Ihre Mitglieder und die Segmente, an die Sie sie senden.",
+  "tabs": "Bereiche der Kampagnen",
+  "segment": {
+    "edit_title": "{{name}} bearbeiten",
+    "new_title": "Neues Segment",
+    "name": "Name",
+    "name_example": "z. B. Gold-Mitglieder, seit dem Sommer nicht gesehen",
+    "description": "Beschreibung",
+    "description_hint": "Optional. Nur für das Team sichtbar.",
+    "who": "Wer dazugehört",
+    "everyone": "Alle",
+    "everyone_hint": "Alle aktiven Mitglieder des Programms.",
+    "by_rules": "Mitglieder nach Regeln",
+    "combine": "Übereinstimmung",
+    "add_rule": "Regel hinzufügen",
+    "preview_wait": "Füllen Sie jede Regel aus, um zu sehen, wer passt.",
+    "counting": "Wird gezählt…",
+    "count": "{{number}} aktive Mitglieder passen · {{marketing}} davon haben Werbe-E-Mails zugestimmt",
+    "sample": "Einige davon",
+    "save": "Segment speichern",
+    "create": "Segment hinzufügen",
+    "rule_n": "Regel {{n}}",
+    "remove_rule": "Regel {{n}} entfernen",
+    "rule_type": "Art der Regel {{n}}",
+    "rule_op": "Vergleich der Regel {{n}}",
+    "rule_tiers": "Stufen der Regel {{n}}",
+    "rule_value": "Wert der Regel {{n}}",
+    "unit_days": "Tage",
+    "unit_points": "Punkte",
+    "date_hint": "Gezählt ab Mitternacht UTC an diesem Tag.",
+    "problem": {
+      "name": "Geben Sie dem Segment einen Namen mit höchstens 120 Zeichen.",
+      "description": "Die Beschreibung darf höchstens 500 Zeichen haben."
+    },
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_found": "Dieses Segment gibt es nicht mehr. Die Liste zeigt jetzt die Segmente, wie sie sind.",
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "bad_rule": "Eine Regel kann nicht verwendet werden. Sie ist oben markiert.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "unknown": "Das Segment konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "segments": {
+    "line": "An wen eine Kampagne geht: Mitglieder nach Stufe, Aktivität, Punkten, Beitrittsdatum – oder alle.",
+    "new": "Neues Segment",
+    "none": "Noch keine Segmente. Ein Segment bestimmt, an welche Mitglieder eine Kampagne geht.",
+    "problem": "Regel {{n}} kann nicht verwendet werden: {{why}} Bis sie korrigiert ist, wird an dieses Segment keine Kampagne gesendet.",
+    "members": "Mitglieder jetzt",
+    "last_sent": "Zuletzt gesendet",
+    "never": "Noch nicht",
+    "edit": "Bearbeiten",
+    "delete": "Löschen",
+    "everyone": "Alle aktiven Mitglieder",
+    "tiers_gone": "{{number}} entfernte Stufen",
+    "days": "{{number}} Tagen",
+    "delete_title": "{{name}} löschen?",
+    "delete_confirm": "Segment löschen",
+    "delete_keep": "Behalten",
+    "delete_body": "Mitglieder werden nicht verändert. Bereits an das Segment gesendete Kampagnen behalten ihre Zahlen. Dies kann nicht rückgängig gemacht werden."
+  },
+  "send": {
+    "title": "Diese Kampagne senden",
+    "counting": "Empfänger werden gezählt…",
+    "tags": "Die E-Mail enthält einen Platzhalter wie {{tag}}. Platzhalter werden nicht ausgefüllt: Mitglieder lesen ihn so, wie er dasteht.",
+    "final": "Einmal gestartet, lässt sich der Versand stoppen, aber bereits gesendete E-Mails lassen sich nicht zurückholen.",
+    "keep": "Nicht jetzt",
+    "confirm": "An {{number}} Mitglieder senden",
+    "will_email": "Sie geht an {{number}} Mitglieder von {{segment}}, ab sofort, unter dem Namen des Hauses, jede mit einem Abmeldelink.",
+    "nobody": "Niemand in {{segment}} kann sie erhalten.",
+    "over": "Sie würde {{number}} Mitglieder erreichen, mehr als {{limit}}, das Höchste für eine Kampagne. Grenzen Sie das Segment ein.",
+    "left_out": "{{number}} der {{members}} Mitglieder erhalten sie nicht:",
+    "error": {
+      "already_started": "Diese Kampagne wurde bereits gestartet. Die Seite zeigt jetzt, wie weit sie ist.",
+      "changed": "Die Kampagne hat sich geändert, seit diese Seite sie zeigte. Prüfen Sie sie und senden Sie dann erneut.",
+      "audience_changed": "Die Zahl der Empfänger ist jetzt {{reached}}. Prüfen Sie die Zahl und senden Sie dann erneut.",
+      "incomplete": "Die Kampagne ist noch nicht bereit. Die Seite zeigt jetzt, was noch fehlt.",
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Ihr Segment hat eine Regel, die nicht verwendet werden kann. Korrigieren Sie zuerst das Segment.",
+      "nobody_to_send_to": "Niemand in diesem Segment kann sie erhalten.",
+      "too_many": "Sie würde mehr als {{limit}} Mitglieder erreichen, das Höchste für eine Kampagne. Grenzen Sie das Segment ein.",
+      "not_editable_here": "Diese Kampagne wird aus dem vollständigen Admin gesendet.",
+      "not_started": "Die Kampagne konnte nicht eingereiht werden. Es wurde nichts gesendet; bitte versuchen Sie es erneut.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob der Versand begonnen hat, bevor Sie erneut auf Senden drücken.",
+      "unknown": "Der Versand hat möglicherweise nicht begonnen. Laden Sie die Seite neu und prüfen Sie den Stand, bevor Sie erneut auf Senden drücken."
+    }
+  },
+  "tab": {
+    "campaigns": "Kampagnen",
+    "segments": "Segmente"
+  },
+  "status": {
+    "draft": "Entwurf",
+    "sending": "Wird gesendet",
+    "sent": "Gesendet",
+    "failed": "Fehlgeschlagen",
+    "cancelled": "Abgebrochen"
+  },
+  "rule_type": {
+    "tier": "Stufe",
+    "activity": "Letzte Aktivität",
+    "current_points": "Punktestand",
+    "lifetime_points": "Insgesamt gesammelte Punkte",
+    "joined": "Beigetreten",
+    "redemptions": "Prämien-Einlösungen",
+    "earn": "Gesammelte Punkte"
+  },
+  "rule_op": {
+    "tier_in": "ist eine von",
+    "tier_not_in": "ist keine von",
+    "activity_active_within": "in den letzten",
+    "activity_inactive_over": "vor den letzten",
+    "current_points_min": "mindestens",
+    "current_points_max": "höchstens",
+    "lifetime_points_min": "mindestens",
+    "lifetime_points_max": "höchstens",
+    "joined_after": "am oder nach dem",
+    "joined_before": "vor dem",
+    "redemptions_any": "hat eine Prämie eingelöst",
+    "redemptions_none": "hat nie eine Prämie eingelöst",
+    "earn_any": "hat Punkte gesammelt",
+    "earn_none": "hat nie Punkte gesammelt"
+  },
+  "operator": {
+    "AND": "Mitglieder, auf die alle diese Regeln zutreffen",
+    "OR": "Mitglieder, auf die eine dieser Regeln zutrifft"
+  },
+  "reason": {
+    "unknown_type": "Diese Art von Regel kennt der Arbeitsbereich nicht. Wählen Sie eine andere Art oder entfernen Sie die Regel.",
+    "unknown_op": "Wählen Sie, wie diese Regel vergleicht.",
+    "no_value": "Füllen Sie diese Regel aus.",
+    "bad_value": "Geben Sie eine ganze Zahl oder ein gültiges Datum ein.",
+    "unknown_tier": "Eine Stufe dieser Regel gibt es im Programm nicht mehr. Wählen Sie die Stufen erneut.",
+    "out_of_range": "Geben Sie einen Wert von {{min}} bis {{max}} ein.",
+    "too_many_tiers": "Wählen Sie höchstens {{max}} Stufen.",
+    "too_many": "Ein Segment hat höchstens {{max}} Regeln.",
+    "operator": "Wählen Sie, ob alle Regeln oder eine davon zutreffen müssen.",
+    "no_rules": "Fügen Sie eine Regel hinzu oder wählen Sie Alle.",
+    "everyone_with_rules": "Alle braucht keine Regeln: Entfernen Sie sie oder wählen Sie Regeln.",
+    "bad_rules": "Diese Regeln lassen sich nicht lesen. Legen Sie sie neu an."
+  },
+  "block": {
+    "heading": "Überschrift",
+    "text": "Text",
+    "button": "Schaltfläche",
+    "divider": "Trennlinie",
+    "spacer": "Abstand"
+  },
+  "align": {
+    "left": "Links",
+    "center": "Mitte",
+    "right": "Rechts"
+  },
+  "level": {
+    "1": "Groß",
+    "2": "Mittel",
+    "3": "Klein"
+  },
+  "draft": {
+    "problem": {
+      "name": "Geben Sie der Kampagne einen Namen mit höchstens 120 Zeichen.",
+      "subject_long": "Der Betreff darf höchstens 200 Zeichen haben.",
+      "segment_gone": "Dieses Segment gibt es nicht mehr. Wählen Sie ein anderes.",
+      "too_many_blocks": "Eine E-Mail hat höchstens 100 Blöcke.",
+      "text_long": "Dieser Text ist zu lang.",
+      "url": "Ein Link beginnt mit https://, http:// oder mailto:.",
+      "look": "Dieser Block kann so nicht gespeichert werden. Entfernen Sie ihn und fügen Sie ihn neu hinzu."
+    }
+  },
+  "blocker": {
+    "unsaved": "Speichern Sie zuerst Ihre Änderungen.",
+    "no_segment": "Wählen Sie, wer sie erhält.",
+    "segment_gone": "Ihr Segment gibt es nicht mehr. Wählen Sie ein anderes.",
+    "segment_problem": "Ihr Segment hat eine Regel, die nicht verwendet werden kann. Korrigieren Sie zuerst das Segment.",
+    "subject": "Schreiben Sie einen Betreff.",
+    "body": "Schreiben Sie etwas in die E-Mail.",
+    "button": "Geben Sie jeder Schaltfläche eine Beschriftung und einen Link."
+  },
+  "not_reached": {
+    "no_consent": "{{number}} haben Werbe-E-Mails nicht zugestimmt oder E-Mails ausgeschaltet",
+    "unsubscribed": "{{number}} haben sich abgemeldet",
+    "suppressed": "{{number}} haben eine Adresse, die unzustellbar war oder sich beschwert hat und daher nie angeschrieben wird",
+    "no_email": "{{number}} haben keine E-Mail-Adresse"
+  },
+  "remove_segment": {
+    "error": {
+      "in_use": "Diese Kampagnen verwenden das Segment noch: {{names}}. Es lässt sich löschen, sobald keine davon mehr ein Entwurf ist oder gesendet wird.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_found": "Dieses Segment gibt es nicht mehr. Die Liste zeigt jetzt die Segmente, wie sie sind.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Bitte versuchen Sie es erneut.",
+      "unknown": "Das Segment konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "count": {
+    "error": {
+      "bad_rule": "Korrigieren Sie die oben markierte Regel, um zu sehen, wer passt.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Die Zahl konnte nicht aktualisiert werden.",
+      "unknown": "Die Zahl konnte nicht aktualisiert werden."
+    }
+  },
+  "create": {
+    "error": {
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung: Es wurde keine Kampagne angelegt. Bitte versuchen Sie es erneut.",
+      "unknown": "Die Kampagne konnte nicht angelegt werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "save": {
+    "error": {
+      "not_a_draft": "Diese Kampagne ist kein Entwurf mehr: Sie wurde inzwischen gesendet. Die Seite zeigt jetzt den aktuellen Stand.",
+      "not_editable_here": "Diese Kampagne wird im vollständigen Admin bearbeitet.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Entwurf konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "test": {
+    "error": {
+      "incomplete": "Schreiben Sie einen Betreff und etwas in die E-Mail, bevor Sie sie testen.",
+      "no_email": "Ihr Konto hat keine E-Mail-Adresse, an die der Test gehen könnte.",
+      "suppressed": "Ihre Adresse war früher unzustellbar oder hat sich beschwert, daher wird sie nie angeschrieben und der Test erreicht Sie nicht.",
+      "test_failed": "Der Test konnte nicht gesendet werden. Bitte versuchen Sie es später erneut.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Der Test wurde nicht gesendet. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Test konnte nicht gesendet werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "audience": {
+    "error": {
+      "no_audience": "Wählen Sie zuerst, wer sie erhält.",
+      "bad_rule": "Ihr Segment hat eine Regel, die nicht verwendet werden kann. Korrigieren Sie zuerst das Segment.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Die Empfänger konnten nicht gezählt werden.",
+      "unknown": "Die Empfänger konnten nicht gezählt werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "duplicate": {
+    "error": {
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
+      "network": "Keine Verbindung: Es wurde keine Kopie angelegt. Bitte versuchen Sie es erneut.",
+      "unknown": "Die Kopie konnte nicht angelegt werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "remove": {
+    "error": {
+      "not_a_draft": "Nur ein Entwurf kann gelöscht werden. Die Seite zeigt jetzt den aktuellen Stand.",
+      "not_found": "Diese Kampagne gibt es nicht mehr.",
+      "manager_only": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "not_allowed": "Nur Inhaber oder Manager können mit Kampagnen arbeiten.",
+      "network": "Keine Verbindung: Es wurde nichts gelöscht. Bitte versuchen Sie es erneut.",
+      "unknown": "Der Entwurf konnte nicht gelöscht werden. Bitte versuchen Sie es erneut."
+    }
+  }
+}

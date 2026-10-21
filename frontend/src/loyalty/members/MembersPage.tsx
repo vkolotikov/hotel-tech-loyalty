@@ -1,29 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { Search } from 'lucide-react'
+import { Download, Search, Upload, UserPlus, Users } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Notice } from '../../workspace/ui/Notice'
 import { PageHeader } from '../../workspace/ui/PageHeader'
 import { Skeleton } from '../../workspace/ui/Skeleton'
 import { useApi, useBoot } from '../LoyaltyProvider'
 import { failureOf } from '../lib/api'
-import { errorKey } from '../lib/errors'
+import { errorKey, refusalKey } from '../lib/errors'
 import { day, points } from '../lib/format'
 import { memberPath } from '../lib/links'
 import { useLook } from '../lib/look'
 import type { MemberFilters, MemberRow, MemberSort, MemberState, TierRef } from '../lib/types'
 import { Pager } from '../ui/Pager'
 import { TierChip } from '../ui/TierChip'
+import { AddMemberDialog } from '../membership/AddMemberDialog'
+import { membershipApi } from '../membership/api'
+import { ERRORS as MEMBERSHIP_ERRORS } from '../membership/errors'
+import { exportFileName, listActions } from '../membership/membershipMath'
 import { filtersFrom, searchFor, toggleTier, withChange } from './membersQuery'
 
 const INPUT = 'rounded-lg border border-a-border bg-a-surface px-2.5 py-1.5 text-sm text-a-text'
+/** A manager's tool in the header, a link that looks like the secondary button beside it. */
+const TOOL = 'inline-flex items-center gap-2 rounded-full border border-a-border bg-a-surface px-4 py-2.5 text-sm font-semibold text-a-text hover:bg-a-surface-2'
 
 /**
  * Members, the workspace's home (spec 2026-10-21 §4.2): the numbers line, the tiers as chips, a search, the state and
  * the order; 50 a page. Everything chosen lives in the address, so a list can be shared and survives a reload. A row
- * opens the member's page.
+ * opens the member's page. Release 2 (§4.1): Add member for everyone; for a manager Import, Export (the list as it is
+ * filtered now) and Duplicates.
  */
 export function MembersPage() {
   const { t, i18n } = useTranslation()
@@ -55,6 +62,20 @@ export function MembersPage() {
   const tierOf = (id: number | null): TierRef | null => tiers.find(tier => tier.id === id) ?? null
   const figures = page?.figures
   const timeZone = boot.venue.timezone
+  const actions = listActions(boot.staff.can)
+  const [adding, setAdding] = useState(false)
+
+  // The file comes through the same client as every call; the browser saves it under the venue's day.
+  const download = useMutation({
+    mutationFn: () => membershipApi.exportMembers(filters),
+    onSuccess: (blob) => {
+      const link = document.createElement('a')
+      link.href = URL.createObjectURL(blob)
+      link.download = exportFileName(boot.venue.today)
+      link.click()
+      URL.revokeObjectURL(link.href)
+    },
+  })
 
   return (
     <div className="space-y-5 px-4 py-6 lg:px-6">
@@ -66,10 +87,27 @@ export function MembersPage() {
             })}
           </p>
         )}>
+        {actions.tools && (
+          <>
+            <Link to="/loyalty/members/duplicates" className={TOOL}><Users size={15} aria-hidden />{t('loyalty.membership.list.duplicates', 'Duplicates')}</Link>
+            <Link to="/loyalty/members/import" className={TOOL}><Upload size={15} aria-hidden />{t('loyalty.membership.list.import', 'Import')}</Link>
+            <Button variant="secondary" loading={download.isPending} onClick={() => download.mutate()}>
+              <Download size={15} aria-hidden />{t('loyalty.membership.list.export', 'Export')}
+            </Button>
+          </>
+        )}
+        {actions.add && (
+          <Button variant="secondary" onClick={() => setAdding(true)}><UserPlus size={15} aria-hidden />{t('loyalty.membership.list.add', 'Add member')}</Button>
+        )}
         <Link to="/loyalty/scan" className="inline-flex items-center gap-2 rounded-full bg-a-accent px-4 py-2.5 text-sm font-semibold text-a-accent-ink shadow-a-sm hover:bg-a-accent-deep">
           {t('loyalty.members.scan', 'Scan a card')}
         </Link>
       </PageHeader>
+
+      {download.isError && (
+        <div className="max-w-xl"><Notice tone="danger">{t(...refusalKey('loyalty.membership', MEMBERSHIP_ERRORS, 'export', failureOf(download.error)))}</Notice></div>
+      )}
+      {adding && <AddMemberDialog onClose={() => setAdding(false)} />}
 
       {tiers.length > 0 && (
         <div role="group" aria-label={t('loyalty.members.tiers', 'Tiers')} className="flex flex-wrap gap-2">

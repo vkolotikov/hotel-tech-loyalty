@@ -41,11 +41,12 @@ class OffersTest extends TestCase
             'id' => $live->id, 'title' => 'Autumn spa', 'description' => '15% off treatments.', 'type' => 'discount', 'value' => 15,
             'code' => 'AUTUMN15', 'applies_to' => 'services', 'tier_ids' => [$this->tiers['gold']->id], 'start_date' => '2026-10-05',
             'end_date' => '2026-10-31', 'usage_limit' => 100, 'times_used' => 7, 'per_member_limit' => 1, 'is_active' => true,
-            'is_featured' => true, 'state' => 'live',
+            'is_featured' => true, 'image_url' => null, 'state' => 'live',
         ])
             ->assertJsonPath('offers.0.tier_ids', null)
             ->assertJsonPath('options.types', ['discount', 'points_multiplier', 'free_night', 'upgrade', 'bonus_points', 'cashback', 'fixed_amount'])
-            ->assertJsonPath('options.applies_to', ['all', 'services', 'stays']);
+            ->assertJsonPath('options.applies_to', ['all', 'services', 'stays'])
+            ->assertJsonPath('options.image', ['max_kb' => 2048, 'max_edge' => 4096, 'types' => ['image/jpeg', 'image/png', 'image/webp']]);
     }
 
     public function test_today_is_the_venues(): void
@@ -72,7 +73,8 @@ class OffersTest extends TestCase
         $response->assertJsonPath('offer', [
             'id' => $id, 'title' => 'Welcome', 'description' => 'Ten percent off the first visit.', 'type' => 'discount', 'value' => 10,
             'code' => 'WELCOME10', 'applies_to' => 'all', 'tier_ids' => [$gold], 'start_date' => '2026-10-05', 'end_date' => '2026-11-05',
-            'usage_limit' => 50, 'times_used' => 0, 'per_member_limit' => null, 'is_active' => true, 'is_featured' => false, 'state' => 'live',
+            'usage_limit' => 50, 'times_used' => 0, 'per_member_limit' => null, 'is_active' => true, 'is_featured' => false, 'image_url' => null,
+            'state' => 'live',
         ]);
         $stored = SpecialOffer::withoutGlobalScopes()->find($id);
         $this->assertSame([$gold], $stored->tier_ids);

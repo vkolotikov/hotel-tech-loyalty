@@ -124,6 +124,31 @@
     "used": "Utilisations : {{used}}",
     "used_of": "Utilisations : {{used}} sur {{limit}}"
   },
+  "picture": {
+    "add": "Ajouter une image",
+    "after_save_offer": "Vous pourrez ajouter une image une fois l’offre enregistrée.",
+    "after_save_reward": "Vous pourrez ajouter une image une fois la récompense enregistrée.",
+    "error": {
+      "invalid": "Utilisez une image JPEG, PNG ou WebP de {{mb}} Mo au plus et de {{edge}} pixels au plus sur son plus grand côté.",
+      "network": "Pas de connexion : rien n’a été modifié. Réessayez.",
+      "no_capability": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_allowed": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_found": "Cet élément n’est plus dans la liste. La liste affiche désormais son état actuel.",
+      "unknown": "L’image n’a pas pu être modifiée. Veuillez réessayer."
+    },
+    "hint": "JPEG, PNG ou WebP, jusqu’à {{mb}} Mo. Enregistrée aussitôt.",
+    "keep": "La garder",
+    "label": "Image",
+    "none": "Pas encore d’image.",
+    "problem": {
+      "size": "Cette image dépasse {{mb}} Mo. Choisissez-en une plus légère.",
+      "type": "Utilisez une image JPEG, PNG ou WebP."
+    },
+    "remove": "Retirer l’image",
+    "remove_confirm": "Retirer",
+    "remove_line": "Retirer l’image ? Les membres le verront sans image.",
+    "replace": "Remplacer l’image"
+  },
   "redemption": {
     "error": {
       "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",

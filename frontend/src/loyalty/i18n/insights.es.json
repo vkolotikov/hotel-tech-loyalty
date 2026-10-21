@@ -1,0 +1,133 @@
+{
+  "at_risk": {
+    "title": "En riesgo",
+    "line": "Miembros activos que llevan tiempo sin actividad, primero los que más. Ganar puntos o escanear su tarjeta cuenta como actividad.",
+    "choose": "Sin actividad durante",
+    "days": "{{days}} días",
+    "none": "Ningún miembro activo lleva {{days}} días sin actividad.",
+    "capped": "Los {{shown}} con más tiempo sin actividad de {{total}}.",
+    "last_seen": "Última actividad el {{day}} · días sin actividad: {{days}}",
+    "error": {
+      "not_allowed": "El análisis es para propietarios, gerentes y personal con acceso a las estadísticas. Un gerente puede cambiarlo en Equipo, en la administración completa.",
+      "no_capability": "El análisis es para propietarios, gerentes y personal con acceso a las estadísticas. Un gerente puede cambiarlo en Equipo, en la administración completa.",
+      "invalid": "Elija entre 7 y 365 días.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar la lista. Inténtelo de nuevo."
+    }
+  },
+  "title": "Análisis",
+  "line": "Cómo va el programa, para toda la organización, según el reloj del local.",
+  "period_line": "{{dates}}, {{bucket}}",
+  "period_choice": "Periodo",
+  "no_right": "El análisis es para propietarios, gerentes y personal con acceso a las estadísticas. Un gerente puede cambiarlo en Equipo, en la administración completa.",
+  "empty": "Aún no hay nada que mostrar. Cuando los miembros se unan y ganen puntos, esta página mostrará cuántos son, los puntos que ganan y gastan, sus niveles y quién lleva tiempo sin actividad.",
+  "points": {
+    "issued": "Otorgados",
+    "redeemed": "Canjeados",
+    "expired": "Caducados",
+    "title": "Puntos que entran y salen",
+    "line": "Los otorgados sobre la línea; los canjeados y caducados, debajo. Un movimiento anulado no cuenta en ninguna parte."
+  },
+  "tiles": {
+    "members": "Miembros",
+    "new_members": "Nuevos en el periodo",
+    "active_members": "Activos, últimos 90 días",
+    "outstanding": "Puntos en circulación",
+    "outstanding_line": "En manos de los miembros activos",
+    "issued": "Puntos otorgados",
+    "redeemed": "Puntos canjeados",
+    "expired": "Puntos caducados",
+    "redemption_rate": "Tasa de canje",
+    "redemption_rate_line": "Puntos canjeados por cada 100 otorgados",
+    "label": "Las cifras"
+  },
+  "growth": {
+    "title": "Miembros a lo largo del tiempo",
+    "total": "Miembros",
+    "new": "Altas"
+  },
+  "redemptions": {
+    "title": "Canjes de recompensas",
+    "line": "{{total}} en el periodo, según el día de cada canje y su estado actual."
+  },
+  "tiers": {
+    "title": "Miembros por nivel",
+    "line": "Miembros activos en cada nivel, ahora.",
+    "off": "desactivado",
+    "none": "El programa aún no tiene niveles."
+  },
+  "movement": {
+    "title": "Cambios de nivel",
+    "line": "Los cambios de nivel del periodo.",
+    "none": "Ningún miembro cambió de nivel en este periodo.",
+    "flows": "De un nivel a otro",
+    "flow": "{{from}} → {{to}}"
+  },
+  "expiry": {
+    "title": "Puntos a punto de caducar",
+    "line": "Puntos aún en poder de los miembros, por el mes en que caducan: este mes y los cinco siguientes.",
+    "overdue": "{{points}} puntos de {{members}} miembros ya llegaron a su fecha y se retirarán en la próxima revisión."
+  },
+  "engagement": {
+    "title": "Participación",
+    "line": "Miembros activos ahora, en cuatro grupos.",
+    "new": "Nuevos",
+    "active": "Activos",
+    "at_risk": "En riesgo",
+    "dormant": "Inactivos"
+  },
+  "balances": {
+    "title": "Saldos",
+    "line": "Miembros activos según los puntos que tienen ahora.",
+    "below": "Menos de cero",
+    "zero": "Ninguno",
+    "over": "{{min}} o más",
+    "range": "{{min}}–{{max}}"
+  },
+  "share": "{{value}} · {{share}} %",
+  "period": {
+    "30d": "30 días",
+    "90d": "90 días",
+    "12m": "12 meses"
+  },
+  "bucket": {
+    "day": "por día",
+    "week": "por semana, desde el lunes",
+    "month": "por mes"
+  },
+  "bucket_head": {
+    "day": "Día",
+    "week": "Semana desde",
+    "month": "Mes"
+  },
+  "growth_line": {
+    "day": "Todos los miembros al final de cada día y las altas de ese día.",
+    "week": "Todos los miembros al final de cada semana y las altas de esa semana.",
+    "month": "Todos los miembros al final de cada mes y las altas de ese mes."
+  },
+  "engagement_hint": {
+    "new": "Se unieron en los últimos 30 días",
+    "active": "Actividad en los últimos 30 días",
+    "at_risk": "Última actividad hace entre 31 y 90 días",
+    "dormant": "Sin actividad en los últimos 90 días"
+  },
+  "redemption": {
+    "fulfilled": "Entregados",
+    "pending": "Pendientes",
+    "cancelled": "Cancelados"
+  },
+  "direction": {
+    "up": "Sube",
+    "down": "Baja",
+    "lateral": "Mismo rango"
+  },
+  "load": {
+    "error": {
+      "not_allowed": "El análisis es para propietarios, gerentes y personal con acceso a las estadísticas. Un gerente puede cambiarlo en Equipo, en la administración completa.",
+      "no_capability": "El análisis es para propietarios, gerentes y personal con acceso a las estadísticas. Un gerente puede cambiarlo en Equipo, en la administración completa.",
+      "invalid": "Este periodo no se puede mostrar. Elija otro.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se pudo cargar el análisis. Inténtelo de nuevo."
+    }
+  }
+}

@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
-use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\User;
 use App\Services\GuestMemberLinkService;
+use App\Services\Loyalty\LoyaltyRefused;
+use App\Services\Loyalty\Members\MemberDetails;
+use App\Services\Loyalty\Members\MemberEnrolment;
+use App\Services\Loyalty\Members\MemberErasure;
+use App\Services\Loyalty\Members\MemberStatus;
+use App\Services\Loyalty\Members\WelcomeNotSent;
 use App\Services\LoyaltyService;
 use App\Services\MemberImportService;
 use App\Services\NotificationService;
@@ -21,7 +26,6 @@ use App\Services\XlsxWriter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -35,6 +39,10 @@ class MemberAdminController extends Controller
         protected GuestMemberLinkService $linkService,
         protected RealtimeEventService $realtime,
         protected MemberImportService $importer,
+        protected MemberEnrolment $enrolment,
+        protected MemberDetails $details,
+        protected MemberStatus $status,
+        protected MemberErasure $erasure,
     ) {}
 
     public function store(Request $request): JsonResponse
@@ -52,104 +60,21 @@ class MemberAdminController extends Controller
             'send_welcome_email' => 'nullable|boolean',
         ]);
 
-        // Plan-cap check (max_loyalty_members). 402 lets the admin SPA
-        // distinguish "you hit a quota" from "validation failed" and
-        // show an upgrade CTA instead of a generic error toast.
-        if ($block = app(PlanLimitGuard::class)->check(PlanLimitGuard::KEY_MEMBERS)) {
-            return response()->json(['error' => $block, 'reason' => 'plan_limit'], 402);
-        }
-
-        $tier = !empty($validated['tier_id'])
-            ? LoyaltyTier::find($validated['tier_id'])
-            : (LoyaltyTier::where('name', 'Bronze')->first()
-                ?? LoyaltyTier::orderBy('min_points')->first());
-
-        if (!$tier) {
-            return response()->json([
-                'message' => 'No loyalty tiers configured for this organization. Create at least one tier (e.g. Bronze) before enrolling members.',
-            ], 422);
-        }
-
-        $useInviteFlow = empty($validated['password']);
-        $welcomeBonus = (int) HotelSetting::getValue('welcome_bonus_points', 500);
-        $sendEmail = $request->boolean('send_welcome_email', $useInviteFlow);
-
+        // Enrolment is the shared writer's (HexaTech Loyalty's Add member calls it too); this
+        // method keeps the answers the admin SPA reads.
         try {
-            $result = \DB::transaction(function () use ($validated, $request, $tier, $useInviteFlow, $welcomeBonus) {
-                $user = User::create([
-                    'name'      => $validated['name'],
-                    'email'     => $validated['email'],
-                    // Use a random password when admin didn't provide one —
-                    // the user will reset it via the welcome-email code.
-                    'password'  => Hash::make($validated['password'] ?? \Illuminate\Support\Str::random(40)),
-                    'phone'     => $validated['phone'] ?? null,
-                    'user_type' => 'member',
-                    // Required, not optional: TenantScope fails closed, so a
-                    // member user row without an org can log in and then see
-                    // an empty app, while the admin list shows them as fine.
-                    'organization_id' => $request->user()?->organization_id
-                        ?? (app()->bound('current_organization_id') ? app('current_organization_id') : null),
-                ]);
-
-                $member = LoyaltyMember::create([
-                    'user_id'        => $user->id,
-                    'tier_id'        => $tier->id,
-                    'member_number'  => $this->qrCode->generateMemberNumber(),
-                    'qr_code_token'  => \Illuminate\Support\Str::random(64),
-                    'referral_code'  => $this->qrCode->generateReferralCode(),
-                    'lifetime_points'=> 0,
-                    'current_points' => 0,
-                    'is_active'      => true,
-                    'joined_at'      => now(),
-                ]);
-
-                $this->qrCode->generateToken($member);
-
-                if (!empty($validated['nfc_uid'])) {
-                    $nfcUid = $validated['nfc_uid'];
-                    \App\Models\NfcCard::create([
-                        'member_id' => $member->id,
-                        'uid'       => $nfcUid,
-                        'card_type' => 'NTAG213',
-                        'issued_at' => now(),
-                        'issued_by' => $request->user()->id,
-                        'is_active' => true,
-                    ]);
-                    $member->update(['qr_code_token' => $nfcUid]);
-                }
-
-                // Award welcome bonus INSIDE the transaction so a failure rolls
-                // everything back — no more orphaned zero-point members.
-                if ($welcomeBonus > 0) {
-                    $this->loyaltyService->awardPoints(
-                        $member,
-                        $welcomeBonus,
-                        'Welcome bonus — registered by staff',
-                        'bonus',
-                        $request->user(),
-                    );
-                }
-
-                // Generate an invite code (48h) if we're using the email flow.
-                $inviteCode = null;
-                if ($useInviteFlow) {
-                    \App\Models\EmailVerificationCode::where('email', $user->email)
-                        ->whereNull('verified_at')
-                        ->delete();
-
-                    $inviteCode = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-                    \App\Models\EmailVerificationCode::create([
-                        'email'      => $user->email,
-                        'code'       => $inviteCode,
-                        'expires_at' => now()->addHours(48),
-                    ]);
-                }
-
-                return ['member' => $member, 'invite_code' => $inviteCode];
-            });
-
-            $member = $result['member'];
-            $inviteCode = $result['invite_code'];
+            $result = $this->enrolment->enrol(
+                $validated,
+                $request->user(),
+                $request->boolean('send_welcome_email', empty($validated['password'])),
+            );
+        } catch (LoyaltyRefused $e) {
+            // 402 lets the admin SPA tell "you hit a quota" from "validation failed" and show an upgrade CTA.
+            return $e->errorCode === 'member_limit'
+                ? response()->json(['error' => $e->getMessage(), 'reason' => 'plan_limit'], 402)
+                : response()->json([
+                    'message' => 'No loyalty tiers configured for this organization. Create at least one tier (e.g. Bronze) before enrolling members.',
+                ], 422);
         } catch (\Throwable $e) {
             \Log::error('Member store failed', [
                 'error'     => $e->getMessage(),
@@ -162,44 +87,9 @@ class MemberAdminController extends Controller
             ], 500);
         }
 
-        // Fire-and-forget welcome email — failure here shouldn't 500 the
-        // request (the member already exists; admin can resend later).
-        $emailSent = false;
-        if ($sendEmail && $inviteCode) {
-            try {
-                $org = \App\Models\Organization::find($member->organization_id);
-                \Illuminate\Support\Facades\Mail::to($member->user->email)
-                    ->send(new \App\Mail\WelcomeMemberMail($member->load(['user', 'tier']), $org, $inviteCode));
-                $emailSent = true;
-                // Stamp the member so booking / service flows know not to
-                // send the welcome email again on first transaction.
-                $member->forceFill(['welcomed_at' => now()])->save();
-            } catch (\Throwable $e) {
-                \Log::warning('Welcome email send failed', [
-                    'member_id' => $member->id,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        try { $this->linkService->linkMemberToGuests($member); }
-        catch (\Throwable $e) { \Log::warning('linkMemberToGuests failed', ['member_id' => $member->id, 'error' => $e->getMessage()]); }
-
-        try {
-            $this->realtime->dispatch('member', 'New Member Registered',
-                "{$member->user->name} joined as {$tier->name}",
-                ['id' => $member->id, 'name' => $member->user->name, 'tier' => $tier->name]
-            );
-        } catch (\Throwable $e) { \Log::warning('Realtime dispatch failed', ['error' => $e->getMessage()]); }
-
-        try {
-            AuditLog::record('member_created', $member,
-                ['name' => $member->user->name, 'email' => $member->user->email, 'tier' => $tier->name],
-                [], $request->user(), "Member '{$member->user->name}' created"
-            );
-        } catch (\Throwable $e) { \Log::warning('AuditLog::record failed', ['error' => $e->getMessage()]); }
-
-        try { AnalyticsService::clearDashboardCache(); } catch (\Throwable $e) {}
+        $member = $result['member'];
+        $useInviteFlow = $result['invite_flow'];
+        $emailSent = $result['email_sent'];
 
         return response()->json([
             'message'      => $useInviteFlow
@@ -215,42 +105,23 @@ class MemberAdminController extends Controller
 
     /**
      * Resend the welcome / set-password email to a member.
-     * Generates a fresh 48h code each time.
+     * Generates a fresh 48h code each time (MemberEnrolment::resendWelcome).
      */
     public function resendWelcomeEmail(int $id): JsonResponse
     {
         $member = LoyaltyMember::with(['user', 'tier'])->findOrFail($id);
 
-        if (!$member->user || !$member->user->email) {
-            return response()->json(['message' => 'Member has no email on file'], 422);
-        }
-
-        \App\Models\EmailVerificationCode::where('email', $member->user->email)
-            ->whereNull('verified_at')
-            ->delete();
-
-        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        \App\Models\EmailVerificationCode::create([
-            'email'      => $member->user->email,
-            'code'       => $code,
-            'expires_at' => now()->addHours(48),
-        ]);
-
         try {
-            $org = \App\Models\Organization::find($member->organization_id);
-            \Illuminate\Support\Facades\Mail::to($member->user->email)
-                ->send(new \App\Mail\WelcomeMemberMail($member, $org, $code));
-        } catch (\Throwable $e) {
-            \Log::error('Welcome email resend failed', [
-                'member_id' => $member->id,
-                'error'     => $e->getMessage(),
-            ]);
+            $email = $this->enrolment->resendWelcome($member);
+        } catch (LoyaltyRefused) {
+            return response()->json(['message' => 'Member has no email on file'], 422);
+        } catch (WelcomeNotSent $e) {
             return response()->json([
-                'message' => 'Could not send email: ' . $e->getMessage(),
+                'message' => 'Could not send email: ' . $e->getPrevious()?->getMessage(),
             ], 500);
         }
 
-        return response()->json(['message' => 'Welcome email sent to ' . $member->user->email]);
+        return response()->json(['message' => 'Welcome email sent to ' . $email]);
     }
 
     /**
@@ -472,7 +343,6 @@ class MemberAdminController extends Controller
     public function update(Request $request, int $id): JsonResponse
     {
         $member = LoyaltyMember::findOrFail($id);
-        $oldTierId = $member->tier_id;
 
         $validated = $request->validate([
             'is_active'         => 'sometimes|boolean',
@@ -490,13 +360,8 @@ class MemberAdminController extends Controller
             'avatar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
 
-        // Capture old values for audit
-        $oldMemberValues = $member->only(['is_active', 'marketing_consent', 'tier_id', 'tier_override_until']);
-        $oldUserValues = $member->user->only(['name', 'email', 'phone', 'nationality', 'language', 'date_of_birth']);
-
-        // Update member fields. tier_override_until is explicitly checked
-        // with has() (not array_filter) because null is a valid clearing
-        // value here.
+        // Member fields. tier_override_until is explicitly checked with
+        // has() (not array_filter) because null is a valid clearing value.
         $memberFields = array_filter(
             $request->only(['is_active', 'marketing_consent', 'tier_id']),
             fn($v) => $v !== null
@@ -505,32 +370,8 @@ class MemberAdminController extends Controller
             $memberFields['tier_override_until'] = $request->input('tier_override_until');
         }
 
-        // The raw `exists:loyalty_tiers,id` rule ignores TenantScope — a
-        // guessed tier id from another org passes it. Re-fetch through
-        // the scoped model (mirrors store()); a cross-org id 422s here
-        // instead of corrupting the member's tier FK (which would make
-        // $member->tier resolve null and 500 getProgressToNextTier()).
-        if (isset($memberFields['tier_id']) && !LoyaltyTier::find($memberFields['tier_id'])) {
-            return response()->json(['message' => 'Invalid tier for this organization.'], 422);
-        }
-
-        // When tier_id changes via admin override, also refresh the timing
-        // fields so mobile-app tier progress / expiry / review calculations
-        // aren't stuck on the previous tier's schedule. Without this the
-        // tier name would update but getProgressToNextTier() — and any UI
-        // that reads tier_effective_until — would show stale data.
-        if (isset($memberFields['tier_id']) && (int) $memberFields['tier_id'] !== (int) $oldTierId) {
-            $memberFields['tier_effective_from']  = now()->toDateString();
-            $memberFields['tier_effective_until'] = now()->addYear()->toDateString();
-            $memberFields['tier_review_date']     = now()->addYear()->toDateString();
-        }
-
-        if (!empty($memberFields)) {
-            $member->update($memberFields);
-        }
-
-        // Update user fields. name/email are never clearable (filtered),
-        // but phone / nationality / language / date_of_birth accept an
+        // User fields. name/email are never clearable (filtered), but
+        // phone / nationality / language / date_of_birth accept an
         // explicit null as "clear this field" — array_filter used to
         // strip those nulls, so blanking a phone number toasted success
         // while silently keeping the old value.
@@ -544,36 +385,13 @@ class MemberAdminController extends Controller
             }
         }
 
-        // Handle avatar upload
-        if ($request->hasFile('avatar')) {
-            $userFields['avatar_url'] = \App\Services\MediaService::upload($request->file('avatar'), 'avatars');
+        // The writing, the tier check (the raw `exists:` rule ignores TenantScope, so a guessed
+        // tier id from another org passes it), the tier's dates and the audit are MemberDetails'.
+        try {
+            $this->details->update($member, $memberFields, $userFields, $request->user(), $request->file('avatar'));
+        } catch (LoyaltyRefused) {
+            return response()->json(['message' => 'Invalid tier for this organization.'], 422);
         }
-
-        if (!empty($userFields)) {
-            $member->user->update($userFields);
-        }
-
-        // Audit: general member update
-        $allChanges = array_merge($memberFields, $userFields);
-        if (!empty($allChanges)) {
-            AuditLog::record('member_updated', $member, $allChanges,
-                array_merge($oldMemberValues, $oldUserValues),
-                $request->user(), "Member #{$member->member_number} updated"
-            );
-        }
-
-        // Audit: specific tier override
-        if (isset($memberFields['tier_id']) && (int) $memberFields['tier_id'] !== (int) $oldTierId) {
-            $oldTierName = LoyaltyTier::find($oldTierId)?->name ?? 'Unknown';
-            $newTierName = LoyaltyTier::find($memberFields['tier_id'])?->name ?? 'Unknown';
-            AuditLog::record('tier_override', $member,
-                ['tier_id' => $memberFields['tier_id'], 'tier_name' => $newTierName],
-                ['tier_id' => $oldTierId, 'tier_name' => $oldTierName],
-                $request->user(), "Tier override: {$oldTierName} → {$newTierName}"
-            );
-        }
-
-        AnalyticsService::clearDashboardCache();
 
         return response()->json([
             'message' => 'Member updated',
@@ -581,83 +399,29 @@ class MemberAdminController extends Controller
         ]);
     }
 
-    public function deactivate(int $id): JsonResponse
+    /** A toggle, as the admin SPA has always used it; the writing is MemberStatus'. */
+    public function deactivate(Request $request, int $id): JsonResponse
     {
         $member = LoyaltyMember::findOrFail($id);
-        $oldIsActive = $member->is_active;
-        $newIsActive = !$oldIsActive;
+        $newIsActive = !$member->is_active;
 
-        $member->update(['is_active' => $newIsActive]);
-
-        AuditLog::record(
-            $newIsActive ? 'member_reactivated' : 'member_deactivated',
-            $member,
-            ['is_active' => $newIsActive],
-            ['is_active' => $oldIsActive],
-            \Auth::user(),
-            "Member #{$member->member_number} " . ($newIsActive ? 'reactivated' : 'deactivated')
-        );
-
-        AnalyticsService::clearDashboardCache();
+        $newIsActive
+            ? $this->status->reactivate($member, $request->user())
+            : $this->status->deactivate($member, $request->user());
 
         return response()->json(['success' => true, 'is_active' => $newIsActive]);
     }
 
-    public function destroy(int $id): JsonResponse
+    /**
+     * GDPR-style anonymisation rather than hard delete (MemberErasure): every personal field goes, the date of birth
+     * included (owner decision R2-4); the row, its number and its history stay so the audit trail and the reports
+     * still reconcile.
+     */
+    public function destroy(Request $request, int $id): JsonResponse
     {
         $member = LoyaltyMember::findOrFail($id);
-        $memberNumber = $member->member_number;
-        $email = $member->user?->email;
-        $name = $member->user?->name;
-        $user = $member->user;
 
-        AuditLog::record(
-            'member_deleted',
-            $member,
-            [],
-            ['member_number' => $memberNumber, 'email' => $email, 'name' => $name],
-            \Auth::user(),
-            "Member #{$memberNumber} ({$email}) anonymised"
-        );
-
-        // GDPR-style anonymisation rather than hard delete. Points
-        // transactions and bookings hold FKs back to user_id / member_id;
-        // a cascade delete leaves orphan rows showing "null" in admin
-        // views and breaks historical reporting. We wipe every PII field
-        // but keep the row so the audit trail and aggregate stats still
-        // reconcile.
-        \DB::transaction(function () use ($user, $member) {
-            // Kill all sessions / API tokens so any active mobile app
-            // login immediately starts returning 401.
-            if ($user) {
-                try { $user->tokens()->delete(); } catch (\Throwable $e) {}
-            }
-
-            // Drop NFC card mappings — these are physical cards that
-            // shouldn't unlock the anonymised account anymore.
-            try { \App\Models\NfcCard::where('member_id', $member->id)->delete(); } catch (\Throwable $e) {}
-
-            $stub = 'deleted-member-' . $member->id . '@deleted.local';
-
-            $member->update([
-                'is_active'       => false,
-                'qr_code_token'   => null,
-                'expo_push_token' => null,
-            ]);
-
-            if ($user) {
-                $user->forceFill([
-                    'name'        => 'Deleted Member',
-                    'email'       => $stub,
-                    'phone'       => null,
-                    'nationality' => null,
-                    'avatar_url'  => null,
-                    'password'    => bcrypt(\Illuminate\Support\Str::random(40)),
-                ])->save();
-            }
-        });
-
-        AnalyticsService::clearDashboardCache();
+        $this->erasure->erase($member, $request->user());
 
         return response()->json(['success' => true, 'message' => 'Member deleted']);
     }

@@ -18,11 +18,12 @@ use Illuminate\Validation\ValidationException;
 /**
  * Offers (spec 2026-10-21 §4.6): every staff member reads them, staff with
  * `can_manage_offers` add and change them (§5). The rules are
- * OffersAdminController's, without the image (JSON only in this release):
- * the code trimmed and upper-cased, one organisation never holding the same
- * code twice, `tier_ids` this organisation's tiers. Offers are brand-scoped:
- * read as the request's brand binding gives, created on the brand the
- * model's own hook picks.
+ * OffersAdminController's, as JSON: the code trimmed and upper-cased, one
+ * organisation never holding the same code twice, `tier_ids` this
+ * organisation's tiers. The picture has its own endpoints (ImageController,
+ * release 2 §7): the row shows it, the list's options carry its limits.
+ * Offers are brand-scoped: read as the request's brand binding gives,
+ * created on the brand the model's own hook picks.
  */
 class OfferController extends Controller
 {
@@ -35,7 +36,7 @@ class OfferController extends Controller
         return response()->json([
             'offers'  => SpecialOffer::query()->orderByDesc('created_at')->orderByDesc('id')->get()
                 ->map(fn (SpecialOffer $o) => self::row($o, $today))->values(),
-            'options' => ['types' => LoyaltyForms::OFFER_TYPES, 'applies_to' => LoyaltyForms::appliesTo()],
+            'options' => ['types' => LoyaltyForms::OFFER_TYPES, 'applies_to' => LoyaltyForms::appliesTo(), 'image' => ImageController::limits('offers')],
         ]);
     }
 
@@ -125,6 +126,7 @@ class OfferController extends Controller
             'per_member_limit' => $o->per_member_limit !== null ? (int) $o->per_member_limit : null,
             'is_active'        => (bool) $o->is_active,
             'is_featured'      => (bool) $o->is_featured,
+            'image_url'        => $o->image_url,
             'state'            => self::state($o, $today),
         ];
     }

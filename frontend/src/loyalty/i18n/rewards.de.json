@@ -124,6 +124,31 @@
     "used": "Genutzt: {{used}}",
     "used_of": "Genutzt: {{used}} von {{limit}}"
   },
+  "picture": {
+    "add": "Bild hinzufügen",
+    "after_save_offer": "Ein Bild können Sie hinzufügen, sobald das Angebot gespeichert ist.",
+    "after_save_reward": "Ein Bild können Sie hinzufügen, sobald die Prämie gespeichert ist.",
+    "error": {
+      "invalid": "Verwenden Sie ein JPEG-, PNG- oder WebP-Bild bis {{mb}} MB und höchstens {{edge}} Pixel an der längsten Seite.",
+      "network": "Keine Verbindung: Es wurde nichts geändert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_allowed": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_found": "Das ist nicht mehr in der Liste. Die Liste zeigt jetzt den aktuellen Stand.",
+      "unknown": "Das Bild konnte nicht geändert werden. Bitte versuchen Sie es erneut."
+    },
+    "hint": "JPEG, PNG oder WebP, bis {{mb}} MB. Wird sofort gespeichert.",
+    "keep": "Behalten",
+    "label": "Bild",
+    "none": "Noch kein Bild.",
+    "problem": {
+      "size": "Dieses Bild ist größer als {{mb}} MB. Wählen Sie ein kleineres.",
+      "type": "Verwenden Sie ein JPEG-, PNG- oder WebP-Bild."
+    },
+    "remove": "Bild entfernen",
+    "remove_confirm": "Entfernen",
+    "remove_line": "Bild entfernen? Mitglieder sehen es dann ohne Bild.",
+    "replace": "Bild ersetzen"
+  },
   "redemption": {
     "error": {
       "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",

@@ -1,0 +1,133 @@
+{
+  "at_risk": {
+    "title": "At risk",
+    "line": "Active members who have gone quiet, the longest quiet first. Earning points or a scan of their card counts as activity.",
+    "choose": "No activity for",
+    "days": "{{days}} days",
+    "none": "No active member has been quiet for {{days}} days.",
+    "capped": "The {{shown}} quietest of {{total}}.",
+    "last_seen": "Last seen {{day}} · days quiet: {{days}}",
+    "error": {
+      "not_allowed": "Insights are for owners, managers and staff who may see analytics. A manager can change that under Team in the full admin.",
+      "no_capability": "Insights are for owners, managers and staff who may see analytics. A manager can change that under Team in the full admin.",
+      "invalid": "Choose from 7 to 365 days.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "The list could not be loaded. Please try again."
+    }
+  },
+  "title": "Insights",
+  "line": "How the programme is doing, for the whole organisation, on the venue’s clock.",
+  "period_line": "{{dates}}, {{bucket}}",
+  "period_choice": "Period",
+  "no_right": "Insights are for owners, managers and staff who may see analytics. A manager can change that under Team in the full admin.",
+  "empty": "Nothing to show yet. Once members join and earn points, this page shows how many there are, the points they earn and spend, their tiers, and who has gone quiet.",
+  "points": {
+    "issued": "Issued",
+    "redeemed": "Redeemed",
+    "expired": "Expired",
+    "title": "Points in and out",
+    "line": "Issued above the line; redeemed and expired below it. A reversed line counts nowhere."
+  },
+  "tiles": {
+    "members": "Members",
+    "new_members": "New in this period",
+    "active_members": "Active, last 90 days",
+    "outstanding": "Points outstanding",
+    "outstanding_line": "Held by active members now",
+    "issued": "Points issued",
+    "redeemed": "Points redeemed",
+    "expired": "Points expired",
+    "redemption_rate": "Redemption rate",
+    "redemption_rate_line": "Points redeemed for each 100 issued",
+    "label": "The figures"
+  },
+  "growth": {
+    "title": "Members over time",
+    "total": "Members",
+    "new": "Joined"
+  },
+  "redemptions": {
+    "title": "Reward redemptions",
+    "line": "{{total}} in this period, by the day each was made and where it stands now."
+  },
+  "tiers": {
+    "title": "Members by tier",
+    "line": "Active members on each tier now.",
+    "off": "switched off",
+    "none": "The programme has no tiers yet."
+  },
+  "movement": {
+    "title": "Tier movement",
+    "line": "Tier changes in this period.",
+    "none": "No member changed tier in this period.",
+    "flows": "From one tier to another",
+    "flow": "{{from}} → {{to}}"
+  },
+  "expiry": {
+    "title": "Points due to expire",
+    "line": "Points still held, by the month they expire: this month and the five after.",
+    "overdue": "{{points}} points of {{members}} members have reached their date and go at the next expiry run."
+  },
+  "engagement": {
+    "title": "Engagement",
+    "line": "Active members now, in four groups.",
+    "new": "New",
+    "active": "Active",
+    "at_risk": "At risk",
+    "dormant": "Dormant"
+  },
+  "balances": {
+    "title": "Balances",
+    "line": "Active members by the points they hold now.",
+    "below": "Below zero",
+    "zero": "None",
+    "over": "{{min}} or more",
+    "range": "{{min}}–{{max}}"
+  },
+  "share": "{{value}} · {{share}}%",
+  "period": {
+    "30d": "30 days",
+    "90d": "90 days",
+    "12m": "12 months"
+  },
+  "bucket": {
+    "day": "by day",
+    "week": "by week, from Monday",
+    "month": "by month"
+  },
+  "bucket_head": {
+    "day": "Day",
+    "week": "Week from",
+    "month": "Month"
+  },
+  "growth_line": {
+    "day": "All members at the end of each day, and those who joined that day.",
+    "week": "All members at the end of each week, and those who joined that week.",
+    "month": "All members at the end of each month, and those who joined that month."
+  },
+  "engagement_hint": {
+    "new": "Joined in the last 30 days",
+    "active": "Activity in the last 30 days",
+    "at_risk": "Last activity 31 to 90 days ago",
+    "dormant": "No activity in the last 90 days"
+  },
+  "redemption": {
+    "fulfilled": "Fulfilled",
+    "pending": "Waiting",
+    "cancelled": "Cancelled"
+  },
+  "direction": {
+    "up": "Up",
+    "down": "Down",
+    "lateral": "Sideways"
+  },
+  "load": {
+    "error": {
+      "not_allowed": "Insights are for owners, managers and staff who may see analytics. A manager can change that under Team in the full admin.",
+      "no_capability": "Insights are for owners, managers and staff who may see analytics. A manager can change that under Team in the full admin.",
+      "invalid": "This period cannot be shown. Choose another one.",
+      "network": "No connection. Check the network and try again.",
+      "unknown": "Insights could not be loaded. Please try again."
+    }
+  }
+}

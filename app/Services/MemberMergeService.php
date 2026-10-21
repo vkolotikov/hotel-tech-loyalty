@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -10,38 +12,79 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Merges a "loser" loyalty_member into a "winner". Used when the same person
  * ends up in the system twice — phone-only signup later linked to an email,
- * NFC-linked guest plus a self-registered account, etc.
+ * NFC-linked guest plus a self-registered account, etc. The full admin's
+ * duplicates screen and HexaTech Loyalty's both call it.
  *
- * Walks every table that holds a member_id FK and re-points it to the winner.
- * For tables with a (member_id, X) unique constraint we drop loser rows whose
- * X already exists on the winner before re-pointing the rest.
+ * It keeps all history (owner decision R2-3, HexaTech Loyalty release 2):
+ * before the loser is deleted, every row of every table that names it moves
+ * to the winner — the ledger, bookings of every kind, reward redemptions,
+ * referrals on both sides, push notifications, benefit requests, cards, scans,
+ * reviews, campaign deliveries, CRM guests. MEMBER_COLUMNS is that list, read
+ * from the migrations; MemberMergeServiceTest scans the migrations and fails
+ * when a member column exists that is neither moved here nor in KEPT_COLUMNS.
+ * (Before the fix, redemptions, referrals and push notifications were deleted
+ * with the loser, a table named `notifications` that does not exist was
+ * listed, and bookings, booking mirrors, reviews and campaign rows were left
+ * pointing at a member that no longer existed.)
+ *
+ * Two pairs would collide after the move, and are deduplicated first:
+ *  - member_offers (member_id, offer_id): where both hold the same offer, the
+ *    row that went furthest stays (used, then claimed, then the winner's), so a
+ *    used offer is never forgotten and its per-member limit still holds;
+ *  - referrals (referrer_id, referee_id): a referral between the two accounts
+ *    is the person referring themselves and is dropped (it would otherwise let
+ *    one person earn both sides of a referral); where both referred the same
+ *    member, or were referred by the same member, the winner's row stays.
+ * Every dropped row is kept in the merge's snapshot (`member_merges.merged_data`,
+ * under `dropped`); the points they paid stay in the ledger, which moves whole.
  *
  * The loser's user row is also deleted (a member_number references its
- * loyalty_members row, but the user row is what carries email/name).
+ * loyalty_members row, but the user row is what carries email/name). The
+ * merge is recorded twice: the `member_merges` snapshot, and an AuditLog row
+ * `member_merged` on the winner.
  */
 class MemberMergeService
 {
-    /** Tables where member_id is a plain FK and we just re-point all rows. */
-    private const PLAIN_TABLES = [
-        'points_transactions',
-        'bookings',
-        'nfc_cards',
-        'ai_conversations',
-        'ai_messages',
-        'notifications',
-        'benefit_entitlements',
-        'point_expiry_buckets',
-        'tier_assessments',
-        'scan_events',
-        'analytics_events',
-        'chat_conversations',
-        'member_identities',
+    /**
+     * Every column that names a member, by table: each is moved from the loser to the winner. Tables or columns this
+     * database does not have are passed over (an older database, the tests' narrower schema).
+     *
+     * @var array<string, list<string>>
+     */
+    public const MEMBER_COLUMNS = [
+        'points_transactions'  => ['member_id'],
+        'point_expiry_buckets' => ['member_id'],
+        'tier_assessments'     => ['member_id'],
+        'bookings'             => ['member_id'],
+        'service_bookings'     => ['member_id'],
+        'booking_mirror'       => ['member_id'],
+        'reward_redemptions'   => ['member_id'],
+        'benefit_entitlements' => ['member_id'],
+        'member_offers'        => ['member_id'],
+        'referrals'            => ['referrer_id', 'referee_id'],
+        'push_notifications'   => ['member_id'],
+        'nfc_cards'            => ['member_id'],
+        'qr_tokens'            => ['member_id'],
+        'scan_events'          => ['member_id'],
+        'member_identities'    => ['member_id'],
+        'ai_conversations'     => ['member_id'],
+        'ai_recommendations'   => ['member_id'],
+        'analytics_events'     => ['member_id'],
+        'chat_conversations'   => ['member_id'],
+        'campaign_recipients'  => ['loyalty_member_id'],
+        'review_invitations'   => ['loyalty_member_id'],
+        'review_submissions'   => ['loyalty_member_id'],
+        'guests'               => ['member_id'],
+        // An earlier merge into the loser now reads as a merge into the winner (its foreign key would otherwise stop
+        // the loser's deletion).
+        'member_merges'        => ['surviving_member_id'],
+        // Whoever the loser referred is now referred by the winner (handled with the winner's own referrer, below).
+        'loyalty_members'      => ['referred_by'],
     ];
 
-    /** Tables with a (member_id, X) uniqueness — must dedupe before moving. */
-    private const UNIQUE_TABLES = [
-        // table => other unique column
-        'member_offers' => 'offer_id',
+    /** Member columns deliberately left as they are, and why. @var array<string, string> */
+    public const KEPT_COLUMNS = [
+        'member_merges.merged_member_id' => 'The record of a merge names the member it removed; that member no longer exists.',
     ];
 
     public function merge(LoyaltyMember $winner, LoyaltyMember $loser, ?int $performedByUserId = null, ?string $reason = null): array
@@ -70,51 +113,53 @@ class MemberMergeService
             [$winner, $loser] = $winner->id === $firstId
                 ? [$lockedFirst, $lockedSecond]
                 : [$lockedSecond, $lockedFirst];
+            $loserUser = $loser->user;
 
-            // 1) Plain re-points. Skip missing tables/columns via Schema checks
-            //    — on PostgreSQL, letting a query error bubble up aborts the
-            //    whole transaction (25P02), so a try/catch around DB::table
-            //    here wouldn't actually let us continue.
+            // 1) The pairs that would collide once moved.
+            $dropped = [
+                'member_offers' => $this->dedupeOffers($winner->id, $loser->id),
+                'referrals'     => $this->dedupeReferrals($winner->id, $loser->id),
+            ];
+
+            // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
+            //    on PostgreSQL a failing statement aborts the whole transaction (25P02), so it cannot be caught and
+            //    passed over.
             $moved = [];
-            foreach (self::PLAIN_TABLES as $table) {
-                if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'member_id')) {
+            foreach (self::MEMBER_COLUMNS as $table => $columns) {
+                if ($table === 'loyalty_members' || !Schema::hasTable($table)) {
                     continue;
                 }
-                $moved[$table] = DB::table($table)
-                    ->where('member_id', $loser->id)
-                    ->update(['member_id' => $winner->id]);
+                foreach ($columns as $column) {
+                    if (!Schema::hasColumn($table, $column)) {
+                        continue;
+                    }
+                    $set = [$column => $winner->id];
+                    // The loser's app tokens: kept as history, never again a way in.
+                    if ($table === 'qr_tokens' && Schema::hasColumn($table, 'is_revoked')) {
+                        $set['is_revoked'] = true;
+                    }
+                    // A CRM guest shows the membership it is linked to.
+                    if ($table === 'guests' && Schema::hasColumn($table, 'loyalty_id')) {
+                        $set['loyalty_id'] = $winner->member_number;
+                    }
+                    $moved[$table] = ($moved[$table] ?? 0) + DB::table($table)->where($column, $loser->id)->update($set);
+                }
             }
 
-            // 2) Unique-constrained tables: drop loser rows whose key already
-            //    exists on the winner, then re-point what's left.
-            foreach (self::UNIQUE_TABLES as $table => $col) {
-                if (!Schema::hasTable($table) || !Schema::hasColumn($table, 'member_id') || !Schema::hasColumn($table, $col)) {
-                    continue;
-                }
-                $winnerKeys = DB::table($table)->where('member_id', $winner->id)->pluck($col);
-                if ($winnerKeys->isNotEmpty()) {
-                    DB::table($table)
-                        ->where('member_id', $loser->id)
-                        ->whereIn($col, $winnerKeys)
-                        ->delete();
-                }
-                $moved[$table] = DB::table($table)
-                    ->where('member_id', $loser->id)
-                    ->update(['member_id' => $winner->id]);
-            }
-
-            // 3) Guest CRM rows — re-point member_id (nullable, no unique).
-            $moved['guests'] = DB::table('guests')
-                ->where('member_id', $loser->id)
-                ->update(['member_id' => $winner->id]);
-
-            // 4) Self-referential: anyone the loser referred is now referred
-            //    by the winner.
+            // 3) Self-referential: anyone the loser referred is now referred by the winner. The winner's own
+            //    referrer: never themselves; the loser's when the winner had none.
             DB::table('loyalty_members')
                 ->where('referred_by', $loser->id)
+                ->where('id', '!=', $winner->id)
                 ->update(['referred_by' => $winner->id]);
+            if ((int) $winner->referred_by === (int) $loser->id) {
+                $winner->referred_by = null;
+            }
+            if (!$winner->referred_by && $loser->referred_by && (int) $loser->referred_by !== (int) $winner->id) {
+                $winner->referred_by = $loser->referred_by;
+            }
 
-            // 5) Aggregate point + qualification totals into the winner.
+            // 4) Aggregate point + qualification totals into the winner.
             //    The points ledger we just moved is the source of truth, but
             //    the cached counters on loyalty_members need to add up too.
             $winner->lifetime_points    = (int) $winner->lifetime_points    + (int) $loser->lifetime_points;
@@ -124,7 +169,8 @@ class MemberMergeService
             $winner->qualifying_stays   = (int) ($winner->qualifying_stays  ?? 0) + (int) ($loser->qualifying_stays  ?? 0);
             $winner->qualifying_spend   = (float) ($winner->qualifying_spend ?? 0) + (float) ($loser->qualifying_spend ?? 0);
 
-            // Adopt any flag the loser had if the winner doesn't.
+            // Adopt any card or code the loser had if the winner doesn't. Both are unique columns, so the loser row
+            // goes first (5) and the winner is saved after it.
             if (!$winner->nfc_uid && $loser->nfc_uid) {
                 $winner->nfc_uid = $loser->nfc_uid;
                 $winner->nfc_card_issued_at = $loser->nfc_card_issued_at;
@@ -136,6 +182,14 @@ class MemberMergeService
                 $winner->last_activity_at ?: $winner->created_at,
                 $loser->last_activity_at  ?: $loser->created_at
             );
+
+            // 5) Delete the loser member, then its user row. Nothing names it any more.
+            $loserUserId = $loser->user_id;
+            $loser->delete();
+            if ($loserUserId) {
+                DB::table('users')->where('id', $loserUserId)->delete();
+            }
+
             $winner->save();
 
             // 6) Recompute tier on the winner now that points have grown.
@@ -145,25 +199,22 @@ class MemberMergeService
                 Log::info('MemberMerge: tier reassess skipped', ['error' => $e->getMessage()]);
             }
 
-            // 7) Audit row.
+            // 7) The record: the loser as it was, with what was dropped to make room, and the audit row.
             DB::table('member_merges')->insert([
                 'surviving_member_id'  => $winner->id,
                 'merged_member_id'     => $loser->id,
-                'merged_data'          => json_encode($snapshot),
+                'merged_data'          => json_encode($snapshot + ['dropped' => $dropped]),
                 'performed_by'         => $performedByUserId,
                 'reason'               => $reason,
                 'created_at'           => now(),
                 'updated_at'           => now(),
             ]);
-
-            // 8) Delete the loser member, then its user row. cascadeOnDelete
-            //    on most child tables is fine because we already moved the
-            //    rows we cared about.
-            $loserUserId = $loser->user_id;
-            $loser->delete();
-            if ($loserUserId) {
-                DB::table('users')->where('id', $loserUserId)->delete();
-            }
+            AuditLog::record('member_merged', $winner,
+                ['merged_member_id' => $loser->id, 'merged_member_number' => $loser->member_number, 'moved' => $moved, 'reason' => $reason],
+                ['member_number' => $loser->member_number, 'name' => $loserUser?->name, 'email' => $loserUser?->email,
+                 'points' => (int) $loser->current_points, 'lifetime_points' => (int) $loser->lifetime_points],
+                $performedByUserId ? User::find($performedByUserId) : null,
+                "Member #{$loser->member_number} merged into #{$winner->member_number}");
 
             return [
                 'winner_id' => $winner->id,
@@ -171,6 +222,58 @@ class MemberMergeService
                 'moved'     => $moved,
             ];
         });
+    }
+
+    /**
+     * Where both members hold the same offer, the row that went furthest stays — used, then claimed, then the
+     * winner's — and the other is deleted. @return list<array<string, mixed>> the rows deleted
+     */
+    private function dedupeOffers(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('member_offers') || !Schema::hasColumn('member_offers', 'offer_id')) {
+            return [];
+        }
+        $winnerRows = DB::table('member_offers')->where('member_id', $winnerId)->get()->keyBy('offer_id');
+        $dropped = [];
+        foreach (DB::table('member_offers')->where('member_id', $loserId)->whereIn('offer_id', $winnerRows->keys()->all())->get() as $loserRow) {
+            $winnerRow = $winnerRows[$loserRow->offer_id];
+            $gone = self::offerReach($loserRow) > self::offerReach($winnerRow) ? $winnerRow : $loserRow;
+            DB::table('member_offers')->where('id', $gone->id)->delete();
+            $dropped[] = (array) $gone;
+        }
+
+        return $dropped;
+    }
+
+    /** How far a member's offer went: used, claimed, or only offered. */
+    private static function offerReach(object $row): int
+    {
+        return !empty($row->used_at) ? 2 : (!empty($row->claimed_at) ? 1 : 0);
+    }
+
+    /**
+     * The referrals that would collide or turn into a self-referral once the loser's columns name the winner: those
+     * between the two, and the loser's where the winner has the same one. @return list<array<string, mixed>> the rows
+     * deleted
+     */
+    private function dedupeReferrals(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('referrals') || !Schema::hasColumn('referrals', 'referrer_id') || !Schema::hasColumn('referrals', 'referee_id')) {
+            return [];
+        }
+        $gone = DB::table('referrals')
+            ->where(fn ($q) => $q->where('referrer_id', $loserId)->where('referee_id', $winnerId))
+            ->orWhere(fn ($q) => $q->where('referrer_id', $winnerId)->where('referee_id', $loserId))
+            ->orWhere(fn ($q) => $q->where('referrer_id', $loserId)
+                ->whereIn('referee_id', DB::table('referrals')->where('referrer_id', $winnerId)->select('referee_id')))
+            ->orWhere(fn ($q) => $q->where('referee_id', $loserId)
+                ->whereIn('referrer_id', DB::table('referrals')->where('referee_id', $winnerId)->select('referrer_id')))
+            ->get();
+        if ($gone->isNotEmpty()) {
+            DB::table('referrals')->whereIn('id', $gone->pluck('id')->all())->delete();
+        }
+
+        return $gone->map(fn ($row) => (array) $row)->values()->all();
     }
 
     /**

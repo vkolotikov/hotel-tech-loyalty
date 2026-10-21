@@ -112,6 +112,12 @@ export const OFFER_PROBLEM_WORDS: Record<string, string> = {
   per_member_limit: 'Enter a whole number, 1 or more, or leave it empty for no limit.',
 }
 
+/** What stops a picture before it is sent (rewardsMath.ts `pictureProblem`). */
+export const PICTURE_PROBLEM_WORDS: Record<string, string> = {
+  type: 'Use a JPEG, PNG or WebP picture.',
+  size: 'This picture is larger than {{mb}} MB. Choose a smaller one.',
+}
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   tab: TAB_WORDS,
@@ -126,4 +132,5 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   referral_state: REFERRAL_STATE_WORDS,
   'reward.problem': REWARD_PROBLEM_WORDS,
   'offer.problem': OFFER_PROBLEM_WORDS,
+  'picture.problem': PICTURE_PROBLEM_WORDS,
 }

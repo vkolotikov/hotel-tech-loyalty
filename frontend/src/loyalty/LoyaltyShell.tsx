@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { Crown, Gift, Inbox, ScanLine, Search, Users } from 'lucide-react'
+import { BarChart3, CreditCard, Crown, Gift, Inbox, Mail, ScanLine, Search, Users } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
@@ -76,12 +76,18 @@ export function LoyaltyShell({ children }: { children: ReactNode }) {
     })
   }, [ready, navigate])
 
+  // The desk's areas (Members, Requests, Scan) stay in the phone's top bar; the others are in the phone menu (release 2
+  // §3). Campaigns, Insights and Card & app are listed only for whoever may use them; the server decides either way.
+  const can = data?.staff.can
   const nav: WorkspaceNavItem[] = [
     { to: '/loyalty', end: false, icon: Users, label: t('loyalty.nav.members', 'Members') },
     { to: '/loyalty/requests', end: false, icon: Inbox, label: t('loyalty.nav.requests', 'Requests'), count: data?.counts.requests_waiting },
-    { to: '/loyalty/program', end: false, icon: Crown, label: t('loyalty.nav.program', 'Program') },
-    { to: '/loyalty/rewards', end: false, icon: Gift, label: t('loyalty.nav.rewards', 'Rewards') },
+    { to: '/loyalty/program', end: false, icon: Crown, label: t('loyalty.nav.program', 'Program'), phone: false },
+    { to: '/loyalty/rewards', end: false, icon: Gift, label: t('loyalty.nav.rewards', 'Rewards'), phone: false },
+    ...(can?.manage_campaigns ? [{ to: '/loyalty/campaigns', end: false, icon: Mail, label: t('loyalty.nav.campaigns', 'Campaigns'), phone: false }] : []),
+    ...(can?.view_insights ? [{ to: '/loyalty/insights', end: false, icon: BarChart3, label: t('loyalty.nav.insights', 'Insights'), phone: false }] : []),
     { to: '/loyalty/scan', end: false, icon: ScanLine, label: t('loyalty.nav.scan', 'Scan') },
+    ...(can?.manage_app ? [{ to: '/loyalty/app', end: false, icon: CreditCard, label: t('loyalty.nav.app', 'Card & app'), phone: false }] : []),
   ]
   // Members is current on /loyalty and on a member's page, not on the other areas' addresses under it.
   const area = areaOf(pathname)

@@ -3,21 +3,29 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { ERRORS } from '../lib/errors'
 import { WORD_FAMILIES } from '../lib/words'
-import { ERRORS as PROGRAM_ERRORS } from '../program/errors'
-import { WORD_FAMILIES as PROGRAM_FAMILIES } from '../program/words'
-import { ERRORS as REWARDS_ERRORS } from '../rewards/errors'
-import { WORD_FAMILIES as REWARDS_FAMILIES } from '../rewards/words'
 
 const LOCALES = ['en', 'ru', 'de', 'fr', 'es'] as const
 
+type Families = Record<string, Record<string, string>>
+
+/** Each area's run-time words (`<area>/words.ts` WORD_FAMILIES) and refusal words (`<area>/errors.ts` ERRORS). */
+const AREA_WORDS = import.meta.glob<{ WORD_FAMILIES?: Families }>('../*/words.ts', { eager: true })
+const AREA_ERRORS = import.meta.glob<{ ERRORS?: Families }>('../*/errors.ts', { eager: true })
+
 /**
- * HexaTech Loyalty's three bundles (spec 2026-10-21 §7): loyalty.<lang>.json for the workspace and Program's and
- * Rewards' own files, read under `loyalty`, `loyalty.program` and `loyalty.rewards` (i18n/index.ts).
+ * HexaTech Loyalty's bundles (spec 2026-10-21 §7, release 2 §9): loyalty.<lang>.json for the workspace, and an area's
+ * own <area>.<lang>.json read under `loyalty.<area>` (i18n/index.ts) with that area's words.ts and errors.ts. Every
+ * area file in this folder is checked; a new area needs no line here.
  */
-const BUNDLES: { name: string; prefix: string; families: Record<string, Record<string, string>>; errors: Record<string, Record<string, string>> }[] = [
+const AREAS = fs.readdirSync(__dirname).map(f => /^([a-z]+)\.en\.json$/.exec(f)?.[1]).filter((n): n is string => !!n && n !== 'loyalty').sort()
+const BUNDLES: { name: string; prefix: string; families: Families; errors: Families }[] = [
   { name: 'loyalty', prefix: 'loyalty.', families: WORD_FAMILIES, errors: ERRORS },
-  { name: 'program', prefix: 'loyalty.program.', families: PROGRAM_FAMILIES, errors: PROGRAM_ERRORS },
-  { name: 'rewards', prefix: 'loyalty.rewards.', families: REWARDS_FAMILIES, errors: REWARDS_ERRORS },
+  ...AREAS.map(name => ({
+    name,
+    prefix: `loyalty.${name}.`,
+    families: AREA_WORDS[`../${name}/words.ts`]?.WORD_FAMILIES ?? {},
+    errors: AREA_ERRORS[`../${name}/errors.ts`]?.ERRORS ?? {},
+  })),
 ]
 
 function bundle(name: string, locale: string): Record<string, unknown> {
@@ -50,11 +58,16 @@ function literalKeys(): Map<string, string> {
 }
 
 describe('HexaTech Loyalty words', () => {
+  it('checks every area bundle that i18n/index.ts registers', () => {
+    expect(AREAS).toEqual(expect.arrayContaining(['program', 'rewards', 'membership', 'insights', 'campaigns', 'app']))
+  })
+
   for (const b of BUNDLES) {
     describe(`${b.name}.<lang>.json`, () => {
       it('the five bundles carry exactly the same key set', () => {
         const en = flatten(bundle(b.name, 'en')).sort()
-        expect(en.length).toBeGreaterThan(0)
+        // The workspace's own bundle is never empty; an area's may still be the placeholder `{}` of its wiring.
+        if (b.name === 'loyalty') expect(en.length).toBeGreaterThan(0)
         for (const locale of LOCALES) expect(flatten(bundle(b.name, locale)).sort(), `${locale} keys differ from en`).toEqual(en)
       })
 

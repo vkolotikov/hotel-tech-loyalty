@@ -9,12 +9,17 @@ use App\Models\TierBenefit;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\Loyalty\MemberDirectory;
 use App\Services\Loyalty\MemberLedger;
+use App\Services\Loyalty\Members\MemberDetails;
+use App\Services\Loyalty\Members\MemberProfile;
 use App\Services\Loyalty\RequestQueue;
 use App\Services\LoyaltyService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
-/** Members: the list, Find, a member's page and their points history (spec 2026-10-21 §4.2, §4.3, §4.8). */
+/**
+ * Members: the list, Find, a member's page and their points history (spec 2026-10-21 §4.2, §4.3, §4.8); release 2
+ * (§4.1) adds the member's details to their page.
+ */
 class MemberController extends Controller
 {
     public function index(Request $request, MemberDirectory $directory): JsonResponse
@@ -40,7 +45,7 @@ class MemberController extends Controller
     public function show(int $id, LoyaltyService $loyalty, RequestQueue $requests): JsonResponse
     {
         $member = $this->member($id);
-        $member->load('user:id,name,email,phone');
+        $member->load('user');
 
         $benefits = $member->tier_id === null ? collect() : TierBenefit::query()
             ->where('tier_id', $member->tier_id)->where('is_active', true)
@@ -56,10 +61,8 @@ class MemberController extends Controller
             ])->values();
 
         return response()->json([
-            'member'   => MemberDirectory::row($member) + [
-                'qualifying_points' => (int) $member->qualifying_points,
-                'referral_code'     => $member->referral_code,
-            ],
+            // Release 2 (§4.1): the details block, the tier's hold and whether the member was deleted (MemberProfile).
+            'member'   => MemberProfile::of($member),
             'progress' => self::progress($member, $loyalty),
             'benefits' => $benefits,
             // The member's requests that still wait for staff: waiting, then approved.
@@ -67,6 +70,8 @@ class MemberController extends Controller
                 ...$requests->page('waiting', 1, $member->id)['requests'],
                 ...$requests->page('approved', 1, $member->id)['requests'],
             ])->values(),
+            // What Edit details offers (the workspace keeps no list of its own).
+            'options'  => ['languages' => MemberDetails::LANGUAGES],
         ]);
     }
 

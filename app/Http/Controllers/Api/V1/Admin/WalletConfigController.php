@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\AuditLog;
 use App\Models\WalletConfig;
+use App\Services\Loyalty\WalletSettings;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Admin endpoints for Wallet pass config:
@@ -26,13 +24,17 @@ use Illuminate\Support\Facades\Storage;
  * The reads strip the cert password from the response so it's never
  * echoed back to the client — admin re-enters when they need to
  * change it.
+ *
+ * The writes are App\Services\Loyalty\WalletSettings', which HexaTech
+ * Loyalty calls too (release 2 §7); the answers are the same as before
+ * the move (tests/Feature/Admin/WalletConfigEndpointsTest.php).
  */
 class WalletConfigController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
         $config = $this->getOrCreate($request);
-        return response()->json(['config' => $this->shape($config)]);
+        return response()->json(['config' => WalletSettings::shape($config)]);
     }
 
     public function update(Request $request): JsonResponse
@@ -50,22 +52,9 @@ class WalletConfigController extends Controller
             'is_active'                    => 'sometimes|boolean',
         ]);
 
-        $config = $this->getOrCreate($request);
+        $config = WalletSettings::update($this->getOrCreate($request), $data, $request->user());
 
-        // apple_cert_password explicitly: empty string means "no
-        // change" (admins re-load the page without re-entering the
-        // password). Pass null to clear.
-        if (array_key_exists('apple_cert_password', $data) && $data['apple_cert_password'] === '') {
-            unset($data['apple_cert_password']);
-        }
-
-        $config->fill($data)->save();
-
-        AuditLog::record('wallet_config_updated', $config,
-            ['fields' => array_keys($data)], [],
-            $request->user(), 'Wallet config updated');
-
-        return response()->json(['config' => $this->shape($config->fresh())]);
+        return response()->json(['config' => WalletSettings::shape($config)]);
     }
 
     public function uploadAppleCert(Request $request): JsonResponse
@@ -74,31 +63,28 @@ class WalletConfigController extends Controller
             'file'     => 'required|file|max:200', // KB; .p12 should be tiny
             'password' => 'sometimes|nullable|string|max:255',
         ]);
-        $config = $this->getOrCreate($request);
-        $path = $this->storeWalletFile($request->file('file'), $config->organization_id, 'apple-cert.p12');
-        $update = ['apple_cert_path' => $path];
-        if ($request->filled('password')) $update['apple_cert_password'] = $request->input('password');
-        $config->fill($update)->save();
+        $config = WalletSettings::storeAppleCert(
+            $this->getOrCreate($request),
+            $request->file('file'),
+            $request->filled('password') ? (string) $request->input('password') : null,
+            $request->user(),
+            ['filename' => $request->file('file')->getClientOriginalName()],
+        );
 
-        AuditLog::record('wallet_apple_cert_uploaded', $config,
-            ['filename' => $request->file('file')->getClientOriginalName()], [],
-            $request->user(), 'Apple Pass Type ID cert uploaded');
-
-        return response()->json(['config' => $this->shape($config->fresh())]);
+        return response()->json(['config' => WalletSettings::shape($config)]);
     }
 
     public function uploadAppleWwdr(Request $request): JsonResponse
     {
         $request->validate(['file' => 'required|file|max:200']);
-        $config = $this->getOrCreate($request);
-        $path = $this->storeWalletFile($request->file('file'), $config->organization_id, 'apple-wwdr.pem');
-        $config->update(['apple_wwdr_path' => $path]);
+        $config = WalletSettings::storeAppleWwdr(
+            $this->getOrCreate($request),
+            $request->file('file'),
+            $request->user(),
+            ['filename' => $request->file('file')->getClientOriginalName()],
+        );
 
-        AuditLog::record('wallet_apple_wwdr_uploaded', $config,
-            ['filename' => $request->file('file')->getClientOriginalName()], [],
-            $request->user(), 'Apple WWDR cert uploaded');
-
-        return response()->json(['config' => $this->shape($config->fresh())]);
+        return response()->json(['config' => WalletSettings::shape($config)]);
     }
 
     public function uploadGoogleServiceAccount(Request $request): JsonResponse
@@ -115,51 +101,13 @@ class WalletConfigController extends Controller
             ], 422);
         }
 
-        $path = $this->storeWalletFile($request->file('file'), $config->organization_id, 'google-service-account.json');
-        $config->update(['google_service_account_path' => $path]);
+        $config = WalletSettings::storeGoogleServiceAccount($config, $request->file('file'), $request->user(), ['client_email' => $json['client_email']]);
 
-        AuditLog::record('wallet_google_sa_uploaded', $config,
-            ['client_email' => $json['client_email']], [],
-            $request->user(), 'Google Wallet service account uploaded');
-
-        return response()->json(['config' => $this->shape($config->fresh())]);
+        return response()->json(['config' => WalletSettings::shape($config)]);
     }
 
     private function getOrCreate(Request $request): WalletConfig
     {
-        $orgId = $request->user()->organization_id;
-        return WalletConfig::firstOrCreate(['organization_id' => $orgId]);
-    }
-
-    private function storeWalletFile(UploadedFile $file, int $orgId, string $filename): string
-    {
-        $dir = "wallet/{$orgId}";
-        $path = "$dir/$filename";
-        Storage::disk('local')->putFileAs($dir, $file, $filename);
-        return $path;
-    }
-
-    private function shape(WalletConfig $config): array
-    {
-        // Mask the password — admins re-enter when changing. Echo
-        // back booleans for "cert is uploaded" so the UI can render
-        // a confirmation row without exposing the path.
-        return [
-            'apple_pass_type_id'           => $config->apple_pass_type_id,
-            'apple_team_id'                => $config->apple_team_id,
-            'apple_organization_name'      => $config->apple_organization_name,
-            'apple_pass_background_color'  => $config->apple_pass_background_color,
-            'apple_pass_foreground_color'  => $config->apple_pass_foreground_color,
-            'apple_pass_label_color'       => $config->apple_pass_label_color,
-            'apple_cert_uploaded'          => !empty($config->apple_cert_path),
-            'apple_cert_password_set'      => !empty($config->getAttributes()['apple_cert_password']),
-            'apple_wwdr_uploaded'          => !empty($config->apple_wwdr_path),
-            'apple_ready'                  => $config->appleReady(),
-            'google_issuer_id'             => $config->google_issuer_id,
-            'google_class_suffix'          => $config->google_class_suffix,
-            'google_service_account_uploaded' => !empty($config->google_service_account_path),
-            'google_ready'                 => $config->googleReady(),
-            'is_active'                    => (bool) $config->is_active,
-        ];
+        return WalletSettings::for((int) $request->user()->organization_id);
     }
 }

@@ -26,10 +26,21 @@ export interface Reward {
   fulfilled: number
 }
 
-/** The lists the reward form chooses from, served by the server (LoyaltyForms). */
+/**
+ * A picture's limits, served beside the list (ImageController::limits): size in KB, the longest side in pixels, the
+ * types accepted (release 2 §7).
+ */
+export interface PictureLimits {
+  max_kb: number
+  max_edge: number
+  types: string[]
+}
+
+/** The lists the reward form chooses from, served by the server (LoyaltyForms), and the picture's limits. */
 export interface RewardOptions {
   discount_types: string[]
   applies_to: string[]
+  image: PictureLimits
 }
 
 export interface Catalogue {
@@ -92,12 +103,15 @@ export interface Offer {
   per_member_limit: number | null
   is_active: boolean
   is_featured: boolean
+  /** Uploaded here or in the full admin, or any address the full admin was given. */
+  image_url: string | null
   state: string
 }
 
 export interface OfferOptions {
   types: string[]
   applies_to: string[]
+  image: PictureLimits
 }
 
 export interface OffersList {

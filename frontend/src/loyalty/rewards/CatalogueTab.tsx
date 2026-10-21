@@ -5,20 +5,22 @@ import { Pencil, Plus } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Eyebrow } from '../../workspace/ui/Typography'
 import { useBoot } from '../LoyaltyProvider'
-import { points, when } from '../lib/format'
+import { amountOf, points, when } from '../lib/format'
 import { ToneBadge } from '../ui/formParts'
 import { activeTone } from '../program/programMath'
-import { decimal, named } from '../lib/forms'
+import { named } from '../lib/forms'
 import { CATALOGUE_KEY, rewardsApi } from './api'
 import { Empty, LoadFailed, Loading, TabHead } from './parts'
 import { RewardDialog } from './RewardDialog'
 import { rewardDiscount, stockOf } from './rewardsMath'
 import type { Reward } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_PHRASE_WORDS, DISCOUNT_TYPE_WORDS } from './words'
+import { mediaUrl } from '../lib/api'
 
 /**
- * The catalogue (spec 2026-10-21 §4.6): every reward as a card — its cost, stock, per-member limit, how often it was
- * redeemed and fulfilled, whether it is offered. Staff who may manage offers add and change them.
+ * The catalogue (spec 2026-10-21 §4.6): every reward as a card — its picture (release 2 §7), its cost, stock,
+ * per-member limit, how often it was redeemed and fulfilled, whether it is offered. Staff who may manage offers add
+ * and change them.
  */
 export function CatalogueTab({ manage }: { manage: boolean }) {
   const { t, i18n } = useTranslation()
@@ -58,18 +60,20 @@ export function CatalogueTab({ manage }: { manage: boolean }) {
 /** One reward as a card. */
 export function RewardCard({ reward: r, manage, locale, timeZone, onEdit }: { reward: Reward; manage: boolean; locale: string; timeZone: string; onEdit: () => void }) {
   const { t } = useTranslation()
+  const currency = useBoot().venue.currency
   const stock = stockOf(r.stock)
   const discount = rewardDiscount(r)
   const phrase = discount ? named('loyalty.rewards.discount_phrase', DISCOUNT_PHRASE_WORDS, discount.type) : null
   const kind = discount && !phrase ? named('loyalty.rewards.discount_type', DISCOUNT_TYPE_WORDS, discount.type) : null
   const scope = r.applies_to !== 'all' ? named('loyalty.rewards.applies_to', APPLIES_TO_WORDS, r.applies_to) : null
   const discountText = discount && [
-    phrase ? t(...phrase, { amount: decimal(discount.amount, locale) }) : `${kind ? t(...kind) : discount.type} ${decimal(discount.amount, locale)}`,
+    phrase ? t(...phrase, { amount: amountOf(discount.type, discount.amount, currency, locale) }) : `${kind ? t(...kind) : discount.type} ${amountOf(discount.type, discount.amount, currency, locale)}`,
     scope ? t(...scope) : r.applies_to !== 'all' ? r.applies_to : null,
   ].filter(Boolean).join(' · ')
 
   return (
     <li data-reward={r.id} className="flex flex-col gap-3 rounded-2xl border border-a-border bg-a-surface p-4">
+      {r.image_url && <img src={mediaUrl(r.image_url)} alt={r.name} loading="lazy" className="aspect-[16/9] w-full rounded-xl bg-a-surface-2 object-cover" />}
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1 space-y-1">
           {r.category && <Eyebrow>{r.category}</Eyebrow>}

@@ -5,6 +5,31 @@ export function points(n: number, locale: string): string {
   return new Intl.NumberFormat(locale || 'en').format(n)
 }
 
+/**
+ * An amount of money in the venue's currency, as the language writes it ("€25", "25,50 €"); whole amounts without
+ * cents. A code the browser does not know is written after the number rather than failing the page.
+ */
+export function money(amount: number, currency: string, locale: string): string {
+  const whole = Number.isInteger(amount)
+  try {
+    return new Intl.NumberFormat(locale || 'en', {
+      style: 'currency', currency, minimumFractionDigits: whole ? 0 : 2, maximumFractionDigits: whole ? 0 : 2,
+    }).format(amount)
+  } catch {
+    return `${new Intl.NumberFormat(locale || 'en', { maximumFractionDigits: 2 }).format(amount)} ${currency}`
+  }
+}
+
+/** Value types whose number is an amount of money (LoyaltyForms): a benefit's, a reward's or an offer's. */
+export const MONEY_TYPES: readonly string[] = ['fixed_amount', 'cashback']
+
+/** A typed value's number: money for the money types, a plain number ("10", "1.5") for the others. */
+export function amountOf(type: string, amount: number, currency: string, locale: string): string {
+  return MONEY_TYPES.includes(type)
+    ? money(amount, currency, locale)
+    : new Intl.NumberFormat(locale || 'en', { maximumFractionDigits: 2 }).format(amount)
+}
+
 /** A ledger line's points with their sign: "+300", "−500" (a true minus sign). */
 export function signedPoints(n: number, locale: string): string {
   const abs = points(Math.abs(n), locale)

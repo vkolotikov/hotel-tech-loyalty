@@ -23,6 +23,8 @@ const FROM_CONTENT: Record<string, string> = {
   'shell.role.manager': 'shell.role.manager',
   'shell.role.staff': 'shell.role.staff',
 }
+/** Words the shared frame has of its own, from no workspace: the phone menu's "More areas" (Loyalty release 2 §3). */
+const OWN = new Set(['shell.more_areas'])
 function at(json: unknown, key: string): unknown {
   return key.split('.').reduce<unknown>((n, p) => (n && typeof n === 'object' ? (n as Record<string, unknown>)[p] : undefined), json)
 }
@@ -58,7 +60,7 @@ describe('workspace bundle', () => {
   it('the words moved without changing: each reads as the Appointments bundle reads the same key', () => {
     for (const locale of LOCALES) {
       const words = appointments(locale)
-      for (const key of flatten(bundle(locale)).filter(k => !(k in FROM_CONTENT))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
+      for (const key of flatten(bundle(locale)).filter(k => !(k in FROM_CONTENT) && !OWN.has(k))) expect(at(bundle(locale), key), `${locale}:${key}`).toBe(at(words, key))
     }
   })
 

@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import { failureOf, loyaltyUrl, membersParams } from './api'
 import { errorKey } from './errors'
-import { dayOf, points, signedPoints, when } from './format'
+import { amountOf, dayOf, money, points, signedPoints, when } from './format'
 import { NO_FILTERS, filtersFrom, searchFor, toggleTier, withChange } from '../members/membersQuery'
 import { balanceAfter, lineType, offersReverse, pointsProblem } from '../member/memberMath'
 import { requestActions, tabAfter, tabFrom } from '../requests/requestMath'
 import { findActions, findGroups, settledMembers } from '../find/findItems'
 import type { Can, LedgerLine, MemberRow } from './types'
 
-const all: Can = { award: true, redeem: true, reverse: true, manage_program: true, manage_rewards: true }
-const staff: Can = { award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false }
+const all: Can = { award: true, redeem: true, reverse: true, manage_program: true, manage_rewards: true, manage_members: true, view_insights: true, manage_campaigns: true, manage_app: true }
+const staff: Can = { award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false }
 
 describe('the calls (spec 2026-10-21 §6.2)', () => {
   it('name brand_id=all, so the full admin\'s brand choice never narrows the programme', () => {
@@ -147,5 +147,16 @@ describe('numbers and times', () => {
     expect(when('2026-10-05T21:30:00Z', 'en-GB', 'Europe/Riga')).toContain('00:30')
     expect(dayOf('2026-10-05T21:30:00Z', 'Europe/Riga')).toBe('2026-10-06')
     expect(dayOf('2026-10-05T21:30:00Z', 'America/New_York')).toBe('2026-10-05')
+  })
+
+  it('write money in the venue\'s currency, cents only when there are some (release 2 §8)', () => {
+    expect(money(25, 'EUR', 'en')).toBe('€25')
+    expect(money(25.5, 'EUR', 'en')).toBe('€25.50')
+    expect(money(25.5, 'EUR', 'fr').replace(/\s/g, ' ')).toBe('25,50 €')
+    expect(money(10, 'XX1', 'en')).toBe('10 XX1')
+    expect(amountOf('fixed_amount', 25, 'GBP', 'en')).toBe('£25')
+    expect(amountOf('cashback', 5, 'USD', 'en')).toBe('$5')
+    expect(amountOf('percent_discount', 15, 'EUR', 'en')).toBe('15')
+    expect(amountOf('points_multiplier', 1.5, 'EUR', 'en')).toBe('1.5')
   })
 })

@@ -1,0 +1,56 @@
+/*
+ * Insights' charts (spec 2026-10-21 release 2 §5): three series colours, in a
+ * fixed order and never cycled — 1 blue, 2 orange, 3 green — each at least
+ * 3:1 on the card surface and told apart under colour-blind vision in both
+ * themes (insightsContrast.test.ts). The dark steps are chosen for the navy
+ * card, not flipped from the light ones. Gridlines and axis text use the
+ * workspace's own border and secondary text. Every rule is scoped under
+ * [data-loyalty]; values are RGB triplets, read as rgb(var(--…)).
+ */
+
+[data-loyalty] {
+  --l-chart-1: 42 120 214;
+  --l-chart-2: 212 84 31;
+  --l-chart-3: 15 138 106;
+}
+
+[data-loyalty][data-theme="dark"] {
+  --l-chart-1: 57 135 229;
+  --l-chart-2: 217 89 38;
+  --l-chart-3: 25 158 112;
+}
+
+/* Marks: a column or a segment (SVG fill), a line (stroke), the wash under a line, a bar of a list (background). */
+[data-loyalty] .l-chart-1 { fill: rgb(var(--l-chart-1)); }
+[data-loyalty] .l-chart-2 { fill: rgb(var(--l-chart-2)); }
+[data-loyalty] .l-chart-3 { fill: rgb(var(--l-chart-3)); }
+[data-loyalty] .l-chart-line-1 { fill: none; stroke: rgb(var(--l-chart-1)); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; }
+[data-loyalty] .l-chart-wash-1 { fill: rgb(var(--l-chart-1) / 0.1); }
+[data-loyalty] .l-chart-bar-1 { background-color: rgb(var(--l-chart-1)); }
+[data-loyalty] .l-chart-bar-2 { background-color: rgb(var(--l-chart-2)); }
+[data-loyalty] .l-chart-bar-3 { background-color: rgb(var(--l-chart-3)); }
+
+/* An end dot keeps a 2px ring of the card's colour where it meets the line. */
+[data-loyalty] .l-chart-ring { stroke: rgb(var(--a-surface)); stroke-width: 2px; }
+
+/* Chrome: hairline gridlines, the zero line a step stronger, small text in the secondary ink. */
+[data-loyalty] .l-chart-grid { stroke: rgb(var(--a-border)); stroke-width: 1px; shape-rendering: crispEdges; }
+[data-loyalty] .l-chart-base { stroke: rgb(var(--a-text-2) / 0.5); stroke-width: 1px; shape-rendering: crispEdges; }
+[data-loyalty] .l-chart-text { fill: rgb(var(--a-text-2)); font-size: 12px; font-variant-numeric: tabular-nums; }
+[data-loyalty] .l-chart-value { fill: rgb(var(--a-text)); font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* A bucket's hover target: the whole column's height, invisible, wider than the mark. */
+[data-loyalty] .l-chart-hit { fill: transparent; }
+[data-loyalty] .l-chart-hit:hover { fill: rgb(var(--a-text) / 0.04); }
+
+/* Where the system sets the colours (Windows high contrast), the marks wear its ink rather than vanish into the page;
+   the legend, the gaps and the tables still tell the series apart. */
+@media (forced-colors: active) {
+  [data-loyalty] .l-chart-1,
+  [data-loyalty] .l-chart-2,
+  [data-loyalty] .l-chart-3 { fill: CanvasText; }
+  [data-loyalty] .l-chart-line-1 { stroke: CanvasText; }
+  [data-loyalty] .l-chart-bar-1,
+  [data-loyalty] .l-chart-bar-2,
+  [data-loyalty] .l-chart-bar-3 { forced-color-adjust: none; background-color: CanvasText; }
+}

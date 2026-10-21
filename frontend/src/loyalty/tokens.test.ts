@@ -10,7 +10,8 @@ import path from 'node:path'
  *  2. Only Loyalty's own API: every `/v1/…` path here is `/v1/admin/loyalty/…`, which the server gates.
  *     (`loyalty-presets` is the full admin's, not ours.)
  *  3. Nothing from another workspace: the workspaces share src/workspace, never each other.
- *  4. Every rule of the stylesheet is scoped under [data-loyalty].
+ *  4. Every rule of every stylesheet here (theme/loyalty.css and an area's own, e.g. theme/insights.css) is scoped
+ *     under [data-loyalty].
  */
 const DIR = path.resolve(__dirname)
 
@@ -67,12 +68,21 @@ describe('loyalty workspace sweep', () => {
     expect(bare).toEqual([])
   })
 
-  it('every rule in the stylesheet is scoped under [data-loyalty]', () => {
-    const css = fs.readFileSync(path.join(DIR, 'theme/loyalty.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-    const selectors = [...css.matchAll(/(^|[{}])\s*([^{}@]+)\{/g)].map(m => m[2].trim()).filter(Boolean)
-    expect(selectors.length).toBeGreaterThan(5)
-    for (const selector of selectors) {
-      for (const part of selector.split(',')) expect(part.trim().startsWith('[data-loyalty]'), `unscoped selector: ${part.trim()}`).toBe(true)
-    }
+  const sheets = files.filter(file => file.endsWith('.css'))
+
+  it('finds the workspace\'s own stylesheet among the sheets it checks', () => {
+    expect(sheets.map(file => path.relative(DIR, file))).toContain(path.join('theme', 'loyalty.css'))
   })
+
+  for (const sheet of sheets) {
+    const rel = path.relative(DIR, sheet)
+    it(`every rule in ${rel} is scoped under [data-loyalty]`, () => {
+      const css = fs.readFileSync(sheet, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+      const selectors = [...css.matchAll(/(^|[{}])\s*([^{}@]+)\{/g)].map(m => m[2].trim()).filter(Boolean)
+      expect(selectors.length).toBeGreaterThan(0)
+      for (const selector of selectors) {
+        for (const part of selector.split(',')) expect(part.trim().startsWith('[data-loyalty]'), `unscoped selector in ${rel}: ${part.trim()}`).toBe(true)
+      }
+    })
+  }
 })

@@ -6,11 +6,11 @@ import { Button } from '../../workspace/ui/Button'
 import type { ThemeName } from '../../workspace/theme/accent'
 import { formatDate } from '../../workspace/lib/wallClock'
 import { useBoot } from '../LoyaltyProvider'
-import { points } from '../lib/format'
+import { amountOf, points } from '../lib/format'
 import { useLook } from '../lib/look'
 import type { TierRef } from '../lib/types'
 import { ToneBadge } from '../ui/formParts'
-import { chosenTiers, decimal, named } from '../lib/forms'
+import { chosenTiers, named } from '../lib/forms'
 import { TierChip } from '../ui/TierChip'
 import { OFFERS_KEY, rewardsApi } from './api'
 import { OfferDialog } from './OfferDialog'
@@ -18,12 +18,14 @@ import { Empty, LoadFailed, Loading, TabHead } from './parts'
 import { offerState, offerTone, offerValue } from './rewardsMath'
 import type { Offer } from './types'
 import { APPLIES_TO_WORDS, OFFER_STATE_WORDS, OFFER_TYPE_WORDS, OFFER_VALUE_WORDS } from './words'
+import { mediaUrl } from '../lib/api'
 
 const DAY: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short', year: 'numeric' }
 
 /**
- * Offers (spec 2026-10-21 §4.6): each with its kind and value, code, the venue days it runs, the tiers that see it,
- * how often it was used, and whether it is running. Staff who may manage offers add and change them.
+ * Offers (spec 2026-10-21 §4.6): each with its picture (release 2 §7), its kind and value, code, the venue days it
+ * runs, the tiers that see it, how often it was used, and whether it is running. Staff who may manage offers add and
+ * change them.
  */
 export function OffersTab({ manage }: { manage: boolean }) {
   const { t, i18n } = useTranslation()
@@ -66,13 +68,14 @@ export function OfferRow({ offer: o, tiers, manage, theme, locale, onEdit }: {
   offer: Offer; tiers: TierRef[]; manage: boolean; theme: ThemeName; locale: string; onEdit: () => void
 }) {
   const { t } = useTranslation()
+  const currency = useBoot().venue.currency
   const state = offerState(o.state)
   const type = named('loyalty.rewards.offer_type', OFFER_TYPE_WORDS, o.type)
   const shown = offerValue(o.type, o.value, Object.keys(OFFER_VALUE_WORDS))
   const scope = o.applies_to !== 'all' ? named('loyalty.rewards.applies_to', APPLIES_TO_WORDS, o.applies_to) : null
   const kind = [
     type ? t(...type) : o.type,
-    shown === 'phrase' ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: decimal(o.value, locale) }) : shown === 'number' ? decimal(o.value, locale) : null,
+    shown === 'phrase' ? t(`loyalty.rewards.offer_value.${o.type}`, OFFER_VALUE_WORDS[o.type], { value: amountOf(o.type, o.value, currency, locale) }) : shown === 'number' ? amountOf(o.type, o.value, currency, locale) : null,
     scope ? t(...scope) : o.applies_to !== 'all' ? o.applies_to : null,
   ].filter(Boolean).join(' · ')
   const days = o.start_date && o.end_date
@@ -86,6 +89,7 @@ export function OfferRow({ offer: o, tiers, manage, theme, locale, onEdit }: {
 
   return (
     <li data-offer={o.id} className="flex flex-wrap items-start gap-x-4 gap-y-2 px-4 py-3">
+      {o.image_url && <img src={mediaUrl(o.image_url)} alt={o.title} loading="lazy" className="h-14 w-14 shrink-0 rounded-lg bg-a-surface-2 object-cover" />}
       <div className="min-w-0 flex-1 space-y-1">
         <p className="flex items-center gap-1.5 font-medium text-a-text">
           {o.title}

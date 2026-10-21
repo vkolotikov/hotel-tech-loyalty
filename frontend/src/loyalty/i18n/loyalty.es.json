@@ -118,7 +118,10 @@
     "program": "Programa",
     "requests": "Solicitudes",
     "rewards": "Recompensas",
-    "scan": "Escanear"
+    "scan": "Escanear",
+    "campaigns": "Campañas",
+    "insights": "Análisis",
+    "app": "Tarjeta y app"
   },
   "points": {
     "error": {

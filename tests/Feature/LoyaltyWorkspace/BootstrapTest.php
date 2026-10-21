@@ -41,11 +41,44 @@ class BootstrapTest extends TestCase
     {
         $this->asManager()->getJson($this->api('bootstrap'))
             ->assertJsonPath('staff.role', 'manager')
-            ->assertJsonPath('staff.can', ['award' => true, 'redeem' => true, 'reverse' => true, 'manage_program' => true, 'manage_rewards' => true]);
+            ->assertJsonPath('staff.can', [
+                'award' => true, 'redeem' => true, 'reverse' => true, 'manage_program' => true, 'manage_rewards' => true,
+                'manage_members' => true, 'view_insights' => true, 'manage_campaigns' => true, 'manage_app' => true,
+            ]);
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))
             ->assertJsonPath('staff.role', 'staff')
-            ->assertJsonPath('staff.can', ['award' => true, 'redeem' => true, 'reverse' => false, 'manage_program' => false, 'manage_rewards' => false]);
+            ->assertJsonPath('staff.can', [
+                'award' => true, 'redeem' => true, 'reverse' => false, 'manage_program' => false, 'manage_rewards' => false,
+                'manage_members' => false, 'view_insights' => false, 'manage_campaigns' => false, 'manage_app' => false,
+            ]);
+    }
+
+    public function test_insights_follow_the_full_admins_analytics_flag(): void
+    {
+        DB::table('staff')->where('user_id', $this->staffMember->id)->update(['can_view_analytics' => true]);
+
+        $this->asStaffMember()->getJson($this->api('bootstrap'))
+            ->assertJsonPath('staff.can.view_insights', true)
+            ->assertJsonPath('staff.can.manage_members', false);
+    }
+
+    public function test_it_names_the_venues_currency_as_the_portal_does_and_the_plans_features(): void
+    {
+        DB::table('organizations')->where('id', $this->org->id)->update([
+            'currency' => 'gbp', 'plan_features' => json_encode(['campaigns' => true, 'wallet' => 'false']),
+        ]);
+
+        $this->asStaffMember()->getJson($this->api('bootstrap'))
+            ->assertJsonPath('venue.currency', 'GBP')
+            ->assertJsonPath('features', ['campaigns' => true, 'wallet' => false]);
+
+        DB::table('organizations')->where('id', $this->org->id)->update(['currency' => null, 'plan_features' => null]);
+        HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'key' => 'services_currency', 'value' => 'chf']);
+
+        $this->asStaffMember()->getJson($this->api('bootstrap'))
+            ->assertJsonPath('venue.currency', 'CHF')
+            ->assertJsonPath('features', ['campaigns' => false, 'wallet' => false]);
     }
 
     public function test_a_flag_switched_off_or_a_deactivated_row_counts_for_nothing(): void

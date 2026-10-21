@@ -19,9 +19,10 @@ use Illuminate\Validation\Validator as FormValidator;
 /**
  * The rewards catalogue (spec 2026-10-21 §4.6): every staff member reads it,
  * staff with `can_manage_offers` add and change it (§5). The rules are
- * RewardAdminController's, without the image upload (JSON only in this
- * release). Rewards are brand-scoped: read as the request's brand binding
- * gives, created on the brand the model's own hook picks.
+ * RewardAdminController's, as JSON; the picture has its own endpoints
+ * (ImageController, release 2 §7), whose limits the list's options carry.
+ * Rewards are brand-scoped: read as the request's brand binding gives,
+ * created on the brand the model's own hook picks.
  */
 class RewardController extends Controller
 {
@@ -31,7 +32,11 @@ class RewardController extends Controller
 
         return response()->json([
             'rewards' => $rewards->map(fn (Reward $r) => self::row($r))->values(),
-            'options' => ['discount_types' => LoyaltyForms::REWARD_DISCOUNT_TYPES, 'applies_to' => LoyaltyForms::appliesTo()],
+            'options' => [
+                'discount_types' => LoyaltyForms::REWARD_DISCOUNT_TYPES,
+                'applies_to'     => LoyaltyForms::appliesTo(),
+                'image'          => ImageController::limits('rewards'),
+            ],
         ]);
     }
 

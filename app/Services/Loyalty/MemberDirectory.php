@@ -30,6 +30,30 @@ final class MemberDirectory
      */
     public function page(array $filters, int $page): array
     {
+        $query = $this->filtered($filters);
+
+        $total = (clone $query)->count();
+        $pages = max(1, (int) ceil($total / self::PER_PAGE));
+        $page = min(max(1, $page), $pages);
+        $rows = $query->forPage($page, self::PER_PAGE)->get();
+
+        return [
+            'members' => $rows->map(fn (LoyaltyMember $m) => self::row($m))->values()->all(),
+            'page'    => $page,
+            'pages'   => $pages,
+            'total'   => $total,
+        ];
+    }
+
+    /**
+     * The list's members for these filters, in the list's order, unpaged: the page reads one slice of it, the
+     * export (release 2 §4.2) all of it, so the file holds exactly what the list shows.
+     *
+     * @param array{q?: ?string, tier_id?: ?int, state?: ?string, sort?: ?string} $filters
+     * @return Builder<LoyaltyMember>
+     */
+    public function filtered(array $filters): Builder
+    {
         $query = $this->base();
         $this->search($query, (string) ($filters['q'] ?? ''));
         if (!empty($filters['tier_id'])) {
@@ -47,19 +71,8 @@ final class MemberDirectory
             'activity' => $query->orderByRaw('loyalty_members.last_activity_at IS NULL')->orderByDesc('loyalty_members.last_activity_at'),
             default    => $query->orderByDesc('loyalty_members.created_at'),
         };
-        $query->orderByDesc('loyalty_members.id');
 
-        $total = (clone $query)->count();
-        $pages = max(1, (int) ceil($total / self::PER_PAGE));
-        $page = min(max(1, $page), $pages);
-        $rows = $query->forPage($page, self::PER_PAGE)->get();
-
-        return [
-            'members' => $rows->map(fn (LoyaltyMember $m) => self::row($m))->values()->all(),
-            'page'    => $page,
-            'pages'   => $pages,
-            'total'   => $total,
-        ];
+        return $query->orderByDesc('loyalty_members.id');
     }
 
     /** @return list<array<string, mixed>> Up to eight members whose name, email, phone or number holds the words. */
@@ -95,7 +108,10 @@ final class MemberDirectory
         return [
             'total'          => LoyaltyMember::query()->count(),
             'active'         => (clone $active)->count(),
-            'new_this_month' => LoyaltyMember::query()->where('created_at', '>=', $monthStart)->count(),
+            // Joined as the list's own column shows it (`joined_at`, else `created_at`), as Insights counts new members: an
+            // import keeps its members' join dates and does not read as a month of new members.
+            'new_this_month' => LoyaltyMember::query()->where(fn ($w) => $w->where('joined_at', '>=', $monthStart)
+                ->orWhere(fn ($x) => $x->whereNull('joined_at')->where('created_at', '>=', $monthStart)))->count(),
             'average_points' => (int) round((float) ((clone $active)->avg('current_points') ?? 0)),
             'tiers'          => (clone $active)->selectRaw('tier_id, COUNT(*) AS n')->groupBy('tier_id')->pluck('n', 'tier_id')
                 ->filter(fn ($n, $tier) => $tier !== null && $tier !== '')

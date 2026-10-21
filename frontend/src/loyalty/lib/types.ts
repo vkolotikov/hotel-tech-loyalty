@@ -10,6 +10,19 @@ export interface Can {
   reverse: boolean
   manage_program: boolean
   manage_rewards: boolean
+  /** Release 2: tier, deactivate, delete, duplicates, import, export (a manager's). */
+  manage_members: boolean
+  /** Insights: a manager or `can_view_analytics`. */
+  view_insights: boolean
+  manage_campaigns: boolean
+  /** Card & app: the wallet pass and the member app's look. */
+  manage_app: boolean
+}
+
+/** What the plan holds; the routes behind each answer 402 `feature_locked` without it. */
+export interface Features {
+  campaigns: boolean
+  wallet: boolean
 }
 
 export interface TierRef {
@@ -24,7 +37,9 @@ export interface Bootstrap {
   name: string
   organization: { id: number; name: string; industry: string }
   accent: string | null
-  venue: { timezone: string; timezone_named: boolean; today: DateKey }
+  /** `currency`: the code members see in the portal (PortalBootstrap::currency). */
+  venue: { timezone: string; timezone_named: boolean; today: DateKey; currency: string }
+  features: Features
   staff: { id: number; name: string; role: string | null; can: Can }
   programme: { on: boolean; tiers: TierRef[] }
   counts: { members: number; requests_waiting: number }
@@ -109,10 +124,26 @@ export interface RequestsPage extends Paged {
 }
 
 export interface MemberDetail {
-  member: MemberRow & { qualifying_points: number; referral_code: string | null }
+  /**
+   * The list's row with release 2's details block (§4.1, `MemberProfile` on the server): language, nationality, the
+   * date of birth (`YYYY-MM-DD`), marketing consent, the instant a manager holds the tier until (or null), and whether
+   * the member was deleted.
+   */
+  member: MemberRow & {
+    qualifying_points: number
+    referral_code: string | null
+    language: string | null
+    nationality: string | null
+    date_of_birth: string | null
+    marketing_consent: boolean
+    tier_override_until: string | null
+    is_erased: boolean
+  }
   progress: Progress
   benefits: TierBenefitLine[]
   requests: BenefitRequest[]
+  /** What Edit details offers: the language codes (named in the reader's language by the browser). */
+  options: { languages: string[] }
 }
 
 export interface LedgerLine {

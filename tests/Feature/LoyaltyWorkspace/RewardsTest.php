@@ -47,7 +47,10 @@ class RewardsTest extends TestCase
             ->assertJsonPath('rewards.1.is_active', false)
             ->assertJsonPath('rewards.1.discount_value', null)
             ->assertJsonPath('rewards.1.redeemed', 0)
-            ->assertJsonPath('options', ['discount_types' => ['percent_discount', 'fixed_amount'], 'applies_to' => ['all', 'services', 'stays']]);
+            ->assertJsonPath('options', [
+                'discount_types' => ['percent_discount', 'fixed_amount'], 'applies_to' => ['all', 'services', 'stays'],
+                'image'          => ['max_kb' => 5120, 'max_edge' => 4096, 'types' => ['image/jpeg', 'image/png', 'image/webp']],
+            ]);
     }
 
     public function test_staff_with_manage_offers_add_a_reward_on_the_default_brand(): void

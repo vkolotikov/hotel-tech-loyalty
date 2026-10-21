@@ -2,21 +2,23 @@ import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
 import { serverProblems } from '../lib/forms'
 import {
-  OFFER_FIELDS, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, redemptionActions, redemptionTone, referralTone,
+  OFFER_FIELDS, megabytes, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, pictureProblem, redemptionActions, redemptionTone, referralTone,
   rewardBody, rewardDiscount, rewardFormOf, rewardProblems, rewardServerProblems, rewardsActions, searchFor, stockOf, tabAfter, tabFrom, typeChoices,
 } from './rewardsMath'
 import type { Offer, OfferOptions, Reward, RewardOptions } from './types'
 
-const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, ...more })
-const rewardOptions: RewardOptions = { discount_types: ['percent_discount', 'fixed_amount'], applies_to: ['all', 'services', 'stays'] }
-const offerOptions: OfferOptions = { types: ['discount', 'bonus_points', 'free_night'], applies_to: ['all', 'stays'] }
+const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
+const image = { max_kb: 5120, max_edge: 4096, types: ['image/jpeg', 'image/png', 'image/webp'] }
+const rewardOptions: RewardOptions = { discount_types: ['percent_discount', 'fixed_amount'], applies_to: ['all', 'services', 'stays'], image }
+const offerOptions: OfferOptions = { types: ['discount', 'bonus_points', 'free_night'], applies_to: ['all', 'stays'], image: { ...image, max_kb: 2048 } }
 const reward = (more: Partial<Reward> = {}): Reward => ({
   id: 4, name: 'Breakfast for two', description: null, terms: null, category: 'Dining', points_cost: 500, stock: null, per_member_limit: 2,
   discount_type: null, discount_value: null, applies_to: 'all', expires_at: null, is_active: true, image_url: null, redeemed: 10, fulfilled: 7, ...more,
 })
 const offer = (more: Partial<Offer> = {}): Offer => ({
   id: 6, title: 'Autumn weekend', description: 'Two nights', type: 'discount', value: 15, code: 'AUTUMN', applies_to: 'stays', tier_ids: [2],
-  start_date: '2026-10-01', end_date: '2026-10-31', usage_limit: 100, times_used: 3, per_member_limit: null, is_active: true, is_featured: false, state: 'live', ...more,
+  start_date: '2026-10-01', end_date: '2026-10-31', usage_limit: 100, times_used: 3, per_member_limit: null, is_active: true, is_featured: false, image_url: null,
+  state: 'live', ...more,
 })
 
 describe('the tab in the address (spec 2026-10-21 §4.6)', () => {
@@ -147,5 +149,23 @@ describe('the offer form', () => {
     expect(offerValue('discount', 15, phrased)).toBe('phrase')
     expect(offerValue('free_night', 1, phrased)).toBe('number')
     expect(offerValue('upgrade', 0, phrased)).toBeNull()
+  })
+})
+
+describe('a picture before it is sent (release 2 §7)', () => {
+  it('takes the server\'s types up to its size; the longest side is the server\'s to check', () => {
+    expect(pictureProblem({ type: 'image/jpeg', size: 5120 * 1024 }, image)).toBeNull()
+    expect(pictureProblem({ type: 'image/webp', size: 10 }, image)).toBeNull()
+    expect(pictureProblem({ type: 'image/jpeg', size: 5120 * 1024 + 1 }, image)).toBe('size')
+    expect(pictureProblem({ type: 'image/jpeg', size: 2048 * 1024 + 1 }, offerOptions.image)).toBe('size')
+    expect(pictureProblem({ type: 'application/pdf', size: 10 }, image)).toBe('type')
+    expect(pictureProblem({ type: 'image/gif', size: 10 }, image)).toBe('type')
+    expect(pictureProblem({ type: '', size: 10 }, image)).toBe('type')
+  })
+
+  it('says a limit in megabytes', () => {
+    expect(megabytes(5120)).toBe(5)
+    expect(megabytes(2048)).toBe(2)
+    expect(megabytes(1536)).toBe(1.5)
   })
 })

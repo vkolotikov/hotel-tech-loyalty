@@ -31,6 +31,15 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: OFFLINE,
     unknown: 'The offer could not be saved. Please try again.',
   },
+  // A picture's upload or removal (release 2 §7); `invalid` names the limits the server answered with.
+  picture: {
+    not_allowed: OFFERS_RIGHT,
+    no_capability: OFFERS_RIGHT,
+    not_found: 'This is no longer in the list. The list now shows it as it is.',
+    invalid: 'Use a JPEG, PNG or WebP picture up to {{mb}} MB and {{edge}} pixels on its longest side.',
+    network: 'No connection: nothing was changed. Try again.',
+    unknown: 'The picture could not be changed. Please try again.',
+  },
   redemption: {
     not_allowed: REDEEM_RIGHT,
     no_capability: REDEEM_RIGHT,

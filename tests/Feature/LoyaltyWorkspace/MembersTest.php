@@ -22,10 +22,22 @@ class MembersTest extends TestCase
         $this->setUpLoyaltyWorkspace();
     }
 
+    public function test_new_this_month_counts_the_day_a_member_joined_not_the_day_the_row_was_made(): void
+    {
+        $base = $this->asStaffMember()->getJson($this->api('members'))->json('figures.new_this_month');
+
+        // Imported today with last year's join date: not new. Made today with no join date: new, by the day it was made.
+        $this->makeMember('Imported Member', 'imported@example.test', ['joined_at' => now()->subYear()]);
+        $this->makeMember('Walk-in Member', 'walkin@example.test', ['joined_at' => null]);
+
+        $this->asStaffMember()->getJson($this->api('members'))->assertJsonPath('figures.new_this_month', $base + 1);
+    }
+
     public function test_the_list_holds_this_organisations_active_members_newest_first_with_the_figures(): void
     {
         $this->otherOrganization();
         $this->ada->forceFill(['created_at' => now()->subMonths(2)])->save();
+        $this->grace->forceFill(['joined_at' => now()])->save();
         $gone = $this->makeMember('Former Member', 'former@example.test', ['is_active' => false]);
 
         $response = $this->asStaffMember()->getJson($this->api('members'))->assertOk();
@@ -35,7 +47,7 @@ class MembersTest extends TestCase
             ->assertJsonPath('pages', 1)
             ->assertJsonPath('figures.total', 3)
             ->assertJsonPath('figures.active', 2)
-            ->assertJsonPath('figures.new_this_month', 2)
+            ->assertJsonPath('figures.new_this_month', 1)
             ->assertJsonPath('figures.average_points', 850)
             ->assertJsonPath('members.1.points', 1500)
             ->assertJsonPath('members.1.tier_id', $this->tiers['gold']->id);

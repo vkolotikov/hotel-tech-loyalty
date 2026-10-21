@@ -124,6 +124,31 @@
     "used": "Usos: {{used}}",
     "used_of": "Usos: {{used}} de {{limit}}"
   },
+  "picture": {
+    "add": "Añadir una imagen",
+    "after_save_offer": "Podrá añadir una imagen cuando la oferta esté guardada.",
+    "after_save_reward": "Podrá añadir una imagen cuando la recompensa esté guardada.",
+    "error": {
+      "invalid": "Use una imagen JPEG, PNG o WebP de hasta {{mb}} MB y {{edge}} píxeles en su lado más largo.",
+      "network": "Sin conexión: no se ha cambiado nada. Inténtelo de nuevo.",
+      "no_capability": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_allowed": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_found": "Esto ya no está en la lista. La lista muestra ahora su estado actual.",
+      "unknown": "No se ha podido cambiar la imagen. Inténtelo de nuevo."
+    },
+    "hint": "JPEG, PNG o WebP, hasta {{mb}} MB. Se guarda al momento.",
+    "keep": "Conservarla",
+    "label": "Imagen",
+    "none": "Aún no hay imagen.",
+    "problem": {
+      "size": "Esta imagen pesa más de {{mb}} MB. Elija una más pequeña.",
+      "type": "Use una imagen JPEG, PNG o WebP."
+    },
+    "remove": "Quitar imagen",
+    "remove_confirm": "Quitar",
+    "remove_line": "¿Quitar la imagen? Los miembros lo verán sin ella.",
+    "replace": "Reemplazar imagen"
+  },
   "redemption": {
     "error": {
       "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",

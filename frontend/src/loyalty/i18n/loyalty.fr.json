@@ -118,7 +118,10 @@
     "program": "Programme",
     "requests": "Demandes",
     "rewards": "Récompenses",
-    "scan": "Scanner"
+    "scan": "Scanner",
+    "campaigns": "Campagnes",
+    "insights": "Analyses",
+    "app": "Carte et appli"
   },
   "points": {
     "error": {

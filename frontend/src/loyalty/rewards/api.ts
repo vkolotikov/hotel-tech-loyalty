@@ -21,7 +21,18 @@ export const rewardsApi = {
   updateOffer: (id: number, body: OfferBody): Promise<{ offer: Offer }> => watched(api.put(loyaltyUrl(`offers/${id}`), body)),
 
   referrals: (page: number): Promise<ReferralsPage> => watched(api.get(loyaltyUrl('referrals'), { params: page > 1 ? { page } : {} })),
+
+  /** A reward's or an offer's picture (release 2 §7): multipart `image`; answers the new address, or null once removed. */
+  uploadPicture: (owner: PictureOwner, id: number, file: File): Promise<{ image_url: string }> => {
+    const form = new FormData()
+    form.append('image', file)
+    return watched(api.post(loyaltyUrl(`${owner}/${id}/image`), form))
+  },
+  removePicture: (owner: PictureOwner, id: number): Promise<{ image_url: null }> => watched(api.delete(loyaltyUrl(`${owner}/${id}/image`))),
 }
+
+/** Whose picture: the path segment of its endpoints. */
+export type PictureOwner = 'rewards' | 'offers'
 
 export const CATALOGUE_KEY = ['loyalty', 'rewards', 'catalogue'] as const
 export const OFFERS_KEY = ['loyalty', 'rewards', 'offers'] as const
