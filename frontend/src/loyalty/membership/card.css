@@ -1,0 +1,54 @@
+/*
+ * The member's card on paper (spec 2026-10-21 release 2 §4.1, Card → Print): only the card is printed — the member's
+ * name, number and QR code at the size of a bank card, black on white — and everything else on the page is left out,
+ * the elements around the card shrunk to it so the paper holds one card and no blank pages. Scoped under
+ * [data-loyalty] as every Loyalty rule is.
+ */
+
+@media print {
+  [data-loyalty] {
+    min-height: 0 !important;
+    background: none !important;
+  }
+
+  [data-loyalty] *:not([data-print-card]):not([data-print-card] *):not(:has([data-print-card])) {
+    display: none !important;
+  }
+
+  [data-loyalty] *:has([data-print-card]) {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: none !important;
+    overflow: visible !important;
+    transform: none !important;
+    animation: none !important;
+  }
+
+  [data-loyalty] [data-print-card] {
+    width: 85.6mm;
+    min-height: 54mm;
+    padding: 5mm;
+    border: 0.3mm solid #000;
+    border-radius: 3mm;
+    background: #fff !important;
+    color: #000 !important;
+    break-inside: avoid;
+  }
+
+  [data-loyalty] [data-print-card] * {
+    color: #000 !important;
+  }
+
+  [data-loyalty] [data-print-card] img {
+    width: 30mm;
+    height: 30mm;
+  }
+}

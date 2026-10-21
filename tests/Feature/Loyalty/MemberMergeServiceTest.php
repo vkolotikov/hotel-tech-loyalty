@@ -9,6 +9,8 @@ use Database\Factories\LoyaltyTierFactory;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -58,11 +60,22 @@ use Tests\TestCase;
  *   Audit + deletion:
  *     - member_merges row created with loser snapshot
  *     - Loser hard-deleted at the end
+ *
+ *   All history kept (owner decision R2-3, HexaTech Loyalty release 2):
+ *     - every table and column in MEMBER_COLUMNS moves, one case each
+ *     - a scan of the migrations fails on a member column the merge
+ *       neither moves nor keeps on purpose
+ *     - member_offers and referrals deduplicated (and recorded) where
+ *       moving would collide; a referral between the pair dropped
+ *     - the loser's QR tokens revoked, earlier merges into the loser
+ *       re-pointed, the winner never its own referrer
+ *     - an AuditLog row member_merged beside the snapshot
  */
 class MemberMergeServiceTest extends TestCase
 {
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
+    use MembershipSchema;
 
     private MemberMergeService $service;
 
@@ -70,6 +83,7 @@ class MemberMergeServiceTest extends TestCase
     {
         parent::setUp();
         $this->setUpMemberMergeSchema();
+        $this->buildMembershipSchema();
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
@@ -365,5 +379,194 @@ class MemberMergeServiceTest extends TestCase
         $this->assertSame($loser->id, $result['loser_id']);
         $this->assertArrayHasKey('moved', $result);
         $this->assertIsArray($result['moved']);
+    }
+
+    // ─── All history kept (R2-3) ───────────────────────────────────────────
+
+    /** @return array<string, array{0: string, 1: string}> one case per moved column */
+    public static function memberColumns(): array
+    {
+        $cases = [];
+        foreach (MemberMergeService::MEMBER_COLUMNS as $table => $columns) {
+            foreach ($columns as $column) {
+                if ($table !== 'loyalty_members') {
+                    $cases["{$table}.{$column}"] = [$table, $column];
+                }
+            }
+        }
+
+        return $cases;
+    }
+
+    /** @dataProvider memberColumns */
+    public function test_every_row_that_names_the_loser_moves_to_the_winner(string $table, string $column): void
+    {
+        $this->assertTrue(Schema::hasTable($table) && Schema::hasColumn($table, $column), "{$table}.{$column} is missing from the test schema");
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        $other  = $this->makeMember();
+
+        $id = $this->insertRow($table, [$column => $loser->id] + $this->otherColumns($table, $column, $other->id));
+
+        $result = $this->service->merge($winner, $loser);
+
+        $this->assertSame($winner->id, (int) DB::table($table)->where('id', $id)->value($column), "{$table}.{$column} must name the winner");
+        $this->assertSame(0, DB::table($table)->where($column, $loser->id)->count());
+        $this->assertGreaterThanOrEqual(1, $result['moved'][$table]);
+    }
+
+    public function test_every_member_column_the_migrations_define_is_moved_or_kept_on_purpose(): void
+    {
+        $handled = [];
+        foreach (MemberMergeService::MEMBER_COLUMNS as $table => $columns) {
+            foreach ($columns as $column) {
+                $handled["{$table}.{$column}"] = true;
+            }
+        }
+        foreach (array_keys(MemberMergeService::KEPT_COLUMNS) as $kept) {
+            $handled[$kept] = true;
+        }
+
+        $found = [];
+        foreach (glob(base_path('database/migrations/*.php')) as $file) {
+            $text = file_get_contents($file);
+            // The table each statement belongs to: the nearest Schema::create / Schema::table / addColumns before it.
+            preg_match_all("/(?:Schema::(?:create|table)|addColumns)\\(\\s*['\"]([a-z0-9_]+)['\"]/", $text, $contexts, PREG_OFFSET_CAPTURE);
+            preg_match_all("/->(?:foreignId|unsignedBigInteger|bigInteger|unsignedInteger|integer|foreignIdFor)\\(\\s*['\"]([a-z_]+)['\"]\\s*\\)([^;]*)/", $text, $defs, PREG_OFFSET_CAPTURE);
+            foreach ($defs[1] as $i => [$column, $at]) {
+                $rest = $defs[2][$i][0];
+                $names = (bool) preg_match('/(^|_)member_id$|^referrer_id$|^referee_id$|^referred_by$/', $column);
+                if (!$names && !str_contains($rest, "'loyalty_members'")) {
+                    continue;
+                }
+                $table = null;
+                foreach ($contexts[1] as [$name, $position]) {
+                    if ($position < $at) {
+                        $table = $name;
+                    }
+                }
+                $found["{$table}.{$column}"] = basename($file);
+            }
+            $this->assertDoesNotMatchRegularExpression('/ADD\\s+COLUMN\\s+\\w*member\\w*/i', $text, basename($file) . ' adds a member column in raw SQL; teach this scan and the merge about it');
+        }
+
+        $this->assertGreaterThan(20, count($found), 'the scan found too few member columns to be reading the migrations');
+        $missing = array_diff_key($found, $handled);
+        $this->assertSame([], $missing, 'member columns the merge neither moves nor keeps (MemberMergeService::MEMBER_COLUMNS / KEPT_COLUMNS)');
+    }
+
+    public function test_a_shared_offer_keeps_the_row_that_went_furthest_and_records_the_other(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        DB::table('member_offers')->insert([
+            ['member_id' => $winner->id, 'offer_id' => 7, 'status' => 'available', 'used_at' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['member_id' => $loser->id, 'offer_id' => 7, 'status' => 'used', 'used_at' => now()->subDay(), 'created_at' => now(), 'updated_at' => now()],
+            ['member_id' => $winner->id, 'offer_id' => 8, 'status' => 'claimed', 'used_at' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['member_id' => $loser->id, 'offer_id' => 8, 'status' => 'available', 'used_at' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['member_id' => $loser->id, 'offer_id' => 9, 'status' => 'available', 'used_at' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        DB::table('member_offers')->where('member_id', $winner->id)->where('offer_id', 8)->update(['claimed_at' => now()]);
+
+        $this->service->merge($winner, $loser);
+
+        $rows = DB::table('member_offers')->where('member_id', $winner->id)->orderBy('offer_id')->get();
+        $this->assertSame([7, 8, 9], $rows->pluck('offer_id')->map(fn ($v) => (int) $v)->all());
+        $this->assertSame(['used', 'claimed', 'available'], $rows->pluck('status')->all());
+        $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['member_offers'];
+        $this->assertSame(['available', 'available'], array_column($dropped, 'status'));
+    }
+
+    public function test_referrals_move_on_both_sides_and_a_referral_between_the_pair_is_dropped(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        $friend = $this->makeMember();
+        $sponsor = $this->makeMember();
+        $both = $this->makeMember();
+        $org = app('current_organization_id');
+        DB::table('referrals')->insert([
+            ['organization_id' => $org, 'referrer_id' => $loser->id, 'referee_id' => $friend->id, 'status' => 'rewarded', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $org, 'referrer_id' => $sponsor->id, 'referee_id' => $loser->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $org, 'referrer_id' => $loser->id, 'referee_id' => $winner->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $org, 'referrer_id' => $winner->id, 'referee_id' => $both->id, 'status' => 'rewarded', 'created_at' => now(), 'updated_at' => now()],
+            ['organization_id' => $org, 'referrer_id' => $loser->id, 'referee_id' => $both->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->service->merge($winner, $loser);
+
+        $pairs = DB::table('referrals')->orderBy('id')->get()->map(fn ($r) => [(int) $r->referrer_id, (int) $r->referee_id, $r->status])->all();
+        $this->assertSame([
+            [$winner->id, $friend->id, 'rewarded'],
+            [$sponsor->id, $winner->id, 'pending'],
+            [$winner->id, $both->id, 'rewarded'],
+        ], $pairs);
+        $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['referrals'];
+        $this->assertCount(2, $dropped);
+    }
+
+    public function test_the_losers_qr_tokens_are_revoked_earlier_merges_follow_and_the_winner_is_never_its_own_referrer(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        $winner->update(['referred_by' => $loser->id]);
+        $sponsor = $this->makeMember();
+        $loser->update(['referred_by' => $sponsor->id]);
+        DB::table('qr_tokens')->insert(['member_id' => $loser->id, 'token' => 'tok-1', 'is_revoked' => false, 'created_at' => now(), 'updated_at' => now()]);
+        DB::table('member_merges')->insert(['surviving_member_id' => $loser->id, 'merged_member_id' => 999999, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->service->merge($winner->fresh(), $loser->fresh());
+
+        $this->assertTrue((bool) DB::table('qr_tokens')->where('token', 'tok-1')->value('is_revoked'));
+        $this->assertSame($winner->id, (int) DB::table('qr_tokens')->where('token', 'tok-1')->value('member_id'));
+        $this->assertSame($winner->id, (int) DB::table('member_merges')->where('merged_member_id', 999999)->value('surviving_member_id'));
+        $this->assertSame(999999, (int) DB::table('member_merges')->where('merged_member_id', 999999)->value('merged_member_id'));
+        // Referred by the loser (now themselves): the loser's own referrer instead.
+        $this->assertSame($sponsor->id, (int) $winner->fresh()->referred_by);
+    }
+
+    public function test_the_merge_is_audited_on_the_winner(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember(300);
+        DB::table('points_transactions')->insert(['organization_id' => app('current_organization_id'), 'member_id' => $loser->id, 'type' => 'earn', 'points' => 300, 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->service->merge($winner, $loser, null, 'Same guest, two sign-ups');
+
+        $audit = \App\Models\AuditLog::where('action', 'member_merged')->firstOrFail();
+        $this->assertSame($winner->id, (int) $audit->subject_id);
+        $this->assertSame($loser->id, $audit->new_values['merged_member_id']);
+        $this->assertSame('Same guest, two sign-ups', $audit->new_values['reason']);
+        $this->assertSame(1, $audit->new_values['moved']['points_transactions']);
+        $this->assertSame(300, $audit->old_values['points']);
+        $this->assertSame("Member #{$loser->member_number} merged into #{$winner->member_number}", $audit->description);
+    }
+
+    /** One row, its NOT NULL columns given plain values, the named ones as asked. @param array<string, mixed> $values */
+    private function insertRow(string $table, array $values): int
+    {
+        $row = [];
+        foreach (Schema::getColumns($table) as $col) {
+            if ($col['name'] === 'id' || $col['nullable'] || $col['default'] !== null) {
+                continue;
+            }
+            $type = strtolower((string) $col['type_name']);
+            $row[$col['name']] = match (true) {
+                str_contains($type, 'int'), str_contains($type, 'numeric'), str_contains($type, 'decimal') => 1,
+                str_contains($type, 'date'), str_contains($type, 'time') => now()->toDateTimeString(),
+                default => 'x-' . uniqid(),
+            };
+        }
+        if (Schema::hasColumn($table, 'organization_id')) {
+            $row['organization_id'] = app('current_organization_id');
+        }
+
+        return (int) DB::table($table)->insertGetId(array_merge($row, $values));
+    }
+
+    /** The other member column a row of `referrals` needs. @return array<string, int> */
+    private function otherColumns(string $table, string $column, int $otherId): array
+    {
+        return $table === 'referrals' ? [$column === 'referrer_id' ? 'referee_id' : 'referrer_id' => $otherId] : [];
     }
 }

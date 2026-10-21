@@ -124,10 +124,26 @@ export interface RequestsPage extends Paged {
 }
 
 export interface MemberDetail {
-  member: MemberRow & { qualifying_points: number; referral_code: string | null }
+  /**
+   * The list's row with release 2's details block (§4.1, `MemberProfile` on the server): language, nationality, the
+   * date of birth (`YYYY-MM-DD`), marketing consent, the instant a manager holds the tier until (or null), and whether
+   * the member was deleted.
+   */
+  member: MemberRow & {
+    qualifying_points: number
+    referral_code: string | null
+    language: string | null
+    nationality: string | null
+    date_of_birth: string | null
+    marketing_consent: boolean
+    tier_override_until: string | null
+    is_erased: boolean
+  }
   progress: Progress
   benefits: TierBenefitLine[]
   requests: BenefitRequest[]
+  /** What Edit details offers: the language codes (named in the reader's language by the browser). */
+  options: { languages: string[] }
 }
 
 export interface LedgerLine {
