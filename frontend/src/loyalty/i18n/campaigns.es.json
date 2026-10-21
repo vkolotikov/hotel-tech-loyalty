@@ -36,16 +36,18 @@
     "segment_option": "{{name}} · {{number}} miembros",
     "segment_gone": "Un segmento que ya no existe",
     "body": "Contenido",
-    "tags": "Las etiquetas como {{tag}} no se rellenan: los miembros las leerían tal cual. Escriba las palabras directamente.",
     "duplicate": "Duplicar",
-    "delete": "Eliminar borrador"
+    "delete": "Eliminar borrador",
+    "unknown_tags": "{{tags}} llegará a los miembros tal cual: ninguna etiqueta con ese nombre se rellena."
   },
   "preview": {
     "heading": "Vista previa",
     "saved_only": "Aquí se ve el borrador guardado. Guarde para ver sus cambios.",
     "footer": "Cada correo a un miembro termina con el nombre del establecimiento y un enlace para darse de baja.",
     "empty": "El correo está vacío. Añada un título o algo de texto.",
-    "title": "Vista previa del correo"
+    "title": "Vista previa del correo",
+    "subject": "Asunto",
+    "sample": "Las etiquetas muestran un ejemplo —su propio nombre, el primer nivel, puntos inventados— como en su correo de prueba. Cada miembro ve los suyos."
   },
   "delete": {
     "title": "¿Eliminar {{name}}?",
@@ -177,7 +179,6 @@
   "send": {
     "title": "Enviar esta campaña",
     "counting": "Contando a quién llegará…",
-    "tags": "El correo contiene una etiqueta como {{tag}}. Las etiquetas no se rellenan: los miembros la leerán tal cual.",
     "final": "Una vez iniciado, el envío se puede detener, pero los correos ya enviados no se pueden recuperar.",
     "keep": "Ahora no",
     "confirm": "Enviar a {{number}} miembros",
@@ -202,7 +203,8 @@
       "feature_locked": "Su plan no incluye campañas de correo.",
       "network": "Sin conexión. Vuelva a cargar la página para ver si el envío empezó antes de pulsar Enviar otra vez.",
       "unknown": "Puede que el envío no haya empezado. Vuelva a cargar la página para ver su estado antes de pulsar Enviar otra vez."
-    }
+    },
+    "unknown_tags": "El correo contiene {{tags}}, que ninguna etiqueta rellena: los miembros lo leerán tal cual."
   },
   "tab": {
     "campaigns": "Campañas",
@@ -301,6 +303,26 @@
     "unsubscribed": "{{number}} se dieron de baja",
     "suppressed": "{{number}} tienen una dirección que rebotó o se quejó, a la que nunca se escribe",
     "no_email": "{{number}} no tienen dirección de correo"
+  },
+  "tags": {
+    "title": "Etiquetas",
+    "where_none": "Haga clic en el asunto, un título, un texto o el texto de un botón y luego elija una etiqueta para colocarla allí.",
+    "where_subject": "La etiqueta se coloca donde está el cursor en el asunto.",
+    "where_block": "La etiqueta se coloca donde está el cursor en {{what}} {{n}}.",
+    "each": "Cada miembro recibe sus propios datos.",
+    "no_room": "No queda espacio para esa etiqueta en este campo."
+  },
+  "tag": {
+    "member_name": "Nombre completo",
+    "first_name": "Nombre",
+    "email": "Dirección de correo",
+    "member_number": "Número de tarjeta",
+    "tier_name": "Nivel",
+    "points_balance": "Saldo de puntos",
+    "lifetime_points": "Puntos ganados en total",
+    "referral_code": "Código de recomendación",
+    "hotel_name": "Nombre del establecimiento",
+    "current_year": "Año"
   },
   "remove_segment": {
     "error": {

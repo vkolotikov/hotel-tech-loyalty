@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\EmailCampaign;
 use App\Models\EmailSuppression;
+use App\Models\User;
 use App\Services\Booking\Setup\OwnRows;
+use App\Services\Email\CampaignTags;
 use App\Services\Loyalty\Campaigns\CampaignAudience;
 use App\Services\Loyalty\Campaigns\CampaignBody;
 use App\Services\Loyalty\Campaigns\CampaignStart;
@@ -73,14 +75,14 @@ class CampaignController extends Controller
         AuditLog::record('email_campaign_created', $campaign, ['name' => $campaign->name], [], $request->user(),
             "Email campaign '{$campaign->name}' drafted");
 
-        return response()->json(self::answer($campaign->fresh()), 201);
+        return response()->json(self::answer($campaign->fresh(), $request->user()), 201);
     }
 
     public function show(Request $request, int $id): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
 
-        return response()->json(self::answer($this->campaign($id)));
+        return response()->json(self::answer($this->campaign($id), $request->user()));
     }
 
     /**
@@ -123,7 +125,7 @@ class CampaignController extends Controller
         AuditLog::record('email_campaign_updated', $campaign, $campaign->only(['name', 'subject', 'segment_id']), $old, $request->user(),
             "Email campaign '{$campaign->name}' updated");
 
-        return response()->json(self::answer($campaign->fresh()));
+        return response()->json(self::answer($campaign->fresh(), $request->user()));
     }
 
     /** A draft only; a campaign that went out stays in the history. */
@@ -167,8 +169,9 @@ class CampaignController extends Controller
 
     /**
      * One copy to the signed-in staff member's own address, "[TEST]" before the subject, as the full admin's
-     * EmailCampaignController::test sends it (the body as it stands, no member footer). It changes nothing on the
-     * campaign. An address the transport would refuse (suppressed) is said so rather than reported as sent.
+     * EmailCampaignController::test sends it (the body as it stands, no member footer, its tags filled with the
+     * sender's own sample, CampaignTags::sample). It changes nothing on the campaign. An address the transport would
+     * refuse (suppressed) is said so rather than reported as sent.
      */
     public function test(Request $request, int $id): JsonResponse
     {
@@ -187,9 +190,11 @@ class CampaignController extends Controller
             throw new LoyaltyRefused('suppressed', 'Your address is on the list that is never emailed.', 422);
         }
 
+        // The tags filled with the sender's own sample, as the preview shows them.
+        $sample = CampaignTags::sample($user, (int) $campaign->organization_id);
         try {
-            Mail::html((string) $campaign->body_html, function ($mail) use ($email, $campaign, $user) {
-                $mail->to($email, $user->name ?? null)->subject('[TEST] ' . $campaign->subject);
+            Mail::html(CampaignTags::html((string) $campaign->body_html, $sample), function ($mail) use ($email, $campaign, $user, $sample) {
+                $mail->to($email, $user->name ?? null)->subject('[TEST] ' . CampaignTags::subject((string) $campaign->subject, $sample));
             });
         } catch (\Throwable $e) {
             Log::warning('Loyalty campaign test send failed', ['campaign_id' => $campaign->id, 'error' => $e->getMessage()]);
@@ -213,7 +218,7 @@ class CampaignController extends Controller
 
         $campaign = $this->start->start($campaign, $request->user(), (int) $data['recipients'], $data['revision']);
 
-        return response()->json(self::answer($campaign));
+        return response()->json(self::answer($campaign, $request->user()));
     }
 
     /** Stop a campaign while it sends; the job checks before each chunk, so what went out stays out. */
@@ -233,7 +238,7 @@ class CampaignController extends Controller
         AuditLog::record('email_campaign_cancelled', $campaign, ['sent_before_cancel' => (int) $campaign->sent_count], ['status' => 'sending'], $user,
             "Email campaign '{$campaign->name}' cancelled after {$campaign->sent_count} sent");
 
-        return response()->json(self::answer($campaign));
+        return response()->json(self::answer($campaign, $request->user()));
     }
 
     /**
@@ -262,15 +267,23 @@ class CampaignController extends Controller
         AuditLog::record('email_campaign_duplicated', $copy, ['name' => $copy->name, 'source_id' => (int) $source->id], [], $request->user(),
             "Email campaign '{$source->name}' duplicated as '{$copy->name}'");
 
-        return response()->json(self::answer($copy->fresh()), 201);
+        return response()->json(self::answer($copy->fresh(), $request->user()), 201);
     }
 
     // ─── Shapes ─────────────────────────────────────────────────────────────
 
-    /** @return array{campaign: array<string, mixed>, options: array<string, mixed>} A campaign's page and the editor's choices. */
-    private static function answer(EmailCampaign $c): array
+    /**
+     * A campaign's page and the editor's choices: the blocks' (CampaignBody) and the tags' (CampaignTags), and the
+     * preview filled with the viewer's own sample, the one their test email carries.
+     *
+     * @return array{campaign: array<string, mixed>, options: array<string, mixed>}
+     */
+    private static function answer(EmailCampaign $c, User $viewer): array
     {
-        return ['campaign' => self::detail($c), 'options' => CampaignBody::options()];
+        return [
+            'campaign' => self::detail($c, CampaignTags::sample($viewer, (int) $c->organization_id)),
+            'options'  => CampaignBody::options() + CampaignTags::options(),
+        ];
     }
 
     /** @return array<string, mixed> A campaign in the list. */
@@ -292,12 +305,15 @@ class CampaignController extends Controller
     }
 
     /**
-     * A campaign's page: the row, its blocks when the workspace may edit them, the HTML the server rendered (the
-     * preview, and what is sent), and the draft's revision for Send. The pipeline's own error text is not passed on.
+     * A campaign's page: the row, its blocks when the workspace may edit them, the HTML the server rendered (what is
+     * sent, its tags filled per member), the same subject and HTML filled with the viewer's sample (the preview), the
+     * double-braced words no tag fills (they would reach members as written), and the draft's revision for Send. The
+     * pipeline's own error text is not passed on.
      *
+     * @param array<string, string> $sample CampaignTags::sample() for whoever is looking
      * @return array<string, mixed>
      */
-    private static function detail(EmailCampaign $c): array
+    private static function detail(EmailCampaign $c, array $sample): array
     {
         $c->loadMissing(['segment:id,name', 'createdBy:id,name', 'sentBy:id,name']);
         $here = CampaignBody::editable($c->body_blocks, $c->body_html);
@@ -307,6 +323,9 @@ class CampaignController extends Controller
             'editable_here'    => $here,
             'body_blocks'      => $here ? array_values(is_array($c->body_blocks) ? $c->body_blocks : []) : null,
             'body_html'        => (string) $c->body_html,
+            'preview_subject'  => CampaignTags::subject((string) $c->subject, $sample),
+            'preview_html'     => CampaignTags::html((string) $c->body_html, $sample),
+            'unknown_tags'     => CampaignTags::unknown((string) $c->subject, (string) $c->body_html),
             'missing'          => CampaignStart::incomplete($c),
             'last_progress_at' => $c->last_progress_at?->toIso8601String(),
             'created_by'       => $c->createdBy?->name,

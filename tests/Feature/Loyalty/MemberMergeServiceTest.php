@@ -10,7 +10,9 @@ use Database\Factories\OrganizationFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\LoyaltyWorkspace\CampaignDeliveriesSchema;
 use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
+use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -65,8 +67,9 @@ use Tests\TestCase;
  *     - every table and column in MEMBER_COLUMNS moves, one case each
  *     - a scan of the migrations fails on a member column the merge
  *       neither moves nor keeps on purpose
- *     - member_offers and referrals deduplicated (and recorded) where
- *       moving would collide; a referral between the pair dropped
+ *     - member_offers, referrals and campaign deliveries deduplicated
+ *       (and recorded) where moving would collide; a referral between
+ *       the pair dropped
  *     - the loser's QR tokens revoked, earlier merges into the loser
  *       re-pointed, the winner never its own referrer
  *     - an AuditLog row member_merged beside the snapshot
@@ -76,6 +79,8 @@ class MemberMergeServiceTest extends TestCase
     use DatabaseTransactions;
     use SetsUpMinimalSchema;
     use MembershipSchema;
+    use CampaignDeliveriesSchema;
+    use PushSchema;
 
     private MemberMergeService $service;
 
@@ -84,6 +89,8 @@ class MemberMergeServiceTest extends TestCase
         parent::setUp();
         $this->setUpMemberMergeSchema();
         $this->buildMembershipSchema();
+        $this->buildCampaignDeliveriesSchema();
+        $this->buildPushSchema();
 
         $org = OrganizationFactory::new()->create();
         app()->instance('current_organization_id', $org->id);
@@ -475,6 +482,45 @@ class MemberMergeServiceTest extends TestCase
         $this->assertSame(['used', 'claimed', 'available'], $rows->pluck('status')->all());
         $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['member_offers'];
         $this->assertSame(['available', 'available'], array_column($dropped, 'status'));
+    }
+
+    public function test_a_campaign_both_accounts_were_emailed_keeps_one_delivery_the_sent_one_first(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        DB::table('email_campaign_deliveries')->insert([
+            ['campaign_id' => 1, 'member_id' => $winner->id, 'status' => 'failed', 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 1, 'member_id' => $loser->id, 'status' => 'sent', 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 2, 'member_id' => $winner->id, 'status' => 'sent', 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 2, 'member_id' => $loser->id, 'status' => 'sent', 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 3, 'member_id' => $loser->id, 'status' => 'pending', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->service->merge($winner, $loser);
+
+        $rows = DB::table('email_campaign_deliveries')->where('member_id', $winner->id)->orderBy('campaign_id')->get();
+        $this->assertSame([[1, 'sent'], [2, 'sent'], [3, 'pending']], $rows->map(fn ($r) => [(int) $r->campaign_id, $r->status])->all());
+        $this->assertSame(3, DB::table('email_campaign_deliveries')->count());
+        $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['email_campaign_deliveries'];
+        $this->assertSame([[1, $winner->id, 'failed'], [2, $loser->id, 'sent']], array_map(fn ($r) => [(int) $r['campaign_id'], (int) $r['member_id'], $r['status']], $dropped));
+    }
+
+    public function test_a_push_message_both_accounts_were_sent_keeps_the_winners_delivery_and_records_the_other(): void
+    {
+        $winner = $this->makeMember();
+        $loser  = $this->makeMember();
+        DB::table('push_message_deliveries')->insert([
+            ['campaign_id' => 1, 'member_id' => $winner->id, 'status' => 'inbox_only', 'reason' => 'no_device', 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 1, 'member_id' => $loser->id, 'status' => 'sent', 'reason' => null, 'created_at' => now(), 'updated_at' => now()],
+            ['campaign_id' => 2, 'member_id' => $loser->id, 'status' => 'sent', 'reason' => null, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->service->merge($winner, $loser);
+
+        $rows = DB::table('push_message_deliveries')->where('member_id', $winner->id)->orderBy('campaign_id')->get();
+        $this->assertSame([[1, 'inbox_only'], [2, 'sent']], $rows->map(fn ($r) => [(int) $r->campaign_id, $r->status])->all());
+        $dropped = json_decode(DB::table('member_merges')->value('merged_data'), true)['dropped']['push_message_deliveries'];
+        $this->assertSame([[1, $loser->id, 'sent']], array_map(fn ($r) => [(int) $r['campaign_id'], (int) $r['member_id'], $r['status']], $dropped));
     }
 
     public function test_referrals_move_on_both_sides_and_a_referral_between_the_pair_is_dropped(): void

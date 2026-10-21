@@ -36,16 +36,18 @@
     "segment_option": "{{name}} · {{number}} membres",
     "segment_gone": "Un segment qui n’existe plus",
     "body": "Contenu",
-    "tags": "Les balises comme {{tag}} ne sont pas remplies : les membres les liraient telles quelles. Écrivez les mots eux-mêmes.",
     "duplicate": "Dupliquer",
-    "delete": "Supprimer le brouillon"
+    "delete": "Supprimer le brouillon",
+    "unknown_tags": "{{tags}} parviendra aux membres tel quel : aucune balise de ce nom n’est remplie."
   },
   "preview": {
     "heading": "Aperçu",
     "saved_only": "Ceci montre le brouillon enregistré. Enregistrez pour voir vos modifications.",
     "footer": "Chaque e-mail envoyé à un membre se termine par le nom de l’établissement et un lien de désinscription.",
     "empty": "L’e-mail est vide. Ajoutez un titre ou du texte.",
-    "title": "Aperçu de l’e-mail"
+    "title": "Aperçu de l’e-mail",
+    "subject": "Objet",
+    "sample": "Les balises montrent un exemple — votre propre nom, le premier niveau, des points fictifs — comme dans votre e-mail de test. Chaque membre voit les siens."
   },
   "delete": {
     "title": "Supprimer {{name}} ?",
@@ -177,7 +179,6 @@
   "send": {
     "title": "Envoyer cette campagne",
     "counting": "Comptage des destinataires…",
-    "tags": "L’e-mail contient une balise comme {{tag}}. Les balises ne sont pas remplies : les membres la liront telle quelle.",
     "final": "Une fois lancé, l’envoi peut être arrêté, mais les e-mails déjà partis ne peuvent pas être repris.",
     "keep": "Pas maintenant",
     "confirm": "Envoyer à {{number}} membres",
@@ -202,7 +203,8 @@
       "feature_locked": "Votre formule n’inclut pas les campagnes e-mail.",
       "network": "Pas de connexion. Rechargez la page pour voir si l’envoi a commencé avant d’appuyer de nouveau sur Envoyer.",
       "unknown": "L’envoi n’a peut-être pas commencé. Rechargez la page pour voir son état avant d’appuyer de nouveau sur Envoyer."
-    }
+    },
+    "unknown_tags": "L’e-mail contient {{tags}}, qu’aucune balise ne remplit : les membres le liront tel quel."
   },
   "tab": {
     "campaigns": "Campagnes",
@@ -301,6 +303,26 @@
     "unsubscribed": "{{number}} se sont désinscrits",
     "suppressed": "{{number}} ont une adresse en échec de distribution ou qui a signalé un spam, jamais contactée",
     "no_email": "{{number}} n’ont pas d’adresse e-mail"
+  },
+  "tags": {
+    "title": "Balises",
+    "where_none": "Cliquez dans l’objet, un titre, un texte ou le libellé d’un bouton, puis choisissez une balise à y placer.",
+    "where_subject": "Une balise se place à l’endroit du curseur dans l’objet.",
+    "where_block": "Une balise se place à l’endroit du curseur dans {{what}} {{n}}.",
+    "each": "Chaque membre reçoit ses propres informations.",
+    "no_room": "Ce champ n’a plus de place pour cette balise."
+  },
+  "tag": {
+    "member_name": "Nom complet",
+    "first_name": "Prénom",
+    "email": "Adresse e-mail",
+    "member_number": "Numéro de carte",
+    "tier_name": "Niveau",
+    "points_balance": "Solde de points",
+    "lifetime_points": "Points gagnés au total",
+    "referral_code": "Code de parrainage",
+    "hotel_name": "Nom de l’établissement",
+    "current_year": "Année"
   },
   "remove_segment": {
     "error": {
