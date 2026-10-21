@@ -13,6 +13,7 @@ import { named, serverProblems, toggled } from '../lib/forms'
 import { TierChip } from '../ui/TierChip'
 import { OFFERS_KEY, rewardsApi } from './api'
 import { ERRORS } from './errors'
+import { PictureField } from './PictureField'
 import { MAX_OFFER_VALUE, OFFER_FIELDS, offerBody, offerFormOf, offerProblems, typeChoices, type OfferForm } from './rewardsMath'
 import type { Offer, OfferOptions } from './types'
 import { APPLIES_TO_WORDS, OFFER_PROBLEM_WORDS, OFFER_TYPE_WORDS } from './words'
@@ -22,7 +23,8 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
 /**
  * Add an offer or change one (spec 2026-10-21 §4.6): what members read, its kind and value, an optional code they
  * type, what it applies to, which tiers see it (none chosen: every tier), the venue days it runs, how often it may be
- * used, whether it is featured — and, once made, whether it is on.
+ * used, whether it is featured — and, once made, whether it is on and its picture, changed at once (PictureField,
+ * release 2 §7).
  */
 export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; options: OfferOptions; onClose: () => void }) {
   const { t } = useTranslation()
@@ -34,6 +36,7 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
   const current = offer?.type ?? null
   const [form, setForm] = useState<OfferForm>(() => offerFormOf(offer, options, boot.venue.today))
   const [tried, setTried] = useState(false)
+  const [picture, setPicture] = useState<string | null>(offer?.image_url ?? null)
   const tiers = boot.programme.tiers
 
   const refresh = () => { void client.invalidateQueries({ queryKey: OFFERS_KEY }) }
@@ -75,6 +78,10 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
           hint={t('loyalty.rewards.offer.description_hint', 'Members read this in the app and the portal.')}>
           <textarea value={form.description} rows={3} onChange={(e) => update({ description: e.target.value })} className={INPUT} />
         </FormField>
+
+        {offer
+          ? <PictureField owner="offers" id={offer.id} picture={picture} alt={offer.title} limits={options.image} onChange={(url) => { setPicture(url); refresh() }} />
+          : <p className="text-xs text-a-text-2">{t('loyalty.rewards.picture.after_save_offer', 'You can add a picture once the offer is saved.')}</p>}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t('loyalty.rewards.offer.type', 'Kind')} problem={problem('type')}>

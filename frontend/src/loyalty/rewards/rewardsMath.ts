@@ -1,7 +1,7 @@
 import { addDays, isDateKey } from '../../workspace/lib/wallClock'
 import type { Can } from '../lib/types'
 import { decimalOf, isWall, numberIn, serverProblems, wallOf, wholeIn, type Problems, type Tone } from '../lib/forms'
-import type { Offer, OfferBody, OfferOptions, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
+import type { Offer, OfferBody, OfferOptions, PictureLimits, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
 
 /**
  * Rewards' decisions (spec 2026-10-21 §4.6, §5), kept out of the components so they can be tested: the tab an address
@@ -290,4 +290,21 @@ export const OFFER_FIELDS: Record<string, string> = {
 export function offerValue(type: string, value: number, phrased: string[]): 'phrase' | 'number' | null {
   if (!value) return null
   return phrased.includes(type) ? 'phrase' : 'number'
+}
+
+// ─── A picture ────────────────────────────────────────────────────────────
+
+/**
+ * What stops a picture before it is sent (release 2 §7), against the limits the server serves: a type it does not take,
+ * or a file over its size. The longest side is the server's to check (the browser would have to decode the file).
+ */
+export function pictureProblem(file: { size: number; type: string }, limits: PictureLimits): 'type' | 'size' | null {
+  if (!limits.types.includes(file.type)) return 'type'
+  if (file.size > limits.max_kb * 1024) return 'size'
+  return null
+}
+
+/** A limit in KB as whole megabytes for a sentence ("5"), or one decimal below a megabyte's multiple ("1.5"). */
+export function megabytes(kb: number): number {
+  return Math.round((kb / 1024) * 10) / 10
 }

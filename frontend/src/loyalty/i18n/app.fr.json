@@ -1,1 +1,242 @@
-{}
+{
+  "accent": {
+    "bold": "Intense",
+    "subtle": "Discret",
+    "vibrant": "Vif"
+  },
+  "button_style": {
+    "filled": "Plein",
+    "outline": "Contour",
+    "soft": "Doux"
+  },
+  "card_style": {
+    "glass": "Verre",
+    "gradient": "Dégradé",
+    "solid": "Uni"
+  },
+  "colour": {
+    "background": "Fond",
+    "border": "Lignes",
+    "error": "Erreur",
+    "info": "Information",
+    "primary": "Accent",
+    "secondary": "Seconde surface",
+    "success": "Succès",
+    "surface": "Surface",
+    "text": "Texte",
+    "text_secondary": "Texte discret",
+    "warning": "Avertissement"
+  },
+  "file": {
+    "apple_cert": "Certificat Pass Type ID",
+    "apple_wwdr": "Certificat Apple WWDR",
+    "google_service_account": "Clé du compte de service Google"
+  },
+  "file_line": {
+    "apple_cert": "Le fichier .p12 exporté de votre compte Apple Developer, avec son mot de passe.",
+    "apple_wwdr": "Le certificat intermédiaire d’Apple, tel qu’Apple le publie (.cer) ou en .pem.",
+    "google_service_account": "La clé JSON du compte de service qu’utilise votre émetteur Google Wallet."
+  },
+  "line": "La carte que les membres gardent dans le portefeuille de leur téléphone, et l’apparence de l’application membre.",
+  "load": {
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les pass Wallet.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "unknown": "Le chargement a échoué. Veuillez réessayer."
+    }
+  },
+  "logo": {
+    "alt": "Le logo de l’établissement",
+    "error": {
+      "invalid": "Utilisez une image JPEG, PNG ou WebP de {{mb}} Mo au plus et de {{edge}} pixels au plus sur son plus grand côté.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion : rien n’a été importé. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "unknown": "Le logo n’a pas pu être importé. Veuillez réessayer."
+    },
+    "hint": "JPEG, PNG ou WebP, jusqu’à {{mb}} Mo. Enregistré aussitôt.",
+    "line": "Affiché dans l’application, le portail membre et sur le pass Wallet. C’est le même logo que dans « Branding » de l’administration complète.",
+    "none": "Pas encore de logo.",
+    "replace": "Remplacer le logo",
+    "title": "Logo",
+    "upload": "Importer un logo"
+  },
+  "look": {
+    "accent": "Intensité de l’accent",
+    "button_style": "Boutons",
+    "card_style": "Carte de membre",
+    "colours": "Couleurs",
+    "error": {
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "unknown": "L’apparence n’a pas pu être enregistrée. Veuillez réessayer."
+    },
+    "pixels": "{{n}} px",
+    "preset_changed": "{{name}}, avec vos modifications.",
+    "presets": "Thèmes prêts",
+    "presets_line": "Un thème règle les onze couleurs ; chacune peut ensuite être modifiée.",
+    "preview": "Aperçu",
+    "preview_line": "Tel que l’application le dessine. Il suit vos modifications.",
+    "problem": {
+      "accent_intensity": "Choisissez l’intensité de l’accent.",
+      "button_style": "Choisissez un style de bouton.",
+      "card_style": "Choisissez un style de carte.",
+      "colour": "Choisissez une couleur, ou saisissez-la au format #rrggbb.",
+      "preset": "Choisissez à nouveau un thème.",
+      "radius": "Choisissez un arrondi de 0 à 32."
+    },
+    "radius": "Arrondi des angles",
+    "save": "Enregistrer l’apparence",
+    "saved": "Enregistré. L’application l’affichera à sa prochaine ouverture.",
+    "styles": "Formes et styles",
+    "unsaved": "Pas encore enregistré."
+  },
+  "managers_only": "Le pass Wallet et l’apparence de l’application membre sont réglés par un propriétaire ou un responsable.",
+  "missing": {
+    "certificate": "Le certificat Pass Type ID (.p12).",
+    "certificate_gone": "Le fichier du certificat n’est plus sur le serveur. Importez-le à nouveau.",
+    "certificate_password": "Le certificat ne s’ouvre pas avec le mot de passe enregistré. Importez-le à nouveau avec son mot de passe.",
+    "class_suffix": "Le suffixe de classe.",
+    "issuer_id": "L’Issuer ID.",
+    "pass_type_id": "Le Pass Type ID.",
+    "service_account": "La clé du compte de service (.json).",
+    "service_account_gone": "La clé du compte de service n’est plus sur le serveur. Importez-la à nouveau.",
+    "switched_off": "Les pass Wallet sont désactivés.",
+    "team_id": "Le Team ID.",
+    "wwdr": "Le certificat WWDR d’Apple.",
+    "wwdr_gone": "Le fichier du certificat WWDR n’est plus sur le serveur. Importez-le à nouveau."
+  },
+  "preset": {
+    "alpine_lodge": "Chalet alpin",
+    "champagne_lux": "Champagne luxe",
+    "desert_oasis": "Oasis du désert",
+    "emerald_spa": "Spa émeraude",
+    "gold_classic": "Or classique",
+    "midnight_violet": "Violet minuit",
+    "nordic_ice": "Glace nordique",
+    "ocean_resort": "Station balnéaire",
+    "rose_boutique": "Boutique rose",
+    "royal_sapphire": "Saphir royal",
+    "tropical_sunset": "Coucher tropical",
+    "urban_loft": "Loft urbain"
+  },
+  "preset_line": {
+    "alpine_lodge": "Tons terreux de montagne.",
+    "champagne_lux": "Champagne sur fond sombre et chaud.",
+    "desert_oasis": "Terre cuite et sable.",
+    "emerald_spa": "Vert apaisant pour le bien-être.",
+    "gold_classic": "Or chaud sur presque noir.",
+    "midnight_violet": "Violet profond.",
+    "nordic_ice": "Frais et minimaliste.",
+    "ocean_resort": "Cyan et violet en bord de mer.",
+    "rose_boutique": "Rose chaleureux pour les boutiques.",
+    "royal_sapphire": "Bleu marine profond et bleu franc.",
+    "tropical_sunset": "Corail et ambre.",
+    "urban_loft": "Monochrome épuré."
+  },
+  "preview": {
+    "button": "Échanger",
+    "member": "Membre",
+    "name": "Camille Martin",
+    "new": "Nouveau",
+    "offer": "Soin spa",
+    "offer_line": "−15 %, encore 7 jours",
+    "offers": "Offres",
+    "points": "Points",
+    "rewards": "Récompenses",
+    "tier": "Membre {{tier}}",
+    "title": "Aperçu de l’application membre avec ces couleurs",
+    "visits": "Visites"
+  },
+  "tab": {
+    "app": "Application membre",
+    "wallet": "Pass Wallet"
+  },
+  "tabs": "Rubriques de la carte et de l’appli",
+  "title": "Carte et appli",
+  "upload": {
+    "choose": "Choisissez d’abord le fichier.",
+    "error": {
+      "cert_unreadable": "Le certificat ne s’ouvre pas avec ce mot de passe. Vérifiez-le ; s’il est correct, exportez à nouveau le certificat.",
+      "feature_locked": "Votre formule n’inclut pas les pass Wallet.",
+      "invalid": "Choisissez à nouveau le fichier ; il peut faire jusqu’à 200 Ko.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion : rien n’a été importé. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_certificate": "Ce n’est pas un certificat. Utilisez le certificat WWDR d’Apple, en .cer ou .pem.",
+      "not_json": "Ce n’est pas un fichier JSON. Utilisez le fichier de clé que Google vous a fourni pour le compte de service.",
+      "not_pkcs12": "Ce n’est pas un certificat .p12. Exportez le certificat Pass Type ID de votre compte Apple Developer au format .p12.",
+      "not_service_account": "Ce JSON n’est pas une clé de compte de service : il lui faut l’e-mail du compte et sa clé privée.",
+      "unknown": "Le fichier n’a pas pu être importé. Veuillez réessayer."
+    },
+    "file": "Fichier",
+    "password": "Mot de passe du certificat",
+    "password_hint": "Le mot de passe choisi lors de l’export du certificat.",
+    "password_keep": "Vide : le mot de passe enregistré est utilisé.",
+    "replace": "Remplacer",
+    "replaces": "Un fichier est déjà importé. L’import le remplace, et l’ancien ne pourra pas être récupéré.",
+    "upload": "Importer"
+  },
+  "wallet": {
+    "active": "Les pass Wallet sont activés",
+    "active_hint": "Désactivés, les membres ne peuvent pas ajouter leur carte à un portefeuille. Rien n’est supprimé.",
+    "apple": "Apple Wallet",
+    "apple_line": "Depuis votre compte Apple Developer : le type de pass et votre équipe.",
+    "class_suffix": "Suffixe de classe",
+    "class_suffix_hint": "Votre propre nom pour la classe de pass, par ex. loyalty.",
+    "colour_saved_as": "Enregistré comme {{value}}",
+    "error": {
+      "feature_locked": "Votre formule n’inclut pas les pass Wallet.",
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier la carte et l’appli.",
+      "unknown": "Le pass Wallet n’a pas pu être enregistré. Veuillez réessayer."
+    },
+    "file_gone": "N’est plus sur le serveur",
+    "file_none": "Non importé",
+    "file_set": "Importé",
+    "files": "Certificats et clés",
+    "files_line": "Conservés sur le serveur et jamais réaffichés ; seule leur présence est indiquée.",
+    "google": "Google Wallet",
+    "google_line": "Depuis la Google Pay & Wallet Console : votre émetteur et la classe du pass.",
+    "issuer_id": "Issuer ID",
+    "locked": "Votre formule n’inclut pas les pass Wallet : les membres ne peuvent pas ajouter leur carte à Apple Wallet ou Google Wallet. L’apparence de l’application se trouve sous Application membre.",
+    "not_ready": "Pas prêt",
+    "organization_hint": "Facultatif. Vide : le nom de l’établissement.",
+    "organization_name": "Nom sur le pass",
+    "pass_type_id": "Pass Type ID",
+    "password_none": "Aucun mot de passe enregistré",
+    "password_set": "Mot de passe enregistré",
+    "problem": {
+      "class_suffix": "Utilisez des lettres, chiffres, points, tirets ou traits de soulignement, sans espace.",
+      "colour": "Choisissez une couleur, ou saisissez-la au format #rrggbb.",
+      "issuer_id": "Un Issuer ID ne contient que des chiffres.",
+      "organization_name": "191 caractères au plus.",
+      "pass_type_id": "Un Pass Type ID commence par « pass. », par ex. pass.com.yourvenue.loyalty.",
+      "team_id": "Un Team ID compte 10 majuscules ou chiffres, par ex. ABCDE12345."
+    },
+    "ready": "Prêt",
+    "ready_line": "Les membres peuvent ajouter leur carte.",
+    "replace": "Remplacer…",
+    "save": "Enregistrer le pass Wallet",
+    "saved": "Enregistré.",
+    "still_needed": "Il manque encore :",
+    "team_id": "Team ID",
+    "upload": "Importer…"
+  },
+  "wallet_colour": {
+    "apple_pass_background_color": "Fond",
+    "apple_pass_foreground_color": "Texte",
+    "apple_pass_label_color": "Libellés"
+  }
+}

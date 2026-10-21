@@ -124,6 +124,31 @@
     "used": "Used: {{used}}",
     "used_of": "Used: {{used}} of {{limit}}"
   },
+  "picture": {
+    "add": "Add a picture",
+    "after_save_offer": "You can add a picture once the offer is saved.",
+    "after_save_reward": "You can add a picture once the reward is saved.",
+    "error": {
+      "invalid": "Use a JPEG, PNG or WebP picture up to {{mb}} MB and {{edge}} pixels on its longest side.",
+      "network": "No connection: nothing was changed. Try again.",
+      "no_capability": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_allowed": "Your account may not change rewards or offers. A manager can allow it under Team in the full admin.",
+      "not_found": "This is no longer in the list. The list now shows it as it is.",
+      "unknown": "The picture could not be changed. Please try again."
+    },
+    "hint": "JPEG, PNG or WebP, up to {{mb}} MB. Saved at once.",
+    "keep": "Keep it",
+    "label": "Picture",
+    "none": "No picture yet.",
+    "problem": {
+      "size": "This picture is larger than {{mb}} MB. Choose a smaller one.",
+      "type": "Use a JPEG, PNG or WebP picture."
+    },
+    "remove": "Remove picture",
+    "remove_confirm": "Remove",
+    "remove_line": "Remove the picture? Members will see this without one.",
+    "replace": "Replace picture"
+  },
   "redemption": {
     "error": {
       "network": "No connection: nothing was saved. Try again.",

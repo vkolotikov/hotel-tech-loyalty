@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -17,6 +18,9 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can } from '../lib/types'
 import { CATALOGUE_KEY, OFFERS_KEY, redemptionsKey, referralsKey } from './api'
+import { OfferDialog } from './OfferDialog'
+import { PictureField } from './PictureField'
+import { RewardDialog } from './RewardDialog'
 import { RewardsPage } from './RewardsPage'
 import type { Catalogue, OffersList, RedemptionsPage, ReferralsPage } from './types'
 
@@ -34,9 +38,11 @@ const boot = (c: Can): Bootstrap => ({
 const catalogue: Catalogue = {
   rewards: [
     { id: 4, name: 'Breakfast for two', description: null, terms: null, category: 'Dining', points_cost: 1500, stock: 0, per_member_limit: null, discount_type: 'percent_discount',
-      discount_value: 10, applies_to: 'stays', expires_at: '2026-12-31T21:59:00+00:00', is_active: true, image_url: null, redeemed: 10, fulfilled: 7 },
+      discount_value: 10, applies_to: 'stays', expires_at: '2026-12-31T21:59:00+00:00', is_active: true, image_url: '/storage/org-1/rewards/breakfast.jpg', redeemed: 10, fulfilled: 7 },
+    { id: 5, name: 'Late checkout', description: null, terms: null, category: null, points_cost: 300, stock: null, per_member_limit: null, discount_type: null,
+      discount_value: null, applies_to: 'all', expires_at: null, is_active: true, image_url: null, redeemed: 0, fulfilled: 0 },
   ],
-  options: { discount_types: ['percent_discount', 'fixed_amount'], applies_to: ['all', 'stays'] },
+  options: { discount_types: ['percent_discount', 'fixed_amount'], applies_to: ['all', 'stays'], image: { max_kb: 5120, max_edge: 4096, types: ['image/jpeg', 'image/png', 'image/webp'] } },
 }
 const redemptions: RedemptionsPage = {
   page: 1, pages: 1, total: 2, counts: { pending: 1 },
@@ -49,11 +55,11 @@ const redemptions: RedemptionsPage = {
 const offers: OffersList = {
   offers: [
     { id: 6, title: 'Autumn weekend', description: 'Two nights', type: 'discount', value: 15, code: 'AUTUMN', applies_to: 'stays', tier_ids: [2], start_date: '2026-10-01',
-      end_date: '2026-10-31', usage_limit: 100, times_used: 3, per_member_limit: 1, is_active: true, is_featured: true, state: 'live' },
+      end_date: '2026-10-31', usage_limit: 100, times_used: 3, per_member_limit: 1, is_active: true, is_featured: true, image_url: '/storage/org-1/offers/autumn.jpg', state: 'live' },
     { id: 7, title: 'Mystery', description: 'x', type: 'flash_sale', value: 0, code: null, applies_to: 'all', tier_ids: null, start_date: '2026-11-01',
-      end_date: '2026-11-30', usage_limit: null, times_used: 0, per_member_limit: null, is_active: true, is_featured: false, state: 'upcoming' },
+      end_date: '2026-11-30', usage_limit: null, times_used: 0, per_member_limit: null, is_active: true, is_featured: false, image_url: null, state: 'upcoming' },
   ],
-  options: { types: ['discount'], applies_to: ['all', 'stays'] },
+  options: { types: ['discount'], applies_to: ['all', 'stays'], image: { max_kb: 2048, max_edge: 4096, types: ['image/jpeg', 'image/png', 'image/webp'] } },
 }
 const referrals: ReferralsPage = {
   page: 1, pages: 3, total: 60, figures: { total: 60, rewarded: 40, pending: 20, points_paid: 12000 },
@@ -148,4 +154,38 @@ describe('Rewards (spec 2026-10-21 §4.6)', () => {
     expect(words).toContain('Page 1 of 3')
     expect(html).toContain('href="/loyalty/members/31"')
   })
+
+  it('shows a reward\'s and an offer\'s picture lazily, named by the reward or the offer', () => {
+    const html = render('', can())
+    expect(html).toMatch(/<img src="\/storage\/org-1\/rewards\/breakfast.jpg" alt="Breakfast for two" loading="lazy"/)
+    expect(html.match(/<img /g)).toHaveLength(1)
+    const offersHtml = render('?tab=offers', can())
+    expect(offersHtml).toMatch(/data-offer="6"[^>]*><img src="\/storage\/org-1\/offers\/autumn.jpg" alt="Autumn weekend" loading="lazy"/)
+    expect(offersHtml.match(/<img /g)).toHaveLength(1)
+  })
+
+  it('changes the picture of a saved row in its dialog, and asks a new one to be saved first', () => {
+    const inDialog = (node: ReactNode) => renderToStaticMarkup(
+      <QueryClientProvider client={new QueryClient()}>
+        <LoyaltyContext.Provider value={{ data: boot(can({ manage_rewards: true })), isLoading: false, isError: false, error: null, refetch: () => {} }}>{node}</LoyaltyContext.Provider>
+      </QueryClientProvider>,
+    )
+    const saved = text(inDialog(<RewardDialog reward={catalogue.rewards[0]} options={catalogue.options} onClose={() => {}} />))
+    expect(saved).toContain('Picture')
+    expect(saved).toContain('Replace picture')
+    expect(saved).toContain('Remove picture')
+    expect(saved).toContain('JPEG, PNG or WebP, up to 5 MB. Saved at once.')
+    expect(text(inDialog(<RewardDialog reward={null} options={catalogue.options} onClose={() => {}} />))).toContain('You can add a picture once the reward is saved.')
+    const offer = text(inDialog(<OfferDialog offer={offers.offers[1]} options={offers.options} onClose={() => {}} />))
+    expect(offer).toContain('No picture yet.')
+    expect(offer).toContain('Add a picture')
+    expect(offer).toContain('up to 2 MB')
+    expect(offer).not.toContain('Remove picture')
+    expect(text(inDialog(<OfferDialog offer={null} options={offers.options} onClose={() => {}} />))).toContain('You can add a picture once the offer is saved.')
+
+    const field = inDialog(<PictureField owner="rewards" id={4} picture="/storage/x.jpg" alt="Breakfast for two" limits={catalogue.options.image} onChange={() => {}} />)
+    expect(field).toMatch(/<img src="\/storage\/x.jpg" alt="Breakfast for two" loading="lazy"/)
+    expect(field).toContain('accept="image/jpeg,image/png,image/webp"')
+  })
 })
+

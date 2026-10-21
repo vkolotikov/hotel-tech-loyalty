@@ -11,6 +11,7 @@ import { Check, FormField, FormFoot } from '../ui/formParts'
 import { named, wallInput } from '../lib/forms'
 import { CATALOGUE_KEY, rewardsApi } from './api'
 import { ERRORS } from './errors'
+import { PictureField } from './PictureField'
 import { MAX_COST, MAX_DISCOUNT, MAX_PER_MEMBER, MAX_STOCK, rewardBody, rewardFormOf, rewardProblems, rewardServerProblems, type RewardForm } from './rewardsMath'
 import type { Reward, RewardOptions } from './types'
 import { APPLIES_TO_WORDS, DISCOUNT_TYPE_WORDS, REWARD_PROBLEM_WORDS } from './words'
@@ -20,7 +21,8 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
 /**
  * Add a reward to the catalogue or change one (spec 2026-10-21 §4.6): what members see (name, description, terms,
  * category), what it costs in points, how many there are and how many one member may take, an optional typed discount
- * and what it applies to, an expiry on the venue's clock, and whether it is offered.
+ * and what it applies to, an expiry on the venue's clock, and whether it is offered. A saved reward's picture is
+ * changed here too, at once (PictureField, release 2 §7); a new one gets its picture once it is saved.
  */
 export function RewardDialog({ reward, options, onClose }: { reward: Reward | null; options: RewardOptions; onClose: () => void }) {
   const { t } = useTranslation()
@@ -30,6 +32,7 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
   const zone = boot.venue.timezone
   const [form, setForm] = useState<RewardForm>(() => rewardFormOf(reward, options, zone))
   const [tried, setTried] = useState(false)
+  const [picture, setPicture] = useState<string | null>(reward?.image_url ?? null)
 
   const refresh = () => { void client.invalidateQueries({ queryKey: CATALOGUE_KEY }) }
   const save = useMutation({
@@ -96,6 +99,10 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
           hint={t('loyalty.rewards.reward.terms_hint', 'Optional, e.g. “Not valid on public holidays.”')}>
           <textarea value={form.terms} rows={2} onChange={(e) => update({ terms: e.target.value })} className={INPUT} />
         </FormField>
+
+        {reward
+          ? <PictureField owner="rewards" id={reward.id} picture={picture} alt={reward.name} limits={options.image} onChange={(url) => { setPicture(url); refresh() }} />
+          : <p className="text-xs text-a-text-2">{t('loyalty.rewards.picture.after_save_reward', 'You can add a picture once the reward is saved.')}</p>}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t('loyalty.rewards.reward.discount_type', 'Discount')} problem={problem('discount_type')}

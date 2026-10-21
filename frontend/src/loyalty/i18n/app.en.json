@@ -1,1 +1,242 @@
-{}
+{
+  "accent": {
+    "bold": "Bold",
+    "subtle": "Subtle",
+    "vibrant": "Vibrant"
+  },
+  "button_style": {
+    "filled": "Filled",
+    "outline": "Outline",
+    "soft": "Soft"
+  },
+  "card_style": {
+    "glass": "Glass",
+    "gradient": "Gradient",
+    "solid": "Solid"
+  },
+  "colour": {
+    "background": "Background",
+    "border": "Lines",
+    "error": "Error",
+    "info": "Information",
+    "primary": "Accent",
+    "secondary": "Second surface",
+    "success": "Success",
+    "surface": "Surface",
+    "text": "Text",
+    "text_secondary": "Quiet text",
+    "warning": "Warning"
+  },
+  "file": {
+    "apple_cert": "Pass Type ID certificate",
+    "apple_wwdr": "Apple WWDR certificate",
+    "google_service_account": "Google service account key"
+  },
+  "file_line": {
+    "apple_cert": "The .p12 file exported from your Apple Developer account, with its password.",
+    "apple_wwdr": "Apple’s intermediate certificate, as Apple publishes it (.cer) or as .pem.",
+    "google_service_account": "The JSON key of the service account your Google Wallet issuer uses."
+  },
+  "line": "The card members keep in their phone’s wallet, and how the member app looks.",
+  "load": {
+    "error": {
+      "feature_locked": "Your plan does not include wallet passes.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection. Check the network and try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "unknown": "This could not be loaded. Please try again."
+    }
+  },
+  "logo": {
+    "alt": "The venue’s logo",
+    "error": {
+      "invalid": "Use a JPEG, PNG or WebP picture up to {{mb}} MB and {{edge}} pixels on its longest side.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection: nothing was uploaded. Try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "unknown": "The logo could not be uploaded. Please try again."
+    },
+    "hint": "JPEG, PNG or WebP, up to {{mb}} MB. Saved at once.",
+    "line": "Shown in the app, the member portal and on the wallet pass. It is the same logo as in the full admin’s Branding.",
+    "none": "No logo yet.",
+    "replace": "Replace logo",
+    "title": "Logo",
+    "upload": "Upload logo"
+  },
+  "look": {
+    "accent": "Accent strength",
+    "button_style": "Buttons",
+    "card_style": "Member card",
+    "colours": "Colours",
+    "error": {
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "unknown": "The look could not be saved. Please try again."
+    },
+    "pixels": "{{n}} px",
+    "preset_changed": "{{name}}, with your changes.",
+    "presets": "Presets",
+    "presets_line": "A preset sets all eleven colours; change any of them afterwards.",
+    "preview": "Preview",
+    "preview_line": "As the app draws it. It changes as you edit.",
+    "problem": {
+      "accent_intensity": "Choose how strong the accent is.",
+      "button_style": "Choose a button style.",
+      "card_style": "Choose a card style.",
+      "colour": "Choose a colour, or type one as #rrggbb.",
+      "preset": "Choose a preset again.",
+      "radius": "Choose a corner radius from 0 to 32."
+    },
+    "radius": "Corner radius",
+    "save": "Save look",
+    "saved": "Saved. The app shows it the next time it opens.",
+    "styles": "Shapes and styles",
+    "unsaved": "Not saved yet."
+  },
+  "managers_only": "The wallet pass and the member app’s look are set by an owner or a manager.",
+  "missing": {
+    "certificate": "The Pass Type ID certificate (.p12).",
+    "certificate_gone": "The certificate file is no longer on the server. Upload it again.",
+    "certificate_password": "The certificate does not open with the saved password. Upload it again with its password.",
+    "class_suffix": "The class suffix.",
+    "issuer_id": "The issuer ID.",
+    "pass_type_id": "The Pass Type ID.",
+    "service_account": "The service account key (.json).",
+    "service_account_gone": "The service account key is no longer on the server. Upload it again.",
+    "switched_off": "Wallet passes are switched off.",
+    "team_id": "The Team ID.",
+    "wwdr": "Apple’s WWDR certificate.",
+    "wwdr_gone": "The WWDR certificate file is no longer on the server. Upload it again."
+  },
+  "preset": {
+    "alpine_lodge": "Alpine Lodge",
+    "champagne_lux": "Champagne Lux",
+    "desert_oasis": "Desert Oasis",
+    "emerald_spa": "Emerald Spa",
+    "gold_classic": "Gold Classic",
+    "midnight_violet": "Midnight Violet",
+    "nordic_ice": "Nordic Ice",
+    "ocean_resort": "Ocean Resort",
+    "rose_boutique": "Rose Boutique",
+    "royal_sapphire": "Royal Sapphire",
+    "tropical_sunset": "Tropical Sunset",
+    "urban_loft": "Urban Loft"
+  },
+  "preset_line": {
+    "alpine_lodge": "Earthy mountain tones.",
+    "champagne_lux": "Champagne on warm dark.",
+    "desert_oasis": "Terracotta and sand.",
+    "emerald_spa": "Calm green for wellness.",
+    "gold_classic": "Warm gold on near black.",
+    "midnight_violet": "Deep purple.",
+    "nordic_ice": "Cool and minimal.",
+    "ocean_resort": "Cyan and violet by the sea.",
+    "rose_boutique": "Warm rose for boutique venues.",
+    "royal_sapphire": "Deep navy with clear blue.",
+    "tropical_sunset": "Coral and amber.",
+    "urban_loft": "Sleek monochrome."
+  },
+  "preview": {
+    "button": "Redeem",
+    "member": "Member",
+    "name": "Sarah Johnson",
+    "new": "New",
+    "offer": "Spa treatment",
+    "offer_line": "15% off, 7 days left",
+    "offers": "Offers",
+    "points": "Points",
+    "rewards": "Rewards",
+    "tier": "{{tier}} member",
+    "title": "Preview of the member app with these colours",
+    "visits": "Visits"
+  },
+  "tab": {
+    "app": "Member app",
+    "wallet": "Wallet pass"
+  },
+  "tabs": "Card and app areas",
+  "title": "Card & app",
+  "upload": {
+    "choose": "Choose the file first.",
+    "error": {
+      "cert_unreadable": "The certificate does not open with this password. Check the password; if it is right, export the certificate again.",
+      "feature_locked": "Your plan does not include wallet passes.",
+      "invalid": "Choose the file again; it can be up to 200 KB.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection: nothing was uploaded. Try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "not_certificate": "This is not a certificate. Use Apple’s WWDR certificate, as .cer or .pem.",
+      "not_json": "This is not a JSON file. Use the key file Google gave you for the service account.",
+      "not_pkcs12": "This is not a .p12 certificate. Export the Pass Type ID certificate from your Apple Developer account as .p12.",
+      "not_service_account": "This JSON is not a service account key: it needs the account’s email and private key.",
+      "unknown": "The file could not be uploaded. Please try again."
+    },
+    "file": "File",
+    "password": "Certificate password",
+    "password_hint": "The password chosen when the certificate was exported.",
+    "password_keep": "Empty: the saved password is used.",
+    "replace": "Replace",
+    "replaces": "One is uploaded already. Uploading replaces it, and the old one cannot be brought back.",
+    "upload": "Upload"
+  },
+  "wallet": {
+    "active": "Wallet passes are on",
+    "active_hint": "Switched off, members cannot add their card to a wallet. Nothing is deleted.",
+    "apple": "Apple Wallet",
+    "apple_line": "From your Apple Developer account: the pass type and your team.",
+    "class_suffix": "Class suffix",
+    "class_suffix_hint": "Your own name for the pass class, e.g. loyalty.",
+    "colour_saved_as": "Saved as {{value}}",
+    "error": {
+      "feature_locked": "Your plan does not include wallet passes.",
+      "invalid": "Check the fields marked below.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "unknown": "The wallet pass could not be saved. Please try again."
+    },
+    "file_gone": "No longer on the server",
+    "file_none": "Not uploaded",
+    "file_set": "Uploaded",
+    "files": "Certificates and keys",
+    "files_line": "Kept on the server and never shown again; only whether each is there.",
+    "google": "Google Wallet",
+    "google_line": "From the Google Pay & Wallet Console: your issuer and the pass class.",
+    "issuer_id": "Issuer ID",
+    "locked": "Your plan does not include wallet passes, so members cannot add their card to Apple Wallet or Google Wallet. The member app’s look is under Member app.",
+    "not_ready": "Not ready",
+    "organization_hint": "Optional. Empty: the venue’s name.",
+    "organization_name": "Name on the pass",
+    "pass_type_id": "Pass Type ID",
+    "password_none": "No password saved",
+    "password_set": "Password saved",
+    "problem": {
+      "class_suffix": "Use letters, digits, dots, hyphens or underscores, without spaces.",
+      "colour": "Choose a colour, or type one as #rrggbb.",
+      "issuer_id": "An issuer ID is digits only.",
+      "organization_name": "Keep the name to 191 characters.",
+      "pass_type_id": "A Pass Type ID starts with “pass.”, e.g. pass.com.yourvenue.loyalty.",
+      "team_id": "A Team ID is 10 capital letters or digits, e.g. ABCDE12345."
+    },
+    "ready": "Ready",
+    "ready_line": "Members can add their card.",
+    "replace": "Replace…",
+    "save": "Save wallet pass",
+    "saved": "Saved.",
+    "still_needed": "Still needed:",
+    "team_id": "Team ID",
+    "upload": "Upload…"
+  },
+  "wallet_colour": {
+    "apple_pass_background_color": "Background",
+    "apple_pass_foreground_color": "Text",
+    "apple_pass_label_color": "Labels"
+  }
+}

@@ -98,13 +98,15 @@ function readLocale(locale: string): unknown {
   // HexaTech Content registers its bundle under `content` the same way (src/content/i18n/index.ts).
   const contentFile = path.join(SRC_DIR, 'content/i18n', `content.${locale}.json`)
   const content = fs.existsSync(contentFile) ? JSON.parse(fs.readFileSync(contentFile, 'utf8')) : {}
-  // HexaTech Loyalty registers its bundles under `loyalty`, Program's and Rewards' under `loyalty.program` and
-  // `loyalty.rewards` (src/loyalty/i18n/index.ts).
+  // HexaTech Loyalty registers its bundle under `loyalty` and each area's own under `loyalty.<area>`
+  // (src/loyalty/i18n/index.ts): every <area>.<lang>.json in that folder.
   const loyaltyPart = (name: string) => {
     const file = path.join(SRC_DIR, 'loyalty/i18n', `${name}.${locale}.json`)
     return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf8')) : {}
   }
-  const loyalty = { ...loyaltyPart('loyalty'), program: loyaltyPart('program'), rewards: loyaltyPart('rewards') }
+  const areas = fs.readdirSync(path.join(SRC_DIR, 'loyalty/i18n'))
+    .map(f => /^([a-z]+)\.en\.json$/.exec(f)?.[1]).filter((n): n is string => !!n && n !== 'loyalty')
+  const loyalty = { ...loyaltyPart('loyalty'), ...Object.fromEntries(areas.map(n => [n, loyaltyPart(n)])) }
   return { ...common, portal, appointments, workspace, content, loyalty }
 }
 

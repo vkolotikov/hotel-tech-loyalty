@@ -121,6 +121,8 @@ class OffersAdminController extends Controller
             'per_member_limit' => 'sometimes|nullable|integer|min:1',
             'is_featured'      => 'sometimes|boolean',
             'is_active'        => 'sometimes|boolean',
+            // Owner decision R2-5 (HexaTech Loyalty release 2): the same image rule as store().
+            'image'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'image_url'        => 'sometimes|nullable|url',
         ]);
 
@@ -133,6 +135,7 @@ class OffersAdminController extends Controller
         if ($request->hasFile('image')) {
             $data['image_url'] = \App\Services\MediaService::upload($request->file('image'), 'offers');
         }
+        unset($data['image']);
 
         $offer->update($this->integerTierIds($data));
         return response()->json(['message' => 'Offer updated', 'offer' => $offer]);

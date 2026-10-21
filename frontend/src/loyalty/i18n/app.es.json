@@ -1,1 +1,242 @@
-{}
+{
+  "accent": {
+    "bold": "Intenso",
+    "subtle": "Sutil",
+    "vibrant": "Vivo"
+  },
+  "button_style": {
+    "filled": "Relleno",
+    "outline": "Contorno",
+    "soft": "Suave"
+  },
+  "card_style": {
+    "glass": "Cristal",
+    "gradient": "Degradado",
+    "solid": "Sólido"
+  },
+  "colour": {
+    "background": "Fondo",
+    "border": "Líneas",
+    "error": "Error",
+    "info": "Información",
+    "primary": "Acento",
+    "secondary": "Segunda superficie",
+    "success": "Éxito",
+    "surface": "Superficie",
+    "text": "Texto",
+    "text_secondary": "Texto suave",
+    "warning": "Aviso"
+  },
+  "file": {
+    "apple_cert": "Certificado Pass Type ID",
+    "apple_wwdr": "Certificado WWDR de Apple",
+    "google_service_account": "Clave de la cuenta de servicio de Google"
+  },
+  "file_line": {
+    "apple_cert": "El archivo .p12 exportado de su cuenta de Apple Developer, con su contraseña.",
+    "apple_wwdr": "El certificado intermedio de Apple, tal como lo publica Apple (.cer) o en .pem.",
+    "google_service_account": "La clave JSON de la cuenta de servicio que usa su emisor de Google Wallet."
+  },
+  "line": "La tarjeta que los miembros guardan en la cartera de su teléfono, y el aspecto de la app de miembros.",
+  "load": {
+    "error": {
+      "feature_locked": "Su plan no incluye pases de Wallet.",
+      "manager_only": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_allowed": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "unknown": "No se ha podido cargar. Inténtelo de nuevo."
+    }
+  },
+  "logo": {
+    "alt": "El logotipo del establecimiento",
+    "error": {
+      "invalid": "Use una imagen JPEG, PNG o WebP de hasta {{mb}} MB y {{edge}} píxeles en su lado más largo.",
+      "manager_only": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "network": "Sin conexión: no se ha subido nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_allowed": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "unknown": "No se ha podido subir el logotipo. Inténtelo de nuevo."
+    },
+    "hint": "JPEG, PNG o WebP, hasta {{mb}} MB. Se guarda al momento.",
+    "line": "Se muestra en la app, en el portal de miembros y en el pase de Wallet. Es el mismo logotipo que en «Branding» de la administración completa.",
+    "none": "Aún no hay logotipo.",
+    "replace": "Reemplazar logotipo",
+    "title": "Logotipo",
+    "upload": "Subir logotipo"
+  },
+  "look": {
+    "accent": "Intensidad del acento",
+    "button_style": "Botones",
+    "card_style": "Tarjeta de miembro",
+    "colours": "Colores",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_allowed": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "unknown": "No se ha podido guardar el aspecto. Inténtelo de nuevo."
+    },
+    "pixels": "{{n}} px",
+    "preset_changed": "{{name}}, con sus cambios.",
+    "presets": "Temas",
+    "presets_line": "Un tema fija los once colores; puede cambiar cualquiera después.",
+    "preview": "Vista previa",
+    "preview_line": "Tal como la app lo dibuja. Cambia mientras edita.",
+    "problem": {
+      "accent_intensity": "Elija la intensidad del acento.",
+      "button_style": "Elija un estilo de botón.",
+      "card_style": "Elija un estilo de tarjeta.",
+      "colour": "Elija un color o escríbalo como #rrggbb.",
+      "preset": "Elija de nuevo un tema.",
+      "radius": "Elija un radio de 0 a 32."
+    },
+    "radius": "Radio de las esquinas",
+    "save": "Guardar aspecto",
+    "saved": "Guardado. La app lo mostrará la próxima vez que se abra.",
+    "styles": "Formas y estilos",
+    "unsaved": "Aún sin guardar."
+  },
+  "managers_only": "El pase de Wallet y el aspecto de la app de miembros los configura un propietario o un responsable.",
+  "missing": {
+    "certificate": "El certificado Pass Type ID (.p12).",
+    "certificate_gone": "El archivo del certificado ya no está en el servidor. Súbalo de nuevo.",
+    "certificate_password": "El certificado no se abre con la contraseña guardada. Súbalo de nuevo con su contraseña.",
+    "class_suffix": "El sufijo de clase.",
+    "issuer_id": "El Issuer ID.",
+    "pass_type_id": "El Pass Type ID.",
+    "service_account": "La clave de la cuenta de servicio (.json).",
+    "service_account_gone": "La clave de la cuenta de servicio ya no está en el servidor. Súbala de nuevo.",
+    "switched_off": "Los pases de Wallet están desactivados.",
+    "team_id": "El Team ID.",
+    "wwdr": "El certificado WWDR de Apple.",
+    "wwdr_gone": "El archivo del certificado WWDR ya no está en el servidor. Súbalo de nuevo."
+  },
+  "preset": {
+    "alpine_lodge": "Refugio alpino",
+    "champagne_lux": "Champán lujo",
+    "desert_oasis": "Oasis del desierto",
+    "emerald_spa": "Spa esmeralda",
+    "gold_classic": "Oro clásico",
+    "midnight_violet": "Violeta medianoche",
+    "nordic_ice": "Hielo nórdico",
+    "ocean_resort": "Resort oceánico",
+    "rose_boutique": "Boutique rosa",
+    "royal_sapphire": "Zafiro real",
+    "tropical_sunset": "Atardecer tropical",
+    "urban_loft": "Loft urbano"
+  },
+  "preset_line": {
+    "alpine_lodge": "Tonos terrosos de montaña.",
+    "champagne_lux": "Champán sobre oscuro cálido.",
+    "desert_oasis": "Terracota y arena.",
+    "emerald_spa": "Verde sereno para el bienestar.",
+    "gold_classic": "Oro cálido sobre casi negro.",
+    "midnight_violet": "Púrpura profundo.",
+    "nordic_ice": "Fresco y minimalista.",
+    "ocean_resort": "Cian y violeta junto al mar.",
+    "rose_boutique": "Rosa cálido para establecimientos boutique.",
+    "royal_sapphire": "Azul marino profundo con azul claro.",
+    "tropical_sunset": "Coral y ámbar.",
+    "urban_loft": "Monocromo elegante."
+  },
+  "preview": {
+    "button": "Canjear",
+    "member": "Miembro",
+    "name": "Lucía García",
+    "new": "Nuevo",
+    "offer": "Tratamiento de spa",
+    "offer_line": "−15 %, quedan 7 días",
+    "offers": "Ofertas",
+    "points": "Puntos",
+    "rewards": "Recompensas",
+    "tier": "Miembro {{tier}}",
+    "title": "Vista previa de la app de miembros con estos colores",
+    "visits": "Visitas"
+  },
+  "tab": {
+    "app": "App de miembros",
+    "wallet": "Pase de Wallet"
+  },
+  "tabs": "Secciones de tarjeta y app",
+  "title": "Tarjeta y app",
+  "upload": {
+    "choose": "Elija primero el archivo.",
+    "error": {
+      "cert_unreadable": "El certificado no se abre con esta contraseña. Compruébela; si es correcta, exporte el certificado de nuevo.",
+      "feature_locked": "Su plan no incluye pases de Wallet.",
+      "invalid": "Elija el archivo de nuevo; puede tener hasta 200 KB.",
+      "manager_only": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "network": "Sin conexión: no se ha subido nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_allowed": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_certificate": "Esto no es un certificado. Use el certificado WWDR de Apple, en .cer o .pem.",
+      "not_json": "Esto no es un archivo JSON. Use el archivo de clave que Google le dio para la cuenta de servicio.",
+      "not_pkcs12": "Esto no es un certificado .p12. Exporte el certificado Pass Type ID de su cuenta de Apple Developer como .p12.",
+      "not_service_account": "Este JSON no es una clave de cuenta de servicio: necesita el correo de la cuenta y la clave privada.",
+      "unknown": "No se ha podido subir el archivo. Inténtelo de nuevo."
+    },
+    "file": "Archivo",
+    "password": "Contraseña del certificado",
+    "password_hint": "La contraseña elegida al exportar el certificado.",
+    "password_keep": "Vacío: se usa la contraseña guardada.",
+    "replace": "Reemplazar",
+    "replaces": "Ya hay uno subido. Al subir otro se reemplaza, y el anterior no se puede recuperar.",
+    "upload": "Subir"
+  },
+  "wallet": {
+    "active": "Los pases de Wallet están activados",
+    "active_hint": "Desactivados, los miembros no pueden añadir su tarjeta a una cartera. No se borra nada.",
+    "apple": "Apple Wallet",
+    "apple_line": "De su cuenta de Apple Developer: el tipo de pase y su equipo.",
+    "class_suffix": "Sufijo de clase",
+    "class_suffix_hint": "Su propio nombre para la clase del pase, p. ej. loyalty.",
+    "colour_saved_as": "Se guarda como {{value}}",
+    "error": {
+      "feature_locked": "Su plan no incluye pases de Wallet.",
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "not_allowed": "Solo un propietario o un responsable puede cambiar la tarjeta y la app.",
+      "unknown": "No se ha podido guardar el pase de Wallet. Inténtelo de nuevo."
+    },
+    "file_gone": "Ya no está en el servidor",
+    "file_none": "No subido",
+    "file_set": "Subido",
+    "files": "Certificados y claves",
+    "files_line": "Se guardan en el servidor y no se vuelven a mostrar; solo se indica si están.",
+    "google": "Google Wallet",
+    "google_line": "De la Google Pay & Wallet Console: su emisor y la clase del pase.",
+    "issuer_id": "Issuer ID",
+    "locked": "Su plan no incluye pases de Wallet, así que los miembros no pueden añadir su tarjeta a Apple Wallet ni a Google Wallet. El aspecto de la app está en App de miembros.",
+    "not_ready": "No está listo",
+    "organization_hint": "Opcional. Vacío: el nombre del establecimiento.",
+    "organization_name": "Nombre en el pase",
+    "pass_type_id": "Pass Type ID",
+    "password_none": "Sin contraseña guardada",
+    "password_set": "Contraseña guardada",
+    "problem": {
+      "class_suffix": "Use letras, dígitos, puntos, guiones o guiones bajos, sin espacios.",
+      "colour": "Elija un color o escríbalo como #rrggbb.",
+      "issuer_id": "Un Issuer ID solo tiene dígitos.",
+      "organization_name": "Como máximo 191 caracteres.",
+      "pass_type_id": "Un Pass Type ID empieza por «pass.», p. ej. pass.com.yourvenue.loyalty.",
+      "team_id": "Un Team ID tiene 10 mayúsculas o dígitos, p. ej. ABCDE12345."
+    },
+    "ready": "Listo",
+    "ready_line": "Los miembros pueden añadir su tarjeta.",
+    "replace": "Reemplazar…",
+    "save": "Guardar el pase de Wallet",
+    "saved": "Guardado.",
+    "still_needed": "Aún falta:",
+    "team_id": "Team ID",
+    "upload": "Subir…"
+  },
+  "wallet_colour": {
+    "apple_pass_background_color": "Fondo",
+    "apple_pass_foreground_color": "Texto",
+    "apple_pass_label_color": "Etiquetas"
+  }
+}
