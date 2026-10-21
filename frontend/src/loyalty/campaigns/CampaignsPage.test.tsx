@@ -117,7 +117,7 @@ describe('Campaigns (spec 2026-10-21 release 2 §6)', () => {
     const words = text(html)
     expect(words).toContain('Members who match all of these rules')
     expect(words).toContain('Tier is one of Gold')
-    expect(words).toContain('Last activity not active in the last 60 days')
+    expect(words).toContain('Last activity before the last 60 days')
     expect(words).toContain('Points balance at least 1,500')
     expect(words).toContain('Every active member')
     expect(words).toContain('Members now 1,200')

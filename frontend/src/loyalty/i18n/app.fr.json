@@ -59,7 +59,7 @@
       "unknown": "Le logo n’a pas pu être importé. Veuillez réessayer."
     },
     "hint": "JPEG, PNG ou WebP, jusqu’à {{mb}} Mo. Enregistré aussitôt.",
-    "line": "Affiché dans l’application, le portail membre et sur le pass Wallet. C’est le même logo que dans « Branding » de l’administration complète.",
+    "line": "Affiché dans l’application et le portail membre. C’est le même logo que dans « Branding » de l’administration complète.",
     "none": "Pas encore de logo.",
     "replace": "Remplacer le logo",
     "title": "Logo",

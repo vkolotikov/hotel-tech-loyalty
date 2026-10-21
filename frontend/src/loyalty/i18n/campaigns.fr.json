@@ -227,8 +227,8 @@
   "rule_op": {
     "tier_in": "est l’un de",
     "tier_not_in": "n’est aucun de",
-    "activity_active_within": "actif dans les derniers",
-    "activity_inactive_over": "inactif dans les derniers",
+    "activity_active_within": "il y a moins de",
+    "activity_inactive_over": "il y a plus de",
     "current_points_min": "au moins",
     "current_points_max": "au plus",
     "lifetime_points_min": "au moins",

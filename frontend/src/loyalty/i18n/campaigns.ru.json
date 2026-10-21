@@ -227,8 +227,8 @@
   "rule_op": {
     "tier_in": "один из",
     "tier_not_in": "ни один из",
-    "activity_active_within": "была за последние",
-    "activity_inactive_over": "не было за последние",
+    "activity_active_within": "в последние",
+    "activity_inactive_over": "раньше последних",
     "current_points_min": "не менее",
     "current_points_max": "не более",
     "lifetime_points_min": "не менее",

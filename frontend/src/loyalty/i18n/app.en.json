@@ -59,7 +59,7 @@
       "unknown": "The logo could not be uploaded. Please try again."
     },
     "hint": "JPEG, PNG or WebP, up to {{mb}} MB. Saved at once.",
-    "line": "Shown in the app, the member portal and on the wallet pass. It is the same logo as in the full admin’s Branding.",
+    "line": "Shown in the app and the member portal. It is the same logo as in the full admin’s Branding.",
     "none": "No logo yet.",
     "replace": "Replace logo",
     "title": "Logo",

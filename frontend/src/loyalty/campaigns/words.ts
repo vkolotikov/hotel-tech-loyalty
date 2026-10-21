@@ -35,8 +35,8 @@ export const RULE_TYPE_WORDS: Record<string, string> = {
 export const RULE_OP_WORDS: Record<string, string> = {
   tier_in: 'is one of',
   tier_not_in: 'is none of',
-  activity_active_within: 'active in the last',
-  activity_inactive_over: 'not active in the last',
+  activity_active_within: 'within the last',
+  activity_inactive_over: 'before the last',
   current_points_min: 'at least',
   current_points_max: 'at most',
   lifetime_points_min: 'at least',

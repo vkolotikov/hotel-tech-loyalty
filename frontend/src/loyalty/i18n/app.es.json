@@ -59,7 +59,7 @@
       "unknown": "No se ha podido subir el logotipo. Inténtelo de nuevo."
     },
     "hint": "JPEG, PNG o WebP, hasta {{mb}} MB. Se guarda al momento.",
-    "line": "Se muestra en la app, en el portal de miembros y en el pase de Wallet. Es el mismo logotipo que en «Branding» de la administración completa.",
+    "line": "Se muestra en la app y en el portal de miembros. Es el mismo logotipo que en «Branding» de la administración completa.",
     "none": "Aún no hay logotipo.",
     "replace": "Reemplazar logotipo",
     "title": "Logotipo",

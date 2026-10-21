@@ -59,7 +59,7 @@
       "unknown": "Das Logo konnte nicht hochgeladen werden. Bitte versuchen Sie es erneut."
     },
     "hint": "JPEG, PNG oder WebP, bis {{mb}} MB. Wird sofort gespeichert.",
-    "line": "Erscheint in der App, im Mitgliederportal und auf dem Wallet-Pass. Es ist dasselbe Logo wie unter „Branding“ in der vollständigen Verwaltung.",
+    "line": "Erscheint in der App und im Mitgliederportal. Es ist dasselbe Logo wie unter „Branding“ in der vollständigen Verwaltung.",
     "none": "Noch kein Logo.",
     "replace": "Logo ersetzen",
     "title": "Logo",
