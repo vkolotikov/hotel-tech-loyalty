@@ -1,1 +1,133 @@
-{}
+{
+  "at_risk": {
+    "title": "Abwanderungsgefahr",
+    "line": "Aktive Mitglieder, die still geworden sind, die am längsten stillen zuerst. Als Aktivität zählen Punkte sammeln und das Scannen der Karte.",
+    "choose": "Keine Aktivität seit",
+    "days": "{{days}} Tagen",
+    "none": "Kein aktives Mitglied ist seit {{days}} Tagen ohne Aktivität.",
+    "capped": "Die {{shown}} am längsten stillen von {{total}}.",
+    "last_seen": "Zuletzt aktiv am {{day}} · Tage ohne Aktivität: {{days}}",
+    "error": {
+      "not_allowed": "Einblicke sehen Inhaber, Manager und Mitarbeitende, die Analysen sehen dürfen. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "no_capability": "Einblicke sehen Inhaber, Manager und Mitarbeitende, die Analysen sehen dürfen. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "invalid": "Wählen Sie 7 bis 365 Tage.",
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Liste konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "title": "Einblicke",
+  "line": "Wie es dem Programm geht, für die ganze Organisation, nach der Uhr des Hauses.",
+  "period_line": "{{dates}}, {{bucket}}",
+  "period_choice": "Zeitraum",
+  "no_right": "Einblicke sehen Inhaber, Manager und Mitarbeitende, die Analysen sehen dürfen. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+  "empty": "Noch nichts zu zeigen. Sobald Mitglieder beitreten und Punkte sammeln, zeigt diese Seite, wie viele es sind, welche Punkte sie sammeln und einlösen, ihre Stufen und wer still geworden ist.",
+  "points": {
+    "issued": "Vergeben",
+    "redeemed": "Eingelöst",
+    "expired": "Verfallen",
+    "title": "Punkte rein und raus",
+    "line": "Vergebene Punkte über der Linie, eingelöste und verfallene darunter. Eine stornierte Buchung zählt nirgends."
+  },
+  "tiles": {
+    "members": "Mitglieder",
+    "new_members": "Neu im Zeitraum",
+    "active_members": "Aktiv, letzte 90 Tage",
+    "outstanding": "Offene Punkte",
+    "outstanding_line": "Jetzt bei aktiven Mitgliedern",
+    "issued": "Vergebene Punkte",
+    "redeemed": "Eingelöste Punkte",
+    "expired": "Verfallene Punkte",
+    "redemption_rate": "Einlösequote",
+    "redemption_rate_line": "Eingelöste Punkte je 100 vergebene",
+    "label": "Die Kennzahlen"
+  },
+  "growth": {
+    "title": "Mitglieder im Zeitverlauf",
+    "total": "Mitglieder",
+    "new": "Beigetreten"
+  },
+  "redemptions": {
+    "title": "Eingelöste Prämien",
+    "line": "{{total}} im Zeitraum, nach dem Tag der Einlösung und ihrem heutigen Stand."
+  },
+  "tiers": {
+    "title": "Mitglieder nach Stufe",
+    "line": "Aktive Mitglieder je Stufe, jetzt.",
+    "off": "ausgeschaltet",
+    "none": "Das Programm hat noch keine Stufen."
+  },
+  "movement": {
+    "title": "Stufenwechsel",
+    "line": "Stufenwechsel in diesem Zeitraum.",
+    "none": "In diesem Zeitraum hat kein Mitglied die Stufe gewechselt.",
+    "flows": "Von einer Stufe zur anderen",
+    "flow": "{{from}} → {{to}}"
+  },
+  "expiry": {
+    "title": "Bald verfallende Punkte",
+    "line": "Noch gehaltene Punkte nach dem Monat, in dem sie verfallen: dieser Monat und die fünf folgenden.",
+    "overdue": "{{points}} Punkte von {{members}} Mitgliedern haben ihr Datum erreicht und verfallen beim nächsten Lauf."
+  },
+  "engagement": {
+    "title": "Aktivität",
+    "line": "Aktive Mitglieder jetzt, in vier Gruppen.",
+    "new": "Neu",
+    "active": "Aktiv",
+    "at_risk": "Gefährdet",
+    "dormant": "Ruhend"
+  },
+  "balances": {
+    "title": "Punktestände",
+    "line": "Aktive Mitglieder nach ihrem jetzigen Punktestand.",
+    "below": "Unter null",
+    "zero": "Keine",
+    "over": "{{min}} und mehr",
+    "range": "{{min}}–{{max}}"
+  },
+  "share": "{{value}} · {{share}} %",
+  "period": {
+    "30d": "30 Tage",
+    "90d": "90 Tage",
+    "12m": "12 Monate"
+  },
+  "bucket": {
+    "day": "nach Tagen",
+    "week": "nach Wochen ab Montag",
+    "month": "nach Monaten"
+  },
+  "bucket_head": {
+    "day": "Tag",
+    "week": "Woche ab",
+    "month": "Monat"
+  },
+  "growth_line": {
+    "day": "Alle Mitglieder am Ende jedes Tages und wer an dem Tag beigetreten ist.",
+    "week": "Alle Mitglieder am Ende jeder Woche und wer in der Woche beigetreten ist.",
+    "month": "Alle Mitglieder am Ende jedes Monats und wer in dem Monat beigetreten ist."
+  },
+  "engagement_hint": {
+    "new": "In den letzten 30 Tagen beigetreten",
+    "active": "Aktivität in den letzten 30 Tagen",
+    "at_risk": "Letzte Aktivität vor 31 bis 90 Tagen",
+    "dormant": "Keine Aktivität in den letzten 90 Tagen"
+  },
+  "redemption": {
+    "fulfilled": "Ausgegeben",
+    "pending": "Offen",
+    "cancelled": "Storniert"
+  },
+  "direction": {
+    "up": "Aufstieg",
+    "down": "Abstieg",
+    "lateral": "Gleichrangig"
+  },
+  "load": {
+    "error": {
+      "not_allowed": "Einblicke sehen Inhaber, Manager und Mitarbeitende, die Analysen sehen dürfen. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "no_capability": "Einblicke sehen Inhaber, Manager und Mitarbeitende, die Analysen sehen dürfen. Ein Manager kann das unter Team im vollständigen Admin ändern.",
+      "invalid": "Dieser Zeitraum kann nicht gezeigt werden. Wählen Sie einen anderen.",
+      "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Einblicke konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  }
+}
