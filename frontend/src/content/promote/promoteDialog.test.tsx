@@ -15,7 +15,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 
 import { ContentContext } from '../ContentProvider'
 import { bootFor, brandWith } from '../brand/brandTesting'
-import type { Channel, PromotionPreview, SitePage } from '../lib/types'
+import type { BioPayload, Channel, PromotionPreview, SitePage } from '../lib/types'
 import { PromoteDialog } from './PromoteDialog'
 import { newForm, previewBody } from './promoteMath'
 
@@ -24,9 +24,13 @@ const page = (id: number, title: string): SitePage => ({
   seen: true, posts: 0, published: 0, clicks: 0, last_promoted_at: null,
 })
 const channel = (platform: string, active = true) => ({ id: platform.length, platform, label: platform, active } as unknown as Channel)
-const render = (pages: SitePage[], preview?: PromotionPreview, channels = [channel('instagram'), channel('linkedin'), channel('blog')]) => {
+const bioOf = (page: BioPayload['page']): BioPayload => ({ page, buttons: [], url: null, suggested_name: 'lumiere', base_url: 'https://sites.hexa-tech.uk/links/' })
+const showing = { is_on: true, slug: 'lumiere', title: null, line: null, show_posts: true }
+const render = (pages: SitePage[], preview?: PromotionPreview, channels = [channel('instagram'), channel('linkedin'), channel('blog')],
+  { brand = true, bio = bioOf(showing) }: { brand?: boolean; bio?: BioPayload } = {}) => {
   const client = new QueryClient()
-  client.setQueryData(['content', 3, 'brand'], brandWith({ channels }))
+  if (brand) client.setQueryData(['content', 3, 'brand'], brandWith({ channels }))
+  client.setQueryData(['content', 3, 'bio'], bio)
   if (preview) {
     const body = previewBody(pages.map(p => p.id), newForm('2026-10-07', pages.length, ['instagram', 'linkedin']))
     client.setQueryData(['content', 3, 'promotion-preview', JSON.stringify(body)], preview)
@@ -67,6 +71,21 @@ describe('the promote dialog (spec 2026-10-20 §4.2)', () => {
     const html = render([page(1, 'A')], { wanted: 10, fit: 6, first_date: '2026-10-08', last_date: '2026-10-20', weeks: 2 })
     expect(html).toContain('Posts that fit in these days: 6 of 10.')
     expect(html).toMatch(/<button[^>]*disabled=""[^>]*>Promote<\/button>/)
+  })
+
+  // Release check (6-2): the Channels heading stood alone, with no boxes, while the brand loaded.
+  it('says the channels are loading until the brand comes', () => {
+    const html = render([page(1, 'A')], undefined, undefined, { brand: false })
+    expect(html).toMatch(/Channels<\/legend>(?:(?!<\/fieldset>).)*Loading…/s)
+  })
+
+  // Final review (6-1): Instagram and TikTok posts say "link in bio"; the page must be on and show the posts.
+  it('says Instagram and TikTok posts need the link-in-bio page while it does not show the posts', () => {
+    const note = 'Instagram and TikTok can’t open links in posts'
+    expect(render([page(1, 'A')], undefined, undefined, { bio: bioOf(null) })).toContain(note)
+    expect(render([page(1, 'A')], undefined, undefined, { bio: bioOf({ ...showing, show_posts: false }) })).toContain(note)
+    expect(render([page(1, 'A')])).not.toContain(note)
+    expect(render([page(1, 'A')], undefined, [channel('linkedin')], { bio: bioOf(null) })).not.toContain(note)
   })
 
   it('names more than five pages by count, and says when the brand has no channel to post on', () => {

@@ -8,7 +8,7 @@ import type { SitePageKind } from '../lib/types'
 import { PageHeader } from '../ui/PageHeader'
 import { PageRow } from './PageRow'
 import { PromoteDialog } from './PromoteDialog'
-import { MAX_PAGES, isPromoting, stillThere } from './promoteMath'
+import { MAX_PAGES, isPromoting, isScanning, stillThere, tabAfter } from './promoteMath'
 import { PromotionLine } from './PromotionLine'
 import { usePromotionWatch, useSite } from './useSite'
 import { WebsiteScan } from './WebsiteScan'
@@ -35,6 +35,7 @@ export function PromotePage() {
   const others = pages.filter(p => p.kind === 'page')
   const shown = tab === 'article' ? articles : others
   const promoting = isPromoting(run.data)
+  const scanning = isScanning(payload)
   const full = chosen.length >= MAX_PAGES
   const toggle = (id: number) => setPicked(c => {
     const now = stillThere(c, pages)
@@ -66,7 +67,8 @@ export function PromotePage() {
       {payload && (
         <section aria-labelledby="content-promote-site" className="space-y-3 rounded-xl border border-a-border bg-a-surface p-4">
           <h2 id="content-promote-site" className="font-a-display text-lg font-normal text-a-text">{t('content.site.title', 'Website')}</h2>
-          {payload.site === null && canManage && <p className="text-sm text-a-text">{t('content.site.empty', 'Add your website address to find your blog articles and pages.')}</p>}
+          {/* Also for a site row with no address yet (its summary saved first: final review, 6-2). */}
+          {!payload.site?.url && canManage && <p className="text-sm text-a-text">{t('content.site.empty', 'Add your website address to find your blog articles and pages.')}</p>}
           <WebsiteScan payload={payload} canManage={canManage} />
         </section>
       )}
@@ -75,8 +77,15 @@ export function PromotePage() {
         <section aria-label={t('content.promote.tabs', 'Kinds of pages')} className="space-y-3">
           <div role="tablist" aria-label={t('content.promote.tabs', 'Kinds of pages')} className="flex flex-wrap gap-2">
             {(['article', 'page'] as const).map(kind => (
+              // One tab stop; the arrow keys, Home and End move between the tabs (final review, 6-2).
               <button key={kind} type="button" role="tab" id={`content-promote-tab-${kind}`} aria-selected={tab === kind} aria-controls="content-promote-list"
-                onClick={() => setTab(kind)}
+                tabIndex={tab === kind ? 0 : -1} onClick={() => setTab(kind)} onKeyDown={(e) => {
+                  const next = tabAfter(tab, e.key)
+                  if (next === null) return
+                  e.preventDefault()
+                  setTab(next)
+                  document.getElementById(`content-promote-tab-${next}`)?.focus()
+                }}
                 className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${tab === kind ? 'border-a-accent-text bg-a-surface-2 text-a-text' : 'border-a-border text-a-text-2 hover:text-a-text'}`}>
                 {kind === 'article'
                   ? t('content.promote.tab_articles', 'Blog articles ({{count}})', { count: articles.length })
@@ -103,21 +112,36 @@ export function PromotePage() {
         </section>
       )}
       {canManage && chosen.length > 0 && (
-        <div data-promote-bar="" className="sticky bottom-0 z-10 -mx-4 border-t border-a-border bg-a-surface px-4 py-3 shadow-a-lg lg:-mx-6 lg:px-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-a-text">{t('content.promote.selected', 'Selected: {{count}}', { count: chosen.length })}</span>
-            {full && <span className="text-xs text-a-text-2">{t('content.promote.limit', 'You can choose up to 20 pages at a time.')}</span>}
-            <div className="ml-auto flex gap-2">
-              <Button size="sm" variant="secondary" onClick={() => setPicked([])}>{t('content.promote.clear', 'Clear')}</Button>
-              <Button size="sm" disabled={promoting} onClick={() => setDialog(true)}>{t('content.promote.start', 'Promote…')}</Button>
-            </div>
-          </div>
-        </div>
+        <PromoteBar count={chosen.length} full={full} blocked={promoting ? 'promoting' : scanning ? 'scanning' : null}
+          onClear={() => setPicked([])} onStart={() => setDialog(true)} />
       )}
       {dialog && (
         <PromoteDialog pages={pages.filter(p => chosen.includes(p.id))} onClose={() => setDialog(false)}
           onStarted={() => { toLine.current = true; setDialog(false); setPicked([]) }} />
       )}
+    </div>
+  )
+}
+
+/**
+ * The bar under the chosen pages: how many, Clear, and Promote… — off while a promotion is written or the website is
+ * read, which it then says (final review, 6-2: the press was refused with scan_running).
+ */
+export function PromoteBar({ count, full, blocked, onClear, onStart }: {
+  count: number; full: boolean; blocked: 'promoting' | 'scanning' | null; onClear: () => void; onStart: () => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <div data-promote-bar="" className="sticky bottom-0 z-10 -mx-4 border-t border-a-border bg-a-surface px-4 py-3 shadow-a-lg lg:-mx-6 lg:px-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="text-sm font-semibold text-a-text">{t('content.promote.selected', 'Selected: {{count}}', { count })}</span>
+        {full && <span className="text-xs text-a-text-2">{t('content.promote.limit', 'You can choose up to 20 pages at a time.')}</span>}
+        {blocked === 'scanning' && <span className="text-xs text-a-text-2">{t('content.promote.error.scan_running', 'The website is being read. Promote when it is done.')}</span>}
+        <div className="ml-auto flex gap-2">
+          <Button size="sm" variant="secondary" onClick={onClear}>{t('content.promote.clear', 'Clear')}</Button>
+          <Button size="sm" disabled={blocked !== null} onClick={onStart}>{t('content.promote.start', 'Promote…')}</Button>
+        </div>
+      </div>
     </div>
   )
 }

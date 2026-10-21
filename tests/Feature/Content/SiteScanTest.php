@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Content;
 
+use App\Jobs\ScanContentWebsite;
 use App\Models\ContentPlannerProfile;
 use App\Models\ContentSite;
 use App\Models\ContentSitePage;
+use App\Services\Content\ContentSites;
 use App\Services\Content\ContentSiteScan;
 use App\Services\Content\ContentSiteSummarizer;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\Concerns\FakesWebsite;
@@ -205,6 +208,39 @@ class SiteScanTest extends TestCase
         Http::assertSentCount(1);
     }
 
+    // Final review (6-1), deferred minor: a robots.txt answering with a server error let everything be read; RFC 9309
+    // §2.3.1.4 says read nothing. A refused or missing one (4xx) still means read everything.
+    public function test_a_robots_txt_with_a_server_error_stops_the_scan_and_a_refused_one_does_not(): void
+    {
+        $this->fakeWebsite([self::SITE . '/robots.txt' => ['oops', 503], self::SITE . '/' => self::html('Lumière Salon')]);
+        $site = $this->scan($this->site());
+        $this->assertSame('failed', $site->status);
+        $this->assertSame('robots_unreachable', $site->error);
+        Http::assertNotSent(fn (Request $request) => str_contains($request->url(), 'sitemap'));
+
+        $this->fakeWebsite([self::SITE . '/robots.txt' => ['no', 403], self::SITE . '/' => self::html('Lumière Salon', '<p>Hair in Riga.</p>')]);
+        $site->forceFill(['status' => 'scanning', 'error' => null])->save();
+        $this->assertSame('ready', $this->scan($site)->status);
+    }
+
+    // Fixes-batch review: a robots.txt that never answers reads nothing (the home page loading); one that answers 204 or
+    // redirects round in circles is read as none, as before, so the scan goes on.
+    public function test_a_robots_txt_that_never_answers_stops_the_scan_and_odd_answers_do_not(): void
+    {
+        $this->fakeWebsite([
+            self::SITE . '/robots.txt' => fn () => throw new ConnectionException('Operation timed out'),
+            self::SITE . '/' => self::html('Lumière Salon'),
+        ]);
+        $site = $this->scan($this->site());
+        $this->assertSame('robots_unreachable', $site->error);
+
+        foreach ([['', 204], ['', 302, ['Location' => '/robots.txt']]] as $answer) {
+            $this->fakeWebsite([self::SITE . '/robots.txt' => $answer, self::SITE . '/' => self::html('Lumière Salon', '<p>Hair in Riga.</p>')]);
+            $site->forceFill(['status' => 'scanning', 'error' => null])->save();
+            $this->assertSame('ready', $this->scan($site)->status, 'robots.txt answering ' . $answer[1]);
+        }
+    }
+
     public function test_a_host_that_does_not_answer_is_unreachable_and_a_private_one_a_bad_address(): void
     {
         $this->fakeWebsite([], ['lumiere.example' => []]);
@@ -312,6 +348,54 @@ class SiteScanTest extends TestCase
         $this->fakeSummary(null, new \RuntimeException('provider down'));
         $site->forceFill(['status' => 'scanning'])->save();
         $this->assertSame('ai_failed', $this->scan($site, true)->summary_note);
+    }
+
+    // Final review (6-1), deferred minor: a scan its worker stopped during the summary call read failed, though its new
+    // list was saved.
+    public function test_a_scan_stopped_during_the_summary_keeps_its_new_list(): void
+    {
+        $this->wordpressSite();
+        $site = $this->site();
+        $during = null;
+        $fake = new class($site, $this->manager->id, $during) extends ContentSiteSummarizer {
+            public function __construct(private ContentSite $site, private int $userId, public ?ContentSite &$during)
+            {
+            }
+
+            public function summarize(ContentPlannerProfile $profile, array $pages): array
+            {
+                $this->during = $this->site->fresh();
+                // The worker's timeout: failed() runs, and this job never comes back.
+                (new ScanContentWebsite($this->site->id, 'token-1', true, $this->userId))->failed(null);
+                throw new \RuntimeException('killed');
+            }
+        };
+        $this->app->instance(ContentSiteSummarizer::class, $fake);
+
+        $after = $this->scan($site, true);
+        // While the AI was asked, the new list's day and numbers were already the site's, the scan still running.
+        $this->assertSame('scanning', $during->status);
+        $this->assertNotNull($during->scanned_at);
+        $this->assertSame(2, $during->articles_count);
+        $this->assertSame(2, $during->pages_count);
+        $this->assertSame('ready', $after->status);
+        $this->assertNull($after->error);
+        $this->assertSame('ai_failed', $after->summary_note);
+    }
+
+    public function test_a_lost_scan_reads_ready_once_its_new_list_was_saved(): void
+    {
+        $site = $this->site();
+        $site->forceFill(['scan_queued_at' => now()->subMinutes(25), 'scan_started_at' => now()->subMinutes(20)])->save();
+        $facts = ContentSites::facts($site->fresh());
+        $this->assertSame('failed', $facts['status']);
+        $this->assertSame('scan_failed', $facts['error']);
+
+        $site->forceFill(['scanned_at' => now()->subMinutes(15), 'articles_count' => 3])->save();
+        $facts = ContentSites::facts($site->fresh());
+        $this->assertSame('ready', $facts['status']);
+        $this->assertNull($facts['error']);
+        $this->assertSame(3, $facts['articles_count']);
     }
 
     public function test_without_update_summary_the_ai_is_not_asked(): void

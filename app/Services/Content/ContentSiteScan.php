@@ -45,7 +45,7 @@ class ContentSiteScan
         $started = $this->now();
         $found = $this->discovery->find((string) $site->url);
         if ($found['failure'] !== null) {
-            self::finish($site, $token, ['status' => 'failed', 'error' => $found['failure']]);
+            self::write($site, $token, ['status' => 'failed', 'error' => $found['failure']]);
 
             return;
         }
@@ -71,7 +71,7 @@ class ContentSiteScan
             $rows[] = self::row($candidate, PageReader::read($response->body, $response->url, $response->contentType));
         }
         if ($rows === []) {
-            self::finish($site, $token, ['status' => 'failed', 'error' => 'nothing_found']);
+            self::write($site, $token, ['status' => 'failed', 'error' => 'nothing_found']);
 
             return;
         }
@@ -80,8 +80,15 @@ class ContentSiteScan
         }
         $now = CarbonImmutable::now()->startOfSecond();
         $counts = DB::transaction(fn () => self::save($site, $rows, $now));
+        // The new list is the site's from here: its day and numbers are written now, so a scan stopped during the summary
+        // call keeps them (ScanContentWebsite::fail reads it as ready), and the note says why the summary did not change
+        // until the summary has its answer (final review, 6-1).
+        self::write($site, $token, [
+            'scanned_at' => $now, 'articles_count' => $counts['articles'], 'pages_count' => $counts['pages'],
+            'summary_note' => $updateSummary ? 'ai_failed' : null,
+        ]);
         [$summary, $note] = $updateSummary ? $this->summary($site, $rows) : [[], null];
-        self::finish($site, $token, [
+        self::write($site, $token, [
             'status' => 'ready', 'error' => null, 'scanned_at' => $now,
             'articles_count' => $counts['articles'], 'pages_count' => $counts['pages'], 'summary_note' => $note,
         ] + $summary);
@@ -188,8 +195,12 @@ class ContentSiteScan
         return ContentSite::withoutGlobalScopes()->whereKey($site->id)->value('scan_token') === $token;
     }
 
-    /** @param array<string, mixed> $fields */
-    private static function finish(ContentSite $site, string $token, array $fields): void
+    /**
+     * Fields on the site, only while this scan is its scan and still running.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private static function write(ContentSite $site, string $token, array $fields): void
     {
         ContentSite::withoutGlobalScopes()->whereKey($site->id)->where('scan_token', $token)->where('status', 'scanning')->update($fields);
     }

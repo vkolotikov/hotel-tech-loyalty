@@ -195,6 +195,7 @@ export const ERRORS = {
     scan_running: 'The website is being read. Try again when it is done.',
     site_unreachable: 'The website could not be reached. Check the address and try again.',
     site_blocked: "The website's robots.txt does not let Content read it.",
+    robots_unreachable: "The website's robots.txt could not be read (an error or no answer), so Content read nothing. Try again later.",
     nothing_found: 'Nothing could be read on this website. Check the address and try again.',
     scan_failed: 'Reading the website stopped unexpectedly. Please try again.',
     manager_only: 'Only an owner or a manager can change the website.',
@@ -237,6 +238,7 @@ export const ERRORS = {
     already_promoting: 'Wait until the promotion being written is done.',
     not_found: 'This page is no longer in the list.',
     manager_only: 'Only an owner or a manager can remove posts.',
+    no_profile: 'This brand is not set up yet.',
     unknown: 'The posts could not be removed. Please try again.',
   },
 } as const

@@ -5,7 +5,7 @@ import { Loader2 } from 'lucide-react'
 import { Button } from '../../workspace/ui/Button'
 import { Field } from '../../workspace/ui/Field'
 import { Notice } from '../../workspace/ui/Notice'
-import { useApi, useBrandId } from '../ContentProvider'
+import { useApi, useBoot, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import type { SitePayload } from '../lib/types'
@@ -23,6 +23,7 @@ export function WebsiteScan({ payload, canManage }: { payload: SitePayload; canM
   const locale = i18n.language || 'en'
   const api = useApi()
   const brand = useBrandId()
+  const boot = useBoot()
   const queryClient = useQueryClient()
   const site = payload.site
   // Both follow what is stored until the manager changes them (final review, 6-2): a summary edited by hand meanwhile
@@ -40,7 +41,7 @@ export function WebsiteScan({ payload, canManage }: { payload: SitePayload; canM
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const scanning = site?.status === 'scanning'
-  const line = siteLine(site, t, locale)
+  const line = siteLine(site, t, locale, boot.venue.timezone)
   const note = site?.status === 'ready' ? summaryNote(site, t) : null
 
   const scan = async () => {
@@ -78,7 +79,9 @@ export function WebsiteScan({ payload, canManage }: { payload: SitePayload; canM
           </Field>
           <div className="flex flex-wrap items-center gap-3">
             <Button type="submit" loading={busy} disabled={scanning || address.trim() === ''}>
-              {site?.scanned_at ? t('content.site.scan_again', 'Scan again') : t('content.site.scan', 'Scan website')}
+              {site?.status === 'failed'
+                ? t('content.common.retry', 'Try again')
+                : site?.scanned_at ? t('content.site.scan_again', 'Scan again') : t('content.site.scan', 'Scan website')}
             </Button>
             <label className="inline-flex items-center gap-2 text-sm text-a-text">
               <input type="checkbox" checked={update} onChange={(e) => setChoice(e.target.checked)} disabled={scanning} />{t('content.site.update_summary', 'Update the company summary')}

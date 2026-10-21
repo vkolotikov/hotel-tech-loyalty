@@ -75,15 +75,25 @@ final class ContentSites
         ];
     }
 
-    /** The site as the portal shows it; a scan that lost its job reads as failed. */
+    /** Has its running scan saved its new list (the list is written before the summary call)? */
+    public static function listSaved(ContentSite $site): bool
+    {
+        return $site->scanned_at !== null && $site->scan_queued_at !== null && $site->scanned_at->gte($site->scan_queued_at);
+    }
+
+    /**
+     * The site as the portal shows it; a scan that lost its job reads as failed — or as ready once it had saved its new
+     * list, as ScanContentWebsite::fail leaves it (final review, 6-1).
+     */
     public static function facts(ContentSite $site): array
     {
         $lost = $site->status === 'scanning' && !self::scanning($site);
+        $kept = $lost && self::listSaved($site);
 
         return [
             'url'                => $site->url,
-            'status'             => $lost ? 'failed' : (string) $site->status,
-            'error'              => $lost ? 'scan_failed' : $site->error,
+            'status'             => $kept ? 'ready' : ($lost ? 'failed' : (string) $site->status),
+            'error'              => $kept ? null : ($lost ? 'scan_failed' : $site->error),
             'scanned_at'         => $site->scanned_at?->toISOString(),
             'articles_count'     => (int) $site->articles_count,
             'pages_count'        => (int) $site->pages_count,
@@ -138,12 +148,23 @@ final class ContentSites
                 'last_promoted_at' => $row->last_at ? CarbonImmutable::parse($row->last_at)->toISOString() : null,
             ];
         }
+        // Every visit through the brand's short links to the page's address — also from posts since archived or removed
+        // (their links stay, without their post) — or through the link of a post that promotes it, once each (final
+        // review, 6-1: a removed post's clicks were lost).
         $clicks = DB::table('content_link_clicks')
             ->join('content_links', 'content_links.id', '=', 'content_link_clicks.link_id')
-            ->join('content_planner_posts', 'content_planner_posts.id', '=', 'content_links.post_id')
-            ->whereIn('content_planner_posts.site_page_id', $ids)
-            ->groupBy('content_planner_posts.site_page_id')
-            ->selectRaw('content_planner_posts.site_page_id as page_id, sum(content_link_clicks.clicks) as clicks')
+            ->leftJoin('content_planner_posts', 'content_planner_posts.id', '=', 'content_links.post_id')
+            ->join('content_site_pages', function ($join) {
+                $join->on('content_site_pages.brand_id', '=', 'content_links.brand_id')
+                    ->on(fn ($either) => $either->on('content_site_pages.url', '=', 'content_links.destination')
+                        ->orOn('content_site_pages.id', '=', 'content_planner_posts.site_page_id'));
+            })
+            ->whereIn('content_site_pages.id', $ids)
+            // Bounded by the pages' brand, so the links' brand index serves it however many clicks the platform has
+            // (fixes-batch review: the OR join alone gave the planner no constant to start from).
+            ->whereIn('content_links.brand_id', DB::table('content_site_pages')->whereIn('id', $ids)->select('brand_id'))
+            ->groupBy('content_site_pages.id')
+            ->selectRaw('content_site_pages.id as page_id, sum(content_link_clicks.clicks) as clicks')
             ->get();
         foreach ($clicks as $row) {
             $out[(int) $row->page_id] ??= $blank;

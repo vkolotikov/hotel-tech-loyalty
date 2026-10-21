@@ -1,6 +1,6 @@
-import { addDays, formatDate, isDateKey } from '../../workspace/lib/wallClock'
+import { addDays, formatDate, isDateKey, venueNow } from '../../workspace/lib/wallClock'
 import { errorKey } from '../lib/errors'
-import type { Channel, DateKey, Platform, PromotionBody, PromotionPreview, PromotionRun, Site, SitePage, SitePayload } from '../lib/types'
+import type { BioPayload, Channel, DateKey, Platform, PromotionBody, PromotionPreview, PromotionRun, Site, SitePage, SitePageKind, SitePayload } from '../lib/types'
 
 /** Release 6's numbers (spec 2026-10-20 §D8); the server holds them too. */
 export const POLL_MS = 4000
@@ -82,6 +82,49 @@ export function previewBody(pageIds: number[], form: PromoteForm): PromotionBody
 }
 
 /**
+ * Cancel and Remove hand the keyboard back to Remove draft posts; once the page's last drafts are gone that button goes
+ * with them, and the keyboard goes to the row's Hide posts instead of the page's top (release check, 6-2). Here, not in
+ * PageRow.tsx: a component file exports only components (fast refresh).
+ */
+export function focusBack(row: ParentNode | null | undefined): void {
+  const target = row?.querySelector<HTMLElement>('[data-remove-trigger]') ?? row?.querySelector<HTMLElement>('[data-posts-toggle]')
+  target?.focus()
+}
+
+/** The problems shown under the form: a number field being retyped (empty) says nothing yet; Promote stays off (final review, 6-2). */
+export function shownProblems(problems: readonly PromoteProblem[], blank: { perPage: boolean; perWeek: boolean }): PromoteProblem[] {
+  return problems.filter(p => !(p === 'per_page' && blank.perPage) && !(p === 'per_week' && blank.perWeek))
+}
+
+/** Which number fields are being retyped: empty while the keyboard is in them; a field left empty says its problem (fixes-batch review). */
+export function retyping(typed: { perPage: string; perWeek: string }, editing: 'perPage' | 'perWeek' | null): { perPage: boolean; perWeek: boolean } {
+  return { perPage: editing === 'perPage' && typed.perPage.trim() === '', perWeek: editing === 'perWeek' && typed.perWeek.trim() === '' }
+}
+
+/** Platforms whose posts cannot hold a working link: their text says "link in bio" (ContentPlatformRules::NO_LINKS). */
+const NO_LINKS: readonly Platform[] = ['instagram', 'tiktok']
+
+/**
+ * Should the dialog say that Instagram and TikTok posts need the link-in-bio page: one of them is chosen and the page is
+ * not on or does not show the latest posts (final review, 6-1). Not while the page is still loading.
+ */
+export function bioNote(platforms: readonly Platform[], bio: BioPayload | undefined): boolean {
+  return bio !== undefined && platforms.some(p => NO_LINKS.includes(p)) && !(bio.page?.is_on && bio.page.show_posts)
+}
+
+const KINDS: SitePageKind[] = ['article', 'page']
+
+/** The tab a key moves to in the kinds-of-pages tab list (arrows wrap, Home and End), or null for other keys (final review, 6-2). */
+export function tabAfter(current: SitePageKind, key: string): SitePageKind | null {
+  const at = KINDS.indexOf(current)
+  if (key === 'ArrowRight') return KINDS[(at + 1) % KINDS.length]
+  if (key === 'ArrowLeft') return KINDS[(at + KINDS.length - 1) % KINDS.length]
+  if (key === 'Home') return KINDS[0]
+  if (key === 'End') return KINDS[KINDS.length - 1]
+  return null
+}
+
+/**
  * The preview is asked only when the settled body it would send is the body on screen and the form has no problem: a
  * body settled before the brand's channels came would send none (release check, 6-2).
  */
@@ -144,15 +187,16 @@ export function pageNumbers(page: SitePage, t: Translate): string {
 }
 
 /** The website's line (spec §5): reading, scanned (with its numbers), or why the scan failed; nothing before a scan. */
-export function siteLine(site: Site | null, t: Translate, locale: string): { tone: 'info' | 'danger'; text: string } | null {
+export function siteLine(site: Site | null, t: Translate, locale: string, timeZone: string): { tone: 'info' | 'danger'; text: string } | null {
   if (site === null || site.status === 'new') return null
   if (site.status === 'scanning') return { tone: 'info', text: t('content.site.scanning', 'Reading your website… This takes a minute or two. You can leave this page.') }
   if (site.status === 'failed') {
     const [key, text] = errorKey('site', site.error ?? 'scan_failed')
     return { tone: 'danger', text: t(key, text) }
   }
-  // The month in full: a short one ends in a dot in several languages ("20 окт."), which met the sentence's own.
-  const date = site.scanned_at ? formatDate(site.scanned_at.slice(0, 10), locale, { day: 'numeric', month: 'long' }) : ''
+  // The venue's day of the scan (final review, 6-2: its UTC day), and the month in full: a short one ends in a dot in
+  // several languages ("20 окт."), which met the sentence's own.
+  const date = site.scanned_at ? formatDate(venueNow(timeZone, new Date(site.scanned_at)).date, locale, { day: 'numeric', month: 'long' }) : ''
   return { tone: 'info', text: t('content.site.scanned', 'Scanned {{date}}. Articles: {{articles}} · Pages: {{pages}}', { date, articles: site.articles_count, pages: site.pages_count }) }
 }
 

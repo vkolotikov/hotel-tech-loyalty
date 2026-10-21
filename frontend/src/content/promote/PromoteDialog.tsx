@@ -12,8 +12,8 @@ import type { Platform, PromotionBody, SitePage } from '../lib/types'
 import { Dialog } from '../ui/Dialog'
 import { PlatformMark } from '../ui/PlatformMark'
 import {
-  DEFAULT_PER_PAGE, DEFAULT_PER_WEEK, MAX_PER_PAGE, MAX_PER_WEEK, PROBLEM_TEXT, askPreview, catchUp, defaultPeriod, newForm, previewBody, previewLine, promotablePlatforms,
-  promoteProblems, promotionBody, type PromoteForm,
+  DEFAULT_PER_PAGE, DEFAULT_PER_WEEK, MAX_PER_PAGE, MAX_PER_WEEK, PROBLEM_TEXT, askPreview, bioNote, catchUp, defaultPeriod, newForm, previewBody, previewLine, promotablePlatforms,
+  promoteProblems, promotionBody, retyping, shownProblems, type PromoteForm,
 } from './promoteMath'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -45,7 +45,12 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
   const today = boot.venue.today
   const brandInfo = useQuery({ queryKey: ['content', brand, 'brand'], queryFn: api.brand, staleTime: 300_000 })
   const channels = useMemo(() => promotablePlatforms(brandInfo.data?.channels ?? []), [brandInfo.data])
+  const bio = useQuery({ queryKey: ['content', brand, 'bio'], queryFn: api.bio, staleTime: 60_000 })
   const [form, setForm] = useState<PromoteForm>(() => newForm(today, pages.length, []))
+  // The numbers as typed: a field cleared to type another stays empty, not 0, and says nothing while the keyboard is in
+  // it; left empty, it says its problem (final review, 6-2; fixes-batch review).
+  const [typed, setTyped] = useState(() => ({ perPage: String(form.perPage), perWeek: String(form.perWeek) }))
+  const [editing, setEditing] = useState<'perPage' | 'perWeek' | null>(null)
   const [off, setOff] = useState<Platform[]>([])
   const [datesTouched, setDatesTouched] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -53,6 +58,7 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
 
   const current: PromoteForm = { ...form, platforms: channels.filter(p => !off.includes(p)) }
   const problems = promoteProblems(pages.length, current, today)
+  const shown = shownProblems(problems, retyping(typed, editing))
   const body = promotionBody(pages.map(p => p.id), current)
   // The preview is asked only what decides the days, once the numbers and dates have settled for 300 ms; while a new
   // answer comes, the last one stays and Promote waits (final review, 6-2: one request per keystroke hit the throttle).
@@ -113,10 +119,14 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
         </div>
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('content.promote.dialog.per_page', 'Posts per page')}>
-            <input type="number" min={1} max={MAX_PER_PAGE} value={form.perPage} onChange={(e) => numbers({ perPage: Number(e.target.value) })} className={INPUT} />
+            <input type="number" min={1} max={MAX_PER_PAGE} value={typed.perPage} className={INPUT}
+              onFocus={() => setEditing('perPage')} onBlur={() => setEditing(null)}
+              onChange={(e) => { const text = e.target.value; setTyped(s => ({ ...s, perPage: text })); numbers({ perPage: Number(text) }) }} />
           </Field>
           <Field label={t('content.promote.dialog.per_week', 'At most per week')}>
-            <input type="number" min={1} max={MAX_PER_WEEK} value={form.perWeek} onChange={(e) => numbers({ perWeek: Number(e.target.value) })} className={INPUT} />
+            <input type="number" min={1} max={MAX_PER_WEEK} value={typed.perWeek} className={INPUT}
+              onFocus={() => setEditing('perWeek')} onBlur={() => setEditing(null)}
+              onChange={(e) => { const text = e.target.value; setTyped(s => ({ ...s, perWeek: text })); numbers({ perWeek: Number(text) }) }} />
           </Field>
         </div>
         {brandInfo.data && channels.length === 0 ? (
@@ -124,15 +134,25 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
         ) : (
           <fieldset>
             <legend className="mb-1.5 text-xs font-medium text-a-text-2">{t('content.promote.dialog.channels', 'Channels')}</legend>
-            <div className="flex flex-wrap gap-3">
-              {channels.map(p => (
-                <label key={p} className="inline-flex items-center gap-1.5 text-sm text-a-text">
-                  <input type="checkbox" checked={!off.includes(p)} onChange={() => setOff(o => (o.includes(p) ? o.filter(x => x !== p) : [...o, p]))} />
-                  <PlatformMark platform={p} size="sm" />{t(`content.platform.${p}`, p)}
-                </label>
-              ))}
-            </div>
+            {/* Not a bare heading while the brand loads (release check, 6-2). */}
+            {!brandInfo.data ? (
+              brandInfo.isError
+                ? <p className="text-sm text-a-danger">{t('content.common.error', 'Something went wrong. Please try again.')}</p>
+                : <p role="status" className="text-sm text-a-text-2">{t('content.common.loading', 'Loading…')}</p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {channels.map(p => (
+                  <label key={p} className="inline-flex items-center gap-1.5 text-sm text-a-text">
+                    <input type="checkbox" checked={!off.includes(p)} onChange={() => setOff(o => (o.includes(p) ? o.filter(x => x !== p) : [...o, p]))} />
+                    <PlatformMark platform={p} size="sm" />{t(`content.platform.${p}`, p)}
+                  </label>
+                ))}
+              </div>
+            )}
           </fieldset>
+        )}
+        {bioNote(current.platforms, bio.data) && (
+          <Notice tone="info">{t('content.promote.dialog.bio_note', 'Instagram and TikTok can’t open links in posts, so these posts say “link in bio”. On the Brand page, turn on Link-in-bio with “Show the latest posts that have a link”: each post’s link appears there once it is published.')}</Notice>
         )}
         <div className="grid grid-cols-2 gap-3">
           <Field label={t('content.promote.dialog.from', 'From')}>
@@ -148,9 +168,9 @@ export function PromoteDialog({ pages, onClose, onStarted }: { pages: SitePage[]
         <Field label={t('content.promote.dialog.instructions', 'Instructions for the AI (optional)')}>
           <textarea value={form.instructions} onChange={(e) => setForm(f => ({ ...f, instructions: e.target.value }))} rows={3} maxLength={2000} className={INPUT} />
         </Field>
-        {problems.length > 0 && channels.length > 0 && (
+        {shown.length > 0 && channels.length > 0 && (
           <ul className="space-y-1 text-xs text-a-danger">
-            {problems.map(p => <li key={p}>{t(`content.promote.dialog.problem.${p}`, PROBLEM_TEXT[p])}</li>)}
+            {shown.map(p => <li key={p}>{t(`content.promote.dialog.problem.${p}`, PROBLEM_TEXT[p])}</li>)}
           </ul>
         )}
         {problems.length === 0 && (preview.isFetching || !fresh) && !words && <p role="status" className="text-sm text-a-text-2">{t('content.promote.dialog.checking', 'Checking the days…')}</p>}

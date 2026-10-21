@@ -77,13 +77,22 @@ class WebFetcherTest extends TestCase
 
     public function test_answers_other_than_200_say_why(): void
     {
-        $this->fakeWebsite(['https://lumiere.example/down' => ['oops', 500]]);
+        $this->fakeWebsite([
+            'https://lumiere.example/down' => ['oops', 500],
+            'https://lumiere.example/busy' => ['slow down', 429],
+            'https://lumiere.example/closed' => ['no', 403],
+        ]);
 
         $why = null;
         $this->assertNull($this->fetcher()->get('https://lumiere.example/missing', 1000, [], $why));
         $this->assertSame('not_found', $why);
+        // Final review (6-1): robots.txt needs a server error told apart from a refusal (RFC 9309 §2.3.1).
         $this->assertNull($this->fetcher()->get('https://lumiere.example/down', 1000, [], $why));
-        $this->assertSame('unreachable', $why);
+        $this->assertSame('server_error', $why);
+        $this->assertNull($this->fetcher()->get('https://lumiere.example/busy', 1000, [], $why));
+        $this->assertSame('server_error', $why);
+        $this->assertNull($this->fetcher()->get('https://lumiere.example/closed', 1000, [], $why));
+        $this->assertSame('refused', $why);
     }
 
     public function test_the_wrong_type_and_too_big_bodies_are_skipped(): void
@@ -103,12 +112,21 @@ class WebFetcherTest extends TestCase
         $this->assertSame('too_big', $why);
     }
 
-    public function test_a_redirect_loop_is_unreachable(): void
+    // Fixes-batch review: robots.txt reads nothing only on a server error or no answer, so redirects and odd answers say so.
+    public function test_a_redirect_loop_and_an_odd_answer_say_what_they_are(): void
     {
-        $this->fakeWebsite(['https://lumiere.example/loop' => ['', 302, ['Location' => '/loop']]]);
+        $this->fakeWebsite([
+            'https://lumiere.example/loop' => ['', 302, ['Location' => '/loop']],
+            'https://lumiere.example/empty' => ['', 204],
+            'https://lumiere.example/nowhere' => ['', 302],
+        ]);
         $why = null;
         $this->assertNull($this->fetcher()->get('https://lumiere.example/loop', 1000, [], $why));
-        $this->assertSame('unreachable', $why);
+        $this->assertSame('redirects', $why);
+        $this->assertNull($this->fetcher()->get('https://lumiere.example/empty', 1000, [], $why));
+        $this->assertSame('unexpected', $why);
+        $this->assertNull($this->fetcher()->get('https://lumiere.example/nowhere', 1000, [], $why));
+        $this->assertSame('unexpected', $why);
     }
 
     /**

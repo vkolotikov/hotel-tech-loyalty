@@ -52,4 +52,35 @@ class RobotsRulesTest extends TestCase
         $this->assertTrue(RobotsRules::parse('<html><body>Not found</body></html>', self::AGENT)->allows('/anything'));
         $this->assertTrue(RobotsRules::allowAll()->allows('/anything'));
     }
+
+    // Final review (6-1), deferred minor: a group named by a part of our name ("bot") applied to us (RFC 9309 §2.2.1).
+    public function test_only_a_group_naming_our_robot_is_ours(): void
+    {
+        $this->assertTrue(RobotsRules::parse("User-agent: bot\nDisallow: /\n", self::AGENT)->allows('/a'));
+        $this->assertTrue(RobotsRules::parse("User-agent: Content\nDisallow: /\n\nUser-agent: *\nAllow: /\n", self::AGENT)->allows('/a'));
+        $this->assertFalse(RobotsRules::parse("User-agent: HexaTechContentBot/1.0\nDisallow: /\n", self::AGENT)->allows('/a'));
+        $this->assertFalse(RobotsRules::parse("User-agent: HEXATECHCONTENTBOT\nDisallow: /\n", self::AGENT)->allows('/a'));
+    }
+
+    // Final review (6-1), deferred minor: patterns with many stars leaned on the regex engine's limits.
+    public function test_patterns_with_many_stars_do_not_lean_on_the_regex_engine(): void
+    {
+        $limit = (string) ini_get('pcre.backtrack_limit');
+        $jit = (string) ini_get('pcre.jit');
+        ini_set('pcre.backtrack_limit', '100');
+        ini_set('pcre.jit', '0');
+        try {
+            $rules = RobotsRules::parse("User-agent: *\nDisallow: /*a*a*a*a*a*.pdf$\n", self::AGENT);
+            $this->assertFalse($rules->allows('/' . str_repeat('a', 3000) . '.pdf'));
+            $this->assertTrue($rules->allows('/' . str_repeat('a', 3000) . '.pdfx'));
+            $this->assertFalse(RobotsRules::parse("User-agent: *\nDisallow: /x*y\n", self::AGENT)->allows('/x-long-y-tail'));
+            $this->assertTrue(RobotsRules::parse("User-agent: *\nDisallow: /x*y$\n", self::AGENT)->allows('/x-y-z'));
+            $this->assertFalse(RobotsRules::parse("User-agent: *\nDisallow: /x*y$\n", self::AGENT)->allows('/x-y-z-y'));
+            $this->assertFalse(RobotsRules::parse("User-agent: *\nDisallow: /a*b*a\n", self::AGENT)->allows('/aba'));
+            $this->assertTrue(RobotsRules::parse("User-agent: *\nDisallow: /ab$\n", self::AGENT)->allows('/abab'));
+        } finally {
+            ini_set('pcre.backtrack_limit', $limit);
+            ini_set('pcre.jit', $jit);
+        }
+    }
 }

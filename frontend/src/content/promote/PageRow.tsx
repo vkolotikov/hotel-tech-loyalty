@@ -13,7 +13,7 @@ import type { SitePage } from '../lib/types'
 import { usePanel } from '../panel/PanelProvider'
 import { PlatformMark } from '../ui/PlatformMark'
 import { StatusPill } from '../ui/StatusDot'
-import { pageNumbers } from './promoteMath'
+import { focusBack, pageNumbers } from './promoteMath'
 
 /**
  * One article or page (spec 2026-10-20 §5): its picture, its title opening the page in a new tab, its date and numbers,
@@ -55,15 +55,6 @@ export function PageRow({ page, canManage, chosen, full, onToggle, locale, busy 
       {open && <PagePosts id={page.id} canManage={canManage} busy={busy} locale={locale} />}
     </li>
   )
-}
-
-/**
- * Cancel and Remove hand the keyboard back to Remove draft posts; once the page's last drafts are gone that button goes
- * with them, and the keyboard goes to the row's Hide posts instead of the page's top (release check, 6-2).
- */
-export function focusBack(row: ParentNode | null | undefined): void {
-  const target = row?.querySelector<HTMLElement>('[data-remove-trigger]') ?? row?.querySelector<HTMLElement>('[data-posts-toggle]')
-  target?.focus()
 }
 
 function PagePosts({ id, canManage, busy, locale }: { id: number; canManage: boolean; busy: boolean; locale: string }) {

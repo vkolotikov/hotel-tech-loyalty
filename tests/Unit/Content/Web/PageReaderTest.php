@@ -31,7 +31,7 @@ HTML;
         $this->assertSame('Autumn colours', $read['title']);
         $this->assertSame('Three warm tones for October.', $read['description']);
         $this->assertSame('https://lumiere.example/img/autumn.jpg', $read['image']);
-        $this->assertSame('2026-09-01T08:00:00+00:00', $read['published_at']);
+        $this->assertSame('2026-09-01T10:00:00+00:00', $read['published_at']);
         $this->assertSame('en-GB', $read['language']);
         $this->assertTrue($read['article']);
         $this->assertSame(['https://lumiere.example/feed/'], $read['feeds']);

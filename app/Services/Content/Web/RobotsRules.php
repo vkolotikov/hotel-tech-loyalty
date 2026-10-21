@@ -3,7 +3,7 @@
 namespace App\Services\Content\Web;
 
 /**
- * robots.txt as the scan obeys it (spec 2026-10-20 §3.5): the group naming our robot, else `*`; `Allow`/`Disallow`
+ * robots.txt as the scan obeys it (spec 2026-10-20 §3.5): the group naming our robot (by its whole name), else `*`; `Allow`/`Disallow`
  * with `*` and `$`; the longest matching rule wins and an `Allow` wins a tie. `Sitemap:` lines are kept for discovery.
  */
 final class RobotsRules
@@ -60,7 +60,7 @@ final class RobotsRules
             foreach ($group['agents'] as $name) {
                 if ($name === '*') {
                     array_push($any, ...$group['rules']);
-                } elseif ($name !== '' && str_contains($agent, $name)) {
+                } elseif (self::token($name) === $agent) {
                     $named = true;
                     array_push($mine, ...$group['rules']);
                 }
@@ -88,12 +88,48 @@ final class RobotsRules
         return $allowed;
     }
 
+    /**
+     * A group's name as the robot it names: "HexaTechContentBot/1.0" is ours, "bot" is not (RFC 9309 §2.2.1: the whole
+     * product token, any case; final review, 6-1).
+     */
+    private static function token(string $name): string
+    {
+        return (string) preg_split('#[/\s]#', $name, 2)[0];
+    }
+
+    /**
+     * `*` matches any run of characters and a final `$` the end, read left to right without the regex engine: a pattern
+     * with many stars cannot run into its limits (final review, 6-1). The first part is a prefix; each middle part is
+     * found at its earliest place after the one before (the earliest place never loses a match); the last part ends the
+     * path when anchored, else is found anywhere after.
+     */
     private static function matches(string $pattern, string $path): bool
     {
         $anchored = str_ends_with($pattern, '$');
-        $core = $anchored ? substr($pattern, 0, -1) : $pattern;
-        $regex = '#^' . implode('.*', array_map(fn (string $part) => preg_quote($part, '#'), explode('*', $core))) . ($anchored ? '$' : '') . '#';
+        $parts = explode('*', $anchored ? substr($pattern, 0, -1) : $pattern);
+        $last = count($parts) - 1;
+        if (!str_starts_with($path, $parts[0])) {
+            return false;
+        }
+        $at = strlen($parts[0]);
+        if ($last === 0) {
+            return !$anchored || $at === strlen($path);
+        }
+        for ($i = 1; $i < $last; $i++) {
+            if ($parts[$i] === '') {
+                continue;
+            }
+            $found = strpos($path, $parts[$i], $at);
+            if ($found === false) {
+                return false;
+            }
+            $at = $found + strlen($parts[$i]);
+        }
+        $tail = $parts[$last];
+        if ($anchored) {
+            return strlen($path) - strlen($tail) >= $at && str_ends_with($path, $tail);
+        }
 
-        return preg_match($regex, $path) === 1;
+        return $tail === '' || strpos($path, $tail, $at) !== false;
     }
 }

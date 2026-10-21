@@ -33,6 +33,11 @@ trait FakesWebsite
         Http::preventStrayRequests();
         $stubs = [];
         foreach ($pages as $url => $page) {
+            // A closure answers for itself (it may throw, as a connection that never answers).
+            if ($page instanceof \Closure) {
+                $stubs[$url] = $page;
+                continue;
+            }
             [$body, $status, $headers] = is_array($page) ? [$page[0], $page[1] ?? 200, $page[2] ?? []] : [$page, 200, []];
             $stubs[$url] = Http::response($body, $status, $headers + ['Content-Type' => self::fakeTypeOf($url)]);
         }

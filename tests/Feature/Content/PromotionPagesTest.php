@@ -8,6 +8,7 @@ use App\Models\ContentPromotion;
 use App\Models\ContentSite;
 use App\Models\ContentSitePage;
 use App\Services\Content\ContentLinks;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Tests\Concerns\SetsUpContentSchema;
@@ -61,6 +62,44 @@ class PromotionPagesTest extends TestCase
         $this->assertSame(0, $pages[$this->other->id]['posts']);
     }
 
+    // Final review (6-1), deferred minor: a page's clicks lost a removed post's clicks (its link stays, without its post).
+    public function test_a_pages_clicks_count_every_visit_also_through_removed_posts(): void
+    {
+        $published = $this->promoPost('published');
+        $draft = $this->promoPost('draft');
+        $archived = $this->promoPost('archived');
+        foreach ([[$published, 5], [$draft, 3], [$archived, 2]] as [$post, $clicks]) {
+            $link = ContentLink::withoutGlobalScopes()->where('post_id', $post->id)->first();
+            DB::table('content_link_clicks')->insert(['link_id' => $link->id, 'day' => '2026-10-04', 'via' => 'direct', 'clicks' => $clicks]);
+        }
+        // A post of this page whose Link now goes elsewhere still counts, once.
+        $moved = $this->promoPost('published');
+        ContentLinks::set($moved, 'https://lumiere.example/elsewhere');
+        $link = ContentLink::withoutGlobalScopes()->where('post_id', $moved->id)->first();
+        DB::table('content_link_clicks')->insert(['link_id' => $link->id, 'day' => '2026-10-04', 'via' => 'direct', 'clicks' => 4]);
+
+        $this->asManager()->deleteJson($this->api("site/pages/{$this->page->id}/posts"))->assertOk()->assertJsonPath('removed', 1);
+        $page = collect($this->asStaffMember()->getJson($this->api('site'))->json('pages'))->firstWhere('id', $this->page->id);
+        $this->assertSame(2, $page['posts']);
+        $this->assertSame(14, $page['clicks']);
+        $this->assertSame(0, collect($this->asStaffMember()->getJson($this->api('site'))->json('pages'))->firstWhere('id', $this->other->id)['clicks']);
+    }
+
+    // Fixes-batch review: GET site (read every few seconds during a scan) must not read every brand's clicks; the read is
+    // bounded by the pages' brand, which the content_links brand index serves.
+    public function test_the_clicks_read_is_bounded_by_the_pages_brand(): void
+    {
+        $reads = [];
+        DB::listen(function (QueryExecuted $query) use (&$reads) {
+            if (str_contains($query->sql, 'content_link_clicks')) {
+                $reads[] = $query->sql;
+            }
+        });
+        $this->asStaffMember()->getJson($this->api('site'))->assertOk();
+        $this->assertCount(1, $reads);
+        $this->assertMatchesRegularExpression('/"content_links"\."brand_id" in \(select "brand_id" from "content_site_pages"/', $reads[0]);
+    }
+
     public function test_everyone_reads_a_pages_posts_by_day_without_archived_ones(): void
     {
         $later = $this->promoPost('draft');
@@ -94,6 +133,26 @@ class PromotionPagesTest extends TestCase
         }
         $this->assertNotNull($approved->fresh());
         $this->assertNotNull($otherPage->fresh());
+    }
+
+    // Final review (6-1), deferred minor: a post approved in another tab while Remove draft posts ran was still removed.
+    public function test_remove_draft_posts_keeps_a_post_approved_meanwhile(): void
+    {
+        $draft = $this->promoPost('draft');
+        $meanwhile = $this->promoPost('draft');
+        $done = false;
+        DB::listen(function (QueryExecuted $query) use ($meanwhile, &$done) {
+            if ($done || !str_starts_with(strtolower(ltrim($query->sql)), 'select')
+                || !str_contains($query->sql, 'from "content_planner_posts"') || !str_contains($query->sql, '"site_page_id"')) {
+                return;
+            }
+            $done = true;
+            DB::table('content_planner_posts')->where('id', $meanwhile->id)->update(['status' => 'approved', 'updated_at' => now()->addSeconds(5)]);
+        });
+
+        $this->asManager()->deleteJson($this->api("site/pages/{$this->page->id}/posts"))->assertOk()->assertJsonPath('removed', 1);
+        $this->assertNull(ContentPlannerPost::find($draft->id));
+        $this->assertSame('approved', $meanwhile->fresh()->status);
     }
 
     public function test_only_managers_remove_drafts_and_not_while_a_promotion_runs(): void

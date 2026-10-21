@@ -52,6 +52,13 @@ class ContentSiteDiscovery
         if ($robotsFile === null && $why === 'bad_address') {
             return ['failure' => 'bad_address'] + $result;
         }
+        // A robots.txt that answers with a server error, or not at all, means read nothing (RFC 9309 §2.3.1.4); a missing
+        // or refused one (4xx) means read everything (final review, 6-1). Nothing answering at all is the site's failure.
+        if ($robotsFile === null && in_array($why, ['server_error', 'unreachable'], true)) {
+            $home = $this->web->get($origin . '/', WebFetcher::HTML_BYTES, WebFetcher::HTML_TYPES);
+
+            return ['failure' => $home === null ? 'site_unreachable' : 'robots_unreachable'] + $result;
+        }
         $robots = $robotsFile !== null ? RobotsRules::parse($robotsFile->body, WebFetcher::AGENT) : RobotsRules::allowAll();
         $result['robots'] = $robots;
         if (!$robots->allows('/')) {

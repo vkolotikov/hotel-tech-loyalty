@@ -15,6 +15,7 @@ use App\Services\Content\ContentRefused;
 use App\Services\Content\ContentSites;
 use App\Services\Content\ContentVersions;
 use App\Services\Content\Web\PublicAddress;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -136,13 +137,22 @@ class SiteController extends Controller
         $removed = 0;
         foreach (ContentPlannerPost::where('site_page_id', $page->id)->whereIn('status', ContentPromotions::DRAFTS)->get() as $post) {
             try {
-                // As deleting one post: out of its group first (its short link stays, release 5b).
-                DB::transaction(function () use ($post) {
+                // Read again under its lock (the group's key first, as every group write), and removed only while it is
+                // still one of this page's drafts: another tab may have approved it meanwhile (final review, 6-1). Then
+                // as deleting one post: out of its group first (its short link stays, release 5b).
+                $gone = DB::transaction(function () use ($post, $page) {
+                    ContentVersions::lockGroup($post);
+                    PostController::lockRow($post);
+                    if ((int) $post->site_page_id !== (int) $page->id || !in_array($post->status, ContentPromotions::DRAFTS, true)) {
+                        return false;
+                    }
                     ContentVersions::unlink($post);
                     $post->delete();
+
+                    return true;
                 }, PostController::ATTEMPTS);
-                $removed++;
-            } catch (ContentRefused) {
+                $removed += $gone ? 1 : 0;
+            } catch (ContentRefused|ModelNotFoundException) {
                 // Deleted meanwhile.
             }
         }

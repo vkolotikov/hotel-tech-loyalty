@@ -65,9 +65,11 @@ class ScanContentWebsite implements ShouldQueue
         self::fail($this->siteId, $this->token, 'scan_failed');
     }
 
+    /** The scan ends failed — or ready when it had already saved its new list (stopped during the summary call). */
     public static function fail(int $siteId, string $token, string $code): void
     {
-        ContentSite::withoutGlobalScopes()->whereKey($siteId)->where('scan_token', $token)->where('status', 'scanning')
-            ->update(['status' => 'failed', 'error' => $code]);
+        $scan = fn () => ContentSite::withoutGlobalScopes()->whereKey($siteId)->where('scan_token', $token)->where('status', 'scanning');
+        $scan()->whereNotNull('scanned_at')->whereColumn('scanned_at', '>=', 'scan_queued_at')->update(['status' => 'ready', 'error' => null]);
+        $scan()->update(['status' => 'failed', 'error' => $code]);
     }
 }

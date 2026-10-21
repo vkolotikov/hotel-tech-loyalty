@@ -31,7 +31,9 @@ class WebFetcher
 
     /**
      * @param list<string> $types accepted media types, by prefix ([] = any)
-     * @param-out ?string $why bad_address | unreachable | not_found | wrong_type | too_big, when null is answered
+     * @param-out ?string $why bad_address | unreachable (no answer) | not_found | server_error (5xx, 429) | refused (other
+     *                         4xx) | unexpected (another status) | redirects (too many, or to no address) | wrong_type |
+     *                         too_big, when null is answered
      */
     public function get(string $url, int $maxBytes, array $types = [], ?string &$why = null): ?WebResponse
     {
@@ -76,7 +78,7 @@ class WebFetcher
             if ($status >= 300 && $status < 400 && $response->header('Location') !== '') {
                 $next = Urls::absolute($response->header('Location'), $url);
                 if ($next === null) {
-                    $why = 'unreachable';
+                    $why = 'redirects';
 
                     return null;
                 }
@@ -84,7 +86,14 @@ class WebFetcher
                 continue;
             }
             if ($status !== 200) {
-                $why = in_array($status, [404, 410], true) ? 'not_found' : 'unreachable';
+                // robots.txt tells a server error (read nothing) from a refusal or an odd answer — a 204, a redirect
+                // without its address — (read everything): RFC 9309 §2.3.1.
+                $why = match (true) {
+                    in_array($status, [404, 410], true) => 'not_found',
+                    $status === 429 || $status >= 500   => 'server_error',
+                    $status >= 400                      => 'refused',
+                    default                             => 'unexpected',
+                };
 
                 return null;
             }
@@ -109,7 +118,7 @@ class WebFetcher
 
             return new WebResponse($url, $type, $body, $header);
         }
-        $why = 'unreachable';
+        $why = 'redirects';
 
         return null;
     }

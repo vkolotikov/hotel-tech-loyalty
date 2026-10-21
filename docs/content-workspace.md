@@ -35,7 +35,7 @@ All under `/api/v1/admin/content/`, behind the admin chain, `workspace:content` 
   `generation_failed`, `already_repeating`, `no_day`, `too_many_snippets`, from release 4b `needs_approval`,
   `approvals_off`, `wrong_status` and `not_yours`, from release 5a `version_exists`, from release 5b `bad_link`,
   `bio_name_invalid`, `bio_name_taken` and `too_many_buttons`, and from release 6 `bad_address`, `already_scanning`,
-  `too_many_scans`, `scan_running`, `scan_failed`, `already_promoting`, `period_too_short`, `too_many_posts`,
+  `too_many_scans`, `scan_running`, `scan_failed`, `robots_unreachable`, `already_promoting`, `period_too_short`, `too_many_posts`,
   `page_not_found` and `promotion_failed`.
 - Generate never writes days already gone on the venue's clock; a range wholly in the past answers `range_in_past`.
   Making a strategy active switches the active pillars to its own; archiving the active one retires them.
@@ -307,12 +307,18 @@ The deferred minors of releases 5a and 5b and the owner's answers of 2026-10-20,
 Spec `docs/superpowers/specs/2026-10-20-content-release-6-design.md`.
 
 - **The scan** (`POST site/scan`, managers; `ScanContentWebsite` on the `ai` queue, `tries` 1, `timeout` 600): robots.txt
-  (`HexaTechContentBot`), then its sitemaps or the usual ones, else the home page's feed, links and blog page; reads up to
+  (the group naming `HexaTechContentBot` by its whole name, any case or version, else `*`; a robots.txt answering 5xx,
+  429 or nothing stops the scan with `robots_unreachable`, a 4xx one reads as none — RFC 9309; patterns matched without
+  the regex engine), then its sitemaps or the usual ones, else the home page's feed, links and blog page; reads up to
   30 pages (home first) and then the 100 newest articles, one at a time, for at most 420 s. Public addresses only: every
-  DNS answer is checked and the connection pinned with `CURLOPT_RESOLVE` (on curl — a streamed Guzzle request would go
-  through PHP's stream handler and ignore the pin); each redirect is checked again; HTML 3 MB, XML 10 MB, pictures 5 MB.
+  DNS answer is checked and the connection pinned with `CURLOPT_CONNECT_TO` and the reached IP checked again (on curl — a
+  streamed Guzzle request would go through PHP's stream handler and ignore the pin); each redirect is checked again; HTML 3 MB, XML 10 MB, pictures 5 MB.
   20 scans per organisation a day (`RateLimiter` key `content:site-scan:{org}`). A token per press: a late job writes
-  nothing. A scan reads failed 1,800 s after it was queued, or 660 s after its job started.
+  nothing. A scan reads failed 1,800 s after it was queued, or 660 s after its job started — ready instead once it has
+  saved its new list (the list, its day and numbers are written before the summary call; a scan stopped during that
+  call keeps them, its `summary_note` saying the summary did not change). A page's date is the day and time the site
+  wrote, its offset dropped, so the day shown is the site's own (pages read before 2026-10-21 keep their UTC day until
+  the next scan reads them again; a page no longer found keeps it).
 - **The company summary** (one AI call, feature `content`, type `website_summary`): kept on `content_sites.summary`, read
   by `ContextBuilder` ("FROM THE BRAND'S WEBSITE") in every Content AI call; it fills `brand_summary`, `usp` and `mission`
   only where they are empty. A manager's edit (`PUT site`) sets `summary_edited`, and a scan then keeps it unless
@@ -321,10 +327,14 @@ Spec `docs/superpowers/specs/2026-10-20-content-release-6-design.md`.
   nearest free slot, channels taking turns at a cost of 3 days, the weekly pace); one `content_promotions` row per page
   and one `WritePromotionPosts` job per row, chained on the `ai` queue. Each post is a draft with `generated_by =
   promotion`, `site_page_id`, its own short link (`utm_campaign = promote-{page}`), the link after the text except on
-  Instagram and TikTok, and the page's picture copied once into the media store. A batch's page reads failed 660 s after
+  Instagram and TikTok (the dialog says they need the link-in-bio page on with its latest posts), and the page's picture
+  copied once into the media store. A page's Posts and Published count its promotion posts not archived; its Clicks
+  count every visit through the brand's short links to its address (also from posts since archived or removed) or
+  through the link of a post promoting it, once each. A batch's page reads failed 660 s after
   its job started, or after 1,800 s without progress in the batch; the next press marks such rows failed.
 - **Undo:** `DELETE site/pages/{id}/posts` removes the page's promotion posts in idea, draft, needs review or needs visual,
-  as deleting one post does (versions unlinked first; short links keep working).
+  as deleting one post does (versions unlinked first; short links keep working); each post is read again under its
+  lock first and kept when another tab approved it meanwhile.
 - **Copies:** versions, repeat copies and duplicates keep `site_page_id`.
 
 ## What this release does not do

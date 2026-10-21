@@ -1292,7 +1292,7 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::put('site', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'update']);
                 Route::post('site/scan', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'scan']);
                 Route::get('site/pages/{id}/posts', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'pagePosts'])->whereNumber('id');
-                Route::delete('site/pages/{id}/posts',[\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'destroyPagePosts'])->whereNumber('id');
+                Route::delete('site/pages/{id}/posts', [\App\Http\Controllers\Api\V1\Admin\Content\SiteController::class, 'destroyPagePosts'])->whereNumber('id');
                 Route::post('promotions/preview', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'preview']);
                 Route::post('promotions', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'store']);
                 Route::get('promotions/current', [\App\Http\Controllers\Api\V1\Admin\Content\PromotionController::class, 'current']);

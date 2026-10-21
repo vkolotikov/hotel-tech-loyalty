@@ -17,8 +17,9 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 import { ContentContext } from '../ContentProvider'
 import { bootFor } from '../brand/brandTesting'
 import type { PromotionRun, Site, SitePage, SitePayload } from '../lib/types'
-import { PageRow, focusBack } from './PageRow'
-import { PromotePage } from './PromotePage'
+import { PageRow } from './PageRow'
+import { focusBack } from './promoteMath'
+import { PromoteBar, PromotePage } from './PromotePage'
 import { PromotionLine } from './PromotionLine'
 
 const site: Site = {
@@ -54,6 +55,9 @@ describe('the Promote page (spec 2026-10-20 §5)', () => {
     const staff = render(payload([], null), false)
     expect(staff).toContain('Your manager has not added the website yet.')
     expect(staff).toContain('Only an owner or a manager can scan the website or promote pages.')
+    // Final review (6-2) M8: a site row made by saving the summary first has no address yet.
+    const noAddress = { ...site, url: null, status: 'new' as const, scanned_at: null }
+    expect(render(payload([], noAddress), true)).toContain('Add your website address to find your blog articles and pages.')
   })
 
   it('shows two tabs with their counts and the articles first', () => {
@@ -63,6 +67,21 @@ describe('the Promote page (spec 2026-10-20 §5)', () => {
     expect(html).toContain('Autumn colours')
     expect(html).toContain('Winter care')
     expect(html).not.toContain('Prices')
+    // Final review (6-2) M11: one tab stop; the arrow keys move between the tabs.
+    expect(html).toMatch(/role="tab"[^>]*tabindex="0"[^>]*>Blog articles/)
+    expect(html).toMatch(/role="tab"[^>]*tabindex="-1"[^>]*>Other pages/)
+  })
+
+  // Final review (6-2) M3: Promote… stayed on while the website was being read (and the press was refused).
+  it('keeps Promote… off while the website is read, and says why', () => {
+    const bar = (blocked: 'promoting' | 'scanning' | null) => renderToStaticMarkup(
+      <PromoteBar count={2} full={false} blocked={blocked} onClear={() => {}} onStart={() => {}} />,
+    )
+    expect(bar('scanning')).toMatch(/<button[^>]*disabled=""[^>]*>Promote…<\/button>/)
+    expect(bar('scanning')).toContain('The website is being read. Promote when it is done.')
+    expect(bar('promoting')).toMatch(/<button[^>]*disabled=""[^>]*>Promote…<\/button>/)
+    expect(bar(null)).not.toMatch(/<button[^>]*disabled=""[^>]*>Promote…<\/button>/)
+    expect(bar(null)).toContain('Selected: 2')
   })
 
   it('says when no article was found, and how to point at the blog', () => {

@@ -58,6 +58,13 @@ describe('the Website section (spec 2026-10-20 §5)', () => {
     expect(html).toContain('href="/content/promote"')
   })
 
+  // Final review (6-2) M13: after a failed scan the button offers to try again.
+  it('says Try again after a failed scan', () => {
+    const html = render({ site: site({ status: 'failed', error: 'site_unreachable' }), suggested_url: null, pages: [] }, true)
+    expect(html).toMatch(/<button[^>]*type="submit"[^>]*>Try again<\/button>/)
+    expect(html).not.toContain('Scan again')
+  })
+
   it('leaves Update unticked for a summary edited by hand, and says it was', () => {
     const html = render({ site: site({ summary_edited: true }), suggested_url: null, pages: [] }, true)
     expect(html).not.toMatch(/<input type="checkbox" checked=""[^>]*>Update the company summary/)

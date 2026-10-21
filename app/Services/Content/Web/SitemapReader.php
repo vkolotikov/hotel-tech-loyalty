@@ -137,7 +137,7 @@ final class SitemapReader
         return $text === '' ? null : mb_substr($text, 0, $max);
     }
 
-    /** A date as UTC ATOM, or null when it is not one. */
+    /** A date as the site wrote it (its wall-clock day and time, labelled +00:00), or null when it is not one. */
     public static function date(?string $value): ?string
     {
         $value = trim((string) $value);
@@ -145,8 +145,10 @@ final class SitemapReader
             return null;
         }
         try {
-            // A date without its own offset is UTC, whatever the server's zone.
-            return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->setTimezone(new \DateTimeZone('UTC'))->format(DATE_ATOM);
+            // The day and time as the site wrote them, its offset dropped: a page published 00:30 Riga time is the 16th,
+            // as the site says, wherever the venue is (final review, 6-2: its UTC day showed the 15th). A date without a
+            // time is midnight. Pages are only shown and ordered by it, where a few hours either way do not matter.
+            return (new \DateTimeImmutable($value, new \DateTimeZone('UTC')))->format('Y-m-d\TH:i:s') . '+00:00';
         } catch (\Throwable) {
             return null;
         }

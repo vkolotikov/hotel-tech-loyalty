@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import type { Channel, PromotionRun, Site, SitePage } from '../lib/types'
+import { errorKey } from '../lib/errors'
+import type { BioPayload, Channel, PromotionRun, Site, SitePage } from '../lib/types'
 import {
-  DEFAULT_PER_PAGE, DEFAULT_PER_WEEK, askPreview, catchUp, defaultPeriod, isPromoting, isScanning, newForm, pageNumbers, planNote, previewBody, previewLine,
-  promotablePlatforms, promoteProblems, promotionBody, promotionEnded, runLine, scanEnded, siteLine, startAddress, stillThere, summaryNote, updateDefault,
+  DEFAULT_PER_PAGE, DEFAULT_PER_WEEK, askPreview, bioNote, catchUp, defaultPeriod, isPromoting, isScanning, newForm, pageNumbers, planNote, previewBody, previewLine,
+  promotablePlatforms, promoteProblems, promotionBody, promotionEnded, retyping, runLine, scanEnded, shownProblems, siteLine, startAddress, stillThere, summaryNote, tabAfter, updateDefault,
 } from './promoteMath'
 
 const t = (_key: string, fallback: string, vars?: Record<string, unknown>) => fallback.replace(/\{\{(\w+)\}\}/g, (_, name) => String((vars ?? {})[name] ?? ''))
@@ -60,14 +61,62 @@ describe('the promote rules (spec 2026-10-20 §4.2, §5)', () => {
     expect(pageNumbers(page({ posts: 10, published: 4, clicks: 37 }), t)).toBe('Posts: 10 · Published: 4 · Clicks: 37')
   })
 
+  // Final review (6-2) M10: clearing a number field to type another showed its problem mid-edit.
+  it('says nothing yet about a number field being retyped', () => {
+    expect(shownProblems(['per_page', 'order'], { perPage: true, perWeek: false })).toEqual(['order'])
+    expect(shownProblems(['per_page', 'per_week'], { perPage: false, perWeek: true })).toEqual(['per_page'])
+    expect(shownProblems(['per_page'], { perPage: false, perWeek: false })).toEqual(['per_page'])
+    // Fixes-batch review: only while the keyboard is in the field; a field left empty says its problem.
+    expect(retyping({ perPage: '', perWeek: '3' }, 'perPage')).toEqual({ perPage: true, perWeek: false })
+    expect(retyping({ perPage: '', perWeek: '3' }, null)).toEqual({ perPage: false, perWeek: false })
+    expect(retyping({ perPage: '', perWeek: '' }, 'perWeek')).toEqual({ perPage: false, perWeek: true })
+    expect(retyping({ perPage: '4', perWeek: '3' }, 'perPage')).toEqual({ perPage: false, perWeek: false })
+  })
+
+  // Final review (6-1): Instagram and TikTok posts point to the link in bio, which must be on and show the posts.
+  it('says when Instagram or TikTok posts have no link-in-bio page showing them', () => {
+    const bio = (page: BioPayload['page']): BioPayload => ({ page, buttons: [], url: null, suggested_name: 'lumiere', base_url: 'https://sites.hexa-tech.uk/links/' })
+    const on = { is_on: true, slug: 'lumiere', title: null, line: null, show_posts: true }
+    expect(bioNote(['instagram'], bio(null))).toBe(true)
+    expect(bioNote(['tiktok', 'linkedin'], bio({ ...on, show_posts: false }))).toBe(true)
+    expect(bioNote(['instagram'], bio({ ...on, is_on: false }))).toBe(true)
+    expect(bioNote(['instagram'], bio(on))).toBe(false)
+    expect(bioNote(['linkedin', 'facebook'], bio(null))).toBe(false)
+    expect(bioNote(['instagram'], undefined)).toBe(false)
+  })
+
+  // Final review (6-2) M6: Remove draft posts had no words for a brand not set up.
+  it('has words for Remove draft posts on a brand not set up', () => {
+    expect(errorKey('drafts', 'no_profile')).toEqual(['content.drafts.error.no_profile', 'This brand is not set up yet.'])
+  })
+
+  // Fixes-batch review: robots_unreachable also stands for a robots.txt that never answered.
+  it('says a robots.txt could not be read, an error or no answer', () => {
+    expect(errorKey('site', 'robots_unreachable')[1]).toBe("The website's robots.txt could not be read (an error or no answer), so Content read nothing. Try again later.")
+  })
+
+  // Final review (6-2) M11: the tabs follow the arrow keys, Home and End, as a tab list should.
+  it('moves between the kinds of pages with the arrow keys', () => {
+    expect(tabAfter('article', 'ArrowRight')).toBe('page')
+    expect(tabAfter('page', 'ArrowRight')).toBe('article')
+    expect(tabAfter('article', 'ArrowLeft')).toBe('page')
+    expect(tabAfter('page', 'Home')).toBe('article')
+    expect(tabAfter('article', 'End')).toBe('page')
+    expect(tabAfter('article', 'Enter')).toBeNull()
+  })
+
   it('says how the website stands', () => {
-    expect(siteLine(null, t, 'en-GB')).toBeNull()
-    expect(siteLine(site({ status: 'new', scanned_at: null }), t, 'en-GB')).toBeNull()
-    expect(siteLine(site({ status: 'scanning' }), t, 'en-GB')?.text).toContain('Reading your website')
-    expect(siteLine(site(), t, 'en-GB')).toEqual({ tone: 'info', text: 'Scanned 20 October. Articles: 42 · Pages: 12' })
+    expect(siteLine(null, t, 'en-GB', 'Europe/London')).toBeNull()
+    expect(siteLine(site({ status: 'new', scanned_at: null }), t, 'en-GB', 'Europe/London')).toBeNull()
+    expect(siteLine(site({ status: 'scanning' }), t, 'en-GB', 'Europe/London')?.text).toContain('Reading your website')
+    expect(siteLine(site(), t, 'en-GB', 'Europe/London')).toEqual({ tone: 'info', text: 'Scanned 20 October. Articles: 42 · Pages: 12' })
     // Release check (6-2): a short month that ends in a dot ("20 окт.", "20. Okt.") met the sentence's own full stop.
-    for (const locale of ['ru', 'de', 'fr', 'es']) expect(siteLine(site(), t, locale)?.text).not.toContain('..')
-    expect(siteLine(site({ status: 'failed', error: 'site_blocked' }), t, 'en-GB')).toEqual({ tone: 'danger', text: "The website's robots.txt does not let Content read it." })
+    for (const locale of ['ru', 'de', 'fr', 'es']) expect(siteLine(site(), t, locale, 'Europe/London')?.text).not.toContain('..')
+    expect(siteLine(site({ status: 'failed', error: 'site_blocked' }), t, 'en-GB', 'Europe/London')).toEqual({ tone: 'danger', text: "The website's robots.txt does not let Content read it." })
+    // Final review (6-2) M5: the scan's day is the venue's, not the UTC day of its instant.
+    const late = site({ scanned_at: '2026-10-20T23:30:00.000000Z' })
+    expect(siteLine(late, t, 'en-GB', 'Europe/Riga')?.text).toContain('Scanned 21 October.')
+    expect(siteLine(late, t, 'en-GB', 'America/New_York')?.text).toContain('Scanned 20 October.')
     expect(summaryNote(site({ summary_note: 'ai_budget_used_up' }), t)).toContain('budget')
     expect(summaryNote(site(), t)).toBeNull()
   })

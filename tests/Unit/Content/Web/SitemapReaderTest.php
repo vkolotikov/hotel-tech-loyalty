@@ -29,7 +29,7 @@ class SitemapReaderTest extends TestCase
 
         $this->assertSame('index', $read['kind']);
         $this->assertSame('https://ex.com/post-sitemap.xml', $read['entries'][0]['url']);
-        $this->assertSame('2026-09-02T08:00:00+00:00', $read['entries'][0]['date']);
+        $this->assertSame('2026-09-02T10:00:00+00:00', $read['entries'][0]['date']);
     }
 
     public function test_a_gzip_sitemap_and_a_byte_order_mark_are_read(): void
@@ -45,7 +45,7 @@ class SitemapReaderTest extends TestCase
             . '<description>&lt;p&gt;Three &lt;b&gt;warm&lt;/b&gt; tones&lt;/p&gt;</description></item></channel></rss>');
 
         $this->assertSame('feed', $read['kind']);
-        $this->assertSame(['url' => 'https://ex.com/blog/autumn', 'date' => '2026-09-01T08:00:00+00:00', 'title' => 'Autumn colours', 'description' => 'Three warm tones'], $read['entries'][0]);
+        $this->assertSame(['url' => 'https://ex.com/blog/autumn', 'date' => '2026-09-01T10:00:00+00:00', 'title' => 'Autumn colours', 'description' => 'Three warm tones'], $read['entries'][0]);
     }
 
     public function test_an_atom_feed_gives_its_alternate_links(): void
@@ -72,5 +72,17 @@ class SitemapReaderTest extends TestCase
     {
         $urls = str_repeat('<url><loc>https://ex.com/p</loc></url>', 5100);
         $this->assertCount(SitemapReader::MAX_ENTRIES, SitemapReader::read('<urlset>' . $urls . '</urlset>')['entries']);
+    }
+
+    // Final review (6-2), deferred minor M5: a page published 00:30 Riga time showed the day before (its UTC day).
+    public function test_a_date_keeps_the_day_and_time_the_site_wrote(): void
+    {
+        $this->assertSame('2026-10-16T00:30:00+00:00', SitemapReader::date('2026-10-16T00:30:00+03:00'));
+        $this->assertSame('2026-10-15T23:30:00+00:00', SitemapReader::date('2026-10-15T23:30:00-05:00'));
+        $this->assertSame('2026-10-16T00:00:00+00:00', SitemapReader::date('2026-10-16'));
+        $this->assertSame('2026-09-01T10:00:00+00:00', SitemapReader::date('Tue, 01 Sep 2026 10:00:00 +0200'));
+        $this->assertSame('2026-09-03T09:00:00+00:00', SitemapReader::date('2026-09-03T09:00:00Z'));
+        $this->assertNull(SitemapReader::date('not a date'));
+        $this->assertNull(SitemapReader::date(''));
     }
 }
