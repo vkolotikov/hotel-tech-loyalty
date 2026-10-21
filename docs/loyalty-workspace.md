@@ -221,9 +221,10 @@ cohort retention or booking figures in Insights; no brand choice. The full admin
 
 ## Deploying
 
-- Release 1 is live (`main` 05f3ad1). Release 2: no migration, no queue or schedule change, no new public route, no
-  new command. Its change list is `git diff --name-status 5895004 <tip>` (5895004 is the branch commit release 1 was
-  built from); it changes full-admin files on purpose: `MemberAdminController`, `MemberImportController`,
+- Release 2 is live (`main` 7549f28, deployed 2026-10-22), built from branch commit 22b99d0: the next release's change
+  list is `git diff --name-status 22b99d0 <tip>`. Release 1 went out as `main` 05f3ad1 from branch commit 5895004.
+- Release 2: no migration, no queue or schedule change, no new public route, no new command. It changed full-admin
+  files on purpose: `MemberAdminController`, `MemberImportController`,
   `MemberMergeService`, `WalletConfigController`, `OffersAdminController`, `PortalBootstrap` (the currency method).
 - Release 1: no migration, no queue or schedule change, no new public route. One new artisan command (`workspace:loyalty`).
 - Ship by the source-patch recipe (`docs/landing-page-builder.md` §6): a worktree from `origin/main`, the change list
