@@ -115,7 +115,10 @@ All server tests are in `tests/Feature/LoyaltyWorkspace/` unless named otherwise
 - **Rules on the source** (`loyalty/tokens.test.ts`): only `a-*` and `l-*` classes, only `/v1/admin/loyalty/…`
   (not `loyalty-presets`), nothing from another workspace, every CSS rule under `[data-loyalty]`.
 - **Dialogs** focus their first field with `lib/useFirstFocus.ts`: `autoFocus` does not work inside the shared
-  Dialog, which focuses its own box after React applies it.
+  Dialog, which focuses its own box after React applies it. The shared Dialog's scrim carries `!m-0`: opened inside a
+  `space-y-*` list it would otherwise take the list's top margin and leave a strip of the page uncovered.
+- **Forms.** The fields and checks Program and Rewards share live in `ui/formParts.tsx` and `lib/forms.ts`; each
+  screen's own rules stay in its pure `programMath.ts` / `rewardsMath.ts`, tested by string.
 
 ## What this release does not do
 
@@ -129,6 +132,8 @@ admin keeps all of these.
   it is stored as if it were UTC; the workspace reads stored instants in the venue's zone. A boost made in the full
   admin at 18:00 in Riga therefore shows here at 21:00 (the full admin's own list shows the same 21:00 in a Riga
   browser). Boosts made or saved in the workspace are right. A fix belongs to the full admin's form.
+- **Amounts carry no currency sign.** A fixed-amount benefit, reward or offer shows "25 off", as the full admin does:
+  the programme stores a bare number and the workspace does not guess the venue's currency.
 - **New rows land on the default brand.** Rewards, offers and boosts created in the workspace go to the
   organisation's default brand, as in the full admin's "All brands".
 - **`docs/appointments-workspace.md`** used to say points are reversed on the full admin's member page; the full admin

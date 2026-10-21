@@ -11,11 +11,9 @@ import { useFirstFocus } from '../lib/useFirstFocus'
 import { TierChip } from '../ui/TierChip'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
-import { Check, FormField, FormFoot, Toggle } from './formParts'
-import {
-  BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, serverProblems, toggled, wallInput, weekdayName,
-  type BoostForm,
-} from './programMath'
+import { Check, FormField, FormFoot, Toggle } from '../ui/formParts'
+import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, weekdayName, type BoostForm } from './programMath'
+import { serverProblems, toggled, wallInput } from '../lib/forms'
 import type { Boost, Tier } from './types'
 import { BOOST_PROBLEM_WORDS } from './words'
 

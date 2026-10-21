@@ -19,13 +19,8 @@ import { APP_NAME, FULL_ADMIN } from './lib/links'
 import { loadBrandPaint, rememberBrandPaint, useLook } from './lib/look'
 import { onShortcuts } from './lib/shortcuts'
 import { Crumb } from './shell/Crumb'
+import { areaOf } from './shell/areaOf'
 import { LoyaltyShortcuts } from './ui/LoyaltyShortcuts'
-
-/** The area an address shows, for the breadcrumb: Members for /loyalty and a member's page. */
-export function areaOf(pathname: string): string {
-  const part = pathname.replace(/^\/loyalty\/?/, '').split('/')[0]
-  return ['requests', 'program', 'rewards', 'scan'].includes(part) ? part : 'members'
-}
 
 /**
  * HexaTech Loyalty on the shared frame (WorkspaceShell), in the cards look Content wears (spec 2026-10-21 §4): the

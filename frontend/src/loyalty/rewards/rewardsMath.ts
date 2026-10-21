@@ -1,6 +1,6 @@
 import { addDays, isDateKey } from '../../workspace/lib/wallClock'
 import type { Can } from '../lib/types'
-import { decimalOf, isWall, numberIn, serverProblems, wallOf, wholeIn, type Problems, type Tone } from '../program/programMath'
+import { decimalOf, isWall, numberIn, serverProblems, wallOf, wholeIn, type Problems, type Tone } from '../lib/forms'
 import type { Offer, OfferBody, OfferOptions, RedemptionFilter, Reward, RewardBody, RewardOptions } from './types'
 
 /**

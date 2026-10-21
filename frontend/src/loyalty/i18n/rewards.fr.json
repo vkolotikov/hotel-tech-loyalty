@@ -1,3 +1,233 @@
 {
-  "title": "Rewards"
+  "applies_to": {
+    "all": "Toutes les réservations",
+    "services": "Prestations uniquement",
+    "stays": "Séjours uniquement"
+  },
+  "cancel": {
+    "body": "{{points}} points reviennent à {{name}}, et la récompense retourne en stock si celui-ci est limité. Le code cesse d’être valable.",
+    "confirm": "Annuler l’échange",
+    "keep": "Le conserver",
+    "title": "Annuler l’échange {{code}} ?"
+  },
+  "catalogue": {
+    "add": "Ajouter une récompense",
+    "fulfilled": "Délivrées",
+    "line": "Ce que les membres peuvent obtenir avec leurs points.",
+    "none": "Le catalogue est vide. Les récompenses ajoutées ici apparaissent dans l’application membre et sur le portail.",
+    "none_left": "Épuisé",
+    "offered": "Proposée",
+    "per_member": "Par membre",
+    "read_only": "Seuls les membres de l’équipe autorisés à gérer les offres peuvent ajouter ou modifier des récompenses.",
+    "redeemed": "Échangées",
+    "stock": "Stock",
+    "until": "Proposée jusqu’au {{when}}"
+  },
+  "discount_phrase": {
+    "fixed_amount": "{{amount}} de remise",
+    "percent_discount": "{{amount}} % de remise"
+  },
+  "discount_type": {
+    "fixed_amount": "Montant de remise",
+    "percent_discount": "Pourcentage de remise"
+  },
+  "edit": "Modifier",
+  "line": "Ce que les membres obtiennent avec leurs points, et ce qui les fait revenir.",
+  "load": {
+    "error": {
+      "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
+      "unknown": "Le chargement a échoué. Veuillez réessayer."
+    }
+  },
+  "no_limit": "Illimité",
+  "offer": {
+    "active": "Active",
+    "active_hint": "Désactivée, l’offre n’est plus visible des membres, même pendant ses dates.",
+    "applies_to": "S’applique à",
+    "choose": "Choisir…",
+    "code": "Code",
+    "code_hint": "Facultatif : 4 à 24 lettres, chiffres ou tirets, enregistrés en majuscules.",
+    "create": "Ajouter l’offre",
+    "description": "Description",
+    "description_hint": "Les membres la lisent dans l’application et sur le portail.",
+    "edit_title": "Modifier {{title}}",
+    "end_date": "Dernier jour",
+    "error": {
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_allowed": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_found": "Cette offre n’existe plus. La liste affiche désormais les offres telles qu’elles sont.",
+      "unknown": "L’offre n’a pas pu être enregistrée. Veuillez réessayer."
+    },
+    "featured": "Mise en avant",
+    "featured_hint": "Présentée en premier aux membres.",
+    "limit_hint": "Vide : illimité.",
+    "new_title": "Ajouter une offre",
+    "per_member_limit": "Utilisations par membre",
+    "problem": {
+      "applies_to": "Choisissez à quoi l’offre s’applique.",
+      "code": "Un code compte 4 à 24 lettres, chiffres ou tirets ; sinon, laissez le champ vide.",
+      "code_taken": "Une autre offre utilise déjà ce code. Choisissez-en un autre.",
+      "description": "Décrivez l’offre : les membres lisent ce texte.",
+      "end_date": "Choisissez le dernier jour.",
+      "order": "L’offre doit se terminer après son premier jour.",
+      "per_member_limit": "Saisissez un nombre entier, 1 ou plus, ou laissez le champ vide pour ne fixer aucune limite.",
+      "start_date": "Choisissez le premier jour.",
+      "tier_ids": "Un niveau choisi ne fait plus partie du programme. Choisissez à nouveau les niveaux.",
+      "title": "Donnez un titre à l’offre, de 191 caractères au plus.",
+      "type": "Choisissez le type d’offre.",
+      "usage_limit": "Saisissez un nombre entier, 1 ou plus, ou laissez le champ vide pour ne fixer aucune limite.",
+      "value": "Saisissez une valeur de 0 à 999 999,99."
+    },
+    "save": "Enregistrer l’offre",
+    "start_date": "Premier jour",
+    "tiers": "Niveaux",
+    "tiers_hint": "Aucun choisi : tous les niveaux.",
+    "title_example": "par ex. Week-end d’automne",
+    "title_field": "Titre",
+    "type": "Type",
+    "usage_limit": "Utilisations au total",
+    "value": "Valeur",
+    "value_hint": "Un pourcentage, un montant, un multiplicateur ou des points, selon le type."
+  },
+  "offer_state": {
+    "ended": "Terminée",
+    "live": "En cours",
+    "off": "Désactivée",
+    "upcoming": "À venir"
+  },
+  "offer_type": {
+    "bonus_points": "Points bonus",
+    "cashback": "Cashback",
+    "discount": "Remise",
+    "fixed_amount": "Montant de remise",
+    "free_night": "Nuit offerte",
+    "points_multiplier": "Multiplicateur de points",
+    "upgrade": "Surclassement"
+  },
+  "offer_value": {
+    "bonus_points": "{{value}} points bonus",
+    "discount": "{{value}} % de remise",
+    "fixed_amount": "{{value}} de remise",
+    "points_multiplier": "points ×{{value}}"
+  },
+  "offers": {
+    "add": "Ajouter une offre",
+    "dates": "{{from}} – {{to}}",
+    "every_tier": "Tous les niveaux",
+    "featured": "Mise en avant",
+    "line": "Les offres spéciales que les membres voient dans l’application et sur le portail.",
+    "none": "Aucune offre pour l’instant.",
+    "per_member": "Jusqu’à {{limit}} par membre",
+    "read_only": "Seuls les membres de l’équipe autorisés à gérer les offres peuvent en ajouter ou en modifier.",
+    "used": "Utilisations : {{used}}",
+    "used_of": "Utilisations : {{used}} sur {{limit}}"
+  },
+  "redemption": {
+    "error": {
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Votre compte n’est pas autorisé à traiter les échanges. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_allowed": "Votre compte n’est pas autorisé à traiter les échanges. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_found": "Cet échange n’existe plus. La liste affiche désormais son état actuel.",
+      "unknown": "Cela n’a pas fonctionné. Rien n’a été modifié ; veuillez réessayer.",
+      "wrong_state": "Quelqu’un d’autre a déjà traité cet échange. La liste affiche désormais son état actuel."
+    }
+  },
+  "redemption_filter": {
+    "all": "Tous",
+    "done": "Traités",
+    "pending": "En attente"
+  },
+  "redemption_state": {
+    "cancelled": "Annulé",
+    "fulfilled": "Délivré",
+    "pending": "En attente"
+  },
+  "redemptions": {
+    "cancel": "Annuler",
+    "filter": "Afficher",
+    "fulfil": "Marquer comme délivré",
+    "line": "Les codes que les membres présentent à l’accueil pour obtenir une récompense.",
+    "no_member": "Ne fait plus partie du programme",
+    "none": "Aucun échange ici pour l’instant.",
+    "none_pending": "Rien n’attend à l’accueil.",
+    "read_only": "Seuls les membres de l’équipe autorisés à échanger des points peuvent délivrer ou annuler un échange.",
+    "unknown_reward": "Une récompense qui n’est plus au catalogue"
+  },
+  "referral_state": {
+    "pending": "En attente",
+    "qualified": "Qualifié",
+    "rewarded": "Récompensé"
+  },
+  "referrals": {
+    "from": "Parrain :",
+    "gone": "Ne fait plus partie des membres",
+    "line": "Les membres qui ont rejoint le programme grâce au code d’un autre membre.",
+    "none": "Aucun parrainage pour l’instant. Les membres trouvent leur code dans l’application.",
+    "pending": "En attente",
+    "points": "Points : +{{referrer}} au parrain, +{{referee}} au nouveau membre",
+    "points_paid": "Points versés",
+    "rewarded": "Récompensés",
+    "total": "Parrainages"
+  },
+  "reward": {
+    "active": "Proposée aux membres",
+    "active_hint": "Désactivée, les membres ne peuvent plus l’échanger ; les codes déjà émis peuvent encore être délivrés.",
+    "applies_to": "S’applique à",
+    "category": "Catégorie",
+    "category_hint": "Votre propre terme, par ex. Restauration. Facultatif.",
+    "create": "Ajouter la récompense",
+    "description": "Description",
+    "description_hint": "Facultatif. Les membres la lisent dans l’application.",
+    "discount_hint": "Pour une récompense que le moteur de réservation déduit du prix.",
+    "discount_type": "Remise",
+    "discount_value": "Montant",
+    "edit_title": "Modifier {{name}}",
+    "error": {
+      "invalid": "Vérifiez les champs signalés ci-dessous.",
+      "network": "Pas de connexion : rien n’a été enregistré. Réessayez.",
+      "no_capability": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_allowed": "Votre compte n’est pas autorisé à modifier les récompenses ou les offres. Un responsable peut l’autoriser dans Équipe, dans l’administration complète.",
+      "not_found": "Cette récompense ne figure plus au catalogue. La liste affiche désormais son état actuel.",
+      "unknown": "La récompense n’a pas pu être enregistrée. Veuillez réessayer."
+    },
+    "expires_at": "Proposée jusqu’au",
+    "expires_hint": "Selon l’heure de l’établissement ({{zone}}). Vide : sans fin.",
+    "name": "Nom",
+    "name_example": "par ex. Petit-déjeuner pour deux",
+    "new_title": "Ajouter une récompense",
+    "no_discount": "Aucune",
+    "per_member_hint": "Combien un même membre peut en obtenir. Vide : illimité.",
+    "per_member_limit": "Par membre",
+    "points_cost": "Coût en points",
+    "problem": {
+      "applies_to": "Choisissez à quoi la remise s’applique.",
+      "category": "La catégorie ne doit pas dépasser 60 caractères.",
+      "description": "Vérifiez la description.",
+      "discount_type": "Choisissez un type de remise, ou « Aucune ».",
+      "discount_value": "Saisissez une remise de 0,01 à 100 000.",
+      "expires_at": "Choisissez une date et une heure, ou laissez le champ vide.",
+      "name": "Donnez un nom à la récompense, de 191 caractères au plus.",
+      "per_member_limit": "Saisissez un nombre entier de 1 à 1 000, ou laissez le champ vide pour ne fixer aucune limite.",
+      "percent_over": "Une remise en pourcentage ne peut pas dépasser 100.",
+      "points_cost": "Saisissez un nombre entier de points de 1 à 1 000 000.",
+      "stock": "Saisissez un nombre entier de 0 à 1 000 000, ou laissez le champ vide pour ne fixer aucune limite.",
+      "terms": "Vérifiez les conditions."
+    },
+    "save": "Enregistrer la récompense",
+    "stock": "Stock",
+    "stock_hint": "Vide : illimité.",
+    "terms": "Conditions",
+    "terms_hint": "Facultatif, par ex. « Non valable les jours fériés. »"
+  },
+  "switched_off": "Désactivée",
+  "tab": {
+    "catalogue": "Catalogue",
+    "offers": "Offres",
+    "redemptions": "Échanges",
+    "referrals": "Parrainages"
+  },
+  "tabs": "Rubriques des récompenses",
+  "title": "Récompenses"
 }

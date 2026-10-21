@@ -41,7 +41,7 @@ export function failureOf(error: unknown): ApiFailure {
   const snake = (v: unknown): v is string => typeof v === 'string' && /^[a-z_]+$/.test(v)
   const fields = data.errors && typeof data.errors === 'object' ? (data.errors as Record<string, string[]>) : undefined
   const code = snake(data.code) ? data.code : snake(data.error) ? data.error : fields ? 'invalid' : response.status === 404 ? 'not_found' : 'unknown'
-  const { error: _e, message: _m, errors: _f, code: _c, ...extra } = data
+  const extra = Object.fromEntries(Object.entries(data).filter(([key]) => !['error', 'message', 'errors', 'code'].includes(key)))
 
   return { status: response.status ?? 0, code, ...(fields ? { fields } : {}), extra }
 }

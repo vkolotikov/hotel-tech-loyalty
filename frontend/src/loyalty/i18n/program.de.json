@@ -1,3 +1,247 @@
 {
-  "title": "Program"
+  "applies_to": {
+    "all": "Alle Buchungen",
+    "services": "Nur Leistungen",
+    "stays": "Nur Aufenthalte"
+  },
+  "benefit": {
+    "category": "Kategorie",
+    "choose": "Bitte wählen…",
+    "code": "Code",
+    "code_fixed": "Der Code bleibt, wie er angelegt wurde: Vorlagen finden den Vorteil darüber.",
+    "code_hint": "Ein kurzer Systemname, z. B. LATE_CHECKOUT. Er lässt sich später nicht ändern.",
+    "create": "Vorteil hinzufügen",
+    "description": "Beschreibung",
+    "description_hint": "Optional. Mitglieder lesen sie in der App.",
+    "edit_title": "{{name}} bearbeiten",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Dieser Vorteil ist nicht mehr im Katalog. Die Seite zeigt jetzt den aktuellen Stand.",
+      "unknown": "Der Vorteil konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "fulfillment_mode": "Art der Gewährung",
+    "name": "Name",
+    "name_example": "z. B. Später Check-out",
+    "new_title": "Vorteil hinzufügen",
+    "problem": {
+      "category": "Bitte wählen Sie eine Kategorie.",
+      "code": "Geben Sie einen kurzen Code mit höchstens 50 Zeichen ein.",
+      "code_taken": "Ein anderer Vorteil hat diesen Code bereits. Bitte wählen Sie einen anderen.",
+      "description": "Bitte prüfen Sie die Beschreibung.",
+      "fulfillment_mode": "Bitte wählen Sie, wie der Vorteil gewährt wird.",
+      "name": "Bitte geben Sie dem Vorteil einen Namen."
+    },
+    "save": "Vorteil speichern"
+  },
+  "benefits": {
+    "add": "Vorteil hinzufügen",
+    "line": "Der Katalog, aus dem die Stufen ihre Vorteile wählen.",
+    "none": "Der Katalog ist leer. Vorteile wie ein später Check-out oder ein Begrüßungsgetränk werden hier angelegt und dann Stufen zugewiesen.",
+    "switch_off": "Deaktivieren",
+    "switch_on": "Aktivieren",
+    "title": "Vorteile"
+  },
+  "boost": {
+    "active": "Aktiv",
+    "active_hint": "Deaktiviert vervielfacht die Aktion nichts, auch nicht innerhalb ihres Zeitraums.",
+    "clock_hint": "Nach der Uhrzeit des Hauses ({{zone}}).",
+    "create": "Aktion hinzufügen",
+    "description": "Beschreibung",
+    "description_hint": "Optional, bis zu 500 Zeichen.",
+    "edit_title": "{{name}} bearbeiten",
+    "ends_at": "Ende",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Diese Aktion gibt es nicht mehr. Die Seite zeigt jetzt das Programm im aktuellen Stand.",
+      "unknown": "Die Aktion konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "multiplier": "Multiplikator",
+    "multiplier_hint": "Während der Aktion gesammelte Punkte werden damit multipliziert, von 1 bis 10.",
+    "name": "Name",
+    "name_example": "z. B. Doppelte Punkte am Wochenende",
+    "new_title": "Aktion hinzufügen",
+    "problem": {
+      "days_of_week": "Bitte prüfen Sie die Wochentage.",
+      "description": "Die Beschreibung darf höchstens 500 Zeichen lang sein.",
+      "ends_at": "Bitte wählen Sie, wann die Aktion endet.",
+      "multiplier": "Geben Sie einen Multiplikator von 1 bis 10 ein, z. B. 2 oder 1,5.",
+      "name": "Geben Sie der Aktion einen Namen mit höchstens 120 Zeichen.",
+      "order": "Die Aktion muss nach ihrem Beginn enden.",
+      "starts_at": "Bitte wählen Sie, wann die Aktion beginnt.",
+      "tier_ids": "Eine gewählte Stufe ist nicht mehr im Programm. Bitte wählen Sie die Stufen neu."
+    },
+    "save": "Aktion speichern",
+    "starts_at": "Beginn",
+    "tiers": "Stufen",
+    "tiers_hint": "Keine gewählt: alle Stufen.",
+    "weekdays": "Wochentage",
+    "weekdays_hint": "Keiner gewählt: jeden Tag."
+  },
+  "boost_state": {
+    "ended": "Beendet",
+    "live": "Läuft",
+    "off": "Deaktiviert",
+    "upcoming": "Geplant"
+  },
+  "boosts": {
+    "add": "Aktion hinzufügen",
+    "every_day": "Jeden Tag",
+    "every_tier": "Alle Stufen",
+    "line": "Zeiten nach der Uhrzeit des Hauses ({{zone}}).",
+    "none": "Keine Aktionen. Eine Aktion vervielfacht eine Zeit lang die Punkte, die Mitglieder sammeln – etwa doppelte Punkte am Wochenende.",
+    "range": "{{from}} – {{to}}",
+    "remove": "Entfernen",
+    "title": "Punkte-Aktionen"
+  },
+  "category": {
+    "access": "Zugang",
+    "accommodation": "Unterkunft",
+    "dining": "Gastronomie",
+    "discount": "Rabatt",
+    "other": "Sonstiges",
+    "points": "Punkte",
+    "recognition": "Wertschätzung",
+    "transport": "Transfer",
+    "wellness": "Wellness"
+  },
+  "edit": "Bearbeiten",
+  "fulfillment_mode": {
+    "automatic": "Automatisch",
+    "on_request": "Auf Anfrage",
+    "pms_linked": "Über das Buchungssystem",
+    "staff_approved": "Nach Freigabe durch das Team",
+    "voucher": "Gutschein"
+  },
+  "in_use": "Aktiv",
+  "line": "Die Stufen, die Mitglieder erreichen, ihre Vorteile und Punkte-Aktionen.",
+  "load": {
+    "error": {
+      "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Das Programm konnte nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "read_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+  "remove_boost": {
+    "body": "Bereits durch die Aktion vergebene Punkte bleiben bei den Mitgliedern. Das lässt sich nicht rückgängig machen; um die Aktion zu pausieren, deaktivieren Sie sie stattdessen.",
+    "confirm": "Aktion entfernen",
+    "keep": "Behalten",
+    "title": "{{name}} entfernen?"
+  },
+  "switched_off": "Deaktiviert",
+  "take_off": {
+    "body": "Mitglieder der Stufe {{tier}} sehen den Vorteil nicht mehr in der App und im Portal. Bereits gestellte Anfragen bleiben bestehen.",
+    "confirm": "Entfernen",
+    "keep": "Behalten",
+    "title": "{{benefit}} aus {{tier}} entfernen?"
+  },
+  "threshold": {
+    "nights": "Nächte bis zur Stufe",
+    "points": "Punkte bis zur Stufe",
+    "spend": "Umsatz bis zur Stufe",
+    "stays": "Aufenthalte bis zur Stufe"
+  },
+  "tier": {
+    "active": "Aktiv",
+    "active_hint": "Deaktiviert steigt kein Mitglied in diese Stufe auf.",
+    "color": "Farbe",
+    "color_hex": "Farbe als Hex-Code",
+    "create": "Stufe hinzufügen",
+    "description": "Beschreibung",
+    "description_hint": "Optional. Mitglieder lesen sie in der App.",
+    "earn_rate": "Sammelrate",
+    "earn_rate_hint": "Punkte pro ausgegebener Einheit; 1,5 bringt die Hälfte mehr.",
+    "edit_title": "{{name}} bearbeiten",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Diese Stufe ist nicht mehr im Programm. Die Seite zeigt jetzt den aktuellen Stand.",
+      "unknown": "Die Stufe konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "min_points": "Punkte bis zur Stufe",
+    "name": "Name",
+    "name_example": "z. B. Gold",
+    "new_title": "Stufe hinzufügen",
+    "preview": "Vorschau",
+    "problem": {
+      "color": "Geben Sie die Farbe als # und sechs Hex-Ziffern ein, z. B. #c9a227, oder lassen Sie das Feld leer.",
+      "description": "Bitte prüfen Sie die Beschreibung.",
+      "earn_rate": "Geben Sie eine Sammelrate von 0 bis 99,99 ein, z. B. 1,5.",
+      "min_points": "Geben Sie eine ganze Punktzahl von 0 bis 10.000.000 ein.",
+      "name": "Bitte geben Sie der Stufe einen Namen."
+    },
+    "save": "Stufe speichern"
+  },
+  "tier_benefit": {
+    "add_title": "Vorteil für {{tier}} hinzufügen",
+    "already": "{{tier}} gewährt diesen Vorteil bereits: Beim Speichern ändern sich Wortlaut und Wert.",
+    "applies_to": "Gilt für",
+    "applies_to_hint": "Bei welchen Buchungen ein Rabatt oder Multiplikator zählt.",
+    "benefit": "Vorteil",
+    "choose": "Vorteil wählen…",
+    "close": "Schließen",
+    "create": "Vorteil gewähren",
+    "edit_title": "{{benefit}} in {{tier}}",
+    "empty_catalogue": "Der Katalog enthält noch keinen aktiven Vorteil. Legen Sie zuerst einen unter „Vorteile“ an.",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Diese Stufe oder dieser Vorteil ist nicht mehr im Programm. Die Seite zeigt jetzt den aktuellen Stand.",
+      "unknown": "Das hat nicht funktioniert. Es wurde nichts geändert; bitte versuchen Sie es erneut."
+    },
+    "problem": {
+      "applies_to": "Bitte wählen Sie, wofür der Wert gilt.",
+      "benefit_id": "Bitte wählen Sie einen Vorteil aus dem Katalog.",
+      "multiplier_under": "Ein Punkte-Multiplikator muss mindestens 1 sein.",
+      "percent_over": "Ein prozentualer Rabatt kann nicht über 100 liegen.",
+      "value": "Der Wortlaut darf höchstens 255 Zeichen lang sein.",
+      "value_amount": "Geben Sie einen Betrag von 0 bis 1.000.000 ein.",
+      "value_type": "Bitte wählen Sie die Art des Werts."
+    },
+    "save": "Vorteil speichern",
+    "value": "Wortlaut",
+    "value_amount": "Betrag",
+    "value_hint": "Was Mitglieder neben dem Vorteil lesen, z. B. „Bis 14 Uhr“. Optional.",
+    "value_type": "Art des Werts"
+  },
+  "tiers": {
+    "add": "Stufe hinzufügen",
+    "add_benefit": "Vorteil hinzufügen",
+    "benefits": "Vorteile",
+    "change_benefit": "Bearbeiten",
+    "earn_rate": "Sammelrate",
+    "ladder": "Die Stufen der Reihe nach, von der ersten an",
+    "members": "Mitglieder",
+    "no_benefits": "Diese Stufe gewährt noch keinen Vorteil.",
+    "none": "Noch keine Stufen.",
+    "none_manager": "Noch keine Stufen. Legen Sie die erste an: Das Programm startet, sobald eine Stufe aktiv ist.",
+    "take_off_label": "{{benefit}} aus {{tier}} entfernen",
+    "title": "Stufen"
+  },
+  "title": "Programm",
+  "value_phrase": {
+    "fixed_amount": "{{amount}} Rabatt",
+    "percent_discount": "{{amount}} % Rabatt",
+    "points_multiplier": "×{{amount}} Punkte"
+  },
+  "value_type": {
+    "fixed_amount": "Fester Rabattbetrag",
+    "free_item": "Gratisleistung",
+    "percent_discount": "Prozentualer Rabatt",
+    "points_multiplier": "Punkte-Multiplikator",
+    "text": "Nur Wortlaut"
+  }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import { serverProblems } from '../program/programMath'
+import { serverProblems } from '../lib/forms'
 import {
   OFFER_FIELDS, offerBody, offerFormOf, offerProblems, offerState, offerTone, offerValue, redemptionActions, redemptionTone, referralTone,
   rewardBody, rewardDiscount, rewardFormOf, rewardProblems, rewardServerProblems, rewardsActions, searchFor, stockOf, tabAfter, tabFrom, typeChoices,

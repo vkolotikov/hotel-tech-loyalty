@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import {
-  BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState,
-  chosenTiers, boostTone, decimalOf, existingOn, named, needsAmount, programActions, serverProblems, thresholds, tierBenefitBody,
-  tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, toggled, typedValue, wallInput, wallOf,
-  weekdayName, weekdaysText,
-} from './programMath'
+import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsAmount, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
+import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, ...more })

@@ -1,3 +1,233 @@
 {
-  "title": "Rewards"
+  "applies_to": {
+    "all": "Todas las reservas",
+    "services": "Solo servicios",
+    "stays": "Solo estancias"
+  },
+  "cancel": {
+    "body": "{{points}} puntos vuelven a {{name}} y la recompensa vuelve al stock si este es limitado. El código deja de funcionar.",
+    "confirm": "Cancelar canje",
+    "keep": "Conservarlo",
+    "title": "¿Cancelar el canje {{code}}?"
+  },
+  "catalogue": {
+    "add": "Añadir recompensa",
+    "fulfilled": "Entregadas",
+    "line": "En qué pueden gastar sus puntos los miembros.",
+    "none": "El catálogo está vacío. Las recompensas que añada aquí aparecen en la aplicación de miembros y en el portal.",
+    "none_left": "Agotada",
+    "offered": "Disponible",
+    "per_member": "Por miembro",
+    "read_only": "Solo el personal autorizado a gestionar ofertas puede añadir o modificar recompensas.",
+    "redeemed": "Canjeadas",
+    "stock": "Stock",
+    "until": "Disponible hasta el {{when}}"
+  },
+  "discount_phrase": {
+    "fixed_amount": "{{amount}} de descuento",
+    "percent_discount": "{{amount}} % de descuento"
+  },
+  "discount_type": {
+    "fixed_amount": "Importe de descuento",
+    "percent_discount": "Porcentaje de descuento"
+  },
+  "edit": "Editar",
+  "line": "En qué gastan sus puntos los miembros y qué los hace volver.",
+  "load": {
+    "error": {
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "unknown": "No se ha podido cargar. Inténtelo de nuevo."
+    }
+  },
+  "no_limit": "Sin límite",
+  "offer": {
+    "active": "Activa",
+    "active_hint": "Desactivada, los miembros dejan de verla, incluso entre sus fechas.",
+    "applies_to": "Se aplica a",
+    "choose": "Elegir…",
+    "code": "Código",
+    "code_hint": "Opcional: de 4 a 24 letras, dígitos o guiones; se guarda en mayúsculas.",
+    "create": "Añadir oferta",
+    "description": "Descripción",
+    "description_hint": "Los miembros la leen en la aplicación y en el portal.",
+    "edit_title": "Editar {{title}}",
+    "end_date": "Último día",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_allowed": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_found": "Esta oferta ya no existe. La lista muestra ahora las ofertas tal como están.",
+      "unknown": "No se ha podido guardar la oferta. Inténtelo de nuevo."
+    },
+    "featured": "Destacada",
+    "featured_hint": "Se muestra primero a los miembros.",
+    "limit_hint": "Vacío: sin límite.",
+    "new_title": "Añadir una oferta",
+    "per_member_limit": "Usos por miembro",
+    "problem": {
+      "applies_to": "Elija a qué se aplica la oferta.",
+      "code": "Un código tiene de 4 a 24 letras, dígitos o guiones; si no, deje el campo vacío.",
+      "code_taken": "Otra oferta ya tiene este código. Elija otro.",
+      "description": "Describa la oferta: los miembros leen este texto.",
+      "end_date": "Elija el último día.",
+      "order": "La oferta debe terminar después de su primer día.",
+      "per_member_limit": "Introduzca un número entero, 1 o más, o deje el campo vacío para no fijar límite.",
+      "start_date": "Elija el primer día.",
+      "tier_ids": "Uno de los niveles elegidos ya no está en el programa. Vuelva a elegir los niveles.",
+      "title": "Dé un título a la oferta, de 191 caracteres como máximo.",
+      "type": "Elija el tipo de oferta.",
+      "usage_limit": "Introduzca un número entero, 1 o más, o deje el campo vacío para no fijar límite.",
+      "value": "Introduzca un valor de 0 a 999.999,99."
+    },
+    "save": "Guardar oferta",
+    "start_date": "Primer día",
+    "tiers": "Niveles",
+    "tiers_hint": "Ninguno elegido: todos los niveles.",
+    "title_example": "p. ej. Fin de semana de otoño",
+    "title_field": "Título",
+    "type": "Tipo",
+    "usage_limit": "Usos en total",
+    "value": "Valor",
+    "value_hint": "Un porcentaje, un importe, un multiplicador o puntos, según el tipo."
+  },
+  "offer_state": {
+    "ended": "Finalizada",
+    "live": "En curso",
+    "off": "Desactivada",
+    "upcoming": "Próxima"
+  },
+  "offer_type": {
+    "bonus_points": "Puntos extra",
+    "cashback": "Reembolso",
+    "discount": "Descuento",
+    "fixed_amount": "Importe de descuento",
+    "free_night": "Noche gratis",
+    "points_multiplier": "Multiplicador de puntos",
+    "upgrade": "Mejora de categoría"
+  },
+  "offer_value": {
+    "bonus_points": "{{value}} puntos extra",
+    "discount": "{{value}} % de descuento",
+    "fixed_amount": "{{value}} de descuento",
+    "points_multiplier": "puntos ×{{value}}"
+  },
+  "offers": {
+    "add": "Añadir oferta",
+    "dates": "{{from}} – {{to}}",
+    "every_tier": "Todos los niveles",
+    "featured": "Destacada",
+    "line": "Ofertas especiales que los miembros ven en la aplicación y en el portal.",
+    "none": "Aún no hay ofertas.",
+    "per_member": "Hasta {{limit}} por miembro",
+    "read_only": "Solo el personal autorizado a gestionar ofertas puede añadirlas o modificarlas.",
+    "used": "Usos: {{used}}",
+    "used_of": "Usos: {{used}} de {{limit}}"
+  },
+  "redemption": {
+    "error": {
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Su cuenta no puede gestionar canjes. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_allowed": "Su cuenta no puede gestionar canjes. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_found": "Este canje ya no existe. La lista muestra ahora su estado actual.",
+      "unknown": "No ha funcionado. No se ha cambiado nada; inténtelo de nuevo.",
+      "wrong_state": "Otra persona ya ha gestionado este canje. La lista muestra ahora su estado actual."
+    }
+  },
+  "redemption_filter": {
+    "all": "Todos",
+    "done": "Gestionados",
+    "pending": "Pendientes"
+  },
+  "redemption_state": {
+    "cancelled": "Cancelado",
+    "fulfilled": "Entregado",
+    "pending": "Pendiente"
+  },
+  "redemptions": {
+    "cancel": "Cancelar",
+    "filter": "Mostrar",
+    "fulfil": "Marcar como entregado",
+    "line": "Códigos que los miembros muestran en recepción para obtener una recompensa.",
+    "no_member": "Ya no forma parte del programa",
+    "none": "Aún no hay canjes aquí.",
+    "none_pending": "No hay nada pendiente en recepción.",
+    "read_only": "Solo el personal autorizado a canjear puntos puede entregar o cancelar un canje.",
+    "unknown_reward": "Una recompensa que ya no está en el catálogo"
+  },
+  "referral_state": {
+    "pending": "Pendiente",
+    "qualified": "Cualificado",
+    "rewarded": "Recompensado"
+  },
+  "referrals": {
+    "from": "Invitación de",
+    "gone": "Ya no es miembro",
+    "line": "Miembros que se unieron con el código de otro miembro.",
+    "none": "Aún no hay referidos. Los miembros encuentran su código en la aplicación.",
+    "pending": "Pendientes",
+    "points": "Puntos: +{{referrer}} para quien invita, +{{referee}} para el nuevo miembro",
+    "points_paid": "Puntos otorgados",
+    "rewarded": "Recompensados",
+    "total": "Referidos"
+  },
+  "reward": {
+    "active": "Disponible para los miembros",
+    "active_hint": "Desactivada, los miembros ya no pueden canjearla; los códigos ya emitidos aún pueden entregarse.",
+    "applies_to": "Se aplica a",
+    "category": "Categoría",
+    "category_hint": "Su propia palabra, p. ej. Restauración. Opcional.",
+    "create": "Añadir recompensa",
+    "description": "Descripción",
+    "description_hint": "Opcional. Los miembros la leen en la aplicación.",
+    "discount_hint": "Para una recompensa que el motor de reservas descuenta del precio.",
+    "discount_type": "Descuento",
+    "discount_value": "Importe",
+    "edit_title": "Editar {{name}}",
+    "error": {
+      "invalid": "Revise los campos marcados abajo.",
+      "network": "Sin conexión: no se ha guardado nada. Inténtelo de nuevo.",
+      "no_capability": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_allowed": "Su cuenta no puede modificar recompensas ni ofertas. Un responsable puede permitirlo en Equipo, en la administración completa.",
+      "not_found": "Esta recompensa ya no está en el catálogo. La lista muestra ahora su estado actual.",
+      "unknown": "No se ha podido guardar la recompensa. Inténtelo de nuevo."
+    },
+    "expires_at": "Disponible hasta",
+    "expires_hint": "Según la hora del establecimiento ({{zone}}). Vacío: sin fin.",
+    "name": "Nombre",
+    "name_example": "p. ej. Desayuno para dos",
+    "new_title": "Añadir una recompensa",
+    "no_discount": "Ninguno",
+    "per_member_hint": "Cuántas puede obtener un mismo miembro. Vacío: sin límite.",
+    "per_member_limit": "Por miembro",
+    "points_cost": "Coste en puntos",
+    "problem": {
+      "applies_to": "Elija a qué se aplica el descuento.",
+      "category": "La categoría no puede superar los 60 caracteres.",
+      "description": "Revise la descripción.",
+      "discount_type": "Elija un tipo de descuento, o «Ninguno».",
+      "discount_value": "Introduzca un descuento de 0,01 a 100.000.",
+      "expires_at": "Elija una fecha y una hora, o deje el campo vacío.",
+      "name": "Dé un nombre a la recompensa, de 191 caracteres como máximo.",
+      "per_member_limit": "Introduzca un número entero de 1 a 1.000, o deje el campo vacío para no fijar límite.",
+      "percent_over": "Un descuento porcentual no puede superar 100.",
+      "points_cost": "Introduzca un número entero de puntos de 1 a 1.000.000.",
+      "stock": "Introduzca un número entero de 0 a 1.000.000, o deje el campo vacío para no fijar límite.",
+      "terms": "Revise las condiciones."
+    },
+    "save": "Guardar recompensa",
+    "stock": "Stock",
+    "stock_hint": "Vacío: sin límite.",
+    "terms": "Condiciones",
+    "terms_hint": "Opcional, p. ej. «No válido en días festivos»."
+  },
+  "switched_off": "Desactivada",
+  "tab": {
+    "catalogue": "Catálogo",
+    "offers": "Ofertas",
+    "redemptions": "Canjes",
+    "referrals": "Referidos"
+  },
+  "tabs": "Secciones de recompensas",
+  "title": "Recompensas"
 }

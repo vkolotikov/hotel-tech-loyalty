@@ -1,3 +1,233 @@
 {
-  "title": "Rewards"
+  "applies_to": {
+    "all": "Alle Buchungen",
+    "services": "Nur Leistungen",
+    "stays": "Nur Aufenthalte"
+  },
+  "cancel": {
+    "body": "{{points}} Punkte gehen an {{name}} zurück, und die Prämie kehrt in den Bestand zurück, falls dieser begrenzt ist. Der Code wird ungültig.",
+    "confirm": "Einlösung stornieren",
+    "keep": "Behalten",
+    "title": "Einlösung {{code}} stornieren?"
+  },
+  "catalogue": {
+    "add": "Prämie hinzufügen",
+    "fulfilled": "Ausgegeben",
+    "line": "Wofür Mitglieder ihre Punkte einlösen können.",
+    "none": "Der Katalog ist leer. Hier angelegte Prämien erscheinen in der Mitglieder-App und im Portal.",
+    "none_left": "Vergriffen",
+    "offered": "Angeboten",
+    "per_member": "Pro Mitglied",
+    "read_only": "Nur Teammitglieder, die Angebote verwalten dürfen, können Prämien anlegen oder ändern.",
+    "redeemed": "Eingelöst",
+    "stock": "Bestand",
+    "until": "Angeboten bis {{when}}"
+  },
+  "discount_phrase": {
+    "fixed_amount": "{{amount}} Rabatt",
+    "percent_discount": "{{amount}} % Rabatt"
+  },
+  "discount_type": {
+    "fixed_amount": "Betragsrabatt",
+    "percent_discount": "Prozentrabatt"
+  },
+  "edit": "Bearbeiten",
+  "line": "Wofür Mitglieder ihre Punkte einlösen – und was sie wiederkommen lässt.",
+  "load": {
+    "error": {
+      "network": "Keine Verbindung. Bitte prüfen Sie das Netzwerk und versuchen Sie es erneut.",
+      "unknown": "Die Daten konnten nicht geladen werden. Bitte versuchen Sie es erneut."
+    }
+  },
+  "no_limit": "Unbegrenzt",
+  "offer": {
+    "active": "Aktiv",
+    "active_hint": "Deaktiviert sehen Mitglieder das Angebot nicht mehr, auch nicht innerhalb seines Zeitraums.",
+    "applies_to": "Gilt für",
+    "choose": "Bitte wählen…",
+    "code": "Code",
+    "code_hint": "Optional: 4 bis 24 Buchstaben, Ziffern oder Bindestriche, gespeichert in Großbuchstaben.",
+    "create": "Angebot hinzufügen",
+    "description": "Beschreibung",
+    "description_hint": "Mitglieder lesen sie in der App und im Portal.",
+    "edit_title": "{{title}} bearbeiten",
+    "end_date": "Letzter Tag",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_allowed": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_found": "Dieses Angebot gibt es nicht mehr. Die Liste zeigt jetzt den aktuellen Stand.",
+      "unknown": "Das Angebot konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "featured": "Hervorgehoben",
+    "featured_hint": "Wird Mitgliedern zuerst gezeigt.",
+    "limit_hint": "Leer: unbegrenzt.",
+    "new_title": "Angebot hinzufügen",
+    "per_member_limit": "Nutzungen pro Mitglied",
+    "problem": {
+      "applies_to": "Bitte wählen Sie, wofür das Angebot gilt.",
+      "code": "Ein Code hat 4 bis 24 Buchstaben, Ziffern oder Bindestriche – oder lassen Sie das Feld leer.",
+      "code_taken": "Ein anderes Angebot hat diesen Code bereits. Bitte wählen Sie einen anderen.",
+      "description": "Beschreiben Sie das Angebot: Mitglieder lesen diesen Text.",
+      "end_date": "Bitte wählen Sie den letzten Tag.",
+      "order": "Das Angebot muss nach seinem ersten Tag enden.",
+      "per_member_limit": "Geben Sie eine ganze Zahl ab 1 ein oder lassen Sie das Feld für „unbegrenzt“ leer.",
+      "start_date": "Bitte wählen Sie den ersten Tag.",
+      "tier_ids": "Eine gewählte Stufe ist nicht mehr im Programm. Bitte wählen Sie die Stufen neu.",
+      "title": "Geben Sie dem Angebot einen Titel mit höchstens 191 Zeichen.",
+      "type": "Bitte wählen Sie die Art des Angebots.",
+      "usage_limit": "Geben Sie eine ganze Zahl ab 1 ein oder lassen Sie das Feld für „unbegrenzt“ leer.",
+      "value": "Geben Sie einen Wert von 0 bis 999.999,99 ein."
+    },
+    "save": "Angebot speichern",
+    "start_date": "Erster Tag",
+    "tiers": "Stufen",
+    "tiers_hint": "Keine gewählt: alle Stufen.",
+    "title_example": "z. B. Herbstwochenende",
+    "title_field": "Titel",
+    "type": "Art",
+    "usage_limit": "Nutzungen insgesamt",
+    "value": "Wert",
+    "value_hint": "Ein Prozentsatz, ein Betrag, ein Multiplikator oder Punkte – je nach Art."
+  },
+  "offer_state": {
+    "ended": "Beendet",
+    "live": "Läuft",
+    "off": "Deaktiviert",
+    "upcoming": "Geplant"
+  },
+  "offer_type": {
+    "bonus_points": "Bonuspunkte",
+    "cashback": "Cashback",
+    "discount": "Rabatt",
+    "fixed_amount": "Betragsrabatt",
+    "free_night": "Gratisnacht",
+    "points_multiplier": "Punkte-Multiplikator",
+    "upgrade": "Upgrade"
+  },
+  "offer_value": {
+    "bonus_points": "{{value}} Bonuspunkte",
+    "discount": "{{value}} % Rabatt",
+    "fixed_amount": "{{value}} Rabatt",
+    "points_multiplier": "×{{value}} Punkte"
+  },
+  "offers": {
+    "add": "Angebot hinzufügen",
+    "dates": "{{from}} – {{to}}",
+    "every_tier": "Alle Stufen",
+    "featured": "Hervorgehoben",
+    "line": "Sonderangebote, die Mitglieder in der App und im Portal sehen.",
+    "none": "Noch keine Angebote.",
+    "per_member": "Bis zu {{limit}} pro Mitglied",
+    "read_only": "Nur Teammitglieder, die Angebote verwalten dürfen, können Angebote anlegen oder ändern.",
+    "used": "Genutzt: {{used}}",
+    "used_of": "Genutzt: {{used}} von {{limit}}"
+  },
+  "redemption": {
+    "error": {
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Ihr Konto darf keine Einlösungen bearbeiten. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_allowed": "Ihr Konto darf keine Einlösungen bearbeiten. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_found": "Diese Einlösung gibt es nicht mehr. Die Liste zeigt jetzt den aktuellen Stand.",
+      "unknown": "Das hat nicht funktioniert. Es wurde nichts geändert; bitte versuchen Sie es erneut.",
+      "wrong_state": "Jemand anderes hat diese Einlösung bereits bearbeitet. Die Liste zeigt jetzt den aktuellen Stand."
+    }
+  },
+  "redemption_filter": {
+    "all": "Alle",
+    "done": "Erledigt",
+    "pending": "Offen"
+  },
+  "redemption_state": {
+    "cancelled": "Storniert",
+    "fulfilled": "Ausgegeben",
+    "pending": "Offen"
+  },
+  "redemptions": {
+    "cancel": "Stornieren",
+    "filter": "Anzeigen",
+    "fulfil": "Als ausgegeben markieren",
+    "line": "Codes, die Mitglieder für eine Prämie an der Rezeption vorzeigen.",
+    "no_member": "Nicht mehr im Programm",
+    "none": "Hier gibt es noch keine Einlösungen.",
+    "none_pending": "An der Rezeption wartet nichts.",
+    "read_only": "Nur Teammitglieder, die Punkte einlösen dürfen, können Einlösungen ausgeben oder stornieren.",
+    "unknown_reward": "Eine Prämie, die nicht mehr im Katalog ist"
+  },
+  "referral_state": {
+    "pending": "Offen",
+    "qualified": "Qualifiziert",
+    "rewarded": "Belohnt"
+  },
+  "referrals": {
+    "from": "Geworben von",
+    "gone": "Kein Mitglied mehr",
+    "line": "Mitglieder, die über den Code eines anderen Mitglieds beigetreten sind.",
+    "none": "Noch keine Empfehlungen. Mitglieder finden ihren Code in der App.",
+    "pending": "Offen",
+    "points": "Punkte: +{{referrer}} für das werbende, +{{referee}} für das neue Mitglied",
+    "points_paid": "Ausgezahlte Punkte",
+    "rewarded": "Belohnt",
+    "total": "Empfehlungen"
+  },
+  "reward": {
+    "active": "Für Mitglieder angeboten",
+    "active_hint": "Deaktiviert können Mitglieder die Prämie nicht mehr einlösen; bereits erstellte Codes können weiterhin ausgegeben werden.",
+    "applies_to": "Gilt für",
+    "category": "Kategorie",
+    "category_hint": "Ihr eigener Begriff, z. B. Gastronomie. Optional.",
+    "create": "Prämie hinzufügen",
+    "description": "Beschreibung",
+    "description_hint": "Optional. Mitglieder lesen sie in der App.",
+    "discount_hint": "Für eine Prämie, die das Buchungssystem vom Preis abzieht.",
+    "discount_type": "Rabatt",
+    "discount_value": "Betrag",
+    "edit_title": "{{name}} bearbeiten",
+    "error": {
+      "invalid": "Bitte prüfen Sie die unten markierten Felder.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_allowed": "Ihr Konto darf Prämien und Angebote nicht ändern. Ein Manager kann das unter „Team“ in der vollständigen Verwaltung freigeben.",
+      "not_found": "Diese Prämie ist nicht mehr im Katalog. Die Liste zeigt jetzt den aktuellen Stand.",
+      "unknown": "Die Prämie konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "expires_at": "Angeboten bis",
+    "expires_hint": "Nach der Uhrzeit des Hauses ({{zone}}). Leer: kein Ende.",
+    "name": "Name",
+    "name_example": "z. B. Frühstück für zwei",
+    "new_title": "Prämie hinzufügen",
+    "no_discount": "Keiner",
+    "per_member_hint": "Wie viele ein Mitglied einlösen darf. Leer: unbegrenzt.",
+    "per_member_limit": "Pro Mitglied",
+    "points_cost": "Kosten in Punkten",
+    "problem": {
+      "applies_to": "Bitte wählen Sie, wofür der Rabatt gilt.",
+      "category": "Die Kategorie darf höchstens 60 Zeichen lang sein.",
+      "description": "Bitte prüfen Sie die Beschreibung.",
+      "discount_type": "Bitte wählen Sie eine Rabattart oder „Keiner“.",
+      "discount_value": "Geben Sie einen Rabatt von 0,01 bis 100.000 ein.",
+      "expires_at": "Bitte wählen Sie Datum und Uhrzeit oder lassen Sie das Feld leer.",
+      "name": "Geben Sie der Prämie einen Namen mit höchstens 191 Zeichen.",
+      "per_member_limit": "Geben Sie eine ganze Zahl von 1 bis 1.000 ein oder lassen Sie das Feld für „unbegrenzt“ leer.",
+      "percent_over": "Ein prozentualer Rabatt kann nicht über 100 liegen.",
+      "points_cost": "Geben Sie eine ganze Punktzahl von 1 bis 1.000.000 ein.",
+      "stock": "Geben Sie eine ganze Zahl von 0 bis 1.000.000 ein oder lassen Sie das Feld für „unbegrenzt“ leer.",
+      "terms": "Bitte prüfen Sie die Bedingungen."
+    },
+    "save": "Prämie speichern",
+    "stock": "Bestand",
+    "stock_hint": "Leer: unbegrenzt.",
+    "terms": "Bedingungen",
+    "terms_hint": "Optional, z. B. „Nicht an Feiertagen gültig.“"
+  },
+  "switched_off": "Deaktiviert",
+  "tab": {
+    "catalogue": "Katalog",
+    "offers": "Angebote",
+    "redemptions": "Einlösungen",
+    "referrals": "Empfehlungen"
+  },
+  "tabs": "Bereiche der Prämien",
+  "title": "Prämien"
 }

@@ -9,11 +9,9 @@ import { refusalKey } from '../lib/errors'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { afterProgramChange, programApi } from './api'
 import { ERRORS } from './errors'
-import { FormField, FormFoot } from './formParts'
-import {
-  benefitChoices, existingOn, named, needsAmount, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems,
-  type TierBenefitForm,
-} from './programMath'
+import { FormField, FormFoot } from '../ui/formParts'
+import { benefitChoices, existingOn, needsAmount, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, type TierBenefitForm } from './programMath'
+import { named } from '../lib/forms'
 import type { Benefit, ProgramOptions, Tier, TierBenefit } from './types'
 import { APPLIES_TO_WORDS, TIER_BENEFIT_PROBLEM_WORDS, VALUE_TYPE_WORDS } from './words'
 

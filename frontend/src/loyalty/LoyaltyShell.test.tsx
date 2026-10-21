@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { LoyaltyContext, type LoyaltyContextValue } from './LoyaltyProvider'
-import { LoyaltyShell, areaOf } from './LoyaltyShell'
+import { LoyaltyShell } from './LoyaltyShell'
+import { areaOf } from './shell/areaOf'
 import type { Bootstrap } from './lib/types'
 
 vi.mock('react-i18next', () => ({

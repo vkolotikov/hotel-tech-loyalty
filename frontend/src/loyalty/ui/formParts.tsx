@@ -2,7 +2,7 @@ import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode 
 import { Button } from '../../workspace/ui/Button'
 import { Dialog } from '../../workspace/ui/Dialog'
 import { Notice } from '../../workspace/ui/Notice'
-import type { Tone } from './programMath'
+import type { Tone } from '../lib/forms'
 
 /**
  * The small pieces Program's and Rewards' forms share (spec 2026-10-21 §4.5, §4.6, §7): a field that says in the
@@ -39,7 +39,7 @@ export function Check({ label, hint, checked, onChange }: { label: string; hint?
   return (
     <div className="flex items-start gap-2.5">
       <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} aria-describedby={hint ? `${id}-hint` : undefined}
-        className="mt-0.5 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent" />
+        className="mt-0.5 h-4 w-4 shrink-0 rounded border-a-border accent-a-accent-text" />
       <div className="min-w-0">
         <label htmlFor={id} className="block text-sm font-medium text-a-text">{label}</label>
         {hint && <p id={`${id}-hint`} className="text-xs text-a-text-2">{hint}</p>}
