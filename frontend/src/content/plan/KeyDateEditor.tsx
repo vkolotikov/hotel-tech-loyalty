@@ -8,7 +8,7 @@ import { useApi, useBrandId } from '../ContentProvider'
 import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import type { DateKey, OwnKeyDate, OwnKind } from '../lib/types'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { keyDateBody, keyDateForm, keyDateProblem, type KeyDateForm } from './keyDateMath'
 
 /**

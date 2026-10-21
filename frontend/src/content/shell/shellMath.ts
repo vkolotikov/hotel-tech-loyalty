@@ -1,20 +1,3 @@
-/** The person's role under their name in the side panel (spec 2026-10-21 §4.1): Owner, Manager, else Staff. */
-export function roleLabelKey(role: string | null): [string, string] {
-  if (role === 'owner') return ['content.shell.role.owner', 'Owner']
-  if (role === 'manager') return ['content.shell.role.manager', 'Manager']
-  return ['content.shell.role.staff', 'Staff']
-}
-
-/** The item a key moves to in a menu of `count` items: the arrows wrap, Home and End go to the ends; null for other keys. */
-export function menuKey(key: string, index: number, count: number): number | null {
-  if (count <= 0) return null
-  if (key === 'ArrowDown') return (index + 1) % count
-  if (key === 'ArrowUp') return (index - 1 + count) % count
-  if (key === 'Home') return 0
-  if (key === 'End') return count - 1
-  return null
-}
-
 /** A brand without a logo in its chip (spec 2026-10-21 §4.2): the first letters of its first two words, else its first two letters. */
 export function brandInitials(name: string): string {
   const words = name.trim().split(/\s+/).filter(Boolean)

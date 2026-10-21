@@ -12,7 +12,7 @@ import type { Channel, DateKey, PostDetail, Slot, Template } from '../lib/types'
 import { useActiveStrategy } from '../lib/useActiveStrategy'
 import { usePanel } from '../panel/PanelProvider'
 import { createBody, newForm } from '../panel/panelState'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { usualTimes } from './addMath'
 import { startPost, templateDraft, writeInto, type TemplateFlow } from './templateFlow'
 

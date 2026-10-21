@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import type { LiveLook } from '../../workspace/lib/look'
+import type { LiveLook } from '../lib/look'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

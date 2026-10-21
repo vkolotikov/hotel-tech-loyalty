@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { focusWasInside, outside } from '../ui/menuFocus'
+import { focusWasInside, outside } from '../lib/menuFocus'
 import { menuKey } from './shellMath'
 
 /** Where the list opens from its button: up (the side panel's foot), down (the top bar, the panel), or beside a slim rail. */

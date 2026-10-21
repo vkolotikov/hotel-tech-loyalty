@@ -2,7 +2,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode, typ
 import { useTranslation } from 'react-i18next'
 import { Hash, Link2, ListPlus, Smile } from 'lucide-react'
 import type { Snippet } from '../lib/types'
-import { focusWasInside, outside } from '../ui/menuFocus'
+import { focusWasInside, outside } from '../../workspace/lib/menuFocus'
 import { PopMenu } from '../ui/PopMenu'
 import { EmojiPicker } from './EmojiPicker'
 import { linkToInsert, loadRecent, pushRecent, saveRecent, type InsertMode } from './toolbarMath'

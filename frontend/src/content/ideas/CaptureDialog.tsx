@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { QuickCapture } from './QuickCapture'
 
 /** The capture box behind I and Find's "Add an idea" (spec 2026-10-16 §4.3), anywhere in Content; Escape closes it. */

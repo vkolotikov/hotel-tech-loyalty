@@ -40,6 +40,15 @@ const CORE = [
   'find/findCore.ts',
   'find/FindFrame.tsx',
   'WorkspaceShell.tsx',
+  // Content's cards frame, shared with HexaTech Loyalty (spec 2026-10-21 Loyalty §6.1).
+  'lib/menuFocus.ts',
+  'lib/dialogFocus.ts',
+  'ui/Dialog.tsx',
+  'ui/PageBoundary.tsx',
+  'ui/PageHeader.tsx',
+  'shell/shellMath.ts',
+  'shell/SideMenu.tsx',
+  'shell/FrameFooter.tsx',
 ]
 
 function sourceFiles(dir: string): string[] {
@@ -53,7 +62,7 @@ function sourceFiles(dir: string): string[] {
 const ADMIN_CLASS = /(?:^|[\s'"`{(])(?:hover:|focus:|focus-visible:|active:|disabled:|group-hover:|sm:|md:|lg:|xl:)*(?:bg|text|border|ring|divide|placeholder|from|to|via|outline|fill|stroke)-(?:dark-[a-z0-9]+|primary-\d{2,3}|t-primary|t-secondary|t-muted|white|black|accent|error|warning|info|gray-\d{2,3}|emerald-\d{2,3})(?:\/\d+)?(?=[\s'"`)}])/
 const PORTAL_CLASS = /(?:^|[\s'"`{(])(?:[a-z-]+:)*(?:bg|text|border|ring|divide|placeholder|outline|rounded|shadow|font)-p-[a-z]/
 const ANY_API = /\/v1\//
-const FROM_A_WORKSPACE = /(?:\bfrom\s+|\bimport\s*\(\s*)['"](?:\.\.\/)+(?:appointments|content)\//
+const FROM_A_WORKSPACE = /(?:\bfrom\s+|\bimport\s*\(\s*)['"](?:\.\.\/)+(?:appointments|content|loyalty)\//
 
 /** Every rule's selector list: after the start, a `}` — or a `{` (the first rule inside @media/@container). */
 const SELECTORS = /(^|[{}])\s*([^{}@]+)\{/g

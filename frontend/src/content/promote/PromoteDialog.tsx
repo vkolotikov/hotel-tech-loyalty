@@ -9,7 +9,7 @@ import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import { refreshLists } from '../lib/planCache'
 import type { Platform, PromotionBody, SitePage } from '../lib/types'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { PlatformMark } from '../ui/PlatformMark'
 import {
   DEFAULT_PER_PAGE, DEFAULT_PER_WEEK, MAX_PER_PAGE, MAX_PER_WEEK, PROBLEM_TEXT, askPreview, bioNote, catchUp, defaultPeriod, newForm, previewBody, previewLine, promotablePlatforms,

@@ -10,7 +10,7 @@ import { errorKey } from '../../lib/errors'
 import { LANGUAGES, languageName } from '../../lib/languages'
 import { INTENSITIES, optionText } from '../../lib/options'
 import type { Intensity, Platform } from '../../lib/types'
-import { Dialog } from '../../ui/Dialog'
+import { Dialog } from '../../../workspace/ui/Dialog'
 import { ChoiceChips, Segmented, SelectField, TextField } from '../inputs'
 import { useBrand } from '../useBrand'
 

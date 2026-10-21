@@ -10,7 +10,7 @@ import { failureOf } from '../lib/api'
 import { errorKey } from '../lib/errors'
 import { refreshLists } from '../lib/planCache'
 import type { StrategySummary } from '../lib/types'
-import { Dialog } from '../ui/Dialog'
+import { Dialog } from '../../workspace/ui/Dialog'
 import { strategyTitle, type Generation } from './strategyMath'
 
 const STATUS_TEXT: Record<StrategySummary['status'], string> = {

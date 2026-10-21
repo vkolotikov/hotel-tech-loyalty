@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ListFilter } from 'lucide-react'
 import type { Platform, PostStatus } from '../lib/types'
-import { SideMenu } from '../shell/SideMenu'
+import { SideMenu } from '../../workspace/shell/SideMenu'
 import { PlatformMark } from '../ui/PlatformMark'
 import { toggleShown, type PlanFilter } from './planMath'
 

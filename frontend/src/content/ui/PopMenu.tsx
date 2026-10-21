@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { focusWasInside, listPlace, outside } from './menuFocus'
+import { focusWasInside, listPlace, outside } from '../../workspace/lib/menuFocus'
 
 export interface PopItem {
   id: string
