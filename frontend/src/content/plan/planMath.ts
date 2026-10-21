@@ -1,5 +1,5 @@
 import { addDays, addMonths, formatDate, monthGrid, monthOf, weekOf } from '../../workspace/lib/wallClock'
-import type { DateKey, Platform, PostCard, PostStatus, Slot } from '../lib/types'
+import type { DateKey, PlanFigures, Platform, PostCard, PostStatus, Slot } from '../lib/types'
 
 /** The Plan's views (spec §4.2): the week (default), the month, and the list, the only one below 1024 px. */
 export type PlanView = 'week' | 'month' | 'list'
@@ -47,8 +47,15 @@ export function filtered(posts: PostCard[], slots: Slot[], filter: PlanFilter): 
   }
 }
 
-export function togglePlatform(chosen: Platform[], platform: Platform): Platform[] {
-  return chosen.includes(platform) ? chosen.filter(p => p !== platform) : [...chosen, platform]
+/**
+ * A channel chip pressed (spec 2026-10-21 §6.2): the filter keeps the channels shown, none meaning every one; the chip
+ * hides or shows its channel, every chip shown again is no filter, and the last channel showing stays.
+ */
+export function toggleShown(chosen: Platform[], platform: Platform, chips: Platform[]): Platform[] {
+  const shown = chosen.length === 0 ? chips : chosen.filter(p => chips.includes(p))
+  const next = shown.includes(platform) ? shown.filter(p => p !== platform) : chips.filter(p => p === platform || shown.includes(p))
+  if (next.length === 0) return shown
+  return chips.every(p => next.includes(p)) ? [] : next
 }
 
 /** The chips worth showing: the platforms the plan holds and those already chosen, in the brand's order. */
@@ -66,6 +73,26 @@ export function rangeLabel(view: PlanView, range: PlanRange, date: DateKey, loca
 /** Whether a day of the month grid belongs to the month shown (the days around it are dimmed). */
 export const inMonth = (day: DateKey, date: DateKey): boolean => monthOf(day) === monthOf(date)
 
+/**
+ * The open Unscheduled list's box (spec 2026-10-21 §6.2): it stays open while a card is dragged out of it, and then lets
+ * the pointer through (faded), so the days under it take the drop.
+ */
+export function trayListClass(dragging: boolean): string {
+  const base = 'absolute left-0 top-full z-30 mt-2 max-h-[60vh] w-80 max-w-[calc(100vw-2rem)] animate-a-pop overflow-y-auto rounded-xl border border-a-border bg-a-surface p-3 shadow-a-lg transition-opacity'
+  return dragging ? `${base} pointer-events-none opacity-60` : base
+}
+
+/** The month view's numbers over its month alone (the grid's six weeks reach into the months around it), counted as the server counts a range. */
+export function monthFigures(posts: PostCard[], slots: Slot[], date: DateKey): PlanFigures {
+  const mine = posts.filter(p => p.scheduled_date !== null && inMonth(p.scheduled_date, date))
+  return {
+    planned: mine.filter(p => p.status !== 'skipped').length,
+    ready: mine.filter(p => p.status === 'ready_to_publish').length,
+    published: mine.filter(p => p.status === 'published').length,
+    open_slots: slots.filter(s => inMonth(s.date, date)).length,
+  }
+}
+
 /** One slot's name, for the one being filled ("2026-10-07|instagram"). */
 export const slotKey = (slot: Slot): string => `${slot.date}|${slot.platform}`
 
@@ -76,3 +103,21 @@ export const opensAfterFill = (madeFor: number | null, shownNow: number | null):
 export const keepWithinBrand = (brand: number | null) =>
   <T,>(previous: T | undefined, previousQuery?: { queryKey: readonly unknown[] }): T | undefined =>
     previousQuery?.queryKey[1] === brand ? previous : undefined
+
+/** The views in the order the calendar bar draws them (spec 2026-10-21 §6.3). */
+export const VIEW_ORDER: PlanView[] = ['month', 'week', 'list']
+
+/** The view a key moves to in the Month · Week · List radio group: the arrows wrap, Home and End go to the ends. */
+export function viewAfter(view: PlanView, key: string): PlanView | null {
+  const at = VIEW_ORDER.indexOf(view)
+  if (key === 'ArrowRight' || key === 'ArrowDown') return VIEW_ORDER[(at + 1) % VIEW_ORDER.length]
+  if (key === 'ArrowLeft' || key === 'ArrowUp') return VIEW_ORDER[(at - 1 + VIEW_ORDER.length) % VIEW_ORDER.length]
+  if (key === 'Home') return VIEW_ORDER[0]
+  if (key === 'End') return VIEW_ORDER[VIEW_ORDER.length - 1]
+  return null
+}
+
+/** A month day's label (spec 2026-10-21 §6.4): its number, and its short month only when it belongs to another month. */
+export function monthDayLabel(day: DateKey, shown: DateKey, locale: string): { number: string; month: string | null } {
+  return { number: String(Number(day.slice(8))), month: monthOf(day) === monthOf(shown) ? null : formatDate(day, locale, { month: 'short' }) }
+}

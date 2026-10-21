@@ -23,7 +23,14 @@
     "budget_warn": "Se ha usado el {{percent}} % del presupuesto de IA de este mes.",
     "budget_over": "El presupuesto de IA de este mes se ha agotado. Las acciones de IA quedan en pausa hasta el mes que viene; puedes seguir escribiendo a mano.",
     "not_set_up_manager": "Esta marca aún no está configurada, así que la IA no conoce su voz ni sus canales.",
-    "not_set_up_staff": "Tu responsable aún no ha configurado esta marca."
+    "not_set_up_staff": "Tu responsable aún no ha configurado esta marca.",
+    "workspace": "Espacio de trabajo",
+    "settings": "Ajustes",
+    "help": "Ayuda y recursos",
+    "find_short": "Buscar",
+    "role": { "owner": "Propietario", "manager": "Responsable", "staff": "Equipo" },
+    "breadcrumb": "Ruta de navegación",
+    "page_write": "Redactar"
   },
   "platform": {
     "linkedin": "LinkedIn", "instagram": "Instagram", "tiktok": "TikTok", "facebook": "Facebook",
@@ -65,7 +72,16 @@
     "add_menu": "Añadir el {{day}}",
     "add": { "post": "Nueva publicación", "template": "Desde una plantilla…", "note": "Nota", "event": "Evento" },
     "generating": "La IA está escribiendo publicaciones…",
-    "promoting": "La IA está escribiendo las publicaciones de promoción…"
+    "promoting": "La IA está escribiendo las publicaciones de promoción…",
+    "line": "Una visión clara de lo que viene.",
+    "numbers": "Planificadas: {{planned}} · Listas: {{ready}} · Publicadas: {{published}} · Huecos libres: {{open}}",
+    "status_chip": "Estado: {{name}}",
+    "unscheduled_chip": "Sin fecha ({{count}})",
+    "legend_draft": "Borrador",
+    "legend_keydate": "Fecha clave",
+    "select_post": "Elige una publicación para ver sus detalles",
+    "card_label_time_status": "{{platform}} {{time}}: {{status}}, {{text}}",
+    "card_label_status": "{{platform}}: {{status}}, {{text}}"
   },
   "move": {
     "error": {
@@ -195,7 +211,32 @@
     "template": "Plantilla",
     "template_replace": "¿Reemplazar el texto ya escrito por esta plantilla?",
     "blanks": "Huecos por rellenar: {{count}} — {{list}}",
-    "promotes": "Promociona:"
+    "promotes": "Promociona:",
+    "details": "Detalles de la publicación",
+    "no_day": "Aún sin día",
+    "more": "Más acciones",
+    "tab_content": "Contenido",
+    "tab_ai": "Herramientas de IA",
+    "tab_activity": "Actividad",
+    "tab_activity_count": "Actividad ({{count}})",
+    "create_first": "Primero cree la publicación para usar esto.",
+    "hook_label": "Gancho de la publicación",
+    "hook_placeholder": "Escriba la primera línea que verá la gente",
+    "post_text": "Texto de la publicación",
+    "add_link": "Añadir URL de destino",
+    "fold_targeting": "Segmentación e idioma",
+    "fold_links": "Enlace y hashtags",
+    "fold_versions": "Versiones y repetición",
+    "save_draft": "Guardar borrador",
+    "tools": "Herramientas de texto",
+    "tool_emoji": "Emoji",
+    "tool_link": "Insertar enlace",
+    "tool_hashtags": "Insertar grupo de hashtags",
+    "emoji_search": "Buscar emoji (en inglés)",
+    "emoji_recent": "Recientes",
+    "emoji_none": "Ningún emoji coincide.",
+    "emoji_group": { "smileys": "Caritas", "people": "Personas", "hearts": "Corazones", "nature": "Naturaleza", "food": "Comida", "activity": "Actividades", "objects": "Objetos", "symbols": "Símbolos" },
+    "link_address": "Dirección web"
   },
   "save": {
     "error": {

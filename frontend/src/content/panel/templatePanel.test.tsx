@@ -20,7 +20,8 @@ import type { Bootstrap, PostDetail, Template } from '../lib/types'
 import { TemplatePicker } from '../plan/TemplatePicker'
 import { PanelProvider } from './PanelProvider'
 import { newForm } from './panelState'
-import { PostActions } from './PostActions'
+import { MoreList } from './PanelMore'
+import { usePostActions } from './postActionsState'
 import { PostFormFields } from './PostFormFields'
 
 const noop = () => {}
@@ -34,6 +35,11 @@ const post: PostDetail = {
   language: 'en', goal: null, format: null, main_copy: 'Warm tones.', short_copy: null, cta: null, hashtags: [],
   audience_id: null, campaign_id: null, weekday_role: null, funnel_stage: null, post_type: null, strategic_reason: null,
   quality: null, published_url: null, published_at: null, generated_by: 'manual', hook_alternatives: [], visual_brief: null,
+}
+/** The ⋯ menu's list, drawn from the panel's shared actions state. */
+function MoreOf() {
+  const actions = usePostActions({ post, dirty: false, onPost: noop, onDuplicated: noop, onDeleted: noop })
+  return <MoreList actions={actions} />
 }
 const fields = (templates: Template[], hook = '') => renderToStaticMarkup(
   <PostFormFields form={{ ...newForm({ date: '2026-10-20', platform: 'instagram' }, ['instagram']), hook }} onChange={noop} platforms={['instagram']} statuses={['draft']}
@@ -58,8 +64,9 @@ describe('templates in the post panel (spec 2026-10-16 §5.3)', () => {
     expect(fields([], 'Book your colour refresh')).not.toContain('Blanks to fill')
   })
 
+  // Release 7a (spec 2026-10-21 §7.2): "Save as template" is in the panel's ⋯ menu.
   it('offers managers "Save as template" on a saved post, and not staff', () => {
-    const actions = <PostActions post={post} dirty={false} onPost={noop} onDuplicated={noop} onDeleted={noop} />
+    const actions = <MoreOf />
     expect(withBoot(bootFor(true), actions)).toContain('Save as template')
     expect(withBoot(bootFor(false), actions)).not.toContain('Save as template')
   })

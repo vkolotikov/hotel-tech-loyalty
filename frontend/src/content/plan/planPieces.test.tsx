@@ -11,9 +11,12 @@ import { MonthGrid } from './MonthGrid'
 import { PostCardView } from './PostCardView'
 import { SlotRow } from './SlotRow'
 import { Toolbar } from './Toolbar'
-import { Tray } from './Tray'
+import { TrayList } from './Tray'
+import { FilterRow } from './FilterRow'
+import { UnscheduledChip } from './UnscheduledChip'
 import { WeekGrid } from './WeekGrid'
-import { WeekStrip } from './WeekStrip'
+import { NumbersLine } from './NumbersLine'
+import { PlanLegend } from './PlanLegend'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -40,8 +43,8 @@ describe('PostCardView', () => {
     expect(out).toContain('09:30')
     expect(out).toContain('Hook 1')
     expect(out).toContain('data-status="draft"')
-    // The name starts with what the card shows (platform, time, words), then its status (WCAG 2.5.3, Lighthouse).
-    expect(out).toContain('aria-label="instagram 09:30: Hook 1, draft"')
+    // The name follows what the card shows (platform, time, its status, then its words: WCAG 2.5.3, Lighthouse).
+    expect(out).toContain('aria-label="instagram 09:30: draft, Hook 1"')
     expect(out).toContain('src="/img/1.png"')
     // A press on the thumbnail drags the card, not the browser's own image drag (which cancels the pointer).
     expect(out).toMatch(/<img[^>]*draggable="false"/)
@@ -58,16 +61,64 @@ describe('PostCardView', () => {
 
   it('tells a screen reader the time, and gives a card in the tray (no day to move from) no move hint', () => {
     const timed = html(<PostCardView post={post(4, { scheduled_time: '09:30' })} onOpen={noop} onPointerDown={noop} />)
-    expect(timed).toContain('aria-label="instagram 09:30: Hook 4, draft"')
-    expect(html(<PostCardView post={post(6)} onOpen={noop} onPointerDown={noop} />)).toContain('aria-label="instagram: Hook 6, draft"')
-    const tray = html(<PostCardView post={post(5, { scheduled_date: null })} compact onOpen={noop} onPointerDown={noop} />)
+    expect(timed).toContain('aria-label="instagram 09:30: draft, Hook 4"')
+    expect(html(<PostCardView post={post(6)} onOpen={noop} onPointerDown={noop} />)).toContain('aria-label="instagram: draft, Hook 6"')
+    const tray = html(<PostCardView post={post(5, { scheduled_date: null })} size="tray" onOpen={noop} onPointerDown={noop} />)
     expect(tray).not.toContain('aria-describedby')
   })
 
-  it('gives the words the card\'s whole width under the mark, time and status, clamped to three lines, so a narrow day cuts no word', () => {
+  // Release 7a (spec 2026-10-21 §6.4): the owner's month cards.
+  it('draws a month card on the brand-tinted fill: its mark, time and status word, then up to four lines of its hook', () => {
+    const out = html(<PostCardView post={post(7, { scheduled_time: '09:00', hook: 'You do not need a finished design' })} size="month" onOpen={noop} />)
+    expect(out).toMatch(/class="[^"]*\bc-card\b/)
+    expect(out).toContain('09:00')
+    expect(out).toMatch(/data-status="draft"[^>]*>draft<\/span>/)
+    expect(out).toMatch(/line-clamp-4[^"]*">You do not need a finished design/)
+    expect(out).not.toContain('<img')
+  })
+
+  it('fills the open post\'s card with the brand, its secondary text on the ink', () => {
+    const out = html(<PostCardView post={post(8, { scheduled_time: '09:00' })} size="month" selected onOpen={noop} />)
+    expect(out).toMatch(/aria-current="true"[^>]*class="[^"]*bg-gradient-to-br from-a-accent to-a-accent-deep text-a-accent-ink/)
+    expect(out).not.toMatch(/class="[^"]*\bc-card\b/)
+    // Final review: at 80 % the ink read 2.9–3.6:1 on the default blue; the time and status take the ink itself.
+    expect(out).not.toContain('text-a-accent-ink/80')
+  })
+
+  // Release check (Lighthouse, label in name): a month or week card shows its status before its words, so its name says
+  // them in that order; a one-line card shows the status last, and its name too.
+  it('names a card in the order it shows: the status before the words on a month or week card, after them on one line', () => {
+    expect(html(<PostCardView post={post(11, { scheduled_time: '09:00' })} size="month" onOpen={noop} />)).toContain('aria-label="instagram 09:00: draft, Hook 11"')
+    expect(html(<PostCardView post={post(12)} size="week" onOpen={noop} />)).toContain('aria-label="instagram: draft, Hook 12"')
+    expect(html(<PostCardView post={post(13, { scheduled_time: '09:00' })} size="list" onOpen={noop} />)).toContain('aria-label="instagram 09:00: Hook 13, draft"')
+  })
+
+  // Release check (Lighthouse, label in name): the card's text is its parts with spaces between them (as its name says
+  // them), and the mark's two letters are drawn by the stylesheet, not text a label has to repeat.
+  it('reads as its name does: platform, time, status and words, spaced, without the mark\'s letters', () => {
+    const out = html(<PostCardView post={post(14, { scheduled_time: '09:00' })} size="month" onOpen={noop} />)
+    expect(out.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()).toBe('instagram 09:00 draft Hook 14')
+    expect(out).toMatch(/<span aria-hidden="true" data-short="ig" class="c-mark-short"><\/span>/)
+  })
+
+  // Final review: with the panel docked a day is 96–107 px wide, and "Needs review" ran into the next day ("Ne").
+  it('lets the status word go under the mark and time when a day is too narrow, never past the card', () => {
+    const out = html(<PostCardView post={post(10, { scheduled_time: '09:00', status: 'needs_review' })} size="month" onOpen={noop} />)
+    expect(out).toMatch(/<span class="[^"]*\bflex-wrap\b/)
+    const word = out.match(/<span data-status="needs_review"[^>]*class="([^"]*)"/)?.[1] ?? ''
+    expect(word.split(' ')).toEqual(expect.arrayContaining(['ml-auto', 'max-w-full', 'truncate']))
+    expect(word.split(' ')).not.toContain('shrink-0')
+  })
+
+  it('draws a list card in one line and a tray card in one line', () => {
+    expect(html(<PostCardView post={post(9, { scheduled_time: '10:00' })} size="list" onOpen={noop} />)).toMatch(/truncate[^"]*">Hook 9</)
+    expect(html(<PostCardView post={post(9)} size="tray" onOpen={noop} />)).toMatch(/truncate[^"]*">Hook 9</)
+  })
+
+  it('gives the words the card\'s whole width under the mark, time and status, clamped to six lines in a week, so a narrow day cuts no word', () => {
     const out = html(<PostCardView post={post(3, { scheduled_time: '09:30' })} onOpen={noop} />)
     const words = out.match(/<span class="([^"]*)">Hook 3<\/span>/)?.[1] ?? ''
-    expect(words).toContain('line-clamp-3')
+    expect(words).toContain('line-clamp-6')
     expect(words).toContain('break-words')
     // A block span keeps line-clamp from clamping (it needs -webkit-box).
     expect(words.split(' ')).not.toContain('block')
@@ -103,13 +154,11 @@ describe('SlotRow', () => {
   })
 })
 
-describe('WeekStrip', () => {
-  it('shows the four figures, and dashes until they are known', () => {
-    const out = html(<WeekStrip figures={{ planned: 7, ready: 2, published: 3, open_slots: 4 }} pending={false} />)
-    for (const label of ['Planned', 'Ready', 'Published', 'Empty slots']) expect(out).toContain(label)
-    expect(out).toContain('>7<')
-    expect(out).toContain('>4<')
-    expect(html(<WeekStrip figures={undefined} pending />).match(/–/g)).toHaveLength(4)
+// Release 7a (spec 2026-10-21 §6.1): the period's numbers, one line under the Plan's title.
+describe('NumbersLine', () => {
+  it('says the numbers of the period in one line, and a dash for each until they are known', () => {
+    expect(html(<NumbersLine figures={{ planned: 12, ready: 3, published: 5, open_slots: 2 }} pending={false} />)).toContain('Planned: 12 · Ready: 3 · Published: 5 · Empty slots: 2')
+    expect(html(<NumbersLine figures={undefined} pending />)).toContain('Planned: – · Ready: – · Published: – · Empty slots: –')
   })
 })
 
@@ -137,6 +186,23 @@ describe('MonthGrid', () => {
     expect(out).toContain('+2 more')
     expect(out).toContain('Empty slots: 1')
   })
+
+  // Release 7a (spec 2026-10-21 §6.4): the owner's month — dimmed other months with their month, today, the open day.
+  it('dims the days of another month and names their month, marks today, and outlines the open post\'s day', () => {
+    const plans = plansFor(rangeFor('month', '2026-10-07').days, [post(1, { scheduled_date: '2026-10-07' })], [])
+    const out = html(<MonthGrid plans={plans} date="2026-10-07" today="2026-10-07" locale="en-GB" selectedId={1} dropDate={null} onDay={noop} onOpen={noop} />)
+    expect(out).toMatch(/text-a-text-2[^>]*>28<\/button>(?:(?!data-drop-date).)*?>Sept?</s)
+    expect(out).toMatch(/aria-current="date"[^>]*class="[^"]*rounded-full bg-a-accent[\s\S]*?>Today</)
+    expect(out).toMatch(/data-drop-date="2026-10-07"[^>]*class="[^"]*ring-a-accent-text/)
+    expect(out).toMatch(/<div class="[^"]*bg-a-surface[^"]*font-a-mono[^"]*">Mon<\/div>/)
+  })
+})
+
+describe('PlanLegend', () => {
+  it('says Draft and Key date under the grid, and how to open a post while none is open', () => {
+    expect(html(<PlanLegend open={false} />)).toMatch(/Draft[\s\S]*Key date[\s\S]*Select a post to review its details/)
+    expect(html(<PlanLegend open />)).not.toContain('Select a post')
+  })
 })
 
 describe('ListView', () => {
@@ -150,38 +216,74 @@ describe('ListView', () => {
   })
 })
 
-describe('Tray', () => {
-  it('is the drop target for "no day", with its count and a hint when empty', () => {
-    const out = html(<Tray posts={[post(1, { scheduled_date: null })]} active={false} selectedId={null} onOpen={noop} />)
-    expect(out).toContain('data-drop="tray"')
-    expect(out).toContain('Unscheduled')
-    expect(out).toContain('Hook 1')
-    expect(html(<Tray posts={[]} active selectedId={null} onOpen={noop} />)).toContain('Drag a post here')
+// Release 7a (spec 2026-10-21 §6.2): the tray is the "Unscheduled (n)" chip's list; the chip is the drop target.
+describe('Unscheduled', () => {
+  it('is a chip with its count, the drop target for "no day", that opens its list', () => {
+    const out = html(<UnscheduledChip posts={[post(1, { scheduled_date: null }), post(2, { scheduled_date: null })]} total={2} active={false} selectedId={null} onOpen={noop} />)
+    expect(out).toMatch(/data-drop="tray"[^>]*aria-expanded="false"[^>]*>[\s\S]*?Unscheduled \(2\)/)
+    expect(html(<UnscheduledChip posts={[]} active selectedId={null} onOpen={noop} />)).toMatch(/data-drop="tray"[^>]*class="[^"]*border-a-accent-text/)
   })
 
-  it('says when it shows only part of the posts with no day, and links to all of them', () => {
-    const out = html(<MemoryRouter><Tray posts={[post(1, { scheduled_date: null }), post(2, { scheduled_date: null })]} total={102} active={false} selectedId={null} onOpen={noop} /></MemoryRouter>)
+  it('lists the posts with no day, says when it is empty, and when it shows only part of them with the way to all', () => {
+    expect(html(<TrayList posts={[post(1, { scheduled_date: null })]} selectedId={null} onOpen={noop} />)).toContain('Hook 1')
+    expect(html(<TrayList posts={[]} selectedId={null} onOpen={noop} />)).toContain('Drag a post here')
+    const out = html(<MemoryRouter><TrayList posts={[post(1, { scheduled_date: null }), post(2, { scheduled_date: null })]} total={102} selectedId={null} onOpen={noop} /></MemoryRouter>)
     expect(out).toContain('Showing 2 of 102')
     expect(out).toMatch(/<a[^>]*href="\/content\/posts\?unscheduled=1"[^>]*>See all<\/a>/)
-    expect(out).toContain('>102<')
+  })
+})
+
+describe('FilterRow', () => {
+  const row = {
+    platforms: ['linkedin' as const, 'instagram' as const], filter: { platforms: ['linkedin' as const], status: 'all' as const },
+    statuses: ['draft' as const, 'published' as const], onFilter: noop, keyDates: true, onKeyDates: noop, unscheduled: <span data-unscheduled="" />,
+  }
+
+  it('draws a chip per channel with its mark, and a tick while it shows', () => {
+    const out = html(<FilterRow {...row} />)
+    expect(out).toMatch(/aria-pressed="true"[^>]*>(?:(?!<\/button>).)*linkedin(?:(?!<\/button>).)*data-tick=""/s)
+    expect(out).toMatch(/aria-pressed="false"[^>]*>(?:(?!<\/button>).)*instagram<\/button>/s)
+  })
+
+  // Final review: with no filter every channel shows, so every chip is ticked (they all looked switched off).
+  it('ticks every chip while no channel is hidden', () => {
+    const out = html(<FilterRow {...row} filter={{ platforms: [], status: 'all' }} />)
+    expect(out.match(/aria-pressed="true"/g)).toHaveLength(2)
+    expect(out.match(/data-tick=""/g)).toHaveLength(2)
+  })
+
+  it('offers Status as a menu chip that names the choice, Unscheduled, and Key dates as a switch', () => {
+    expect(html(<FilterRow {...row} />)).toMatch(/aria-haspopup="menu"[^>]*>[\s\S]*?Status</)
+    const out = html(<FilterRow {...row} filter={{ platforms: [], status: 'draft' }} />)
+    expect(out).toMatch(/aria-haspopup="menu"[^>]*>[\s\S]*?Status: draft/)
+    expect(out).toContain('data-unscheduled=""')
+    expect(out).toMatch(/role="switch"[^>]*aria-checked="true"[\s\S]*?Key dates/)
   })
 })
 
 describe('Toolbar', () => {
   const base = {
-    view: 'week' as const, label: '5 Oct – 11 Oct 2026', refreshing: false, filter: { platforms: ['linkedin' as const], status: 'all' as const },
-    platforms: ['instagram' as const, 'linkedin' as const], statuses: ['draft' as const, 'published' as const],
-    onPrev: noop, onNext: noop, onToday: noop, onView: noop, onFilter: noop, onGenerate: noop,
+    view: 'week' as const, label: '5 Oct – 11 Oct 2026', refreshing: false,
+    onPrev: noop, onNext: noop, onToday: noop, onView: noop, onGenerate: noop,
   }
 
-  it('names the range, offers the views and the chips, and Generate only to managers', () => {
+  it('names the range, offers the views, and Generate only to managers — the chips are the filter row\'s', () => {
     const out = html(<Toolbar {...base} viewLocked={false} canGenerate />)
     expect(out).toContain('5 Oct – 11 Oct 2026')
-    expect(out).toMatch(/aria-pressed="true"[^>]*>Week</)
-    expect(out).toMatch(/aria-pressed="true"[^>]*>.*linkedin/)
+    expect(out).toMatch(/role="radio"[^>]*aria-checked="true"[^>]*>Week</)
+    expect(out).not.toContain('linkedin')
     expect(out).toContain('Generate')
-    expect(out).toContain('<option value="published">published</option>')
     expect(html(<Toolbar {...base} viewLocked={false} canGenerate={false} />)).not.toContain('Generate')
+  })
+
+  // Release 7a (spec 2026-10-21 §6.3): the owner's calendar bar.
+  it('draws the period in the display face, back, forward and Today, then Generate and the views grouped', () => {
+    const out = html(<Toolbar {...base} view="month" label="October 2026" viewLocked={false} canGenerate />)
+    expect(out).toMatch(/<h2[^>]*font-a-display[^>]*>October 2026<\/h2>/)
+    expect(out).toMatch(/aria-label="Previous"[\s\S]*aria-label="Next"[\s\S]*>Today</)
+    expect(out).toMatch(/data-views=""[\s\S]*c-ai[\s\S]*Generate[\s\S]*role="radiogroup"[\s\S]*>Month<[\s\S]*>Week<[\s\S]*>List</)
+    expect(out).toMatch(/role="radio"[^>]*aria-checked="true"[^>]*tabindex="0"[^>]*>Month</)
+    expect(out).toMatch(/role="radio"[^>]*aria-checked="false"[^>]*tabindex="-1"[^>]*>Week</)
   })
 
   it('has no view choice where the list is the only view', () => {

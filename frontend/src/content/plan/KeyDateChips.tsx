@@ -30,8 +30,8 @@ export function KeyDateChips({ items, observed, compact = false, onPick, onMore 
         const kind = t(`content.keydates.kind.${k.kind}`, KIND_TEXT[k.kind])
         return (
           <button key={keyOf(k)} type="button" data-keydate={k.kind} onClick={() => onPick(k)} aria-label={`${kind}: ${name}`} title={name}
-            className="inline-flex min-w-0 max-w-full items-center gap-1 rounded-full border border-a-border bg-a-surface-2 px-2 py-0.5 text-xs text-a-text hover:border-a-accent-text">
-            <Icon size={12} aria-hidden className="shrink-0 text-a-text-2" />
+            className="c-keydate inline-flex min-w-0 max-w-full items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium">
+            <Icon size={12} aria-hidden className="shrink-0" />
             <span className="truncate">{name}</span>
           </button>
         )

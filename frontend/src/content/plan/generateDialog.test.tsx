@@ -18,7 +18,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 
 const boot = {
   name: 'HexaTech Content', organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
-  brand: { id: 3, name: 'Lumière Salon' }, brands: [], accent: null,
+  brand: { id: 3, name: 'Lumière Salon', logo_url: null }, brands: [], accent: null,
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-08' },
   staff: { name: 'Vitalij K', role: 'manager', can_manage: true }, profile: { id: 1, setup_completed: true, readiness: 80 },
   ai: { status: 'under', percent: 10 }, platforms: ['instagram', 'linkedin', 'tiktok'], statuses: [], rewrites: [],

@@ -23,7 +23,14 @@
     "budget_warn": "Das KI-Budget dieses Monats ist zu {{percent}} % verbraucht.",
     "budget_over": "Das KI-Budget dieses Monats ist aufgebraucht. KI-Aktionen pausieren bis zum nächsten Monat; von Hand schreiben geht weiterhin.",
     "not_set_up_manager": "Diese Marke ist noch nicht eingerichtet, daher kennt die KI ihre Stimme und Kanäle nicht.",
-    "not_set_up_staff": "Ihre Managerin oder Ihr Manager hat diese Marke noch nicht eingerichtet."
+    "not_set_up_staff": "Ihre Managerin oder Ihr Manager hat diese Marke noch nicht eingerichtet.",
+    "workspace": "Arbeitsbereich",
+    "settings": "Einstellungen",
+    "help": "Hilfe & Ressourcen",
+    "find_short": "Suchen",
+    "role": { "owner": "Inhaber", "manager": "Manager", "staff": "Mitarbeiter" },
+    "breadcrumb": "Brotkrumen-Navigation",
+    "page_write": "Schreiben"
   },
   "platform": {
     "linkedin": "LinkedIn", "instagram": "Instagram", "tiktok": "TikTok", "facebook": "Facebook",
@@ -65,7 +72,16 @@
     "add_menu": "Hinzufügen am {{day}}",
     "add": { "post": "Neuer Beitrag", "template": "Aus einer Vorlage…", "note": "Notiz", "event": "Ereignis" },
     "generating": "Die KI schreibt Beiträge…",
-    "promoting": "Die KI schreibt Werbebeiträge…"
+    "promoting": "Die KI schreibt Werbebeiträge…",
+    "line": "Ein klarer Blick auf das, was als Nächstes kommt.",
+    "numbers": "Geplant: {{planned}} · Bereit: {{ready}} · Veröffentlicht: {{published}} · Freie Plätze: {{open}}",
+    "status_chip": "Status: {{name}}",
+    "unscheduled_chip": "Ohne Datum ({{count}})",
+    "legend_draft": "Entwurf",
+    "legend_keydate": "Wichtiger Termin",
+    "select_post": "Wählen Sie einen Beitrag, um seine Details zu sehen",
+    "card_label_time_status": "{{platform}} {{time}}: {{status}}, {{text}}",
+    "card_label_status": "{{platform}}: {{status}}, {{text}}"
   },
   "move": {
     "error": {
@@ -195,7 +211,32 @@
     "template": "Vorlage",
     "template_replace": "Den bereits geschriebenen Text durch diese Vorlage ersetzen?",
     "blanks": "Auszufüllende Lücken: {{count}} — {{list}}",
-    "promotes": "Bewirbt:"
+    "promotes": "Bewirbt:",
+    "details": "Beitragsdetails",
+    "no_day": "Noch kein Tag",
+    "more": "Weitere Aktionen",
+    "tab_content": "Inhalt",
+    "tab_ai": "KI-Werkzeuge",
+    "tab_activity": "Aktivität",
+    "tab_activity_count": "Aktivität ({{count}})",
+    "create_first": "Legen Sie zuerst den Beitrag an, um dies zu nutzen.",
+    "hook_label": "Aufhänger des Beitrags",
+    "hook_placeholder": "Schreiben Sie die erste Zeile, die man sieht",
+    "post_text": "Beitragstext",
+    "add_link": "Ziel-URL hinzufügen",
+    "fold_targeting": "Zielgruppe & Sprache",
+    "fold_links": "Link & Hashtags",
+    "fold_versions": "Versionen & Wiederholung",
+    "save_draft": "Entwurf speichern",
+    "tools": "Textwerkzeuge",
+    "tool_emoji": "Emoji",
+    "tool_link": "Link einfügen",
+    "tool_hashtags": "Hashtag-Gruppe einfügen",
+    "emoji_search": "Emoji suchen (auf Englisch)",
+    "emoji_recent": "Zuletzt",
+    "emoji_none": "Kein passendes Emoji.",
+    "emoji_group": { "smileys": "Smileys", "people": "Menschen", "hearts": "Herzen", "nature": "Natur", "food": "Essen", "activity": "Aktivitäten", "objects": "Gegenstände", "symbols": "Symbole" },
+    "link_address": "Webadresse"
   },
   "save": {
     "error": {

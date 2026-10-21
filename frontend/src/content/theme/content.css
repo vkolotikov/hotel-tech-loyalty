@@ -8,6 +8,25 @@
  */
 
 [data-content] {
+  /* Content's own palette (spec 2026-10-21 §3.1), over the Atelier tokens of the same names: a light set whose side panel
+     stays the owner's navy. accent.ts CONTENT_SURFACES works the accent out on these; contentContrast.test.ts pins them. */
+  --a-canvas: 244 246 249;
+  --a-surface: 255 255 255;
+  --a-surface-2: 238 242 247;
+  --a-border: 221 227 234;
+  --a-text: 27 36 48;
+  --a-text-2: 84 98 114;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  /* A post card's secondary text (time, status word); the card's fill, --c-card, is set inline from the brand. */
+  --c-card-text-2: 84 98 114;
+  /* Generate and every AI action, and the key-date chips: the same violet for every brand. */
+  --c-ai: 109 93 214;
+  --c-ai-ink: 255 255 255;
+  /* The violet as text (key-date chips, the legend): darker on light, lighter on navy, ≥ 4.5:1 on its 14 % tint. */
+  --c-ai-text: 84 70 190;
   /* The dark ink on a platform fill white does not read on (owner, 2026-10-15: white where it reads 4.5:1, else ink). */
   --c-ink: 20 24 28;
   /* Post statuses: a tone for the dot, and for text over a 12 % tint of itself. */
@@ -23,6 +42,19 @@
 }
 
 [data-content][data-theme="dark"] {
+  /* The owner's navy, taken from the mockup's screenshot. */
+  --a-canvas: 32 40 54;
+  --a-surface: 36 44 58;
+  --a-surface-2: 41 48 63;
+  --a-border: 51 62 78;
+  --a-text: 232 238 244;
+  --a-text-2: 150 165 185;
+  --a-side: 28 35 44;
+  --a-side-2: 35 44 58;
+  --a-side-text: 232 238 244;
+  --a-side-text-2: 150 165 185;
+  --c-card-text-2: 170 184 202;
+  --c-ai-text: 178 166 255;
   --c-st-idea: 163 173 184;
   --c-st-draft: 169 193 227;
   --c-st-review: 240 179 90;
@@ -46,9 +78,36 @@
 /* X's black would vanish on the dark canvas: a pale mark there, with the dark ink. */
 [data-content][data-theme="dark"] [data-platform="x"] { --c-pf: 231 233 234; --c-pf-ink: 20 24 28; }
 
+/* Generate and the AI actions (spec 2026-10-21 §3.1): the AI violet with its white ink, the same for every brand. */
+[data-content] .c-ai {
+  background-color: rgb(var(--c-ai));
+  color: rgb(var(--c-ai-ink));
+}
+
 [data-content] .c-mark {
   background-color: rgb(var(--c-pf));
   color: rgb(var(--c-pf-ink));
+}
+
+/* A post card (spec 2026-10-21 §6.4): the brand-tinted fill worked out with the accent (--c-card, inline), its text and
+   its secondary text (time, status word). */
+[data-content] .c-card {
+  background-color: rgb(var(--c-card, var(--a-surface)));
+  color: rgb(var(--a-text));
+}
+
+[data-content] .c-card-2 {
+  color: rgb(var(--c-card-text-2));
+}
+
+/* A key date's chip, and the legend's mark: the AI violet's text over a 14 % tint of it. */
+[data-content] .c-keydate {
+  background-color: rgb(var(--c-ai) / 0.14);
+  color: rgb(var(--c-ai-text));
+}
+
+[data-content] .c-ai-text {
+  color: rgb(var(--c-ai-text));
 }
 
 /* A card's platform edge: a 3 px line inside its left side. */
@@ -81,4 +140,15 @@
 
 [data-content] .c-st-tint {
   background-color: rgb(var(--c-st) / 0.12);
+}
+
+/* The post hook keeps its large line on phones and tablets: the admin sets every field to 16 px up to 1023 px (!important,
+   so iOS does not zoom); 26 px is past 16, so no zoom either (spec 2026-10-21 §7.4). */
+[data-content] textarea.c-hook {
+  font-size: 26px !important;
+}
+
+/* A platform mark's two letters, drawn from data-short (not text a card's spoken name would have to repeat). */
+[data-content] .c-mark-short::before {
+  content: attr(data-short);
 }

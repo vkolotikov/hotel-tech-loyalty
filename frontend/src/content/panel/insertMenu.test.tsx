@@ -18,6 +18,11 @@ describe('InsertMenu', () => {
       .toMatch(/<button[^>]*aria-haspopup="true"[^>]*aria-expanded="false"/)
   })
 
+  // Release check (Lighthouse target-size): beside the call to action the button is a 24 px touch target at least.
+  it('is a 24 px touch target at least', () => {
+    expect(renderToStaticMarkup(<InsertMenu label="Insert snippet" items={items} onPick={() => {}} />)).toMatch(/<button[^>]*class="[^"]*\bmin-h-6\b/)
+  })
+
   it('closes on a press or focus outside it, not inside', () => {
     expect(outside(menu('toggle', 'item'), at('field'))).toBe(true)
     expect(outside(menu('toggle', 'item'), null)).toBe(true)

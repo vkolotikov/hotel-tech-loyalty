@@ -21,7 +21,7 @@ import { newForm } from '../panel/panelState'
 import { KeyDateChips } from './KeyDateChips'
 import { KeyDateEditor } from './KeyDateEditor'
 import { KeyDayCard } from './KeyDayCard'
-import { Toolbar } from './Toolbar'
+import { FilterRow } from './FilterRow'
 
 const wrap = (el: ReactElement) => renderToStaticMarkup(
   <QueryClientProvider client={new QueryClient()}>
@@ -40,6 +40,8 @@ describe('KeyDateChips (spec 2026-10-16 §3.4)', () => {
     expect(out).toContain('Boxing Day (day off in lieu)')
     expect(out).toContain('aria-label="Note: Photographer"')
     expect(out.match(/<button/g)).toHaveLength(3)
+    // Release 7a (spec 2026-10-21 §6.4): the key-date chips wear the AI violet's tint.
+    expect(out).toMatch(/data-keydate="holiday"[^>]*class="[^"]*\bc-keydate\b/)
   })
 
   it('says "observed" for a United States substitute, and in the month view shows the first and how many more', () => {
@@ -80,12 +82,11 @@ describe('KeyDateEditor', () => {
 })
 
 describe('the Key dates toggle and a new post from a key date', () => {
-  it('shows a pressed Key dates switch in the toolbar', () => {
-    const out = wrap(<Toolbar view="week" viewLocked={false} label="Oct 5 – 11" refreshing={false} canGenerate={false} filter={{ platforms: [], status: 'all' }}
-      platforms={[]} statuses={[]} onPrev={() => {}} onNext={() => {}} onToday={() => {}} onView={() => {}} onFilter={() => {}} onGenerate={() => {}}
+  // Release 7a (spec 2026-10-21 §6.2): a switch at the filter row's end.
+  it('shows the Key dates switch on in the filter row', () => {
+    const out = wrap(<FilterRow platforms={[]} filter={{ platforms: [], status: 'all' }} statuses={[]} onFilter={() => {}} unscheduled={null}
       keyDates onKeyDates={() => {}} />)
-    // Within one button: the Week view's pressed button must not count.
-    expect(out).toMatch(/<button[^>]*aria-pressed="true"[^>]*>(?:(?!<\/button>).)*Key dates<\/button>/)
+    expect(out).toMatch(/<button[^>]*role="switch"[^>]*aria-checked="true"[^>]*>(?:(?!<\/button>).)*Key dates/s)
   })
 
   it('starts a new post with the day’s name as its topic (Write a post for it)', () => {

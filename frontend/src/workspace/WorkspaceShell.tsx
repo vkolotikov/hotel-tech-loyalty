@@ -2,13 +2,13 @@ import { useLayoutEffect, type CSSProperties, type MouseEvent, type ReactNode } 
 import { Link, NavLink } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Globe, LayoutGrid, LogOut, Menu, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react'
-import { SUPPORTED_LANGUAGES } from '../i18n'
 import { logoutAndRedirect } from '../lib/logout'
 import { firstLetter } from './lib/firstLetter'
 import { leave } from './lib/leave'
 import type { LiveLook } from './lib/look'
 import { markShell } from './lib/shellMark'
 import { accentStyle, type AccentTokens } from './theme/accent'
+import { LanguageSelect } from './ui/LanguageSelect'
 import { ThemeSwitch } from './ui/ThemeSwitch'
 
 export interface WorkspaceNavItem { to: string; end: boolean; icon: LucideIcon; label: string }
@@ -25,11 +25,13 @@ export interface WorkspaceNavItem { to: string; end: boolean; icon: LucideIcon; 
  * <html data-shell="<workspace>"> from the first paint, so the full admin's
  * mood typography stays out.
  */
-export function WorkspaceShell({ workspace, look, accent, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, children }: {
+export function WorkspaceShell({ workspace, look, accent, card, initial, organization, product, person, nav, fullAdmin, header, overlays, onLeave, variant, railLabel, footer, phoneMenu, crumbs, children }: {
   /** The workspace's name: its root attribute (`data-appointments`) and its <html> mark. */
   workspace: string
   look: LiveLook
   accent: AccentTokens
+  /** A post card's fill worked out with the accent (Content, spec 2026-10-21 §3.1); set as --c-card beside it. */
+  card?: string
   /** The organisation's mark in the side panel: one letter or one emoji. */
   initial: string
   organization?: string
@@ -45,30 +47,33 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
   onLeave?: () => boolean
   /** Dialogs drawn over the whole frame (Find, the list of shortcuts). */
   overlays?: ReactNode
+  /** Release 7a (spec 2026-10-21 §4), passed by Content only: the side buttons as cards, under a label. */
+  variant?: 'cards'
+  railLabel?: string
+  /** In place of the side panel's foot (theme, Full admin, language, person, collapse). */
+  footer?: ReactNode
+  /** In place of the phone menu's contents. */
+  phoneMenu?: ReactNode
+  /** The top bar's start, before the header (Content's breadcrumb). */
+  crumbs?: ReactNode
   children: ReactNode
 }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   // <html data-shell="<workspace>"> keeps the full admin's Branding mood typography out, from the first paint.
   useLayoutEffect(() => markShell(document.documentElement, workspace), [workspace])
   const slim = look.rail === 'slim'
+  const cards = variant === 'cards'
   // Neither exit unloads a page the browser could ask about (Sign out even revokes the session first): the app is asked.
   const signOut = () => { leave(onLeave, () => { void logoutAndRedirect('/login') }) }
   const toFullAdmin = (e: MouseEvent) => { leave(onLeave, () => {}, e) }
-  const language = (className: string) => (
-    <label className="block">
-      <span className="sr-only">{t('workspace.shell.language', 'Language')}</span>
-      <select value={i18n.language?.slice(0, 2)} onChange={(e) => { void i18n.changeLanguage(e.target.value) }} className={className}>
-        {SUPPORTED_LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
-      </select>
-    </label>
-  )
+  const language = (className: string) => <LanguageSelect className={className} />
   const scope = { [`data-${workspace}`]: '' } as Record<string, string>
 
   return (
     <div data-workspace="" {...scope} data-theme={look.resolved} data-accent-edge={accent.edge ? '' : undefined}
-      style={accentStyle(accent) as CSSProperties} className="min-h-screen flex bg-a-canvas text-a-text">
-      <aside data-rail="" data-rail-size={look.rail} aria-label={t('workspace.shell.menu', 'Menu')}
-        className={`hidden lg:flex ${slim ? 'w-[76px]' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out`}>
+      style={accentStyle(accent, card) as CSSProperties} className="min-h-screen flex bg-a-canvas text-a-text">
+      <aside data-rail="" data-rail-size={look.rail} data-rail-variant={cards ? 'cards' : undefined} aria-label={t('workspace.shell.menu', 'Menu')}
+        className={`hidden lg:flex ${slim ? 'w-[76px]' : cards ? 'w-60' : 'w-64'} shrink-0 flex-col gap-6 bg-a-side px-3 py-5 text-a-side-text transition-[width] duration-300 ease-out`}>
         <div className={`flex min-h-11 items-center gap-3 ${slim ? 'justify-center' : 'px-2'}`}>
           <span aria-hidden className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-a-accent font-a-display text-lg font-semibold text-a-accent-ink">{initial}</span>
           <div className={slim ? 'sr-only' : 'min-w-0'}>
@@ -76,21 +81,25 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
             <div className="truncate text-xs text-a-side-text-2">{product}</div>
           </div>
         </div>
-        <nav className="space-y-1">
+        {cards && railLabel && !slim && <p className="-mb-4 px-2 font-a-mono text-xs uppercase tracking-[0.14em] text-a-side-text-2">{railLabel}</p>}
+        <nav className={cards ? 'space-y-2' : 'space-y-1'}>
           {nav.map(({ to, end, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={end} data-tip={slim ? label : undefined}
-              className={({ isActive }) => `relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'bg-a-side-2 text-a-side-text' : 'text-a-side-text-2 hover:bg-a-side-2/60 hover:text-a-side-text'}`}>
+              className={({ isActive }) => cards
+                // The owner's mockup: each area a card; the current one filled with the brand (spec 2026-10-21 §4.1).
+                ? `relative flex min-h-11 items-center gap-3 rounded-[10px] border px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'border-transparent bg-gradient-to-br from-a-accent to-a-accent-deep text-a-accent-ink shadow-a-sm' : 'border-a-side-2 bg-a-side-2 text-a-side-text-2 hover:text-a-side-text'}`
+                : `relative flex min-h-11 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors ${slim ? 'justify-center' : ''} ${isActive ? 'bg-a-side-2 text-a-side-text' : 'text-a-side-text-2 hover:bg-a-side-2/60 hover:text-a-side-text'}`}>
               {({ isActive }) => (
                 <>
                   <Icon size={18} aria-hidden className="shrink-0" />
                   <span className={slim ? 'sr-only' : 'truncate'}>{label}</span>
-                  {isActive && !slim && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-a-accent-rail" />}
+                  {isActive && !slim && !cards && <span aria-hidden className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full bg-a-accent-rail" />}
                 </>
               )}
             </NavLink>
           ))}
         </nav>
-        <div className="mt-auto space-y-2 border-t border-a-side-2 pt-4">
+        {footer ?? <div className="mt-auto space-y-2 border-t border-a-side-2 pt-4">
           <ThemeSwitch value={look.theme} onChange={look.setTheme} vertical={slim} />
           {fullAdmin !== null && (
             <Link to={fullAdmin} onClick={toFullAdmin} data-tip={slim ? t('workspace.shell.full_admin', 'Full admin') : undefined}
@@ -128,7 +137,7 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
             {slim ? <PanelLeftOpen size={16} aria-hidden /> : <PanelLeftClose size={16} aria-hidden />}
             <span className={slim ? 'sr-only' : ''}>{slim ? t('workspace.shell.expand', 'Expand menu') : t('workspace.shell.collapse', 'Collapse menu')}</span>
           </button>
-        </div>
+        </div>}
       </aside>
 
       <div className="flex-1 min-w-0 flex flex-col">
@@ -141,6 +150,7 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
               </NavLink>
             ))}
           </nav>
+          {crumbs}
           {header}
           {/* Below the width of the rail, what the rail's secondary area holds lives here. */}
           <details className="relative lg:hidden">
@@ -149,6 +159,7 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
             </summary>
             {/* As wide as what it holds (the theme switch is longer in Russian), at least 14rem, never past the screen. */}
             <div className="absolute right-0 top-full z-40 mt-2 w-max min-w-56 max-w-[calc(100vw-2rem)] animate-a-pop space-y-1 rounded-lg border border-a-border bg-a-surface p-2 shadow-lg">
+              {phoneMenu ?? <>
               <div className="px-2 py-1 text-xs text-a-text-2 break-words">{person}</div>
               <div className="px-1 pb-1"><ThemeSwitch value={look.theme} onChange={look.setTheme} tone="surface" /></div>
               {fullAdmin !== null && (
@@ -162,6 +173,7 @@ export function WorkspaceShell({ workspace, look, accent, initial, organization,
               <button type="button" onClick={signOut} className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-sm text-a-text hover:bg-a-surface-2">
                 <LogOut size={16} aria-hidden /> {t('workspace.shell.sign_out', 'Sign out')}
               </button>
+              </>}
             </div>
           </details>
         </header>

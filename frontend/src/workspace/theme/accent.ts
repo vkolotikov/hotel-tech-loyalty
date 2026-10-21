@@ -29,6 +29,21 @@ export const SURFACES: Record<ThemeName, { canvas: string; surface: string; surf
   dark: { canvas: '#0e1a24', surface: '#13232f', surface2: '#1a2e3c', side: '#0a141c' },
 }
 
+/**
+ * HexaTech Content's own palette (spec 2026-10-21 §3.1): the owner's navy in Dark, a light set with the navy side panel
+ * in Light. content/theme/contentContrast.test.ts proves they equal the [data-content] tokens in content.css.
+ */
+export const CONTENT_SURFACES: Record<ThemeName, { canvas: string; surface: string; surface2: string; side: string }> = {
+  light: { canvas: '#f4f6f9', surface: '#ffffff', surface2: '#eef2f7', side: '#1c232c' },
+  dark: { canvas: '#202836', surface: '#242c3a', surface2: '#29303f', side: '#1c232c' },
+}
+
+/** A post card's text and secondary text in Content (`--a-text` and `--c-card-text-2`). */
+const CARD_TEXT: Record<ThemeName, { text: string; text2: string }> = {
+  light: { text: '#1b2430', text2: '#546272' },
+  dark: { text: '#e8eef4', text2: '#aab8ca' },
+}
+
 export interface AccentTokens { accent: string; ink: string; deep: string; text: string; rail: string; edge: boolean }
 
 function rgb(hex: string): [number, number, number] {
@@ -76,9 +91,10 @@ function readableOn(color: string, backgrounds: string[], min: number, toward: s
   return toward
 }
 
-export function accentTokens(brand: string | null | undefined, theme: ThemeName): AccentTokens {
+/** The accent worked out on the Atelier palette, or on the surfaces a workspace passes (Content's navy). */
+export function accentTokens(brand: string | null | undefined, theme: ThemeName, surfaces: { canvas: string; surface: string; surface2: string; side: string } = SURFACES[theme]): AccentTokens {
   const accent = normalise(brand)
-  const s = SURFACES[theme]
+  const s = surfaces
   const ink = contrast(WHITE, accent) >= 3 ? WHITE : INK
   const deep = mix(accent, ink === WHITE ? '#000000' : WHITE, 0.12)
   const text = readableOn(
@@ -93,16 +109,32 @@ export function accentTokens(brand: string | null | undefined, theme: ThemeName)
   return { accent, ink, deep, text, rail, edge }
 }
 
+/**
+ * A Content post card's fill (spec 2026-10-21 §3.1): the brand mixed 18 % into surface-2 in Dark, 10 % into the surface
+ * in Light — less, in 2-point steps, while the card's text or its secondary text would read under 4.5:1 on it.
+ */
+export function cardFill(brand: string | null | undefined, theme: ThemeName): string {
+  const accent = normalise(brand)
+  const ground = theme === 'dark' ? CONTENT_SURFACES.dark.surface2 : CONTENT_SURFACES.light.surface
+  for (let pct = theme === 'dark' ? 18 : 10; pct > 0; pct -= 2) {
+    const card = mix(ground, accent, pct / 100)
+    if (contrast(CARD_TEXT[theme].text, card) >= 4.5 && contrast(CARD_TEXT[theme].text2, card) >= 4.5) return card
+  }
+  return ground
+}
+
 export function triplet(hex: string): string {
   return rgb(hex).join(' ')
 }
 
-export function accentStyle(t: AccentTokens): Record<string, string> {
+/** The accent's CSS variables, and the post card's fill where a workspace gives one (Content). */
+export function accentStyle(t: AccentTokens, card?: string): Record<string, string> {
   return {
     '--a-accent': triplet(t.accent),
     '--a-accent-ink': triplet(t.ink),
     '--a-accent-deep': triplet(t.deep),
     '--a-accent-text': triplet(t.text),
     '--a-accent-rail': triplet(t.rail),
+    ...(card ? { '--c-card': triplet(card) } : {}),
   }
 }

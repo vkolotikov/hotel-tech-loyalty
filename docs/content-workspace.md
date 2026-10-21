@@ -337,6 +337,47 @@ Spec `docs/superpowers/specs/2026-10-20-content-release-6-design.md`.
   lock first and kept when another tab approved it meanwhile.
 - **Copies:** versions, repeat copies and duplicates keep `site_page_id`.
 
+## Release 7a: the owner's look (2026-10-21)
+
+Spec `docs/superpowers/specs/2026-10-21-content-release-7-design.md` (§3–§7, §9); the writing view (§8) is release 7b.
+No migration, no new route; Appointments is unchanged (the shared shell's new options are off unless passed).
+
+- **Palette and accent:** `[data-content]` gives Content its own navy (Dark) and blue-grey (Light) surfaces (`content.css`;
+  the side panel stays navy in Light). `accentTokens(brand, theme, surfaces)` takes the surfaces, so the accent text,
+  rail mark and outline rules hold on navy; `cardFill` mixes the accent 18 % into `--a-surface-2` (Dark) or 10 % into
+  `--a-surface` (Light) for `--c-card`, lowered in 2-point steps until `--a-text` and `--c-card-text-2` read ≥ 4.5:1.
+  `--c-ai` (violet, white ink) fills Generate and the key-date chip; `--c-ai-text` is the violet as text (the fill reads
+  2.6:1 on navy). `contentContrast.test.ts` pins every pair.
+- **The frame** (`WorkspaceShell` options `variant: 'cards'`, `railLabel`, `footer`, `phoneMenu`, `crumbs`, `card`): the
+  areas as cards under "Workspace"; the foot is Settings (a panel: theme, language, full admin), Help & resources
+  (shortcuts, Find) and the person with their role (Collapse, Sign out) — `shell/SideMenu.tsx` opens them, claims Escape
+  (an open post panel stays open) and closes on a press or focus outside. The top bar starts with the breadcrumb
+  (`shell/BrandCrumb.tsx`: the brand's logo or initials, its name, a brand menu from two brands up, "/", the page);
+  New post moved to the page header (`ui/PageHeader.tsx`, `ui/NewPostButton.tsx`). Below 640 px the breadcrumb has
+  its own row above Find (the top bar holds the six area buttons, the bell and the menu).
+- **Plan:** the header's numbers line (Planned · Ready · Published · Empty slots: the server's figures for the week or
+  list, the month's own days in Month view — `monthFigures`); the filter row above the calendar (channel chips ticked
+  while their channel shows — pressing one hides or shows it, the last one stays — a Status menu, Unscheduled as a chip
+  that takes a dropped card off its day and opens the list of posts without a day, which lets a dragged card through to
+  the days under it, and the Key dates switch); the calendar bar (month title, ‹ ›, Today, Generate beside the Month ·
+  Week · List control); month cards filled with `--c-card` (the open post with the accent), a status word on each (it
+  goes under the mark and time in a narrow day), the Today circle, key dates at a day's foot, and the legend under the
+  grid.
+- **The post panel:** docked beside the page from 1280 px (`role="complementary"`; `<main>` gets `xl:pr-[400px]`), over
+  the page from 640 px, the whole screen below (`usePanelMode`). Header "Post details" with the day, ⋯ (Duplicate, Copy
+  text, Copy link, Save as template, Delete — `PanelMore`, sharing `usePostActions` with `ProgressActions`) and ✕. Above
+  the tabs, so every tab shows them: loading, a failed read, kept edits, a conflict, and what ⋯ answered (`MoreOutcome`:
+  the delete confirmation, "Copied", a refusal, the template editor). Tabs Content · AI tools · Activity (a new post
+  opens on Content, a post the AI is writing on AI tools, any other on the tab last used; the tab and each folding
+  section's state are remembered per device in `panelPrefs.ts`).
+  The Content tab: the hook as the large serif line, Date · Time, Status · Who posts it with the progress actions under
+  them, Post text with its toolbar (`TextToolbar`: Emoji picker searched in English, Insert link — the short link while
+  it is on, else the Link field's address, else a box asks —, Insert snippet, Insert hashtag group), Call to action with
+  "Add destination URL" (opens the Link field in place), then the folding sections Targeting & language, Link & hashtags
+  and Versions & repeat (a section opens by itself for a refused field, the too-many-hashtags warning, or a hashtag group
+  just added). Footer: Create post, Save draft for a draft, else Save.
+- **`logo_url`:** `GET bootstrap` gives each brand's `logo_url` (null without one) for the breadcrumb's chip.
+
 ## What this release does not do
 
 No email notices other than the opt-in morning email, no mentions or attachments (approvals, comments, reminders and the bell live in the app), no publishing to social networks, no campaigns or media-library screens, no plan limits, and no AI

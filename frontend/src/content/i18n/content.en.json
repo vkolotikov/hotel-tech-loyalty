@@ -23,7 +23,14 @@
     "budget_warn": "This month's AI budget is {{percent}} % used.",
     "budget_over": "This month's AI budget is used up. AI actions are paused until next month; writing by hand still works.",
     "not_set_up_manager": "This brand is not set up yet, so the AI does not know its voice and channels.",
-    "not_set_up_staff": "Your manager has not set up this brand yet."
+    "not_set_up_staff": "Your manager has not set up this brand yet.",
+    "workspace": "Workspace",
+    "settings": "Settings",
+    "help": "Help & resources",
+    "find_short": "Find",
+    "role": { "owner": "Owner", "manager": "Manager", "staff": "Staff" },
+    "breadcrumb": "Breadcrumb",
+    "page_write": "Write"
   },
   "platform": {
     "linkedin": "LinkedIn", "instagram": "Instagram", "tiktok": "TikTok", "facebook": "Facebook",
@@ -65,7 +72,16 @@
     "add_menu": "Add to {{day}}",
     "add": { "post": "New post", "template": "From a template…", "note": "Note", "event": "Event" },
     "generating": "The AI is writing posts…",
-    "promoting": "The AI is writing promotion posts…"
+    "promoting": "The AI is writing promotion posts…",
+    "line": "A clear view of what comes next.",
+    "numbers": "Planned: {{planned}} · Ready: {{ready}} · Published: {{published}} · Empty slots: {{open}}",
+    "status_chip": "Status: {{name}}",
+    "unscheduled_chip": "Unscheduled ({{count}})",
+    "legend_draft": "Draft",
+    "legend_keydate": "Key date",
+    "select_post": "Select a post to review its details",
+    "card_label_time_status": "{{platform}} {{time}}: {{status}}, {{text}}",
+    "card_label_status": "{{platform}}: {{status}}, {{text}}"
   },
   "move": {
     "error": {
@@ -195,7 +211,32 @@
     "template": "Template",
     "template_replace": "Replace the words already written with this template?",
     "blanks": "Blanks to fill: {{count}} — {{list}}",
-    "promotes": "Promotes:"
+    "promotes": "Promotes:",
+    "details": "Post details",
+    "no_day": "No day yet",
+    "more": "More actions",
+    "tab_content": "Content",
+    "tab_ai": "AI tools",
+    "tab_activity": "Activity",
+    "tab_activity_count": "Activity ({{count}})",
+    "create_first": "Create the post first to use this.",
+    "hook_label": "Post hook",
+    "hook_placeholder": "Write the first line people see",
+    "post_text": "Post text",
+    "add_link": "Add destination URL",
+    "fold_targeting": "Targeting & language",
+    "fold_links": "Link & hashtags",
+    "fold_versions": "Versions & repeat",
+    "save_draft": "Save draft",
+    "tools": "Text tools",
+    "tool_emoji": "Emoji",
+    "tool_link": "Insert link",
+    "tool_hashtags": "Insert hashtag group",
+    "emoji_search": "Search emoji",
+    "emoji_recent": "Recent",
+    "emoji_none": "No emoji match.",
+    "emoji_group": { "smileys": "Smileys", "people": "People", "hearts": "Hearts", "nature": "Nature", "food": "Food", "activity": "Activities", "objects": "Objects", "symbols": "Symbols" },
+    "link_address": "Web address"
   },
   "save": {
     "error": {

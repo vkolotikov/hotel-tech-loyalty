@@ -11,7 +11,8 @@ export type PostStatus = 'idea' | 'draft' | 'needs_review' | 'needs_visual' | 'a
 export type Rewrite = 'shorter' | 'longer' | 'professional' | 'friendly' | 'alternative'
 export type BudgetStatus = 'unlimited' | 'under' | 'warn' | 'over'
 
-export interface BrandRef { id: number; name: string }
+/** A brand as the bootstrap names it; its logo for the top bar's brand chip (spec 2026-10-21 §9). */
+export interface BrandRef { id: number; name: string; logo_url: string | null }
 
 export interface Bootstrap {
   name: string

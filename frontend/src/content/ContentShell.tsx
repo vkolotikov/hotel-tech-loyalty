@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Megaphone, Plus, Search } from 'lucide-react'
+import { CalendarDays, Compass, FileText, Fingerprint, Lightbulb, Megaphone, Search } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from '../workspace/WorkspaceShell'
 import type { FindTarget } from '../workspace/find/findCore'
 import { firstLetter } from '../workspace/lib/firstLetter'
 import { useMedia } from '../workspace/lib/useMedia'
-import { accentTokens } from '../workspace/theme/accent'
+import { CONTENT_SURFACES, accentTokens, cardFill } from '../workspace/theme/accent'
 import { Button } from '../workspace/ui/Button'
 import { Notice } from '../workspace/ui/Notice'
 import { ForYouBell } from './bell/ForYouBell'
@@ -24,6 +24,9 @@ import { PanelFailed } from './panel/PanelFailed'
 import { PostPanel } from './panel/PostPanel'
 import { ContentErrorBoundary } from './ui/ContentErrorBoundary'
 import { ContentShortcuts } from './ui/ContentShortcuts'
+import { BrandCrumb } from './shell/BrandCrumb'
+import { FrameFooter, PhoneMenu } from './shell/FrameFooter'
+import { pageKeyOf } from './shell/shellMath'
 
 /**
  * HexaTech Content on the shared frame (WorkspaceShell): its areas in the
@@ -60,7 +63,9 @@ export function ContentShell({ children }: { children: ReactNode }) {
   // While the bootstrap loads, the frame wears the accent and mark this device last saw (lib/look.ts).
   const look = useLook()
   const [remembered] = useState(loadBrandPaint)
-  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved)
+  // Worked out on Content's own navy (spec 2026-10-21 §3.2), with the post cards' fill.
+  const accent = accentTokens(data ? data.accent : remembered?.accent, look.resolved, CONTENT_SURFACES[look.resolved])
+  const card = cardFill(accent.accent, look.resolved)
   const initial = data ? firstLetter(data.organization.name, 'H') : (remembered?.initial ?? 'H')
   const known = Boolean(data)
   const brandHex = accent.accent
@@ -100,15 +105,23 @@ export function ContentShell({ children }: { children: ReactNode }) {
     { to: '/content/strategy', end: false, icon: Compass, label: t('content.nav.strategy', 'Strategy') },
     { to: '/content/brand', end: false, icon: Fingerprint, label: t('content.nav.brand', 'Brand') },
   ]
+  // The breadcrumb's page (spec 2026-10-21 §4.2): the side panel's names, and Write for 7b's writing view.
+  const pageKey = pageKeyOf(pathname)
+  const pageName = pageKey === 'write' ? t('content.shell.page_write', 'Write') : (nav.find(n => (pageKey === 'plan' ? n.to === '/content' : n.to === `/content/${pageKey}`))?.label ?? '')
   const findLabel = t('content.shell.find', 'Find a post or action')
   const modKey = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform ?? '') ? '⌘' : 'Ctrl'
   const canManage = Boolean(data?.staff.can_manage)
   const setUp = data?.profile?.setup_completed === true
   // Another brand drops the open post: the panel asks first (spec §6.7).
   const chooseBrand = (id: number) => { if (data && id > 0 && id !== data.brand?.id && close()) switchBrand(id) }
+  const crumb = data ? <BrandCrumb brand={data.brand} brands={data.brands} page={pageName} onChoose={chooseBrand} /> : null
 
   // Find: what it offers (the pages this person sees above), and what each choice does.
   const slim = look.rail === 'slim'
+  const foot = {
+    look, fullAdmin: fullAdminPath(canManage), person: data?.staff.name, role: data?.staff.role ?? null, onLeave: panel.guard,
+    onShortcuts: () => { if (ready) setHelpOpen(true) }, onFind: () => { if (ready) setFindOpen(true) },
+  }
   const findList = findActions({
     nav, dark: look.resolved === 'dark', wide, slim,
     words: {
@@ -134,42 +147,27 @@ export function ContentShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <WorkspaceShell workspace="content" look={look} accent={accent} initial={initial}
+    <WorkspaceShell workspace="content" look={look} accent={accent} card={card} initial={initial}
       organization={data?.organization.name} product={data?.name ?? APP_NAME} person={data?.staff.name}
       nav={nav}
       fullAdmin={fullAdminPath(canManage)}
       onLeave={panel.guard}
+      // The owner's side panel (spec 2026-10-21 §4.1): the areas as cards, and Settings, Help & resources and the person.
+      variant="cards" railLabel={t('content.shell.workspace', 'Workspace')}
+      footer={<FrameFooter {...foot} />}
+      // From 640 px the breadcrumb starts the top bar; on a phone it has the row above Find (beside the six area buttons it cannot fit).
+      crumbs={crumb && <div className="hidden min-w-0 sm:flex">{crumb}</div>}
+      phoneMenu={<PhoneMenu {...foot} />}
       header={<>
-        {/* The brand takes the free room and shrinks with it: a long name is cut, never under the buttons. On a phone the
-            switcher has its own row above the page (found by eyes: with the bell, a 390 px header has no room left for it). */}
-        <div className="hidden min-w-0 flex-1 sm:block sm:flex-initial">
-          <div className="hidden truncate text-sm font-semibold md:block">{data?.organization.name}</div>
-          {data && data.brands.length > 1 ? (
-            <label data-brand-switcher="" className="block">
-              <span className="sr-only">{t('content.shell.brand', 'Brand')}</span>
-              <select value={data.brand?.id ?? ''} onChange={(e) => chooseBrand(Number(e.target.value))}
-                className="w-full max-w-[12rem] truncate rounded-md border border-a-border bg-a-surface px-1.5 py-0.5 text-xs text-a-text">
-                {data.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-              </select>
-            </label>
-          ) : data?.brand && data.brand.name !== data.organization.name && (
-            <div className="hidden truncate text-xs text-a-text-2 md:block">{data.brand.name}</div>
-          )}
-        </div>
         <button ref={findButton} type="button" onClick={() => { if (ready) setFindOpen(true) }} disabled={!ready} aria-label={findLabel} aria-keyshortcuts={modKey === '⌘' ? 'Meta+K' : 'Control+K'} aria-haspopup="dialog"
-          className="hidden min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:flex sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4">
+          className="hidden min-w-0 shrink-0 items-center justify-center gap-2 rounded-xl border border-a-border bg-a-surface p-2 text-left text-sm text-a-text-2 shadow-a-sm enabled:hover:border-a-text-2/40 disabled:opacity-60 sm:flex sm:min-w-[10rem] sm:max-w-md sm:flex-1 sm:shrink sm:justify-start sm:px-3 lg:ml-4">
           <Search size={15} aria-hidden className="shrink-0" />
           <span className="hidden min-w-0 truncate sm:inline">{findLabel}</span>
           <kbd aria-hidden="true" className="ml-auto hidden shrink-0 rounded-md border border-a-border px-1.5 font-a-mono text-xs sm:inline">{modKey} K</kbd>
         </button>
-        {/* The bell beside New post (spec 2026-10-16 §8): what waits for this person, and their news, for the brand at work. */}
+        {/* The bell (spec 2026-10-16 §8): what waits for this person, and their news, for the brand at work. New post is in each page's header (spec 2026-10-21 §5). */}
         <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
           {ready && <ForYouBell />}
-          <button type="button" onClick={() => { if (today !== null) openNew({ date: today, platform: null }) }} disabled={!ready}
-            aria-label={t('content.shell.new_post', 'New post')}
-            className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full bg-a-accent p-2 text-sm font-semibold text-a-accent-ink shadow-a-sm transition hover:bg-a-accent-deep disabled:opacity-60 sm:px-4 [@media(hover:hover)]:hover:-translate-y-px">
-            <Plus size={16} aria-hidden /><span className="hidden sm:inline">{t('content.shell.new_post', 'New post')}</span>
-          </button>
         </div>
       </>}
       overlays={ready ? <>
@@ -207,25 +205,17 @@ export function ContentShell({ children }: { children: ReactNode }) {
 
       {!stopped && data && (
         <>
-          {/* On a phone Find and the brand switcher have their own row (found by eyes at 390 px and by the final review at
+          {/* On a phone Find has its own row, the brand menu being the breadcrumb's (found by eyes at 390 px and by the final review at
               375 and 360 px: with the bell, a phone's header has no room for them). */}
+          <div data-phone-crumb="" className="flex min-w-0 px-4 pt-3 sm:hidden">{crumb}</div>
           <div data-phone-row="" className="flex items-center gap-2 px-4 pt-3 sm:hidden">
             <button ref={findPhone} type="button" data-find-phone="" onClick={() => setFindOpen(true)} aria-haspopup="dialog"
               className="flex min-w-0 flex-1 items-center gap-2 rounded-xl border border-a-border bg-a-surface px-3 py-2 text-left text-sm text-a-text-2 shadow-a-sm">
               <Search size={15} aria-hidden className="shrink-0" /><span className="truncate">{findLabel}</span>
             </button>
-            {data.brands.length > 1 && (
-              <label data-brand-switcher-phone="" className="block min-w-0 max-w-[45%] shrink">
-                <span className="sr-only">{t('content.shell.brand', 'Brand')}</span>
-                <select value={data.brand?.id ?? ''} onChange={(e) => chooseBrand(Number(e.target.value))}
-                  className="w-full truncate rounded-md border border-a-border bg-a-surface px-1.5 py-2 text-sm text-a-text">
-                  {data.brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </label>
-            )}
           </div>
           {(data.ai.status === 'warn' || data.ai.status === 'over' || !setUp) && (
-            <div className="space-y-2 px-4 pt-3 lg:px-6">
+            <div className={`space-y-2 px-4 pt-3 lg:px-6 ${panel.target ? 'xl:pr-[400px]' : ''}`}>
               {data.ai.status === 'warn' && (
                 <Notice tone="warning">{t('content.shell.budget_warn', "This month's AI budget is {{percent}} % used.", { percent: data.ai.percent ?? 80 })}</Notice>
               )}
@@ -241,7 +231,8 @@ export function ContentShell({ children }: { children: ReactNode }) {
               )}
             </div>
           )}
-          <main ref={main} tabIndex={-1} className="min-h-0 flex-1">
+          {/* From 1280 px the open post's panel is a column beside the page: the page makes room for it (spec 2026-10-21 §7.1). */}
+          <main ref={main} tabIndex={-1} className={`min-h-0 min-w-0 flex-1 ${panel.target ? 'xl:pr-[400px]' : ''}`}>
             <ContentErrorBoundary key={pathname}
               message={t('content.common.page_failed', 'This page could not be shown. What you saved is safe.')}
               reload={t('content.common.reload', 'Reload the page')}>

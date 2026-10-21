@@ -38,7 +38,7 @@ final class ContentContext
         return Brand::query()
             ->when($assigned !== [], fn ($q) => $q->whereIn('id', $assigned))
             ->orderBy('sort_order')->orderBy('id')
-            ->get(['id', 'name', 'is_default']);
+            ->get(['id', 'name', 'is_default', 'logo_url']);
     }
 
     /** The brand to work on when the request names none (or one it may not use): the default among theirs, else their first. */

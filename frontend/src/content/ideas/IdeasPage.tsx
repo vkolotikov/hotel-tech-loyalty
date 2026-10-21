@@ -114,8 +114,7 @@ export function IdeasPage() {
   const shown = wide ? COLUMNS : [stage]
   return (
     <div className="space-y-4 px-4 py-4 lg:px-6">
-      <PageHeader title={t('content.ideas.title', 'Ideas')} />
-      <p className="text-sm text-a-text-2">{t('content.ideas.intro', 'Posts without a day, by stage. Move a card to another stage, or schedule it onto the Plan.')}</p>
+      <PageHeader title={t('content.ideas.title', 'Ideas')} line={t('content.ideas.intro', 'Posts without a day, by stage. Move a card to another stage, or schedule it onto the Plan.')} newPost />
       <p id={IDEAS_HINT_ID} className="sr-only">{t('content.ideas.move_hint', 'Shift + ← or → moves the card to the stage beside it.')}</p>
 
       <div className="flex flex-wrap items-center gap-2">

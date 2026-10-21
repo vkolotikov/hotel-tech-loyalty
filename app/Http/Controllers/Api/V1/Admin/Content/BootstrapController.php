@@ -38,8 +38,9 @@ class BootstrapController extends Controller
         return response()->json([
             'name'         => self::NAME,
             'organization' => ['id' => $orgId, 'name' => (string) $org->name, 'industry' => (string) $org->resolved_industry],
-            'brand'        => $brand ? ['id' => (int) $brand->id, 'name' => (string) $brand->name] : null,
-            'brands'       => $brands->map(fn (Brand $b) => ['id' => (int) $b->id, 'name' => (string) $b->name])->values(),
+            // Each brand's logo for the top bar's brand chip (spec 2026-10-21 §9); null where it has none.
+            'brand'        => $brand ? ['id' => (int) $brand->id, 'name' => (string) $brand->name, 'logo_url' => $brand->logo_url ?: null] : null,
+            'brands'       => $brands->map(fn (Brand $b) => ['id' => (int) $b->id, 'name' => (string) $b->name, 'logo_url' => $b->logo_url ?: null])->values(),
             'accent'       => OrgAccent::of($orgId),
             'venue'        => [
                 'timezone'       => VenueClock::zone($orgId),

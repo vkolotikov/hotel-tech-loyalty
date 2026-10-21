@@ -32,11 +32,15 @@ const pf = (p: string, dark: boolean) => ({
   ...(dark ? block(css, `[data-content][data-theme="dark"] [data-platform="${p}"]`, 'c-') : {}),
 })
 const THEMES = [
-  { name: 'light', dark: false, own: block(css, '[data-content]', 'c-'), surfaces: block(workspace, '[data-workspace]', 'a-') },
+  { name: 'light', dark: false, own: block(css, '[data-content]', 'c-'), surfaces: { ...block(workspace, '[data-workspace]', 'a-'), ...block(css, '[data-content]', 'a-') } },
   {
     name: 'dark', dark: true,
     own: { ...block(css, '[data-content]', 'c-'), ...block(css, '[data-content][data-theme="dark"]', 'c-') },
-    surfaces: { ...block(workspace, '[data-workspace]', 'a-'), ...block(workspace, '[data-workspace][data-theme="dark"]', 'a-') },
+    // Content's own navy over the Atelier set (spec 2026-10-21 §3.1): the tones must read on what Content draws.
+    surfaces: {
+      ...block(workspace, '[data-workspace]', 'a-'), ...block(workspace, '[data-workspace][data-theme="dark"]', 'a-'),
+      ...block(css, '[data-content]', 'a-'), ...block(css, '[data-content][data-theme="dark"]', 'a-'),
+    },
   },
 ]
 
@@ -67,6 +71,16 @@ for (const theme of THEMES) {
 describe('content stylesheet', () => {
   it('marks the open post\'s card with a ring beside its platform edge (one box-shadow carries both)', () => {
     expect(css).toMatch(/\[data-content\] \.c-edge\[aria-current="true"\]\s*\{[^}]*inset 3px 0 0 rgb\(var\(--c-pf\)\),\s*0 0 0 2px rgb\(var\(--a-accent-text\)\)/)
+  })
+
+  // Found by the release check's browser pass: the admin's rule for screens up to 1023 px sets every field to 16 px
+  // (!important, so iOS does not zoom); the post hook keeps its large line there too (26 px is past 16, no zoom).
+  it('keeps the post hook at 26 px on phones and tablets, over the admin\'s 16 px field rule', () => {
+    expect(css).toMatch(/\[data-content\] textarea\.c-hook\s*\{[^}]*font-size:\s*26px\s*!important/)
+  })
+
+  it('draws a platform mark\'s two letters from its data-short (so a card\'s name need not repeat them)', () => {
+    expect(css).toMatch(/\[data-content\] \.c-mark-short::before\s*\{[^}]*content:\s*attr\(data-short\)/)
   })
 
   it('maps every status the server sends to a tone', () => {

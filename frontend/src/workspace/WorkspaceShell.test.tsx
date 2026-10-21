@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { MemoryRouter } from 'react-router-dom'
+import type { ComponentProps } from 'react'
 import { CalendarDays, FileText } from 'lucide-react'
 import { WorkspaceShell, type WorkspaceNavItem } from './WorkspaceShell'
 import { accentTokens } from './theme/accent'
@@ -22,12 +23,13 @@ const nav: WorkspaceNavItem[] = [
 ]
 const look = (rail: 'full' | 'slim' = 'full'): LiveLook => ({ theme: 'light', rail, resolved: 'light', setTheme: () => {}, setRail: () => {} })
 
-function render({ rail = 'full', fullAdmin = '/marketing' }: { rail?: 'full' | 'slim'; fullAdmin?: string | null } = {}) {
+type Extra = Partial<Pick<ComponentProps<typeof WorkspaceShell>, 'variant' | 'railLabel' | 'footer' | 'phoneMenu' | 'crumbs'>>
+function render({ rail = 'full', fullAdmin = '/marketing', ...extra }: { rail?: 'full' | 'slim'; fullAdmin?: string | null } & Extra = {}) {
   return renderToStaticMarkup(
     <MemoryRouter initialEntries={['/content']}>
       <WorkspaceShell workspace="content" look={look(rail)} accent={accentTokens('#c9a84c', 'light')} initial="L"
         organization="Lumière Salon" product="HexaTech Content" person="Vitalij K" nav={nav} fullAdmin={fullAdmin}
-        header={<p>the workspace header</p>} overlays={<p>an overlay</p>}>
+        header={<p data-header-own="">the workspace header</p>} overlays={<p>an overlay</p>} {...extra}>
         <main>page body</main>
       </WorkspaceShell>
     </MemoryRouter>,
@@ -35,6 +37,30 @@ function render({ rail = 'full', fullAdmin = '/marketing' }: { rail?: 'full' | '
 }
 
 describe('WorkspaceShell', () => {
+  // Release 7a (spec 2026-10-21 §4): options only Content passes; without them the frame is today's (Appointments).
+  it('draws the frame as it is today when no option is given (Appointments)', () => {
+    const html = render()
+    expect(html).not.toContain('data-rail-variant="cards"')
+    expect(html).toMatch(/data-rail=""[^>]*class="[^"]*w-64/)
+    expect(html).toContain('Collapse menu')
+  })
+
+  it('draws the side buttons as cards with the label above them when asked', () => {
+    const html = render({ variant: 'cards', railLabel: 'Workspace' })
+    expect(html).toContain('data-rail-variant="cards"')
+    expect(html).toMatch(/data-rail=""[^>]*class="[^"]*w-60/)
+    expect(html).toMatch(/<p[^>]*>Workspace<\/p>/)
+    expect(html).toMatch(/aria-current="page"[^>]*class="[^"]*from-a-accent[^"]*text-a-accent-ink/)
+  })
+
+  it('puts a workspace footer, phone menu and breadcrumb in place of the usual ones', () => {
+    const html = render({ footer: <div data-own-footer="" />, phoneMenu: <div data-own-phone="" />, crumbs: <nav data-crumbs="" /> })
+    expect(html).toContain('data-own-footer=""')
+    expect(html).toContain('data-own-phone=""')
+    expect(html.indexOf('data-crumbs=""')).toBeLessThan(html.indexOf('data-header-own'))
+    expect(html).not.toContain('Collapse menu')
+  })
+
   it('is the token scope for the shared core and for the workspace by its name', () => {
     const html = render()
     const root = html.match(/^<div[^>]*>/)?.[0] ?? ''

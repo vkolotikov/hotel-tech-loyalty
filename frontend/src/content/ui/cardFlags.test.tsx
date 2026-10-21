@@ -54,9 +54,9 @@ describe('card flags (spec 2026-10-16 §6.3, §7.1)', () => {
 
   it('end a Plan card’s name and show on the card, in the month and on a Posts row', () => {
     const html = render(true, <PostCardView post={card({ comments_count: 2 })} onOpen={() => {}} />)
-    expect(html).toContain('aria-label="instagram 09:00: Three colours, needs_review, Waiting for approval, Comments: 2"')
+    expect(html).toContain('aria-label="instagram 09:00: needs_review, Three colours, Waiting for approval, Comments: 2"')
     expect(html).toContain('data-flags=""')
-    expect(render(true, <PostCardView post={card()} compact onOpen={() => {}} />)).toContain('title="Waiting for approval"')
+    expect(render(true, <PostCardView post={card()} size="tray" onOpen={() => {}} />)).toContain('title="Waiting for approval"')
     expect(render(false, <PostRow post={card({ comments_count: 3 })} locale="en-GB" pillar={null} selected={false} onOpen={() => {}} />)).toContain('Comments: 3')
   })
 })
@@ -79,6 +79,6 @@ describe('clicks on cards (spec 2026-10-19 §5.5)', () => {
     expect(render(false, <CardFlags post={card({ status: 'draft', clicks: 12 })} />)).toContain('<span aria-hidden="true">12</span><span class="sr-only">Clicks: 12</span>')
     expect(render(false, <CardFlags post={card({ status: 'draft', clicks: 1 })} compact />)).toContain('title="Clicks: 1"')
     expect(render(false, <PostCardView post={card({ status: 'draft', clicks: 3, group_size: 2 })} onOpen={() => {}} />))
-      .toContain('aria-label="instagram 09:00: Three colours, draft, Versions: 2, Clicks: 3"')
+      .toContain('aria-label="instagram 09:00: draft, Three colours, Versions: 2, Clicks: 3"')
   })
 })

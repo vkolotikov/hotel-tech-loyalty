@@ -48,7 +48,7 @@ export function ListView({ plans, today, locale, selectedId, fillingKey, aiPause
           </div>
           {keyDates?.[day.date] && onKeyDate && <div className="mb-2"><KeyDateChips items={keyDates[day.date]} observed={observed} onPick={(k) => onKeyDate(k, day.date)} /></div>}
           <div className="grid gap-2 sm:grid-cols-2">
-            {day.posts.map(post => <PostCardView key={post.id} post={post} selected={selectedId === post.id} onOpen={onOpen} onKeyDown={onCardKeyDown} />)}
+            {day.posts.map(post => <PostCardView key={post.id} post={post} size="list" selected={selectedId === post.id} onOpen={onOpen} onKeyDown={onCardKeyDown} />)}
             {day.slots.map(slot => (
               <SlotRow key={slot.platform} slot={slot} time={times?.[slot.platform] ?? null} filling={fillingKey === slotKey(slot)} aiPaused={aiPaused} onWrite={() => onWrite(slot)} onFill={() => onFill(slot)} />
             ))}

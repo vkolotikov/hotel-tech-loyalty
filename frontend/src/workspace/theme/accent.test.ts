@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FALLBACK_ACCENT, accentStyle, accentTokens, contrast, tint, triplet } from './accent'
+import { CONTENT_SURFACES, FALLBACK_ACCENT, accentStyle, accentTokens, cardFill, contrast, tint, triplet } from './accent'
 
 const BRANDS = ['#3b82f6', '#c9a84c', '#ffffff', '#f5f5f5', '#fde68a', '#111111', '#000000', '#0e8f7e', '#b4884d', '#9b5c8f',
   '#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e', '#14b8a6', '#06b6d4', '#0ea5e9', '#6366f1', '#8b5cf6',
@@ -98,5 +98,34 @@ describe('accentTokens', () => {
     const style = accentStyle(accentTokens('#c9a84c', 'light'))
     expect(Object.keys(style).sort()).toEqual(['--a-accent', '--a-accent-deep', '--a-accent-ink', '--a-accent-rail', '--a-accent-text'])
     expect(style['--a-accent']).toBe('201 168 76')
+  })
+
+  // Release 7a (spec 2026-10-21 §3.2): Content works its accent out on its own navy; Appointments passes nothing.
+  it('gives today\'s result when no surfaces are passed', () => {
+    expect(accentTokens('#3b82f6', 'dark')).toEqual({ accent: '#3b82f6', ink: '#ffffff', deep: '#3472d8', text: '#76a8f9', rail: '#3b82f6', edge: false })
+    expect(accentTokens('#c9a84c', 'light')).toEqual({ accent: '#c9a84c', ink: '#0e1a24', deep: '#cfb261', text: '#6f5c2a', rail: '#c9a84c', edge: false })
+  })
+
+  it('reads accent text on the surfaces it is given', () => {
+    for (const brand of BRANDS) {
+      const text = accentTokens(brand, 'dark', CONTENT_SURFACES.dark).text
+      for (const bg of ['#202836', '#242c3a', '#29303f']) expect(contrast(text, bg), `${brand} on ${bg}`).toBeGreaterThanOrEqual(4.6)
+    }
+  })
+
+  it('writes the card fill beside the accent when it is given', () => {
+    expect(accentStyle(accentTokens('#3b82f6', 'dark'), '#2c3f60')['--c-card']).toBe('44 63 96')
+    expect(accentStyle(accentTokens('#3b82f6', 'dark'))['--c-card']).toBeUndefined()
+  })
+
+  it('lowers the card mix while its text would read under 4.5:1, down to the bare ground', () => {
+    for (const brand of BRANDS) {
+      for (const theme of ['light', 'dark'] as const) {
+        const card = cardFill(brand, theme)
+        const [text, text2] = theme === 'dark' ? ['#e8eef4', '#aab8ca'] : ['#1b2430', '#546272']
+        expect(contrast(text, card), `${brand} ${theme}`).toBeGreaterThanOrEqual(4.5)
+        expect(contrast(text2, card), `${brand} ${theme}`).toBeGreaterThanOrEqual(4.5)
+      }
+    }
   })
 })

@@ -24,7 +24,7 @@ import { isRunning, runEnded, runNote, useGenerationRun } from './generateRun'
 import { ListView } from './ListView'
 import { MonthGrid } from './MonthGrid'
 import { createMover, keyMove, leavesRange, movedDate, undoOf, type DropTarget } from './moveMath'
-import { filtered, keepWithinBrand, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
+import { filtered, keepWithinBrand, monthFigures, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey } from './planMath'
 import { canAdd, newPostDraft, usualTimes, type AddChoice } from './addMath'
 import { GoalsLine } from './GoalsLine'
 import { KeyDateEditor } from './KeyDateEditor'
@@ -35,10 +35,13 @@ import { showGoals } from './goalsMath'
 import { MOVE_HINT_ID } from './PostCardView'
 import { loadPrefs, savePrefs, type PlanPrefs } from './prefs'
 import { Toolbar } from './Toolbar'
-import { Tray } from './Tray'
+import { FilterRow } from './FilterRow'
+import { UnscheduledChip } from './UnscheduledChip'
 import { useCardDrag } from './useCardDrag'
 import { WeekGrid } from './WeekGrid'
-import { WeekStrip } from './WeekStrip'
+import { NumbersLine } from './NumbersLine'
+import { PlanLegend } from './PlanLegend'
+import { PageHeader } from '../ui/PageHeader'
 
 /** The line under the toolbar after a move (with its Undo) or a refusal. */
 interface Note { tone: 'info' | 'danger'; text: string; undo: (() => void) | null }
@@ -279,19 +282,25 @@ export function PlanPage() {
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col">
+      {/* The owner's header (spec 2026-10-21 §6.1): the title, its line, the period's numbers, and New post. */}
+      <div className="px-4 pb-3 pt-4 lg:px-6">
+        <PageHeader title={t('content.nav.plan', 'Plan')} line={t('content.plan.line', 'A clear view of what comes next.')}
+          below={<NumbersLine figures={data && view === 'month' ? monthFigures(data.posts, data.slots, date) : data?.figures} pending={!data || query.isPlaceholderData} />} newPost />
+      </div>
+      {/* The owner's filter row, above the calendar bar (spec 2026-10-21 §6.2); the tray is the Unscheduled chip's list. */}
+      <FilterRow platforms={chips} filter={prefs.filter} statuses={boot.statuses} onFilter={(filter) => setPrefs({ ...prefs, filter })}
+        keyDates={prefs.keyDates} onKeyDates={(on) => setPrefs({ ...prefs, keyDates: on })}
+        unscheduled={<UnscheduledChip posts={data?.unscheduled ?? []} total={data?.unscheduled_total} active={dropTarget?.kind === 'tray'} dragging={drag.state !== null} selectedId={selectedId}
+          onOpen={openPost} onCardPointerDown={wide ? drag.begin : undefined} onCardKeyDown={onCardKeyDown} />} />
       <Toolbar view={view} viewLocked={!wide} label={rangeLabel(view, range, date, locale)} refreshing={query.isFetching && !query.isLoading}
-        canGenerate={boot.staff.can_manage} filter={prefs.filter} platforms={chips} statuses={boot.statuses}
+        canGenerate={boot.staff.can_manage}
         onPrev={() => setDate(shiftDate(view, date, -1))} onNext={() => setDate(shiftDate(view, date, 1))}
         onToday={() => setDate(boot.venue.today)}
-        onView={(v) => setPrefs({ ...prefs, view: v })} onFilter={(filter) => setPrefs({ ...prefs, filter })}
-        onGenerate={() => setGenerating(true)} aiPaused={aiPaused}
-        keyDates={prefs.keyDates} onKeyDates={(on) => setPrefs({ ...prefs, keyDates: on })} />
+        onView={(v) => setPrefs({ ...prefs, view: v })}
+        onGenerate={() => setGenerating(true)} aiPaused={aiPaused} />
 
-      {view !== 'month' && (
-        <div className="space-y-3 px-4 pb-3 lg:px-6">
-          <WeekStrip figures={data?.figures} pending={!data || query.isPlaceholderData} />
-          {showGoals(goals.data, range, today) && <GoalsLine goals={goals.data} />}
-        </div>
+      {view !== 'month' && showGoals(goals.data, range, today) && (
+        <div className="px-4 pb-3 lg:px-6"><GoalsLine goals={goals.data} /></div>
       )}
 
       {query.isError && (
@@ -317,7 +326,7 @@ export function PlanPage() {
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 lg:px-6 xl:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 pb-4 lg:px-6">
         <div className="min-h-[24rem] min-w-0 flex-1 overflow-auto rounded-xl border border-a-border bg-a-surface shadow-a-sm">
           {query.isLoading && <CalendarSkeleton />}
           {!query.isLoading && view === 'week' && (
@@ -336,12 +345,10 @@ export function PlanPage() {
               keyDates={keyDates} observed={observed} onKeyDate={onKeyDate} templates={templates.length > 0} />
           )}
         </div>
-        <div className="xl:w-64 xl:shrink-0">
-          <Tray posts={data?.unscheduled ?? []} total={data?.unscheduled_total} active={dropTarget?.kind === 'tray'} selectedId={selectedId}
-            onOpen={openPost} onCardPointerDown={wide ? drag.begin : undefined} onCardKeyDown={onCardKeyDown} />
-        </div>
       </div>
 
+      {/* The legend under the calendar (spec 2026-10-21 §6.6). */}
+      <div className="px-4 pb-4 lg:px-6"><PlanLegend open={selectedId !== null} /></div>
       <p id={MOVE_HINT_ID} className="sr-only">{t('content.plan.move_hint', 'Shift and the left or right arrow moves it a day.')}</p>
       {drag.state && <DragGhost post={drag.state.post} x={drag.state.x} y={drag.state.y} />}
       {generating && <GenerateDialog today={today} onClose={() => setGenerating(false)} onDone={() => { void refresh() }} />}

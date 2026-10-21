@@ -63,7 +63,7 @@ export function PostsPage() {
 
   return (
     <div className="space-y-4 px-4 py-4 lg:px-6">
-      <PageHeader title={t('content.posts.title', 'Posts')}>
+      <PageHeader title={t('content.posts.title', 'Posts')} newPost>
         {page && <span className="text-sm text-a-text-2">{t('content.posts.found', 'Posts: {{count}}', { count: page.meta.total })}</span>}
       </PageHeader>
 

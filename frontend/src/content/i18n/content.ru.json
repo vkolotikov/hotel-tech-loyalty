@@ -23,7 +23,14 @@
     "budget_warn": "Месячный бюджет на ИИ израсходован на {{percent}} %.",
     "budget_over": "Месячный бюджет на ИИ исчерпан. Действия ИИ приостановлены до следующего месяца; писать вручную по-прежнему можно.",
     "not_set_up_manager": "Этот бренд ещё не настроен, поэтому ИИ не знает его голос и каналы.",
-    "not_set_up_staff": "Ваш менеджер ещё не настроил этот бренд."
+    "not_set_up_staff": "Ваш менеджер ещё не настроил этот бренд.",
+    "workspace": "Рабочее пространство",
+    "settings": "Настройки",
+    "help": "Помощь и материалы",
+    "find_short": "Поиск",
+    "role": { "owner": "Владелец", "manager": "Менеджер", "staff": "Сотрудник" },
+    "breadcrumb": "Навигационная цепочка",
+    "page_write": "Текст"
   },
   "platform": {
     "linkedin": "LinkedIn", "instagram": "Instagram", "tiktok": "TikTok", "facebook": "Facebook",
@@ -65,7 +72,16 @@
     "add_menu": "Добавить на {{day}}",
     "add": { "post": "Новый пост", "template": "Из шаблона…", "note": "Заметка", "event": "Событие" },
     "generating": "ИИ пишет посты…",
-    "promoting": "ИИ пишет посты для продвижения…"
+    "promoting": "ИИ пишет посты для продвижения…",
+    "line": "Ясный взгляд на то, что впереди.",
+    "numbers": "Запланировано: {{planned}} · Готово: {{ready}} · Опубликовано: {{published}} · Свободные места: {{open}}",
+    "status_chip": "Статус: {{name}}",
+    "unscheduled_chip": "Без даты ({{count}})",
+    "legend_draft": "Черновик",
+    "legend_keydate": "Важная дата",
+    "select_post": "Выберите пост, чтобы посмотреть подробности",
+    "card_label_time_status": "{{platform}} {{time}}: {{status}}, {{text}}",
+    "card_label_status": "{{platform}}: {{status}}, {{text}}"
   },
   "move": {
     "error": {
@@ -195,7 +211,32 @@
     "template": "Шаблон",
     "template_replace": "Заменить уже написанный текст этим шаблоном?",
     "blanks": "Пропуски: {{count}} — {{list}}",
-    "promotes": "Продвигает:"
+    "promotes": "Продвигает:",
+    "details": "Детали поста",
+    "no_day": "Дата ещё не выбрана",
+    "more": "Другие действия",
+    "tab_content": "Содержание",
+    "tab_ai": "Инструменты ИИ",
+    "tab_activity": "Активность",
+    "tab_activity_count": "Активность ({{count}})",
+    "create_first": "Сначала создайте пост, чтобы этим воспользоваться.",
+    "hook_label": "Хук поста",
+    "hook_placeholder": "Напишите первую строку, которую увидят люди",
+    "post_text": "Текст поста",
+    "add_link": "Добавить ссылку назначения",
+    "fold_targeting": "Аудитория и язык",
+    "fold_links": "Ссылка и хэштеги",
+    "fold_versions": "Версии и повтор",
+    "save_draft": "Сохранить черновик",
+    "tools": "Инструменты текста",
+    "tool_emoji": "Эмодзи",
+    "tool_link": "Вставить ссылку",
+    "tool_hashtags": "Вставить группу хэштегов",
+    "emoji_search": "Поиск эмодзи (на английском)",
+    "emoji_recent": "Недавние",
+    "emoji_none": "Подходящих эмодзи нет.",
+    "emoji_group": { "smileys": "Смайлики", "people": "Люди", "hearts": "Сердечки", "nature": "Природа", "food": "Еда", "activity": "Занятия", "objects": "Предметы", "symbols": "Символы" },
+    "link_address": "Веб-адрес"
   },
   "save": {
     "error": {

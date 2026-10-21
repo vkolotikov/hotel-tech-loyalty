@@ -23,7 +23,14 @@
     "budget_warn": "Le budget IA du mois est utilisé à {{percent}} %.",
     "budget_over": "Le budget IA du mois est épuisé. Les actions IA sont suspendues jusqu'au mois prochain ; vous pouvez toujours écrire vous-même.",
     "not_set_up_manager": "Cette marque n'est pas encore configurée : l'IA ne connaît ni sa voix ni ses canaux.",
-    "not_set_up_staff": "Votre responsable n'a pas encore configuré cette marque."
+    "not_set_up_staff": "Votre responsable n'a pas encore configuré cette marque.",
+    "workspace": "Espace de travail",
+    "settings": "Réglages",
+    "help": "Aide et ressources",
+    "find_short": "Rechercher",
+    "role": { "owner": "Propriétaire", "manager": "Responsable", "staff": "Équipe" },
+    "breadcrumb": "Fil d’Ariane",
+    "page_write": "Rédaction"
   },
   "platform": {
     "linkedin": "LinkedIn", "instagram": "Instagram", "tiktok": "TikTok", "facebook": "Facebook",
@@ -65,7 +72,16 @@
     "add_menu": "Ajouter le {{day}}",
     "add": { "post": "Nouvelle publication", "template": "À partir d’un modèle…", "note": "Note", "event": "Événement" },
     "generating": "L’IA rédige des publications…",
-    "promoting": "L’IA rédige les publications de promotion…"
+    "promoting": "L’IA rédige les publications de promotion…",
+    "line": "Une vue claire de ce qui arrive.",
+    "numbers": "Prévues : {{planned}} · Prêtes : {{ready}} · Publiées : {{published}} · Créneaux libres : {{open}}",
+    "status_chip": "Statut : {{name}}",
+    "unscheduled_chip": "Sans date ({{count}})",
+    "legend_draft": "Brouillon",
+    "legend_keydate": "Date clé",
+    "select_post": "Choisissez une publication pour voir ses détails",
+    "card_label_time_status": "{{platform}} {{time}} : {{status}}, {{text}}",
+    "card_label_status": "{{platform}} : {{status}}, {{text}}"
   },
   "move": {
     "error": {
@@ -195,7 +211,32 @@
     "template": "Modèle",
     "template_replace": "Remplacer les mots déjà écrits par ce modèle ?",
     "blanks": "Blancs à remplir : {{count}} — {{list}}",
-    "promotes": "Promeut :"
+    "promotes": "Promeut :",
+    "details": "Détails de la publication",
+    "no_day": "Pas encore de jour",
+    "more": "Autres actions",
+    "tab_content": "Contenu",
+    "tab_ai": "Outils IA",
+    "tab_activity": "Activité",
+    "tab_activity_count": "Activité ({{count}})",
+    "create_first": "Créez d'abord la publication pour utiliser ceci.",
+    "hook_label": "Accroche de la publication",
+    "hook_placeholder": "Écrivez la première ligne que les gens verront",
+    "post_text": "Texte de la publication",
+    "add_link": "Ajouter l'URL de destination",
+    "fold_targeting": "Ciblage et langue",
+    "fold_links": "Lien et hashtags",
+    "fold_versions": "Versions et répétition",
+    "save_draft": "Enregistrer le brouillon",
+    "tools": "Outils de texte",
+    "tool_emoji": "Émoji",
+    "tool_link": "Insérer un lien",
+    "tool_hashtags": "Insérer un groupe de hashtags",
+    "emoji_search": "Rechercher un émoji (en anglais)",
+    "emoji_recent": "Récents",
+    "emoji_none": "Aucun émoji ne correspond.",
+    "emoji_group": { "smileys": "Smileys", "people": "Personnes", "hearts": "Cœurs", "nature": "Nature", "food": "Nourriture", "activity": "Activités", "objects": "Objets", "symbols": "Symboles" },
+    "link_address": "Adresse web"
   },
   "save": {
     "error": {

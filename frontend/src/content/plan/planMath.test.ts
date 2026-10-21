@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { PostCard, Slot } from '../lib/types'
-import { byTime, filtered, inMonth, keepWithinBrand, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey, togglePlatform } from './planMath'
+import type { Platform, PostCard, Slot } from '../lib/types'
+import { byTime, filtered, inMonth, keepWithinBrand, monthFigures, opensAfterFill, plansFor, presentPlatforms, rangeFor, rangeLabel, shiftDate, slotKey, monthDayLabel, toggleShown, trayListClass, viewAfter } from './planMath'
 
 const post = (id: number, more: Partial<PostCard> = {}): PostCard => ({
   id, platform: 'instagram', scheduled_date: '2026-10-07', scheduled_time: null, status: 'draft',
@@ -47,9 +47,14 @@ describe('filters', () => {
     expect(filtered(posts, slots, { platforms: [], status: 'draft' })).toEqual({ posts: [posts[0]], slots })
   })
 
-  it('toggles a chip, and offers the chips the plan shows (or the person chose), in the brand\'s order', () => {
-    expect(togglePlatform(['instagram'], 'linkedin')).toEqual(['instagram', 'linkedin'])
-    expect(togglePlatform(['instagram', 'linkedin'], 'instagram')).toEqual(['linkedin'])
+  // Final review (spec 2026-10-21 §6.2): a chip is ticked while its channel shows; pressing it hides or shows that channel.
+  it('hides and shows a channel from the chips (none hidden is every channel), keeps one showing, and offers the chips in the brand\'s order', () => {
+    const chips: Platform[] = ['linkedin', 'instagram', 'facebook']
+    expect(toggleShown([], 'instagram', chips)).toEqual(['linkedin', 'facebook'])
+    expect(toggleShown(['linkedin', 'facebook'], 'instagram', chips)).toEqual([])
+    expect(toggleShown(['linkedin'], 'facebook', chips)).toEqual(['linkedin', 'facebook'])
+    expect(toggleShown(['linkedin'], 'linkedin', chips)).toEqual(['linkedin'])
+    expect(toggleShown(['x'], 'linkedin', chips)).toEqual(['linkedin'])
     expect(presentPlatforms(['linkedin', 'instagram', 'tiktok', 'x'], posts, [{ date: '2026-10-07', platform: 'tiktok' }], ['x']))
       .toEqual(['linkedin', 'instagram', 'tiktok', 'x'])
     expect(presentPlatforms(['linkedin', 'instagram'], [], [], [])).toEqual([])
@@ -67,6 +72,24 @@ describe('labels', () => {
     expect(inMonth('2026-11-01', '2026-10-08')).toBe(false)
     expect(slotKey({ date: '2026-10-07', platform: 'instagram' })).toBe('2026-10-07|instagram')
   })
+
+  // Final review: the open Unscheduled list lay over the calendar, and the drop is found under the pointer, so the days
+  // under the list could not take a card dragged out of it.
+  it('lets a dragged card reach the days under the open Unscheduled list', () => {
+    expect(trayListClass(true).split(' ')).toEqual(expect.arrayContaining(['pointer-events-none', 'opacity-60']))
+    expect(trayListClass(false).split(' ')).not.toContain('pointer-events-none')
+  })
+
+  // Final review: under "October 2026" the numbers line counted the six weeks the grid shows (28 Sep – 8 Nov).
+  it('counts the month view\'s numbers over the month alone, as the server counts a range', () => {
+    const card = (id: number, scheduled_date: string, status: PostCard['status']): PostCard => ({
+      id, platform: 'instagram', scheduled_date, scheduled_time: null, status, title: null, hook: null, topic: null, pillar_id: null, image_url: null, updated_at: '',
+    })
+    const posts = [card(1, '2026-09-29', 'draft'), card(2, '2026-10-02', 'draft'), card(3, '2026-10-15', 'ready_to_publish'),
+      card(4, '2026-10-20', 'published'), card(5, '2026-10-21', 'skipped'), card(6, '2026-11-03', 'published')]
+    const slots: Slot[] = [{ date: '2026-10-30', platform: 'instagram' }, { date: '2026-11-02', platform: 'instagram' }]
+    expect(monthFigures(posts, slots, '2026-10-08')).toEqual({ planned: 3, ready: 1, published: 1, open_slots: 1 })
+  })
 })
 
 describe('brand changes while something is on its way', () => {
@@ -82,5 +105,28 @@ describe('brand changes while something is on its way', () => {
     expect(keepWithinBrand(3)(plan, { queryKey: ['content', 3, 'plan', '2026-10-05', '2026-10-11'] })).toBe(plan)
     expect(keepWithinBrand(4)(plan, { queryKey: ['content', 3, 'plan', '2026-10-05', '2026-10-11'] })).toBeUndefined()
     expect(keepWithinBrand(3)(undefined, undefined)).toBeUndefined()
+  })
+})
+
+// Release 7a (spec 2026-10-21 §6.3): Month · Week · List as one radio group — the arrows move and choose.
+describe('viewAfter', () => {
+  it('moves through Month, Week and List with the arrows, wrapping, and Home and End', () => {
+    expect(viewAfter('month', 'ArrowRight')).toBe('week')
+    expect(viewAfter('list', 'ArrowRight')).toBe('month')
+    expect(viewAfter('month', 'ArrowLeft')).toBe('list')
+    expect(viewAfter('week', 'ArrowDown')).toBe('list')
+    expect(viewAfter('week', 'ArrowUp')).toBe('month')
+    expect(viewAfter('list', 'Home')).toBe('month')
+    expect(viewAfter('month', 'End')).toBe('list')
+    expect(viewAfter('week', 'Enter')).toBeNull()
+  })
+})
+
+// Release 7a (spec 2026-10-21 §6.4): a month day names its month only when it belongs to another month.
+describe('monthDayLabel', () => {
+  it('gives the number, and the short month for a day of another month', () => {
+    expect(monthDayLabel('2026-09-28', '2026-10-15', 'en')).toEqual({ number: '28', month: 'Sep' })
+    expect(monthDayLabel('2026-10-03', '2026-10-15', 'en-GB')).toEqual({ number: '3', month: null })
+    expect(monthDayLabel('2026-11-01', '2026-10-15', 'en-GB')).toEqual({ number: '1', month: 'Nov' })
   })
 })

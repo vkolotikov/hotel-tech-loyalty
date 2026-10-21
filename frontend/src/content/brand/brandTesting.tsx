@@ -9,7 +9,7 @@ import { BrandPage } from './BrandPage'
 /** A bootstrap for brand 3 of org 16, as a manager or as staff. */
 export const bootFor = (canManage: boolean) => ({
   name: 'HexaTech Content', organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
-  brand: { id: 3, name: 'Lumière Salon' }, brands: [], accent: null,
+  brand: { id: 3, name: 'Lumière Salon', logo_url: null }, brands: [], accent: null,
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' },
   staff: { name: 'Sam', role: canManage ? 'manager' : 'staff', can_manage: canManage }, profile: { id: 1, setup_completed: true, readiness: 64 },
   ai: { status: 'under', percent: 10 }, platforms: ['instagram', 'linkedin'], statuses: ['draft'], rewrites: [],

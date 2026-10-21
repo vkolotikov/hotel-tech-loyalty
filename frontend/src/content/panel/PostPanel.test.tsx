@@ -18,10 +18,16 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 vi.mock('../../lib/api', () => ({ api: {} }))
+// Release 7a (spec 2026-10-21 §7.1): where the panel sits is read from the width; a test chooses it.
+const place = vi.hoisted(() => ({ mode: 'over' as 'docked' | 'over' | 'full' }))
+vi.mock('./usePanelMode', () => ({ usePanelMode: () => place.mode }))
+// The tab last used on this device; a test chooses it.
+const remembered = vi.hoisted(() => ({ tab: 'content' as 'content' | 'ai' | 'activity' }))
+vi.mock('./panelPrefs', () => ({ loadPanelTab: () => remembered.tab, savePanelTab: () => {}, loadFold: () => false, saveFold: () => {} }))
 
 const boot = {
   name: 'HexaTech Content', organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
-  brand: { id: 3, name: 'Lumière Salon' }, brands: [], accent: null,
+  brand: { id: 3, name: 'Lumière Salon', logo_url: null }, brands: [], accent: null,
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' },
   staff: { name: 'Sam', role: 'staff', can_manage: false }, profile: { id: 1, setup_completed: true, readiness: 80 },
   ai: { status: 'under', percent: 10 }, platforms: ['instagram', 'linkedin'], statuses: ['draft', 'published'],
@@ -49,18 +55,75 @@ function render(target: PanelTarget | undefined, cached: PostDetail | null = pos
   )
 }
 
+// Final review: with AI tools or Activity remembered, the panel was blank while the post loaded (and when it failed), a
+// new post opened on a tab that said only "Create the post first", and a conflict on Save showed nowhere.
+describe('PostPanel on another tab than Content', () => {
+  const firstPane = (html: string) => html.indexOf('role="tabpanel"')
+
+  it('says it is loading, or could not load, above the tabs whichever tab is open', () => {
+    remembered.tab = 'ai'
+    const loading = render({ kind: 'post', id: 5, seq: 1 }, null)
+    remembered.tab = 'content'
+    expect(loading).toMatch(/data-panel-notices=""/)
+    expect(loading.indexOf('Loading…')).toBeGreaterThan(-1)
+    expect(loading.indexOf('Loading…')).toBeLessThan(firstPane(loading))
+  })
+
+  it('opens a new post on Content even when AI tools was the tab last used', () => {
+    remembered.tab = 'ai'
+    const fresh = render({ kind: 'new', draft: { date: '2026-10-09', platform: 'linkedin' }, seq: 1 }, null)
+    const saved = render({ kind: 'post', id: 5, seq: 1 })
+    remembered.tab = 'content'
+    expect(fresh).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>Content</)
+    expect(saved).toMatch(/role="tab"[^>]*aria-selected="true"[^>]*>AI tools</)
+  })
+})
+
 describe('PostPanel', () => {
+  // Release 7a (spec 2026-10-21 §7.1): a labelled region beside the page from 1280 px; a dialog over it below.
+  it('is a region beside the page when docked, a dialog over it otherwise, 400 px wide', () => {
+    place.mode = 'docked'
+    const docked = render({ kind: 'post', id: 5, seq: 1 })
+    place.mode = 'over'
+    expect(docked).toMatch(/<aside[^>]*role="complementary"[^>]*aria-labelledby="content-panel-title"/)
+    expect(docked).not.toContain('aria-modal')
+    const over = render({ kind: 'post', id: 5, seq: 1 })
+    expect(over).toMatch(/<aside[^>]*role="dialog"/)
+    expect(over).toContain("sm:w-[400px]")
+  })
+
+  // Release 7a (spec 2026-10-21 §7.3): the panel's three tabs; the comments' number on Activity.
+  it('shows Content, AI tools and Activity as tabs, Content chosen, with the number of comments on Activity', () => {
+    const html = render({ kind: 'post', id: 5, seq: 1 }, { ...post, comments_count: 3 })
+    expect(html).toMatch(/role="tablist"[\s\S]*?role="tab"[^>]*aria-selected="true"[^>]*>Content<[\s\S]*?>AI tools<[\s\S]*?>Activity \(3\)</)
+    expect(html).toMatch(/role="tabpanel"[^>]*hidden=""[\s\S]*Write the text/)
+  })
+
+  it('asks a new post to be created before AI tools and Activity', () => {
+    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'linkedin' }, seq: 1 }, null)).toContain('Create the post first to use this.')
+  })
+
+  it('says Save draft in the footer for a draft', () => {
+    expect(render({ kind: 'post', id: 5, seq: 1 })).toMatch(/<button[^>]*>Save draft</)
+  })
+
+  it('says "No day yet" for a post without a day', () => {
+    expect(render({ kind: 'post', id: 6, seq: 1 }, { ...post, id: 6, scheduled_date: null })).toContain('No day yet')
+  })
+
   it('opens a post with its fields filled, its platform and status, and Save waiting for a change', () => {
     const html = render({ kind: 'post', id: 5, seq: 1 })
     expect(html).toContain('role="dialog"')
-    expect(html).toContain('>Post<')
+    expect(html).toContain('>Post details<')
+    expect(html).toContain('Wednesday, October 7, 2026')
+    expect(html).toMatch(/aria-label="More actions"[^>]*aria-haspopup="menu"/)
     expect(html).toContain('value="Autumn"')
     expect(html).toContain('>Three colours</textarea>')
     expect(html).toContain('Warm tones.')
     expect(html).toContain('value="2026-10-07"')
     expect(html).toContain('data-status="draft"')
     // The attribute itself (disabled=""), not Tailwind's disabled: variant in the class.
-    expect(html).toMatch(/<button[^>]*\bdisabled=""[^>]*>Save</)
+    expect(html).toMatch(/<button[^>]*\bdisabled=""[^>]*>Save draft</)
   })
 
   it('starts a new post from a slot on its day and platform, ready to be created', () => {
@@ -82,7 +145,7 @@ describe('PostPanel', () => {
   it('says it is loading a post it does not have yet, under the title of a post (not a new one)', () => {
     const html = render({ kind: 'post', id: 9, seq: 1 }, null)
     expect(html).toContain('role="status"')
-    expect(html).toContain('>Post</h2>')
+    expect(html).toContain('>Post details</h2>')
     expect(html).not.toContain('>New post</h2>')
   })
 
@@ -90,8 +153,9 @@ describe('PostPanel', () => {
     const saved = render({ kind: 'post', id: 5, seq: 1 })
     expect(saved).toContain('Write the text')
     expect(saved).toContain('Mark ready')
-    expect(saved).toContain('Copy link')
-    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'linkedin' }, seq: 1 }, null)).toContain('Create the post first to use AI.')
+    // Copy link and the rest are in the ⋯ menu (spec 2026-10-21 §7.2).
+    expect(saved).toContain('aria-label="More actions"')
+    expect(render({ kind: 'new', draft: { date: '2026-10-09', platform: 'linkedin' }, seq: 1 }, null)).toContain('Create the post first to use this.')
   })
 
   it('starts a post from the New post button on the brand\'s own channel', () => {
@@ -116,8 +180,8 @@ describe('PostPanel', () => {
     const html = render(undefined)
     expect(html).toContain('>Typed before leaving</textarea>')
     expect(html).toContain('Your unsaved changes were kept.')
-    expect(html).toMatch(/<button[^>]*>Save</)
-    expect(html).not.toMatch(/<button[^>]*\bdisabled=""[^>]*>Save</)
+    expect(html).toMatch(/<button[^>]*>Save draft</)
+    expect(html).not.toMatch(/<button[^>]*\bdisabled=""[^>]*>Save draft</)
   })
 
   it('offers only the active pillars (and the post\'s own), and names an audience it does not know', () => {
@@ -147,11 +211,13 @@ describe('PostPanel', () => {
   })
 
   // Spec 2026-10-15 §6: the brand's hashtag groups and snippets one click away beside their fields.
-  it('offers the brand\'s hashtag groups beside Hashtags, and its snippets beside Text and Call to action', () => {
+  // Release 7a (spec 2026-10-21 §7.5): the text's snippets and the hashtag groups are in the toolbar above the text.
+  it('offers the brand\'s snippets and hashtag groups in the toolbar above the text, and its snippets beside Call to action', () => {
     const brand = { audiences: [], channels: [], snippets: [{ id: 1, kind: 'hashtags', name: 'Autumn', body: '#autumn' }, { id: 2, kind: 'text', name: 'Sign-off', body: 'See you!' }] }
     const out = render({ kind: 'post', id: 5, seq: 1 }, post, brand)
-    expect(out).toContain('Insert</button>')
-    expect(out.match(/Insert snippet<\/button>/g)).toHaveLength(2)
+    expect(out).toMatch(/data-toolbar=""(?:(?!<textarea).)*aria-label="Insert snippet"(?:(?!<textarea).)*aria-label="Insert hashtag group"/s)
+    expect(out).toMatch(/>Call to action<(?:(?!<textarea).)*Insert snippet<\/button>/s)
+    expect(out).not.toContain('Insert</button>')
   })
 
   it('warns when an Instagram post holds more than 30 hashtags', () => {

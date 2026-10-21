@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ContentContext, type ContentContextValue } from './ContentProvider'
 import { ContentShell } from './ContentShell'
-import { PanelProvider } from './panel/PanelProvider'
+import { PanelProvider, type PanelTarget } from './panel/PanelProvider'
 import type { Bootstrap } from './lib/types'
 
 vi.mock('react-i18next', () => ({
@@ -23,8 +23,8 @@ vi.mock('../lib/api', () => ({ api: {} }))
 const boot: Bootstrap = {
   name: 'HexaTech Content',
   organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
-  brand: { id: 3, name: 'Lumière Salon' },
-  brands: [{ id: 3, name: 'Lumière Salon' }],
+  brand: { id: 3, name: 'Lumière Salon', logo_url: null },
+  brands: [{ id: 3, name: 'Lumière Salon', logo_url: null }],
   accent: '#7c5cff',
   venue: { timezone: 'Europe/London', timezone_named: true, today: '2026-10-07' },
   staff: { name: 'Vitalij K', role: 'manager', can_manage: true },
@@ -36,7 +36,7 @@ const boot: Bootstrap = {
 }
 const staff = { name: 'Sam', role: 'staff', can_manage: false }
 
-function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstrap> = {}) {
+function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstrap> = {}, target?: PanelTarget) {
   const full: ContentContextValue = { data: { ...boot, ...data }, isLoading: false, isError: false, error: null, refetch: () => {}, switchBrand: () => {}, ...value }
   return renderToStaticMarkup(
     <QueryClientProvider client={new QueryClient()}>
@@ -45,7 +45,7 @@ function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstra
         <Route path="/" element={<p>full admin dashboard</p>} />
         <Route path="/content/*" element={
           <ContentContext.Provider value={full}>
-            <PanelProvider><ContentShell><p>page body</p></ContentShell></PanelProvider>
+            <PanelProvider initial={target}><ContentShell><p>page body</p></ContentShell></PanelProvider>
           </ContentContext.Provider>
         } />
       </Routes>
@@ -56,7 +56,7 @@ function render(value: Partial<ContentContextValue> = {}, data: Partial<Bootstra
 const refused = (code: string) => ({ response: { status: 403, data: { error: code } } })
 
 describe('ContentShell: the bell (spec 2026-10-16 §8)', () => {
-  it('puts the "For you" bell beside New post once the workspace is ready, and not while it loads', () => {
+  it('puts the "For you" bell in the top bar once the workspace is ready, and not while it loads', () => {
     expect(render()).toContain('data-bell=""')
     expect(render({ data: undefined, isLoading: true })).not.toContain('data-bell=""')
   })
@@ -70,19 +70,28 @@ describe('ContentShell', () => {
     expect(html).toContain('HexaTech Content')
     expect(html).toContain('Lumière Salon')
     expect(html).toContain('page body')
-    expect(html).toContain('New post')
   })
 
-  it('offers the brand switcher only to someone with more than one brand, and keeps it out of the desktop-only block', () => {
-    expect(render()).not.toContain('data-brand-switcher')
-    const html = render({}, { brands: [{ id: 3, name: 'Lumière Salon' }, { id: 7, name: 'Second Studio' }] })
-    const label = html.match(/<label[^>]*data-brand-switcher[^>]*>/)?.[0] ?? ''
-    expect(label).not.toBe('')
-    expect(label).not.toContain('hidden')
-    expect(html).toContain('Second Studio')
+  // Release 7a (spec 2026-10-21 §4.2): the brand chip and name with its menu, and the page, at the top bar's start.
+  it('names the brand and the page at the start of the top bar, with the brand menu only for more than one brand', () => {
+    const one = render()
+    expect(one).toMatch(/aria-label="Breadcrumb"[\s\S]*?Lumière Salon[\s\S]*?aria-current="page"[^>]*>Plan</)
+    expect(one).not.toMatch(/aria-label="Breadcrumb"(?:(?!<\/nav>).)*aria-haspopup/s)
+    const two = render({}, { brands: [{ id: 3, name: 'Lumière Salon', logo_url: null }, { id: 7, name: 'Second Studio', logo_url: null }] })
+    expect(two).toMatch(/aria-label="Breadcrumb"(?:(?!<\/nav>).)*aria-haspopup="menu"/s)
+    expect(two).not.toContain('data-brand-switcher')
   })
 
-  // Found by eyes on a phone: a long brand name's switcher kept its own width (up to 12rem) and slid under Find and New post.
+  // Release 7a (spec 2026-10-21 §4.1): the owner's side panel — cards under "Workspace", and its own foot.
+  it('draws the areas as cards under Workspace, with Settings, Help & resources and the person at the foot', () => {
+    const html = render()
+    expect(html).toContain('data-rail-variant="cards"')
+    expect(html).toMatch(/<p[^>]*>Workspace<\/p>/)
+    expect(html).toContain('data-frame-footer=""')
+    expect(html).toMatch(/Settings[\s\S]*Help &amp; resources[\s\S]*Vitalij K[\s\S]*Manager/)
+    expect(html).toContain('data-phone-menu=""')
+  })
+
   it('asks for the phone menu that fits what it holds (the theme switch is longer in Russian)', () => {
     expect(render()).toMatch(/<summary[\s\S]*?<\/summary><div class="[^"]*\bw-max\b/)
   })
@@ -90,23 +99,48 @@ describe('ContentShell', () => {
   // Found by eyes at 390 px, then by the final review at 375 and 360 px: with the bell, the header's pieces outgrew a
   // phone, pushed the menu off the screen and squeezed the brand switcher to nothing. On a phone Find and the switcher
   // have their own row above the page, and the bell and New post are 32 px; from 640 px on nothing changes.
-  it('on a phone gives Find and the brand switcher their own row above the page, so the header fits with the bell', () => {
-    const html = render({}, { brands: [{ id: 3, name: 'Lumière Salon' }, { id: 7, name: 'Second Studio' }] })
-    expect(html).toContain('<div class="hidden min-w-0 flex-1 sm:block sm:flex-initial">')
+  it('keeps Find and the bell in the top bar, Find on its own row on a phone, and New post in the page header', () => {
+    const html = render({}, { brands: [{ id: 3, name: 'Lumière Salon', logo_url: null }, { id: 7, name: 'Second Studio', logo_url: null }] })
     expect(html).toMatch(/aria-label="Find a post or action" aria-keyshortcuts="[^"]*" aria-haspopup="dialog" class="hidden\b[^"]*\bsm:flex\b/)
-    expect(html).toMatch(/data-phone-row="" class="[^"]*\bsm:hidden\b[^"]*">(?:(?!<\/div>).)*data-find-phone=""(?:(?!<\/div>).)*data-brand-switcher-phone=""/s)
-    expect(html).toContain('<div class="ml-auto flex shrink-0 items-center gap-1 sm:gap-2">')
-    expect(html).toMatch(/aria-label="New post" class="[^"]*\bp-2\b[^"]*\bsm:px-4\b/)
+    expect(html).toMatch(/data-phone-row="" class="[^"]*\bsm:hidden\b[^"]*">(?:(?!<\/div>).)*data-find-phone=""/s)
+    expect(html).not.toContain('data-brand-switcher-phone')
     expect(html).toMatch(/data-bell=""[^>]*class="[^"]*\bh-8 w-8 sm:h-9 sm:w-9\b/)
-    // One brand: the row still holds Find, and no switcher.
-    expect(render()).toContain('data-find-phone=""')
-    expect(render()).not.toContain('data-brand-switcher-phone')
+    expect(html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '').not.toContain('New post')
   })
 
-  it('lets the brand switcher shrink with the header, so a long name never slides under the buttons', () => {
-    const html = render({}, { brands: [{ id: 3, name: 'Lumière Salon' }, { id: 7, name: 'Release check: a brand whose name is far too long for a phone header' }] })
-    expect(html).toMatch(/<div class="[^"]*\bmin-w-0\b[^"]*\bflex-1\b[^"]*">/)
-    expect(html).toMatch(/data-brand-switcher=""[^>]*>(?:(?!<\/label>).)*<select[^>]*class="[^"]*\bw-full\b/s)
+  it('cuts a long brand name in the breadcrumb, so it never slides under Find or the bell', () => {
+    const html = render({}, { brand: { id: 3, name: 'Release check: a brand whose name is far too long for a phone header', logo_url: null } })
+    expect(html).toMatch(/aria-label="Breadcrumb" class="[^"]*min-w-0/)
+    expect(html).toMatch(/class="[^"]*min-w-0[^"]*truncate[^"]*"[^>]*>Release check: a brand/)
+  })
+
+  // Found by the release check's browser pass at 390 px: the brand menu's own box kept the whole name's width, so the
+  // name never shortened, and on a phone the breadcrumb beside the six area buttons pushed the bar to 572 px (the panel
+  // "filling the screen" then measured 572 px too). The brand menu's box may shrink; on a phone the breadcrumb is on the
+  // row above the page with Find, and Find keeps room in the top bar from 640 px.
+  it('lets the brand menu shrink, puts the breadcrumb on the phone row, and keeps Find usable beside a long name', () => {
+    const two = { brands: [{ id: 3, name: 'Lumière Salon', logo_url: null }, { id: 7, name: 'Second Studio', logo_url: null }] }
+    const html = render({}, two)
+    // A button is as wide as its words unless held: the menu's button keeps to its box, so the name is cut there.
+    expect(html).toMatch(/aria-label="Breadcrumb"[^>]*><div class="relative min-w-0"><button[^>]*class="[^"]*\bmax-w-full\b/)
+    const bar = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? ''
+    expect(bar).toMatch(/<div class="hidden min-w-0 sm:flex">\s*<nav aria-label="Breadcrumb"/)
+    expect(html).toMatch(/data-phone-crumb="" class="[^"]*\bsm:hidden\b[^"]*">\s*<nav aria-label="Breadcrumb"/)
+    expect(html.indexOf('data-phone-crumb')).toBeLessThan(html.indexOf('data-phone-row'))
+    expect(bar).toMatch(/aria-label="Find a post or action"[^>]*class="[^"]*\bsm:min-w-\[10rem\]/)
+  })
+
+  // Release 7a (spec 2026-10-21 §7.1, Review Focus 3–4): from 1280 px the page makes room for the open panel, and gets it back.
+  it('makes room for the open panel beside the page from 1280 px, and none while it is closed', () => {
+    const open = render({}, {}, { kind: 'post', id: 5, seq: 1 })
+    expect(open).toMatch(/<main[^>]*class="[^"]*min-w-0[^"]*xl:pr-\[400px\]/)
+    expect(render()).not.toContain('xl:pr-[400px]')
+  })
+
+  // Final review: the notices above the page kept their full width, their right side under the docked panel.
+  it('keeps the notices above the page clear of the docked panel too', () => {
+    const open = render({}, { ai: { status: 'warn', percent: 85 } }, { kind: 'post', id: 5, seq: 1 })
+    expect(open).toMatch(/<div class="[^"]*\bxl:pr-\[400px\][^"]*">(?:(?!<\/div>).)*AI budget is 85 % used/s)
   })
 
   it('warns at 80 % of the AI budget and says when it is used up', () => {

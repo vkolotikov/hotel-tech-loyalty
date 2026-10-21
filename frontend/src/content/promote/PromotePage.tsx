@@ -54,8 +54,7 @@ export function PromotePage() {
 
   return (
     <div data-promote="" className="space-y-4 px-4 py-4 lg:px-6">
-      <PageHeader title={t('content.promote.title', 'Promote')} />
-      <p className="text-sm text-a-text-2">{t('content.promote.intro', 'Turn your blog articles and pages into posts that link to them.')}</p>
+      <PageHeader title={t('content.promote.title', 'Promote')} line={t('content.promote.intro', 'Turn your blog articles and pages into posts that link to them.')} />
       {!canManage && <Notice tone="info">{t('content.promote.staff_note', 'Only an owner or a manager can scan the website or promote pages.')}</Notice>}
       {query.isLoading && <div role="status" aria-label={t('content.common.loading', 'Loading…')} className="space-y-3"><Skeleton className="h-24" /><Skeleton className="h-64" /></div>}
       {query.isError && !payload && (

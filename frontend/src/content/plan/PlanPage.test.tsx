@@ -20,7 +20,7 @@ vi.mock('../../lib/api', () => ({ api: {} }))
 
 const boot: Bootstrap = {
   name: 'HexaTech Content', organization: { id: 16, name: 'Lumière Salon', industry: 'beauty' },
-  brand: { id: 3, name: 'Lumière Salon' }, brands: [{ id: 3, name: 'Lumière Salon' }], accent: null,
+  brand: { id: 3, name: 'Lumière Salon', logo_url: null }, brands: [{ id: 3, name: 'Lumière Salon', logo_url: null }], accent: null,
   venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-07' },
   staff: { name: 'Vitalij K', role: 'manager', can_manage: true }, profile: { id: 1, setup_completed: true, readiness: 80 },
   ai: { status: 'under', percent: 10 }, platforms: ['instagram', 'linkedin'], statuses: ['draft', 'ready_to_publish', 'published'],
@@ -66,14 +66,20 @@ describe('PlanPage', () => {
     expect(html).toContain('Autumn colours')
   })
 
-  it('shows the week\'s figures, its posts, its empty slots and the tray', () => {
+  // Release 7a (spec 2026-10-21 §6.1): the page header with the numbers line, New post in it.
+  it('heads the Plan with its title, its line and the numbers, then shows its posts, empty slots and the tray', () => {
     const html = page()
-    expect(html).toContain('Planned')
-    expect(html).toMatch(/data-figure="planned"[^>]*>.*?>2</)
+    expect(html).toMatch(/<h1[^>]*>Plan<\/h1>/)
+    expect(html).toContain('A clear view of what comes next.')
+    expect(html).toContain('Planned: 2 · Ready: 0 · Published: 1 · Empty slots: 1')
+    expect(html).not.toContain('data-figure')
+    expect(html).toContain('data-new-post=""')
     expect(html).toContain('Team news')
     expect(html).toContain('aria-label="Empty instagram slot"')
     expect(html).toContain('data-drop="tray"')
-    expect(html).toContain('An idea for later')
+    // Release 7a (spec 2026-10-21 §6.2): the tray is the chip's list, opened from "Unscheduled (n)".
+    expect(html).toContain('Unscheduled (1)')
+    expect(html).not.toContain('aria-labelledby="content-tray-title"')
     expect(html).toContain(`id="content-move-hint"`)
   })
 

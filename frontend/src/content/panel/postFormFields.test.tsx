@@ -56,12 +56,58 @@ describe('the Link next to the call to action (spec 2026-10-19 §5.1, §5.5)', (
   })
 })
 
-// 5A-2 review: Date and Time sit side by side; Who posts it comes after them.
+// Release 7a (spec 2026-10-21 §7.4): the owner's order — the hook, the day, the status and who posts it, the words, then
+// the folding sections (platform, pillar, audience, language and topic under Targeting & language).
 describe('the panel’s field order', () => {
-  it('is Platform, Status, Date, Time, Who posts it, Pillar, Audience', () => {
+  it('is Post hook, Date, Time, Status, Who posts it, Post text, Call to action, then Platform, Pillar, Audience in the folds', () => {
     const html = render('')
-    const order = ['Platform', 'Status', 'Date', 'Time', 'Who posts it', 'Pillar', 'Audience'].map(label => html.indexOf(`>${label}<`))
+    const order = ['Post hook', 'Date', 'Time', 'Status', 'Who posts it', 'Post text', 'Call to action', 'Platform', 'Pillar', 'Audience'].map(label => html.indexOf(`>${label}<`))
     expect(order.every(i => i >= 0)).toBe(true)
     expect([...order].sort((a, b) => a - b)).toEqual(order)
+  })
+
+  it('draws the hook as the large serif line, edited in place', () => {
+    expect(render('')).toMatch(/>Post hook<[\s\S]*?<textarea[^>]*placeholder="Write the first line people see"[^>]*class="[^"]*font-a-display/)
+    expect(render('')).toMatch(/<textarea[^>]*placeholder="Write the first line people see"[^>]*class="[^"]*\bc-hook\b/)
+  })
+
+  it('folds Targeting & language, Link & hashtags and Versions & repeat, closed at first', () => {
+    const html = render('')
+    for (const title of ['Targeting &amp; language', 'Link &amp; hashtags', 'Versions &amp; repeat']) {
+      expect(html).toMatch(new RegExp(`aria-expanded="false"[^>]*>(?:(?!</button>).)*${title}`, 's'))
+    }
+  })
+})
+
+describe('a folding section with something to see to', () => {
+  const fields = (invalid: (keyof import('./panelState').PostForm)[], hashtags = '') => renderToStaticMarkup(
+    <PostFormFields form={{ ...newForm({ date: '2026-10-07', platform: 'instagram' }, ['instagram']), hashtags }} onChange={() => {}}
+      platforms={['instagram']} statuses={['draft']} pillars={[]} audiences={[]} published={false} invalid={invalid} locale="en" industry={null} snippets={[]} />,
+  )
+  const opened = (html: string, title: string) => new RegExp(`aria-expanded="true"[^>]*>(?:(?!</button>).)*${title}`, 's').test(html)
+
+  it('opens by itself when a refused save named one of its fields, so the person sees what to fix', () => {
+    expect(opened(fields(['pillar_id']), 'Targeting &amp; language')).toBe(true)
+    expect(opened(fields(['pillar_id']), 'Link &amp; hashtags')).toBe(false)
+    expect(opened(fields(['hashtags']), 'Link &amp; hashtags')).toBe(true)
+  })
+
+  it('opens Link & hashtags when the platform takes fewer hashtags than the post has', () => {
+    const many = Array.from({ length: 31 }, (_, i) => `#tag${i}`).join(' ')
+    expect(opened(fields([], many), 'Link &amp; hashtags')).toBe(true)
+  })
+})
+
+describe('the destination under the call to action (spec 2026-10-21 §7.4)', () => {
+  const withLink = (link: string) => renderToStaticMarkup(
+    <PostFormFields form={{ ...newForm({ date: '2026-10-07', platform: 'instagram' }, ['instagram']), link }} onChange={() => {}}
+      platforms={['instagram']} statuses={['draft']} pillars={[]} audiences={[]} published={false} invalid={[]} locale="en" industry={null} snippets={[]} />,
+  )
+
+  it('offers "Add destination URL" until there is a link, then the Link field in its place', () => {
+    expect(withLink('')).toContain('Add destination URL')
+    expect(withLink('')).not.toMatch(/type="url"/)
+    expect(withLink('https://lumiere.example')).not.toContain('Add destination URL')
+    expect(withLink('https://lumiere.example')).toMatch(/type="url"/)
   })
 })

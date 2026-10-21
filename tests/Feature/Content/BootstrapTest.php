@@ -28,8 +28,8 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('name', 'HexaTech Content')
             ->assertJsonPath('organization.name', 'Lumière Salon')
             ->assertJsonPath('organization.industry', 'beauty')
-            ->assertJsonPath('brand', ['id' => $this->brandId, 'name' => $defaultName])
-            ->assertJsonPath('brands', [['id' => $this->brandId, 'name' => $defaultName]])
+            ->assertJsonPath('brand', ['id' => $this->brandId, 'name' => $defaultName, 'logo_url' => null])
+            ->assertJsonPath('brands', [['id' => $this->brandId, 'name' => $defaultName, 'logo_url' => null]])
             ->assertJsonPath('venue.timezone', 'UTC')
             ->assertJsonPath('venue.today', '2026-10-05')
             ->assertJsonPath('staff.role', 'manager')
@@ -42,6 +42,20 @@ class BootstrapTest extends TestCase
             ->assertJsonPath('rewrites', ContentRules::REWRITES);
 
         $this->asStaffMember()->getJson($this->api('bootstrap'))->assertOk()->assertJsonPath('staff.can_manage', false);
+    }
+
+    // Release 7a (spec 2026-10-21 §9): the brand chip in the top bar shows the brand's logo.
+    public function test_each_brand_comes_with_its_logo(): void
+    {
+        Brand::withoutGlobalScopes()->whereKey($this->brandId)->update(['logo_url' => 'https://cdn.example/logo.png']);
+        [$second] = $this->secondBrand();
+
+        $brands = collect($this->asManager()->getJson($this->api('bootstrap'))
+            ->assertOk()
+            ->assertJsonPath('brand.logo_url', 'https://cdn.example/logo.png')
+            ->json('brands'))->keyBy('id');
+        $this->assertSame('https://cdn.example/logo.png', $brands[$this->brandId]['logo_url']);
+        $this->assertNull($brands[$second]['logo_url']);
     }
 
     public function test_it_works_on_the_brand_the_portal_asks_for_and_lists_every_brand(): void
@@ -71,7 +85,7 @@ class BootstrapTest extends TestCase
         $this->asStaffMember()->getJson($this->api('bootstrap'))
             ->assertOk()
             ->assertJsonPath('brand.id', $second)
-            ->assertJsonPath('brands', [['id' => $second, 'name' => 'Second Studio']]);
+            ->assertJsonPath('brands', [['id' => $second, 'name' => 'Second Studio', 'logo_url' => null]]);
         // A code, so the portal can drop a stored brand no longer allowed and ask again without one (spec §6.7).
         $this->asStaffMember()->getJson($this->api('bootstrap') . '?brand_id=' . $this->brandId)
             ->assertStatus(403)

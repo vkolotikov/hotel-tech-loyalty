@@ -19,5 +19,8 @@ describe('PanelFailed', () => {
     expect(html).toContain('role="alert"')
     expect(html).toContain('This post could not be shown. What you saved is safe.')
     expect(html).toMatch(/<button[^>]*>Close<\/button>/)
+    // Final review: as wide as the panel (400 px), which the page makes room for when docked.
+    expect(html).toContain('sm:w-[400px]')
+    expect(html).not.toContain('sm:w-[480px]')
   })
 })
