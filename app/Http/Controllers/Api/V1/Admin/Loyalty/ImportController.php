@@ -25,9 +25,11 @@ use Illuminate\Support\Facades\Storage;
  *
  * A chunk runs under the advisory lock `loyalty-import:{batch}`, so two presses never import the same rows twice: a
  * call that waited for another's chunk, or that names a position (`from`) the batch has moved past, answers `busy`
- * (409) with the batch as it now stands and imports nothing. Once a batch is finished — completed, cancelled, failed
- * — its stored file is deleted: no step reads it again (MemberImportService::processChunk returns early for a finished
- * batch) and the full admin's view of a batch never reads it.
+ * (409) with the batch as it now stands and imports nothing. The uploaded file is kept in the batch's row (release 3
+ * §2) and cleared when the batch ends, by the shared steps (MemberImportRun, MemberImportService::processChunk); a
+ * batch previewed before release 3 names a file on the local disk instead, deleted here once that batch is finished
+ * — completed, cancelled, failed: no step reads it again (processChunk returns early for a finished batch) and the
+ * full admin's view of a batch never reads it.
  *
  * Refusals are codes, the rows' problems too (ImportProblems): the service's English is never sent.
  */
@@ -39,7 +41,7 @@ class ImportController extends Controller
     public function index(Request $request): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
-        $batches = $this->batches()->orderByDesc('created_at')->orderByDesc('id')->limit(self::RECENT)->get();
+        $batches = $this->batches()->withoutFile()->orderByDesc('created_at')->orderByDesc('id')->limit(self::RECENT)->get();
         $names = User::query()->whereIn('id', $batches->pluck('created_by_user_id')->filter()->unique()->values())->pluck('name', 'id');
 
         return response()->json([
@@ -174,7 +176,10 @@ class ImportController extends Controller
         return $out;
     }
 
-    /** A finished batch's stored file, deleted when it is where imports keep their files. */
+    /**
+     * A finished pre-release-3 batch's file on the local disk, deleted when it is where imports kept their files. A
+     * batch previewed since keeps its file in the row and names no path.
+     */
     private static function forgetFile(MemberImportBatch $b): void
     {
         $path = (string) $b->stored_path;

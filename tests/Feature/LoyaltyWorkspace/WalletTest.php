@@ -16,6 +16,7 @@ use Tests\TestCase;
  * The wallet pass in HexaTech Loyalty (release 2 §7): a manager's, behind the plan's `wallet` feature; the full
  * admin's writer (WalletSettings) with the workspace's own checks first — Apple's colour form, the identifiers'
  * shapes, each file by its content — and readiness that says exactly what is missing. Never a secret or a path out.
+ * Since release 3 (§2) the files are kept in the row, encrypted, and nothing is written to the local disk.
  */
 class WalletTest extends TestCase
 {
@@ -54,9 +55,10 @@ class WalletTest extends TestCase
         return $this->asManager()->post($this->api($path), ['file' => UploadedFile::fake()->createWithContent($name, $content)] + $more, ['Accept' => 'application/json']);
     }
 
-    private function stored(string $file): string
+    /** A file's bytes as the row holds them (`apple_cert`, `apple_wwdr`, `google_service_account`). */
+    private function stored(string $file): ?string
     {
-        return (string) Storage::disk('local')->get("wallet/{$this->org->id}/{$file}");
+        return WalletConfig::query()->first()?->fileBytes($file);
     }
 
     public function test_a_manager_reads_it_with_the_defaults_and_what_each_pass_lacks(): void
@@ -135,13 +137,14 @@ class WalletTest extends TestCase
             ->assertStatus(422)->assertJsonPath('error', 'cert_unreadable');
         $this->upload('wallet/apple-cert', 'Certificates.p12', $made['p12'])
             ->assertStatus(422)->assertJsonPath('error', 'cert_unreadable');
-        Storage::disk('local')->assertMissing("wallet/{$this->org->id}/apple-cert.p12");
+        $this->assertNull($this->stored('apple_cert'));
 
         $response = $this->upload('wallet/apple-cert', 'Certificates.p12', $made['p12'], ['password' => 'p12-secret'])->assertOk()
             ->assertJsonPath('wallet.apple_cert_uploaded', true)
             ->assertJsonPath('wallet.apple_cert_password_set', true)
             ->assertJsonPath('wallet.apple_missing', ['pass_type_id', 'team_id', 'wwdr']);
-        $this->assertSame($made['p12'], $this->stored('apple-cert.p12'));
+        $this->assertSame($made['p12'], $this->stored('apple_cert'));
+        $this->assertSame([], Storage::disk('local')->allFiles());
         $this->assertStringNotContainsString('p12-secret', $response->getContent());
         $this->assertStringNotContainsString('wallet/', $response->getContent());
 
@@ -161,13 +164,13 @@ class WalletTest extends TestCase
         $this->upload('wallet/apple-wwdr', 'AppleWWDRCAG4.cer', "\x30\x82\x01\x00broken")->assertStatus(422)->assertJsonPath('error', 'not_certificate');
 
         $this->upload('wallet/apple-wwdr', 'AppleWWDRCAG4.cer', $made['der'])->assertOk()->assertJsonPath('wallet.apple_wwdr_uploaded', true);
-        $stored = $this->stored('apple-wwdr.pem');
+        $stored = (string) $this->stored('apple_wwdr');
         $this->assertStringStartsWith("-----BEGIN CERTIFICATE-----\n", $stored);
         $this->assertNotFalse(openssl_x509_read($stored));
         $this->assertSame(openssl_x509_fingerprint($made['pem']), openssl_x509_fingerprint($stored));
 
         $this->upload('wallet/apple-wwdr', 'wwdr.pem', $made['pem'])->assertOk();
-        $this->assertSame($made['pem'], $this->stored('apple-wwdr.pem'));
+        $this->assertSame($made['pem'], $this->stored('apple_wwdr'));
     }
 
     public function test_the_google_key_must_be_json_with_an_email_and_a_key_that_signs(): void
@@ -179,16 +182,17 @@ class WalletTest extends TestCase
             ->assertStatus(422)->assertJsonPath('error', 'not_service_account');
         $this->upload('wallet/google-service-account', 'sa.json', json_encode(['client_email' => 'a@b', 'private_key' => "-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n"]))
             ->assertStatus(422)->assertJsonPath('error', 'not_service_account');
-        Storage::disk('local')->assertMissing("wallet/{$this->org->id}/google-service-account.json");
+        $this->assertNull($this->stored('google_service_account'));
 
         $json = json_encode(['type' => 'service_account', 'client_email' => 'wallet@venue.iam.gserviceaccount.com', 'private_key' => $made['key']]);
         $response = $this->upload('wallet/google-service-account', 'sa.json', $json)->assertOk()->assertJsonPath('wallet.google_service_account_uploaded', true);
-        $this->assertSame($json, $this->stored('google-service-account.json'));
+        $this->assertSame($json, $this->stored('google_service_account'));
+        $this->assertSame([], Storage::disk('local')->allFiles());
         $this->assertStringNotContainsString('wallet@venue', $response->getContent());
         $this->assertSame(['source' => 'loyalty_workspace'], AuditLog::query()->where('action', 'wallet_google_sa_uploaded')->sole()->new_values);
     }
 
-    public function test_ready_until_a_file_is_gone_or_the_password_no_longer_opens_the_certificate(): void
+    public function test_ready_until_a_file_named_before_release_3_is_gone_or_the_password_no_longer_opens_the_certificate(): void
     {
         $made = self::made();
         $this->asManager()->putJson($this->api('wallet'), [
@@ -206,12 +210,17 @@ class WalletTest extends TestCase
         $this->asManager()->putJson(rtrim((string) config('app.url'), '/') . '/api/v1/admin/wallet-config', ['apple_cert_password' => ''])->assertOk();
         $this->asManager()->getJson($this->api('wallet'))->assertOk()->assertJsonPath('wallet.apple_ready', true);
 
-        // A password cleared before that fix, and a key file gone from the disk, are named.
-        DB::table('wallet_configs')->where('organization_id', $this->org->id)->update(['apple_cert_password' => null]);
-        Storage::disk('local')->delete("wallet/{$this->org->id}/google-service-account.json");
+        // A password cleared before that fix is named; so is a key uploaded before release 3 (§2) whose path is named
+        // but whose file the deploy took from the disk before it could be read into the row: upload it again.
+        DB::table('wallet_configs')->where('organization_id', $this->org->id)->update([
+            'apple_cert_password' => null,
+            'google_service_account_content' => null, 'google_service_account_path' => "wallet/{$this->org->id}/google-service-account.json",
+        ]);
 
         $this->asManager()->getJson($this->api('wallet'))->assertOk()
             ->assertJsonPath('wallet.apple_missing', ['certificate_password'])
-            ->assertJsonPath('wallet.google_missing', ['service_account_gone']);
+            ->assertJsonPath('wallet.google_missing', ['service_account_gone'])
+            ->assertJsonPath('wallet.google_service_account_uploaded', false)
+            ->assertJsonPath('wallet.google_ready', false);
     }
 }

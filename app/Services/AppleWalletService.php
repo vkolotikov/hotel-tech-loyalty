@@ -4,8 +4,6 @@ namespace App\Services;
 
 use App\Models\LoyaltyMember;
 use App\Models\WalletConfig;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
 /**
@@ -189,27 +187,35 @@ class AppleWalletService
      * private key) using the encrypted password, plus the WWDR
      * intermediate cert; emits a DER-encoded PKCS#7 detached
      * signature ready for Wallet to verify.
+     *
+     * Both files come from the organisation's wallet_configs row
+     * (HexaTech Loyalty release 3 §2: the local disk does not survive
+     * a deploy on Laravel Cloud). openssl_pkcs7_sign takes its inputs
+     * by file name, so the cert, the key and the WWDR cert are written
+     * to temporary files readable by this process only, outside the
+     * staging dir (which is zipped into the pass), and deleted in the
+     * finally block whatever happens.
      */
     private function signManifest(string $stagingDir, WalletConfig $config): void
     {
-        $certPath = Storage::disk('local')->path($config->apple_cert_path);
-        $wwdrPath = Storage::disk('local')->path($config->apple_wwdr_path);
-        if (!is_file($certPath) || !is_file($wwdrPath)) {
-            throw new \RuntimeException('Apple Wallet cert files missing on disk.');
+        $p12Bytes = $config->fileBytes('apple_cert');
+        $wwdrBytes = $config->fileBytes('apple_wwdr');
+        if ($p12Bytes === null || $wwdrBytes === null) {
+            throw new \RuntimeException('Apple Wallet cert files are not stored for this organization.');
         }
 
         $p12 = [];
-        if (!openssl_pkcs12_read(file_get_contents($certPath), $p12, (string) $config->apple_cert_password)) {
+        if (!openssl_pkcs12_read($p12Bytes, $p12, (string) $config->apple_cert_password)) {
             throw new \RuntimeException('Could not read Apple Pass Type ID cert — wrong password?');
         }
 
         // openssl_pkcs7_sign needs the cert + key in PEM form, written
         // to temp files (its arg signature is file-path-based).
-        $certFile = tempnam(sys_get_temp_dir(), 'pkpass_cert');
-        $keyFile  = tempnam(sys_get_temp_dir(), 'pkpass_key');
+        $secrets = [];
         try {
-            file_put_contents($certFile, $p12['cert']);
-            file_put_contents($keyFile,  $p12['pkey']);
+            $certFile = $secrets[] = $this->secretFile('pkpass_cert', $p12['cert']);
+            $keyFile  = $secrets[] = $this->secretFile('pkpass_key', $p12['pkey']);
+            $wwdrFile = $secrets[] = $this->secretFile('pkpass_wwdr', $wwdrBytes);
 
             $manifestPath = "$stagingDir/manifest.json";
             $sigPath      = "$stagingDir/signature";
@@ -221,7 +227,7 @@ class AppleWalletService
                 ['file://' . $keyFile, ''],
                 [],
                 PKCS7_BINARY | PKCS7_DETACHED,
-                $wwdrPath,
+                $wwdrFile,
             );
             if (!$ok) {
                 throw new \RuntimeException('openssl_pkcs7_sign failed: ' . openssl_error_string());
@@ -234,20 +240,62 @@ class AppleWalletService
             $der = $this->smimeToDer($smime);
             file_put_contents($sigPath, $der);
         } finally {
-            @unlink($certFile);
-            @unlink($keyFile);
+            foreach ($secrets as $path) {
+                @unlink($path);
+            }
         }
     }
 
+    /**
+     * A temporary file in sys_get_temp_dir() holding a secret, readable
+     * and writable by this process's user only (0600, set before the
+     * secret is written). Removed again if the write fails; otherwise
+     * the caller deletes it.
+     */
+    private function secretFile(string $prefix, string $contents): string
+    {
+        $path = tempnam(sys_get_temp_dir(), $prefix);
+        if ($path === false) {
+            throw new \RuntimeException('Could not create a temporary file for pass signing.');
+        }
+        if (!@chmod($path, 0600) || file_put_contents($path, $contents) !== strlen($contents)) {
+            @unlink($path);
+            throw new \RuntimeException('Could not write a temporary file for pass signing.');
+        }
+
+        return $path;
+    }
+
+    /**
+     * A detached signature comes out of openssl_pkcs7_sign as
+     * multipart/signed: a preamble, the signed content, then the
+     * signature part (application/x-pkcs7-signature, base64). Only that
+     * last part's body is the signature. (Reading everything after the
+     * first blank line as base64, as this did before HexaTech Loyalty
+     * release 3, took the preamble, the manifest and the part headers
+     * with it, and no pass was ever produced.)
+     */
     private function smimeToDer(string $smime): string
     {
-        // S/MIME body is base64-encoded after a blank line, ends with
-        // a MIME boundary line ("------"). Extract + decode.
         $parts = preg_split('/\r?\n\r?\n/', $smime, 2);
         if (count($parts) < 2) {
             throw new \RuntimeException('Malformed PKCS#7 signature output.');
         }
-        $body = $parts[1];
+        [$headers, $body] = $parts;
+        if (preg_match('/boundary="?([^"\r\n;]+)"?/i', $headers, $boundary)) {
+            $signature = null;
+            foreach (explode('--' . $boundary[1], $body) as $part) {
+                $split = preg_split('/\r?\n\r?\n/', ltrim($part, "\r\n"), 2);
+                if (count($split) === 2 && preg_match('/^Content-Type:\s*application\/(?:x-)?pkcs7-signature/im', $split[0])) {
+                    $signature = $split[1];
+                    break;
+                }
+            }
+            if ($signature === null) {
+                throw new \RuntimeException('Malformed PKCS#7 signature output.');
+            }
+            $body = $signature;
+        }
         // Strip MIME boundary trailers.
         $body = preg_replace('/^-{2,}.*$/m', '', $body);
         $body = preg_replace('/\s+/', '', $body);

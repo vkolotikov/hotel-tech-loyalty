@@ -9,7 +9,6 @@ use App\Services\AnalyticsService;
 use App\Services\MemberImportService;
 use App\Services\PlanLimitGuard;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -18,9 +17,11 @@ use Illuminate\Support\Str;
  * release 2 §4.1) start a run and finish a chunk. Moved here unchanged from the controller, which keeps its answers.
  *
  * Preview: the file is read whole and judged exactly as a commit would judge it (the dry run is the same code path),
- * under the plan's member cap, and kept on the default disk for the life of the batch, which starts pending. A chunk:
- * the next slice of rows, and when the last one is done, the run is audited (`members_bulk_import`) and the
- * dashboard's figures are cleared.
+ * under the plan's member cap, and kept in the batch's row (`file_content`, release 3 §2: not on the local disk, which
+ * a deploy on Laravel Cloud loses and another replica never had) for the life of the batch, which starts pending. A
+ * chunk: the next slice of rows, read from that copy, and when the last one is done, the run is audited
+ * (`members_bulk_import`) and the dashboard's figures are cleared. The copy is cleared when the batch ends — completed
+ * or failed (MemberImportService::processChunk), cancelled (here).
  */
 final class MemberImportRun
 {
@@ -73,15 +74,18 @@ final class MemberImportRun
             planLimit: $usage['limit'],
         );
 
-        // Kept for the life of the batch; each chunk reads it again.
-        $path = $upload->store('member-imports');
+        // Kept for the life of the batch, as uploaded; each chunk reads it again.
+        $bytes = @file_get_contents($upload->getRealPath());
+        if ($bytes === false) {
+            throw new ImportRefused('file_unreadable', 'Could not open the uploaded file.');
+        }
 
         $batch = MemberImportBatch::create([
             'uuid'               => (string) Str::uuid(),
             'organization_id'    => $orgId,
             'created_by_user_id' => $by?->id,
             'original_filename'  => $upload->getClientOriginalName(),
-            'stored_path'        => Storage::path($path),
+            'file_content'       => MemberImportBatch::encodeFile($bytes),
             'file_rows'          => $parsed['file_rows'],
             'total_rows'         => count($parsed['rows']),
             'status'             => 'pending',
@@ -118,11 +122,11 @@ final class MemberImportRun
         return $batch;
     }
 
-    /** Stop a run. Members already created stay: this is not a rollback. */
+    /** Stop a run. Members already created stay: this is not a rollback. The stored copy of the file goes. */
     public function cancel(MemberImportBatch $batch): MemberImportBatch
     {
         if (!$batch->isFinished()) {
-            $batch->update(['status' => 'cancelled', 'completed_at' => now()]);
+            $batch->update(['status' => 'cancelled', 'completed_at' => now(), 'file_content' => null]);
         }
 
         return $batch;

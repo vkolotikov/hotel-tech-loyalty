@@ -123,7 +123,8 @@ class MemberImportController extends Controller
     /** Recent imports, so an interrupted run is findable. */
     public function index(Request $request): JsonResponse
     {
-        $batches = MemberImportBatch::orderByDesc('created_at')->limit(20)->get();
+        // Without the stored file (release 3 §2): an unfinished batch keeps it in its row.
+        $batches = MemberImportBatch::withoutFile()->orderByDesc('created_at')->limit(20)->get();
 
         return response()->json([
             'data' => $batches->map(fn ($b) => $this->payload($b, false))->all(),
