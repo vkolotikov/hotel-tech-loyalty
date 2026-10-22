@@ -265,6 +265,42 @@ trait SetsUpMinimalSchema
     }
 
     /**
+     * Brands schema with production's unique indexes — for tests of who
+     * writes a default brand. `brands_org_default_unique` is the partial
+     * index the 2026_05_10_100000 migration creates (one live default per
+     * organisation), so SQLite refuses the rows PostgreSQL refuses;
+     * `brands_org_slug_unique` and the widget_token unique are not partial,
+     * deleted rows count. Against a PostgreSQL database built from the
+     * migrations the table exists and nothing here runs.
+     */
+    protected function setUpBrandsSchema(): void
+    {
+        $this->setUpMinimalSchema();
+
+        if (!Schema::hasTable('brands')) {
+            Schema::create('brands', function ($table) {
+                $table->bigIncrements('id');
+                $table->unsignedBigInteger('organization_id');
+                $table->string('name');
+                $table->string('slug', 100);
+                $table->text('description')->nullable();
+                $table->string('logo_url')->nullable();
+                $table->string('primary_color', 7)->nullable();
+                $table->string('widget_token', 64)->unique();
+                $table->string('domain')->nullable();
+                $table->boolean('is_default')->default(false);
+                $table->integer('sort_order')->default(0);
+                $table->string('pms_smoobu_api_key')->nullable();
+                $table->string('pms_smoobu_channel_id')->nullable();
+                $table->softDeletes();
+                $table->timestamps();
+                $table->unique(['organization_id', 'slug'], 'brands_org_slug_unique');
+            });
+            \Illuminate\Support\Facades\DB::statement('CREATE UNIQUE INDEX brands_org_default_unique ON brands (organization_id) WHERE is_default = true AND deleted_at IS NULL');
+        }
+    }
+
+    /**
      * Engagement schema — opt-in extension for tests that
      * exercise EngagementDailySummaryService + EngagementFeedService
      * (the parts that need DB access). Adds chat_conversations +

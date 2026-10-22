@@ -101,22 +101,20 @@ class Organization extends Model
             // EXCLUDES trashed rows, which matches the partial unique
             // `brands_org_default_unique` semantics (where
             // deleted_at IS NULL).
-            $hasDefault = \App\Models\Brand::where('organization_id', $org->id)
+            //
+            // Only TenantScope is lifted, and the org is named
+            // explicitly: whatever tenant is bound (another org, when a
+            // super admin creates a venue from inside their own) must
+            // not decide what this check sees. createDefaultFor() binds
+            // this org for the write for the same reason.
+            $hasDefault = \App\Models\Brand::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                ->where('organization_id', $org->id)
                 ->where('is_default', true)
                 ->exists();
             if ($hasDefault) return;
 
             try {
-                $baseSlug = \Illuminate\Support\Str::slug($org->name ?? '') ?: ('default-' . $org->id);
-                \App\Models\Brand::create([
-                    'organization_id' => $org->id,
-                    'name'            => $org->name ?: 'Default',
-                    'slug'            => substr($baseSlug, 0, 100),
-                    'logo_url'        => $org->logo_url ?? null,
-                    'widget_token'    => $org->widget_token ?: \Illuminate\Support\Str::random(32),
-                    'is_default'      => true,
-                    'sort_order'      => 0,
-                ]);
+                \App\Models\Brand::createDefaultFor($org);
             } catch (\Throwable $e) {
                 // Defensive: race between two org-create paths (rare
                 // — orgs are SaaS-side primary keys — but possible

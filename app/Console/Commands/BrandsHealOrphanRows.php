@@ -7,7 +7,6 @@ use App\Models\Organization;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
 
 /**
  * Heal brand_id NULLs on brand-scoped tables for orgs whose default brand
@@ -134,7 +133,7 @@ class BrandsHealOrphanRows extends Command
      * Ensure the org has a default brand. Order of preference:
      *   1. Existing brand with is_default=true (no change needed).
      *   2. Earliest non-deleted brand promoted to is_default.
-     *   3. Create one via the same defaults Organization::booted uses.
+     *   3. Create one via Brand::createDefaultFor(), the writer Organization::booted uses.
      */
     private function ensureDefaultBrand(Organization $org, bool $apply): ?Brand
     {
@@ -162,16 +161,10 @@ class BrandsHealOrphanRows extends Command
             return $promote->fresh();
         }
 
-        // No brand at all — create one.
+        // No brand at all — create one, through the writer the `created`
+        // hook uses (it files the row under this org whatever tenant is bound).
         if ($apply) {
-            $created = Brand::withoutGlobalScopes()->create([
-                'organization_id' => $org->id,
-                'name'            => $org->name ?: 'Default',
-                'slug'            => Str::slug($org->name ?: 'default'),
-                'widget_token'    => $org->widget_token ?: Str::random(40),
-                'is_default'      => true,
-                'is_active'       => true,
-            ]);
+            $created = Brand::createDefaultFor($org);
             $this->line("    created default brand #{$created->id}");
             return $created;
         }

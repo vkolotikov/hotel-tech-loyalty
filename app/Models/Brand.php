@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -75,6 +76,72 @@ class Brand extends Model
     public function properties(): HasMany
     {
         return $this->hasMany(Property::class);
+    }
+
+    /**
+     * Create the organisation's default brand. The one writer of that row:
+     * Organization's `created` hook, `brands:ensure-default` and
+     * `brands:heal-orphan-rows` all come here. It does not check whether
+     * the organisation already has a default; the caller decides that.
+     *
+     * The organisation is bound as the tenant for the write, and the
+     * previous binding (or its absence) is restored afterwards. That is
+     * what makes the row land under the right organisation:
+     * BelongsToOrganization's `creating` hook forces organization_id from
+     * the bound tenant, and withoutGlobalScopes() does not stop it. Without
+     * the binding, a default brand made for organisation B while A is bound
+     * (a super admin creating a venue from inside their own, a console
+     * command run under a tenant, a test making a second organisation) is
+     * filed under A, and PostgreSQL refuses it on `brands_org_default_unique`.
+     *
+     * Runs in its own transaction, which is a savepoint inside the caller's.
+     * On PostgreSQL a failed statement aborts the whole enclosing
+     * transaction (SQLSTATE 25P02), so a caller that catches this method's
+     * exception could not otherwise carry on.
+     */
+    public static function createDefaultFor(Organization $org): self
+    {
+        $wasBound = app()->bound('current_organization_id');
+        $prior    = $wasBound ? app('current_organization_id') : null;
+        app()->instance('current_organization_id', $org->id);
+
+        try {
+            return DB::transaction(fn () => static::create([
+                'organization_id' => $org->id,
+                'name'            => $org->name ?: 'Default',
+                'slug'            => static::freeSlugFor($org),
+                'logo_url'        => $org->logo_url ?? null,
+                'widget_token'    => $org->widget_token ?: Str::random(32),
+                'is_default'      => true,
+                'sort_order'      => 0,
+            ]));
+        } finally {
+            if ($wasBound) {
+                app()->instance('current_organization_id', $prior);
+            } else {
+                app()->forgetInstance('current_organization_id');
+            }
+        }
+    }
+
+    /**
+     * The organisation's name as a slug, or "default-<id>" when the name has
+     * none, suffixed "-2", "-3", … while the organisation already has a brand
+     * with it. Deleted brands count: `brands_org_slug_unique` is not partial.
+     * A new organisation has no brands, so its default always gets the base.
+     */
+    private static function freeSlugFor(Organization $org): string
+    {
+        $base = substr(Str::slug($org->name ?? '') ?: ('default-' . $org->id), 0, 100);
+        $slug = $base;
+        $i    = 2;
+
+        while (static::withoutGlobalScopes()->where('organization_id', $org->id)->where('slug', $slug)->exists()) {
+            $suffix = '-' . $i++;
+            $slug   = substr($base, 0, 100 - strlen($suffix)) . $suffix;
+        }
+
+        return $slug;
     }
 
     /**
