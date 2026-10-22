@@ -13,6 +13,8 @@ Status: owner's answers of 2026-10-22 ("proceed all remaining improvements and a
 | R4-4 | SMS | **Build, with its own opt-in**: a member switch "Offers by SMS", off until the member turns it on; only they receive SMS. Sent through the venue's own Twilio account (Settings → Integrations). |
 | R4-5 | Currency | **Set in Card & app**: one field that writes the same setting booking setup writes, warning when online payments are set up in another currency. |
 | R4-6 | Boost times | **Fix new saves, flag old**: the full admin's boost form saves the venue's wall clock; boosts saved before by the full admin are marked "check the time" in the workspace until saved again. |
+| R4-7 | Combination stays (part D) | **Deferred to the next release** (owner, 2026-10-22, after the build): the build wrote one PaymentIntent on every room row, which the partial unique index `booking_mirror_org_pi_unique` (organization_id, stripe_payment_intent_id) refuses on PostgreSQL. Next release: the lead room carries the payment, the other rooms of the group follow it at capture, refund and cancellation. The build is kept in branch commit 1dcd8de. |
+| R4-8 | The widget's own combination | The same index refuses a paid widget combination at its second room (found reading the code, 2026-10-22; not run end to end). **Fixed in the next release** together with R4-7; untouched in release 4. |
 
 ## 2. The member portal (parts A, C, D)
 
@@ -32,7 +34,7 @@ Status: owner's answers of 2026-10-22 ("proceed all remaining improvements and a
 - **D. Combination stays.** A party larger than one room can book several rooms in one go, through
   `BookingEngineService` with every room locked (in a fixed order) and every price and availability re-checked under
   the locks, paid with the payment rules of `docs/member-portal.md` intact. If the payment rules cannot hold for a
-  combination without changing them, the builder stops and reports a design instead of building.
+  combination without changing them, the builder stops and reports a design instead of building. **Deferred (R4-7).**
 
 ## 3. The public widget (part B, R4-2/R4-3)
 
