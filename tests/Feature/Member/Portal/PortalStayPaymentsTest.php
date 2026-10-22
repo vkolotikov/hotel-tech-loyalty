@@ -82,6 +82,12 @@ class PortalStayPaymentsTest extends MemberEndpointTestCase
         $this->smoobu->shouldReceive('getPriceElements')->byDefault()->andReturn([]);
     }
 
+    /** Stripe not answering at all — the one kind of failure the pay-at-venue fallback is for. */
+    private function outage(): \Stripe\Exception\ApiConnectionException
+    {
+        return \Stripe\Exception\ApiConnectionException::factory('Could not connect to Stripe');
+    }
+
     private function mirrors()
     {
         return BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id);
@@ -217,7 +223,7 @@ class PortalStayPaymentsTest extends MemberEndpointTestCase
         $this->setting(PayAtVenueFallback::SETTING, 'true');
         $stripe = $this->stripe();
         $hold = $this->quote();
-        $stripe->shouldReceive('createPaymentIntent')->andThrow(new \RuntimeException('stripe down'));
+        $stripe->shouldReceive('createPaymentIntent')->andThrow($this->outage());
 
         $grant = $this->intent($hold)->assertStatus(409)->assertJsonPath('error', 'pay_at_venue')->assertJsonPath('reason', 'payment_unavailable')->json('pay_at_venue_grant');
         $this->assertIsString($grant);
@@ -239,7 +245,7 @@ class PortalStayPaymentsTest extends MemberEndpointTestCase
         $this->smoobu->shouldNotReceive('createReservation');
         $this->setting(PayAtVenueFallback::SETTING, 'true');
         $stripe = $this->stripe();
-        $stripe->shouldReceive('createPaymentIntent')->andThrow(new \RuntimeException('stripe down'));
+        $stripe->shouldReceive('createPaymentIntent')->andThrow($this->outage());
         $holdA = $this->quote();
         $grant = $this->intent($holdA)->assertStatus(409)->json('pay_at_venue_grant');
 
@@ -285,9 +291,109 @@ class PortalStayPaymentsTest extends MemberEndpointTestCase
         $hold = $this->quote();
         $stripe->shouldReceive('createPaymentIntent')->once()->andReturn(['client_secret' => 'pi_a_secret', 'payment_intent_id' => 'pi_a']);
         $this->intent($hold)->assertOk();
-        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_a')->andThrow(new \RuntimeException('stripe down'));
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_a')->andThrow($this->outage());
         $stripe->shouldNotReceive('cancelPaymentIntent', Mockery::any());
 
         $this->intent($hold)->assertStatus(409)->assertJsonPath('error', 'pay_at_venue')->assertJsonPath('reason', 'payment_unavailable');
+    }
+
+    // ─── Review fixes ───────────────────────────────────────────────────────
+
+    /** Finding 2: an earlier intent Stripe will not cancel has an unknown fate — nothing is minted beside it. */
+    public function test_an_earlier_intent_that_cannot_be_released_stops_a_second_one_being_made(): void
+    {
+        $stripe = $this->stripe();
+        $hold = $this->quote();
+        $stripe->shouldReceive('createPaymentIntent')->once()->andReturn(['client_secret' => 'pi_a_secret', 'payment_intent_id' => 'pi_a']);
+        $this->intent($hold)->assertOk();
+
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_a')->andReturn($this->pi('pi_a', $hold, 'requires_capture'));
+        $stripe->shouldReceive('cancelPaymentIntent')->with('pi_a', 'abandoned')->andThrow(\Stripe\Exception\InvalidRequestException::factory('This PaymentIntent cannot be canceled', 400));
+        $this->intent($hold)->assertStatus(503)->assertJsonPath('error', 'payment_unavailable');
+
+        // With the venue's fallback on, a refusal is still not an outage: no grant.
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $this->intent($hold)->assertStatus(503)->assertJsonMissingPath('pay_at_venue_grant');
+        $this->assertSame('pi_a', $this->hold($hold)->payload_json[PortalStayBookingController::HOLD_INTENT_KEY]);
+    }
+
+    /** Finding 2 with an outage: the cancel could not reach Stripe — the venue's fallback may be offered. */
+    public function test_an_earlier_intent_whose_cancel_cannot_reach_stripe_offers_the_venue_when_switched_on(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $stripe = $this->stripe();
+        $hold = $this->quote();
+        $stripe->shouldReceive('createPaymentIntent')->once()->andReturn(['client_secret' => 'pi_a_secret', 'payment_intent_id' => 'pi_a']);
+        $this->intent($hold)->assertOk();
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_a')->andReturn($this->pi('pi_a', $hold, 'requires_capture'));
+        $stripe->shouldReceive('cancelPaymentIntent')->with('pi_a', 'abandoned')->andThrow($this->outage());
+
+        $this->intent($hold)->assertStatus(409)->assertJsonPath('error', 'pay_at_venue')->assertJsonPath('reason', 'payment_unavailable');
+    }
+
+    /** Finding 4: only an outage or an overloaded Stripe offers the venue; a broken set-up keeps the 503. */
+    public function test_only_an_unreachable_or_overloaded_stripe_offers_the_venue(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $cases = [
+            'revoked key'      => [\Stripe\Exception\AuthenticationException::factory('Invalid API Key provided', 401), 503],
+            'restricted'       => [\Stripe\Exception\PermissionException::factory('The provided key does not have access', 403), 503],
+            'below minimum'    => [\Stripe\Exception\InvalidRequestException::factory('Amount must be at least €0.50', 400), 503],
+            'not configured'   => [new \RuntimeException('Stripe is not configured for this organization.'), 503],
+            'connection'       => [$this->outage(), 409],
+            'rate limited'     => [\Stripe\Exception\RateLimitException::factory('Too many requests', 429), 409],
+            'stripe 500'       => [\Stripe\Exception\UnknownApiErrorException::factory('Internal error', 500), 409],
+        ];
+        foreach ($cases as $name => [$error, $status]) {
+            $stripe = $this->stripe();
+            $stripe->shouldReceive('createPaymentIntent')->andThrow($error);
+            $res = $this->intent($this->quote());
+            $this->assertSame($status, $res->status(), $name);
+            $this->assertSame($status === 409 ? 'pay_at_venue' : 'payment_unavailable', $res->json('error'), $name);
+            $this->assertSame($status === 409, is_string($res->json('pay_at_venue_grant')), $name);
+        }
+    }
+
+    /** Finding 6: a stay booked to pay at the venue releases the intent the hold recorded. */
+    public function test_a_pay_at_venue_stay_releases_the_intent_its_hold_recorded(): void
+    {
+        $this->smoobuBooks();
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $stripe = $this->stripe();
+        $hold = $this->quote();
+        $stripe->shouldReceive('createPaymentIntent')->once()->andReturn(['client_secret' => 'pi_a_secret', 'payment_intent_id' => 'pi_a']);
+        $this->intent($hold)->assertOk();
+
+        // Stripe stops answering: the earlier intent cannot be read, so the venue is offered.
+        $calls = 0;
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_a')->andReturnUsing(function () use (&$calls, $hold) {
+            if (++$calls === 1) {
+                throw $this->outage();
+            }
+
+            return $this->pi('pi_a', $hold);
+        });
+        $grant = $this->intent($hold)->assertStatus(409)->json('pay_at_venue_grant');
+
+        // Booked at the venue; Stripe is back by then, and pi_a is released.
+        $stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_a', 'abandoned');
+        $this->confirm($hold, ['pay_at_venue_grant' => $grant])->assertStatus(201)->assertJsonPath('booking.payment_status', 'open');
+        $this->assertSame(2, $calls);
+    }
+
+    /** Finding 6: never one a booking carries — the release goes through the guard's own rules. */
+    public function test_a_pay_at_venue_stay_never_releases_an_intent_a_booking_carries(): void
+    {
+        $this->smoobuBooks();
+        $this->stripe(false); // Stripe off: the venue's ordinary at-venue stay
+        $hold = $this->quote();
+        $row = $this->hold($hold);
+        $row->forceFill(['payload_json' => $row->payload_json + [PortalStayBookingController::HOLD_INTENT_KEY => 'pi_carried']])->save();
+        BookingMirror::withoutGlobalScopes()->create(['organization_id' => $this->org->id, 'reservation_id' => 'R-OLD', 'apartment_id' => '202', 'price_total' => 200, 'stripe_payment_intent_id' => 'pi_carried', 'member_id' => $this->member->id, 'arrival_date' => now()->addDays(40)->toDateString(), 'departure_date' => now()->addDays(42)->toDateString()]);
+        $stripe = $this->app->make(\App\Services\StripeService::class);
+        $stripe->shouldNotReceive('retrievePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+
+        $this->confirm($hold)->assertStatus(201)->assertJsonPath('booking.payment_status', 'open');
     }
 }

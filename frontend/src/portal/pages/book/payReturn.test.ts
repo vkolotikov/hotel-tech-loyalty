@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { restartPath, returnConfirmOutcome, returnHasSecret, returnIntentId, returnStayNotice, returnView } from './payReturn'
-import { payAtVenueGrantOf, portalReturnUrl, retryOnlineVisit } from './steps'
+import { canTryOnlineAgain, payAtVenueGrantOf, portalReturnUrl, retryOnlineVisit } from './steps'
 import type { PaymentReturn } from '../../lib/types'
 
 const stay: PaymentReturn = {
@@ -103,7 +103,17 @@ describe('portalReturnUrl / retryOnlineVisit', () => {
     expect(portalReturnUrl('http://localhost:5173/')).toBe('http://localhost:5173/portal/book/return')
   })
 
-  it('trying online again asks for one fresh intent and forgets the grant', () => {
-    expect(retryOnlineVisit(() => 'fresh')).toEqual({ nonce: 'fresh', noCard: false, atVenueGrant: null })
+  it('trying online again asks for one fresh intent under a fresh key, and forgets the grant', () => {
+    let n = 0
+    // Review finding 6: the old key belonged to the at-venue booking; a card booking under it could only answer
+    // `idempotency_conflict` with its new intent left authorised.
+    expect(retryOnlineVisit(() => `fresh-${n++}`)).toEqual({ nonce: 'fresh-0', idempotencyKey: 'fresh-1', noCard: false, atVenueGrant: null })
+  })
+
+  it('offers trying online again only before any confirm was sent on this visit', () => {
+    expect(canTryOnlineAgain('grant', 'idle')).toBe(true)
+    // Sent: its answer may have been lost while the at-venue booking was made — only that same confirm may be resent.
+    for (const state of ['pending', 'error', 'success'] as const) expect(canTryOnlineAgain('grant', state), state).toBe(false)
+    expect(canTryOnlineAgain(null, 'idle')).toBe(false)
   })
 })

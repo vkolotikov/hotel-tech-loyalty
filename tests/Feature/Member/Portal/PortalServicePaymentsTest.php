@@ -16,6 +16,7 @@ use App\Models\TierBenefit;
 use App\Services\Booking\PayAtVenueFallback;
 use App\Services\Portal\AppointmentClock;
 use App\Services\StripeService;
+use App\Support\SharedCache;
 use Illuminate\Support\Facades\Cache;
 use Mockery;
 use Stripe\PaymentIntent;
@@ -101,11 +102,24 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
         ], $top, ['metadata' => array_map('strval', array_merge($made[$id]['meta'], $meta))]));
     }
 
-    private function intent(array $body)
+    /** The payment-intent call as the Pay step makes it: with the visit's Idempotency-Key (null: an older client, none). */
+    private function intent(array $body, ?string $key = 'idem-key-0002')
     {
         $this->flushHeaders();
+        $req = $this->withToken($this->token);
 
-        return $this->withToken($this->token)->postJson(self::INTENT, $body);
+        return ($key !== null ? $req->withHeader('Idempotency-Key', $key) : $req)->postJson(self::INTENT, $body);
+    }
+
+    /** Stripe not answering at all — the one kind of failure the pay-at-venue fallback is for. */
+    private function outage(): \Stripe\Exception\ApiConnectionException
+    {
+        return \Stripe\Exception\ApiConnectionException::factory('Could not connect to Stripe');
+    }
+
+    private function target(string $key, ?string $start = null): string
+    {
+        return PayAtVenueFallback::serviceTarget($this->service->id, AppointmentClock::fromClient($start ?? $this->body()['start_at']), $key);
     }
 
     private function confirm(array $body, string $key = 'idem-key-0001')
@@ -183,12 +197,12 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
 
         // The slot's last intent pays for a booking already (a booking at another time of the same member).
         ServiceBooking::create(['organization_id' => $this->org->id, 'service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'customer_name' => 'X', 'customer_email' => 'x@example.test', 'start_at' => now()->setTime(14, 0), 'end_at' => now()->setTime(14, 45), 'duration_minutes' => 45, 'service_price' => 60, 'total_amount' => 60, 'currency' => 'EUR', 'status' => 'confirmed', 'payment_status' => 'authorized', 'stripe_payment_intent_id' => 'pi_carried']);
-        Cache::put($this->slotKey(), 'pi_carried', now()->addHour());
+        SharedCache::store()->put($this->slotKey(), 'pi_carried', now()->addHour());
         $stripe->shouldNotReceive('retrievePaymentIntent')->with('pi_carried');
         $this->intent($this->body())->assertOk()->assertJsonPath('payment_intent_id', 'pi_1');
 
         // Another member's intent under this key: read, never cancelled, never handed out.
-        Cache::put($this->slotKey(), 'pi_stranger', now()->addHour());
+        SharedCache::store()->put($this->slotKey(), 'pi_stranger', now()->addHour());
         $stripe->shouldReceive('retrievePaymentIntent')->with('pi_stranger')->andReturn(PaymentIntent::constructFrom([
             'id' => 'pi_stranger', 'status' => 'requires_payment_method', 'amount' => 6000, 'currency' => 'eur', 'client_secret' => 'pi_stranger_secret',
             'metadata' => array_map('strval', array_merge($made['pi_1']['meta'], ['member_id' => '999999'])),
@@ -202,7 +216,7 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
         $made = [];
         $this->minting($stripe, $made);
         $this->intent($this->body())->assertOk();
-        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andThrow(new \RuntimeException('stripe down'));
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andThrow($this->outage());
         $stripe->shouldNotReceive('cancelPaymentIntent');
 
         $this->intent($this->body())->assertStatus(503)->assertJsonPath('error', 'payment_unavailable');
@@ -239,7 +253,7 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
     {
         $this->setting(PayAtVenueFallback::SETTING, 'true');
         $stripe = $this->stripe();
-        $stripe->shouldReceive('createPaymentIntent')->andThrow(new \RuntimeException('stripe down'));
+        $stripe->shouldReceive('createPaymentIntent')->andThrow($this->outage());
 
         $grant = $this->intent($this->body())->assertStatus(409)->assertJsonPath('error', 'pay_at_venue')->assertJsonPath('reason', 'payment_unavailable')->json('pay_at_venue_grant');
         $this->assertIsString($grant);
@@ -259,19 +273,20 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
     public function test_a_grant_works_only_for_its_own_slot_and_while_the_setting_is_on(): void
     {
         $this->setting(PayAtVenueFallback::SETTING, 'true');
-        $grant = PayAtVenueFallback::grant('service', $this->org->id, $this->member->id, PayAtVenueFallback::serviceTarget($this->service->id, AppointmentClock::fromClient($this->body()['start_at'])));
         $this->stripe();
 
-        $this->confirm($this->body(['start_at' => now()->setTime(11, 0)->toIso8601String(), 'pay_at_venue_grant' => $grant]), 'idem-key-0003')->assertStatus(422)->assertJsonPath('error', 'payment_required');
-        $stay = PayAtVenueFallback::grant('stay', $this->org->id, $this->member->id, PayAtVenueFallback::serviceTarget($this->service->id, AppointmentClock::fromClient($this->body()['start_at'])));
+        $grant = fn (string $key) => PayAtVenueFallback::grant('service', $this->org->id, $this->member->id, $this->target($key));
+        $this->confirm($this->body(['start_at' => now()->setTime(11, 0)->toIso8601String(), 'pay_at_venue_grant' => $grant('idem-key-0003')]), 'idem-key-0003')->assertStatus(422)->assertJsonPath('error', 'payment_required');
+        $stay = PayAtVenueFallback::grant('stay', $this->org->id, $this->member->id, $this->target('idem-key-0004'));
         $this->confirm($this->body(['pay_at_venue_grant' => $stay]), 'idem-key-0004')->assertStatus(422)->assertJsonPath('error', 'payment_required');
 
         $this->setting(PayAtVenueFallback::SETTING, 'false');
-        $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'idem-key-0005')->assertStatus(422)->assertJsonPath('error', 'payment_required');
+        $this->confirm($this->body(['pay_at_venue_grant' => $grant('idem-key-0005')]), 'idem-key-0005')->assertStatus(422)->assertJsonPath('error', 'payment_required');
 
         $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $late = $grant('idem-key-0006');
         $this->travel(31)->minutes();
-        $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'idem-key-0006')->assertStatus(422)->assertJsonPath('error', 'payment_required');
+        $this->confirm($this->body(['pay_at_venue_grant' => $late]), 'idem-key-0006')->assertStatus(422)->assertJsonPath('error', 'payment_required');
         $this->assertSame(0, ServiceBooking::withoutGlobalScopes()->count());
     }
 
@@ -305,5 +320,125 @@ class PortalServicePaymentsTest extends MemberEndpointTestCase
         $this->intent($this->body())->assertOk()->assertJsonPath('amount', 54);
         $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andReturnUsing(fn () => $this->made($made, 'pi_1'));
         $this->intent($this->body())->assertOk()->assertJsonPath('reused', true)->assertJsonPath('amount', 54);
+    }
+
+    // ─── Review fixes ───────────────────────────────────────────────────────
+
+    /** Finding 5: a grant is for the one booking the Pay visit's Idempotency-Key makes. */
+    public function test_a_grant_books_one_appointment_only_under_its_own_key(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $stripe = $this->stripe();
+        $stripe->shouldReceive('createPaymentIntent')->andThrow($this->outage());
+        $grant = $this->intent($this->body(), 'visit-key-0001')->assertStatus(409)->json('pay_at_venue_grant');
+
+        // Another key — another booking — is not covered.
+        $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'other-key-0002')->assertStatus(422)->assertJsonPath('error', 'payment_required');
+        $id = $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'visit-key-0001')->assertStatus(201)->json('booking.id');
+        // The same key replays the booking it made; a second unpaid booking at another time is refused.
+        $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'visit-key-0001')->assertOk()->assertJsonPath('replayed', true)->assertJsonPath('booking.id', $id);
+        $this->confirm($this->body(['start_at' => now()->setTime(12, 0)->toIso8601String(), 'pay_at_venue_grant' => $grant]), 'other-key-0003')->assertStatus(422)->assertJsonPath('error', 'payment_required');
+        $this->assertSame(1, ServiceBooking::withoutGlobalScopes()->count());
+    }
+
+    /** Finding 5: a client that sends no key (an older bundle) is offered no grant — the 503, as before. */
+    public function test_a_payment_intent_call_without_a_key_is_offered_no_grant(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $stripe = $this->stripe();
+        $stripe->shouldReceive('createPaymentIntent')->andThrow($this->outage());
+
+        $this->intent($this->body(), null)->assertStatus(503)->assertJsonPath('error', 'payment_unavailable')->assertJsonMissingPath('pay_at_venue_grant');
+    }
+
+    /** Finding 4: a revoked key or an amount Stripe refuses is not "unavailable". */
+    public function test_only_an_unreachable_or_overloaded_stripe_offers_the_venue(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        foreach ([
+            [\Stripe\Exception\AuthenticationException::factory('Invalid API Key provided', 401), 503],
+            [\Stripe\Exception\InvalidRequestException::factory('Amount must be at least €0.50', 400), 503],
+            [\Stripe\Exception\RateLimitException::factory('Too many requests', 429), 409],
+            [\Stripe\Exception\UnknownApiErrorException::factory('Internal error', 502), 409],
+        ] as $i => [$error, $status]) {
+            $stripe = $this->stripe();
+            $stripe->shouldReceive('createPaymentIntent')->andThrow($error);
+            $res = $this->intent($this->body(['start_at' => now()->setTime(10 + $i, 0)->toIso8601String()]));
+            $this->assertSame($status, $res->status(), get_class($error));
+            $this->assertSame($status === 409, is_string($res->json('pay_at_venue_grant')), get_class($error));
+        }
+    }
+
+    /** Finding 2: an earlier intent Stripe will not cancel has an unknown fate — nothing is minted beside it. */
+    public function test_an_earlier_intent_that_cannot_be_released_stops_a_second_one_being_made(): void
+    {
+        $stripe = $this->stripe();
+        $made = [];
+        $this->minting($stripe, $made);
+        $this->intent($this->body())->assertOk();
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andReturnUsing(fn () => $this->made($made, 'pi_1', 'requires_capture'));
+        $stripe->shouldReceive('cancelPaymentIntent')->with('pi_1', 'abandoned')->andThrow(\Stripe\Exception\InvalidRequestException::factory('This PaymentIntent cannot be canceled', 400));
+
+        $this->intent($this->body())->assertStatus(503)->assertJsonPath('error', 'payment_unavailable');
+        $this->assertCount(1, $made);
+        $this->assertSame('pi_1', SharedCache::store()->get($this->slotKey()));
+    }
+
+    /** Finding 3: the slot's record lives in the shared cache every container sees, not the per-container default. */
+    public function test_the_slot_record_lives_in_the_shared_cache(): void
+    {
+        config(['cache.stores.portal_shared_test' => ['driver' => 'array'], 'cache.shared' => 'portal_shared_test']);
+        $stripe = $this->stripe();
+        $made = [];
+        $this->minting($stripe, $made);
+
+        $this->intent($this->body())->assertOk();
+        $this->assertSame('pi_1', Cache::store('portal_shared_test')->get($this->slotKey()));
+        $this->assertNull(Cache::get($this->slotKey()), 'never the default (per-container) store');
+
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andReturnUsing(fn () => $this->made($made, 'pi_1'));
+        $this->intent($this->body())->assertOk()->assertJsonPath('reused', true);
+    }
+
+    /** Finding 6: an appointment booked to pay at the venue releases the intent its slot recorded, and forgets it. */
+    public function test_a_pay_at_venue_appointment_releases_the_intent_its_slot_recorded(): void
+    {
+        $this->setting(PayAtVenueFallback::SETTING, 'true');
+        $stripe = $this->stripe();
+        $made = [];
+        $this->minting($stripe, $made);
+        $this->intent($this->body())->assertOk()->assertJsonPath('payment_intent_id', 'pi_1');
+
+        $calls = 0;
+        $stripe->shouldReceive('retrievePaymentIntent')->with('pi_1')->andReturnUsing(function () use (&$calls, $made) {
+            if (++$calls === 1) {
+                throw $this->outage();
+            }
+
+            return $this->made($made, 'pi_1');
+        });
+        $grant = $this->intent($this->body())->assertStatus(409)->json('pay_at_venue_grant');
+
+        $stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_1', 'abandoned');
+        $this->confirm($this->body(['pay_at_venue_grant' => $grant]), 'idem-key-0002')->assertStatus(201)->assertJsonPath('booking.payment_status', 'unpaid');
+        $this->assertNull(SharedCache::store()->get($this->slotKey()));
+        $this->assertCount(1, $made);
+    }
+
+    /** Finding 6: an intent a booking carries is never released after an at-venue booking. */
+    public function test_a_pay_at_venue_appointment_never_releases_an_intent_a_booking_carries(): void
+    {
+        // Stripe off: the venue's ordinary at-venue booking; the slot still records an intent another booking carries.
+        ServiceBooking::create(['organization_id' => $this->org->id, 'service_id' => $this->service->id, 'service_master_id' => $this->master->id, 'customer_name' => 'X', 'customer_email' => 'x@example.test', 'start_at' => now()->setTime(14, 0), 'end_at' => now()->setTime(14, 45), 'duration_minutes' => 45, 'service_price' => 60, 'total_amount' => 60, 'currency' => 'EUR', 'status' => 'confirmed', 'payment_status' => 'authorized', 'stripe_payment_intent_id' => 'pi_carried']);
+        SharedCache::store()->put($this->slotKey(), 'pi_carried', now()->addHour());
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(false);
+        $stripe->shouldReceive('currency')->andReturn('eur');
+        $stripe->shouldReceive('publishableKey')->andReturn('');
+        $stripe->shouldNotReceive('retrievePaymentIntent');
+        $stripe->shouldNotReceive('cancelPaymentIntent');
+        $this->app->instance(StripeService::class, $stripe);
+
+        $this->confirm($this->body())->assertStatus(201)->assertJsonPath('booking.payment_status', 'unpaid');
     }
 }

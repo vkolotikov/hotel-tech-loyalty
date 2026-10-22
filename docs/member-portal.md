@@ -234,14 +234,47 @@ trusts it, and `assertUnused()` refuses one that already pays for another `Servi
 organisation. The hold is released (`guard->release()`, via the controller's `fail()`) on every
 failed confirm exit that has a `payment_intent_id`, but `carried()` — a booking in this
 organisation already has this `stripe_payment_intent_id` — means it is never touched, however the
-failure was reached. Redirect-based payment methods are off (`allow_redirects: 'never'` on
-`StripeService::createPaymentIntent()`): the portal has no return URL to redirect back to, so a
-redirect method would strand the member. The `Idempotency-Key` header (8–80 chars) is hashed with
+failure was reached. Redirect-based payment methods are allowed since release 4 (see "Payment, release 4"
+below). The `Idempotency-Key` header (8–80 chars) is hashed with
 the canonically-sorted request body; a replay of the same key and body returns the stored booking
 DTO, a replay with a different body answers `idempotency_conflict`; the lookup runs again inside
 the lock, so a same-key request that waited there replays the first booking rather than answering
 `slot_taken`. Capture is left to the existing `php artisan bookings:capture-pending-pis` job, same as widget
 bookings — which skips a service booking still `pending` and never captures a cancelled one (below).
+
+### Payment, release 4
+
+- **Redirect methods.** Portal intents (stays and services) are made without `allow_redirects: 'never'`; Stripe offers
+  only the methods the account enables that support manual capture (Klarna, PayPal…; iDEAL and SEPA do not). The Pay
+  step's `confirmPayment` returns to `/portal/book/return`; before leaving, the tab keeps only the member's note and the
+  confirm's `Idempotency-Key` in `sessionStorage`. The return page strips the client secret from the address and asks
+  `GET member/portal/payments/{pi}` (`PortalPaymentReturnController`, read only, throttled): another member's,
+  organisation's or the widget's payment answers 404 `payment_not_found` and is never touched; otherwise `booked` (with
+  the booking), `authorised` (the stay hold from `portal_hold_token`, or the appointment rebuilt from the intent's
+  metadata — member, party size, extras, coupon), `processing` or `failed`. For `authorised` the page confirms once
+  through the existing confirm endpoints, so every check and release rule applies (an expired hold releases the card).
+  A return that never confirms (tab closed) is an orphan for the sweeper.
+- **One hold per card.** A stay's hold remembers its last intent (and `portal_intent_extensions`); an appointment slot's
+  is kept per member, service and start in the shared cache (`SharedCache`, the database), 3 hours.
+  `PortalPaymentIntentGuard::reuseOrRelease()` under `pi:` reuses the earlier intent when it is the member's own, for the
+  same target and amount and still `requires_payment_method`/`requires_confirmation`; otherwise cancels it — never one a
+  booking carries, never another member's or organisation's; if the earlier one cannot be read, or Stripe refuses or
+  never answers its cancel, nothing new is made (503, or the pay-at-venue offer on an outage). Locks: a stay's
+  payment-intent takes the hold row, then `pi:`; an appointment's takes `psi:{org}:{member}:{service}:{start hash}`,
+  then `pi:` — neither takes the room or slot lock the confirms take, so a slow Stripe holds up only this member's own
+  flow. A hold is extended to now + 15 minutes at most 3 times (never shortened); then the member quotes again.
+- **Pay at the venue when online payment is unavailable** (`portal_pay_at_venue_when_unavailable`, off by default; the
+  Appointments workspace's Setup → Settings → Online booking; it covers stays and appointments). When it is on and
+  Stripe is unreachable (`PayAtVenueFallback::isStripeUnreachable()`: a connection error, a 429, a 5xx — a revoked key,
+  a restricted account or an amount below Stripe's minimum keeps the 503), payment-intent answers 409 `pay_at_venue`
+  (`reason: payment_unavailable`) with an encrypted grant, 30 minutes, bound to the organisation, the member and the
+  hold, or for an appointment the service, the start and the visit's `Idempotency-Key` (one booking per grant). The
+  confirm accepts no payment only with a valid grant while the setting is still on, then books through the existing
+  at-venue path (`unpaid`, or `open` with `pay_at_venue`), and afterwards releases the intent the hold or slot
+  recorded (through the guard). The member reads "Online payment is unavailable right now. You can still book now and
+  pay at the venue." with "Try paying online again" (a fresh `Idempotency-Key`; hidden once a confirm was sent). Each
+  such booking writes the audit row `portal.pay_at_venue_fallback` and the log lines
+  `portal.pay_at_venue_fallback_offered` / `…_booked`: the venue collects at the desk.
 
 ### One payment, one service booking
 
@@ -930,11 +963,15 @@ calls, audit rows and log lines. Five things differ:
   sentence.
 - **Nothing alerts on a rescue refusal.** A refusal is an audit row and a warning line, with no realtime
   event and no mail; it is found by looking (see "When money looks wrong").
-- **A stays or services `payment-intent` call mints a brand-new PaymentIntent every time**, without
-  releasing whichever one it minted last for the same hold/slot — a member who calls it twice (a retry,
-  a re-render) can have two authorised holds on their card until the sweeper releases the older one.
-  There is also no cap on how many times a `payment-intent` call extends the hold's `expires_at` (always
-  reset to now + 15 minutes, however many times it is called).
+- **One hold per card, within one quote** (release 4). A new quote or a reload makes a new hold, and the older hold's
+  intent is left for the sweeper. The engine saves the hold during a confirm and can overwrite the hold's record of its
+  intent if a payment-intent call lands at that moment (the sweeper then releases the unrecorded one).
+- **Redirect returns** (release 4): if the bank opens a new tab, the member's note is lost (the booking is still made).
+  An SPA bundle loaded before the deploy can strand a redirect payment (the sweeper releases it) and sends no grant.
+- **Pay at the venue when Stripe is unreachable** (release 4): a fallback does not extend the hold. The setting is
+  switched in the Appointments workspace only; with that workspace switched off for an organisation
+  (`php artisan workspace:appointments <organisation id> --off`), the setting stays as it was and nothing on screen can
+  change it — switch the workspace on, change it, switch it off again.
 - **No shorter Stripe timeout for a call made under a lock.** Every Stripe call inside the `pi:` lock (or
   the room/slot lock) uses the same client timeout as everywhere else; a slow Stripe response holds the
   lock for that long. Reported, not changed.
@@ -972,10 +1009,6 @@ calls, audit rows and log lines. Five things differ:
   rule. The public stays widget's own sidebar still adds each extra's catalogue price once (the widget's screen is
   unchanged), so it can read lower than the payment step's total. A hold quoted before the deploy is charged its old
   total but itemised with the new rule.
-- **Redirect-based payment methods** stay off in the portal (`allow_redirects: 'never'`); a return
-  handler would have to restore the flow's state after the redirect.
-- **"Pay at the venue although we take cards"** when Stripe is unavailable needs a venue setting;
-  today `payment-intent` answers 503 and asks the member to retry.
 - A **Stripe outage at a confirm's payment check** (`verify()`/`verifyStay()`, or the re-check
   `assertStillPayable()` under the `pi:` lock) answers 503 `payment_check_failed`, not
   `payment_mismatch`: nothing is released and the member confirms once more with the same intent.

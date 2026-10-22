@@ -138,7 +138,13 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   becomes a member's only at award time, through `BookingPointsService::certainMemberForStay()` (one member, linked
   guest, same email, active, verified address). Never write one PaymentIntent on several `booking_mirror` rows: the
   partial unique index `booking_mirror_org_pi_unique` refuses it on PostgreSQL (combination stays wait for the
-  lead-room design, release-4 spec §7).
+  lead-room design, release-4 spec §7). A portal payment-intent never calls Stripe under a room or slot lock the
+  confirms take: a stay's takes its hold row then `pi:`, an appointment's a member-scoped `psi:` key then `pi:`; an
+  earlier intent is reused or released only through `PortalPaymentIntentGuard::reuseOrRelease()`, and nothing new is
+  made beside one whose fate is unknown. State shared across requests lives in `SharedCache` (production's default
+  cache is each container's own files). The pay-at-venue grant is offered only when Stripe is unreachable
+  (`PayAtVenueFallback::isStripeUnreachable()`) and pays for one booking; the return endpoint
+  (`member/portal/payments/{pi}`) only reads.
 - Runbook: `docs/member-portal.md` (`## Stays (phase 3)`, `## Cancellation (phase 3)`,
   `## The public confirm's payment rescue`, `## After a deploy`, `## When money looks wrong`,
   `## Known limits`) — read it before touching stays, cancellation or the public confirm's failure handling.
