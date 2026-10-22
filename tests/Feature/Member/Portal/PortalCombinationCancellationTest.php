@@ -41,9 +41,13 @@ class PortalCombinationCancellationTest extends MemberEndpointTestCase
     }
 
     /** @return array{0: BookingMirror, 1: BookingMirror} */
+    /** How many combinations this test has written: each one's reservations are its own (production's unique organization_id + reservation_id). */
+    private int $combinations = 0;
+
     private function combination(array $both = [], array $second = []): array
     {
         $group = 'c0mb0000-0000-4000-8000-' . str_pad((string) random_int(1, 999999999), 12, '0', STR_PAD_LEFT);
+        $n = ++$this->combinations;
         $row = fn (array $own) => BookingMirror::withoutGlobalScopes()->create(array_merge([
             'organization_id' => $this->org->id, 'booking_group_id' => $group,
             'booking_type' => 'reservation', 'booking_state' => 'confirmed', 'internal_status' => 'confirmed',
@@ -52,9 +56,9 @@ class PortalCombinationCancellationTest extends MemberEndpointTestCase
             'payment_status' => 'open', 'payment_method' => 'pay_at_venue',
         ], $both, $own));
 
-        $lead = $row(['reservation_id' => '990101', 'booking_reference' => 'BK-C1', 'apartment_id' => '101', 'apartment_name' => 'Sea view', 'adults' => 2, 'children' => 0, 'price_total' => 180, 'list_total' => 200, 'discount_amount' => 20]);
+        $lead = $row(['reservation_id' => sprintf('99%02d01', $n), 'booking_reference' => 'BK-C1', 'apartment_id' => '101', 'apartment_name' => 'Sea view', 'adults' => 2, 'children' => 0, 'price_total' => 180, 'list_total' => 200, 'discount_amount' => 20]);
         // Release 5: the lead room carries the one payment; the other room none (booking_mirror_org_pi_unique).
-        $other = $row(array_merge(['reservation_id' => '990102', 'booking_reference' => 'BK-C2', 'apartment_id' => '102', 'apartment_name' => 'Garden', 'adults' => 2, 'children' => 0, 'price_total' => 144, 'list_total' => 160, 'discount_amount' => 16, 'stripe_payment_intent_id' => null], $second));
+        $other = $row(array_merge(['reservation_id' => sprintf('99%02d02', $n), 'booking_reference' => 'BK-C2', 'apartment_id' => '102', 'apartment_name' => 'Garden', 'adults' => 2, 'children' => 0, 'price_total' => 144, 'list_total' => 160, 'discount_amount' => 16, 'stripe_payment_intent_id' => null], $second));
 
         return [$lead, $other];
     }

@@ -201,8 +201,12 @@ class CapturePendingPaymentIntents extends Command
         }
 
         // ── Bookings (rooms) ───────────────────────────────────────────
+        // An open row that carries an intent — or (release 5) a lead room,
+        // whatever its own status, whose group still has an open room that
+        // follows it: a room left `authorized` when its lead moved on (a write
+        // that failed, a status staff changed) is still decided with its lead.
         $bookings = BookingMirror::withoutGlobalScopes()
-            ->whereIn('payment_status', ['authorized', 'pending'])
+            ->where(fn ($q) => $this->openOrLeadingOpenRooms($q))
             ->whereNotNull('stripe_payment_intent_id')
             ->where('stripe_payment_intent_id', 'like', 'pi_%')
             ->where('stripe_payment_intent_id', 'not like', 'pi_mock_%')
@@ -297,6 +301,26 @@ class CapturePendingPaymentIntents extends Command
         $this->info("Sweep complete: {$totals['captured']} captured · {$totals['already_captured']} already captured · {$totals['expired']} expired · {$totals['skipped']} skipped · {$totals['failed']} failed · {$totals['released']} released (booking cancelled) · {$totals['needs_refund']} need a refund");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * The sweeps' status filter: a row still `authorized`/`pending`, or a row
+     * that leads a room group (it carries the intent) one of whose rooms that
+     * follow it (no intent of their own — GroupPayment) is still open.
+     */
+    private function openOrLeadingOpenRooms($q): void
+    {
+        $q->whereIn('payment_status', ['authorized', 'pending'])
+          ->orWhere(function ($lead) {
+              $lead->whereNotNull('booking_group_id')->where('booking_group_id', '!=', '')
+                   ->whereExists(function ($f) {
+                       $f->selectRaw('1')->from('booking_mirror as follower')
+                         ->whereColumn('follower.organization_id', 'booking_mirror.organization_id')
+                         ->whereColumn('follower.booking_group_id', 'booking_mirror.booking_group_id')
+                         ->where(fn ($none) => $none->whereNull('follower.stripe_payment_intent_id')->orWhere('follower.stripe_payment_intent_id', ''))
+                         ->whereIn('follower.payment_status', ['authorized', 'pending']);
+                   });
+          });
     }
 
     /** A zeroed outcome tally, merged with the given overrides. */
@@ -1047,7 +1071,7 @@ class CapturePendingPaymentIntents extends Command
         $floor = now()->subDays(30);
 
         $mirrors = BookingMirror::withoutGlobalScopes()
-            ->whereIn('payment_status', ['authorized', 'pending'])
+            ->where(fn ($q) => $this->openOrLeadingOpenRooms($q))
             ->whereNotNull('stripe_payment_intent_id')
             ->where('stripe_payment_intent_id', 'like', 'pi_%')
             ->where('stripe_payment_intent_id', 'not like', 'pi_mock_%')
@@ -1081,9 +1105,12 @@ class CapturePendingPaymentIntents extends Command
             // The row that carries the intent and — release 5 — the rooms of
             // its group that follow it with none of their own (GroupPayment),
             // still open: each gets the same decision and its own audit.
-            $rooms = collect([$mirror]);
+            // The lead only while it is open itself (it may have been
+            // selected for an open room that follows it).
+            $isOpen = fn (BookingMirror $m) => in_array((string) $m->payment_status, ['authorized', 'pending'], true);
+            $rooms = collect([$mirror])->filter($isOpen);
             if (!empty($mirror->booking_group_id)) {
-                $rooms = $rooms->concat(GroupPayment::followers($mirror)->filter(fn (BookingMirror $f) => in_array((string) $f->payment_status, ['authorized', 'pending'], true)))->values();
+                $rooms = $rooms->concat(GroupPayment::followers($mirror)->filter($isOpen))->values();
             }
 
             if ($status === 'canceled' || $status === 'requires_payment_method') {

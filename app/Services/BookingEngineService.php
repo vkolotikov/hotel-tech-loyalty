@@ -321,6 +321,15 @@ class BookingEngineService
             $hold->save();
         }
 
+        // The member portal's own submissions (it is the only caller that
+        // passes hooks) record what was asked for — the hold's dates, party,
+        // room(s) and price — which logSubmission() and the follow-up enquiry
+        // read from `hold` (release 5). The public widget's submissions are
+        // left exactly as they were.
+        if ($hooks !== null) {
+            $data['hold'] = $payload;
+        }
+
         // Combo bookings branch off into their own confirm path that
         // loops over each room, creates per-room Smoobu reservations,
         // and links all mirrors via a shared booking_group_id. The member
@@ -2167,12 +2176,16 @@ class BookingEngineService
         $groupId = (string) Str::uuid();
         // The PMS reservations this call has made — cancelled again if nothing is written.
         $made = [];
+        // The rooms this call could not get (taken here, at the PMS, refused
+        // by it): logged once the transaction has rolled back, so the
+        // submission row and the staff's follow-up enquiry survive it.
+        $failed = [];
 
         try {
             [$mirrors, $results] = DB::transaction(function () use (
                 $hold, $payload, $rooms, $orgId, $data, $guest, $guestId, $requestId, $idempotencyKey, $hooks,
                 $checkIn, $checkOut, $nights, $shares, $extrasSnapshot, $groupId, $isPaid,
-                $paymentIntentId, $paymentMethod, $paymentStatus, &$made,
+                $paymentIntentId, $paymentMethod, $paymentStatus, &$made, &$failed,
             ) {
                 // 1. Every room's lock, in one order, before anything else.
                 foreach (\App\Services\Booking\StayCombination::roomLockKeys((int) $orgId, array_column($rooms, 'unit_id')) as $roomLock) {
@@ -2193,7 +2206,7 @@ class BookingEngineService
                     $needed[$unit] = ($needed[$unit] ?? 0) + 1;
                 }
                 foreach ($needed as $unit => $count) {
-                    $this->assertComboRoomStillFree($orgId, (string) $unit, $count, $checkIn, $checkOut, $data, $requestId, $idempotencyKey);
+                    $this->assertComboRoomStillFree($orgId, (string) $unit, $count, $checkIn, $checkOut, $failed);
                 }
 
                 // 4. The caller's last word, before the PMS is asked.
@@ -2213,7 +2226,7 @@ class BookingEngineService
                     } catch (\Throwable $e) {
                         $msg = $e->getMessage();
                         if (!self::isTransientSmoobuError($msg)) {
-                            $this->logSubmission('failure', 'pms_rejected', $msg, $data, $requestId, $idempotencyKey);
+                            $failed[] = ['pms_rejected', $msg];
                             Log::warning('Smoobu hard-rejected a combination room (no local fallback)', ['org_id' => $orgId, 'unit_id' => $room['unit_id'], 'group' => $groupId, 'error' => $msg]);
                             throw stripos($msg, 'Smoobu channel configuration') !== false
                                 ? new \RuntimeException('Booking could not be confirmed because of a PMS configuration issue on our side. Your card has NOT been charged. Please contact support so we can complete this booking for you.', 0, $e)
@@ -2297,6 +2310,7 @@ class BookingEngineService
         } catch (\Throwable $e) {
             // Nothing was written, so nothing may stay booked at the PMS either.
             $this->cancelComboReservations($made, $orgId, $groupId, $guest, $checkIn, $checkOut, $e);
+            $this->logComboFailures($failed, $data, $requestId, $idempotencyKey);
             throw $e;
         }
 
@@ -2379,10 +2393,11 @@ class BookingEngineService
      * combination may hold two of one room type), then the PMS's live answer
      * (per-day rates, then the aggregate rates, then the room's own base price
      * when the PMS has nothing at all, as the availability search does). A taken
-     * room throws confirm()'s own refusal; a PMS that cannot be asked fails
-     * closed (SmoobuUnavailable).
+     * room throws confirm()'s own refusal, its failure added to $failed (the
+     * caller logs it once its transaction has rolled back); a PMS that cannot
+     * be asked fails closed (SmoobuUnavailable).
      */
-    private function assertComboRoomStillFree(?int $orgId, string $apartmentId, int $needed, string $checkIn, string $checkOut, array $data, ?string $requestId, ?string $idempotencyKey): void
+    private function assertComboRoomStillFree(?int $orgId, string $apartmentId, int $needed, string $checkIn, string $checkOut, array &$failed): void
     {
         // The room by its PMS id, or — only when it has none — by its own id
         // (StayQuoteService's rule, so a PMS id never matches another room's key).
@@ -2409,7 +2424,7 @@ class BookingEngineService
             ->count();
 
         if ($booked + $needed > $inventory) {
-            $this->logSubmission('failure', 'inventory_unavailable', 'Room no longer available for selected dates', $data, $requestId, $idempotencyKey);
+            $failed[] = ['inventory_unavailable', 'Room no longer available for selected dates'];
             throw new \RuntimeException('This room is no longer available for the selected dates. Please choose another.');
         }
 
@@ -2456,11 +2471,11 @@ class BookingEngineService
                         && (isset($unitLive['available']) || isset($unitLive['price']));
 
                     if ($dailyHadData || $aggregateHadData) {
-                        $this->logSubmission('failure', 'pms_unavailable', 'PMS reports unit unavailable at confirm', $data, $requestId, $idempotencyKey);
+                        $failed[] = ['pms_unavailable', 'PMS reports unit unavailable at confirm'];
                         throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
                     }
                     if ((float) ($room->base_price ?? 0) <= 0) {
-                        $this->logSubmission('failure', 'pms_unavailable', 'PMS has no data and room has no base_price at confirm', $data, $requestId, $idempotencyKey);
+                        $failed[] = ['pms_unavailable', 'PMS has no data and room has no base_price at confirm'];
                         throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
                     }
                     Log::info('Combination live recheck: no Smoobu data — accepting via base_price fallback (matches availability)', ['org_id' => $orgId, 'unit_id' => $apartmentId]);
@@ -2471,6 +2486,26 @@ class BookingEngineService
         } catch (\Throwable $e) {
             Log::warning('Live availability re-check failed at a combination confirm — failing closed', ['org_id' => $orgId, 'unit_id' => $apartmentId, 'error' => $e->getMessage()]);
             throw new SmoobuUnavailable('PMS unavailable — try again', 0, $e);
+        }
+    }
+
+    /**
+     * The rooms a member combination's confirm could not get, logged once
+     * its transaction has rolled back (a submission row each and, through
+     * logSubmission(), the staff's follow-up enquiry) — logged inside it,
+     * the rollback would take them along. Best effort: a log that cannot be
+     * written never hides the refusal itself.
+     *
+     * @param list<array{0: string, 1: string}> $failed
+     */
+    private function logComboFailures(array $failed, array $data, ?string $requestId, ?string $idempotencyKey): void
+    {
+        foreach ($failed as [$code, $message]) {
+            try {
+                $this->logSubmission('failure', $code, $message, $data, $requestId, $idempotencyKey);
+            } catch (\Throwable $e) {
+                Log::warning('Combination confirm: failure not logged', ['code' => $code, 'error' => $e->getMessage()]);
+            }
         }
     }
 
@@ -3274,7 +3309,8 @@ class BookingEngineService
             'guest_email'       => $guest['email'] ?? null,
             'guest_phone'       => $guest['phone'] ?? null,
             'unit_id'           => $payload['unit_id'] ?? $data['unit_id'] ?? null,
-            'unit_name'         => $payload['unit_name'] ?? null,
+            // A combination's rooms named together can be longer than the column (120).
+            'unit_name'         => isset($payload['unit_name']) ? mb_substr((string) $payload['unit_name'], 0, 120) : null,
             'check_in'          => $payload['check_in'] ?? null,
             'check_out'         => $payload['check_out'] ?? null,
             'adults'            => $payload['adults'] ?? null,
@@ -3298,13 +3334,19 @@ class BookingEngineService
             $orgId = app()->bound('current_organization_id') ? app('current_organization_id') : null;
             if (!$orgId) return;
 
+            // Each write below runs in its own SAVEPOINT (a nested
+            // DB::transaction()): this is called from inside the confirm's
+            // own transaction too, and on PostgreSQL a refused statement —
+            // swallowed here — would otherwise abort the WHOLE surrounding
+            // transaction (release 5).
+
             // Reuse linkOrCreateGuest so the failed-submission flow goes
             // through the same auto-Bronze + lifecycle hooks as a successful
             // booking — the customer ends up in Members regardless.
-            $guestId = $this->linkOrCreateGuest($guest, $orgId);
+            $guestId = \Illuminate\Support\Facades\DB::transaction(fn () => $this->linkOrCreateGuest($guest, $orgId));
             if (!$guestId) return;
 
-            $inquiry = \App\Models\Inquiry::create([
+            $inquiry = \Illuminate\Support\Facades\DB::transaction(fn () => \App\Models\Inquiry::create([
                 'organization_id' => $orgId,
                 'guest_id'        => $guestId,
                 'inquiry_type'    => 'Room Reservation',
@@ -3315,10 +3357,10 @@ class BookingEngineService
                 'check_out'       => $payload['check_out'] ?? null,
                 'num_adults'      => $payload['adults'] ?? null,
                 'num_children'    => $payload['children'] ?? null,
-                'room_type_requested' => $payload['unit_name'] ?? null,
+                'room_type_requested' => isset($payload['unit_name']) ? mb_substr((string) $payload['unit_name'], 0, 100) : null,
                 'total_value'     => $payload['gross_total'] ?? null,
                 'notes'           => "Booking widget failed: {$failCode} — {$failMsg}",
-            ]);
+            ] + (is_array($payload['rooms'] ?? null) && $payload['rooms'] !== [] ? ['num_rooms' => count($payload['rooms'])] : [])));
 
             // Surface a realtime toast so staff know to follow up before the
             // would-be guest goes cold. Hooks the existing realtime poll bus
@@ -3329,12 +3371,12 @@ class BookingEngineService
                 $dates     = ($payload['check_in'] ?? null) && ($payload['check_out'] ?? null)
                     ? " ({$payload['check_in']} → {$payload['check_out']})"
                     : '';
-                app(\App\Services\RealtimeEventService::class)->dispatch(
+                \Illuminate\Support\Facades\DB::transaction(fn () => app(\App\Services\RealtimeEventService::class)->dispatch(
                     'inquiry',
                     'Booking widget failed — follow up',
                     "{$guestName}" . ($unit ? " · {$unit}" : '') . $dates,
                     ['inquiry_id' => $inquiry->id, 'reason' => $failCode]
-                );
+                ));
             } catch (\Throwable $notifyError) {
                 \Illuminate\Support\Facades\Log::warning('Realtime dispatch failed for rescue inquiry', [
                     'error' => $notifyError->getMessage(),

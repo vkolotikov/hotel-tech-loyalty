@@ -11,8 +11,6 @@ use App\Services\LoyaltyService;
 use App\Services\SmoobuClient;
 use App\Services\StripeService;
 use Database\Factories\BookingMirrorFactory;
-use Database\Factories\LoyaltyMemberFactory;
-use Database\Factories\LoyaltyTierFactory;
 use Database\Factories\OrganizationFactory;
 use Database\Factories\PointsTransactionFactory;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -106,6 +104,23 @@ class BookingRefundServiceComboTest extends TestCase
             ]);
         }
         return $mirrors;
+    }
+
+    /**
+     * A member as production's schema takes one (this file runs on
+     * PostgreSQL too): a user, a tier, and the member's NOT NULL
+     * `qr_code_token` / `referral_code` — the factories carry test-only
+     * columns (`qualification_model`) PostgreSQL does not have.
+     */
+    private function loyaltyMember(int $points): \App\Models\LoyaltyMember
+    {
+        $tier = \App\Models\LoyaltyTier::create(['organization_id' => $this->orgId, 'name' => 'Bronze', 'min_points' => 0, 'is_active' => true]);
+        $user = \App\Models\User::create(['name' => 'Combo Guest', 'email' => 'combo_' . uniqid('', true) . '@example.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member', 'organization_id' => $this->orgId]);
+        $has = fn (string $c) => \Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', $c);
+
+        return \App\Models\LoyaltyMember::create(['organization_id' => $this->orgId, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'M-' . strtoupper(uniqid()), 'current_points' => $points, 'lifetime_points' => $points, 'is_active' => true]
+            + ($has('qr_code_token') ? ['qr_code_token' => bin2hex(random_bytes(16))] : [])
+            + ($has('referral_code') ? ['referral_code' => strtoupper(bin2hex(random_bytes(4)))] : []));
     }
 
     private function fakeStripeRefund(string $id): \Stripe\Refund
@@ -218,8 +233,7 @@ class BookingRefundServiceComboTest extends TestCase
         $piId = 'pi_test_combo_loyalty_' . uniqid();
         [$a, $b] = $this->makeComboMirrors(2, $groupId, $piId);
 
-        $tier = LoyaltyTierFactory::new()->bronze()->create();
-        $member = LoyaltyMemberFactory::new()->inTier($tier->id)->withPoints(300)->create();
+        $member = $this->loyaltyMember(300);
 
         // 2 earn rows, one per mirror.
         PointsTransactionFactory::new()

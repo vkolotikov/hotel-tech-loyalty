@@ -36,9 +36,27 @@ class StayCombinationPointsTest extends TestCase
         $this->setUpServiceBookingSchema();
         $this->setUpStayBookingSchema();
 
-        $fixture = $this->seedPointsFixture(); // 10 points per currency unit, tier rate 1.5
-        $this->orgId = $fixture['orgId'];
-        $this->member = $fixture['member'];
+        $this->seedVenue(); // 10 points per currency unit, tier rate 1.5
+    }
+
+    /**
+     * SeedsPointsFixture::seedPointsFixture()'s venue, written so production's
+     * schema accepts it too (the test runs on PostgreSQL as well):
+     * `loyalty_members.qr_code_token` and `.referral_code`, `hotel_settings.type`
+     * and `.group` are NOT NULL there.
+     */
+    private function seedVenue(): void
+    {
+        $this->ensurePointsBenefitTables();
+        $this->orgId = \App\Models\Organization::create(['name' => 'Numa', 'slug' => 'org-' . uniqid('', true), 'industry' => 'beauty'])->id;
+        app()->instance('current_organization_id', $this->orgId);
+        $tier = \App\Models\LoyaltyTier::create(['organization_id' => $this->orgId, 'name' => 'Gold', 'min_points' => 0, 'earn_rate' => 1.5, 'is_active' => true]);
+        $user = \App\Models\User::create(['name' => 'Ada', 'email' => 'ada_' . uniqid('', true) . '@example.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'member', 'organization_id' => $this->orgId]);
+        $this->member = LoyaltyMember::create(['organization_id' => $this->orgId, 'user_id' => $user->id, 'tier_id' => $tier->id, 'member_number' => 'HL-' . $user->id, 'current_points' => 0, 'lifetime_points' => 0]
+            + (\Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'qr_code_token') ? ['qr_code_token' => bin2hex(random_bytes(16))] : [])
+            + (\Illuminate\Support\Facades\Schema::hasColumn('loyalty_members', 'referral_code') ? ['referral_code' => strtoupper(bin2hex(random_bytes(4)))] : []));
+        \App\Models\HotelSetting::withoutGlobalScopes()->create(['organization_id' => $this->orgId, 'key' => 'points_per_currency', 'value' => '10', 'type' => 'string', 'group' => 'loyalty']);
+        \App\Models\HotelSetting::flushCacheFor($this->orgId);
     }
 
     private function room(string $group, array $attrs): BookingMirror

@@ -61,6 +61,8 @@ trait StayPortalFixture
         $row->organization_id = $this->org->id;
         $row->key = $key;
         $row->value = $value;
+        // NOT NULL in production (hotel_settings.type); 'string' reads the value back as it is.
+        $row->type = $row->type ?: 'string';
         $row->group = 'booking';
         $row->save();
         HotelSetting::flushCacheFor($this->org->id);

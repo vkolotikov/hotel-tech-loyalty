@@ -120,6 +120,58 @@ final class GroupPayment
     }
 
     /**
+     * Where a PART of the one payment that comes back belongs, room by room:
+     * first the room the refund was made for ($roomId — the full admin's
+     * refund on one room's page), then the rooms that are cancelled (a room
+     * staff cancelled on its own is the money the capture job flags as
+     * `needs_refund`), each up to what it has left; only what remains is
+     * shared between the other rooms in proportion to what each has left.
+     * Worked in cents; never more than a room cost. Returns each room's
+     * refunded amount AFTER this refund.
+     *
+     * @param list<array{id: int, total: float, refunded: float, cancelled: bool}> $rooms  in the group's (id) order
+     * @return array<int, float>
+     */
+    public static function allocateRefund(array $rooms, float $amount, ?int $roomId = null): array
+    {
+        $left = [];
+        $after = [];
+        foreach ($rooms as $r) {
+            $total = max(0, (int) round((float) $r['total'] * 100));
+            $done = max(0, min($total, (int) round((float) $r['refunded'] * 100)));
+            $after[$r['id']] = $done;
+            $left[$r['id']] = $total - $done;
+        }
+        $rest = max(0, (int) round($amount * 100));
+
+        $take = function (int $id) use (&$rest, &$left, &$after): void {
+            $part = min($rest, $left[$id]);
+            $after[$id] += $part;
+            $left[$id] -= $part;
+            $rest -= $part;
+        };
+        if ($roomId !== null && isset($left[$roomId])) {
+            $take($roomId);
+        }
+        foreach ($rooms as $r) {
+            if ($rest > 0 && !empty($r['cancelled'])) {
+                $take($r['id']);
+            }
+        }
+        if ($rest > 0) {
+            $others = array_values(array_filter(array_keys($left), fn ($id) => $left[$id] > 0));
+            $shares = self::refundShares(array_map(fn ($id) => $left[$id] / 100, $others), $rest / 100);
+            foreach ($others as $i => $id) {
+                $part = min($left[$id], (int) round(($shares[$i] ?? 0) * 100));
+                $after[$id] += $part;
+                $left[$id] -= $part;
+            }
+        }
+
+        return array_map(fn (int $c) => round($c / 100, 2), $after);
+    }
+
+    /**
      * A payment's refunded money shared between the rooms it paid for, in
      * cents, each room at most its own total: in proportion to the rooms'
      * totals, the first room taking what the rounding leaves, so the shares

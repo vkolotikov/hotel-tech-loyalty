@@ -260,6 +260,14 @@ final class StayQuoteService
             'rooms'              => $engineRooms,
             // The confirmation mail and the payment's description name the stay by its rooms.
             'unit_name'          => $name,
+            // The whole party and the rooms' combined rate at the top level, as
+            // a single room's hold has them: the submission log, the staff's
+            // follow-up enquiry, the mails and the payment return read them
+            // there (who sleeps in which room is in `rooms`).
+            'adults'             => $adults,
+            'children'           => $children,
+            'nights'             => $nights,
+            'price_per_night'    => round((float) $engine['room_total'] / max(1, $nights), 2),
             'member_id'          => (int) $member->id,
             'user_id'            => (int) $user->id,
             'list_total'         => $pricing->list,

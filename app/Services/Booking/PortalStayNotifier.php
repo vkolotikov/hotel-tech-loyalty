@@ -20,12 +20,15 @@ class PortalStayNotifier
     public function notify(BookingMirror $mirror, bool $online): void
     {
         $orgId = (int) $mirror->organization_id;
+        // A combination (release 5) is one stay of several rooms: named by all of them.
+        $rooms = StayCombination::rooms($mirror);
+        $title = $rooms ? $rooms->map(fn (BookingMirror $m) => $m->apartment_name ?: 'Room')->implode(' + ') : $mirror->apartment_name;
 
         try {
             app(RealtimeEventService::class)->dispatch(
                 'booking.created',
                 'New stay from the member portal',
-                "{$mirror->guest_name} · {$mirror->apartment_name} · {$mirror->arrival_date?->toDateString()}",
+                "{$mirror->guest_name} · {$title} · {$mirror->arrival_date?->toDateString()}",
                 ['mirror_id' => $mirror->id, 'source' => 'member_portal', 'action_url' => "/bookings/{$mirror->id}"],
                 $orgId,
             );

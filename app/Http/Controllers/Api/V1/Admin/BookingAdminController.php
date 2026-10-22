@@ -399,14 +399,34 @@ class BookingAdminController extends Controller
             'reason' => 'nullable|in:duplicate,fraudulent,requested_by_customer',
         ]);
 
+        // A room of a multi-room stay (one payment for all its rooms, carried
+        // by the lead room — release 5): a refund on this room's page is this
+        // room's. With no amount it is this room's own remaining total — what
+        // the dialog says ("full refund of" this room's total) — never the
+        // whole payment, and the other rooms keep theirs. One room is as before.
+        $amount = $validated['amount'] ?? null;
+        $forRoomId = null;
+        if (!empty($booking->booking_group_id)
+            && BookingMirror::withoutGlobalScopes()->where('organization_id', $booking->organization_id)->where('booking_group_id', $booking->booking_group_id)->count() > 1) {
+            $forRoomId = (int) $booking->id;
+            if ($amount === null) {
+                $amount = round(max(0.0, (float) $booking->price_total - (float) ($booking->refunded_amount ?? 0)), 2);
+                if ($amount <= 0) {
+                    return response()->json(['error' => 'This room has nothing left to refund.'], 422);
+                }
+            }
+            $amount = (float) $amount;
+        }
+
         try {
             $outcome = $refund->applyRefund(
                 $booking,
-                $validated['amount'] ?? null,
+                $amount,
                 $validated['reason'] ?? null,
                 null,
                 true,
                 $request->user(),
+                $forRoomId,
             );
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);

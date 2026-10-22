@@ -534,6 +534,64 @@ class PortalStayCombinationTest extends MemberEndpointTestCase
         $this->assertNull(MemberOffer::findOrFail($claim->id)->used_at, 'the rollback took the coupon with it');
     }
 
+    /**
+     * A combination the PMS refuses leaves what staff need to follow it up —
+     * the submission row and the enquiry, with the whole party, the rooms and
+     * the dates (the hold's top-level totals) — although the confirm's own
+     * transaction rolled back. On PostgreSQL the enquiry's `num_adults` is NOT
+     * NULL: a hold without the party at its top level would be refused there.
+     */
+    public function test_a_combination_the_pms_refuses_leaves_a_submission_and_an_enquiry_with_the_party(): void
+    {
+        if (!\Illuminate\Support\Facades\Schema::hasColumn('inquiries', 'num_adults')) {
+            // sqlite: the production columns the enquiry writes (2026_04_01 inquiries), NOT NULLs included.
+            \Illuminate\Support\Facades\Schema::dropIfExists('inquiries');
+            \Illuminate\Support\Facades\Schema::create('inquiries', function ($t) {
+                $t->bigIncrements('id');
+                $t->unsignedBigInteger('organization_id');
+                $t->unsignedBigInteger('brand_id')->nullable();
+                $t->unsignedBigInteger('guest_id');
+                $t->string('inquiry_type', 50)->default('Room Reservation');
+                $t->string('source', 100)->nullable();
+                $t->date('check_in')->nullable();
+                $t->date('check_out')->nullable();
+                $t->integer('num_rooms')->default(1);
+                $t->integer('num_adults')->default(1);
+                $t->integer('num_children')->default(0);
+                $t->string('room_type_requested', 100)->nullable();
+                $t->decimal('total_value', 12, 2)->nullable();
+                $t->string('status', 50)->default('New');
+                $t->string('priority', 20)->default('Medium');
+                $t->text('notes')->nullable();
+                $t->unsignedBigInteger('pipeline_id')->nullable();
+                $t->unsignedBigInteger('pipeline_stage_id')->nullable();
+                $t->timestamps();
+            });
+        }
+        $hold = $this->quote(['adults' => 3, 'children' => 1])->assertOk()->json('hold_token');
+        $calls = 0;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function () use (&$calls) {
+            if (++$calls === 2) {
+                throw new \RuntimeException('Smoobu API error: 422 POST /reservations — apartment not available');
+            }
+            return ['id' => 700001, 'reference-id' => 'BK-700001'];
+        });
+        $this->smoobu->shouldReceive('cancelReservation')->once()->with('700001')->andReturn([]);
+
+        $this->confirm($hold)->assertStatus(409)->assertJsonPath('error', 'room_unavailable');
+
+        $this->assertSame(0, $this->mirrors()->count());
+        $failure = \App\Models\BookingSubmission::withoutGlobalScopes()->where('organization_id', $this->org->id)->where('outcome', 'failure')->sole();
+        $this->assertSame('pms_rejected', $failure->failure_code);
+        $this->assertSame('Sea view + Garden', $failure->unit_name);
+        $this->assertSame([3, 1], [(int) $failure->adults, (int) $failure->children]);
+        $this->assertSame($this->checkIn, \Illuminate\Support\Carbon::parse($failure->check_in)->toDateString());
+        $enquiry = \Illuminate\Support\Facades\DB::table('inquiries')->where('organization_id', $this->org->id)->sole();
+        $this->assertSame([3, 1, 2], [(int) $enquiry->num_adults, (int) $enquiry->num_children, (int) $enquiry->num_rooms]);
+        $this->assertSame('Sea view + Garden', $enquiry->room_type_requested);
+        $this->assertEquals(360.0, (float) $enquiry->total_value);
+    }
+
     public function test_a_write_that_fails_after_the_pms_said_yes_cancels_every_reservation_and_audits_an_orphan(): void
     {
         $stripe = $this->stripe();
@@ -635,6 +693,9 @@ class PortalStayCombinationTest extends MemberEndpointTestCase
     public function test_another_organisations_member_cannot_reach_the_combination(): void
     {
         $hold = $this->quote()->assertOk()->json('hold_token');
+        // The quote's request left this venue bound as the tenant; a new venue is
+        // created with none bound, as in production (its default brand is its own).
+        app()->forgetInstance('current_organization_id');
         $other = $this->tenant('Hill Hotel');
         app()->instance('current_organization_id', $other->id);
         $this->seedRoom($other->id, ['pms_id' => '201', 'name' => 'Hill room']);
