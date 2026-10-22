@@ -8,8 +8,10 @@ use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\ServiceBooking;
 use App\Services\Appointments\Money\Deposits;
+use App\Services\Booking\GroupPayment;
 use App\Services\Booking\MemberCancellation;
 use App\Services\Booking\PortalPaymentIntentGuard;
+use App\Services\Booking\StayCombination;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -88,11 +90,12 @@ final class MemberBookingQuery
                 return [$dto, $ends !== null ? (strtotime($ends) ?: null) : null];
             });
         $checkOut = null; // the venue's default check-out time, read once and only when there is a stay
-        $stays = $this->stays($member)->get()
-            ->map(function (BookingMirror $m) use (&$checkOut) {
+        // A member-portal combination's rooms are one booking (stayBookings()).
+        $stays = self::stayBookings($this->stays($member)->get())
+            ->map(function (Collection $rooms) use (&$checkOut) {
                 $checkOut ??= PortalBootstrap::stayPolicies()['check_out_time'];
 
-                return [self::stayDto($m), self::stayEnds($m, $checkOut)];
+                return [$rooms->count() > 1 ? self::combinationDto($rooms) : self::roomDto($rooms->first()), self::stayEnds($rooms->first(), $checkOut)];
             });
 
         // "Now" from Carbon (the same clock as time() outside tests).
@@ -196,7 +199,91 @@ final class MemberBookingQuery
         ];
     }
 
+    /**
+     * A stay as the member sees it: one room's booking, or — when the row is
+     * one room of a member-portal combination (StayCombination) — the whole
+     * combination as one booking (combinationDto()), whichever room was asked
+     * for.
+     */
     public static function stayDto(BookingMirror $m): array
+    {
+        $rooms = StayCombination::rooms($m);
+
+        return $rooms ? self::combinationDto($rooms) : self::roomDto($m);
+    }
+
+    /**
+     * The member's stay rows as bookings: each combination's rooms together
+     * (id order, the lead first), every other row on its own. Grouped in
+     * memory, so a list asks nothing more of the database.
+     *
+     * @param Collection<int, BookingMirror> $rows
+     * @return Collection<int, Collection<int, BookingMirror>>
+     */
+    private static function stayBookings(Collection $rows): Collection
+    {
+        $groups = $rows->filter(fn (BookingMirror $m) => !empty($m->booking_group_id))
+            ->groupBy(fn (BookingMirror $m) => (string) $m->booking_group_id)
+            ->map(fn (Collection $g) => $g->sortBy('id')->values())
+            ->filter(fn (Collection $g) => StayCombination::isCombination($g));
+
+        $out = collect();
+        $done = [];
+        foreach ($rows->sortBy('id') as $m) {
+            $group = (string) $m->booking_group_id;
+            if ($group !== '' && $groups->has($group)) {
+                if (!isset($done[$group])) {
+                    $out->push($groups->get($group));
+                    $done[$group] = true;
+                }
+                continue;
+            }
+            $out->push(collect([$m]));
+        }
+
+        return $out;
+    }
+
+    /**
+     * A member-portal combination as one booking: the lead room's DTO, named
+     * by all its rooms, with the rooms' totals, discounts and guests added up
+     * (they add up to what the one payment charged — StayCombination::shares()),
+     * the combination's own cancellation answer (MemberCancellation, which
+     * cancels all the rooms together or none) and each room listed.
+     *
+     * @param Collection<int, BookingMirror> $rooms
+     */
+    public static function combinationDto(Collection $rooms): array
+    {
+        $rooms = $rooms->sortBy('id')->values();
+        $each = $rooms->map(fn (BookingMirror $m) => self::roomDto($m));
+        // The lead room carries the one payment (GroupPayment, release 5): the
+        // booking's id, `payment_status` and `paid_online` are read from it.
+        $payer = GroupPayment::lead($rooms);
+        $lead = $each->first(fn (array $d) => $d['id'] === $payer?->id) ?? $each->first();
+        $policy = MemberCancellation::combinationPolicy($rooms);
+        $guests = (int) $each->sum('guests');
+        $discount = round((float) $rooms->sum(fn (BookingMirror $m) => (float) $m->discount_amount), 2);
+        $statuses = $each->pluck('status')->unique()->values();
+
+        return array_merge($lead, [
+            'title'           => $rooms->map(fn (BookingMirror $m) => $m->apartment_name ?: 'Room')->implode(' + '),
+            'subtitle'        => $lead['nights'] !== null ? "{$lead['nights']}n · {$guests}p" : null,
+            // Rooms are cancelled together; a room staff changed on its own shows the rest's status.
+            'status'          => $statuses->count() === 1 ? $statuses->first() : ($each->first(fn (array $d) => $d['status'] !== 'cancelled')['status'] ?? $lead['status']),
+            'total'           => round((float) $rooms->sum(fn (BookingMirror $m) => (float) $m->price_total), 2),
+            'discount'        => $discount > 0 ? ['amount' => $discount, 'label' => $rooms->first()->discount_label ?: 'Member discount'] : null,
+            'can_cancel'      => $policy['can_cancel'],
+            'cancel_deadline' => $policy['deadline']?->toIso8601String(),
+            'guests'          => $guests,
+            'rooms'           => $each->map(fn (array $d) => [
+                'id' => $d['id'], 'reference' => $d['reference'], 'title' => $d['title'], 'guests' => $d['guests'], 'total' => $d['total'], 'status' => $d['status'],
+            ])->all(),
+        ]);
+    }
+
+    /** One room's stay. */
+    private static function roomDto(BookingMirror $m): array
     {
         $policy = MemberCancellation::policyFor($m);
         $internal = (string) $m->internal_status;

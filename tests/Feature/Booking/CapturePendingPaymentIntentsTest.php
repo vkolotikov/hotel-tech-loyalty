@@ -619,9 +619,24 @@ class CapturePendingPaymentIntentsTest extends TestCase
     // ── Combo stays: several rooms sharing one PaymentIntent — decided once
     //    per PI, over every room. ────────────────────────────────────────
 
-    private function comboRow(string $groupId, string $pi, array $attrs): int
+    /** @var array<string, true> the groups whose lead room is written */
+    private array $comboLeads = [];
+
+    /**
+     * A room of a combination. Release 5: the lead room carries the one
+     * PaymentIntent and the group's other rooms carry none (production's
+     * `booking_mirror_org_pi_unique`, which the test schema now has, refuses a
+     * second row with it) — by default the group's first room written is the
+     * lead; $lead names it explicitly.
+     */
+    private function comboRow(string $groupId, string $pi, array $attrs, ?bool $lead = null): int
     {
-        return $this->stayRow(array_merge(['booking_group_id' => $groupId, 'stripe_payment_intent_id' => $pi], $attrs));
+        $lead ??= !isset($this->comboLeads[$groupId]);
+        if ($lead) {
+            $this->comboLeads[$groupId] = true;
+        }
+
+        return $this->stayRow(array_merge(['booking_group_id' => $groupId, 'stripe_payment_intent_id' => $lead ? $pi : null], $attrs));
     }
 
     public function test_a_combo_with_one_cancelled_and_one_live_room_captures_once_and_flags_the_cancelled_room(): void
@@ -793,6 +808,54 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->assertSame('refunded', \DB::table('booking_mirror')->where('id', $id)->value('payment_status'));
     }
 
+    /** Release 5: the stale path brings the rooms that follow the lead along too. */
+    public function test_a_stale_groups_rooms_all_flip_to_capture_expired(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_stale_group_1', ['created_at' => now()->subDays(10)]);
+        $other = $this->comboRow($group, 'pi_test_stale_group_1', ['created_at' => now()->subDays(10)]);
+        $this->enabledStripe('canceled');
+
+        $this->runCron();
+
+        $this->assertSame('capture_expired', \DB::table('booking_mirror')->where('id', $lead)->value('payment_status'));
+        $this->assertSame('capture_expired', \DB::table('booking_mirror')->where('id', $other)->value('payment_status'));
+        $this->assertSame(2, $this->audits('booking.capture.auth_expired'));
+    }
+
+    public function test_a_stale_group_whose_payment_succeeded_pays_every_room_and_flags_the_cancelled_one(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_stale_group_2', ['created_at' => now()->subDays(10)]);
+        $cancelled = $this->comboRow($group, 'pi_test_stale_group_2', ['created_at' => now()->subDays(10), 'internal_status' => 'cancelled']);
+        $this->enabledStripe('succeeded');
+
+        $this->runCron();
+
+        $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $lead)->value('payment_status'));
+        $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $cancelled)->value('payment_status'));
+        $this->assertSame(1, $this->audits('booking.capture.needs_refund'));
+        $this->assertSame($cancelled, (int) \DB::table('audit_logs')->where('action', 'booking.capture.needs_refund')->value('subject_id'));
+    }
+
+    /** Release 5: only the lead carries the intent, and the sweep still captures once and pays every room. */
+    public function test_a_group_whose_rooms_follow_the_lead_is_captured_once_and_every_room_paid(): void
+    {
+        $group = 'grp-' . uniqid();
+        $lead = $this->comboRow($group, 'pi_test_lead_only_1', ['price_total' => 200]);
+        $other = $this->comboRow($group, 'pi_test_lead_only_1', ['price_total' => 160]);
+        $this->assertNull(\DB::table('booking_mirror')->where('id', $other)->value('stripe_payment_intent_id'));
+        $stripe = $this->enabledStripe('requires_capture');
+        $stripe->shouldReceive('capturePaymentIntent')->once()->with('pi_test_lead_only_1')
+            ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_lead_only_1', 'status' => 'succeeded']));
+
+        $this->runCron();
+
+        $this->assertSame(['paid', 'paid'], [\DB::table('booking_mirror')->where('id', $lead)->value('payment_status'), \DB::table('booking_mirror')->where('id', $other)->value('payment_status')]);
+        $this->assertEquals([200.0, 160.0], [(float) \DB::table('booking_mirror')->where('id', $lead)->value('price_paid'), (float) \DB::table('booking_mirror')->where('id', $other)->value('price_paid')]);
+        $this->assertStringContainsString('Found 2 pending capture(s): 2 room booking(s)', Artisan::output());
+    }
+
     // ── Console output for an ordinary (non-cancelled) group reads the same
     //    as N independent single-room sweeps. ────────────────────────────
 
@@ -903,8 +966,9 @@ class CapturePendingPaymentIntentsTest extends TestCase
     public function test_an_already_refunded_cancelled_sibling_is_not_flagged_for_a_refund(): void
     {
         $group = 'grp-' . uniqid();
-        $refunded = $this->comboRow($group, 'pi_test_combo_alreadyrefunded_1', ['internal_status' => 'cancelled', 'payment_status' => 'refunded']);
-        $live = $this->comboRow($group, 'pi_test_combo_alreadyrefunded_1', []);
+        // The live room is the lead (it carries the intent); the refunded one follows it.
+        $refunded = $this->comboRow($group, 'pi_test_combo_alreadyrefunded_1', ['internal_status' => 'cancelled', 'payment_status' => 'refunded'], false);
+        $live = $this->comboRow($group, 'pi_test_combo_alreadyrefunded_1', [], true);
         $stripe = $this->enabledStripe('requires_capture');
         $stripe->shouldReceive('capturePaymentIntent')->once()->with('pi_test_combo_alreadyrefunded_1')
             ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_combo_alreadyrefunded_1', 'status' => 'succeeded']));
@@ -1033,32 +1097,40 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->assertSame(1, \DB::table('realtime_events')->count());
     }
 
-    public function test_limit_cuts_a_group_but_all_three_rooms_are_still_paid(): void
+    /**
+     * Release 5: a group's payment is on its lead room, and the sweep brings
+     * the rooms that follow the lead along with it — so --limit caps the
+     * payments a run decides and never cuts a group in two. (Before, every
+     * room carried the intent and --limit could cut a group; that data cannot
+     * exist under `booking_mirror_org_pi_unique`.)
+     */
+    public function test_limit_never_cuts_a_group_and_all_three_rooms_are_paid(): void
     {
         $group = 'grp-' . uniqid();
         $r1 = $this->comboRow($group, 'pi_test_limit_group_1', []);
         $r2 = $this->comboRow($group, 'pi_test_limit_group_1', []);
         $r3 = $this->comboRow($group, 'pi_test_limit_group_1', []);
+        $later = $this->stayRow(['stripe_payment_intent_id' => 'pi_test_limit_single_1']);
         $stripe = $this->enabledStripe('requires_capture');
         $stripe->shouldReceive('capturePaymentIntent')->once()->with('pi_test_limit_group_1')
             ->andReturn(\Stripe\PaymentIntent::constructFrom(['id' => 'pi_test_limit_group_1', 'status' => 'succeeded']));
+        $stripe->shouldNotReceive('capturePaymentIntent')->with('pi_test_limit_single_1');
 
-        $this->runCron(['--limit' => '2']);
+        $this->runCron(['--limit' => '1']);
         $output = Artisan::output();
 
-        // Only 2 of the group's 3 rows were swept — "Found" and the summary
-        // both follow that, never the whole group.
-        $this->assertStringContainsString('Found 2 pending capture(s): 2 room booking(s), 0 service booking(s)', $output);
+        // One payment swept — its three rooms, one line and one count each.
+        $this->assertStringContainsString('Found 3 pending capture(s): 3 room booking(s), 0 service booking(s)', $output);
         $this->assertStringContainsString(
-            'Sweep complete: 1 captured · 1 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled) · 0 need a refund',
+            'Sweep complete: 1 captured · 2 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled) · 0 need a refund',
             $output,
         );
         // Money correctness: the PI was captured once for the whole group,
-        // so markBookingPaid() marks every room — including the one --limit
-        // cut off from this run's own counters/lines.
+        // and markBookingPaid() marks every room the lead's payment paid for.
         $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $r1)->value('payment_status'));
         $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $r2)->value('payment_status'));
         $this->assertSame('paid', \DB::table('booking_mirror')->where('id', $r3)->value('payment_status'));
+        $this->assertSame('authorized', \DB::table('booking_mirror')->where('id', $later)->value('payment_status'), 'the next payment waits for the next run');
     }
 
     public function test_dry_run_with_limit_prints_only_the_swept_rows(): void
@@ -1067,15 +1139,17 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->comboRow($group, 'pi_test_limit_dry_1', []);
         $this->comboRow($group, 'pi_test_limit_dry_1', []);
         $this->comboRow($group, 'pi_test_limit_dry_1', []);
+        $this->stayRow(['stripe_payment_intent_id' => 'pi_test_limit_dry_single']);
         $stripe = $this->enabledStripe('requires_capture');
         $stripe->shouldNotReceive('capturePaymentIntent');
 
-        $this->runCron(['--dry-run' => true, '--limit' => '2']);
+        $this->runCron(['--dry-run' => true, '--limit' => '1']);
         $output = Artisan::output();
 
-        $this->assertSame(2, substr_count($output, '[dry-run] would capture booking #'), 'exactly the two swept rows should print a line, never the third');
+        $this->assertSame(3, substr_count($output, '[dry-run] would capture booking #'), "the swept payment's three rooms print a line each, the next payment none");
+        $this->assertStringNotContainsString('pi_test_limit_dry_single', $output);
         $this->assertStringContainsString(
-            'Sweep complete: 2 captured · 0 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled) · 0 need a refund',
+            'Sweep complete: 3 captured · 0 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled) · 0 need a refund',
             $output,
         );
     }
@@ -1086,9 +1160,9 @@ class CapturePendingPaymentIntentsTest extends TestCase
     public function test_the_representative_row_is_the_first_open_row_not_the_lowest_id(): void
     {
         $group = 'grp-' . uniqid();
-        $this->comboRow($group, 'pi_test_rep_1', ['payment_status' => 'paid']); // lowest id, already resolved — not swept
-        $firstOpen = $this->comboRow($group, 'pi_test_rep_1', ['guest_name' => 'First Open']);
-        $this->comboRow($group, 'pi_test_rep_1', ['guest_name' => 'Second Open']);
+        $this->comboRow($group, 'pi_test_rep_1', ['payment_status' => 'paid'], false); // lowest id, already resolved — not swept
+        $firstOpen = $this->comboRow($group, 'pi_test_rep_1', ['guest_name' => 'First Open'], true);
+        $this->comboRow($group, 'pi_test_rep_1', ['guest_name' => 'Second Open'], false);
         $stripe = $this->enabledStripe('requires_capture');
         $stripe->shouldReceive('capturePaymentIntent')->once()->with('pi_test_rep_1')->andThrow(new \RuntimeException('card declined'));
 
@@ -1204,11 +1278,11 @@ class CapturePendingPaymentIntentsTest extends TestCase
     public function test_the_failure_logs_name_the_first_open_swept_row(): void
     {
         $group = 'grp-' . uniqid();
-        $this->comboRow($group, 'pi_test_log_retrieve', ['payment_status' => 'paid']);
-        $open = $this->comboRow($group, 'pi_test_log_retrieve', []);
+        $this->comboRow($group, 'pi_test_log_retrieve', ['payment_status' => 'paid'], false);
+        $open = $this->comboRow($group, 'pi_test_log_retrieve', [], true);
         $cancelGroup = 'grp-' . uniqid();
-        $this->comboRow($cancelGroup, 'pi_test_log_cancel', ['payment_status' => 'paid', 'internal_status' => 'cancelled']);
-        $openCancelled = $this->comboRow($cancelGroup, 'pi_test_log_cancel', ['internal_status' => 'cancelled']);
+        $this->comboRow($cancelGroup, 'pi_test_log_cancel', ['payment_status' => 'paid', 'internal_status' => 'cancelled'], false);
+        $openCancelled = $this->comboRow($cancelGroup, 'pi_test_log_cancel', ['internal_status' => 'cancelled'], true);
         $stripe = Mockery::mock(StripeService::class);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
         $stripe->shouldReceive('retrievePaymentIntent')->with('pi_test_log_retrieve')->andThrow(new \RuntimeException('stripe down'));
@@ -1224,7 +1298,7 @@ class CapturePendingPaymentIntentsTest extends TestCase
         $this->addToAssertionCount(2); // the two spy verifications above throw when unmet
     }
 
-    /** Release / expire / already-captured counts follow the open rows THIS sweep selected (--limit cuts a group). */
+    /** Release / expire / already-captured counts follow the open rows THIS sweep selected: the lead and the rooms that follow it (release 5 — --limit never cuts a group). */
     public function test_release_expire_and_already_captured_counts_follow_the_swept_rows(): void
     {
         foreach ([['canceled', [], 'expired'], ['succeeded', [], 'already_captured'], ['requires_capture', ['internal_status' => 'cancelled'], 'released']] as [$status, $attrs, $label]) {
@@ -1239,13 +1313,13 @@ class CapturePendingPaymentIntentsTest extends TestCase
                 $this->runCron(['--limit' => 1] + ($dry ? ['--dry-run' => true] : []));
                 $output = Artisan::output();
                 $expected = [
-                    'expired'          => '0 captured · 0 already captured · 1 expired · 0 skipped · 0 failed · 0 released (booking cancelled)',
-                    'already_captured' => '0 captured · 1 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled)',
-                    'released'         => '0 captured · 0 already captured · 0 expired · 0 skipped · 0 failed · 1 released (booking cancelled)',
+                    'expired'          => '0 captured · 0 already captured · 2 expired · 0 skipped · 0 failed · 0 released (booking cancelled)',
+                    'already_captured' => '0 captured · 2 already captured · 0 expired · 0 skipped · 0 failed · 0 released (booking cancelled)',
+                    'released'         => '0 captured · 0 already captured · 0 expired · 0 skipped · 0 failed · 2 released (booking cancelled)',
                 ][$label];
                 $this->assertStringContainsString('Sweep complete: ' . $expected, $output, $label . ($dry ? ' dry-run' : ''));
                 if ($dry && $label === 'released') {
-                    $this->assertSame(1, substr_count($output, '[dry-run] would cancel the hold'), 'one line per swept row');
+                    $this->assertSame(2, substr_count($output, '[dry-run] would cancel the hold'), 'one line per swept row');
                 }
             }
         }

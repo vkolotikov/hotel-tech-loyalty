@@ -16,6 +16,8 @@ vi.mock('../../lib/api', () => ({ api: {}, resolveImage: (url: string | null | u
 
 import { LoyaltyContext } from '../LoyaltyProvider'
 import type { Bootstrap, Can, HistoryPage, MemberDetail } from '../lib/types'
+import type { NfcCardRow } from '../scan/cardsApi'
+import { cardActions } from './memberMath'
 import { MemberPage } from './MemberPage'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: true, redeem: true, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
@@ -46,10 +48,11 @@ const history: HistoryPage = {
   lines: [{ id: 1, type: 'earn', points: 200, balance_after: 1500, description: 'Spa visit', by: null, at: '2026-10-01T10:00:00+00:00', is_reversed: false, reversal_of_id: null, can_reverse: false }],
 }
 
-function render(c: Can, data: MemberDetail) {
+function render(c: Can, data: MemberDetail, cards?: NfcCardRow[]) {
   const client = new QueryClient()
   client.setQueryData(['loyalty', 'member', 30], data)
   client.setQueryData(['loyalty', 'history', 30, 1], history)
+  if (cards) client.setQueryData(['loyalty', 'cards', 30], { cards })
   return renderToStaticMarkup(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/loyalty/members/30']}>
@@ -103,5 +106,39 @@ describe('a member’s page, release 2 (§4.1)', () => {
     expect(words).toContain('Points history')
     expect(words).toContain('Spa visit')
     for (const gone of ['Award points', 'Redeem points', 'Edit details', 'More', 'Details', 'deleted-member-30@deleted.local']) expect(words).not.toContain(gone)
+  })
+})
+
+describe('a member’s NFC cards (release 5)', () => {
+  const cards: NfcCardRow[] = [
+    { id: 7, uid: '04a2b3c4d5e6f7', is_active: true, linked_at: '2026-10-01T10:00:00+00:00', last_used_at: '2026-10-20T08:00:00+00:00', scans: 3 },
+    { id: 6, uid: '04112233', is_active: false, linked_at: '2026-09-01T10:00:00+00:00', last_used_at: null, scans: 0 },
+  ]
+
+  it('lists each card shortened, when it was linked and last used, on or off, with Switch off on the active one', () => {
+    const html = render(can(), detail(), cards)
+    const words = text(html)
+    expect(words).toContain('NFC cards')
+    expect(words).toContain('Link NFC card')
+    expect(words).toContain('04:A2:…:E6:F7')
+    expect(words).toContain('Linked Oct 1, 2026 · Last used Oct 20, 2026')
+    expect(words).toContain('04:11:22:33')
+    expect(words).toContain('Not used yet')
+    expect(words).toContain('On')
+    expect(words).toContain('Switched off')
+    expect(html.match(/Switch off</g)).toHaveLength(1)
+    expect(html).toContain('title="04:A2:B3:C4:D5:E6:F7"')
+  })
+
+  it('says when no card is linked', () => {
+    expect(text(render(can(), detail(), []))).toContain('No NFC card is linked to this member.')
+  })
+
+  it('every staff member may link and switch off; a deleted member has no cards to show', () => {
+    expect(cardActions({ is_erased: false })).toEqual({ link: true, off: true })
+    expect(cardActions({ is_erased: true })).toEqual({ link: false, off: false })
+    const words = text(render(can(), detail({ is_erased: true, name: 'Deleted Member', email: 'deleted-member-30@deleted.local', is_active: false }), cards))
+    expect(words).not.toContain('NFC cards')
+    expect(words).not.toContain('Link NFC card')
   })
 })

@@ -9,7 +9,9 @@ use App\Models\BookingMirror;
 use App\Models\PointsTransaction;
 use App\Models\RefundAttempt;
 use App\Models\User;
+use App\Services\Booking\GroupPayment;
 use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -61,6 +63,12 @@ class BookingRefundService
         bool $issueStripeRefund = true,
         ?User $staff = null,
     ): array {
+        // A room of a group (a combination) that carries no payment of its
+        // own follows its lead room, which does (GroupPayment, release 5): the
+        // refund — lock, attempt row, Stripe call, the whole group's records —
+        // is the lead's, whichever room it was asked for on.
+        $mirror = GroupPayment::payer($mirror);
+
         // Bind org context so downstream services (LoyaltyService, mailer
         // resolution, etc.) read from the right tenant.
         app()->instance('current_organization_id', (int) $mirror->organization_id);
@@ -187,6 +195,7 @@ class BookingRefundService
             // the same booking_group_id (when set) — apply side effects
             // to each, but only ONE Stripe refund + ONE email.
             $siblings = collect([$mirror]);
+            $group = collect([$mirror]);
             if (!empty($mirror->booking_group_id)) {
                 $siblings = BookingMirror::withoutGlobalScopes()
                     ->where('organization_id', $mirror->organization_id)
@@ -194,6 +203,37 @@ class BookingRefundService
                     ->whereNotIn('payment_status', [PaymentStatus::Refunded->value, PaymentStatus::Cancelled->value])
                     ->get();
                 if ($siblings->isEmpty()) $siblings = collect([$mirror]);
+                // Every room the one payment paid for (release 5): the lead
+                // carries it, the others follow it (GroupPayment).
+                $group = BookingMirror::withoutGlobalScopes()
+                    ->where('organization_id', $mirror->organization_id)
+                    ->where('booking_group_id', $mirror->booking_group_id)
+                    ->orderBy('id')
+                    ->get();
+                if ($group->isEmpty()) $group = collect([$mirror]);
+            }
+
+            // A group's one payment is the sum of its rooms (release 5): the
+            // refund is judged against the whole payment, never against the
+            // lead room's own share — a partial refund of the payment is a
+            // partial refund of every room, recorded on each room as its
+            // share of what has come back (GroupPayment::refundShares(), to
+            // the cent), and a full one records each room's own total. One
+            // room keeps its arithmetic exactly as it was.
+            $shares = [];
+            if ($group->count() > 1) {
+                $groupTotal = round((float) $group->sum(fn (BookingMirror $m) => (float) ($m->price_total ?? 0)), 2);
+                $alreadyRefunded = round((float) $group->sum(fn (BookingMirror $m) => (float) ($m->refunded_amount ?? 0)), 2);
+                $thisRefund = $amount !== null ? (float) $amount : max(0.0, round($groupTotal - $alreadyRefunded, 2));
+                $cumulative = round($alreadyRefunded + $thisRefund, 2);
+                $isFull = $amount === null || $cumulative >= ($groupTotal - 0.01);
+                $shared = GroupPayment::refundShares(
+                    $group->map(fn (BookingMirror $m) => (float) ($m->price_total ?? 0))->all(),
+                    $isFull ? $groupTotal : $cumulative,
+                );
+                foreach ($group->values() as $i => $m) {
+                    $shares[$m->id] = $shared[$i] ?? 0.0;
+                }
             }
 
             // ── Step 3: persist refund state on each mirror IMMEDIATELY
@@ -206,12 +246,11 @@ class BookingRefundService
             //      Stripe's source-of-truth refund state mirrored
             //      locally — staff can see the refund happened.
             foreach ($siblings as $sibling) {
-                $sibCumulative = $sibling->id === $mirror->id
-                    ? $cumulative
-                    : (float) ($sibling->refunded_amount ?? 0) + (float) ($sibling->price_total ?? 0);
                 $sibling->update([
                     'payment_status'  => $isFull ? PaymentStatus::Refunded->value : PaymentStatus::PartiallyRefunded->value,
-                    'refunded_amount' => $sibling->id === $mirror->id ? $cumulative : $sibling->price_total,
+                    'refunded_amount' => $shares !== []
+                        ? ($shares[$sibling->id] ?? $sibling->price_total)
+                        : ($sibling->id === $mirror->id ? $cumulative : $sibling->price_total),
                     'refunded_at'     => $isFull ? now() : $sibling->refunded_at,
                     'last_refund_id'  => $stripeRefundId,
                 ]);
@@ -250,7 +289,7 @@ class BookingRefundService
 
             // ── Step 6: email the guest. Only ONE email per refund event
             // even for combo bookings (single combined PI = single refund).
-            $emailSent = $this->sendRefundEmail($mirror, $thisRefund, $isFull);
+            $emailSent = $this->sendRefundEmail($mirror, $thisRefund, $isFull, $group);
 
             // ── Step 6b: if any sibling Smoobu cancellation failed,
             // write a SEPARATE audit row so the operator can see the
@@ -338,14 +377,22 @@ class BookingRefundService
     {
         app()->instance('current_organization_id', (int) $mirror->organization_id);
 
-        $mirror->update(['payment_status' => PaymentStatus::Disputed->value]);
+        // The dispute is on the one payment: every room it paid for is
+        // disputed — a group's lead and the rooms that follow it
+        // (GroupPayment, release 5); one room is a group of one.
+        $mirror = GroupPayment::payer($mirror);
+        $rooms = collect([$mirror])->concat(GroupPayment::followers($mirror));
 
-        AuditLog::record('booking_disputed', $mirror,
-            ['dispute_reason' => $disputeReason],
-            ['payment_status' => PaymentStatus::Disputed->value],
-            null,
-            "Stripe dispute opened on booking #{$mirror->id}" . ($disputeReason ? " · reason: {$disputeReason}" : ''),
-        );
+        foreach ($rooms as $room) {
+            $room->update(['payment_status' => PaymentStatus::Disputed->value]);
+
+            AuditLog::record('booking_disputed', $room,
+                ['dispute_reason' => $disputeReason] + ($rooms->count() > 1 ? ['booking_group_id' => $room->booking_group_id, 'payment_carried_by' => $mirror->id] : []),
+                ['payment_status' => PaymentStatus::Disputed->value],
+                null,
+                "Stripe dispute opened on booking #{$room->id}" . ($disputeReason ? " · reason: {$disputeReason}" : ''),
+            );
+        }
     }
 
     // ─── Step helpers ──────────────────────────────────────────────────
@@ -426,7 +473,14 @@ class BookingRefundService
         }
     }
 
-    private function sendRefundEmail(BookingMirror $mirror, float $amount, bool $isFull): bool
+    /**
+     * One mail per refund. For a group (a combination: one payment, several
+     * rooms) it names every room and every room's reference, and $amount is
+     * what the one payment gave back — never one room's share.
+     *
+     * @param Collection<int, BookingMirror>|null $group
+     */
+    private function sendRefundEmail(BookingMirror $mirror, float $amount, bool $isFull, ?Collection $group = null): bool
     {
         $email = $mirror->guest_email;
         if (!$email) return false;
@@ -435,7 +489,13 @@ class BookingRefundService
             // queue() — BookingRefundMail implements ShouldQueue. The
             // refund itself is already complete; the email is a
             // notification that can ride the queue with retries.
-            Mail::to($email)->queue(new BookingRefundMail($mirror, $amount, $isFull));
+            $mail = new BookingRefundMail($mirror, $amount, $isFull);
+            if ($group !== null && $group->count() > 1) {
+                $rooms = $group->sortBy('id')->values();
+                $mail->unitName = $rooms->map(fn (BookingMirror $m) => $m->apartment_name ?: 'Room')->implode(' + ');
+                $mail->bookingReference = $rooms->map(fn (BookingMirror $m) => $m->booking_reference ?: ('#' . $m->id))->implode(', ');
+            }
+            Mail::to($email)->queue($mail);
             return true;
         } catch (\Throwable $e) {
             Log::warning('Refund confirmation email failed', [

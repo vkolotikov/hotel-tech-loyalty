@@ -30,6 +30,14 @@ export function memberActions(can: Can): { award: boolean; redeem: boolean; reve
   return { award: can.award, redeem: can.redeem, reverse: can.reverse }
 }
 
+/**
+ * A member's NFC cards (release 5): link and switch off for whoever may edit the member — every staff member, as Edit
+ * details (the server's access map says the same) — and for nobody on a deleted member, whose cards went with them.
+ */
+export function cardActions(member: { is_erased: boolean }): { link: boolean; off: boolean } {
+  return { link: !member.is_erased, off: !member.is_erased }
+}
+
 /** Whether a ledger line offers Reverse to this person: a manager, on a line the server says can be reversed. */
 export function offersReverse(line: LedgerLine, can: Can): boolean {
   return can.reverse && line.can_reverse

@@ -8,6 +8,7 @@ use App\Models\BookingMirror;
 use App\Models\ServiceBooking;
 use App\Services\Appointments\Money\AppointmentMoney;
 use App\Services\Appointments\Money\Deposits;
+use App\Services\Booking\GroupPayment;
 use App\Services\StripeService;
 use App\Support\AdvisoryLock;
 use Illuminate\Console\Command;
@@ -82,9 +83,13 @@ use Illuminate\Support\Facades\Log;
  *     back.
  *   --dry-run reports both without writing.
  *
- * COMBO stays: several rooms of one public-widget stay can share one
- * PaymentIntent (`booking_group_id`). The decision above is made once per
- * PaymentIntent, over every BookingMirror row that carries it (a
+ * COMBO stays: several rooms of one stay (the public widget's combination or
+ * a member-portal one) share one PaymentIntent (`booking_group_id`). Since
+ * release 5 the intent is on the lead room's row only — the other rooms carry
+ * none (`booking_mirror_org_pi_unique`) and are found through the lead's group
+ * (App\Services\Booking\GroupPayment::rows()); the sweep selects the lead and
+ * brings its still-open rooms along. The decision above is made once per
+ * PaymentIntent, over every BookingMirror row it pays for (a
  * single-room stay is a group of one): one `retrieve` and, when capturing,
  * one `capturePaymentIntent` call serve the whole group, and a refused
  * capture produces one audit row and one realtime alert for the group
@@ -239,25 +244,41 @@ class CapturePendingPaymentIntents extends Command
             return self::SUCCESS;
         }
 
-        $this->info("Found {$total} pending capture(s): {$bookings->count()} room booking(s), {$services->count()} service booking(s)" . ($dryRun ? ' [dry-run]' : ''));
-
-        $totals = $this->tally();
-
-        // A combo's rooms all carry the same PaymentIntent and all appear
-        // in $bookings (same eligible-status filter, and the same --limit
-        // cutoff) — decide each PI once. processBooking() itself locks +
-        // re-reads every row of the WHOLE group (a sibling this run's
-        // --limit cut off is still locked and written when the intent is
-        // captured or released — money correctness first), but counts and
-        // prints only over the ids THIS sweep actually selected — passed in
-        // as $sweptIds so "captured" etc. can never exceed "Found N" and a
-        // later sibling row here is simply skipped without opening a second
-        // transaction or a second Stripe call for the same PI.
+        // A room group's payment is on its lead room; the rooms that follow
+        // it carry no intent of their own (GroupPayment, release 5) and are
+        // swept with their lead — still open, they count and print one line
+        // per room, as a group whose rooms all carried the intent always did.
+        // --limit therefore caps the payments a run decides, never cutting a
+        // group in two.
         $sweptIdsByPi = [];
         foreach ($bookings as $mirror) {
             $piKey = $mirror->organization_id . ':' . $mirror->stripe_payment_intent_id;
             $sweptIdsByPi[$piKey][] = $mirror->id;
+            foreach (empty($mirror->booking_group_id) ? [] : GroupPayment::followers($mirror) as $follower) {
+                if (in_array((string) $follower->payment_status, ['authorized', 'pending'], true)) {
+                    $sweptIdsByPi[$piKey][] = $follower->id;
+                }
+            }
+            $sweptIdsByPi[$piKey] = array_values(array_unique($sweptIdsByPi[$piKey]));
         }
+        $roomCount = array_sum(array_map('count', $sweptIdsByPi));
+        $total = $roomCount + $services->count();
+
+        $this->info("Found {$total} pending capture(s): {$roomCount} room booking(s), {$services->count()} service booking(s)" . ($dryRun ? ' [dry-run]' : ''));
+
+        $totals = $this->tally();
+
+        // Decide each PI once. processBooking() itself locks + re-reads every
+        // row of the WHOLE group (the lead and the rooms that follow it — a
+        // room that is no longer open, or a row of an older group whose rooms
+        // all carried the intent and that --limit cut off, is still locked and
+        // written when the intent is captured or released — money
+        // correctness first), but counts and prints only over the ids THIS
+        // sweep actually selected — passed in as $sweptIds (built above, with
+        // the open rooms that follow each lead) so "captured" etc. can never
+        // exceed "Found N" and a later row of the same PI here is simply
+        // skipped without opening a second transaction or a second Stripe
+        // call for it.
         $decidedPis = [];
         foreach ($bookings as $mirror) {
             $piKey = $mirror->organization_id . ':' . $mirror->stripe_payment_intent_id;
@@ -341,12 +362,9 @@ class CapturePendingPaymentIntents extends Command
 
         if ($dryRun) {
             // No row lock, no `pi:` lock, no transaction — a pure read and
-            // report.
-            $rows = BookingMirror::withoutGlobalScopes()
-                ->where('organization_id', $orgId)
-                ->where('stripe_payment_intent_id', $piId)
-                ->orderBy('id')
-                ->get();
+            // report. The row that carries the intent and the rooms of its
+            // group that follow it (GroupPayment).
+            $rows = GroupPayment::rows($orgId, $piId);
             if ($rows->isEmpty()) {
                 return $this->tally();
             }
@@ -361,13 +379,11 @@ class CapturePendingPaymentIntents extends Command
         $fallback = [];
         try {
             $result = DB::transaction(function () use ($stripe, $orgId, $piId, $sweptIds, &$audits, &$alerts, &$fallback) {
-                // Row lock first, `pi:` second — see the class docblock.
-                $rows = BookingMirror::withoutGlobalScopes()
-                    ->where('organization_id', $orgId)
-                    ->where('stripe_payment_intent_id', $piId)
-                    ->orderBy('id')
-                    ->lockForUpdate()
-                    ->get();
+                // Row lock first, `pi:` second — see the class docblock. Every
+                // room the intent pays for: the row that carries it and the
+                // rooms of its group that follow it (GroupPayment), one
+                // locked read in id order.
+                $rows = GroupPayment::rows($orgId, $piId, true);
                 if ($rows->isEmpty()) {
                     return $this->tally();
                 }
@@ -599,7 +615,7 @@ class CapturePendingPaymentIntents extends Command
         $t = $this->tally(['captured' => 1, 'already_captured' => max(0, $sweptOpenRows->count() - 1)]);
         $fallback['tally'] = $t;
 
-        $this->markBookingPaid($repRow);
+        $this->markBookingPaid($repRow, $piId);
 
         $audits[] = [
             'org' => $orgId, 'action' => 'booking.capture.recovered', 'pi' => $piId,
@@ -639,7 +655,7 @@ class CapturePendingPaymentIntents extends Command
             return $this->tally(['already_captured' => $sweptOpenRows->count()]);
         }
 
-        $this->markBookingPaid($rows->first());
+        $this->markBookingPaid($rows->first(), $piId);
         $t = $this->tally(['already_captured' => $sweptOpenRows->count()]);
         if ($anyCancelled) {
             foreach ($openRows as $row) {
@@ -958,18 +974,19 @@ class CapturePendingPaymentIntents extends Command
      * Includes orWhereNull because Postgres `IN` never matches NULL —
      * orphan-recovered mirrors with a null payment_status would otherwise
      * stay null after capture.
+     *
+     * Release 5: a room group's payment is on its lead room only; the rooms
+     * that follow it (no intent of their own) are found through the lead's
+     * group (GroupPayment::rows()), so every room of the payment is paid —
+     * and earns its points — not just the lead. $piId is the intent being
+     * decided ($mirror may be a follower, which carries none).
      */
-    private function markBookingPaid(BookingMirror $mirror): void
+    private function markBookingPaid(BookingMirror $mirror, ?string $piId = null): void
     {
         try {
-            $query = BookingMirror::withoutGlobalScopes()
-                ->where('organization_id', $mirror->organization_id)
-                ->where('stripe_payment_intent_id', $mirror->stripe_payment_intent_id)
-                ->where(function ($q) {
-                    $q->whereIn('payment_status', ['authorized', 'pending', ''])
-                      ->orWhereNull('payment_status');
-                });
-            $query->get()->each(function (BookingMirror $m) {
+            GroupPayment::rows((int) $mirror->organization_id, (string) ($piId ?? $mirror->stripe_payment_intent_id))
+                ->filter(fn (BookingMirror $m) => $m->payment_status === null || in_array((string) $m->payment_status, ['authorized', 'pending', ''], true))
+                ->each(function (BookingMirror $m) {
                 $observed = $m->payment_status;
                 $this->guarded(function () use ($m, $observed) {
                     return BookingMirror::withoutGlobalScopes()
@@ -1061,42 +1078,54 @@ class CapturePendingPaymentIntents extends Command
                 continue;
             }
 
-            $observed = (string) $mirror->payment_status;
+            // The row that carries the intent and — release 5 — the rooms of
+            // its group that follow it with none of their own (GroupPayment),
+            // still open: each gets the same decision and its own audit.
+            $rooms = collect([$mirror]);
+            if (!empty($mirror->booking_group_id)) {
+                $rooms = $rooms->concat(GroupPayment::followers($mirror)->filter(fn (BookingMirror $f) => in_array((string) $f->payment_status, ['authorized', 'pending'], true)))->values();
+            }
+
             if ($status === 'canceled' || $status === 'requires_payment_method') {
-                $result = $this->guarded(
-                    fn () => BookingMirror::withoutGlobalScopes()->where('id', $mirror->id)->where('payment_status', $observed)->update(['payment_status' => 'capture_expired']),
-                    'Stale-auth reconcile — update failed', ['mirror_id' => $mirror->id],
-                );
-                if ($result !== null) {
-                    // A clean write (a row updated, or 0 matched — then the
-                    // description says the row had already moved on) always
-                    // audits here; an EXCEPTION ($result === null) instead
-                    // logs only, inside guarded().
-                    $this->auditOutcome($mirror->organization_id, 'booking.capture.auth_expired', $piId, [
-                        'mirror_id' => $mirror->id, 'stripe_status' => $status, 'age_days' => $mirror->created_at?->diffInDays(now()),
-                    ], "PI {$piId} authorization expired/cancelled before capture (status={$status}, mirror age > 6d). Flipped to capture_expired." . ($result === 0 ? ' (row had already moved on)' : ''));
+                foreach ($rooms as $row) {
+                    $observed = (string) $row->payment_status;
+                    $result = $this->guarded(
+                        fn () => BookingMirror::withoutGlobalScopes()->where('id', $row->id)->where('payment_status', $observed)->update(['payment_status' => 'capture_expired']),
+                        'Stale-auth reconcile — update failed', ['mirror_id' => $row->id],
+                    );
+                    if ($result !== null) {
+                        // A clean write (a row updated, or 0 matched — then the
+                        // description says the row had already moved on) always
+                        // audits here; an EXCEPTION ($result === null) instead
+                        // logs only, inside guarded().
+                        $this->auditOutcome($row->organization_id, 'booking.capture.auth_expired', $piId, [
+                            'mirror_id' => $row->id, 'stripe_status' => $status, 'age_days' => $row->created_at?->diffInDays(now()),
+                        ], "PI {$piId} authorization expired/cancelled before capture (status={$status}, mirror age > 6d). Flipped to capture_expired." . ($result === 0 ? ' (row had already moved on)' : ''));
+                    }
                 }
             } elseif ($status === 'succeeded') {
-                $this->markBookingPaid($mirror);
+                $this->markBookingPaid($mirror, $piId);
                 // Re-read fresh: flag needs_refund only when the row is
                 // genuinely 'paid' now — either this run's own
                 // markBookingPaid() wrote it, or it already was — never
                 // from the in-memory $mirror, which markBookingPaid() never
                 // updates in place. A database error in this per-row block
                 // is logged and the loop moves on to the next row.
-                try {
-                    $freshMirror = BookingMirror::withoutGlobalScopes()->find($mirror->id);
-                    if ($freshMirror && (string) $freshMirror->payment_status === 'paid' && $this->isCancelledStayRow($freshMirror)) {
-                        $audits = [];
-                        $this->flagBookingForRefundRow($freshMirror, $piId, $audits);
-                        foreach ($audits as $a) {
-                            $this->auditOutcome($a['org'], $a['action'], $a['pi'], $a['extra'], $a['description'], $a['subjectType'] ?? 'stripe_payment', $a['subjectId'] ?? null);
+                foreach ($rooms as $row) {
+                    try {
+                        $freshMirror = BookingMirror::withoutGlobalScopes()->find($row->id);
+                        if ($freshMirror && (string) $freshMirror->payment_status === 'paid' && $this->isCancelledStayRow($freshMirror)) {
+                            $audits = [];
+                            $this->flagBookingForRefundRow($freshMirror, $piId, $audits);
+                            foreach ($audits as $a) {
+                                $this->auditOutcome($a['org'], $a['action'], $a['pi'], $a['extra'], $a['description'], $a['subjectType'] ?? 'stripe_payment', $a['subjectId'] ?? null);
+                            }
                         }
+                    } catch (\Throwable $e) {
+                        Log::warning('Stale-auth reconcile — update failed', [
+                            'mirror_id' => $row->id, 'error' => $e->getMessage(),
+                        ]);
                     }
-                } catch (\Throwable $e) {
-                    Log::warning('Stale-auth reconcile — update failed', [
-                        'mirror_id' => $mirror->id, 'error' => $e->getMessage(),
-                    ]);
                 }
             } else {
                 // Unexpected — audit but don't touch the mirror.

@@ -47,7 +47,12 @@ export function StayPriceBreakdown({ quote: q, stage = 'pay', paid = false, inte
   const amount = formatMoney(q.total_amount, q.currency, i18n.language)
   return (
     <div className="space-y-2">
-      <Row label={t('portal.stay.room_line', '{{room}} · nights: {{count}}', { room: q.room.name, count: q.nights })}><Money amount={q.lines.room_total} currency={q.currency} /></Row>
+      {/* A combination (release 5) lists each room at its own price; one room, the one line. */}
+      {q.rooms && q.rooms.length > 0
+        ? q.rooms.map((r, i) => (
+          <Row key={`${r.id}-${i}`} label={t('portal.stay.room_line', '{{room}} · nights: {{count}}', { room: r.name, count: q.nights })}><Money amount={r.room_total} currency={q.currency} /></Row>
+        ))
+        : <Row label={t('portal.stay.room_line', '{{room}} · nights: {{count}}', { room: q.room.name, count: q.nights })}><Money amount={q.lines.room_total} currency={q.currency} /></Row>}
       {q.lines.extras.map(l => (
         <Row key={l.id} label={`${l.name}${l.quantity > 1 ? ` × ${l.quantity}` : ''}`}><Money amount={l.line_total} currency={q.currency} /></Row>
       ))}

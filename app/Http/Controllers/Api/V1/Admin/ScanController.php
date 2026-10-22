@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\LoyaltyMember;
 use App\Models\NfcCard;
-use App\Models\QrToken;
 use App\Models\ScanEvent;
 use App\Models\TierBenefit;
 use App\Models\BenefitEntitlement;
+use App\Services\Loyalty\CardLookup;
+use App\Services\Loyalty\Cards\CardRead;
 use App\Services\OpenAiService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,87 +19,59 @@ class ScanController extends Controller
 {
     public function __construct(protected OpenAiService $openAi) {}
 
-    public function scanQr(Request $request): JsonResponse
+    /**
+     * The camera's (or a reader's) code to the member it names. Since HexaTech Loyalty release 5 (R5-3) the code is
+     * read by CardLookup's tolerant reading, shared with the workspace's Scan: the member app's QR code however a
+     * keyboard layout bent it, the older app's token, the wallet pass, a link, a member number, a card's ID. The
+     * answer, its messages and the scan log are as before: the app's code names a number ("Member not found"), a
+     * token says why it cannot be used, anything else is "Invalid or expired QR code".
+     */
+    public function scanQr(Request $request, CardLookup $cards): JsonResponse
     {
         $validated = $request->validate(['token' => 'required|string']);
+        $read = $cards->read($validated['token'], $request->user());
+        $byNumber = $read->form === CardRead::APP_NUMBER;
+        $logged = $byNumber ? (string) $read->value : substr($read->value ?? $validated['token'], 0, 20) . '...';
+        $log = [
+            'scan_type'   => 'qr',
+            'token_value' => $logged,
+            'staff_id'    => $request->user()->id,
+            'device_id'   => $request->header('X-Device-Id'),
+            'ip_address'  => $request->ip(),
+        ];
 
-        // Check if the scanned data is a v2 static QR (JSON with member_number)
-        $decoded = json_decode($validated['token'], true);
-        if (is_array($decoded) && ($decoded['member_number'] ?? null)) {
-            return $this->scanByMemberNumber($decoded['member_number'], $request);
-        }
+        if (!$read->found()) {
+            if ($byNumber) {
+                ScanEvent::create($log + ['result' => 'member_not_found']);
 
-        // Try secure QR token first, fall back to legacy qr_code_token
-        $qrToken = QrToken::where('token', $validated['token'])->first();
-        $scanResult = 'success';
-        $member = null;
+                return response()->json(['message' => 'Member not found'], 404);
+            }
 
-        if ($qrToken) {
-            if (!$qrToken->isValid()) {
-                $scanResult = match (true) {
-                    $qrToken->is_revoked                             => 'invalid_token',
-                    $qrToken->expires_at->isPast()                   => 'expired_token',
-                    $qrToken->use_count >= $qrToken->max_uses        => 'replay_detected',
-                    default => 'error',
-                };
-
-                $reason = match ($scanResult) {
-                    'expired_token'   => 'QR code has expired',
-                    'invalid_token'   => 'QR code has been revoked',
-                    'replay_detected' => 'QR code has exceeded maximum uses',
-                    default           => 'Invalid QR code',
-                };
-
-                ScanEvent::create([
-                    'scan_type'   => 'qr',
-                    'token_value' => substr($validated['token'], 0, 20) . '...',
-                    'result'      => $scanResult,
-                    'staff_id'    => $request->user()->id,
-                    'property_id' => $request->user()->property_id ?? null,
-                    'device_id'   => $request->header('X-Device-Id'),
-                    'ip_address'  => $request->ip(),
-                ]);
+            $reason = match ($read->result) {
+                'expired_token'   => 'QR code has expired',
+                'invalid_token'   => 'QR code has been revoked',
+                'replay_detected' => 'QR code has exceeded maximum uses',
+                default           => null,
+            };
+            if ($reason !== null) {
+                ScanEvent::create($log + ['result' => $read->result, 'property_id' => $request->user()->property_id ?? null]);
 
                 return response()->json(['message' => $reason], 404);
             }
 
-            $qrToken->consume();
-            $member = $qrToken->member()
-                ->where('is_active', true)
-                ->with(['user', 'tier', 'bookings' => fn($q) => $q->latest()->limit(3)])
-                ->first();
-        } else {
-            // Legacy fallback
-            $member = LoyaltyMember::where('qr_code_token', $validated['token'])
-                ->where('is_active', true)
-                ->with(['user', 'tier', 'bookings' => fn($q) => $q->latest()->limit(3)])
-                ->first();
-        }
+            ScanEvent::create($log + ['result' => 'inactive_member']);
 
-        if (!$member) {
-            ScanEvent::create([
-                'scan_type'   => 'qr',
-                'token_value' => substr($validated['token'], 0, 20) . '...',
-                'result'      => 'inactive_member',
-                'staff_id'    => $request->user()->id,
-                'device_id'   => $request->header('X-Device-Id'),
-                'ip_address'  => $request->ip(),
-            ]);
             return response()->json(['message' => 'Invalid or expired QR code'], 404);
         }
 
+        $member = $read->member->load(['user', 'tier', 'bookings' => fn($q) => $q->latest()->limit(3)]);
         $member->update(['last_activity_at' => now()]);
 
-        ScanEvent::create([
-            'member_id'   => $member->id,
-            'scan_type'   => 'qr',
-            'token_value' => substr($validated['token'], 0, 20) . '...',
-            'result'      => 'success',
-            'action_taken'=> 'verify',
-            'staff_id'    => $request->user()->id,
-            'property_id' => $request->user()->property_id ?? null,
-            'device_id'   => $request->header('X-Device-Id'),
-            'ip_address'  => $request->ip(),
+        ScanEvent::create($log + [
+            'member_id'    => $member->id,
+            'result'       => 'success',
+            'action_taken' => 'verify',
+            'property_id'  => $request->user()->property_id ?? null,
         ]);
 
         AuditLog::record('qr_scanned', $member, [], [], $request->user());
@@ -187,47 +160,6 @@ class ScanController extends Controller
         ], [], $request->user());
 
         return response()->json(['message' => 'NFC card linked', 'card' => $card], 201);
-    }
-
-    /**
-     * Look up a member by member_number (static QR v2 format).
-     */
-    private function scanByMemberNumber(string $memberNumber, Request $request): JsonResponse
-    {
-        $member = LoyaltyMember::where('member_number', $memberNumber)
-            ->where('is_active', true)
-            ->with(['user', 'tier', 'bookings' => fn($q) => $q->latest()->limit(3)])
-            ->first();
-
-        if (!$member) {
-            ScanEvent::create([
-                'scan_type'   => 'qr',
-                'token_value' => $memberNumber,
-                'result'      => 'member_not_found',
-                'staff_id'    => $request->user()->id,
-                'device_id'   => $request->header('X-Device-Id'),
-                'ip_address'  => $request->ip(),
-            ]);
-            return response()->json(['message' => 'Member not found'], 404);
-        }
-
-        $member->update(['last_activity_at' => now()]);
-
-        ScanEvent::create([
-            'member_id'   => $member->id,
-            'scan_type'   => 'qr',
-            'token_value' => $memberNumber,
-            'result'      => 'success',
-            'action_taken'=> 'verify',
-            'staff_id'    => $request->user()->id,
-            'property_id' => $request->user()->property_id ?? null,
-            'device_id'   => $request->header('X-Device-Id'),
-            'ip_address'  => $request->ip(),
-        ]);
-
-        AuditLog::record('qr_scanned', $member, [], [], $request->user());
-
-        return $this->buildScanResponse($member, $request->user());
     }
 
     private function buildScanResponse(LoyaltyMember $member, $staff): JsonResponse

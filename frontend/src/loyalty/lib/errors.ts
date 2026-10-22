@@ -49,6 +49,19 @@ export const ERRORS = {
     network: 'No connection. Try again.',
     unknown: 'The scan did not work. Please try again.',
   },
+  // Release 5: a member's NFC cards (link, switch off). Another member's or organisation's card is never named.
+  cards: {
+    card_in_use: 'This card is linked to another member. Switch it off on that member’s page first.',
+    card_elsewhere: 'This card is in use elsewhere and cannot be linked here.',
+    bad_uid: 'This is not a card ID. Tap or read the card, or type the ID printed on it.',
+    already_erased: 'This member was deleted.',
+    invalid: 'Type the card’s ID.',
+    not_found: 'This member or card is not in your programme any more.',
+    not_allowed: 'Your account may not do this.',
+    no_capability: 'Your account may not do this.',
+    network: 'No connection: nothing was saved. Try again.',
+    unknown: 'That did not work. Nothing was changed; please try again.',
+  },
 } as const
 
 export type ErrorFamily = keyof typeof ERRORS

@@ -60,8 +60,8 @@ export function Scan() {
         if (result) {
           stopScanning()
           try {
-            const payload = JSON.parse(result.getText())
-            const { data } = await api.post('/v1/admin/scan/qr', { token: payload.token })
+            // The whole code: the server reads every form (the app's JSON, a token, a number), not only `token`.
+            const { data } = await api.post('/v1/admin/scan/qr', { token: result.getText() })
             setMember(data.member)
             setAiUpsell(data.ai_upsell_suggestion)
             toast.success(`Member found: ${data.member.name}`)
