@@ -69,6 +69,7 @@ trait MembershipSchema
             $t->unsignedBigInteger('created_by_user_id')->nullable();
             $t->string('original_filename')->nullable();
             $t->string('stored_path', 500)->nullable();
+            $t->longText('file_content')->nullable(); // release 3 §2 (2026_10_22_100100)
             $t->unsignedInteger('file_rows')->default(0);
             $t->unsignedInteger('total_rows')->default(0);
             $t->unsignedInteger('processed')->default(0);

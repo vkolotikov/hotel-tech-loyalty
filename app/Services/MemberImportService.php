@@ -94,6 +94,33 @@ class MemberImportService
             return $this->emptyParse('Could not open the uploaded file.');
         }
 
+        return $this->parseHandle($handle);
+    }
+
+    /**
+     * Read a CSV held in memory — a batch's stored file (HexaTech Loyalty
+     * release 3 §2: kept in the database, not on the disk) — exactly as
+     * parseFile() reads it off disk: the same bytes give the same rows,
+     * BOM and delimiter included. php://temp spills to a temporary file
+     * of its own past 2 MB and is gone when closed.
+     */
+    public function parseBytes(string $bytes): array
+    {
+        $handle = @fopen('php://temp', 'w+b');
+        if (!$handle || fwrite($handle, $bytes) !== strlen($bytes)) {
+            if ($handle) {
+                fclose($handle);
+            }
+            return $this->emptyParse('Could not open the uploaded file.');
+        }
+        rewind($handle);
+
+        return $this->parseHandle($handle);
+    }
+
+    /** @param resource $handle an open CSV, read from its start and closed here */
+    private function parseHandle($handle): array
+    {
         $firstLine = fgets($handle);
         if ($firstLine === false || trim($firstLine) === '') {
             fclose($handle);
@@ -181,12 +208,19 @@ class MemberImportService
             return $batch;
         }
 
-        $parsed = $this->parseFile($batch->stored_path);
+        // The file as uploaded, from the batch's row (release 3 §2), so a
+        // chunk on any replica, after any deploy, reads what the preview
+        // read. Once the batch ends nothing reads it again: it is cleared
+        // in the same write that ends it.
+        $bytes = $batch->fileBytes();
+        $parsed = $bytes === null ? $this->emptyParse('Could not open the uploaded file.') : $this->parseBytes($bytes);
+        unset($bytes);
         if ($parsed['error']) {
             $batch->update([
                 'status'        => 'failed',
                 'error_message' => $parsed['error'],
                 'completed_at'  => now(),
+                'file_content'  => null,
             ]);
             return $batch;
         }
@@ -195,7 +229,7 @@ class MemberImportService
         $slice = array_slice($parsed['rows'], $offset, $size);
 
         if ($slice === []) {
-            $batch->update(['status' => 'completed', 'completed_at' => now()]);
+            $batch->update(['status' => 'completed', 'completed_at' => now(), 'file_content' => null]);
             return $batch;
         }
 
@@ -238,6 +272,7 @@ class MemberImportService
         if ($batch->processed >= $batch->total_rows) {
             $batch->status = 'completed';
             $batch->completed_at = now();
+            $batch->file_content = null;
         }
         $batch->save();
 

@@ -1450,6 +1450,19 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'show']);
                 Route::put('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'update']);
                 Route::post('app-look/logo', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'logo']);
+                // Push messages (release 3 §5), with the plan's `push_notifications` feature
+                Route::middleware('feature:push_notifications')->group(function () {
+                    Route::get('push', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'index']);
+                    Route::post('push', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'store']);
+                    Route::get('push/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'show'])->whereNumber('id');
+                    Route::put('push/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'update'])->whereNumber('id');
+                    Route::delete('push/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'destroy'])->whereNumber('id');
+                    Route::get('push/{id}/audience', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'audience'])->whereNumber('id');
+                    Route::post('push/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'send'])->whereNumber('id');
+                    Route::post('push/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'cancel'])->whereNumber('id');
+                    Route::post('push/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'duplicate'])->whereNumber('id');
+                });
+
                 Route::post('rewards/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'storeReward'])->whereNumber('id');
                 Route::delete('rewards/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'destroyReward'])->whereNumber('id');
                 Route::post('offers/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'storeOffer'])->whereNumber('id');

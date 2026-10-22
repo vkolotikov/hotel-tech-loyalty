@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  campaignActions, campaignBody, campaignFormOf, campaignServerProblems, canTest, confirmationOf, draftProblems, hasTags, isDirty, isDay, isLink,
-  moveBlock, newBlock, previewDocument, previewOf, progressOf, reasonBounds, removeBlock, rowOf, rowProblem, ruleRow, searchFor, segmentBody,
-  segmentFormOf, segmentProblems, sendBlockers, sendRefusalRefreshes, serverRuleProblem, statusTone, tabAfter, tabFrom, toggledTier, viewOf,
-  withType, formWords,
+  campaignActions, campaignBody, campaignFormOf, campaignServerProblems, canTest, confirmationOf, draftProblems, fieldKey, isDirty, isDay, isLink,
+  moveBlock, newBlock, previewDocument, previewFilled, previewOf, progressOf, reasonBounds, removeBlock, rowOf, rowProblem, ruleRow, searchFor, segmentBody,
+  segmentFormOf, segmentProblems, sendBlockers, sendRefusalRefreshes, serverRuleProblem, statusTone, tabAfter, tabFrom, tagPlace, targetFrom, toggledTier,
+  unknownTags, viewOf, withTag, withType, formWords, type CampaignForm,
 } from './campaignsMath'
 import type { Audience, Block, Campaign, CampaignOptions, Segment, SegmentOptions } from './types'
 
@@ -38,13 +38,15 @@ const blockOptions: CampaignOptions = {
   spacer: { min: 4, max: 160 },
   max_name: 120,
   max_subject: 200,
+  tags: [{ tag: '{{member_name}}', name: 'member_name', label: 'Member full name' }, { tag: '{{first_name}}', name: 'first_name', label: 'Member first name' }],
+  known_tags: ['{{member_name}}', '{{first_name}}', '{{member.name}}'],
 }
 
 const campaign = (more: Partial<Campaign> = {}): Campaign => ({
   id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0,
   sent_at: null, created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', segment_id: 3, editable_here: true,
-  body_blocks: [{ id: 'h', type: 'heading', text: 'Hello', level: 1, align: 'left', color: '#1a1a1a' }], body_html: '<div>Hello</div>', missing: [],
-  last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
+  body_blocks: [{ id: 'h', type: 'heading', text: 'Hello', level: 1, align: 'left', color: '#1a1a1a' }], body_html: '<div>Hello</div>',
+  preview_subject: 'Our autumn', preview_html: '<div>Hello</div>', unknown_tags: [], missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
 })
 const segment = (more: Partial<Segment> = {}): Segment => ({
   id: 3, name: 'Gold', description: null, everyone: false, operator: 'AND', filters: [{ type: 'tier', op: 'in', value: [2] }], members: 120, problem: null,
@@ -59,9 +61,13 @@ describe('the tabs live in the address', () => {
     expect(tabFrom('?tab=nonsense')).toBe('campaigns')
     expect(searchFor('campaigns')).toBe('')
     expect(searchFor('segments')).toBe('?tab=segments')
+    expect(tabFrom('?tab=push')).toBe('push')
+    expect(searchFor('push')).toBe('?tab=push')
     expect(tabAfter('campaigns', 'ArrowRight')).toBe('segments')
-    expect(tabAfter('campaigns', 'ArrowLeft')).toBe('segments')
-    expect(tabAfter('segments', 'Home')).toBe('campaigns')
+    expect(tabAfter('segments', 'ArrowRight')).toBe('push')
+    expect(tabAfter('campaigns', 'ArrowLeft')).toBe('push')
+    expect(tabAfter('push', 'Home')).toBe('campaigns')
+    expect(tabAfter('segments', 'End')).toBe('push')
     expect(tabAfter('campaigns', 'x')).toBeNull()
   })
 })
@@ -225,14 +231,61 @@ describe('the body\'s blocks', () => {
     expect(campaignBody(form)).toEqual({ name: 'Autumn', subject: 'Our autumn', segment_id: 3, body_blocks: c.body_blocks })
   })
 
-  it('says when a tag would reach members as written', () => {
-    expect(hasTags('Hi', 'there')).toBe(false)
-    expect(hasTags('Hi {{member.name}}')).toBe(true)
-    expect(hasTags(...formWords({ name: 'x', subject: 'S', segment_id: '', blocks: [{ id: 'b', type: 'button', text: 'Go {{x}}', url: '', bgColor: '#000', textColor: '#fff', align: 'left' }] }))).toBe(true)
-  })
-
   it('puts the server\'s rendering in a page of its own', () => {
     expect(previewDocument('<p>x</p>')).toMatch(/^<!doctype html>.*<body[^>]*><p>x<\/p><\/body><\/html>$/)
+  })
+})
+
+describe('tags (release 3 §4)', () => {
+  const form: CampaignForm = {
+    name: 'Autumn', subject: 'Hello there', segment_id: '', blocks: [
+      { id: 'h', type: 'heading', text: 'Autumn', level: 1, align: 'left', color: '#1a1a1a' },
+      { id: 'd', type: 'divider', color: '#e5e5e5' },
+      { id: 't', type: 'text', text: 'Dear guest', color: '#555555', align: 'left', fontSize: 15 },
+      { id: 'b', type: 'button', text: 'Book', url: '', bgColor: '#000000', textColor: '#ffffff', align: 'left' },
+    ],
+  }
+
+  it('names each double-braced word no tag fills, once, in order, and the server\'s own tags not at all', () => {
+    const known = blockOptions.known_tags
+    expect(unknownTags(['Hi {{first_name}} {{member.name}}'], known)).toEqual([])
+    expect(unknownTags(['Hi {{x}} and {{ first_name }}', undefined, null, '{{x}} {{member.tier}} {{ unclosed'], known)).toEqual(['{{x}}', '{{ first_name }}', '{{member.tier}}'])
+    expect(unknownTags(formWords({ ...form, blocks: [{ id: 'b', type: 'button', text: 'Go {{y}}', url: '', bgColor: '#000', textColor: '#fff', align: 'left' }] }), known)).toEqual(['{{y}}'])
+  })
+
+  it('puts a tag where the cursor was, over the selection, in the subject or a block\'s words', () => {
+    const subject = withTag(form, { field: { kind: 'subject' }, start: 6, end: 11 }, '{{first_name}}', blockOptions)
+    expect(subject).toEqual({ form: { ...form, subject: 'Hello {{first_name}}' }, caret: 20 })
+    const text = withTag(form, { field: { kind: 'block', id: 't' }, start: 5, end: 10 }, '{{member_name}}', blockOptions)
+    expect(text?.form.blocks[2]).toMatchObject({ id: 't', text: 'Dear {{member_name}}' })
+    expect(text?.form.blocks.filter((_, i) => i !== 2)).toEqual(form.blocks.filter((_, i) => i !== 2))
+    expect(text?.caret).toBe(20)
+    // A cursor past the end lands at the end; a button's label takes tags too.
+    expect(withTag(form, { field: { kind: 'block', id: 'b' }, start: 99, end: 99 }, ' {{first_name}}', blockOptions)?.form.blocks[3]).toMatchObject({ text: 'Book {{first_name}}' })
+  })
+
+  it('puts no tag into a field that is gone, has no words, or has no room for it', () => {
+    expect(withTag(form, { field: { kind: 'block', id: 'gone' }, start: 0, end: 0 }, '{{first_name}}', blockOptions)).toBeNull()
+    expect(withTag(form, { field: { kind: 'block', id: 'd' }, start: 0, end: 0 }, '{{first_name}}', blockOptions)).toBeNull()
+    expect(withTag({ ...form, subject: 'x'.repeat(195) }, { field: { kind: 'subject' }, start: 0, end: 0 }, '{{first_name}}', blockOptions)).toBeNull()
+    expect(withTag({ ...form, subject: 'x'.repeat(195) }, { field: { kind: 'subject' }, start: 0, end: 195 }, '{{first_name}}', blockOptions)?.form.subject).toBe('{{first_name}}')
+  })
+
+  it('says where the cursor is, and reads it from the field', () => {
+    expect(tagPlace(form, { kind: 'subject' })).toEqual({ kind: 'subject' })
+    expect(tagPlace(form, { kind: 'block', id: 't' })).toEqual({ kind: 'text', n: 3 })
+    expect(tagPlace(form, { kind: 'block', id: 'd' })).toBeNull()
+    expect(tagPlace(form, { kind: 'block', id: 'gone' })).toBeNull()
+    expect(fieldKey({ kind: 'subject' })).toBe('subject')
+    expect(fieldKey({ kind: 'block', id: 't' })).toBe('block:t')
+    expect(targetFrom({ kind: 'subject' }, { value: 'Hello', selectionStart: 1, selectionEnd: 3 })).toEqual({ field: { kind: 'subject' }, start: 1, end: 3 })
+    expect(targetFrom({ kind: 'subject' }, { value: 'Hello', selectionStart: null, selectionEnd: null })).toEqual({ field: { kind: 'subject' }, start: 5, end: 5 })
+  })
+
+  it('knows when the preview shows tags filled with a sample', () => {
+    expect(previewFilled(campaign())).toBe(false)
+    expect(previewFilled(campaign({ subject: 'Hi {{first_name}}', preview_subject: 'Hi Ada' }))).toBe(true)
+    expect(previewFilled(campaign({ body_html: '<p>{{first_name}}</p>', preview_html: '<p>Ada</p>' }))).toBe(true)
   })
 })
 

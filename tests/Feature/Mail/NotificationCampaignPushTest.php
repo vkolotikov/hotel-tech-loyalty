@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Schema;
+use Tests\Concerns\LoyaltyWorkspace\PushSchema;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -31,7 +32,7 @@ use Tests\TestCase;
  */
 class NotificationCampaignPushTest extends TestCase
 {
-    use DatabaseTransactions, SetsUpMinimalSchema;
+    use DatabaseTransactions, SetsUpMinimalSchema, PushSchema;
 
     protected function setUp(): void
     {
@@ -91,6 +92,9 @@ class NotificationCampaignPushTest extends TestCase
             });
         }
 
+        // push_notifications as the migrations build it (the inbox row carries sent_at since release 3 §3).
+        $this->buildPushSchema();
+
         // Expo is never reached: every push goes to a fake that says "ok".
         Http::fake(['https://exp.host/*' => Http::response(['data' => [['status' => 'ok']]], 200)]);
     }
@@ -137,6 +141,7 @@ class NotificationCampaignPushTest extends TestCase
         $this->assertNotNull($push, 'No push was recorded for the member.');
         $this->assertSame('campaign', $push->type, 'The push must be recorded under the campaign type.');
         $this->assertSame('Weekend double points', $push->title);
+        $this->assertTrue((bool) $push->is_sent, 'The push must be kept in the member\'s inbox, marked sent.');
 
         $recipient = DB::table('campaign_recipients')->where('campaign_id', $campaign->id)->where('loyalty_member_id', $member->id)->first();
         $this->assertNotNull($recipient);

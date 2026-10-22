@@ -351,6 +351,12 @@ class CampaignsTest extends TestCase
         $this->assertStringContainsString('Unsubscribe from marketing emails', $sent[0]['html']);
         $this->assertNotNull($sent[0]['unsubscribe']);
         $this->assertSame([EmailCampaign::STATUS_SENT, 3, 0], [$campaign->fresh()->status, $campaign->fresh()->sent_count, $campaign->fresh()->failed_count]);
+
+        // Release 3: each of the three has a row, and the queue retrying the chunk mails none of them again.
+        $this->assertSame(array_fill_keys($expected, 'sent'), DB::table('email_campaign_deliveries')->where('campaign_id', $campaign->id)->orderBy('member_id')->pluck('status', 'member_id')->all());
+        $job->handle(app(EmailComplianceService::class));
+        $this->assertCount(3, $this->sent());
+        $this->assertSame([3, 0], [$campaign->fresh()->sent_count, $campaign->fresh()->failed_count]);
     }
 
     public function test_two_presses_start_a_campaign_once(): void
@@ -476,6 +482,44 @@ class CampaignsTest extends TestCase
         $empty = EmailCampaign::create(['name' => 'Empty', 'subject' => '', 'body_html' => '', 'body_blocks' => [], 'status' => 'draft']);
         $this->asManager()->postJson($this->api("campaigns/{$empty->id}/test"))->assertStatus(422)->assertJsonPath('error', 'incomplete')->assertJsonPath('missing', ['subject', 'body']);
         $this->assertCount(1, $this->sent());
+    }
+
+    public function test_the_editor_is_offered_the_tags_and_the_preview_and_the_test_fill_them_with_the_senders_own_sample(): void
+    {
+        $this->audienceOfEight();
+        $this->manager->forceFill(['name' => 'Rita <i>Moreno</i>'])->save();
+        $campaign = $this->readyDraft();
+        $this->asManager()->putJson($this->api("campaigns/{$campaign->id}"), ['name' => 'Autumn', 'subject' => 'Hi {{first_name}} {{favourite_colour}}', 'segment_id' => $this->everyone->id, 'body_blocks' => [
+            ['id' => 'h', 'type' => 'heading', 'text' => 'Autumn at {{hotel_name}}'],
+            ['id' => 't', 'type' => 'text', 'text' => 'Dear {{member.name}}, {{points_balance}} points as {{tier_name}}. {{ first_name }}'],
+        ]])->assertOk();
+        $campaign = $campaign->fresh();
+
+        $response = $this->asManager()->getJson($this->api("campaigns/{$campaign->id}"))->assertOk()
+            // The tags the editor offers, served like the block types; every tag that is filled, for its own warning.
+            ->assertJsonPath('options.tags.0', ['tag' => '{{member_name}}', 'name' => 'member_name', 'label' => 'Member full name'])
+            ->assertJsonPath('options.tags.1.tag', '{{first_name}}')
+            ->assertJsonPath('options.known_tags', [...array_keys(\App\Models\EmailTemplate::AVAILABLE_TAGS), '{{member.name}}', '{{member.tier}}', '{{member.points}}'])
+            // What is sent keeps its tags; the preview fills them with the viewer's own sample, escaped in the body.
+            ->assertJsonPath('campaign.subject', 'Hi {{first_name}} {{favourite_colour}}')
+            ->assertJsonPath('campaign.preview_subject', 'Hi Rita {{favourite_colour}}')
+            ->assertJsonPath('campaign.unknown_tags', ['{{favourite_colour}}', '{{ first_name }}']);
+        $this->assertStringContainsString('Dear {{member.name}}, {{points_balance}} points as {{tier_name}}.', $response->json('campaign.body_html'));
+        $preview = (string) $response->json('campaign.preview_html');
+        $this->assertStringContainsString('Autumn at Lumière Salon</h1>', $preview);
+        $this->assertStringContainsString('Dear Rita &lt;i&gt;Moreno&lt;/i&gt;, 1,250 points as Silver. {{ first_name }}</p>', $preview);
+        $this->assertCount(count(\App\Models\EmailTemplate::AVAILABLE_TAGS), $response->json('options.tags'));
+
+        // The test email carries the same sample as the preview.
+        $this->asManager()->postJson($this->api("campaigns/{$campaign->id}/test"))->assertOk()->assertJsonPath('sent_to', $this->manager->email);
+        $this->assertSame([['to' => $this->manager->email, 'subject' => '[TEST] Hi Rita {{favourite_colour}}', 'html' => $preview, 'unsubscribe' => null]], $this->sent());
+
+        // Tags change nothing about who it reaches: the confirmation's numbers are the ones without them.
+        $this->asManager()->getJson($this->api("campaigns/{$campaign->id}/audience"))->assertOk()
+            ->assertJsonPath('audience.members', 8)->assertJsonPath('audience.reached', 3)->assertJsonPath('audience.no_consent', 2)
+            ->assertJsonPath('audience.unsubscribed', 1)->assertJsonPath('audience.suppressed', 2);
+        $this->assertSame(0, DB::table('email_campaign_deliveries')->count());
+        Queue::assertNothingPushed();
     }
 
     public function test_cancel_stops_a_sending_campaign_only(): void

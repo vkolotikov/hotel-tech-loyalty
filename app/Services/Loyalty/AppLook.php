@@ -198,9 +198,10 @@ final class AppLook
     }
 
     /**
-     * The venue's logo, as SettingsController::uploadLogo writes it: MediaService's `logos` folder, the setting
-     * `company_logo` (made in `appearance` when missing), the old file deleted once the setting no longer names it —
-     * here only when it is this organisation's own file in that folder. Answers the new address.
+     * The venue's logo, the one writer of it (the workspace's upload and the full admin's SettingsController::uploadLogo
+     * both call it): MediaService's `logos` folder, the setting `company_logo` (made in `appearance` when missing), the
+     * old file deleted once the setting no longer names it — only when it is this organisation's own file in that
+     * folder. Answers the new address.
      */
     public static function setLogo(UploadedFile $file, User $by): string
     {

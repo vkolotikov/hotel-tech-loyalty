@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -13,12 +13,14 @@ import { ConfirmDialog, FormField } from '../ui/formParts'
 import { afterCampaignChange, campaignKey, campaignsApi, SEGMENTS_KEY } from './api'
 import { BlockList } from './BlockList'
 import {
-  campaignBody, campaignFormOf, campaignPath, campaignServerProblems, canTest, draftProblems, formWords, hasTags, isDirty, sendBlockers, type CampaignForm,
+  campaignBody, campaignFormOf, campaignPath, campaignServerProblems, canTest, draftProblems, fieldKey, formWords, isDirty, previewFilled, sendBlockers,
+  targetFrom, unknownTags, withTag, type CampaignForm, type TagField, type TagTarget,
 } from './campaignsMath'
 import { EmailPreview } from './EmailPreview'
 import { ERRORS } from './errors'
 import { Refusal, StatusBadge } from './parts'
 import { SendDialog } from './SendDialog'
+import { TagBar, type TagFieldProps } from './TagBar'
 import type { CampaignAnswer } from './types'
 import { BLOCKER_WORDS, DRAFT_PROBLEM_WORDS } from './words'
 
@@ -28,7 +30,9 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * A draft's page (spec 2026-10-21 release 2 §6): its name, subject and audience, the body as blocks, and beside them
  * the server's rendering of the saved draft. Save writes the blocks (the server renders the email); Send me a test and
  * Send work on the saved draft only, so what is tested and confirmed is what goes out. Send says first why it cannot
- * be pressed yet (campaignsMath.ts `sendBlockers`).
+ * be pressed yet (campaignsMath.ts `sendBlockers`). Release 3: the tag bar puts the server's tags where the cursor was
+ * (the subject included), the editor names any double-braced word no tag fills, and the preview shows the tags filled
+ * with the viewer's own sample, as their test email has them.
  */
 export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
   const { t, i18n } = useTranslation()
@@ -39,6 +43,10 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
   const [form, setForm] = useState<CampaignForm>(() => campaignFormOf(c))
   const [tried, setTried] = useState(false)
   const [open, setOpen] = useState<'send' | 'delete' | null>(null)
+  const [target, setTarget] = useState<TagTarget | null>(null)
+  const [noRoom, setNoRoom] = useState(false)
+  const [caret, setCaret] = useState<{ key: string; at: number } | null>(null)
+  const fields = useRef(new Map<string, HTMLInputElement | HTMLTextAreaElement>())
   const segments = useQuery({ queryKey: SEGMENTS_KEY, queryFn: campaignsApi.segments })
   const dirty = isDirty(form, c)
 
@@ -66,9 +74,37 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
   })
   const update = (patch: Partial<CampaignForm>) => {
     setForm(f => ({ ...f, ...patch }))
+    setNoRoom(false)
     if (save.isError) save.reset()
     if (test.isSuccess || test.isError) test.reset()
   }
+
+  // A tag goes where the cursor was; the cursor then stands after it, in the same field.
+  const track = (field: TagField): TagFieldProps => ({
+    ref: (el) => {
+      if (el) fields.current.set(fieldKey(field), el)
+      else fields.current.delete(fieldKey(field))
+    },
+    onSelect: (e) => setTarget(targetFrom(field, e.currentTarget)),
+    onFocus: (e) => setTarget(targetFrom(field, e.currentTarget)),
+  })
+  const insertTag = (tag: string) => {
+    if (!target) return
+    const next = withTag(form, target, tag, options)
+    if (!next) {
+      setNoRoom(true)
+      return
+    }
+    update(next.form)
+    setTarget({ ...target, start: next.caret, end: next.caret })
+    setCaret({ key: fieldKey(target.field), at: next.caret })
+  }
+  useEffect(() => {
+    if (!caret) return
+    const el = fields.current.get(caret.key)
+    el?.focus()
+    el?.setSelectionRange(caret.at, caret.at)
+  }, [caret])
 
   const failure = save.isError ? failureOf(save.error) : null
   const own = draftProblems(form, options)
@@ -79,7 +115,7 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
   }
   const blockProblems = { ...own.blocks, ...server.blocks }
   const blockers = sendBlockers(c, dirty, segments.data?.segments)
-  const tags = hasTags(...formWords(form))
+  const unknown = unknownTags(formWords(form), options.known_tags)
   const list = segments.data?.segments ?? []
   const chosenGone = form.segment_id !== '' && segments.data !== undefined && !list.some(s => String(s.id) === form.segment_id)
 
@@ -132,7 +168,7 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
           </FormField>
           <FormField label={t('loyalty.campaigns.editor.subject', 'Subject')} problem={formProblem('subject')}>
             <input type="text" value={form.subject} maxLength={options.max_subject} onChange={(e) => update({ subject: e.target.value })} className={INPUT}
-              placeholder={t('loyalty.campaigns.editor.subject_example', 'e.g. Autumn at our place')} />
+              placeholder={t('loyalty.campaigns.editor.subject_example', 'e.g. Autumn at our place')} {...track({ kind: 'subject' })} />
           </FormField>
           <FormField label={t('loyalty.campaigns.editor.audience', 'Who receives it')} problem={formProblem('segment_id')}
             hint={t('loyalty.campaigns.editor.audience_hint', 'Only the segment’s members who agreed to marketing email get it. Send shows the exact number first.')}>
@@ -151,10 +187,13 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-a-text-2">{t('loyalty.campaigns.editor.body', 'Body')}</p>
-            {tags && (
-              <Notice tone="warning">{t('loyalty.campaigns.editor.tags', 'Tags such as {{tag}} are not filled in: members would read them as written. Write the words themselves.', { tag: '{{member.name}}' })}</Notice>
+            <TagBar tags={options.tags} form={form} target={target} noRoom={noRoom} onInsert={insertTag} />
+            {unknown.length > 0 && (
+              <div data-unknown-tags="">
+                <Notice tone="warning">{t('loyalty.campaigns.editor.unknown_tags', '{{tags}} will reach members as written: no tag of that name is filled in.', { tags: unknown.join(', ') })}</Notice>
+              </div>
             )}
-            <BlockList blocks={form.blocks} options={options} problems={blockProblems} onChange={(blocks) => update({ blocks })} />
+            <BlockList blocks={form.blocks} options={options} problems={blockProblems} onChange={(blocks) => update({ blocks })} track={track} />
             {formProblem('blocks') && <p className="text-xs font-medium text-a-danger">{formProblem('blocks')}</p>}
           </div>
         </section>
@@ -162,7 +201,7 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
         <section aria-labelledby="campaign-preview" className="min-w-0 space-y-2">
           <Eyebrow><span id="campaign-preview">{t('loyalty.campaigns.preview.heading', 'Preview')}</span></Eyebrow>
           {dirty && <p className="text-sm text-a-text-2">{t('loyalty.campaigns.preview.saved_only', 'This shows the saved draft. Save to see your changes.')}</p>}
-          <EmailPreview html={c.body_html} />
+          <EmailPreview subject={c.preview_subject} html={c.preview_html} filled={previewFilled(c)} />
           <p className="text-xs text-a-text-2">{t('loyalty.campaigns.preview.footer', 'Each member’s copy ends with the venue’s name and an unsubscribe link.')}</p>
         </section>
       </div>
@@ -177,7 +216,7 @@ export function CampaignEditor({ answer }: { answer: CampaignAnswer }) {
       </div>
       {duplicate.isError && <Refusal family="duplicate" failure={failureOf(duplicate.error)} />}
 
-      {open === 'send' && <SendDialog campaign={c} tags={hasTags(c.subject, c.body_html)} onClose={() => setOpen(null)} />}
+      {open === 'send' && <SendDialog campaign={c} onClose={() => setOpen(null)} />}
       {open === 'delete' && <DeleteDraft id={c.id} name={c.name} onClose={() => setOpen(null)} />}
     </div>
   )

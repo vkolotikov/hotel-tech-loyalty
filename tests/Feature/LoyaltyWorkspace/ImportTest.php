@@ -9,6 +9,7 @@ use App\Models\MemberImportBatch;
 use App\Services\Loyalty\Members\ImportProblems;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
@@ -18,7 +19,8 @@ use Tests\TestCase;
 /**
  * Member import in the workspace (spec 2026-10-21 release 2 §4.1, §4.2): a manager's; the preview in codes, never the
  * service's English; a run a chunk at a time under the batch's lock, a stale or second caller answered `busy`;
- * Cancel; the past imports of every brand; the stored file deleted once a batch is finished.
+ * Cancel; the past imports of every brand; the file kept in the batch's row (release 3 §2), never on the disk, and
+ * cleared once a batch is finished.
  */
 class ImportTest extends TestCase
 {
@@ -108,8 +110,9 @@ class ImportTest extends TestCase
             ->assertJsonPath('error', 'busy')->assertJsonPath('batch.processed', 100);
         $this->assertSame(100, LoyaltyMember::query()->where('member_number', 'like', 'HL-%')->count());
 
-        $stored = MemberImportBatch::query()->findOrFail($id)->stored_path;
-        $this->assertFileExists($stored);
+        // Between chunks the file is in the batch's row, as uploaded, and nowhere on the disk.
+        $this->assertSame($this->rows(130), MemberImportBatch::query()->findOrFail($id)->fileBytes());
+        $this->assertSame([], Storage::allFiles());
 
         $this->asManager()->postJson($this->api("members/imports/{$id}/run"))->assertOk()
             ->assertJsonPath('batch.state', 'completed')
@@ -120,7 +123,7 @@ class ImportTest extends TestCase
             ->assertJsonPath('batch.problems', []);
         $this->assertSame(130, LoyaltyMember::query()->where('member_number', 'like', 'HL-%')->count());
         $this->assertSame(1, AuditLog::where('action', 'members_bulk_import')->count());
-        $this->assertFileDoesNotExist($stored);
+        $this->assertNull(DB::table('member_import_batches')->where('id', $id)->value('file_content'));
 
         // Finished: another press answers as it stands.
         $this->asManager()->postJson($this->api("members/imports/{$id}/run"), ['from' => 0])->assertOk()->assertJsonPath('batch.created', 130);
@@ -151,11 +154,11 @@ class ImportTest extends TestCase
     {
         $id = $this->upload($this->rows(130))->json('batch.id');
         $this->asManager()->postJson($this->api("members/imports/{$id}/run"), ['from' => 0])->assertOk();
-        $stored = MemberImportBatch::query()->findOrFail($id)->stored_path;
+        $this->assertNotNull(MemberImportBatch::query()->findOrFail($id)->fileBytes());
 
         $this->asManager()->postJson($this->api("members/imports/{$id}/cancel"))->assertOk()
             ->assertJsonPath('batch.state', 'cancelled')->assertJsonPath('batch.finished', true)->assertJsonPath('batch.created', 100);
-        $this->assertFileDoesNotExist($stored);
+        $this->assertNull(DB::table('member_import_batches')->where('id', $id)->value('file_content'));
         $this->asManager()->postJson($this->api("members/imports/{$id}/run"), ['from' => 100])->assertOk()->assertJsonPath('batch.state', 'cancelled');
         $this->assertSame(100, LoyaltyMember::query()->where('member_number', 'like', 'HL-%')->count());
     }

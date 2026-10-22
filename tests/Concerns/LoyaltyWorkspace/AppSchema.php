@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * The tables Card & app (release 2 §7) reads and writes beyond SetsUpLoyaltyWorkspace's: `wallet_configs` as its
- * migration builds it (the colour defaults included, since the full admin's answers show them). `hotel_settings`,
+ * migration builds it (the colour defaults included, since the full admin's answers show them), with release 3's file
+ * contents (§2). `hotel_settings`,
  * `rewards.image_url` and `special_offers.image_url` are already in the shared set.
  */
 trait AppSchema
@@ -33,6 +34,12 @@ trait AppSchema
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
             });
+        }
+        // Release 3 §2: the three files' contents, encrypted (2026_10_22_100000).
+        foreach (['apple_cert_content', 'apple_wwdr_content', 'google_service_account_content'] as $column) {
+            if (!Schema::hasColumn('wallet_configs', $column)) {
+                Schema::table('wallet_configs', fn (Blueprint $t) => $t->longText($column)->nullable());
+            }
         }
     }
 

@@ -8,9 +8,11 @@ use App\Jobs\SendEmailCampaignChunk;
 use App\Models\EmailCampaign;
 use App\Models\LoyaltyMember;
 use App\Models\MemberSegment;
+use App\Services\Email\CampaignTags;
 use App\Services\MemberSegmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -120,10 +122,14 @@ class EmailCampaignController extends Controller
             return response()->json(['message' => 'Your staff account has no email on file.'], 422);
         }
 
+        // Tags filled as a member's would be, with the sender's own name as the sample (CampaignTags::sample): the
+        // test shows the personalisation without putting any member's details in a staff inbox.
+        $sample = CampaignTags::sample($user, (int) $campaign->organization_id);
+
         try {
-            Mail::html($campaign->body_html, function ($mail) use ($email, $campaign, $user) {
+            Mail::html(CampaignTags::html((string) $campaign->body_html, $sample), function ($mail) use ($email, $campaign, $user, $sample) {
                 $mail->to($email, $user->name ?? null)
-                     ->subject('[TEST] ' . $campaign->subject);
+                     ->subject('[TEST] ' . CampaignTags::subject((string) $campaign->subject, $sample));
             });
         } catch (\Throwable $e) {
             Log::warning('Email campaign test send failed', [
@@ -313,6 +319,10 @@ class EmailCampaignController extends Controller
             'status'        => EmailCampaign::STATUS_DRAFT,
             'error_message' => null,
         ])->save();
+
+        // The record of who this send reached belongs to that send. A reset is the choice to send again, to everyone
+        // (the warning below says so); left in place, the record would make the next send pass those members over.
+        DB::table('email_campaign_deliveries')->where('campaign_id', $campaign->id)->delete();
 
         return response()->json([
             'campaign' => $campaign->fresh(),

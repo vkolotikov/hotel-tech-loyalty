@@ -7,6 +7,7 @@ use App\Models\LoyaltyMember;
 use App\Models\MemberImportBatch;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\LoyaltyWorkspace\MembershipSchema;
 use Tests\Concerns\SetsUpLoyaltyWorkspace;
@@ -16,7 +17,8 @@ use Tests\TestCase;
  * The full admin's resumable member import (MemberImportController), whose preview and completion steps HexaTech
  * Loyalty release 2 (§4.3) shares through App\Services\Loyalty\Members\MemberImportRun. Written against the controller
  * as it was and kept passing on the new code: the same refusals in the same words, the same preview, the same
- * progress, the same audit when a run completes.
+ * progress, the same audit when a run completes. Release 3 (§2) keeps the file in the batch's row instead of on the
+ * local disk and clears it when the batch ends; the answers stayed as they were.
  */
 class MemberImportEndpointsTest extends TestCase
 {
@@ -77,7 +79,9 @@ class MemberImportEndpointsTest extends TestCase
         $this->assertSame(0, LoyaltyMember::query()->where('member_number', 'like', 'HL-%')->count());
 
         $batch = MemberImportBatch::query()->where('uuid', $response->json('batch.uuid'))->firstOrFail();
-        $this->assertFileExists($batch->stored_path);
+        $this->assertSame($csv, $batch->fileBytes());
+        $this->assertNull($batch->stored_path);
+        $this->assertSame([], Storage::allFiles());
         $this->assertSame($this->manager->id, (int) $batch->created_by_user_id);
     }
 
@@ -108,6 +112,8 @@ class MemberImportEndpointsTest extends TestCase
         $this->assertSame(['batch_id' => $uuid, 'file' => 'guests.csv', 'imported' => 2, 'skipped' => 0, 'errors' => 0, 'points_awarded' => 300], $audit->new_values);
         $this->assertSame('Member import finished: 2 created, 0 skipped, 0 errors', $audit->description);
 
+        $this->assertNull(DB::table('member_import_batches')->where('uuid', $uuid)->value('file_content'));
+
         // A finished run answers as it stands and does nothing more.
         $this->asManager()->postJson($this->admin("{$uuid}/process"))->assertOk()->assertJsonPath('batch.ok', 2);
         $this->assertSame(1, AuditLog::where('action', 'members_bulk_import')->count());
@@ -119,6 +125,7 @@ class MemberImportEndpointsTest extends TestCase
 
         $this->asManager()->getJson($this->admin($uuid))->assertOk()->assertJsonPath('batch.uuid', $uuid)->assertJsonPath('batch.problems', []);
         $this->asManager()->postJson($this->admin("{$uuid}/cancel"))->assertOk()->assertJsonPath('batch.status', 'cancelled')->assertJsonPath('batch.is_finished', true);
+        $this->assertNull(DB::table('member_import_batches')->where('uuid', $uuid)->value('file_content'));
         $this->asManager()->postJson($this->admin("{$uuid}/process"))->assertOk()->assertJsonPath('batch.status', 'cancelled')->assertJsonPath('batch.ok', 0);
 
         $list = $this->asManager()->getJson($this->admin(''))->assertOk()->json('data');

@@ -18,9 +18,10 @@ import { NOT_REACHED_WORDS } from './words'
  * server's count of the segment's members who agreed to marketing email, are not unsubscribed and whose address is not
  * blocked, the members the pipeline is then handed — and how many of the segment will not get it, and why. The button
  * names that number, and the server starts nothing if the number or the draft changed meanwhile (`audience_changed`,
- * `changed`): the person is asked again with the new number.
+ * `changed`): the person is asked again with the new number. Before Send it names any double-braced word in the saved
+ * subject or body that no tag fills (the server's `unknown_tags`): members would read it as written.
  */
-export function SendDialog({ campaign, tags, onClose }: { campaign: Campaign; tags: boolean; onClose: () => void }) {
+export function SendDialog({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const client = useQueryClient()
@@ -54,8 +55,10 @@ export function SendDialog({ campaign, tags, onClose }: { campaign: Campaign; ta
           </div>
         )}
         {a && said && <Numbers audience={a} said={said} locale={locale} />}
-        {said?.state === 'ok' && tags && (
-          <Notice tone="warning">{t('loyalty.campaigns.send.tags', 'The email holds a tag such as {{tag}}. Tags are not filled in: members will read it as written.', { tag: '{{member.name}}' })}</Notice>
+        {said?.state === 'ok' && campaign.unknown_tags.length > 0 && (
+          <div data-unknown-tags="">
+            <Notice tone="warning">{t('loyalty.campaigns.send.unknown_tags', 'The email holds {{tags}}, which no tag fills: members will read it as written.', { tags: campaign.unknown_tags.join(', ') })}</Notice>
+          </div>
         )}
         {said?.state === 'ok' && (
           <p className="text-a-text-2">{t('loyalty.campaigns.send.final', 'Once it starts it can be stopped, but emails already sent cannot be taken back.')}</p>

@@ -106,7 +106,10 @@ final class AppointmentClock
         return CarbonImmutable::parse($raw)->format(self::DIGITS);
     }
 
-    /** A value that does not name a zone (PortalBootstrap::namedZone(), the venue zone's own test) falls back as PortalBootstrap::timezone() does. */
+    /**
+     * A value that does not name a zone (PortalBootstrap::namedZone(), the venue zone's own test) falls back as
+     * PortalBootstrap::timezone() does; an old name (`US/Eastern`) is read as the zone it links to, on every PHP.
+     */
     private static function safeZone(string $zone): string
     {
         return PortalBootstrap::namedZone($zone) ?? self::fallbackZone();

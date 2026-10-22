@@ -9,6 +9,7 @@
 export const TAB_WORDS: Record<string, string> = {
   campaigns: 'Campaigns',
   segments: 'Segments',
+  push: 'Push messages',
 }
 
 /** A campaign's status (EmailCampaign::STATUS_*). */
@@ -130,6 +131,23 @@ export const NOT_REACHED_WORDS: Record<string, string> = {
   no_email: '{{number}} have no email address',
 }
 
+/**
+ * A tag's word in the editor's tag bar, by its name (CampaignTags::options, EmailTemplate::AVAILABLE_TAGS). A tag the
+ * server adds later is named by the server's own English description.
+ */
+export const TAG_WORDS: Record<string, string> = {
+  member_name: 'Full name',
+  first_name: 'First name',
+  email: 'Email address',
+  member_number: 'Card number',
+  tier_name: 'Tier',
+  points_balance: 'Points balance',
+  lifetime_points: 'Points earned in all',
+  referral_code: 'Referral code',
+  hotel_name: 'Venue name',
+  current_year: 'Year',
+}
+
 /** The families above by the key prefix they are read under. */
 export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   tab: TAB_WORDS,
@@ -145,4 +163,5 @@ export const WORD_FAMILIES: Record<string, Record<string, string>> = {
   'draft.problem': DRAFT_PROBLEM_WORDS,
   blocker: BLOCKER_WORDS,
   not_reached: NOT_REACHED_WORDS,
+  tag: TAG_WORDS,
 }

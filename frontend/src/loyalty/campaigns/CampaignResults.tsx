@@ -13,7 +13,7 @@ import { points, when } from '../lib/format'
 import { ConfirmDialog } from '../ui/formParts'
 import { afterCampaignChange, campaignKey, campaignsApi } from './api'
 import { DeleteDraft } from './CampaignEditor'
-import { campaignActions, campaignPath, FULL_ADMIN_CAMPAIGNS, progressOf } from './campaignsMath'
+import { campaignActions, campaignPath, FULL_ADMIN_CAMPAIGNS, previewFilled, progressOf } from './campaignsMath'
 import { EmailPreview } from './EmailPreview'
 import { ERRORS } from './errors'
 import { Refusal, StatusBadge } from './parts'
@@ -67,7 +67,7 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
           <p className="text-xs text-a-text-2">{t('loyalty.campaigns.results.last_progress', 'Last batch {{when}}.', { when: when(c.last_progress_at, locale, timeZone) })}</p>
         )}
         {progress.skipped > 0 && (
-          <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started.', { number: n(progress.skipped) })}</p>
+          <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.', { number: n(progress.skipped) })}</p>
         )}
       </section>
 
@@ -75,7 +75,7 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
 
       <section aria-labelledby="campaign-sent" className="max-w-2xl space-y-2">
         <Eyebrow><span id="campaign-sent">{t('loyalty.campaigns.results.email', 'The email')}</span></Eyebrow>
-        <EmailPreview html={c.body_html} />
+        <EmailPreview html={c.preview_html} filled={previewFilled(c)} />
       </section>
 
       {stopping && <CancelDialog campaign={c} onClose={() => setStopping(false)} />}
@@ -99,7 +99,7 @@ export function ElsewhereDraft({ campaign: c }: { campaign: Campaign }) {
       <Actions campaign={c} cancel={false} onCancel={() => {}} onRemove={() => setRemoving(true)} />
       <section aria-labelledby="campaign-draft" className="max-w-2xl space-y-2">
         <Eyebrow><span id="campaign-draft">{t('loyalty.campaigns.preview.heading', 'Preview')}</span></Eyebrow>
-        <EmailPreview html={c.body_html} />
+        <EmailPreview html={c.preview_html} filled={previewFilled(c)} />
       </section>
       {removing && <DeleteDraft id={c.id} name={c.name} onClose={() => setRemoving(false)} />}
     </div>

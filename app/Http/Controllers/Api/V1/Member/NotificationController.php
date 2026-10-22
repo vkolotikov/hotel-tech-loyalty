@@ -13,8 +13,9 @@ class NotificationController extends Controller
     {
         $member = $request->user()->loyaltyMember;
 
+        // Every row is a notification kept for the member's inbox (NotificationService::keep(), release 3 §3). No
+        // `is_sent` filter: a row the code before release 3 wrote while the deploy switched over still shows.
         $notifications = PushNotification::where('member_id', $member->id)
-            ->where('is_sent', true)
             ->orderByDesc('created_at')
             ->paginate($request->get('per_page', 50));
 

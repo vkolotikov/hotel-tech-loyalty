@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\SetsUpMinimalSchema;
 use Tests\TestCase;
 
@@ -43,9 +44,13 @@ use Tests\TestCase;
  *     (fail-open — admins re-save to encrypt)
  *   - Null password persists as null (defensive)
  *   - appleReady() returns true ONLY when all 4 required Apple
- *     fields set + is_active
+ *     fields set + is_active (the two files: held in the row)
  *   - googleReady() returns true ONLY when all 3 required Google
- *     fields set + is_active
+ *     fields set + is_active (the key: held in the row)
+ *   - The files (HexaTech Loyalty release 3 §2) are ciphertext in
+ *     the raw columns, never in an array or JSON form; a file named
+ *     by a pre-release-3 path and still on the local disk is taken
+ *     into the row on read, a path whose file is gone is not ready
  *   - is_active=false → both predicates false (defensive
  *     master kill switch)
  *   - BelongsToOrganization + TenantScope isolation
@@ -92,6 +97,9 @@ class WalletConfigModelTest extends TestCase
                 $t->string('google_issuer_id')->nullable();
                 $t->string('google_class_suffix')->nullable();
                 $t->string('google_service_account_path')->nullable();
+                $t->longText('apple_cert_content')->nullable();
+                $t->longText('apple_wwdr_content')->nullable();
+                $t->longText('google_service_account_content')->nullable();
                 $t->boolean('is_active')->default(true);
                 $t->timestamps();
                 $t->index('organization_id');
@@ -111,12 +119,20 @@ class WalletConfigModelTest extends TestCase
         parent::tearDown();
     }
 
+    /** A row; `apple_cert`, `apple_wwdr` and `google_service_account` name a file's bytes (null: none). */
     private function config(array $attrs = []): WalletConfig
     {
-        return WalletConfig::create(array_merge([
+        $files = array_intersect_key($attrs, WalletConfig::FILES);
+        $config = WalletConfig::create(array_merge([
             'organization_id' => $this->orgId,
             'is_active'       => true,
-        ], $attrs));
+        ], array_diff_key($attrs, WalletConfig::FILES)));
+        foreach (array_filter($files, fn ($bytes) => $bytes !== null) as $file => $bytes) {
+            $config->putFile($file, $bytes);
+        }
+        $config->save();
+
+        return $config;
     }
 
     /* ─── apple_cert_password encryption ─── */
@@ -214,12 +230,12 @@ class WalletConfigModelTest extends TestCase
     public function test_apple_ready_true_when_all_4_required_fields_set(): void
     {
         // The 4 required: apple_pass_type_id + apple_team_id +
-        // apple_cert_path + apple_wwdr_path. PLUS is_active.
+        // the certificate + the WWDR certificate. PLUS is_active.
         $config = $this->config([
             'apple_pass_type_id' => 'pass.com.example',
             'apple_team_id'      => 'ABCDEF1234',
-            'apple_cert_path'    => '/private/storage/cert.p12',
-            'apple_wwdr_path'    => '/private/storage/wwdr.pem',
+            'apple_cert'         => 'p12 bytes',
+            'apple_wwdr'         => 'wwdr bytes',
         ]);
 
         $this->assertTrue($config->appleReady(),
@@ -231,8 +247,8 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'apple_pass_type_id' => null, // missing
             'apple_team_id'      => 'ABCDEF1234',
-            'apple_cert_path'    => '/private/storage/cert.p12',
-            'apple_wwdr_path'    => '/private/storage/wwdr.pem',
+            'apple_cert'         => 'p12 bytes',
+            'apple_wwdr'         => 'wwdr bytes',
         ]);
 
         $this->assertFalse($config->appleReady());
@@ -243,32 +259,32 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'apple_pass_type_id' => 'pass.com.example',
             'apple_team_id'      => null,
-            'apple_cert_path'    => '/private/storage/cert.p12',
-            'apple_wwdr_path'    => '/private/storage/wwdr.pem',
+            'apple_cert'         => 'p12 bytes',
+            'apple_wwdr'         => 'wwdr bytes',
         ]);
 
         $this->assertFalse($config->appleReady());
     }
 
-    public function test_apple_ready_false_when_cert_path_missing(): void
+    public function test_apple_ready_false_when_cert_missing(): void
     {
         $config = $this->config([
             'apple_pass_type_id' => 'pass.com.example',
             'apple_team_id'      => 'ABCDEF1234',
-            'apple_cert_path'    => null,
-            'apple_wwdr_path'    => '/private/storage/wwdr.pem',
+            'apple_cert'         => null,
+            'apple_wwdr'         => 'wwdr bytes',
         ]);
 
         $this->assertFalse($config->appleReady());
     }
 
-    public function test_apple_ready_false_when_wwdr_path_missing(): void
+    public function test_apple_ready_false_when_wwdr_missing(): void
     {
         $config = $this->config([
             'apple_pass_type_id' => 'pass.com.example',
             'apple_team_id'      => 'ABCDEF1234',
-            'apple_cert_path'    => '/private/storage/cert.p12',
-            'apple_wwdr_path'    => null,
+            'apple_cert'         => 'p12 bytes',
+            'apple_wwdr'         => null,
         ]);
 
         $this->assertFalse($config->appleReady());
@@ -283,8 +299,8 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'apple_pass_type_id' => 'pass.com.example',
             'apple_team_id'      => 'ABCDEF1234',
-            'apple_cert_path'    => '/private/storage/cert.p12',
-            'apple_wwdr_path'    => '/private/storage/wwdr.pem',
+            'apple_cert'         => 'p12 bytes',
+            'apple_wwdr'         => 'wwdr bytes',
             'is_active'          => false,
         ]);
 
@@ -299,7 +315,7 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'google_issuer_id'             => '3388000000001234567',
             'google_class_suffix'          => 'loyalty_card',
-            'google_service_account_path'  => '/private/storage/sa.json',
+            'google_service_account'       => '{"client_email":"a@b"}',
         ]);
 
         $this->assertTrue($config->googleReady());
@@ -310,7 +326,7 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'google_issuer_id'             => null,
             'google_class_suffix'          => 'loyalty_card',
-            'google_service_account_path'  => '/private/storage/sa.json',
+            'google_service_account'       => '{"client_email":"a@b"}',
         ]);
 
         $this->assertFalse($config->googleReady());
@@ -321,18 +337,18 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'google_issuer_id'             => '3388000000001234567',
             'google_class_suffix'          => null,
-            'google_service_account_path'  => '/private/storage/sa.json',
+            'google_service_account'       => '{"client_email":"a@b"}',
         ]);
 
         $this->assertFalse($config->googleReady());
     }
 
-    public function test_google_ready_false_when_service_account_path_missing(): void
+    public function test_google_ready_false_when_service_account_missing(): void
     {
         $config = $this->config([
             'google_issuer_id'             => '3388000000001234567',
             'google_class_suffix'          => 'loyalty_card',
-            'google_service_account_path'  => null,
+            'google_service_account'       => null,
         ]);
 
         $this->assertFalse($config->googleReady());
@@ -343,11 +359,86 @@ class WalletConfigModelTest extends TestCase
         $config = $this->config([
             'google_issuer_id'             => '3388000000001234567',
             'google_class_suffix'          => 'loyalty_card',
-            'google_service_account_path'  => '/private/storage/sa.json',
+            'google_service_account'       => '{"client_email":"a@b"}',
             'is_active'                    => false,
         ]);
 
         $this->assertFalse($config->googleReady());
+    }
+
+    /* ─── The files, in the row (release 3 §2) ─── */
+
+    public function test_a_file_is_ciphertext_in_its_raw_column_and_comes_back_byte_for_byte(): void
+    {
+        // A .p12 is binary: every byte value must survive.
+        $p12 = random_bytes(64) . "\x00\xff\x30\x82" . implode('', array_map('chr', range(0, 255)));
+        $config = $this->config(['apple_cert' => $p12, 'google_service_account' => '{"private_key":"KEY-MATERIAL"}']);
+
+        $raw = (string) DB::table('wallet_configs')->where('id', $config->id)->value('apple_cert_content');
+        $this->assertNotSame('', $raw);
+        $this->assertStringNotContainsString(base64_encode($p12), $raw, 'CRITICAL: the raw column MUST be ciphertext.');
+        $this->assertSame(base64_encode($p12), Crypt::decryptString($raw), 'The cast encrypts the base64 of the bytes.');
+        $this->assertStringNotContainsString('KEY-MATERIAL', (string) DB::table('wallet_configs')->where('id', $config->id)->value('google_service_account_content'));
+
+        $row = WalletConfig::first();
+        $this->assertSame($p12, $row->fileBytes('apple_cert'));
+        $this->assertTrue($row->hasFile('apple_cert'));
+        $this->assertFalse($row->hasFile('apple_wwdr'));
+        $this->assertNull($row->fileBytes('apple_wwdr'));
+    }
+
+    public function test_the_files_and_the_password_never_appear_in_an_array_or_json_form(): void
+    {
+        $this->config(['apple_cert_password' => 'PASSWORD-1', 'apple_cert' => 'CERT-BYTES', 'apple_wwdr' => 'WWDR-BYTES', 'google_service_account' => 'SA-BYTES']);
+        $row = WalletConfig::first();
+
+        $json = $row->toJson();
+        foreach (['PASSWORD-1', 'CERT-BYTES', 'WWDR-BYTES', 'SA-BYTES', 'apple_cert_content', 'apple_cert_password'] as $secret) {
+            $this->assertStringNotContainsString($secret, $json);
+        }
+        $this->assertArrayNotHasKey('google_service_account_content', $row->toArray());
+    }
+
+    public function test_content_that_no_longer_decrypts_reads_as_no_file_without_throwing(): void
+    {
+        $config = $this->config();
+        DB::table('wallet_configs')->where('id', $config->id)->update(['apple_cert_content' => 'not-a-crypt-payload']);
+
+        $row = WalletConfig::first();
+        $this->assertTrue($row->hasFile('apple_cert'), 'The row names a file …');
+        $this->assertNull($row->fileBytes('apple_cert'), '… that cannot be had.');
+    }
+
+    public function test_a_file_uploaded_before_release_3_is_taken_into_the_row_when_read_and_the_disk_is_left_alone(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put("wallet/{$this->orgId}/apple-cert.p12", "\x30\x82legacy-p12");
+        DB::table('wallet_configs')->insert([
+            'organization_id'             => $this->orgId,
+            'apple_pass_type_id'          => 'pass.com.example',
+            'apple_team_id'               => 'ABCDEF1234',
+            'apple_cert_path'             => "wallet/{$this->orgId}/apple-cert.p12",
+            'apple_wwdr_path'             => "wallet/{$this->orgId}/apple-wwdr.pem",
+            'is_active'                   => true,
+            'created_at'                  => now(),
+            'updated_at'                  => now(),
+        ]);
+
+        $row = WalletConfig::first();
+
+        // The certificate is in the row, encrypted; the WWDR file was not on the disk, so it stays named but absent.
+        $this->assertSame("\x30\x82legacy-p12", $row->fileBytes('apple_cert'));
+        $raw = DB::table('wallet_configs')->where('organization_id', $this->orgId)->first();
+        $this->assertSame(base64_encode("\x30\x82legacy-p12"), Crypt::decryptString($raw->apple_cert_content));
+        $this->assertNull($raw->apple_wwdr_content);
+        $this->assertSame("wallet/{$this->orgId}/apple-cert.p12", $raw->apple_cert_path);
+        $this->assertSame("wallet/{$this->orgId}/apple-wwdr.pem", $raw->apple_wwdr_path);
+        Storage::disk('local')->assertExists("wallet/{$this->orgId}/apple-cert.p12");
+        $this->assertFalse($row->appleReady(), 'A path whose file is gone is not a file.');
+
+        // From then on the row is the source: the disk can be empty (a deploy, another replica).
+        Storage::fake('local');
+        $this->assertSame("\x30\x82legacy-p12", WalletConfig::first()->fileBytes('apple_cert'));
     }
 
     /* ─── is_active boolean cast ─── */

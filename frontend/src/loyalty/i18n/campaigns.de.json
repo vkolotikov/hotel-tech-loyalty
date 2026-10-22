@@ -36,16 +36,18 @@
     "segment_option": "{{name}} · {{number}} Mitglieder",
     "segment_gone": "Ein Segment, das es nicht mehr gibt",
     "body": "Inhalt",
-    "tags": "Platzhalter wie {{tag}} werden nicht ausgefüllt: Mitglieder würden sie so lesen, wie sie dastehen. Schreiben Sie die Wörter selbst.",
     "duplicate": "Duplizieren",
-    "delete": "Entwurf löschen"
+    "delete": "Entwurf löschen",
+    "unknown_tags": "{{tags}} erreicht die Mitglieder so, wie es dasteht: Kein Platzhalter dieses Namens wird ausgefüllt."
   },
   "preview": {
     "heading": "Vorschau",
     "saved_only": "Dies zeigt den gespeicherten Entwurf. Speichern Sie, um Ihre Änderungen zu sehen.",
     "footer": "Jede E-Mail an ein Mitglied endet mit dem Namen des Hauses und einem Abmeldelink.",
     "empty": "Die E-Mail ist leer. Fügen Sie eine Überschrift oder Text hinzu.",
-    "title": "Vorschau der E-Mail"
+    "title": "Vorschau der E-Mail",
+    "subject": "Betreff",
+    "sample": "Die Platzhalter zeigen ein Beispiel – Ihren eigenen Namen, die erste Stufe, erfundene Punkte –, wie in Ihrer Test-E-Mail. Jedes Mitglied sieht seine eigenen."
   },
   "delete": {
     "title": "{{name}} löschen?",
@@ -77,7 +79,7 @@
     "stopped": "Der Versand brach vor dem Ende ab: {{sent}} wurden gesendet, der Rest nicht.",
     "cancelled": "Abgebrochen: {{sent}} wurden vor dem Stopp gesendet.",
     "last_progress": "Letztes Paket {{when}}.",
-    "skipped": "{{number}} erhielten keine E-Mail: Sie haben nach dem Start ihre Zustimmung zurückgezogen oder sich abgemeldet.",
+    "skipped": "{{number}} erhielten keine E-Mail: Sie haben nach dem Start ihre Zustimmung zurückgezogen oder sich abgemeldet, oder ihre Adresse wurde nach einer Unzustellbarkeit oder Beschwerde gesperrt.",
     "email": "Die E-Mail",
     "to": "An {{segment}}",
     "by": "Gesendet von {{name}}",
@@ -177,7 +179,6 @@
   "send": {
     "title": "Diese Kampagne senden",
     "counting": "Empfänger werden gezählt…",
-    "tags": "Die E-Mail enthält einen Platzhalter wie {{tag}}. Platzhalter werden nicht ausgefüllt: Mitglieder lesen ihn so, wie er dasteht.",
     "final": "Einmal gestartet, lässt sich der Versand stoppen, aber bereits gesendete E-Mails lassen sich nicht zurückholen.",
     "keep": "Nicht jetzt",
     "confirm": "An {{number}} Mitglieder senden",
@@ -202,11 +203,13 @@
       "feature_locked": "Ihr Tarif enthält keine E-Mail-Kampagnen.",
       "network": "Keine Verbindung. Laden Sie die Seite neu, um zu sehen, ob der Versand begonnen hat, bevor Sie erneut auf Senden drücken.",
       "unknown": "Der Versand hat möglicherweise nicht begonnen. Laden Sie die Seite neu und prüfen Sie den Stand, bevor Sie erneut auf Senden drücken."
-    }
+    },
+    "unknown_tags": "Die E-Mail enthält {{tags}}, das kein Platzhalter ausfüllt: Mitglieder lesen es so, wie es dasteht."
   },
   "tab": {
     "campaigns": "Kampagnen",
-    "segments": "Segmente"
+    "segments": "Segmente",
+    "push": "Push-Nachrichten"
   },
   "status": {
     "draft": "Entwurf",
@@ -300,6 +303,26 @@
     "unsubscribed": "{{number}} haben sich abgemeldet",
     "suppressed": "{{number}} haben eine Adresse, die unzustellbar war oder sich beschwert hat und daher nie angeschrieben wird",
     "no_email": "{{number}} haben keine E-Mail-Adresse"
+  },
+  "tags": {
+    "title": "Platzhalter",
+    "where_none": "Klicken Sie in den Betreff, eine Überschrift, einen Text oder eine Schaltflächen-Beschriftung und wählen Sie dann einen Platzhalter, der dort eingefügt wird.",
+    "where_subject": "Ein Platzhalter kommt an die Stelle des Cursors im Betreff.",
+    "where_block": "Ein Platzhalter kommt an die Stelle des Cursors in {{what}} {{n}}.",
+    "each": "Jedes Mitglied erhält seine eigenen Angaben.",
+    "no_room": "In diesem Feld ist kein Platz mehr für diesen Platzhalter."
+  },
+  "tag": {
+    "member_name": "Vollständiger Name",
+    "first_name": "Vorname",
+    "email": "E-Mail-Adresse",
+    "member_number": "Kartennummer",
+    "tier_name": "Stufe",
+    "points_balance": "Punktestand",
+    "lifetime_points": "Insgesamt gesammelte Punkte",
+    "referral_code": "Empfehlungscode",
+    "hotel_name": "Name des Hauses",
+    "current_year": "Jahr"
   },
   "remove_segment": {
     "error": {

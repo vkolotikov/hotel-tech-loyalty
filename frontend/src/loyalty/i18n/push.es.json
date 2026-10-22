@@ -1,0 +1,239 @@
+{
+  "audience": {
+    "error": {
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: no se pudo contar a quién llegaría.",
+      "no_audience": "Elija primero quién la recibe.",
+      "no_category": "Elija primero el tipo de mensaje.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "unknown": "No se pudo contar a quién llegaría. Inténtelo de nuevo."
+    }
+  },
+  "back": "Todas las notificaciones push",
+  "blocker": {
+    "body": "Escriba el mensaje.",
+    "category": "Elija el tipo de mensaje.",
+    "no_segment": "Elija quién la recibe.",
+    "segment_gone": "Su segmento ya no existe. Elija otro.",
+    "segment_problem": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+    "title": "Escriba un título.",
+    "unsaved": "Primero guarde sus cambios."
+  },
+  "cancel": {
+    "body": "Ya salieron {{sent}} notificaciones y siguen enviadas. El resto no se envía; el envío se detiene en menos de un lote de 100.",
+    "confirm": "Detener el envío",
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: puede que siga enviándose. Inténtelo de nuevo.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "not_sending": "Esta notificación ya no se está enviando. La página la muestra ahora tal como está.",
+      "unknown": "No se pudo detener el envío. Inténtelo de nuevo."
+    },
+    "keep": "Seguir enviando",
+    "title": "¿Detener el envío de {{name}}?"
+  },
+  "category": {
+    "offers": "Ofertas",
+    "points": "Puntos",
+    "stays": "Visitas y reservas",
+    "tier": "Novedades del nivel"
+  },
+  "category_hint": {
+    "offers": "Ofertas especiales, recompensas y promociones.",
+    "points": "Puntos ganados, bonificaciones y puntos que van a caducar.",
+    "stays": "Visitas, estancias y reservas.",
+    "tier": "Cambios de nivel y ventajas del nivel."
+  },
+  "copy_name": "{{name}} (copia)",
+  "create": {
+    "error": {
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: no se creó ninguna notificación. Inténtelo de nuevo.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "unknown": "No se pudo crear la notificación. Inténtelo de nuevo."
+    }
+  },
+  "delete": {
+    "body": "El borrador se elimina para siempre. No se envió nada desde él.",
+    "confirm": "Eliminar borrador",
+    "keep": "Conservarlo",
+    "title": "¿Eliminar {{name}}?"
+  },
+  "duplicate": {
+    "error": {
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: no se creó ninguna copia. Inténtelo de nuevo.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "unknown": "No se pudo crear la copia. Inténtelo de nuevo."
+    }
+  },
+  "editor": {
+    "audience": "Quién la recibe",
+    "audience_hint": "Solo la reciben los miembros del segmento que tienen la aplicación, con las notificaciones push y este tipo de mensaje activados. Antes de enviar verá el número exacto.",
+    "before_send": "Antes de poder enviarla:",
+    "body": "Mensaje",
+    "body_example": "p. ej. Cada visita hasta el domingo suma el doble de puntos.",
+    "category": "Tipo de mensaje",
+    "category_hint": "Los miembros eligen en la aplicación qué tipos reciben. Quien haya desactivado este tipo no la recibe, ni siquiera en la bandeja de entrada.",
+    "choose_segment": "Elija un segmento",
+    "delete": "Eliminar borrador",
+    "duplicate": "Duplicar",
+    "heading": "El mensaje",
+    "name": "Nombre",
+    "name_hint": "Solo lo ve el personal.",
+    "save": "Guardar borrador",
+    "segment_gone": "Un segmento que ya no existe",
+    "segment_option": "{{name}} · {{number}} miembros",
+    "segment_problem": "{{name}} (hay que corregir una regla)",
+    "send": "Enviar…",
+    "title": "Título",
+    "title_example": "p. ej. Puntos dobles este fin de semana",
+    "unsaved": "Cambios sin guardar"
+  },
+  "guide": {
+    "fits": "{{chars}} de unos {{guide}} caracteres que se ven completos",
+    "may_cut": "{{chars}} caracteres: los teléfonos pueden cortarlo a partir de unos {{guide}}",
+    "too_long": "{{chars}} caracteres: como máximo se pueden guardar {{max}}"
+  },
+  "list": {
+    "counts": "{{sent}} de {{total}} entregadas",
+    "edited": "Editada el {{day}}",
+    "line": "Un mensaje breve al teléfono de los miembros de un segmento que tienen la aplicación. Cada uno queda también en su bandeja de entrada de la aplicación.",
+    "new": "Nueva notificación push",
+    "new_name": "Nueva notificación push, {{day}}",
+    "no_category": "Tipo aún sin elegir",
+    "no_segment": "Sin segmento",
+    "no_title": "Aún sin título",
+    "none": "Aún no hay notificaciones push. Cree una, elija su tipo y un segmento, y envíela."
+  },
+  "load": {
+    "error": {
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "unknown": "No se pudo cargar. Inténtelo de nuevo."
+    }
+  },
+  "not_reached": {
+    "no_device": "{{number}} no tienen un teléfono con la aplicación",
+    "opted_out": "{{number}} desactivaron este tipo de mensaje",
+    "push_off": "{{number}} desactivaron las notificaciones push"
+  },
+  "outcome": {
+    "failed": "No entregadas",
+    "inbox_only": "Solo en la bandeja",
+    "pending": "En curso",
+    "sent": "Entregadas",
+    "skipped": "Omitidas"
+  },
+  "outcome_hint": {
+    "failed": "No se pudo llegar al teléfono, por ejemplo porque se eliminó la aplicación. Aun así está en su bandeja de entrada.",
+    "inbox_only": "Desactivaron las notificaciones push después de empezar el envío. Está en su bandeja de entrada de la aplicación.",
+    "pending": "Se les estaba enviando cuando el envío se detuvo. No se les vuelve a enviar.",
+    "sent": "El servicio de notificaciones del teléfono la aceptó.",
+    "skipped": "Desactivaron este tipo de mensaje, o se desactivó su cuenta, después de empezar el envío."
+  },
+  "plan_locked": "Su plan no incluye notificaciones push. Las campañas de correo y los segmentos no se ven afectados.",
+  "preview": {
+    "caption": "Así se ve en la pantalla de bloqueo. Los teléfonos varían; un mensaje largo se corta tras unas líneas.",
+    "cut": "Los teléfonos cortan un título a partir de unos {{guide}} caracteres, como aquí.",
+    "heading": "En un teléfono",
+    "no_body": "Su mensaje",
+    "no_title": "Su título",
+    "now": "ahora"
+  },
+  "problem": {
+    "body_long": "El mensaje puede tener como máximo {{max}} caracteres.",
+    "category": "Elija uno de los tipos de abajo.",
+    "name": "Ponga un nombre a la notificación, de hasta {{max}} caracteres.",
+    "segment_gone": "Ese segmento ya no existe. Elija otro.",
+    "title_long": "El título puede tener como máximo {{max}} caracteres."
+  },
+  "reach": {
+    "choose": "Elija un tipo y un segmento para ver a quién llega.",
+    "counted": "Ahora llegaría a {{number}} de los {{members}} miembros de {{segment}}.",
+    "save_first": "Guarde el borrador para contar a quién llega."
+  },
+  "remove": {
+    "error": {
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: no se eliminó nada. Inténtelo de nuevo.",
+      "not_a_draft": "Solo se puede eliminar un borrador. La página lo muestra ahora tal como está.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "unknown": "No se pudo eliminar el borrador. Inténtelo de nuevo."
+    }
+  },
+  "results": {
+    "by": "Enviada por {{name}}",
+    "cancel": "Detener el envío",
+    "cancelled": "Cancelada: se entregaron {{sent}} antes de detenerse.",
+    "done": "Enviada el {{when}}.",
+    "gone": "No se llegó a {{number}}: su ficha de miembro se eliminó o se fusionó después de empezar el envío.",
+    "last_progress": "Último lote: {{when}}.",
+    "message": "El mensaje",
+    "of": "De",
+    "outcome_count": "{{outcome}}: {{number}}",
+    "progress": "Procesadas hasta ahora",
+    "sending": "Enviando en lotes de 100. Esta página se actualiza cada 10 segundos.",
+    "stopped": "El envío se detuvo antes del final: se entregaron {{sent}} y el resto no.",
+    "title": "Cómo va el envío",
+    "to": "Para {{segment}}"
+  },
+  "save": {
+    "error": {
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "invalid": "Revise los campos marcados abajo.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión: no se guardó nada. Inténtelo de nuevo.",
+      "not_a_draft": "Esta notificación ya no es un borrador: se envió entretanto. La página la muestra ahora tal como está.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "unknown": "No se pudo guardar el borrador. Inténtelo de nuevo."
+    }
+  },
+  "send": {
+    "confirm": "Enviar a {{number}} miembros",
+    "counting": "Contando a quién llegará…",
+    "error": {
+      "already_started": "Esta notificación ya se inició. La página muestra ahora cómo va el envío.",
+      "audience_changed": "Ahora llegaría a {{reached}} miembros. Compruebe el número y vuelva a enviarla.",
+      "bad_rule": "Su segmento tiene una regla que no se puede usar. Corrija primero el segmento.",
+      "changed": "La notificación cambió desde que se mostró esta página. Revísela y vuelva a enviarla.",
+      "feature_locked": "Su plan no incluye notificaciones push.",
+      "incomplete": "La notificación no está lista para enviarse. La página muestra ahora lo que le falta.",
+      "manager_only": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "network": "Sin conexión. Recargue la página para ver si empezó antes de volver a pulsar Enviar.",
+      "no_audience": "Elija primero quién la recibe.",
+      "no_category": "Elija primero el tipo de mensaje.",
+      "nobody_to_send_to": "Nadie de este segmento puede recibirla.",
+      "not_allowed": "Solo un propietario o un responsable puede trabajar con notificaciones push.",
+      "not_found": "Esta notificación push ya no existe.",
+      "not_started": "No se pudo poner la notificación en cola. No se envió nada; inténtelo de nuevo.",
+      "too_many": "Llegaría a más de {{limit}} miembros, el máximo para una notificación. Reduzca el segmento.",
+      "unknown": "Puede que no haya empezado. Recargue la página para ver su estado antes de volver a pulsar Enviar."
+    },
+    "final": "Una vez iniciado, el envío se puede detener, pero las notificaciones ya enviadas no se pueden recuperar. Cada una queda también en la bandeja de entrada del miembro en la aplicación.",
+    "keep": "Ahora no",
+    "left_out": "{{number}} de sus {{members}} miembros no la recibirán:",
+    "nobody": "Nadie de {{segment}} puede recibirla.",
+    "over": "Llegaría a {{number}} miembros, más de {{limit}}, el máximo para una notificación. Reduzca el segmento.",
+    "title": "Enviar esta notificación push",
+    "will_push": "Se enviará a {{number}} miembros de {{segment}}, a partir de ahora."
+  },
+  "status": {
+    "cancelled": "Cancelada",
+    "draft": "Borrador",
+    "failed": "Fallida",
+    "sending": "Enviando",
+    "sent": "Enviada"
+  }
+}

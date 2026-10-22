@@ -15,7 +15,8 @@ use Tests\TestCase;
 /**
  * The full admin's wallet-config endpoints, pinned before their writes moved into App\Services\Loyalty\WalletSettings
  * (HexaTech Loyalty release 2 §7) and kept passing after: the answers, what is stored where, what is audited, and that
- * the full admin checks no colour format and no file type (only the Google file's two keys).
+ * the full admin checks no colour format and no file type (only the Google file's two keys). Release 3 (§2) moved the
+ * files from the local disk into the row, encrypted; the answers stayed as they were.
  */
 class WalletConfigEndpointsTest extends TestCase
 {
@@ -126,10 +127,14 @@ class WalletConfigEndpointsTest extends TestCase
         $this->asManager()->post($this->admin('apple-cert'), ['file' => $file, 'password' => 'p12-secret'], ['Accept' => 'application/json'])
             ->assertOk()->assertExactJson(['config' => self::shape(['apple_cert_uploaded' => true, 'apple_cert_password_set' => true])]);
 
-        Storage::disk('local')->assertExists("wallet/{$this->org->id}/apple-cert.p12");
-        $this->assertSame('not really pkcs12', Storage::disk('local')->get("wallet/{$this->org->id}/apple-cert.p12"));
+        // In the row, encrypted; nothing on the local disk, no path.
         $config = WalletConfig::query()->first();
-        $this->assertSame("wallet/{$this->org->id}/apple-cert.p12", $config->apple_cert_path);
+        $this->assertSame('not really pkcs12', $config->fileBytes('apple_cert'));
+        $raw = (string) DB::table('wallet_configs')->where('organization_id', $this->org->id)->value('apple_cert_content');
+        $this->assertStringNotContainsString('not really pkcs12', $raw);
+        $this->assertStringNotContainsString(base64_encode('not really pkcs12'), $raw);
+        $this->assertNull($config->apple_cert_path);
+        $this->assertSame([], Storage::disk('local')->allFiles());
         $this->assertSame('p12-secret', $config->apple_cert_password);
         $audit = AuditLog::query()->where('action', 'wallet_apple_cert_uploaded')->sole();
         $this->assertSame(['filename' => 'Certificates.p12'], $audit->new_values);
@@ -137,7 +142,7 @@ class WalletConfigEndpointsTest extends TestCase
         // Without a password the stored one stays; a new file takes the same name.
         $this->asManager()->post($this->admin('apple-cert'), ['file' => UploadedFile::fake()->createWithContent('again.p12', 'second')], ['Accept' => 'application/json'])
             ->assertOk()->assertJsonPath('config.apple_cert_password_set', true);
-        $this->assertSame('second', Storage::disk('local')->get("wallet/{$this->org->id}/apple-cert.p12"));
+        $this->assertSame('second', WalletConfig::query()->first()->fileBytes('apple_cert'));
         $this->assertSame('p12-secret', WalletConfig::query()->first()->apple_cert_password);
     }
 
@@ -145,7 +150,7 @@ class WalletConfigEndpointsTest extends TestCase
     {
         $this->asManager()->post($this->admin('apple-wwdr'), ['file' => UploadedFile::fake()->createWithContent('AppleWWDRCAG4.cer', "\x30\x82binary")], ['Accept' => 'application/json'])
             ->assertOk()->assertJsonPath('config.apple_wwdr_uploaded', true);
-        Storage::disk('local')->assertExists("wallet/{$this->org->id}/apple-wwdr.pem");
+        $this->assertSame("\x30\x82binary", WalletConfig::query()->first()->fileBytes('apple_wwdr'));
         $this->assertSame(['filename' => 'AppleWWDRCAG4.cer'], AuditLog::query()->where('action', 'wallet_apple_wwdr_uploaded')->sole()->new_values);
 
         $this->asManager()->post($this->admin('apple-wwdr'), ['file' => UploadedFile::fake()->create('big.pem', 201)], ['Accept' => 'application/json'])
@@ -160,12 +165,13 @@ class WalletConfigEndpointsTest extends TestCase
     {
         $this->asManager()->post($this->admin('google-service-account'), ['file' => UploadedFile::fake()->createWithContent('sa.json', '{"client_email":"x@y.iam.gserviceaccount.com"}')], ['Accept' => 'application/json'])
             ->assertStatus(422)->assertExactJson(['message' => 'Uploaded file is not a valid Google service account JSON (missing private_key or client_email).']);
-        Storage::disk('local')->assertMissing("wallet/{$this->org->id}/google-service-account.json");
+        $this->assertFalse(WalletConfig::query()->first()->hasFile('google_service_account'));
 
         $json = '{"type":"service_account","client_email":"wallet@venue.iam.gserviceaccount.com","private_key":"-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----\n"}';
         $this->asManager()->post($this->admin('google-service-account'), ['file' => UploadedFile::fake()->createWithContent('sa.json', $json)], ['Accept' => 'application/json'])
             ->assertOk()->assertJsonPath('config.google_service_account_uploaded', true)->assertJsonPath('config.google_ready', false);
-        $this->assertSame($json, Storage::disk('local')->get("wallet/{$this->org->id}/google-service-account.json"));
+        $this->assertSame($json, WalletConfig::query()->first()->fileBytes('google_service_account'));
+        $this->assertSame([], Storage::disk('local')->allFiles());
         $this->assertSame(['client_email' => 'wallet@venue.iam.gserviceaccount.com'], AuditLog::query()->where('action', 'wallet_google_sa_uploaded')->sole()->new_values);
     }
 

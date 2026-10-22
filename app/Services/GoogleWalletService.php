@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\LoyaltyMember;
 use App\Models\WalletConfig;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Google Wallet pass generator.
@@ -32,11 +31,14 @@ class GoogleWalletService
 
         $member->loadMissing(['user', 'tier']);
 
-        $serviceAccountPath = Storage::disk('local')->path($config->google_service_account_path);
-        if (!is_file($serviceAccountPath)) {
-            throw new \RuntimeException('Google service account JSON missing on disk.');
+        // The key is the organisation's wallet_configs row's (HexaTech
+        // Loyalty release 3 §2), never a file on the local disk, which
+        // does not survive a deploy on Laravel Cloud.
+        $raw = $config->fileBytes('google_service_account');
+        if ($raw === null) {
+            throw new \RuntimeException('Google service account JSON is not stored for this organization.');
         }
-        $sa = json_decode((string) file_get_contents($serviceAccountPath), true);
+        $sa = json_decode($raw, true);
         if (!is_array($sa) || empty($sa['private_key']) || empty($sa['client_email'])) {
             throw new \RuntimeException('Invalid Google service account JSON.');
         }

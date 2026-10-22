@@ -6,12 +6,15 @@ use App\Models\EmailTemplate;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\PushNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class NotificationService
 {
+    private const EXPO_URL = 'https://exp.host/--/api/v2/push/send';
+
     public function sendPointsEarned(LoyaltyMember $member, int $points): void
     {
         $this->send($member, [
@@ -90,12 +93,30 @@ class NotificationService
     }
 
     /**
+     * The member's own opt-out categories, the keys of `loyalty_members.notification_preferences` (the member app's
+     * settings write them, MemberController::updateProfile). Everything else is `transactional`.
+     */
+    public const CATEGORIES = ['offers', 'points', 'tier', 'stays'];
+
+    /**
+     * The type a push message from HexaTech Loyalty is kept under, by its category (release 3 §5): each maps to that
+     * category in TYPE_TO_CATEGORY, so the member's opt-out applies to it. (The full admin's push campaigns keep the
+     * type `campaign`, which is transactional.)
+     */
+    public const MESSAGE_TYPES = [
+        'offers' => 'message_offers',
+        'points' => 'message_points',
+        'tier'   => 'message_tier',
+        'stays'  => 'message_stays',
+    ];
+
+    /**
      * Maps each push `type` to the category opt-in key inside
      * `loyalty_members.notification_preferences`. Members who explicitly
      * opted out of "offers" still get tier + points + transactional
      * pushes (those are core program comms).
      */
-    private const TYPE_TO_CATEGORY = [
+    public const TYPE_TO_CATEGORY = [
         'points_earned'   => 'points',
         'points_expiry'   => 'points',
         'tier_upgrade'    => 'tier',
@@ -104,37 +125,40 @@ class NotificationService
         'offer_expiring'  => 'offers',
         'booking'         => 'stays',
         'stay_review'     => 'stays',
+        'message_offers'  => 'offers',
+        'message_points'  => 'points',
+        'message_tier'    => 'tier',
+        'message_stays'   => 'stays',
         // Default: anything else (welcome, generic, system) treated as
         // 'transactional' and only suppressed by the global toggle.
     ];
 
+    /**
+     * Send a member a notification (release 3 §3, the member inbox).
+     *
+     * A notification of a category the member opted out of is not written at all. Every other one is kept for the
+     * member's inbox — the app's `GET /v1/member/notifications` and the portal's unread count — and marked sent
+     * (`is_sent` true, `sent_at` now) whatever happens to the push: the inbox row means "the member was told", not
+     * "Expo accepted it". The push itself goes out only to a member with push switched on and a device token; a push
+     * that fails is logged and the row stays.
+     *
+     * Before the fix the row was written with `is_sent` false (and nothing ever set it), so every inbox was empty,
+     * and nothing was written for a member without the app or with push switched off.
+     */
     public function send(LoyaltyMember $member, array $notification): void
     {
-        if (!$member->push_notifications || !$member->expo_push_token) {
-            return;
-        }
-
         // Per-category opt-in check. NULL preferences = back-compat:
         // pre-fix members default to "everything on" so the existing
         // population doesn't suddenly stop hearing from us.
-        $prefs = $member->notification_preferences ?: [];
-        $category = self::TYPE_TO_CATEGORY[$notification['type'] ?? ''] ?? 'transactional';
-        if ($category !== 'transactional' && array_key_exists($category, $prefs) && $prefs[$category] === false) {
+        if (self::optsOut($member->notification_preferences, self::categoryOf((string) ($notification['type'] ?? '')))) {
             return;
         }
 
-        // Store notification in DB
-        \DB::table('push_notifications')->insert([
-            'member_id'  => $member->id,
-            'type'       => $notification['type'],
-            'title'      => $notification['title'],
-            'body'       => $notification['body'],
-            'data'       => json_encode($notification['data'] ?? []),
-            'channel'    => 'push',
-            'is_sent'    => false,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        $this->keep($member, $notification);
+
+        if (!self::canPush($member)) {
+            return;
+        }
 
         // Send via Expo Push API
         try {
@@ -147,6 +171,123 @@ class NotificationService
         } catch (\Throwable $e) {
             Log::error('Push notification failed: ' . $e->getMessage());
         }
+    }
+
+    /** The opt-out category a notification type belongs to; `transactional` for every type the map does not name. */
+    public static function categoryOf(string $type): string
+    {
+        return self::TYPE_TO_CATEGORY[$type] ?? 'transactional';
+    }
+
+    /**
+     * Whether a member's stored preferences switch this category off. Only an explicit "off" counts — `false`, or the
+     * `0`/`"0"`/`"false"` a form-encoded settings save stores — so a member who never chose keeps everything on.
+     * Transactional notifications have no switch of their own.
+     *
+     * @param mixed $preferences the member's `notification_preferences` (array, or its JSON as stored)
+     */
+    public static function optsOut(mixed $preferences, string $category): bool
+    {
+        if ($category === 'transactional') {
+            return false;
+        }
+        if (is_string($preferences)) {
+            $preferences = json_decode($preferences, true);
+        }
+        if (!is_array($preferences) || !array_key_exists($category, $preferences)) {
+            return false;
+        }
+
+        return in_array($preferences[$category], [false, 0, '0', 'false'], true);
+    }
+
+    /** Whether a push can reach the member at all: push switched on, and a device token. */
+    public static function canPush(LoyaltyMember $member): bool
+    {
+        return (bool) $member->push_notifications && trim((string) $member->expo_push_token) !== '';
+    }
+
+    /**
+     * Keep a notification in the member's inbox, marked sent. `campaign_id` (a notification_campaigns row) links a
+     * push message's rows to it. The caller has checked the opt-out.
+     *
+     * @param array{type: string, title: string, body: string, data?: array<string, mixed>, campaign_id?: int} $notification
+     * @return int the row's id
+     */
+    public function keep(LoyaltyMember $member, array $notification): int
+    {
+        $now = now();
+        $row = [
+            'member_id'  => $member->id,
+            'type'       => $notification['type'],
+            'title'      => $notification['title'],
+            'body'       => $notification['body'],
+            'data'       => json_encode($notification['data'] ?? []),
+            'channel'    => 'push',
+            'is_sent'    => true,
+            'sent_at'    => $now,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ];
+        if (isset($notification['campaign_id'])) {
+            $row['campaign_id'] = (int) $notification['campaign_id'];
+        }
+
+        return (int) DB::table('push_notifications')->insertGetId($row);
+    }
+
+    /**
+     * Hand Expo up to 100 pushes in one request, and say, in the same order, which it accepted (an `ok` ticket). A
+     * request that fails, or an answer without tickets, counts every push as not accepted; nothing is thrown.
+     *
+     * @param list<array{to: string, title: string, body: string, data?: array<string, mixed>}> $messages
+     * @return list<array{ok: bool, error: ?string}> `error` is Expo's code (`DeviceNotRegistered`, …) or the transport's
+     */
+    public function pushMany(array $messages): array
+    {
+        if ($messages === []) {
+            return [];
+        }
+        $all = fn (string $error) => array_fill(0, count($messages), ['ok' => false, 'error' => $error]);
+
+        try {
+            $response = Http::withHeaders([
+                'Accept'       => 'application/json',
+                'Content-Type' => 'application/json',
+            ])->timeout(30)->post(self::EXPO_URL, array_map(fn (array $m) => [
+                'to'    => $m['to'],
+                'sound' => 'default',
+                'title' => $m['title'],
+                'body'  => $m['body'],
+                'data'  => (object) ($m['data'] ?? []),
+            ], array_values($messages)));
+        } catch (\Throwable $e) {
+            Log::error('Push batch failed: ' . $e->getMessage());
+
+            return $all('unreachable');
+        }
+        if (!$response->successful()) {
+            Log::error('Push batch refused', ['status' => $response->status()]);
+
+            return $all('http_' . $response->status());
+        }
+        $tickets = $response->json('data');
+        if (!is_array($tickets)) {
+            return $all('no_ticket');
+        }
+        if (!array_is_list($tickets)) {
+            $tickets = [$tickets];
+        }
+
+        $out = [];
+        foreach (array_values($messages) as $i => $_) {
+            $ticket = is_array($tickets[$i] ?? null) ? $tickets[$i] : [];
+            $ok = ($ticket['status'] ?? null) === 'ok';
+            $error = $ticket['details']['error'] ?? ($ticket === [] ? 'no_ticket' : 'refused');
+            $out[] = ['ok' => $ok, 'error' => $ok ? null : mb_substr((string) $error, 0, 40)];
+        }
+
+        return $out;
     }
 
     /**
@@ -184,7 +325,7 @@ class NotificationService
         Http::withHeaders([
             'Accept'       => 'application/json',
             'Content-Type' => 'application/json',
-        ])->post('https://exp.host/--/api/v2/push/send', [
+        ])->post(self::EXPO_URL, [
             'to'    => $expoPushToken,
             'sound' => 'default',
             'title' => $title,

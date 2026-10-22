@@ -16,10 +16,11 @@ use Illuminate\Http\Request;
  *   POST   /v1/admin/wallet-config/apple-wwdr        — multipart .pem upload
  *   POST   /v1/admin/wallet-config/google-service-account  — multipart .json upload
  *
- * Cert files are stored privately at storage/app/wallet/{org_id}/*
- * — never served publicly. Reading them requires going through the
- * service classes (which run inside an authenticated request and
- * resolve via Storage::disk('local')).
+ * Cert files are stored encrypted in the organisation's wallet_configs
+ * row (HexaTech Loyalty release 3 §2; before it, on the local disk at
+ * storage/app/wallet/{org_id}/*, which Laravel Cloud loses on every
+ * deploy) — never served. Only the pass builders read them, through
+ * WalletConfig::fileBytes().
  *
  * The reads strip the cert password from the response so it's never
  * echoed back to the client — admin re-enters when they need to

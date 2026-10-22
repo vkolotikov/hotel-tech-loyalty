@@ -10,8 +10,9 @@
  *     isn't in the built-in map AND hasn't been customised.
  *
  *   • DEFAULT_CHANNELS — the 6 starter communication channels
- *     (Call / Email / WhatsApp / SMS / Video / In-person). Admins can
- *     replace or extend these via crm_settings.planner_channels.
+ *     (Call / Email / WhatsApp / SMS / Video / In-person). No longer
+ *     injected: crm_settings.planner_channels is the org's own Tasks
+ *     list, and an org without one has no tasks (parsePlannerChannels).
  *
  *   • ICON_OPTIONS — the curated picker list of selectable lucide
  *     icons. Keep it small (~30 icons) so the picker stays scannable.
@@ -210,7 +211,7 @@ export function resolveGroupMeta(
 
 /* ─────────────────────────  Channels  ───────────────────────── */
 
-/** Starter set — what every org sees until they customise. */
+/** The old starter set. parsePlannerChannels() no longer falls back to it: an org's Tasks are its own. */
 export const DEFAULT_CHANNELS: ChannelDef[] = [
   { key: 'call',      label: 'Call',      icon: 'phone',           color: '#22d3ee', groups: [] },
   { key: 'email',     label: 'Email',     icon: 'mail',            color: '#a78bfa', groups: [] },

@@ -118,8 +118,13 @@ export interface Campaign extends CampaignRow {
   editable_here: boolean
   /** null when the draft is the full admin's (an image, or its own HTML). */
   body_blocks: Block[] | null
-  /** The server's rendering: the preview, and what is sent. */
+  /** The server's rendering: what is sent, its tags filled for each member as it goes. */
   body_html: string
+  /** The subject and the rendering with the tags filled with the viewer's own sample, as their test email has them: the preview. */
+  preview_subject: string
+  preview_html: string
+  /** What reads as a tag in the saved subject or body but is filled by none: members would read it as written. */
+  unknown_tags: string[]
   /** What the saved draft still lacks: `subject`, `body`, `button:<index>`. */
   missing: string[]
   last_progress_at: string | null
@@ -129,7 +134,14 @@ export interface Campaign extends CampaignRow {
   revision: string
 }
 
-/** The block editor's choices, served with every campaign (CampaignBody::options). */
+/** A tag the editor offers (CampaignTags::options): as written, its name, and the server's English description. */
+export interface TagOption {
+  tag: string
+  name: string
+  label: string
+}
+
+/** The block editor's choices, served with every campaign (CampaignBody::options, CampaignTags::options). */
 export interface CampaignOptions {
   block_types: BlockType[]
   /** A new block of each type without its id: the builder's defaults, empty texts. */
@@ -143,6 +155,10 @@ export interface CampaignOptions {
   spacer: { min: number; max: number }
   max_name: number
   max_subject: number
+  /** The tags the editor offers. */
+  tags: TagOption[]
+  /** Every tag that is filled, those offered and the full admin builder's own (`{{member.name}}`, …). */
+  known_tags: string[]
 }
 
 /** A campaign's answer: the campaign and the editor's choices. */

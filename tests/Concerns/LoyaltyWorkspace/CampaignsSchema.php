@@ -10,12 +10,15 @@ use Illuminate\Support\Facades\Schema;
 /**
  * The tables HexaTech Loyalty's segments and campaigns read and write (spec 2026-10-21 release 2 §6), in sqlite, as
  * the migrations build them (member_segments 2026_05_12_220000; email_campaigns 2026_05_12_240000 with
- * body_blocks 2026_05_13 and last_progress_at 2026_08_11; email_suppressions 2026_08_14). Every table and column is
- * guarded, so a narrower table another suite built first is widened rather than replaced. Used beside
+ * body_blocks 2026_05_13 and last_progress_at 2026_08_11; email_suppressions 2026_08_14; and since release 3 the
+ * record of who a send emailed, email_campaign_deliveries 2026_10_22, CampaignDeliveriesSchema). Every table and column
+ * is guarded, so a narrower table another suite built first is widened rather than replaced. Used beside
  * SetsUpLoyaltyWorkspace; `campaignsOn()` gives the organisation the plan's `campaigns` feature.
  */
 trait CampaignsSchema
 {
+    use CampaignDeliveriesSchema;
+
     protected function setUpCampaignsSchema(): void
     {
         if (!Schema::hasTable('member_segments')) {
@@ -74,6 +77,8 @@ trait CampaignsSchema
                 $t->unique(['organization_id', 'email']);
             });
         }
+
+        $this->buildCampaignDeliveriesSchema();
     }
 
     /** The plan's `campaigns` feature, which the campaigns routes need (`feature:campaigns`). */

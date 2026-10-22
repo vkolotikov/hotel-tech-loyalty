@@ -27,14 +27,20 @@ use Illuminate\Support\Facades\Schema;
  * listed, and bookings, booking mirrors, reviews and campaign rows were left
  * pointing at a member that no longer existed.)
  *
- * Two pairs would collide after the move, and are deduplicated first:
+ * Four pairs would collide after the move, and are deduplicated first:
  *  - member_offers (member_id, offer_id): where both hold the same offer, the
  *    row that went furthest stays (used, then claimed, then the winner's), so a
  *    used offer is never forgotten and its per-member limit still holds;
  *  - referrals (referrer_id, referee_id): a referral between the two accounts
  *    is the person referring themselves and is dropped (it would otherwise let
  *    one person earn both sides of a referral); where both referred the same
- *    member, or were referred by the same member, the winner's row stays.
+ *    member, or were referred by the same member, the winner's row stays;
+ *  - email_campaign_deliveries (campaign_id, member_id): where both accounts
+ *    were emailed the same campaign, one row stays — the one that says sent,
+ *    else the winner's — and the person is still never emailed it again;
+ *  - push_message_deliveries (campaign_id, member_id): where both accounts
+ *    were sent the same push message, the winner's row stays, and the person
+ *    is still never pushed it again.
  * Every dropped row is kept in the merge's snapshot (`member_merges.merged_data`,
  * under `dropped`); the points they paid stay in the ledger, which moves whole.
  *
@@ -72,6 +78,8 @@ class MemberMergeService
         'analytics_events'     => ['member_id'],
         'chat_conversations'   => ['member_id'],
         'campaign_recipients'  => ['loyalty_member_id'],
+        'email_campaign_deliveries' => ['member_id'],
+        'push_message_deliveries'   => ['member_id'],
         'review_invitations'   => ['loyalty_member_id'],
         'review_submissions'   => ['loyalty_member_id'],
         'guests'               => ['member_id'],
@@ -119,6 +127,8 @@ class MemberMergeService
             $dropped = [
                 'member_offers' => $this->dedupeOffers($winner->id, $loser->id),
                 'referrals'     => $this->dedupeReferrals($winner->id, $loser->id),
+                'email_campaign_deliveries' => $this->dedupeDeliveries($winner->id, $loser->id),
+                'push_message_deliveries'   => $this->dedupePushDeliveries($winner->id, $loser->id),
             ];
 
             // 2) Every other row that names the loser now names the winner. Tables and columns are checked first:
@@ -249,6 +259,49 @@ class MemberMergeService
     private static function offerReach(object $row): int
     {
         return !empty($row->used_at) ? 2 : (!empty($row->claimed_at) ? 1 : 0);
+    }
+
+    /**
+     * Where both members have a row for the same campaign (unique per campaign and member), one stays: the one that
+     * says `sent`, else the winner's; the other is deleted. Either row keeps the campaign from emailing the person
+     * again. @return list<array<string, mixed>> the rows deleted
+     */
+    private function dedupeDeliveries(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('email_campaign_deliveries')) {
+            return [];
+        }
+        $winnerRows = DB::table('email_campaign_deliveries')->where('member_id', $winnerId)->get()->keyBy('campaign_id');
+        $dropped = [];
+        foreach (DB::table('email_campaign_deliveries')->where('member_id', $loserId)->whereIn('campaign_id', $winnerRows->keys()->all())->get() as $loserRow) {
+            $winnerRow = $winnerRows[$loserRow->campaign_id];
+            $gone = $loserRow->status === 'sent' && $winnerRow->status !== 'sent' ? $winnerRow : $loserRow;
+            DB::table('email_campaign_deliveries')->where('id', $gone->id)->delete();
+            $dropped[] = (array) $gone;
+        }
+
+        return $dropped;
+    }
+
+    /**
+     * Where both members have a row for the same push message (push_message_deliveries, unique per message and
+     * member), the winner's stays and the loser's is deleted; either row keeps the message from pushing to the person
+     * again. @return list<array<string, mixed>> the rows deleted
+     */
+    private function dedupePushDeliveries(int $winnerId, int $loserId): array
+    {
+        if (!Schema::hasTable('push_message_deliveries')) {
+            return [];
+        }
+        $gone = DB::table('push_message_deliveries')
+            ->where('member_id', $loserId)
+            ->whereIn('campaign_id', DB::table('push_message_deliveries')->where('member_id', $winnerId)->select('campaign_id'))
+            ->get();
+        if ($gone->isNotEmpty()) {
+            DB::table('push_message_deliveries')->whereIn('id', $gone->pluck('id')->all())->delete();
+        }
+
+        return $gone->map(fn ($row) => (array) $row)->values()->all();
     }
 
     /**

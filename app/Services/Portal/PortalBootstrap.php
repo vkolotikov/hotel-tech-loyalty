@@ -13,6 +13,7 @@ use App\Services\DiscountService;
 use App\Services\IndustryPrompts\IndustryPromptService;
 use App\Services\LoyaltyService;
 use App\Services\StripeService;
+use App\Support\TimeZones;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Log;
 
@@ -101,8 +102,10 @@ final class PortalBootstrap
 
     /**
      * The zone a free-text value names, or null: `UTC` for any name of UTC
-     * (case-insensitive), the trimmed value for a named zone with a location
-     * (`Europe/Riga`, a legacy name like `US/Eastern`), and null for
+     * (case-insensitive), the zone an old name links to (`US/Eastern` →
+     * `America/New_York`, `GB` → `Europe/London`: TimeZones, so it does not
+     * matter whether this PHP still knows the old name), the trimmed value
+     * for any other named zone with a location (`Europe/Riga`), and null for
      * anything else — garbage, and also an abbreviation (`EET`, `CEST`,
      * `PST`, `Z`) or an offset (`+03:00`), which PHP accepts as a fixed
      * offset without daylight saving and a browser reads differently or not
@@ -117,6 +120,7 @@ final class PortalBootstrap
         if (in_array(strtolower($zone), self::UTC_NAMES, true)) {
             return 'UTC';
         }
+        $zone = TimeZones::canonical($zone);
         try {
             // A named zone has a location; an abbreviation or an offset has none.
             return (new \DateTimeZone($zone))->getLocation() !== false ? $zone : null;
@@ -213,8 +217,9 @@ final class PortalBootstrap
             ],
             'member'       => $member ? $this->member($member, $loyalty) : null,
             'counts'       => [
+                // Every row is kept for the inbox (release 3 §3), so no `is_sent` filter, as the inbox itself reads.
                 'unread_notifications' => $member ? PushNotification::where('member_id', $member->id)
-                    ->where('is_sent', true)->whereNull('read_at')->count() : 0,
+                    ->whereNull('read_at')->count() : 0,
                 'upcoming_bookings'    => $member ? $this->upcomingBookings($member) : 0,
             ],
         ];

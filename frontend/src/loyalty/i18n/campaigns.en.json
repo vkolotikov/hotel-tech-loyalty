@@ -36,16 +36,18 @@
     "segment_option": "{{name}} · {{number}} members",
     "segment_gone": "A segment that no longer exists",
     "body": "Body",
-    "tags": "Tags such as {{tag}} are not filled in: members would read them as written. Write the words themselves.",
     "duplicate": "Duplicate",
-    "delete": "Delete draft"
+    "delete": "Delete draft",
+    "unknown_tags": "{{tags}} will reach members as written: no tag of that name is filled in."
   },
   "preview": {
     "heading": "Preview",
     "saved_only": "This shows the saved draft. Save to see your changes.",
     "footer": "Each member’s copy ends with the venue’s name and an unsubscribe link.",
     "empty": "The email is empty. Add a heading or some text.",
-    "title": "Preview of the email"
+    "title": "Preview of the email",
+    "subject": "Subject",
+    "sample": "The tags show a sample — your own name, the first tier, made-up points — as your test email has them. Each member sees their own."
   },
   "delete": {
     "title": "Delete {{name}}?",
@@ -77,7 +79,7 @@
     "stopped": "Sending stopped before the end: {{sent}} were sent, the rest were not.",
     "cancelled": "Cancelled: {{sent}} were sent before it stopped.",
     "last_progress": "Last batch {{when}}.",
-    "skipped": "{{number}} were not emailed: they withdrew their consent or unsubscribed after it started.",
+    "skipped": "{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.",
     "email": "The email",
     "to": "To {{segment}}",
     "by": "Sent by {{name}}",
@@ -177,7 +179,6 @@
   "send": {
     "title": "Send this campaign",
     "counting": "Counting who it will reach…",
-    "tags": "The email holds a tag such as {{tag}}. Tags are not filled in: members will read it as written.",
     "final": "Once it starts it can be stopped, but emails already sent cannot be taken back.",
     "keep": "Not now",
     "confirm": "Send to {{number}} members",
@@ -202,11 +203,13 @@
       "feature_locked": "Your plan does not include email campaigns.",
       "network": "No connection. Reload the page to see whether it started before you press Send again.",
       "unknown": "It may not have started. Reload the page to see its state before you press Send again."
-    }
+    },
+    "unknown_tags": "The email holds {{tags}}, which no tag fills: members will read it as written."
   },
   "tab": {
     "campaigns": "Campaigns",
-    "segments": "Segments"
+    "segments": "Segments",
+    "push": "Push messages"
   },
   "status": {
     "draft": "Draft",
@@ -300,6 +303,26 @@
     "unsubscribed": "{{number}} unsubscribed",
     "suppressed": "{{number}} have an address that bounced or complained, which is never emailed",
     "no_email": "{{number}} have no email address"
+  },
+  "tags": {
+    "title": "Tags",
+    "where_none": "Click into the subject, a heading, a text or a button label, then choose a tag to put there.",
+    "where_subject": "A tag goes where the cursor is in the subject.",
+    "where_block": "A tag goes where the cursor is in {{what}} {{n}}.",
+    "each": "Each member’s copy shows their own.",
+    "no_room": "There is no room for that tag in this field."
+  },
+  "tag": {
+    "member_name": "Full name",
+    "first_name": "First name",
+    "email": "Email address",
+    "member_number": "Card number",
+    "tier_name": "Tier",
+    "points_balance": "Points balance",
+    "lifetime_points": "Points earned in all",
+    "referral_code": "Referral code",
+    "hotel_name": "Venue name",
+    "current_year": "Year"
   },
   "remove_segment": {
     "error": {

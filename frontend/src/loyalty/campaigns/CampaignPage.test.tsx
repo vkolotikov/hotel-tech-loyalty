@@ -28,7 +28,7 @@ const boot = (c: Can, campaigns = true): Bootstrap => ({
   organization: { id: 1, name: 'Lumière', industry: 'hotel' },
   accent: null,
   venue: { timezone: 'Europe/Riga', timezone_named: true, today: '2026-10-21', currency: 'EUR' },
-  features: { campaigns, wallet: true },
+  features: { campaigns, wallet: true, push: true },
   staff: { id: 5, name: 'Ada', role: c.manage_campaigns ? 'manager' : 'staff', can: c },
   programme: { on: true, tiers: [] },
   counts: { members: 40, requests_waiting: 0 },
@@ -45,6 +45,12 @@ const options: CampaignOptions = {
   spacer: { min: 4, max: 160 },
   max_name: 120,
   max_subject: 200,
+  tags: [
+    { tag: '{{member_name}}', name: 'member_name', label: 'Member full name' },
+    { tag: '{{first_name}}', name: 'first_name', label: 'Member first name' },
+    { tag: '{{lucky_number}}', name: 'lucky_number', label: 'A tag the server added later' },
+  ],
+  known_tags: ['{{member_name}}', '{{first_name}}', '{{lucky_number}}', '{{member.name}}'],
 }
 const HTML = '<div style="max-width:600px"><h1>Autumn at Lumière</h1></div>'
 const draft = (more: Partial<Campaign> = {}): Campaign => ({
@@ -54,7 +60,7 @@ const draft = (more: Partial<Campaign> = {}): Campaign => ({
     { id: 'h1', type: 'heading', text: 'Autumn at Lumière', level: 1, align: 'center', color: '#1a1a1a' },
     { id: 'b1', type: 'button', text: 'Book now', url: 'https://lumiere.example/book', bgColor: '#c9a84c', textColor: '#0e0e0e', align: 'center' },
   ],
-  body_html: HTML, missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
+  body_html: HTML, preview_subject: 'Our autumn', preview_html: HTML, unknown_tags: [], missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
 })
 const segments: Segment[] = [
   { id: 3, name: 'Gold', description: null, everyone: false, operator: 'AND', filters: [{ type: 'tier', op: 'in', value: [2] }], members: 1200, problem: null, last_sent_at: null, updated_at: null },
@@ -108,9 +114,34 @@ describe('A draft (spec 2026-10-21 release 2 §6)', () => {
     expect(button(html, 'Send me a test')).toContain('disabled=""')
   })
 
-  it('warns that a tag is not filled in', () => {
-    const html = render(manager, draft({ body_blocks: [{ id: 't', type: 'text', text: 'Hi {{member.name}}', color: '#555555', align: 'left', fontSize: 15 }] }))
-    expect(text(html)).toContain('Tags such as {{member.name}} are not filled in: members would read them as written.')
+  it('offers the server\'s tags, waiting for a field to put them in, and says nothing of tags it fills', () => {
+    const html = render(manager, draft({ body_blocks: [{ id: 't', type: 'text', text: 'Hi {{member.name}}, {{first_name}}', color: '#555555', align: 'left', fontSize: 15 }] }))
+    const words = text(html)
+    expect(html).toContain('data-tags=""')
+    expect(button(html, 'Full name')).toContain('title="{{member_name}}"')
+    expect(button(html, 'First name')).toContain('disabled=""')
+    // A tag the workspace has no word for is named by the server's description.
+    expect(button(html, 'A tag the server added later')).toContain('title="{{lucky_number}}"')
+    expect(words).toContain('Click into the subject, a heading, a text or a button label, then choose a tag to put there. Each member’s copy shows their own.')
+    expect(html).not.toContain('data-unknown-tags')
+    expect(words).not.toContain('not filled in')
+  })
+
+  it('names a double-braced word no tag fills, in the subject or a block, as it is typed', () => {
+    const html = render(manager, draft({ subject: 'Hi {{name}}', body_blocks: [{ id: 't', type: 'text', text: 'Your {{favourite}} {{first_name}}', color: '#555555', align: 'left', fontSize: 15 }] }))
+    expect(html).toContain('data-unknown-tags=""')
+    expect(text(html)).toContain('{{name}}, {{favourite}} will reach members as written: no tag of that name is filled in.')
+  })
+
+  it('previews the server\'s rendering with the tags filled with the viewer\'s own sample, and says so', () => {
+    const html = render(manager, draft({ subject: 'Hi {{first_name}}', preview_subject: 'Hi Ada', body_html: '<p>Dear {{member.name}}</p>', preview_html: '<p>Dear Ada &lt;Lovelace&gt;</p>' }))
+    const words = text(html)
+    expect(html).toMatch(/<iframe[^>]*srcDoc="[^"]*&lt;p&gt;Dear Ada &amp;lt;Lovelace&amp;gt;&lt;\/p&gt;/)
+    expect(html).not.toMatch(/<iframe[^>]*srcDoc="[^"]*\{\{member\.name\}\}/)
+    expect(words).toContain('Subject Hi Ada')
+    expect(words).toContain('The tags show a sample — your own name, the first tier, made-up points — as your test email has them.')
+    expect(html).toContain('data-sample=""')
+    expect(text(render(manager, draft()))).not.toContain('The tags show a sample')
   })
 
   it('made in the full admin with an image or its own HTML, is shown read-only with the way there', () => {
@@ -143,7 +174,7 @@ describe('A campaign that went out', () => {
   it('once sent says when, and who it was handed but did not mail', () => {
     const words = text(render(manager, draft({ status: 'sent', recipient_count: 400, sent_count: 395, failed_count: 2, sent_at: '2026-10-21T08:00:00+00:00' })))
     expect(words).toContain('Sent Oct 21, 11:00.')
-    expect(words).toContain('3 were not emailed: they withdrew their consent or unsubscribed after it started.')
+    expect(words).toContain('3 were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.')
     expect(words).not.toContain('Stop sending')
     expect(words).toContain('Duplicate')
   })
@@ -167,12 +198,12 @@ describe('Who may see a campaign', () => {
 })
 
 describe('The confirmation', () => {
-  const dialog = (audience: Audience | null, tags = false) => {
+  const dialog = (audience: Audience | null, unknown: string[] = []) => {
     const client = new QueryClient()
     if (audience) client.setQueryData(audienceKey(7), { audience })
     return renderToStaticMarkup(
       <QueryClientProvider client={client}>
-        <SendDialog campaign={draft()} tags={tags} onClose={() => {}} />
+        <SendDialog campaign={draft({ unknown_tags: unknown })} onClose={() => {}} />
       </QueryClientProvider>,
     )
   }
@@ -181,7 +212,7 @@ describe('The confirmation', () => {
   })
 
   it('names how many it will email, how many will not get it and why, and the button carries the number', () => {
-    const html = dialog(audience(), true)
+    const html = dialog(audience(), ['{{name}}', '{{ first_name }}'])
     const words = text(html)
     expect(words).toContain('It will email 950 members of Gold, starting now, under the venue’s name, each with an unsubscribe link.')
     expect(words).toContain('250 of its 1,200 members will not get it:')
@@ -189,7 +220,8 @@ describe('The confirmation', () => {
     expect(words).toContain('50 unsubscribed')
     expect(words).toContain('20 have an address that bounced or complained, which is never emailed')
     expect(words).not.toContain('have no email address')
-    expect(words).toContain('The email holds a tag such as {{member.name}}.')
+    expect(words).toContain('The email holds {{name}}, {{ first_name }}, which no tag fills: members will read it as written.')
+    expect(text(dialog(audience()))).not.toContain('which no tag fills')
     expect(words).toContain('emails already sent cannot be taken back')
     expect(button(html, 'Send to 950 members')).toContain('Send to 950 members')
   })

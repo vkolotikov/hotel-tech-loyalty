@@ -7,6 +7,7 @@ import { CampaignsTab } from './CampaignsTab'
 import { CAMPAIGN_TABS, searchFor, tabAfter, tabFrom, type CampaignTab } from './campaignsMath'
 import { SegmentsTab } from './SegmentsTab'
 import { TAB_WORDS } from './words'
+import { PushTab } from '../push/PushTab'
 
 /**
  * Campaigns (spec 2026-10-21 release 2 §6), a manager's area: email campaigns to the programme's members, and the
@@ -57,6 +58,7 @@ export function CampaignsPage() {
               </div>
             ))}
             {tab === 'segments' && <SegmentsTab />}
+            {tab === 'push' && <PushTab />}
           </div>
         </>
       )}

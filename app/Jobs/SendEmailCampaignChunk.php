@@ -5,12 +5,14 @@ namespace App\Jobs;
 use App\Models\EmailCampaign;
 use App\Models\LoyaltyMember;
 use App\Models\Organization;
+use App\Services\Email\CampaignTags;
 use App\Services\EmailComplianceService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -26,6 +28,13 @@ use Illuminate\Support\Facades\Mail;
  * Tenant context has to be re-bound by hand: a queued job runs outside the
  * request that created it, so TenantMiddleware never fires and every
  * scoped query would fail closed.
+ *
+ * Once per member, tags per member (HexaTech Loyalty release 3 §4, for the
+ * full admin's campaigns and the workspace's alike): a member's row in
+ * `email_campaign_deliveries` is written before the send and a retry passes
+ * over every member who has one, so a retried chunk (tries = 3) never emails
+ * anyone twice; the subject and body have their tags filled for each member
+ * by App\Services\Email\CampaignTags.
  */
 class SendEmailCampaignChunk implements ShouldQueue
 {
@@ -33,6 +42,13 @@ class SendEmailCampaignChunk implements ShouldQueue
 
     /** Recipients per job. Small enough to stay well inside any timeout. */
     public const CHUNK = 100;
+
+    /** A member's row in `email_campaign_deliveries`: written as pending before the send, then what came of it. */
+    public const DELIVERY_PENDING = 'pending';
+    public const DELIVERY_SENT = 'sent';
+    public const DELIVERY_FAILED = 'failed';
+    /** The transport's suppression listener cancelled it: counted neither as sent nor as failed. */
+    public const DELIVERY_SUPPRESSED = 'suppressed';
 
     public int $tries = 3;
     public int $timeout = 300;
@@ -104,28 +120,41 @@ class SendEmailCampaignChunk implements ShouldQueue
         $identity = app(\App\Services\MailIdentityService::class)->forOrganization($campaign->organization_id);
         $orgName  = $identity['from_name'] ?: $org?->name;
 
-        $recipients = LoyaltyMember::whereIn('id', $slice)->with('user:id,name,email');
+        $recipients = LoyaltyMember::whereIn('id', $slice)->with(['user:id,name,email', 'tier:id,name'])->orderBy('id');
         $compliance->scopeEligible($recipients, $category);
 
         $sent = 0;
-        $failed = 0;
+        $passedOver = 0;
 
         foreach ($recipients->get() as $member) {
+            // Once per member (release 3 §4). The member's row is written BEFORE anything is handed to the mailer,
+            // and only the call that wrote it goes on: a retried chunk — or a second job over the same members —
+            // finds the row and passes the member over, whatever the row says. At most once, never twice; a member
+            // whose send was under way when a worker died keeps a `pending` row and is not tried again.
+            if (!$this->claim((int) $campaign->id, (int) $member->id)) {
+                $passedOver++;
+                continue;
+            }
+
             $email = $member->user?->email;
             if (!$email) {
-                $failed++;
+                $this->settle((int) $campaign->id, (int) $member->id, self::DELIVERY_FAILED);
                 continue;
             }
 
             try {
-                $html = $campaign->body_html;
+                // Tags are filled per member after the body was rendered: escaped in the body, one plain line in
+                // the subject (CampaignTags, which the test sends and the workspace's preview use too).
+                $tags = CampaignTags::forMember($member, (string) $orgName);
+                $html = CampaignTags::html((string) $campaign->body_html, $tags);
+                $subject = CampaignTags::subject((string) $campaign->subject, $tags);
                 if ($isMarketing) {
                     $html .= $compliance->footerHtml($member, $orgName);
                 }
 
-                Mail::html($html, function ($mail) use ($email, $campaign, $member, $compliance, $category, $identity, $orgName) {
+                $message = Mail::html($html, function ($mail) use ($email, $subject, $member, $compliance, $category, $identity) {
                     $mail->to($email, $member->user->name ?? null)
-                         ->subject($campaign->subject);
+                         ->subject($subject);
 
                     // Send AS the venue, not as the platform.
                     //
@@ -155,23 +184,37 @@ class SendEmailCampaignChunk implements ShouldQueue
 
                     $compliance->applyHeaders($mail, $member, $category);
                 });
-                $sent++;
+                // No message back: the suppression listener (BlockSuppressedRecipients) cancelled it at the
+                // transport — not sent, and not a failure either.
+                $outcome = $message === null ? self::DELIVERY_SUPPRESSED : self::DELIVERY_SENT;
             } catch (\Throwable $e) {
-                $failed++;
+                $outcome = self::DELIVERY_FAILED;
                 Log::warning('campaign recipient failed', [
                     'campaign_id' => $campaign->id,
                     'member_id'   => $member->id,
                     'error'       => $e->getMessage(),
                 ]);
             }
+
+            $this->settle((int) $campaign->id, (int) $member->id, $outcome);
+            if ($outcome === self::DELIVERY_SENT) {
+                $sent++;
+            }
         }
 
-        // Counters accumulate per chunk, so progress survives a crash and
-        // is visible to the admin while the send is still running.
+        if ($passedOver > 0) {
+            Log::info('campaign chunk passed over members already handled', [
+                'campaign_id' => $campaign->id,
+                'offset'      => $this->offset,
+                'members'     => $passedOver,
+            ]);
+        }
+
         $limiter->record($campaign->organization_id, $sent);
 
-        $campaign->increment('sent_count', $sent);
-        $campaign->increment('failed_count', $failed);
+        // The counters moved with each member (settle()), so progress is visible while the chunk runs and a chunk
+        // that stopped partway and ran again still adds up: its first sends stay counted, its second pass counts
+        // nobody twice.
         $campaign->forceFill(['last_progress_at' => now()])->save();
 
         $nextOffset = $this->offset + self::CHUNK;
@@ -196,6 +239,37 @@ class SendEmailCampaignChunk implements ShouldQueue
 
         self::dispatch($this->campaignId, $this->memberIds, $nextOffset)
             ->delay(now()->addSeconds($spacing));
+    }
+
+    /**
+     * Write the member's row for this campaign, or find it there: true only for the call that wrote it. The unique
+     * pair (campaign, member) turns a second insert into a no-op, on PostgreSQL and SQLite alike; the row is committed
+     * on its own, before the send, so it survives whatever happens to the worker after.
+     */
+    private function claim(int $campaignId, int $memberId): bool
+    {
+        $now = now();
+
+        return DB::table('email_campaign_deliveries')->insertOrIgnore([
+            'campaign_id' => $campaignId,
+            'member_id'   => $memberId,
+            'status'      => self::DELIVERY_PENDING,
+            'created_at'  => $now,
+            'updated_at'  => $now,
+        ]) === 1;
+    }
+
+    /** What came of the member's send, and the campaign's counter for it, together. */
+    private function settle(int $campaignId, int $memberId, string $outcome): void
+    {
+        DB::transaction(function () use ($campaignId, $memberId, $outcome) {
+            DB::table('email_campaign_deliveries')->where('campaign_id', $campaignId)->where('member_id', $memberId)
+                ->update(['status' => $outcome, 'updated_at' => now()]);
+            $counter = [self::DELIVERY_SENT => 'sent_count', self::DELIVERY_FAILED => 'failed_count'][$outcome] ?? null;
+            if ($counter !== null) {
+                DB::table('email_campaigns')->where('id', $campaignId)->increment($counter);
+            }
+        });
     }
 
     /**

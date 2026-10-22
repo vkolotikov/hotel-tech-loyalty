@@ -8,7 +8,8 @@ import type {
 /**
  * Campaigns' decisions (spec 2026-10-21 release 2 §6), kept out of the components so they can be tested: the tab an
  * address names, what a campaign's state allows, its progress, a segment's rules as a form and what is wrong with them,
- * the body's blocks and their problems, what Send waits for, and what the confirmation says. The server decides every
+ * the body's blocks and their problems, where a tag goes and which tags no one fills, what Send waits for, and what the
+ * confirmation says. The server decides every
  * right and every number; these only choose what to show.
  */
 
@@ -23,7 +24,7 @@ export const SENDING_REFRESH_MS = 10_000
 
 // ─── The tabs ─────────────────────────────────────────────────────────────
 
-export const CAMPAIGN_TABS = ['campaigns', 'segments'] as const
+export const CAMPAIGN_TABS = ['campaigns', 'segments', 'push'] as const
 export type CampaignTab = typeof CAMPAIGN_TABS[number]
 
 /** The tab an address names (`?tab=segments`); Campaigns for none or anything else. */
@@ -94,7 +95,7 @@ export const isLive = (status: string): boolean => status === 'sending'
 /**
  * How far a campaign got: those mailed, those that failed, of how many. `skipped` is, once it is over, the members it
  * was handed that it neither mailed nor failed: they withdrew consent or unsubscribed after it started (the job checks
- * again before every chunk).
+ * again before every chunk), or — since release 3 — the transport refused their address as suppressed.
  */
 export function progressOf(c: Pick<CampaignRow, 'status' | 'recipient_count' | 'sent_count' | 'failed_count'>): { done: number; total: number; percent: number; skipped: number } {
   const done = c.sent_count + c.failed_count
@@ -393,17 +394,82 @@ export function campaignServerProblems(fields: Record<string, string[]> | undefi
   return { form, blocks }
 }
 
+// ─── Campaigns: tags ──────────────────────────────────────────────────────
+
+/** What reads as a tag: double braces and what is between them (the server's CampaignTags::PATTERN). */
+const TAG = /\{\{[^{}]*\}\}/g
+
 /**
- * Whether the words hold a tag such as `{{member.name}}`. The pipeline fills in none (spec §2): a member would read it
- * as written, so the editor and the confirmation say so.
+ * The double-braced words in these texts that no tag fills, each once, in the order they first appear (release 3
+ * §4). The server fills exactly the tags it lists (`known_tags`), as written; anything else reaches members as
+ * written, so the editor and the confirmation say so.
  */
-export function hasTags(...texts: (string | null | undefined)[]): boolean {
-  return texts.some(text => typeof text === 'string' && text.includes('{{'))
+export function unknownTags(texts: (string | null | undefined)[], known: readonly string[]): string[] {
+  const out: string[] = []
+  for (const text of texts) {
+    for (const m of (text ?? '').matchAll(TAG)) {
+      if (!known.includes(m[0]) && !out.includes(m[0])) out.push(m[0])
+    }
+  }
+  return out
 }
 
-/** The form's words, for hasTags. */
+/** The form's words, where tags are written: the subject and every heading, text and button label. */
 export function formWords(form: CampaignForm): string[] {
   return [form.subject, ...form.blocks.map(textOf).filter((t): t is string => t !== null)]
+}
+
+/** A field a tag can go into: the subject, or a heading's, a text's or a button label's words (by the block's id). */
+export type TagField = { kind: 'subject' } | { kind: 'block'; id: string }
+
+/** The field the cursor was last in, and the selection there (a tag replaces what is selected). */
+export interface TagTarget {
+  field: TagField
+  start: number
+  end: number
+}
+
+export const fieldKey = (field: TagField): string => (field.kind === 'subject' ? 'subject' : `block:${field.id}`)
+
+/** The cursor's place in a field, read from the field (an input or a text area) as the person moves it. */
+export function targetFrom(field: TagField, el: { value: string; selectionStart: number | null; selectionEnd: number | null }): TagTarget {
+  const at = el.value.length
+  return { field, start: el.selectionStart ?? at, end: el.selectionEnd ?? at }
+}
+
+/** Where a field is, for the words: the subject, or the block's kind and its place (1-based); null when it is gone. */
+export function tagPlace(form: CampaignForm, field: TagField): { kind: 'subject' } | { kind: BlockType; n: number } | null {
+  if (field.kind === 'subject') return { kind: 'subject' }
+  const i = form.blocks.findIndex(b => b.id === field.id)
+  return i >= 0 && textOf(form.blocks[i]) !== null ? { kind: form.blocks[i].type, n: i + 1 } : null
+}
+
+/**
+ * The form with a tag put where the cursor was (replacing the selection), and where the cursor goes after it; null
+ * when the field is gone or the tag would take it past its limit (the server's `max_subject`, `max_text`).
+ */
+export function withTag(form: CampaignForm, target: TagTarget, tag: string, options: CampaignOptions): { form: CampaignForm; caret: number } | null {
+  const place = (text: string, max: number): { text: string; caret: number } | null => {
+    const start = Math.min(Math.max(0, target.start), text.length)
+    const end = Math.min(Math.max(start, target.end), text.length)
+    const next = text.slice(0, start) + tag + text.slice(end)
+    return next.length > max ? null : { text: next, caret: start + tag.length }
+  }
+  if (target.field.kind === 'subject') {
+    const done = place(form.subject, options.max_subject)
+    return done && { form: { ...form, subject: done.text }, caret: done.caret }
+  }
+  const id = target.field.id
+  const i = form.blocks.findIndex(b => b.id === id)
+  const block = form.blocks[i]
+  if (!block || (block.type !== 'heading' && block.type !== 'text' && block.type !== 'button')) return null
+  const done = place(block.text, options.max_text[block.type])
+  return done && { form: { ...form, blocks: patchBlock(form.blocks, i, { text: done.text }) }, caret: done.caret }
+}
+
+/** Whether the preview shows tags filled (with the viewer's own sample) rather than the email exactly as stored. */
+export function previewFilled(c: Pick<Campaign, 'subject' | 'body_html' | 'preview_subject' | 'preview_html'>): boolean {
+  return c.preview_subject !== c.subject || c.preview_html !== c.body_html
 }
 
 /**
