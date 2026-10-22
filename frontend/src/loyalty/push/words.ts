@@ -8,6 +8,7 @@
 /** A message's status (PushMessage::STATUS_*). */
 export const STATUS_WORDS: Record<string, string> = {
   draft: 'Draft',
+  scheduled: 'Scheduled',
   sending: 'Sending',
   sent: 'Sent',
   failed: 'Failed',

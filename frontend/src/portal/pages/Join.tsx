@@ -6,6 +6,7 @@ import { Sparkles } from 'lucide-react'
 import { api } from '../../lib/api'
 import { useAuthStore } from '../../stores/authStore'
 import { apiMessage } from '../lib/portalApi'
+import { counted } from '../lib/plural'
 import type { PortalThemeInput } from '../theme/applyPortalTheme'
 import { Button } from '../ui/Button'
 import { Field, INPUT_CLASS } from '../ui/Field'
@@ -68,7 +69,7 @@ export function Join() {
           : <div className="w-11 h-11 rounded-full bg-p-accent/10 text-p-accent-deep flex items-center justify-center mx-auto mb-3"><Sparkles size={20} aria-hidden /></div>}
         <h1 className="font-p-display text-2xl">{t('portal.join.title', 'Join {{venue}}', { venue: ctx.organization.name })}</h1>
         <p className="text-sm text-p-text-2 mt-1">
-          {ctx.welcome_bonus ? t('portal.join.with_bonus', 'Start with {{count}} points on us.', { count: ctx.welcome_bonus }) : t('portal.join.no_bonus', 'Earn points every time you visit.')}
+          {ctx.welcome_bonus ? counted(t, 'join.with_bonus', ctx.welcome_bonus) :t('portal.join.no_bonus', 'Earn points every time you visit.')}
         </p>
       </div>
 

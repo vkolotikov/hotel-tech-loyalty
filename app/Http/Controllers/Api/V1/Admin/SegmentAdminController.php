@@ -188,16 +188,27 @@ class SegmentAdminController extends Controller
 
         foreach ($members as $m) {
             try {
+                // Every member of the segment is told (HexaTech Loyalty release 4 §5): NotificationService::send()
+                // keeps the message in the member's inbox, app or no app, unless they switched its kind off, and
+                // pushes only to a member with push on and a device. The counts mean what they meant: `push_sent`
+                // the members with push on and a device token, `skipped` the others; a member without the app whose
+                // inbox row cannot be written is still skipped and still emailed, as before.
+                $notice = [
+                    'type'  => $type,
+                    'title' => $validated['title'],
+                    'body'  => $validated['body'],
+                    'data'  => ['source' => 'segment_campaign', 'segment_id' => $segment->id, 'category' => $category],
+                ];
                 if ($m->push_notifications && $m->expo_push_token) {
-                    $notify->send($m, [
-                        'type'  => $type,
-                        'title' => $validated['title'],
-                        'body'  => $validated['body'],
-                        'data'  => ['source' => 'segment_campaign', 'segment_id' => $segment->id, 'category' => $category],
-                    ]);
+                    $notify->send($m, $notice);
                     $pushSent++;
                 } else {
                     $skipped++;
+                    try {
+                        $notify->send($m, $notice);
+                    } catch (\Throwable $e) {
+                        \Log::warning('Segment campaign inbox row failed', ['segment_id' => $segment->id, 'member_id' => $m->id, 'error' => $e->getMessage()]);
+                    }
                 }
                 // Consent, not just the channel switch. `email_notifications`
                 // defaults to TRUE and `marketing_consent` to FALSE, so gating

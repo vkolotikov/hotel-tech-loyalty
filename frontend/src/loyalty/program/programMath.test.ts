@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
-import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsAmount, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
+import { BENEFIT_FIELDS, BOOST_FIELDS, benefitBody, benefitChoices, benefitFormOf, benefitProblems, boostBody, boostFormOf, boostProblems, boostState, boostTone, existingOn, needsTimeCheck, needsAmount, programActions, thresholds, tierBenefitBody, tierBenefitFormOf, tierBenefitProblems, tierBenefitServerProblems, tierBody, tierFormOf, tierProblems, typedValue, weekdayName, weekdaysText } from './programMath'
 import { chosenTiers, decimalOf, named, serverProblems, toggled, wallInput, wallOf } from '../lib/forms'
 import type { Benefit, Boost, ProgramOptions, Tier } from './types'
 
@@ -200,5 +200,13 @@ describe('words for the server\'s values', () => {
     expect(decimalOf('1,5')).toBe(1.5)
     expect(decimalOf('abc')).toBeNull()
     expect(decimalOf('')).toBeNull()
+  })
+})
+
+describe('a boost saved before its times were the venue\'s (R4-6)', () => {
+  it('asks for a check while the boost can still give points, never for one without the mark', () => {
+    expect(['live', 'upcoming', 'off', 'ended'].map(state => needsTimeCheck({ check_time: true, state }))).toEqual([true, true, true, false])
+    expect(needsTimeCheck({ check_time: false, state: 'live' })).toBe(false)
+    expect(needsTimeCheck({ state: 'live' })).toBe(false)
   })
 })

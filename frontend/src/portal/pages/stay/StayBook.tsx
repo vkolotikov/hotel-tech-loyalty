@@ -17,7 +17,7 @@ import { DatesStep } from './DatesStep'
 import { RoomStep } from './RoomStep'
 import { StayReviewStep } from './StayReviewStep'
 import { StayPayStep } from './StayPayStep'
-import { STAY_STEPS, initialStayState, stayCatalogueGuard, stayFocusTarget, stayReducer, type StayStep } from './staySteps'
+import { STAY_STEPS, hasRoomChoice, initialStayState, stayCatalogueGuard, stayFocusTarget, stayReducer, type StayStep } from './staySteps'
 
 const randomId = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `k-${Date.now()}-${Math.random()}`)
 
@@ -90,9 +90,14 @@ export function StayBook() {
         </>
       )}
       {state.step === 'room' && (
-        <RoomStep state={state} onPick={roomId => dispatch({ type: 'pickRoom', roomId })} onChangeDates={() => dispatch({ type: 'jump', step: 'dates' })} />
+        <RoomStep
+          state={state}
+          onPick={roomId => dispatch({ type: 'pickRoom', roomId })}
+          onPickRooms={roomIds => dispatch({ type: 'pickRooms', roomIds })}
+          onChangeDates={() => dispatch({ type: 'jump', step: 'dates' })}
+        />
       )}
-      {state.step === 'review' && state.roomId !== null && (
+      {state.step === 'review' && hasRoomChoice(state) && (
         <StayReviewStep
           catalogue={cat}
           state={state}

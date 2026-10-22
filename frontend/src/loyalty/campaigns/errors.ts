@@ -125,4 +125,28 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: 'No connection: nothing was deleted. Try again.',
     unknown: 'The draft could not be deleted. Please try again.',
   },
+  // Release 4: send later.
+  schedule: {
+    already_started: 'This campaign was already started. The page now shows how far it got.',
+    changed: 'The campaign changed since this page showed it. Check it, then schedule it again.',
+    bad_time: 'Choose another time.',
+    incomplete: 'The campaign is not ready to send. The page now shows what it still needs.',
+    no_audience: 'Choose who receives it first.',
+    bad_rule: 'Its segment has a rule that cannot be used. Fix the segment first.',
+    not_editable_here: 'This campaign is sent from the full admin.',
+    not_found: GONE,
+    manager_only: MANAGER,
+    not_allowed: MANAGER,
+    feature_locked: PLAN,
+    network: 'No connection. Reload the page to see whether it was scheduled before you try again.',
+    unknown: 'It may not have been scheduled. Reload the page to see its state before you try again.',
+  },
+  unschedule: {
+    not_scheduled: 'It is no longer waiting: it started, or was taken back already. The page now shows it as it is.',
+    not_found: GONE,
+    manager_only: MANAGER,
+    not_allowed: MANAGER,
+    network: 'No connection: it is still scheduled. Try again.',
+    unknown: 'It could not be taken back. Please try again.',
+  },
 }

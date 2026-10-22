@@ -4,6 +4,7 @@ namespace App\Services\Loyalty;
 
 use App\Enums\PaymentStatus;
 use App\Models\BookingMirror;
+use App\Models\Guest;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\PointsTransaction;
@@ -25,7 +26,9 @@ use Illuminate\Support\Facades\DB;
  *
  * Stays are awarded by the daily `bookings:award-stay-points` command: a
  * stay is complete when its departure date has passed, and nothing in the
- * application marks that moment.
+ * application marks that moment. A stay booked through the public widget
+ * names no member; it earns when certainMemberForStay() matches it to one
+ * member for certain, and the award records that member on the stay.
  */
 final class BookingPointsService
 {
@@ -181,7 +184,8 @@ final class BookingPointsService
     {
         $orgId = (int) $mirror->organization_id;
 
-        if (!$mirror->member_id || $mirror->points_awarded_at !== null || !$mirror->departure_date) {
+        // A member's stay, or a widget stay naming a guest that the match below may make a member's.
+        if ((!$mirror->member_id && !$mirror->guest_id) || $mirror->points_awarded_at !== null || !$mirror->departure_date) {
             return false;
         }
         if (in_array((string) $mirror->internal_status, ['cancelled', 'no-show', 'no_show'], true) || (string) $mirror->booking_state === 'cancelled') {
@@ -193,8 +197,68 @@ final class BookingPointsService
         if ($mirror->departure_date->toDateString() >= PortalBootstrap::venueToday($orgId)->toDateString()) {
             return false;
         }
+        if (!$this->pointsOnBookingsEnabled($orgId) || !PortalBootstrap::loyaltyOn($orgId)) {
+            return false;
+        }
 
-        return $this->pointsOnBookingsEnabled($orgId) && PortalBootstrap::loyaltyOn($orgId);
+        return $this->memberIdForStay($mirror) !== null;
+    }
+
+    /**
+     * The member a stay earns for: the one the mirror names (a stay booked in
+     * the portal, or one an earlier award recorded), else the member a widget
+     * stay certainly belongs to (certainMemberForStay()). Null: nobody's.
+     */
+    public function memberIdForStay(BookingMirror $mirror): ?int
+    {
+        return $mirror->member_id ? (int) $mirror->member_id : $this->certainMemberForStay($mirror);
+    }
+
+    /**
+     * The member a stay booked through the public widget (no member on the
+     * mirror) certainly belongs to, or null. Certain means every one of:
+     * the stay names a guest and an email; that guest is a guest of the
+     * stay's own organisation and is linked to a member; exactly one member
+     * of that organisation, active or not, has a user whose email is the
+     * stay's (case and surrounding spaces ignored); and that member is the
+     * guest's, is active and has verified the address (the portal's own rule
+     * for email-matched history: a guest link alone is made by email at
+     * sign-up, before anyone proved the address). Anything less is not a
+     * match and the stay earns nothing: no guest or an unlinked one, a member
+     * of another organisation, another email, two members with the email, an
+     * inactive member, an unverified address. Reads only; the award records
+     * the member (awardForStay()).
+     */
+    public function certainMemberForStay(BookingMirror $mirror): ?int
+    {
+        $orgId = (int) $mirror->organization_id;
+        $email = mb_strtolower(trim((string) $mirror->guest_email));
+        if ($mirror->member_id || !$mirror->guest_id || $email === '') {
+            return null;
+        }
+
+        $linked = (int) Guest::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->whereKey($mirror->guest_id)
+            ->value('member_id');
+        if ($linked === 0) {
+            return null;
+        }
+
+        // LOWER/TRIM: the same on PostgreSQL and SQLite (the guest's email
+        // column is free text; a member's address may be stored as typed).
+        $withEmail = LoyaltyMember::withoutGlobalScopes()
+            ->join('users', 'users.id', '=', 'loyalty_members.user_id')
+            ->where('loyalty_members.organization_id', $orgId)
+            ->whereRaw('LOWER(TRIM(users.email)) = ?', [$email])
+            ->limit(2)
+            ->get(['loyalty_members.id', 'loyalty_members.is_active', 'users.email_verified_at']);
+        if ($withEmail->count() !== 1) {
+            return null;
+        }
+        $only = $withEmail->first();
+
+        return (int) $only->id === $linked && (bool) $only->is_active && $only->email_verified_at !== null ? $linked : null;
     }
 
     /**
@@ -212,9 +276,13 @@ final class BookingPointsService
         }
 
         return $this->underBookingOrg($orgId, function () use ($mirror, $orgId) {
+            $memberId = $this->memberIdForStay($mirror);
+            if ($memberId === null || !$this->recordMember($mirror, $memberId)) {
+                return null;
+            }
             $member = LoyaltyMember::withoutGlobalScopes()
                 ->where('organization_id', $orgId)
-                ->whereKey($mirror->member_id)
+                ->whereKey($memberId)
                 ->with('tier')
                 ->first();
             if (!$member) {
@@ -250,6 +318,34 @@ final class BookingPointsService
 
             return $tx;
         });
+    }
+
+    /**
+     * A widget stay matched at award time becomes the member's: its
+     * `member_id` is written then, never at booking time (the public widget
+     * writes what it always wrote), so the award is made once, a refund
+     * finds the member's points, and the portal lists it as theirs. The
+     * write is conditional — only while no member is recorded — and a stay
+     * that meanwhile names another member is not awarded here. A stay that
+     * already names this member passes untouched.
+     */
+    private function recordMember(BookingMirror $mirror, int $memberId): bool
+    {
+        if ((int) $mirror->member_id === $memberId) {
+            return true;
+        }
+
+        $recorded = DB::table('booking_mirror')
+            ->where('id', $mirror->id)
+            ->whereNull('member_id')
+            ->update(['member_id' => $memberId]);
+        if ($recorded === 0 && (int) DB::table('booking_mirror')->where('id', $mirror->id)->value('member_id') !== $memberId) {
+            return false;
+        }
+        $mirror->member_id = $memberId;
+        $mirror->syncOriginalAttribute('member_id');
+
+        return true;
     }
 
     /**

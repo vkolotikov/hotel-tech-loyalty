@@ -27,6 +27,31 @@
     "text_secondary": "Gedämpfter Text",
     "warning": "Warnung"
   },
+  "currency": {
+    "before": "Bevor Sie {{from}} in {{to}} ändern:",
+    "confirm": "Auf {{to}} ändern",
+    "error": {
+      "invalid": "Wählen Sie eine Währung aus der Liste.",
+      "manager_only": "Nur ein Inhaber oder Manager kann die Karte und die App ändern.",
+      "network": "Keine Verbindung: Es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann die Karte und die App ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann die Karte und die App ändern.",
+      "unknown": "Die Währung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut."
+    },
+    "field": "Währung",
+    "keep": "{{from}} behalten",
+    "line": "Die Währung Ihrer Preise und der Beträge, die Mitglieder sehen. Das Mitgliederportal, Angebote, Einblicke und die Einrichtung der Termine lesen diese eine Einstellung. Eine Änderung beschriftet Preise neu; sie rechnet sie nie um.",
+    "save": "Währung speichern",
+    "saved": "Gespeichert. Preise und Beträge erscheinen jetzt in {{currency}}.",
+    "title": "Währung",
+    "unsaved": "Noch nicht gespeichert.",
+    "warn": {
+      "bookings": "Termine in einer anderen Währung gebucht: {{total}} (davon noch bevorstehend: {{upcoming}}). Sie behalten die Währung, in der sie gebucht wurden.",
+      "payments": "Online-Zahlungen sind in {{currency}} eingerichtet. Buchungen mit Preisen in {{to}} würden vor Ort bezahlt, bis Stripe {{to}} annimmt (vollständige Verwaltung: Einstellungen → Integrationen).",
+      "relabel": "Leistungen ({{services}}) und Extras ({{extras}}) erhalten die Bezeichnung {{to}}. Die Zahlen ihrer Preise bleiben gleich.",
+      "stays": "Aufenthalte haben Preise in {{currency}}, festgelegt in den Buchungseinstellungen der vollständigen Verwaltung. Dieses Feld ändert sie nicht."
+    }
+  },
   "file": {
     "apple_cert": "Pass-Type-ID-Zertifikat",
     "apple_wwdr": "Apple-WWDR-Zertifikat",
@@ -157,6 +182,7 @@
   },
   "tab": {
     "app": "Mitglieder-App",
+    "currency": "Währung",
     "wallet": "Wallet-Pass"
   },
   "tabs": "Bereiche von Karte & App",

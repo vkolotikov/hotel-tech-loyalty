@@ -84,7 +84,8 @@ class PortalStayCatalogueTest extends MemberEndpointTestCase
         $this->assertEquals(180.0, $json['rooms'][0]['member_total']);
         $this->assertEquals(100.0, $json['rooms'][0]['price_per_night']);
         $this->assertSame('EUR', $json['rooms'][0]['currency']);
-        $this->assertArrayNotHasKey('combinations', $json, 'combination stays are not sold in the portal (plan3-1)');
+        // Release 4, part D: rooms together are offered only when no single room sleeps the party.
+        $this->assertSame([], $json['combinations']);
     }
 
     public function test_a_party_too_large_for_any_room_is_told_so(): void
@@ -102,6 +103,9 @@ class PortalStayCatalogueTest extends MemberEndpointTestCase
 
         $this->assertSame([], $json['rooms']);
         $this->assertTrue($json['party_too_large']);
+        // Release 4, part D: and the two rooms are offered together (PortalStayCombinationTest books them).
+        $this->assertCount(1, $json['combinations']);
+        $this->assertEquals(380.0, $json['combinations'][0]['total_price']);
     }
 
     public function test_a_stay_outside_the_venues_limits_is_refused(): void

@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Plus, X, Pencil, Trash2, Zap, Calendar } from 'lucide-react'
-import { format } from 'date-fns'
 import toast from 'react-hot-toast'
 import { api } from '../lib/api'
 import { QueryError } from '../components/QueryError'
 import { Card } from '../components/ui/Card'
+import { formWall, listWall } from './earnRateEventTimes'
 
 /**
  * Earn-rate boost events — "Double points weekend", "Triple points
@@ -14,6 +14,11 @@ import { Card } from '../components/ui/Card'
  * top of the tier earn_rate. Highest-matching multiplier wins (no
  * stacking) so an admin can't accidentally create a 6x event by
  * overlapping two 3x campaigns.
+ *
+ * Times are the venue's wall clock (HexaTech Loyalty release 4, R4-6): the
+ * form sends what it shows without an offset and the server reads it as the
+ * venue's clock; the form and the list show the server's venue times
+ * (earnRateEventTimes.ts), whatever this computer's zone.
  */
 
 const DAYS = [
@@ -93,8 +98,8 @@ export function EarnRateEvents() {
       name: e.name,
       description: e.description ?? '',
       multiplier: String(e.multiplier ?? '2.0'),
-      starts_at: e.starts_at ? e.starts_at.slice(0, 16) : '',
-      ends_at: e.ends_at ? e.ends_at.slice(0, 16) : '',
+      starts_at: formWall(e.starts_at_venue, e.starts_at),
+      ends_at: formWall(e.ends_at_venue, e.ends_at),
       days_of_week: Array.isArray(e.days_of_week) ? e.days_of_week : [],
       tier_ids: Array.isArray(e.tier_ids) ? e.tier_ids : [],
       property_id: e.property_id ?? '',
@@ -171,6 +176,11 @@ export function EarnRateEvents() {
                 onChange={e => setForm(f => ({ ...f, ends_at: e.target.value }))}
                 className="w-full bg-dark-bg border border-dark-border rounded-lg px-3 py-2 text-sm text-white" />
             </div>
+            {data?.timezone && (
+              <p className="md:col-span-2 text-[10px] text-t-muted -mt-1">
+                {t('boostEvents.form.venue_clock', { zone: data.timezone, defaultValue: 'Times are on the venue’s clock ({{zone}}).' })}
+              </p>
+            )}
           </div>
 
           <div className="mb-3">
@@ -253,7 +263,7 @@ export function EarnRateEvents() {
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-white font-medium truncate">{e.name}</div>
                       <div className="text-[11px] text-t-soft">
-                        {format(new Date(e.starts_at), 'MMM d, HH:mm')} → {format(new Date(e.ends_at), 'MMM d, HH:mm')}
+                        {listWall(e.starts_at_venue, e.starts_at)} → {listWall(e.ends_at_venue, e.ends_at)}
                         {Array.isArray(e.days_of_week) && e.days_of_week.length > 0 && (
                           <> · {(e.days_of_week as number[]).map(d => DAYS[d]?.label).join(' / ')}</>
                         )}

@@ -15,13 +15,16 @@ import { ERRORS } from './errors'
 import { CategoryName, Refusal, StatusBadge } from './parts'
 import { PhonePreview } from './PhonePreview'
 import { outcomesOf, progressOf, pushActions, pushSearch } from './pushMath'
+import { ScheduledPanel, ScheduleFailed } from '../campaigns/ScheduleParts'
+import { isScheduled } from '../campaigns/scheduleMath'
 import type { Push, PushOptions } from './types'
 import { OUTCOME_HINT_WORDS, OUTCOME_WORDS } from './words'
 
 /**
  * A push message that went out, or is going out (spec 2026-10-22 release 3 §5): how many members it was handed, how
  * many were pushed, and what came of the others, read again every 10 s while it sends; Cancel while it sends (what
- * went out stays out); Duplicate for a new draft. The message as it was sent is below.
+ * went out stays out); Duplicate for a new draft. The message as it was sent is below. Release 4: a scheduled message
+ * shows when it goes out, with Change time and Take back to a draft; one that could not start when due says why.
  */
 export function PushResults({ push: p, options }: { push: Push; options: PushOptions }) {
   const { t, i18n } = useTranslation()
@@ -33,6 +36,17 @@ export function PushResults({ push: p, options }: { push: Push; options: PushOpt
   const [stopping, setStopping] = useState(false)
   const n = (count: number) => points(count, locale)
   const outcomes = outcomesOf(p.results)
+  const client = useQueryClient()
+  const waiting = isScheduled(p.status)
+  const didNotStart = p.status === 'failed' && !!p.schedule_problem
+  const settle = (answer: { push: Push; options: PushOptions }) => {
+    client.setQueryData(pushKey(p.id), { push: answer.push, options: answer.options })
+    afterPushChange(client, p.id)
+  }
+  const reread = (error: unknown) => {
+    afterPushChange(client, p.id)
+    throw error
+  }
 
   return (
     <div className="space-y-6">
@@ -46,8 +60,16 @@ export function PushResults({ push: p, options }: { push: Push; options: PushOpt
         </div>
       </div>
 
+      {waiting && (
+        <ScheduledPanel wall={p.scheduled_for} timeZone={timeZone} today={boot.venue.today} by={p.sent_by}
+          onMove={(at) => pushApi.schedule(p.id, { send_at: at, revision: p.revision }).then(settle, reread)}
+          onTakeBack={() => pushApi.unschedule(p.id).then(settle, reread)}
+          refusal={(family, failure) => <Refusal family={family} failure={failure} />} />
+      )}
+      {didNotStart && <ScheduleFailed problem={p.schedule_problem ?? ''} wall={p.scheduled_for} />}
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
-        <section aria-labelledby="push-progress" className="min-w-0 space-y-3 rounded-2xl border border-a-border bg-a-surface p-5" data-progress={p.status}>
+        {!waiting && !didNotStart && <section aria-labelledby="push-progress" className="min-w-0 space-y-3 rounded-2xl border border-a-border bg-a-surface p-5" data-progress={p.status}>
           <Eyebrow><span id="push-progress">{t('loyalty.push.results.title', 'How far it got')}</span></Eyebrow>
           <dl className="grid grid-cols-2 gap-4">
             <div>
@@ -87,7 +109,7 @@ export function PushResults({ push: p, options }: { push: Push; options: PushOpt
           {progress.gone > 0 && (
             <p className="text-sm text-a-text-2">{t('loyalty.push.results.gone', '{{number}} were not reached: their member record was deleted or merged after it started.', { number: n(progress.gone) })}</p>
           )}
-        </section>
+        </section>}
 
         <section aria-labelledby="push-sent" className="min-w-0 space-y-2">
           <Eyebrow><span id="push-sent">{t('loyalty.push.results.message', 'The message')}</span></Eyebrow>

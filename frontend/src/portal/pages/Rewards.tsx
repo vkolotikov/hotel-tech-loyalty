@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { usePortal } from '../PortalProvider'
+import { counted } from '../lib/plural'
 import { Tabs } from '../ui/Tabs'
 import { BenefitsTab } from './rewards/BenefitsTab'
 import { CatalogueTab } from './rewards/CatalogueTab'
@@ -22,7 +23,7 @@ export function Rewards() {
       <div className="flex items-baseline justify-between gap-3">
         <h1 className="font-p-display text-2xl">{t('portal.rewards.title', 'Rewards')}</h1>
         {data?.member && (
-          <span className="text-sm text-p-text-2">{t('portal.rewards.you_have', 'You have {{count}} points', { count: data.member.current_points })}</span>
+          <span className="text-sm text-p-text-2">{counted(t, 'rewards.you_have', data.member.current_points)}</span>
         )}
       </div>
       <Tabs

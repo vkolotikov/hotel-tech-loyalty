@@ -11,6 +11,7 @@ use App\Scopes\BrandScope;
 use App\Services\Appointments\Messages\MessageSettings;
 use App\Services\Appointments\Money\Deposits;
 use App\Services\Appointments\VenueClock;
+use App\Services\Booking\PayAtVenueFallback;
 use App\Services\Loyalty\BookingPointsService;
 use App\Services\Portal\PortalBootstrap;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,9 @@ use Illuminate\Validation\Rule;
 /**
  * The venue's booking settings as the workspace shows and changes them,
  * stored in the very keys the public widget, the portal and the full admin
- * read (`services_*`, `points_on_bookings`, `hotel_timezone`). Changing the
+ * read (`services_*`, `points_on_bookings`, `hotel_timezone`; and the
+ * member portal's own `portal_pay_at_venue_when_unavailable`, release 4,
+ * which only the portal reads — see PayAtVenueFallback). Changing the
  * time zone never moves a stored appointment (its digits are the venue's
  * clock); changing the currency relabels prices and never converts them.
  */
@@ -44,6 +47,8 @@ final class BookingRules
             'client_messages_language'       => ['sometimes', 'string', Rule::in(MessageSettings::LANGUAGES)],
             'deposits_on'     => 'sometimes|boolean',
             'deposit_percent' => 'sometimes|integer|min:1|max:100',
+            // Release 4, part C: member-portal bookings may be taken to pay at the venue when Stripe cannot be reached.
+            'pay_at_venue_when_unavailable' => 'sometimes|boolean',
         ];
     }
 
@@ -92,6 +97,8 @@ final class BookingRules
             'deposits_available' => $reason === null,
             'deposits_reason'    => $reason,
             'cancel_hours'       => Deposits::cancelHours(),
+            // Release 4, part C (PayAtVenueFallback): off until a manager switches it on.
+            'pay_at_venue_when_unavailable' => PayAtVenueFallback::enabled(),
         ];
     }
 
@@ -184,6 +191,9 @@ final class BookingRules
             }
             if (array_key_exists('deposit_percent', $data)) {
                 self::put($orgId, 'services_deposit_percent', (string) (int) $data['deposit_percent'], 'integer', 'booking', 'Deposit Percent');
+            }
+            if (array_key_exists('pay_at_venue_when_unavailable', $data)) {
+                self::put($orgId, PayAtVenueFallback::SETTING, $data['pay_at_venue_when_unavailable'] ? 'true' : 'false', 'boolean', 'booking', 'Take bookings to pay at the venue when online payment is unavailable');
             }
         });
 

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { cancelErrorFallback, cancelErrorKey } from '../lib/portalApi'
 import { formatDateTime } from '../lib/dates'
 import { formatMoney } from '../lib/money'
+import { counted } from '../lib/plural'
 import { Button } from '../ui/Button'
 import { Notice } from '../ui/Notice'
 import { moneyPromise } from './cancelBooking'
@@ -61,7 +62,7 @@ export function CancelPanel({ booking: b, venue, offer, stage, error, result, on
         {result.outcome === 'released' && <p>{t('portal.bookings.cancelled_released', 'The hold on your card has been released.')}</p>}
         {venueMoney && <p>{t('portal.bookings.cancel_money_venue', 'This booking was paid at {{venue}}. They will arrange any refund with you.', { venue: venue.name })}</p>}
         {result.coupon_released && <p>{t('portal.bookings.cancelled_coupon', 'Your coupon is back with your coupons.')}</p>}
-        {result.points_reversed > 0 && <p>{t('portal.bookings.cancelled_points', 'We have taken back {{count}} points.', { count: result.points_reversed })}</p>}
+        {result.points_reversed > 0 && <p>{counted(t, 'bookings.cancelled_points', result.points_reversed)}</p>}
       </Notice>
     )
   }

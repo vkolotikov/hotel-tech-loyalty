@@ -1,9 +1,12 @@
 import { api } from '../../lib/api'
 import type {
-  Benefit, BookingKind, CancelReply, CardPayload, Catalogue, Claim, ConfirmBody, LaravelPage, Offer, Paginated, PaymentIntentReply, PortalBooking,
-  PortalBootstrap, Quote, QuoteBody, Redemption, ResolvedCoupon, Reward, Slot, Activity,
+  Benefit, BookingKind, CancelReply, CardPayload, Catalogue, Claim, ConfirmBody, LaravelPage, Offer, Paginated, PaymentIntentReply, PaymentReturn, PortalBooking,
+  PortalBootstrap, Quote, QuoteBody, Redemption, ResolvedCoupon, Reward, Slot, Activity, InboxNotification,
   StayAvailability, StayCatalogue, StayConfirmBody, StayQuote, StayQuoteBody,
 } from './types'
+
+/** Notifications per inbox page. */
+export const INBOX_PAGE_SIZE = 20
 
 /**
  * Every call the portal makes, in one place, typed. Member endpoints only —
@@ -37,6 +40,12 @@ export const portalApi = {
   googleWallet: (): Promise<{ saveUrl?: string; save_url?: string }> => api.get('/v1/member/card/google-wallet').then(r => r.data),
   deleteAccount: (payload: Record<string, string>) => api.delete('/v1/member/account', { data: payload }).then(r => r.data),
 
+  // ─── The inbox (release 4, part A): the member app's own endpoints, unchanged ───
+  notifications: (page: number): Promise<LaravelPage<InboxNotification>> =>
+    api.get('/v1/member/notifications', { params: { page, per_page: INBOX_PAGE_SIZE } }).then(r => r.data),
+  markNotificationRead: (id: number): Promise<{ message: string }> => api.post(`/v1/member/notifications/${id}/read`).then(r => r.data),
+  markAllNotificationsRead: (): Promise<{ message: string }> => api.post('/v1/member/notifications/read-all').then(r => r.data),
+
   // ─── Service booking (the Book flow) ─────────────────────────────────────
   catalogue: (): Promise<Catalogue> => api.get('/v1/member/portal/services').then(r => r.data),
   calendar: (serviceId: number, masterId: number | null, start: string, end: string): Promise<{ available_dates: string[] }> =>
@@ -59,6 +68,11 @@ export const portalApi = {
   // No Idempotency-Key: a hold is booked once, and a repeated confirm answers the booking it became.
   stayConfirm: (body: StayConfirmBody): Promise<{ booking: PortalBooking; replayed: boolean }> =>
     api.post('/v1/member/portal/stays/confirm', body).then(r => r.data),
+
+  // ─── Return from a bank redirect (release 4, part C) ─────────────────────
+  // Read only: what the payment is for, from its own metadata on the server — then the ordinary confirm above.
+  paymentReturn: (paymentIntentId: string): Promise<PaymentReturn> =>
+    api.get(`/v1/member/portal/payments/${encodeURIComponent(paymentIntentId)}`).then(r => r.data),
 
   // ─── Cancellation ────────────────────────────────────────────────────────
   cancelBooking: (kind: BookingKind, id: number): Promise<CancelReply> =>

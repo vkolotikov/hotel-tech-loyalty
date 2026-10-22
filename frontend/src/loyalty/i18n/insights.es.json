@@ -129,5 +129,28 @@
       "network": "Sin conexión. Compruebe la red e inténtelo de nuevo.",
       "unknown": "No se pudo cargar el análisis. Inténtelo de nuevo."
     }
+  },
+  "cohorts": {
+    "cell": "{{active}} de {{members}} activos",
+    "joined": "Alta",
+    "line": "Los miembros por el mes en que se dieron de alta, y la parte de ellos que ganó o gastó puntos ese mes y cada mes siguiente. Los últimos doce meses.",
+    "members": "Miembros",
+    "month_after": "+{{months}}",
+    "month_zero": "Mes de alta",
+    "none": "Nadie se dio de alta en los últimos doce meses.",
+    "title": "Retención por cohortes"
+  },
+  "money": {
+    "all": "De {{total}} pagados en total",
+    "bookings": "Reservas: {{number}}",
+    "currency_line": "En {{currency}}",
+    "line": "Estancias y citas pagadas que los miembros reservaron en este periodo, por el día de la reserva: lo que pagaron, menos las devoluciones.",
+    "members": "Aportado por miembros",
+    "none": "Todavía no hay reservas pagadas en este periodo.",
+    "other_currency": "Reservas pagadas por miembros en otra moneda, no sumadas: {{number}}.",
+    "services": "Citas",
+    "share": "Parte de todas las reservas pagadas",
+    "stays": "Estancias",
+    "title": "Lo que aportan los miembros"
   }
 }

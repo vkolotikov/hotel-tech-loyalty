@@ -11,7 +11,9 @@ use Illuminate\Support\Facades\Log;
  * Awards points for members' stays that ended. Nothing in the application
  * marks the moment a stay ends (the PMS sync relabels it some minutes or
  * hours later), so this looks every day for member stays whose departure
- * date has passed and that have not been awarded yet.
+ * date has passed and that have not been awarded yet — and for stays booked
+ * through the public widget that match one member for certain
+ * (BookingPointsService::certainMemberForStay()).
  *
  * Safe to run twice: BookingPointsService::awardForStay() is idempotent on
  * the ledger's key and stamps the stay. Looks back 60 days, so a stay
@@ -41,7 +43,9 @@ class AwardStayPoints extends Command
         $seen = 0;
 
         BookingMirror::withoutGlobalScopes()
-            ->whereNotNull('member_id')
+            // A member's stay, or a widget stay naming a guest: awardForStay()
+            // awards the second only when it matches one member for certain.
+            ->where(fn ($q) => $q->whereNotNull('member_id')->orWhereNotNull('guest_id'))
             ->whereNull('points_awarded_at')
             // The day boundary is each venue's own; awardForStay() checks it.
             ->whereDate('departure_date', '<=', now()->addDay()->toDateString())
@@ -56,7 +60,8 @@ class AwardStayPoints extends Command
                         // unpaid or not-yet-departed stay is not listed.
                         if ($points->stayIsDue($stay)) {
                             $awarded++;
-                            $this->line("[dry-run] stay #{$stay->id} (org {$stay->organization_id}, departed {$stay->departure_date?->toDateString()})");
+                            $matched = $stay->member_id ? '' : ', widget stay matched to member #' . $points->memberIdForStay($stay);
+                            $this->line("[dry-run] stay #{$stay->id} (org {$stay->organization_id}, departed {$stay->departure_date?->toDateString()}{$matched})");
                         }
                         continue;
                     }

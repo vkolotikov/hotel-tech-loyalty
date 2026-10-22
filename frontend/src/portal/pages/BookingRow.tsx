@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { CalendarDays, BedDouble } from 'lucide-react'
 import type { PortalBooking } from '../lib/types'
+import { nightsAndGuests } from '../lib/plural'
 import { Card } from '../ui/Card'
 import { Chip } from '../ui/Chip'
 import { DateTime } from '../ui/DateTime'
@@ -109,7 +110,7 @@ export function BookingRow({ booking: b, onOpen }: { booking: PortalBooking; onO
           <p className="text-sm font-semibold truncate">{b.title}</p>
           <p className="text-xs text-p-text-2 truncate">
             {b.starts_at && <DateTime iso={b.starts_at} mode={b.kind === 'stay' ? 'day' : 'datetime'} />}
-            {b.kind === 'stay' && b.nights != null && b.guests != null && ` · ${t('portal.bookings.nights_guests', '{{nights}} nights · {{guests}} guests', { nights: b.nights, guests: b.guests })}`}
+            {b.kind === 'stay' && b.nights != null && b.guests != null && ` · ${nightsAndGuests(t, b.nights, b.guests)}`}
             {b.kind === 'service' && b.subtitle && ` · ${b.subtitle}`}
           </p>
         </div>

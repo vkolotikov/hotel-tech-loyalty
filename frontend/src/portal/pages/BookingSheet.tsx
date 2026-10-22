@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { usePortal } from '../PortalProvider'
 import { apiErrorBooking, apiErrorCode, portalApi } from '../lib/portalApi'
 import { buildIcs, downloadIcs } from '../lib/ics'
+import { counted, nightsAndGuests } from '../lib/plural'
 import type { BookingKind, CancelReply } from '../lib/types'
 import { Sheet } from '../ui/Sheet'
 import { Button } from '../ui/Button'
@@ -114,9 +115,9 @@ export function BookingSheet({ kind, id, onClose, onCancelSettled }: { kind: Boo
             </Row>
             {b.kind === 'service' && b.subtitle && <Row label={t('portal.bookings.with', 'With')}>{b.subtitle}</Row>}
             {b.kind === 'stay' && b.nights != null && b.guests != null && (
-              <Row label={t('portal.bookings.guests', 'Guests')}>{t('portal.bookings.nights_guests', '{{nights}} nights · {{guests}} guests', { nights: b.nights, guests: b.guests })}</Row>
+              <Row label={t('portal.bookings.guests', 'Guests')}>{nightsAndGuests(t, b.nights, b.guests)}</Row>
             )}
-            {b.kind === 'service' && b.party_size != null && b.party_size > 1 && <Row label={t('portal.bookings.guests', 'Guests')}>{t('portal.bookings.party', 'For {{count}} people', { count: b.party_size })}</Row>}
+            {b.kind === 'service' && b.party_size != null && b.party_size > 1 && <Row label={t('portal.bookings.guests', 'Guests')}>{counted(t, 'bookings.party', b.party_size)}</Row>}
             {b.discount && <Row label={t('portal.bookings.discount', 'Member discount')}>−<Money amount={b.discount.amount} currency={b.currency} /> · {b.discount.label}</Row>}
             <Row label={t('portal.bookings.total', 'Total')}><Money amount={b.total} currency={b.currency} className="font-semibold" /></Row>
             {payment && <Row label={t('portal.bookings.payment', 'Payment')}>{payment}</Row>}

@@ -14,6 +14,10 @@ import { ERRORS } from './errors'
 import { Check, FormField, FormFoot, Toggle } from '../ui/formParts'
 import { BOOST_FIELDS, MAX_MULTIPLIER, MIN_MULTIPLIER, WEEK, boostBody, boostFormOf, boostProblems, weekdayName, type BoostForm } from './programMath'
 import { serverProblems, toggled, wallInput } from '../lib/forms'
+import { BrandField } from '../rewards/parts'
+import { brandPart, initialBrand } from '../rewards/rewardsMath'
+import type { BrandOptions } from '../rewards/types'
+import { needsTimeCheck } from './programMath'
 import type { Boost, Tier } from './types'
 import { BOOST_PROBLEM_WORDS } from './words'
 
@@ -23,8 +27,10 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Add a boost event or change one (spec 2026-10-21 §4.5): a name, the multiplier, when it runs — on the venue's
  * clock, whatever the browser's zone (§6.6): the instants the server answers are shown as the venue's wall clock and
  * sent back as one —, on which weekdays and for which tiers (none chosen: every day, every tier), and whether it is on.
+ * With more than one brand, a new boost names its brand and a saved one shows it (release 4). A boost whose times
+ * were saved before they were read as the venue's (R4-6) says so above the times; saving it clears the mark.
  */
-export function BoostDialog({ boost, tiers, onClose }: { boost: Boost | null; tiers: Tier[]; onClose: () => void }) {
+export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | null; tiers: Tier[]; brands?: BrandOptions; onClose: () => void }) {
   const { t, i18n } = useTranslation()
   const locale = i18n.language || 'en'
   const boot = useBoot()
@@ -36,9 +42,10 @@ export function BoostDialog({ boost, tiers, onClose }: { boost: Boost | null; ti
   const zone = boot.venue.timezone
   const [form, setForm] = useState<BoostForm>(() => boostFormOf(boost, zone, boot.venue.today))
   const [tried, setTried] = useState(false)
+  const [brand, setBrand] = useState<number | null>(() => initialBrand(brands))
 
   const save = useMutation({
-    mutationFn: () => (boost ? programApi.updateBoost(boost.id, boostBody(form)) : programApi.createBoost(boostBody(form))),
+    mutationFn: () => (boost ? programApi.updateBoost(boost.id, boostBody(form)) : programApi.createBoost({ ...boostBody(form), ...brandPart(brand) })),
     onSuccess: () => { afterProgramChange(client); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') afterProgramChange(client) },
   })
@@ -69,12 +76,18 @@ export function BoostDialog({ boost, tiers, onClose }: { boost: Boost | null; ti
             placeholder={t('loyalty.program.boost.name_example', 'e.g. Double points weekend')} />
         </FormField>
 
+        <BrandField options={brands} value={brand} saved={boost ? (boost.brand_id ?? null) : undefined}
+          refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
+
         <FormField label={t('loyalty.program.boost.multiplier', 'Multiplier')} problem={problem('multiplier')}
           hint={t('loyalty.program.boost.multiplier_hint', 'Points earned while it runs are multiplied by this, from 1 to 10.')}>
           <input type="number" inputMode="decimal" min={MIN_MULTIPLIER} max={MAX_MULTIPLIER} step={0.1} value={form.multiplier}
             onChange={(e) => update({ multiplier: e.target.value })} className={`${INPUT} sm:w-40`} />
         </FormField>
 
+        {boost && needsTimeCheck(boost) && (
+          <Notice tone="warning">{t('loyalty.program.time_check.dialog', 'Check these times: they were saved in the full admin before it read times on the venue’s clock, so they may be off by the venue’s difference from UTC. Saving the boost marks them as checked.')}</Notice>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t('loyalty.program.boost.starts_at', 'Starts')} hint={clock} problem={problem('starts_at')}>
             <input type="datetime-local" value={form.starts_at} onChange={(e) => update({ starts_at: wallInput(e.target.value) })} className={INPUT} />

@@ -37,7 +37,8 @@ const options: PushOptions = { categories: ['offers', 'points', 'tier', 'stays']
 const none = { sent: 0, failed: 0, inbox_only: 0, skipped: 0, pending: 0 }
 const message = (more: Partial<Push> = {}): Push => ({
   id: 7, name: 'Autumn', title: 'Double points this weekend', category: 'offers', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, results: none,
-  sent_at: null, created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', body: 'Every visit until Sunday earns double points.', segment_id: 3,
+  sent_at: null, scheduled_at: null, scheduled_for: null, schedule_problem: null,
+  created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', body: 'Every visit until Sunday earns double points.', segment_id: 3,
   missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
 })
 const list: PushesPage = {

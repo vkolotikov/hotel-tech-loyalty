@@ -8,8 +8,10 @@ import { Rewards } from './pages/Rewards'
 import { Bookings } from './pages/Bookings'
 import { Activity } from './pages/Activity'
 import { Profile } from './pages/Profile'
+import { Inbox } from './pages/Inbox'
 import { Book } from './pages/book/Book'
 import { StayBook } from './pages/stay/StayBook'
+import { PayReturn } from './pages/book/PayReturn'
 import { BookEntry } from './pages/BookEntry'
 
 registerPortalLocales()
@@ -32,11 +34,15 @@ export function PortalApp() {
           <Route path="book" element={<BookEntry />} />
           <Route path="book/appointment" element={<Book />} />
           <Route path="book/stay" element={<StayBook />} />
+          {/* Release 4, part C: where a bank redirect comes back to (Stripe's return_url). */}
+          <Route path="book/return" element={<PayReturn />} />
           <Route path="rewards" element={<Rewards />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="bookings/:kind/:id" element={<Bookings />} />
           <Route path="activity" element={<Activity />} />
           <Route path="profile" element={<Profile />} />
+          {/* Release 4, part A: the member's kept notifications. */}
+          <Route path="inbox" element={<Inbox />} />
           <Route path="*" element={<Navigate to="/portal" replace />} />
         </Routes>
       </PortalShell>

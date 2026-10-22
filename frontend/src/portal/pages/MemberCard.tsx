@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { portalApi } from '../lib/portalApi'
 import { resolveLocale } from '../lib/dates'
+import { counted } from '../lib/plural'
 import type { PortalMember } from '../lib/types'
 import { Card } from '../ui/Card'
 import { WalletButtons } from './WalletButtons'
@@ -29,7 +30,7 @@ export function MemberCard({ member, loyalty }: { member: PortalMember; loyalty:
             <>
               <p className="text-[11px] uppercase tracking-widest text-p-text-2">{t('portal.home.balance', 'Points balance')}</p>
               <p className="font-p-display text-5xl leading-tight tabular-nums text-p-text">{member.current_points.toLocaleString(locale)}</p>
-              <p className="text-[11px] text-p-text-2 mt-1">{t('portal.home.lifetime', '{{count}} earned all time', { count: member.lifetime_points })}</p>
+              <p className="text-[11px] text-p-text-2 mt-1">{counted(t, 'home.lifetime', member.lifetime_points)}</p>
             </>
           ) : (
             <p className="font-p-display text-2xl leading-tight text-p-text">{member.name}</p>
@@ -46,7 +47,7 @@ export function MemberCard({ member, loyalty }: { member: PortalMember; loyalty:
         <div className="mt-5">
           <div className="flex justify-between text-[11px] text-p-text-2 mb-1.5">
             <span>{t('portal.home.progress_to', 'Progress to {{tier}}', { tier: member.progress.next_tier.name })}</span>
-            <span className="tabular-nums">{t('portal.home.points_to_go', '{{count}} points to go', { count: member.progress.points_needed })}</span>
+            <span className="tabular-nums">{counted(t, 'home.points_to_go', member.progress.points_needed)}</span>
           </div>
           <div className="h-1.5 rounded-full bg-p-surface-2 overflow-hidden" role="progressbar" aria-valuenow={member.progress.percentage} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full rounded-full" style={{ width: `${Math.max(member.progress.percentage, 2)}%`, background: tierColor || 'rgb(var(--p-accent))' }} />

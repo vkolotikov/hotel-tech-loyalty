@@ -38,7 +38,7 @@ class RewardsTest extends TestCase
 
         $this->assertSame(['Spa voucher', 'Coffee'], array_column($response->json('rewards'), 'name'));
         $response->assertJsonPath('rewards.0', [
-            'id' => $voucher->id, 'name' => 'Spa voucher', 'description' => 'A morning at the spa.', 'terms' => 'Weekdays only.',
+            'id' => $voucher->id, 'brand_id' => $this->brandId, 'name' => 'Spa voucher', 'description' => 'A morning at the spa.', 'terms' => 'Weekdays only.',
             'category' => 'wellness', 'points_cost' => 500, 'stock' => 10, 'per_member_limit' => 2, 'discount_type' => 'percent_discount',
             'discount_value' => 15, 'applies_to' => 'services', 'expires_at' => '2026-12-31T22:00:00+00:00', 'is_active' => true,
             'image_url' => null, 'redeemed' => 3, 'fulfilled' => 1,
@@ -50,6 +50,7 @@ class RewardsTest extends TestCase
             ->assertJsonPath('options', [
                 'discount_types' => ['percent_discount', 'fixed_amount'], 'applies_to' => ['all', 'services', 'stays'],
                 'image'          => ['max_kb' => 5120, 'max_edge' => 4096, 'types' => ['image/jpeg', 'image/png', 'image/webp']],
+                'brands'         => ['list' => [['id' => $this->brandId, 'name' => 'Lumière Salon', 'is_default' => true]], 'default' => $this->brandId],
             ]);
     }
 
@@ -62,7 +63,7 @@ class RewardsTest extends TestCase
 
         $id = $response->json('reward.id');
         $response->assertJsonPath('reward', [
-            'id' => $id, 'name' => 'Free coffee', 'description' => null, 'terms' => null, 'category' => 'dining', 'points_cost' => 120,
+            'id' => $id, 'brand_id' => $this->brandId, 'name' => 'Free coffee', 'description' => null, 'terms' => null, 'category' => 'dining', 'points_cost' => 120,
             'stock' => 5, 'per_member_limit' => null, 'discount_type' => 'fixed_amount', 'discount_value' => 4.5, 'applies_to' => 'all',
             'expires_at' => '2026-11-30T23:59:00+00:00', 'is_active' => true, 'image_url' => null, 'redeemed' => 0, 'fulfilled' => 0,
         ]);

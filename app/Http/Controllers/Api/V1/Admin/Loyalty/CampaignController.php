@@ -12,6 +12,7 @@ use App\Services\Email\CampaignTags;
 use App\Services\Loyalty\Campaigns\CampaignAudience;
 use App\Services\Loyalty\Campaigns\CampaignBody;
 use App\Services\Loyalty\Campaigns\CampaignStart;
+use App\Services\Loyalty\Campaigns\SendLater;
 use App\Services\Loyalty\LoyaltyAccess;
 use App\Services\Loyalty\LoyaltyRefused;
 use Illuminate\Http\JsonResponse;
@@ -32,6 +33,9 @@ use Illuminate\Validation\ValidationException;
  * only while its blocks are the workspace's subset; a draft with an image or with hand-written HTML stays the full
  * admin's. Send is CampaignStart's one conditional update; cancel and delete are conditional too, so two people
  * pressing at once act once. Every change, test, send and cancel is audited.
+ *
+ * Release 4 (§5): send later. `schedule` sets a draft to go out at a time on the venue's clock (or moves a scheduled
+ * one), `unschedule` takes it back to a draft; `loyalty:send-scheduled` starts it when it is due (CampaignStart).
  */
 class CampaignController extends Controller
 {
@@ -221,6 +225,34 @@ class CampaignController extends Controller
         return response()->json(self::answer($campaign, $request->user()));
     }
 
+    /**
+     * Send later: `{send_at, revision}` — a time on the venue's clock (`YYYY-MM-DDTHH:mm`) and the draft shown; on a
+     * scheduled campaign, a new time. Answers the campaign and how many it would email now (`about`): it goes to
+     * whoever is eligible when it starts.
+     */
+    public function schedule(Request $request, int $id): JsonResponse
+    {
+        LoyaltyAccess::requireManager($request->user());
+        $campaign = $this->campaign($id);
+        $data = $request->validate([
+            'send_at'  => 'required|string|max:32',
+            'revision' => 'required|string|max:64',
+        ]);
+
+        $done = $this->start->schedule($campaign, $request->user(), $data['send_at'], $data['revision']);
+
+        return response()->json(self::answer($done['campaign'], $request->user()) + ['about' => $done['about']]);
+    }
+
+    /** A scheduled campaign back to a draft. */
+    public function unschedule(Request $request, int $id): JsonResponse
+    {
+        LoyaltyAccess::requireManager($request->user());
+        $campaign = $this->start->unschedule($this->campaign($id), $request->user());
+
+        return response()->json(self::answer($campaign, $request->user()));
+    }
+
     /** Stop a campaign while it sends; the job checks before each chunk, so what went out stays out. */
     public function cancel(Request $request, int $id): JsonResponse
     {
@@ -251,7 +283,7 @@ class CampaignController extends Controller
         $source = $this->campaign($id);
         $data = $request->validate(['name' => 'nullable|string|max:200']);
 
-        $copy = $source->replicate(['status', 'sent_at', 'sent_count', 'failed_count', 'recipient_count', 'error_message', 'sent_by_user_id', 'last_progress_at']);
+        $copy = $source->replicate(['status', 'sent_at', 'sent_count', 'failed_count', 'recipient_count', 'error_message', 'sent_by_user_id', 'last_progress_at', 'scheduled_at']);
         $copy->forceFill([
             'name'               => mb_substr(trim((string) ($data['name'] ?? '')) ?: $source->name . ' (copy)', 0, 120),
             'status'             => EmailCampaign::STATUS_DRAFT,
@@ -298,6 +330,8 @@ class CampaignController extends Controller
             'recipient_count' => (int) $c->recipient_count,
             'sent_count'      => (int) $c->sent_count,
             'failed_count'    => (int) $c->failed_count,
+            'scheduled_at'    => CampaignStart::scheduledAt($c)?->toIso8601String(),
+            'scheduled_for'   => SendLater::wallOf(CampaignStart::scheduledAt($c), (int) $c->organization_id),
             'sent_at'         => $c->sent_at?->toIso8601String(),
             'created_at'      => $c->created_at?->toIso8601String(),
             'updated_at'      => $c->updated_at?->toIso8601String(),
@@ -327,6 +361,8 @@ class CampaignController extends Controller
             'preview_html'     => CampaignTags::html((string) $c->body_html, $sample),
             'unknown_tags'     => CampaignTags::unknown((string) $c->subject, (string) $c->body_html),
             'missing'          => CampaignStart::incomplete($c),
+            // Why a scheduled send did not start when it was due (SendLater), as a code; the pipeline's own text is not.
+            'schedule_problem' => $c->status === EmailCampaign::STATUS_FAILED ? SendLater::problemIn($c->error_message) : null,
             'last_progress_at' => $c->last_progress_at?->toIso8601String(),
             'created_by'       => $c->createdBy?->name,
             'sent_by'          => $c->sentBy?->name,

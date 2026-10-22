@@ -26,6 +26,8 @@ final class MemberProfile
             'nationality'         => $user?->nationality,
             'date_of_birth'       => $user?->date_of_birth?->toDateString(),
             'marketing_consent'   => (bool) $member->marketing_consent,
+            // Release 4 (R4-4): the member's own "Offers by SMS", read only here (the member sets it in the app or portal).
+            'sms_consent'         => (bool) $member->sms_consent,
             'tier_override_until' => $member->tier_override_until?->toIso8601String(),
             'is_erased'           => MemberErasure::isErased($member),
         ];

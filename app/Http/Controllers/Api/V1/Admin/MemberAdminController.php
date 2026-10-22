@@ -477,16 +477,27 @@ class MemberAdminController extends Controller
 
         foreach ($members as $m) {
             try {
+                // Every member named is told (HexaTech Loyalty release 4 §5): NotificationService::send() keeps the
+                // message in the member's inbox, app or no app, unless they switched its kind off, and pushes only
+                // to a member with push on and a device. The counts mean what they meant: `push_sent` the members
+                // with push on and a device token, `skipped` the others; a member without the app whose inbox row
+                // cannot be written is still skipped and still emailed, as before.
+                $notice = [
+                    'type'  => $type,
+                    'title' => $validated['title'],
+                    'body'  => $validated['body'],
+                    'data'  => ['source' => 'admin_broadcast', 'category' => $category],
+                ];
                 if ($m->push_notifications && $m->expo_push_token) {
-                    $svc->send($m, [
-                        'type'  => $type,
-                        'title' => $validated['title'],
-                        'body'  => $validated['body'],
-                        'data'  => ['source' => 'admin_broadcast', 'category' => $category],
-                    ]);
+                    $svc->send($m, $notice);
                     $pushSent++;
                 } else {
                     $skipped++;
+                    try {
+                        $svc->send($m, $notice);
+                    } catch (\Throwable $e) {
+                        \Log::warning('Bulk message inbox row failed', ['member_id' => $m->id, 'error' => $e->getMessage()]);
+                    }
                 }
                 // Consent gate + unsubscribe. Gating on `email_notifications`
                 // alone (default TRUE) sent marketing to members who had never

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { apiErrorCode, bookErrorKey, portalApi } from '../../lib/portalApi'
 import { formatDay, resolveLocale, venueToday } from '../../lib/dates'
+import { counted } from '../../lib/plural'
 import { Skeleton } from '../../ui/Skeleton'
 import { EmptyState } from '../../ui/EmptyState'
 import { Notice } from '../../ui/Notice'
@@ -130,7 +131,7 @@ export function WhenStep({ serviceId, masterId, rules, value, onPick, timezone }
           ))}
         </div>
       )}
-      {calendar.isSuccess && available.size === 0 && <EmptyState title={t('portal.book.no_days', 'No days available in the next {{count}} days.', { count: rules.max_advance_days })} />}
+      {calendar.isSuccess && available.size === 0 && <EmptyState title={counted(t, 'book.no_days', rules.max_advance_days)} />}
       <p className="text-xs text-p-text-2">{t('portal.book.lead_note', "Times are shown in the venue's local time.")}</p>
     </div>
   )

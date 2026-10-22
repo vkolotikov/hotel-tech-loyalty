@@ -129,5 +129,28 @@
       "network": "Pas de connexion. Vérifiez le réseau et réessayez.",
       "unknown": "Les analyses n’ont pas pu être chargées. Veuillez réessayer."
     }
+  },
+  "cohorts": {
+    "cell": "{{active}} actifs sur {{members}}",
+    "joined": "Inscription",
+    "line": "Les membres par mois d’inscription, et la part d’entre eux qui ont gagné ou dépensé des points ce mois-là et chaque mois suivant. Les douze derniers mois.",
+    "members": "Membres",
+    "month_after": "+{{months}}",
+    "month_zero": "Mois d’inscription",
+    "none": "Personne ne s’est inscrit au cours des douze derniers mois.",
+    "title": "Fidélisation par cohorte"
+  },
+  "money": {
+    "all": "Sur {{total}} payés au total",
+    "bookings": "Réservations : {{number}}",
+    "currency_line": "En {{currency}}",
+    "line": "Séjours et rendez-vous payés que les membres ont réservés sur cette période, par jour de réservation : ce qu’ils ont payé, moins les remboursements.",
+    "members": "Apporté par les membres",
+    "none": "Aucune réservation payée sur cette période pour l’instant.",
+    "other_currency": "Réservations payées par des membres dans une autre devise, non comptées : {{number}}.",
+    "services": "Rendez-vous",
+    "share": "Part de toutes les réservations payées",
+    "stays": "Séjours",
+    "title": "Ce que rapportent les membres"
   }
 }

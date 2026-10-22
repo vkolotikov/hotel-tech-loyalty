@@ -10,6 +10,7 @@ use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\TierBenefit;
 use App\Services\AnalyticsService;
+use App\Services\Appointments\VenueClock;
 use App\Services\Booking\Setup\OwnRows;
 use App\Services\DiscountService;
 use App\Services\Loyalty\LoyaltyAccess;
@@ -37,8 +38,10 @@ class ProgramController extends Controller
     /** loyalty_tiers.earn_rate is decimal(4,2): a larger rate would fail in the database, not in the form. */
     private const MAX_EARN_RATE = 99.99;
 
-    public function show(): JsonResponse
+    public function show(Request $request): JsonResponse
     {
+        $orgId = (int) app('current_organization_id');
+        $named = VenueClock::isNamed($orgId);
         $members = LoyaltyMember::query()->where('is_active', true)
             ->selectRaw('tier_id, COUNT(*) AS n')->groupBy('tier_id')->pluck('n', 'tier_id');
         $benefits = $this->tierBenefits()->get()->groupBy('tier_id');
@@ -50,12 +53,14 @@ class ProgramController extends Controller
             'benefits' => BenefitDefinition::query()->orderBy('sort_order')->orderBy('name')->get()
                 ->map(fn (BenefitDefinition $b) => self::benefitRow($b))->values(),
             'boosts'   => EarnRateEvent::query()->orderByDesc('starts_at')->orderByDesc('id')->get()
-                ->map(fn (EarnRateEvent $e) => self::boostRow($e))->values(),
+                ->map(fn (EarnRateEvent $e) => self::boostRow($e, $named))->values(),
             'options'  => [
                 'categories'        => LoyaltyForms::BENEFIT_CATEGORIES,
                 'fulfillment_modes' => LoyaltyForms::FULFILLMENT_MODES,
                 'value_types'       => DiscountService::VALUE_TYPES,
                 'applies_to'        => LoyaltyForms::appliesTo(),
+                // Release 4: the brands a new boost may be put on (one: nothing to choose).
+                'brands'            => LoyaltyForms::brands($request->user(), $orgId),
             ],
         ]);
     }
@@ -217,15 +222,16 @@ class ProgramController extends Controller
 
     // ─── Boost events ───────────────────────────────────────────────────────
 
+    /** A new boost may name its brand (release 4, `brand`): one of the options' brands; none, the model's hook picks it as before. */
     public function storeBoost(Request $request): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
-        $event = EarnRateEvent::create($this->boostValues($request));
+        $event = EarnRateEvent::create($this->boostValues($request, true));
 
         AuditLog::record('earn_rate_event_created', $event, $event->toArray(), [],
             $request->user(), "Earn-rate event '{$event->name}' created ({$event->multiplier}x)");
 
-        return response()->json(['boost' => self::boostRow($event->fresh())], 201);
+        return response()->json(['boost' => self::boostRow($event->fresh(), VenueClock::isNamed((int) app('current_organization_id')))], 201);
     }
 
     public function updateBoost(Request $request, int $id): JsonResponse
@@ -238,7 +244,7 @@ class ProgramController extends Controller
         AuditLog::record('earn_rate_event_updated', $event, $event->toArray(), $old,
             $request->user(), "Earn-rate event '{$event->name}' updated");
 
-        return response()->json(['boost' => self::boostRow($event->fresh())]);
+        return response()->json(['boost' => self::boostRow($event->fresh(), VenueClock::isNamed((int) app('current_organization_id')))]);
     }
 
     public function destroyBoost(Request $request, int $id): JsonResponse
@@ -257,11 +263,12 @@ class ProgramController extends Controller
     /**
      * EarnRateEventController's payload, without the property (the workspace has no property choice): a whole
      * event, on create and on change alike. The start and end are read as LoyaltyForms::instant() says, and the end
-     * is compared with the start as the instants they are.
+     * is compared with the start as the instants they are. Every save marks the times as the venue's
+     * (`times_venue_at`, R4-6), as the full admin's save now does too. The brand is chosen on create only.
      *
      * @return array<string, mixed>
      */
-    private function boostValues(Request $request): array
+    private function boostValues(Request $request, bool $creating = false): array
     {
         $orgId = (int) app('current_organization_id');
         $data = Validator::make($request->all(), [
@@ -275,6 +282,7 @@ class ProgramController extends Controller
             'tier_ids'       => 'sometimes|nullable|array',
             'tier_ids.*'     => ['integer', OwnRows::rule('loyalty_tiers')],
             'is_active'      => 'sometimes|boolean',
+            ...($creating ? ['brand' => LoyaltyForms::brandRule($request->user(), $orgId)] : []),
         ])->after(function (FormValidator $v) use ($request, $orgId) {
             if ($v->errors()->hasAny(['starts_at', 'ends_at'])) {
                 return;
@@ -286,6 +294,8 @@ class ProgramController extends Controller
 
         $data['starts_at'] = LoyaltyForms::instant($data['starts_at'], $orgId);
         $data['ends_at'] = LoyaltyForms::instant($data['ends_at'], $orgId);
+        $data['times_venue_at'] = now();
+        $data = LoyaltyForms::withBrand($data);
         foreach (['days_of_week', 'tier_ids'] as $list) {
             if (array_key_exists($list, $data)) {
                 $data[$list] = LoyaltyForms::ints($data[$list]);
@@ -360,11 +370,19 @@ class ProgramController extends Controller
         ];
     }
 
-    /** @return array<string, mixed> */
-    private static function boostRow(EarnRateEvent $e): array
+    /**
+     * A boost as Program shows it. `check_time` (R4-6): its times were last saved before every save read a time
+     * without an offset as the venue's wall clock (no `times_venue_at`), at a venue whose clock is not UTC — the full
+     * admin then stored 18:00 as 18:00 UTC, which is 21:00 in Riga. At a venue on UTC that read the same, so nothing
+     * needs checking there. Saving the boost from either admin clears it.
+     *
+     * @return array<string, mixed>
+     */
+    private static function boostRow(EarnRateEvent $e, bool $namedZone): array
     {
         return [
             'id'           => (int) $e->id,
+            'brand_id'     => $e->brand_id !== null ? (int) $e->brand_id : null,
             'name'         => (string) $e->name,
             'description'  => $e->description,
             'multiplier'   => (float) $e->multiplier,
@@ -374,6 +392,7 @@ class ProgramController extends Controller
             'tier_ids'     => LoyaltyForms::ints($e->tier_ids),
             'is_active'    => (bool) $e->is_active,
             'state'        => self::boostState($e),
+            'check_time'   => $namedZone && $e->times_venue_at === null,
         ];
     }
 

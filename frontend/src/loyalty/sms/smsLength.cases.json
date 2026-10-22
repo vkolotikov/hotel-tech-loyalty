@@ -1,0 +1,196 @@
+[
+ {
+  "name": "nothing",
+  "text": "",
+  "encoding": "gsm7",
+  "units": 0,
+  "segments": 0,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "a short word",
+  "text": "Hello",
+  "encoding": "gsm7",
+  "units": 5,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "160 GSM letters fit one SMS",
+  "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "encoding": "gsm7",
+  "units": 160,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "161 GSM letters are two parts of 153",
+  "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "encoding": "gsm7",
+  "units": 161,
+  "segments": 2,
+  "per_segment": 153,
+  "unicode": []
+ },
+ {
+  "name": "306 GSM letters are two parts",
+  "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "encoding": "gsm7",
+  "units": 306,
+  "segments": 2,
+  "per_segment": 153,
+  "unicode": []
+ },
+ {
+  "name": "307 GSM letters are three parts",
+  "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "encoding": "gsm7",
+  "units": 307,
+  "segments": 3,
+  "per_segment": 153,
+  "unicode": []
+ },
+ {
+  "name": "the euro sign counts twice: 80 fit one SMS",
+  "text": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€",
+  "encoding": "gsm7",
+  "units": 160,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "81 euro signs are two parts",
+  "text": "€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€€",
+  "encoding": "gsm7",
+  "units": 162,
+  "segments": 2,
+  "per_segment": 153,
+  "unicode": []
+ },
+ {
+  "name": "a doubled character is never split between parts",
+  "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx€xxxxxxx",
+  "encoding": "gsm7",
+  "units": 161,
+  "segments": 2,
+  "per_segment": 153,
+  "unicode": []
+ },
+ {
+  "name": "a tag's braces are extension characters",
+  "text": "Hi {{first_name}}",
+  "encoding": "gsm7",
+  "units": 21,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "a line break is one character",
+  "text": "a\nb",
+  "encoding": "gsm7",
+  "units": 3,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "GSM accented letters",
+  "text": "Café à Øresund, Ñoño",
+  "encoding": "gsm7",
+  "units": 20,
+  "segments": 1,
+  "per_segment": 160,
+  "unicode": []
+ },
+ {
+  "name": "a curly apostrophe makes it Unicode",
+  "text": "It’s on",
+  "encoding": "ucs2",
+  "units": 7,
+  "segments": 1,
+  "per_segment": 70,
+  "unicode": [
+   "’"
+  ]
+ },
+ {
+  "name": "a small c with cedilla is not in the GSM alphabet",
+  "text": "Garçon",
+  "encoding": "ucs2",
+  "units": 6,
+  "segments": 1,
+  "per_segment": 70,
+  "unicode": [
+   "ç"
+  ]
+ },
+ {
+  "name": "Cyrillic: 70 fit one SMS",
+  "text": "жжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж",
+  "encoding": "ucs2",
+  "units": 70,
+  "segments": 1,
+  "per_segment": 70,
+  "unicode": [
+   "ж"
+  ]
+ },
+ {
+  "name": "Cyrillic: 71 are two parts of 67",
+  "text": "жжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжжж",
+  "encoding": "ucs2",
+  "units": 71,
+  "segments": 2,
+  "per_segment": 67,
+  "unicode": [
+   "ж"
+  ]
+ },
+ {
+  "name": "an emoji counts twice: 35 fit one SMS",
+  "text": "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉",
+  "encoding": "ucs2",
+  "units": 70,
+  "segments": 1,
+  "per_segment": 70,
+  "unicode": [
+   "🎉"
+  ]
+ },
+ {
+  "name": "36 emoji are two parts, never split",
+  "text": "🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉🎉",
+  "encoding": "ucs2",
+  "units": 72,
+  "segments": 2,
+  "per_segment": 67,
+  "unicode": [
+   "🎉"
+  ]
+ },
+ {
+  "name": "the Unicode characters are named once each, the first ten",
+  "text": "Привет, мир! абвгдеёзий",
+  "encoding": "ucs2",
+  "units": 23,
+  "segments": 1,
+  "per_segment": 70,
+  "unicode": [
+   "П",
+   "р",
+   "и",
+   "в",
+   "е",
+   "т",
+   "м",
+   "а",
+   "б",
+   "г"
+  ]
+ }
+]

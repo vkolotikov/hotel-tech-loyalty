@@ -8,6 +8,7 @@ use App\Models\MemberSegment;
 use App\Models\NotificationCampaign;
 use App\Models\User;
 use App\Services\Loyalty\Campaigns\SegmentRules;
+use App\Services\Loyalty\Campaigns\SendLater;
 use App\Services\Loyalty\LoyaltyRefused;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -23,6 +24,11 @@ use Illuminate\Support\Facades\Log;
  *   checked) starts it, so two presses cannot start it twice: the second hears `already_started` and dispatches
  *   nothing;
  * - an audience over the cap is refused, not cut.
+ *
+ * Release 4 (§5): send later, as for email (Campaigns\CampaignStart, Campaigns\SendLater): `schedule()` sets a draft to
+ * `scheduled` (`scheduled_at`, the column notification_campaigns always had, and `sent_by_user_id` naming who
+ * scheduled it), `unschedule()` takes it back, and `startScheduled()` starts it once when it is due, to whoever can
+ * receive it then. A scheduled message that cannot start is marked failed with the reason in `data.schedule_problem`.
  */
 final class PushStart
 {
@@ -103,19 +109,8 @@ final class PushStart
             throw $now && $now->status !== PushMessage::STATUS_DRAFT ? self::alreadyStarted((string) $now->status) : self::changed();
         }
 
-        try {
-            SendPushMessageChunk::dispatch((int) $m->id, $ids);
-        } catch (\Throwable $e) {
-            Log::error('loyalty push message could not be queued', ['campaign_id' => $m->id, 'error' => $e->getMessage()]);
-            // Nothing was queued: hand the draft back rather than leave it "sending" with no job behind it — only while
-            // no member was recorded. A synchronous queue (local development) runs the job here, and one that stopped
-            // partway has already recorded members, so the message stays as the job left it.
-            $back = PushMessage::query()->whereKey($m->id)->where('status', PushMessage::STATUS_SENDING)
-                ->whereNotExists(fn ($q) => $q->from('push_message_deliveries')->where('push_message_deliveries.campaign_id', (int) $m->id))
-                ->update(['status' => PushMessage::STATUS_DRAFT, 'sent_by_user_id' => null, 'target_count' => 0]);
-            if ($back === 1) {
-                throw new LoyaltyRefused('not_started', 'The message could not be queued. Nothing was sent.', 503);
-            }
+        if (!$this->handOver($m, $ids, PushMessage::STATUS_DRAFT)) {
+            throw new LoyaltyRefused('not_started', 'The message could not be queued. Nothing was sent.', 503);
         }
 
         $audience['segment']->forceFill(['last_sent_at' => now()])->save();
@@ -125,6 +120,170 @@ final class PushStart
             "Push message '{$fresh->name}' queued for {$count} members");
 
         return $fresh;
+    }
+
+    /**
+     * Send later (release 4 §5): a draft set to go out at a time on the venue's clock, or a scheduled one moved. The
+     * draft is checked as Send checks it (the revision shown, nothing missing, a segment and a category, sound rules),
+     * but no count is confirmed: it goes to whoever can receive it when it starts.
+     *
+     * @param string $sendAt the venue's wall clock, `YYYY-MM-DDTHH:mm`
+     * @return array{push: NotificationCampaign, about: int} `about`: how many it would reach now
+     */
+    public function schedule(NotificationCampaign $m, User $by, string $sendAt, string $revision): array
+    {
+        $orgId = (int) $m->organization_id;
+        if (!in_array($m->status, [PushMessage::STATUS_DRAFT, SendLater::STATUS], true)) {
+            throw self::alreadyStarted((string) $m->status);
+        }
+        if ($revision !== PushMessage::revision($m)) {
+            throw self::changed();
+        }
+        $at = SendLater::instantOf($sendAt, $orgId);
+        $missing = PushMessage::incomplete($m);
+        if ($missing !== []) {
+            throw new LoyaltyRefused('incomplete', 'This message is not ready to send.', 422, ['missing' => $missing]);
+        }
+        $about = count($this->audienceOf($m)['reached']);
+        $was = (string) $m->status;
+        $before = $m->scheduled_at?->toIso8601String();
+
+        $query = PushMessage::query()->whereKey($m->id)->where('organization_id', $orgId)->where('status', $was);
+        if ($was === PushMessage::STATUS_DRAFT) {
+            $query->where('member_segment_id', $m->member_segment_id)->where('category', $m->category)->where('title', $m->title)->where('body', $m->body);
+        }
+        $set = $query->update([
+            'status'          => SendLater::STATUS,
+            'scheduled_at'    => $at,
+            'sent_by_user_id' => $by->id,
+            'target_count'    => 0,
+            'sent_count'      => 0,
+        ]);
+        if ($set !== 1) {
+            $now = PushMessage::query()->find($m->id);
+            throw $now && !in_array($now->status, [PushMessage::STATUS_DRAFT, SendLater::STATUS], true) ? self::alreadyStarted((string) $now->status) : self::changed();
+        }
+
+        $fresh = PushMessage::query()->findOrFail($m->id);
+        AuditLog::record($was === SendLater::STATUS ? 'push_message_rescheduled' : 'push_message_scheduled', $fresh,
+            ['send_at' => $at->toIso8601String(), 'send_at_venue' => SendLater::wallOf($at, $orgId), 'about' => $about, 'segment_id' => (int) $m->member_segment_id],
+            $was === SendLater::STATUS ? ['send_at' => $before] : [], $by,
+            "Push message '{$fresh->name}' scheduled for " . SendLater::wallOf($at, $orgId) . " (venue time), about {$about} members now");
+
+        return ['push' => $fresh, 'about' => $about];
+    }
+
+    /** A scheduled message back to a draft: nothing is sent. @throws LoyaltyRefused `not_scheduled` */
+    public function unschedule(NotificationCampaign $m, User $by): NotificationCampaign
+    {
+        $back = PushMessage::query()->whereKey($m->id)->where('organization_id', $m->organization_id)->where('status', SendLater::STATUS)
+            ->update(['status' => PushMessage::STATUS_DRAFT, 'scheduled_at' => null, 'sent_by_user_id' => null]);
+        if ($back !== 1) {
+            throw SendLater::notScheduled((string) (PushMessage::query()->find($m->id)?->status ?? ''));
+        }
+
+        $fresh = PushMessage::query()->findOrFail($m->id);
+        AuditLog::record('push_message_unscheduled', $fresh, ['status' => PushMessage::STATUS_DRAFT],
+            ['status' => SendLater::STATUS, 'send_at' => $m->scheduled_at?->toIso8601String()], $by,
+            "Push message '{$fresh->name}' taken back to a draft; nothing was sent");
+
+        return $fresh;
+    }
+
+    /**
+     * Start a scheduled message that is due (`loyalty:send-scheduled`), to whoever can receive it now, with one
+     * conditional update (`scheduled` → `sending`). One that cannot start is marked failed with the reason; one that
+     * another run started, or someone moved or took back meanwhile, is left.
+     *
+     * @return string `started`, `left`, `not_started` (the queue refused it; it stays scheduled), or the reason's code
+     */
+    public function startScheduled(NotificationCampaign $m): string
+    {
+        if ($m->status !== SendLater::STATUS || $m->scheduled_at === null || $m->scheduled_at->isFuture()) {
+            return 'left';
+        }
+
+        try {
+            if (PushMessage::incomplete($m) !== []) {
+                throw new LoyaltyRefused('incomplete', '', 422);
+            }
+            $audience = $this->audienceOf($m);
+            $ids = $audience['reached'];
+            if ($ids === []) {
+                throw new LoyaltyRefused('nobody_to_send_to', '', 422);
+            }
+            if (count($ids) > PushMessage::LIMIT) {
+                throw new LoyaltyRefused('too_many', '', 422);
+            }
+        } catch (LoyaltyRefused $e) {
+            $failed = PushMessage::query()->whereKey($m->id)->where('status', SendLater::STATUS)
+                ->update(['status' => PushMessage::STATUS_FAILED, 'data' => json_encode(['schedule_problem' => $e->errorCode])]);
+            if ($failed === 1) {
+                AuditLog::record('push_message_schedule_failed', $m, ['reason' => $e->errorCode], ['status' => SendLater::STATUS],
+                    self::scheduler($m), "Push message '{$m->name}' was due but did not start: {$e->errorCode}");
+            }
+
+            return $failed === 1 ? $e->errorCode : 'left';
+        }
+        $count = count($ids);
+
+        $started = PushMessage::query()
+            ->whereKey($m->id)
+            ->where('organization_id', $m->organization_id)
+            ->where('status', SendLater::STATUS)
+            ->where('scheduled_at', '<=', now())
+            ->where('member_segment_id', $m->member_segment_id)
+            ->where('category', $m->category)
+            ->where('title', $m->title)
+            ->where('body', $m->body)
+            ->update(['status' => PushMessage::STATUS_SENDING, 'target_count' => $count, 'sent_count' => 0, 'sent_at' => null]);
+        if ($started !== 1) {
+            return 'left';
+        }
+        if (!$this->handOver($m, $ids, SendLater::STATUS)) {
+            return 'not_started';
+        }
+
+        $audience['segment']->forceFill(['last_sent_at' => now()])->save();
+        $fresh = PushMessage::query()->findOrFail($m->id);
+        AuditLog::record('push_message_queued', $fresh,
+            ['recipients' => $count, 'segment_id' => (int) $m->member_segment_id, 'category' => (string) $m->category, 'scheduled' => true], [],
+            self::scheduler($m), "Scheduled push message '{$fresh->name}' queued for {$count} members");
+
+        return 'started';
+    }
+
+    /**
+     * Queue the job. When the queue refuses it, nothing was queued: the message goes back to what it was (`$back`: a
+     * draft, or scheduled for the next run) rather than stay "sending" with no job behind it — only while no member
+     * was recorded. A synchronous queue (local development) runs the job here, and one that stopped partway has
+     * already recorded members, so the message stays as the job left it.
+     *
+     * @param list<int> $ids
+     */
+    private function handOver(NotificationCampaign $m, array $ids, string $back): bool
+    {
+        try {
+            SendPushMessageChunk::dispatch((int) $m->id, $ids);
+        } catch (\Throwable $e) {
+            Log::error('loyalty push message could not be queued', ['campaign_id' => $m->id, 'error' => $e->getMessage()]);
+            $undo = $back === PushMessage::STATUS_DRAFT
+                ? ['status' => PushMessage::STATUS_DRAFT, 'sent_by_user_id' => null, 'target_count' => 0]
+                : ['status' => SendLater::STATUS, 'target_count' => 0];
+            $reverted = PushMessage::query()->whereKey($m->id)->where('status', PushMessage::STATUS_SENDING)
+                ->whereNotExists(fn ($q) => $q->from('push_message_deliveries')->where('push_message_deliveries.campaign_id', (int) $m->id))
+                ->update($undo);
+
+            return $reverted !== 1;
+        }
+
+        return true;
+    }
+
+    /** Who scheduled it: the causer of what the scheduler does for them. */
+    private static function scheduler(NotificationCampaign $m): ?User
+    {
+        return $m->sent_by_user_id ? User::query()->find($m->sent_by_user_id) : null;
     }
 
     /**

@@ -19,7 +19,7 @@ import { BenefitDialog } from './BenefitDialog'
 import { BoostDialog } from './BoostDialog'
 import { ERRORS } from './errors'
 import { ConfirmDialog, ToneBadge } from '../ui/formParts'
-import { activeTone, boostState, boostTone, programActions, thresholds, typedValue, weekdaysText } from './programMath'
+import { activeTone, boostState, boostTone, needsTimeCheck, programActions, thresholds, typedValue, weekdaysText } from './programMath'
 import { chosenTiers, decimal, named } from '../lib/forms'
 import { TierBenefitDialog } from './TierBenefitDialog'
 import { TierDialog } from './TierDialog'
@@ -84,7 +84,7 @@ export function ProgramPage() {
       )}
       {open?.kind === 'take_off' && <TakeOff tier={open.tier} tb={open.tb} onClose={close} />}
       {data && open?.kind === 'benefit' && <BenefitDialog benefit={open.benefit} options={data.options} onClose={close} />}
-      {data && open?.kind === 'boost' && <BoostDialog boost={open.boost} tiers={data.tiers} onClose={close} />}
+      {data && open?.kind === 'boost' && <BoostDialog boost={open.boost} tiers={data.tiers} brands={data.options.brands} onClose={close} />}
       {open?.kind === 'remove_boost' && <RemoveBoost boost={open.boost} onClose={close} />}
     </div>
   )
@@ -343,6 +343,11 @@ export function BoostRow({ boost, tiers, manage, theme, locale, timeZone, onOpen
             : chosen.map(tier => <TierChip key={tier.id} tier={tier} theme={theme} size="sm" />)}
         </div>
         {boost.description && <p className="text-xs text-a-text-2">{boost.description}</p>}
+        {needsTimeCheck(boost) && (
+          <p data-time-check="" className="text-xs font-medium text-a-st-pending">
+            {t('loyalty.program.time_check.row', 'Check the time: saved in the full admin before its times were read on the venue’s clock, it may start and end hours off. Open it, check the times and save.')}
+          </p>
+        )}
       </div>
       <ToneBadge tone={boostTone(state)}>{t(`loyalty.program.boost_state.${state}`, BOOST_STATE_WORDS[state])}</ToneBadge>
       {manage && (

@@ -32,12 +32,16 @@ const CATEGORIES = [
   { value: 'equipment', label: 'Equipment', icon: '🔧' },
 ]
 
+// How the booking engine charges each type (R4-3): `per` follows the price in the list ("€10.00 per night"),
+// `hint` sits under the form's choice. A guest is anyone in the party, children included.
 const PRICE_TYPES = [
-  { value: 'per_stay', label: 'Per stay' },
-  { value: 'per_night', label: 'Per night' },
-  { value: 'per_person', label: 'Per person' },
-  { value: 'per_person_night', label: 'Per person / night' },
+  { value: 'per_stay', label: 'Per stay', per: 'per stay', hint: 'Charged once for the whole stay.' },
+  { value: 'per_night', label: 'Per night', per: 'per night', hint: 'Charged for every night of the stay.' },
+  { value: 'per_person', label: 'Per person', per: 'per person', hint: 'Charged for every guest, children included.' },
+  { value: 'per_person_night', label: 'Per person / night', per: 'per person per night', hint: 'Charged for every guest, children included, for every night of the stay.' },
 ]
+// An extra saved with no type is charged once per stay; an unexpected one is shown as it is stored.
+const chargedAs = (value: string | null | undefined) => PRICE_TYPES.find(p => p.value === (value || 'per_stay'))
 
 const card = 'rounded-2xl border border-white/[0.06] p-5'
 const cardBg = { background: 'var(--legacy-hero-gradient-soft)', backdropFilter: 'blur(20px)' }
@@ -57,7 +61,7 @@ export default function BookingExtras() {
   const deleteMut = useMutation({
     mutationFn: (id: number) => api.delete(`/v1/admin/booking-extras/${id}`),
     onSuccess: () => { toast.success('Extra deleted'); qc.invalidateQueries({ queryKey: ['booking-extras'] }) },
-    onError: (e: any) => toast.error(e?.response?.data?.message || 'Failed to delete'),
+    onError: (e: { response?: { data?: { message?: string } } }) => toast.error(e?.response?.data?.message || 'Failed to delete'),
   })
 
   const saveMut = useMutation({
@@ -150,7 +154,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
           </div>
           {extra.description && <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{extra.description}</p>}
           <div className="flex items-center justify-between mt-2">
-            <span className="text-sm font-bold text-white">{money(extra.price)} <span className="text-xs font-normal text-gray-500">/ {PRICE_TYPES.find(p => p.value === extra.price_type)?.label || extra.price_type}</span></span>
+            <span className="text-sm font-bold text-white">{money(extra.price)} <span className="text-xs font-normal text-gray-500">{chargedAs(extra.price_type)?.per || extra.price_type}</span></span>
             <div className="flex gap-1">
               <button onClick={onEdit} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-gray-500 hover:text-white transition-all"><Pencil size={12} /></button>
               <button onClick={onDelete} className="p-1.5 rounded-lg hover:bg-red-500/10 text-gray-500 hover:text-red-400 transition-all"><Trash2 size={12} /></button>
@@ -162,7 +166,7 @@ function ExtraCard({ extra, onEdit, onDelete }: { extra: Extra; onEdit: () => vo
   )
 }
 
-function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; onClose: () => void; onSave: (fd: FormData) => void; saving: boolean }) {
+export function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; onClose: () => void; onSave: (fd: FormData) => void; saving: boolean }) {
   const [name, setName] = useState(extra?.name || '')
   const [description, setDescription] = useState(extra?.description || '')
   const [price, setPrice] = useState<string>(extra?.price != null ? String(extra.price) : '')
@@ -235,6 +239,7 @@ function ExtraForm({ extra, onClose, onSave, saving }: { extra: Extra | null; on
               <select value={priceType} onChange={e => setPriceType(e.target.value)} className={inputCls}>
                 {PRICE_TYPES.map(pt => <option key={pt.value} value={pt.value} style={{ background: hx('f', '#0f1c18'), color: hxWhite() }}>{pt.label}</option>)}
               </select>
+              {chargedAs(priceType) && <p className="text-[11px] text-gray-500 mt-1">{chargedAs(priceType)?.hint}</p>}
             </div>
           </div>
 

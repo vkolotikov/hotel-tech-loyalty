@@ -17,12 +17,15 @@ import { campaignActions, campaignPath, FULL_ADMIN_CAMPAIGNS, previewFilled, pro
 import { EmailPreview } from './EmailPreview'
 import { ERRORS } from './errors'
 import { Refusal, StatusBadge } from './parts'
+import { ScheduledPanel, ScheduleFailed } from './ScheduleParts'
+import { isScheduled } from './scheduleMath'
 import type { Campaign } from './types'
 
 /**
  * A campaign that went out, or is going out (spec 2026-10-21 release 2 §6): how many were sent, failed, and of how
  * many, read again every 10 s while it sends; Cancel while it sends (what went out stays out); Duplicate for a new
- * draft. The email as it was sent is below.
+ * draft. The email as it was sent is below. Release 4: a scheduled campaign shows when it goes out, with Change time and
+ * Take back to a draft; one that could not start when it was due says why.
  */
 export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
   const { t, i18n } = useTranslation()
@@ -32,11 +35,35 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
   const progress = progressOf(c)
   const actions = campaignActions(c)
   const [stopping, setStopping] = useState(false)
+  const client = useQueryClient()
   const n = (count: number) => points(count, locale)
+
+  if (isScheduled(c.status)) {
+    const settle = (answer: { campaign: Campaign; options: unknown }) => {
+      client.setQueryData(campaignKey(c.id), { campaign: answer.campaign, options: answer.options })
+      afterCampaignChange(client, c.id)
+    }
+    return (
+      <div className="space-y-6">
+        <Header campaign={c} />
+        <ScheduledPanel wall={c.scheduled_for} timeZone={timeZone} today={boot.venue.today} by={c.sent_by}
+          onMove={(at) => campaignsApi.schedule(c.id, { send_at: at, revision: c.revision }).then(settle, (error) => { afterCampaignChange(client, c.id); throw error })}
+          onTakeBack={() => campaignsApi.unschedule(c.id).then(settle, (error) => { afterCampaignChange(client, c.id); throw error })}
+          refusal={(family, failure) => <Refusal family={family} failure={failure} />} />
+        <Actions campaign={c} cancel={false} onCancel={() => {}} />
+        <section aria-labelledby="campaign-sent" className="max-w-2xl space-y-2">
+          <Eyebrow><span id="campaign-sent">{t('loyalty.campaigns.results.email', 'The email')}</span></Eyebrow>
+          <EmailPreview html={c.preview_html} filled={previewFilled(c)} />
+        </section>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
       <Header campaign={c} />
+      {c.status === 'failed' && c.schedule_problem && <ScheduleFailed problem={c.schedule_problem} wall={c.scheduled_for} />}
+      {!(c.status === 'failed' && c.schedule_problem) && (
       <section aria-labelledby="campaign-progress" className="max-w-2xl space-y-3 rounded-2xl border border-a-border bg-a-surface p-5" data-progress={c.status}>
         <Eyebrow><span id="campaign-progress">{t('loyalty.campaigns.results.title', 'How far it got')}</span></Eyebrow>
         <dl className="grid grid-cols-3 gap-4">
@@ -70,6 +97,7 @@ export function CampaignResults({ campaign: c }: { campaign: Campaign }) {
           <p className="text-sm text-a-text-2">{t('loyalty.campaigns.results.skipped', '{{number}} were not emailed: they withdrew their consent or unsubscribed after it started, or their address was blocked after a bounce or a complaint.', { number: n(progress.skipped) })}</p>
         )}
       </section>
+      )}
 
       <Actions campaign={c} cancel={actions.cancel} onCancel={() => setStopping(true)} />
 

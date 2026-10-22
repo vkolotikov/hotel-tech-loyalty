@@ -231,6 +231,10 @@
     "take_off_label": "Retirer {{benefit}} du niveau {{tier}}",
     "title": "Niveaux"
   },
+  "time_check": {
+    "dialog": "Vérifiez ces horaires : le boost a été enregistré dans l’administration complète avant qu’elle ne lise les heures selon l’heure de l’établissement ; ils peuvent être décalés de l’écart entre l’établissement et UTC. Une fois le boost enregistré, ils sont considérés comme vérifiés.",
+    "row": "Vérifiez l’horaire : enregistré dans l’administration complète avant que ses heures ne soient lues selon l’heure de l’établissement, ce boost peut commencer et finir avec quelques heures d’écart. Ouvrez-le, vérifiez les horaires et enregistrez."
+  },
   "title": "Programme",
   "value_phrase": {
     "fixed_amount": "{{amount}} de remise",

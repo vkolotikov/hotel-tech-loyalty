@@ -82,6 +82,8 @@ class MemberController extends Controller
             'notification_preferences.points'    => 'sometimes|boolean',
             'notification_preferences.tier'      => 'sometimes|boolean',
             'notification_preferences.stays'     => 'sometimes|boolean',
+            // "Offers by SMS" (HexaTech Loyalty release 4, R4-4): the member's own SMS opt-in, off until they turn it on.
+            'sms_consent'         => 'sometimes|boolean',
         ]);
 
         $user = $request->user();
@@ -93,6 +95,10 @@ class MemberController extends Controller
         if (array_key_exists('notification_preferences', $validated)) {
             $existing = $member->notification_preferences ?: [];
             $memberFields['notification_preferences'] = array_merge($existing, $validated['notification_preferences']);
+        }
+        // Written by name, not through the model's fillable list (which the column postdates); kept as a boolean.
+        if (array_key_exists('sms_consent', $validated)) {
+            $member->forceFill(['sms_consent' => (bool) $validated['sms_consent']]);
         }
 
         $member->update($memberFields);

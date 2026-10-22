@@ -54,3 +54,10 @@
   [data-loyalty] .l-chart-bar-2,
   [data-loyalty] .l-chart-bar-3 { forced-color-adjust: none; background-color: CanvasText; }
 }
+
+/* Release 4: the cohort table's cells, shaded by the share of the cohort active that month in four steps of the first
+   series' colour; the text stays the card's own ink, the share written in every cell. */
+[data-loyalty] .l-heat-1 { background-color: rgb(var(--l-chart-1) / 0.1); }
+[data-loyalty] .l-heat-2 { background-color: rgb(var(--l-chart-1) / 0.2); }
+[data-loyalty] .l-heat-3 { background-color: rgb(var(--l-chart-1) / 0.32); }
+[data-loyalty] .l-heat-4 { background-color: rgb(var(--l-chart-1) / 0.46); }

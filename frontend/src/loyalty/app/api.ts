@@ -1,6 +1,6 @@
 import { api } from '../../lib/api'
 import { loyaltyUrl, watched } from '../lib/api'
-import type { LookAnswer, LookBody, Look, Wallet, WalletBody, WalletFile } from './types'
+import type { CurrencyAnswer, CurrencyPreview, LookAnswer, LookBody, Look, Wallet, WalletBody, WalletFile } from './types'
 
 /** Where each wallet file goes. */
 const FILE_PATHS: Record<WalletFile, string> = {
@@ -28,7 +28,13 @@ export const appApi = {
     form.append('logo', file)
     return watched(api.post(loyaltyUrl('app-look/logo'), form))
   },
+
+  /** Release 4 (R4-5): the venue's currency — the setting the appointments Setup writes. */
+  currency: (): Promise<CurrencyAnswer> => watched(api.get(loyaltyUrl('currency'))),
+  previewCurrency: (currency: string): Promise<CurrencyPreview> => watched(api.put(loyaltyUrl('currency'), { currency, dry_run: true })),
+  saveCurrency: (currency: string): Promise<CurrencyAnswer> => watched(api.put(loyaltyUrl('currency'), { currency })),
 }
 
 export const WALLET_KEY = ['loyalty', 'app', 'wallet'] as const
 export const LOOK_KEY = ['loyalty', 'app', 'look'] as const
+export const CURRENCY_KEY = ['loyalty', 'app', 'currency'] as const

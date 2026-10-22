@@ -49,6 +49,14 @@ export const ERRORS: Record<string, Record<string, string>> = {
     network: OFFLINE,
     unknown: 'The look could not be saved. Please try again.',
   },
+  currency: {
+    manager_only: MANAGER,
+    not_allowed: MANAGER,
+    no_capability: MANAGER,
+    invalid: 'Choose a currency from the list.',
+    network: OFFLINE,
+    unknown: 'The currency could not be saved. Please try again.',
+  },
   logo: {
     manager_only: MANAGER,
     not_allowed: MANAGER,

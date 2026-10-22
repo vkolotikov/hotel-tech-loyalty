@@ -346,6 +346,10 @@
         "currency_mismatch": "Stripe cobra en una moneda distinta de la de sus precios. Haga que coincidan para cobrar depósitos."
       }
     },
+    "pay_at_venue": {
+      "on": "Aceptar reservas para pagar en el local cuando el pago en línea no está disponible",
+      "note": "Para los miembros que reservan en el portal de miembros: si no se puede contactar con el servicio de pago con tarjeta, pueden reservar igualmente y pagar en el local. La reserva queda marcada para pagar en el local."
+    },
     "title": "Configuración",
     "load_failed": "No se pudo cargar la configuración. Inténtelo de nuevo.",
     "read_only": "Solo un propietario o un gerente puede cambiar la configuración. Aquí puede verla y gestionar sus propias ausencias en Equipo.",

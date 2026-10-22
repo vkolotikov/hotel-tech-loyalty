@@ -5,6 +5,7 @@ import { RoomStep } from './RoomStep'
 import { StayBook } from './StayBook'
 import { initialStayState } from './staySteps'
 import { availability, stayCatalogue, stayVenue } from './stayTestUtils'
+import type { StayAvailability } from '../../lib/types'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -92,7 +93,7 @@ describe('RoomStep', () => {
   const key = ['portal-stay-availability', '2026-10-10', '2026-10-12', 2, 0]
 
   it('lists the free rooms with the price a night, the total and the member\'s own total', () => {
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, availability))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, availability))
     expect(html).toContain('Sea view')
     expect(html).toContain('A balcony over the bay')
     expect(html).toContain('Sleeps 2')
@@ -104,18 +105,18 @@ describe('RoomStep', () => {
   })
 
   it('strikes no price through when the member pays the list price', () => {
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[1]] }))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[1]] }))
     expect(html).not.toContain('line-through')
   })
 
   it('says when nothing is free and offers other dates', () => {
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { rooms: [], nights: 2, party_too_large: false }))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { rooms: [], nights: 2, party_too_large: false }))
     expect(html).toContain('No rooms are free for these dates.')
     expect(html).toContain('Change dates')
   })
 
   it('tells a party too large for any room to contact the venue, with the venue\'s contact', () => {
-    const html = render(<RoomStep state={{ ...picked, adults: 5 }} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(['portal-stay-availability', '2026-10-10', '2026-10-12', 5, 0], { rooms: [], nights: 2, party_too_large: true }))
+    const html = render(<RoomStep state={{ ...picked, adults: 5 }} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(['portal-stay-availability', '2026-10-10', '2026-10-12', 5, 0], { rooms: [], nights: 2, party_too_large: true }))
     expect(html).toContain('No single room fits your party. Please contact Seaside Hotel and we will arrange it.')
     expect(html).toContain('href="mailto:hello@seaside.test"')
     expect(html).not.toContain('No rooms are free for these dates.')
@@ -124,26 +125,48 @@ describe('RoomStep', () => {
   it('shows the price a night, muted, under the total', () => {
     // Room 102 in the fixture isn't discounted (member_total === total_price), so its per-night line is
     // the list rate exactly as given — 90.
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[1]] }))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[1]] }))
     expect(html).toMatch(/90[^<]*a night/)
   })
 
   it("a discounted room's per-night line agrees with the member's own total, not the list rate", () => {
     // Room 101: list rate 100 a night, but a 200/180 discount over 2 nights — the line must say 90, the
     // member's own total spread over the stay, never 100, which would contradict the 180 shown above it.
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[0]] }))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [availability.rooms[0]] }))
     expect(html).toMatch(/90[^<]*a night/)
     expect(html).not.toMatch(/100[^<]*a night/)
   })
 
   it('a room with no nightly rate and no discount shows no per-night line', () => {
-    const html = render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [{ ...availability.rooms[1], price_per_night: 0 }] }))
+    const html = render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(key, { ...availability, rooms: [{ ...availability.rooms[1], price_per_night: 0 }] }))
     expect(html).not.toContain('a night')
   })
 
+  // Release 4, part D: no single room sleeps the party, but rooms together do — each combination one stay.
+  it('offers rooms together when no single room sleeps the party, each with the server\'s own total', () => {
+    const together: StayAvailability = {
+      rooms: [], nights: 2, party_too_large: true,
+      combinations: [{
+        key: '101+102', sleeps: 5, total_price: 380, member_total: 342, currency: 'EUR',
+        rooms: [{ id: '101', name: 'Sea view', max_guests: 2, total_price: 200, image: null }, { id: '102', name: 'Garden', max_guests: 3, total_price: 180, image: null }],
+      }],
+    }
+    const html = render(<RoomStep state={{ ...picked, adults: 5 }} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, c => c.setQueryData(['portal-stay-availability', '2026-10-10', '2026-10-12', 5, 0], together))
+    expect(html).toContain('No single room sleeps your party, but these rooms do together.')
+    expect(html).toContain('Sea view + Garden')
+    expect(html).toContain('Sea view · Sleeps 2')
+    expect(html).toContain('Garden · Sleeps 3')
+    expect(html).toMatch(/line-through[^>]*>.*380/s)
+    expect(html).toContain('342')
+    expect(html).toMatch(/171[^<]*a night/)
+    expect(html).toContain('Choose these rooms')
+    expect(html).not.toContain('Please contact Seaside Hotel')
+    expect(html).not.toContain('No rooms are free for these dates.')
+  })
+
   it('shows a skeleton while loading and a retry when the search fails', async () => {
-    expect(render(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue)).not.toContain('Sea view')
-    const html = await renderAsync(<RoomStep state={picked} onPick={noop} onChangeDates={noop} />, stayVenue, async c => {
+    expect(render(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue)).not.toContain('Sea view')
+    const html = await renderAsync(<RoomStep state={picked} onPick={noop} onPickRooms={noop} onChangeDates={noop} />, stayVenue, async c => {
       await c.prefetchQuery({ queryKey: key, queryFn: () => Promise.reject({ response: { status: 422, data: { error: 'invalid_stay' } } }), retry: false })
     })
     expect(html).toContain('Those dates cannot be booked online.')

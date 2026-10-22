@@ -179,6 +179,52 @@ class BookingEngineConfirmTest extends TestCase
         $this->assertEquals(30.0, $sent['priceElements'][1]['amount']);
     }
 
+    /**
+     * R4-3 (owner, 2026-10-22): each extra is itemised as it was charged —
+     * the quote's own arithmetic, here two adults and a child for two
+     * nights: per night 10.00 → 20.00, per person 5.00 → 15.00, per person
+     * per night 5.00 → 30.00, per stay 15.00 × 2 → 30.00. Smoobu's addons and
+     * receipt, the mirror's extras_json, the stored line items and both mails
+     * say the same, and Smoobu's elements add up to the price.
+     */
+    public function test_widget_confirm_itemises_each_extra_as_it_was_charged(): void
+    {
+        $this->smoobuAccepts();
+        $extras = [];
+        foreach (['per_night' => 10, 'per_person' => 5, 'per_person_night' => 5, 'per_stay' => 15] as $type => $price) {
+            $id = (string) $this->seedStayExtra($this->org->id, ['name' => $type, 'price' => $price, 'price_type' => $type])->id;
+            $extras[] = ['id' => $id, 'quantity' => $type === 'per_stay' ? 2 : 1];
+        }
+        $hold = $this->hold(['adults' => 2, 'children' => 1, 'extras' => $extras, 'extras_total' => 95.0, 'gross_total' => 295.0]);
+        User::create(['name' => 'Front desk', 'email' => 'desk@seaside.test', 'password' => bcrypt('secret-pass-1'), 'user_type' => 'staff', 'organization_id' => $this->org->id]);
+        $sent = null;
+        $this->smoobu->shouldReceive('createReservation')->once()->with(Mockery::on(function (array $p) use (&$sent) {
+            $sent = $p;
+            return true;
+        }))->andReturn(['id' => 555004, 'reference-id' => 'BK-EXTRAS04']);
+
+        $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()]);
+
+        $charged = [20.0, 15.0, 30.0, 30.0];
+        $addons = array_values(array_filter($sent['priceElements'], fn (array $e) => $e['type'] === 'addon'));
+        $this->assertEquals($charged, array_column($addons, 'amount'));
+        $this->assertSame([1, 1, 1, 2], array_column($addons, 'quantity'));
+        $this->assertEquals(295.0, $sent['price']);
+        $this->assertEquals(295.0, array_sum(array_column($sent['priceElements'], 'amount')), 'Smoobu adds the elements up; they must equal the price');
+        $this->assertStringContainsString('· per_night = €20.00', $sent['assistant-notice']);
+        $this->assertStringContainsString('· per_person_night = €30.00', $sent['assistant-notice']);
+        $this->assertStringContainsString('· per_stay ×2 @ €15.00 = €30.00', $sent['assistant-notice']);
+
+        $mirror = BookingMirror::withoutGlobalScopes()->where('organization_id', $this->org->id)->sole();
+        $this->assertEquals($charged, array_column($mirror->extras_json, 'line_total'));
+        $this->assertEquals([20.0, 15.0, 30.0, 15.0], array_column($mirror->extras_json, 'unit_price'));
+        $rows = BookingPriceElement::withoutGlobalScopes()->where('booking_mirror_id', $mirror->id)->where('element_type', 'extra')->orderBy('sort_order')->get();
+        $this->assertEquals([20.0, 15.0, 30.0, 15.0], $rows->map(fn ($r) => (float) $r->amount)->all());
+        $this->assertSame([1, 1, 1, 2], $rows->map(fn ($r) => (int) $r->quantity)->all());
+        Mail::assertQueued(BookingConfirmationMail::class, fn (BookingConfirmationMail $m) => array_column($m->extras, 'total') == $charged && $m->extrasTotal === 95.0);
+        Mail::assertQueued(AdminBookingNotificationMail::class, fn (AdminBookingNotificationMail $m) => array_column($m->extras, 'total') == $charged);
+    }
+
     public function test_widget_confirm_stores_the_line_items_the_log_the_audit_row_and_queues_the_mail(): void
     {
         $this->smoobuAccepts();

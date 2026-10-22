@@ -44,7 +44,8 @@ const blockOptions: CampaignOptions = {
 
 const campaign = (more: Partial<Campaign> = {}): Campaign => ({
   id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0,
-  sent_at: null, created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', segment_id: 3, editable_here: true,
+  sent_at: null, scheduled_at: null, scheduled_for: null, schedule_problem: null,
+  created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', segment_id: 3, editable_here: true,
   body_blocks: [{ id: 'h', type: 'heading', text: 'Hello', level: 1, align: 'left', color: '#1a1a1a' }], body_html: '<div>Hello</div>',
   preview_subject: 'Our autumn', preview_html: '<div>Hello</div>', unknown_tags: [], missing: [], last_progress_at: null, created_by: 'Ada', sent_by: null, revision: '2026-10-20T09:00:00+00:00', ...more,
 })
@@ -63,11 +64,16 @@ describe('the tabs live in the address', () => {
     expect(searchFor('segments')).toBe('?tab=segments')
     expect(tabFrom('?tab=push')).toBe('push')
     expect(searchFor('push')).toBe('?tab=push')
+    // Release 4: SMS is the fourth tab.
+    expect(tabFrom('?tab=sms')).toBe('sms')
+    expect(searchFor('sms')).toBe('?tab=sms')
     expect(tabAfter('campaigns', 'ArrowRight')).toBe('segments')
     expect(tabAfter('segments', 'ArrowRight')).toBe('push')
-    expect(tabAfter('campaigns', 'ArrowLeft')).toBe('push')
+    expect(tabAfter('push', 'ArrowRight')).toBe('sms')
+    expect(tabAfter('sms', 'ArrowRight')).toBe('campaigns')
+    expect(tabAfter('campaigns', 'ArrowLeft')).toBe('sms')
     expect(tabAfter('push', 'Home')).toBe('campaigns')
-    expect(tabAfter('segments', 'End')).toBe('push')
+    expect(tabAfter('segments', 'End')).toBe('sms')
     expect(tabAfter('campaigns', 'x')).toBeNull()
   })
 })
@@ -76,20 +82,20 @@ describe('what a campaign\'s state allows', () => {
   it('opens a workspace draft in the editor, the full admin\'s draft read-only, and anything sent as results', () => {
     expect(viewOf({ status: 'draft', editable_here: true })).toBe('editor')
     expect(viewOf({ status: 'draft', editable_here: false })).toBe('elsewhere')
-    for (const status of ['sending', 'sent', 'failed', 'cancelled']) expect(viewOf({ status, editable_here: true })).toBe('results')
+    for (const status of ['scheduled', 'sending', 'sent', 'failed', 'cancelled']) expect(viewOf({ status, editable_here: true })).toBe('results')
   })
 
   it('offers each button only where the server would act', () => {
     expect(campaignActions({ status: 'draft', editable_here: true })).toEqual({ edit: true, test: true, send: true, cancel: false, duplicate: true, remove: true })
     expect(campaignActions({ status: 'draft', editable_here: false })).toEqual({ edit: false, test: false, send: false, cancel: false, duplicate: true, remove: true })
     expect(campaignActions({ status: 'sending', editable_here: true })).toEqual({ edit: false, test: false, send: false, cancel: true, duplicate: true, remove: false })
-    for (const status of ['sent', 'failed', 'cancelled']) {
+    for (const status of ['scheduled', 'sent', 'failed', 'cancelled']) {
       expect(campaignActions({ status, editable_here: true })).toEqual({ edit: false, test: false, send: false, cancel: false, duplicate: true, remove: false })
     }
   })
 
   it('gives each status its tone, anything new the quiet one', () => {
-    expect(['draft', 'sending', 'sent', 'failed', 'cancelled', 'paused'].map(statusTone)).toEqual(['pending', 'approved', 'fulfilled', 'declined', 'cancelled', 'cancelled'])
+    expect(['draft', 'scheduled', 'sending', 'sent', 'failed', 'cancelled', 'paused'].map(statusTone)).toEqual(['pending', 'approved', 'approved', 'fulfilled', 'declined', 'cancelled', 'cancelled'])
   })
 
   it('counts progress, and once sent says how many it was handed but did not mail', () => {

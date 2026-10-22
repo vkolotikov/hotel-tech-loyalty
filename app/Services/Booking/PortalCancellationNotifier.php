@@ -113,11 +113,16 @@ class PortalCancellationNotifier
     {
         $b = $o->booking;
         if ($b instanceof BookingMirror) {
+            // A member-portal combination was cancelled whole: both mails name every room.
+            $rooms = StayCombination::rooms($b);
+
             return [
                 'name'      => $b->guest_name ?: 'Guest',
                 'email'     => $this->contactEmail($b, $b->guest_email),
-                'reference' => (string) ($b->booking_reference ?: $b->reservation_id),
-                'title'     => $b->apartment_name ?: 'Stay',
+                'reference' => $rooms
+                    ? $rooms->map(fn (BookingMirror $m) => (string) ($m->booking_reference ?: $m->reservation_id))->implode(', ')
+                    : (string) ($b->booking_reference ?: $b->reservation_id),
+                'title'     => $rooms ? $rooms->map(fn (BookingMirror $m) => $m->apartment_name ?: 'Room')->implode(' + ') : ($b->apartment_name ?: 'Stay'),
                 'when'      => trim(($b->arrival_date?->format('M j, Y') ?? '') . ' – ' . ($b->departure_date?->format('M j, Y') ?? ''), ' –'),
             ];
         }

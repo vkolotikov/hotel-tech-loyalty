@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
+import { counted } from '../../lib/plural'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { Field, INPUT_CLASS } from '../../ui/Field'
@@ -12,7 +13,7 @@ import { Skeleton } from '../../ui/Skeleton'
 import { Toggle } from '../../ui/Toggle'
 import { CouponField } from '../book/CouponField'
 import { StayPriceBreakdown } from './StayPriceBreakdown'
-import { afterStayQuoteError, stayQuoteBody, type StayReviewPatch, type StayState } from './staySteps'
+import { afterStayQuoteError, chosenRoomsLabel, stayQuoteBody, type StayReviewPatch, type StayState } from './staySteps'
 import type { CouponRef, StayCatalogue, StayQuote, StayQuoteBody } from '../../lib/types'
 
 export interface StayReviewStepProps {
@@ -73,7 +74,8 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
     onChange({ coupon: c })
   }
 
-  const room = catalogue.rooms.find(r => r.id === state.roomId)
+  // One room's name, or a combination's rooms together (part D), until the quote names them itself.
+  const roomsLabel = chosenRoomsLabel(state, catalogue.rooms)
   const policy = quote.data?.policy
 
   return (
@@ -81,9 +83,14 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       <h2 tabIndex={-1} data-step-heading="review" className="sr-only">{t('portal.stay.heading_review', 'Check the details')}</h2>
       <Card className="p-4 flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="font-medium">{quote.data?.room.name ?? room?.name}</p>
+          <p className="font-medium">{quote.data?.room.name ?? roomsLabel}</p>
           <p className="text-sm text-p-text-2">{state.checkIn && formatDay(state.checkIn, i18n.language)} – {state.checkOut && formatDay(state.checkOut, i18n.language)}</p>
           <p className="text-sm text-p-text-2">{t('portal.stay.guests_line', 'Adults: {{adults}} · children: {{children}}', { adults: state.adults, children: state.children })}</p>
+          {/* Who sleeps where — the server's own split of the party (StayCombination::party()). */}
+          {quote.data?.rooms?.map((r, i) => (
+            <p key={`${r.id}-${i}`} className="text-sm text-p-text-2">{t('portal.stay.room_party', '{{room}} — adults: {{adults}} · children: {{children}}', { room: r.name, adults: r.adults, children: r.children })}</p>
+          ))}
+          {state.roomIds !== null && <p className="text-xs text-p-text-2 mt-1">{t('portal.stay.together_note', 'One booking for all these rooms: one payment, and they are cancelled together.')}</p>}
         </div>
         <Button type="button" variant="ghost" size="sm" onClick={onBack}>{t('portal.book.change', 'Change')}</Button>
       </Card>
@@ -127,7 +134,7 @@ export function StayReviewStep({ catalogue, state, onChange, onBack, onBounce, o
       {policy && (
         <div className="text-xs text-p-text-2 space-y-1">
           <p>{t('portal.stay.arrival_from', 'Arrival from {{time}}', { time: policy.check_in_time })} · {t('portal.stay.departure_by', 'Departure by {{time}}', { time: policy.check_out_time })}</p>
-          {policy.cancel_hours > 0 && <p>{t('portal.stay.free_cancellation', 'Free cancellation up to {{count}} hours before arrival.', { count: policy.cancel_hours })}</p>}
+          {policy.cancel_hours > 0 && <p>{counted(t, 'stay.free_cancellation', policy.cancel_hours)}</p>}
           {policy.cancellation_policy && <p><span className="font-medium">{t('portal.bookings.policy', 'Cancellation policy')}:</span> {policy.cancellation_policy}</p>}
         </div>
       )}

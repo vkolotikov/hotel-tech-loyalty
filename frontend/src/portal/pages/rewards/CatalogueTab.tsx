@@ -5,6 +5,7 @@ import { Check, Gift } from 'lucide-react'
 import { portalApi, apiMessage } from '../../lib/portalApi'
 import type { Reward } from '../../lib/types'
 import { resolveLocale } from '../../lib/dates'
+import { counted } from '../../lib/plural'
 import { Card } from '../../ui/Card'
 import { Button } from '../../ui/Button'
 import { Sheet } from '../../ui/Sheet'
@@ -64,7 +65,7 @@ export function CatalogueTab() {
                 <div className="mt-auto pt-2">
                   {limitReached ? <p className="flex items-center gap-1.5 text-xs text-p-text-2"><Check size={13} aria-hidden /> {t('portal.rewards.already_claimed', 'Already claimed')}</p>
                   : outOfStock ? <p className="text-xs text-p-text-2">{t('portal.rewards.out_of_stock', 'Out of stock')}</p>
-                  : short > 0 ? <p className="text-xs text-p-text-2 tabular-nums">{t('portal.rewards.points_needed', '{{count}} more points needed', { count: short })}</p>
+                  : short > 0 ? <p className="text-xs text-p-text-2 tabular-nums">{counted(t, 'rewards.points_needed', short)}</p>
                   : <Button full onClick={() => { setError(null); setConfirming(r) }}>{t('portal.rewards.redeem', 'Redeem')}</Button>}
                 </div>
               </div>
@@ -82,7 +83,7 @@ export function CatalogueTab() {
           <Button loading={redeem.isPending} onClick={() => confirming && redeem.mutate(confirming.id)}>{t('portal.common.confirm', 'Confirm')}</Button>
         </>}
       >
-        <p className="text-p-text-2">{t('portal.rewards.redeem_body', "This spends {{count}} points. You'll get a code to show at the desk.", { count: confirming?.points_cost ?? 0 })}</p>
+        <p className="text-p-text-2">{counted(t, 'rewards.redeem_body', confirming?.points_cost ?? 0)}</p>
       </Sheet>
     </div>
   )

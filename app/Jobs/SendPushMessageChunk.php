@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\LoyaltyMember;
 use App\Models\NotificationCampaign;
+use App\Services\Loyalty\Push\ExpoReceipts;
 use App\Services\Loyalty\Push\PushMessage;
 use App\Services\NotificationService;
 use Illuminate\Bus\Queueable;
@@ -31,6 +32,10 @@ use Illuminate\Support\Facades\Log;
  *
  * Tenant context is bound by hand: a queued job runs outside the request that queued it, and every scoped query would
  * otherwise fail closed and match nobody.
+ *
+ * Release 4 (§5): each accepted push's row keeps Expo's ticket id and the hash of the device token it went to, for
+ * the receipts read later (Push\ExpoReceipts, `loyalty:push-receipts`); a ticket that says at once that the device is
+ * gone (`DeviceNotRegistered`) clears it from the member, while it is still that device.
  */
 class SendPushMessageChunk implements ShouldQueue
 {
@@ -152,8 +157,24 @@ class SendPushMessageChunk implements ShouldQueue
         ));
         $outcomes = [];
         foreach (array_keys($toPush) as $i => $id) {
-            $result = $results[$i] ?? ['ok' => false, 'error' => 'no_ticket'];
-            $outcomes[$result['ok'] ? 'sent|' : 'failed|' . (string) $result['error']][] = $id;
+            $result = $results[$i] ?? ['ok' => false, 'error' => 'no_ticket', 'ticket' => null];
+            if ($result['ok']) {
+                // Release 4: the ticket, by which Expo's receipt is read later (loyalty:push-receipts), and the hash of
+                // the device it went to, so a receipt saying the device is gone clears only that device.
+                DB::table('push_message_deliveries')->where('campaign_id', $message->id)->where('member_id', $id)->update([
+                    'status'     => 'sent',
+                    'reason'     => null,
+                    'ticket_id'  => $result['ticket'] ?? null,
+                    'token_hash' => ExpoReceipts::hash($toPush[$id]),
+                    'updated_at' => now(),
+                ]);
+                continue;
+            }
+            $outcomes['failed|' . (string) $result['error']][] = $id;
+            if ($result['error'] === 'DeviceNotRegistered') {
+                // Expo says at once that the device is gone: cleared from the member while it is still that device.
+                ExpoReceipts::clearDevice($id, ExpoReceipts::hash($toPush[$id]));
+            }
         }
         $this->mark($message, $outcomes);
     }

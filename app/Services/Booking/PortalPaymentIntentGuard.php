@@ -250,6 +250,93 @@ class PortalPaymentIntentGuard
         });
     }
 
+    /** The statuses in which an intent has taken no money and can still be paid through the Payment Element. */
+    public const REUSABLE_STATUSES = ['requires_payment_method', 'requires_confirmation'];
+
+    /**
+     * Release 4, part C — one hold per card. A portal `payment-intent` call
+     * for a hold or slot that already has an intent from an earlier call
+     * hands that intent to this method first, inside the caller's own room
+     * or slot lock (taken before this `pi:` lock — CLAUDE.md's order).
+     *
+     * Returns the intent when it can simply be paid again: this
+     * organisation's and this member's own (metadata), of $kind, for this
+     * very hold or slot ($isForThisTarget), for exactly $total, not yet
+     * carried by any booking, and in a status that has taken no money
+     * (REUSABLE_STATUSES). Otherwise returns null, and before that cancels
+     * it — but only under the same rules as release(): never one a booking
+     * of this organisation carries, never one whose metadata names another
+     * organisation or member (those are left exactly as they are). An intent
+     * Stripe says does not exist is null. A retrieve that fails is
+     * PaymentUnverifiable: nothing is known, nothing is cancelled, and the
+     * caller must not mint a second intent beside one it could not read.
+     *
+     * "Carried, read, then cancel" is one step under the `pi:` lock, like
+     * release(): a confirm spending this very intent either finishes first
+     * (and this finds it carried) or finds it cancelled under the same lock.
+     *
+     * @param callable(array): bool $isForThisTarget
+     *
+     * @throws PaymentUnverifiable
+     */
+    public function reuseOrRelease(string $piId, int $orgId, int $memberId, string $kind, float $total, callable $isForThisTarget): mixed
+    {
+        return AdvisoryLock::transaction('pi:' . $piId, function () use ($piId, $orgId, $memberId, $kind, $total, $isForThisTarget) {
+            if ($this->carried($piId, $orgId)) {
+                return null;
+            }
+            try {
+                $pi = $this->retrieveForCheck($piId);
+            } catch (PaymentMismatch) {
+                return null; // Stripe has no such intent: nothing to reuse or release
+            }
+
+            $meta = $this->metadata($pi);
+            if ((int) ($meta['org_id'] ?? 0) !== $orgId || (int) ($meta['member_id'] ?? 0) !== $memberId || ($meta['kind'] ?? null) !== $kind) {
+                return null; // not this member's own portal intent of this kind: never touched
+            }
+
+            if (in_array($this->status($pi), self::REUSABLE_STATUSES, true)
+                && $isForThisTarget($meta)
+                && $this->amountMatches($pi, $total)
+                && is_string(is_array($pi) ? ($pi['client_secret'] ?? null) : ($pi->client_secret ?? null))) {
+                return $pi;
+            }
+
+            if ($this->status($pi) !== 'canceled') {
+                $this->cancel($piId, 'abandoned');
+            }
+
+            return null;
+        });
+    }
+
+    /**
+     * The metadata of a member's own portal intent, for the payment return
+     * (release 4, part C): retrieves the intent and answers it only when its
+     * metadata names this organisation and this member and a portal kind;
+     * null for anyone else's (or none). Reads only — nothing is cancelled.
+     *
+     * @return array{intent: mixed, metadata: array, status: string, carried: bool}|null
+     *
+     * @throws PaymentUnverifiable
+     */
+    public function ownIntent(string $piId, int $orgId, int $memberId): ?array
+    {
+        try {
+            $pi = $this->retrieveForCheck($piId);
+        } catch (PaymentMismatch) {
+            return null;
+        }
+        $meta = $this->metadata($pi);
+        if ((int) ($meta['org_id'] ?? 0) !== $orgId || (int) ($meta['member_id'] ?? 0) !== $memberId
+            || !in_array($meta['kind'] ?? null, self::PORTAL_KINDS, true)) {
+            return null;
+        }
+
+        return ['intent' => $pi, 'metadata' => $meta, 'status' => $this->status($pi), 'carried' => $this->carried($piId, $orgId)];
+    }
+
     /**
      * The two portal-made kinds (metadata `kind`) — the only PaymentIntents
      * releaseOrphan() and the sweeper's own cheap pre-filter

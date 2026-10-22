@@ -8,6 +8,7 @@ import { CAMPAIGN_TABS, searchFor, tabAfter, tabFrom, type CampaignTab } from '.
 import { SegmentsTab } from './SegmentsTab'
 import { TAB_WORDS } from './words'
 import { PushTab } from '../push/PushTab'
+import { SmsTab } from '../sms/SmsTab'
 
 /**
  * Campaigns (spec 2026-10-21 release 2 §6), a manager's area: email campaigns to the programme's members, and the
@@ -59,6 +60,7 @@ export function CampaignsPage() {
             ))}
             {tab === 'segments' && <SegmentsTab />}
             {tab === 'push' && <PushTab />}
+            {tab === 'sms' && <SmsTab />}
           </div>
         </>
       )}

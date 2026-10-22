@@ -1,6 +1,6 @@
 import type { Can, Features } from '../lib/types'
 import { serverProblems, type Problems } from '../lib/forms'
-import type { Colors, Look, LookBody, LookOptions, Preset, Wallet, WalletBody, WalletFile } from './types'
+import type { Colors, CurrencyPreview, Look, LookBody, LookOptions, Preset, Wallet, WalletBody, WalletFile } from './types'
 
 /**
  * Card & app's decisions (release 2 §7), kept out of the components so they can be tested: the tab an address names,
@@ -11,16 +11,16 @@ import type { Colors, Look, LookBody, LookOptions, Preset, Wallet, WalletBody, W
 
 // ─── The tabs ─────────────────────────────────────────────────────────────
 
-export const APP_TABS = ['wallet', 'app'] as const
+export const APP_TABS = ['wallet', 'app', 'currency'] as const
 export type AppTab = typeof APP_TABS[number]
 
-/** The tab an address names (`?tab=app`); the wallet pass for none or anything else. */
+/** The tab an address names (`?tab=app`, `?tab=currency`); the wallet pass for none or anything else. */
 export function tabFrom(search: string): AppTab {
   const tab = new URLSearchParams(search).get('tab')
   return (APP_TABS as readonly string[]).includes(tab ?? '') ? (tab as AppTab) : 'wallet'
 }
 
-/** The address of a tab: the wallet pass is the page's own address, the member app carries `?tab=app`. */
+/** The address of a tab: the wallet pass is the page's own address, the others carry `?tab=`. */
 export function searchFor(tab: AppTab): string {
   return tab === 'wallet' ? '' : `?tab=${tab}`
 }
@@ -42,6 +42,44 @@ export function tabAfter(current: AppTab, key: string): AppTab | null {
  */
 export function appAccess(can: Can, features: Features): { manage: boolean; wallet: boolean } {
   return { manage: can.manage_app, wallet: features.wallet }
+}
+
+// ─── The currency (release 4, R4-5) ───────────────────────────────────────
+
+/** A currency code with its name in the language, "EUR · Euro"; the bare code where the browser has no name for it. */
+export function currencyLabel(code: string, locale: string): string {
+  try {
+    const name = new Intl.DisplayNames([locale || 'en'], { type: 'currency' }).of(code)
+    return name && name !== code ? `${code} · ${name}` : code
+  } catch {
+    return code
+  }
+}
+
+/** Whether Save has anything to do: a code from the list other than the current one. */
+export function currencyChanged(current: string, chosen: string, options: readonly string[]): boolean {
+  return chosen !== current && options.includes(chosen)
+}
+
+/** One thing the manager reads before the change is saved, by its key under `loyalty.app.currency.warn`. */
+export type CurrencyWarning =
+  | { key: 'payments'; currency: string }
+  | { key: 'bookings'; total: number; upcoming: number }
+  | { key: 'stays'; currency: string }
+  | { key: 'relabel'; services: number; extras: number }
+
+/**
+ * What the server's dry run says, in the order it matters (warn, list, still allow): online payments in another
+ * currency first, then the bookings that keep theirs, the stays priced apart, and the prices that get the new label.
+ * Nothing to say: an empty list, and the change is saved at once.
+ */
+export function currencyWarnings(preview: CurrencyPreview): CurrencyWarning[] {
+  const out: CurrencyWarning[] = []
+  if (preview.payments.mismatch && preview.payments.currency) out.push({ key: 'payments', currency: preview.payments.currency })
+  if (preview.bookings.total > 0) out.push({ key: 'bookings', total: preview.bookings.total, upcoming: preview.bookings.upcoming })
+  if (preview.stays) out.push({ key: 'stays', currency: preview.stays.currency })
+  if (preview.relabel.services + preview.relabel.extras > 0) out.push({ key: 'relabel', services: preview.relabel.services, extras: preview.relabel.extras })
+  return out
 }
 
 // ─── Colours ──────────────────────────────────────────────────────────────

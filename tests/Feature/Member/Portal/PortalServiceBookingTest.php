@@ -163,11 +163,14 @@ class PortalServiceBookingTest extends MemberEndpointTestCase
     {
         $this->tenPercent();
         $stripe = $this->stripe();
-        // The portal has nowhere to read a redirect-method's `?payment_intent=...` return to — the fourth
-        // argument keeps the PI to payment methods that never navigate the browser away.
+        // Release 4, part C: the portal has a return page now (/portal/book/return), so redirect-based methods
+        // are allowed — no `allow_redirects: 'never'` — and the metadata names everything the return needs to
+        // rebuild the booking on the server: the person, the party, the extras and the coupon.
         $stripe->shouldReceive('createPaymentIntent')->once()->withArgs(function (float $amount, string $desc, array $meta, array $options) {
             return $amount === 54.0 && $meta['org_id'] === $this->org->id && $meta['member_id'] === $this->member->id && $meta['kind'] === 'portal_service_booking'
-                && $options === ['allow_redirects' => 'never'];
+                && $meta['master_id'] === (string) $this->master->id && $meta['party_size'] === '1' && $meta['extras'] === '[]' && $meta['coupon'] === ''
+                && !array_key_exists('hold_token', $meta)
+                && $options === [];
         })->andReturn(['client_secret' => 'pi_1_secret', 'payment_intent_id' => 'pi_1']);
         $this->withToken($this->token)->postJson('/api/v1/member/portal/services/payment-intent', $this->body())->assertOk()->assertJsonPath('payment_intent_id', 'pi_1')->assertJsonPath('amount', 54);
     }

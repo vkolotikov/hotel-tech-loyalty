@@ -84,6 +84,32 @@ describe('PortalShell', () => {
     expect(render(base)).toMatch(/href="\/portal\/bookings"[\s\S]*?>2</)
   })
 
+  // Release 4, part A: the inbox is the bell in the header, with the unread count on it.
+  const withMember = (unread: number): PortalBootstrap => ({
+    ...base, member: { member_number: 'HL-1' } as PortalBootstrap['member'], counts: { unread_notifications: unread, upcoming_bookings: 2 },
+  })
+
+  it('puts the inbox bell in the header for a member, badged with the unread count', () => {
+    const html = render(withMember(3))
+    expect(html.match(/href="\/portal\/inbox"/g)?.length).toBe(1)
+    expect(html).toMatch(/href="\/portal\/inbox"[\s\S]*?data-inbox-badge=""[^>]*>3</)
+    expect(html).toContain('Inbox')
+  })
+
+  it('shows the bell without a badge when nothing is unread, and 99+ past ninety-nine', () => {
+    expect(render(withMember(0))).not.toContain('data-inbox-badge')
+    expect(render(withMember(250))).toMatch(/data-inbox-badge=""[^>]*>99\+</)
+  })
+
+  it('has no inbox without a membership row, whose endpoints answer members only', () => {
+    expect(render({ ...base, counts: { unread_notifications: 4, upcoming_bookings: 0 } })).not.toContain('href="/portal/inbox"')
+  })
+
+  it('keeps the phone bar at five items with the inbox in the header', () => {
+    const html = render({ ...withMember(1), capabilities: { ...base.capabilities, services: true, loyalty: true } })
+    expect(html).toContain('grid-cols-5')
+  })
+
   it('blocks with the error notice and no page when there is no cached data', () => {
     const html = renderWith({ data: undefined, isLoading: false, isError: true, error: null, refetch: () => {} })
     expect(html).toContain('Something went wrong. Please try again.')

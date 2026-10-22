@@ -213,6 +213,58 @@ class PortalBootstrapTest extends MemberEndpointTestCase
         $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->assertJsonPath('counts.unread_notifications', 2);
     }
 
+    /**
+     * Pinned before release 4 §2 A added `notification_preferences`: every key
+     * of `member` the portal reads (frontend/src/portal/lib/types.ts,
+     * PortalMember) is still there, and the new key is added beside them.
+     */
+    public function test_the_member_keeps_every_key_the_portal_reads_and_carries_the_kinds_of_message(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token] = $this->member($org);
+
+        $member = $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member');
+
+        foreach ([
+            'member_number', 'name', 'tier', 'current_points', 'lifetime_points', 'referral_code', 'progress', 'recent_activity',
+            'marketing_consent', 'email_notifications', 'push_notifications', 'member_since', 'user', 'benefits',
+        ] as $key) {
+            $this->assertArrayHasKey($key, $member, "member.{$key}");
+        }
+        foreach (['id', 'name', 'email', 'phone', 'language', 'date_of_birth'] as $key) {
+            $this->assertArrayHasKey($key, $member['user'], "member.user.{$key}");
+        }
+        // A member who never chose hears about every kind, as NotificationService::send() reads it.
+        $this->assertSame(['offers' => true, 'points' => true, 'tier' => true, 'stays' => true], $member['notification_preferences']);
+    }
+
+    /**
+     * What Profile saves through PUT /v1/member/profile (merged one switch at
+     * a time) is what the bootstrap reads back — and a kind stored off the
+     * way a form save stores it ("0") reads off, as optsOut() reads it.
+     */
+    public function test_the_kinds_of_message_read_back_what_profile_saves(): void
+    {
+        $org = $this->tenant();
+        ['token' => $token, 'member' => $member] = $this->member($org);
+
+        $this->withToken($token)->putJson('/api/v1/member/profile', ['notification_preferences' => ['offers' => false]])->assertOk();
+        $this->flushHeaders();
+        $this->withToken($token)->putJson('/api/v1/member/profile', ['notification_preferences' => ['stays' => false]])->assertOk();
+        $this->flushHeaders();
+        $this->assertSame(
+            ['offers' => false, 'points' => true, 'tier' => true, 'stays' => false],
+            $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member.notification_preferences'),
+        );
+
+        DB::table('loyalty_members')->where('id', $member->id)->update(['notification_preferences' => json_encode(['tier' => '0', 'points' => true])]);
+        $this->flushHeaders();
+        $this->assertSame(
+            ['offers' => true, 'points' => true, 'tier' => false, 'stays' => true],
+            $this->withToken($token)->getJson(self::ENDPOINT)->assertOk()->json('member.notification_preferences'),
+        );
+    }
+
     public function test_a_member_gets_venue_capabilities_and_their_card(): void
     {
         $org = $this->tenant('Seaside Hotel');

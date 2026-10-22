@@ -27,6 +27,31 @@
     "text_secondary": "Quiet text",
     "warning": "Warning"
   },
+  "currency": {
+    "before": "Before you change {{from}} to {{to}}:",
+    "confirm": "Change to {{to}}",
+    "error": {
+      "invalid": "Choose a currency from the list.",
+      "manager_only": "Only an owner or a manager can change the card and the app.",
+      "network": "No connection: nothing was saved. Try again.",
+      "no_capability": "Only an owner or a manager can change the card and the app.",
+      "not_allowed": "Only an owner or a manager can change the card and the app.",
+      "unknown": "The currency could not be saved. Please try again."
+    },
+    "field": "Currency",
+    "keep": "Keep {{from}}",
+    "line": "The currency your prices and the amounts members see are in. The member portal, offers, Insights and the appointments Setup read this one setting. Changing it relabels prices; it never converts them.",
+    "save": "Save currency",
+    "saved": "Saved. Prices and amounts now show in {{currency}}.",
+    "title": "Currency",
+    "unsaved": "Not saved yet.",
+    "warn": {
+      "bookings": "{{total}} appointments were booked in another currency ({{upcoming}} still to come). They keep the currency they were booked in.",
+      "payments": "Online payments are set up in {{currency}}. Bookings priced in {{to}} would be paid at the venue until Stripe takes {{to}} (full admin: Settings → Integrations).",
+      "relabel": "{{services}} services and {{extras}} extras get the {{to}} label. Their prices stay the same numbers.",
+      "stays": "Stays are priced in {{currency}}, set in the full admin’s booking settings. This field does not change them."
+    }
+  },
   "file": {
     "apple_cert": "Pass Type ID certificate",
     "apple_wwdr": "Apple WWDR certificate",
@@ -157,6 +182,7 @@
   },
   "tab": {
     "app": "Member app",
+    "currency": "Currency",
     "wallet": "Wallet pass"
   },
   "tabs": "Card and app areas",

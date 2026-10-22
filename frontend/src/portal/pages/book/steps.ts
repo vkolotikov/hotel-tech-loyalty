@@ -147,6 +147,9 @@ export function afterQuoteError(code: string | null): { patch: ReviewPatch; noti
  * would leave a gap, while `stripe.confirmPayment()` is in flight, where the strip is still clickable.
  * `noCard` remembers that the payment-intent call itself answered "nothing to charge online" (`nothing_to_pay`
  * or `pay_at_venue`), so later renders don't re-request an intent this visit will never need.
+ * `atVenueGrant` (release 4, part C) is the server's grant from a `pay_at_venue` answer given because online
+ * payment was unavailable (`payAtVenueGrantOf`): the confirm sends it back, and only with it may a venue that
+ * takes cards book without one. Null otherwise.
  */
 export interface PayVisit {
   nonce: string
@@ -155,12 +158,37 @@ export interface PayVisit {
   paid: boolean
   held: boolean
   noCard: boolean
+  atVenueGrant: string | null
 }
 
 /** `random` is injected (rather than calling `crypto.randomUUID()` here directly) so this stays a pure,
  *  deterministically-testable function — `Book.tsx`'s own call site supplies the real generator. */
 export function newPayVisit(random: () => string): PayVisit {
-  return { nonce: random(), idempotencyKey: random(), paymentIntentId: null, paid: false, held: false, noCard: false }
+  return { nonce: random(), idempotencyKey: random(), paymentIntentId: null, paid: false, held: false, noCard: false, atVenueGrant: null }
+}
+
+/**
+ * Release 4, part C. The grant a `pay_at_venue` answer from the payment-intent call carries when the venue takes
+ * bookings to pay at the venue because online payment is unavailable (`reason: 'payment_unavailable'`), or null —
+ * for every other answer, including a plain `pay_at_venue` from a venue that takes no cards at all (no grant is
+ * needed then). Read loosely off the error, like `apiErrorCode`, so this file stays free of axios.
+ */
+export function payAtVenueGrantOf(error: unknown): string | null {
+  const data = (error as { response?: { data?: { error?: string; reason?: string; pay_at_venue_grant?: unknown } } })?.response?.data
+  if (data?.error !== 'pay_at_venue' || data.reason !== 'payment_unavailable') return null
+  return typeof data.pay_at_venue_grant === 'string' && data.pay_at_venue_grant !== '' ? data.pay_at_venue_grant : null
+}
+
+/** Release 4, part C: where a redirect-based payment method (a bank, a wallet) sends the member back to — the
+ *  portal's own return page, which asks the server what the payment is for. Absolute, as Stripe requires. */
+export function portalReturnUrl(origin: string): string {
+  return `${origin.replace(/\/+$/, '')}/portal/book/return`
+}
+
+/** The visit after the member asks to try paying online again from the pay-at-venue notice: a fresh nonce (one
+ *  new payment-intent request), and neither "no card" nor the grant any more. Nothing was ever authorised. */
+export function retryOnlineVisit(random: () => string): Partial<PayVisit> {
+  return { nonce: random(), noCard: false, atVenueGrant: null }
 }
 
 /** False from the moment the member presses Pay (`held`) through a captured card (`paid`) — the step strip

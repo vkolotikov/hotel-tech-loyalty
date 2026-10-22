@@ -242,6 +242,8 @@ export interface SetupSettings {
   /** Part H: deposits for online bookings — the full admin's own settings; available only with Stripe in the venue's currency. */
   deposits_on: boolean; deposit_percent: number; deposits_available: boolean
   deposits_reason: 'payments_off' | 'mock_mode' | 'currency_mismatch' | null; cancel_hours: number
+  /** Release 4, part C: member-portal bookings taken to pay at the venue when Stripe cannot be reached. Absent from an older server (the deploy window): read it with `?? false`. */
+  pay_at_venue_when_unavailable?: boolean
 }
 export interface SetupPayload {
   can_manage: boolean; my_team_member_id: number | null; services: SetupService[]; categories: SetupCategory[]
@@ -267,4 +269,5 @@ export interface TeamBody {
 }
 export interface TimeOffBody { from: DateKey; to?: DateKey; start_time?: string; end_time?: string; reason?: string }
 export type SettingsBody = Partial<Pick<SetupSettings, 'timezone' | 'currency' | 'lead_minutes' | 'slot_step' | 'max_advance_days' | 'allow_master_choice' | 'points_on_bookings'
-  | 'client_messages_staff_default' | 'client_messages_reminder_hours' | 'client_messages_language' | 'deposits_on' | 'deposit_percent'>>
+  | 'client_messages_staff_default' | 'client_messages_reminder_hours' | 'client_messages_language' | 'deposits_on' | 'deposit_percent'
+  | 'pay_at_venue_when_unavailable'>>

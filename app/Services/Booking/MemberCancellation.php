@@ -13,6 +13,7 @@ use App\Services\LoyaltyService;
 use App\Services\SmoobuClient;
 use App\Services\StripeService;
 use App\Support\AdvisoryLock;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -225,6 +226,12 @@ final class MemberCancellation
         $ambient = $this->bindStayTenant($orgId);
 
         try {
+            // A room of a member-portal combination: the whole combination, every room or none.
+            $asked = BookingMirror::withoutGlobalScopes()->where('organization_id', $orgId)->whereKey($mirrorId)->first();
+            if ($asked && ($rooms = StayCombination::rooms($asked))) {
+                return $this->cancelCombination($orgId, (string) $rooms->first()->booking_group_id);
+            }
+
             $lock = Cache::lock("portal-cancel:stay:{$mirrorId}", 60);
             if (!$lock->get()) {
                 throw new CancellationException('cancel_in_progress', 'This booking is being cancelled. Please check it again in a moment.', 409);
@@ -382,14 +389,14 @@ final class MemberCancellation
      *
      * @return array{policy: array, converge: bool}
      */
-    private static function stayDecision(BookingMirror $m): array
+    private static function stayDecision(BookingMirror $m, bool $wholeCombination = false): array
     {
         $already = ['can_cancel' => false, 'deadline' => null, 'reason' => CancellationPolicy::ALREADY_CANCELLED];
         if ($m->cancelled_at !== null) {
             return ['policy' => $already, 'converge' => false];
         }
         if (!self::isRefundedInFull((string) $m->payment_status, $m->refunded_amount, $m->price_total)) {
-            return ['policy' => CancellationPolicy::forStay($m), 'converge' => false];
+            return ['policy' => CancellationPolicy::forStay($m, null, $wholeCombination), 'converge' => false];
         }
 
         $statusesCancelled = (string) $m->internal_status === 'cancelled' || (string) $m->booking_state === 'cancelled';
@@ -405,7 +412,322 @@ final class MemberCancellation
             $probe->internal_status = 'confirmed';
         }
 
-        return ['policy' => CancellationPolicy::forStay($probe), 'converge' => true];
+        return ['policy' => CancellationPolicy::forStay($probe, null, $wholeCombination), 'converge' => true];
+    }
+
+    /**
+     * May the member cancel this member-portal combination (StayCombination),
+     * as cancelStay() will judge it — the combination's booking DTO's
+     * `can_cancel` / `cancel_deadline` (MemberBookingQuery::combinationDto()).
+     *
+     * @param Collection<int, BookingMirror> $rooms
+     * @return array{can_cancel: bool, deadline: ?\Carbon\CarbonImmutable, reason: ?string}
+     */
+    public static function combinationPolicy(Collection $rooms): array
+    {
+        return self::combinationDecision($rooms->sortBy('id')->values())['policy'];
+    }
+
+    /**
+     * Every room judged as cancelStay() judges one (stayDecision()), with the
+     * group no refusal (CancellationPolicy::forStay()'s $wholeCombination):
+     * the combination may be cancelled when every room may, and converges
+     * (its money already back in full) when every room does. Anything else —
+     * a room staff cancelled or refunded on its own, a dispute on one, rooms
+     * that disagree — is the venue's (`not_cancellable`), unless every room
+     * refuses for the same reason (all already cancelled, all past the
+     * deadline), which is then the answer.
+     *
+     * @param Collection<int, BookingMirror> $rooms
+     * @return array{policy: array, converge: bool}
+     */
+    private static function combinationDecision(Collection $rooms): array
+    {
+        $venues = ['policy' => ['can_cancel' => false, 'deadline' => null, 'reason' => CancellationPolicy::NOT_CANCELLABLE], 'converge' => false];
+        $decisions = $rooms->map(fn (BookingMirror $m) => self::stayDecision($m, true))->values();
+        if ($decisions->isEmpty()) {
+            return $venues;
+        }
+
+        $refusals = $decisions->filter(fn (array $d) => !$d['policy']['can_cancel']);
+        if ($refusals->isNotEmpty()) {
+            $reasons = $refusals->map(fn (array $d) => $d['policy']['reason'])->unique();
+
+            return $refusals->count() === $decisions->count() && $reasons->count() === 1
+                ? ['policy' => $refusals->first()['policy'], 'converge' => false]
+                : $venues;
+        }
+
+        $converge = $decisions->map(fn (array $d) => $d['converge'])->unique();
+
+        return $converge->count() === 1 ? ['policy' => $decisions->first()['policy'], 'converge' => (bool) $converge->first()] : $venues;
+    }
+
+    /**
+     * A member-portal combination (StayCombination) is cancelled whole: every
+     * room, or none. The phases of cancelStay(), over all the rooms at once:
+     *
+     *   1. one short transaction locks every room's row (`lockForUpdate`, id
+     *      order — the capture job's order for the rows of one intent), judges
+     *      them together (combinationDecision()), then — for the one real
+     *      PaymentIntent they all carry — takes `pi:` (row locks first, `pi:`
+     *      second, as everywhere) and asks Stripe. A held card is released and
+     *      every room's cancellation written right there; the PMS reservations
+     *      are cancelled after the commit, best effort;
+     *   2. a captured payment is refunded ONCE, outside any transaction, by
+     *      BookingRefundService::applyRefund() on the lead room — the same call
+     *      the staff path makes: it refunds the whole intent, records every
+     *      room of the group (booking_group_id) as refunded, reverses each
+     *      room's points and cancels each room at the PMS;
+     *   3. a second short transaction writes every room's cancellation
+     *      columns, gives the coupon back and reverses whatever points remain.
+     *
+     * Money first, booking second: a payment that cannot be returned leaves
+     * every room standing (502 `refund_failed`). A retry after a failure
+     * between 2 and 3 finds every room's money back and finishes (converge).
+     *
+     * @throws CancellationException
+     */
+    private function cancelCombination(int $orgId, string $groupId): CancellationOutcome
+    {
+        $lock = Cache::lock("portal-cancel:stay-group:{$groupId}", 60);
+        if (!$lock->get()) {
+            throw new CancellationException('cancel_in_progress', 'This booking is being cancelled. Please check it again in a moment.', 409);
+        }
+
+        try {
+            $phase1 = DB::transaction(function () use ($orgId, $groupId) {
+                $rooms = $this->lockCombination($orgId, $groupId);
+                $decision = self::combinationDecision($rooms);
+                $this->assertAllowed($decision['policy']);
+                if ($decision['converge']) {
+                    return ['mode' => 'converge', 'amount' => self::sumOf($rooms, 'refunded_amount')];
+                }
+
+                $lead = $rooms->first();
+                $pi = (string) $lead->stripe_payment_intent_id;
+                // One payment for the whole combination; rooms that disagree about it are the venue's to sort out.
+                if ($rooms->contains(fn (BookingMirror $r) => (string) $r->stripe_payment_intent_id !== $pi || (string) $r->payment_method !== (string) $lead->payment_method)) {
+                    throw new CancellationException('not_cancellable', 'This booking cannot be cancelled here. Please contact the venue.', 422);
+                }
+
+                if (!PortalPaymentIntentGuard::isRealIntent($pi, $lead->payment_method)) {
+                    return ['mode' => 'finished', 'outcome' => $this->writeCombinationCancellation($rooms, 'none', 0.0, [])];
+                }
+
+                AdvisoryLock::within('pi:' . $pi);
+
+                if (!$this->stripe->isEnabled()) {
+                    throw new CancellationException('refund_unavailable', 'Online payments are switched off at this venue, so the payment cannot be returned here. Please contact the venue.', 409);
+                }
+                try {
+                    $status = (string) ($this->stripe->retrievePaymentIntent($pi)->status ?? '');
+                } catch (\Throwable $e) {
+                    Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
+                    throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
+                }
+
+                if ($status === 'succeeded') {
+                    // Phase 2 — nothing is written here.
+                    return ['mode' => 'refund', 'pi' => $pi];
+                }
+                if ($status !== 'canceled') {
+                    try {
+                        $this->stripe->cancelPaymentIntent($pi, 'requested_by_customer');
+                    } catch (\Throwable $e) {
+                        Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
+                        throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
+                    }
+                }
+
+                return ['mode' => 'finished', 'outcome' => $this->writeCombinationCancellation($rooms, 'released', self::sumOf($rooms, 'price_total'), ['payment_status' => 'cancelled'])];
+            });
+
+            if ($phase1['mode'] === 'finished') {
+                return $phase1['outcome']->withPms($this->cancelCombinationAtPms($orgId, $groupId));
+            }
+            if ($phase1['mode'] === 'converge') {
+                return $this->finishRefundedCombination($orgId, $groupId, $phase1['amount'], null);
+            }
+
+            return $this->refundCapturedCombination($orgId, $groupId, $phase1['pi']);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Phase 2 for a combination: the one captured payment refunded once, the
+     * way refundCapturedStay() refunds one room's — re-read first (money
+     * already back in full finishes; anything no longer "paid, nothing
+     * refunded" on any room is not ours to refund on top of), the STARTED
+     * marker on every room before any money moves, then applyRefund() on the
+     * lead room, which walks its siblings.
+     *
+     * @throws CancellationException
+     */
+    private function refundCapturedCombination(int $orgId, string $groupId, string $pi): CancellationOutcome
+    {
+        $rooms = $this->readCombination($orgId, $groupId);
+        $inFull = fn (Collection $rs) => $rs->every(fn (BookingMirror $m) => self::isRefundedInFull((string) $m->payment_status, $m->refunded_amount, $m->price_total));
+
+        if ($inFull($rooms)) {
+            $this->assertAllowed(self::combinationDecision($rooms)['policy']);
+            return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'refunded_amount'), null);
+        }
+        if ($rooms->contains(fn (BookingMirror $m) => (string) $m->payment_status !== 'paid' || (float) $m->refunded_amount > 0)) {
+            throw new CancellationException('not_cancellable', 'This booking cannot be cancelled here. Please contact the venue.', 422);
+        }
+
+        foreach ($rooms as $m) {
+            AuditLog::create([
+                'organization_id' => (int) $m->organization_id,
+                'action'          => self::STARTED,
+                'subject_type'    => 'booking_mirror',
+                'subject_id'      => $m->id,
+                'new_values'      => ['payment_intent' => $pi, 'booking_group_id' => $groupId],
+                'description'     => "The member started cancelling stay #{$m->id} (a room of combination {$groupId}); its payment is being refunded",
+            ]);
+        }
+
+        try {
+            $this->stayRefund->applyRefund($rooms->first(), null, 'requested_by_customer', null, true, null);
+        } catch (\Throwable $e) {
+            if (!$this->isChargeAlreadyRefunded($e)) {
+                Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $e->getMessage()]);
+                throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
+            }
+            $rooms = $this->readCombination($orgId, $groupId);
+            if ($inFull($rooms)) {
+                return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'refunded_amount'), null);
+            }
+            try {
+                $this->stayRefund->applyRefund($rooms->first(), null, 'requested_by_customer', null, false, null);
+            } catch (\Throwable $inner) {
+                Log::error('portal.stay_refund_failed', ['org' => $orgId, 'group' => $groupId, 'payment_intent' => $pi, 'error' => $inner->getMessage()]);
+                throw new CancellationException('refund_failed', 'We could not return the payment just now, so the booking was not cancelled. Please try again in a moment.', 502);
+            }
+        }
+
+        // The PMS state is read room by room in phase 3 (applyRefund() stamps each room it cancelled there).
+        return $this->finishRefundedCombination($orgId, $groupId, self::sumOf($rooms, 'price_total'), null);
+    }
+
+    /**
+     * Phase 3 for a combination: every room locked again, re-checked (another
+     * instance may have finished it), its cancellation columns written — never
+     * the money columns applyRefund() wrote — the coupon given back and the
+     * points reversed. The member is mailed by the cancellation notifier with
+     * the whole combination's amount (`memberMailed` false): the refund's own
+     * mail names one room.
+     */
+    private function finishRefundedCombination(int $orgId, string $groupId, float $amount, ?bool $pms): CancellationOutcome
+    {
+        return DB::transaction(function () use ($orgId, $groupId, $amount, $pms) {
+            $rooms = $this->lockCombination($orgId, $groupId);
+            if ($rooms->contains(fn (BookingMirror $m) => $m->cancelled_at !== null)) {
+                throw new CancellationException('already_cancelled', 'This booking is already cancelled.', 409);
+            }
+            $pms ??= self::combinedPms($rooms->map(fn (BookingMirror $m) => $this->pmsStateOf($m))->all());
+
+            return $this->writeCombinationCancellation($rooms, 'refunded', $amount, [], $pms);
+        });
+    }
+
+    /**
+     * Every room's cancellation, the coupon (found by whichever room carries
+     * its reference — the lead's `BM:{id}`) and every room's points — inside
+     * the caller's transaction, never touching Stripe or the PMS itself. One
+     * `booking.member_cancelled` row per room, each with its own amount.
+     *
+     * @param Collection<int, BookingMirror> $rooms
+     */
+    private function writeCombinationCancellation(Collection $rooms, string $money, float $amount, array $columns, ?bool $pms = null): CancellationOutcome
+    {
+        foreach ($rooms as $m) {
+            $m->forceFill([
+                'internal_status'     => 'cancelled',
+                'booking_state'       => 'cancelled',
+                'cancelled_at'        => now(),
+                'cancellation_reason' => self::REASON,
+            ] + $columns)->save();
+        }
+
+        $couponReleased = false;
+        $pointsReversed = 0;
+        foreach ($rooms as $m) {
+            $couponReleased = $this->releaseStayCoupon($m) || $couponReleased;
+            $pointsReversed += $this->reverseAndCount('booking_mirror', (int) $m->id, 'Stay ' . $this->stayReference($m) . ' cancelled');
+            $this->auditMemberCancelled($m, $money, $money === 'none' ? 0.0 : round((float) $m->price_total, 2));
+        }
+
+        return new CancellationOutcome(
+            kind: 'stay',
+            booking: $rooms->first(),
+            money: $money,
+            amount: $amount,
+            currency: strtoupper((string) HotelSetting::getValue('booking_currency', 'EUR')),
+            couponReleased: $couponReleased,
+            pointsReversed: $pointsReversed,
+            memberMailed: false,
+            pmsCancelled: $pms,
+        );
+    }
+
+    /** After phase 1 committed: every room cancelled at the PMS, best effort, one by one (cancelAtPmsAfterCommit()). */
+    private function cancelCombinationAtPms(int $orgId, string $groupId): ?bool
+    {
+        return self::combinedPms($this->readCombination($orgId, $groupId)->map(fn (BookingMirror $m) => $this->cancelAtPmsAfterCommit((int) $m->id))->all());
+    }
+
+    /** Null when no room had anything to cancel at the PMS, false when any room is still open there, else true. */
+    private static function combinedPms(array $states): ?bool
+    {
+        $known = array_filter($states, fn ($s) => $s !== null);
+        if ($known === []) {
+            return null;
+        }
+
+        return !in_array(false, $known, true);
+    }
+
+    /**
+     * Every room of the combination, locked (`lockForUpdate`, id order); a
+     * group that is no longer a member-portal combination is the venue's.
+     *
+     * @return Collection<int, BookingMirror>
+     */
+    private function lockCombination(int $orgId, string $groupId): Collection
+    {
+        $rooms = BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('booking_group_id', $groupId)
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+        if ($rooms->isEmpty()) {
+            throw new CancellationException('not_found', 'We could not find that booking.', 404);
+        }
+        if (!StayCombination::isCombination($rooms)) {
+            throw new CancellationException('not_cancellable', 'This booking cannot be cancelled here. Please contact the venue.', 422);
+        }
+
+        return $rooms;
+    }
+
+    /** @return Collection<int, BookingMirror> */
+    private function readCombination(int $orgId, string $groupId): Collection
+    {
+        return BookingMirror::withoutGlobalScopes()
+            ->where('organization_id', $orgId)
+            ->where('booking_group_id', $groupId)
+            ->orderBy('id')
+            ->get();
+    }
+
+    private static function sumOf(Collection $rooms, string $column): float
+    {
+        return round((float) $rooms->sum(fn (BookingMirror $m) => (float) $m->{$column}), 2);
     }
 
     /** Whether a cancellation of the member's ever started refunding this stay (the STARTED marker). */

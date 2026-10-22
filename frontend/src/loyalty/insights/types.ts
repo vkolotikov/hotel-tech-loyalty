@@ -72,6 +72,38 @@ export interface Insights {
   balances: Band[]
 }
 
+/**
+ * `GET insights/cohorts` (release 4; InsightsCohorts): the last twelve venue months, each with the members who joined
+ * in it and how many of them were active (earned or spent points) in that month and each month since — `active[0]` is
+ * the month they joined, `active[k]` the k-th month after.
+ */
+export interface CohortRow { key: string; members: number; active: number[] }
+export interface Cohorts { timezone: string; months: string[]; rows: CohortRow[] }
+
+/** Paid bookings of one kind that members made in the period, and what they brought. */
+export interface MoneyKind { bookings: number; amount: number }
+export interface MoneyBucket { key: string; stays: number; services: number }
+
+/**
+ * `GET insights/money?period=` (release 4; InsightsMoney): paid stays and appointments members booked in the period,
+ * in the venue's currency, beside what every booking of the period brought; per bucket of the period.
+ */
+export interface Money {
+  period: Period
+  bucket: BucketKind
+  from: string
+  to: string
+  timezone: string
+  currency: string
+  members: { stays: MoneyKind; services: MoneyKind; total: number }
+  all: { total: number }
+  /** Members' share of everything paid, in per cent with one decimal; null when nothing was paid. */
+  share: number | null
+  /** Paid bookings by members in another currency: counted here, added nowhere. */
+  other_currency: { bookings: number }
+  series: MoneyBucket[]
+}
+
 export interface AtRiskMember extends MemberRow {
   /** Whole venue days since the last activity. */
   days_quiet: number

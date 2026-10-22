@@ -5,19 +5,23 @@ import { usePortal } from '../../PortalProvider'
 import { apiErrorCode, bookErrorFallback, bookErrorKey, portalApi } from '../../lib/portalApi'
 import { formatDay } from '../../lib/dates'
 import { formatMoney } from '../../lib/money'
+import { counted } from '../../lib/plural'
 import { Button } from '../../ui/Button'
 import { Card } from '../../ui/Card'
 import { EmptyState } from '../../ui/EmptyState'
 import { Money } from '../../ui/Money'
 import { Notice } from '../../ui/Notice'
 import { Skeleton } from '../../ui/Skeleton'
-import type { AvailableRoom } from '../../lib/types'
-import { perNightShown, type StayState } from './staySteps'
+import type { AvailableCombination, AvailableRoom } from '../../lib/types'
+import { perNightShown, stayRoomChoices, type StayState } from './staySteps'
 
-interface Props { state: StayState; onPick: (roomId: string) => void; onChangeDates: () => void }
+interface Props { state: StayState; onPick: (roomId: string) => void; onPickRooms: (roomIds: string[]) => void; onChangeDates: () => void }
 
-/** The rooms free for the chosen dates and party, cheapest first, each with the member's own total. */
-export function RoomStep({ state, onPick, onChangeDates }: Props) {
+/**
+ * The rooms free for the chosen dates and party, cheapest first, each with the member's own total. When no single
+ * room sleeps the party, the rooms that do together (part D) — each combination one stay, paid once.
+ */
+export function RoomStep({ state, onPick, onPickRooms, onChangeDates }: Props) {
   const { t, i18n } = useTranslation()
   const { data } = usePortal()
   const { checkIn, checkOut, adults, children } = state
@@ -35,6 +39,7 @@ export function RoomStep({ state, onPick, onChangeDates }: Props) {
   // value to satisfy the type even in the branches that never use it.
   const nights = free.data?.nights ?? 0
   const contact = venue?.contact.phone || venue?.contact.email
+  const choices = free.data ? stayRoomChoices(free.data) : null
 
   return (
     <div className="space-y-4">
@@ -58,14 +63,14 @@ export function RoomStep({ state, onPick, onChangeDates }: Props) {
         </div>
       )}
 
-      {free.data && free.data.rooms.length === 0 && free.data.party_too_large && venue && (
+      {choices === 'contact' && venue && (
         <Notice tone="info">
           {t('portal.stay.party_too_large', 'No single room fits your party. Please contact {{venue}} and we will arrange it.', { venue: venue.name })}
           {contact && <> <a className="text-p-accent-deep underline" href={venue.contact.phone ? `tel:${venue.contact.phone}` : `mailto:${venue.contact.email}`}>{contact}</a></>}
         </Notice>
       )}
 
-      {free.data && free.data.rooms.length === 0 && !free.data.party_too_large && (
+      {choices === 'none' && (
         <EmptyState
           icon={<BedDouble size={18} aria-hidden />}
           title={t('portal.stay.no_rooms', 'No rooms are free for these dates.')}
@@ -74,7 +79,40 @@ export function RoomStep({ state, onPick, onChangeDates }: Props) {
       )}
 
       {free.data?.rooms.map(room => <RoomCard key={room.id} room={room} nights={nights} onPick={onPick} />)}
+
+      {choices === 'combinations' && (
+        <>
+          <Notice tone="info">{t('portal.stay.together_intro', 'No single room sleeps your party, but these rooms do together. Each choice is one booking: paid once, and changed or cancelled together.')}</Notice>
+          {free.data?.combinations?.map(combo => <CombinationCard key={combo.key} combo={combo} nights={nights} onPick={onPickRooms} />)}
+        </>
+      )}
     </div>
+  )
+}
+
+/** Two or three rooms offered together: each room and what it sleeps, and the stay's one total — the server's. */
+function CombinationCard({ combo, nights, onPick }: { combo: AvailableCombination; nights: number; onPick: (ids: string[]) => void }) {
+  const { t, i18n } = useTranslation()
+  const discounted = combo.member_total < combo.total_price
+  const perNight = nights > 0 ? Math.round((combo.member_total / nights) * 100) / 100 : null
+  return (
+    <Card className="p-4 space-y-3">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <p className="font-p-display text-xl leading-tight">{combo.rooms.map(r => r.name).join(' + ')}</p>
+          <ul className="text-xs text-p-text-2 mt-1 space-y-0.5">
+            {combo.rooms.map((r, i) => <li key={`${r.id}-${i}`}>{r.name} · {counted(t, 'stay.sleeps', r.max_guests)}</li>)}
+          </ul>
+        </div>
+        <div className="text-right shrink-0">
+          {discounted && <span className="block text-xs text-p-text-2 line-through"><span className="sr-only">{t('portal.book.list_price', 'List price')}</span><Money amount={combo.total_price} currency={combo.currency} /></span>}
+          <span className="block font-p-display text-lg">{discounted && <span className="sr-only">{t('portal.book.your_price', 'Your price')}</span>}<Money amount={combo.member_total} currency={combo.currency} /></span>
+          <span className="block text-[11px] text-p-text-2">{t('portal.stay.total_for_stay', 'Total for your stay')}</span>
+          {!!perNight && <span className="block text-[11px] text-p-text-2">{t('portal.stay.per_night', '{{price}} a night', { price: formatMoney(perNight, combo.currency, i18n.language) })}</span>}
+        </div>
+      </div>
+      <Button type="button" full onClick={() => onPick(combo.rooms.map(r => r.id))}>{t('portal.stay.choose_together', 'Choose these rooms')}</Button>
+    </Card>
   )
 }
 
@@ -96,7 +134,7 @@ function RoomCard({ room, nights, onPick }: { room: AvailableRoom; nights: numbe
             <p className="font-p-display text-xl leading-tight">{room.name}</p>
             {room.short_description && <p className="text-sm text-p-text-2 mt-0.5">{room.short_description}</p>}
             <p className="text-xs text-p-text-2 mt-1">
-              {t('portal.stay.sleeps', 'Sleeps {{count}}', { count: room.max_guests })}
+              {counted(t, 'stay.sleeps', room.max_guests)}
               {room.bed_type && ` · ${room.bed_type}`}
               {room.size && ` · ${room.size}`}
             </p>

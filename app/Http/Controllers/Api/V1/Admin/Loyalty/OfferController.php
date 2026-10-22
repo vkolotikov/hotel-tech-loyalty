@@ -23,20 +23,27 @@ use Illuminate\Validation\ValidationException;
  * organisation's tiers. The picture has its own endpoints (ImageController,
  * release 2 §7): the row shows it, the list's options carry its limits.
  * Offers are brand-scoped: read as the request's brand binding gives,
- * created on the brand the model's own hook picks.
+ * created on the brand the request names (release 4: one of the options'
+ * brands, which are this organisation's and the staff member's), else on the
+ * one the model's own hook picks. An offer keeps its brand when changed.
  */
 class OfferController extends Controller
 {
     private const CODE = 'regex:/^[A-Za-z0-9-]+$/';
 
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $today = VenueClock::today((int) app('current_organization_id'));
+        $orgId = (int) app('current_organization_id');
+        $today = VenueClock::today($orgId);
 
         return response()->json([
             'offers'  => SpecialOffer::query()->orderByDesc('created_at')->orderByDesc('id')->get()
                 ->map(fn (SpecialOffer $o) => self::row($o, $today))->values(),
-            'options' => ['types' => LoyaltyForms::OFFER_TYPES, 'applies_to' => LoyaltyForms::appliesTo(), 'image' => ImageController::limits('offers')],
+            'options' => [
+                'types' => LoyaltyForms::OFFER_TYPES, 'applies_to' => LoyaltyForms::appliesTo(), 'image' => ImageController::limits('offers'),
+                // Release 4: the brands a new offer may be put on (one: nothing to choose).
+                'brands' => LoyaltyForms::brands($request->user(), $orgId),
+            ],
         ]);
     }
 
@@ -58,8 +65,10 @@ class OfferController extends Controller
             'usage_limit'      => 'nullable|integer|min:1',
             'per_member_limit' => 'nullable|integer|min:1',
             'is_featured'      => 'boolean',
+            'brand'            => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id')),
         ]);
         $this->refuseTakenCode($data['code'] ?? null);
+        $data = LoyaltyForms::withBrand($data);
 
         $offer = SpecialOffer::create(self::columns($data) + ['created_by' => $request->user()->id]);
 
@@ -112,6 +121,7 @@ class OfferController extends Controller
     {
         return [
             'id'               => (int) $o->id,
+            'brand_id'         => $o->brand_id !== null ? (int) $o->brand_id : null,
             'title'            => (string) $o->title,
             'description'      => $o->description,
             'type'             => $o->type,

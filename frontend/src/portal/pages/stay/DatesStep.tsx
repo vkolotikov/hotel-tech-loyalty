@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { venueToday } from '../../lib/dates'
+import { counted } from '../../lib/plural'
 import { Button } from '../../ui/Button'
 import { Field, INPUT_CLASS } from '../../ui/Field'
 import { Notice } from '../../ui/Notice'
@@ -28,8 +29,8 @@ export function DatesStep({ state, rules, timezone, onDates, onGuests, onSearch 
   const nights = state.checkIn && state.checkOut ? nightsBetween(state.checkIn, state.checkOut) : 0
 
   const sentence = problem === null ? null
-    : problem.code === 'min_nights' ? t('portal.stay.min_nights', 'The shortest stay here is {{count}} nights.', { count: problem.count })
-    : problem.code === 'max_nights' ? t('portal.stay.max_nights', 'The longest stay you can book online is {{count}} nights.', { count: problem.count })
+    : problem.code === 'min_nights' ? counted(t, 'stay.min_nights', problem.count)
+    : problem.code === 'max_nights' ? counted(t, 'stay.max_nights', problem.count)
     : t('portal.stay.pick_dates', 'Choose your arrival and departure dates.')
 
   return (

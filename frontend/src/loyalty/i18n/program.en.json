@@ -231,6 +231,10 @@
     "take_off_label": "Take {{benefit}} off {{tier}}",
     "title": "Tiers"
   },
+  "time_check": {
+    "dialog": "Check these times: they were saved in the full admin before it read times on the venue’s clock, so they may be off by the venue’s difference from UTC. Saving the boost marks them as checked.",
+    "row": "Check the time: saved in the full admin before its times were read on the venue’s clock, it may start and end hours off. Open it, check the times and save."
+  },
   "title": "Program",
   "value_phrase": {
     "fixed_amount": "{{amount}} off",

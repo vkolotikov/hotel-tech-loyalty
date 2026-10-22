@@ -90,7 +90,7 @@ describe('newPayVisit', () => {
   it('draws both the nonce and the idempotency key from the injected generator, starting unpaid/unheld with no intent and no noCard memory', () => {
     const draws = ['nonce-1', 'key-1']
     const visit = newPayVisit(() => draws.shift()!)
-    expect(visit).toEqual({ nonce: 'nonce-1', idempotencyKey: 'key-1', paymentIntentId: null, paid: false, held: false, noCard: false })
+    expect(visit).toEqual({ nonce: 'nonce-1', idempotencyKey: 'key-1', paymentIntentId: null, paid: false, held: false, noCard: false, atVenueGrant: null })
   })
 
   it('gives two different visits two different nonces and keys', () => {
@@ -105,15 +105,15 @@ describe('newPayVisit', () => {
 
 describe('canLeavePay', () => {
   it('is false the moment the member presses Pay, even before Stripe has answered', () => {
-    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: null, paid: false, held: true, noCard: false })).toBe(false)
+    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: null, paid: false, held: true, noCard: false, atVenueGrant: null })).toBe(false)
   })
 
   it('is false while a card is held against an unconfirmed booking', () => {
-    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: 'pi_1', paid: true, held: true, noCard: false })).toBe(false)
+    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: 'pi_1', paid: true, held: true, noCard: false, atVenueGrant: null })).toBe(false)
   })
 
   it('is true before the member has pressed Pay, once the hold is released, and when there is no visit at all', () => {
-    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: null, paid: false, held: false, noCard: false })).toBe(true)
+    expect(canLeavePay({ nonce: 'n', idempotencyKey: 'k', paymentIntentId: null, paid: false, held: false, noCard: false, atVenueGrant: null })).toBe(true)
     expect(canLeavePay(null)).toBe(true)
   })
 })

@@ -22,6 +22,10 @@ export const campaignsApi = {
   send: (id: number, body: { recipients: number; revision: string }): Promise<CampaignAnswer> => watched(api.post(loyaltyUrl(`campaigns/${id}/send`), body)),
   cancel: (id: number): Promise<CampaignAnswer> => watched(api.post(loyaltyUrl(`campaigns/${id}/cancel`))),
   duplicate: (id: number, name: string): Promise<CampaignAnswer> => watched(api.post(loyaltyUrl(`campaigns/${id}/duplicate`), { name })),
+  // Release 4: send later, at a time on the venue's clock (`YYYY-MM-DDTHH:mm`); `about` is how many it would reach now.
+  schedule: (id: number, body: { send_at: string; revision: string }): Promise<CampaignAnswer & { about: number }> =>
+    watched(api.post(loyaltyUrl(`campaigns/${id}/schedule`), body)),
+  unschedule: (id: number): Promise<CampaignAnswer> => watched(api.post(loyaltyUrl(`campaigns/${id}/unschedule`))),
 }
 
 export const SEGMENTS_KEY = ['loyalty', 'campaigns', 'segments'] as const

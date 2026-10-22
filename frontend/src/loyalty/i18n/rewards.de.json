@@ -4,6 +4,12 @@
     "services": "Nur Leistungen",
     "stays": "Nur Aufenthalte"
   },
+  "brand": {
+    "hint": "Zu welcher Ihrer Marken es gehört.",
+    "label": "Marke",
+    "refused": "Wählen Sie eine der aufgeführten Marken.",
+    "saved": "Marke: {{name}}. Es bleibt bei dieser Marke."
+  },
   "cancel": {
     "body": "{{points}} Punkte gehen an {{name}} zurück, und die Prämie kehrt in den Bestand zurück, falls dieser begrenzt ist. Der Code wird ungültig.",
     "confirm": "Einlösung stornieren",

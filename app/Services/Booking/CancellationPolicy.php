@@ -56,15 +56,23 @@ final class CancellationPolicy
         return self::until($start->subHours($hours), $now);
     }
 
-    /** @return array{can_cancel: bool, deadline: ?CarbonImmutable, reason: ?string} */
-    public static function forStay(BookingMirror $m, ?\DateTimeInterface $now = null): array
+    /**
+     * A room of a group (`booking_group_id`) is never cancelled on its own.
+     * $wholeCombination is MemberCancellation judging every room of a
+     * member-portal combination together (StayCombination), each against
+     * every other rule here — the only caller for which the group is no
+     * refusal.
+     *
+     * @return array{can_cancel: bool, deadline: ?CarbonImmutable, reason: ?string}
+     */
+    public static function forStay(BookingMirror $m, ?\DateTimeInterface $now = null, bool $wholeCombination = false): array
     {
         if (in_array((string) $m->internal_status, self::STAY_DEAD, true) || (string) $m->booking_state === 'cancelled') {
             return self::no(self::ALREADY_CANCELLED);
         }
         if (!in_array((string) $m->internal_status, self::STAY_OPEN, true)
             || !in_array((string) $m->channel_name, self::DIRECT_CHANNELS, true)
-            || !empty($m->booking_group_id)
+            || (!empty($m->booking_group_id) && !$wholeCombination)
             || in_array((string) $m->payment_status, self::MONEY_TOUCHED, true)
             || !$m->arrival_date) {
             return self::no(self::NOT_CANCELLABLE);

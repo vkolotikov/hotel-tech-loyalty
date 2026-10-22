@@ -55,6 +55,7 @@ const options: CampaignOptions = {
 const HTML = '<div style="max-width:600px"><h1>Autumn at Lumière</h1></div>'
 const draft = (more: Partial<Campaign> = {}): Campaign => ({
   id: 7, name: 'Autumn', subject: 'Our autumn', status: 'draft', segment: { id: 3, name: 'Gold' }, recipient_count: 0, sent_count: 0, failed_count: 0, sent_at: null,
+  scheduled_at: null, scheduled_for: null, schedule_problem: null,
   created_at: '2026-10-20T08:00:00+00:00', updated_at: '2026-10-20T09:00:00+00:00', segment_id: 3, editable_here: true,
   body_blocks: [
     { id: 'h1', type: 'heading', text: 'Autumn at Lumière', level: 1, align: 'center', color: '#1a1a1a' },

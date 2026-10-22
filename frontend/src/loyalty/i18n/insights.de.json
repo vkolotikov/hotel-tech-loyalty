@@ -129,5 +129,28 @@
       "network": "Keine Verbindung. Prüfen Sie das Netzwerk und versuchen Sie es erneut.",
       "unknown": "Die Einblicke konnten nicht geladen werden. Bitte versuchen Sie es erneut."
     }
+  },
+  "cohorts": {
+    "cell": "{{active}} von {{members}} aktiv",
+    "joined": "Beigetreten",
+    "line": "Mitglieder nach dem Monat ihres Beitritts und der Anteil, der in diesem und jedem folgenden Monat Punkte gesammelt oder eingelöst hat. Die letzten zwölf Monate.",
+    "members": "Mitglieder",
+    "month_after": "+{{months}}",
+    "month_zero": "Beitrittsmonat",
+    "none": "In den letzten zwölf Monaten ist niemand beigetreten.",
+    "title": "Bindung nach Beitrittsmonat"
+  },
+  "money": {
+    "all": "Von {{total}}, die insgesamt bezahlt wurden",
+    "bookings": "Buchungen: {{number}}",
+    "currency_line": "In {{currency}}",
+    "line": "Bezahlte Aufenthalte und Termine, die Mitglieder in diesem Zeitraum gebucht haben, nach dem Buchungstag: was sie bezahlt haben, abzüglich Erstattungen.",
+    "members": "Von Mitgliedern",
+    "none": "In diesem Zeitraum gibt es noch keine bezahlten Buchungen.",
+    "other_currency": "Bezahlte Buchungen von Mitgliedern in einer anderen Währung, nicht mitgerechnet: {{number}}.",
+    "services": "Termine",
+    "share": "Anteil an allen bezahlten Buchungen",
+    "stays": "Aufenthalte",
+    "title": "Umsatz durch Mitglieder"
   }
 }

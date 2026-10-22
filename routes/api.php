@@ -429,6 +429,10 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 ->middleware('throttle:30,1,portal-stays-payment-intent');
             Route::post('stays/confirm', [\App\Http\Controllers\Api\V1\Member\Portal\PortalStayBookingController::class, 'confirm'])
                 ->middleware('throttle:30,1,portal-stays-confirm');
+            // Release 4, part C: what a payment the member returns with from a bank redirect is for (read only).
+            Route::get('payments/{paymentIntent}', [\App\Http\Controllers\Api\V1\Member\Portal\PortalPaymentReturnController::class, 'show'])
+                ->where('paymentIntent', 'pi_[A-Za-z0-9_]{1,200}')
+                ->middleware('throttle:30,1,portal-payment-return');
         });
 
         // ─── AI Chatbot ────────────────────────────────────────────────────────
@@ -1418,6 +1422,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 // Insights (§5)
                 Route::get('insights', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'show']);
                 Route::get('insights/at-risk', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'atRisk']);
+                // Release 4 part E: cohort retention, and the money members bring
+                Route::get('insights/cohorts', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'cohorts']);
+                Route::get('insights/money', [\App\Http\Controllers\Api\V1\Admin\Loyalty\InsightsController::class, 'money']);
 
                 // Segments & campaigns (§6); campaigns need the plan's `campaigns` feature, segments do not
                 Route::get('segments', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SegmentController::class, 'index']);
@@ -1437,6 +1444,22 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('campaigns/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'send'])->whereNumber('id');
                     Route::post('campaigns/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'cancel'])->whereNumber('id');
                     Route::post('campaigns/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'duplicate'])->whereNumber('id');
+                    // Release 4 §5: send later
+                    Route::post('campaigns/{id}/schedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'schedule'])->whereNumber('id');
+                    Route::post('campaigns/{id}/unschedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CampaignController::class, 'unschedule'])->whereNumber('id');
+                    // Release 4 §5 (R4-4): SMS campaigns through the venue's own Twilio account, with the plan's `campaigns` feature
+                    Route::get('sms', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'index']);
+                    Route::post('sms', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'store']);
+                    Route::get('sms/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'show'])->whereNumber('id');
+                    Route::put('sms/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'update'])->whereNumber('id');
+                    Route::delete('sms/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'destroy'])->whereNumber('id');
+                    Route::get('sms/{id}/audience', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'audience'])->whereNumber('id');
+                    Route::post('sms/{id}/test', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'test'])->whereNumber('id');
+                    Route::post('sms/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'send'])->whereNumber('id');
+                    Route::post('sms/{id}/schedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'schedule'])->whereNumber('id');
+                    Route::post('sms/{id}/unschedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'unschedule'])->whereNumber('id');
+                    Route::post('sms/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'cancel'])->whereNumber('id');
+                    Route::post('sms/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\SmsController::class, 'duplicate'])->whereNumber('id');
                 });
 
                 // Card & app (§7): the wallet pass needs the plan's `wallet` feature; images for rewards and offers
@@ -1450,6 +1473,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::get('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'show']);
                 Route::put('app-look', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'update']);
                 Route::post('app-look/logo', [\App\Http\Controllers\Api\V1\Admin\Loyalty\AppLookController::class, 'logo']);
+                // Release 4 (R4-5): the venue's currency, the setting booking setup writes
+                Route::get('currency', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CurrencyController::class, 'show']);
+                Route::put('currency', [\App\Http\Controllers\Api\V1\Admin\Loyalty\CurrencyController::class, 'update']);
                 // Push messages (release 3 §5), with the plan's `push_notifications` feature
                 Route::middleware('feature:push_notifications')->group(function () {
                     Route::get('push', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'index']);
@@ -1461,6 +1487,9 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                     Route::post('push/{id}/send', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'send'])->whereNumber('id');
                     Route::post('push/{id}/cancel', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'cancel'])->whereNumber('id');
                     Route::post('push/{id}/duplicate', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'duplicate'])->whereNumber('id');
+                    // Release 4 §5: send later
+                    Route::post('push/{id}/schedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'schedule'])->whereNumber('id');
+                    Route::post('push/{id}/unschedule', [\App\Http\Controllers\Api\V1\Admin\Loyalty\PushController::class, 'unschedule'])->whereNumber('id');
                 });
 
                 Route::post('rewards/{id}/image', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ImageController::class, 'storeReward'])->whereNumber('id');

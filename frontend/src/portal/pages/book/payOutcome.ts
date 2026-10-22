@@ -13,8 +13,8 @@ export type PayOutcome = { kind: 'paid'; id: string } | { kind: 'failed'; messag
  * testable without driving a real effect or a real Stripe mount (fix round 2, finding M3's own decision —
  * "requires_capture"/"succeeded" is a captured card; an `error` is a failure, carrying Stripe's own
  * message when Stripe gave one; anything else (no error, but no matching intent status either — e.g. a
- * redirect-pending or `requires_action` status the portal's `allow_redirects: 'never'` intent should never
- * actually reach) is incomplete.
+ * `processing` or `requires_action` status) is incomplete. A redirect-based method never answers here at all:
+ * the browser has left for the bank, and the return page (`payReturn.ts`) takes it from there (release 4).
  *
  * Error is checked before the intent's own status: Stripe's real result is one or the other, never both,
  * but a caller that wraps a caught rejection into `{ error }` (minor C) leaves `paymentIntent` unset either

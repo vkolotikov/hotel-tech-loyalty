@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import type { Can } from '../lib/types'
 import {
-  appAccess, appleRgb, applyPreset, chosenPreset, fileState, hexOf, lookBody, lookChanged, lookFormOf, lookProblems, lookServerProblems, passReady,
+  appAccess, appleRgb, applyPreset, chosenPreset, currencyChanged, currencyLabel, currencyWarnings, fileState, hexOf, lookBody, lookChanged, lookFormOf, lookProblems, lookServerProblems, passReady,
   pickerValue, previewPaint, previewTier, replaces, rgbHex, searchFor, svgId, tabAfter, tabFrom, walletBody, walletFormOf, walletProblems,
   walletServerProblems, walletShownProblems,
 } from './appMath'
-import type { Look, LookOptions, Wallet } from './types'
+import type { CurrencyPreview, Look, LookOptions, Wallet } from './types'
 
 const can = (more: Partial<Can> = {}): Can => ({ award: false, redeem: false, reverse: false, manage_program: false, manage_rewards: false, manage_members: false, view_insights: false, manage_campaigns: false, manage_app: false, ...more })
 const GOLD = { primary: '#c9a84c', background: '#0d0d0d', surface: '#161616', secondary: '#1e1e1e', text: '#ffffff', text_secondary: '#8e8e93', border: '#2c2c2c', success: '#32d74b', error: '#ff375f', warning: '#ffd60a', info: '#0a84ff' }
@@ -36,15 +36,17 @@ describe('the tab in the address and who sees the page (release 2 §7)', () => {
     expect(tabFrom('?tab=offers')).toBe('wallet')
     expect(searchFor('wallet')).toBe('')
     expect(searchFor('app')).toBe('?tab=app')
-    for (const tab of ['wallet', 'app'] as const) expect(tabFrom(searchFor(tab))).toBe(tab)
+    expect(tabFrom('?tab=currency')).toBe('currency')
+    for (const tab of ['wallet', 'app', 'currency'] as const) expect(tabFrom(searchFor(tab))).toBe(tab)
   })
 
   it('moves with the arrows, Home and End, wrapping; nothing for another key', () => {
     expect(tabAfter('wallet', 'ArrowRight')).toBe('app')
-    expect(tabAfter('app', 'ArrowRight')).toBe('wallet')
-    expect(tabAfter('wallet', 'ArrowLeft')).toBe('app')
+    expect(tabAfter('app', 'ArrowRight')).toBe('currency')
+    expect(tabAfter('currency', 'ArrowRight')).toBe('wallet')
+    expect(tabAfter('wallet', 'ArrowLeft')).toBe('currency')
     expect(tabAfter('app', 'Home')).toBe('wallet')
-    expect(tabAfter('wallet', 'End')).toBe('app')
+    expect(tabAfter('wallet', 'End')).toBe('currency')
     expect(tabAfter('wallet', 'Enter')).toBeNull()
   })
 
@@ -205,5 +207,42 @@ describe('the phone preview', () => {
     expect(previewTier([])).toBeNull()
     expect(svgId(':r1:')).toBe('lr1')
     expect(svgId('«r2»')).toBe('lr2')
+  })
+})
+
+describe('the currency (release 4, R4-5)', () => {
+  const preview = (more: Partial<CurrencyPreview> = {}): CurrencyPreview => ({
+    dry_run: true, from: 'EUR', to: 'GBP', relabel: { services: 0, extras: 0 }, payments: { mismatch: false, currency: null },
+    bookings: { total: 0, upcoming: 0 }, stays: null, ...more,
+  })
+
+  it('names a code in the language, and shows the bare code where there is no name', () => {
+    expect(currencyLabel('EUR', 'en')).toBe('EUR · Euro')
+    expect(currencyLabel('GBP', 'de')).toBe('GBP · Britisches Pfund')
+    expect(currencyLabel('QQQ', 'en')).toBe('QQQ')
+  })
+
+  it('saves only another code from the list', () => {
+    expect(currencyChanged('EUR', 'GBP', ['EUR', 'GBP'])).toBe(true)
+    expect(currencyChanged('EUR', 'EUR', ['EUR', 'GBP'])).toBe(false)
+    expect(currencyChanged('EUR', 'XYZ', ['EUR', 'GBP'])).toBe(false)
+  })
+
+  it('says nothing when the dry run found nothing, so the change is saved at once', () => {
+    expect(currencyWarnings(preview())).toEqual([])
+  })
+
+  it('lists payments first, then the bookings that keep theirs, the stays priced apart and the relabelled prices', () => {
+    expect(currencyWarnings(preview({
+      relabel: { services: 3, extras: 1 }, payments: { mismatch: true, currency: 'EUR' }, bookings: { total: 12, upcoming: 4 }, stays: { currency: 'EUR' },
+    }))).toEqual([
+      { key: 'payments', currency: 'EUR' },
+      { key: 'bookings', total: 12, upcoming: 4 },
+      { key: 'stays', currency: 'EUR' },
+      { key: 'relabel', services: 3, extras: 1 },
+    ])
+    expect(currencyWarnings(preview({ relabel: { services: 0, extras: 2 } }))).toEqual([{ key: 'relabel', services: 0, extras: 2 }])
+    // A mismatch the server could not name is no sentence to say.
+    expect(currencyWarnings(preview({ payments: { mismatch: true, currency: null } }))).toEqual([])
   })
 })

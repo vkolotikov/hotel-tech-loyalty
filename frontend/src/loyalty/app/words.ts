@@ -8,6 +8,7 @@
 export const TAB_WORDS: Record<string, string> = {
   wallet: 'Wallet pass',
   app: 'Member app',
+  currency: 'Currency',
 }
 
 /** What stops a pass (WalletSettings::missing). */

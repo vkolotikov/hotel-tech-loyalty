@@ -65,7 +65,9 @@ final class AccessMap
         'admin/loyalty/campaigns'               => ['staff',              'manager',            'loyalty'],       // Email campaigns (changes and sending: manager, as admin/email-campaigns)
         'admin/loyalty/wallet'                  => ['manager',            'manager',            'loyalty'],       // Wallet pass settings and certificates (manager, as admin/wallet-config)
         'admin/loyalty/app-look'                => ['staff',              'manager',            'loyalty'],       // The member app's look (changes: manager, as admin/settings)
+        'admin/loyalty/currency'                => ['manager',            'manager',            'loyalty'],       // The venue's currency in Card & app (release 4, R4-5; manager, as the appointments Setup)
         'admin/loyalty/push'                    => ['staff',              'manager',            'loyalty'],       // Push messages to a segment (release 3; changes and sending: manager)
+        'admin/loyalty/sms'                     => ['staff',              'manager',            'loyalty'],       // SMS campaigns through the venue's Twilio (release 4; changes, tests and sending: manager)
 
         // ── The caller's own account
         'admin/branding'                        => ['staff',              'manager',            'account'],       // The theme every page reads, the workspace included (ruling R1)

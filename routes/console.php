@@ -177,6 +177,19 @@ Schedule::command('content:send-morning-email')
     ->hourly()
     ->withoutOverlapping(10);
 
+// HexaTech Loyalty release 4 §5, send later: email campaigns, push messages and SMS campaigns whose scheduled time
+// has come start now, each once (one conditional update `scheduled` → `sending` in its start service), to whoever is
+// eligible at that moment. The overlap lock is a guard only; the conditional update is what makes it once.
+Schedule::command('loyalty:send-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping(5);
+
+// HexaTech Loyalty release 4 §5: Expo's receipts for push messages pushed more than 15 minutes ago; a refused push is
+// marked failed, a device that is gone is cleared from its member.
+Schedule::command('loyalty:push-receipts')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(15);
+
 // Prune expired BookingHold + BookingIdempotencyKey rows. Holds carry guest
 // PII (name/email/phone) in payload_json; abandoned-cart rows accumulating
 // forever is both a Postgres bloat issue (jsonb ~2KB/row at the quote rate)

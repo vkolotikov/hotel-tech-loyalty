@@ -14,6 +14,9 @@ export const pushApi = {
   send: (id: number, body: { recipients: number; revision: string }): Promise<PushAnswer> => watched(api.post(loyaltyUrl(`push/${id}/send`), body)),
   cancel: (id: number): Promise<PushAnswer> => watched(api.post(loyaltyUrl(`push/${id}/cancel`))),
   duplicate: (id: number, name: string): Promise<PushAnswer> => watched(api.post(loyaltyUrl(`push/${id}/duplicate`), { name })),
+  // Release 4: send later, at a time on the venue's clock (`YYYY-MM-DDTHH:mm`); `about` is how many it would reach now.
+  schedule: (id: number, body: { send_at: string; revision: string }): Promise<PushAnswer & { about: number }> => watched(api.post(loyaltyUrl(`push/${id}/schedule`), body)),
+  unschedule: (id: number): Promise<PushAnswer> => watched(api.post(loyaltyUrl(`push/${id}/unschedule`))),
   segments: (): Promise<{ segments: SegmentChoice[] }> => watched(api.get(loyaltyUrl('segments'))),
 }
 

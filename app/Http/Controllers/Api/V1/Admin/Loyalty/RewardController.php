@@ -22,11 +22,13 @@ use Illuminate\Validation\Validator as FormValidator;
  * RewardAdminController's, as JSON; the picture has its own endpoints
  * (ImageController, release 2 §7), whose limits the list's options carry.
  * Rewards are brand-scoped: read as the request's brand binding gives,
- * created on the brand the model's own hook picks.
+ * created on the brand the request names (release 4: one of the options'
+ * brands, which are this organisation's and the staff member's), else on the
+ * one the model's own hook picks. A reward keeps its brand when changed.
  */
 class RewardController extends Controller
 {
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
         $rewards = Reward::query()->withCount(self::counts())->orderBy('sort_order')->orderBy('name')->get();
 
@@ -36,10 +38,13 @@ class RewardController extends Controller
                 'discount_types' => LoyaltyForms::REWARD_DISCOUNT_TYPES,
                 'applies_to'     => LoyaltyForms::appliesTo(),
                 'image'          => ImageController::limits('rewards'),
+                // Release 4: the brands a new reward may be put on (one: nothing to choose).
+                'brands'         => LoyaltyForms::brands($request->user(), (int) app('current_organization_id')),
             ],
         ]);
     }
 
+    /** A new reward may name its brand (release 4, `brand`): one of the options' brands; none, the model's hook picks it as before. */
     public function store(Request $request): JsonResponse
     {
         LoyaltyAccess::require($request->user(), LoyaltyAccess::MANAGE_REWARDS);
@@ -68,6 +73,7 @@ class RewardController extends Controller
     {
         return [
             'id'               => (int) $r->id,
+            'brand_id'         => $r->brand_id !== null ? (int) $r->brand_id : null,
             'name'             => (string) $r->name,
             'description'      => $r->description,
             'terms'            => $r->terms,
@@ -118,6 +124,8 @@ class RewardController extends Controller
             'expires_at'       => 'nullable|date',
             'is_active'        => 'sometimes|boolean',
             'sort_order'       => 'sometimes|integer|min:0|max:10000',
+            // Release 4: a new reward may name its brand; a reward keeps the one it has.
+            ...($reward === null ? ['brand' => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id'))] : []),
         ])->after(function (FormValidator $v) use ($request, $reward) {
             // A percentage above 100 would hand money back; the type is the stored one when the request keeps it.
             $type = $request->has('discount_type') ? $request->input('discount_type') : $reward?->discount_type;
@@ -133,6 +141,7 @@ class RewardController extends Controller
         if (array_key_exists('applies_to', $data)) {
             $data['applies_to'] ??= 'all';
         }
+        $data = LoyaltyForms::withBrand($data);
         if (!empty($data['expires_at'])) {
             $data['expires_at'] = LoyaltyForms::instant($data['expires_at'], (int) app('current_organization_id'));
         }

@@ -3,6 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { portalApi } from '../lib/portalApi'
 import { formatDay, resolveLocale } from '../lib/dates'
+import { counted } from '../lib/plural'
 import { Card } from '../ui/Card'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -53,7 +54,7 @@ export function Activity() {
     <div className="space-y-4">
       <div className="flex items-baseline justify-between">
         <h1 className="font-p-display text-2xl">{t('portal.activity.title', 'Activity')}</h1>
-        {!!data?.total && <span className="text-xs text-p-text-2 tabular-nums">{t('portal.activity.entries', '{{count}} entries', { count: data.total })}</span>}
+        {!!data?.total && <span className="text-xs text-p-text-2 tabular-nums">{counted(t, 'activity.entries', data.total)}</span>}
       </div>
       {rows.length === 0 ? <EmptyState title={t('portal.activity.empty', 'No points activity yet. Your first visit will show up here.')} /> : (
         <Card className="overflow-hidden divide-y divide-p-border">
