@@ -53,6 +53,8 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
     {
         $stripe = Mockery::mock(StripeService::class);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('currency')->andReturn('eur');
+        $stripe->shouldReceive('toSmallestUnit')->passthru();
         $stripe->shouldReceive('retrievePaymentIntent')->andReturnUsing(function (string $id) use (&$captured) {
             return $this->intent($id, in_array($id, $captured, true) ? 'succeeded' : 'requires_capture');
         });
@@ -67,9 +69,21 @@ class ServiceConfirmOnePaymentTest extends MemberEndpointTestCase
         return $stripe;
     }
 
+    /**
+     * The payment the services payment-intent endpoint made for the request
+     * being confirmed: its venue, service and time, the seeded 60.00 EUR —
+     * the only payment the confirm accepts since R4-2 (see
+     * tests/Feature/Booking/ServiceConfirmPaymentCheckTest.php). What these
+     * tests are about is the one-payment rule, not whose the payment is.
+     */
     private function intent(string $id, string $status): PaymentIntent
     {
-        return PaymentIntent::constructFrom(['id' => $id, 'status' => $status, 'amount' => 6000, 'currency' => 'eur']);
+        return PaymentIntent::constructFrom(['id' => $id, 'status' => $status, 'amount' => 6000, 'currency' => 'eur', 'metadata' => [
+            'org_id'     => (string) app('current_organization_id'),
+            'service_id' => (string) request()->input('service_id'),
+            'start_at'   => (string) request()->input('start_at'),
+            'kind'       => 'service_booking',
+        ]]);
     }
 
     private function confirm(string $time, array $extra = [], ?Organization $org = null, ?Service $service = null, ?ServiceMaster $master = null, ?string $key = null)
