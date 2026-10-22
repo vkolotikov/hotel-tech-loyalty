@@ -10,9 +10,11 @@ use App\Models\PointsTransaction;
 use App\Models\RefundAttempt;
 use App\Models\User;
 use App\Services\Booking\GroupPayment;
+use App\Services\Booking\RefundOutcomeUnknown;
 use App\Support\SharedCache;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -181,6 +183,7 @@ class BookingRefundService
 
         // ── Step 1b: actually issue the Stripe refund (or trust the
         // pre-existing id when called from the webhook path).
+        $replayed = false;
         try {
             if ($issueStripeRefund) {
                 if ($mirror->payment_method === 'mock') {
@@ -191,14 +194,16 @@ class BookingRefundService
                     // (StripeService::underLock()), so the lock always
                     // outlives the call. A refund Stripe made but did not
                     // answer in time is recorded by its own webhook; a retry
-                    // gets the same refund back (the idempotency key) and
-                    // records nothing twice (alreadyRecorded() below).
+                    // of the same amount gets the same refund back (the
+                    // idempotency key, `Idempotent-Replayed`) and records
+                    // nothing twice (below).
                     $refund = StripeService::underLock(fn () => $this->stripe->refund(
                         $mirror->stripe_payment_intent_id,
                         $amount,
                         $reason,
                     ));
                     $stripeRefundId = $refund->id;
+                    $replayed = StripeService::wasReplayed($refund);
                 } else {
                     throw new \RuntimeException(
                         'No Stripe payment attached. Refund manually via your PMS or accounting tool.'
@@ -233,23 +238,49 @@ class BookingRefundService
                 'error'        => substr($e->getMessage(), 0, 2000),
                 'completed_at' => now(),
             ]);
+            // Stripe did not answer in time (the short timeout under the
+            // lock): the refund may have been made. Staff are told so — a
+            // retry of the same amount gets that refund back and records it
+            // once; another amount would be a second refund.
+            if ($e instanceof \Stripe\Exception\ApiConnectionException) {
+                throw new RefundOutcomeUnknown(RefundOutcomeUnknown::MESSAGE, 0, $e);
+            }
             throw $e;
         }
 
-        // A refund id this payment has already recorded: an earlier attempt of
-        // the same amount that Stripe made but answered too late (the short
-        // timeout), recorded since by its own webhook — Stripe's idempotency key
-        // handed the same refund back and no new money moved. Recorded once.
-        if ($issueStripeRefund && $stripeRefundId !== null && $this->alreadyRecorded($mirror, $stripeRefundId, (int) $attempt->id)) {
-            $attempt->update(['refund_id' => $stripeRefundId, 'completed_at' => now()]);
+        // A refund Stripe handed back rather than made now — the same
+        // payment and amount within its 24 hours (the idempotency key,
+        // `Idempotent-Replayed`), or a refund id this payment already
+        // recorded: an earlier attempt that Stripe made but answered too late
+        // (the short timeout), or an earlier refund of the same amount. No
+        // money moved now. It is recorded only as far as nothing here has
+        // recorded it yet — Stripe's own refunded total, read under this
+        // lock, against what the rooms hold (its webhook may have recorded it
+        // without the refund's id) — and staff are told no new refund was made.
+        $known = $issueStripeRefund && $stripeRefundId !== null && $this->alreadyRecorded($mirror, $stripeRefundId, (int) $attempt->id);
+        if ($known || $replayed) {
+            $unrecorded = $known ? 0.0 : $this->unrecordedAtStripe($mirror);
+            if ($unrecorded === null || $unrecorded <= 0.004) {
+                $attempt->update(['refund_id' => $stripeRefundId, 'completed_at' => now()]);
+                Log::info('Refund handed back by Stripe — no new refund was made', [
+                    'mirror_id' => $mirror->id, 'refund_id' => $stripeRefundId, 'recorded_later' => $unrecorded === null,
+                ]);
 
-            return [
-                'is_full'         => $multi ? $group->every(fn (BookingMirror $m) => $m->payment_status === PaymentStatus::Refunded->value) : $mirror->payment_status === PaymentStatus::Refunded->value,
-                'refund_id'       => $stripeRefundId,
-                'reversed_points' => 0,
-                'pms_cancelled'   => false,
-                'email_sent'      => false,
-            ];
+                return [
+                    'is_full'         => $multi ? $group->every(fn (BookingMirror $m) => $m->payment_status === PaymentStatus::Refunded->value) : $mirror->payment_status === PaymentStatus::Refunded->value,
+                    'refund_id'       => $stripeRefundId,
+                    'reversed_points' => 0,
+                    'pms_cancelled'   => false,
+                    'email_sent'      => false,
+                    // Nothing new was refunded; null: Stripe's total could not be
+                    // read, so the refund's own webhook records it if it is new.
+                    'no_new_refund'   => true,
+                    'recorded_later'  => $unrecorded === null,
+                ];
+            }
+            // Made earlier and not recorded here yet: recorded now, never more
+            // than was asked for (the webhook records anything beyond it).
+            $amount = $amount === null ? $unrecorded : min((float) $amount, $unrecorded);
         }
 
         // ── Step 2: compute is_full + new refunded total.
@@ -465,6 +496,8 @@ class BookingRefundService
      * difference is recorded, through applyRefund()'s own work with no Stripe
      * call. Equal is a redelivery or our own refund's event, lower an older event
      * arriving late: nothing is recorded, the stored amount never moves backwards.
+     * What a lost dispute took is in `refunded_amount` but not in Stripe's figure:
+     * it is kept apart (`dispute_lost_amount`) and left out of the compare.
      * Release 6: this replaces the 60-second `RefundAttempt` freshness skip — a
      * webhook that arrives while a refund is mid-flight waits for its lock and
      * then finds it recorded; two dashboard refunds seconds apart are both
@@ -481,9 +514,9 @@ class BookingRefundService
         app()->instance('current_organization_id', (int) $payer->organization_id);
 
         return $this->underRefundLock($payer, $this->lockWait(), function (BookingMirror $locked) use ($refundedTotal, $refundId, $reason) {
-            $pi = (string) $locked->stripe_payment_intent_id;
-            $rooms = $pi !== '' ? GroupPayment::rows((int) $locked->organization_id, $pi) : collect([$locked]);
-            $recorded = round((float) $rooms->sum(fn (BookingMirror $m) => (float) ($m->refunded_amount ?? 0)), 2);
+            // Refunds only: Stripe's `amount_refunded` leaves out what a lost
+            // dispute took, so the rooms' `dispute_lost_amount` is left out too.
+            $recorded = $this->recordedRefunds($locked);
             $new = round($refundedTotal - $recorded, 2);
             if ($new <= 0.004) {
                 Log::info('Stripe charge.refunded webhook — nothing new to record', [
@@ -508,8 +541,12 @@ class BookingRefundService
      * reversed, as a refund reverses them. Unlike a refund, nothing is cancelled
      * at the PMS, `booking_state` is not touched and no mail is sent: whether the
      * guest still stays is the venue's decision. Each room gets an audit row
-     * `booking_dispute_lost` (the dispute id and reason, the amount). Under the
-     * payment's refund lock; a redelivered event changes nothing.
+     * `booking_dispute_lost` (the dispute id and reason, the amount). What the
+     * dispute took is also kept apart on each room (`dispute_lost_amount`): Stripe's
+     * refunded total leaves it out, and so does the `charge.refunded` compare
+     * (recordedRefunds()). Under the payment's refund lock, every room in one
+     * transaction — all of it is recorded or none, so a failure leaves nothing for
+     * a redelivery to skip; a redelivered event changes nothing.
      *
      * @param float|null $amount the dispute's amount in major units; null = everything not yet recorded as returned
      * @return array{lost: float, is_full: bool, reversed_points: int}|null null when this dispute is already recorded
@@ -522,7 +559,7 @@ class BookingRefundService
         app()->instance('current_organization_id', (int) $payer->organization_id);
         $marker = 'dispute_' . $disputeId;
 
-        return $this->underRefundLock($payer, $this->lockWait(), function (BookingMirror $lead) use ($amount, $marker, $disputeId, $disputeReason) {
+        return $this->underRefundLock($payer, $this->lockWait(), fn (BookingMirror $lead) => DB::transaction(function () use ($lead, $amount, $marker, $disputeId, $disputeReason) {
             $rooms = collect([$lead])->concat(GroupPayment::followers($lead))->sortBy('id')->values();
             if ($rooms->contains(fn (BookingMirror $m) => (string) $m->last_refund_id === $marker)) {
                 return null;
@@ -556,6 +593,10 @@ class BookingRefundService
                 } elseif ($now > 0.004) {
                     $changes += ['payment_status' => PaymentStatus::PartiallyRefunded->value, 'refunded_amount' => $now];
                 }
+                $roomLost = round(((float) ($changes['refunded_amount'] ?? $before)) - $before, 2);
+                if ($roomLost > 0.004) {
+                    $changes['dispute_lost_amount'] = round((float) ($room->dispute_lost_amount ?? 0) + $roomLost, 2);
+                }
                 $room->update($changes);
                 $roomPoints = $roomFull ? $this->reverseLoyaltyPoints($room, null) : 0;
                 $reversed += $roomPoints;
@@ -564,7 +605,7 @@ class BookingRefundService
                     [
                         'dispute_id'      => $disputeId,
                         'dispute_reason'  => $disputeReason,
-                        'lost'            => round(((float) ($changes['refunded_amount'] ?? $before)) - $before, 2),
+                        'lost'            => $roomLost,
                         'refunded_amount' => (float) ($changes['refunded_amount'] ?? $before),
                         'reversed_points' => $roomPoints,
                     ] + ($multi ? ['booking_group_id' => $room->booking_group_id, 'payment_carried_by' => $lead->id, 'payment_lost' => $lost] : []),
@@ -576,7 +617,7 @@ class BookingRefundService
             }
 
             return ['lost' => $lost, 'is_full' => $full, 'reversed_points' => $reversed];
-        });
+        }));
     }
 
     /** How long a refund waits for the payment's refund lock (seconds). */
@@ -628,6 +669,51 @@ class BookingRefundService
             ->whereNull('error')
             ->whereKeyNot($currentAttemptId)
             ->exists();
+    }
+
+    /**
+     * What this payment's rooms record as refunded — every room of a multi-room
+     * stay (GroupPayment) — with what lost disputes took left out
+     * (`dispute_lost_amount`): the figure Stripe's `amount_refunded`, which
+     * counts refunds only, is compared with.
+     */
+    private function recordedRefunds(BookingMirror $payer): float
+    {
+        $pi = (string) $payer->stripe_payment_intent_id;
+        $rooms = $pi !== '' ? GroupPayment::rows((int) $payer->organization_id, $pi) : collect([$payer]);
+
+        return round((float) $rooms->sum(fn (BookingMirror $m) => (float) ($m->refunded_amount ?? 0) - (float) ($m->dispute_lost_amount ?? 0)), 2);
+    }
+
+    /**
+     * What Stripe has refunded on this payment's charge beyond what its rooms
+     * record (recordedRefunds()), in major units — read now, under the refund
+     * lock, with the short timeout. Null when it cannot be read: a refund that
+     * is new is then recorded by its own `charge.refunded` webhook, which makes
+     * the same compare.
+     */
+    private function unrecordedAtStripe(BookingMirror $payer): ?float
+    {
+        $pi = (string) $payer->stripe_payment_intent_id;
+        if ($pi === '') {
+            return null;
+        }
+        try {
+            $intent = StripeService::underLock(fn () => $this->stripe->retrievePaymentIntent($pi, ['latest_charge']));
+        } catch (\Throwable $e) {
+            Log::warning('Refund handed back by Stripe — its charge could not be read to see whether the refund is recorded', [
+                'mirror_id' => $payer->id,
+                'error'     => $e->getMessage(),
+            ]);
+            return null;
+        }
+        $charge = $intent->latest_charge ?? null;
+        if (!is_object($charge) || !isset($charge->amount_refunded)) {
+            return null;
+        }
+        $refunded = StripeService::fromSmallestUnit((int) $charge->amount_refunded, (string) ($charge->currency ?? ''));
+
+        return max(0.0, round($refunded - $this->recordedRefunds($payer), 2));
     }
 
     /**

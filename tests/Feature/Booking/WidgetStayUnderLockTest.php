@@ -35,7 +35,8 @@ use Tests\TestCase;
  *    before the PMS is asked: a payment cancelled meanwhile (the rescue of a
  *    racing request) is refused — "Payment has not been completed." — instead
  *    of a stay written without a live payment; a Stripe that cannot be asked
- *    is PaymentUnverifiable (the controller's 503, nothing released).
+ *    is PaymentUnverifiable (the controller's 503; its rescue then releases
+ *    the card only if it can read the payment and it is this hold's own).
  *
  * The widget's own tests in BookingEngineConfirmTest pin that nothing else
  * changed. Smoobu and Stripe are Mockery mocks.
@@ -223,6 +224,48 @@ class WidgetStayUnderLockTest extends TestCase
         $this->assertSame(1, AuditLog::withoutGlobalScopes()->where('action', 'booking.confirm.pms_transient_skip')->count());
     }
 
+    /**
+     * Review of release 6: the per-day answer has a row for a room but no night of the stay, and the second read of the
+     * rates fails. A single room is then a PMS that cannot be asked (fail closed); so is a room of the combination —
+     * only a room missing from the per-day answer altogether is judged on its base price.
+     */
+    public function test_a_combination_room_the_pms_answered_without_nights_is_not_booked_on_its_base_price(): void
+    {
+        $this->smoobu->shouldReceive('getDailyRates')->andReturnUsing(fn ($in, $out, array $units) => collect($units)
+            ->mapWithKeys(fn ($u) => [(string) $u => (string) $u === '102' ? [] : $this->nights()])->all());
+        $this->smoobu->shouldReceive('getRates')->andThrow(new \Exception('Smoobu API error: 429 Too Many Requests'));
+        $this->smoobu->shouldReceive('resolveDirectChannelId')->andReturn(7);
+        $this->smoobu->shouldNotReceive('createReservation');
+        $hold = $this->comboHold();
+
+        try {
+            $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest()]);
+            $this->fail('a room the PMS has a row for cannot be judged on its base price when the PMS cannot be asked again');
+        } catch (HttpException $e) {
+            $this->assertSame(503, $e->getStatusCode());
+        }
+        $this->assertCount(0, $this->mirrors());
+    }
+
+    /** A room missing from the per-day answer altogether is no data: judged on its base price, as the availability search offered it. */
+    public function test_a_combination_room_missing_from_the_per_day_answer_is_judged_on_its_base_price(): void
+    {
+        $this->smoobu->shouldReceive('getDailyRates')->andReturnUsing(fn ($in, $out, array $units) => collect($units)
+            ->reject(fn ($u) => (string) $u === '102')->mapWithKeys(fn ($u) => [(string) $u => $this->nights()])->all());
+        $this->smoobu->shouldReceive('getRates')->andThrow(new \Exception('Smoobu API error: 429 Too Many Requests'));
+        $this->smoobu->shouldReceive('resolveDirectChannelId')->andReturn(7);
+        $this->smoobu->shouldReceive('getPriceElements')->andReturn([]);
+        $next = 555801;
+        $this->smoobu->shouldReceive('createReservation')->twice()->andReturnUsing(function () use (&$next) {
+            $id = $next++;
+            return ['id' => $id, 'reference-id' => 'BK-' . $id];
+        });
+
+        $this->engine->confirm(['hold_token' => $this->comboHold()->hold_token, 'guest' => $this->guest()]);
+
+        $this->assertCount(2, $this->mirrors());
+    }
+
     public function test_a_write_that_fails_after_the_reservations_cancels_them_at_the_pms(): void
     {
         $this->smoobuAnswers();
@@ -377,8 +420,12 @@ class WidgetStayUnderLockTest extends TestCase
 
     // ── Through the public endpoint ────────────────────────────────────
 
-    /** POST /api/v1/booking/confirm: Stripe answers the controller's check, then cannot be reached under the lock. */
-    public function test_the_public_confirm_answers_503_and_releases_nothing_when_the_recheck_cannot_read_the_payment(): void
+    /**
+     * POST /api/v1/booking/confirm: Stripe answers the controller's check, then cannot be reached under the lock, nor
+     * by the rescue. Nothing is written; the rescue leaves alone the payment it cannot read (audited, no staff alert:
+     * anyone can post an id), and the guest is told the booking was not made.
+     */
+    public function test_the_public_confirm_answers_503_and_leaves_alone_a_payment_the_rescue_cannot_read(): void
     {
         $this->smoobuAnswers();
         $this->smoobu->shouldNotReceive('createReservation');
@@ -395,15 +442,59 @@ class WidgetStayUnderLockTest extends TestCase
         $stripe->shouldNotReceive('cancelPaymentIntent');
         $stripe->shouldNotReceive('refund');
         $this->app->instance(StripeService::class, $stripe);
+        $alerts = [];
+        $realtime = Mockery::mock(\App\Services\RealtimeEventService::class);
+        $realtime->shouldReceive('dispatch')->andReturnUsing(function (string $type) use (&$alerts) {
+            $alerts[] = $type;
+            return new \App\Models\RealtimeEvent();
+        });
+        $this->app->instance(\App\Services\RealtimeEventService::class, $realtime);
 
+        $res = $this->confirmThroughTheWidget($hold);
+
+        $res->assertStatus(503)->assertJsonPath('code', 'payment_check_failed');
+        $this->assertStringContainsString('the booking was not made', (string) $res->json('error'));
+        $this->assertSame(3, $reads, 'read by the controller, under the lock, then by the rescue');
+        $this->assertCount(0, $this->mirrors());
+        $this->assertSame('active', $hold->fresh()->status);
+        $refused = AuditLog::withoutGlobalScopes()->where('action', 'booking.confirm.pi_rescue_refused')->sole();
+        $this->assertSame('unreadable', $refused->new_values['reason'] ?? null);
+        $this->assertNotContains('booking.pi_rescue_refused', $alerts, 'no staff alert for a payment that could not be read');
+    }
+
+    /** The same, but Stripe is back by the time the rescue reads the payment: it is this hold's own, so its card is released. */
+    public function test_the_public_confirm_releases_its_own_payment_when_the_rescue_can_read_it(): void
+    {
+        $this->smoobuAnswers();
+        $this->smoobu->shouldNotReceive('createReservation');
+        $hold = $this->hold();
+        $reads = 0;
+        $stripe = Mockery::mock(StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('retrievePaymentIntent')->andReturnUsing(function (string $id) use (&$reads, $hold) {
+            if (++$reads === 2) {
+                throw new \Stripe\Exception\ApiConnectionException('Request timed out');
+            }
+
+            return PaymentIntent::constructFrom(['id' => $id, 'status' => 'requires_capture', 'amount' => 20000, 'currency' => 'eur', 'metadata' => ['hold_token' => $hold->hold_token, 'org_id' => (string) $this->org->id]]);
+        });
+        $stripe->shouldReceive('cancelPaymentIntent')->once()->with('pi_widget_live');
+        $stripe->shouldNotReceive('refund');
+        $this->app->instance(StripeService::class, $stripe);
+
+        $this->confirmThroughTheWidget($hold)->assertStatus(503)->assertJsonPath('code', 'payment_check_failed');
+
+        $this->assertSame(3, $reads);
+        $this->assertCount(0, $this->mirrors());
+        $this->assertSame(1, AuditLog::withoutGlobalScopes()->where('action', 'booking.confirm.pi_cancelled')->count());
+    }
+
+    private function confirmThroughTheWidget(BookingHold $hold): \Illuminate\Testing\TestResponse
+    {
         app()->forgetInstance('current_organization_id');
         $res = $this->postJson('/api/v1/booking/confirm', ['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_widget_live'], ['X-Org-Token' => $this->org->widget_token]);
         app()->instance('current_organization_id', $this->org->id);
 
-        $res->assertStatus(503)->assertExactJson(['error' => PaymentUnverifiable::MESSAGE, 'code' => 'payment_check_failed']);
-        $this->assertSame(2, $reads, 'read by the controller, then under the lock; never by a rescue');
-        $this->assertCount(0, $this->mirrors());
-        $this->assertSame('active', $hold->fresh()->status);
-        $this->assertSame(0, AuditLog::withoutGlobalScopes()->where('action', 'like', 'booking.confirm.pi_%')->count(), 'no rescue ran');
+        return $res;
     }
 }

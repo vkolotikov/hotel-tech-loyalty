@@ -25,7 +25,9 @@ use Tests\TestCase;
  * also told as it happens — a realtime event `booking.pi_rescue_refused` beside
  * the audit row, in its own try (and savepoint), so it can never change the
  * request's answer or the rescue's record. The rescue's rules are unchanged
- * (PublicConfirmRescueGuardTest); a payment it gives back raises no alert.
+ * (PublicConfirmRescueGuardTest); a payment it gives back raises no alert, and
+ * neither does an id Stripe cannot read (anyone can post one) or a payment a
+ * booking carries (a double submit) — their audit rows record them.
  */
 class RescueRefusalAlertTest extends TestCase
 {
@@ -47,7 +49,8 @@ class RescueRefusalAlertTest extends TestCase
 
         $stripe = Mockery::mock(StripeService::class);
         $stripe->shouldReceive('isEnabled')->andReturn(true);
-        $stripe->shouldReceive('retrievePaymentIntent')->andReturnUsing(fn (string $id) => $this->intents[$id]);
+        $stripe->shouldReceive('retrievePaymentIntent')->andReturnUsing(fn (string $id) => $this->intents[$id]
+            ?? throw \Stripe\Exception\InvalidRequestException::factory("No such payment_intent: '{$id}'", 404, null, null, null, 'resource_missing'));
         $stripe->shouldReceive('cancelPaymentIntent')->andReturnUsing(function (string $id) {
             $this->cancelled[] = $id;
             return PaymentIntent::constructFrom(['id' => $id, 'status' => 'canceled']);
@@ -124,6 +127,25 @@ class RescueRefusalAlertTest extends TestCase
         $this->failedConfirm($hold, 'pi_own')->assertStatus(422);
 
         $this->assertSame(['pi_own'], $this->cancelled);
+        $this->assertCount(0, $this->alerts());
+    }
+
+    public function test_an_id_stripe_cannot_read_or_a_payment_a_booking_carries_raises_no_alert(): void
+    {
+        $hold = $this->hold();
+        $this->intent('pi_carried', $hold->hold_token);
+        \App\Models\BookingMirror::withoutGlobalScopes()->create([
+            'organization_id' => $this->org->id, 'reservation_id' => 'R-' . uniqid(), 'booking_state' => 'confirmed', 'internal_status' => 'confirmed',
+            'apartment_id' => '101', 'arrival_date' => now()->addDays(10)->toDateString(), 'departure_date' => now()->addDays(12)->toDateString(),
+            'price_total' => 200, 'stripe_payment_intent_id' => 'pi_carried',
+        ]);
+
+        $this->failedConfirm($hold, 'pi_made_up_by_anyone')->assertStatus(422);
+        $this->failedConfirm($hold, 'pi_carried')->assertStatus(422);
+
+        $this->assertSame([], $this->cancelled);
+        $this->assertEqualsCanonicalizing(['unreadable', 'carried_by_booking'], AuditLog::withoutGlobalScopes()
+            ->where('action', 'booking.confirm.pi_rescue_refused')->get()->map(fn ($a) => $a->new_values['reason'] ?? null)->all());
         $this->assertCount(0, $this->alerts());
     }
 

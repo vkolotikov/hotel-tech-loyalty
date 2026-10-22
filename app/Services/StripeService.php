@@ -93,6 +93,24 @@ class StripeService
         }
     }
 
+    /**
+     * Whether Stripe answered with $object by replaying an earlier request that had the same idempotency key — its
+     * `Idempotent-Replayed: true` header: nothing new was made at Stripe this time. A refund's key is the payment and
+     * the amount (refund()), so a retry of a refund Stripe made but answered too late, and a second refund of the same
+     * amount within Stripe's 24 hours, both come back this way. False for an answer that carries no response (a test
+     * double built without one).
+     */
+    public static function wasReplayed(\Stripe\StripeObject $object): bool
+    {
+        $headers = $object->getLastResponse()?->headers;
+        if ($headers === null) {
+            return false;
+        }
+        $value = $headers['Idempotent-Replayed'] ?? $headers['idempotent-replayed'] ?? null;
+
+        return $value === true || (is_string($value) && strtolower(trim($value)) === 'true');
+    }
+
     /** The short-timeout client underLock() sends through (one per process). */
     public static function lockedHttpClient(): \Stripe\HttpClient\CurlClient
     {

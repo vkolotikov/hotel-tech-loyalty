@@ -585,13 +585,22 @@ class BookingPublicController extends Controller
             return response()->json(['error' => $e->getMessage()], $e->getStatusCode());
         } catch (\App\Services\Booking\PaymentUnverifiable $e) {
             // Release 6: the engine read the payment again under the hold's
-            // lock and Stripe could not be asked (an outage, a timeout). Nothing
-            // is known about the payment, so nothing is released — no rescue —
-            // and nothing was written: the guest confirms once more with the
-            // same payment (the portal's `payment_check_failed`, the same 503).
+            // lock and Stripe could not be asked (an outage, a timeout).
+            // Nothing was written. The widget cannot confirm again with a
+            // payment it already confirmed at Stripe, so the rescue runs as for
+            // every other failure — it releases the card only when it can read
+            // the payment and it is this hold's own, and leaves alone one it
+            // cannot read — and staff have the enquiry (the engine's
+            // `payment_check_failed` submission row) to follow up.
             $this->logConfirmFailureWithContext('payment_check', $validated, $e);
+            $this->rescuePaymentIntentOnConfirmFailure(
+                $validated['payment_intent_id'] ?? null,
+                $validated['hold_token'] ?? null,
+                ['stage' => 'payment_check'],
+                $e,
+            );
             return response()->json([
-                'error' => \App\Services\Booking\PaymentUnverifiable::MESSAGE,
+                'error' => self::WIDGET_PAYMENT_CHECK_FAILED,
                 'code'  => \App\Services\Booking\PaymentUnverifiable::CODE,
             ], 503);
         } catch (\RuntimeException $e) {
@@ -895,6 +904,9 @@ class BookingPublicController extends Controller
      * at Stripe costs nobody money; a payment returned for a booking that
      * stands costs the venue the stay.
      */
+    /** The widget's sentence when its payment could not be checked at confirm (release 6): it starts again. */
+    private const WIDGET_PAYMENT_CHECK_FAILED = 'We could not check your payment just now, so the booking was not made. Our team has your request and will make sure you are not charged for it. Please book again in a few minutes, or contact us.';
+
     private function rescuePaymentIntentOnConfirmFailure(
         ?string $intentId,
         ?string $holdToken,
@@ -964,14 +976,19 @@ class BookingPublicController extends Controller
 
         if ($outcome !== null) {
             $this->logPiRescueOutcome($orgId, $outcome[0], $intentId, $context, $original, $outcome[1]);
-            if ($outcome[0] === 'pi_rescue_refused') {
+            // Staff are alerted to a payment Stripe could read in this venue's
+            // account that the rescue refused — never to an id it could not read
+            // (anyone can post one) nor to one a booking carries (a double
+            // submit): the audit row records those.
+            if ($outcome[0] === 'pi_rescue_refused' && !in_array($outcome[1]['reason'] ?? '', ['unreadable', 'carried_by_booking'], true)) {
                 $this->alertRescueRefused($orgId, $intentId, $outcome[1], $context);
             }
         }
     }
 
     /**
-     * Release 6, item 9: a refusal also tells the venue's staff, as it happens —
+     * Release 6, item 9: a refusal of a payment Stripe could read in this venue's
+     * account also tells the venue's staff, as it happens —
      * a realtime event `booking.pi_rescue_refused` (the admin's toast, linked to
      * the audit rows), beside the audit row and the warning line. Its own try,
      * and its own savepoint when a transaction is open, so it can never break
@@ -985,8 +1002,6 @@ class BookingPublicController extends Controller
         }
         $reason = (string) ($refusal['reason'] ?? '');
         $why = match ($reason) {
-            'carried_by_booking'  => 'a booking carries it, so it stays with that booking',
-            'unreadable'          => 'Stripe could not read it',
             'portal_payment'      => 'it is a member-portal payment',
             'other_kind'          => 'it is not a stay widget payment',
             'other_organisation'  => 'it names another organisation',
@@ -2238,7 +2253,12 @@ class BookingPublicController extends Controller
                 return false;
             }
 
-            $stored = $booking->refunded_amount !== null ? round((float) $booking->refunded_amount, 2) : null;
+            // Release 6: what a lost dispute took is in `refunded_amount` but not
+            // in Stripe's `amount_refunded` (refunds only) — kept apart in
+            // `dispute_lost_amount`, left out of the compare and added back to
+            // what is stored.
+            $lostToDisputes = round((float) ($booking->dispute_lost_amount ?? 0), 2);
+            $stored = $booking->refunded_amount !== null ? round((float) $booking->refunded_amount - $lostToDisputes, 2) : null;
 
             // Never move backwards: equal (redelivery) or lower (an older
             // event delivered late) — nothing to do, no audit.
@@ -2246,14 +2266,18 @@ class BookingPublicController extends Controller
                 return true;
             }
 
-            // Status never regresses from refunded back to partially_refunded.
-            $newStatus = ((string) $booking->payment_status === 'refunded') ? 'refunded' : $computedStatus;
             $refundId = $newestRefundId ?? $booking->last_refund_id;
             $total = round((float) $booking->total_amount, 2);
+            $goneBack = round($refundedAmount + $lostToDisputes, 2);
+            if ($goneBack >= $total - 0.01 && $total > 0) {
+                $computedStatus = 'refunded';
+            }
+            // Status never regresses from refunded back to partially_refunded.
+            $newStatus = ((string) $booking->payment_status === 'refunded') ? 'refunded' : $computedStatus;
 
             $booking->forceFill([
                 'payment_status'  => $newStatus,
-                'refunded_amount' => $refundedAmount,
+                'refunded_amount' => $goneBack,
                 'refunded_at'     => now(),
                 'last_refund_id'  => $refundId,
             ])->save();
@@ -2265,8 +2289,8 @@ class BookingPublicController extends Controller
                 'action'          => 'service_booking.refunded',
                 'subject_type'    => \App\Models\ServiceBooking::class,
                 'subject_id'      => $booking->id,
-                'new_values'      => ['payment_intent_id' => $paymentIntentId, 'refund_id' => $refundId, 'refunded' => $refundedAmount, 'source' => 'stripe_webhook'],
-                'description'     => "Stripe refunded {$refundedAmount} of {$total} on service booking {$booking->booking_reference}",
+                'new_values'      => ['payment_intent_id' => $paymentIntentId, 'refund_id' => $refundId, 'refunded' => $refundedAmount] + ($lostToDisputes > 0 ? ['dispute_lost' => $lostToDisputes, 'gone_back' => $goneBack] : []) + ['source' => 'stripe_webhook'],
+                'description'     => "Stripe refunded {$refundedAmount} of {$total} on service booking {$booking->booking_reference}" . ($lostToDisputes > 0 ? " (with {$lostToDisputes} lost to a dispute, {$goneBack} gone back)" : ''),
             ]);
 
             return true;
@@ -2387,19 +2411,23 @@ class BookingPublicController extends Controller
                     (string) $dispute->id,
                     $dispute->reason ?? null,
                 );
-            } catch (\Illuminate\Contracts\Cache\LockTimeoutException $e) {
-                // A refund of this payment is mid-flight: Stripe delivers again.
+            } catch (\Throwable $e) {
+                // A refund of this payment is mid-flight (the lock), or the
+                // recording failed — its one transaction rolled back, so
+                // nothing of it was kept: Stripe delivers again (the dedup row
+                // goes, the request fails) and the next delivery records it.
+                if (!$e instanceof \Illuminate\Contracts\Cache\LockTimeoutException) {
+                    \Illuminate\Support\Facades\Log::error('Dispute-lost recording failed; Stripe will deliver again', [
+                        'mirror_id' => $mirror->id,
+                        'error'     => $e->getMessage(),
+                    ]);
+                }
                 if ($eventId !== null) {
                     try {
                         \App\Models\StripeWebhookEvent::withoutGlobalScopes()->where('organization_id', $orgId)->where('event_id', $eventId)->delete();
                     } catch (\Throwable) { /* best effort */ }
                 }
                 throw $e;
-            } catch (\Throwable $e) {
-                \Illuminate\Support\Facades\Log::error('Dispute-lost recording failed', [
-                    'mirror_id' => $mirror->id,
-                    'error'     => $e->getMessage(),
-                ]);
             }
         } elseif (in_array($status, ['won', 'warning_closed'], true)) {
             // Funds reinstated — restore status only if we'd marked it disputed:
@@ -2470,6 +2498,8 @@ class BookingPublicController extends Controller
                     'refunded_amount' => $after,
                     'refunded_at'     => now(),
                     'last_refund_id'  => $marker,
+                    // Kept apart: Stripe's refunded total leaves it out (recordServiceBookingRefund()).
+                    'dispute_lost_amount' => round((float) ($booking->dispute_lost_amount ?? 0) + $lost, 2),
                 ])->save();
                 app(\App\Services\Appointments\Money\AppointmentMoney::class)->recordOutsideCardRefund($booking, $marker, 'Dispute lost in Stripe');
                 $points = $full ? app(\App\Services\Loyalty\BookingPointsService::class)->reverseForServiceBooking($booking) : 0;

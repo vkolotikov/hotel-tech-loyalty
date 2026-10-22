@@ -124,6 +124,8 @@ trait SetsUpStayBookingSchema
             'points_awarded_at'  => fn (Blueprint $t) => $t->timestamp('points_awarded_at')->nullable(),
             'cancelled_at'       => fn (Blueprint $t) => $t->timestamp('cancelled_at')->nullable(),
             'cancellation_reason' => fn (Blueprint $t) => $t->string('cancellation_reason', 60)->nullable(),
+            // Release 6 (2026_10_23_160000): what a lost dispute took, kept apart from refunds.
+            'dispute_lost_amount' => fn (Blueprint $t) => $t->decimal('dispute_lost_amount', 10, 2)->nullable(),
         ]);
 
         // booking_price_elements and booking_submissions are built in full,

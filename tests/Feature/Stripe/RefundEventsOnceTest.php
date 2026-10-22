@@ -250,8 +250,100 @@ class RefundEventsOnceTest extends TestCase
 
         $this->assertSame('re_late_1', $outcome['refund_id']);
         $this->assertFalse($outcome['is_full']);
+        $this->assertTrue($outcome['no_new_refund'], 'staff are told no new refund was made');
         $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount, 'the same refund is not recorded twice');
         $this->assertSame(1, $this->refundAudits());
+    }
+
+    /** A refund as Stripe answers a request it replays (`Idempotent-Replayed: true`): one it made for an earlier request with the same key. */
+    private function replayed(string $id, int $amountMinor): Refund
+    {
+        $refund = Refund::constructFrom(['id' => $id, 'object' => 'refund', 'amount' => $amountMinor, 'currency' => 'eur']);
+        $refund->setLastResponse(new \Stripe\ApiResponse('{}', 200, new \Stripe\Util\CaseInsensitiveArray(['Idempotent-Replayed' => 'true']), []));
+
+        return $refund;
+    }
+
+    /** What Stripe holds as refunded on the payment's charge, read under the lock. */
+    private function chargeRefunded(int $refundedMinor, string $pi = 'pi_refund_1'): void
+    {
+        $this->stripe->shouldReceive('retrievePaymentIntent')->with($pi, ['latest_charge'])->andReturn(\Stripe\PaymentIntent::constructFrom([
+            'id' => $pi, 'object' => 'payment_intent', 'status' => 'succeeded',
+            'latest_charge' => ['id' => 'ch_' . $pi, 'object' => 'charge', 'amount' => 20000, 'amount_refunded' => $refundedMinor, 'currency' => 'eur'],
+        ]));
+    }
+
+    /**
+     * Review of release 6: the refund's webhook came without the `refunds` list (API versions since 2022-11-15), so it
+     * recorded the money but not the refund's id; the staff member's retry gets the same refund back, marked replayed.
+     * Stripe's own refunded total says it is recorded already: nothing more is.
+     */
+    public function test_a_retry_after_an_event_without_the_refunds_list_records_nothing_more(): void
+    {
+        $id = $this->stay();
+        $event = $this->event('evt_no_list', 5000, []);
+        unset($event['data']['object']['refunds']);
+        $this->deliver($event)->assertOk();
+        $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount);
+        $this->stripe->shouldReceive('refund')->once()->andReturn($this->replayed('re_late_1', 5000));
+        $this->chargeRefunded(5000);
+
+        $outcome = app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
+
+        $this->assertTrue($outcome['no_new_refund']);
+        $this->assertFalse($outcome['recorded_later']);
+        $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount, 'recorded once, for the 50 actually refunded');
+        $this->assertSame('partially_refunded', $this->row($id)->payment_status);
+        $this->assertSame(1, $this->refundAudits());
+        Mail::assertQueued(\App\Mail\BookingRefundMail::class, 1);
+    }
+
+    /** A replayed refund nothing here has recorded yet (its webhook has not come): recorded now, once — the webhook then finds nothing new. */
+    public function test_a_replayed_refund_not_recorded_yet_is_recorded_once(): void
+    {
+        $id = $this->stay();
+        $this->stripe->shouldReceive('refund')->once()->andReturn($this->replayed('re_late_2', 5000));
+        $this->chargeRefunded(5000);
+
+        $outcome = app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
+        $this->deliver($this->event('evt_late_2', 5000, [['id' => 're_late_2', 'object' => 'refund', 'amount' => 5000, 'created' => time()]]))->assertOk();
+
+        $this->assertArrayNotHasKey('no_new_refund', $outcome);
+        $this->assertEquals(50.0, (float) $this->row($id)->refunded_amount);
+        $this->assertSame('re_late_2', $this->row($id)->last_refund_id);
+        $this->assertSame(1, $this->refundAudits());
+    }
+
+    /** A replayed refund whose charge cannot be read: nothing is recorded now, and staff are told it shows once Stripe confirms it. */
+    public function test_a_replayed_refund_whose_charge_cannot_be_read_records_nothing_and_says_so(): void
+    {
+        $id = $this->stay();
+        $this->stripe->shouldReceive('refund')->once()->andReturn($this->replayed('re_late_3', 5000));
+        $this->stripe->shouldReceive('retrievePaymentIntent')->andThrow(new \Stripe\Exception\ApiConnectionException('Request timed out'));
+
+        $outcome = app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
+
+        $this->assertTrue($outcome['no_new_refund']);
+        $this->assertTrue($outcome['recorded_later']);
+        $this->assertNull($this->row($id)->refunded_amount);
+        $this->assertSame(0, $this->refundAudits());
+    }
+
+    /** Stripe does not answer in time: whether it refunded is unknown — nothing is recorded, and staff are told to retry only the same amount. */
+    public function test_a_refund_stripe_does_not_answer_in_time_is_reported_as_unknown(): void
+    {
+        $id = $this->stay();
+        $this->stripe->shouldReceive('refund')->once()->andThrow(new \Stripe\Exception\ApiConnectionException('Request timed out after 15 seconds'));
+
+        try {
+            app(BookingRefundService::class)->applyRefund(BookingMirror::withoutGlobalScopes()->find($id), 50.0, 'requested_by_customer');
+            $this->fail('a refund Stripe did not answer must not read as made or as failed');
+        } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
+            $this->assertStringContainsString('use exactly the same amount', $e->getMessage());
+        }
+
+        $this->assertNull($this->row($id)->refunded_amount);
+        $this->assertStringContainsString('timed out', (string) DB::table('refund_attempts')->where('mirror_id', $id)->value('error'));
     }
 
     /** Item 6 pin: a zero-decimal currency's refund event is recorded in yen, not hundredths of a yen. */

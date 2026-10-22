@@ -2537,10 +2537,12 @@ class BookingEngineService
      * lock (StripeService::underLock()). Anything but `succeeded` or
      * `requires_capture` — cancelled, or no such payment — is refused with the
      * widget's own sentence, "Payment has not been completed." A Stripe that
-     * cannot be asked is PaymentUnverifiable: nothing is known, so the
-     * controller answers 503 and releases nothing. Either way the transaction
-     * rolls back before anything is written; the refusal is added to $failed
-     * (written after the rollback). The member portal checks its own payment
+     * cannot be asked is PaymentUnverifiable: the controller answers 503 and,
+     * as the widget cannot confirm again with a payment it already confirmed at
+     * Stripe, runs its rescue (which leaves alone a payment it cannot read) and
+     * staff get the enquiry. Either way the transaction rolls back before
+     * anything is written; the refusal is added to $failed (written after the
+     * rollback). The member portal checks its own payment
      * in PortalStayHooks::beforeReservation(), under `pi:`.
      *
      * @param list<array{0: string, 1: string, 2?: bool}> $failed
@@ -2565,7 +2567,10 @@ class BookingEngineService
             $code = method_exists($e, 'getStripeCode') ? (string) $e->getStripeCode() : '';
             $http = method_exists($e, 'getHttpStatus') ? (int) $e->getHttpStatus() : 0;
             if (!($e instanceof \Stripe\Exception\ApiErrorException && ($code === 'resource_missing' || $http === 404))) {
-                $failed[] = ['payment_check_failed', 'The payment could not be read under the lock: ' . mb_substr($e->getMessage(), 0, 300), false];
+                // The widget cannot confirm again with this payment, so staff
+                // get the enquiry, and the controller's rescue releases the
+                // card if Stripe can be read by then.
+                $failed[] = ['payment_check_failed', 'The payment could not be read under the lock: ' . mb_substr($e->getMessage(), 0, 300)];
                 throw new PaymentUnverifiable(PaymentUnverifiable::MESSAGE, 0, $e);
             }
             $intent = null; // Stripe has no such payment: it was never completed
@@ -2641,10 +2646,13 @@ class BookingEngineService
 
             $dailyAvailable = false;
             $dailyHadData   = false;
-            $dailyAnswered  = false;
+            $dailyWithoutRoom = false;
             try {
                 $daily  = $this->smoobu->getDailyRates($checkIn, $checkOut, [$apartmentId]);
-                $dailyAnswered = true;
+                // Answered without any row for this room: no data. A row for
+                // it — even an empty one — is the single room's answer, and a
+                // failing second read is then a PMS that cannot be asked.
+                $dailyWithoutRoom = !is_array($daily) || !array_key_exists($apartmentId, $daily);
                 $perDay = $daily[$apartmentId] ?? null;
                 if (is_array($perDay) && !empty($perDay) && !empty($nights)) {
                     $dailyHadData = true;
@@ -2668,7 +2676,7 @@ class BookingEngineService
                     // The widget's combination only: the PMS was reached and its
                     // per-day answer had no row for this room — no data, judged
                     // on the base price below (see the docblock).
-                    if (!$dailyAnswerSuffices || !$dailyAnswered || $dailyHadData) {
+                    if (!$dailyAnswerSuffices || !$dailyWithoutRoom || $dailyHadData) {
                         throw $e;
                     }
                     Log::info('Combination live recheck: aggregate rates read failed after a per-day answer without this room — judging it on its base price', ['org_id' => $orgId, 'unit_id' => $apartmentId, 'error' => $e->getMessage()]);

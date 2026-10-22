@@ -21,7 +21,8 @@ use Tests\TestCase;
  * A public widget booking that fails leaves staff a "Booking widget failed" enquiry to rescue the guest, with what the
  * guest asked for (owner, 2026-10-23: "fix it"). Before, the widget's submissions never carried the hold, so the
  * enquiry had no party and PostgreSQL refused its NOT NULL `num_adults`: no enquiry was ever kept. With no hold to read
- * (an expired one) the enquiry takes the columns' own defaults. The widget's answer and everything it books are
+ * (an expired one) the enquiry takes the columns' own defaults. A payment Stripe could not be asked about at confirm
+ * leaves one too (release 6): the widget cannot confirm again with it. The widget's answer and everything it books are
  * unchanged (BookingEngineConfirmTest's "widget" tests).
  */
 class WidgetFailedEnquiryTest extends TestCase
@@ -173,6 +174,34 @@ class WidgetFailedEnquiryTest extends TestCase
 
         $this->assertCount(0, $this->enquiries());
         $this->assertSame('hold_expired', BookingSubmission::withoutGlobalScopes()->where('outcome', 'failure')->sole()->failure_code);
+    }
+
+    /**
+     * Release 6 (review): Stripe cannot be asked about the payment under the lock. The widget cannot confirm again
+     * with a payment it already confirmed at Stripe, so staff get the enquiry to follow the guest up.
+     */
+    public function test_a_payment_the_widget_could_not_check_leaves_an_enquiry(): void
+    {
+        $nights = [];
+        for ($d = now()->addDays(10); $d->toDateString() < $this->checkOut; $d = $d->copy()->addDay()) {
+            $nights[$d->toDateString()] = ['available' => true, 'price' => 100.0, 'min_stay' => 1];
+        }
+        $this->smoobu->shouldReceive('getDailyRates')->andReturn(['101' => $nights]);
+        $this->smoobu->shouldNotReceive('createReservation');
+        $stripe = Mockery::mock(\App\Services\StripeService::class);
+        $stripe->shouldReceive('isEnabled')->andReturn(true);
+        $stripe->shouldReceive('retrievePaymentIntent')->andThrow(new \Stripe\Exception\ApiConnectionException('Request timed out'));
+        $this->app->instance(\App\Services\StripeService::class, $stripe);
+        $hold = $this->hold();
+
+        try {
+            $this->engine->confirm(['hold_token' => $hold->hold_token, 'guest' => $this->guest(), 'payment_intent_id' => 'pi_widget_live', 'payment_method' => 'stripe', 'payment_status' => 'authorized']);
+            $this->fail('a payment that cannot be checked must not book');
+        } catch (\App\Services\Booking\PaymentUnverifiable) {
+        }
+
+        $this->assertStringStartsWith('Booking widget failed: payment_check_failed', (string) $this->enquiries()->sole()->notes);
+        $this->assertSame('active', $hold->fresh()->status);
     }
 
     public function test_an_expired_hold_still_leaves_an_enquiry_with_the_default_party(): void

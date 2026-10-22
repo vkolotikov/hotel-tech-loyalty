@@ -454,12 +454,28 @@ class BookingAdminController extends Controller
                 $request->user(),
                 $forRoomId,
             );
+        } catch (\App\Services\Booking\RefundOutcomeUnknown $e) {
+            // Stripe did not answer in time: the refund may have been made.
+            return response()->json(['error' => $e->getMessage(), 'code' => \App\Services\Booking\RefundOutcomeUnknown::CODE], 504);
         } catch (\RuntimeException $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             return response()->json([
                 'error' => 'Stripe refund failed: ' . $e->getMessage(),
             ], 502);
+        }
+
+        // Stripe handed back a refund it had already made for this payment and
+        // amount (within its 24 hours) instead of making a new one (release 6).
+        if (!empty($outcome['no_new_refund'])) {
+            return response()->json([
+                'error' => 'No new refund was made: Stripe returned a refund of this amount that it had already made on this payment in the last 24 hours. '
+                    . (!empty($outcome['recorded_later'])
+                        ? 'If it does not show on this booking yet, it will once Stripe confirms it.'
+                        : 'It is already recorded on this booking.')
+                    . ' To give back more, make the refund in the Stripe dashboard: it is recorded here automatically.',
+                'code' => 'no_new_refund',
+            ], 409);
         }
 
         // Return the updated booking row PLUS the side-effect summary so

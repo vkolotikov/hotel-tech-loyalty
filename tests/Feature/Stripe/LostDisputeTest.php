@@ -27,7 +27,10 @@ use Tests\TestCase;
  * room refunded in full are reversed as a refund reverses them. The booking
  * itself is left as staff left it: no PMS cancellation, no booking_state
  * change, no refund mail. The same for a service booking's payment, whose
- * dispute now reaches its organisation.
+ * dispute now reaches its organisation. What a dispute took is kept apart
+ * (`dispute_lost_amount`): Stripe's refunded total leaves it out, so a refund
+ * reported after it is recorded in full. All rooms are recorded in one
+ * transaction: a failure keeps nothing and Stripe delivers the event again.
  *
  * Rows are written as production's schema takes them (the test runs on
  * PostgreSQL too). Stripe, Smoobu and the points ledger are mocks.
@@ -59,6 +62,12 @@ class LostDisputeTest extends TestCase
                 $t->timestamps();
                 $t->unique(['organization_id', 'event_id'], 'stripe_webhook_events_dedup_unique');
             });
+        }
+        // What a lost dispute took, kept apart from refunds (migration 2026_10_23_160000).
+        foreach (['booking_mirror', 'service_bookings'] as $table) {
+            if (!Schema::hasColumn($table, 'dispute_lost_amount')) {
+                Schema::table($table, fn ($t) => $t->decimal('dispute_lost_amount', 10, 2)->nullable());
+            }
         }
         Mail::fake();
         $this->org = Organization::create(['name' => 'Seaside Hotel', 'slug' => 'seaside-' . uniqid()]);
@@ -266,5 +275,93 @@ class LostDisputeTest extends TestCase
         $row = DB::table('service_bookings')->where('id', $id)->first();
         $this->assertSame('partially_refunded', $row->payment_status);
         $this->assertEquals(20.0, (float) $row->refunded_amount);
+    }
+
+    /** A `charge.refunded` event as Stripe sends it: the charge's cumulative `amount_refunded`, which counts refunds only. */
+    private function refunded(string $pi, int $amountMinor, int $refundedMinor, string $refundId): void
+    {
+        $this->postJson('/api/v1/booking/webhooks/stripe', [
+            'id' => 'evt_' . uniqid(), 'object' => 'event', 'type' => 'charge.refunded', 'data' => ['object' => [
+                'id' => 'ch_' . $pi, 'object' => 'charge', 'payment_intent' => $pi, 'amount' => $amountMinor, 'amount_captured' => $amountMinor,
+                'amount_refunded' => $refundedMinor, 'currency' => 'eur', 'refunded' => $refundedMinor >= $amountMinor,
+                'metadata' => ['org_id' => (string) $this->org->id],
+                'refunds' => ['object' => 'list', 'data' => [['id' => $refundId, 'object' => 'refund', 'amount' => $refundedMinor, 'created' => time()]]],
+            ]],
+        ], ['Stripe-Signature' => 't=1,v1=test'])->assertOk();
+    }
+
+    /** Review of release 6: a dispute lost for 80 of 200, then the other 120 refunded — Stripe reports 120 refunded, not 200. */
+    public function test_a_refund_after_a_lost_dispute_is_compared_with_refunds_only(): void
+    {
+        $id = $this->room(['reservation_id' => 'LOCAL-' . uniqid(), 'apartment_id' => 101, 'apartment_name' => 'Sea view', 'price_total' => 200, 'price_paid' => 200, 'stripe_payment_intent_id' => 'pi_dispute_then_refund', 'payment_status' => 'disputed']);
+        $this->loyalty->shouldNotReceive('reverseTransaction');
+
+        $this->deliver('charge.dispute.closed', $this->dispute('pi_dispute_then_refund', 8000, 'lost', 'eur', 'dp_80'));
+        $this->assertEquals(80.0, (float) $this->row($id)->refunded_amount);
+        $this->assertEquals(80.0, (float) $this->row($id)->dispute_lost_amount);
+
+        $this->refunded('pi_dispute_then_refund', 20000, 12000, 're_rest');
+
+        $row = $this->row($id);
+        $this->assertSame('refunded', $row->payment_status, 'everything is gone back: 80 lost, 120 refunded');
+        $this->assertEquals(200.0, (float) $row->refunded_amount);
+        $this->assertEquals(80.0, (float) $row->dispute_lost_amount);
+    }
+
+    /** A refund made before the dispute whose event arrives after the dispute is recorded. */
+    public function test_a_refund_reported_after_a_lost_dispute_is_recorded(): void
+    {
+        $id = $this->room(['reservation_id' => 'LOCAL-' . uniqid(), 'apartment_id' => 101, 'apartment_name' => 'Sea view', 'price_total' => 200, 'price_paid' => 200, 'stripe_payment_intent_id' => 'pi_refund_late', 'payment_status' => 'disputed']);
+        $this->loyalty->shouldNotReceive('reverseTransaction');
+
+        $this->deliver('charge.dispute.closed', $this->dispute('pi_refund_late', 15000, 'lost', 'eur', 'dp_150'));
+        $this->refunded('pi_refund_late', 20000, 5000, 're_early');
+
+        $this->assertSame('refunded', $this->row($id)->payment_status);
+        $this->assertEquals(200.0, (float) $this->row($id)->refunded_amount);
+    }
+
+    public function test_a_service_booking_refund_after_a_lost_dispute_keeps_what_the_dispute_took(): void
+    {
+        $id = $this->serviceBooking(['stripe_payment_intent_id' => 'pi_svc_both']);
+        $this->loyalty->shouldNotReceive('reverseTransaction');
+
+        $this->deliver('charge.dispute.closed', $this->dispute('pi_svc_both', 2000, 'lost', 'eur', 'dp_svc_20'));
+        $this->refunded('pi_svc_both', 5400, 3400, 're_svc_rest');
+
+        $row = DB::table('service_bookings')->where('id', $id)->first();
+        $this->assertSame('refunded', $row->payment_status);
+        $this->assertEquals(54.0, (float) $row->refunded_amount, '20 lost and 34 refunded');
+        $this->assertEquals(20.0, (float) $row->dispute_lost_amount);
+
+        // The same refund event again: nothing moves.
+        $this->refunded('pi_svc_both', 5400, 3400, 're_svc_rest');
+        $this->assertEquals(54.0, (float) DB::table('service_bookings')->where('id', $id)->value('refunded_amount'));
+    }
+
+    public function test_a_lost_dispute_that_fails_part_way_keeps_nothing_and_stripe_delivers_it_again(): void
+    {
+        [$lead, $other] = $this->group();
+        $this->loyalty->shouldNotReceive('reverseTransaction');
+        $this->deliver('charge.dispute.created', $this->dispute('pi_dispute_1', 36000, 'needs_response'));
+        $fail = true;
+        \App\Models\BookingMirror::updating(function ($m) use (&$fail, $other) {
+            if ($fail && (int) $m->id === $other) {
+                throw new \RuntimeException('the room could not be written');
+            }
+        });
+        $event = ['id' => 'evt_lost_once', 'object' => 'event', 'type' => 'charge.dispute.closed', 'data' => ['object' => $this->dispute('pi_dispute_1', 36000, 'lost')]];
+
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertStatus(500);
+
+        $this->assertSame(['disputed', 'disputed'], [$this->row($lead)->payment_status, $this->row($other)->payment_status], 'nothing of it was kept');
+        $this->assertNull($this->row($lead)->last_refund_id);
+        $this->assertSame(0, DB::table('stripe_webhook_events')->where('event_id', 'evt_lost_once')->count(), 'Stripe delivers it again');
+
+        $fail = false;
+        $this->postJson('/api/v1/booking/webhooks/stripe', $event, ['Stripe-Signature' => 't=1,v1=test'])->assertOk();
+
+        $this->assertSame(['refunded', 'refunded'], [$this->row($lead)->payment_status, $this->row($other)->payment_status]);
+        $this->assertSame(2, DB::table('audit_logs')->where('action', 'booking_dispute_lost')->count());
     }
 }
