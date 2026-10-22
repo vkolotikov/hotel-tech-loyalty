@@ -1,6 +1,6 @@
 # HexaTech Loyalty, release 4 — the member portal completed, safer payments, messaging, the last gaps (design)
 
-Status: owner's answers of 2026-10-22 ("proceed all remaining improvements and addons"). Builds on release 3 (live as
+Status: deployed 2026-10-22 as `main` 097432a (from branch a7e87ae); combination stays deferred (R4-7). Owner's answers of 2026-10-22 ("proceed all remaining improvements and addons"). Builds on release 3 (live as
 `main` f344b74, built from branch 763e1b0). Runbooks: `docs/member-portal.md`, `docs/loyalty-workspace.md`.
 
 ## 1. Owner decisions
