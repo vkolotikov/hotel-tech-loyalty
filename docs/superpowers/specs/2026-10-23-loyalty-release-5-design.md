@@ -1,6 +1,6 @@
 # HexaTech Loyalty, release 5 — Scan that works (camera, NFC, any code), combination stays with the lead room paying (design)
 
-Status: owner's answers of 2026-10-23 ("do next improvements. No need Twilio for now. Scan feature not works correctly,
+Status: deployed 2026-10-23 as `main` 8a04f86 (from branch 6adf121). Owner's answers of 2026-10-23 ("do next improvements. No need Twilio for now. Scan feature not works correctly,
 and need also NFC and qr scan option on the app"). Builds on release 4 (live as `main` 097432a, built from branch
 a7e87ae). Runbooks: `docs/loyalty-workspace.md`, `docs/member-portal.md`.
 
