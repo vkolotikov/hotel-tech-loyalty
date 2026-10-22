@@ -243,6 +243,7 @@ final class CampaignStart
         $ids = [];
         $audience = null;
         try {
+            SendLater::assertStillAllowed((int) $campaign->organization_id, 'campaigns');
             if (!CampaignBody::editable($campaign->body_blocks, $campaign->body_html)) {
                 throw new LoyaltyRefused('not_editable_here', '', 409);
             }

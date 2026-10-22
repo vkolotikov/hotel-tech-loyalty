@@ -9,7 +9,7 @@ import { Eyebrow } from '../../workspace/ui/Typography'
 import { failureOf, type ApiFailure } from '../lib/api'
 import { useFirstFocus } from '../lib/useFirstFocus'
 import { ConfirmDialog } from '../ui/formParts'
-import { badTimeReason, laterProblem, scheduledWhen, venueClockNow, type SendMode } from './scheduleMath'
+import { badTimeReason, laterProblem, scheduledWhen, timeProblemOf, venueClockNow, type SendMode } from './scheduleMath'
 import { SCHEDULE_PROBLEM_WORDS, SCHEDULE_REASON_WORDS } from './words'
 
 const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 text-sm text-a-text'
@@ -58,12 +58,6 @@ export function WhenChoice({ mode, at, timeZone, problem, onMode, onAt }: {
       )}
     </fieldset>
   )
-}
-
-/** The reason to show under the time: the form's own first, then the server's `bad_time`. */
-export function timeProblemOf(at: string, timeZone: string, tried: boolean, failure: ApiFailure | null): string | null {
-  const own = tried ? laterProblem(at, venueClockNow(timeZone)) : null
-  return own ?? badTimeReason(failure)
 }
 
 /**

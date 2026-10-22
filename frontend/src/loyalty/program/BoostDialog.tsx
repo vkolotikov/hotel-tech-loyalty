@@ -86,7 +86,7 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
         </FormField>
 
         {boost && needsTimeCheck(boost) && (
-          <Notice tone="warning">{t('loyalty.program.time_check.dialog', 'Check these times: they were saved in the full admin before it read times on the venue’s clock, so they may be off by the venue’s difference from UTC. Saving the boost marks them as checked.')}</Notice>
+          <Notice tone="warning">{t('loyalty.program.time_check.dialog', 'Check these times: this boost was saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, its times may be off by the venue’s difference from UTC. Saving the boost marks them as checked.')}</Notice>
         )}
         <div className="grid gap-4 sm:grid-cols-2">
           <FormField label={t('loyalty.program.boost.starts_at', 'Starts')} hint={clock} problem={problem('starts_at')}>

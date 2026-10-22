@@ -127,7 +127,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     const html = render(can({ manage_program: true }), flagged)
     expect(html.match(/data-time-check=""/g)).toHaveLength(1)
     expect(html).toMatch(/data-boost="3"[\s\S]*data-time-check=""[\s\S]*data-boost="4"/)
-    expect(text(html)).toContain('Check the time: saved in the full admin before its times were read on the venue’s clock')
+    expect(text(html)).toContain('Check the time: saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin')
     expect(render(can({ manage_program: true }))).not.toContain('data-time-check')
   })
 
@@ -139,7 +139,7 @@ describe('Program (spec 2026-10-21 §4.5, §5)', () => {
     )
     const two = { list: [{ id: 1, name: 'Lumière Spa', is_default: true }, { id: 2, name: 'Lumière Hotel', is_default: false }], default: 1 }
     const flagged = text(inDialog(<BoostDialog boost={{ ...program.boosts[0], check_time: true, brand_id: 2 }} tiers={program.tiers} brands={two} onClose={() => {}} />))
-    expect(flagged).toContain('Check these times: they were saved in the full admin before it read times on the venue’s clock')
+    expect(flagged).toContain('Check these times: this boost was saved before boost times were read on the venue’s clock everywhere')
     expect(flagged).toContain('Brand: Lumière Hotel. It stays on this brand.')
     expect(inDialog(<BoostDialog boost={null} tiers={program.tiers} brands={two} onClose={() => {}} />)).toContain('<select data-brand=""')
     const plain = inDialog(<BoostDialog boost={program.boosts[0]} tiers={program.tiers} onClose={() => {}} />)

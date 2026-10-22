@@ -428,7 +428,9 @@
     "no_category": "у него не был выбран вид сообщения.",
     "incomplete": "оно было не заполнено до конца.",
     "not_editable_here": "его изменили в полной панели.",
-    "not_ready": "аккаунт Twilio заведения не был настроен."
+    "not_ready": "аккаунт Twilio заведения не был настроен.",
+    "feature_locked": "тариф его больше не включал.",
+    "workspace_off": "HexaTech Loyalty был выключен для заведения."
   },
   "schedule": {
     "error": {

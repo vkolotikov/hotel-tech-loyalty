@@ -228,6 +228,23 @@ class SendLaterTest extends TestCase
         $this->assertSame(1, AuditLog::query()->where('action', 'email_campaign_schedule_failed')->count());
     }
 
+    public function test_a_scheduled_send_does_not_start_once_the_plan_or_the_workspace_no_longer_allows_it(): void
+    {
+        $c = $this->emailDraft();
+        $this->schedule('campaigns', $c->id, '2026-10-05T15:30', $c->updated_at->toIso8601String())->assertOk();
+        $p = $this->pushDraft();
+        $this->schedule('push', $p->id, '2026-10-05T15:30', $p->updated_at->toIso8601String())->assertOk();
+        DB::table('organizations')->where('id', $this->org->id)->update(['plan_features' => json_encode(['push_notifications' => true])]);
+        $this->org->fresh()->setWorkspace('loyalty', false);
+        $this->travelTo(CarbonImmutable::parse('2026-10-05 12:31:00'));
+
+        $this->run_();
+
+        Queue::assertNothingPushed();
+        $this->assertSame('Scheduled send did not start: feature_locked', $c->fresh()->error_message);
+        $this->assertSame(['schedule_problem' => 'workspace_off'], NotificationCampaign::query()->find($p->id)->data);
+    }
+
     public function test_a_push_message_is_scheduled_and_started_once(): void
     {
         $p = $this->pushDraft();
@@ -291,6 +308,7 @@ class SendLaterTest extends TestCase
     public function test_another_organisations_due_campaign_is_started_under_its_own_organisation(): void
     {
         $other = $this->otherOrganization();
+        DB::table('organizations')->where('id', $other['org']->id)->update(['plan_features' => json_encode(['campaigns' => true])]);
         $prior = app('current_organization_id');
         app()->instance('current_organization_id', $other['org']->id);
         $theirSegment = MemberSegment::create(['name' => 'All', 'definition' => ['operator' => 'AND', 'filters' => []]]);

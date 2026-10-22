@@ -428,7 +428,9 @@
     "no_category": "no tenía tipo de mensaje.",
     "incomplete": "no estaba completo.",
     "not_editable_here": "se cambió en el panel completo.",
-    "not_ready": "la cuenta de Twilio del establecimiento no estaba configurada."
+    "not_ready": "la cuenta de Twilio del establecimiento no estaba configurada.",
+    "feature_locked": "el plan ya no lo incluía.",
+    "workspace_off": "HexaTech Loyalty estaba desactivado para el establecimiento."
   },
   "schedule": {
     "error": {

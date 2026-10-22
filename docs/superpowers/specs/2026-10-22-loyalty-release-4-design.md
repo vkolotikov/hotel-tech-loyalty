@@ -66,3 +66,30 @@ Status: owner's answers of 2026-10-22 ("proceed all remaining improvements and a
 
 One deploy by the source-patch recipe after the owner's "yes, deploy"; migrations add tables and nullable columns
 only and are tried on PostgreSQL first. After it: put the Twilio account in Settings → Integrations to use SMS.
+
+## 7. For the next release: combination stays (R4-7, R4-8)
+
+The build (branch commit 1dcd8de) is one hold, one confirm, one PaymentIntent, one `booking_mirror` row per room
+sharing `booking_group_id`; it wrote the intent on every row, which `booking_mirror_org_pi_unique` refuses (the
+SQLite test schemas lack the index, so its tests passed — the rebuild's tests must create it). The widget's own
+`confirmCombo()` does the same today: a paid widget combination (a `pi_mock_` one too) fails at the second room on
+PostgreSQL, rolls back, cancels its Smoobu reservations and rescues the payment; unpaid ones work.
+
+Rebuild: the lead room carries the intent, the other rooms are reached through `booking_group_id`. Everything that
+finds rows by intent sees the lead only, so each must also update the siblings or take the payment from the lead:
+
+- `CapturePendingPaymentIntents` (`markBookingPaid()` flips only rows carrying the intent: siblings would stay
+  `authorized` and never earn), its cancelled-booking release, `needs_refund` flagging and `reconcileStaleAuths()`.
+- `BookingPublicController` webhooks: `payment_intent.succeeded` (`markMirrorPaid()`), `payment_intent.canceled`,
+  `charge.refunded` (then `applyRefund()`; its `RefundAttempt` check is keyed by mirror id and intent),
+  `charge.dispute.created` / `.closed` (the flag would land on the lead only).
+- `BookingRefundService::applyRefund()` refunds only a row with an intent (call it on the lead); its sibling walk by
+  group fits; it records each sibling's `refunded_amount` as its own `price_total`; its mail names one room.
+- Fine as they are ("carried" needs one row): `PortalPaymentIntentGuard::carried()` and its callers,
+  `rescueIntentIsCarried()`, `DiagOrphanStripePis`, the services confirm's pre-check.
+- Answer the lead: the engine's confirm replay, `ReconcileOrphanPi`, `PortalPaymentReturnController`.
+- Per-row reads (`MemberBookingQuery` `paid_online`, `MemberCancellation`, `CancellationPolicy`) must read the
+  payment from the lead for a combination's view and cancel.
+- Known limits of the build to settle: a dashboard partial refund recorded as full on the whole group (and a member's
+  cancel then refunding nothing more), the refund mail and realtime event naming one room, points rounded per room,
+  "every room needs an adult", two units of one room type sending two Smoobu reservations for one apartment id.

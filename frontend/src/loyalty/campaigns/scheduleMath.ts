@@ -57,6 +57,12 @@ export function badTimeReason(failure: ApiFailure | null): string | null {
   return typeof reason === 'string' && (BAD_TIME_REASONS as readonly string[]).includes(reason) ? reason : 'format'
 }
 
+/** The reason to show under a time: the form's own first (once Schedule was pressed), then the server's `bad_time`. */
+export function timeProblemOf(at: string, timeZone: string, tried: boolean, failure: ApiFailure | null): string | null {
+  const own = tried ? laterProblem(at, venueClockNow(timeZone)) : null
+  return own ?? badTimeReason(failure)
+}
+
 /** A scheduled time as it reads: "Tue, 6 Oct, 10:00" in the reader's language, the venue's digits unchanged. */
 export function scheduledWhen(wall: string | null, locale: string): string {
   if (!wall || !isWall(wall)) return ''

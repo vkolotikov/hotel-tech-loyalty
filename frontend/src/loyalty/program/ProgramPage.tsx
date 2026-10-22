@@ -345,7 +345,7 @@ export function BoostRow({ boost, tiers, manage, theme, locale, timeZone, onOpen
         {boost.description && <p className="text-xs text-a-text-2">{boost.description}</p>}
         {needsTimeCheck(boost) && (
           <p data-time-check="" className="text-xs font-medium text-a-st-pending">
-            {t('loyalty.program.time_check.row', 'Check the time: saved in the full admin before its times were read on the venue’s clock, it may start and end hours off. Open it, check the times and save.')}
+            {t('loyalty.program.time_check.row', 'Check the time: saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, it may start and end hours off. Open it, check the times and save.')}
           </p>
         )}
       </div>

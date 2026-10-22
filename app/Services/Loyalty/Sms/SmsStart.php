@@ -213,6 +213,7 @@ final class SmsStart
         }
 
         try {
+            SendLater::assertStillAllowed((int) $c->organization_id, 'campaigns');
             $this->assertReady((int) $c->organization_id);
             if (SmsMessage::incomplete($c) !== []) {
                 throw new LoyaltyRefused('incomplete', '', 422);

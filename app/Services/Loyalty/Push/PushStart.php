@@ -204,6 +204,7 @@ final class PushStart
         }
 
         try {
+            SendLater::assertStillAllowed((int) $m->organization_id, 'push_notifications');
             if (PushMessage::incomplete($m) !== []) {
                 throw new LoyaltyRefused('incomplete', '', 422);
             }

@@ -2,6 +2,7 @@
 
 namespace App\Services\Loyalty\Campaigns;
 
+use App\Models\Organization;
 use App\Services\Appointments\VenueClock;
 use App\Services\Loyalty\LoyaltyRefused;
 use Carbon\CarbonImmutable;
@@ -14,9 +15,10 @@ use Carbon\CarbonImmutable;
  * (`scheduled` → `sending`), so it starts once however often the command runs. It goes to whoever is eligible at that
  * moment; there is no confirmed count then. While it waits it can be moved or taken back to a draft.
  *
- * A scheduled one that cannot start when it is due (nobody eligible then, over the limit, its segment gone or broken,
- * the content incomplete, SMS without Twilio) is marked failed with the reason's code (FAILED_PREFIX in an email
- * campaign's `error_message`, `data.schedule_problem` on a push message, the code itself on an SMS campaign).
+ * A scheduled one that cannot start when it is due (the plan or the workspace no longer allows it, nobody eligible then,
+ * over the limit, its segment gone or broken, the content incomplete, SMS without Twilio) is marked failed with the
+ * reason's code (FAILED_PREFIX in an email campaign's `error_message`, `data.schedule_problem` on a push message, the
+ * code itself on an SMS campaign).
  */
 final class SendLater
 {
@@ -70,6 +72,23 @@ final class SendLater
         $text = (string) $errorMessage;
 
         return str_starts_with($text, self::FAILED_PREFIX) ? substr($text, strlen(self::FAILED_PREFIX)) : null;
+    }
+
+    /**
+     * When a scheduled send is due, it starts only if the venue may still send it: the plan still holds the feature its
+     * routes need, and HexaTech Loyalty is still switched on for it — the same gates a press of Send passes.
+     *
+     * @throws LoyaltyRefused `feature_locked` or `workspace_off`, the reason it is marked failed with
+     */
+    public static function assertStillAllowed(int $orgId, string $feature): void
+    {
+        $org = Organization::withoutGlobalScopes()->find($orgId);
+        if (!$org || !$org->hasFeature($feature)) {
+            throw new LoyaltyRefused('feature_locked', 'The plan no longer includes this.', 402);
+        }
+        if (!$org->workspaceEnabled('loyalty')) {
+            throw new LoyaltyRefused('workspace_off', 'HexaTech Loyalty is switched off for this organisation.', 403);
+        }
     }
 
     public static function notScheduled(string $status): LoyaltyRefused

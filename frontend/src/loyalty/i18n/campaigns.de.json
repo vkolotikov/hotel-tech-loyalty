@@ -428,7 +428,9 @@
     "no_category": "es hatte keine Nachrichtenart.",
     "incomplete": "es war nicht vollständig.",
     "not_editable_here": "es wurde im vollen Admin geändert.",
-    "not_ready": "das Twilio-Konto des Hauses war nicht eingerichtet."
+    "not_ready": "das Twilio-Konto des Hauses war nicht eingerichtet.",
+    "feature_locked": "der Tarif enthielt es nicht mehr.",
+    "workspace_off": "HexaTech Loyalty war für das Haus ausgeschaltet."
   },
   "schedule": {
     "error": {

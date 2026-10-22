@@ -428,7 +428,9 @@
     "no_category": "it had no kind of message.",
     "incomplete": "it was not complete.",
     "not_editable_here": "it was changed in the full admin.",
-    "not_ready": "the venue’s Twilio account was not set up."
+    "not_ready": "the venue’s Twilio account was not set up.",
+    "feature_locked": "the plan no longer included it.",
+    "workspace_off": "HexaTech Loyalty was switched off for the venue."
   },
   "schedule": {
     "error": {

@@ -168,6 +168,8 @@ export const SCHEDULE_PROBLEM_WORDS: Record<string, string> = {
   incomplete: 'it was not complete.',
   not_editable_here: 'it was changed in the full admin.',
   not_ready: 'the venue’s Twilio account was not set up.',
+  feature_locked: 'the plan no longer included it.',
+  workspace_off: 'HexaTech Loyalty was switched off for the venue.',
 }
 
 /** The families above by the key prefix they are read under. */
