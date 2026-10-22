@@ -267,8 +267,9 @@ or booking figures in Insights; no brand choice. The full admin keeps these.
 
 ## Deploying
 
-- Release 2 is live (`main` 7549f28, deployed 2026-10-22), built from branch commit 22b99d0: the next release's change
-  list is `git diff --name-status 22b99d0 <tip>`. Release 1 went out as `main` 05f3ad1 from branch commit 5895004.
+- Release 3 is live (`main` f344b74, deployed 2026-10-22), built from branch commit 763e1b0: the next release's change
+  list is `git diff --name-status 763e1b0 <tip>`. Release 2 went out as `main` 7549f28 from 22b99d0, release 1 as
+  05f3ad1 from 5895004.
 - Release 3 runs five migrations, each tried on PostgreSQL with rollback: `2026_10_22_100000` and `100100` (nullable
   columns for the wallet files and an import's file), `110000` (four nullable columns on `notification_campaigns`, the
   table `push_message_deliveries`), `110100` (one `UPDATE` marking earlier notifications sent and read), `120000` (the
