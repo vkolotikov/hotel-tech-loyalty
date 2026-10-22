@@ -27,8 +27,9 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Add a boost event or change one (spec 2026-10-21 §4.5): a name, the multiplier, when it runs — on the venue's
  * clock, whatever the browser's zone (§6.6): the instants the server answers are shown as the venue's wall clock and
  * sent back as one —, on which weekdays and for which tiers (none chosen: every day, every tier), and whether it is on.
- * With more than one brand, a new boost names its brand and a saved one shows it (release 4). A boost whose times
- * were saved before they were read as the venue's (R4-6) says so above the times; saving it clears the mark.
+ * With more than one brand, a new boost names its brand (release 4) and a saved one can be moved (release 6). A boost
+ * whose times were saved before they were read as the venue's (R4-6) says so above the times; saving it clears the
+ * mark, and so does a manager's "These times are right" on Program (release 6).
  */
 export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | null; tiers: Tier[]; brands?: BrandOptions; onClose: () => void }) {
   const { t, i18n } = useTranslation()
@@ -42,10 +43,11 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
   const zone = boot.venue.timezone
   const [form, setForm] = useState<BoostForm>(() => boostFormOf(boost, zone, boot.venue.today))
   const [tried, setTried] = useState(false)
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(brands))
+  const saved = boost ? (boost.brand_id ?? null) : undefined
+  const [brand, setBrand] = useState<number | null>(() => initialBrand(brands, saved))
 
   const save = useMutation({
-    mutationFn: () => (boost ? programApi.updateBoost(boost.id, boostBody(form)) : programApi.createBoost({ ...boostBody(form), ...brandPart(brand) })),
+    mutationFn: () => (boost ? programApi.updateBoost(boost.id, { ...boostBody(form), ...brandPart(brand, saved) }) : programApi.createBoost({ ...boostBody(form), ...brandPart(brand) })),
     onSuccess: () => { afterProgramChange(client); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') afterProgramChange(client) },
   })
@@ -76,7 +78,7 @@ export function BoostDialog({ boost, tiers, brands, onClose }: { boost: Boost | 
             placeholder={t('loyalty.program.boost.name_example', 'e.g. Double points weekend')} />
         </FormField>
 
-        <BrandField options={brands} value={brand} saved={boost ? (boost.brand_id ?? null) : undefined}
+        <BrandField options={brands} value={brand} saved={saved}
           refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
 
         <FormField label={t('loyalty.program.boost.multiplier', 'Multiplier')} problem={problem('multiplier')}

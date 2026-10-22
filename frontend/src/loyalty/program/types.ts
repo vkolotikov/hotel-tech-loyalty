@@ -47,7 +47,7 @@ export type BoostState = 'live' | 'upcoming' | 'ended' | 'off'
 
 export interface Boost {
   id: number
-  /** The brand it runs on (release 4); a change keeps it. */
+  /** The brand it runs on (release 4); a change keeps it unless it names another (release 6). */
   brand_id?: number | null
   name: string
   description: string | null
@@ -120,6 +120,6 @@ export interface BoostBody {
   days_of_week: number[] | null
   tier_ids: number[] | null
   is_active: boolean
-  /** Release 4: the brand a new boost goes on, sent only when there is a choice. */
+  /** Release 4: the brand a new boost goes on, sent only when there is a choice; release 6: on a change, another moves it. */
   brand?: number
 }

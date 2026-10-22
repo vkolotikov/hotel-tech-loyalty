@@ -1394,6 +1394,8 @@ Route::prefix('booking')->middleware('throttle:60,1')->group(function () {
                 Route::post('program/boosts', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'storeBoost']);
                 Route::put('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'updateBoost'])->whereNumber('id');
                 Route::delete('program/boosts/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\ProgramController::class, 'destroyBoost'])->whereNumber('id');
+                // Release 6: a manager confirms the times of boosts flagged "check the time" together.
+                Route::post('program/boosts/confirm-times', [\App\Http\Controllers\Api\V1\Admin\Loyalty\BoostTimesController::class, 'confirm']);
                 Route::get('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'index']);
                 Route::post('rewards', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'store']);
                 Route::put('rewards/{id}', [\App\Http\Controllers\Api\V1\Admin\Loyalty\RewardController::class, 'update'])->whereNumber('id');

@@ -11,10 +11,14 @@ namespace App\Services\Loyalty\Cards;
  *   `{"type":"hotel_loyalty","token":"…","version":1}`. A USB or Bluetooth QR reader set to a US layout on a computer
  *   with another keyboard layout types it bent: on a German layout the quotes become `Ä`, the colons `Ö`, the braces
  *   `Ü` and `*`, the underscore `?`, the hyphen `ß`, and y and z swap; on a Russian layout the letters come out Cyrillic
- *   (`Э` for a quote, `Ж` for a colon); on a UK layout a quote is `@`. The German and Russian layouts are typed back
- *   key for key; any other bending is read by finding `member…number` and taking the value after it (letters, digits
- *   and hyphens).
- * - A member number compares in upper case with hyphens, spaces, dots, slashes and underscores removed, on both sides.
+ *   (`Э` for a quote, `Ж` for a colon); on a French (AZERTY) layout the digits come out as the unshifted row's
+ *   `&é"'(-è_çà`, the hyphen `)`, a quote `%`, a colon `M`, the braces `¨` and `£`, a and q, z and w swap and m is `,`;
+ *   on a Spanish layout a quote is the dead `¨` (`ë` before an e), a colon `Ñ`, the hyphen `'`, the underscore `?`, the
+ *   braces `^` and `*`; on a UK layout a quote is `@`. The German, Russian, French and Spanish layouts are typed back
+ *   key for key (FRENCH_KEYS and SPANISH_KEYS are the key maps); any other bending is read by finding `member…number`
+ *   and taking the value after it (letters, digits and hyphens).
+ * - A member number compares in upper case with hyphens, spaces, dots, slashes and underscores removed, on both sides;
+ *   one a layout bent (`LS)àà&àà&` for `LS-001001` on AZERTY) is typed back first (numberForms()).
  * - An NFC card's ID is hex with any separators, or the decimal many keyboard-style readers type (a 4- or 7-byte ID,
  *   in either byte order).
  */
@@ -54,6 +58,57 @@ final class CodeReader
         '.' => '/', ',' => '?', '"' => '@', '№' => '#', ';' => '$', ':' => '^', '?' => '&', '/' => '|',
     ];
 
+    /**
+     * The keys a scanner set to a US layout presses, row by row (the number row, then the three letter rows, as the US
+     * keyboard has them, `\` at the end of the second), each row unshifted then shifted. FRENCH_KEYS and SPANISH_KEYS
+     * name, key for key, what another layout types for the same key; frenchMap()/spanishMap() pair them back.
+     */
+    private const US_KEYS = [
+        ['`1234567890-=', '~!@#$%^&*()_+'],
+        ['qwertyuiop[]\\', 'QWERTYUIOP{}|'],
+        ["asdfghjkl;'", 'ASDFGHJKL:"'],
+        ['zxcvbnm,./', 'ZXCVBNM<>?'],
+    ];
+
+    /**
+     * French AZERTY (fr-FR, the Windows and Linux layout): the digits are the shifted row, the unshifted one is
+     * `&é"'(-è_çà`; `-` is `)`, `=` is `=`; `[` and `{` are the dead `^` and `¨`, `]` `$`, `}` `£`, `\` `*`, `|` `µ`;
+     * a and q, z and w swap, `;` is m and `:` M, `'` is `ù` and `"` `%`; m is `,`, `,` `;`, `.` `:`, `/` `!`, M `?`,
+     * `<` `.`, `>` `/`, `?` `§`. `\0`: shift with the first key types nothing. So `LS-001001` comes out `LS)àà&àà&`
+     * and the app's code `¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£` (a system that drops
+     * a dead key that does not combine leaves out the `¨`).
+     */
+    private const FRENCH_KEYS = [
+        ['²&é"\'(-è_çà)=', "\0" . '1234567890°+'],
+        ['azertyuiop^$*', 'AZERTYUIOP¨£µ'],
+        ['qsdfghjklmù', 'QSDFGHJKLM%'],
+        ['wxcvbn,;:!', 'WXCVBN?./§'],
+    ];
+
+    /**
+     * Spanish (es-ES, QWERTY): the digits are where they are; `-` is `'`, `_` `?`, `=` `¡`, `+` `¿`; `[` and `{` are
+     * the dead `` ` `` and `^`, `]` `+`, `}` `*`, `\` `ç`; `;` is `ñ` and `:` `Ñ`, `'` and `"` are the dead `´` and
+     * `¨`; `/` is `-`, `<` `;`, `>` `:`, `?` `_`; shifted digits `!"·$%&/()=`. A dead key that does not combine is
+     * typed with what follows (`"t` comes out `¨t`); before a vowel it combines (`"e` comes out `ë`, read back by
+     * SPANISH_COMBINED). So `LS-001001` comes out `LS'001001` and the app's code
+     * `^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'001001¨,¨version¨Ñ2*`.
+     */
+    private const SPANISH_KEYS = [
+        ["º1234567890'¡", 'ª!"·$%&/()=?¿'],
+        ['qwertyuiop`+ç', 'QWERTYUIOP^*Ç'],
+        ['asdfghjklñ´', 'ASDFGHJKLÑ¨'],
+        ['zxcvbnm,.-', 'ZXCVBNM;:_'],
+    ];
+
+    /** On a Spanish layout a quote (the dead `¨`) before a vowel combines with it: read back as the quote and the vowel. */
+    private const SPANISH_COMBINED = [
+        'ä' => '"a', 'ë' => '"e', 'ï' => '"i', 'ö' => '"o', 'ü' => '"u', 'ÿ' => '"y',
+        'Ä' => '"A', 'Ë' => '"E', 'Ï' => '"I', 'Ö' => '"O', 'Ü' => '"U', 'Ÿ' => '"Y',
+    ];
+
+    /** What a member number is made of when no layout bent it (number() compares it without the separators). */
+    private const NUMBER_SHAPE = '#^[A-Za-z0-9][A-Za-z0-9\-. /_]*$#';
+
     /** The code without the spaces around it, invisible marks a reader may add, and the `#` the wallet pass shows. */
     public static function clean(string $code): string
     {
@@ -66,8 +121,8 @@ final class CodeReader
     }
 
     /**
-     * The member app's code, read from the JSON as it is, as a German or Russian layout bent it, or by the member
-     * number found after `member…number` however the punctuation was bent.
+     * The member app's code, read from the JSON as it is, as a German, Russian, French or Spanish layout bent it, or by
+     * the member number found after `member…number` however the punctuation was bent.
      *
      * @return array{0: 'number'|'token', 1: string}|null
      */
@@ -99,7 +154,10 @@ final class CodeReader
         return null;
     }
 
-    /** @return list<string> the code, then as a Russian and a German layout would have typed it back to US keys */
+    /**
+     * @return list<string> the code, then typed back to US keys as each layout whose marks it carries would have bent
+     * it: Russian (Cyrillic), German (`äöüß§°`), French (`²éèçàù¨£µ§°`), Spanish (`ñ¨´ºª·¡¿ç` and a combined vowel)
+     */
     public static function layouts(string $code): array
     {
         $out = [$code];
@@ -109,8 +167,79 @@ final class CodeReader
         if (preg_match('/[äöüÄÖÜß§°]/u', $code)) {
             $out[] = strtr($code, self::GERMAN);
         }
+        if (preg_match('/[²éèçàù¨£µ§°]/u', $code)) {
+            $out[] = strtr($code, self::frenchMap());
+        }
+        if (preg_match('/[ñÑ¨´ºª·¡¿çÇäëïöüÿÄËÏÖÜŸ]/u', $code)) {
+            $out[] = strtr($code, self::spanishMap());
+        }
 
         return array_values(array_unique($out));
+    }
+
+    /**
+     * A member number a keyboard layout bent (a scanner set to US typing `LS-001001` gives `LS)àà&àà&` on AZERTY,
+     * `LS'001001` on a Spanish layout, `LSß001001` on a German one, `ДЫ-001001` on a Russian one), typed back by every
+     * layout above, keeping what reads as a member number again (letters, digits and separators). Empty when the code
+     * already reads as one — nothing bent it — so a number typed right is never taken for another.
+     *
+     * @return list<string>
+     */
+    public static function numberForms(string $code): array
+    {
+        $code = self::clean($code);
+        if ($code === '' || preg_match(self::NUMBER_SHAPE, $code)) {
+            return [];
+        }
+        $out = [];
+        foreach ([self::RUSSIAN, self::GERMAN, self::frenchMap(), self::spanishMap()] as $map) {
+            $typed = strtr($code, $map);
+            if ($typed !== $code && preg_match(self::NUMBER_SHAPE, $typed)) {
+                $out[] = $typed;
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+
+    /** @return array<string, string> a French AZERTY key as typed => the US one (FRENCH_KEYS) */
+    private static function frenchMap(): array
+    {
+        static $map = null;
+
+        return $map ??= self::pairKeys(self::FRENCH_KEYS);
+    }
+
+    /** @return array<string, string> a Spanish key as typed => the US one (SPANISH_KEYS, SPANISH_COMBINED) */
+    private static function spanishMap(): array
+    {
+        static $map = null;
+
+        return $map ??= self::pairKeys(self::SPANISH_KEYS) + self::SPANISH_COMBINED;
+    }
+
+    /**
+     * A layout's key rows paired with US_KEYS: what it types => what the US layout means by the same key. A key that
+     * types the same on both is left out, and so is one that types nothing (`\0`).
+     *
+     * @param list<array{0: string, 1: string}> $rows
+     * @return array<string, string>
+     */
+    private static function pairKeys(array $rows): array
+    {
+        $map = [];
+        foreach ($rows as $r => $row) {
+            foreach ($row as $shift => $typed) {
+                $us = str_split(self::US_KEYS[$r][$shift]);
+                foreach (mb_str_split($typed) as $i => $char) {
+                    if ($char !== "\0" && $char !== $us[$i] && !isset($map[$char])) {
+                        $map[$char] = $us[$i];
+                    }
+                }
+            }
+        }
+
+        return $map;
     }
 
     /**

@@ -25,7 +25,8 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * Add an offer or change one (spec 2026-10-21 §4.6): what members read, its kind and value, an optional code they
  * type, what it applies to, which tiers see it (none chosen: every tier), the venue days it runs, how often it may be
  * used, whether it is featured — and, once made, whether it is on and its picture, changed at once (PictureField,
- * release 2 §7). With more than one brand, a new offer names its brand and a saved one shows it (release 4).
+ * release 2 §7). With more than one brand, a new offer names its brand (release 4) and a saved one can be moved
+ * (release 6).
  */
 export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; options: OfferOptions; onClose: () => void }) {
   const { t } = useTranslation()
@@ -38,12 +39,13 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
   const [form, setForm] = useState<OfferForm>(() => offerFormOf(offer, options, boot.venue.today))
   const [tried, setTried] = useState(false)
   const [picture, setPicture] = useState<string | null>(offer?.image_url ?? null)
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands))
+  const saved = offer ? (offer.brand_id ?? null) : undefined
+  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands, saved))
   const tiers = boot.programme.tiers
 
   const refresh = () => { void client.invalidateQueries({ queryKey: OFFERS_KEY }) }
   const save = useMutation({
-    mutationFn: () => (offer ? rewardsApi.updateOffer(offer.id, offerBody(form, true)) : rewardsApi.createOffer({ ...offerBody(form, false), ...brandPart(brand) })),
+    mutationFn: () => (offer ? rewardsApi.updateOffer(offer.id, { ...offerBody(form, true), ...brandPart(brand, saved) }) : rewardsApi.createOffer({ ...offerBody(form, false), ...brandPart(brand) })),
     onSuccess: () => { refresh(); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') refresh() },
   })
@@ -76,7 +78,7 @@ export function OfferDialog({ offer, options, onClose }: { offer: Offer | null; 
           <input ref={first} type="text" value={form.title} maxLength={191} onChange={(e) => update({ title: e.target.value })} className={INPUT}
             placeholder={t('loyalty.rewards.offer.title_example', 'e.g. Autumn weekend')} />
         </FormField>
-        <BrandField options={options.brands} value={brand} saved={offer ? (offer.brand_id ?? null) : undefined}
+        <BrandField options={options.brands} value={brand} saved={saved}
           refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
         <FormField label={t('loyalty.rewards.offer.description', 'Description')} problem={problem('description')}
           hint={t('loyalty.rewards.offer.description_hint', 'Members read this in the app and the portal.')}>

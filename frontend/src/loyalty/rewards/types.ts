@@ -6,7 +6,7 @@ import type { Paged } from '../lib/types'
  */
 export interface Reward {
   id: number
-  /** The brand it is offered on (release 4); a change keeps it. */
+  /** The brand it is offered on (release 4); a change keeps it unless it names another (release 6). */
   brand_id?: number | null
   name: string
   description: string | null
@@ -38,7 +38,7 @@ export interface PictureLimits {
   types: string[]
 }
 
-/** A brand a new reward, offer or boost may be put on (release 4; LoyaltyForms::brands). */
+/** A brand a reward, offer or boost may be put on (release 4; LoyaltyForms::brands) or moved to (release 6). */
 export interface BrandOption {
   id: number
   name: string
@@ -79,7 +79,7 @@ export interface RewardBody {
   /** The venue's wall clock, `YYYY-MM-DDTHH:mm`, or null for none. */
   expires_at: string | null
   is_active: boolean
-  /** Release 4: the brand a new reward goes on, sent only when there is a choice. */
+  /** Release 4: the brand a new reward goes on, sent only when there is a choice; release 6: on a change, another moves it. */
   brand?: number
 }
 
@@ -106,7 +106,7 @@ export interface RedemptionsPage extends Paged {
 
 export interface Offer {
   id: number
-  /** The brand it runs on (release 4); a change keeps it. */
+  /** The brand it runs on (release 4); a change keeps it unless it names another (release 6). */
   brand_id?: number | null
   title: string
   description: string | null
@@ -157,7 +157,7 @@ export interface OfferBody {
   is_featured: boolean
   /** Only on a change: a new offer is made active. */
   is_active?: boolean
-  /** Release 4: the brand a new offer goes on, sent only when there is a choice. */
+  /** Release 4: the brand a new offer goes on, sent only when there is a choice; release 6: on a change, another moves it. */
   brand?: number
 }
 

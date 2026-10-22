@@ -25,7 +25,8 @@ use Illuminate\Validation\ValidationException;
  * Offers are brand-scoped: read as the request's brand binding gives,
  * created on the brand the request names (release 4: one of the options'
  * brands, which are this organisation's and the staff member's), else on the
- * one the model's own hook picks. An offer keeps its brand when changed.
+ * one the model's own hook picks. Since release 6 a change may name another
+ * of those brands and moves the offer there; without one it keeps its brand.
  */
 class OfferController extends Controller
 {
@@ -106,12 +107,14 @@ class OfferController extends Controller
             'per_member_limit' => 'sometimes|nullable|integer|min:1',
             'is_featured'      => 'sometimes|boolean',
             'is_active'        => 'sometimes|boolean',
+            // Release 6: another of the options' brands moves the offer there; absent, it keeps its own.
+            'brand'            => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id')),
         ]);
         if (array_key_exists('code', $data)) {
             $this->refuseTakenCode($data['code'], $offer);
         }
 
-        $offer->update(self::columns($data));
+        $offer->update(self::columns(LoyaltyForms::withBrand($data)));
 
         return response()->json(['offer' => self::row($offer->fresh(), VenueClock::today((int) app('current_organization_id')))]);
     }

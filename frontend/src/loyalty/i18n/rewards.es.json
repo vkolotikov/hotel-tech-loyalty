@@ -6,9 +6,10 @@
   },
   "brand": {
     "hint": "A cuál de sus marcas pertenece.",
+    "keep": "Dejar como está",
     "label": "Marca",
-    "refused": "Elija una de las marcas de la lista.",
-    "saved": "Marca: {{name}}. Se queda en esta marca."
+    "move_hint": "A cuál de sus marcas pertenece. Si elige otra, se mueve allí al guardar.",
+    "refused": "Elija una de las marcas de la lista."
   },
   "cancel": {
     "body": "{{points}} puntos vuelven a {{name}} y la recompensa vuelve al stock si este es limitado. El código deja de funcionar.",

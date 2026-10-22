@@ -24,7 +24,8 @@ use Illuminate\Validation\Validator as FormValidator;
  * Rewards are brand-scoped: read as the request's brand binding gives,
  * created on the brand the request names (release 4: one of the options'
  * brands, which are this organisation's and the staff member's), else on the
- * one the model's own hook picks. A reward keeps its brand when changed.
+ * one the model's own hook picks. Since release 6 a change may name another
+ * of those brands and moves the reward there; without one it keeps its brand.
  */
 class RewardController extends Controller
 {
@@ -124,8 +125,8 @@ class RewardController extends Controller
             'expires_at'       => 'nullable|date',
             'is_active'        => 'sometimes|boolean',
             'sort_order'       => 'sometimes|integer|min:0|max:10000',
-            // Release 4: a new reward may name its brand; a reward keeps the one it has.
-            ...($reward === null ? ['brand' => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id'))] : []),
+            // Release 4: a new reward may name its brand; release 6: a change may move it (absent, it keeps its own).
+            'brand'            => LoyaltyForms::brandRule($request->user(), (int) app('current_organization_id')),
         ])->after(function (FormValidator $v) use ($request, $reward) {
             // A percentage above 100 would hand money back; the type is the stored one when the request keeps it.
             $type = $request->has('discount_type') ? $request->input('discount_type') : $reward?->discount_type;

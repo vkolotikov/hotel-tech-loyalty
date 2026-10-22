@@ -30,6 +30,13 @@ class CodeReaderTest extends TestCase
             'a German layout, y and z swapped' => ['ÜÄmember?numberÄÖÄHLßYZ12Ä*', ['number', 'HL-ZY12']],
             'a Russian layout'                 => ['ХЭензуЭЖЭрщеуд_дщнфденЭбЭьуьиук_тгьиукЭЖЭДЫ-001001ЭбЭмукышщтЭЖ2Ъ', ['number', 'LS-001001']],
             'a UK layout'                      => ['{@type@:@hotel_loyalty@,@member_number@:@LS-001001@,@version@:2}', ['number', 'LS-001001']],
+            // Release 6: the strings FRENCH_KEYS and SPANISH_KEYS give for a US-layout scanner's keys.
+            'a French AZERTY layout'           => ['¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£', ['number', 'LS-001001']],
+            'AZERTY, the dead ¨ dropped'       => ['%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£', ['number', 'LS-001001']],
+            'AZERTY, a, q, z, w and m moved'   => ['¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%Q?W)àé"ç%;%version%Mé£', ['number', 'AMZ-0239']],
+            'a Spanish layout'                 => ["^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'001001¨,¨version¨Ñ2*", ['number', 'LS-001001']],
+            'Spanish, a quote before a vowel'  => ["^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨ÑËL'000123¨,¨version¨Ñ2*", ['number', 'EL-000123']],
+            'a v1 code on a Spanish layout'    => ["^¨type¨Ñ¨hotel?loyalty¨,¨token¨Ñ" . 'ä' . substr($token, 1) . "¨,¨version¨Ñ1*", ['token', 'a' . substr($token, 1)]],
             'quotes and colons bent'           => ['Ä"type"Ö"hotel_loyalty"Ümember_number"Ö"LS-001001"Ü', ['number', 'LS-001001']],
             'a v1 code on a UK layout'         => ['{@type@:@hotel_loyalty@,@token@:@' . $token . '@,@version@:1}', ['token', $token]],
             'a link with the number'           => ['https://venue.example/card?member_number=LS-001001', ['number', 'LS-001001']],
@@ -44,6 +51,40 @@ class CodeReaderTest extends TestCase
     public function test_the_member_apps_code_however_a_keyboard_layout_bent_it(string $code, ?array $expected): void
     {
         $this->assertSame($expected, CodeReader::appCode($code));
+    }
+
+    public function test_the_french_and_spanish_key_maps_type_the_apps_code_back_key_for_key(): void
+    {
+        $code = '{"type":"hotel_loyalty","member_number":"LS-001001","version":2}';
+        $this->assertContains($code, CodeReader::layouts('¨%type%M%hotel°loyqlty%;%,e,ber°nu,ber%M%LS)àà&àà&%;%version%Mé£'));
+        $this->assertContains($code, CodeReader::layouts("^¨type¨Ñ¨hotel?loyalty¨,¨member?number¨Ñ¨LS'001001¨,¨version¨Ñ2*"));
+        // Every shifted key of the number row, typed back (and the key after it: é is 2, ñ is ;).
+        $this->assertContains('!@#$%^&*()_+2', CodeReader::layouts('1234567890°+é'));
+        $this->assertContains('!@#$%^&*()_+;', CodeReader::layouts('!"·$%&/()=?¿ñ'));
+        $this->assertSame(['plain'], CodeReader::layouts('plain'), 'a code without a layout\'s marks is read as it is');
+    }
+
+    /** @return array<string, array{0: string, 1: list<string>}> */
+    public static function bentNumbers(): array
+    {
+        return [
+            'French AZERTY'               => ['LS)àà&àà&', ['LS-001001']],
+            'AZERTY, letters that move'   => ['Q?W)àé"ç', ['AMZ-0239']],
+            'Spanish'                     => ["LS'001001", ['LS-001001']],
+            'German'                      => ['LSß001001', ['LS-001001']],
+            'Russian'                     => ['ДЫ-001001', ['LS-001001']],
+            'the wallet pass hash'        => ['#LS)àà&àà&', ['LS-001001']],
+            'a number nothing bent'       => ['LS-001001', []],
+            'a lower-case number'         => ['ls 001001', []],
+            'no number in any layout'     => ['%%%', []],
+            'empty'                       => ['', []],
+        ];
+    }
+
+    #[DataProvider('bentNumbers')]
+    public function test_a_member_number_a_layout_bent_is_typed_back_and_one_nothing_bent_is_left_alone(string $code, array $expected): void
+    {
+        $this->assertSame($expected, CodeReader::numberForms($code));
     }
 
     public function test_a_link_gives_its_query_values_then_the_path_segments_that_hold_a_digit(): void

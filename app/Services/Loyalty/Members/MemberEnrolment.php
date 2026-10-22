@@ -8,11 +8,11 @@ use App\Models\EmailVerificationCode;
 use App\Models\HotelSetting;
 use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
-use App\Models\NfcCard;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\AnalyticsService;
 use App\Services\GuestMemberLinkService;
+use App\Services\Loyalty\Cards\NfcCards;
 use App\Services\Loyalty\LoyaltyRefused;
 use App\Services\LoyaltyService;
 use App\Services\PlanLimitGuard;
@@ -37,7 +37,7 @@ use Illuminate\Support\Str;
  *
  * Quirks kept on purpose, because the full admin's answer depends on them: the welcome bonus re-assesses the tier, so
  * a chosen starting tier above the bonus's is undone (the workspace offers no choice); the QR token is written as a
- * random string, then the HMAC token, then the card's id when a card is named.
+ * random string, then the HMAC token (a named card no longer replaces it, release 6).
  */
 final class MemberEnrolment
 {
@@ -104,15 +104,10 @@ final class MemberEnrolment
             $this->qrCode->generateToken($member);
 
             if (!empty($data['nfc_uid'])) {
-                NfcCard::create([
-                    'member_id' => $member->id,
-                    'uid'       => $data['nfc_uid'],
-                    'card_type' => 'NTAG213',
-                    'issued_at' => now(),
-                    'issued_by' => $by->id,
-                    'is_active' => true,
-                ]);
-                $member->update(['qr_code_token' => $data['nfc_uid']]);
+                // Through NfcCards (release 6): the ID stored normalised, one card for one member across every
+                // organisation (a refusal rolls the whole enrolment back), and the member's QR code and wallet pass
+                // stay their own — the card's ID no longer replaces the QR token.
+                app(NfcCards::class)->link($member, (string) $data['nfc_uid'], $by, 'NTAG213', 'enrolment');
             }
 
             // Inside the transaction: a failed bonus leaves no member without one.

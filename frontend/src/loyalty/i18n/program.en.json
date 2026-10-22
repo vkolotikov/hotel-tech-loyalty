@@ -232,8 +232,24 @@
     "title": "Tiers"
   },
   "time_check": {
+    "all_line": "Some boosts ask for their times to be checked. If the times shown are right, confirm them together.",
+    "confirm_all": "These times are right",
+    "confirm_body": "These boosts were saved before boost times were read on the venue’s clock everywhere. Check that each starts and ends as shown, on the venue’s clock ({{zone}}). Confirming marks them as checked and changes no time; if one is wrong, choose Not yet and correct it.",
+    "confirm_title": "Are these times right?",
     "dialog": "Check these times: this boost was saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, its times may be off by the venue’s difference from UTC. Saving the boost marks them as checked.",
+    "keep": "Not yet",
     "row": "Check the time: saved before boost times were read on the venue’s clock everywhere. If it was last saved in the full admin, it may start and end hours off. Open it, check the times and save."
+  },
+  "times": {
+    "error": {
+      "invalid": "One of these boosts is no longer in the programme. The page now shows it as it is; nothing was confirmed.",
+      "manager_only": "Only an owner or a manager can change the programme.",
+      "network": "No connection: nothing was confirmed. Try again.",
+      "no_capability": "Only an owner or a manager can change the programme.",
+      "not_allowed": "Only an owner or a manager can change the programme.",
+      "not_found": "One of these boosts is no longer in the programme. The page now shows it as it is; nothing was confirmed.",
+      "unknown": "The times could not be confirmed. Please try again."
+    }
   },
   "title": "Program",
   "value_phrase": {

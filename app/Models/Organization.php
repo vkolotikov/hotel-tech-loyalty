@@ -92,31 +92,22 @@ class Organization extends Model
         // org. Multi-brand portfolios (Enterprise gate) still requires
         // BrandController::store for the 2nd+ brand; this just
         // guarantees the foundational #1 brand exists.
+        //
+        // Release 6 (spec 2026-10-23 §2 item 1): the brand is written for
+        // THIS organisation whatever tenant is bound (ensureDefaultBrand()).
+        // Before, Brand's BelongsToOrganization hook stamped the BOUND
+        // tenant's id on it and the "already has one" check was
+        // tenant-scoped too, so an organisation created while another was
+        // bound (a super admin, a console command, a test) wrote a second
+        // default for the bound one — refused on PostgreSQL by
+        // `brands_org_default_unique`, the error swallowed below — and was
+        // left without a brand. `php artisan brands:ensure-default` repairs
+        // an organisation that was.
         static::created(function ($org) {
             if (!\Illuminate\Support\Facades\Schema::hasTable('brands')) return;
 
-            // Skip when a default brand already exists for this org
-            // (test fixtures, manual seeds, or a parallel-write race
-            // that won the row first). SoftDeletes scope on Brand
-            // EXCLUDES trashed rows, which matches the partial unique
-            // `brands_org_default_unique` semantics (where
-            // deleted_at IS NULL).
-            $hasDefault = \App\Models\Brand::where('organization_id', $org->id)
-                ->where('is_default', true)
-                ->exists();
-            if ($hasDefault) return;
-
             try {
-                $baseSlug = \Illuminate\Support\Str::slug($org->name ?? '') ?: ('default-' . $org->id);
-                \App\Models\Brand::create([
-                    'organization_id' => $org->id,
-                    'name'            => $org->name ?: 'Default',
-                    'slug'            => substr($baseSlug, 0, 100),
-                    'logo_url'        => $org->logo_url ?? null,
-                    'widget_token'    => $org->widget_token ?: \Illuminate\Support\Str::random(32),
-                    'is_default'      => true,
-                    'sort_order'      => 0,
-                ]);
+                $org->ensureDefaultBrand();
             } catch (\Throwable $e) {
                 // Defensive: race between two org-create paths (rare
                 // — orgs are SaaS-side primary keys — but possible
@@ -220,6 +211,81 @@ class Organization extends Model
     public function defaultBrand(): HasOne
     {
         return $this->hasOne(Brand::class)->where('is_default', true);
+    }
+
+    /**
+     * Gives this organisation its default brand when it has none (release 6, spec 2026-10-23 §2 item 1): its earliest
+     * brand that is not deleted is made the default (as `brands:heal-orphan-rows` does), and an organisation with no
+     * brand at all gets one named after it — its widget token (unless a brand already holds it), its logo, a slug free
+     * among its brands, deleted ones included (`brands_org_slug_unique` counts them). Read and written for THIS
+     * organisation whatever tenant is bound: the checks lift the tenant scope and name the organisation, and the new
+     * brand is created with this organisation bound for that one write, because Brand's BelongsToOrganization hook
+     * stamps the bound tenant's id on every new row; the binding is put back as it was. The insert runs in its own
+     * (nested) transaction, so a default written a moment before by someone else (the partial unique index
+     * `brands_org_default_unique`) is answered by reading again, and never aborts the caller's transaction on
+     * PostgreSQL. With $write false nothing is written: the answer says what would be done, a would-be brand unsaved.
+     *
+     * @return array{action: 'none'|'promoted'|'created', brand: ?Brand} `none` with the default it already has
+     */
+    public function ensureDefaultBrand(bool $write = true): array
+    {
+        $brands = fn () => Brand::withoutGlobalScopes()->where('organization_id', $this->id)->whereNull('deleted_at');
+        $current = fn () => $brands()->where('is_default', true)->orderBy('id')->first();
+
+        if ($default = $current()) {
+            return ['action' => 'none', 'brand' => $default];
+        }
+
+        $earliest = $brands()->orderBy('id')->first();
+        if ($earliest) {
+            if ($write) {
+                Brand::withoutGlobalScopes()->whereKey($earliest->id)->update(['is_default' => true, 'updated_at' => now()]);
+                $earliest->refresh();
+            } else {
+                $earliest->is_default = true;
+            }
+
+            return ['action' => 'promoted', 'brand' => $earliest];
+        }
+
+        $base = substr(\Illuminate\Support\Str::slug((string) ($this->name ?? '')) ?: ('default-' . $this->id), 0, 90);
+        $slug = $base;
+        for ($n = 2; Brand::withoutGlobalScopes()->where('organization_id', $this->id)->where('slug', $slug)->exists(); $n++) {
+            $slug = $base . '-' . $n;
+        }
+        $token = (string) ($this->widget_token ?? '');
+        if ($token === '' || Brand::withoutGlobalScopes()->where('widget_token', $token)->exists()) {
+            $token = \Illuminate\Support\Str::random(32);
+        }
+        $brand = new Brand([
+            'name'         => $this->name ?: 'Default',
+            'slug'         => $slug,
+            'logo_url'     => $this->logo_url ?? null,
+            'widget_token' => $token,
+            'is_default'   => true,
+            'sort_order'   => 0,
+        ]);
+        $brand->organization_id = $this->id;
+        if (!$write) {
+            return ['action' => 'created', 'brand' => $brand];
+        }
+
+        $wasBound = app()->bound('current_organization_id');
+        $prior = $wasBound ? app('current_organization_id') : null;
+        app()->instance('current_organization_id', (int) $this->id);
+        try {
+            \Illuminate\Support\Facades\DB::transaction(fn () => $brand->save());
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            // Written a moment before by someone else: answer by what is stored now.
+            if ($default = $current()) {
+                return ['action' => 'none', 'brand' => $default];
+            }
+            throw $e;
+        } finally {
+            $wasBound ? app()->instance('current_organization_id', $prior) : app()->forgetInstance('current_organization_id');
+        }
+
+        return ['action' => 'created', 'brand' => $brand];
     }
 
     // ─── Plan / entitlement helpers ───────────────────────────

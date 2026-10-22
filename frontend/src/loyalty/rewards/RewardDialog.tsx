@@ -24,7 +24,7 @@ const INPUT = 'w-full rounded-lg border border-a-border bg-a-surface px-3 py-2 t
  * category), what it costs in points, how many there are and how many one member may take, an optional typed discount
  * and what it applies to, an expiry on the venue's clock, and whether it is offered. A saved reward's picture is
  * changed here too, at once (PictureField, release 2 §7); a new one gets its picture once it is saved. With more than
- * one brand, a new reward names its brand and a saved one shows it (release 4).
+ * one brand, a new reward names its brand (release 4) and a saved one can be moved to another (release 6).
  */
 export function RewardDialog({ reward, options, onClose }: { reward: Reward | null; options: RewardOptions; onClose: () => void }) {
   const { t } = useTranslation()
@@ -35,11 +35,12 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
   const [form, setForm] = useState<RewardForm>(() => rewardFormOf(reward, options, zone))
   const [tried, setTried] = useState(false)
   const [picture, setPicture] = useState<string | null>(reward?.image_url ?? null)
-  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands))
+  const saved = reward ? (reward.brand_id ?? null) : undefined
+  const [brand, setBrand] = useState<number | null>(() => initialBrand(options.brands, saved))
 
   const refresh = () => { void client.invalidateQueries({ queryKey: CATALOGUE_KEY }) }
   const save = useMutation({
-    mutationFn: () => (reward ? rewardsApi.updateReward(reward.id, rewardBody(form)) : rewardsApi.createReward({ ...rewardBody(form), ...brandPart(brand) })),
+    mutationFn: () => (reward ? rewardsApi.updateReward(reward.id, { ...rewardBody(form), ...brandPart(brand, saved) }) : rewardsApi.createReward({ ...rewardBody(form), ...brandPart(brand) })),
     onSuccess: () => { refresh(); onClose() },
     onError: (error) => { if (failureOf(error).code === 'not_found') refresh() },
   })
@@ -73,7 +74,7 @@ export function RewardDialog({ reward, options, onClose }: { reward: Reward | nu
             placeholder={t('loyalty.rewards.reward.name_example', 'e.g. Breakfast for two')} />
         </FormField>
 
-        <BrandField options={options.brands} value={brand} saved={reward ? (reward.brand_id ?? null) : undefined}
+        <BrandField options={options.brands} value={brand} saved={saved}
           refused={!!failure?.fields?.brand} onChange={(id) => { setBrand(id); if (save.isError) save.reset() }} />
 
         <div className="grid gap-4 sm:grid-cols-2">

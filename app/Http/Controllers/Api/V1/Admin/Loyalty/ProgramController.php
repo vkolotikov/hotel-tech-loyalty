@@ -226,7 +226,7 @@ class ProgramController extends Controller
     public function storeBoost(Request $request): JsonResponse
     {
         LoyaltyAccess::requireManager($request->user());
-        $event = EarnRateEvent::create($this->boostValues($request, true));
+        $event = EarnRateEvent::create($this->boostValues($request));
 
         AuditLog::record('earn_rate_event_created', $event, $event->toArray(), [],
             $request->user(), "Earn-rate event '{$event->name}' created ({$event->multiplier}x)");
@@ -264,11 +264,13 @@ class ProgramController extends Controller
      * EarnRateEventController's payload, without the property (the workspace has no property choice): a whole
      * event, on create and on change alike. The start and end are read as LoyaltyForms::instant() says, and the end
      * is compared with the start as the instants they are. Every save marks the times as the venue's
-     * (`times_venue_at`, R4-6), as the full admin's save now does too. The brand is chosen on create only.
+     * (`times_venue_at`, R4-6), as the full admin's save now does too. The brand is one of the options' brands, on
+     * create and, since release 6, on change too (absent: a new boost goes where the model's hook puts it, a saved one
+     * keeps its own).
      *
      * @return array<string, mixed>
      */
-    private function boostValues(Request $request, bool $creating = false): array
+    private function boostValues(Request $request): array
     {
         $orgId = (int) app('current_organization_id');
         $data = Validator::make($request->all(), [
@@ -282,7 +284,7 @@ class ProgramController extends Controller
             'tier_ids'       => 'sometimes|nullable|array',
             'tier_ids.*'     => ['integer', OwnRows::rule('loyalty_tiers')],
             'is_active'      => 'sometimes|boolean',
-            ...($creating ? ['brand' => LoyaltyForms::brandRule($request->user(), $orgId)] : []),
+            'brand'          => LoyaltyForms::brandRule($request->user(), $orgId),
         ])->after(function (FormValidator $v) use ($request, $orgId) {
             if ($v->errors()->hasAny(['starts_at', 'ends_at'])) {
                 return;

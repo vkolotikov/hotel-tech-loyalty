@@ -7,6 +7,7 @@ use App\Models\LoyaltyMember;
 use App\Models\LoyaltyTier;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\Appointments\VenueClock;
 use App\Services\MailIdentityService;
 use Illuminate\Support\Str;
 
@@ -25,6 +26,10 @@ use Illuminate\Support\Str;
  * plain text on one line in the subject. EmailTemplate::render() stays as it is (separate code with the same tag list):
  * a template's values go in unescaped and its `{{hotel_name}}` is the `company_name` setting; a campaign's is the name
  * it is sent under, the one its footer names.
+ *
+ * Release 6 (spec 2026-10-23 §2 item 7): inside a link a value is URL-encoded instead (html() says how a link is
+ * found), and `{{current_year}}` is the year on the venue's clock (VenueClock), not the server's: on 31 December at
+ * 23:30 in Auckland it is already the next year there.
  */
 final class CampaignTags
 {
@@ -43,6 +48,12 @@ final class CampaignTags
 
     /** Double braces and what is between them: what reads as a tag. */
     private const PATTERN = '/\{\{[^{}]*\}\}/';
+
+    /**
+     * An `href` attribute's value (html()): double-quoted, single-quoted, or unquoted up to a space or `>` as a browser
+     * reads it; `data-href` and `xlink:href` are not links.
+     */
+    private const HREF = '/(?<![\w:-])href\s*=\s*(?|"([^"]*)"|\'([^\']*)\'|([^\s"\'>][^\s>]*))/i';
 
     /** Every tag that is filled, in the order EmailTemplate names them, then the builder's. @return list<string> */
     public static function known(): array
@@ -86,7 +97,7 @@ final class CampaignTags
             '{{lifetime_points}}' => number_format((int) $member->lifetime_points),
             '{{referral_code}}'   => (string) ($member->referral_code ?? ''),
             '{{hotel_name}}'      => $venue,
-            '{{current_year}}'    => now()->format('Y'),
+            '{{current_year}}'    => self::year((int) ($member->organization_id ?? app('current_organization_id'))),
         ]);
     }
 
@@ -114,7 +125,7 @@ final class CampaignTags
             '{{lifetime_points}}' => number_format(self::SAMPLE_LIFETIME),
             '{{referral_code}}'   => self::SAMPLE_CODE,
             '{{hotel_name}}'      => self::venueName($organizationId),
-            '{{current_year}}'    => now()->format('Y'),
+            '{{current_year}}'    => self::year($organizationId),
         ]);
     }
 
@@ -135,10 +146,42 @@ final class CampaignTags
         return self::oneLine(strtr($subject, array_map(fn (string $v) => self::oneLine($v), $values)));
     }
 
-    /** The HTML with the values filled, each escaped. @param array<string, string> $values */
+    /**
+     * The HTML with the values filled: each escaped, and URL-encoded inside a link.
+     *
+     * A link is the value of an `href` attribute in the rendered HTML — `href="…"`, `href='…'` or unquoted, in any
+     * case, not `data-href` and the like — which is how both block renderers write a button and a linked picture
+     * (Campaigns\CampaignBody, the full admin's EmailBlockBuilder) and how a hand-written link reads. A tag there is
+     * filled with rawurlencode(): only letters, digits, `-_.~` and `%XX` come out, so a value can neither end the
+     * attribute nor add to the URL's own `/`, `?`, `&`, `=` or `#`, which are left as written; in a `mailto:`
+     * address (before its `?`) the `@` stays, as an address needs it. Everywhere else — the text, an `alt`, a `src` —
+     * a value is HTML-escaped. Still one pass over each part: a filled value is never read as a tag.
+     *
+     * @param array<string, string> $values
+     */
     public static function html(string $html, array $values): string
     {
-        return strtr($html, array_map(fn (string $v) => e($v), $values));
+        $escaped = array_map(fn (string $v) => e($v), $values);
+        $encoded = array_map(fn (string $v) => rawurlencode($v), $values);
+        $address = array_map(fn (string $v) => str_replace('%40', '@', rawurlencode($v)), $values);
+
+        $out = '';
+        $at = 0;
+        preg_match_all(self::HREF, $html, $links, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        foreach ($links as $link) {
+            [$value, $start] = $link[1];
+            $out .= strtr(substr($html, $at, $start - $at), $escaped);
+            if (preg_match('/^\s*mailto:/i', $value)) {
+                $query = strpos($value, '?');
+                $out .= $query === false ? strtr($value, $address)
+                    : strtr(substr($value, 0, $query), $address) . strtr(substr($value, $query), $encoded);
+            } else {
+                $out .= strtr($value, $encoded);
+            }
+            $at = $start + strlen($value);
+        }
+
+        return $out . strtr(substr($html, $at), $escaped);
     }
 
     /**
@@ -170,6 +213,12 @@ final class CampaignTags
         }
 
         return $values;
+    }
+
+    /** The year on the venue's clock (its zone, else UTC), as `{{current_year}}` says it. */
+    private static function year(int $organizationId): string
+    {
+        return VenueClock::now($organizationId)->format('Y');
     }
 
     private static function firstName(string $name): string

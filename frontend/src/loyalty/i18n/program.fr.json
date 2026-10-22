@@ -232,8 +232,24 @@
     "title": "Niveaux"
   },
   "time_check": {
+    "all_line": "Certains boosts demandent une vérification de leurs horaires. Si les horaires affichés sont justes, confirmez-les ensemble.",
+    "confirm_all": "Ces horaires sont justes",
+    "confirm_body": "Ces boosts ont été enregistrés avant que les horaires des boosts soient lus partout selon l’heure de l’établissement. Vérifiez que chacun commence et finit comme indiqué, selon l’heure de l’établissement ({{zone}}). La confirmation les marque comme vérifiés et ne change aucun horaire ; si l’un est faux, choisissez « Pas encore » et corrigez-le.",
+    "confirm_title": "Ces horaires sont-ils justes ?",
     "dialog": "Vérifiez ces horaires : le boost a été enregistré avant que les horaires des boosts soient lus partout selon l’heure de l’établissement. S’il a été enregistré en dernier dans l’administration complète, ils peuvent être décalés de l’écart entre l’établissement et UTC. Une fois le boost enregistré, ils sont considérés comme vérifiés.",
+    "keep": "Pas encore",
     "row": "Vérifiez l’horaire : ce boost a été enregistré avant que les horaires des boosts soient lus partout selon l’heure de l’établissement. S’il a été enregistré en dernier dans l’administration complète, il peut commencer et finir avec quelques heures d’écart. Ouvrez-le, vérifiez les horaires et enregistrez."
+  },
+  "times": {
+    "error": {
+      "invalid": "L’un de ces boosts n’est plus dans le programme. La page l’affiche désormais tel qu’il est ; rien n’a été confirmé.",
+      "manager_only": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "network": "Pas de connexion : rien n’a été confirmé. Réessayez.",
+      "no_capability": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_allowed": "Seul un propriétaire ou un responsable peut modifier le programme.",
+      "not_found": "L’un de ces boosts n’est plus dans le programme. La page l’affiche désormais tel qu’il est ; rien n’a été confirmé.",
+      "unknown": "Les horaires n’ont pas pu être confirmés. Veuillez réessayer."
+    }
   },
   "title": "Programme",
   "value_phrase": {

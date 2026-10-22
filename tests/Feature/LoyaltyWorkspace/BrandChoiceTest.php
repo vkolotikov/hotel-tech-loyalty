@@ -15,7 +15,8 @@ use Tests\TestCase;
  * Brand choice (release 4 part E): the options of Rewards, Offers and Program list the brands a new reward, offer or
  * boost may be put on — this organisation's, not deleted, the default first, narrowed to a staff member's own brands —
  * and a new one names its brand as `brand`; without one it lands where it always did (the default brand). Every brand
- * id is checked against that list; a change keeps the brand a row has.
+ * id is checked against that list. Since release 6 a change may name another of those brands and moves the row there;
+ * without one it keeps the brand it has.
  */
 class BrandChoiceTest extends TestCase
 {
@@ -107,12 +108,69 @@ class BrandChoiceTest extends TestCase
         }
     }
 
-    public function test_a_change_keeps_the_brand_a_row_has(): void
+    public function test_a_change_without_a_brand_keeps_the_one_a_row_has(): void
     {
         foreach ($this->areas() as $area => [$path, $body, $key]) {
             $id = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => $this->second->id])->assertCreated()->json("{$key}.id");
-            $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => $this->brandId, 'brand_id' => $this->brandId])
+            // `brand_id` is the address's (`all`), never the row's: only `brand` moves a row.
+            $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand_id' => $this->brandId])
                 ->assertOk()->assertJsonPath("{$key}.brand_id", $this->second->id);
+            $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => null])
+                ->assertOk()->assertJsonPath("{$key}.brand_id", $this->second->id);
+        }
+    }
+
+    public function test_a_change_naming_another_of_the_brands_moves_the_row_there(): void
+    {
+        foreach ($this->areas() as $area => [$path, $body, $key]) {
+            $id = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => $this->second->id])->assertCreated()->json("{$key}.id");
+            $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => $this->brandId])
+                ->assertOk()->assertJsonPath("{$key}.brand_id", $this->brandId);
+            $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => $this->second->id])
+                ->assertOk()->assertJsonPath("{$key}.brand_id", $this->second->id);
+        }
+        // The list shows it on its new brand; the reward's and the boost's change are audited with the old brand.
+        $this->asManager()->getJson($this->api('rewards?brand_id=all'))->assertOk()->assertJsonPath('rewards.0.brand_id', $this->second->id);
+        foreach (['reward_updated', 'earn_rate_event_updated'] as $action) {
+            $audit = \App\Models\AuditLog::where('action', $action)->orderBy('id')->firstOrFail();
+            $this->assertSame([$this->second->id, $this->brandId], [(int) $audit->old_values['brand_id'], (int) $audit->new_values['brand_id']], $action);
+        }
+    }
+
+    public function test_a_change_naming_another_organisations_brand_a_deleted_one_or_a_word_is_refused_and_moves_nothing(): void
+    {
+        $other = $this->otherOrganization();
+        $theirs = (int) Brand::withoutGlobalScopes()->where('organization_id', $other['org']->id)->value('id');
+        $gone = Brand::create(['name' => 'Closed Studio', 'slug' => 'closed-' . uniqid(), 'is_default' => false]);
+        $gone->delete();
+
+        foreach ($this->areas() as $area => [$path, $body, $key]) {
+            $id = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body)->assertCreated()->json("{$key}.id");
+            foreach ([$theirs, $gone->id, 'all', 999999] as $brand) {
+                $this->asManager()->putJson($this->api("{$path}/{$id}?brand_id=all"), $body + ['brand' => $brand])
+                    ->assertStatus(422)->assertJsonValidationErrors(['brand']);
+            }
+        }
+        $this->assertSame(3, Reward::query()->where('brand_id', $this->brandId)->count() + SpecialOffer::query()->where('brand_id', $this->brandId)->count() + EarnRateEvent::query()->where('brand_id', $this->brandId)->count());
+    }
+
+    public function test_a_staff_member_held_to_some_brands_cannot_move_a_row_to_another(): void
+    {
+        $third = Brand::create(['name' => 'Third Studio', 'slug' => 'third-' . uniqid(), 'is_default' => false, 'sort_order' => 3]);
+        $ids = [];
+        foreach ($this->areas() as $area => [$path, $body, $key]) {
+            $ids[$area] = $this->asManager()->postJson($this->api("{$path}?brand_id=all"), $body + ['brand' => $this->second->id])->assertCreated()->json("{$key}.id");
+        }
+        DB::table('brand_user')->insert([
+            ['brand_id' => $this->second->id, 'user_id' => $this->manager->id, 'created_at' => now(), 'updated_at' => now()],
+            ['brand_id' => $third->id, 'user_id' => $this->manager->id, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        foreach ($this->areas() as $area => [$path, $body, $key]) {
+            $this->asManager()->putJson($this->api("{$path}/{$ids[$area]}?brand_id=all"), $body + ['brand' => $this->brandId])
+                ->assertStatus(422)->assertJsonValidationErrors(['brand']);
+            $this->asManager()->putJson($this->api("{$path}/{$ids[$area]}?brand_id=all"), $body + ['brand' => $third->id])
+                ->assertOk()->assertJsonPath("{$key}.brand_id", $third->id);
         }
     }
 }

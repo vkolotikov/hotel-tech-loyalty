@@ -69,6 +69,11 @@ class MemberAdminController extends Controller
                 $request->boolean('send_welcome_email', empty($validated['password'])),
             );
         } catch (LoyaltyRefused $e) {
+            // A named NFC card that cannot be linked (not a card ID, another member's, another venue's): the member was
+            // not created; answered as a field error on `nfc_uid`, the shape the SPA's form already shows (release 6).
+            if (in_array($e->errorCode, ['bad_uid', 'card_in_use', 'card_elsewhere'], true)) {
+                return response()->json(['message' => $e->getMessage(), 'errors' => ['nfc_uid' => [$e->getMessage()]]], 422);
+            }
             // 402 lets the admin SPA tell "you hit a quota" from "validation failed" and show an upgrade CTA.
             return $e->errorCode === 'member_limit'
                 ? response()->json(['error' => $e->getMessage(), 'reason' => 'plan_limit'], 402)

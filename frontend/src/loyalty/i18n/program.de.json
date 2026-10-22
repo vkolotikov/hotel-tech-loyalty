@@ -232,8 +232,24 @@
     "title": "Stufen"
   },
   "time_check": {
+    "all_line": "Bei einigen Aktionen sollten die Zeiten geprüft werden. Stimmen die angezeigten Zeiten, bestätigen Sie sie gemeinsam.",
+    "confirm_all": "Diese Zeiten stimmen",
+    "confirm_body": "Diese Aktionen wurden gespeichert, bevor Aktionszeiten überall nach der Uhrzeit des Hauses gelesen wurden. Prüfen Sie, ob jede wie angezeigt beginnt und endet, nach der Uhrzeit des Hauses ({{zone}}). Die Bestätigung markiert sie als geprüft und ändert keine Zeit; stimmt eine nicht, wählen Sie „Noch nicht“ und korrigieren Sie sie.",
+    "confirm_title": "Stimmen diese Zeiten?",
     "dialog": "Prüfen Sie diese Zeiten: Die Aktion wurde gespeichert, bevor Aktionszeiten überall nach der Uhrzeit des Hauses gelesen wurden. Wurde sie zuletzt in der vollständigen Verwaltung gespeichert, können die Zeiten um den Abstand des Hauses zu UTC verschoben sein. Nach dem Speichern gelten sie als geprüft.",
+    "keep": "Noch nicht",
     "row": "Zeit prüfen: Diese Aktion wurde gespeichert, bevor Aktionszeiten überall nach der Uhrzeit des Hauses gelesen wurden. Wurde sie zuletzt in der vollständigen Verwaltung gespeichert, kann sie einige Stunden zu früh oder zu spät beginnen und enden. Öffnen, Zeiten prüfen und speichern."
+  },
+  "times": {
+    "error": {
+      "invalid": "Eine dieser Aktionen ist nicht mehr im Programm. Die Seite zeigt jetzt den aktuellen Stand; es wurde nichts bestätigt.",
+      "manager_only": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "network": "Keine Verbindung: Es wurde nichts bestätigt. Bitte versuchen Sie es erneut.",
+      "no_capability": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_allowed": "Nur ein Inhaber oder Manager kann das Programm ändern.",
+      "not_found": "Eine dieser Aktionen ist nicht mehr im Programm. Die Seite zeigt jetzt den aktuellen Stand; es wurde nichts bestätigt.",
+      "unknown": "Die Zeiten konnten nicht bestätigt werden. Bitte versuchen Sie es erneut."
+    }
   },
   "title": "Programm",
   "value_phrase": {
