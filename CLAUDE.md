@@ -134,7 +134,9 @@ Multi-tenant Laravel 13 + React (Vite, TypeScript) SaaS with four sub-brands. Pr
   or `hotel_timezone` directly in portal code.
 - Release 4: the public services confirm accepts only this booking's own payment (`assertPaysThisBooking()`: kind,
   organisation, service, start, amount, the venue's Stripe currency) — owner-approved widget change R4-2, as is extras
-  pricing by type in `BookingEngineService::extraUnits()` (R4-3); nothing else in the widget changed. A widget stay
+  pricing by type in `BookingEngineService::extraUnits()` (R4-3); nothing else in the widget changed. Release 5 (R5-6, owner 2026-10-23): a failed
+  widget booking records the hold in its submission row and leaves staff an enquiry; failures found under the lock are
+  written after the rollback (`logComboFailures()`), and a used hold or a member's hold leaves no enquiry. A widget stay
   becomes a member's only at award time, through `BookingPointsService::certainMemberForStay()` (one member, linked
   guest, same email, active, verified address). Never write one PaymentIntent on several `booking_mirror` rows: the
   partial unique index `booking_mirror_org_pi_unique` refuses it on PostgreSQL. Release 5: a combination's lead room

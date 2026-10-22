@@ -289,7 +289,8 @@ class BookingEngineService
         $hold = $holdQuery->first();
 
         if (!$hold || !$hold->isActive()) {
-            $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey);
+            // A hold already used up is a booking that went through (a double submit): no "booking failed" lead.
+            $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey, enquiry: !($hold && $hold->status === 'consumed'));
             throw new \RuntimeException('Hold expired or not found');
         }
 
@@ -302,7 +303,8 @@ class BookingEngineService
         // unknown/expired hold — the member's own hold is left untouched,
         // so they can still finish it in the portal.
         if ($hooks === null && !empty($hold->payload_json['member_id'] ?? null)) {
-            $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey);
+            // The member finishes it in the portal: not a lead for staff.
+            $this->logSubmission('failure', 'hold_expired', 'Hold expired or not found', $data, $requestId, $idempotencyKey, enquiry: false);
             throw new \RuntimeException('Hold expired or not found');
         }
 
@@ -321,14 +323,13 @@ class BookingEngineService
             $hold->save();
         }
 
-        // The member portal's own submissions (it is the only caller that
-        // passes hooks) record what was asked for — the hold's dates, party,
-        // room(s) and price — which logSubmission() and the follow-up enquiry
-        // read from `hold` (release 5). The public widget's submissions are
-        // left exactly as they were.
-        if ($hooks !== null) {
-            $data['hold'] = $payload;
-        }
+        // Every submission — the member portal's and the public widget's (owner,
+        // 2026-10-23: "fix it") — records what was asked for: the hold's dates,
+        // party, room(s) and price, which logSubmission() and the follow-up
+        // enquiry read from `hold`. Before, nothing passed it, so a failed
+        // widget booking's enquiry had no party and PostgreSQL refused it:
+        // staff never got the "Booking widget failed" lead to rescue.
+        $data['hold'] = $payload;
 
         // Combo bookings branch off into their own confirm path that
         // loops over each room, creates per-room Smoobu reservations,
@@ -356,9 +357,14 @@ class BookingEngineService
         $apartmentId = $payload['unit_id'];
         $lockKey = "room:{$orgId}:{$apartmentId}";
 
+        // Failures found under the lock (room taken, the PMS says no) are written after the transaction rolls back —
+        // logged inside it, the rollback erased the submission row and the staff's follow-up enquiry with the booking
+        // (release 5, owner 2026-10-23). A hold already used up under the lock stays logged inside: a double submit of
+        // a booking that went through must not leave a "booking failed" lead.
+        $failures = [];
         try {
         [$mirror, $result, $internalStatus, $pmsResult] = DB::transaction(function () use (
-            $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey, $hooks
+            $hold, $payload, $orgId, $apartmentId, $data, $guest, $guestId, $requestId, $idempotencyKey, $lockKey, $hooks, &$failures
         ) {
             AdvisoryLock::within($lockKey);
 
@@ -408,7 +414,7 @@ class BookingEngineService
                 ->count();
 
             if ($booked >= $inventory) {
-                $this->logSubmission('failure', 'inventory_unavailable', 'Room no longer available for selected dates', $data, $requestId, $idempotencyKey);
+                $failures[] = ['inventory_unavailable', 'Room no longer available for selected dates'];
                 throw new \RuntimeException('This room is no longer available for the selected dates. Please choose another.');
             }
 
@@ -521,7 +527,7 @@ class BookingEngineService
                             && (isset($unitLive['available']) || isset($unitLive['price']));
 
                         if ($dailyHadData || $aggregateHadData) {
-                            $this->logSubmission('failure', 'pms_unavailable', 'PMS reports unit unavailable at confirm', $data, $requestId, $idempotencyKey);
+                            $failures[] = ['pms_unavailable', 'PMS reports unit unavailable at confirm'];
                             throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
                         }
 
@@ -531,7 +537,7 @@ class BookingEngineService
                         // surfaced this room either, so refuse.
                         $base = (float) ($rooms->base_price ?? 0);
                         if ($base <= 0) {
-                            $this->logSubmission('failure', 'pms_unavailable', 'PMS has no data and room has no base_price at confirm', $data, $requestId, $idempotencyKey);
+                            $failures[] = ['pms_unavailable', 'PMS has no data and room has no base_price at confirm'];
                             throw new \RuntimeException('This room was just booked through another channel. Please choose another.');
                         }
 
@@ -881,7 +887,7 @@ class BookingEngineService
                 }
 
                 if ($pmsFatal) {
-                    $this->logSubmission('failure', 'pms_rejected', $msg, $data, $requestId, $idempotencyKey);
+                    $failures[] = ['pms_rejected', $msg];
                     \Illuminate\Support\Facades\Log::warning('Smoobu hard-rejected create (no local fallback)', [
                         'org_id'  => $orgId,
                         'unit_id' => $payload['unit_id'],
@@ -1015,6 +1021,11 @@ class BookingEngineService
                 'PMS is temporarily unavailable. Please try again in a moment.',
                 $e,
             );
+        } catch (\Throwable $e) {
+            // The transaction has rolled back: now the failures found under the lock are written for good (the
+            // submission row and the staff's enquiry), then the same exception goes on as before.
+            $this->logComboFailures($failures, $data, $requestId, $idempotencyKey);
+            throw $e;
         }
 
         // Lifecycle: a confirmed widget booking is real engagement. If the
@@ -3293,7 +3304,7 @@ class BookingEngineService
         return $total;
     }
 
-    private function logSubmission(string $outcome, ?string $failCode, ?string $failMsg, array $data, ?string $requestId, ?string $idempotencyKey, array $response = [], ?int $guestId = null): void
+    private function logSubmission(string $outcome, ?string $failCode, ?string $failMsg, array $data, ?string $requestId, ?string $idempotencyKey, array $response = [], ?int $guestId = null, bool $enquiry = true): void
     {
         $payload = $data['hold_token'] ?? null ? ($data['hold'] ?? []) : [];
         $guest   = $data['guest'] ?? [];
@@ -3325,7 +3336,7 @@ class BookingEngineService
         // Hand off failed widget submissions to the unified Inquiries
         // pipeline so staff can manually rescue the booking. We need at
         // least an email to do anything useful with it.
-        if ($outcome === 'failure' && !empty($guest['email'])) {
+        if ($outcome === 'failure' && $enquiry && !empty($guest['email'])) {
             $this->createInquiryFromFailedSubmission($guest, $payload, $failCode, $failMsg);
         }
     }
@@ -3357,12 +3368,15 @@ class BookingEngineService
                 'priority'        => 'High',
                 'check_in'        => $payload['check_in'] ?? null,
                 'check_out'       => $payload['check_out'] ?? null,
-                'num_adults'      => $payload['adults'] ?? null,
-                'num_children'    => $payload['children'] ?? null,
                 'room_type_requested' => isset($payload['unit_name']) ? mb_substr((string) $payload['unit_name'], 0, 100) : null,
                 'total_value'     => $payload['gross_total'] ?? null,
                 'notes'           => "Booking widget failed: {$failCode} — {$failMsg}",
-            ] + (is_array($payload['rooms'] ?? null) && $payload['rooms'] !== [] ? ['num_rooms' => count($payload['rooms'])] : [])));
+            ]
+                // The party when the hold names it; otherwise the columns' own defaults (NOT NULL, 1 adult, 0 children)
+                // — a null was refused by PostgreSQL, so no enquiry was ever kept (release 5, owner 2026-10-23).
+                + (isset($payload['adults']) ? ['num_adults' => (int) $payload['adults']] : [])
+                + (isset($payload['children']) ? ['num_children' => (int) $payload['children']] : [])
+                + (is_array($payload['rooms'] ?? null) && $payload['rooms'] !== [] ? ['num_rooms' => count($payload['rooms'])] : [])));
 
             // Surface a realtime toast so staff know to follow up before the
             // would-be guest goes cold. Hooks the existing realtime poll bus

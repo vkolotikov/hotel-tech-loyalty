@@ -1,6 +1,6 @@
 # HexaTech Loyalty, release 5 — Scan that works (camera, NFC, any code), combination stays with the lead room paying (design)
 
-Status: owner's answers of 2026-10-23 ("do next improvements. No need Twilio for now. Scan feature not works correctly,
+Status: deployed 2026-10-23 as `main` 8a04f86 (from branch 6adf121). Owner's answers of 2026-10-23 ("do next improvements. No need Twilio for now. Scan feature not works correctly,
 and need also NFC and qr scan option on the app"). Builds on release 4 (live as `main` 097432a, built from branch
 a7e87ae). Runbooks: `docs/loyalty-workspace.md`, `docs/member-portal.md`.
 
@@ -13,6 +13,7 @@ a7e87ae). Runbooks: `docs/loyalty-workspace.md`, `docs/member-portal.md`.
 | R5-3 | The full admin's camera scan | **Fix it**: it reads the member app's QR code and the wallet pass through the same tolerant lookup; its answer stays the same shape. |
 | R5-4 | Combination stays | **Build now, the lead room pays**, and fix the public widget's paid combination the same way (R4-8, approved then). |
 | R5-5 | Twilio | Not now: SMS stays as release 4 left it; the token encryption waits. |
+| R5-6 | Failed widget bookings (asked after deploying release 5) | **Fix it**: a failed public widget booking records the hold's dates, party, room and total in its submission row and leaves staff a "Booking widget failed" enquiry (with the realtime toast) — before, the enquiry had no party and PostgreSQL refused it, so none was ever kept. Failures found under the lock are written after the rollback; a hold already used by a booking that went through, or a member's hold sent to the widget, leaves no enquiry. The widget's screens, answers, prices and bookings are unchanged. Ships with the next deploy. |
 
 ## 2. Why Scan "does not work" (found 2026-10-23 on a local copy)
 
